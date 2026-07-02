@@ -1,0 +1,14 @@
+{
+  "toy.Counter": {
+    "fields": [
+      {"name": "seq", "type": "u64"},
+      {"name": "value", "type": "i64"}
+    ]
+  },
+  "toy.Accum": {
+    "fields": [
+      {"name": "count", "type": "u64"},
+      {"name": "sum", "type": "i64"}
+    ]
+  }
+}
