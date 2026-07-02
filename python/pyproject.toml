@@ -3,10 +3,10 @@ name = "sil"
 version = "0.1.0"
 description = "SiL framework: deterministic scheduling + typed data routing for vECU simulation"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["mcap>=1.1"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "mcap>=1.1"]
+dev = ["pytest>=8"]
 
 [project.scripts]
 sil-check = "sil.check:main"

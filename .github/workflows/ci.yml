@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python environment
+        run: |
+          uv venv .venv
+          uv pip install -p .venv/bin/python -e "python/[dev]"
+
+      - name: Build kernel
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j
+
+      # Full suite includes the milestone exit criterion: run twice ->
+      # bit-identical MCAP (tests/test_determinism.py).
+      - name: Run tests
+        run: SIL_SKIP_BUILD=1 .venv/bin/python -m pytest tests/ -v
+
+      - name: Determinism gate on reference pipeline
+        run: |
+          .venv/bin/python - <<'EOF'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, "tests")
+          sys.path.insert(0, "python/src")
+          from test_determinism import full_pipeline_manifest
+          from sil.check import check
+          ref = full_pipeline_manifest(Path("."))
+          raise SystemExit(check(Path("build/sil-run"), ref.path))
+          EOF
