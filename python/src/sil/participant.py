@@ -89,3 +89,27 @@ def run(participant: StepParticipant) -> None:
             })
         elif op == "shutdown":
             return
+
+
+def _load(spec: str) -> StepParticipant:
+    """Instantiates a participant from a '<file.py>:<ClassName>' spec."""
+    import importlib.util
+
+    path, _, cls_name = spec.rpartition(":")
+    if not path:
+        raise SystemExit(f"participant spec must be <file.py>:<Class>, got {spec!r}")
+    module_spec = importlib.util.spec_from_file_location("sil_participant_module", path)
+    module = importlib.util.module_from_spec(module_spec)
+    module_spec.loader.exec_module(module)
+    return getattr(module, cls_name)()
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = sys.argv[1:] if argv is None else argv
+    if len(args) != 1:
+        raise SystemExit("usage: python -m sil.participant <file.py>:<Class>")
+    run(_load(args[0]))
+
+
+if __name__ == "__main__":
+    main()
