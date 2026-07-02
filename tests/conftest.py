@@ -1,11 +1,21 @@
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_DIR = Path(os.environ.get("SIL_BUILD_DIR", ROOT / "build"))
+
+# Make the sil package importable here and in every child process the kernel
+# spawns (Python step participants), independent of install state.
+# (Editable installs are unreliable here: Python 3.14 skips .pth files that
+# macOS flags UF_HIDDEN, which uv-created venvs do.)
+_SRC = ROOT / "python" / "src"
+if str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
+os.environ["PYTHONPATH"] = str(_SRC) + os.pathsep + os.environ.get("PYTHONPATH", "")
 
 
 @pytest.fixture(scope="session")
