@@ -79,6 +79,7 @@ class Engine {
   // --- services used by participant adapters ---
   uint64_t now_ns() const { return now_ns_; }
   bool in_setup() const { return in_setup_; }
+  bool in_task() const { return in_task_; }
   const Manifest &manifest() const { return manifest_; }
 
   void register_task(const std::string &owner, const std::string &task,

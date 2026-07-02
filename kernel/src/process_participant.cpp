@@ -4,6 +4,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <algorithm>
+
 #include <nlohmann/json.hpp>
 
 namespace sil {

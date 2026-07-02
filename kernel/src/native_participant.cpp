@@ -46,7 +46,8 @@ struct NativeApiBridge {
   static int publish(void *ctx, const char *channel, const void *data,
                      size_t len) {
     NativeParticipant *p = self(ctx);
-    if (p->engine_.in_setup() || !channel || !data) return SIL_ERR;
+    // Data plane is only valid inside a task callback (see participant.h).
+    if (!p->engine_.in_task() || !channel || !data) return SIL_ERR;
     try {
       p->engine_.publish(p->name_, channel, data, len);
     } catch (const std::exception &e) {
@@ -59,7 +60,7 @@ struct NativeApiBridge {
   static int take(void *ctx, const char *channel, const void **data,
                   size_t *len) {
     NativeParticipant *p = self(ctx);
-    if (!channel || !data || !len) return SIL_ERR;
+    if (!p->engine_.in_task() || !channel || !data || !len) return SIL_ERR;
     auto it = p->subscriptions_.find(channel);
     if (it == p->subscriptions_.end()) {
       p->engine_.fail(p->name_, std::string("take on unsubscribed channel '") +
