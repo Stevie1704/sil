@@ -1,0 +1,128 @@
+# SiL Framework — Design Decisions
+
+Outcome of a design grilling session, 2026-07-02. Greenfield project for an
+automotive ADAS/AD company. Requirements: (1) determinism, (2) lightweight
+(scheduling + data routing kernel), (3) usable across vECU levels.
+
+## Decision record
+
+### 1. Primary use case: CI regression testing
+Headless, massively parallel, faster-than-real-time execution in a build farm.
+Determinism means: same inputs → bit-identical outputs, so every test failure
+is reproducible. Desktop debugging, re-simulation, and homologation are
+follow-on use cases, not drivers of v1.
+
+### 2. Determinism scope: same artifacts + same machine class
+Bit-exact reproducibility is guaranteed when the same compiled artifacts run
+on the same OS/CPU architecture (e.g. x86-64 Linux CI runners). Dev machines
+get best-effort repro. Cross-platform bit-exactness is a non-goal — it would
+require policing FP behavior in vECU code the framework doesn't own.
+
+### 3. vECU scope (v1)
+- **L0/L1** host-compiled algorithm/application code (in-process).
+- **POSIX/Adaptive AUTOSAR** stacks as separate Linux processes.
+- **L2/L3** classic AUTOSAR vECUs from vendor tools — via adapter only (see #10).
+- L4 (ISS/QEMU) deferred.
+
+### 4. Time model: central time master, sequential stepping
+One coordinator owns virtual time. Every participant is stepped explicitly in
+a fixed, configured order — never by the OS scheduler. Bit-exact by
+construction. Parallel stepping is a later optimization, added only where
+provably race-free.
+
+### 5. Scheduling unit: two-tier
+- Native L0/L1 code registers **periodic tasks** (period, offset,
+  order-priority) that the scheduler orders directly.
+- Opaque vECUs (POSIX processes, FMUs) implement a single **`step(t, Δt)`**
+  contract and manage internal rates themselves.
+
+### 6. Internal nondeterminism of opaque vECUs: contract + verification
+The vECU author is responsible for internal determinism given stepped virtual
+time and delivered inputs (single-threaded executors, no wall-clock reads,
+seeded RNG). The framework provides the virtual-time/clock API that makes this
+achievable, and a **determinism-check mode** in CI: run twice, bit-diff
+outputs, fail loudly. Violations are made visible, not silently guaranteed
+away. No framework-enforced thread serialization (conflicts with lightweight).
+
+### 7. Data routing: neutral typed pub/sub core + bus adapters
+The core routes typed messages on named channels with virtual-time stamps —
+nothing bus-specific. CAN, SOME/IP, DDS semantics (signal packing, service
+discovery, QoS) are adapter layers, opt-in per channel.
+
+### 8. Delivery semantics: explicit per-channel latency, default 1 activation
+A message published at t becomes visible at t + declared channel latency;
+default is the consumer's next activation (unit-delay style). Results are
+therefore independent of execution order within a time slot — reordering the
+manifest cannot change outputs. Same-slot direct feedthrough must be declared
+explicitly, which documents real data-path dependencies.
+
+### 9. Message representation: schema-defined fixed layout + shared memory
+Types declared in a schema, code-gen to C/C++/Python, fixed versioned
+POD-style layout. Small messages copied; large sensor payloads (camera frames,
+point clouds) passed via shared-memory ring buffers with ownership handover —
+zero-copy across processes. Deterministic byte layout makes recording and
+bit-diffing trivial.
+
+### 10. Adapters at the edge
+- **Environment/plant** (scenario engine, dynamics, sensor models): just
+  another stepped participant with `step(t, Δt)` + channels. Ship thin
+  reference adapters (e.g. esmini + internal dynamics model). The framework
+  never becomes a simulator.
+- **Vendor L2/L3 vECUs and models**: one blessed importer — **FMI 3.0
+  co-simulation + FMI-LS-BUS** for bus traffic. Importer-as-adapter, not an
+  FMI master in the kernel.
+
+### 11. Implementation: C++ kernel, stable C ABI, Python bindings
+C++20 core (matches vECU code, org skills, vendor SDKs). The integration
+contract is a small stable C ABI — survives compiler/version skew, trivially
+bindable. Python bindings for test orchestration, config generation, analysis.
+
+### 12. Configuration: declarative manifest + Python builder
+A strict-schema declarative manifest is the single execution input —
+canonical, hashable, archived with every run as part of the reproducibility
+contract. A Python builder API generates/validates manifests for test matrices;
+the kernel only ever consumes the manifest.
+
+### 13. Recording: MCAP native; record/replay as participants
+Recorder and replayer are ordinary scheduled participants (deterministic by
+construction). MCAP as the container: self-describing, schema-embedded,
+indexed, free tooling (Foxglove). Bit-diff of two runs = compare channel
+streams. Replaying recorded channels as stimulus covers open-loop
+re-simulation with no new machinery.
+
+### 14. Test API: in-schedule test participant + pytest frontend
+A test is itself a scheduled participant: publishes stimuli and evaluates
+assertions at defined virtual times — fully inside the deterministic world, so
+failing tests replay exactly. Authored in Python, executed under pytest.
+Fault injection = channel interceptors declared in the manifest (faults are
+part of the reproducible config). Post-hoc KPI evaluation against MCAP is a
+complementary pattern.
+
+### 15. CI unit: one run = one container; orchestration out of scope
+A run is a self-contained process tree (kernel + participants), packaged in
+one container image; outputs are exit code + MCAP + manifest hash (for
+cache/dedup). Scheduling thousands of runs is the job of existing CI/batch
+infrastructure.
+
+### 16. Milestone 1: walking skeleton + determinism proof
+Kernel (time master, task scheduling, typed channels), two toy native
+participants, one out-of-process participant, MCAP recorder, manifest, pytest
+test participant. **Exit criterion: run twice → bit-identical MCAP, enforced
+in the framework's own CI from day one.**
+
+## Explicit non-goals
+- Cross-platform bit-exactness.
+- Own environment/scenario/sensor simulation.
+- Native bus emulation in the core.
+- Framework-enforced thread serialization of opaque vECUs.
+- Run-fleet orchestration / result database.
+- L4 (ISS) vECUs in v1.
+
+## Open questions (not yet decided)
+- Schema/code-gen technology for #9: custom generator vs. FlatBuffers vs.
+  Cap'n Proto (constraint: deterministic fixed layout, zero-copy, C/C++/Python).
+- Manifest format detail: YAML vs. JSON, schema-validation tooling.
+- Virtual-time API surface offered to POSIX vECUs (clock shim: link-time,
+  LD_PRELOAD for `clock_gettime`, or explicit API only).
+- Which environment tool gets the first reference adapter.
+- Project name.
