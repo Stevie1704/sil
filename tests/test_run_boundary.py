@@ -148,3 +148,70 @@ class TestDeliverySemantics:
             (10_000_000, {"count": 2, "sum": 3}),
             (20_000_000, {"count": 3, "sum": 9}),
         ]
+
+
+class TestProcessParticipant:
+    def test_python_step_participant_transforms_messages(self, run_sil, tmp_path):
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_channel("echo", schema="toy.Counter")
+        m.add_native(
+            "aprod",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+        )
+        m.add_process(
+            "pecho",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "echo.py")],
+            step_period_ns=10_000_000,
+            subscribes=["ticks"],
+            publishes=["echo"],
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        echoes = [
+            (t, TYPES["toy.Counter"].unpack(data))
+            for topic, t, data in msgs
+            if topic == "echo"
+        ]
+        # Default latency: the step at t sees ticks published before t.
+        assert echoes == [
+            (10_000_000, {"seq": 0, "value": 0}),
+            (20_000_000, {"seq": 1, "value": 30}),
+        ]
+
+
+class TestRunAbort:
+    def test_failing_assertion_aborts_run_with_reason(self, run_sil, tmp_path):
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = toy_manifest(duration_ns=100_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_native(
+            "aprod",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+        )
+        m.add_process(
+            "test",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "fail_at_20ms.py")],
+            step_period_ns=10_000_000,
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 1
+        assert "boom at t=20000000" in proc.stderr
+        assert "'test'" in proc.stderr
+
+        # The recording is finalized and readable up to the failure.
+        _, msgs = read_mcap(proc.mcap_path)
+        assert [t for _, t, _ in msgs] == [0, 10_000_000, 20_000_000]
