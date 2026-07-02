@@ -1,5 +1,6 @@
 // Toy native participant: consumes toy.Counter messages and publishes a
 // running toy.Accum (count, sum) every activation.
+// Uses one global instance: at most one participant per library per run.
 #include <sil/participant.h>
 
 #include <string>

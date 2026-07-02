@@ -1,5 +1,6 @@
 // Toy native participant: publishes toy.Counter on a channel at a fixed
 // period. Walking-skeleton fixture, config-driven so tests can vary timing.
+// Uses one global instance: at most one participant per library per run.
 #include <sil/participant.h>
 
 #include <string>
