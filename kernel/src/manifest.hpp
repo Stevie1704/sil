@@ -27,11 +27,26 @@ struct SchemaSpec {
   size_t byte_size = 0;
 };
 
+// A manifest-declared fault applied to a channel's message stream. Parsed
+// and validated at load; inert in this slice (the routing layer does not yet
+// consult it). The window is half-open [start_ns, end_ns); an empty end means
+// "to end of run". Only the fields relevant to `kind` are populated.
+struct InterceptorSpec {
+  std::string kind;  // drop | drop_nth | delay | override
+  uint64_t start_ns = 0;
+  std::optional<uint64_t> end_ns;
+  std::optional<uint64_t> delay_ns;  // delay
+  std::optional<uint64_t> n;         // drop_nth
+  std::string field;                 // override
+  double value = 0.0;                // override, held as the schema field type
+};
+
 struct ChannelSpec {
   std::string name;
   std::string schema;
   // Explicit latency in ns; empty means default "next activation" semantics.
   std::optional<uint64_t> latency_ns;
+  std::vector<InterceptorSpec> interceptors;  // applied in declared order
 };
 
 struct NativeSpec {

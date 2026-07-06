@@ -162,3 +162,130 @@ class TestReplayBuilder:
         )
         with pytest.raises(ManifestError, match="ticks"):
             m.to_json()
+
+
+class TestInterceptorBuilder:
+    """Interceptors are declared per channel and carried in the hashed
+    manifest. In this slice they are inert (parsed and validated, not yet
+    applied), so the tests pin declaration, canonicalization, and the eager
+    validation rules the kernel mirrors at load."""
+
+    def test_drop_interceptor_is_recorded_on_channel(self):
+        m = make_minimal()
+        m.add_interceptor("ticks", kind="drop", start_ns=2_000_000, end_ns=4_000_000)
+        chan = json.loads(m.to_json())["channels"]["ticks"]
+        assert chan["interceptors"] == [
+            {"kind": "drop", "start_ns": 2_000_000, "end_ns": 4_000_000}
+        ]
+
+    def test_window_defaults_to_whole_run_when_omitted(self):
+        m = make_minimal()
+        m.add_interceptor("ticks", kind="drop")
+        [entry] = json.loads(m.to_json())["channels"]["ticks"]["interceptors"]
+        assert "start_ns" not in entry and "end_ns" not in entry
+
+    def test_absent_interceptors_key_when_none_declared(self):
+        chan = json.loads(make_minimal().to_json())["channels"]["ticks"]
+        assert "interceptors" not in chan
+
+    def test_multiple_interceptors_keep_declared_order(self):
+        m = make_minimal()
+        m.add_interceptor("ticks", kind="delay", delay_ns=1_000_000)
+        m.add_interceptor("ticks", kind="override", field="value", value=7)
+        kinds = [i["kind"] for i in
+                 json.loads(m.to_json())["channels"]["ticks"]["interceptors"]]
+        assert kinds == ["delay", "override"]
+
+    def test_declaration_is_canonical(self):
+        a = make_minimal()
+        a.add_interceptor("ticks", kind="delay", delay_ns=5_000_000)
+        b = make_minimal()
+        b.add_interceptor("ticks", kind="delay", delay_ns=5_000_000)
+        assert a.hash() == b.hash()
+
+    def test_never_matching_interceptor_only_changes_hash(self):
+        # Inertness at the builder level: adding an interceptor changes the
+        # hash (user story 11) but nothing else about the declaration set.
+        base = make_minimal()
+        faulted = make_minimal()
+        faulted.add_interceptor("ticks", kind="drop",
+                                start_ns=1, end_ns=2)
+        assert base.hash() != faulted.hash()
+
+    # --- validation (mirrors kernel load-time exit-2 rules) ---
+
+    def test_unknown_channel_rejected(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="nope"):
+            m.add_interceptor("nope", kind="drop")
+
+    def test_unknown_kind_rejected(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="bogus"):
+            m.add_interceptor("ticks", kind="bogus")
+
+    def test_inverted_window_rejected(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="window"):
+            m.add_interceptor("ticks", kind="drop", start_ns=4, end_ns=2)
+
+    def test_empty_window_rejected(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="window"):
+            m.add_interceptor("ticks", kind="drop", start_ns=2, end_ns=2)
+
+    def test_negative_window_bound_rejected(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="start_ns"):
+            m.add_interceptor("ticks", kind="drop", start_ns=-1)
+
+    def test_negative_delay_rejected(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="delay_ns"):
+            m.add_interceptor("ticks", kind="delay", delay_ns=-1)
+
+    def test_delay_requires_delay_ns(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="delay_ns"):
+            m.add_interceptor("ticks", kind="delay")
+
+    def test_drop_nth_below_one_rejected(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="n"):
+            m.add_interceptor("ticks", kind="drop_nth", n=0)
+
+    def test_drop_nth_requires_n(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="n"):
+            m.add_interceptor("ticks", kind="drop_nth")
+
+    def test_override_unknown_field_rejected(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="missing"):
+            m.add_interceptor("ticks", kind="override", field="missing", value=1)
+
+    def test_override_requires_field_and_value(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="field"):
+            m.add_interceptor("ticks", kind="override", value=1)
+
+    def test_override_value_out_of_range_rejected(self):
+        m = make_minimal()
+        # seq is u64; a negative constant is unrepresentable.
+        with pytest.raises(ManifestError, match="value"):
+            m.add_interceptor("ticks", kind="override", field="seq", value=-1)
+
+    def test_override_value_in_range_accepted(self):
+        m = make_minimal()
+        # value is i64; -1 fits.
+        m.add_interceptor("ticks", kind="override", field="value", value=-1)
+        [entry] = json.loads(m.to_json())["channels"]["ticks"]["interceptors"]
+        assert entry == {"kind": "override", "field": "value", "value": -1}
+
+    def test_override_float_field_accepts_number(self):
+        m = Manifest(duration_ns=1_000_000)
+        m.add_schemas({"S": {"fields": [{"name": "x", "type": "f32"}]}})
+        m.add_channel("c", schema="S")
+        m.add_interceptor("c", kind="override", field="x", value=1.5)
+        [entry] = json.loads(m.to_json())["channels"]["c"]["interceptors"]
+        assert entry["value"] == 1.5

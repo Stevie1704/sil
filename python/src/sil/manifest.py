@@ -18,6 +18,22 @@ MANIFEST_VERSION = 1
 
 _FIELD_TYPES = {"u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64", "f32", "f64"}
 
+# Inclusive [min, max] for the integer field types; float types accept any
+# real value and are handled separately. Used to reject override constants
+# that a field could never hold.
+_INT_RANGES = {
+    "u8": (0, 2**8 - 1),
+    "u16": (0, 2**16 - 1),
+    "u32": (0, 2**32 - 1),
+    "u64": (0, 2**64 - 1),
+    "i8": (-(2**7), 2**7 - 1),
+    "i16": (-(2**15), 2**15 - 1),
+    "i32": (-(2**31), 2**31 - 1),
+    "i64": (-(2**63), 2**63 - 1),
+}
+
+_INTERCEPTOR_KINDS = {"drop", "drop_nth", "delay", "override"}
+
 
 class ManifestError(ValueError):
     """A manifest that could never be a valid kernel input."""
@@ -64,6 +80,93 @@ class Manifest:
         if latency_ns is not None:
             entry["latency_ns"] = latency_ns
         self._channels[name] = entry
+
+    def add_interceptor(
+        self,
+        channel: str,
+        *,
+        kind: str,
+        start_ns: int | None = None,
+        end_ns: int | None = None,
+        delay_ns: int | None = None,
+        n: int | None = None,
+        field: str | None = None,
+        value: int | float | None = None,
+    ) -> None:
+        """Declare a fault interceptor on a channel's message stream.
+
+        Interceptors live in the hashed manifest (faults are reproducible
+        config) and apply in declared order. The window is half-open
+        ``[start_ns, end_ns)``; both bounds are optional and default to the
+        whole run. Validation here mirrors the kernel's load-time rules so a
+        bad declaration fails before a kernel is ever invoked.
+        """
+        if channel not in self._channels:
+            raise ManifestError(f"interceptor references unknown channel {channel!r}")
+        if kind not in _INTERCEPTOR_KINDS:
+            raise ManifestError(
+                f"interceptor on {channel!r}: unknown kind {kind!r}"
+            )
+
+        entry: dict = {"kind": kind}
+        ctx = f"interceptor on {channel!r}"
+
+        for bound_name, bound in (("start_ns", start_ns), ("end_ns", end_ns)):
+            if bound is not None:
+                if bound < 0:
+                    raise ManifestError(f"{ctx}: {bound_name} must be >= 0")
+                entry[bound_name] = bound
+        lo = start_ns if start_ns is not None else 0
+        if end_ns is not None and end_ns <= lo:
+            raise ManifestError(
+                f"{ctx}: window end_ns must be greater than start_ns"
+            )
+
+        if kind == "delay":
+            if delay_ns is None:
+                raise ManifestError(f"{ctx}: delay requires delay_ns")
+            if delay_ns < 0:
+                raise ManifestError(f"{ctx}: delay_ns must be >= 0")
+            entry["delay_ns"] = delay_ns
+        elif kind == "drop_nth":
+            if n is None:
+                raise ManifestError(f"{ctx}: drop_nth requires n")
+            if n < 1:
+                raise ManifestError(f"{ctx}: n must be >= 1")
+            entry["n"] = n
+        elif kind == "override":
+            if field is None or value is None:
+                raise ManifestError(f"{ctx}: override requires field and value")
+            self._check_override_value(channel, field, value, ctx)
+            entry["field"] = field
+            entry["value"] = value
+
+        self._channels[channel].setdefault("interceptors", []).append(entry)
+
+    def _check_override_value(
+        self, channel: str, field: str, value: int | float, ctx: str
+    ) -> None:
+        schema = self._schemas[self._channels[channel]["schema"]]
+        spec = next((f for f in schema["fields"] if f["name"] == field), None)
+        if spec is None:
+            raise ManifestError(
+                f"{ctx}: override field {field!r} is not in the channel's schema"
+            )
+        ftype = spec["type"]
+        if ftype in _INT_RANGES:
+            lo, hi = _INT_RANGES[ftype]
+            if not isinstance(value, int) or isinstance(value, bool) or not (
+                lo <= value <= hi
+            ):
+                raise ManifestError(
+                    f"{ctx}: override value {value!r} is unrepresentable in "
+                    f"{field!r} ({ftype})"
+                )
+        elif not isinstance(value, (int, float)) or isinstance(value, bool):
+            raise ManifestError(
+                f"{ctx}: override value {value!r} is not a number for "
+                f"{field!r} ({ftype})"
+            )
 
     def add_native(self, name: str, *, library: str, config: dict | None = None) -> None:
         self._add_participant(

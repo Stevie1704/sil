@@ -1,6 +1,8 @@
 """External behavior at the run boundary: invoke the runner with a manifest
 and artifacts, assert on exit code and MCAP content only."""
 
+import json
+
 from mcap.reader import make_reader
 
 from toys import TOY_SCHEMAS, accumulator_library, producer_library, toy_manifest
@@ -186,6 +188,116 @@ class TestProcessParticipant:
             (10_000_000, {"seq": 0, "value": 0}),
             (20_000_000, {"seq": 1, "value": 30}),
         ]
+
+
+def write_with_raw_interceptor(tmp_path, entry, *, channel="ticks"):
+    """Build a valid producer manifest, then splice a raw interceptor entry
+    into the named channel and write it canonically. Lets the kernel's
+    load-time validation be exercised with declarations the Python builder
+    would itself reject."""
+    m = toy_manifest(duration_ns=100_000_000)
+    m.add_channel(channel, schema="toy.Counter")
+    m.add_native(
+        "producer",
+        library=producer_library(),
+        config={"channel": channel, "period_ns": 10_000_000},
+    )
+    doc = m.to_doc()
+    doc["channels"][channel]["interceptors"] = [entry]
+    path = tmp_path / "m.json"
+    path.write_text(json.dumps(doc, sort_keys=True, separators=(",", ":")) + "\n")
+    return path
+
+
+class TestInterceptorRejection:
+    """The kernel mirrors the builder's eager checks at load: a malformed
+    interceptor is a config error (exit 2), distinguishable from a test
+    failure (exit 1), with a diagnostic naming the offending channel."""
+
+    def test_unknown_kind_is_config_error(self, run_sil, tmp_path):
+        path = write_with_raw_interceptor(tmp_path, {"kind": "bogus"})
+        proc = run_sil(path)
+        assert proc.returncode == 2
+        assert "ticks" in proc.stderr and "bogus" in proc.stderr
+
+    def test_inverted_window_is_config_error(self, run_sil, tmp_path):
+        path = write_with_raw_interceptor(
+            tmp_path, {"kind": "drop", "start_ns": 4, "end_ns": 2}
+        )
+        proc = run_sil(path)
+        assert proc.returncode == 2
+        assert "ticks" in proc.stderr
+
+    def test_negative_delay_is_config_error(self, run_sil, tmp_path):
+        # -1 as a JSON number is not is_number_unsigned in the kernel.
+        path = write_with_raw_interceptor(
+            tmp_path, {"kind": "delay", "delay_ns": -1}
+        )
+        proc = run_sil(path)
+        assert proc.returncode == 2
+        assert "ticks" in proc.stderr
+
+    def test_drop_nth_below_one_is_config_error(self, run_sil, tmp_path):
+        path = write_with_raw_interceptor(tmp_path, {"kind": "drop_nth", "n": 0})
+        proc = run_sil(path)
+        assert proc.returncode == 2
+        assert "ticks" in proc.stderr
+
+    def test_override_unknown_field_is_config_error(self, run_sil, tmp_path):
+        path = write_with_raw_interceptor(
+            tmp_path, {"kind": "override", "field": "missing", "value": 1}
+        )
+        proc = run_sil(path)
+        assert proc.returncode == 2
+        assert "ticks" in proc.stderr and "missing" in proc.stderr
+
+    def test_override_out_of_range_is_config_error(self, run_sil, tmp_path):
+        # seq is u64; -1 cannot be represented.
+        path = write_with_raw_interceptor(
+            tmp_path, {"kind": "override", "field": "seq", "value": -1}
+        )
+        proc = run_sil(path)
+        assert proc.returncode == 2
+        assert "ticks" in proc.stderr
+
+
+class TestInterceptorInertness:
+    """This slice declares interceptors but does not apply them. A run with a
+    never-matching interceptor must behave identically to one without it — the
+    recordings differ only by the manifest hash they embed."""
+
+    def test_declared_interceptor_only_changes_manifest_hash(self, run_sil, tmp_path):
+        def build(with_fault):
+            m = toy_manifest(duration_ns=100_000_000)
+            m.add_channel("ticks", schema="toy.Counter")
+            m.add_native(
+                "producer",
+                library=producer_library(),
+                config={"channel": "ticks", "period_ns": 10_000_000},
+            )
+            if with_fault:
+                # A window past the run's end can never match a message.
+                m.add_interceptor(
+                    "ticks", kind="drop",
+                    start_ns=200_000_000, end_ns=300_000_000,
+                )
+            return m
+
+        base = build(False)
+        faulted = build(True)
+        base_ref = base.write(tmp_path / "base.json")
+        faulted_ref = faulted.write(tmp_path / "faulted.json")
+        assert base_ref.hash != faulted_ref.hash
+
+        base_proc = run_sil(base_ref.path, out=tmp_path / "base.mcap")
+        faulted_proc = run_sil(faulted_ref.path, out=tmp_path / "faulted.mcap")
+        assert base_proc.returncode == 0, base_proc.stderr
+        assert faulted_proc.returncode == 0, faulted_proc.stderr
+
+        _, base_msgs = read_mcap(base_proc.mcap_path)
+        _, faulted_msgs = read_mcap(faulted_proc.mcap_path)
+        # Same topics, times, and payloads — the fault is inert.
+        assert base_msgs == faulted_msgs
 
 
 class TestRunAbort:
