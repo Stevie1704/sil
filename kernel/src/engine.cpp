@@ -101,9 +101,34 @@ void Engine::publish(const std::string &owner, const std::string &channel,
                    std::to_string(len) + " bytes on '" + channel +
                    "' but schema '" + c.spec->schema + "' is " +
                    std::to_string(c.schema->byte_size) + " bytes");
+
+  // Fault injection choke point: a `delay` interceptor whose half-open window
+  // [start_ns, end_ns) contains the actual publish time shifts the message's
+  // visibility — and the recorded ground truth — later by delay_ns. Multiple
+  // matching delays compose in declared order. Other kinds are still inert.
+  // The sum saturates: delay_ns is only bounded to 2^64-1 at load, so an
+  // overflowing total clamps to the max and is dropped below rather than
+  // wrapping around into the visible range.
+  uint64_t visible_ns = now_ns_;
+  for (const InterceptorSpec &i : c.spec->interceptors) {
+    if (i.kind != "delay") continue;
+    if (now_ns_ < i.start_ns || (i.end_ns && now_ns_ >= *i.end_ns)) continue;
+    uint64_t sum = visible_ns + *i.delay_ns;
+    visible_ns = sum < visible_ns ? UINT64_MAX : sum;
+  }
+
+  // A message whose shifted visibility lands at or beyond the run duration
+  // never surfaces: drop it before it is recorded or enqueued, matching the
+  // replayer's [0, duration) truncation. A sequence number is not consumed.
+  if (visible_ns >= manifest_.duration_ns) {
+    global_seq_++;
+    return;
+  }
+
   const uint8_t *p = static_cast<const uint8_t *>(data);
-  PendingMessage msg{now_ns_, global_seq_++, std::vector<uint8_t>(p, p + len)};
-  if (recorder_) recorder_->record(c.index, now_ns_, c.next_seq, data, len);
+  PendingMessage msg{visible_ns, global_seq_++,
+                     std::vector<uint8_t>(p, p + len)};
+  if (recorder_) recorder_->record(c.index, visible_ns, c.next_seq, data, len);
   c.next_seq++;
   for (SubQueue *q : c.subscribers) q->push(msg);
 }

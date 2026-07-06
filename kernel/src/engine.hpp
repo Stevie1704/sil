@@ -39,6 +39,11 @@ class SubQueue {
 
   bool visible_at(uint64_t now_ns) const {
     if (pending_.empty()) return false;
+    // Strict FIFO in publish order: only the front is ever inspected. A delay
+    // interceptor can give an early message a later visibility than a message
+    // published behind it on the same channel; that message then waits for the
+    // delayed front rather than overtaking it, so per-channel order is
+    // preserved (an intentional choice over reordering by shifted time).
     const PendingMessage &m = pending_.front();
     // Default semantics: visible at the consumer's next activation after
     // publish, so results are independent of execution order within a slot.
