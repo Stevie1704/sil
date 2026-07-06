@@ -98,6 +98,45 @@ class Manifest:
             },
         )
 
+    def add_replay(
+        self,
+        name: str,
+        *,
+        recording: str | Path,
+        channels: list[str],
+    ) -> None:
+        """Re-publish recorded channels from a prior run's MCAP.
+
+        The recording is identified by its SHA-256 content hash, computed here
+        from the file bytes and embedded in the manifest, so the manifest hash
+        fully covers the run's stimulus. The file must exist at build time.
+        """
+        if not channels:
+            raise ManifestError(
+                f"participant {name!r}: replay channels must not be empty"
+            )
+        for ch in channels:
+            if ch not in self._channels:
+                raise ManifestError(
+                    f"participant {name!r} replays unknown channel {ch!r}"
+                )
+        recording = Path(recording)
+        try:
+            data = recording.read_bytes()
+        except OSError as e:
+            raise ManifestError(
+                f"participant {name!r}: cannot read recording {str(recording)!r}: {e}"
+            ) from e
+        self._add_participant(
+            name,
+            {
+                "type": "replay",
+                "recording": str(recording),
+                "recording_hash": hashlib.sha256(data).hexdigest(),
+                "channels": list(channels),
+            },
+        )
+
     def _add_participant(self, name: str, entry: dict) -> None:
         if name in self._participants:
             raise ManifestError(f"participant {name!r} already declared")
@@ -105,7 +144,7 @@ class Manifest:
 
     def _validate(self) -> None:
         for pname, p in self._participants.items():
-            for key in ("subscribes", "publishes"):
+            for key in ("subscribes", "publishes", "channels"):
                 for ch in p.get(key, []):
                     if ch not in self._channels:
                         raise ManifestError(

@@ -88,6 +88,15 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
     ps.publishes = check_channels(js.value("publishes", json::array()), "publishes");
     ps.priority = js.value("priority", 0);
     p.impl = std::move(ps);
+  } else if (type == "replay") {
+    ReplaySpec rs;
+    rs.recording = require(js, "recording", ctx).get<std::string>();
+    rs.recording_hash = require(js, "recording_hash", ctx).get<std::string>();
+    const json &chans = require(js, "channels", ctx);
+    if (!chans.is_array() || chans.empty())
+      fail(ctx + ": channels must be a non-empty array");
+    rs.channels = check_channels(chans, "channels");
+    p.impl = std::move(rs);
   } else {
     fail(ctx + ": unknown type '" + type + "'");
   }

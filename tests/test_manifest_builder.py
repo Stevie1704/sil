@@ -103,3 +103,48 @@ class TestValidation:
         m = make_minimal()
         with pytest.raises(ManifestError, match="latency"):
             m.add_channel("c", schema="toy.Counter", latency_ns=-1)
+
+
+class TestReplayBuilder:
+    def _recording(self, tmp_path) -> str:
+        rec = tmp_path / "rec.mcap"
+        rec.write_bytes(b"\x89MCAP0\r\n")  # bytes are irrelevant to the builder
+        return str(rec)
+
+    def test_hash_is_embedded_from_recording_bytes(self, tmp_path):
+        rec = self._recording(tmp_path)
+        m = make_minimal()
+        m.add_replay("rep", recording=rec, channels=["ticks"])
+        p = json.loads(m.to_json())["participants"]["rep"]
+        assert p["type"] == "replay"
+        assert p["recording_hash"] == hashlib.sha256(
+            open(rec, "rb").read()
+        ).hexdigest()
+        assert p["channels"] == ["ticks"]
+
+    def test_replay_declaration_is_canonical(self, tmp_path):
+        rec = self._recording(tmp_path)
+        a = make_minimal()
+        a.add_replay("rep", recording=rec, channels=["ticks"])
+        b = make_minimal()
+        b.add_replay("rep", recording=rec, channels=["ticks"])
+        assert a.hash() == b.hash()
+
+    def test_empty_channel_selection_rejected(self, tmp_path):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="empty"):
+            m.add_replay("rep", recording=self._recording(tmp_path), channels=[])
+
+    def test_unknown_channel_rejected(self, tmp_path):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="nope"):
+            m.add_replay(
+                "rep", recording=self._recording(tmp_path), channels=["nope"]
+            )
+
+    def test_missing_recording_rejected(self, tmp_path):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="recording"):
+            m.add_replay(
+                "rep", recording=str(tmp_path / "gone.mcap"), channels=["ticks"]
+            )

@@ -1,6 +1,10 @@
 #include "recorder.hpp"
 
+// Single translation unit that compiles the MCAP implementation (writer for
+// recording, reader for the replayer); every other TU includes the headers
+// for declarations only.
 #define MCAP_IMPLEMENTATION
+#include <mcap/reader.hpp>
 #include <mcap/writer.hpp>
 
 #include "engine.hpp"

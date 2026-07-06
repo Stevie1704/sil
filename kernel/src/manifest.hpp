@@ -47,9 +47,15 @@ struct ProcessSpec {
   int32_t priority = 0;
 };
 
+struct ReplaySpec {
+  std::string recording;       // resolved relative to the manifest directory
+  std::string recording_hash;  // sha256 the recording bytes must match
+  std::vector<std::string> channels;
+};
+
 struct ParticipantSpec {
   std::string name;
-  std::variant<NativeSpec, ProcessSpec> impl;
+  std::variant<NativeSpec, ProcessSpec, ReplaySpec> impl;
 };
 
 struct Manifest {
