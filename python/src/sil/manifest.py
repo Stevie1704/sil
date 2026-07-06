@@ -151,6 +151,26 @@ class Manifest:
                             f"participant {pname!r} {key} unknown channel {ch!r}"
                         )
 
+        # Open-loop replay must not race live production: a channel a process
+        # participant publishes cannot also be replayed. The kernel enforces
+        # this at load (over process publishes); reject it here so a bad
+        # manifest never gets written.
+        live_published = {
+            ch
+            for p in self._participants.values()
+            if p["type"] == "process"
+            for ch in p["publishes"]
+        }
+        for pname, p in self._participants.items():
+            if p["type"] != "replay":
+                continue
+            for ch in p["channels"]:
+                if ch in live_published:
+                    raise ManifestError(
+                        f"participant {pname!r}: replayed channel {ch!r} is also "
+                        f"published by a live participant"
+                    )
+
     def to_doc(self) -> dict:
         self._validate()
         return {

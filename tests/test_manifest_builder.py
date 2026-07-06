@@ -148,3 +148,17 @@ class TestReplayBuilder:
             m.add_replay(
                 "rep", recording=str(tmp_path / "gone.mcap"), channels=["ticks"]
             )
+
+    def test_replayed_channel_also_published_live_rejected(self, tmp_path):
+        # Open-loop replay must not race a live producer on the same channel.
+        # The kernel rejects this at load; catch it earlier in the builder.
+        m = make_minimal()
+        m.add_replay("rep", recording=self._recording(tmp_path), channels=["ticks"])
+        m.add_process(
+            "live",
+            command=["python3", "echo.py"],
+            step_period_ns=10_000_000,
+            publishes=["ticks"],
+        )
+        with pytest.raises(ManifestError, match="ticks"):
+            m.to_json()

@@ -182,24 +182,28 @@ class TestReplayRejection:
         assert "schema" in proc.stderr.lower()
 
     def test_live_publisher_collision_is_config_error(self, run_sil, tmp_path):
+        # The builder also rejects this collision (see the builder suite); a
+        # hand-tampered manifest bypasses that, so prove the *kernel* rejects a
+        # replayed channel that a live participant publishes, at load, exit 2.
+        import json
         import sys
 
         from conftest import ROOT
 
         rec, h = record_producer_run(run_sil, tmp_path)
-        m = toy_manifest(duration_ns=30_000_000)
-        m.add_channel("ticks", schema="toy.Counter")
-        m.add_replay("rep", recording=str(rec), channels=["ticks"])
-        # A live process participant also publishes 'ticks' — open-loop replay
-        # must not race live production on the same channel.
-        m.add_process(
-            "live",
-            command=[sys.executable,
-                     str(ROOT / "tests" / "participants" / "echo.py")],
-            step_period_ns=10_000_000,
-            publishes=["ticks"],
-        )
-        proc = run_sil(m.write(tmp_path / "m.json").path)
+        manifest = tmp_path / "m.json"
+        doc = json.loads(_manifest_json(recording=str(rec), recording_hash=h))
+        doc["participants"]["live"] = {
+            "type": "process",
+            "command": [sys.executable,
+                        str(ROOT / "tests" / "participants" / "echo.py")],
+            "step_period_ns": 10_000_000,
+            "subscribes": [],
+            "publishes": ["ticks"],
+            "priority": 0,
+        }
+        manifest.write_text(json.dumps(doc))
+        proc = run_sil(manifest)
         assert proc.returncode == 2
         assert "ticks" in proc.stderr
 
