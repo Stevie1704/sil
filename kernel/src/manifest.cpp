@@ -1,5 +1,6 @@
 #include "manifest.hpp"
 
+#include <cmath>
 #include <fstream>
 #include <sstream>
 
@@ -52,6 +53,79 @@ SchemaSpec parse_schema(const std::string &name, const json &js) {
   }
   spec.canonical_json = js.dump();
   return spec;
+}
+
+// Inclusive [min, max] for integer field types, expressed as doubles so a
+// single range check covers both bounds. Float types are not listed and
+// accept any numeric value. Mirrors _INT_RANGES in the Python builder.
+const std::map<std::string, std::pair<double, double>> kIntRanges = {
+    {"u8", {0.0, 255.0}},
+    {"u16", {0.0, 65535.0}},
+    {"u32", {0.0, 4294967295.0}},
+    {"u64", {0.0, 18446744073709551615.0}},
+    {"i8", {-128.0, 127.0}},
+    {"i16", {-32768.0, 32767.0}},
+    {"i32", {-2147483648.0, 2147483647.0}},
+    {"i64", {-9223372036854775808.0, 9223372036854775807.0}},
+};
+
+void parse_interceptors(ChannelSpec &c, const json &arr, const SchemaSpec &schema) {
+  if (!arr.is_array())
+    fail("channel '" + c.name + "': interceptors must be an array");
+  for (const json &js : arr) {
+    const std::string ctx = "interceptor on '" + c.name + "'";
+    InterceptorSpec spec;
+    spec.kind = require(js, "kind", ctx).get<std::string>();
+    if (spec.kind != "drop" && spec.kind != "drop_nth" &&
+        spec.kind != "delay" && spec.kind != "override")
+      fail(ctx + ": unknown kind '" + spec.kind + "'");
+
+    if (js.contains("start_ns")) {
+      const json &v = js["start_ns"];
+      if (!v.is_number_unsigned())
+        fail(ctx + ": start_ns must be a non-negative integer");
+      spec.start_ns = v.get<uint64_t>();
+    }
+    if (js.contains("end_ns")) {
+      const json &v = js["end_ns"];
+      if (!v.is_number_unsigned())
+        fail(ctx + ": end_ns must be a non-negative integer");
+      if (v.get<uint64_t>() <= spec.start_ns)
+        fail(ctx + ": window end_ns must be greater than start_ns");
+      spec.end_ns = v.get<uint64_t>();
+    }
+
+    if (spec.kind == "delay") {
+      const json &v = require(js, "delay_ns", ctx + " (delay)");
+      if (!v.is_number_unsigned())
+        fail(ctx + ": delay_ns must be a non-negative integer");
+      spec.delay_ns = v.get<uint64_t>();
+    } else if (spec.kind == "drop_nth") {
+      const json &v = require(js, "n", ctx + " (drop_nth)");
+      if (!v.is_number_unsigned() || v.get<uint64_t>() < 1)
+        fail(ctx + ": n must be an integer >= 1");
+      spec.n = v.get<uint64_t>();
+    } else if (spec.kind == "override") {
+      spec.field = require(js, "field", ctx + " (override)").get<std::string>();
+      const FieldSpec *fs = nullptr;
+      for (const FieldSpec &f : schema.fields)
+        if (f.name == spec.field) fs = &f;
+      if (!fs)
+        fail(ctx + ": override field '" + spec.field +
+             "' is not in the channel's schema");
+      const json &v = require(js, "value", ctx + " (override)");
+      if (!v.is_number())
+        fail(ctx + ": override value for '" + spec.field + "' must be a number");
+      spec.value = v.get<double>();
+      auto rit = kIntRanges.find(fs->type);
+      if (rit != kIntRanges.end() &&
+          (spec.value < rit->second.first || spec.value > rit->second.second ||
+           spec.value != std::floor(spec.value)))
+        fail(ctx + ": override value is unrepresentable in '" + spec.field +
+             "' (" + fs->type + ")");
+    }
+    c.interceptors.push_back(std::move(spec));
+  }
 }
 
 ParticipantSpec parse_participant(const std::string &name, const json &js,
@@ -154,6 +228,8 @@ Manifest load_manifest(const std::filesystem::path &path) {
         fail("channel '" + name + "': latency_ns must be a non-negative integer");
       c.latency_ns = lat.get<uint64_t>();
     }
+    if (js.contains("interceptors"))
+      parse_interceptors(c, js["interceptors"], m.schemas.at(c.schema));
     m.channels.push_back(std::move(c));
   }
 
