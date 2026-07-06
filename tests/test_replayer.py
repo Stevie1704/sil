@@ -6,9 +6,12 @@ own recorded input reproduces the consumer's recorded output bit-identically.
 """
 
 import hashlib
+import sys
+from collections import defaultdict
 
 import pytest
 
+from conftest import ROOT
 from test_run_boundary import TYPES, read_mcap, sums
 from toys import accumulator_library, producer_library, toy_manifest
 
@@ -55,6 +58,21 @@ def ticks(mcap_path):
         for topic, t, data in msgs
         if topic == "ticks"
     ]
+
+
+def channel_streams(mcap_path):
+    """Per-channel message streams: {topic: [(log_time, data), ...]}.
+
+    DESIGN #8/#13: the determinism guarantee is defined over channel streams,
+    not the cross-channel interleaving the MCAP happens to serialize. Two runs
+    that agree channel-by-channel are equivalent even if a producer and a
+    consumer land in a different order within a shared slot.
+    """
+    _, msgs = read_mcap(mcap_path)
+    streams = defaultdict(list)
+    for topic, t, data in msgs:
+        streams[topic].append((t, data))
+    return dict(streams)
 
 
 class TestFaithfulReplay:
@@ -155,6 +173,52 @@ class TestReplayDeterminism:
         assert a.returncode == 0 and b.returncode == 0
         assert a.mcap_path.read_bytes() == b.mcap_path.read_bytes()
 
+    def test_record_replay_record_preserves_channel_streams(self, run_sil, tmp_path):
+        # The headline reproducibility proof (PRD #2, DESIGN #13): record a run,
+        # replay its recorded channel back into an equivalent run recording the
+        # replay output, and assert the two recordings agree channel by channel.
+        # The producer that live-published 'ticks' in run A is swapped for a
+        # replayer in run B; the accumulator's 'sums' and the replayed 'ticks'
+        # must both reproduce exactly. Cross-channel interleaving inside a slot
+        # is not part of the contract (DESIGN #8), so streams — not raw bytes —
+        # are the unit of comparison.
+        rec, _ = record_producer_run(run_sil, tmp_path)
+        recorded = channel_streams(rec)
+
+        m = replay_manifest(rec)
+        proc = run_sil(m.write(tmp_path / "replay.json").path,
+                       out=tmp_path / "replay.mcap")
+        assert proc.returncode == 0, proc.stderr
+        assert channel_streams(proc.mcap_path) == recorded
+
+    def test_replay_interleaved_with_live_publisher_is_deterministic(
+        self, run_sil, tmp_path
+    ):
+        # A replayer and a live participant publish in overlapping slots. The
+        # replayed message must take a deterministic position in global publish
+        # order, so the run is bit-identical under the run-twice CI discipline.
+        # 'pyecho' subscribes to the replayed 'ticks' and publishes 'echo' in
+        # the same slots the replayer is active.
+        rec, _ = record_producer_run(run_sil, tmp_path)
+        m = toy_manifest(duration_ns=50_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_channel("echo", schema="toy.Counter")
+        m.add_replay("rep", recording=str(rec), channels=["ticks"])
+        m.add_process(
+            "pyecho",
+            command=[sys.executable,
+                     str(ROOT / "tests" / "participants" / "echo.py")],
+            step_period_ns=10_000_000,
+            subscribes=["ticks"],
+            publishes=["echo"],
+        )
+        manifest = m.write(tmp_path / "interleaved.json").path
+        a = run_sil(manifest, out=tmp_path / "a.mcap")
+        b = run_sil(manifest, out=tmp_path / "b.mcap")
+        assert a.returncode == 0, a.stderr
+        assert b.returncode == 0, b.stderr
+        assert a.mcap_path.read_bytes() == b.mcap_path.read_bytes()
+
 
 class TestReplayRejection:
     def test_missing_recording_is_config_error(self, sil_run, run_sil, tmp_path):
@@ -205,9 +269,6 @@ class TestReplayRejection:
         # hand-tampered manifest bypasses that, so prove the *kernel* rejects a
         # replayed channel that a live participant publishes, at load, exit 2.
         import json
-        import sys
-
-        from conftest import ROOT
 
         rec, h = record_producer_run(run_sil, tmp_path)
         manifest = tmp_path / "m.json"
