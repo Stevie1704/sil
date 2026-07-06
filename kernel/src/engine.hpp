@@ -20,6 +20,7 @@ struct RunError : std::runtime_error {
 class Recorder;
 class NativeParticipant;
 class ProcessParticipant;
+class Replayer;
 
 struct PendingMessage {
   uint64_t publish_ns;
@@ -121,6 +122,7 @@ class Engine {
   std::vector<Task> tasks_;
   std::vector<std::unique_ptr<NativeParticipant>> natives_;
   std::vector<std::unique_ptr<ProcessParticipant>> processes_;
+  std::vector<std::unique_ptr<Replayer>> replayers_;
   uint64_t now_ns_ = 0;
   uint64_t global_seq_ = 0;
   bool in_setup_ = false;

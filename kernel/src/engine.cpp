@@ -2,10 +2,12 @@
 
 #include <algorithm>
 #include <limits>
+#include <set>
 
 #include "native_participant.hpp"
 #include "process_participant.hpp"
 #include "recorder.hpp"
+#include "replayer.hpp"
 
 namespace sil {
 
@@ -30,12 +32,30 @@ Engine::ChannelState &Engine::channel_or_fail(const std::string &name,
 
 void Engine::setup() {
   in_setup_ = true;
+
+  // Open-loop replay must not race live production on the same channel: a
+  // channel a live participant publishes cannot also be replayed. Process
+  // participants declare their publishes in the manifest, so the collision is
+  // caught here, at load, before any message flows.
+  std::set<std::string> live_published;
+  for (const ParticipantSpec &p : manifest_.participants)
+    if (const auto *proc = std::get_if<ProcessSpec>(&p.impl))
+      for (const std::string &ch : proc->publishes) live_published.insert(ch);
+
   // Manifest order is name-sorted: registration indices, and with them all
   // scheduling tie-breaks, are independent of authoring order.
   for (const ParticipantSpec &p : manifest_.participants) {
     if (const auto *native = std::get_if<NativeSpec>(&p.impl)) {
       natives_.push_back(std::make_unique<NativeParticipant>(
           *this, p.name, *native, manifest_.base_dir));
+    } else if (const auto *replay = std::get_if<ReplaySpec>(&p.impl)) {
+      for (const std::string &ch : replay->channels)
+        if (live_published.count(ch))
+          throw ManifestError("manifest error: participant '" + p.name +
+                              "': replayed channel '" + ch +
+                              "' is also published by a live participant");
+      replayers_.push_back(
+          std::make_unique<Replayer>(*this, p.name, *replay, manifest_.base_dir));
     } else {
       const auto &spec = std::get<ProcessSpec>(p.impl);
       auto proc = std::make_unique<ProcessParticipant>(*this, p.name, spec);
@@ -104,6 +124,10 @@ void Engine::run() {
     uint64_t slot = std::numeric_limits<uint64_t>::max();
     for (const Task &t : tasks_)
       if (!t.done) slot = std::min(slot, t.next_ns);
+    // A replay timestamp can fall between task periods; it must still open a
+    // slot so the message is published at its recorded virtual time.
+    for (const auto &r : replayers_)
+      slot = std::min(slot, r->next_publish_ns());
     if (slot == std::numeric_limits<uint64_t>::max()) break;
 
     std::vector<Task *> due;
@@ -115,6 +139,10 @@ void Engine::run() {
     });
 
     now_ns_ = slot;
+    // Replayed messages enter the router before any task activation in the
+    // slot, so a consumer stepped in this slot sees them exactly as it saw
+    // the original live production.
+    for (const auto &r : replayers_) r->publish_due(slot);
     for (Task *t : due) {
       in_task_ = true;
       t->fn(slot);
