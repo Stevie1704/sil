@@ -126,6 +126,25 @@ class TestReplaySemantics:
         assert proc.returncode == 0, proc.stderr
         assert [t for t, _ in ticks(proc.mcap_path)] == [0, 10_000_000]
 
+    def test_message_at_exactly_duration_is_dropped(self, run_sil, tmp_path):
+        # Boundary is half-open: a message recorded at exactly duration_ns is
+        # dropped. Ticks land at 0/10/20/30/40ms; duration is exactly 20ms, so
+        # the 20ms tick is at duration and must not be published.
+        rec, _ = record_producer_run(run_sil, tmp_path, duration_ns=50_000_000)
+        m = replay_manifest(rec, duration_ns=20_000_000)
+        proc = run_sil(m.write(tmp_path / "replay.json").path)
+        assert proc.returncode == 0, proc.stderr
+        assert 20_000_000 not in [t for t, _ in ticks(proc.mcap_path)]
+
+    def test_message_just_below_duration_is_published(self, run_sil, tmp_path):
+        # The cut is >= duration, not > duration: a message one nanosecond below
+        # duration replays. The 20ms tick sits just under a 20ms+1ns duration.
+        rec, _ = record_producer_run(run_sil, tmp_path, duration_ns=50_000_000)
+        m = replay_manifest(rec, duration_ns=20_000_001)
+        proc = run_sil(m.write(tmp_path / "replay.json").path)
+        assert proc.returncode == 0, proc.stderr
+        assert [t for t, _ in ticks(proc.mcap_path)] == [0, 10_000_000, 20_000_000]
+
 
 class TestReplayDeterminism:
     def test_replay_run_is_bit_identical_across_two_runs(self, run_sil, tmp_path):
