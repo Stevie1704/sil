@@ -300,6 +300,137 @@ class TestInterceptorInertness:
         assert base_msgs == faulted_msgs
 
 
+class TestDelayInterceptor:
+    """A `delay` interceptor shifts a message's visibility — and the recorded
+    ground truth — later by `delay_ns`, but only for messages published inside
+    its virtual-time window. The recording is the post-interceptor stream."""
+
+    def _producer(self, duration_ns=100_000_000):
+        m = toy_manifest(duration_ns=duration_ns)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_native(
+            "producer",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+        )
+        return m
+
+    def test_window_scoped_delay_shifts_recorded_time(self, run_sil, tmp_path):
+        m = self._producer()
+        # Messages published in [25ms, 55ms) — at 30ms, 40ms, 50ms — are shifted
+        # by 7ms; everything outside the window is untouched.
+        m.add_interceptor(
+            "ticks", kind="delay",
+            start_ns=25_000_000, end_ns=55_000_000, delay_ns=7_000_000,
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        times = [t for _, t, _ in msgs]
+        assert times == [
+            0, 10_000_000, 20_000_000,
+            37_000_000, 47_000_000, 57_000_000,
+            60_000_000, 70_000_000, 80_000_000, 90_000_000,
+        ]
+        # Payloads and their seq order are unchanged; only visibility moved.
+        counters = [TYPES["toy.Counter"].unpack(d) for _, _, d in msgs]
+        assert [c["seq"] for c in counters] == list(range(10))
+
+    def test_delay_past_run_duration_drops_message(self, run_sil, tmp_path):
+        m = self._producer()
+        # From 85ms to end of run, add 20ms. The message at 90ms would surface
+        # at 110ms — past the 100ms duration — so it is dropped entirely, never
+        # delivered and never recorded.
+        m.add_interceptor(
+            "ticks", kind="delay", start_ns=85_000_000, delay_ns=20_000_000,
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        times = [t for _, t, _ in msgs]
+        # 0..80ms recorded as published; the delayed 90ms message is gone.
+        assert times == [i * 10_000_000 for i in range(9)]
+
+    def test_delay_landing_exactly_at_duration_drops_message(self, run_sil, tmp_path):
+        m = self._producer()
+        # 80ms + 20ms == 100ms == duration. The run is the half-open interval
+        # [0, duration), so a message surfacing at the boundary is dropped —
+        # matching the replayer's duration-truncation rule.
+        m.add_interceptor(
+            "ticks", kind="delay",
+            start_ns=75_000_000, end_ns=85_000_000, delay_ns=20_000_000,
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        times = [t for _, t, _ in msgs]
+        assert 100_000_000 not in times
+        # The 80ms message (seq 8) is dropped; 90ms (seq 9) is outside the
+        # window and untouched.
+        assert times == [
+            0, 10_000_000, 20_000_000, 30_000_000, 40_000_000,
+            50_000_000, 60_000_000, 70_000_000, 90_000_000,
+        ]
+
+    def test_enormous_delay_saturates_and_drops(self, run_sil, tmp_path):
+        # A delay near u64 max must not wrap around into the visible range; the
+        # sum saturates and every matched message is dropped as past-duration.
+        m = self._producer()
+        m.add_interceptor(
+            "ticks", kind="delay",
+            start_ns=45_000_000, delay_ns=18_000_000_000_000_000_000,
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        _, msgs = read_mcap(proc.mcap_path)
+        # Only the pre-window messages (0..40ms) survive.
+        assert [t for _, t, _ in msgs] == [i * 10_000_000 for i in range(5)]
+
+    def test_delay_changes_downstream_consumer_view(self, run_sil, tmp_path):
+        # The delay is a routing-layer effect: a subscriber sees the shifted
+        # visibility, not just the recording. An accumulator consuming delayed
+        # ticks must fold them in later than it otherwise would.
+        m = toy_manifest(duration_ns=60_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_channel("sums", schema="toy.Accum")
+        m.add_native(
+            "aprod",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+        )
+        m.add_native(
+            "mid",
+            library=accumulator_library(),
+            config={"input": "ticks", "output": "sums",
+                    "period_ns": 10_000_000, "priority": 0},
+        )
+        # Delay the tick published at 10ms by 15ms → it becomes visible at 25ms,
+        # so the consumer at 20ms no longer sees it but the one at 30ms does.
+        m.add_interceptor(
+            "ticks", kind="delay",
+            start_ns=5_000_000, end_ns=15_000_000, delay_ns=15_000_000,
+        )
+        with_delay = sums(run_sil(m.write(tmp_path / "d.json").path,
+                                  out=tmp_path / "d.mcap").mcap_path)
+
+        base = toy_manifest(duration_ns=60_000_000)
+        base.add_channel("ticks", schema="toy.Counter")
+        base.add_channel("sums", schema="toy.Accum")
+        base.add_native("aprod", library=producer_library(),
+                        config={"channel": "ticks", "period_ns": 10_000_000})
+        base.add_native("mid", library=accumulator_library(),
+                        config={"input": "ticks", "output": "sums",
+                                "period_ns": 10_000_000, "priority": 0})
+        base_sums = sums(run_sil(base.write(tmp_path / "b.json").path,
+                                 out=tmp_path / "b.mcap").mcap_path)
+        # The delay must change what the consumer folds in — otherwise the
+        # interceptor had no runtime effect.
+        assert with_delay != base_sums
+
+
 class TestRunAbort:
     def test_failing_assertion_aborts_run_with_reason(self, run_sil, tmp_path):
         import sys as _sys
