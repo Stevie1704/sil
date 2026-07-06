@@ -120,6 +120,12 @@ class Engine {
   ChannelState &channel_or_fail(const std::string &name,
                                 const std::string &ctx);
 
+  // Rewrites `bytes` in place for every `override` interceptor on `c` whose
+  // half-open window contains `publish_ns`, so the recording and every
+  // subscriber see the same post-interceptor payload.
+  void apply_overrides(const ChannelState &c, uint64_t publish_ns,
+                       std::vector<uint8_t> &bytes) const;
+
   const Manifest &manifest_;
   Recorder *recorder_;
   std::vector<ChannelState> channels_;  // manifest (name-sorted) order
