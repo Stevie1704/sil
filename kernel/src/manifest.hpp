@@ -27,10 +27,10 @@ struct SchemaSpec {
   size_t byte_size = 0;
 };
 
-// A manifest-declared fault applied to a channel's message stream. Parsed
-// and validated at load; inert in this slice (the routing layer does not yet
-// consult it). The window is half-open [start_ns, end_ns); an empty end means
-// "to end of run". Only the fields relevant to `kind` are populated.
+// A manifest-declared fault applied to a channel's message stream at the
+// publish choke point. All four kinds — drop, drop_nth, delay, override — are
+// live and applied there. The window is half-open [start_ns, end_ns); an empty
+// end means "to end of run". Only the fields relevant to `kind` are populated.
 struct InterceptorSpec {
   std::string kind;  // drop | drop_nth | delay | override
   uint64_t start_ns = 0;

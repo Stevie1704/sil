@@ -283,6 +283,12 @@ class TestInterceptorInertness:
             kind="override",
             start_ns=200_000_000, end_ns=300_000_000, field="value", value=999,
         ),
+        "drop": dict(
+            kind="drop", start_ns=200_000_000, end_ns=300_000_000,
+        ),
+        "drop_nth": dict(
+            kind="drop_nth", start_ns=200_000_000, end_ns=300_000_000, n=2,
+        ),
     }
 
     def _producer(self, fault):
@@ -557,6 +563,137 @@ class TestOverrideInterceptor:
         assert at_25 == [(25_000_000, {"seq": 2, "value": 999})]
         # 20ms (the shifted-away slot) carries no message.
         assert 20_000_000 not in [t for _, t, _ in msgs]
+
+
+class TestDropInterceptor:
+    """A `drop` interceptor silences a channel for its virtual-time window: a
+    message published inside [start_ns, end_ns) is never recorded and never
+    delivered — the first-named fault in the PRD (a sensor channel goes
+    silent). Messages outside the window are untouched."""
+
+    def _producer(self, duration_ns=100_000_000):
+        m = toy_manifest(duration_ns=duration_ns)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_native(
+            "producer",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+        )
+        return m
+
+    def test_window_scoped_drop_silences_only_inside_window(self, run_sil, tmp_path):
+        m = self._producer()
+        # Ticks published in [25ms, 55ms) — at 30ms, 40ms, 50ms (seq 3,4,5) —
+        # are dropped; every other tick is recorded unchanged.
+        m.add_interceptor(
+            "ticks", kind="drop", start_ns=25_000_000, end_ns=55_000_000,
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        counters = [TYPES["toy.Counter"].unpack(d) for _, _, d in msgs]
+        times = [t for _, t, _ in msgs]
+        assert [c["seq"] for c in counters] == [0, 1, 2, 6, 7, 8, 9]
+        assert times == [
+            0, 10_000_000, 20_000_000,
+            60_000_000, 70_000_000, 80_000_000, 90_000_000,
+        ]
+
+    def test_open_ended_drop_silences_to_end_of_run(self, run_sil, tmp_path):
+        m = self._producer()
+        # No end_ns: the channel goes silent from 45ms onward.
+        m.add_interceptor("ticks", kind="drop", start_ns=45_000_000)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        # Only 0..40ms survive; 50ms onward is dropped.
+        assert [t for _, t, _ in msgs] == [i * 10_000_000 for i in range(5)]
+
+    def test_drop_removes_message_from_downstream_consumer(self, run_sil, tmp_path):
+        # The drop is a routing-layer effect: a subscriber never folds in a
+        # dropped tick. Dropping every tick starves the accumulator entirely.
+        def build():
+            m = toy_manifest(duration_ns=40_000_000)
+            m.add_channel("ticks", schema="toy.Counter")
+            m.add_channel("sums", schema="toy.Accum")
+            m.add_native("aprod", library=producer_library(),
+                         config={"channel": "ticks", "period_ns": 10_000_000})
+            m.add_native("mid", library=accumulator_library(),
+                         config={"input": "ticks", "output": "sums",
+                                 "period_ns": 10_000_000, "priority": 0})
+            return m
+
+        faulted = build()
+        faulted.add_interceptor("ticks", kind="drop")
+        with_drop = sums(run_sil(faulted.write(tmp_path / "d.json").path,
+                                 out=tmp_path / "d.mcap").mcap_path)
+        base = sums(run_sil(build().write(tmp_path / "b.json").path,
+                            out=tmp_path / "b.mcap").mcap_path)
+        # With no tick ever delivered the accumulator never counts or sums.
+        assert with_drop != base
+        assert all(a["count"] == 0 and a["sum"] == 0 for _, a in with_drop)
+
+
+class TestDropNthInterceptor:
+    """A `drop_nth` interceptor drops every nth message that falls inside its
+    virtual-time window, counting from the first in-window message. The window
+    index is per-interceptor and independent of channel sequence numbers."""
+
+    def _producer(self, duration_ns=100_000_000):
+        m = toy_manifest(duration_ns=duration_ns)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_native(
+            "producer",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+        )
+        return m
+
+    def test_drops_every_nth_message_in_window(self, run_sil, tmp_path):
+        m = self._producer()
+        # Drop every 2nd tick published in [25ms, 95ms) — the in-window ticks
+        # are seq 3..8 (30..80ms). Counting from 1, the 2nd, 4th, 6th are
+        # dropped: seq 4 (40ms), seq 6 (60ms), seq 8 (80ms).
+        m.add_interceptor(
+            "ticks", kind="drop_nth", start_ns=25_000_000, end_ns=95_000_000, n=2,
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        counters = [TYPES["toy.Counter"].unpack(d) for _, _, d in msgs]
+        assert [c["seq"] for c in counters] == [0, 1, 2, 3, 5, 7, 9]
+
+    def test_window_index_resets_relative_to_window_not_channel(
+        self, run_sil, tmp_path
+    ):
+        # The count starts at the first in-window message, not at channel seq 0.
+        # Window [45ms, end): in-window ticks are seq 5..9 (50..90ms). Counting
+        # from 1, the 3rd in-window tick is dropped: seq 7 (70ms).
+        m = self._producer()
+        m.add_interceptor("ticks", kind="drop_nth", start_ns=45_000_000, n=3)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        counters = [TYPES["toy.Counter"].unpack(d) for _, _, d in msgs]
+        assert [c["seq"] for c in counters] == [0, 1, 2, 3, 4, 5, 6, 8, 9]
+
+    def test_drop_nth_one_drops_every_in_window_message(self, run_sil, tmp_path):
+        # n=1 drops every message inside the window — equivalent to a plain
+        # drop over that window.
+        m = self._producer()
+        m.add_interceptor(
+            "ticks", kind="drop_nth", start_ns=25_000_000, end_ns=55_000_000, n=1,
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        counters = [TYPES["toy.Counter"].unpack(d) for _, _, d in msgs]
+        assert [c["seq"] for c in counters] == [0, 1, 2, 6, 7, 8, 9]
 
 
 class TestRunAbort:

@@ -115,6 +115,10 @@ class Engine {
     uint32_t index;
     uint32_t next_seq = 0;
     std::vector<SubQueue *> subscribers;
+    // Per-interceptor count of messages that have fallen inside each
+    // interceptor's window, indexed parallel to `spec->interceptors`. Only
+    // `drop_nth` consumes it, to drop every nth in-window message.
+    std::vector<uint64_t> window_counts;
   };
 
   ChannelState &channel_or_fail(const std::string &name,
