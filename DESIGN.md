@@ -140,3 +140,12 @@ in the framework's own CI from day one.**
   step protocol delivers `t`/`dt` with every activation. A clock shim
   remains open (above).
 - **Project name:** sil.
+- **Recording-format seam (#13, #24):** the container is chosen from the output
+  extension behind a format-neutral sink (write side) and reader (read side);
+  MCAP is the only v1 format, an unrecognized extension is a config error
+  (exit 2) that rejects before any participant starts. **A recording format
+  must preserve, or explicitly store, the total publish order** — for messages
+  sharing a timestamp the replayer's tie-break is the recording's stored order,
+  so any format that does not keep write order intact must record an explicit
+  sequence. MCAP satisfies this via FileOrder reads of an in-order, uncompressed
+  write.

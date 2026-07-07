@@ -696,6 +696,65 @@ class TestDropNthInterceptor:
         assert [c["seq"] for c in counters] == [0, 1, 2, 6, 7, 8, 9]
 
 
+class TestRecordingFormatSeam:
+    """The recording format is selected from the output extension at the run
+    boundary (req #24). An unrecognized extension is a config error, caught
+    before any participant starts; the sole v1 format, .mcap, is unchanged."""
+
+    def _producer_with_marker(self, tmp_path):
+        """A manifest whose process participant writes a marker file the moment
+        the kernel spawns it, so a missing marker proves no participant ran."""
+        import sys as _sys
+
+        from conftest import ROOT
+
+        marker = tmp_path / "spawned.marker"
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_native(
+            "aprod",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+        )
+        m.add_process(
+            "marker",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "spawn_marker.py"),
+                     str(marker)],
+            step_period_ns=10_000_000,
+        )
+        return m, marker
+
+    def test_unknown_extension_is_config_error_and_starts_no_participants(
+        self, run_sil, tmp_path
+    ):
+        m, marker = self._producer_with_marker(tmp_path)
+        proc = run_sil(m.write(tmp_path / "m.json").path,
+                       out=tmp_path / "out.bogus")
+        assert proc.returncode == 2
+        assert ".bogus" in proc.stderr
+        # The format check precedes engine setup, so the process participant
+        # was never spawned.
+        assert not marker.exists()
+
+    def test_mcap_output_is_byte_identical(self, run_sil, tmp_path):
+        # Naming the .mcap output explicitly must produce exactly the same bytes
+        # as the default path: the seam is a pure dispatch, not a re-encode.
+        m = toy_manifest(duration_ns=100_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_native(
+            "producer",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+        )
+        ref = m.write(tmp_path / "m.json").path
+        a = run_sil(ref, out=tmp_path / "a.mcap")
+        b = run_sil(ref, out=tmp_path / "b.mcap")
+        assert a.returncode == 0, a.stderr
+        assert b.returncode == 0, b.stderr
+        assert a.mcap_path.read_bytes() == b.mcap_path.read_bytes()
+
+
 class TestRunAbort:
     def test_failing_assertion_aborts_run_with_reason(self, run_sil, tmp_path):
         import sys as _sys

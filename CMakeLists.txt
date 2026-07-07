@@ -29,7 +29,7 @@ add_executable(sil-run
   kernel/src/engine.cpp
   kernel/src/native_participant.cpp
   kernel/src/process_participant.cpp
-  kernel/src/recorder.cpp
+  kernel/src/mcap_recording.cpp
   kernel/src/replayer.cpp)
 target_include_directories(sil-run PRIVATE include)
 target_link_libraries(sil-run PRIVATE nlohmann_json::nlohmann_json mcap_headers)
