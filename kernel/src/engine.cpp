@@ -64,7 +64,8 @@ Engine::Engine(const Manifest &manifest, Recorder *recorder)
   channels_.reserve(manifest.channels.size());
   for (uint32_t i = 0; i < manifest.channels.size(); i++) {
     const ChannelSpec &spec = manifest.channels[i];
-    channels_.push_back({&spec, &manifest.schemas.at(spec.schema), i, 0, {}});
+    channels_.push_back({&spec, &manifest.schemas.at(spec.schema), i, 0, {},
+                         std::vector<uint64_t>(spec.interceptors.size(), 0)});
   }
 }
 
@@ -171,13 +172,36 @@ void Engine::publish(const std::string &owner, const std::string &channel,
                    "' but schema '" + c.spec->schema + "' is " +
                    std::to_string(c.schema->byte_size) + " bytes");
 
-  // Fault injection choke point: a `delay` interceptor whose half-open window
-  // [start_ns, end_ns) contains the actual publish time shifts the message's
-  // visibility — and the recorded ground truth — later by delay_ns. Multiple
-  // matching delays compose in declared order. Other kinds are still inert.
-  // The sum saturates: delay_ns is only bounded to 2^64-1 at load, so an
-  // overflowing total clamps to the max and is dropped below rather than
-  // wrapping around into the visible range.
+  // Fault injection choke point: a `drop` interceptor whose half-open window
+  // [start_ns, end_ns) contains the actual publish time silences the message —
+  // it is never recorded, delivered, nor does it consume a channel sequence
+  // number, exactly like a message shifted past the run duration. A `drop_nth`
+  // interceptor counts each message that falls inside its own window and drops
+  // only every nth one (counting from 1); the count is per-interceptor and
+  // independent of channel sequence numbers. Evaluated before delay so a
+  // dropped message is never shifted or recorded.
+  for (size_t k = 0; k < c.spec->interceptors.size(); k++) {
+    const InterceptorSpec &i = c.spec->interceptors[k];
+    if (i.kind != "drop" && i.kind != "drop_nth") continue;
+    if (now_ns_ < i.start_ns || (i.end_ns && now_ns_ >= *i.end_ns)) continue;
+    if (i.kind == "drop") {
+      global_seq_++;
+      return;
+    }
+    // drop_nth: matched the window — advance its counter and drop on multiples.
+    if (++c.window_counts[k] % *i.n == 0) {
+      global_seq_++;
+      return;
+    }
+  }
+
+  // A surviving message may still be shifted: a `delay` interceptor whose
+  // half-open window [start_ns, end_ns) contains the actual publish time moves
+  // the message's visibility — and the recorded ground truth — later by
+  // delay_ns. Multiple matching delays compose in declared order. The sum
+  // saturates: delay_ns is only bounded to 2^64-1 at load, so an overflowing
+  // total clamps to the max and is dropped below rather than wrapping around
+  // into the visible range.
   uint64_t visible_ns = now_ns_;
   for (const InterceptorSpec &i : c.spec->interceptors) {
     if (i.kind != "delay") continue;
