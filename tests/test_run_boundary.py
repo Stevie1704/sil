@@ -3,6 +3,7 @@ and artifacts, assert on exit code and MCAP content only."""
 
 import json
 
+import pytest
 from mcap.reader import make_reader
 
 from toys import TOY_SCHEMAS, accumulator_library, producer_library, toy_manifest
@@ -262,31 +263,49 @@ class TestInterceptorRejection:
 
 
 class TestInterceptorInertness:
-    """This slice declares interceptors but does not apply them. A run with a
-    never-matching interceptor must behave identically to one without it — the
-    recordings differ only by the manifest hash they embed."""
+    """Inertness proof (req #19): a well-formed interceptor whose window matches
+    no published message is observationally inert. The same pipeline run twice —
+    plain, then with the never-matching fault — yields bit-identical recorded
+    channel streams; the recordings differ *only* in the embedded manifest hash.
+    An interceptor is a pure function of what it matches, so declaring one that
+    matches nothing costs only the hash change the reproducibility contract
+    requires (a different manifest is a different run)."""
 
-    def test_declared_interceptor_only_changes_manifest_hash(self, run_sil, tmp_path):
-        def build(with_fault):
-            m = toy_manifest(duration_ns=100_000_000)
-            m.add_channel("ticks", schema="toy.Counter")
-            m.add_native(
-                "producer",
-                library=producer_library(),
-                config={"channel": "ticks", "period_ns": 10_000_000},
-            )
-            if with_fault:
-                # A window past the run's end can never match a message.
-                m.add_interceptor(
-                    "ticks", kind="drop",
-                    start_ns=200_000_000, end_ns=300_000_000,
-                )
-            return m
+    # A window entirely past the run's end can never match a published message.
+    # Both a shifting (delay) and a mutating (override) fault must be inert when
+    # they match nothing.
+    NEVER_MATCHING = {
+        "delay": dict(
+            kind="delay",
+            start_ns=200_000_000, end_ns=300_000_000, delay_ns=7_000_000,
+        ),
+        "override": dict(
+            kind="override",
+            start_ns=200_000_000, end_ns=300_000_000, field="value", value=999,
+        ),
+    }
 
-        base = build(False)
-        faulted = build(True)
-        base_ref = base.write(tmp_path / "base.json")
-        faulted_ref = faulted.write(tmp_path / "faulted.json")
+    def _producer(self, fault):
+        m = toy_manifest(duration_ns=100_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_native(
+            "producer",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+        )
+        if fault is not None:
+            m.add_interceptor("ticks", **fault)
+        return m
+
+    @pytest.mark.parametrize("kind", list(NEVER_MATCHING))
+    def test_never_matching_fault_differs_only_by_manifest_hash(
+        self, run_sil, tmp_path, kind
+    ):
+        base_ref = self._producer(None).write(tmp_path / "base.json")
+        faulted_ref = self._producer(self.NEVER_MATCHING[kind]).write(
+            tmp_path / "faulted.json"
+        )
+        # A different manifest is a different run: the hashes must diverge.
         assert base_ref.hash != faulted_ref.hash
 
         base_proc = run_sil(base_ref.path, out=tmp_path / "base.mcap")
@@ -294,10 +313,18 @@ class TestInterceptorInertness:
         assert base_proc.returncode == 0, base_proc.stderr
         assert faulted_proc.returncode == 0, faulted_proc.stderr
 
-        _, base_msgs = read_mcap(base_proc.mcap_path)
-        _, faulted_msgs = read_mcap(faulted_proc.mcap_path)
-        # Same topics, times, and payloads — the fault is inert.
+        base_meta, base_msgs = read_mcap(base_proc.mcap_path)
+        faulted_meta, faulted_msgs = read_mcap(faulted_proc.mcap_path)
+
+        # The recorded channel streams — topics, times, and raw payload bytes —
+        # are bit-identical: the never-matching fault is inert.
         assert base_msgs == faulted_msgs
+
+        # The recordings differ *only* in the manifest-hash metadata.
+        assert base_meta["manifest_hash"] == base_ref.hash
+        assert faulted_meta["manifest_hash"] == faulted_ref.hash
+        assert base_meta.pop("manifest_hash") != faulted_meta.pop("manifest_hash")
+        assert base_meta == faulted_meta
 
 
 class TestDelayInterceptor:
