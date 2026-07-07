@@ -83,12 +83,16 @@ canonical, hashable, archived with every run as part of the reproducibility
 contract. A Python builder API generates/validates manifests for test matrices;
 the kernel only ever consumes the manifest.
 
-### 13. Recording: MCAP native; record/replay as participants
-Recorder and replayer are ordinary scheduled participants (deterministic by
-construction). MCAP as the container: self-describing, schema-embedded,
-indexed, free tooling (Foxglove). Bit-diff of two runs = compare channel
-streams. Replaying recorded channels as stimulus covers open-loop
-re-simulation with no new machinery.
+### 13. Recording: MCAP native; record/replay inside stepped virtual time
+Recorder and replayer live inside the stepped virtual-time world, so both are
+deterministic by construction: the recorder as a direct sink at the publish
+choke point (equivalent to a latency-0 subscriber running last in every
+slot), the replayer driven by the kernel loop, which folds its recorded
+timestamps into slot selection and publishes them before task activations.
+MCAP as the container: self-describing, schema-embedded, indexed, free
+tooling (Foxglove). Bit-diff of two runs = compare channel streams. Replaying
+recorded channels as stimulus covers open-loop re-simulation with no new
+machinery.
 
 ### 14. Test API: in-schedule test participant + pytest frontend
 A test is itself a scheduled participant: publishes stimuli and evaluates
@@ -119,10 +123,20 @@ in the framework's own CI from day one.**
 - L4 (ISS) vECUs in v1.
 
 ## Open questions (not yet decided)
-- Schema/code-gen technology for #9: custom generator vs. FlatBuffers vs.
-  Cap'n Proto (constraint: deterministic fixed layout, zero-copy, C/C++/Python).
-- Manifest format detail: YAML vs. JSON, schema-validation tooling.
-- Virtual-time API surface offered to POSIX vECUs (clock shim: link-time,
-  LD_PRELOAD for `clock_gettime`, or explicit API only).
 - Which environment tool gets the first reference adapter.
-- Project name.
+- POSIX vECU clock shim (link-time or LD_PRELOAD for `clock_gettime`) for
+  stacks that read the clock themselves — v1 ships explicit API only (see
+  resolution below).
+
+## Resolved since (2026-07-07)
+- **Schema/code-gen (#9):** custom minimal generator. `tools/silschema.py`
+  emits packed C structs; `sil.schema` packs the identical layout in Python
+  (little-endian, declared field order, no padding). FlatBuffers/Cap'n Proto
+  passed over — overweight for fixed POD layouts.
+- **Manifest format (#12):** canonical JSON (sorted keys, compact
+  separators), SHA-256 over the exact file bytes. Strict validation mirrored
+  in the Python builder and the kernel loader (defense in depth).
+- **Virtual-time API for POSIX vECUs (#6):** explicit API only in v1 — the
+  step protocol delivers `t`/`dt` with every activation. A clock shim
+  remains open (above).
+- **Project name:** sil.
