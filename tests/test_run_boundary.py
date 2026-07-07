@@ -431,6 +431,107 @@ class TestDelayInterceptor:
         assert with_delay != base_sums
 
 
+class TestOverrideInterceptor:
+    """An `override` interceptor rewrites a named schema field to a declared
+    constant for messages published inside its virtual-time window. The
+    overridden value is the recorded ground truth and what subscribers see;
+    the field's byte layout is respected and other fields are untouched."""
+
+    def _producer(self, duration_ns=100_000_000):
+        m = toy_manifest(duration_ns=duration_ns)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_native(
+            "producer",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+        )
+        return m
+
+    def test_window_scoped_override_rewrites_only_inside_window(
+        self, run_sil, tmp_path
+    ):
+        # Producer emits toy.Counter{seq, value=seq*3}. Override `value` to 777
+        # for messages published in [25ms, 55ms) — at 30ms, 40ms, 50ms.
+        m = self._producer()
+        m.add_interceptor(
+            "ticks", kind="override",
+            start_ns=25_000_000, end_ns=55_000_000, field="value", value=777,
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        counters = [TYPES["toy.Counter"].unpack(d) for _, _, d in msgs]
+        # seq is never touched; value is 777 only for seq 3,4,5 (published in
+        # the window) and the untouched seq*3 elsewhere.
+        assert [c["seq"] for c in counters] == list(range(10))
+        assert [c["value"] for c in counters] == [
+            0, 3, 6, 777, 777, 777, 18, 21, 24, 27,
+        ]
+
+    def test_override_changes_downstream_consumer_view(self, run_sil, tmp_path):
+        # The override is a routing-layer effect: a subscriber folds in the
+        # constant, not the original value. Overriding every tick's `value` to
+        # 0 must flatten the accumulator's running sum.
+        def build():
+            m = toy_manifest(duration_ns=40_000_000)
+            m.add_channel("ticks", schema="toy.Counter")
+            m.add_channel("sums", schema="toy.Accum")
+            m.add_native("aprod", library=producer_library(),
+                         config={"channel": "ticks", "period_ns": 10_000_000})
+            m.add_native("mid", library=accumulator_library(),
+                         config={"input": "ticks", "output": "sums",
+                                 "period_ns": 10_000_000, "priority": 0})
+            return m
+
+        faulted = build()
+        faulted.add_interceptor("ticks", kind="override", field="value", value=0)
+        with_override = sums(run_sil(faulted.write(tmp_path / "o.json").path,
+                                     out=tmp_path / "o.mcap").mcap_path)
+        base = sums(run_sil(build().write(tmp_path / "b.json").path,
+                            out=tmp_path / "b.mcap").mcap_path)
+        # With every value forced to 0 the running sum never grows past 0.
+        assert with_override != base
+        assert all(accum["sum"] == 0 for _, accum in with_override)
+
+    def test_override_encodes_negative_constant(self, run_sil, tmp_path):
+        # `value` is i64; a negative override must round-trip through the
+        # little-endian two's-complement byte encoding.
+        m = self._producer(duration_ns=30_000_000)
+        m.add_interceptor("ticks", kind="override", field="value", value=-5)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        _, msgs = read_mcap(proc.mcap_path)
+        counters = [TYPES["toy.Counter"].unpack(d) for _, _, d in msgs]
+        assert all(c["value"] == -5 for c in counters)
+
+    def test_override_composes_with_delay_on_same_channel(self, run_sil, tmp_path):
+        # A delay and an override on the same channel both fire at the choke
+        # point: the recorded message is shifted in time *and* carries the
+        # overridden value.
+        m = self._producer(duration_ns=60_000_000)
+        m.add_interceptor(
+            "ticks", kind="delay",
+            start_ns=15_000_000, end_ns=25_000_000, delay_ns=5_000_000,
+        )
+        m.add_interceptor(
+            "ticks", kind="override",
+            start_ns=15_000_000, end_ns=25_000_000, field="value", value=999,
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        _, msgs = read_mcap(proc.mcap_path)
+        # The 20ms tick (seq 2) is shifted to 25ms and its value forced to 999;
+        # neighbours are untouched.
+        at_25 = [
+            (t, TYPES["toy.Counter"].unpack(d))
+            for _, t, d in msgs if t == 25_000_000
+        ]
+        assert at_25 == [(25_000_000, {"seq": 2, "value": 999})]
+        # 20ms (the shifted-away slot) carries no message.
+        assert 20_000_000 not in [t for _, t, _ in msgs]
+
+
 class TestRunAbort:
     def test_failing_assertion_aborts_run_with_reason(self, run_sil, tmp_path):
         import sys as _sys

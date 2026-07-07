@@ -1,7 +1,9 @@
 #include "engine.hpp"
 
 #include <algorithm>
+#include <cstring>
 #include <limits>
+#include <map>
 #include <set>
 
 #include "native_participant.hpp"
@@ -10,6 +12,52 @@
 #include "replayer.hpp"
 
 namespace sil {
+
+namespace {
+
+// Byte layout of each field type: little-endian, declared order, no padding —
+// the same wire contract participants pack to (see sil/schema.py and
+// tools/silschema.py). Maps a type name to its width and whether it is signed
+// integer, unsigned integer, or float, so an override constant can be encoded
+// into a message the same way its producer would have.
+struct TypeLayout {
+  size_t size;
+  enum { kUnsigned, kSigned, kFloat } repr;
+};
+
+const std::map<std::string, TypeLayout> kTypeLayouts = {
+    {"u8", {1, TypeLayout::kUnsigned}},  {"u16", {2, TypeLayout::kUnsigned}},
+    {"u32", {4, TypeLayout::kUnsigned}}, {"u64", {8, TypeLayout::kUnsigned}},
+    {"i8", {1, TypeLayout::kSigned}},    {"i16", {2, TypeLayout::kSigned}},
+    {"i32", {4, TypeLayout::kSigned}},   {"i64", {8, TypeLayout::kSigned}},
+    {"f32", {4, TypeLayout::kFloat}},    {"f64", {8, TypeLayout::kFloat}}};
+
+// Writes `value`, interpreted as type `layout`, little-endian into `dst`.
+// `value` is already range-checked at load, so the numeric conversions here
+// cannot overflow their target type.
+void encode_le(const TypeLayout &layout, double value, uint8_t *dst) {
+  uint64_t bits = 0;
+  switch (layout.repr) {
+    case TypeLayout::kUnsigned:
+      bits = static_cast<uint64_t>(value);
+      break;
+    case TypeLayout::kSigned:
+      bits = static_cast<uint64_t>(static_cast<int64_t>(value));
+      break;
+    case TypeLayout::kFloat:
+      if (layout.size == 4) {
+        float f = static_cast<float>(value);
+        std::memcpy(&bits, &f, sizeof(f));
+      } else {
+        std::memcpy(&bits, &value, sizeof(value));
+      }
+      break;
+  }
+  for (size_t i = 0; i < layout.size; i++)
+    dst[i] = static_cast<uint8_t>(bits >> (8 * i));
+}
+
+}  // namespace
 
 Engine::Engine(const Manifest &manifest, Recorder *recorder)
     : manifest_(manifest), recorder_(recorder) {
@@ -93,6 +141,27 @@ SubQueue *Engine::subscribe(const std::string &owner,
   return queues_.back().get();
 }
 
+void Engine::apply_overrides(const ChannelState &c, uint64_t publish_ns,
+                             std::vector<uint8_t> &bytes) const {
+  for (const InterceptorSpec &i : c.spec->interceptors) {
+    if (i.kind != "override") continue;
+    if (publish_ns < i.start_ns || (i.end_ns && publish_ns >= *i.end_ns))
+      continue;
+    // Field offset is the sum of preceding field widths (no padding). The
+    // field's presence in the schema was validated at load, so the lookups
+    // below always resolve.
+    size_t offset = 0;
+    for (const FieldSpec &f : c.schema->fields) {
+      const TypeLayout &layout = kTypeLayouts.at(f.type);
+      if (f.name == i.field) {
+        encode_le(layout, i.value, bytes.data() + offset);
+        break;
+      }
+      offset += layout.size;
+    }
+  }
+}
+
 void Engine::publish(const std::string &owner, const std::string &channel,
                      const void *data, size_t len) {
   ChannelState &c = channel_or_fail(channel, "participant '" + owner + "'");
@@ -125,10 +194,17 @@ void Engine::publish(const std::string &owner, const std::string &channel,
     return;
   }
 
+  // An `override` interceptor rewrites the named field to a constant on the
+  // same choke point, keyed on the actual publish time. The rewrite happens
+  // before recording and enqueueing, so the MCAP is the post-interceptor
+  // ground truth and every subscriber sees the overridden value.
   const uint8_t *p = static_cast<const uint8_t *>(data);
   PendingMessage msg{visible_ns, global_seq_++,
                      std::vector<uint8_t>(p, p + len)};
-  if (recorder_) recorder_->record(c.index, visible_ns, c.next_seq, data, len);
+  apply_overrides(c, now_ns_, msg.bytes);
+  if (recorder_)
+    recorder_->record(c.index, visible_ns, c.next_seq, msg.bytes.data(),
+                      msg.bytes.size());
   c.next_seq++;
   for (SubQueue *q : c.subscribers) q->push(msg);
 }
