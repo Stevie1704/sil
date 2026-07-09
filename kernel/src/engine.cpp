@@ -8,7 +8,7 @@
 
 #include "native_participant.hpp"
 #include "process_participant.hpp"
-#include "recorder.hpp"
+#include "recording_sink.hpp"
 #include "replayer.hpp"
 
 namespace sil {
@@ -59,7 +59,7 @@ void encode_le(const TypeLayout &layout, double value, uint8_t *dst) {
 
 }  // namespace
 
-Engine::Engine(const Manifest &manifest, Recorder *recorder)
+Engine::Engine(const Manifest &manifest, RecordingSink *recorder)
     : manifest_(manifest), recorder_(recorder) {
   channels_.reserve(manifest.channels.size());
   for (uint32_t i = 0; i < manifest.channels.size(); i++) {

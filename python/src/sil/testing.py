@@ -35,15 +35,14 @@ class RunResult:
 
     def messages(self, topic: str) -> list[tuple[int, dict]]:
         """Returns [(virtual_time_ns, fields_dict), ...] for one channel."""
-        from mcap.reader import make_reader
+        from sil.recording import read_records
 
         message_type = self._types[self._topic_schemas[topic]]
-        out = []
-        with open(self.mcap_path, "rb") as f:
-            for _, channel, message in make_reader(f).iter_messages():
-                if channel.topic == topic:
-                    out.append((message.log_time, message_type.unpack(message.data)))
-        return out
+        return [
+            (log_time, message_type.unpack(data))
+            for channel_topic, log_time, data in read_records(self.mcap_path)
+            if channel_topic == topic
+        ]
 
 
 def run_simulation(manifest: Manifest, *, runner: str | Path,

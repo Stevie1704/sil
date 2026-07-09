@@ -17,7 +17,7 @@ struct RunError : std::runtime_error {
   using std::runtime_error::runtime_error;
 };
 
-class Recorder;
+class RecordingSink;
 class NativeParticipant;
 class ProcessParticipant;
 class Replayer;
@@ -71,7 +71,7 @@ class SubQueue {
 
 class Engine {
  public:
-  Engine(const Manifest &manifest, Recorder *recorder);
+  Engine(const Manifest &manifest, RecordingSink *recorder);
   ~Engine();
 
   // Loads native libraries, spawns process participants, collects task
@@ -131,7 +131,7 @@ class Engine {
                        std::vector<uint8_t> &bytes) const;
 
   const Manifest &manifest_;
-  Recorder *recorder_;
+  RecordingSink *recorder_;
   std::vector<ChannelState> channels_;  // manifest (name-sorted) order
   std::vector<std::unique_ptr<SubQueue>> queues_;
   std::vector<Task> tasks_;

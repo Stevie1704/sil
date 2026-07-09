@@ -2,12 +2,12 @@
 
 #include <fstream>
 #include <limits>
+#include <memory>
 #include <set>
 #include <sstream>
 
-#include <mcap/reader.hpp>
-
 #include "engine.hpp"
+#include "recording_reader.hpp"
 #include "sha256.hpp"
 
 namespace sil {
@@ -23,7 +23,7 @@ Replayer::Replayer(Engine &engine, const std::string &name,
 
   // Read the whole file up front: it must exist, be readable, and hash to the
   // value the manifest committed to — otherwise the manifest hash would not
-  // actually cover the run's stimulus.
+  // actually cover the run's stimulus. This is format-independent.
   std::ifstream in(path, std::ios::binary);
   if (!in)
     throw ManifestError("manifest error: " + ctx +
@@ -38,66 +38,48 @@ Replayer::Replayer(Engine &engine, const std::string &name,
                         path.string() + "' hash " + actual +
                         " does not match manifest " + spec.recording_hash);
 
-  mcap::McapReader reader;
-  {
-    std::ifstream stream(path, std::ios::binary);
-    if (!reader.open(stream).ok())
-      throw ManifestError("manifest error: " + ctx +
-                          ": '" + path.string() + "' is not a valid MCAP file");
-    // Parse the summary (scanning the file if it has no summary section) so
-    // channel and schema records are available for validation.
-    if (!reader.readSummary(mcap::ReadSummaryMethod::AllowFallbackScan).ok())
-      throw ManifestError("manifest error: " + ctx + ": '" + path.string() +
-                          "' is not a readable MCAP recording");
+  // Decode via the format reader; all validation below stays here and is
+  // independent of how the recording was stored.
+  std::unique_ptr<RecordingReader> reader = make_recording_reader(path, ctx);
 
-    // A replayed channel must exist in the recording, must be selected from
-    // the recording's own topics, and its recorded schema must match the
-    // schema the new manifest declares for that channel (name and byte
-    // layout, compared via the canonical schema JSON the recorder embedded).
-    const Manifest &m = engine_.manifest();
-    std::set<std::string> wanted(spec.channels.begin(), spec.channels.end());
-    std::set<std::string> found;
-    for (auto &[cid, channel] : reader.channels()) {
-      if (!wanted.count(channel->topic)) continue;
-      found.insert(channel->topic);
+  // A replayed channel must exist in the recording, must be selected from the
+  // recording's own topics, and its recorded schema must match the schema the
+  // new manifest declares for that channel (name and byte layout, compared via
+  // the canonical schema JSON the recorder embedded).
+  const Manifest &m = engine_.manifest();
+  std::set<std::string> wanted(spec.channels.begin(), spec.channels.end());
+  std::set<std::string> found;
+  for (const RecordingReader::ChannelSchema &cs : reader->channel_schemas()) {
+    if (!wanted.count(cs.channel)) continue;
+    found.insert(cs.channel);
 
-      // The channel exists in the manifest (load_manifest already rejects a
-      // replay of an undeclared channel); a recording with no schema for its
-      // own channel is malformed and rejected here.
-      const ChannelSpec *cs = m.find_channel(channel->topic);
-      const SchemaSpec &want_schema = m.schemas.at(cs->schema);
-      mcap::SchemaPtr rs = reader.schema(channel->schemaId);
-      if (!rs)
-        throw ManifestError("manifest error: " + ctx + ": channel '" +
-                            channel->topic + "' has no schema in recording");
-      std::string rec_schema(reinterpret_cast<const char *>(rs->data.data()),
-                             rs->data.size());
-      if (rs->name != cs->schema || rec_schema != want_schema.canonical_json)
-        throw ManifestError(
-            "manifest error: " + ctx + ": channel '" + channel->topic +
-            "' schema in recording does not match manifest schema '" +
-            cs->schema + "'");
-    }
-    for (const std::string &want : spec.channels)
-      if (!found.count(want))
-        throw ManifestError("manifest error: " + ctx + ": channel '" + want +
-                            "' not present in recording '" + path.string() +
-                            "'");
-
-    // FileOrder (the default) hands back messages in the order they were
-    // written, i.e. the original run's global publish order; that fixes the
-    // tie-break for messages sharing a timestamp. Drop anything at or beyond
-    // the run duration so a long recording can drive a shorter run.
-    const uint64_t duration = m.duration_ns;
-    for (const mcap::MessageView &mv : reader.readMessages()) {
-      if (!wanted.count(mv.channel->topic)) continue;
-      if (mv.message.logTime >= duration) continue;
-      const auto *p = reinterpret_cast<const uint8_t *>(mv.message.data);
-      messages_.push_back({mv.message.logTime, mv.channel->topic,
-                           std::vector<uint8_t>(p, p + mv.message.dataSize)});
-    }
+    // The channel exists in the manifest (load_manifest already rejects a
+    // replay of an undeclared channel).
+    const ChannelSpec *spec_ch = m.find_channel(cs.channel);
+    const SchemaSpec &want_schema = m.schemas.at(spec_ch->schema);
+    if (cs.schema_name != spec_ch->schema ||
+        cs.canonical_json != want_schema.canonical_json)
+      throw ManifestError(
+          "manifest error: " + ctx + ": channel '" + cs.channel +
+          "' schema in recording does not match manifest schema '" +
+          spec_ch->schema + "'");
   }
-  reader.close();
+  for (const std::string &want : spec.channels)
+    if (!found.count(want))
+      throw ManifestError("manifest error: " + ctx + ": channel '" + want +
+                          "' not present in recording '" + path.string() +
+                          "'");
+
+  // Keep the recording's stored total publish order (the tie-break for
+  // messages sharing a timestamp). Drop anything at or beyond the run duration
+  // so a long recording can drive a shorter run.
+  const uint64_t duration = m.duration_ns;
+  for (RecordingReader::Message &msg : std::move(*reader).take_messages()) {
+    if (!wanted.count(msg.channel)) continue;
+    if (msg.publish_ns >= duration) continue;
+    messages_.push_back(
+        {msg.publish_ns, std::move(msg.channel), std::move(msg.bytes)});
+  }
 }
 
 uint64_t Replayer::next_publish_ns() const {

@@ -2,10 +2,11 @@
 
 #include <cstring>
 #include <iostream>
+#include <memory>
 
 #include "engine.hpp"
 #include "manifest.hpp"
-#include "recorder.hpp"
+#include "recording_sink.hpp"
 
 namespace {
 
@@ -46,12 +47,16 @@ int main(int argc, char **argv) {
 
   try {
     sil::Manifest manifest = sil::load_manifest(manifest_path);
+    // Selecting the recording format is a manifest/config concern: an
+    // unrecognized output extension is a config error (exit 2) and must reject
+    // before any participant is created.
+    std::unique_ptr<sil::RecordingSink> recorder =
+        sil::make_recording_sink(out_path, manifest);
     try {
-      sil::Recorder recorder(out_path, manifest);
-      sil::Engine engine(manifest, &recorder);
+      sil::Engine engine(manifest, recorder.get());
       engine.setup();
       engine.run();
-      recorder.close();
+      recorder->close();
     } catch (const sil::ManifestError &) {
       throw;
     } catch (const std::exception &e) {
