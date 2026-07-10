@@ -27,6 +27,7 @@ add_executable(sil-run
   kernel/src/main.cpp
   kernel/src/manifest.cpp
   kernel/src/engine.cpp
+  kernel/src/clock_shim.cpp
   kernel/src/native_participant.cpp
   kernel/src/process_participant.cpp
   kernel/src/mcap_recording.cpp

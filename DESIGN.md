@@ -124,9 +124,6 @@ in the framework's own CI from day one.**
 
 ## Open questions (not yet decided)
 - Which environment tool gets the first reference adapter.
-- POSIX vECU clock shim (link-time or LD_PRELOAD for `clock_gettime`) for
-  stacks that read the clock themselves — v1 ships explicit API only (see
-  resolution below).
 
 ## Resolved since (2026-07-07)
 - **Schema/code-gen (#9):** custom minimal generator. `tools/silschema.py`
@@ -149,3 +146,22 @@ in the framework's own CI from day one.**
   so any format that does not keep write order intact must record an explicit
   sequence. MCAP satisfies this via FileOrder reads of an in-order, uncompressed
   write.
+- **POSIX vECU clock shim (#4):** preload interposition, resolving the open
+  question in favor of `LD_PRELOAD` (Linux) / `DYLD_INSERT_LIBRARIES` with a
+  `__DATA,__interpose` table (macOS). Link-time wrapping is rejected — opaque
+  binaries cannot be relinked; explicit-API-only is rejected — opaque code will
+  not call a new API. The shim interposes `clock_gettime` (monotonic-class IDs
+  → virtual `t`; realtime-class → epoch + `t`), `gettimeofday`, `time`,
+  `clock_getres` (reports 1 ns), and the sleep family (`nanosleep`,
+  `clock_nanosleep`, `usleep`, `sleep`), which return immediately with success;
+  CPU-time clock IDs pass through. **Frozen-step semantics:** every clock read
+  during one step returns the same `t`; time advances only between steps.
+  **Time transport:** the kernel writes the current virtual time into a small
+  fixed-layout region shared with the child (a memory-mapped file whose path is
+  handed over in `SIL_CLOCK_REGION` at spawn) before each step; the shim maps it
+  read-only and answers every read from it, so it has no knowledge of the step
+  protocol and adds no per-read syscall. The shim is opt-in per process
+  participant (manifest `shim` flag) with a manifest-declared realtime `epoch`;
+  both live in the hashed manifest. Boundary (documented, out of scope):
+  statically linked binaries and direct-syscall/vDSO clock users bypass the
+  shim.

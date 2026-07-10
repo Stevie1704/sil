@@ -9,8 +9,8 @@ from sil.manifest import Manifest
 TOY_SCHEMAS = json.loads((ROOT / "schemas" / "toy.json").read_text())
 
 
-def toy_manifest(duration_ns: int = 100_000_000) -> Manifest:
-    m = Manifest(duration_ns=duration_ns)
+def toy_manifest(duration_ns: int = 100_000_000, *, epoch_ns: int = 0) -> Manifest:
+    m = Manifest(duration_ns=duration_ns, epoch_ns=epoch_ns)
     m.add_schemas(TOY_SCHEMAS)
     return m
 

@@ -1,12 +1,19 @@
 #include "process_participant.hpp"
 
+#include <fcntl.h>
 #include <signal.h>
+#include <sys/mman.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include <nlohmann/json.hpp>
+
+#include "clock_shim.hpp"
 
 namespace sil {
 
@@ -71,60 +78,151 @@ std::vector<uint8_t> b64_decode(const std::string &in) {
 
 }  // namespace
 
+// --- virtual clock shim wiring (issue #28) ---------------------------------
+//
+// The kernel owns a small fixed-layout time region (include/sil/clock_region.h)
+// per shimmed participant: a memory-mapped temp file it writes and the child's
+// preloaded shim maps read-only. The shim has no knowledge of the kernel; the
+// only contract is the region layout and the SIL_CLOCK_REGION environment var.
+
+void ProcessParticipant::setup_clock_region() {
+  // A plain mmap'd file (not POSIX shm) for portability — the child's shim maps
+  // it by path, so it must stay on the filesystem until the child has mapped
+  // it; teardown_clock_region unlinks it at run end. Created in the OS temp dir.
+  const char *tmp = getenv("TMPDIR");
+  std::string tpl =
+      (tmp && *tmp ? std::string(tmp) : std::string("/tmp")) + "/sil_clock_XXXXXX";
+  std::vector<char> path(tpl.begin(), tpl.end());
+  path.push_back('\0');
+  region_fd_ = mkstemp(path.data());
+  if (region_fd_ < 0)
+    throw RunError("participant '" + name_ + "': clock region: mkstemp failed");
+  region_path_ = path.data();
+  if (ftruncate(region_fd_, sizeof(sil_clock_region)) != 0) {
+    teardown_clock_region();
+    throw RunError("participant '" + name_ + "': clock region: ftruncate failed");
+  }
+  void *p = mmap(nullptr, sizeof(sil_clock_region), PROT_READ | PROT_WRITE,
+                 MAP_SHARED, region_fd_, 0);
+  if (p == MAP_FAILED) {
+    teardown_clock_region();
+    throw RunError("participant '" + name_ + "': clock region: mmap failed");
+  }
+  region_ = static_cast<volatile sil_clock_region *>(p);
+  // t is set per step; epoch is fixed for the run. Start frozen at t=0 so the
+  // child's load-time reads (before its first step) see run start, not garbage.
+  region_->t = 0;
+  region_->epoch = epoch_ns_;
+
+  // Resolve the shim library path here, in the parent: inject_shim_env runs
+  // between fork and exec, where allocation and filesystem canonicalization are
+  // not async-signal-safe, so nothing heavier than setenv may happen there.
+  shim_lib_ = clock_shim_library_path().string();
+}
+
+void ProcessParticipant::inject_shim_env() const {
+  // Runs in the forked child before exec. Both strings are already built in the
+  // parent (setup_clock_region), so this only calls setenv — names the region
+  // file and preloads the shim so the child's own POSIX clock reads are
+  // interposed. LD_PRELOAD (Linux) / DYLD_INSERT_LIBRARIES (macOS): the same
+  // split the shim's unit tests use.
+  setenv(SIL_CLOCK_REGION_ENV, region_path_.c_str(), 1);
+#if defined(__APPLE__)
+  setenv("DYLD_INSERT_LIBRARIES", shim_lib_.c_str(), 1);
+#else
+  setenv("LD_PRELOAD", shim_lib_.c_str(), 1);
+#endif
+}
+
+void ProcessParticipant::write_clock_region(uint64_t now_ns) {
+  if (!region_) return;
+  region_->t = now_ns;  // epoch is invariant across steps; only t advances
+}
+
+void ProcessParticipant::teardown_clock_region() {
+  if (region_) {
+    munmap(const_cast<sil_clock_region *>(region_), sizeof(sil_clock_region));
+    region_ = nullptr;
+  }
+  if (region_fd_ >= 0) {
+    close(region_fd_);
+    region_fd_ = -1;
+  }
+  if (!region_path_.empty()) {
+    unlink(region_path_.c_str());
+    region_path_.clear();
+  }
+}
+
 ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
                                        const ProcessSpec &spec)
     : engine_(engine), name_(name), period_ns_(spec.step_period_ns),
-      publishes_(spec.publishes) {
+      publishes_(spec.publishes), epoch_ns_(engine.manifest().epoch_ns) {
   for (const std::string &ch : spec.subscribes)
     inputs_.emplace_back(ch, engine.subscribe(name, ch));
 
-  int to_child[2], from_child[2];
-  if (pipe(to_child) != 0 || pipe(from_child) != 0)
-    throw RunError("participant '" + name + "': pipe failed");
+  // Shimmed participants get a shared time region mapped before fork, so the
+  // child can map it read-only at load and the kernel can write virtual time
+  // into it before each step. The region path and shim preload are injected
+  // into the child's environment below. Set up before fork; on any failure
+  // between here and a fully-live participant the region must be released, as a
+  // throwing constructor never runs the destructor.
+  const bool shimmed = spec.shim;
+  if (shimmed) setup_clock_region();
 
-  pid_ = fork();
-  if (pid_ < 0) throw RunError("participant '" + name + "': fork failed");
-  if (pid_ == 0) {
-    dup2(to_child[0], STDIN_FILENO);
-    dup2(from_child[1], STDOUT_FILENO);
+  try {
+    int to_child[2], from_child[2];
+    if (pipe(to_child) != 0 || pipe(from_child) != 0)
+      throw RunError("participant '" + name + "': pipe failed");
+
+    pid_ = fork();
+    if (pid_ < 0) throw RunError("participant '" + name + "': fork failed");
+    if (pid_ == 0) {
+      dup2(to_child[0], STDIN_FILENO);
+      dup2(from_child[1], STDOUT_FILENO);
+      close(to_child[0]);
+      close(to_child[1]);
+      close(from_child[0]);
+      close(from_child[1]);
+      if (shimmed) inject_shim_env();
+      std::vector<char *> argv;
+      for (const std::string &arg : spec.command)
+        argv.push_back(const_cast<char *>(arg.c_str()));
+      argv.push_back(nullptr);
+      execvp(argv[0], argv.data());
+      perror("sil: exec participant");
+      _exit(127);
+    }
     close(to_child[0]);
-    close(to_child[1]);
-    close(from_child[0]);
     close(from_child[1]);
-    std::vector<char *> argv;
-    for (const std::string &arg : spec.command)
-      argv.push_back(const_cast<char *>(arg.c_str()));
-    argv.push_back(nullptr);
-    execvp(argv[0], argv.data());
-    perror("sil: exec participant");
-    _exit(127);
+    child_stdin_ = to_child[1];
+    child_stdout_ = from_child[0];
+    alive_ = true;
+
+    const Manifest &m = engine.manifest();
+    json channels = json::object();
+    json schemas = json::object();
+    auto add_channel = [&](const std::string &ch, const char *direction) {
+      const ChannelSpec *c = m.find_channel(ch);
+      channels[ch] = {{"schema", c->schema}, {"direction", direction}};
+      schemas[c->schema] = json::parse(m.schemas.at(c->schema).canonical_json);
+    };
+    for (const std::string &ch : spec.subscribes) add_channel(ch, "in");
+    for (const std::string &ch : spec.publishes) add_channel(ch, "out");
+
+    json init = {{"op", "init"},
+                 {"name", name},
+                 {"channels", channels},
+                 {"schemas", schemas}};
+    send_line(init.dump());
+    json ready = json::parse(read_line());
+    if (ready.value("op", "") != "ready")
+      throw RunError("participant '" + name + "': expected ready, got " +
+                     ready.dump());
+  } catch (...) {
+    teardown_clock_region();
+    throw;
   }
-  close(to_child[0]);
-  close(from_child[1]);
-  child_stdin_ = to_child[1];
-  child_stdout_ = from_child[0];
-  alive_ = true;
-
-  const Manifest &m = engine.manifest();
-  json channels = json::object();
-  json schemas = json::object();
-  auto add_channel = [&](const std::string &ch, const char *direction) {
-    const ChannelSpec *c = m.find_channel(ch);
-    channels[ch] = {{"schema", c->schema}, {"direction", direction}};
-    schemas[c->schema] = json::parse(m.schemas.at(c->schema).canonical_json);
-  };
-  for (const std::string &ch : spec.subscribes) add_channel(ch, "in");
-  for (const std::string &ch : spec.publishes) add_channel(ch, "out");
-
-  json init = {{"op", "init"},
-               {"name", name},
-               {"channels", channels},
-               {"schemas", schemas}};
-  send_line(init.dump());
-  json ready = json::parse(read_line());
-  if (ready.value("op", "") != "ready")
-    throw RunError("participant '" + name + "': expected ready, got " +
-                   ready.dump());
 }
 
 ProcessParticipant::~ProcessParticipant() {
@@ -147,6 +245,11 @@ void ProcessParticipant::step(uint64_t now_ns) {
                   {"t", msg.publish_ns},
                   {"data", b64_encode(msg.bytes)}});
   }
+
+  // Freeze this step's virtual time into the shared region before the child
+  // runs, so every clock read inside it (through the shim) returns exactly
+  // now_ns until the next step advances it. No-op for unshimmed participants.
+  write_clock_region(now_ns);
 
   json step = {
       {"op", "step"}, {"t", now_ns}, {"dt", period_ns_}, {"in", in}};
@@ -213,11 +316,15 @@ void ProcessParticipant::shutdown() {
   for (int i = 0; i < 200; i++) {
     int status = 0;
     pid_t r = waitpid(pid_, &status, WNOHANG);
-    if (r == pid_) return;
+    if (r == pid_) {
+      teardown_clock_region();
+      return;
+    }
     usleep(10000);
   }
   kill(pid_, SIGKILL);
   waitpid(pid_, nullptr, 0);
+  teardown_clock_region();
 }
 
 }  // namespace sil

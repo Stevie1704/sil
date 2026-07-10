@@ -124,6 +124,102 @@ class TestClockShimRejection:
         assert "shim library not found" not in proc.stderr
 
 
+class TestClockShimRunBoundary:
+    """End-to-end shim behavior at the run boundary (issue #28): a process
+    participant that reads the interposed POSIX clocks each step, run under a
+    shimmed manifest, records readings equal to the step's virtual time
+    (monotonic) and the declared epoch plus virtual time (realtime). No
+    knowledge of the shared region or preload leaks into the assertions — only
+    what a clock read returns and what lands in the recording."""
+
+    EPOCH = 1_700_000_000_000_000_000  # fixed calendar epoch, ns
+    PERIOD = 10_000_000
+    DURATION = 30_000_000  # steps at t = 0, 10ms, 20ms
+
+    def _manifest(self, *, shim, epoch_ns=0):
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = toy_manifest(duration_ns=self.DURATION, epoch_ns=epoch_ns)
+        m.add_channel("readings", schema="toy.Counter")
+        m.add_process(
+            "vecu",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "clock_reader.py")],
+            step_period_ns=self.PERIOD,
+            publishes=["readings"],
+            shim=shim,
+        )
+        return m
+
+    def _readings(self, mcap_path):
+        _, msgs = read_mcap(mcap_path)
+        return [
+            (t, TYPES["toy.Counter"].unpack(data))
+            for topic, t, data in msgs
+            if topic == "readings"
+        ]
+
+    def test_monotonic_reads_return_step_virtual_time(self, run_sil, tmp_path):
+        m = self._manifest(shim=True)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        readings = self._readings(proc.mcap_path)
+        # Each step's monotonic reading equals that step's virtual time t.
+        assert [t for t, _ in readings] == [0, self.PERIOD, 2 * self.PERIOD]
+        assert [r["seq"] for _, r in readings] == [0, self.PERIOD, 2 * self.PERIOD]
+
+    def test_realtime_reads_return_epoch_plus_virtual_time(self, run_sil, tmp_path):
+        m = self._manifest(shim=True, epoch_ns=self.EPOCH)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        readings = self._readings(proc.mcap_path)
+        assert [r["value"] for _, r in readings] == [
+            self.EPOCH + 0,
+            self.EPOCH + self.PERIOD,
+            self.EPOCH + 2 * self.PERIOD,
+        ]
+
+    def test_default_epoch_is_zero(self, run_sil, tmp_path):
+        # No epoch declared: realtime reads are just virtual time (epoch 0).
+        m = self._manifest(shim=True)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        readings = self._readings(proc.mcap_path)
+        assert [r["value"] for _, r in readings] == [0, self.PERIOD, 2 * self.PERIOD]
+
+    def test_unshimmed_participant_sees_wall_clock_not_virtual_time(
+        self, run_sil, tmp_path
+    ):
+        # Control: without the shim, the same participant's monotonic read is
+        # real wall-clock time — far larger than the step's virtual time — so
+        # the recorded readings do not equal t. This proves the shimmed runs
+        # above are the shim's doing, not an accident of the fixture.
+        m = self._manifest(shim=False)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        readings = self._readings(proc.mcap_path)
+        assert all(r["seq"] > 2 * self.PERIOD for _, r in readings)
+
+    def test_two_shimmed_runs_are_bit_identical(self, run_sil, tmp_path):
+        # The determinism contract extends to clock-reading vECUs: two runs of
+        # the same shimmed manifest, started at different wall-clock times,
+        # produce byte-identical MCAPs (req #6). Start the second run a moment
+        # later so any wall-clock leak would diverge the bytes.
+        import time as _time
+
+        ref = self._manifest(shim=True, epoch_ns=self.EPOCH).write(
+            tmp_path / "m.json"
+        )
+        a = run_sil(ref.path, out=tmp_path / "a.mcap")
+        _time.sleep(0.05)
+        b = run_sil(ref.path, out=tmp_path / "b.mcap")
+        assert a.returncode == 0, a.stderr
+        assert b.returncode == 0, b.stderr
+        assert a.mcap_path.read_bytes() == b.mcap_path.read_bytes()
+
+
 class TestEmptyRun:
     def test_produces_valid_mcap_tied_to_manifest_hash(self, run_sil, tmp_path):
         m = toy_manifest()
