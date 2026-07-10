@@ -31,6 +31,52 @@ One run = `sil-run manifest.json -o out.mcap`:
 Exit codes: `0` ok, `1` run/test failure, `2` config error, `3` determinism
 violation (sil-check).
 
+## Virtual clock shim for opaque POSIX vECUs
+
+An out-of-process participant is expected to derive time from the `step(t, Δt)`
+protocol and never read the wall clock. Opaque binaries you cannot change often
+break that rule — they call `clock_gettime`, `gettimeofday`, `time`, or sleep.
+The **clock shim** makes such a participant deterministic without touching it:
+preload a small library that answers every POSIX clock read from virtual time.
+
+Opt a process participant in per participant via the manifest `shim` flag, and
+set the run's realtime `epoch_ns` (calendar time, ns since 1970) that
+realtime-class reads are offset from:
+
+```python
+m = Manifest(duration_ns=30_000_000, epoch_ns=1_700_000_000_000_000_000)
+m.add_channel("readings", schema="toy.Counter")
+m.add_process(
+    "vecu",
+    command=[sys.executable, "vecu.py"],
+    step_period_ns=10_000_000,
+    publishes=["readings"],
+    shim=True,           # this participant sees virtual time; others do not
+)
+```
+
+Inside a shimmed child, per step at virtual time `t`:
+
+- monotonic-class reads (`CLOCK_MONOTONIC`, `..._RAW`) return `t` — nanoseconds
+  from run start;
+- realtime-class reads (`CLOCK_REALTIME`, `gettimeofday`, `time`) return
+  `epoch_ns + t`;
+- `clock_getres` reports 1 ns; the sleep family (`nanosleep`, `clock_nanosleep`,
+  `usleep`, `sleep`) returns success immediately without advancing time;
+- **reads are frozen within a step** — every read during one step returns the
+  same value; time advances only between steps.
+
+The shim applies **per participant**: a shimmed vECU and ordinary unshimmed
+participants coexist in one manifest and one run. Both `shim` and `epoch_ns`
+are hashed into the manifest (they change output), so shimmed and unshimmed
+variants of a run never collide under hash-based caching, and two shimmed runs
+started at different wall-clock times still produce bit-identical MCAPs — run
+`sil-check` on a shimmed manifest to prove it.
+
+**Boundaries (out of scope, documented):** statically linked binaries and code
+that reads the clock via direct syscalls or the vDSO bypass the preload and are
+not virtualized.
+
 ## Build & test
 
 ```sh
@@ -60,8 +106,8 @@ tests/             behavior tests at the run boundary
 
 ## Notes / deferred (per DESIGN.md)
 
-- Shared-memory zero-copy payloads, bus adapters, FMI importer, replayer,
-  clock shim for POSIX vECUs: later milestones.
+- Shared-memory zero-copy payloads, bus adapters, FMI importer: later
+  milestones.
 - The recorder is fed in global publish order — behaviorally identical to a
   latency-0 subscriber scheduled last in every slot.
 - Message layout is packed little-endian; cross-platform bit-exactness is an
