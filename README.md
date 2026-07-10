@@ -47,8 +47,9 @@ criterion (`tests/test_determinism.py`: run twice → bit-identical MCAP).
 ```
 kernel/src/        C++20 kernel: manifest, engine (scheduler+router),
                    recorder, native/process participant adapters
-include/sil/       stable C ABI for native participants
+include/sil/       stable C ABI for native participants; clock-region layout
 participants/      toy native participants (walking-skeleton fixtures)
+shim/              virtual clock shim (preload lib) + probe for POSIX vECUs
 schemas/           message schemas (single typed contract)
 tools/silschema.py schema → packed C structs; sil.schema packs the same
                    layout in Python
