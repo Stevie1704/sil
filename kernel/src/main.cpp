@@ -6,15 +6,10 @@
 #include <memory>
 #include <variant>
 
+#include "clock_shim.hpp"
 #include "engine.hpp"
 #include "manifest.hpp"
 #include "recording_sink.hpp"
-
-#ifdef __APPLE__
-#include <mach-o/dyld.h>
-#else
-#include <unistd.h>
-#endif
 
 namespace {
 
@@ -22,34 +17,13 @@ constexpr int kExitOk = 0;
 constexpr int kExitRunFailure = 1;
 constexpr int kExitConfigError = 2;
 
-#ifdef __APPLE__
-constexpr const char *kClockShimLib = "libsil_clock_shim.dylib";
-#else
-constexpr const char *kClockShimLib = "libsil_clock_shim.so";
-#endif
-
 void usage() {
   std::cerr << "usage: sil-run <manifest.json> [-o <out.mcap>]\n";
 }
 
-// The directory holding the running sil-run binary. The clock shim ships next
-// to it (CMake places libsil_clock_shim.* in the same dir), so this is where a
-// shimmed run must find it.
-std::filesystem::path runner_dir() {
-#ifdef __APPLE__
-  uint32_t size = 0;
-  _NSGetExecutablePath(nullptr, &size);
-  std::string buf(size, '\0');
-  if (_NSGetExecutablePath(buf.data(), &size) != 0) return {};
-  return std::filesystem::weakly_canonical(buf.c_str()).parent_path();
-#else
-  return std::filesystem::weakly_canonical("/proc/self/exe").parent_path();
-#endif
-}
-
-// The shim is injected at spawn (issue #28); here we only fail fast at load if
-// a participant opted in but the shim library is missing next to the runner, so
-// a broken install is a config error rather than a silently wall-clocked run.
+// Fail fast at load if a participant opted into the shim but the shim library
+// is missing next to the runner, so a broken install is a config error rather
+// than a silently wall-clocked run. The shim is injected at spawn (issue #28).
 bool manifest_requests_shim(const sil::Manifest &m) {
   for (const sil::ParticipantSpec &p : m.participants) {
     const auto *ps = std::get_if<sil::ProcessSpec>(&p.impl);
@@ -88,9 +62,8 @@ int main(int argc, char **argv) {
   try {
     sil::Manifest manifest = sil::load_manifest(manifest_path);
     if (manifest_requests_shim(manifest)) {
-      std::filesystem::path dir = runner_dir();
-      std::filesystem::path shim = dir / kClockShimLib;
-      if (dir.empty() || !std::filesystem::exists(shim)) {
+      std::filesystem::path shim = sil::clock_shim_library_path();
+      if (shim.empty() || !std::filesystem::exists(shim)) {
         std::cerr << "sil-run: clock shim requested but shim library not found "
                      "next to the runner: "
                   << shim.string() << "\n";

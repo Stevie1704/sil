@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "sil/clock_region.h"
+
 #include "engine.hpp"
 
 namespace sil {
@@ -48,6 +50,23 @@ class ProcessParticipant {
   pid_t pid_ = -1;
   std::string read_buffer_;
   bool alive_ = false;
+
+  // Virtual clock shim (issue #28). When the participant opts in, the kernel
+  // maps a small fixed-layout time region shared with the child, injects the
+  // shim preload plus the region path into the child's environment at spawn,
+  // and writes the current virtual time into the region before every step so
+  // the child's own clock reads return stepped virtual time. Left inert (fd -1,
+  // region null) for unshimmed participants.
+  int region_fd_ = -1;
+  std::string region_path_;
+  std::string shim_lib_;  // resolved in the parent so the child only setenv()s
+  volatile sil_clock_region *region_ = nullptr;
+  uint64_t epoch_ns_ = 0;
+
+  void setup_clock_region();
+  void inject_shim_env() const;  // runs in the forked child before exec
+  void write_clock_region(uint64_t now_ns);
+  void teardown_clock_region();
 };
 
 }  // namespace sil
