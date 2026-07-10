@@ -219,6 +219,27 @@ class TestClockShimRunBoundary:
         assert b.returncode == 0, b.stderr
         assert a.mcap_path.read_bytes() == b.mcap_path.read_bytes()
 
+    def test_sil_check_passes_on_shimmed_manifest(self, sil_run, tmp_path):
+        # The determinism proof runs through the real tool, not a hand-rolled
+        # bit-compare: sil-check runs the shimmed manifest twice and must report
+        # it deterministic unchanged (exit 0). Sleep between builder and check so
+        # the two internal runs straddle a wall-clock advance; a virtual-time
+        # leak would trip the check's own DETERMINISM VIOLATION path.
+        import sys as _sys
+        import time as _time
+
+        ref = self._manifest(shim=True, epoch_ns=self.EPOCH).write(
+            tmp_path / "m.json"
+        )
+        _time.sleep(0.05)
+        proc = subprocess.run(
+            [_sys.executable, "-m", "sil.check", str(ref.path),
+             "--runner", str(sil_run)],
+            capture_output=True, text=True,
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert proc.stdout.startswith("deterministic: ")
+
 
 class TestEmptyRun:
     def test_produces_valid_mcap_tied_to_manifest_hash(self, run_sil, tmp_path):
