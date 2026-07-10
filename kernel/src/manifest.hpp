@@ -60,6 +60,7 @@ struct ProcessSpec {
   std::vector<std::string> subscribes;
   std::vector<std::string> publishes;
   int32_t priority = 0;
+  bool shim = false;  // opt-in virtual clock shim (issue #27)
 };
 
 struct ReplaySpec {
@@ -75,6 +76,7 @@ struct ParticipantSpec {
 
 struct Manifest {
   uint64_t duration_ns = 0;
+  uint64_t epoch_ns = 0;  // realtime epoch for shimmed participants (issue #27)
   std::map<std::string, SchemaSpec> schemas;
   std::vector<ChannelSpec> channels;          // name-sorted
   std::vector<ParticipantSpec> participants;  // name-sorted

@@ -105,6 +105,58 @@ class TestValidation:
             m.add_channel("c", schema="toy.Counter", latency_ns=-1)
 
 
+class TestClockShim:
+    """The shim flag and realtime epoch are hashed config: a shimmed and an
+    unshimmed variant of the same run must never collide, while manifests that
+    predate the shim keep byte-identical output."""
+
+    def test_negative_epoch_rejected(self):
+        with pytest.raises(ManifestError, match="epoch"):
+            Manifest(duration_ns=1_000_000, epoch_ns=-1)
+
+    def test_non_integer_epoch_rejected(self):
+        # The kernel loader requires an unsigned integer; the builder must
+        # reject non-integers eagerly so the two validators agree.
+        with pytest.raises(ManifestError, match="epoch"):
+            Manifest(duration_ns=1_000_000, epoch_ns=1.5)
+
+    def test_default_epoch_is_omitted(self):
+        with_default = Manifest(duration_ns=1_000_000, epoch_ns=0)
+        without = Manifest(duration_ns=1_000_000)
+        assert "epoch_ns" not in json.loads(with_default.to_json())
+        assert with_default.hash() == without.hash()
+
+    def test_positive_epoch_is_emitted_and_changes_hash(self):
+        base = make_minimal()
+        with_epoch = Manifest(
+            duration_ns=100_000_000, epoch_ns=1_700_000_000_000_000_000
+        )
+        with_epoch.add_schemas(TOY_SCHEMAS)
+        with_epoch.add_channel("ticks", schema="toy.Counter")
+        with_epoch.add_native("producer", library="libtoy_producer.dylib")
+        doc = json.loads(with_epoch.to_json())
+        assert doc["epoch_ns"] == 1_700_000_000_000_000_000
+        assert with_epoch.hash() != base.hash()
+
+    def test_shim_flag_emitted_only_when_enabled(self):
+        m = make_minimal()
+        m.add_process(
+            "vecu", command=["x"], step_period_ns=10_000_000, shim=True
+        )
+        entry = json.loads(m.to_json())["participants"]["vecu"]
+        assert entry["shim"] is True
+
+    def test_unshimmed_process_omits_flag_and_keeps_hash(self):
+        shimless = make_minimal()
+        shimless.add_process("vecu", command=["x"], step_period_ns=10_000_000)
+        explicit_off = make_minimal()
+        explicit_off.add_process(
+            "vecu", command=["x"], step_period_ns=10_000_000, shim=False
+        )
+        assert "shim" not in json.loads(shimless.to_json())["participants"]["vecu"]
+        assert shimless.hash() == explicit_off.hash()
+
+
 class TestReplayBuilder:
     def _recording(self, tmp_path) -> str:
         rec = tmp_path / "rec.mcap"

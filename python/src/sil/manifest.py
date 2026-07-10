@@ -46,10 +46,18 @@ class ManifestRef:
 
 
 class Manifest:
-    def __init__(self, duration_ns: int):
+    def __init__(self, duration_ns: int, *, epoch_ns: int = 0):
         if duration_ns <= 0:
             raise ManifestError(f"duration_ns must be positive, got {duration_ns}")
+        # Realtime epoch handed to shimmed process participants; affects output,
+        # so it is hashed. A run's default (0) is omitted from the canonical doc
+        # so manifests predating the clock shim keep byte-identical hashes.
+        if not isinstance(epoch_ns, int) or isinstance(epoch_ns, bool):
+            raise ManifestError(f"epoch_ns must be an integer, got {epoch_ns!r}")
+        if epoch_ns < 0:
+            raise ManifestError(f"epoch_ns must be >= 0, got {epoch_ns}")
         self._duration_ns = duration_ns
+        self._epoch_ns = epoch_ns
         self._schemas: dict[str, dict] = {}
         self._channels: dict[str, dict] = {}
         self._participants: dict[str, dict] = {}
@@ -182,6 +190,7 @@ class Manifest:
         subscribes: list[str] | None = None,
         publishes: list[str] | None = None,
         priority: int = 0,
+        shim: bool = False,
     ) -> None:
         if step_period_ns <= 0:
             raise ManifestError(
@@ -189,17 +198,20 @@ class Manifest:
             )
         if not command:
             raise ManifestError(f"participant {name!r}: command must not be empty")
-        self._add_participant(
-            name,
-            {
-                "type": "process",
-                "command": command,
-                "step_period_ns": step_period_ns,
-                "subscribes": subscribes or [],
-                "publishes": publishes or [],
-                "priority": priority,
-            },
-        )
+        entry: dict = {
+            "type": "process",
+            "command": command,
+            "step_period_ns": step_period_ns,
+            "subscribes": subscribes or [],
+            "publishes": publishes or [],
+            "priority": priority,
+        }
+        # The virtual clock shim is opt-in per process participant. Only the
+        # enabled case is emitted, so a shimmed and an unshimmed variant of the
+        # same run hash differently while unshimmed manifests are unaffected.
+        if shim:
+            entry["shim"] = True
+        self._add_participant(name, entry)
 
     def add_replay(
         self,
@@ -276,13 +288,18 @@ class Manifest:
 
     def to_doc(self) -> dict:
         self._validate()
-        return {
+        doc: dict = {
             "sil_manifest": MANIFEST_VERSION,
             "duration_ns": self._duration_ns,
             "schemas": self._schemas,
             "channels": self._channels,
             "participants": self._participants,
         }
+        # Absent epoch_ns means 0 (the kernel's default); omit the default so
+        # pre-shim manifests keep byte-identical output.
+        if self._epoch_ns:
+            doc["epoch_ns"] = self._epoch_ns
+        return doc
 
     def to_json(self) -> str:
         return json.dumps(self.to_doc(), sort_keys=True, separators=(",", ":")) + "\n"
