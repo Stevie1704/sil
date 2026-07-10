@@ -2,6 +2,8 @@
 and artifacts, assert on exit code and MCAP content only."""
 
 import json
+import shutil
+import subprocess
 
 import pytest
 from mcap.reader import make_reader
@@ -45,6 +47,81 @@ class TestManifestRejection:
         proc = run_sil(bad)
         assert proc.returncode == 2
         assert "sil_manifest" in proc.stderr
+
+
+class TestClockShimRejection:
+    """Eager load-time validation of the clock-shim manifest surface. Each rule
+    is a config error (exit 2) with a diagnostic, distinguishable from a run
+    failure (exit 1)."""
+
+    def test_negative_epoch_is_config_error(self, run_sil, tmp_path):
+        bad = tmp_path / "bad.json"
+        bad.write_text(
+            '{"sil_manifest":1,"duration_ns":1000,"epoch_ns":-1,'
+            '"schemas":{},"channels":{},"participants":{}}'
+        )
+        proc = run_sil(bad)
+        assert proc.returncode == 2
+        assert "epoch_ns" in proc.stderr
+
+    def test_shim_on_native_participant_is_config_error(self, run_sil, tmp_path):
+        # Unrepresentable via the Python builder, but a hand-written manifest
+        # can still express it; the kernel must reject it.
+        bad = tmp_path / "bad.json"
+        bad.write_text(
+            '{"sil_manifest":1,"duration_ns":1000,"schemas":{},"channels":{},'
+            '"participants":{"n":{"type":"native","library":"x","shim":true}}}'
+        )
+        proc = run_sil(bad)
+        assert proc.returncode == 2
+        assert "shim" in proc.stderr
+
+    def test_shim_requested_but_library_missing_is_config_error(
+        self, sil_run, tmp_path
+    ):
+        # The runner resolves the shim relative to its own path, so a copy of
+        # sil-run in a bare directory has no shim library beside it.
+        bare = tmp_path / "bare"
+        bare.mkdir()
+        runner = bare / "sil-run"
+        shutil.copy2(sil_run, runner)
+
+        m = toy_manifest()
+        m.add_process(
+            "vecu",
+            command=["true"],
+            step_period_ns=10_000_000,
+            shim=True,
+        )
+        manifest = tmp_path / "m.json"
+        m.write(manifest)
+
+        proc = subprocess.run(
+            [str(runner), str(manifest), "-o", str(tmp_path / "out.mcap")],
+            capture_output=True,
+            text=True,
+        )
+        assert proc.returncode == 2
+        assert "shim" in proc.stderr
+
+    def test_shim_with_library_present_is_not_rejected_for_missing_shim(
+        self, run_sil, tmp_path
+    ):
+        # The real sil-run ships the shim beside it, so a shimmed manifest must
+        # not fail the shim-not-found check. Spawn-time injection is issue #28,
+        # so the run may still fail later — we only assert the shim-missing
+        # diagnostic is absent.
+        m = toy_manifest()
+        m.add_process(
+            "vecu",
+            command=["true"],
+            step_period_ns=10_000_000,
+            shim=True,
+        )
+        manifest = tmp_path / "m.json"
+        m.write(manifest)
+        proc = run_sil(manifest)
+        assert "shim library not found" not in proc.stderr
 
 
 class TestEmptyRun:

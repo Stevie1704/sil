@@ -145,6 +145,10 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
   ParticipantSpec p;
   p.name = name;
   std::string type = require(js, "type", ctx);
+  // The clock shim is a process-participant-only opt-in; on any other type it
+  // is a config error (the Python builder cannot even express it there).
+  if (type != "process" && js.contains("shim"))
+    fail(ctx + ": shim is only valid on process participants");
   if (type == "native") {
     NativeSpec n;
     n.library = require(js, "library", ctx).get<std::string>();
@@ -161,6 +165,11 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
     ps.subscribes = check_channels(js.value("subscribes", json::array()), "subscribes");
     ps.publishes = check_channels(js.value("publishes", json::array()), "publishes");
     ps.priority = js.value("priority", 0);
+    if (js.contains("shim")) {
+      const json &v = js["shim"];
+      if (!v.is_boolean()) fail(ctx + ": shim must be a boolean");
+      ps.shim = v.get<bool>();
+    }
     p.impl = std::move(ps);
   } else if (type == "replay") {
     ReplaySpec rs;
@@ -210,6 +219,15 @@ Manifest load_manifest(const std::filesystem::path &path) {
   m.base_dir = std::filesystem::absolute(path).parent_path();
   m.duration_ns =
       positive_u64(require(doc, "duration_ns", "manifest"), "duration_ns");
+
+  // Optional realtime epoch for shimmed participants; absent means 0. A JSON
+  // negative is not is_number_unsigned(), so this rejects negative epochs.
+  if (doc.contains("epoch_ns")) {
+    const json &e = doc["epoch_ns"];
+    if (!e.is_number_unsigned())
+      fail("epoch_ns must be a non-negative integer");
+    m.epoch_ns = e.get<uint64_t>();
+  }
 
   for (const auto &[name, js] : require(doc, "schemas", "manifest").items())
     m.schemas.emplace(name, parse_schema(name, js));
