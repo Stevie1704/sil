@@ -48,8 +48,18 @@ SchemaSpec parse_schema(const std::string &name, const json &js) {
     if (it == kFieldSizes.end())
       fail("schema '" + name + "' field '" + fname + "': unknown type '" +
            ftype + "'");
-    spec.fields.push_back({fname, ftype});
-    spec.byte_size += it->second;
+    // An optional `count` makes the field a fixed-size array of its element
+    // type; it must be a positive integer. Absent means a scalar.
+    size_t count = 0;
+    if (f.contains("count")) {
+      const json &cv = f["count"];
+      if (!cv.is_number_unsigned() || cv.get<uint64_t>() < 1)
+        fail("schema '" + name + "' field '" + fname +
+             "': count must be an integer >= 1");
+      count = cv.get<size_t>();
+    }
+    spec.fields.push_back({fname, ftype, count});
+    spec.byte_size += it->second * (count == 0 ? 1 : count);
   }
   spec.canonical_json = js.dump();
   return spec;
@@ -113,6 +123,9 @@ void parse_interceptors(ChannelSpec &c, const json &arr, const SchemaSpec &schem
       if (!fs)
         fail(ctx + ": override field '" + spec.field +
              "' is not in the channel's schema");
+      if (fs->count != 0)
+        fail(ctx + ": override field '" + spec.field +
+             "' is a fixed-size array; only scalar fields can be overridden");
       const json &v = require(js, "value", ctx + " (override)");
       if (!v.is_number())
         fail(ctx + ": override value for '" + spec.field + "' must be a number");

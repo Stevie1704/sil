@@ -11,6 +11,7 @@ from mcap.reader import make_reader
 from toys import TOY_SCHEMAS, accumulator_library, producer_library, toy_manifest
 
 from sil import schema
+from sil.manifest import Manifest
 
 TYPES = schema.load(TOY_SCHEMAS)
 
@@ -976,3 +977,85 @@ class TestRunAbort:
         # The recording is finalized and readable up to the failure.
         _, msgs = read_mcap(proc.mcap_path)
         assert [t for _, t, _ in msgs] == [0, 10_000_000, 20_000_000]
+
+
+ARRAY_SCHEMAS = {
+    "big.Payload": {
+        "fields": [
+            {"name": "id", "type": "u64"},
+            {"name": "blob", "type": "u8", "count": 4},
+            {"name": "samples", "type": "f32", "count": 8},
+        ]
+    }
+}
+ARRAY_TYPES = schema.load(ARRAY_SCHEMAS)
+
+
+def write_with_raw_array_schema(tmp_path, schemas):
+    """Build a producer manifest but swap in a raw (possibly malformed) schema
+    set, so the kernel's load-time array validation can be exercised with
+    declarations the Python builder would itself reject."""
+    m = toy_manifest(duration_ns=100_000_000)
+    m.add_channel("ticks", schema="toy.Counter")
+    m.add_native(
+        "producer",
+        library=producer_library(),
+        config={"channel": "ticks", "period_ns": 10_000_000},
+    )
+    doc = m.to_doc()
+    doc["schemas"] = schemas
+    path = tmp_path / "m.json"
+    path.write_text(json.dumps(doc, sort_keys=True, separators=(",", ":")) + "\n")
+    return path
+
+
+class TestArrayPayload:
+    """Fixed-size array fields round-trip bit-for-bit over the inline
+    transport, and the kernel mirrors the builder's array validation at load."""
+
+    def test_array_payload_roundtrips_bit_for_bit(self, run_sil, tmp_path):
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = Manifest(duration_ns=30_000_000)
+        m.add_schemas(ARRAY_SCHEMAS)
+        m.add_channel("payload", schema="big.Payload")
+        m.add_process(
+            "source",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "array_source.py")],
+            step_period_ns=10_000_000,
+            publishes=["payload"],
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        payloads = [
+            ARRAY_TYPES["big.Payload"].unpack(data)
+            for topic, _, data in msgs
+            if topic == "payload"
+        ]
+        # One message per step; each payload is a pure function of the step
+        # index, reproduced here to assert the array bytes survive intact.
+        expected = []
+        for step in range(3):
+            expected.append({
+                "id": step,
+                "blob": bytes((step + k) % 256 for k in range(4)),
+                "samples": [float(step * 10 + k) for k in range(8)],
+            })
+        assert payloads == expected
+
+    def test_zero_count_array_is_config_error(self, run_sil, tmp_path):
+        bad = {"S": {"fields": [{"name": "a", "type": "u8", "count": 0}]}}
+        proc = run_sil(write_with_raw_array_schema(tmp_path, bad))
+        assert proc.returncode == 2
+        assert "count" in proc.stderr
+
+    def test_unknown_array_element_type_is_config_error(self, run_sil, tmp_path):
+        bad = {"S": {"fields": [{"name": "a", "type": "vec3", "count": 4}]}}
+        proc = run_sil(write_with_raw_array_schema(tmp_path, bad))
+        assert proc.returncode == 2
+        assert "vec3" in proc.stderr

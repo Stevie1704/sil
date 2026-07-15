@@ -19,6 +19,9 @@ struct ManifestError : std::runtime_error {
 struct FieldSpec {
   std::string name;
   std::string type;
+  // Fixed-size array element count; 0 means a scalar field. An array occupies
+  // count * sizeof(type) contiguous bytes (packed, no padding).
+  size_t count = 0;
 };
 
 struct SchemaSpec {
