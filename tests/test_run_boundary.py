@@ -1148,6 +1148,96 @@ class TestShmTransport:
         assert proc.returncode == 2, proc.stderr
         assert "arena" in proc.stderr
 
+    def test_shm_input_path_delivers_payload_to_subscriber(self, run_sil, tmp_path):
+        # array_source only publishes (child->kernel arena writes). Add a sink
+        # that subscribes to the shm channel and republishes onto an inline
+        # mirror, exercising the kernel->child arena-write + Python read path.
+        # The mirror payloads must equal what the source produced.
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = Manifest(duration_ns=60_000_000)
+        m.add_schemas(ARRAY_SCHEMAS)
+        m.add_channel("payload", schema="big.Payload", transport="shm")
+        m.add_channel("mirror", schema="big.Payload")
+        m.add_process(
+            "source",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "array_source.py")],
+            step_period_ns=10_000_000,
+            publishes=["payload"],
+        )
+        m.add_process(
+            "sink",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "array_echo.py")],
+            step_period_ns=10_000_000,
+            subscribes=["payload"],
+            publishes=["mirror"],
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        mirrored = [
+            ARRAY_TYPES["big.Payload"].unpack(data)
+            for topic, _, data in msgs
+            if topic == "mirror"
+        ]
+        # The sink republishes what it received; a non-empty mirror stream whose
+        # every payload is one the source actually produced (by the source's
+        # pure step function) proves the shm input path carried real bytes.
+        assert mirrored, "sink never received a shm input"
+        valid = [
+            {
+                "id": step,
+                "blob": bytes((step + k) % 256 for k in range(4)),
+                "samples": [float(step * 10 + k) for k in range(8)],
+            }
+            for step in range(6)  # 60ms / 10ms step, enough to cover all seen
+        ]
+        for payload in mirrored:
+            assert payload in valid, f"sink saw a payload the source never sent: {payload}"
+
+    def test_arena_files_are_cleaned_up_at_run_end(self, sil_run, tmp_path):
+        # Arenas are temp files under TMPDIR; scope TMPDIR to an empty dir and
+        # assert nothing is left behind once the run's process tree exits.
+        arena_dir = tmp_path / "arenas"
+        arena_dir.mkdir()
+        ref = self._array_manifest("shm").write(tmp_path / "m.json")
+        env = {**os.environ, "TMPDIR": str(arena_dir)}
+        proc = subprocess.run(
+            [str(sil_run), str(ref.path), "-o", str(tmp_path / "out.mcap")],
+            capture_output=True, text=True, env=env,
+        )
+        assert proc.returncode == 0, proc.stderr
+        leftover = list(arena_dir.glob("sil_arena_*"))
+        assert leftover == [], f"arena files leaked: {leftover}"
+
+    def test_bidirectional_shm_channel_is_config_error(self, run_sil, tmp_path):
+        # A single-slot arena carries one direction; a participant that both
+        # subscribes and publishes the same shm channel is rejected at startup
+        # (exit 2) rather than silently racing input/output writes.
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = Manifest(duration_ns=30_000_000)
+        m.add_schemas(ARRAY_SCHEMAS)
+        m.add_channel("payload", schema="big.Payload", transport="shm")
+        m.add_process(
+            "loop",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "array_echo.py")],
+            step_period_ns=10_000_000,
+            subscribes=["payload"],
+            publishes=["payload"],
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 2, proc.stderr
+        assert "shm" in proc.stderr
+
     def test_kernel_rejects_unknown_transport(self, run_sil, tmp_path):
         # The kernel mirrors the builder's transport validation (defense in
         # depth): a hand-written manifest with a bogus transport is a config

@@ -32,6 +32,10 @@ class _Arena:
     Payloads cross through this region instead of base64/JSON. A single slot is
     enough: the step protocol is sequential and each channel carries at most one
     message per step. `seq` marks a fresh write so a stale read is caught.
+
+    `capacity` is the kernel-authoritative arena size (derived from the schema
+    `byte_size`, delivered in the init line); this side does not re-derive it
+    from the schema, so the two ends cannot disagree.
     """
 
     def __init__(self, path: str, capacity: int):

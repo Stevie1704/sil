@@ -166,8 +166,23 @@ void ProcessParticipant::teardown_clock_region() {
 
 void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
   const Manifest &m = engine_.manifest();
+
+  // A single-slot arena carries one direction. A participant that both
+  // subscribes and publishes the same shm channel would race an input and an
+  // output write through one header — out of scope (no feedback loop over the
+  // large-payload path), so reject it at load rather than silently corrupt.
+  for (const std::string &ch : spec.publishes) {
+    const ChannelSpec *c = m.find_channel(ch);
+    if (c && c->transport == Transport::Shm &&
+        std::find(spec.subscribes.begin(), spec.subscribes.end(), ch) !=
+            spec.subscribes.end())
+      throw ManifestError("participant '" + name_ + "': channel '" + ch +
+                          "' cannot be both subscribed and published over "
+                          "shm transport");
+  }
+
   auto map_channel = [&](const std::string &ch) {
-    if (arenas_.count(ch)) return;  // pub+sub of the same channel shares one
+    if (arenas_.count(ch)) return;  // idempotent across the pub/sub passes below
     const ChannelSpec *c = m.find_channel(ch);
     if (!c || c->transport != Transport::Shm) return;
     const size_t capacity = m.schemas.at(c->schema).byte_size;
