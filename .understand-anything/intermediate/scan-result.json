@@ -1,0 +1,516 @@
+{
+  "name": "sil",
+  "description": "SiL framework: deterministic scheduling + typed data routing for vECU simulation.",
+  "languages": [
+    "c",
+    "cpp",
+    "json",
+    "makefile",
+    "markdown",
+    "python",
+    "toml",
+    "txt",
+    "unknown",
+    "yaml"
+  ],
+  "frameworks": [
+    "pytest",
+    "CMake",
+    "GitHub Actions",
+    "hatchling"
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "language": "yaml",
+      "sizeLines": 42,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".understand-anything/.understandignore",
+      "language": "unknown",
+      "sizeLines": 26,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".understand-anything/config.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "CMakeLists.txt",
+      "language": "txt",
+      "sizeLines": 78,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "DESIGN.md",
+      "language": "markdown",
+      "sizeLines": 167,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "include/sil/clock_region.h",
+      "language": "c",
+      "sizeLines": 33,
+      "fileCategory": "code"
+    },
+    {
+      "path": "include/sil/participant.h",
+      "language": "c",
+      "sizeLines": 60,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/clock_shim.cpp",
+      "language": "cpp",
+      "sizeLines": 43,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/clock_shim.hpp",
+      "language": "cpp",
+      "sizeLines": 14,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/engine.cpp",
+      "language": "cpp",
+      "sizeLines": 287,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/engine.hpp",
+      "language": "cpp",
+      "sizeLines": 148,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/main.cpp",
+      "language": "cpp",
+      "sizeLines": 95,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/manifest.cpp",
+      "language": "cpp",
+      "sizeLines": 273,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/manifest.hpp",
+      "language": "cpp",
+      "sizeLines": 94,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/mcap_recording.cpp",
+      "language": "cpp",
+      "sizeLines": 149,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/mcap_recording.hpp",
+      "language": "cpp",
+      "sizeLines": 35,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/native_participant.cpp",
+      "language": "cpp",
+      "sizeLines": 123,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/native_participant.hpp",
+      "language": "cpp",
+      "sizeLines": 37,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/process_participant.cpp",
+      "language": "cpp",
+      "sizeLines": 330,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/process_participant.hpp",
+      "language": "cpp",
+      "sizeLines": 72,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/recording_reader.hpp",
+      "language": "cpp",
+      "sizeLines": 52,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/recording_sink.hpp",
+      "language": "cpp",
+      "sizeLines": 37,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/replayer.cpp",
+      "language": "cpp",
+      "sizeLines": 98,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/replayer.hpp",
+      "language": "cpp",
+      "sizeLines": 48,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/sha256.hpp",
+      "language": "cpp",
+      "sizeLines": 112,
+      "fileCategory": "code"
+    },
+    {
+      "path": "Makefile",
+      "language": "makefile",
+      "sizeLines": 68,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "participants/toy_accumulator.cpp",
+      "language": "cpp",
+      "sizeLines": 57,
+      "fileCategory": "code"
+    },
+    {
+      "path": "participants/toy_producer.cpp",
+      "language": "cpp",
+      "sizeLines": 45,
+      "fileCategory": "code"
+    },
+    {
+      "path": "python/pyproject.toml",
+      "language": "toml",
+      "sizeLines": 19,
+      "fileCategory": "config"
+    },
+    {
+      "path": "python/src/sil/__init__.py",
+      "language": "python",
+      "sizeLines": 3,
+      "fileCategory": "code"
+    },
+    {
+      "path": "python/src/sil/check.py",
+      "language": "python",
+      "sizeLines": 61,
+      "fileCategory": "code"
+    },
+    {
+      "path": "python/src/sil/manifest.py",
+      "language": "python",
+      "sizeLines": 330,
+      "fileCategory": "code"
+    },
+    {
+      "path": "python/src/sil/participant.py",
+      "language": "python",
+      "sizeLines": 115,
+      "fileCategory": "code"
+    },
+    {
+      "path": "python/src/sil/recording.py",
+      "language": "python",
+      "sizeLines": 37,
+      "fileCategory": "code"
+    },
+    {
+      "path": "python/src/sil/schema.py",
+      "language": "python",
+      "sizeLines": 117,
+      "fileCategory": "code"
+    },
+    {
+      "path": "python/src/sil/testing.py",
+      "language": "python",
+      "sizeLines": 68,
+      "fileCategory": "code"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "sizeLines": 114,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "schemas/toy.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "shim/clock_probe.c",
+      "language": "c",
+      "sizeLines": 83,
+      "fileCategory": "code"
+    },
+    {
+      "path": "shim/clock_shim.c",
+      "language": "c",
+      "sizeLines": 243,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/conftest.py",
+      "language": "python",
+      "sizeLines": 58,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/participants/array_source.py",
+      "language": "python",
+      "sizeLines": 21,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/participants/clock_reader.py",
+      "language": "python",
+      "sizeLines": 26,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/participants/echo.py",
+      "language": "python",
+      "sizeLines": 15,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/participants/fail_at_20ms.py",
+      "language": "python",
+      "sizeLines": 12,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/participants/nondet.py",
+      "language": "python",
+      "sizeLines": 16,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/participants/spawn_marker.py",
+      "language": "python",
+      "sizeLines": 21,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/participants/tick_checks.py",
+      "language": "python",
+      "sizeLines": 27,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/test_clock_shim.py",
+      "language": "python",
+      "sizeLines": 149,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/test_determinism.py",
+      "language": "python",
+      "sizeLines": 92,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/test_manifest_builder.py",
+      "language": "python",
+      "sizeLines": 409,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/test_pytest_frontend.py",
+      "language": "python",
+      "sizeLines": 49,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/test_recording_reader.py",
+      "language": "python",
+      "sizeLines": 40,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/test_replayer.py",
+      "language": "python",
+      "sizeLines": 310,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/test_run_boundary.py",
+      "language": "python",
+      "sizeLines": 1061,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/test_schema.py",
+      "language": "python",
+      "sizeLines": 91,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/test_silschema.py",
+      "language": "python",
+      "sizeLines": 61,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/toys.py",
+      "language": "python",
+      "sizeLines": 23,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/silschema.py",
+      "language": "python",
+      "sizeLines": 81,
+      "fileCategory": "code"
+    }
+  ],
+  "totalFiles": 59,
+  "filteredByIgnore": 1,
+  "estimatedComplexity": "moderate",
+  "importMap": {
+    ".github/workflows/ci.yml": [],
+    ".understand-anything/.understandignore": [],
+    ".understand-anything/config.json": [],
+    "CMakeLists.txt": [],
+    "DESIGN.md": [],
+    "include/sil/clock_region.h": [],
+    "include/sil/participant.h": [],
+    "kernel/src/clock_shim.cpp": [
+      "kernel/src/clock_shim.hpp"
+    ],
+    "kernel/src/clock_shim.hpp": [],
+    "kernel/src/engine.cpp": [
+      "kernel/src/engine.hpp",
+      "kernel/src/native_participant.hpp",
+      "kernel/src/process_participant.hpp",
+      "kernel/src/recording_sink.hpp",
+      "kernel/src/replayer.hpp"
+    ],
+    "kernel/src/engine.hpp": [
+      "kernel/src/manifest.hpp"
+    ],
+    "kernel/src/main.cpp": [
+      "kernel/src/clock_shim.hpp",
+      "kernel/src/engine.hpp",
+      "kernel/src/manifest.hpp",
+      "kernel/src/recording_sink.hpp"
+    ],
+    "kernel/src/manifest.cpp": [
+      "kernel/src/manifest.hpp",
+      "kernel/src/sha256.hpp"
+    ],
+    "kernel/src/manifest.hpp": [],
+    "kernel/src/mcap_recording.cpp": [
+      "kernel/src/engine.hpp",
+      "kernel/src/mcap_recording.hpp",
+      "kernel/src/recording_reader.hpp"
+    ],
+    "kernel/src/mcap_recording.hpp": [
+      "kernel/src/manifest.hpp",
+      "kernel/src/recording_sink.hpp"
+    ],
+    "kernel/src/native_participant.cpp": [
+      "kernel/src/native_participant.hpp"
+    ],
+    "kernel/src/native_participant.hpp": [
+      "include/sil/participant.h",
+      "kernel/src/engine.hpp"
+    ],
+    "kernel/src/process_participant.cpp": [
+      "kernel/src/clock_shim.hpp",
+      "kernel/src/process_participant.hpp"
+    ],
+    "kernel/src/process_participant.hpp": [
+      "include/sil/clock_region.h",
+      "kernel/src/engine.hpp"
+    ],
+    "kernel/src/recording_reader.hpp": [],
+    "kernel/src/recording_sink.hpp": [
+      "kernel/src/manifest.hpp"
+    ],
+    "kernel/src/replayer.cpp": [
+      "kernel/src/engine.hpp",
+      "kernel/src/recording_reader.hpp",
+      "kernel/src/replayer.hpp",
+      "kernel/src/sha256.hpp"
+    ],
+    "kernel/src/replayer.hpp": [
+      "kernel/src/manifest.hpp"
+    ],
+    "kernel/src/sha256.hpp": [],
+    "Makefile": [],
+    "participants/toy_accumulator.cpp": [
+      "include/sil/participant.h"
+    ],
+    "participants/toy_producer.cpp": [
+      "include/sil/participant.h"
+    ],
+    "python/pyproject.toml": [],
+    "python/src/sil/__init__.py": [
+      "python/src/sil/manifest.py"
+    ],
+    "python/src/sil/check.py": [],
+    "python/src/sil/manifest.py": [],
+    "python/src/sil/participant.py": [
+      "python/src/sil/__init__.py",
+      "python/src/sil/schema.py"
+    ],
+    "python/src/sil/recording.py": [],
+    "python/src/sil/schema.py": [],
+    "python/src/sil/testing.py": [
+      "python/src/sil/__init__.py",
+      "python/src/sil/manifest.py",
+      "python/src/sil/schema.py"
+    ],
+    "README.md": [],
+    "schemas/toy.json": [],
+    "shim/clock_probe.c": [],
+    "shim/clock_shim.c": [
+      "include/sil/clock_region.h"
+    ],
+    "tests/conftest.py": [],
+    "tests/participants/array_source.py": [],
+    "tests/participants/clock_reader.py": [],
+    "tests/participants/echo.py": [],
+    "tests/participants/fail_at_20ms.py": [],
+    "tests/participants/nondet.py": [],
+    "tests/participants/spawn_marker.py": [],
+    "tests/participants/tick_checks.py": [],
+    "tests/test_clock_shim.py": [],
+    "tests/test_determinism.py": [
+      "tests/conftest.py",
+      "tests/toys.py"
+    ],
+    "tests/test_manifest_builder.py": [],
+    "tests/test_pytest_frontend.py": [
+      "tests/conftest.py",
+      "tests/toys.py"
+    ],
+    "tests/test_recording_reader.py": [],
+    "tests/test_replayer.py": [
+      "tests/conftest.py",
+      "tests/test_run_boundary.py",
+      "tests/toys.py"
+    ],
+    "tests/test_run_boundary.py": [
+      "tests/toys.py"
+    ],
+    "tests/test_schema.py": [],
+    "tests/test_silschema.py": [],
+    "tests/toys.py": [
+      "tests/conftest.py"
+    ],
+    "tools/silschema.py": []
+  }
+}

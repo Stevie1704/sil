@@ -1,0 +1,4481 @@
+{
+  "version": "1.0.0",
+  "gitCommitHash": "d56ae0f35cb14bd7e1600a9079e3a28edf15b1ee",
+  "generatedAt": "2026-07-16T17:05:00.324Z",
+  "files": {
+    ".github/workflows/ci.yml": {
+      "filePath": ".github/workflows/ci.yml",
+      "contentHash": "d0886407d66c539595b7d593b2c63535ecfba59356078e8320658b239cbc9fe4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 43,
+      "hasStructuralAnalysis": true
+    },
+    "CMakeLists.txt": {
+      "filePath": "CMakeLists.txt",
+      "contentHash": "beee7b77616056b1e24969be7bcdca4b6e5f24b88d1081d7d921ff5f7e8cd22d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 79,
+      "hasStructuralAnalysis": false
+    },
+    "DESIGN.md": {
+      "filePath": "DESIGN.md",
+      "contentHash": "f6ac75d6a36d6212b6f2001bc8972fe7d1928f948041187c209ca9bbf987b97c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 168,
+      "hasStructuralAnalysis": true
+    },
+    "include/sil/clock_region.h": {
+      "filePath": "include/sil/clock_region.h",
+      "contentHash": "81852c0d6ffbfd061b509b2f3dca400ca3f1e3a720cb3ef58bc286e98ffb1140",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 34,
+      "hasStructuralAnalysis": true
+    },
+    "include/sil/participant.h": {
+      "filePath": "include/sil/participant.h",
+      "contentHash": "9d1714755550e6dc157aa7efbda435f2f6d408bbac381a7dbd542b578478e221",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 61,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/clock_shim.cpp": {
+      "filePath": "kernel/src/clock_shim.cpp",
+      "contentHash": "bde052bbee0dff9e98fbae4e43f21bc62c5a4acfcbe7f1d9b35f7a2e4456e633",
+      "functions": [
+        {
+          "name": "runner_dir",
+          "params": [],
+          "returnType": "std::filesystem::path",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "clock_shim_library_path",
+          "params": [],
+          "returnType": "std::filesystem::path",
+          "exported": true,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "clock_shim.hpp",
+          "specifiers": [
+            "clock_shim.hpp"
+          ]
+        }
+      ],
+      "exports": [
+        "runner_dir",
+        "clock_shim_library_path"
+      ],
+      "totalLines": 44,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/clock_shim.hpp": {
+      "filePath": "kernel/src/clock_shim.hpp",
+      "contentHash": "2fc8a55918f733ecfa9bc06443ed888e6a8bfd5dd7f4b531f93c2669d253e037",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "filesystem",
+          "specifiers": [
+            "filesystem"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 15,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/engine.cpp": {
+      "filePath": "kernel/src/engine.cpp",
+      "contentHash": "65ad1bc7441bf4ea1b039f0560690bfaf167230a9da3563e4958e2c92d2f1983",
+      "functions": [
+        {
+          "name": "encode_le",
+          "params": [
+            "layout",
+            "value",
+            "dst"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "Engine",
+          "params": [
+            "manifest",
+            "recorder"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "~Engine",
+          "params": [],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "setup",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 37
+        },
+        {
+          "name": "register_task",
+          "params": [
+            "owner",
+            "task",
+            "period_ns",
+            "offset_ns",
+            "priority",
+            "fn"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "apply_overrides",
+          "params": [
+            "c",
+            "publish_ns",
+            "bytes"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "publish",
+          "params": [
+            "owner",
+            "channel",
+            "data",
+            "len"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 69
+        },
+        {
+          "name": "take",
+          "params": [
+            "queue",
+            "out"
+          ],
+          "returnType": "bool",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "fail",
+          "params": [
+            "owner",
+            "reason"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "run",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 36
+        }
+      ],
+      "classes": [
+        {
+          "name": "TypeLayout",
+          "methods": [],
+          "properties": [
+            "size",
+            "repr"
+          ],
+          "exported": true,
+          "lineCount": 4
+        }
+      ],
+      "imports": [
+        {
+          "source": "engine.hpp",
+          "specifiers": [
+            "engine.hpp"
+          ]
+        },
+        {
+          "source": "algorithm",
+          "specifiers": [
+            "algorithm"
+          ]
+        },
+        {
+          "source": "cstring",
+          "specifiers": [
+            "cstring"
+          ]
+        },
+        {
+          "source": "limits",
+          "specifiers": [
+            "limits"
+          ]
+        },
+        {
+          "source": "map",
+          "specifiers": [
+            "map"
+          ]
+        },
+        {
+          "source": "set",
+          "specifiers": [
+            "set"
+          ]
+        },
+        {
+          "source": "native_participant.hpp",
+          "specifiers": [
+            "native_participant.hpp"
+          ]
+        },
+        {
+          "source": "process_participant.hpp",
+          "specifiers": [
+            "process_participant.hpp"
+          ]
+        },
+        {
+          "source": "recording_sink.hpp",
+          "specifiers": [
+            "recording_sink.hpp"
+          ]
+        },
+        {
+          "source": "replayer.hpp",
+          "specifiers": [
+            "replayer.hpp"
+          ]
+        }
+      ],
+      "exports": [
+        "TypeLayout",
+        "encode_le",
+        "Engine",
+        "~Engine",
+        "setup",
+        "register_task",
+        "apply_overrides",
+        "publish",
+        "take",
+        "fail",
+        "run"
+      ],
+      "totalLines": 288,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/engine.hpp": {
+      "filePath": "kernel/src/engine.hpp",
+      "contentHash": "4aceec0316cd8d1f92babd40e1ed37c125f9b336e7c8221d8e29ac57e89415be",
+      "functions": [
+        {
+          "name": "SubQueue",
+          "params": [
+            "channel",
+            "latency_ns"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "visible_at",
+          "params": [
+            "now_ns"
+          ],
+          "returnType": "bool",
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "front_seq",
+          "params": [],
+          "returnType": "uint64_t",
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "pop",
+          "params": [],
+          "returnType": "PendingMessage",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "push",
+          "params": [
+            "m"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "now_ns",
+          "params": [],
+          "returnType": "uint64_t",
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "in_setup",
+          "params": [],
+          "returnType": "bool",
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "in_task",
+          "params": [],
+          "returnType": "bool",
+          "exported": true,
+          "lineCount": 1
+        }
+      ],
+      "classes": [
+        {
+          "name": "RunError",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "RecordingSink",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "NativeParticipant",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "ProcessParticipant",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "Replayer",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "PendingMessage",
+          "methods": [],
+          "properties": [
+            "publish_ns",
+            "global_seq",
+            "bytes"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "SubQueue",
+          "methods": [
+            "SubQueue",
+            "visible_at",
+            "front_seq",
+            "pop",
+            "push"
+          ],
+          "properties": [
+            "channel_",
+            "latency_ns_",
+            "pending_"
+          ],
+          "exported": true,
+          "lineCount": 38
+        },
+        {
+          "name": "Engine",
+          "methods": [
+            "setup",
+            "run",
+            "now_ns",
+            "in_setup",
+            "in_task",
+            "register_task",
+            "publish",
+            "take",
+            "fail",
+            "apply_overrides"
+          ],
+          "properties": [
+            "subscribe",
+            "manifest_",
+            "recorder_",
+            "channels_",
+            "queues_",
+            "tasks_",
+            "natives_",
+            "processes_",
+            "replayers_",
+            "now_ns_",
+            "global_seq_",
+            "in_setup_",
+            "in_task_",
+            "failure_"
+          ],
+          "exported": true,
+          "lineCount": 75
+        }
+      ],
+      "imports": [
+        {
+          "source": "cstdint",
+          "specifiers": [
+            "cstdint"
+          ]
+        },
+        {
+          "source": "deque",
+          "specifiers": [
+            "deque"
+          ]
+        },
+        {
+          "source": "functional",
+          "specifiers": [
+            "functional"
+          ]
+        },
+        {
+          "source": "memory",
+          "specifiers": [
+            "memory"
+          ]
+        },
+        {
+          "source": "stdexcept",
+          "specifiers": [
+            "stdexcept"
+          ]
+        },
+        {
+          "source": "string",
+          "specifiers": [
+            "string"
+          ]
+        },
+        {
+          "source": "vector",
+          "specifiers": [
+            "vector"
+          ]
+        },
+        {
+          "source": "manifest.hpp",
+          "specifiers": [
+            "manifest.hpp"
+          ]
+        }
+      ],
+      "exports": [
+        "RunError",
+        "RecordingSink",
+        "NativeParticipant",
+        "ProcessParticipant",
+        "Replayer",
+        "PendingMessage",
+        "SubQueue",
+        "visible_at",
+        "front_seq",
+        "pop",
+        "push",
+        "SubQueue",
+        "setup",
+        "run",
+        "now_ns",
+        "in_setup",
+        "in_task",
+        "register_task",
+        "publish",
+        "take",
+        "fail",
+        "Engine"
+      ],
+      "totalLines": 149,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/main.cpp": {
+      "filePath": "kernel/src/main.cpp",
+      "contentHash": "8cfb463c275976a0cf9d544ba5817a24833b2fb63ba01faa2b6d60077747f585",
+      "functions": [
+        {
+          "name": "usage",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "manifest_requests_shim",
+          "params": [
+            "m"
+          ],
+          "returnType": "bool",
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "main",
+          "params": [
+            "argc",
+            "argv"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 59
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "signal.h",
+          "specifiers": [
+            "signal.h"
+          ]
+        },
+        {
+          "source": "cstring",
+          "specifiers": [
+            "cstring"
+          ]
+        },
+        {
+          "source": "filesystem",
+          "specifiers": [
+            "filesystem"
+          ]
+        },
+        {
+          "source": "iostream",
+          "specifiers": [
+            "iostream"
+          ]
+        },
+        {
+          "source": "memory",
+          "specifiers": [
+            "memory"
+          ]
+        },
+        {
+          "source": "variant",
+          "specifiers": [
+            "variant"
+          ]
+        },
+        {
+          "source": "clock_shim.hpp",
+          "specifiers": [
+            "clock_shim.hpp"
+          ]
+        },
+        {
+          "source": "engine.hpp",
+          "specifiers": [
+            "engine.hpp"
+          ]
+        },
+        {
+          "source": "manifest.hpp",
+          "specifiers": [
+            "manifest.hpp"
+          ]
+        },
+        {
+          "source": "recording_sink.hpp",
+          "specifiers": [
+            "recording_sink.hpp"
+          ]
+        }
+      ],
+      "exports": [
+        "usage",
+        "manifest_requests_shim",
+        "main"
+      ],
+      "totalLines": 96,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/manifest.cpp": {
+      "filePath": "kernel/src/manifest.cpp",
+      "contentHash": "e988c830512d9b996f86ac384b29889ba6916278e0fb46a19c142257ca4b168c",
+      "functions": [
+        {
+          "name": "fail",
+          "params": [
+            "msg"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "positive_u64",
+          "params": [
+            "v",
+            "ctx"
+          ],
+          "returnType": "uint64_t",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "parse_schema",
+          "params": [
+            "name",
+            "js"
+          ],
+          "returnType": "SchemaSpec",
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "parse_interceptors",
+          "params": [
+            "c",
+            "arr",
+            "schema"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 61
+        },
+        {
+          "name": "parse_participant",
+          "params": [
+            "name",
+            "js",
+            "m"
+          ],
+          "returnType": "ParticipantSpec",
+          "exported": true,
+          "lineCount": 57
+        },
+        {
+          "name": "load_manifest",
+          "params": [
+            "path"
+          ],
+          "returnType": "Manifest",
+          "exported": true,
+          "lineCount": 62
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "manifest.hpp",
+          "specifiers": [
+            "manifest.hpp"
+          ]
+        },
+        {
+          "source": "cmath",
+          "specifiers": [
+            "cmath"
+          ]
+        },
+        {
+          "source": "fstream",
+          "specifiers": [
+            "fstream"
+          ]
+        },
+        {
+          "source": "sstream",
+          "specifiers": [
+            "sstream"
+          ]
+        },
+        {
+          "source": "nlohmann/json.hpp",
+          "specifiers": [
+            "nlohmann/json.hpp"
+          ]
+        },
+        {
+          "source": "sha256.hpp",
+          "specifiers": [
+            "sha256.hpp"
+          ]
+        }
+      ],
+      "exports": [
+        "fail",
+        "positive_u64",
+        "parse_schema",
+        "parse_interceptors",
+        "parse_participant",
+        "load_manifest"
+      ],
+      "totalLines": 274,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/manifest.hpp": {
+      "filePath": "kernel/src/manifest.hpp",
+      "contentHash": "1166c2e58c0f35632e7fe59f446979068507dc7c478c98638be3de31b043f642",
+      "functions": [],
+      "classes": [
+        {
+          "name": "ManifestError",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "FieldSpec",
+          "methods": [],
+          "properties": [
+            "name",
+            "type",
+            "count"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "SchemaSpec",
+          "methods": [],
+          "properties": [
+            "fields",
+            "canonical_json",
+            "byte_size"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "InterceptorSpec",
+          "methods": [],
+          "properties": [
+            "kind",
+            "start_ns",
+            "end_ns",
+            "delay_ns",
+            "n",
+            "field",
+            "value"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "ChannelSpec",
+          "methods": [],
+          "properties": [
+            "name",
+            "schema",
+            "latency_ns",
+            "interceptors"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "NativeSpec",
+          "methods": [],
+          "properties": [
+            "library",
+            "config_json"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "ProcessSpec",
+          "methods": [],
+          "properties": [
+            "command",
+            "step_period_ns",
+            "subscribes",
+            "publishes",
+            "priority",
+            "shim"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "ReplaySpec",
+          "methods": [],
+          "properties": [
+            "recording",
+            "recording_hash",
+            "channels"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "ParticipantSpec",
+          "methods": [],
+          "properties": [
+            "name",
+            "impl"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "Manifest",
+          "methods": [],
+          "properties": [
+            "duration_ns",
+            "epoch_ns",
+            "schemas",
+            "channels",
+            "participants",
+            "hash_hex",
+            "base_dir",
+            "find_channel"
+          ],
+          "exported": true,
+          "lineCount": 11
+        }
+      ],
+      "imports": [
+        {
+          "source": "cstdint",
+          "specifiers": [
+            "cstdint"
+          ]
+        },
+        {
+          "source": "filesystem",
+          "specifiers": [
+            "filesystem"
+          ]
+        },
+        {
+          "source": "map",
+          "specifiers": [
+            "map"
+          ]
+        },
+        {
+          "source": "optional",
+          "specifiers": [
+            "optional"
+          ]
+        },
+        {
+          "source": "stdexcept",
+          "specifiers": [
+            "stdexcept"
+          ]
+        },
+        {
+          "source": "string",
+          "specifiers": [
+            "string"
+          ]
+        },
+        {
+          "source": "variant",
+          "specifiers": [
+            "variant"
+          ]
+        },
+        {
+          "source": "vector",
+          "specifiers": [
+            "vector"
+          ]
+        }
+      ],
+      "exports": [
+        "ManifestError",
+        "FieldSpec",
+        "SchemaSpec",
+        "InterceptorSpec",
+        "ChannelSpec",
+        "NativeSpec",
+        "ProcessSpec",
+        "ReplaySpec",
+        "ParticipantSpec",
+        "Manifest"
+      ],
+      "totalLines": 95,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/mcap_recording.cpp": {
+      "filePath": "kernel/src/mcap_recording.cpp",
+      "contentHash": "9681e3aeebc4d45f946e49fd77970a263aa88cba5f30f0d9e445714b8e2683b3",
+      "functions": [
+        {
+          "name": "McapRecorder",
+          "params": [
+            "out",
+            "manifest"
+          ],
+          "exported": true,
+          "lineCount": 33
+        },
+        {
+          "name": "~McapRecorder",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "record",
+          "params": [
+            "channel_index",
+            "publish_ns",
+            "seq",
+            "data",
+            "len"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "close",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "make_recording_sink",
+          "params": [
+            "out",
+            "manifest"
+          ],
+          "returnType": "std::unique_ptr<RecordingSink>",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "McapRecordingReader",
+          "params": [
+            "path",
+            "ctx"
+          ],
+          "exported": true,
+          "lineCount": 34
+        },
+        {
+          "name": "channel_schemas",
+          "params": [],
+          "returnType": "std::vector<ChannelSchema>",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "take_messages",
+          "params": [],
+          "returnType": "std::vector<Message>",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "make_recording_reader",
+          "params": [
+            "path",
+            "ctx"
+          ],
+          "returnType": "std::unique_ptr<RecordingReader>",
+          "exported": true,
+          "lineCount": 9
+        }
+      ],
+      "classes": [
+        {
+          "name": "McapRecordingReader",
+          "methods": [
+            "McapRecordingReader",
+            "channel_schemas",
+            "take_messages"
+          ],
+          "properties": [
+            "schemas_",
+            "messages_"
+          ],
+          "exported": true,
+          "lineCount": 48
+        }
+      ],
+      "imports": [
+        {
+          "source": "mcap_recording.hpp",
+          "specifiers": [
+            "mcap_recording.hpp"
+          ]
+        },
+        {
+          "source": "fstream",
+          "specifiers": [
+            "fstream"
+          ]
+        },
+        {
+          "source": "mcap/reader.hpp",
+          "specifiers": [
+            "mcap/reader.hpp"
+          ]
+        },
+        {
+          "source": "mcap/writer.hpp",
+          "specifiers": [
+            "mcap/writer.hpp"
+          ]
+        },
+        {
+          "source": "engine.hpp",
+          "specifiers": [
+            "engine.hpp"
+          ]
+        },
+        {
+          "source": "recording_reader.hpp",
+          "specifiers": [
+            "recording_reader.hpp"
+          ]
+        }
+      ],
+      "exports": [
+        "McapRecorder",
+        "~McapRecorder",
+        "record",
+        "close",
+        "make_recording_sink",
+        "McapRecordingReader",
+        "channel_schemas",
+        "take_messages",
+        "McapRecordingReader",
+        "make_recording_reader"
+      ],
+      "totalLines": 150,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/mcap_recording.hpp": {
+      "filePath": "kernel/src/mcap_recording.hpp",
+      "contentHash": "d4847cac9df58c3b533c87f436899f7ba6fcc5cf015277e4f487844711a00f14",
+      "functions": [],
+      "classes": [
+        {
+          "name": "McapWriter",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "McapRecorder",
+          "methods": [
+            "record",
+            "close"
+          ],
+          "properties": [
+            "writer_",
+            "channel_ids_",
+            "closed_"
+          ],
+          "exported": true,
+          "lineCount": 14
+        }
+      ],
+      "imports": [
+        {
+          "source": "cstdint",
+          "specifiers": [
+            "cstdint"
+          ]
+        },
+        {
+          "source": "filesystem",
+          "specifiers": [
+            "filesystem"
+          ]
+        },
+        {
+          "source": "memory",
+          "specifiers": [
+            "memory"
+          ]
+        },
+        {
+          "source": "vector",
+          "specifiers": [
+            "vector"
+          ]
+        },
+        {
+          "source": "manifest.hpp",
+          "specifiers": [
+            "manifest.hpp"
+          ]
+        },
+        {
+          "source": "recording_sink.hpp",
+          "specifiers": [
+            "recording_sink.hpp"
+          ]
+        }
+      ],
+      "exports": [
+        "McapWriter",
+        "record",
+        "close",
+        "McapRecorder"
+      ],
+      "totalLines": 36,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/native_participant.cpp": {
+      "filePath": "kernel/src/native_participant.cpp",
+      "contentHash": "bae9bc440119f4c15c72d44f53c35c36dbb0b0ba2a049d3e26572c8e9f036ed4",
+      "functions": [
+        {
+          "name": "register_task",
+          "params": [
+            "ctx",
+            "name",
+            "period_ns",
+            "offset_ns",
+            "priority",
+            "fn",
+            "user"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "subscribe",
+          "params": [
+            "ctx",
+            "channel"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "publish",
+          "params": [
+            "ctx",
+            "channel",
+            "data",
+            "len"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "take",
+          "params": [
+            "ctx",
+            "channel",
+            "data",
+            "len"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "now_ns",
+          "params": [
+            "ctx"
+          ],
+          "returnType": "uint64_t",
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "fail",
+          "params": [
+            "ctx",
+            "reason"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "NativeParticipant",
+          "params": [
+            "engine",
+            "name",
+            "spec",
+            "base_dir"
+          ],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "~NativeParticipant",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "classes": [
+        {
+          "name": "NativeApiBridge",
+          "methods": [
+            "register_task",
+            "subscribe",
+            "publish",
+            "take",
+            "now_ns",
+            "fail"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 68
+        }
+      ],
+      "imports": [
+        {
+          "source": "native_participant.hpp",
+          "specifiers": [
+            "native_participant.hpp"
+          ]
+        },
+        {
+          "source": "dlfcn.h",
+          "specifiers": [
+            "dlfcn.h"
+          ]
+        }
+      ],
+      "exports": [
+        "register_task",
+        "subscribe",
+        "publish",
+        "take",
+        "now_ns",
+        "fail",
+        "NativeApiBridge",
+        "NativeParticipant",
+        "~NativeParticipant"
+      ],
+      "totalLines": 124,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/native_participant.hpp": {
+      "filePath": "kernel/src/native_participant.hpp",
+      "contentHash": "957634bf85b02e4e77527bb9f189d484bb4d95abb664d00d1ea45eaa827bf51e",
+      "functions": [
+        {
+          "name": "NativeParticipant",
+          "params": [],
+          "exported": true,
+          "lineCount": 1
+        }
+      ],
+      "classes": [
+        {
+          "name": "NativeParticipant",
+          "methods": [
+            "NativeParticipant"
+          ],
+          "properties": [
+            "engine_",
+            "name_",
+            "api_",
+            "handle_",
+            "subscriptions_",
+            "take_buffer_"
+          ],
+          "exported": true,
+          "lineCount": 21
+        }
+      ],
+      "imports": [
+        {
+          "source": "filesystem",
+          "specifiers": [
+            "filesystem"
+          ]
+        },
+        {
+          "source": "map",
+          "specifiers": [
+            "map"
+          ]
+        },
+        {
+          "source": "string",
+          "specifiers": [
+            "string"
+          ]
+        },
+        {
+          "source": "vector",
+          "specifiers": [
+            "vector"
+          ]
+        },
+        {
+          "source": "sil/participant.h",
+          "specifiers": [
+            "sil/participant.h"
+          ]
+        },
+        {
+          "source": "engine.hpp",
+          "specifiers": [
+            "engine.hpp"
+          ]
+        }
+      ],
+      "exports": [
+        "NativeParticipant",
+        "NativeParticipant"
+      ],
+      "totalLines": 38,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/process_participant.cpp": {
+      "filePath": "kernel/src/process_participant.cpp",
+      "contentHash": "bec0499c0b4ffb2a4bf5afde4b1e5470f9960423b6fe6de14c7b2baa2798d7e1",
+      "functions": [
+        {
+          "name": "b64_encode",
+          "params": [
+            "in"
+          ],
+          "returnType": "std::string",
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "b64_decode",
+          "params": [
+            "in"
+          ],
+          "returnType": "std::vector<uint8_t>",
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "setup_clock_region",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 34
+        },
+        {
+          "name": "inject_shim_env",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "write_clock_region",
+          "params": [
+            "now_ns"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "teardown_clock_region",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "ProcessParticipant",
+          "params": [
+            "engine",
+            "name",
+            "spec"
+          ],
+          "exported": true,
+          "lineCount": 70
+        },
+        {
+          "name": "~ProcessParticipant",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "step",
+          "params": [
+            "now_ns"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 46
+        },
+        {
+          "name": "send_line",
+          "params": [
+            "line"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "read_line",
+          "params": [],
+          "returnType": "std::string",
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "shutdown",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 23
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "process_participant.hpp",
+          "specifiers": [
+            "process_participant.hpp"
+          ]
+        },
+        {
+          "source": "fcntl.h",
+          "specifiers": [
+            "fcntl.h"
+          ]
+        },
+        {
+          "source": "signal.h",
+          "specifiers": [
+            "signal.h"
+          ]
+        },
+        {
+          "source": "sys/mman.h",
+          "specifiers": [
+            "sys/mman.h"
+          ]
+        },
+        {
+          "source": "sys/wait.h",
+          "specifiers": [
+            "sys/wait.h"
+          ]
+        },
+        {
+          "source": "unistd.h",
+          "specifiers": [
+            "unistd.h"
+          ]
+        },
+        {
+          "source": "algorithm",
+          "specifiers": [
+            "algorithm"
+          ]
+        },
+        {
+          "source": "cstdio",
+          "specifiers": [
+            "cstdio"
+          ]
+        },
+        {
+          "source": "cstdlib",
+          "specifiers": [
+            "cstdlib"
+          ]
+        },
+        {
+          "source": "cstring",
+          "specifiers": [
+            "cstring"
+          ]
+        },
+        {
+          "source": "nlohmann/json.hpp",
+          "specifiers": [
+            "nlohmann/json.hpp"
+          ]
+        },
+        {
+          "source": "clock_shim.hpp",
+          "specifiers": [
+            "clock_shim.hpp"
+          ]
+        }
+      ],
+      "exports": [
+        "b64_encode",
+        "b64_decode",
+        "setup_clock_region",
+        "inject_shim_env",
+        "write_clock_region",
+        "teardown_clock_region",
+        "ProcessParticipant",
+        "~ProcessParticipant",
+        "step",
+        "send_line",
+        "read_line",
+        "shutdown"
+      ],
+      "totalLines": 331,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/process_participant.hpp": {
+      "filePath": "kernel/src/process_participant.hpp",
+      "contentHash": "46c44973e5db9a80c39b7e88d105f47cb9f4a348dedc9e599ad02c6b2489e856",
+      "functions": [
+        {
+          "name": "ProcessParticipant",
+          "params": [],
+          "exported": true,
+          "lineCount": 1
+        }
+      ],
+      "classes": [
+        {
+          "name": "ProcessParticipant",
+          "methods": [
+            "ProcessParticipant",
+            "step",
+            "shutdown",
+            "send_line",
+            "read_line",
+            "setup_clock_region",
+            "inject_shim_env",
+            "write_clock_region",
+            "teardown_clock_region"
+          ],
+          "properties": [
+            "engine_",
+            "name_",
+            "period_ns_",
+            "inputs_",
+            "publishes_",
+            "child_stdin_",
+            "child_stdout_",
+            "pid_",
+            "read_buffer_",
+            "alive_",
+            "region_fd_",
+            "region_path_",
+            "shim_lib_",
+            "region_",
+            "epoch_ns_"
+          ],
+          "exported": true,
+          "lineCount": 44
+        }
+      ],
+      "imports": [
+        {
+          "source": "sys/types.h",
+          "specifiers": [
+            "sys/types.h"
+          ]
+        },
+        {
+          "source": "cstdint",
+          "specifiers": [
+            "cstdint"
+          ]
+        },
+        {
+          "source": "string",
+          "specifiers": [
+            "string"
+          ]
+        },
+        {
+          "source": "vector",
+          "specifiers": [
+            "vector"
+          ]
+        },
+        {
+          "source": "sil/clock_region.h",
+          "specifiers": [
+            "sil/clock_region.h"
+          ]
+        },
+        {
+          "source": "engine.hpp",
+          "specifiers": [
+            "engine.hpp"
+          ]
+        }
+      ],
+      "exports": [
+        "ProcessParticipant",
+        "step",
+        "shutdown",
+        "ProcessParticipant"
+      ],
+      "totalLines": 73,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/recording_reader.hpp": {
+      "filePath": "kernel/src/recording_reader.hpp",
+      "contentHash": "9e6adc167ca5976db677fadc51871abf471eac9cd1a89e27f3ca6590343ea8e2",
+      "functions": [
+        {
+          "name": "~RecordingReader",
+          "params": [],
+          "exported": true,
+          "lineCount": 1
+        }
+      ],
+      "classes": [
+        {
+          "name": "RecordingReader",
+          "methods": [
+            "~RecordingReader",
+            "channel_schemas",
+            "take_messages"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 28
+        }
+      ],
+      "imports": [
+        {
+          "source": "cstdint",
+          "specifiers": [
+            "cstdint"
+          ]
+        },
+        {
+          "source": "filesystem",
+          "specifiers": [
+            "filesystem"
+          ]
+        },
+        {
+          "source": "memory",
+          "specifiers": [
+            "memory"
+          ]
+        },
+        {
+          "source": "string",
+          "specifiers": [
+            "string"
+          ]
+        },
+        {
+          "source": "vector",
+          "specifiers": [
+            "vector"
+          ]
+        }
+      ],
+      "exports": [
+        "~RecordingReader",
+        "channel_schemas",
+        "take_messages",
+        "RecordingReader"
+      ],
+      "totalLines": 53,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/recording_sink.hpp": {
+      "filePath": "kernel/src/recording_sink.hpp",
+      "contentHash": "c453878aa6bd35c4f2f8a6ce563a6eb65ab1d19f6d1e54c9ed388353610408bb",
+      "functions": [
+        {
+          "name": "~RecordingSink",
+          "params": [],
+          "exported": true,
+          "lineCount": 1
+        }
+      ],
+      "classes": [
+        {
+          "name": "RecordingSink",
+          "methods": [
+            "~RecordingSink",
+            "record",
+            "close"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 13
+        }
+      ],
+      "imports": [
+        {
+          "source": "cstddef",
+          "specifiers": [
+            "cstddef"
+          ]
+        },
+        {
+          "source": "cstdint",
+          "specifiers": [
+            "cstdint"
+          ]
+        },
+        {
+          "source": "filesystem",
+          "specifiers": [
+            "filesystem"
+          ]
+        },
+        {
+          "source": "memory",
+          "specifiers": [
+            "memory"
+          ]
+        },
+        {
+          "source": "manifest.hpp",
+          "specifiers": [
+            "manifest.hpp"
+          ]
+        }
+      ],
+      "exports": [
+        "~RecordingSink",
+        "record",
+        "close",
+        "RecordingSink"
+      ],
+      "totalLines": 38,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/replayer.cpp": {
+      "filePath": "kernel/src/replayer.cpp",
+      "contentHash": "39d0add8d52b09b028f7137e211f4c757114a4d48075223a09cec8123e0674d9",
+      "functions": [
+        {
+          "name": "Replayer",
+          "params": [
+            "engine",
+            "name",
+            "spec",
+            "base_dir"
+          ],
+          "exported": true,
+          "lineCount": 69
+        },
+        {
+          "name": "next_publish_ns",
+          "params": [],
+          "returnType": "uint64_t",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "publish_due",
+          "params": [
+            "now_ns"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 7
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "replayer.hpp",
+          "specifiers": [
+            "replayer.hpp"
+          ]
+        },
+        {
+          "source": "fstream",
+          "specifiers": [
+            "fstream"
+          ]
+        },
+        {
+          "source": "limits",
+          "specifiers": [
+            "limits"
+          ]
+        },
+        {
+          "source": "memory",
+          "specifiers": [
+            "memory"
+          ]
+        },
+        {
+          "source": "set",
+          "specifiers": [
+            "set"
+          ]
+        },
+        {
+          "source": "sstream",
+          "specifiers": [
+            "sstream"
+          ]
+        },
+        {
+          "source": "engine.hpp",
+          "specifiers": [
+            "engine.hpp"
+          ]
+        },
+        {
+          "source": "recording_reader.hpp",
+          "specifiers": [
+            "recording_reader.hpp"
+          ]
+        },
+        {
+          "source": "sha256.hpp",
+          "specifiers": [
+            "sha256.hpp"
+          ]
+        }
+      ],
+      "exports": [
+        "Replayer",
+        "next_publish_ns",
+        "publish_due"
+      ],
+      "totalLines": 99,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/replayer.hpp": {
+      "filePath": "kernel/src/replayer.hpp",
+      "contentHash": "f4b17a0cbcf753857417f2b43a9c787653e6a94c591511e8ed8f21c636e0a2f5",
+      "functions": [],
+      "classes": [
+        {
+          "name": "Engine",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "Replayer",
+          "methods": [
+            "next_publish_ns",
+            "publish_due"
+          ],
+          "properties": [
+            "engine_",
+            "name_",
+            "messages_",
+            "next_"
+          ],
+          "exported": true,
+          "lineCount": 26
+        }
+      ],
+      "imports": [
+        {
+          "source": "cstdint",
+          "specifiers": [
+            "cstdint"
+          ]
+        },
+        {
+          "source": "filesystem",
+          "specifiers": [
+            "filesystem"
+          ]
+        },
+        {
+          "source": "string",
+          "specifiers": [
+            "string"
+          ]
+        },
+        {
+          "source": "vector",
+          "specifiers": [
+            "vector"
+          ]
+        },
+        {
+          "source": "manifest.hpp",
+          "specifiers": [
+            "manifest.hpp"
+          ]
+        }
+      ],
+      "exports": [
+        "Engine",
+        "next_publish_ns",
+        "publish_due",
+        "Replayer"
+      ],
+      "totalLines": 49,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/sha256.hpp": {
+      "filePath": "kernel/src/sha256.hpp",
+      "contentHash": "dc637491ac8956d191ceb3091cb16eeac4327a8a1715c888ae0f9159040138b5",
+      "functions": [
+        {
+          "name": "update",
+          "params": [
+            "data",
+            "len"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "hex_digest",
+          "params": [],
+          "returnType": "std::string",
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "rotr",
+          "params": [
+            "x",
+            "n"
+          ],
+          "returnType": "uint32_t",
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "process_block",
+          "params": [
+            "p"
+          ],
+          "returnType": "void",
+          "exported": false,
+          "lineCount": 41
+        },
+        {
+          "name": "sha256_hex",
+          "params": [
+            "bytes"
+          ],
+          "returnType": "std::string",
+          "exported": true,
+          "lineCount": 5
+        }
+      ],
+      "classes": [
+        {
+          "name": "Sha256",
+          "methods": [
+            "update",
+            "hex_digest",
+            "rotr",
+            "process_block"
+          ],
+          "properties": [
+            "h_",
+            "buf_",
+            "buf_len_",
+            "total_"
+          ],
+          "exported": true,
+          "lineCount": 93
+        }
+      ],
+      "imports": [
+        {
+          "source": "array",
+          "specifiers": [
+            "array"
+          ]
+        },
+        {
+          "source": "cstdint",
+          "specifiers": [
+            "cstdint"
+          ]
+        },
+        {
+          "source": "cstring",
+          "specifiers": [
+            "cstring"
+          ]
+        },
+        {
+          "source": "string",
+          "specifiers": [
+            "string"
+          ]
+        }
+      ],
+      "exports": [
+        "update",
+        "hex_digest",
+        "Sha256",
+        "sha256_hex"
+      ],
+      "totalLines": 113,
+      "hasStructuralAnalysis": true
+    },
+    "Makefile": {
+      "filePath": "Makefile",
+      "contentHash": "ae0bb3983fdf385bd96ec695e04033b338fd1186264defa1386aa97132fa7c7e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 69,
+      "hasStructuralAnalysis": true
+    },
+    "participants/toy_accumulator.cpp": {
+      "filePath": "participants/toy_accumulator.cpp",
+      "contentHash": "6bc93c873e395b0602ecd8e342c11990329dd92ab3278396ea0593ed433461c7",
+      "functions": [
+        {
+          "name": "accumulate",
+          "params": [
+            "user"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 17
+        }
+      ],
+      "classes": [
+        {
+          "name": "Accumulator",
+          "methods": [],
+          "properties": [
+            "api",
+            "input",
+            "output",
+            "count",
+            "sum"
+          ],
+          "exported": true,
+          "lineCount": 7
+        }
+      ],
+      "imports": [
+        {
+          "source": "sil/participant.h",
+          "specifiers": [
+            "sil/participant.h"
+          ]
+        },
+        {
+          "source": "string",
+          "specifiers": [
+            "string"
+          ]
+        },
+        {
+          "source": "nlohmann/json.hpp",
+          "specifiers": [
+            "nlohmann/json.hpp"
+          ]
+        },
+        {
+          "source": "toy_messages.h",
+          "specifiers": [
+            "toy_messages.h"
+          ]
+        }
+      ],
+      "exports": [
+        "Accumulator",
+        "accumulate"
+      ],
+      "totalLines": 58,
+      "hasStructuralAnalysis": true
+    },
+    "participants/toy_producer.cpp": {
+      "filePath": "participants/toy_producer.cpp",
+      "contentHash": "f2332bc51b524ccbdbb72700aae6ce406320f5b01d05c0a807b69604ed30724f",
+      "functions": [
+        {
+          "name": "tick",
+          "params": [
+            "user"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 10
+        }
+      ],
+      "classes": [
+        {
+          "name": "Producer",
+          "methods": [],
+          "properties": [
+            "api",
+            "channel",
+            "seq"
+          ],
+          "exported": true,
+          "lineCount": 5
+        }
+      ],
+      "imports": [
+        {
+          "source": "sil/participant.h",
+          "specifiers": [
+            "sil/participant.h"
+          ]
+        },
+        {
+          "source": "string",
+          "specifiers": [
+            "string"
+          ]
+        },
+        {
+          "source": "nlohmann/json.hpp",
+          "specifiers": [
+            "nlohmann/json.hpp"
+          ]
+        },
+        {
+          "source": "toy_messages.h",
+          "specifiers": [
+            "toy_messages.h"
+          ]
+        }
+      ],
+      "exports": [
+        "Producer",
+        "tick"
+      ],
+      "totalLines": 46,
+      "hasStructuralAnalysis": true
+    },
+    "python/pyproject.toml": {
+      "filePath": "python/pyproject.toml",
+      "contentHash": "824b417766d2a981bb86461d873ac9501186e439f020e915108558a4355102a7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 20,
+      "hasStructuralAnalysis": true
+    },
+    "python/src/sil/__init__.py": {
+      "filePath": "python/src/sil/__init__.py",
+      "contentHash": "979400b9e6a11cb30f8b41ab8348eeab77aaf98b371fccebdf06688688308be5",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "sil.manifest",
+          "specifiers": [
+            "Manifest",
+            "ManifestError",
+            "ManifestRef"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 4,
+      "hasStructuralAnalysis": true
+    },
+    "python/src/sil/check.py": {
+      "filePath": "python/src/sil/check.py",
+      "contentHash": "e58d6fc9a2f6b1a17a09f8a7d401c4d32078119da87c8d2bf9431cac9665fa9d",
+      "functions": [
+        {
+          "name": "file_sha256",
+          "params": [
+            "path"
+          ],
+          "returnType": "str",
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "check",
+          "params": [
+            "runner",
+            "manifest",
+            "out",
+            "err"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "main",
+          "params": [
+            "argv"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "hashlib",
+          "specifiers": [
+            "hashlib"
+          ]
+        },
+        {
+          "source": "subprocess",
+          "specifiers": [
+            "subprocess"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "tempfile",
+          "specifiers": [
+            "tempfile"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        }
+      ],
+      "exports": [
+        "file_sha256",
+        "check",
+        "main"
+      ],
+      "totalLines": 62,
+      "hasStructuralAnalysis": true
+    },
+    "python/src/sil/manifest.py": {
+      "filePath": "python/src/sil/manifest.py",
+      "contentHash": "d650338bf8334f2f8f55beed76cab1a074a3a2bb86000c77eecbca5dca520fa3",
+      "functions": [],
+      "classes": [
+        {
+          "name": "ManifestError",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "ManifestRef",
+          "methods": [],
+          "properties": [
+            "path",
+            "hash"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "Manifest",
+          "methods": [
+            "__init__",
+            "add_schemas",
+            "add_channel",
+            "add_interceptor",
+            "_check_override_value",
+            "add_native",
+            "add_process",
+            "add_replay",
+            "_add_participant",
+            "_validate",
+            "to_doc",
+            "to_json",
+            "hash",
+            "write"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 283
+        }
+      ],
+      "imports": [
+        {
+          "source": "hashlib",
+          "specifiers": [
+            "hashlib"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        }
+      ],
+      "exports": [
+        "ManifestError",
+        "ManifestRef",
+        "Manifest"
+      ],
+      "totalLines": 331,
+      "hasStructuralAnalysis": true
+    },
+    "python/src/sil/participant.py": {
+      "filePath": "python/src/sil/participant.py",
+      "contentHash": "0b1059f1b843b111070fb8e480f418be807b3949f1b7522d83c687ef1b463d51",
+      "functions": [
+        {
+          "name": "run",
+          "params": [
+            "participant"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 49
+        },
+        {
+          "name": "_load",
+          "params": [
+            "spec"
+          ],
+          "returnType": "StepParticipant",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "main",
+          "params": [
+            "argv"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 5
+        }
+      ],
+      "classes": [
+        {
+          "name": "ParticipantFailure",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "Input",
+          "methods": [],
+          "properties": [
+            "channel",
+            "publish_ns",
+            "data"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "StepParticipant",
+          "methods": [
+            "on_init",
+            "on_step"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 8
+        }
+      ],
+      "imports": [
+        {
+          "source": "base64",
+          "specifiers": [
+            "base64"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "traceback",
+          "specifiers": [
+            "traceback"
+          ]
+        },
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass"
+          ]
+        },
+        {
+          "source": "sil",
+          "specifiers": [
+            "schema"
+          ]
+        }
+      ],
+      "exports": [
+        "ParticipantFailure",
+        "Input",
+        "StepParticipant",
+        "run",
+        "_load",
+        "main"
+      ],
+      "totalLines": 116,
+      "hasStructuralAnalysis": true
+    },
+    "python/src/sil/recording.py": {
+      "filePath": "python/src/sil/recording.py",
+      "contentHash": "ad0bcbcc5c80a7cf4562796a22a0715205b4ca7eecf83d2ad8ea229d6380d25c",
+      "functions": [
+        {
+          "name": "read_records",
+          "params": [
+            "path"
+          ],
+          "returnType": "Iterator[tuple[str, int, bytes]]",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "_read_mcap",
+          "params": [
+            "path"
+          ],
+          "returnType": "Iterator[tuple[str, int, bytes]]",
+          "exported": true,
+          "lineCount": 6
+        }
+      ],
+      "classes": [
+        {
+          "name": "UnknownRecordingFormat",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 2
+        }
+      ],
+      "imports": [
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Iterator"
+          ]
+        }
+      ],
+      "exports": [
+        "UnknownRecordingFormat",
+        "read_records",
+        "_read_mcap"
+      ],
+      "totalLines": 38,
+      "hasStructuralAnalysis": true
+    },
+    "python/src/sil/schema.py": {
+      "filePath": "python/src/sil/schema.py",
+      "contentHash": "8c76af047c4054914ac971d934c57e136db9678d2fad1fc2baec68aeca2924e5",
+      "functions": [
+        {
+          "name": "_field_plan",
+          "params": [
+            "field"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "load",
+          "params": [
+            "schemas"
+          ],
+          "returnType": "dict[str, MessageType]",
+          "exported": true,
+          "lineCount": 2
+        }
+      ],
+      "classes": [
+        {
+          "name": "MessageType",
+          "methods": [
+            "__init__",
+            "pack",
+            "unpack"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "_Scalar",
+          "methods": [
+            "__init__",
+            "spread",
+            "gather"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "_ByteArray",
+          "methods": [
+            "__init__",
+            "spread",
+            "gather"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "_List",
+          "methods": [
+            "__init__",
+            "spread",
+            "gather"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 18
+        }
+      ],
+      "imports": [
+        {
+          "source": "struct",
+          "specifiers": [
+            "struct"
+          ]
+        }
+      ],
+      "exports": [
+        "MessageType",
+        "_Scalar",
+        "_ByteArray",
+        "_List",
+        "_field_plan",
+        "load"
+      ],
+      "totalLines": 118,
+      "hasStructuralAnalysis": true
+    },
+    "python/src/sil/testing.py": {
+      "filePath": "python/src/sil/testing.py",
+      "contentHash": "552657e7e449dcfbac8c75bdd49f11f0bc1e2a92523c31937e4ef2302371eeab",
+      "functions": [
+        {
+          "name": "participant_command",
+          "params": [
+            "file"
+          ],
+          "returnType": "list[str]",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "run_simulation",
+          "params": [
+            "manifest",
+            "runner",
+            "workdir"
+          ],
+          "returnType": "RunResult",
+          "exported": true,
+          "lineCount": 21
+        }
+      ],
+      "classes": [
+        {
+          "name": "RunFailure",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "RunResult",
+          "methods": [
+            "messages"
+          ],
+          "properties": [
+            "mcap_path",
+            "manifest_hash",
+            "_types",
+            "_topic_schemas"
+          ],
+          "exported": true,
+          "lineCount": 16
+        }
+      ],
+      "imports": [
+        {
+          "source": "subprocess",
+          "specifiers": [
+            "subprocess"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "sil",
+          "specifiers": [
+            "schema"
+          ]
+        },
+        {
+          "source": "sil.manifest",
+          "specifiers": [
+            "Manifest"
+          ]
+        }
+      ],
+      "exports": [
+        "RunFailure",
+        "participant_command",
+        "RunResult",
+        "run_simulation"
+      ],
+      "totalLines": 69,
+      "hasStructuralAnalysis": true
+    },
+    "README.md": {
+      "filePath": "README.md",
+      "contentHash": "9cbbd68d7b173493f7d772929c4eee7ccccc0202e9ec24f2e43b443e05446ccb",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 115,
+      "hasStructuralAnalysis": true
+    },
+    "schemas/toy.json": {
+      "filePath": "schemas/toy.json",
+      "contentHash": "bcfdc90f76df405adfdeb44d35a8320badb7ace74c76fe68bfa231878237731f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 15,
+      "hasStructuralAnalysis": true
+    },
+    "shim/clock_probe.c": {
+      "filePath": "shim/clock_probe.c",
+      "contentHash": "e045153d7f6b046a21ea44415a0d616d2e8fc4fc213fff191b4b494ed1f27c03",
+      "functions": [
+        {
+          "name": "ts_ns",
+          "params": [
+            "ts"
+          ],
+          "returnType": "uint64_t",
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "print_clock",
+          "params": [
+            "key",
+            "id"
+          ],
+          "returnType": "void",
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "main",
+          "params": [],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 57
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "stdint.h",
+          "specifiers": [
+            "stdint.h"
+          ]
+        },
+        {
+          "source": "stdio.h",
+          "specifiers": [
+            "stdio.h"
+          ]
+        },
+        {
+          "source": "sys/time.h",
+          "specifiers": [
+            "sys/time.h"
+          ]
+        },
+        {
+          "source": "time.h",
+          "specifiers": [
+            "time.h"
+          ]
+        },
+        {
+          "source": "unistd.h",
+          "specifiers": [
+            "unistd.h"
+          ]
+        }
+      ],
+      "exports": [
+        "main"
+      ],
+      "totalLines": 84,
+      "hasStructuralAnalysis": true
+    },
+    "shim/clock_shim.c": {
+      "filePath": "shim/clock_shim.c",
+      "contentHash": "87c447f275f7248ff94c39dce5dfba86431502f88845dbe7fcf2fdf419d4ea91",
+      "functions": [
+        {
+          "name": "sil_clock_shim_init",
+          "params": [],
+          "returnType": "void",
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "is_monotonic",
+          "params": [
+            "id"
+          ],
+          "returnType": "int",
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "virtual_ns",
+          "params": [
+            "id"
+          ],
+          "returnType": "uint64_t",
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "fill_timespec",
+          "params": [
+            "ts",
+            "ns"
+          ],
+          "returnType": "void",
+          "exported": false,
+          "lineCount": 4
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "fcntl.h",
+          "specifiers": [
+            "fcntl.h"
+          ]
+        },
+        {
+          "source": "stdint.h",
+          "specifiers": [
+            "stdint.h"
+          ]
+        },
+        {
+          "source": "stdlib.h",
+          "specifiers": [
+            "stdlib.h"
+          ]
+        },
+        {
+          "source": "sys/mman.h",
+          "specifiers": [
+            "sys/mman.h"
+          ]
+        },
+        {
+          "source": "sys/time.h",
+          "specifiers": [
+            "sys/time.h"
+          ]
+        },
+        {
+          "source": "time.h",
+          "specifiers": [
+            "time.h"
+          ]
+        },
+        {
+          "source": "unistd.h",
+          "specifiers": [
+            "unistd.h"
+          ]
+        },
+        {
+          "source": "sil/clock_region.h",
+          "specifiers": [
+            "sil/clock_region.h"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 244,
+      "hasStructuralAnalysis": true
+    },
+    "tests/conftest.py": {
+      "filePath": "tests/conftest.py",
+      "contentHash": "12f74f7feaf5c2d2dd0fcf6cee382451844ad2d1e07d93e4fa82e137d535b867",
+      "functions": [
+        {
+          "name": "build_dir",
+          "params": [],
+          "returnType": "Path",
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "sil_run",
+          "params": [
+            "build_dir"
+          ],
+          "returnType": "Path",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "run_sil",
+          "params": [
+            "sil_run",
+            "tmp_path"
+          ],
+          "exported": true,
+          "lineCount": 13
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "subprocess",
+          "specifiers": [
+            "subprocess"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        }
+      ],
+      "exports": [
+        "build_dir",
+        "sil_run",
+        "run_sil"
+      ],
+      "totalLines": 59,
+      "hasStructuralAnalysis": true
+    },
+    "tests/participants/array_source.py": {
+      "filePath": "tests/participants/array_source.py",
+      "contentHash": "35effc7520d14da2ad8a1bd49eda536bac728c401379c13200c39d2bcb7cc1b8",
+      "functions": [],
+      "classes": [
+        {
+          "name": "ArraySource",
+          "methods": [
+            "on_step"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 6
+        }
+      ],
+      "imports": [
+        {
+          "source": "sil.participant",
+          "specifiers": [
+            "StepParticipant",
+            "run"
+          ]
+        }
+      ],
+      "exports": [
+        "ArraySource"
+      ],
+      "totalLines": 22,
+      "hasStructuralAnalysis": true
+    },
+    "tests/participants/clock_reader.py": {
+      "filePath": "tests/participants/clock_reader.py",
+      "contentHash": "e0df88a0e502153b6fbda38d043696829b73ccf2eec68ba3f50f446fab93ff90",
+      "functions": [],
+      "classes": [
+        {
+          "name": "ClockReader",
+          "methods": [
+            "on_step"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 5
+        }
+      ],
+      "imports": [
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "sil.participant",
+          "specifiers": [
+            "StepParticipant",
+            "run"
+          ]
+        }
+      ],
+      "exports": [
+        "ClockReader"
+      ],
+      "totalLines": 27,
+      "hasStructuralAnalysis": true
+    },
+    "tests/participants/echo.py": {
+      "filePath": "tests/participants/echo.py",
+      "contentHash": "6842996742336981440774c11e90025d80bb60a19bb2eccebd07117160d7c0aa",
+      "functions": [],
+      "classes": [
+        {
+          "name": "Echo",
+          "methods": [
+            "on_step"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 6
+        }
+      ],
+      "imports": [
+        {
+          "source": "sil.participant",
+          "specifiers": [
+            "StepParticipant",
+            "run"
+          ]
+        }
+      ],
+      "exports": [
+        "Echo"
+      ],
+      "totalLines": 16,
+      "hasStructuralAnalysis": true
+    },
+    "tests/participants/fail_at_20ms.py": {
+      "filePath": "tests/participants/fail_at_20ms.py",
+      "contentHash": "1101c0d8048233ce763da629a1172b220175eeadc981b2a360ad441b59e41a4f",
+      "functions": [],
+      "classes": [
+        {
+          "name": "FailAt20ms",
+          "methods": [
+            "on_step"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "imports": [
+        {
+          "source": "sil.participant",
+          "specifiers": [
+            "StepParticipant",
+            "run"
+          ]
+        }
+      ],
+      "exports": [
+        "FailAt20ms"
+      ],
+      "totalLines": 13,
+      "hasStructuralAnalysis": true
+    },
+    "tests/participants/nondet.py": {
+      "filePath": "tests/participants/nondet.py",
+      "contentHash": "0463606f16e2e48f178772b7883aa26beb803a53984c9408b131c56cd16710a2",
+      "functions": [],
+      "classes": [
+        {
+          "name": "NonDeterministic",
+          "methods": [
+            "on_step"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 4
+        }
+      ],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sil.participant",
+          "specifiers": [
+            "StepParticipant",
+            "run"
+          ]
+        }
+      ],
+      "exports": [
+        "NonDeterministic"
+      ],
+      "totalLines": 17,
+      "hasStructuralAnalysis": true
+    },
+    "tests/participants/spawn_marker.py": {
+      "filePath": "tests/participants/spawn_marker.py",
+      "contentHash": "6f630268f8aa2290ad42e2c596689f10ace399351f6d5c1b8e3cbc2473b83d17",
+      "functions": [],
+      "classes": [
+        {
+          "name": "SpawnMarker",
+          "methods": [
+            "on_step"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "sil.participant",
+          "specifiers": [
+            "StepParticipant",
+            "run"
+          ]
+        }
+      ],
+      "exports": [
+        "SpawnMarker"
+      ],
+      "totalLines": 22,
+      "hasStructuralAnalysis": true
+    },
+    "tests/participants/tick_checks.py": {
+      "filePath": "tests/participants/tick_checks.py",
+      "contentHash": "94b21070c9063690a030ae38bfc60af86ce182bf1ffa9bde350e648a5c80bc46",
+      "functions": [],
+      "classes": [
+        {
+          "name": "TicksAreCorrect",
+          "methods": [
+            "__init__",
+            "on_step"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "TicksAreWrong",
+          "methods": [
+            "on_step"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 8
+        }
+      ],
+      "imports": [
+        {
+          "source": "sil.participant",
+          "specifiers": [
+            "StepParticipant"
+          ]
+        }
+      ],
+      "exports": [
+        "TicksAreCorrect",
+        "TicksAreWrong"
+      ],
+      "totalLines": 28,
+      "hasStructuralAnalysis": true
+    },
+    "tests/test_clock_shim.py": {
+      "filePath": "tests/test_clock_shim.py",
+      "contentHash": "7faf931c1fb743388431f49d88b4af99f4eaf23e181895e821e103efe011da4c",
+      "functions": [
+        {
+          "name": "clock_region",
+          "params": [
+            "tmp_path"
+          ],
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "probe",
+          "params": [
+            "build_dir"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "shim",
+          "params": [
+            "build_dir"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "run_probe",
+          "params": [
+            "probe",
+            "shim",
+            "region_name"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "test_monotonic_ids_return_virtual_t",
+          "params": [
+            "probe",
+            "shim",
+            "clock_region"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "test_realtime_id_returns_epoch_plus_t",
+          "params": [
+            "probe",
+            "shim",
+            "clock_region"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "test_getres_reports_one_nanosecond",
+          "params": [
+            "probe",
+            "shim",
+            "clock_region"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "test_gettimeofday_and_time_use_realtime",
+          "params": [
+            "probe",
+            "shim",
+            "clock_region"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "test_reads_are_frozen_within_a_step",
+          "params": [
+            "probe",
+            "shim",
+            "clock_region"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "test_sleeps_return_success_immediately",
+          "params": [
+            "probe",
+            "shim",
+            "clock_region"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "test_frozen_across_steps",
+          "params": [
+            "probe",
+            "shim",
+            "clock_region"
+          ],
+          "exported": true,
+          "lineCount": 9
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "mmap",
+          "specifiers": [
+            "mmap"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "struct",
+          "specifiers": [
+            "struct"
+          ]
+        },
+        {
+          "source": "subprocess",
+          "specifiers": [
+            "subprocess"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        }
+      ],
+      "exports": [
+        "clock_region",
+        "probe",
+        "shim",
+        "run_probe",
+        "test_monotonic_ids_return_virtual_t",
+        "test_realtime_id_returns_epoch_plus_t",
+        "test_getres_reports_one_nanosecond",
+        "test_gettimeofday_and_time_use_realtime",
+        "test_reads_are_frozen_within_a_step",
+        "test_sleeps_return_success_immediately",
+        "test_frozen_across_steps"
+      ],
+      "totalLines": 150,
+      "hasStructuralAnalysis": true
+    },
+    "tests/test_determinism.py": {
+      "filePath": "tests/test_determinism.py",
+      "contentHash": "d48e0207bb7d886447991ccbdb22c2003d46820d7264f64f923a546345ef8c9b",
+      "functions": [
+        {
+          "name": "full_pipeline_manifest",
+          "params": [
+            "tmp_path"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "sha256",
+          "params": [
+            "path"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "test_two_runs_are_bit_identical",
+          "params": [
+            "run_sil",
+            "tmp_path"
+          ],
+          "exported": true,
+          "lineCount": 7
+        }
+      ],
+      "classes": [
+        {
+          "name": "TestCheckCli",
+          "methods": [
+            "run_check",
+            "test_reports_deterministic_pipeline",
+            "test_flags_nondeterministic_participant",
+            "test_propagates_run_failure"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 41
+        }
+      ],
+      "imports": [
+        {
+          "source": "hashlib",
+          "specifiers": [
+            "hashlib"
+          ]
+        },
+        {
+          "source": "subprocess",
+          "specifiers": [
+            "subprocess"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "conftest",
+          "specifiers": [
+            "ROOT"
+          ]
+        },
+        {
+          "source": "toys",
+          "specifiers": [
+            "accumulator_library",
+            "producer_library",
+            "toy_manifest"
+          ]
+        }
+      ],
+      "exports": [
+        "full_pipeline_manifest",
+        "sha256",
+        "test_two_runs_are_bit_identical",
+        "TestCheckCli"
+      ],
+      "totalLines": 93,
+      "hasStructuralAnalysis": true
+    },
+    "tests/test_manifest_builder.py": {
+      "filePath": "tests/test_manifest_builder.py",
+      "contentHash": "1cfa62cabea126975ffb3c8ef5d1f1e8e047be12c8407b6c34c2c0335d87c866",
+      "functions": [
+        {
+          "name": "make_minimal",
+          "params": [],
+          "returnType": "Manifest",
+          "exported": true,
+          "lineCount": 6
+        }
+      ],
+      "classes": [
+        {
+          "name": "TestCanonicalOutput",
+          "methods": [
+            "test_same_content_gives_identical_bytes_and_hash",
+            "test_declaration_order_does_not_change_hash",
+            "test_output_is_valid_json_with_version_marker",
+            "test_write_returns_path_and_hash"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "TestValidation",
+          "methods": [
+            "test_duplicate_channel_rejected",
+            "test_duplicate_participant_rejected",
+            "test_channel_with_unknown_schema_rejected",
+            "test_process_participant_with_unknown_channel_rejected",
+            "test_nonpositive_duration_rejected",
+            "test_nonpositive_step_period_rejected",
+            "test_negative_latency_rejected"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 41
+        },
+        {
+          "name": "TestClockShim",
+          "methods": [
+            "test_negative_epoch_rejected",
+            "test_non_integer_epoch_rejected",
+            "test_default_epoch_is_omitted",
+            "test_positive_epoch_is_emitted_and_changes_hash",
+            "test_shim_flag_emitted_only_when_enabled",
+            "test_unshimmed_process_omits_flag_and_keeps_hash"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 50
+        },
+        {
+          "name": "TestArraySchemas",
+          "methods": [
+            "test_array_schema_accepted_and_canonical",
+            "test_zero_count_rejected",
+            "test_negative_count_rejected",
+            "test_non_integer_count_rejected",
+            "test_unknown_element_type_rejected",
+            "test_override_on_array_field_rejected",
+            "test_override_on_scalar_beside_array_still_works"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 64
+        },
+        {
+          "name": "TestReplayBuilder",
+          "methods": [
+            "_recording",
+            "test_hash_is_embedded_from_recording_bytes",
+            "test_replay_declaration_is_canonical",
+            "test_empty_channel_selection_rejected",
+            "test_unknown_channel_rejected",
+            "test_missing_recording_rejected",
+            "test_replayed_channel_also_published_live_rejected"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 57
+        },
+        {
+          "name": "TestInterceptorBuilder",
+          "methods": [
+            "test_drop_interceptor_is_recorded_on_channel",
+            "test_window_defaults_to_whole_run_when_omitted",
+            "test_absent_interceptors_key_when_none_declared",
+            "test_multiple_interceptors_keep_declared_order",
+            "test_declaration_is_canonical",
+            "test_never_matching_interceptor_only_changes_hash",
+            "test_unknown_channel_rejected",
+            "test_unknown_kind_rejected",
+            "test_inverted_window_rejected",
+            "test_empty_window_rejected",
+            "test_negative_window_bound_rejected",
+            "test_negative_delay_rejected",
+            "test_delay_requires_delay_ns",
+            "test_drop_nth_below_one_rejected",
+            "test_drop_nth_requires_n",
+            "test_override_unknown_field_rejected",
+            "test_override_requires_field_and_value",
+            "test_override_value_out_of_range_rejected",
+            "test_override_value_in_range_accepted",
+            "test_override_float_field_accepts_number"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 125
+        }
+      ],
+      "imports": [
+        {
+          "source": "hashlib",
+          "specifiers": [
+            "hashlib"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "sil.manifest",
+          "specifiers": [
+            "Manifest",
+            "ManifestError"
+          ]
+        }
+      ],
+      "exports": [
+        "make_minimal",
+        "TestCanonicalOutput",
+        "TestValidation",
+        "TestClockShim",
+        "TestArraySchemas",
+        "TestReplayBuilder",
+        "TestInterceptorBuilder"
+      ],
+      "totalLines": 410,
+      "hasStructuralAnalysis": true
+    },
+    "tests/test_pytest_frontend.py": {
+      "filePath": "tests/test_pytest_frontend.py",
+      "contentHash": "9868a1fbeb22b48e00d60053971f74d2d03beec8aa9a9bdac16b755821c87d6a",
+      "functions": [
+        {
+          "name": "manifest_with_checker",
+          "params": [
+            "checker"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "test_in_schedule_assertions_pass_and_recording_is_typed",
+          "params": [
+            "sil_run",
+            "tmp_path"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "test_in_schedule_assertion_failure_fails_the_pytest_test",
+          "params": [
+            "sil_run",
+            "tmp_path"
+          ],
+          "exported": true,
+          "lineCount": 8
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "conftest",
+          "specifiers": [
+            "ROOT"
+          ]
+        },
+        {
+          "source": "toys",
+          "specifiers": [
+            "producer_library",
+            "toy_manifest"
+          ]
+        },
+        {
+          "source": "sil.testing",
+          "specifiers": [
+            "RunFailure",
+            "participant_command",
+            "run_simulation"
+          ]
+        }
+      ],
+      "exports": [
+        "manifest_with_checker",
+        "test_in_schedule_assertions_pass_and_recording_is_typed",
+        "test_in_schedule_assertion_failure_fails_the_pytest_test"
+      ],
+      "totalLines": 50,
+      "hasStructuralAnalysis": true
+    },
+    "tests/test_recording_reader.py": {
+      "filePath": "tests/test_recording_reader.py",
+      "contentHash": "2851dea2e9eb571aef10c37941a6eeb4b6681de6e86c816d2c7b9ea9d3d6c29d",
+      "functions": [
+        {
+          "name": "test_unknown_extension_is_rejected_with_a_clear_error",
+          "params": [
+            "tmp_path"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "test_mcap_extension_reads_recorded_messages",
+          "params": [
+            "sil_run",
+            "tmp_path"
+          ],
+          "exported": true,
+          "lineCount": 23
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "sil.recording",
+          "specifiers": [
+            "UnknownRecordingFormat",
+            "read_records"
+          ]
+        }
+      ],
+      "exports": [
+        "test_unknown_extension_is_rejected_with_a_clear_error",
+        "test_mcap_extension_reads_recorded_messages"
+      ],
+      "totalLines": 41,
+      "hasStructuralAnalysis": true
+    },
+    "tests/test_replayer.py": {
+      "filePath": "tests/test_replayer.py",
+      "contentHash": "17dd384636ab8b1f4adc00327fe2936f3a7aa1ca2789009cc4f1ea19ab38d1f4",
+      "functions": [
+        {
+          "name": "record_producer_run",
+          "params": [
+            "run_sil",
+            "tmp_path",
+            "duration_ns"
+          ],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "replay_manifest",
+          "params": [
+            "recording",
+            "channels",
+            "duration_ns"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "ticks",
+          "params": [
+            "mcap_path"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "channel_streams",
+          "params": [
+            "mcap_path"
+          ],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "_manifest_json",
+          "params": [
+            "recording",
+            "recording_hash",
+            "channels",
+            "ticks_schema"
+          ],
+          "exported": true,
+          "lineCount": 20
+        }
+      ],
+      "classes": [
+        {
+          "name": "TestFaithfulReplay",
+          "methods": [
+            "test_replay_reproduces_recorded_consumer_output",
+            "test_replayed_channel_is_recorded_in_the_new_run"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "TestReplaySemantics",
+          "methods": [
+            "test_channel_latency_of_new_manifest_is_applied",
+            "test_short_recording_lets_run_reach_full_duration",
+            "test_over_long_recording_truncated_at_duration",
+            "test_message_at_exactly_duration_is_dropped",
+            "test_message_just_below_duration_is_published"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 64
+        },
+        {
+          "name": "TestReplayDeterminism",
+          "methods": [
+            "test_replay_run_is_bit_identical_across_two_runs",
+            "test_record_replay_record_preserves_channel_streams",
+            "test_replay_interleaved_with_live_publisher_is_deterministic"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 54
+        },
+        {
+          "name": "TestReplayRejection",
+          "methods": [
+            "test_missing_recording_is_config_error",
+            "test_hash_mismatch_is_config_error",
+            "test_unknown_selected_channel_is_config_error",
+            "test_schema_mismatch_is_config_error",
+            "test_live_publisher_collision_is_config_error"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 66
+        }
+      ],
+      "imports": [
+        {
+          "source": "hashlib",
+          "specifiers": [
+            "hashlib"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "collections",
+          "specifiers": [
+            "defaultdict"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "conftest",
+          "specifiers": [
+            "ROOT"
+          ]
+        },
+        {
+          "source": "test_run_boundary",
+          "specifiers": [
+            "TYPES",
+            "read_mcap",
+            "sums"
+          ]
+        },
+        {
+          "source": "toys",
+          "specifiers": [
+            "accumulator_library",
+            "producer_library",
+            "toy_manifest"
+          ]
+        }
+      ],
+      "exports": [
+        "record_producer_run",
+        "replay_manifest",
+        "ticks",
+        "channel_streams",
+        "TestFaithfulReplay",
+        "TestReplaySemantics",
+        "TestReplayDeterminism",
+        "TestReplayRejection",
+        "_manifest_json"
+      ],
+      "totalLines": 311,
+      "hasStructuralAnalysis": true
+    },
+    "tests/test_run_boundary.py": {
+      "filePath": "tests/test_run_boundary.py",
+      "contentHash": "cca0e33f8f8c08ad500b42943499c871384cda16fb4c67c54508ac7b3e830fa9",
+      "functions": [
+        {
+          "name": "read_mcap",
+          "params": [
+            "path"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "pipeline_manifest",
+          "params": [
+            "producer_name",
+            "latency_ns",
+            "consumer_priority"
+          ],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "sums",
+          "params": [
+            "mcap_path"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "write_with_raw_interceptor",
+          "params": [
+            "tmp_path",
+            "entry",
+            "channel"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "write_with_raw_array_schema",
+          "params": [
+            "tmp_path",
+            "schemas"
+          ],
+          "exported": true,
+          "lineCount": 16
+        }
+      ],
+      "classes": [
+        {
+          "name": "TestManifestRejection",
+          "methods": [
+            "test_invalid_json_is_config_error",
+            "test_missing_file_is_config_error",
+            "test_wrong_manifest_version_is_config_error"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "TestClockShimRejection",
+          "methods": [
+            "test_negative_epoch_is_config_error",
+            "test_shim_on_native_participant_is_config_error",
+            "test_shim_requested_but_library_missing_is_config_error",
+            "test_shim_with_library_present_is_not_rejected_for_missing_shim"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 73
+        },
+        {
+          "name": "TestClockShimRunBoundary",
+          "methods": [
+            "_manifest",
+            "_readings",
+            "test_monotonic_reads_return_step_virtual_time",
+            "test_realtime_reads_return_epoch_plus_virtual_time",
+            "test_default_epoch_is_zero",
+            "test_unshimmed_participant_sees_wall_clock_not_virtual_time",
+            "test_two_shimmed_runs_are_bit_identical",
+            "test_sil_check_passes_on_shimmed_manifest"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 115
+        },
+        {
+          "name": "TestEmptyRun",
+          "methods": [
+            "test_produces_valid_mcap_tied_to_manifest_hash"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "TestNativeScheduling",
+          "methods": [
+            "test_periodic_producer_records_typed_messages",
+            "test_offset_delays_first_activation"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "TestDeliverySemantics",
+          "methods": [
+            "test_default_latency_is_unit_delay",
+            "test_output_independent_of_in_slot_execution_order",
+            "test_declared_zero_latency_is_same_slot_feedthrough"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 33
+        },
+        {
+          "name": "TestProcessParticipant",
+          "methods": [
+            "test_python_step_participant_transforms_messages"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 36
+        },
+        {
+          "name": "TestInterceptorRejection",
+          "methods": [
+            "test_unknown_kind_is_config_error",
+            "test_inverted_window_is_config_error",
+            "test_negative_delay_is_config_error",
+            "test_drop_nth_below_one_is_config_error",
+            "test_override_unknown_field_is_config_error",
+            "test_override_out_of_range_is_config_error"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 50
+        },
+        {
+          "name": "TestInterceptorInertness",
+          "methods": [
+            "_producer",
+            "test_never_matching_fault_differs_only_by_manifest_hash"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 69
+        },
+        {
+          "name": "TestDelayInterceptor",
+          "methods": [
+            "_producer",
+            "test_window_scoped_delay_shifts_recorded_time",
+            "test_delay_past_run_duration_drops_message",
+            "test_delay_landing_exactly_at_duration_drops_message",
+            "test_enormous_delay_saturates_and_drops",
+            "test_delay_changes_downstream_consumer_view"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 129
+        },
+        {
+          "name": "TestOverrideInterceptor",
+          "methods": [
+            "_producer",
+            "test_window_scoped_override_rewrites_only_inside_window",
+            "test_override_changes_downstream_consumer_view",
+            "test_override_encodes_negative_constant",
+            "test_override_composes_with_delay_on_same_channel"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 99
+        },
+        {
+          "name": "TestDropInterceptor",
+          "methods": [
+            "_producer",
+            "test_window_scoped_drop_silences_only_inside_window",
+            "test_open_ended_drop_silences_to_end_of_run",
+            "test_drop_removes_message_from_downstream_consumer"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 69
+        },
+        {
+          "name": "TestDropNthInterceptor",
+          "methods": [
+            "_producer",
+            "test_drops_every_nth_message_in_window",
+            "test_window_index_resets_relative_to_window_not_channel",
+            "test_drop_nth_one_drops_every_in_window_message"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 58
+        },
+        {
+          "name": "TestRecordingFormatSeam",
+          "methods": [
+            "_producer_with_marker",
+            "test_unknown_extension_is_config_error_and_starts_no_participants",
+            "test_mcap_output_is_byte_identical"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 57
+        },
+        {
+          "name": "TestRunAbort",
+          "methods": [
+            "test_failing_assertion_aborts_run_with_reason"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "TestArrayPayload",
+          "methods": [
+            "test_array_payload_roundtrips_bit_for_bit",
+            "test_zero_count_array_is_config_error",
+            "test_unknown_array_element_type_is_config_error"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 50
+        }
+      ],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "shutil",
+          "specifiers": [
+            "shutil"
+          ]
+        },
+        {
+          "source": "subprocess",
+          "specifiers": [
+            "subprocess"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "mcap.reader",
+          "specifiers": [
+            "make_reader"
+          ]
+        },
+        {
+          "source": "toys",
+          "specifiers": [
+            "TOY_SCHEMAS",
+            "accumulator_library",
+            "producer_library",
+            "toy_manifest"
+          ]
+        },
+        {
+          "source": "sil",
+          "specifiers": [
+            "schema"
+          ]
+        },
+        {
+          "source": "sil.manifest",
+          "specifiers": [
+            "Manifest"
+          ]
+        }
+      ],
+      "exports": [
+        "read_mcap",
+        "TestManifestRejection",
+        "TestClockShimRejection",
+        "TestClockShimRunBoundary",
+        "TestEmptyRun",
+        "TestNativeScheduling",
+        "pipeline_manifest",
+        "sums",
+        "TestDeliverySemantics",
+        "TestProcessParticipant",
+        "write_with_raw_interceptor",
+        "TestInterceptorRejection",
+        "TestInterceptorInertness",
+        "TestDelayInterceptor",
+        "TestOverrideInterceptor",
+        "TestDropInterceptor",
+        "TestDropNthInterceptor",
+        "TestRecordingFormatSeam",
+        "TestRunAbort",
+        "write_with_raw_array_schema",
+        "TestArrayPayload"
+      ],
+      "totalLines": 1062,
+      "hasStructuralAnalysis": true
+    },
+    "tests/test_schema.py": {
+      "filePath": "tests/test_schema.py",
+      "contentHash": "716008cd7245f0dd9ad2e96affdd118d8d476a65357778b1e65265fb4ef327d6",
+      "functions": [],
+      "classes": [
+        {
+          "name": "TestScalarUnchanged",
+          "methods": [
+            "test_pack_unpack_roundtrip"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "TestArrayLayout",
+          "methods": [
+            "_payload_type",
+            "test_size_includes_array_bytes",
+            "test_list_field_packs_in_declared_order",
+            "test_roundtrip_returns_list_for_non_u8_arrays",
+            "test_u8_array_surfaces_as_bytes",
+            "test_wrong_array_length_is_rejected_on_pack",
+            "test_wrong_u8_array_length_is_rejected_not_silently_padded",
+            "test_mixed_scalar_and_array_fields"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 65
+        }
+      ],
+      "imports": [
+        {
+          "source": "struct",
+          "specifiers": [
+            "struct"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "sil",
+          "specifiers": [
+            "schema"
+          ]
+        }
+      ],
+      "exports": [
+        "TestScalarUnchanged",
+        "TestArrayLayout"
+      ],
+      "totalLines": 92,
+      "hasStructuralAnalysis": true
+    },
+    "tests/test_silschema.py": {
+      "filePath": "tests/test_silschema.py",
+      "contentHash": "95d80ddacb3f699892490a9be881b1d2767732e61c032c7982d54404aa2ff429",
+      "functions": [
+        {
+          "name": "test_scalar_struct_unchanged",
+          "params": [],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "test_array_member_emitted_as_c_array",
+          "params": [],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "test_static_assert_includes_array_bytes",
+          "params": [],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "test_u8_array_member",
+          "params": [],
+          "exported": true,
+          "lineCount": 6
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "importlib.util",
+          "specifiers": [
+            "importlib.util"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        }
+      ],
+      "exports": [
+        "test_scalar_struct_unchanged",
+        "test_array_member_emitted_as_c_array",
+        "test_static_assert_includes_array_bytes",
+        "test_u8_array_member"
+      ],
+      "totalLines": 62,
+      "hasStructuralAnalysis": true
+    },
+    "tests/toys.py": {
+      "filePath": "tests/toys.py",
+      "contentHash": "3f3938de2abc7fc25cad4bbdd84a6b1ea405feb4a2747645488f65d275bdbbba",
+      "functions": [
+        {
+          "name": "toy_manifest",
+          "params": [
+            "duration_ns",
+            "epoch_ns"
+          ],
+          "returnType": "Manifest",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "producer_library",
+          "params": [],
+          "returnType": "str",
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "accumulator_library",
+          "params": [],
+          "returnType": "str",
+          "exported": true,
+          "lineCount": 2
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "conftest",
+          "specifiers": [
+            "BUILD_DIR",
+            "ROOT"
+          ]
+        },
+        {
+          "source": "sil.manifest",
+          "specifiers": [
+            "Manifest"
+          ]
+        }
+      ],
+      "exports": [
+        "toy_manifest",
+        "producer_library",
+        "accumulator_library"
+      ],
+      "totalLines": 24,
+      "hasStructuralAnalysis": true
+    },
+    "tools/silschema.py": {
+      "filePath": "tools/silschema.py",
+      "contentHash": "cf7bd43289bf632d25d9df354c2a82df92db3d1c34bf00859ae041a3bb21895b",
+      "functions": [
+        {
+          "name": "c_ident",
+          "params": [
+            "schema_name"
+          ],
+          "returnType": "str",
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "member",
+          "params": [
+            "f"
+          ],
+          "returnType": "str",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "field_bytes",
+          "params": [
+            "f"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "generate",
+          "params": [
+            "schemas"
+          ],
+          "returnType": "str",
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "main",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 7
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        }
+      ],
+      "exports": [
+        "c_ident",
+        "member",
+        "field_bytes",
+        "generate",
+        "main"
+      ],
+      "totalLines": 82,
+      "hasStructuralAnalysis": true
+    }
+  }
+}

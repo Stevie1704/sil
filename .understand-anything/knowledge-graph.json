@@ -1,0 +1,4233 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "sil",
+    "languages": [
+      "C++",
+      "C",
+      "Python"
+    ],
+    "frameworks": [
+      "pytest",
+      "hatchling",
+      "CMake",
+      "Make",
+      "GitHub Actions"
+    ],
+    "description": "SiL Framework: deterministic software-in-the-loop kernel for ADAS/AD regression testing — deterministic scheduling + typed data routing for vECU simulation. Same artifacts + same machine class produce bit-identical MCAP recordings.",
+    "analyzedAt": "2026-07-16T17:04:14.502Z",
+    "gitCommitHash": "d56ae0f35cb14bd7e1600a9079e3a28edf15b1ee"
+  },
+  "nodes": [
+    {
+      "id": "file:kernel/src/engine.cpp",
+      "type": "file",
+      "name": "engine.cpp",
+      "filePath": "kernel/src/engine.cpp",
+      "summary": "Implements the SiL deterministic scheduling engine: participant setup, typed pub/sub routing with per-channel latency queues, interceptor overrides, and the two-tier run loop that interleaves replay publishes and periodic tasks.",
+      "tags": [
+        "engine",
+        "scheduler",
+        "pub-sub",
+        "service",
+        "core"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses std::variant + std::get_if to dispatch participant specs and little-endian field encoding for typed message overrides."
+    },
+    {
+      "id": "file:kernel/src/engine.hpp",
+      "type": "file",
+      "name": "engine.hpp",
+      "filePath": "kernel/src/engine.hpp",
+      "summary": "Declares the Engine class and its supporting types (SubQueue latency buffer, PendingMessage), defining the deterministic scheduling API and typed channel routing surface.",
+      "tags": [
+        "engine",
+        "type-definition",
+        "pub-sub",
+        "scheduler",
+        "core"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:kernel/src/main.cpp",
+      "type": "file",
+      "name": "main.cpp",
+      "filePath": "kernel/src/main.cpp",
+      "summary": "Kernel executable entry point: parses CLI arguments, loads the manifest, wires the optional virtual clock shim, constructs the recording sink, and drives Engine setup and run.",
+      "tags": [
+        "entry-point",
+        "cli",
+        "bootstrap"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:kernel/src/manifest.cpp",
+      "type": "file",
+      "name": "manifest.cpp",
+      "filePath": "kernel/src/manifest.cpp",
+      "summary": "Parses and validates the scenario manifest JSON into typed specs (schemas, channels, interceptors, participants) and computes the canonical SHA-256 hash used for determinism verification.",
+      "tags": [
+        "manifest",
+        "parsing",
+        "validation",
+        "serialization",
+        "core"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses nlohmann::json with strict type/range checks; canonical JSON dump feeds the SHA-256 hash for reproducibility."
+    },
+    {
+      "id": "file:kernel/src/manifest.hpp",
+      "type": "file",
+      "name": "manifest.hpp",
+      "filePath": "kernel/src/manifest.hpp",
+      "summary": "Declares the typed manifest data model: field/schema specs, interceptor and channel specs, participant impl variants (native/process/replay), and the top-level Manifest aggregate.",
+      "tags": [
+        "manifest",
+        "type-definition",
+        "data-model",
+        "core"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:kernel/src/mcap_recording.cpp",
+      "type": "file",
+      "name": "mcap_recording.cpp",
+      "filePath": "kernel/src/mcap_recording.cpp",
+      "summary": "Implements the MCAP-backed recording sink and reader: writes per-channel schemas and typed messages via mcap::McapWriter and reads them back for replay.",
+      "tags": [
+        "recording",
+        "mcap",
+        "serialization",
+        "io"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:kernel/src/mcap_recording.hpp",
+      "type": "file",
+      "name": "mcap_recording.hpp",
+      "filePath": "kernel/src/mcap_recording.hpp",
+      "summary": "Declares the McapRecorder class implementing the RecordingSink interface over an mcap::McapWriter, tracking per-channel ids.",
+      "tags": [
+        "recording",
+        "mcap",
+        "type-definition"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:kernel/src/recording_reader.hpp",
+      "type": "file",
+      "name": "recording_reader.hpp",
+      "filePath": "kernel/src/recording_reader.hpp",
+      "summary": "Defines the abstract RecordingReader interface for reading back recorded channel schemas and typed messages during replay.",
+      "tags": [
+        "recording",
+        "type-definition",
+        "interface",
+        "replay"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:kernel/src/recording_sink.hpp",
+      "type": "file",
+      "name": "recording_sink.hpp",
+      "filePath": "kernel/src/recording_sink.hpp",
+      "summary": "Defines the abstract RecordingSink interface that the engine uses to record published messages, decoupling the run loop from the concrete MCAP writer.",
+      "tags": [
+        "recording",
+        "type-definition",
+        "interface"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:kernel/src/replayer.cpp",
+      "type": "file",
+      "name": "replayer.cpp",
+      "filePath": "kernel/src/replayer.cpp",
+      "summary": "Implements the Replayer: loads a recording, verifies its SHA-256 hash and channel schemas against the manifest, and republishes recorded messages into the engine at their original timestamps.",
+      "tags": [
+        "replay",
+        "recording",
+        "validation",
+        "core"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:kernel/src/replayer.hpp",
+      "type": "file",
+      "name": "replayer.hpp",
+      "filePath": "kernel/src/replayer.hpp",
+      "summary": "Declares the Replayer class that feeds recorded messages back into the Engine, exposing next-publish timing and due-publish dispatch for the scheduler.",
+      "tags": [
+        "replay",
+        "type-definition",
+        "recording"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:kernel/src/sha256.hpp",
+      "type": "file",
+      "name": "sha256.hpp",
+      "filePath": "kernel/src/sha256.hpp",
+      "summary": "Header-only SHA-256 implementation (Sha256 class plus sha256_hex helper) used to hash canonical manifests and recordings for deterministic verification.",
+      "tags": [
+        "hashing",
+        "sha256",
+        "utility",
+        "security"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Self-contained SHA-256 with no external crypto dependency; process_block implements the standard 64-round compression."
+    },
+    {
+      "id": "class:kernel/src/engine.hpp:Engine",
+      "type": "class",
+      "name": "Engine",
+      "filePath": "kernel/src/engine.hpp",
+      "lineRange": [
+        72,
+        146
+      ],
+      "summary": "Central deterministic scheduling and routing engine: owns channels, latency queues, tasks, participants and replayers, and exposes setup/run plus the publish/take pub-sub primitives.",
+      "tags": [
+        "engine",
+        "scheduler",
+        "pub-sub",
+        "core"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:kernel/src/engine.hpp:SubQueue",
+      "type": "class",
+      "name": "SubQueue",
+      "filePath": "kernel/src/engine.hpp",
+      "lineRange": [
+        33,
+        70
+      ],
+      "summary": "Per-subscription FIFO buffer that holds pending messages and gates visibility by a configured channel latency, enabling deterministic delayed delivery.",
+      "tags": [
+        "pub-sub",
+        "queue",
+        "latency",
+        "data-model"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:kernel/src/engine.cpp:setup",
+      "type": "function",
+      "name": "setup",
+      "filePath": "kernel/src/engine.cpp",
+      "lineRange": [
+        82,
+        118
+      ],
+      "summary": "Instantiates participants from manifest specs (native, process, replay), registering process-participant step tasks and building the replayer/native lists.",
+      "tags": [
+        "engine",
+        "setup",
+        "factory"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:kernel/src/engine.cpp:publish",
+      "type": "function",
+      "name": "publish",
+      "filePath": "kernel/src/engine.cpp",
+      "lineRange": [
+        169,
+        237
+      ],
+      "summary": "Validates a published message against its channel schema, applies interceptor overrides, records it to the sink, and enqueues it into subscriber latency queues with a global sequence number.",
+      "tags": [
+        "pub-sub",
+        "routing",
+        "validation",
+        "core"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:kernel/src/engine.cpp:run",
+      "type": "function",
+      "name": "run",
+      "filePath": "kernel/src/engine.cpp",
+      "lineRange": [
+        250,
+        285
+      ],
+      "summary": "Two-tier deterministic run loop that advances virtual time to the next replay or task deadline, dispatches due replay publishes, then runs priority-ordered periodic tasks until the scenario duration elapses.",
+      "tags": [
+        "scheduler",
+        "run-loop",
+        "deterministic",
+        "core"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:kernel/src/engine.cpp:register_task",
+      "type": "function",
+      "name": "register_task",
+      "filePath": "kernel/src/engine.cpp",
+      "lineRange": [
+        120,
+        135
+      ],
+      "summary": "Registers a periodic task with owner, period, offset and priority, validating the period and storing the callback for the scheduler.",
+      "tags": [
+        "scheduler",
+        "task",
+        "registration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:kernel/src/engine.cpp:apply_overrides",
+      "type": "function",
+      "name": "apply_overrides",
+      "filePath": "kernel/src/engine.cpp",
+      "lineRange": [
+        145,
+        167
+      ],
+      "summary": "Applies time-windowed interceptor field overrides to a message payload by encoding the override value into the correct schema field offset.",
+      "tags": [
+        "interceptor",
+        "override",
+        "serialization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:kernel/src/engine.cpp:encode_le",
+      "type": "function",
+      "name": "encode_le",
+      "filePath": "kernel/src/engine.cpp",
+      "lineRange": [
+        38,
+        58
+      ],
+      "summary": "Encodes a numeric value into a destination buffer in little-endian form according to the field's type layout (integer, unsigned, or float representation).",
+      "tags": [
+        "serialization",
+        "encoding",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:kernel/src/main.cpp:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "kernel/src/main.cpp",
+      "lineRange": [
+        37,
+        95
+      ],
+      "summary": "Program entry point that parses arguments, loads and hashes the manifest, conditionally injects the clock shim library, builds the recording sink, and runs the engine with error handling.",
+      "tags": [
+        "entry-point",
+        "bootstrap",
+        "cli"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:kernel/src/manifest.cpp:load_manifest",
+      "type": "function",
+      "name": "load_manifest",
+      "filePath": "kernel/src/manifest.cpp",
+      "lineRange": [
+        210,
+        271
+      ],
+      "summary": "Reads a manifest file, parses and validates its JSON, computes the canonical SHA-256 hash, and assembles the fully-typed Manifest with schemas, channels and participants.",
+      "tags": [
+        "manifest",
+        "parsing",
+        "validation",
+        "entry-point"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:kernel/src/manifest.cpp:parse_participant",
+      "type": "function",
+      "name": "parse_participant",
+      "filePath": "kernel/src/manifest.cpp",
+      "lineRange": [
+        144,
+        200
+      ],
+      "summary": "Parses a single participant entry into a native, process, or replay spec, validating channels, subscribes/publishes and shim flags against the manifest.",
+      "tags": [
+        "manifest",
+        "parsing",
+        "validation"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:kernel/src/manifest.cpp:parse_interceptors",
+      "type": "function",
+      "name": "parse_interceptors",
+      "filePath": "kernel/src/manifest.cpp",
+      "lineRange": [
+        82,
+        142
+      ],
+      "summary": "Parses the interceptor array for a channel, validating kind-specific fields (delay, drop-n, override) and time windows against the schema.",
+      "tags": [
+        "manifest",
+        "parsing",
+        "interceptor",
+        "validation"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:kernel/src/manifest.cpp:parse_schema",
+      "type": "function",
+      "name": "parse_schema",
+      "filePath": "kernel/src/manifest.cpp",
+      "lineRange": [
+        39,
+        66
+      ],
+      "summary": "Parses a named schema definition into typed field specs, validating field types and array counts and computing the canonical JSON and byte size.",
+      "tags": [
+        "manifest",
+        "parsing",
+        "schema",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:kernel/src/manifest.hpp:Manifest",
+      "type": "class",
+      "name": "Manifest",
+      "filePath": "kernel/src/manifest.hpp",
+      "lineRange": [
+        80,
+        90
+      ],
+      "summary": "Top-level typed representation of a loaded scenario: duration, epoch, schemas, channels, participants, canonical hash and base directory, with channel lookup.",
+      "tags": [
+        "manifest",
+        "data-model",
+        "aggregate"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:kernel/src/manifest.hpp:InterceptorSpec",
+      "type": "class",
+      "name": "InterceptorSpec",
+      "filePath": "kernel/src/manifest.hpp",
+      "lineRange": [
+        37,
+        45
+      ],
+      "summary": "Typed spec for a channel interceptor (delay, drop, or field override) with its time window and parameters.",
+      "tags": [
+        "manifest",
+        "data-model",
+        "interceptor"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:kernel/src/mcap_recording.hpp:McapRecorder",
+      "type": "class",
+      "name": "McapRecorder",
+      "filePath": "kernel/src/mcap_recording.hpp",
+      "lineRange": [
+        20,
+        33
+      ],
+      "summary": "RecordingSink implementation that writes channel schemas and typed messages to an MCAP file via mcap::McapWriter and closes cleanly on shutdown.",
+      "tags": [
+        "recording",
+        "mcap",
+        "sink"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:kernel/src/mcap_recording.cpp:McapRecorder",
+      "type": "function",
+      "name": "McapRecorder",
+      "filePath": "kernel/src/mcap_recording.cpp",
+      "lineRange": [
+        17,
+        49
+      ],
+      "summary": "Constructs the MCAP recorder, opens the output file, writes the file header, and registers a schema and channel for each manifest channel.",
+      "tags": [
+        "recording",
+        "mcap",
+        "constructor"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:kernel/src/mcap_recording.cpp:record",
+      "type": "function",
+      "name": "record",
+      "filePath": "kernel/src/mcap_recording.cpp",
+      "lineRange": [
+        55,
+        66
+      ],
+      "summary": "Writes a single typed message to the MCAP file with its channel id, publish timestamp, sequence and payload bytes.",
+      "tags": [
+        "recording",
+        "mcap",
+        "io"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:kernel/src/mcap_recording.cpp:McapRecordingReader",
+      "type": "function",
+      "name": "McapRecordingReader",
+      "filePath": "kernel/src/mcap_recording.cpp",
+      "lineRange": [
+        90,
+        123
+      ],
+      "summary": "Opens an MCAP file, reads the channel schemas from the summary, and loads all messages into memory for deterministic replay.",
+      "tags": [
+        "recording",
+        "mcap",
+        "reader",
+        "replay"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:kernel/src/mcap_recording.cpp:make_recording_sink",
+      "type": "function",
+      "name": "make_recording_sink",
+      "filePath": "kernel/src/mcap_recording.cpp",
+      "lineRange": [
+        74,
+        81
+      ],
+      "summary": "Factory that selects a recording sink implementation based on the output file extension, returning an McapRecorder for .mcap outputs.",
+      "tags": [
+        "recording",
+        "factory"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:kernel/src/mcap_recording.cpp:make_recording_reader",
+      "type": "function",
+      "name": "make_recording_reader",
+      "filePath": "kernel/src/mcap_recording.cpp",
+      "lineRange": [
+        139,
+        147
+      ],
+      "summary": "Factory that selects a recording reader implementation based on the input file extension, returning an McapRecordingReader for .mcap files.",
+      "tags": [
+        "recording",
+        "factory",
+        "replay"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:kernel/src/mcap_recording.cpp:McapRecordingReader",
+      "type": "class",
+      "name": "McapRecordingReader",
+      "filePath": "kernel/src/mcap_recording.cpp",
+      "lineRange": [
+        88,
+        135
+      ],
+      "summary": "RecordingReader implementation over MCAP that exposes recorded channel schemas and moves out the loaded messages for replay.",
+      "tags": [
+        "recording",
+        "mcap",
+        "reader"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:kernel/src/recording_reader.hpp:RecordingReader",
+      "type": "class",
+      "name": "RecordingReader",
+      "filePath": "kernel/src/recording_reader.hpp",
+      "lineRange": [
+        17,
+        44
+      ],
+      "summary": "Abstract interface for reading recorded channel schemas and typed messages, implemented by the MCAP reader for replay.",
+      "tags": [
+        "recording",
+        "interface",
+        "replay"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:kernel/src/recording_sink.hpp:RecordingSink",
+      "type": "class",
+      "name": "RecordingSink",
+      "filePath": "kernel/src/recording_sink.hpp",
+      "lineRange": [
+        17,
+        29
+      ],
+      "summary": "Abstract interface for recording published messages, decoupling the engine run loop from concrete writer backends like MCAP.",
+      "tags": [
+        "recording",
+        "interface"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:kernel/src/replayer.hpp:Replayer",
+      "type": "class",
+      "name": "Replayer",
+      "filePath": "kernel/src/replayer.hpp",
+      "lineRange": [
+        21,
+        46
+      ],
+      "summary": "Feeds recorded messages back into the Engine, tracking the next publish index and dispatching messages whose timestamp is due.",
+      "tags": [
+        "replay",
+        "recording",
+        "scheduler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:kernel/src/replayer.cpp:Replayer",
+      "type": "function",
+      "name": "Replayer",
+      "filePath": "kernel/src/replayer.cpp",
+      "lineRange": [
+        15,
+        83
+      ],
+      "summary": "Constructs a Replayer by loading a recording, verifying its SHA-256 hash and channel schemas against the manifest, and buffering the messages to replay.",
+      "tags": [
+        "replay",
+        "recording",
+        "validation",
+        "constructor"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:kernel/src/replayer.cpp:publish_due",
+      "type": "function",
+      "name": "publish_due",
+      "filePath": "kernel/src/replayer.cpp",
+      "lineRange": [
+        90,
+        96
+      ],
+      "summary": "Publishes all buffered recorded messages whose timestamp is at or before the given virtual time into the engine.",
+      "tags": [
+        "replay",
+        "scheduler",
+        "pub-sub"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:kernel/src/sha256.hpp:Sha256",
+      "type": "class",
+      "name": "Sha256",
+      "filePath": "kernel/src/sha256.hpp",
+      "lineRange": [
+        12,
+        104
+      ],
+      "summary": "Streaming SHA-256 hasher with update/hex_digest and the internal block-compression routine used for deterministic manifest and recording hashing.",
+      "tags": [
+        "hashing",
+        "sha256",
+        "security"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:kernel/src/sha256.hpp:process_block",
+      "type": "function",
+      "name": "process_block",
+      "filePath": "kernel/src/sha256.hpp",
+      "lineRange": [
+        56,
+        96
+      ],
+      "summary": "Performs the 64-round SHA-256 compression on a single 512-bit message block, updating the running hash state.",
+      "tags": [
+        "hashing",
+        "sha256",
+        "algorithm"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:kernel/src/sha256.hpp:hex_digest",
+      "type": "function",
+      "name": "hex_digest",
+      "filePath": "kernel/src/sha256.hpp",
+      "lineRange": [
+        30,
+        51
+      ],
+      "summary": "Finalizes the SHA-256 state by applying padding and the length block, then returns the digest as a lowercase hex string.",
+      "tags": [
+        "hashing",
+        "sha256",
+        "serialization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:include/sil/clock_region.h",
+      "type": "file",
+      "name": "clock_region.h",
+      "filePath": "include/sil/clock_region.h",
+      "summary": "Defines the fixed POD layout of the shared virtual clock region — two little-endian nanosecond fields (virtual time and realtime epoch) — that is the sole contract between the kernel writer and the clock shim reader.",
+      "tags": [
+        "type-definition",
+        "data-model",
+        "serialization",
+        "shared-memory"
+      ],
+      "complexity": "simple",
+      "languageNotes": "C header with extern \"C\" guard for C++ interop; deliberately no-padding two-field struct matching the project's fixed-layout message convention."
+    },
+    {
+      "id": "file:kernel/src/clock_shim.cpp",
+      "type": "file",
+      "name": "clock_shim.cpp",
+      "filePath": "kernel/src/clock_shim.cpp",
+      "summary": "Kernel-side helper that locates the virtual clock shim library shipped next to the sil-run binary, so the load-time check and spawn-time injection resolve the same file.",
+      "tags": [
+        "utility",
+        "path-resolution",
+        "clock-shim"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Uses macOS _NSGetExecutablePath plus std::filesystem::weakly_canonical to derive the runner directory."
+    },
+    {
+      "id": "file:kernel/src/clock_shim.hpp",
+      "type": "file",
+      "name": "clock_shim.hpp",
+      "filePath": "kernel/src/clock_shim.hpp",
+      "summary": "Declares clock_shim_library_path(), the single point that resolves the absolute path of the virtual clock shim library for both the load-time check and spawn-time injection.",
+      "tags": [
+        "type-definition",
+        "clock-shim",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:kernel/src/process_participant.cpp",
+      "type": "file",
+      "name": "process_participant.cpp",
+      "filePath": "kernel/src/process_participant.cpp",
+      "summary": "Implements the out-of-process participant adapter: forks a child process, speaks a JSON-lines step protocol over stdin/stdout with base64-encoded payloads, and manages the shared virtual clock region injected via LD_PRELOAD/DYLD.",
+      "tags": [
+        "service",
+        "ipc",
+        "serialization",
+        "clock-shim",
+        "process-management"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Combines POSIX process control (fork/execvp/pipe/dup2/waitpid), mmap-backed shared memory, and nlohmann::json line framing."
+    },
+    {
+      "id": "file:kernel/src/process_participant.hpp",
+      "type": "file",
+      "name": "process_participant.hpp",
+      "filePath": "kernel/src/process_participant.hpp",
+      "summary": "Declares the ProcessParticipant class that drives an out-of-process participant across the JSON-lines step protocol and owns the mmap'd virtual clock region and its lifecycle state.",
+      "tags": [
+        "type-definition",
+        "service",
+        "ipc",
+        "clock-shim"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:shim/clock_shim.c",
+      "type": "file",
+      "name": "clock_shim.c",
+      "filePath": "shim/clock_shim.c",
+      "summary": "LD_PRELOAD/DYLD_INSERT_LIBRARIES interposition library that maps the shared clock region at load and answers every POSIX clock read (clock_gettime, gettimeofday, time) and neutralizes sleeps from frozen virtual time for deterministic replay.",
+      "tags": [
+        "service",
+        "interposition",
+        "clock-shim",
+        "determinism",
+        "shared-memory"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses dlsym(RTLD_NEXT) via a REAL() macro and platform-specific symbol interposition (macOS DYLD_INTERPOSE vs. ELF symbol override) to intercept libc time calls."
+    },
+    {
+      "id": "function:kernel/src/clock_shim.cpp:runner_dir",
+      "type": "function",
+      "name": "runner_dir",
+      "filePath": "kernel/src/clock_shim.cpp",
+      "lineRange": [
+        23,
+        33
+      ],
+      "summary": "Resolves the directory containing the running sil-run binary via _NSGetExecutablePath and filesystem canonicalization.",
+      "tags": [
+        "utility",
+        "path-resolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:kernel/src/clock_shim.cpp:clock_shim_library_path",
+      "type": "function",
+      "name": "clock_shim_library_path",
+      "filePath": "kernel/src/clock_shim.cpp",
+      "lineRange": [
+        37,
+        41
+      ],
+      "summary": "Returns the absolute path to the clock shim library next to the runner binary, empty if the runner directory cannot be determined.",
+      "tags": [
+        "utility",
+        "path-resolution",
+        "clock-shim"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:kernel/src/process_participant.cpp:b64_encode",
+      "type": "function",
+      "name": "b64_encode",
+      "filePath": "kernel/src/process_participant.cpp",
+      "lineRange": [
+        27,
+        51
+      ],
+      "summary": "Encodes a byte buffer to a base64 string for transport of binary channel payloads over the JSON-lines protocol.",
+      "tags": [
+        "utility",
+        "serialization",
+        "encoding"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:kernel/src/process_participant.cpp:b64_decode",
+      "type": "function",
+      "name": "b64_decode",
+      "filePath": "kernel/src/process_participant.cpp",
+      "lineRange": [
+        53,
+        77
+      ],
+      "summary": "Decodes a base64 string back into raw bytes, raising RunError on malformed input, when receiving channel payloads from the child.",
+      "tags": [
+        "utility",
+        "serialization",
+        "encoding",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:kernel/src/process_participant.cpp:setup_clock_region",
+      "type": "function",
+      "name": "setup_clock_region",
+      "filePath": "kernel/src/process_participant.cpp",
+      "lineRange": [
+        88,
+        121
+      ],
+      "summary": "Creates a temp-file-backed mmap for the shared clock region, sizes it, maps it writable, and resolves the shim library path for injection.",
+      "tags": [
+        "clock-shim",
+        "shared-memory",
+        "initialization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:kernel/src/process_participant.cpp:inject_shim_env",
+      "type": "function",
+      "name": "inject_shim_env",
+      "filePath": "kernel/src/process_participant.cpp",
+      "lineRange": [
+        123,
+        135
+      ],
+      "summary": "Sets the LD_PRELOAD/DYLD and clock-region environment variables in the child so the preloaded shim maps the same region.",
+      "tags": [
+        "clock-shim",
+        "process-management",
+        "configuration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:kernel/src/process_participant.cpp:teardown_clock_region",
+      "type": "function",
+      "name": "teardown_clock_region",
+      "filePath": "kernel/src/process_participant.cpp",
+      "lineRange": [
+        142,
+        155
+      ],
+      "summary": "Unmaps the clock region, closes its file descriptor, and unlinks the backing temp file during participant teardown.",
+      "tags": [
+        "clock-shim",
+        "shared-memory",
+        "cleanup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:kernel/src/process_participant.cpp:step",
+      "type": "function",
+      "name": "step",
+      "filePath": "kernel/src/process_participant.cpp",
+      "lineRange": [
+        232,
+        277
+      ],
+      "summary": "Executes one participant tick: gathers visible input messages, writes virtual time into the shared region, sends a base64-framed step request, and applies the child's published outputs.",
+      "tags": [
+        "ipc",
+        "serialization",
+        "event-handler",
+        "clock-shim"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:kernel/src/process_participant.cpp:send_line",
+      "type": "function",
+      "name": "send_line",
+      "filePath": "kernel/src/process_participant.cpp",
+      "lineRange": [
+        279,
+        288
+      ],
+      "summary": "Writes a newline-terminated JSON line to the child's stdin, raising RunError on short or failed writes.",
+      "tags": [
+        "ipc",
+        "io",
+        "serialization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:kernel/src/process_participant.cpp:read_line",
+      "type": "function",
+      "name": "read_line",
+      "filePath": "kernel/src/process_participant.cpp",
+      "lineRange": [
+        290,
+        304
+      ],
+      "summary": "Reads a full newline-delimited line from the child's stdout using an internal buffer, blocking until a complete line arrives or the pipe closes.",
+      "tags": [
+        "ipc",
+        "io",
+        "buffering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:kernel/src/process_participant.cpp:shutdown",
+      "type": "function",
+      "name": "shutdown",
+      "filePath": "kernel/src/process_participant.cpp",
+      "lineRange": [
+        306,
+        328
+      ],
+      "summary": "Sends a shutdown request, closes pipes, and reaps the child with a grace period before force-killing, then tears down the clock region.",
+      "tags": [
+        "ipc",
+        "process-management",
+        "cleanup"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:kernel/src/process_participant.hpp:ProcessParticipant",
+      "type": "class",
+      "name": "ProcessParticipant",
+      "filePath": "kernel/src/process_participant.hpp",
+      "lineRange": [
+        27,
+        70
+      ],
+      "summary": "Engine participant that drives an out-of-process child over the JSON-lines step protocol, owning its pipes, pid, and the mmap'd virtual clock region.",
+      "tags": [
+        "service",
+        "ipc",
+        "data-model",
+        "clock-shim"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:shim/clock_shim.c:sil_clock_shim_init",
+      "type": "function",
+      "name": "sil_clock_shim_init",
+      "filePath": "shim/clock_shim.c",
+      "lineRange": [
+        36,
+        48
+      ],
+      "summary": "Load-time constructor that opens the clock-region file named by the environment variable and maps it read-only so interposed clock reads can serve virtual time.",
+      "tags": [
+        "clock-shim",
+        "initialization",
+        "shared-memory"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:shim/clock_shim.c:is_monotonic",
+      "type": "function",
+      "name": "is_monotonic",
+      "filePath": "shim/clock_shim.c",
+      "lineRange": [
+        51,
+        62
+      ],
+      "summary": "Classifies a POSIX clock id as monotonic or realtime to decide whether the region's virtual time or the realtime epoch offset applies.",
+      "tags": [
+        "clock-shim",
+        "utility",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/conftest.py",
+      "type": "file",
+      "name": "conftest.py",
+      "filePath": "tests/conftest.py",
+      "summary": "Pytest configuration providing shared fixtures that locate the CMake build directory, resolve the built sil-run binary, and expose a run_sil helper for executing simulations from a manifest.",
+      "tags": [
+        "test",
+        "fixture",
+        "configuration",
+        "entry-point"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Pytest conftest.py: fixtures defined here are auto-discovered by all tests in the tests/ directory without explicit import."
+    },
+    {
+      "id": "function:tests/conftest.py:run_sil",
+      "type": "function",
+      "name": "run_sil",
+      "filePath": "tests/conftest.py",
+      "lineRange": [
+        46,
+        57
+      ],
+      "summary": "Fixture returning a helper that invokes the built sil-run binary against a manifest and returns the completed process for assertions.",
+      "tags": [
+        "fixture",
+        "test-harness",
+        "subprocess"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/test_determinism.py",
+      "type": "file",
+      "name": "test_determinism.py",
+      "filePath": "tests/test_determinism.py",
+      "summary": "Milestone exit-criterion tests asserting that two independent runs of the full pipeline produce bit-identical MCAP output, plus CLI tests that sil-check reports deterministic pipelines and flags nondeterministic participants.",
+      "tags": [
+        "test",
+        "determinism",
+        "cli",
+        "integration"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Determinism verified via hashlib.sha256 over raw MCAP bytes across two runs."
+    },
+    {
+      "id": "class:tests/test_determinism.py:TestCheckCli",
+      "type": "class",
+      "name": "TestCheckCli",
+      "filePath": "tests/test_determinism.py",
+      "lineRange": [
+        52,
+        92
+      ],
+      "summary": "Test class exercising the sil.check CLI: asserts it reports deterministic pipelines, flags nondeterministic participants, and propagates run failures.",
+      "tags": [
+        "test",
+        "cli",
+        "determinism",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:tests/test_pytest_frontend.py",
+      "type": "file",
+      "name": "test_pytest_frontend.py",
+      "filePath": "tests/test_pytest_frontend.py",
+      "summary": "Tests for the sil.testing pytest frontend, verifying that in-schedule assertion failures fail the enclosing pytest test and that passing assertions yield a typed recording.",
+      "tags": [
+        "test",
+        "pytest-frontend",
+        "assertion",
+        "integration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/test_replayer.py",
+      "type": "file",
+      "name": "test_replayer.py",
+      "filePath": "tests/test_replayer.py",
+      "summary": "Behavior tests for the record-and-replay subsystem covering faithful replay of recorded consumer output, replay determinism and bit-identity, channel-stream preservation across record-replay-record, and rejection of missing/mismatched/unknown recordings.",
+      "tags": [
+        "test",
+        "replay",
+        "recording",
+        "determinism"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Reads MCAP channel streams to compare recorded vs replayed message sequences."
+    },
+    {
+      "id": "class:tests/test_replayer.py:TestFaithfulReplay",
+      "type": "class",
+      "name": "TestFaithfulReplay",
+      "filePath": "tests/test_replayer.py",
+      "lineRange": [
+        80,
+        166
+      ],
+      "summary": "Verifies that replaying a recorded producer reproduces the original consumer output and that replayed channels are recorded into the new run.",
+      "tags": [
+        "test",
+        "replay",
+        "faithfulness"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/test_replayer.py:TestReplaySemantics",
+      "type": "class",
+      "name": "TestReplaySemantics",
+      "filePath": "tests/test_replayer.py",
+      "lineRange": [
+        167,
+        219
+      ],
+      "summary": "Checks replay semantics such as applying a new manifest's channel latency and letting a short recording still reach full run duration.",
+      "tags": [
+        "test",
+        "replay",
+        "semantics",
+        "timing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/test_replayer.py:TestReplayDeterminism",
+      "type": "class",
+      "name": "TestReplayDeterminism",
+      "filePath": "tests/test_replayer.py",
+      "lineRange": [
+        220,
+        222
+      ],
+      "summary": "Asserts replay runs are bit-identical across two executions and that record-replay-record preserves channel streams, including interleaving with a live publisher.",
+      "tags": [
+        "test",
+        "replay",
+        "determinism"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/test_replayer.py:TestReplayRejection",
+      "type": "class",
+      "name": "TestReplayRejection",
+      "filePath": "tests/test_replayer.py",
+      "lineRange": [
+        223,
+        310
+      ],
+      "summary": "Confirms the replayer treats missing recordings, hash mismatches, unknown selected channels, and schema mismatches as configuration errors.",
+      "tags": [
+        "test",
+        "replay",
+        "validation",
+        "error-handling"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:tests/test_run_boundary.py",
+      "type": "file",
+      "name": "test_run_boundary.py",
+      "filePath": "tests/test_run_boundary.py",
+      "summary": "Comprehensive behavior tests at the run boundary covering manifest rejection, clock-shim validation and determinism, message interceptors (drop, drop-nth), recording format seams, run abort on failing assertions, typed periodic producers, activation offsets, and array-payload bit-for-bit roundtrips.",
+      "tags": [
+        "test",
+        "run-boundary",
+        "integration",
+        "determinism"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Large end-to-end suite driving the built sil-run binary and the sil Python package against many manifest variants."
+    },
+    {
+      "id": "class:tests/test_run_boundary.py:TestManifestRejection",
+      "type": "class",
+      "name": "TestManifestRejection",
+      "filePath": "tests/test_run_boundary.py",
+      "lineRange": [
+        33,
+        50
+      ],
+      "summary": "Asserts invalid JSON and missing manifest files are surfaced as configuration errors by the run boundary.",
+      "tags": [
+        "test",
+        "manifest",
+        "validation",
+        "error-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/test_run_boundary.py:TestClockShimRejection",
+      "type": "class",
+      "name": "TestClockShimRejection",
+      "filePath": "tests/test_run_boundary.py",
+      "lineRange": [
+        53,
+        125
+      ],
+      "summary": "Validates clock-shim manifest rejection rules: negative epochs, missing shim libraries when requested, and acceptance when the library is present.",
+      "tags": [
+        "test",
+        "clock-shim",
+        "validation",
+        "error-handling"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/test_run_boundary.py:TestClockShimRunBoundary",
+      "type": "class",
+      "name": "TestClockShimRunBoundary",
+      "filePath": "tests/test_run_boundary.py",
+      "lineRange": [
+        128,
+        242
+      ],
+      "summary": "Exercises the shimmed virtual clock at the run boundary, asserting two shimmed runs are bit-identical and that sil-check passes on a shimmed manifest.",
+      "tags": [
+        "test",
+        "clock-shim",
+        "determinism",
+        "run-boundary"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:tests/test_run_boundary.py:TestDropInterceptor",
+      "type": "class",
+      "name": "TestDropInterceptor",
+      "filePath": "tests/test_run_boundary.py",
+      "lineRange": [
+        763,
+        831
+      ],
+      "summary": "Verifies a window-scoped drop interceptor silences messages only inside its configured window.",
+      "tags": [
+        "test",
+        "interceptor",
+        "message-drop"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/test_run_boundary.py:TestDropNthInterceptor",
+      "type": "class",
+      "name": "TestDropNthInterceptor",
+      "filePath": "tests/test_run_boundary.py",
+      "lineRange": [
+        834,
+        891
+      ],
+      "summary": "Verifies a drop-nth interceptor drops every Nth message as configured.",
+      "tags": [
+        "test",
+        "interceptor",
+        "message-drop"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/test_run_boundary.py:TestRecordingFormatSeam",
+      "type": "class",
+      "name": "TestRecordingFormatSeam",
+      "filePath": "tests/test_run_boundary.py",
+      "lineRange": [
+        894,
+        950
+      ],
+      "summary": "Tests the recording format seam, ensuring recorded output conforms to the expected typed MCAP structure.",
+      "tags": [
+        "test",
+        "recording",
+        "serialization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/test_run_boundary.py:TestRunAbort",
+      "type": "class",
+      "name": "TestRunAbort",
+      "filePath": "tests/test_run_boundary.py",
+      "lineRange": [
+        953,
+        979
+      ],
+      "summary": "Confirms a failing assertion aborts the run and surfaces the failure reason.",
+      "tags": [
+        "test",
+        "run-abort",
+        "assertion",
+        "error-handling"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/test_run_boundary.py:TestArrayPayload",
+      "type": "class",
+      "name": "TestArrayPayload",
+      "filePath": "tests/test_run_boundary.py",
+      "lineRange": [
+        1012,
+        1061
+      ],
+      "summary": "Asserts fixed-size array payloads roundtrip bit-for-bit through recording and replay.",
+      "tags": [
+        "test",
+        "array-payload",
+        "serialization",
+        "determinism"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:tests/test_run_boundary.py:write_with_raw_array_schema",
+      "type": "function",
+      "name": "write_with_raw_array_schema",
+      "filePath": "tests/test_run_boundary.py",
+      "lineRange": [
+        994,
+        1009
+      ],
+      "summary": "Helper that writes a manifest declaring a raw fixed-size array schema field for array-payload tests.",
+      "tags": [
+        "test-helper",
+        "array-payload",
+        "schema"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/toys.py",
+      "type": "file",
+      "name": "toys.py",
+      "filePath": "tests/toys.py",
+      "summary": "Shared test fixtures and helpers providing toy manifests, producer/accumulator libraries, and a record-producer-run helper built on the sil.manifest Manifest builder.",
+      "tags": [
+        "test",
+        "fixture",
+        "test-harness"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:include/sil/participant.h",
+      "type": "file",
+      "name": "participant.h",
+      "filePath": "include/sil/participant.h",
+      "summary": "Defines the stable C ABI (sil_api_v1 function table and sil_participant_init entry point) that native participant shared libraries implement to register tasks, subscribe to channels, and exchange messages with the kernel under stepped virtual time.",
+      "tags": [
+        "type-definition",
+        "api-schema",
+        "entry-point",
+        "c-abi"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Pure C header using extern \"C\" guards and function-pointer tables to expose a versioned, language-agnostic ABI across the kernel/participant boundary."
+    },
+    {
+      "id": "file:kernel/src/native_participant.cpp",
+      "type": "file",
+      "name": "native_participant.cpp",
+      "filePath": "kernel/src/native_participant.cpp",
+      "summary": "Kernel-side adapter that dlopen's a native participant shared library, populates the sil_api_v1 function table with bridge callbacks, and drives the participant's sil_participant_init entry point through the engine.",
+      "tags": [
+        "service",
+        "middleware",
+        "api-handler",
+        "serialization"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Uses dlopen/dlsym/dlclose and reinterpret_cast to load the participant symbol, bridging C++ engine calls to the flat C ABI callbacks."
+    },
+    {
+      "id": "file:kernel/src/native_participant.hpp",
+      "type": "file",
+      "name": "native_participant.hpp",
+      "filePath": "kernel/src/native_participant.hpp",
+      "summary": "Declares the NativeParticipant class that owns a dlopen'd library handle, the sil_api_v1 bridge table, subscription set, and take buffer for a single native participant instance.",
+      "tags": [
+        "type-definition",
+        "service",
+        "data-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:participants/toy_accumulator.cpp",
+      "type": "file",
+      "name": "toy_accumulator.cpp",
+      "filePath": "participants/toy_accumulator.cpp",
+      "summary": "Walking-skeleton native participant fixture built as a .silp MODULE library that subscribes to an input channel, accumulates a running count/sum from incoming toy_Counter messages, and republishes the result.",
+      "tags": [
+        "test",
+        "component",
+        "event-handler",
+        "fixture"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:participants/toy_producer.cpp",
+      "type": "file",
+      "name": "toy_producer.cpp",
+      "filePath": "participants/toy_producer.cpp",
+      "summary": "Walking-skeleton native participant fixture built as a .silp MODULE library that registers a periodic task publishing an incrementing sequence counter on a configured channel.",
+      "tags": [
+        "test",
+        "component",
+        "event-handler",
+        "fixture"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:kernel/src/native_participant.cpp:NativeApiBridge",
+      "type": "class",
+      "name": "NativeApiBridge",
+      "filePath": "kernel/src/native_participant.cpp",
+      "lineRange": [
+        17,
+        84
+      ],
+      "summary": "Static bridge exposing the sil_api_v1 C callbacks (register_task, subscribe, publish, take, now_ns, fail) that translate participant calls into the C++ engine's task and channel operations.",
+      "tags": [
+        "middleware",
+        "api-handler",
+        "serialization",
+        "c-abi"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:kernel/src/native_participant.cpp:register_task",
+      "type": "function",
+      "name": "register_task",
+      "filePath": "kernel/src/native_participant.cpp",
+      "lineRange": [
+        18,
+        32
+      ],
+      "summary": "ABI callback that registers a periodic participant task with the engine during setup, failing the run if invoked outside the setup phase.",
+      "tags": [
+        "api-handler",
+        "event-handler",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:kernel/src/native_participant.cpp:take",
+      "type": "function",
+      "name": "take",
+      "filePath": "kernel/src/native_participant.cpp",
+      "lineRange": [
+        60,
+        76
+      ],
+      "summary": "ABI callback that returns the next visible message on a subscribed channel into a kernel-owned buffer, guarding against calls outside a task and unsubscribed channels.",
+      "tags": [
+        "api-handler",
+        "serialization",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:kernel/src/native_participant.cpp:publish",
+      "type": "function",
+      "name": "publish",
+      "filePath": "kernel/src/native_participant.cpp",
+      "lineRange": [
+        46,
+        58
+      ],
+      "summary": "ABI callback that publishes raw message bytes on a channel via the engine, failing the run if invoked outside a task callback.",
+      "tags": [
+        "api-handler",
+        "serialization",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:kernel/src/native_participant.cpp:NativeParticipant",
+      "type": "class",
+      "name": "NativeParticipant",
+      "filePath": "kernel/src/native_participant.cpp",
+      "lineRange": [
+        86,
+        121
+      ],
+      "summary": "Constructs a native participant by resolving its library path, dlopen'ing it, locating sil_participant_init, and invoking it with the bridge API table; the destructor closes the library handle.",
+      "tags": [
+        "factory",
+        "service",
+        "singleton"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:kernel/src/native_participant.hpp:NativeParticipant",
+      "type": "class",
+      "name": "NativeParticipant",
+      "filePath": "kernel/src/native_participant.hpp",
+      "lineRange": [
+        15,
+        35
+      ],
+      "summary": "Declaration of the NativeParticipant class owning the engine reference, library handle, sil_api_v1 bridge table, subscription set, and take buffer for one loaded native participant.",
+      "tags": [
+        "type-definition",
+        "data-model",
+        "service"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:participants/toy_accumulator.cpp:Accumulator",
+      "type": "class",
+      "name": "Accumulator",
+      "filePath": "participants/toy_accumulator.cpp",
+      "lineRange": [
+        14,
+        20
+      ],
+      "summary": "Per-instance state for the toy accumulator fixture holding the API handle, input/output channel names, and running count and sum.",
+      "tags": [
+        "data-model",
+        "fixture",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:participants/toy_accumulator.cpp:accumulate",
+      "type": "function",
+      "name": "accumulate",
+      "filePath": "participants/toy_accumulator.cpp",
+      "lineRange": [
+        24,
+        40
+      ],
+      "summary": "Periodic task callback that drains toy_Counter messages from the input channel, folds them into the running count and sum, and republishes the accumulated result.",
+      "tags": [
+        "event-handler",
+        "serialization",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:participants/toy_producer.cpp:tick",
+      "type": "function",
+      "name": "tick",
+      "filePath": "participants/toy_producer.cpp",
+      "lineRange": [
+        22,
+        31
+      ],
+      "summary": "Periodic task callback that emits an incrementing sequence counter message on the producer's configured channel and fails the run on publish error.",
+      "tags": [
+        "event-handler",
+        "serialization",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:participants/toy_producer.cpp:Producer",
+      "type": "class",
+      "name": "Producer",
+      "filePath": "participants/toy_producer.cpp",
+      "lineRange": [
+        14,
+        18
+      ],
+      "summary": "Per-instance state for the toy producer fixture holding the API handle, output channel name, and current sequence number.",
+      "tags": [
+        "data-model",
+        "fixture",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:python/src/sil/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "python/src/sil/__init__.py",
+      "summary": "Package entry point for the sil Python framework; re-exports the Manifest API from manifest.py as the public surface of the package.",
+      "tags": [
+        "entry-point",
+        "barrel",
+        "python-package"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:python/src/sil/manifest.py",
+      "type": "file",
+      "name": "manifest.py",
+      "filePath": "python/src/sil/manifest.py",
+      "summary": "Builds and validates the SiL execution manifest — schemas, channels, interceptors, and native/process/replay participants — then serializes it to canonical JSON and SHA-256-hashes it as the single deterministic execution input.",
+      "tags": [
+        "data-model",
+        "serialization",
+        "validation",
+        "factory",
+        "manifest",
+        "tested"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses hashlib.sha256 over sorted-key JSON (json.dumps with sort_keys) to produce a canonical, deterministic manifest hash."
+    },
+    {
+      "id": "file:python/src/sil/participant.py",
+      "type": "file",
+      "name": "participant.py",
+      "filePath": "python/src/sil/participant.py",
+      "summary": "Python side of the JSON-lines step protocol for out-of-process participants; reads init/step messages from stdin, decodes packed channel payloads via the schema module, invokes user on_init/on_step callbacks, and writes responses to stdout.",
+      "tags": [
+        "service",
+        "event-handler",
+        "protocol",
+        "serialization",
+        "entry-point"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Loads user participant modules dynamically via importlib.util.spec_from_file_location; base64-encodes packed binary channel payloads over the line protocol."
+    },
+    {
+      "id": "file:python/src/sil/schema.py",
+      "type": "file",
+      "name": "schema.py",
+      "filePath": "python/src/sil/schema.py",
+      "summary": "Packs and unpacks channel messages using the same packed little-endian layout as the C silschema codegen, dispatching each field to scalar, fixed byte-array, or list plan handlers built on struct.Struct.",
+      "tags": [
+        "serialization",
+        "data-model",
+        "factory",
+        "binary-protocol",
+        "tested"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Composes a struct.Struct format string from per-field plan objects (spread/gather) to mirror the C little-endian wire layout."
+    },
+    {
+      "id": "file:python/src/sil/testing.py",
+      "type": "file",
+      "name": "testing.py",
+      "filePath": "python/src/sil/testing.py",
+      "summary": "In-simulation test API that writes the manifest, invokes the SiL runner as a subprocess, and returns a RunResult exposing decoded MCAP messages; a non-zero runner exit surfaces as a RunFailure assertion.",
+      "tags": [
+        "test",
+        "service",
+        "utility",
+        "simulation",
+        "tested"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:python/src/sil/manifest.py:Manifest",
+      "type": "class",
+      "name": "Manifest",
+      "filePath": "python/src/sil/manifest.py",
+      "lineRange": [
+        48,
+        330
+      ],
+      "summary": "Core builder for the SiL execution manifest, accumulating schemas, channels, interceptors, and participants via add_* methods and emitting validated canonical JSON plus a SHA-256 hash.",
+      "tags": [
+        "data-model",
+        "factory",
+        "validation",
+        "serialization"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:python/src/sil/participant.py:run",
+      "type": "function",
+      "name": "run",
+      "filePath": "python/src/sil/participant.py",
+      "lineRange": [
+        43,
+        91
+      ],
+      "summary": "Drives the JSON-lines step loop: reads init and step messages from stdin, unpacks per-channel binary inputs, calls the participant's on_init/on_step hooks, and streams packed outputs back over stdout.",
+      "tags": [
+        "event-handler",
+        "protocol",
+        "entry-point",
+        "serialization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:python/src/sil/participant.py:StepParticipant",
+      "type": "class",
+      "name": "StepParticipant",
+      "filePath": "python/src/sil/participant.py",
+      "lineRange": [
+        33,
+        40
+      ],
+      "summary": "Base protocol interface defining the on_init and on_step callbacks that user participants implement to react to each simulation step.",
+      "tags": [
+        "protocol",
+        "type-definition",
+        "event-handler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:python/src/sil/schema.py:MessageType",
+      "type": "class",
+      "name": "MessageType",
+      "filePath": "python/src/sil/schema.py",
+      "lineRange": [
+        22,
+        47
+      ],
+      "summary": "Compiles a channel schema into a struct.Struct and provides pack/unpack for converting field dicts to and from the packed little-endian wire layout.",
+      "tags": [
+        "serialization",
+        "factory",
+        "binary-protocol"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:python/src/sil/schema.py:_ByteArray",
+      "type": "class",
+      "name": "_ByteArray",
+      "filePath": "python/src/sil/schema.py",
+      "lineRange": [
+        63,
+        83
+      ],
+      "summary": "Field plan for fixed-size byte-array fields, spreading a bytes value into struct-packable form with length validation and gathering it back on unpack.",
+      "tags": [
+        "serialization",
+        "binary-protocol",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:python/src/sil/schema.py:_List",
+      "type": "class",
+      "name": "_List",
+      "filePath": "python/src/sil/schema.py",
+      "lineRange": [
+        86,
+        103
+      ],
+      "summary": "Field plan for fixed-length list fields, flattening a sequence into individual struct elements with length validation and reassembling it on gather.",
+      "tags": [
+        "serialization",
+        "binary-protocol",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:python/src/sil/testing.py:run_simulation",
+      "type": "function",
+      "name": "run_simulation",
+      "filePath": "python/src/sil/testing.py",
+      "lineRange": [
+        48,
+        68
+      ],
+      "summary": "Writes the manifest to the working directory, runs the SiL runner as a subprocess, raises RunFailure on non-zero exit, and returns a RunResult wrapping the produced MCAP and channel schemas.",
+      "tags": [
+        "test",
+        "service",
+        "simulation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:python/src/sil/testing.py:RunResult",
+      "type": "class",
+      "name": "RunResult",
+      "filePath": "python/src/sil/testing.py",
+      "lineRange": [
+        30,
+        45
+      ],
+      "summary": "Holds the MCAP output path, manifest hash, and channel type map from a simulation run, and decodes recorded records into typed messages on demand.",
+      "tags": [
+        "data-model",
+        "test",
+        "serialization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "pipeline:.github/workflows/ci.yml",
+      "type": "pipeline",
+      "name": "ci.yml",
+      "filePath": ".github/workflows/ci.yml",
+      "summary": "GitHub Actions CI pipeline that builds the CMake kernel and runs the full pytest suite on push to main and pull requests, then enforces the determinism gate by re-running the reference pipeline through sil.check to guarantee bit-identical MCAP output.",
+      "tags": [
+        "ci-cd",
+        "infrastructure",
+        "determinism",
+        "build-system",
+        "test"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Uses astral-sh/setup-uv for a uv-managed Python venv, and inlines a heredoc Python snippet in the final step to invoke the determinism check as the milestone exit criterion."
+    },
+    {
+      "id": "config:CMakeLists.txt",
+      "type": "config",
+      "name": "CMakeLists.txt",
+      "filePath": "CMakeLists.txt",
+      "summary": "Top-level CMake build configuration for the SiL kernel; builds the sil-run executable, the sil_clock_shim preload library and its probe, runs the silschema.py message codegen, and compiles the toy .silp participant fixtures.",
+      "tags": [
+        "configuration",
+        "build-system",
+        "infrastructure",
+        "containerization",
+        "codegen"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Uses FetchContent to vendor nlohmann_json and mcap; builds sil_clock_shim as SHARED (not MODULE) so macOS DYLD_INSERT_LIBRARIES accepts a real dylib, and a custom_command drives generated header codegen."
+    },
+    {
+      "id": "document:DESIGN.md",
+      "type": "document",
+      "name": "DESIGN.md",
+      "filePath": "DESIGN.md",
+      "summary": "Architecture decision record capturing the 16 core design decisions of the SiL framework, from determinism scope and the central time master to schema-defined fixed message layout, the C++ kernel with stable C ABI, and Milestone 1 scope.",
+      "tags": [
+        "documentation",
+        "architecture",
+        "decision-record",
+        "design"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:Makefile",
+      "type": "config",
+      "name": "Makefile",
+      "filePath": "Makefile",
+      "summary": "Thin convenience wrapper mirroring the README and CI commands, providing configure/build/test/run/check targets over the CMake build and the pytest suite, including the determinism-check entry point.",
+      "tags": [
+        "configuration",
+        "build-system",
+        "infrastructure",
+        "ci-cd"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "README.md",
+      "summary": "Project overview for the SiL framework covering the Milestone 1 walking skeleton and determinism proof, the virtual clock shim for opaque POSIX vECUs, build/test instructions, and the repository layout.",
+      "tags": [
+        "documentation",
+        "entry-point",
+        "overview"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:python/pyproject.toml",
+      "type": "config",
+      "name": "pyproject.toml",
+      "filePath": "python/pyproject.toml",
+      "summary": "Python packaging config for the sil package, declaring optional dependencies, console scripts (including sil-check), and a hatchling wheel build targeting the src/sil layout.",
+      "tags": [
+        "configuration",
+        "build-system",
+        "packaging",
+        "python"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Uses the src-layout with hatchling; project.scripts exposes CLI entry points."
+    },
+    {
+      "id": "file:python/src/sil/check.py",
+      "type": "file",
+      "name": "check.py",
+      "filePath": "python/src/sil/check.py",
+      "summary": "Implements the sil-check determinism verifier that runs a manifest twice and bit-compares the resulting MCAP recordings via SHA-256.",
+      "tags": [
+        "entry-point",
+        "cli",
+        "determinism",
+        "validation",
+        "tested"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:python/src/sil/check.py:check",
+      "type": "function",
+      "name": "check",
+      "filePath": "python/src/sil/check.py",
+      "lineRange": [
+        26,
+        43
+      ],
+      "summary": "Runs the given manifest twice and compares the two recordings' SHA-256 hashes to confirm deterministic output.",
+      "tags": [
+        "determinism",
+        "validation",
+        "hashing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:python/src/sil/check.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "python/src/sil/check.py",
+      "lineRange": [
+        49,
+        60
+      ],
+      "summary": "CLI entry point that parses arguments, invokes the determinism check, and exits with a status reflecting the comparison result.",
+      "tags": [
+        "entry-point",
+        "cli"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:python/src/sil/recording.py",
+      "type": "file",
+      "name": "recording.py",
+      "filePath": "python/src/sil/recording.py",
+      "summary": "Reads MCAP recordings in Python, decoding recorded messages into records for replay and verification.",
+      "tags": [
+        "serialization",
+        "mcap",
+        "recording",
+        "reader",
+        "tested"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:python/src/sil/recording.py:read_records",
+      "type": "function",
+      "name": "read_records",
+      "filePath": "python/src/sil/recording.py",
+      "lineRange": [
+        10,
+        37
+      ],
+      "summary": "Iterates an MCAP recording file and yields decoded message records.",
+      "tags": [
+        "serialization",
+        "mcap",
+        "reader"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "schema:schemas/toy.json",
+      "type": "schema",
+      "name": "toy.json",
+      "filePath": "schemas/toy.json",
+      "summary": "The single typed message-schema contract for the framework, defining the toy.Counter and toy.Accum message layouts used across kernel, codegen, and tests.",
+      "tags": [
+        "schema-definition",
+        "message-schema",
+        "data-model",
+        "contract"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:shim/clock_probe.c",
+      "type": "file",
+      "name": "clock_probe.c",
+      "filePath": "shim/clock_probe.c",
+      "summary": "Standalone C probe that exercises the virtual clock shim by calling clock_gettime/clock_nanosleep and printing observed times to verify shimmed determinism.",
+      "tags": [
+        "shim",
+        "clock",
+        "determinism",
+        "probe",
+        "tested"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Calls libc clock APIs directly so the LD_PRELOAD shim can intercept them."
+    },
+    {
+      "id": "function:shim/clock_probe.c:print_clock",
+      "type": "function",
+      "name": "print_clock",
+      "filePath": "shim/clock_probe.c",
+      "lineRange": [
+        18,
+        40
+      ],
+      "summary": "Queries a given clock id via clock_gettime and prints the resulting nanosecond timestamp for the probe output.",
+      "tags": [
+        "clock",
+        "probe",
+        "diagnostics"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:shim/clock_probe.c:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "shim/clock_probe.c",
+      "lineRange": [
+        42,
+        83
+      ],
+      "summary": "Probe entry point that reads several clocks and performs a sleep to exercise the shim's interception across a simulated step.",
+      "tags": [
+        "entry-point",
+        "clock",
+        "probe"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:tests/participants/array_source.py",
+      "type": "file",
+      "name": "array_source.py",
+      "filePath": "tests/participants/array_source.py",
+      "summary": "Out-of-process participant fixture that publishes fixed-size array-field messages to exercise the array schema transport.",
+      "tags": [
+        "test",
+        "fixture",
+        "participant",
+        "array"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/participants/clock_reader.py",
+      "type": "file",
+      "name": "clock_reader.py",
+      "filePath": "tests/participants/clock_reader.py",
+      "summary": "Participant fixture that reads the clock each step to exercise the virtual clock shim's determinism behavior.",
+      "tags": [
+        "test",
+        "fixture",
+        "participant",
+        "clock"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/participants/echo.py",
+      "type": "file",
+      "name": "echo.py",
+      "filePath": "tests/participants/echo.py",
+      "summary": "Minimal participant fixture that echoes received messages back, used as a baseline participant in tests.",
+      "tags": [
+        "test",
+        "fixture",
+        "participant",
+        "echo"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/participants/fail_at_20ms.py",
+      "type": "file",
+      "name": "fail_at_20ms.py",
+      "filePath": "tests/participants/fail_at_20ms.py",
+      "summary": "Participant fixture that triggers an in-sim assertion failure at the 20ms mark to test failure handling.",
+      "tags": [
+        "test",
+        "fixture",
+        "participant",
+        "failure"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/participants/nondet.py",
+      "type": "file",
+      "name": "nondet.py",
+      "filePath": "tests/participants/nondet.py",
+      "summary": "Deliberately non-deterministic participant fixture used to prove the determinism check can detect divergent recordings.",
+      "tags": [
+        "test",
+        "fixture",
+        "participant",
+        "determinism"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/participants/nondet.py:NonDeterministic",
+      "type": "class",
+      "name": "NonDeterministic",
+      "filePath": "tests/participants/nondet.py",
+      "lineRange": [
+        9,
+        16
+      ],
+      "summary": "Participant that emits non-deterministic values each step so sil-check observes differing hashes between runs.",
+      "tags": [
+        "test",
+        "fixture",
+        "determinism"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/participants/spawn_marker.py",
+      "type": "file",
+      "name": "spawn_marker.py",
+      "filePath": "tests/participants/spawn_marker.py",
+      "summary": "Participant fixture that writes a marker on spawn to verify process-participant spawning wiring.",
+      "tags": [
+        "test",
+        "fixture",
+        "participant",
+        "spawn"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/participants/spawn_marker.py:SpawnMarker",
+      "type": "class",
+      "name": "SpawnMarker",
+      "filePath": "tests/participants/spawn_marker.py",
+      "lineRange": [
+        15,
+        21
+      ],
+      "summary": "Participant that records a spawn marker so tests can assert the participant process was launched.",
+      "tags": [
+        "test",
+        "fixture",
+        "spawn"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/participants/tick_checks.py",
+      "type": "file",
+      "name": "tick_checks.py",
+      "filePath": "tests/participants/tick_checks.py",
+      "summary": "Participant fixture that asserts tick ordering and timing correctness during each simulation step.",
+      "tags": [
+        "test",
+        "fixture",
+        "participant",
+        "timing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/participants/tick_checks.py:TicksAreCorrect",
+      "type": "class",
+      "name": "TicksAreCorrect",
+      "filePath": "tests/participants/tick_checks.py",
+      "lineRange": [
+        1,
+        27
+      ],
+      "summary": "Participant that validates the step tick sequence is monotonic and correctly spaced.",
+      "tags": [
+        "test",
+        "fixture",
+        "timing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/test_clock_shim.py",
+      "type": "file",
+      "name": "test_clock_shim.py",
+      "filePath": "tests/test_clock_shim.py",
+      "summary": "Pytest suite that builds and runs the clock probe under the shim to verify virtual-clock reads are frozen within a step and advance deterministically across steps.",
+      "tags": [
+        "test",
+        "clock",
+        "shim",
+        "determinism"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:tests/test_clock_shim.py:TestClockShim",
+      "type": "class",
+      "name": "TestClockShim",
+      "filePath": "tests/test_clock_shim.py",
+      "lineRange": [
+        79,
+        149
+      ],
+      "summary": "Test class asserting the clock shim freezes reads within a step, advances virtual time across steps, and returns success immediately from sleeps.",
+      "tags": [
+        "test",
+        "clock",
+        "shim"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:tests/test_clock_shim.py:run_probe",
+      "type": "function",
+      "name": "run_probe",
+      "filePath": "tests/test_clock_shim.py",
+      "lineRange": [
+        66,
+        82
+      ],
+      "summary": "Helper that runs the compiled clock probe under the shim and returns its parsed clock readings.",
+      "tags": [
+        "test",
+        "helper",
+        "clock"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/test_manifest_builder.py",
+      "type": "file",
+      "name": "test_manifest_builder.py",
+      "filePath": "tests/test_manifest_builder.py",
+      "summary": "Extensive pytest suite for the Manifest builder covering channel/participant validation, clock-shim options, array schemas, interceptor ordering, replay wiring, and canonical hashing.",
+      "tags": [
+        "test",
+        "manifest",
+        "validation",
+        "hashing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:tests/test_recording_reader.py",
+      "type": "file",
+      "name": "test_recording_reader.py",
+      "filePath": "tests/test_recording_reader.py",
+      "summary": "Pytest suite verifying that the Python MCAP recording reader decodes recorded messages back into the expected records.",
+      "tags": [
+        "test",
+        "recording",
+        "mcap",
+        "reader"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/test_schema.py",
+      "type": "file",
+      "name": "test_schema.py",
+      "filePath": "tests/test_schema.py",
+      "summary": "Pytest suite for the Python schema layer covering scalar pack/unpack roundtrips and fixed-size array field layout, ordering, and length enforcement.",
+      "tags": [
+        "test",
+        "schema",
+        "serialization",
+        "array"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/test_schema.py:TestArrayLayout",
+      "type": "class",
+      "name": "TestArrayLayout",
+      "filePath": "tests/test_schema.py",
+      "lineRange": [
+        27,
+        91
+      ],
+      "summary": "Tests fixed-size array field packing: declared-order layout, u8-array surfacing as bytes, length rejection on pack, and mixed scalar/array structs.",
+      "tags": [
+        "test",
+        "schema",
+        "array",
+        "serialization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/test_schema.py:TestScalarUnchanged",
+      "type": "class",
+      "name": "TestScalarUnchanged",
+      "filePath": "tests/test_schema.py",
+      "lineRange": [
+        18,
+        24
+      ],
+      "summary": "Confirms scalar schema pack/unpack roundtrips remain unchanged after array support was added.",
+      "tags": [
+        "test",
+        "schema",
+        "serialization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/test_silschema.py",
+      "type": "file",
+      "name": "test_silschema.py",
+      "filePath": "tests/test_silschema.py",
+      "summary": "Pytest suite for the silschema codegen verifying generated packed C structs for scalar and array members, including static_assert byte-size checks and u8 arrays.",
+      "tags": [
+        "test",
+        "codegen",
+        "schema",
+        "c"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:tools/silschema.py",
+      "type": "file",
+      "name": "silschema.py",
+      "filePath": "tools/silschema.py",
+      "summary": "Schema-to-packed-C-struct code generator that mirrors the Python sil.schema layout, emitting C member declarations and static_assert size checks for each message.",
+      "tags": [
+        "codegen",
+        "schema",
+        "c",
+        "tooling",
+        "tested"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:tools/silschema.py:generate",
+      "type": "function",
+      "name": "generate",
+      "filePath": "tools/silschema.py",
+      "lineRange": [
+        40,
+        68
+      ],
+      "summary": "Generates the C header text for the given schemas, emitting a packed struct with member declarations and a static_assert total-byte-size check per message.",
+      "tags": [
+        "codegen",
+        "schema",
+        "c"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:tools/silschema.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "tools/silschema.py",
+      "lineRange": [
+        71,
+        77
+      ],
+      "summary": "CLI entry point that loads a schema JSON file and writes the generated C header to the output path.",
+      "tags": [
+        "codegen",
+        "cli",
+        "entry-point"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:kernel/src/engine.cpp",
+      "target": "file:kernel/src/engine.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/engine.cpp",
+      "target": "file:kernel/src/native_participant.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/engine.cpp",
+      "target": "file:kernel/src/process_participant.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/engine.cpp",
+      "target": "file:kernel/src/recording_sink.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/engine.cpp",
+      "target": "file:kernel/src/replayer.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/engine.hpp",
+      "target": "file:kernel/src/manifest.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/main.cpp",
+      "target": "file:kernel/src/clock_shim.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/main.cpp",
+      "target": "file:kernel/src/engine.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/main.cpp",
+      "target": "file:kernel/src/manifest.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/main.cpp",
+      "target": "file:kernel/src/recording_sink.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/manifest.cpp",
+      "target": "file:kernel/src/manifest.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/manifest.cpp",
+      "target": "file:kernel/src/sha256.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.cpp",
+      "target": "file:kernel/src/engine.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.cpp",
+      "target": "file:kernel/src/mcap_recording.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.cpp",
+      "target": "file:kernel/src/recording_reader.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.hpp",
+      "target": "file:kernel/src/manifest.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.hpp",
+      "target": "file:kernel/src/recording_sink.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/recording_sink.hpp",
+      "target": "file:kernel/src/manifest.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/replayer.cpp",
+      "target": "file:kernel/src/engine.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/replayer.cpp",
+      "target": "file:kernel/src/recording_reader.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/replayer.cpp",
+      "target": "file:kernel/src/replayer.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/replayer.cpp",
+      "target": "file:kernel/src/sha256.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/replayer.hpp",
+      "target": "file:kernel/src/manifest.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/engine.hpp",
+      "target": "class:kernel/src/engine.hpp:Engine",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/engine.hpp",
+      "target": "class:kernel/src/engine.hpp:SubQueue",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/engine.hpp",
+      "target": "class:kernel/src/engine.hpp:Engine",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:kernel/src/engine.hpp",
+      "target": "class:kernel/src/engine.hpp:SubQueue",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:kernel/src/engine.cpp",
+      "target": "function:kernel/src/engine.cpp:setup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/engine.cpp",
+      "target": "function:kernel/src/engine.cpp:publish",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/engine.cpp",
+      "target": "function:kernel/src/engine.cpp:run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/engine.cpp",
+      "target": "function:kernel/src/engine.cpp:register_task",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/engine.cpp",
+      "target": "function:kernel/src/engine.cpp:apply_overrides",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/engine.cpp",
+      "target": "function:kernel/src/engine.cpp:encode_le",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/main.cpp",
+      "target": "function:kernel/src/main.cpp:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/main.cpp",
+      "target": "function:kernel/src/main.cpp:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:kernel/src/manifest.cpp",
+      "target": "function:kernel/src/manifest.cpp:load_manifest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/manifest.cpp",
+      "target": "function:kernel/src/manifest.cpp:parse_participant",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/manifest.cpp",
+      "target": "function:kernel/src/manifest.cpp:parse_interceptors",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/manifest.cpp",
+      "target": "function:kernel/src/manifest.cpp:parse_schema",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/manifest.cpp",
+      "target": "function:kernel/src/manifest.cpp:load_manifest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:kernel/src/manifest.hpp",
+      "target": "class:kernel/src/manifest.hpp:Manifest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/manifest.hpp",
+      "target": "class:kernel/src/manifest.hpp:InterceptorSpec",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/manifest.hpp",
+      "target": "class:kernel/src/manifest.hpp:Manifest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:kernel/src/manifest.hpp",
+      "target": "class:kernel/src/manifest.hpp:InterceptorSpec",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.cpp",
+      "target": "function:kernel/src/mcap_recording.cpp:McapRecorder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.cpp",
+      "target": "function:kernel/src/mcap_recording.cpp:record",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.cpp",
+      "target": "function:kernel/src/mcap_recording.cpp:McapRecordingReader",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.cpp",
+      "target": "function:kernel/src/mcap_recording.cpp:make_recording_sink",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.cpp",
+      "target": "function:kernel/src/mcap_recording.cpp:make_recording_reader",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.cpp",
+      "target": "class:kernel/src/mcap_recording.cpp:McapRecordingReader",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.cpp",
+      "target": "function:kernel/src/mcap_recording.cpp:make_recording_sink",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.cpp",
+      "target": "function:kernel/src/mcap_recording.cpp:make_recording_reader",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.hpp",
+      "target": "class:kernel/src/mcap_recording.hpp:McapRecorder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/mcap_recording.hpp",
+      "target": "class:kernel/src/mcap_recording.hpp:McapRecorder",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:kernel/src/recording_reader.hpp",
+      "target": "class:kernel/src/recording_reader.hpp:RecordingReader",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/recording_reader.hpp",
+      "target": "class:kernel/src/recording_reader.hpp:RecordingReader",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:kernel/src/recording_sink.hpp",
+      "target": "class:kernel/src/recording_sink.hpp:RecordingSink",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/recording_sink.hpp",
+      "target": "class:kernel/src/recording_sink.hpp:RecordingSink",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:kernel/src/replayer.hpp",
+      "target": "class:kernel/src/replayer.hpp:Replayer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/replayer.hpp",
+      "target": "class:kernel/src/replayer.hpp:Replayer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:kernel/src/replayer.cpp",
+      "target": "function:kernel/src/replayer.cpp:Replayer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/replayer.cpp",
+      "target": "function:kernel/src/replayer.cpp:publish_due",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/sha256.hpp",
+      "target": "class:kernel/src/sha256.hpp:Sha256",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/sha256.hpp",
+      "target": "function:kernel/src/sha256.hpp:process_block",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/sha256.hpp",
+      "target": "function:kernel/src/sha256.hpp:hex_digest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/sha256.hpp",
+      "target": "class:kernel/src/sha256.hpp:Sha256",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:kernel/src/mcap_recording.hpp:McapRecorder",
+      "target": "class:kernel/src/recording_sink.hpp:RecordingSink",
+      "type": "implements",
+      "direction": "forward",
+      "weight": 0.9
+    },
+    {
+      "source": "class:kernel/src/mcap_recording.cpp:McapRecordingReader",
+      "target": "class:kernel/src/recording_reader.hpp:RecordingReader",
+      "type": "implements",
+      "direction": "forward",
+      "weight": 0.9
+    },
+    {
+      "source": "function:kernel/src/manifest.cpp:load_manifest",
+      "target": "function:kernel/src/sha256.hpp:hex_digest",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/replayer.cpp:Replayer",
+      "target": "function:kernel/src/sha256.hpp:hex_digest",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/replayer.cpp:Replayer",
+      "target": "function:kernel/src/mcap_recording.cpp:make_recording_reader",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/engine.cpp:publish",
+      "target": "function:kernel/src/engine.cpp:apply_overrides",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/engine.cpp:apply_overrides",
+      "target": "function:kernel/src/engine.cpp:encode_le",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/engine.cpp:setup",
+      "target": "function:kernel/src/engine.cpp:register_task",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/engine.cpp:run",
+      "target": "function:kernel/src/replayer.cpp:publish_due",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/main.cpp:main",
+      "target": "function:kernel/src/manifest.cpp:load_manifest",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/main.cpp:main",
+      "target": "function:kernel/src/mcap_recording.cpp:make_recording_sink",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/main.cpp:main",
+      "target": "function:kernel/src/engine.cpp:setup",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/main.cpp:main",
+      "target": "function:kernel/src/engine.cpp:run",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:kernel/src/clock_shim.cpp",
+      "target": "file:kernel/src/clock_shim.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/process_participant.cpp",
+      "target": "file:kernel/src/clock_shim.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/process_participant.cpp",
+      "target": "file:kernel/src/process_participant.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/process_participant.hpp",
+      "target": "file:include/sil/clock_region.h",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/process_participant.hpp",
+      "target": "file:kernel/src/engine.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:shim/clock_shim.c",
+      "target": "file:include/sil/clock_region.h",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/clock_shim.cpp",
+      "target": "function:kernel/src/clock_shim.cpp:runner_dir",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/clock_shim.cpp",
+      "target": "function:kernel/src/clock_shim.cpp:clock_shim_library_path",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/clock_shim.cpp",
+      "target": "function:kernel/src/clock_shim.cpp:clock_shim_library_path",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:kernel/src/process_participant.cpp",
+      "target": "function:kernel/src/process_participant.cpp:b64_encode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/process_participant.cpp",
+      "target": "function:kernel/src/process_participant.cpp:b64_decode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/process_participant.cpp",
+      "target": "function:kernel/src/process_participant.cpp:setup_clock_region",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/process_participant.cpp",
+      "target": "function:kernel/src/process_participant.cpp:inject_shim_env",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/process_participant.cpp",
+      "target": "function:kernel/src/process_participant.cpp:teardown_clock_region",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/process_participant.cpp",
+      "target": "function:kernel/src/process_participant.cpp:step",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/process_participant.cpp",
+      "target": "function:kernel/src/process_participant.cpp:send_line",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/process_participant.cpp",
+      "target": "function:kernel/src/process_participant.cpp:read_line",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/process_participant.cpp",
+      "target": "function:kernel/src/process_participant.cpp:shutdown",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/process_participant.hpp",
+      "target": "class:kernel/src/process_participant.hpp:ProcessParticipant",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/process_participant.hpp",
+      "target": "class:kernel/src/process_participant.hpp:ProcessParticipant",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shim/clock_shim.c",
+      "target": "function:shim/clock_shim.c:sil_clock_shim_init",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:shim/clock_shim.c",
+      "target": "function:shim/clock_shim.c:is_monotonic",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:kernel/src/clock_shim.cpp:clock_shim_library_path",
+      "target": "function:kernel/src/clock_shim.cpp:runner_dir",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/process_participant.cpp:setup_clock_region",
+      "target": "function:kernel/src/clock_shim.cpp:clock_shim_library_path",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/process_participant.cpp:step",
+      "target": "function:kernel/src/process_participant.cpp:b64_encode",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/process_participant.cpp:step",
+      "target": "function:kernel/src/process_participant.cpp:b64_decode",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/process_participant.cpp:step",
+      "target": "function:kernel/src/process_participant.cpp:send_line",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/process_participant.cpp:step",
+      "target": "function:kernel/src/process_participant.cpp:read_line",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/process_participant.cpp:shutdown",
+      "target": "function:kernel/src/process_participant.cpp:teardown_clock_region",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tests/test_determinism.py",
+      "target": "file:tests/conftest.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/test_determinism.py",
+      "target": "file:tests/toys.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/test_pytest_frontend.py",
+      "target": "file:tests/conftest.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/test_pytest_frontend.py",
+      "target": "file:tests/toys.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/test_replayer.py",
+      "target": "file:tests/conftest.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/test_replayer.py",
+      "target": "file:tests/test_run_boundary.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/test_replayer.py",
+      "target": "file:tests/toys.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/test_run_boundary.py",
+      "target": "file:tests/toys.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/toys.py",
+      "target": "file:tests/conftest.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/conftest.py",
+      "target": "function:tests/conftest.py:run_sil",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_determinism.py",
+      "target": "class:tests/test_determinism.py:TestCheckCli",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_replayer.py",
+      "target": "class:tests/test_replayer.py:TestFaithfulReplay",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_replayer.py",
+      "target": "class:tests/test_replayer.py:TestReplaySemantics",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_replayer.py",
+      "target": "class:tests/test_replayer.py:TestReplayDeterminism",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_replayer.py",
+      "target": "class:tests/test_replayer.py:TestReplayRejection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_run_boundary.py",
+      "target": "class:tests/test_run_boundary.py:TestManifestRejection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_run_boundary.py",
+      "target": "class:tests/test_run_boundary.py:TestClockShimRejection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_run_boundary.py",
+      "target": "class:tests/test_run_boundary.py:TestClockShimRunBoundary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_run_boundary.py",
+      "target": "class:tests/test_run_boundary.py:TestDropInterceptor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_run_boundary.py",
+      "target": "class:tests/test_run_boundary.py:TestDropNthInterceptor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_run_boundary.py",
+      "target": "class:tests/test_run_boundary.py:TestRecordingFormatSeam",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_run_boundary.py",
+      "target": "class:tests/test_run_boundary.py:TestRunAbort",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_run_boundary.py",
+      "target": "class:tests/test_run_boundary.py:TestArrayPayload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_run_boundary.py",
+      "target": "function:tests/test_run_boundary.py:write_with_raw_array_schema",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:python/src/sil/check.py",
+      "target": "file:tests/test_determinism.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:python/src/sil/manifest.py",
+      "target": "file:tests/test_run_boundary.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:python/src/sil/schema.py",
+      "target": "file:tests/test_run_boundary.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:python/src/sil/check.py",
+      "target": "file:tests/test_run_boundary.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:python/src/sil/testing.py",
+      "target": "file:tests/test_pytest_frontend.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:python/src/sil/recording.py",
+      "target": "file:tests/test_replayer.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:kernel/src/native_participant.cpp",
+      "target": "file:kernel/src/native_participant.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/native_participant.hpp",
+      "target": "file:include/sil/participant.h",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/native_participant.hpp",
+      "target": "file:kernel/src/engine.hpp",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:participants/toy_accumulator.cpp",
+      "target": "file:include/sil/participant.h",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:participants/toy_producer.cpp",
+      "target": "file:include/sil/participant.h",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:kernel/src/native_participant.cpp",
+      "target": "class:kernel/src/native_participant.cpp:NativeApiBridge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/native_participant.cpp",
+      "target": "function:kernel/src/native_participant.cpp:register_task",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/native_participant.cpp",
+      "target": "function:kernel/src/native_participant.cpp:take",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/native_participant.cpp",
+      "target": "function:kernel/src/native_participant.cpp:publish",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/native_participant.cpp",
+      "target": "class:kernel/src/native_participant.cpp:NativeParticipant",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/native_participant.hpp",
+      "target": "class:kernel/src/native_participant.hpp:NativeParticipant",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:kernel/src/native_participant.hpp",
+      "target": "class:kernel/src/native_participant.hpp:NativeParticipant",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:participants/toy_accumulator.cpp",
+      "target": "class:participants/toy_accumulator.cpp:Accumulator",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:participants/toy_accumulator.cpp",
+      "target": "function:participants/toy_accumulator.cpp:accumulate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:participants/toy_producer.cpp",
+      "target": "class:participants/toy_producer.cpp:Producer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:participants/toy_producer.cpp",
+      "target": "function:participants/toy_producer.cpp:tick",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:python/src/sil/__init__.py",
+      "target": "file:python/src/sil/manifest.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:python/src/sil/participant.py",
+      "target": "file:python/src/sil/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:python/src/sil/participant.py",
+      "target": "file:python/src/sil/schema.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:python/src/sil/testing.py",
+      "target": "file:python/src/sil/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:python/src/sil/testing.py",
+      "target": "file:python/src/sil/manifest.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:python/src/sil/testing.py",
+      "target": "file:python/src/sil/schema.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:python/src/sil/manifest.py",
+      "target": "class:python/src/sil/manifest.py:Manifest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:python/src/sil/manifest.py",
+      "target": "class:python/src/sil/manifest.py:Manifest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:python/src/sil/participant.py",
+      "target": "function:python/src/sil/participant.py:run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:python/src/sil/participant.py",
+      "target": "function:python/src/sil/participant.py:run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:python/src/sil/participant.py",
+      "target": "class:python/src/sil/participant.py:StepParticipant",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:python/src/sil/participant.py",
+      "target": "class:python/src/sil/participant.py:StepParticipant",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:python/src/sil/schema.py",
+      "target": "class:python/src/sil/schema.py:MessageType",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:python/src/sil/schema.py",
+      "target": "class:python/src/sil/schema.py:MessageType",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:python/src/sil/schema.py",
+      "target": "class:python/src/sil/schema.py:_ByteArray",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:python/src/sil/schema.py",
+      "target": "class:python/src/sil/schema.py:_List",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:python/src/sil/testing.py",
+      "target": "function:python/src/sil/testing.py:run_simulation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:python/src/sil/testing.py",
+      "target": "function:python/src/sil/testing.py:run_simulation",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:python/src/sil/testing.py",
+      "target": "class:python/src/sil/testing.py:RunResult",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:python/src/sil/testing.py",
+      "target": "class:python/src/sil/testing.py:RunResult",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:python/src/sil/participant.py:run",
+      "target": "class:python/src/sil/schema.py:MessageType",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:python/src/sil/testing.py:run_simulation",
+      "target": "class:python/src/sil/manifest.py:Manifest",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "pipeline:.github/workflows/ci.yml",
+      "target": "file:tests/test_determinism.py",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "pipeline:.github/workflows/ci.yml",
+      "target": "file:python/src/sil/check.py",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "config:CMakeLists.txt",
+      "target": "file:kernel/src/main.cpp",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:CMakeLists.txt",
+      "target": "file:kernel/src/engine.cpp",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:CMakeLists.txt",
+      "target": "file:kernel/src/manifest.cpp",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:CMakeLists.txt",
+      "target": "file:kernel/src/clock_shim.cpp",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:CMakeLists.txt",
+      "target": "file:kernel/src/native_participant.cpp",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:CMakeLists.txt",
+      "target": "file:kernel/src/process_participant.cpp",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:CMakeLists.txt",
+      "target": "file:kernel/src/mcap_recording.cpp",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:CMakeLists.txt",
+      "target": "file:kernel/src/replayer.cpp",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:CMakeLists.txt",
+      "target": "file:shim/clock_shim.c",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:CMakeLists.txt",
+      "target": "file:shim/clock_probe.c",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:CMakeLists.txt",
+      "target": "file:tools/silschema.py",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:CMakeLists.txt",
+      "target": "file:participants/toy_producer.cpp",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:CMakeLists.txt",
+      "target": "file:participants/toy_accumulator.cpp",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:Makefile",
+      "target": "config:CMakeLists.txt",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "document:README.md",
+      "target": "config:CMakeLists.txt",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "config:Makefile",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "file:shim/clock_shim.c",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "document:DESIGN.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "config:python/pyproject.toml",
+      "target": "file:python/src/sil/check.py",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:python/src/sil/check.py",
+      "target": "function:python/src/sil/check.py:check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:python/src/sil/check.py",
+      "target": "function:python/src/sil/check.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:python/src/sil/check.py",
+      "target": "function:python/src/sil/check.py:check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:python/src/sil/check.py",
+      "target": "function:python/src/sil/check.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:python/src/sil/recording.py",
+      "target": "function:python/src/sil/recording.py:read_records",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:python/src/sil/recording.py",
+      "target": "function:python/src/sil/recording.py:read_records",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:python/src/sil/recording.py",
+      "target": "file:tests/test_recording_reader.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:shim/clock_probe.c",
+      "target": "function:shim/clock_probe.c:print_clock",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:shim/clock_probe.c",
+      "target": "function:shim/clock_probe.c:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:shim/clock_probe.c",
+      "target": "file:tests/test_clock_shim.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/participants/nondet.py",
+      "target": "class:tests/participants/nondet.py:NonDeterministic",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/participants/spawn_marker.py",
+      "target": "class:tests/participants/spawn_marker.py:SpawnMarker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/participants/spawn_marker.py",
+      "target": "class:tests/participants/spawn_marker.py:SpawnMarker",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tests/participants/tick_checks.py",
+      "target": "class:tests/participants/tick_checks.py:TicksAreCorrect",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_clock_shim.py",
+      "target": "class:tests/test_clock_shim.py:TestClockShim",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_clock_shim.py",
+      "target": "function:tests/test_clock_shim.py:run_probe",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_clock_shim.py",
+      "target": "file:shim/clock_probe.c",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:tests/test_schema.py",
+      "target": "class:tests/test_schema.py:TestArrayLayout",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_schema.py",
+      "target": "class:tests/test_schema.py:TestScalarUnchanged",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_silschema.py",
+      "target": "file:tools/silschema.py",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:tools/silschema.py",
+      "target": "function:tools/silschema.py:generate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/silschema.py",
+      "target": "function:tools/silschema.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/silschema.py",
+      "target": "function:tools/silschema.py:generate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/silschema.py",
+      "target": "function:tools/silschema.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/silschema.py",
+      "target": "file:tests/test_silschema.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "schema:schemas/toy.json",
+      "target": "file:tools/silschema.py",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:kernel/src/native_participant.cpp:register_task",
+      "target": "function:kernel/src/engine.cpp:register_task",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:kernel/src/native_participant.cpp:publish",
+      "target": "function:kernel/src/engine.cpp:publish",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:kernel/src/native_participant.cpp:take",
+      "target": "class:kernel/src/engine.hpp:Engine",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer:kernel-core",
+      "name": "Kernel Core",
+      "description": "The deterministic C++20 simulation core: two-tier scheduler and typed pub/sub router (engine), canonical manifest parsing with SHA-256 hashing, MCAP recorder/reader, and replayer.",
+      "nodeIds": [
+        "file:kernel/src/engine.cpp",
+        "file:kernel/src/engine.hpp",
+        "file:kernel/src/main.cpp",
+        "file:kernel/src/manifest.cpp",
+        "file:kernel/src/manifest.hpp",
+        "file:kernel/src/mcap_recording.cpp",
+        "file:kernel/src/mcap_recording.hpp",
+        "file:kernel/src/recording_reader.hpp",
+        "file:kernel/src/recording_sink.hpp",
+        "file:kernel/src/replayer.cpp",
+        "file:kernel/src/replayer.hpp",
+        "file:kernel/src/sha256.hpp"
+      ]
+    },
+    {
+      "id": "layer:participant-adapters",
+      "name": "Participant Adapters",
+      "description": "Kernel-side adapters that bridge participants into the engine: the native dlopen adapter, the out-of-process JSON-lines adapter, and the kernel-side virtual clock shim wiring.",
+      "nodeIds": [
+        "file:kernel/src/native_participant.cpp",
+        "file:kernel/src/native_participant.hpp",
+        "file:kernel/src/process_participant.cpp",
+        "file:kernel/src/process_participant.hpp",
+        "file:kernel/src/clock_shim.cpp",
+        "file:kernel/src/clock_shim.hpp"
+      ]
+    },
+    {
+      "id": "layer:c-abi-shim",
+      "name": "C ABI & Clock Shim",
+      "description": "The stable C ABI boundary (participant.h, clock_region.h) that native participants and the shim depend on, plus the LD_PRELOAD virtual clock shim library and its verification probe.",
+      "nodeIds": [
+        "file:include/sil/clock_region.h",
+        "file:include/sil/participant.h",
+        "file:shim/clock_shim.c",
+        "file:shim/clock_probe.c"
+      ]
+    },
+    {
+      "id": "layer:native-participants",
+      "name": "Native Participant Fixtures",
+      "description": "Toy native participants built as .silp shared libraries against the C ABI, serving as walking-skeleton fixtures for the kernel.",
+      "nodeIds": [
+        "file:participants/toy_accumulator.cpp",
+        "file:participants/toy_producer.cpp"
+      ]
+    },
+    {
+      "id": "layer:python-sdk",
+      "name": "Python SDK",
+      "description": "The user-facing installable sil package: manifest builder, JSON-lines step-participant library, packed-layout schema, in-sim test API, record reader, and the sil-check determinism CLI.",
+      "nodeIds": [
+        "file:python/src/sil/__init__.py",
+        "file:python/src/sil/manifest.py",
+        "file:python/src/sil/participant.py",
+        "file:python/src/sil/schema.py",
+        "file:python/src/sil/testing.py",
+        "file:python/src/sil/check.py",
+        "file:python/src/sil/recording.py",
+        "config:python/pyproject.toml"
+      ]
+    },
+    {
+      "id": "layer:schema-codegen",
+      "name": "Schema & Codegen",
+      "description": "The single typed message contract (toy.json) and the silschema tool that generates packed C structs from it.",
+      "nodeIds": [
+        "schema:schemas/toy.json",
+        "file:tools/silschema.py"
+      ]
+    },
+    {
+      "id": "layer:tests",
+      "name": "Tests",
+      "description": "Pytest behavior tests exercised at the run boundary plus the small out-of-process participant fixtures those tests drive.",
+      "nodeIds": [
+        "file:tests/conftest.py",
+        "file:tests/test_determinism.py",
+        "file:tests/test_pytest_frontend.py",
+        "file:tests/test_replayer.py",
+        "file:tests/test_run_boundary.py",
+        "file:tests/toys.py",
+        "file:tests/test_clock_shim.py",
+        "file:tests/test_manifest_builder.py",
+        "file:tests/test_recording_reader.py",
+        "file:tests/test_schema.py",
+        "file:tests/test_silschema.py",
+        "file:tests/participants/array_source.py",
+        "file:tests/participants/clock_reader.py",
+        "file:tests/participants/echo.py",
+        "file:tests/participants/fail_at_20ms.py",
+        "file:tests/participants/nondet.py",
+        "file:tests/participants/spawn_marker.py",
+        "file:tests/participants/tick_checks.py"
+      ]
+    },
+    {
+      "id": "layer:build-ci-docs",
+      "name": "Build, CI & Documentation",
+      "description": "Project build orchestration (CMake, Makefile), the GitHub Actions CI pipeline, and project documentation (README, DESIGN architecture record).",
+      "nodeIds": [
+        "config:CMakeLists.txt",
+        "config:Makefile",
+        "pipeline:.github/workflows/ci.yml",
+        "document:README.md",
+        "document:DESIGN.md"
+      ]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "Why Determinism Is the Product",
+      "description": "Start with the README to understand what SiL actually sells: a deterministic software-in-the-loop kernel for ADAS/AD regression testing where the same artifacts on the same machine class produce bit-identical recordings. The core does only two things — deterministic scheduling and typed data routing — and everything else in the tour exists to protect that guarantee. This document also lays out the Milestone 1 walking skeleton and the repository layout you'll traverse next.",
+      "nodeIds": [
+        "document:README.md",
+        "document:DESIGN.md"
+      ]
+    },
+    {
+      "order": 2,
+      "title": "The Single Execution Input",
+      "description": "A run is fully described by one manifest: canonical JSON, SHA-256 hashed, the only input the kernel accepts. This step covers both sides of that contract — the Python Manifest builder that assembles schemas, channels, interceptors, and participants and serializes them canonically, and the C++ parser that validates the JSON into typed specs and recomputes the same hash. Because the hash pins the exact scenario, any divergence between two runs of the same manifest is a determinism bug, not a configuration difference.",
+      "nodeIds": [
+        "file:python/src/sil/manifest.py",
+        "file:kernel/src/manifest.cpp",
+        "file:kernel/src/manifest.hpp"
+      ],
+      "languageLesson": "Canonical JSON (sorted keys, fixed formatting) is what makes hashing meaningful: two logically identical manifests must serialize byte-for-byte identically before SHA-256 can act as a stable scenario fingerprint."
+    },
+    {
+      "order": 3,
+      "title": "Booting a Run",
+      "description": "kernel/src/main.cpp is the sil-run executable and the concrete entry point for every simulation. Building on the manifest from Step 2, it parses CLI arguments, loads and hashes the manifest, optionally wires the virtual clock shim, constructs the MCAP recording sink, and then hands off to the Engine to set up participants and run. Reading it top-to-bottom gives you the whole runtime skeleton in one file before you dive into any subsystem.",
+      "nodeIds": [
+        "file:kernel/src/main.cpp"
+      ]
+    },
+    {
+      "order": 4,
+      "title": "The Deterministic Heart: Scheduler + Router",
+      "description": "The Engine is where determinism is manufactured. It runs a two-tier schedule — periodic tasks for native code and step(t, Δt) for opaque vECUs — over a central virtual-time master, and it routes typed pub/sub messages through per-channel latency queues (default: unit delay) so message ordering never depends on wall-clock timing. This is the subsystem the entire README promise rests on; the header declares the SubQueue latency buffer and scheduling API, and the implementation contains the interleaved run loop.",
+      "nodeIds": [
+        "file:kernel/src/engine.hpp",
+        "file:kernel/src/engine.cpp"
+      ],
+      "languageLesson": "Explicit per-channel latency (a unit-delay queue) is the classic trick for deterministic dataflow: by never letting a message be observed in the same tick it was produced, the schedule becomes independent of participant execution order."
+    },
+    {
+      "order": 5,
+      "title": "The Typed Message Contract",
+      "description": "Channels carry typed messages with a fixed packed layout so bytes are stable across languages and runs. toy.json is the single schema contract defining the toy.Counter and toy.Accum layouts; silschema.py generates packed C structs from it (with static_assert size checks) while the Python schema module packs and unpacks the identical little-endian layout. This shared codegen is why a C++ producer and a Python consumer agree on bytes without hidden padding or endianness surprises.",
+      "nodeIds": [
+        "schema:schemas/toy.json",
+        "file:tools/silschema.py",
+        "file:python/src/sil/schema.py"
+      ],
+      "languageLesson": "Fixed packed layout (little-endian, no compiler padding) is generated once and mirrored in both C and Python. static_assert on struct size catches any drift at compile time, turning a subtle ABI mismatch into a build failure."
+    },
+    {
+      "order": 6,
+      "title": "Native Participants and the Stable C ABI",
+      "description": "Native participants are shared libraries loaded from the manifest, and include/sil/participant.h is the stable C ABI they compile against: the sil_api_v1 function table plus the sil_participant_init entry point for registering tasks, subscribing, and exchanging messages under stepped virtual time. The kernel-side native adapter dlopen's the library, fills the function table with bridge callbacks into the Engine from Step 4, and drives its init. Keeping this boundary a small C ABI is what lets participant authors build independently of the kernel.",
+      "nodeIds": [
+        "file:include/sil/participant.h",
+        "file:kernel/src/native_participant.cpp",
+        "file:participants/toy_producer.cpp"
+      ]
+    },
+    {
+      "order": 7,
+      "title": "Out-of-Process Participants",
+      "description": "Any executable that speaks a JSON-lines step protocol on stdin/stdout can be a participant, which lets opaque vECUs and other-language code join a run without linking the C ABI. The kernel's ProcessParticipant forks the child and exchanges base64-encoded typed payloads over the step protocol, while the Python sil.participant library implements the participant side — decoding packed channel payloads via the Step 5 schema and invoking user on_init/on_step callbacks. This adapter is the bridge between the deterministic core and processes it cannot see inside.",
+      "nodeIds": [
+        "file:kernel/src/process_participant.cpp",
+        "file:python/src/sil/participant.py"
+      ]
+    },
+    {
+      "order": 8,
+      "title": "Making Opaque vECUs Deterministic: The Clock Shim",
+      "description": "Out-of-process vECUs still read the OS clock, which would inject nondeterminism into an otherwise virtual-time run. The LD_PRELOAD/DYLD clock shim interposes every POSIX clock read (clock_gettime, gettimeofday, time) and neutralizes sleeps, answering instead from a shared virtual clock region. clock_region.h defines the tiny fixed POD layout of that region — the sole contract between the kernel writer and the shim reader — so an unmodified POSIX binary behaves deterministically without knowing SiL exists.",
+      "nodeIds": [
+        "file:shim/clock_shim.c",
+        "file:include/sil/clock_region.h",
+        "file:kernel/src/clock_shim.hpp"
+      ],
+      "languageLesson": "LD_PRELOAD (DYLD_INSERT_LIBRARIES on macOS) interposition lets you override libc symbols like clock_gettime without recompiling the target binary — the loader resolves the preloaded definition first, so the shim answers instead of the real syscall."
+    },
+    {
+      "order": 9,
+      "title": "Recording and Replaying to MCAP",
+      "description": "Runs are recorded to uncompressed MCAP with virtual timestamps only and the manifest hash embedded, so a bit-diff of two recordings is itself the determinism check. The recording sink decouples the Engine's run loop from the concrete MCAP writer, and the Replayer loads a recording, verifies its hash and channel schemas against the manifest, and republishes recorded messages at their original timestamps. Together they let a prior run be fed back into the Engine exactly as it happened.",
+      "nodeIds": [
+        "file:kernel/src/mcap_recording.cpp",
+        "file:kernel/src/recording_sink.hpp",
+        "file:kernel/src/replayer.cpp"
+      ]
+    },
+    {
+      "order": 10,
+      "title": "Tests as Scheduled Participants",
+      "description": "In SiL, tests are themselves scheduled participants run under pytest, not external observers poking a black box. The sil.testing API writes the manifest, invokes sil-run as a subprocess, and returns a RunResult of decoded MCAP messages — with a non-zero runner exit surfacing as an assertion failure. test_run_boundary.py exercises the whole system at that seam: manifest rejection, interceptors, clock-shim determinism, activation offsets, and array-payload bit-for-bit roundtrips.",
+      "nodeIds": [
+        "file:python/src/sil/testing.py",
+        "file:tests/test_run_boundary.py"
+      ]
+    },
+    {
+      "order": 11,
+      "title": "The Determinism Proof",
+      "description": "This is the milestone's exit criterion made executable. sil-check runs a manifest twice and bit-compares the resulting MCAP recordings via SHA-256, exiting 3 on any violation; test_determinism.py asserts two independent runs produce bit-identical output and that the checker correctly flags a deliberately non-deterministic participant. This closes the loop opened in Step 1: determinism isn't a claim, it's a gate the code enforces on itself.",
+      "nodeIds": [
+        "file:python/src/sil/check.py",
+        "file:tests/test_determinism.py"
+      ]
+    },
+    {
+      "order": 12,
+      "title": "Build Orchestration and the CI Gate",
+      "description": "Finally, see how it all fits together and stays honest. CMakeLists.txt builds sil-run, the clock-shim preload library and its probe, runs the silschema codegen from Step 5, and compiles the toy .silp participant fixtures; the Makefile wraps the same configure/build/test/run/check flow the README documents. The GitHub Actions pipeline builds the kernel, runs the full pytest suite, and then enforces the determinism gate by re-running the reference pipeline through sil.check — so bit-identical output is a merge requirement, not an aspiration.",
+      "nodeIds": [
+        "config:CMakeLists.txt",
+        "config:Makefile",
+        "pipeline:.github/workflows/ci.yml"
+      ],
+      "languageLesson": "GitHub Actions YAML uses `on` triggers (push/PR) and `jobs`/`steps` for sequencing; making the determinism check a required job turns the project's central invariant into an automated merge gate."
+    }
+  ]
+}
