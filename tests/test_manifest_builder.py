@@ -157,6 +157,72 @@ class TestClockShim:
         assert shimless.hash() == explicit_off.hash()
 
 
+class TestArraySchemas:
+    """Fixed-size array fields are declared with `count`. The builder rejects
+    malformed declarations eagerly, mirroring the kernel's load-time rules."""
+
+    ARRAY_SCHEMA = {
+        "big.Payload": {
+            "fields": [
+                {"name": "id", "type": "u32"},
+                {"name": "samples", "type": "f32", "count": 8},
+            ]
+        }
+    }
+
+    def test_array_schema_accepted_and_canonical(self):
+        a = Manifest(duration_ns=1_000_000)
+        a.add_schemas(self.ARRAY_SCHEMA)
+        b = Manifest(duration_ns=1_000_000)
+        b.add_schemas(self.ARRAY_SCHEMA)
+        assert a.hash() == b.hash()
+        doc = json.loads(a.to_json())["schemas"]["big.Payload"]
+        assert doc["fields"][1] == {"name": "samples", "type": "f32", "count": 8}
+
+    def test_zero_count_rejected(self):
+        m = Manifest(duration_ns=1_000_000)
+        with pytest.raises(ManifestError, match="count"):
+            m.add_schemas(
+                {"S": {"fields": [{"name": "a", "type": "u8", "count": 0}]}}
+            )
+
+    def test_negative_count_rejected(self):
+        m = Manifest(duration_ns=1_000_000)
+        with pytest.raises(ManifestError, match="count"):
+            m.add_schemas(
+                {"S": {"fields": [{"name": "a", "type": "u8", "count": -1}]}}
+            )
+
+    def test_non_integer_count_rejected(self):
+        m = Manifest(duration_ns=1_000_000)
+        with pytest.raises(ManifestError, match="count"):
+            m.add_schemas(
+                {"S": {"fields": [{"name": "a", "type": "u8", "count": 1.5}]}}
+            )
+
+    def test_unknown_element_type_rejected(self):
+        m = Manifest(duration_ns=1_000_000)
+        with pytest.raises(ManifestError, match="unknown type"):
+            m.add_schemas(
+                {"S": {"fields": [{"name": "a", "type": "vec3", "count": 4}]}}
+            )
+
+    def test_override_on_array_field_rejected(self):
+        m = Manifest(duration_ns=1_000_000)
+        m.add_schemas(self.ARRAY_SCHEMA)
+        m.add_channel("c", schema="big.Payload")
+        with pytest.raises(ManifestError, match="samples"):
+            m.add_interceptor("c", kind="override", field="samples", value=1)
+
+    def test_override_on_scalar_beside_array_still_works(self):
+        m = Manifest(duration_ns=1_000_000)
+        m.add_schemas(self.ARRAY_SCHEMA)
+        m.add_channel("c", schema="big.Payload")
+        m.add_interceptor("c", kind="override", field="id", value=42)
+        [entry] = json.loads(m.to_json())["channels"]["c"]["interceptors"]
+        assert entry["field"] == "id"
+
+
 class TestReplayBuilder:
     def _recording(self, tmp_path) -> str:
         rec = tmp_path / "rec.mcap"

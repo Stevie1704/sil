@@ -75,6 +75,18 @@ class Manifest:
                         f"schema {name!r} field {f.get('name')!r}: "
                         f"unknown type {f.get('type')!r}"
                     )
+                # A `count` makes the field a fixed-size array of its element
+                # type; it must be a positive integer. Absent means a scalar.
+                count = f.get("count")
+                if count is not None and (
+                    not isinstance(count, int)
+                    or isinstance(count, bool)
+                    or count < 1
+                ):
+                    raise ManifestError(
+                        f"schema {name!r} field {f.get('name')!r}: "
+                        f"count must be an integer >= 1, got {count!r}"
+                    )
             self._schemas[name] = schema
 
     def add_channel(self, name: str, *, schema: str, latency_ns: int | None = None) -> None:
@@ -159,6 +171,11 @@ class Manifest:
         if spec is None:
             raise ManifestError(
                 f"{ctx}: override field {field!r} is not in the channel's schema"
+            )
+        if spec.get("count") is not None:
+            raise ManifestError(
+                f"{ctx}: override field {field!r} is a fixed-size array; "
+                f"only scalar fields can be overridden"
             )
         ftype = spec["type"]
         if ftype in _INT_RANGES:

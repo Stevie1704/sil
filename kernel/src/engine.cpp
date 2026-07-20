@@ -155,10 +155,13 @@ void Engine::apply_overrides(const ChannelState &c, uint64_t publish_ns,
     for (const FieldSpec &f : c.schema->fields) {
       const TypeLayout &layout = kTypeLayouts.at(f.type);
       if (f.name == i.field) {
+        // Only scalar fields can be overridden (rejected at load otherwise),
+        // so the matched field is a single element at this offset.
         encode_le(layout, i.value, bytes.data() + offset);
         break;
       }
-      offset += layout.size;
+      // A preceding array field spans count elements; a scalar spans one.
+      offset += layout.size * (f.count == 0 ? 1 : f.count);
     }
   }
 }
