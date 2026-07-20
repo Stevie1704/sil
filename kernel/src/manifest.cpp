@@ -259,6 +259,21 @@ Manifest load_manifest(const std::filesystem::path &path) {
         fail("channel '" + name + "': latency_ns must be a non-negative integer");
       c.latency_ns = lat.get<uint64_t>();
     }
+    // Inline is the default (and omitted from the canonical doc). Only "shm"
+    // is otherwise valid; anything else is a config error before setup.
+    if (js.contains("transport")) {
+      const json &t = js["transport"];
+      if (!t.is_string())
+        fail("channel '" + name + "': transport must be a string");
+      const std::string tv = t.get<std::string>();
+      if (tv == "inline")
+        c.transport = Transport::Inline;
+      else if (tv == "shm")
+        c.transport = Transport::Shm;
+      else
+        fail("channel '" + name + "': unknown transport '" + tv +
+             "' (expected 'inline' or 'shm')");
+    }
     if (js.contains("interceptors"))
       parse_interceptors(c, js["interceptors"], m.schemas.at(c.schema));
     m.channels.push_back(std::move(c));

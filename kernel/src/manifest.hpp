@@ -44,11 +44,18 @@ struct InterceptorSpec {
   double value = 0.0;                // override, held as the schema field type
 };
 
+// How a channel's payload crosses the kernel↔process boundary. Inline
+// base64-encodes it into the JSON step line (default); Shm hands it through a
+// per-channel shared-memory arena, skipping base64/JSON for large payloads.
+// Native participants are unaffected either way (pointer-based data plane).
+enum class Transport { Inline, Shm };
+
 struct ChannelSpec {
   std::string name;
   std::string schema;
   // Explicit latency in ns; empty means default "next activation" semantics.
   std::optional<uint64_t> latency_ns;
+  Transport transport = Transport::Inline;
   std::vector<InterceptorSpec> interceptors;  // applied in declared order
 };
 

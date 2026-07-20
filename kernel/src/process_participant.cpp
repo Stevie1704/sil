@@ -13,6 +13,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include "sil/shm_arena.h"
+
 #include "clock_shim.hpp"
 
 namespace sil {
@@ -154,6 +156,97 @@ void ProcessParticipant::teardown_clock_region() {
   }
 }
 
+// --- shared-memory channel arenas (issue #35) ------------------------------
+//
+// One arena per shm channel, an mmap'd temp file mapped MAP_SHARED before fork
+// so the child maps the same file by path at load. A create/map failure is an
+// environment problem, not a bad manifest expressed in code — but the issue
+// requires it to surface as a startup config error (exit 2), so we throw
+// ManifestError, which main() maps to exit 2 (RunError would be exit 1).
+
+void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
+  const Manifest &m = engine_.manifest();
+  auto map_channel = [&](const std::string &ch) {
+    if (arenas_.count(ch)) return;  // pub+sub of the same channel shares one
+    const ChannelSpec *c = m.find_channel(ch);
+    if (!c || c->transport != Transport::Shm) return;
+    const size_t capacity = m.schemas.at(c->schema).byte_size;
+    const size_t map_size = sizeof(sil_shm_arena) + capacity;
+
+    const char *tmp = getenv("TMPDIR");
+    std::string tpl = (tmp && *tmp ? std::string(tmp) : std::string("/tmp")) +
+                      "/sil_arena_XXXXXX";
+    std::vector<char> path(tpl.begin(), tpl.end());
+    path.push_back('\0');
+    Arena a;
+    a.fd = mkstemp(path.data());
+    if (a.fd < 0)
+      throw ManifestError("participant '" + name_ + "' channel '" + ch +
+                          "': shm arena: mkstemp failed");
+    a.path = path.data();
+    a.capacity = capacity;
+    a.map_size = map_size;
+    if (ftruncate(a.fd, off_t(map_size)) != 0) {
+      close(a.fd);
+      unlink(a.path.c_str());
+      throw ManifestError("participant '" + name_ + "' channel '" + ch +
+                          "': shm arena: ftruncate failed");
+    }
+    a.base = mmap(nullptr, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, a.fd, 0);
+    if (a.base == MAP_FAILED) {
+      close(a.fd);
+      unlink(a.path.c_str());
+      throw ManifestError("participant '" + name_ + "' channel '" + ch +
+                          "': shm arena: mmap failed");
+    }
+    auto *hdr = static_cast<sil_shm_arena *>(a.base);
+    hdr->seq = 0;
+    hdr->len = 0;
+    arenas_.emplace(ch, std::move(a));
+  };
+  for (const std::string &ch : spec.subscribes) map_channel(ch);
+  for (const std::string &ch : spec.publishes) map_channel(ch);
+}
+
+uint64_t ProcessParticipant::write_arena(const std::string &channel,
+                                         const std::vector<uint8_t> &bytes) {
+  Arena &a = arenas_.at(channel);
+  if (bytes.size() > a.capacity)
+    throw RunError("participant '" + name_ + "' channel '" + channel +
+                   "': payload exceeds shm arena capacity");
+  auto *hdr = static_cast<sil_shm_arena *>(a.base);
+  std::memcpy(static_cast<uint8_t *>(a.base) + sizeof(sil_shm_arena),
+              bytes.data(), bytes.size());
+  hdr->len = bytes.size();
+  hdr->seq = ++a.seq;
+  return a.seq;
+}
+
+void ProcessParticipant::read_arena(const std::string &channel, uint64_t seq,
+                                    std::vector<uint8_t> &out) {
+  Arena &a = arenas_.at(channel);
+  auto *hdr = static_cast<sil_shm_arena *>(a.base);
+  if (hdr->seq != seq)
+    throw RunError("participant '" + name_ + "' channel '" + channel +
+                   "': stale shm arena (expected seq " + std::to_string(seq) +
+                   ", got " + std::to_string(hdr->seq) + ")");
+  if (hdr->len > a.capacity)
+    throw RunError("participant '" + name_ + "' channel '" + channel +
+                   "': shm arena len exceeds capacity");
+  const auto *payload =
+      static_cast<const uint8_t *>(a.base) + sizeof(sil_shm_arena);
+  out.assign(payload, payload + hdr->len);
+}
+
+void ProcessParticipant::teardown_arenas() {
+  for (auto &[ch, a] : arenas_) {
+    if (a.base && a.base != MAP_FAILED) munmap(a.base, a.map_size);
+    if (a.fd >= 0) close(a.fd);
+    if (!a.path.empty()) unlink(a.path.c_str());
+  }
+  arenas_.clear();
+}
+
 ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
                                        const ProcessSpec &spec)
     : engine_(engine), name_(name), period_ns_(spec.step_period_ns),
@@ -169,6 +262,17 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
   // throwing constructor never runs the destructor.
   const bool shimmed = spec.shim;
   if (shimmed) setup_clock_region();
+
+  // Map shm arenas before fork so the child inherits nothing but a path it can
+  // re-open. Any failure here throws ManifestError (exit 2) and must release
+  // the arenas + clock region, since a throwing constructor skips the dtor.
+  try {
+    setup_arenas(spec);
+  } catch (...) {
+    teardown_arenas();
+    teardown_clock_region();
+    throw;
+  }
 
   try {
     int to_child[2], from_child[2];
@@ -204,7 +308,18 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     json schemas = json::object();
     auto add_channel = [&](const std::string &ch, const char *direction) {
       const ChannelSpec *c = m.find_channel(ch);
-      channels[ch] = {{"schema", c->schema}, {"direction", direction}};
+      json entry = {{"schema", c->schema}, {"direction", direction}};
+      // For shm channels, hand the child the arena path + capacity so it maps
+      // the same MAP_SHARED region and moves payloads through it. Absent
+      // "transport" means inline (the base64/JSON path), keeping existing
+      // manifests byte-identical on the wire.
+      if (c->transport == Transport::Shm) {
+        const Arena &a = arenas_.at(ch);
+        entry["transport"] = "shm";
+        entry["shm_path"] = a.path;
+        entry["shm_capacity"] = a.capacity;
+      }
+      channels[ch] = entry;
       schemas[c->schema] = json::parse(m.schemas.at(c->schema).canonical_json);
     };
     for (const std::string &ch : spec.subscribes) add_channel(ch, "in");
@@ -220,6 +335,7 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
       throw RunError("participant '" + name + "': expected ready, got " +
                      ready.dump());
   } catch (...) {
+    teardown_arenas();
     teardown_clock_region();
     throw;
   }
@@ -241,9 +357,17 @@ void ProcessParticipant::step(uint64_t now_ns) {
     if (!best) break;
     PendingMessage msg;
     engine_.take(*best, msg);
-    in.push_back({{"ch", best->channel()},
-                  {"t", msg.publish_ns},
-                  {"data", b64_encode(msg.bytes)}});
+    const std::string &ch = best->channel();
+    json item = {{"ch", ch}, {"t", msg.publish_ns}};
+    auto arena = arenas_.find(ch);
+    if (arena != arenas_.end()) {
+      // shm channel: write the payload into the arena and hand the child only a
+      // freshness marker; it reads the bytes directly, skipping base64/JSON.
+      item["shm_seq"] = write_arena(ch, msg.bytes);
+    } else {
+      item["data"] = b64_encode(msg.bytes);
+    }
+    in.push_back(item);
   }
 
   // Freeze this step's virtual time into the shared region before the child
@@ -271,7 +395,15 @@ void ProcessParticipant::step(uint64_t now_ns) {
       engine_.fail(name_, "published on undeclared channel '" + ch + "'");
       return;
     }
-    std::vector<uint8_t> bytes = b64_decode(out.at("data").get<std::string>());
+    std::vector<uint8_t> bytes;
+    auto arena = arenas_.find(ch);
+    if (arena != arenas_.end()) {
+      // shm channel: the child wrote the payload into the arena and returned
+      // its seq; read it back out rather than decoding base64.
+      read_arena(ch, out.at("shm_seq").get<uint64_t>(), bytes);
+    } else {
+      bytes = b64_decode(out.at("data").get<std::string>());
+    }
     engine_.publish(name_, ch, bytes.data(), bytes.size());
   }
 }
@@ -318,6 +450,7 @@ void ProcessParticipant::shutdown() {
     pid_t r = waitpid(pid_, &status, WNOHANG);
     if (r == pid_) {
       teardown_clock_region();
+      teardown_arenas();
       return;
     }
     usleep(10000);
@@ -325,6 +458,7 @@ void ProcessParticipant::shutdown() {
   kill(pid_, SIGKILL);
   waitpid(pid_, nullptr, 0);
   teardown_clock_region();
+  teardown_arenas();
 }
 
 }  // namespace sil
