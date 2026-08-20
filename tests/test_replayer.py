@@ -62,12 +62,16 @@ def ticks(mcap_path):
 
 
 def channel_streams(mcap_path):
-    """Per-channel message streams: {topic: [(log_time, data), ...]}.
-
-    DESIGN #8/#13: the determinism guarantee is defined over channel streams,
-    not the cross-channel interleaving the MCAP happens to serialize. Two runs
-    that agree channel-by-channel are equivalent even if a producer and a
-    consumer land in a different order within a shared slot.
+    """
+    Group recorded messages into per-channel timestamp and payload streams.
+    
+    Cross-channel serialization order is not represented; message order is preserved within each channel.
+    
+    Parameters:
+        mcap_path: Path to the MCAP recording.
+    
+    Returns:
+        A mapping from channel names to lists of ``(log_time, data)`` pairs.
     """
     _, msgs = read_mcap(mcap_path)
     streams = defaultdict(list)
@@ -77,7 +81,15 @@ def channel_streams(mcap_path):
 
 
 def array_source_manifest(participant="array_source.py"):
-    """Build a manifest for a fixed-size array process participant."""
+    """
+    Build a manifest for a process that publishes fixed-size array payloads.
+    
+    Parameters:
+    	participant (str): Filename of the participant process to run.
+    
+    Returns:
+    	Manifest: The configured process manifest.
+    """
     m = Manifest(duration_ns=30_000_000)
     m.add_schemas(ARRAY_SCHEMAS)
     m.add_channel("payload", schema="big.Payload")
@@ -91,7 +103,15 @@ def array_source_manifest(participant="array_source.py"):
 
 
 def record_array_source_run(run_sil, tmp_path, *, participant="array_source.py"):
-    """Record fixed-size array messages for replay transport tests."""
+    """
+    Record fixed-size array messages for replay transport tests.
+    
+    Parameters:
+        participant (str): Participant script used to publish the array messages.
+    
+    Returns:
+        tuple: The recorded MCAP path and its SHA-256 hash.
+    """
     m = array_source_manifest(participant)
     out = tmp_path / "array-record.mcap"
     proc = run_sil(m.write(tmp_path / "array-record.json").path, out=out)
@@ -100,7 +120,12 @@ def record_array_source_run(run_sil, tmp_path, *, participant="array_source.py")
 
 
 def record_multi_channel_array_run(run_sil, tmp_path):
-    """Record same-time messages interleaved across two array channels."""
+    """
+    Record same-time messages interleaved across two array channels.
+    
+    Returns:
+    	tuple: The recorded MCAP path and its SHA-256 hash
+    """
     m = Manifest(duration_ns=30_000_000)
     m.add_schemas(ARRAY_SCHEMAS)
     m.add_channel("left", schema="big.Payload")
@@ -138,7 +163,14 @@ def replay_array_manifest(recording, *, transport):
 
 
 def replay_multi_channel_array_manifest(recording, *, transport):
-    """Build a replay run with two arena-backed input channels."""
+    """Build a replay manifest with two input channels and an echo output channel.
+    
+    Parameters:
+    	transport: Transport used for the replayed input channels.
+    
+    Returns:
+    	The configured replay manifest.
+    """
     m = Manifest(duration_ns=30_000_000)
     m.add_schemas(ARRAY_SCHEMAS)
     m.add_channel("left", schema="big.Payload", transport=transport)

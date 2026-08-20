@@ -1095,6 +1095,15 @@ class TestShmTransport:
         ]
 
     def _payloads(self, mcap_path):
+        """
+        Extract decoded payload messages from an MCAP recording.
+        
+        Parameters:
+        	mcap_path: Path to the MCAP recording.
+        
+        Returns:
+        	A list of unpacked payload values from messages on the `payload` topic.
+        """
         _, msgs = read_mcap(mcap_path)
         return [
             ARRAY_TYPES["big.Payload"].unpack(data)
@@ -1131,7 +1140,16 @@ class TestShmTransport:
         return m
 
     def _message_ids(self, mcap_path, channel):
-        """Return a channel's (visibility time, array id) messages."""
+        """
+        Extract message visibility times and array IDs for a channel.
+        
+        Parameters:
+            mcap_path: Path to the MCAP recording.
+            channel: Channel name to inspect.
+        
+        Returns:
+            A list of ``(visibility_time, array_id)`` tuples in recording order.
+        """
         _, msgs = read_mcap(mcap_path)
         return [
             (t, ARRAY_TYPES["big.Payload"].unpack(data)["id"])

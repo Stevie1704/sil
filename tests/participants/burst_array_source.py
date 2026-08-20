@@ -7,7 +7,17 @@ class BurstArraySource(StepParticipant):
     """Publish two messages at each step to exercise recording tie-breaks."""
 
     def on_step(self, t, dt, inputs):
-        """Publish two deterministically constructed payloads at virtual time t."""
+        """
+        Publish two deterministic payloads for the current simulation step.
+        
+        Parameters:
+        	t (int or float): Current virtual simulation time.
+        	dt (int or float): Duration of one simulation step.
+        	inputs: Step inputs.
+        
+        Returns:
+        	list: Two ``("payload", payload)`` message tuples with consecutive message IDs.
+        """
         step = t // dt
 
         def payload(message_id):

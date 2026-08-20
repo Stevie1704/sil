@@ -7,7 +7,12 @@ class MultiChannelBurstSource(StepParticipant):
     """Publish left/right/left/right messages in a deterministic order."""
 
     def on_step(self, t, dt, inputs):
-        """Publish four fixed-size messages at the current virtual time."""
+        """
+        Publish four deterministic messages across the left and right channels for the current simulation step.
+        
+        Returns:
+            list: Messages in the order left, right, left, right, each containing an ID, a four-byte blob, and eight numeric samples.
+        """
         step = t // dt
 
         def payload(message_id):
