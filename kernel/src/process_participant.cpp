@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <set>
 
 #include <nlohmann/json.hpp>
 
@@ -363,6 +364,11 @@ ProcessParticipant::~ProcessParticipant() {
 void ProcessParticipant::step(uint64_t now_ns) {
   // Merge visible inputs across channels in global publish order.
   json in = json::array();
+  // An arena holds one payload, but a slower subscriber can see several
+  // messages on the same channel in one step. The first rides the arena; the
+  // rest fall back to the inline encoding, so what the participant receives is
+  // identical either way.
+  std::set<std::string> arena_used;
   for (;;) {
     SubQueue *best = nullptr;
     for (auto &[ch, q] : inputs_)
@@ -374,10 +380,9 @@ void ProcessParticipant::step(uint64_t now_ns) {
     engine_.take(*best, msg);
     const std::string &ch = best->channel();
     json item = {{"ch", ch}, {"t", msg.publish_ns}};
-    auto arena = arenas_.find(ch);
-    if (arena != arenas_.end()) {
-      // shm channel: write the payload into the arena and hand the child only a
-      // freshness marker; it reads the bytes directly, skipping base64/JSON.
+    if (arenas_.count(ch) && arena_used.insert(ch).second) {
+      // Arena-backed: the payload goes through the arena and the step line
+      // carries only a freshness marker, skipping base64/JSON.
       item["shm_seq"] = write_arena(ch, msg.bytes);
     } else {
       item["data"] = b64_encode(msg.bytes);
@@ -411,10 +416,10 @@ void ProcessParticipant::step(uint64_t now_ns) {
       return;
     }
     std::vector<uint8_t> bytes;
-    auto arena = arenas_.find(ch);
-    if (arena != arenas_.end()) {
-      // shm channel: the child wrote the payload into the arena and returned
-      // its seq; read it back out rather than decoding base64.
+    // Each output says how it travelled: the child sends its first payload per
+    // arena-backed channel through the arena and any further one inline, so
+    // honour the field present rather than the channel's declared transport.
+    if (out.contains("shm_seq")) {
       read_arena(ch, out.at("shm_seq").get<uint64_t>(), bytes);
     } else {
       bytes = b64_decode(out.at("data").get<std::string>());

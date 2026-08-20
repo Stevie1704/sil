@@ -4,11 +4,15 @@
  * and the process participant map the same file MAP_SHARED.
  *
  * The step protocol is fully sequential (request/response, no concurrency), so
- * a single-slot arena is sufficient: the writer stamps `len` and the payload
- * before signalling over the pipe, and the reader consumes it before the next
- * step line. `seq` monotonically counts writes, so a reader can assert it saw a
- * fresh payload rather than a stale one. This header knows nothing about the
- * step protocol, manifest, or kernel internals — it is the only contract.
+ * one slot needs no locking: the writer stamps `len` and the payload before
+ * signalling over the pipe, and the reader consumes it before the next step
+ * line. One slot holds one payload, so a step that carries several messages on
+ * the same channel sends the first through the arena and the rest inline —
+ * which payload travelled how is stated per message in the step line, never
+ * inferred from the channel. `seq` monotonically counts writes, so a reader can
+ * assert it saw a fresh payload rather than a stale one. This header knows
+ * nothing about the step protocol, manifest, or kernel internals — it is the
+ * only contract.
  */
 #ifndef SIL_SHM_ARENA_H
 #define SIL_SHM_ARENA_H

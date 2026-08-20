@@ -1238,6 +1238,65 @@ class TestShmTransport:
         assert proc.returncode == 2, proc.stderr
         assert "shm" in proc.stderr
 
+    def _burst_manifest(self, transport):
+        # A sink stepping 3x slower than the source sees three messages on the
+        # channel in one step, and republishes all three in one step_done — an
+        # input burst and an output burst through a one-payload arena.
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = Manifest(duration_ns=60_000_000)
+        m.add_schemas(ARRAY_SCHEMAS)
+        m.add_channel("payload", schema="big.Payload", transport=transport)
+        m.add_channel("mirror", schema="big.Payload", transport=transport)
+        m.add_process(
+            "source",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "array_source.py")],
+            step_period_ns=10_000_000,
+            publishes=["payload"],
+        )
+        m.add_process(
+            "sink",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "array_echo.py")],
+            step_period_ns=30_000_000,
+            subscribes=["payload"],
+            publishes=["mirror"],
+        )
+        return m
+
+    def _mirrored(self, mcap_path):
+        _, msgs = read_mcap(mcap_path)
+        return [
+            ARRAY_TYPES["big.Payload"].unpack(data)
+            for topic, _, data in msgs
+            if topic == "mirror"
+        ]
+
+    def test_message_burst_matches_inline_exactly(self, run_sil, tmp_path):
+        # The regression this transport shipped with: an arena holds one
+        # payload, so a step carrying several messages on one channel must fall
+        # back to the inline encoding for the rest instead of overwriting the
+        # slot. A manifest that runs inline must run identically over shm —
+        # otherwise the transport has leaked into participant code.
+        inline = run_sil(
+            self._burst_manifest("inline").write(tmp_path / "inline.json").path,
+            out=tmp_path / "inline.mcap",
+        )
+        shm = run_sil(
+            self._burst_manifest("shm").write(tmp_path / "shm.json").path,
+            out=tmp_path / "shm.mcap",
+        )
+        assert inline.returncode == 0, inline.stderr
+        assert shm.returncode == 0, shm.stderr
+        expected = self._mirrored(inline.mcap_path)
+        # Three messages per sink step is what makes this a burst; a run that
+        # silently delivered one would pass the equality check vacuously.
+        assert len(expected) >= 3, f"fixture stopped bursting: {expected}"
+        assert self._mirrored(shm.mcap_path) == expected
+
     def test_kernel_rejects_unknown_transport(self, run_sil, tmp_path):
         # The kernel mirrors the builder's transport validation (defense in
         # depth): a hand-written manifest with a bogus transport is a config

@@ -106,15 +106,21 @@ def run(participant: StepParticipant) -> None:
         stdout.flush()
 
     def unpack_input(i: dict) -> Input:
+        # Each input says how it travelled. An arena holds one payload, so when
+        # a step delivers several messages on the same channel the kernel sends
+        # the first through the arena and the rest inline; honour the field
+        # present rather than the channel's declared transport.
         ch = i["ch"]
-        arena = arenas.get(ch)
-        raw = arena.read(i["shm_seq"]) if arena else base64.b64decode(i["data"])
+        raw = arenas[ch].read(i["shm_seq"]) if "shm_seq" in i else base64.b64decode(i["data"])
         return Input(ch, i["t"], types_by_channel[ch].unpack(raw))
 
-    def encode_output(ch: str, fields: dict) -> dict:
+    def encode_output(ch: str, fields: dict, arena_used: set[str]) -> dict:
+        # Mirror image of the input rule: the first output per arena-backed
+        # channel in this step rides the arena, any further one goes inline.
         raw = types_by_channel[ch].pack(**fields)
         arena = arenas.get(ch)
-        if arena:
+        if arena is not None and ch not in arena_used:
+            arena_used.add(ch)
             return {"ch": ch, "shm_seq": arena.write(raw)}
         return {"ch": ch, "data": base64.b64encode(raw).decode()}
 
@@ -143,9 +149,13 @@ def run(participant: StepParticipant) -> None:
                     reason = "".join(traceback.format_exception_only(e)).strip()
                     send({"op": "fail", "reason": reason})
                     continue
+                arena_used: set[str] = set()
                 send({
                     "op": "step_done",
-                    "out": [encode_output(ch, fields) for ch, fields in outputs],
+                    "out": [
+                        encode_output(ch, fields, arena_used)
+                        for ch, fields in outputs
+                    ],
                 })
             elif op == "shutdown":
                 return

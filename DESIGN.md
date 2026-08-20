@@ -172,12 +172,17 @@ in the framework's own CI from day one.**
   (participant, channel) at startup, sized from the schema `byte_size`, as a
   memory-mapped temp file shared with the child; the step line carries only a
   `shm_seq` freshness marker. **Refined from the decision text:** a single-slot
-  arena, not a ring buffer — the step protocol is sequential request/response
-  and a channel carries at most one message per activation, so a ring buys
-  nothing; and the participant-facing copy stays, so this is *not* zero-copy
-  into user code (out of scope per the PRD). Because one slot carries one
-  direction, a participant that both subscribes and publishes the same shm
-  channel is rejected at load rather than silently racing its own writes. A
+  arena, not a ring buffer, and the participant-facing copy stays — so this is
+  *not* zero-copy into user code (out of scope per the PRD). One slot holds one
+  payload, and a slower subscriber can see several messages on a channel in one
+  step, so the first message rides the arena and the rest fall back to the
+  inline encoding. Every message states in the step line how it travelled; a
+  receiver never infers that from the channel's declared transport. This keeps
+  the arena an optimization that correctness never depends on, and is why the
+  transport can stay invisible to participant code. Because one slot carries
+  one direction, a participant that both subscribes and publishes the same
+  channel over shared memory is rejected at load rather than silently racing
+  its own writes. A
   run that cannot create or map an arena is an environment/config error (exit
   2), distinct from a test failure (exit 1). The transport never reaches
   participant code — the step API is the same field-dict/`bytes`/`list` either

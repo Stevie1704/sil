@@ -78,9 +78,10 @@ class ProcessParticipant {
   // participant subscribes to or publishes, mapped MAP_SHARED before fork so
   // the child maps the same file at load. The kernel writes an input payload
   // into the arena (the step line then carries only "shm_seq") and reads a
-  // published payload back out of it, skipping base64/JSON. A single slot
-  // suffices: the step protocol is sequential and each channel carries at most
-  // one message per step. Empty for participants with no shm channel.
+  // published payload back out of it, skipping base64/JSON. One slot holds one
+  // payload: when a step carries several messages on the same channel, the
+  // first rides the arena and the rest fall back inline. Empty for
+  // participants with no shm channel.
   struct Arena {
     int fd = -1;
     std::string path;

@@ -92,7 +92,10 @@ m.add_channel("frames", schema="sensor.Frame", transport="shm")
 The kernel sizes and maps one arena per shm channel from the schema `byte_size`
 at startup and hands the process participant its path. Publishing writes the
 payload into the arena and the step line carries only a freshness marker; the
-participant reads the bytes directly. **The transport choice never leaks into
+participant reads the bytes directly. An arena holds one payload, so when a
+step carries several messages on the same channel the first rides the arena and
+the rest fall back to the inline encoding — a detail of delivery that never
+changes what the participant sees. **The transport choice never leaks into
 participant code** — `on_step` still sees the same field-dict (scalars) and
 `bytes`/`list` (array fields) whether the channel is inline or shm. Flip the flag
 and rebuild nothing.
