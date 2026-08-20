@@ -105,6 +105,43 @@ class TestValidation:
             m.add_channel("c", schema="toy.Counter", latency_ns=-1)
 
 
+class TestTransport:
+    """Channel transport is hashed config. Inline is the default and omitted so
+    pre-shm manifests keep byte-identical hashes; shm is the only other value."""
+
+    def test_inline_is_default_and_omitted_from_doc(self):
+        m = make_minimal()
+        doc = json.loads(m.to_json())
+        assert "transport" not in doc["channels"]["ticks"]
+
+    def test_default_transport_matches_pre_shm_hash(self):
+        # A channel built without the transport arg must hash exactly as one
+        # built with the explicit default, so existing manifests are untouched.
+        explicit = Manifest(duration_ns=1_000_000)
+        explicit.add_schemas(TOY_SCHEMAS)
+        explicit.add_channel("c", schema="toy.Counter", transport="inline")
+
+        implicit = Manifest(duration_ns=1_000_000)
+        implicit.add_schemas(TOY_SCHEMAS)
+        implicit.add_channel("c", schema="toy.Counter")
+
+        assert explicit.hash() == implicit.hash()
+
+    def test_shm_is_emitted_and_changes_hash(self):
+        inline = make_minimal()
+        shm = Manifest(duration_ns=100_000_000)
+        shm.add_schemas(TOY_SCHEMAS)
+        shm.add_channel("ticks", schema="toy.Counter", transport="shm")
+        shm.add_native("producer", library="libtoy_producer.dylib")
+        assert json.loads(shm.to_json())["channels"]["ticks"]["transport"] == "shm"
+        assert shm.hash() != inline.hash()
+
+    def test_unknown_transport_rejected(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="transport"):
+            m.add_channel("c", schema="toy.Counter", transport="rdma")
+
+
 class TestClockShim:
     """The shim flag and realtime epoch are hashed config: a shimmed and an
     unshimmed variant of the same run must never collide, while manifests that

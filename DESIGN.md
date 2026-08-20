@@ -165,3 +165,28 @@ in the framework's own CI from day one.**
   both live in the hashed manifest. Boundary (documented, out of scope):
   statically linked binaries and direct-syscall/vDSO clock users bypass the
   shim.
+- **Shared-memory channel transport (#9, #35):** a channel opts in with
+  `transport: "shm"` in the hashed manifest; `inline` (base64 inside the JSON
+  step line) stays the default and is omitted from the canonical document, so
+  pre-shm manifests keep byte-identical hashes. The kernel maps one arena per
+  (participant, channel) at startup, sized from the schema `byte_size`, as a
+  memory-mapped temp file shared with the child; the step line carries only a
+  `shm_seq` freshness marker. **Refined from the decision text:** a single-slot
+  arena, not a ring buffer, and the participant-facing copy stays — so this is
+  *not* zero-copy into user code (out of scope per the PRD). One slot holds one
+  payload, and a slower subscriber can see several messages on a channel in one
+  step, so the first message rides the arena and the rest fall back to the
+  inline encoding. Every message states in the step line how it travelled; a
+  receiver never infers that from the channel's declared transport. This keeps
+  the arena an optimization that correctness never depends on, and is why the
+  transport can stay invisible to participant code. Because one slot carries
+  one direction, a participant that both subscribes and publishes the same
+  channel over shared memory is rejected at load rather than silently racing
+  its own writes. A
+  run that cannot create or map an arena is an environment/config error (exit
+  2), distinct from a test failure (exit 1). The transport never reaches
+  participant code — the step API is the same field-dict/`bytes`/`list` either
+  way — and native participants are unaffected, staying on the pointer-based
+  C ABI data plane. Boundaries (out of scope): native-participant shm beyond
+  that pointer ABI, cross-machine transport, compression, and arena-size or
+  backpressure tuning.

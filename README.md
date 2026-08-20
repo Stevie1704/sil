@@ -77,6 +77,39 @@ started at different wall-clock times still produce bit-identical MCAPs — run
 that reads the clock via direct syscalls or the vDSO bypass the preload and are
 not virtualized.
 
+## Shared-memory channel transport
+
+Every channel payload is base64-encoded inside the JSON step line by default
+(inline transport). For megabyte-class payloads at sensor rate — a camera frame,
+a point cloud — the ~33% base64 penalty plus per-message encode/decode dominates
+the run. Declare `transport: "shm"` on such a channel and its payload crosses the
+kernel↔process boundary through a per-channel shared-memory arena instead:
+
+```python
+m.add_channel("frames", schema="sensor.Frame", transport="shm")
+```
+
+The kernel sizes and maps one arena per such channel from the schema `byte_size`
+at startup and hands the process participant its path. Publishing writes the
+payload into the arena and the step line carries only a freshness marker; the
+participant reads the bytes directly. An arena holds one payload, so when a
+step carries several messages on the same channel the first rides the arena and
+the rest fall back to the inline encoding — a detail of delivery that never
+changes what the participant sees. **The transport choice never leaks into
+participant code** — `on_step` still sees the same field-dict (scalars) and
+`bytes`/`list` (array fields) whether the channel is inline or shm. Flip the flag
+and rebuild nothing.
+
+`transport` is hashed (inline, the default, is omitted so pre-shm manifests keep
+byte-identical hashes). A run that cannot create or map its arena fails at
+**startup with exit 2** (a config/environment problem), distinct from a test
+failure's exit 1. Native participants are unaffected — they stay on the existing
+pointer-based C ABI data plane and need no rebuild.
+
+**Boundaries (out of scope, per PRD):** true zero-copy into user code (a
+participant-facing copy stays), native-participant shm beyond the pointer ABI,
+cross-machine transport, compression, and arena-size/backpressure tuning.
+
 ## Build & test
 
 ```sh

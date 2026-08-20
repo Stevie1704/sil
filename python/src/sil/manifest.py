@@ -34,6 +34,11 @@ _INT_RANGES = {
 
 _INTERCEPTOR_KINDS = {"drop", "drop_nth", "delay", "override"}
 
+# Channel transports. "inline" (default) base64-encodes the payload into the
+# JSON step line; "shm" hands megabyte-class payloads across the kernel↔process
+# boundary through a per-channel arena, skipping base64/JSON.
+_TRANSPORTS = {"inline", "shm"}
+
 
 class ManifestError(ValueError):
     """A manifest that could never be a valid kernel input."""
@@ -89,16 +94,32 @@ class Manifest:
                     )
             self._schemas[name] = schema
 
-    def add_channel(self, name: str, *, schema: str, latency_ns: int | None = None) -> None:
+    def add_channel(
+        self,
+        name: str,
+        *,
+        schema: str,
+        latency_ns: int | None = None,
+        transport: str = "inline",
+    ) -> None:
         if name in self._channels:
             raise ManifestError(f"channel {name!r} already declared")
         if schema not in self._schemas:
             raise ManifestError(f"channel {name!r} references unknown schema {schema!r}")
         if latency_ns is not None and latency_ns < 0:
             raise ManifestError(f"channel {name!r}: latency_ns must be >= 0")
+        if transport not in _TRANSPORTS:
+            raise ManifestError(
+                f"channel {name!r}: unknown transport {transport!r} "
+                f"(expected one of {sorted(_TRANSPORTS)})"
+            )
         entry: dict = {"schema": schema}
         if latency_ns is not None:
             entry["latency_ns"] = latency_ns
+        # Inline is the default; omit it from the canonical doc so pre-shm
+        # manifests keep byte-identical hashes.
+        if transport != "inline":
+            entry["transport"] = transport
         self._channels[name] = entry
 
     def add_interceptor(

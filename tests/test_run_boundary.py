@@ -2,6 +2,7 @@
 and artifacts, assert on exit code and MCAP content only."""
 
 import json
+import os
 import shutil
 import subprocess
 
@@ -1059,3 +1060,259 @@ class TestArrayPayload:
         proc = run_sil(write_with_raw_array_schema(tmp_path, bad))
         assert proc.returncode == 2
         assert "vec3" in proc.stderr
+
+
+class TestShmTransport:
+    """A channel over the shared-memory transport moves its payload through a
+    per-channel arena instead of base64/JSON, with no participant-visible
+    difference from inline (the same fixture, unchanged)."""
+
+    def _array_manifest(self, transport):
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = Manifest(duration_ns=30_000_000)
+        m.add_schemas(ARRAY_SCHEMAS)
+        m.add_channel("payload", schema="big.Payload", transport=transport)
+        m.add_process(
+            "source",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "array_source.py")],
+            step_period_ns=10_000_000,
+            publishes=["payload"],
+        )
+        return m
+
+    def _expected_payloads(self):
+        return [
+            {
+                "id": step,
+                "blob": bytes((step + k) % 256 for k in range(4)),
+                "samples": [float(step * 10 + k) for k in range(8)],
+            }
+            for step in range(3)
+        ]
+
+    def _payloads(self, mcap_path):
+        _, msgs = read_mcap(mcap_path)
+        return [
+            ARRAY_TYPES["big.Payload"].unpack(data)
+            for topic, _, data in msgs
+            if topic == "payload"
+        ]
+
+    def test_shm_channel_roundtrips_array_payload(self, run_sil, tmp_path):
+        m = self._array_manifest("shm")
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        assert self._payloads(proc.mcap_path) == self._expected_payloads()
+
+    def test_shm_recording_matches_inline_byte_for_byte(self, run_sil, tmp_path):
+        # The transport is a delivery detail, not a semantic one: an shm run and
+        # an inline run of the same fixture must record the identical payload
+        # bytes. Proves the arena path carries the exact bytes base64 would and
+        # that the participant API never changed.
+        inline = run_sil(
+            self._array_manifest("inline").write(tmp_path / "inline.json").path,
+            out=tmp_path / "inline.mcap",
+        )
+        shm = run_sil(
+            self._array_manifest("shm").write(tmp_path / "shm.json").path,
+            out=tmp_path / "shm.mcap",
+        )
+        assert inline.returncode == 0, inline.stderr
+        assert shm.returncode == 0, shm.stderr
+        assert self._payloads(shm.mcap_path) == self._payloads(inline.mcap_path)
+
+    def test_two_shm_runs_are_bit_identical(self, run_sil, tmp_path):
+        ref = self._array_manifest("shm").write(tmp_path / "m.json")
+        a = run_sil(ref.path, out=tmp_path / "a.mcap")
+        b = run_sil(ref.path, out=tmp_path / "b.mcap")
+        assert a.returncode == 0, a.stderr
+        assert b.returncode == 0, b.stderr
+        assert a.mcap_path.read_bytes() == b.mcap_path.read_bytes()
+
+    def test_unmappable_arena_is_startup_config_error(self, sil_run, tmp_path):
+        # An arena the kernel cannot create is an environment problem, not a test
+        # failure: it must fail at startup with exit 2 (distinct from a run's
+        # exit 1). The kernel creates the arena itself, before it forks the
+        # child, so pointing TMPDIR at a path that cannot hold the arena file
+        # makes its mkstemp fail before any participant starts.
+        ref = self._array_manifest("shm").write(tmp_path / "m.json")
+        no_such_dir = tmp_path / "does-not-exist"
+        env = {**os.environ, "TMPDIR": str(no_such_dir)}
+        proc = subprocess.run(
+            [str(sil_run), str(ref.path), "-o", str(tmp_path / "out.mcap")],
+            capture_output=True, text=True, env=env,
+        )
+        assert proc.returncode == 2, proc.stderr
+        assert "arena" in proc.stderr
+
+    def test_shm_input_path_delivers_payload_to_subscriber(self, run_sil, tmp_path):
+        # array_source only publishes (child->kernel arena writes). Add a sink
+        # that subscribes to the shm channel and republishes onto an inline
+        # mirror, exercising the kernel->child arena-write + Python read path.
+        # The mirror payloads must equal what the source produced.
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = Manifest(duration_ns=60_000_000)
+        m.add_schemas(ARRAY_SCHEMAS)
+        m.add_channel("payload", schema="big.Payload", transport="shm")
+        m.add_channel("mirror", schema="big.Payload")
+        m.add_process(
+            "source",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "array_source.py")],
+            step_period_ns=10_000_000,
+            publishes=["payload"],
+        )
+        m.add_process(
+            "sink",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "array_echo.py")],
+            step_period_ns=10_000_000,
+            subscribes=["payload"],
+            publishes=["mirror"],
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        mirrored = [
+            ARRAY_TYPES["big.Payload"].unpack(data)
+            for topic, _, data in msgs
+            if topic == "mirror"
+        ]
+        # The sink republishes what it received; a non-empty mirror stream whose
+        # every payload is one the source actually produced (by the source's
+        # pure step function) proves the shm input path carried real bytes.
+        assert mirrored, "sink never received a shm input"
+        valid = [
+            {
+                "id": step,
+                "blob": bytes((step + k) % 256 for k in range(4)),
+                "samples": [float(step * 10 + k) for k in range(8)],
+            }
+            for step in range(6)  # 60ms / 10ms step, enough to cover all seen
+        ]
+        for payload in mirrored:
+            assert payload in valid, f"sink saw a payload the source never sent: {payload}"
+
+    def test_arena_files_are_cleaned_up_at_run_end(self, sil_run, tmp_path):
+        # Arenas are temp files under TMPDIR; scope TMPDIR to an empty dir and
+        # assert nothing is left behind once the run's process tree exits.
+        arena_dir = tmp_path / "arenas"
+        arena_dir.mkdir()
+        ref = self._array_manifest("shm").write(tmp_path / "m.json")
+        env = {**os.environ, "TMPDIR": str(arena_dir)}
+        proc = subprocess.run(
+            [str(sil_run), str(ref.path), "-o", str(tmp_path / "out.mcap")],
+            capture_output=True, text=True, env=env,
+        )
+        assert proc.returncode == 0, proc.stderr
+        leftover = list(arena_dir.glob("sil_arena_*"))
+        assert leftover == [], f"arena files leaked: {leftover}"
+
+    def test_bidirectional_shm_channel_is_config_error(self, run_sil, tmp_path):
+        # A single-slot arena carries one direction; a participant that both
+        # subscribes and publishes the same shm channel is rejected at startup
+        # (exit 2) rather than silently racing input/output writes.
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = Manifest(duration_ns=30_000_000)
+        m.add_schemas(ARRAY_SCHEMAS)
+        m.add_channel("payload", schema="big.Payload", transport="shm")
+        m.add_process(
+            "loop",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "array_echo.py")],
+            step_period_ns=10_000_000,
+            subscribes=["payload"],
+            publishes=["payload"],
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 2, proc.stderr
+        assert "shm" in proc.stderr
+
+    def _burst_manifest(self, transport):
+        # A sink stepping 3x slower than the source sees three messages on the
+        # channel in one step, and republishes all three in one step_done — an
+        # input burst and an output burst through a one-payload arena.
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = Manifest(duration_ns=60_000_000)
+        m.add_schemas(ARRAY_SCHEMAS)
+        m.add_channel("payload", schema="big.Payload", transport=transport)
+        m.add_channel("mirror", schema="big.Payload", transport=transport)
+        m.add_process(
+            "source",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "array_source.py")],
+            step_period_ns=10_000_000,
+            publishes=["payload"],
+        )
+        m.add_process(
+            "sink",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "array_echo.py")],
+            step_period_ns=30_000_000,
+            subscribes=["payload"],
+            publishes=["mirror"],
+        )
+        return m
+
+    def _mirrored(self, mcap_path):
+        _, msgs = read_mcap(mcap_path)
+        return [
+            ARRAY_TYPES["big.Payload"].unpack(data)
+            for topic, _, data in msgs
+            if topic == "mirror"
+        ]
+
+    def test_message_burst_matches_inline_exactly(self, run_sil, tmp_path):
+        # The regression this transport shipped with: an arena holds one
+        # payload, so a step carrying several messages on one channel must fall
+        # back to the inline encoding for the rest instead of overwriting the
+        # slot. A manifest that runs inline must run identically over shm —
+        # otherwise the transport has leaked into participant code.
+        inline = run_sil(
+            self._burst_manifest("inline").write(tmp_path / "inline.json").path,
+            out=tmp_path / "inline.mcap",
+        )
+        shm = run_sil(
+            self._burst_manifest("shm").write(tmp_path / "shm.json").path,
+            out=tmp_path / "shm.mcap",
+        )
+        assert inline.returncode == 0, inline.stderr
+        assert shm.returncode == 0, shm.stderr
+        expected = self._mirrored(inline.mcap_path)
+        # Three messages per sink step is what makes this a burst; a run that
+        # silently delivered one would pass the equality check vacuously.
+        assert len(expected) >= 3, f"fixture stopped bursting: {expected}"
+        assert self._mirrored(shm.mcap_path) == expected
+
+    def test_kernel_rejects_unknown_transport(self, run_sil, tmp_path):
+        # The kernel mirrors the builder's transport validation (defense in
+        # depth): a hand-written manifest with a bogus transport is a config
+        # error at load, before any participant starts.
+        m = toy_manifest(duration_ns=100_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_native(
+            "producer",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+        )
+        doc = m.to_doc()
+        doc["channels"]["ticks"]["transport"] = "rdma"
+        path = tmp_path / "m.json"
+        path.write_text(json.dumps(doc, sort_keys=True, separators=(",", ":")) + "\n")
+        proc = run_sil(path)
+        assert proc.returncode == 2
+        assert "transport" in proc.stderr
