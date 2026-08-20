@@ -77,7 +77,7 @@ class ProcessParticipant {
   // Shared-memory channel arenas (issue #35). One arena per shm channel this
   // participant subscribes to or publishes, mapped MAP_SHARED before fork so
   // the child maps the same file at load. The kernel writes an input payload
-  // into the arena (then the step line carries only "shm":true) and reads a
+  // into the arena (the step line then carries only "shm_seq") and reads a
   // published payload back out of it, skipping base64/JSON. A single slot
   // suffices: the step protocol is sequential and each channel carries at most
   // one message per step. Empty for participants with no shm channel.

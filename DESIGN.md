@@ -165,3 +165,23 @@ in the framework's own CI from day one.**
   both live in the hashed manifest. Boundary (documented, out of scope):
   statically linked binaries and direct-syscall/vDSO clock users bypass the
   shim.
+- **Shared-memory channel transport (#9, #35):** a channel opts in with
+  `transport: "shm"` in the hashed manifest; `inline` (base64 inside the JSON
+  step line) stays the default and is omitted from the canonical document, so
+  pre-shm manifests keep byte-identical hashes. The kernel maps one arena per
+  (participant, channel) at startup, sized from the schema `byte_size`, as a
+  memory-mapped temp file shared with the child; the step line carries only a
+  `shm_seq` freshness marker. **Refined from the decision text:** a single-slot
+  arena, not a ring buffer — the step protocol is sequential request/response
+  and a channel carries at most one message per activation, so a ring buys
+  nothing; and the participant-facing copy stays, so this is *not* zero-copy
+  into user code (out of scope per the PRD). Because one slot carries one
+  direction, a participant that both subscribes and publishes the same shm
+  channel is rejected at load rather than silently racing its own writes. A
+  run that cannot create or map an arena is an environment/config error (exit
+  2), distinct from a test failure (exit 1). The transport never reaches
+  participant code — the step API is the same field-dict/`bytes`/`list` either
+  way — and native participants are unaffected, staying on the pointer-based
+  C ABI data plane. Boundaries (out of scope): native-participant shm beyond
+  that pointer ABI, cross-machine transport, compression, and arena-size or
+  backpressure tuning.
