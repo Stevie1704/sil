@@ -12,7 +12,8 @@ from collections import defaultdict
 import pytest
 
 from conftest import ROOT
-from test_run_boundary import TYPES, read_mcap, sums
+from test_run_boundary import ARRAY_SCHEMAS, ARRAY_TYPES, TYPES, read_mcap, sums
+from sil.manifest import Manifest
 from toys import accumulator_library, producer_library, toy_manifest
 
 
@@ -73,6 +74,91 @@ def channel_streams(mcap_path):
     for topic, t, data in msgs:
         streams[topic].append((t, data))
     return dict(streams)
+
+
+def array_source_manifest(participant="array_source.py"):
+    """Build a manifest for a fixed-size array process participant."""
+    m = Manifest(duration_ns=30_000_000)
+    m.add_schemas(ARRAY_SCHEMAS)
+    m.add_channel("payload", schema="big.Payload")
+    m.add_process(
+        "source",
+        command=[sys.executable, str(ROOT / "tests" / "participants" / participant)],
+        step_period_ns=10_000_000,
+        publishes=["payload"],
+    )
+    return m
+
+
+def record_array_source_run(run_sil, tmp_path, *, participant="array_source.py"):
+    """Record fixed-size array messages for replay transport tests."""
+    m = array_source_manifest(participant)
+    out = tmp_path / "array-record.mcap"
+    proc = run_sil(m.write(tmp_path / "array-record.json").path, out=out)
+    assert proc.returncode == 0, proc.stderr
+    return out, hashlib.sha256(out.read_bytes()).hexdigest()
+
+
+def record_multi_channel_array_run(run_sil, tmp_path):
+    """Record same-time messages interleaved across two array channels."""
+    m = Manifest(duration_ns=30_000_000)
+    m.add_schemas(ARRAY_SCHEMAS)
+    m.add_channel("left", schema="big.Payload")
+    m.add_channel("right", schema="big.Payload")
+    m.add_process(
+        "source",
+        command=[
+            sys.executable,
+            str(ROOT / "tests" / "participants" / "multi_channel_burst_source.py"),
+        ],
+        step_period_ns=10_000_000,
+        publishes=["left", "right"],
+    )
+    out = tmp_path / "multi-record.mcap"
+    proc = run_sil(m.write(tmp_path / "multi-record.json").path, out=out)
+    assert proc.returncode == 0, proc.stderr
+    return out, hashlib.sha256(out.read_bytes()).hexdigest()
+
+
+def replay_array_manifest(recording, *, transport):
+    """Build a replay run whose process input uses the requested transport."""
+    m = Manifest(duration_ns=30_000_000)
+    m.add_schemas(ARRAY_SCHEMAS)
+    m.add_channel("payload", schema="big.Payload", transport=transport)
+    m.add_channel("mirror", schema="big.Payload")
+    m.add_replay("rep", recording=str(recording), channels=["payload"])
+    m.add_process(
+        "sink",
+        command=[sys.executable, str(ROOT / "tests" / "participants" / "array_echo.py")],
+        step_period_ns=10_000_000,
+        subscribes=["payload"],
+        publishes=["mirror"],
+    )
+    return m
+
+
+def replay_multi_channel_array_manifest(recording, *, transport):
+    """Build a replay run with two arena-backed input channels."""
+    m = Manifest(duration_ns=30_000_000)
+    m.add_schemas(ARRAY_SCHEMAS)
+    m.add_channel("left", schema="big.Payload", transport=transport)
+    m.add_channel("right", schema="big.Payload", transport=transport)
+    m.add_channel("mirror", schema="big.Payload")
+    m.add_replay("rep", recording=str(recording), channels=["left", "right"])
+    m.add_process(
+        "sink",
+        command=[sys.executable, str(ROOT / "tests" / "participants" / "array_echo.py")],
+        step_period_ns=10_000_000,
+        subscribes=["left", "right"],
+        publishes=["mirror"],
+    )
+    return m
+
+
+def channel_messages(mcap_path, channel):
+    """Return one channel's timestamp/payload messages in recording order."""
+    _, msgs = read_mcap(mcap_path)
+    return [(t, data) for name, t, data in msgs if name == channel]
 
 
 class TestFaithfulReplay:
@@ -162,6 +248,124 @@ class TestReplaySemantics:
         proc = run_sil(m.write(tmp_path / "replay.json").path)
         assert proc.returncode == 0, proc.stderr
         assert [t for t, _ in ticks(proc.mcap_path)] == [0, 10_000_000, 20_000_000]
+
+
+class TestReplayTransportComposition:
+    """Replay keeps its semantics when the destination channel uses an arena."""
+
+    def test_replay_over_shm_matches_inline_delivery_and_is_deterministic(
+        self, run_sil, tmp_path
+    ):
+        """Replay over shm preserves bytes, delivery, and run determinism."""
+        recording, _ = record_array_source_run(run_sil, tmp_path)
+        inline = replay_array_manifest(recording, transport="inline").write(
+            tmp_path / "replay-inline.json"
+        ).path
+        shm = replay_array_manifest(recording, transport="shm").write(
+            tmp_path / "replay-shm.json"
+        ).path
+
+        inline_proc = run_sil(inline, out=tmp_path / "inline.mcap")
+        shm_a = run_sil(shm, out=tmp_path / "shm-a.mcap")
+        shm_b = run_sil(shm, out=tmp_path / "shm-b.mcap")
+        assert inline_proc.returncode == 0, inline_proc.stderr
+        assert shm_a.returncode == 0, shm_a.stderr
+        assert shm_b.returncode == 0, shm_b.stderr
+
+        # The replayed channel is still recorded at its original timestamps and
+        # bytes, while the process subscriber sees the same fixed-size payloads
+        # through the arena as it does over inline transport.
+        assert channel_messages(shm_a.mcap_path, "payload") == channel_messages(
+            inline_proc.mcap_path, "payload"
+        )
+        assert channel_messages(shm_a.mcap_path, "mirror") == channel_messages(
+            inline_proc.mcap_path, "mirror"
+        )
+        assert [
+            ARRAY_TYPES["big.Payload"].unpack(data)
+            for _, data in channel_messages(shm_a.mcap_path, "mirror")
+        ] == [
+            {"id": 0, "blob": b"\x00\x01\x02\x03", "samples": [0.0, 1.0, 2.0, 3.0,
+                                                        4.0, 5.0, 6.0, 7.0]},
+            {"id": 1, "blob": b"\x01\x02\x03\x04", "samples": [10.0, 11.0, 12.0,
+                                                         13.0, 14.0, 15.0, 16.0,
+                                                         17.0]},
+        ]
+        assert shm_a.mcap_path.read_bytes() == shm_b.mcap_path.read_bytes()
+
+    def test_replay_over_shm_preserves_equal_timestamp_publish_order(
+        self, run_sil, tmp_path
+    ):
+        """Replay retains the recording-order tie-break for same-time messages."""
+        recording, _ = record_array_source_run(
+            run_sil, tmp_path, participant="burst_array_source.py"
+        )
+        inline = replay_array_manifest(recording, transport="inline").write(
+            tmp_path / "burst-inline.json"
+        ).path
+        shm = replay_array_manifest(recording, transport="shm").write(
+            tmp_path / "burst-shm.json"
+        ).path
+
+        inline_proc = run_sil(inline, out=tmp_path / "burst-inline.mcap")
+        shm_proc = run_sil(shm, out=tmp_path / "burst-shm.mcap")
+        assert inline_proc.returncode == 0, inline_proc.stderr
+        assert shm_proc.returncode == 0, shm_proc.stderr
+
+        # Two messages share each source timestamp. Their file order is the
+        # recording's global publish-order tie-break, and the process receives
+        # that order even though the first message uses the arena and the rest
+        # use the protocol's inline burst fallback.
+        assert [t for t, _ in channel_messages(shm_proc.mcap_path, "payload")] == [
+            0, 0, 10_000_000, 10_000_000, 20_000_000, 20_000_000,
+        ]
+        assert [
+            ARRAY_TYPES["big.Payload"].unpack(data)["id"]
+            for _, data in channel_messages(shm_proc.mcap_path, "mirror")
+        ] == [0, 1, 2, 3]
+        assert channel_messages(shm_proc.mcap_path, "payload") == channel_messages(
+            inline_proc.mcap_path, "payload"
+        )
+        assert channel_messages(shm_proc.mcap_path, "mirror") == channel_messages(
+            inline_proc.mcap_path, "mirror"
+        )
+
+    def test_replay_over_shm_preserves_cross_channel_tie_break(
+        self, run_sil, tmp_path
+    ):
+        """Replay retains global order when equal-time messages cross channels."""
+        recording, _ = record_multi_channel_array_run(run_sil, tmp_path)
+        inline = replay_multi_channel_array_manifest(
+            recording, transport="inline"
+        ).write(tmp_path / "multi-inline.json").path
+        shm = replay_multi_channel_array_manifest(
+            recording, transport="shm"
+        ).write(tmp_path / "multi-shm.json").path
+
+        inline_proc = run_sil(inline, out=tmp_path / "multi-inline.mcap")
+        shm_proc = run_sil(shm, out=tmp_path / "multi-shm.mcap")
+        assert inline_proc.returncode == 0, inline_proc.stderr
+        assert shm_proc.returncode == 0, shm_proc.stderr
+
+        # The source publishes left/right/left/right at each timestamp. The
+        # sink subscribes to both shm channels and must observe that recording
+        # order, rather than its declared channel order, in the mirror output.
+        _, msgs = read_mcap(shm_proc.mcap_path)
+        mirror = [
+            (t, ARRAY_TYPES["big.Payload"].unpack(data)["id"])
+            for channel, t, data in msgs
+            if channel == "mirror"
+        ]
+        assert mirror == [
+            (10_000_000, 0), (10_000_000, 1),
+            (10_000_000, 2), (10_000_000, 3),
+            (20_000_000, 4), (20_000_000, 5),
+            (20_000_000, 6), (20_000_000, 7),
+        ]
+        for channel in ("left", "right", "mirror"):
+            assert channel_messages(shm_proc.mcap_path, channel) == channel_messages(
+                inline_proc.mcap_path, channel
+            )
 
 
 class TestReplayDeterminism:
