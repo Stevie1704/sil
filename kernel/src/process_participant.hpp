@@ -27,9 +27,9 @@ namespace sil {
 //   kernel -> child  {"op":"shutdown"}
 //
 // A channel declared transport "shm" swaps the inline "data":<base64> field for
-// "shm_seq":<n>: the payload rides a per-channel shared-memory arena (init
-// carries its "shm_path"/"shm_capacity") and the seq marks a fresh write. The
-// participant-facing API is unchanged — only the wire representation differs.
+// "shm_seq":<n>: the payload rides a per-channel arena (init carries its
+// "shm_path"/"shm_capacity") and the seq marks a fresh write. The
+// participant-facing API is unchanged — only the transport differs.
 class ProcessParticipant {
  public:
   ProcessParticipant(Engine &engine, const std::string &name,
@@ -74,14 +74,14 @@ class ProcessParticipant {
   void write_clock_region(uint64_t now_ns);
   void teardown_clock_region();
 
-  // Shared-memory channel arenas (issue #35). One arena per shm channel this
+  // Channel arenas (issue #35). One arena per arena-backed channel this
   // participant subscribes to or publishes, mapped MAP_SHARED before fork so
   // the child maps the same file at load. The kernel writes an input payload
   // into the arena (the step line then carries only "shm_seq") and reads a
   // published payload back out of it, skipping base64/JSON. One slot holds one
   // payload: when a step carries several messages on the same channel, the
   // first rides the arena and the rest fall back inline. Empty for
-  // participants with no shm channel.
+  // participants with no arena-backed channel.
   struct Arena {
     int fd = -1;
     std::string path;
@@ -92,7 +92,8 @@ class ProcessParticipant {
   };
   std::map<std::string, Arena> arenas_;  // by channel name
 
-  // Maps an arena for every shm channel in `spec`, sized from schema byte_size.
+  // Maps an arena for every arena-backed channel in `spec`, sized from the
+  // schema byte_size.
   // Throws ManifestError (exit 2) on any create/map failure so an environment
   // problem is distinguishable from a run/test failure.
   void setup_arenas(const ProcessSpec &spec);

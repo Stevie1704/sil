@@ -1136,8 +1136,9 @@ class TestShmTransport:
     def test_unmappable_arena_is_startup_config_error(self, sil_run, tmp_path):
         # An arena the kernel cannot create is an environment problem, not a test
         # failure: it must fail at startup with exit 2 (distinct from a run's
-        # exit 1). Point the child's temp dir at a path that cannot hold the
-        # arena file so mkstemp/ftruncate fails before any step runs.
+        # exit 1). The kernel creates the arena itself, before it forks the
+        # child, so pointing TMPDIR at a path that cannot hold the arena file
+        # makes its mkstemp fail before any participant starts.
         ref = self._array_manifest("shm").write(tmp_path / "m.json")
         no_such_dir = tmp_path / "does-not-exist"
         env = {**os.environ, "TMPDIR": str(no_such_dir)}

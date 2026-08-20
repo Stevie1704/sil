@@ -20,18 +20,19 @@ from dataclasses import dataclass
 
 from sil import schema
 
-# Fixed-layout header at the front of every shm arena: seq (u64), len (u64),
-# then the payload. Mirrors include/sil/shm_arena.h — the kernel is the writer
+# Fixed-layout header at the front of every arena: seq (u64), len (u64),
+# then the payload. Mirrors include/sil/arena.h — the kernel is the writer
 # for inputs and the reader for outputs; this side is the mirror image.
 _ARENA_HEADER = struct.Struct("<QQ")
 
 
 class _Arena:
-    """A per-channel shared-memory arena mapped MAP_SHARED with the kernel.
+    """A per-channel arena mapped MAP_SHARED with the kernel.
 
-    Payloads cross through this region instead of base64/JSON. A single slot is
-    enough: the step protocol is sequential and each channel carries at most one
-    message per step. `seq` marks a fresh write so a stale read is caught.
+    Payloads cross through this region instead of base64/JSON. One slot holds
+    one payload: when a step carries several messages on the same channel, the
+    first rides the arena and the rest travel inline. `seq` marks a fresh write
+    so a stale read is caught.
 
     `capacity` is the kernel-authoritative arena size (derived from the schema
     `byte_size`, delivered in the init line); this side does not re-derive it
@@ -50,16 +51,16 @@ class _Arena:
         got_seq, length = _ARENA_HEADER.unpack_from(self._mmap, 0)
         if got_seq != seq:
             raise ParticipantFailure(
-                f"stale shm arena (expected seq {seq}, got {got_seq})"
+                f"stale arena (expected seq {seq}, got {got_seq})"
             )
         if length > self._capacity:
-            raise ParticipantFailure("shm arena len exceeds capacity")
+            raise ParticipantFailure("arena len exceeds capacity")
         start = _ARENA_HEADER.size
         return bytes(self._mmap[start : start + length])
 
     def write(self, payload: bytes) -> int:
         if len(payload) > self._capacity:
-            raise ParticipantFailure("payload exceeds shm arena capacity")
+            raise ParticipantFailure("payload exceeds arena capacity")
         start = _ARENA_HEADER.size
         self._mmap[start : start + len(payload)] = payload
         self._seq += 1
@@ -96,9 +97,10 @@ def run(participant: StepParticipant) -> None:
     stdin = sys.stdin
     stdout = sys.stdout
     types_by_channel: dict[str, schema.MessageType] = {}
-    # shm channels map an arena and move payloads through it; inline channels
-    # stay on the base64/JSON path. The transport choice never reaches the
-    # participant — on_step sees the same field-dict/bytes/list either way.
+    # A channel declaring transport "shm" maps an arena and moves payloads
+    # through it; inline channels stay on the base64/JSON path. The transport
+    # choice never reaches the participant — on_step sees the same
+    # field-dict/bytes/list either way.
     arenas: dict[str, _Arena] = {}
 
     def send(msg: dict) -> None:

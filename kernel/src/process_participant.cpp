@@ -14,7 +14,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include "sil/shm_arena.h"
+#include "sil/arena.h"
 
 #include "clock_shim.hpp"
 
@@ -157,9 +157,10 @@ void ProcessParticipant::teardown_clock_region() {
   }
 }
 
-// --- shared-memory channel arenas (issue #35) ------------------------------
+// --- channel arenas (issue #35) ------------------------------
 //
-// One arena per shm channel, an mmap'd temp file mapped MAP_SHARED before fork
+// One arena per arena-backed channel, an mmap'd temp file mapped MAP_SHARED
+// before fork
 // so the child maps the same file by path at load. A create/map failure is an
 // environment problem, not a bad manifest expressed in code — but the issue
 // requires it to surface as a startup config error (exit 2), so we throw
@@ -169,8 +170,8 @@ void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
   const Manifest &m = engine_.manifest();
 
   // A single-slot arena carries one direction. A participant that both
-  // subscribes and publishes the same shm channel would race an input and an
-  // output write through one header — out of scope (no feedback loop over the
+  // subscribes and publishes the same arena-backed channel would race an input
+  // and an output write through one header — out of scope (no feedback loop over the
   // large-payload path), so reject it at load rather than silently corrupt.
   for (const std::string &ch : spec.publishes) {
     const ChannelSpec *c = m.find_channel(ch);
@@ -187,7 +188,7 @@ void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
     const ChannelSpec *c = m.find_channel(ch);
     if (!c || c->transport != Transport::Shm) return;
     const size_t capacity = m.schemas.at(c->schema).byte_size;
-    const size_t map_size = sizeof(sil_shm_arena) + capacity;
+    const size_t map_size = sizeof(sil_arena) + capacity;
 
     const char *tmp = getenv("TMPDIR");
     std::string tpl = (tmp && *tmp ? std::string(tmp) : std::string("/tmp")) +
@@ -198,7 +199,7 @@ void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
     a.fd = mkstemp(path.data());
     if (a.fd < 0)
       throw ManifestError("participant '" + name_ + "' channel '" + ch +
-                          "': shm arena: mkstemp failed");
+                          "': arena: mkstemp failed");
     a.path = path.data();
     a.capacity = capacity;
     a.map_size = map_size;
@@ -206,16 +207,16 @@ void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
       close(a.fd);
       unlink(a.path.c_str());
       throw ManifestError("participant '" + name_ + "' channel '" + ch +
-                          "': shm arena: ftruncate failed");
+                          "': arena: ftruncate failed");
     }
     a.base = mmap(nullptr, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, a.fd, 0);
     if (a.base == MAP_FAILED) {
       close(a.fd);
       unlink(a.path.c_str());
       throw ManifestError("participant '" + name_ + "' channel '" + ch +
-                          "': shm arena: mmap failed");
+                          "': arena: mmap failed");
     }
-    auto *hdr = static_cast<sil_shm_arena *>(a.base);
+    auto *hdr = static_cast<sil_arena *>(a.base);
     hdr->seq = 0;
     hdr->len = 0;
     arenas_.emplace(ch, std::move(a));
@@ -229,9 +230,9 @@ uint64_t ProcessParticipant::write_arena(const std::string &channel,
   Arena &a = arenas_.at(channel);
   if (bytes.size() > a.capacity)
     throw RunError("participant '" + name_ + "' channel '" + channel +
-                   "': payload exceeds shm arena capacity");
-  auto *hdr = static_cast<sil_shm_arena *>(a.base);
-  std::memcpy(static_cast<uint8_t *>(a.base) + sizeof(sil_shm_arena),
+                   "': payload exceeds arena capacity");
+  auto *hdr = static_cast<sil_arena *>(a.base);
+  std::memcpy(static_cast<uint8_t *>(a.base) + sizeof(sil_arena),
               bytes.data(), bytes.size());
   hdr->len = bytes.size();
   hdr->seq = ++a.seq;
@@ -241,16 +242,16 @@ uint64_t ProcessParticipant::write_arena(const std::string &channel,
 void ProcessParticipant::read_arena(const std::string &channel, uint64_t seq,
                                     std::vector<uint8_t> &out) {
   Arena &a = arenas_.at(channel);
-  auto *hdr = static_cast<sil_shm_arena *>(a.base);
+  auto *hdr = static_cast<sil_arena *>(a.base);
   if (hdr->seq != seq)
     throw RunError("participant '" + name_ + "' channel '" + channel +
-                   "': stale shm arena (expected seq " + std::to_string(seq) +
+                   "': stale arena (expected seq " + std::to_string(seq) +
                    ", got " + std::to_string(hdr->seq) + ")");
   if (hdr->len > a.capacity)
     throw RunError("participant '" + name_ + "' channel '" + channel +
-                   "': shm arena len exceeds capacity");
+                   "': arena len exceeds capacity");
   const auto *payload =
-      static_cast<const uint8_t *>(a.base) + sizeof(sil_shm_arena);
+      static_cast<const uint8_t *>(a.base) + sizeof(sil_arena);
   out.assign(payload, payload + hdr->len);
 }
 
@@ -279,7 +280,7 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
   const bool shimmed = spec.shim;
   if (shimmed) setup_clock_region();
 
-  // Map shm arenas before fork so the child inherits nothing but a path it can
+  // Map the arenas before fork so the child inherits nothing but a path it can
   // re-open. Any failure here throws ManifestError (exit 2) and must release
   // the arenas + clock region, since a throwing constructor skips the dtor.
   try {
@@ -325,7 +326,7 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     auto add_channel = [&](const std::string &ch, const char *direction) {
       const ChannelSpec *c = m.find_channel(ch);
       json entry = {{"schema", c->schema}, {"direction", direction}};
-      // For shm channels, hand the child the arena path + capacity so it maps
+      // For arena-backed channels, hand the child the arena path + capacity so it maps
       // the same MAP_SHARED region and moves payloads through it. Absent
       // "transport" means inline (the base64/JSON path), keeping existing
       // manifests byte-identical on the wire.

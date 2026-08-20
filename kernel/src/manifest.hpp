@@ -46,7 +46,7 @@ struct InterceptorSpec {
 
 // How a channel's payload crosses the kernel↔process boundary. Inline
 // base64-encodes it into the JSON step line (default); Shm hands it through a
-// per-channel shared-memory arena, skipping base64/JSON for large payloads.
+// per-channel arena, skipping base64/JSON for large payloads.
 // Native participants are unaffected either way (pointer-based data plane).
 enum class Transport { Inline, Shm };
 

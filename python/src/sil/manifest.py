@@ -36,7 +36,7 @@ _INTERCEPTOR_KINDS = {"drop", "drop_nth", "delay", "override"}
 
 # Channel transports. "inline" (default) base64-encodes the payload into the
 # JSON step line; "shm" hands megabyte-class payloads across the kernel↔process
-# boundary through a per-channel shared-memory arena, skipping base64/JSON.
+# boundary through a per-channel arena, skipping base64/JSON.
 _TRANSPORTS = {"inline", "shm"}
 
 

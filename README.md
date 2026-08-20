@@ -89,7 +89,7 @@ kernel↔process boundary through a per-channel shared-memory arena instead:
 m.add_channel("frames", schema="sensor.Frame", transport="shm")
 ```
 
-The kernel sizes and maps one arena per shm channel from the schema `byte_size`
+The kernel sizes and maps one arena per such channel from the schema `byte_size`
 at startup and hands the process participant its path. Publishing writes the
 payload into the arena and the step line carries only a freshness marker; the
 participant reads the bytes directly. An arena holds one payload, so when a

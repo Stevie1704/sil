@@ -1,4 +1,4 @@
-/* SiL shared-memory channel arena — the fixed-layout region a single channel's
+/* SiL channel arena — the fixed-layout shared-memory region a single channel's
  * payload crosses the kernel↔process boundary through when the channel declares
  * transport "shm". One arena per (participant, channel) direction; the kernel
  * and the process participant map the same file MAP_SHARED.
@@ -14,8 +14,8 @@
  * nothing about the step protocol, manifest, or kernel internals — it is the
  * only contract.
  */
-#ifndef SIL_SHM_ARENA_H
-#define SIL_SHM_ARENA_H
+#ifndef SIL_ARENA_H
+#define SIL_ARENA_H
 
 #include <stdint.h>
 
@@ -26,14 +26,14 @@ extern "C" {
 /* Fixed POD header, immediately followed by `capacity` payload bytes in the
  * same mapping. Little-endian, no padding — matching the project's fixed-layout
  * message convention. */
-typedef struct sil_shm_arena {
+typedef struct sil_arena {
     uint64_t seq;       /* incremented on every write (fresh-payload marker)  */
     uint64_t len;       /* valid payload length in bytes (<= capacity)        */
     /* uint8_t payload[capacity] follows immediately */
-} sil_shm_arena;
+} sil_arena;
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* SIL_SHM_ARENA_H */
+#endif /* SIL_ARENA_H */
