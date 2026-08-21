@@ -11,6 +11,7 @@
 #include "sil/clock_region.h"
 
 #include "engine.hpp"
+#include "mapped_region.hpp"
 
 namespace sil {
 
@@ -48,18 +49,15 @@ class ProcessParticipant {
   // maps a small fixed-layout time region shared with the child, injects the
   // shim preload plus the region path into the child's environment at spawn,
   // and writes the current virtual time into the region before every step so
-  // the child's own clock reads return stepped virtual time. Left inert (fd -1,
-  // region null) for unshimmed participants.
-  int region_fd_ = -1;
-  std::string region_path_;
+  // the child's own clock reads return stepped virtual time. Left empty for
+  // unshimmed participants; the region unlinks its file when released.
+  MappedRegion clock_region_;
   std::string shim_lib_;  // resolved in the parent so the child only setenv()s
-  volatile sil_clock_region *region_ = nullptr;
   uint64_t epoch_ns_ = 0;
 
   void setup_clock_region();
   void inject_shim_env() const;  // runs in the forked child before exec
   void write_clock_region(uint64_t now_ns);
-  void teardown_clock_region();
 
   // Channel arenas (issue #35). One arena per arena-backed channel this
   // participant subscribes to or publishes, mapped MAP_SHARED before fork so
@@ -67,12 +65,9 @@ class ProcessParticipant {
   // rules are specified in docs/step-protocol.md. Empty for participants with
   // no arena-backed channel.
   struct Arena {
-    int fd = -1;
-    std::string path;
-    void *base = nullptr;
-    size_t map_size = 0;   // sizeof(header) + capacity
-    size_t capacity = 0;   // schema byte_size
-    uint64_t seq = 0;      // last seq stamped, for the fresh-payload marker
+    MappedRegion region;  // sizeof(header) + capacity, unlinked when released
+    size_t capacity = 0;  // schema byte_size
+    uint64_t seq = 0;     // last seq stamped, for the fresh-payload marker
   };
   std::map<std::string, Arena> arenas_;  // by channel name
 
@@ -109,7 +104,6 @@ class ProcessParticipant {
   // Reads the channel's arena payload back into `out`, checking `seq` freshness.
   void read_arena(const std::string &channel, uint64_t seq,
                   std::vector<uint8_t> &out);
-  void teardown_arenas();
 };
 
 }  // namespace sil
