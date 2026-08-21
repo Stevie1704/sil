@@ -1095,6 +1095,15 @@ class TestShmTransport:
         ]
 
     def _payloads(self, mcap_path):
+        """
+        Extract decoded payload messages from an MCAP recording.
+        
+        Parameters:
+        	mcap_path: Path to the MCAP recording.
+        
+        Returns:
+        	A list of unpacked payload values from messages on the `payload` topic.
+        """
         _, msgs = read_mcap(mcap_path)
         return [
             ARRAY_TYPES["big.Payload"].unpack(data)
@@ -1102,11 +1111,169 @@ class TestShmTransport:
             if topic == "payload"
         ]
 
+    def _interceptor_manifest(self, transport, interceptor):
+        """Build a process-to-process array route with one channel interceptor."""
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = Manifest(duration_ns=60_000_000)
+        m.add_schemas(ARRAY_SCHEMAS)
+        m.add_channel("payload", schema="big.Payload", transport=transport)
+        m.add_channel("mirror", schema="big.Payload")
+        m.add_process(
+            "source",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "array_source.py")],
+            step_period_ns=10_000_000,
+            publishes=["payload"],
+        )
+        m.add_process(
+            "sink",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "array_echo.py")],
+            step_period_ns=10_000_000,
+            subscribes=["payload"],
+            publishes=["mirror"],
+        )
+        m.add_interceptor("payload", **interceptor)
+        return m
+
+    def _message_ids(self, mcap_path, channel):
+        """
+        Extract message visibility times and array IDs for a channel.
+        
+        Parameters:
+            mcap_path: Path to the MCAP recording.
+            channel: Channel name to inspect.
+        
+        Returns:
+            A list of ``(visibility_time, array_id)`` tuples in recording order.
+        """
+        _, msgs = read_mcap(mcap_path)
+        return [
+            (t, ARRAY_TYPES["big.Payload"].unpack(data)["id"])
+            for name, t, data in msgs
+            if name == channel
+        ]
+
     def test_shm_channel_roundtrips_array_payload(self, run_sil, tmp_path):
         m = self._array_manifest("shm")
         proc = run_sil(m.write(tmp_path / "m.json").path)
         assert proc.returncode == 0, proc.stderr
         assert self._payloads(proc.mcap_path) == self._expected_payloads()
+
+    @pytest.mark.parametrize(
+        ("interceptor", "payload_messages", "mirror_messages"),
+        [
+            (
+                {"kind": "drop", "start_ns": 20_000_000, "end_ns": 40_000_000},
+                [(0, 0), (10_000_000, 1), (40_000_000, 4), (50_000_000, 5)],
+                [(10_000_000, 0), (20_000_000, 1), (50_000_000, 4)],
+            ),
+            (
+                {"kind": "drop_nth", "start_ns": 10_000_000,
+                 "end_ns": 50_000_000, "n": 2},
+                [(0, 0), (10_000_000, 1), (30_000_000, 3), (50_000_000, 5)],
+                [(10_000_000, 0), (20_000_000, 1), (40_000_000, 3)],
+            ),
+            (
+                {"kind": "delay", "start_ns": 0, "end_ns": 30_000_000,
+                 "delay_ns": 15_000_000},
+                [(15_000_000, 0), (25_000_000, 1), (30_000_000, 3),
+                 (35_000_000, 2), (40_000_000, 4), (50_000_000, 5)],
+                [(20_000_000, 0), (30_000_000, 1), (40_000_000, 2),
+                 (40_000_000, 3), (50_000_000, 4)],
+            ),
+            (
+                {"kind": "override", "start_ns": 10_000_000,
+                 "end_ns": 30_000_000, "field": "id", "value": 99},
+                [(0, 0), (10_000_000, 99), (20_000_000, 99),
+                 (30_000_000, 3), (40_000_000, 4), (50_000_000, 5)],
+                [(10_000_000, 0), (20_000_000, 99), (30_000_000, 99),
+                 (40_000_000, 3), (50_000_000, 4)],
+            ),
+            (
+                # Open-ended window (no end_ns): silences the channel from
+                # 30ms to the end of the 60ms run, over the arena transport.
+                {"kind": "drop", "start_ns": 30_000_000},
+                [(0, 0), (10_000_000, 1), (20_000_000, 2)],
+                [(10_000_000, 0), (20_000_000, 1), (30_000_000, 2)],
+            ),
+            (
+                # n=1 drops every in-window message: equivalent to a plain
+                # drop over [10ms, 40ms), but exercised through drop_nth.
+                {"kind": "drop_nth", "start_ns": 10_000_000,
+                 "end_ns": 40_000_000, "n": 1},
+                [(0, 0), (40_000_000, 4), (50_000_000, 5)],
+                [(10_000_000, 0), (50_000_000, 4)],
+            ),
+        ],
+        ids=["drop", "drop_nth", "delay", "override", "drop_open_ended",
+             "drop_nth_one"],
+    )
+    def test_interceptors_have_the_same_effect_over_inline_and_shm(
+        self, run_sil, tmp_path, interceptor, payload_messages, mirror_messages
+    ):
+        """Every interceptor keeps its inline semantics on an arena channel."""
+        for transport in ("inline", "shm"):
+            manifest = self._interceptor_manifest(transport, interceptor)
+            proc = run_sil(
+                manifest.write(tmp_path / f"{transport}-{interceptor['kind']}.json").path,
+                out=tmp_path / f"{transport}-{interceptor['kind']}.mcap",
+            )
+            assert proc.returncode == 0, proc.stderr
+            assert self._message_ids(proc.mcap_path, "payload") == payload_messages
+            assert self._message_ids(proc.mcap_path, "mirror") == mirror_messages
+
+    def test_shm_override_preserves_the_rest_of_the_payload(
+        self, run_sil, tmp_path
+    ):
+        """Override changes only the selected scalar before arena delivery."""
+        m = self._interceptor_manifest(
+            "shm",
+            {"kind": "override", "start_ns": 10_000_000,
+             "end_ns": 30_000_000, "field": "id", "value": 99},
+        )
+        proc = run_sil(m.write(tmp_path / "override.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        payloads = self._payloads(proc.mcap_path)
+        expected = [
+            {
+                "id": step,
+                "blob": bytes((step + k) % 256 for k in range(4)),
+                "samples": [float(step * 10 + k) for k in range(8)],
+            }
+            for step in range(6)
+        ]
+        expected[1] = {**expected[1], "id": 99}
+        expected[2] = {**expected[2], "id": 99}
+        assert payloads == expected
+
+        _, msgs = read_mcap(proc.mcap_path)
+        mirrored = [
+            ARRAY_TYPES["big.Payload"].unpack(data)
+            for channel, _, data in msgs
+            if channel == "mirror"
+        ]
+        assert mirrored == expected[:5]
+
+    def test_shm_interceptor_run_is_deterministic_across_two_runs(
+        self, run_sil, tmp_path
+    ):
+        """An interceptor composed with the shm transport stays deterministic."""
+        m = self._interceptor_manifest(
+            "shm",
+            {"kind": "override", "start_ns": 10_000_000,
+             "end_ns": 30_000_000, "field": "id", "value": 99},
+        )
+        manifest = m.write(tmp_path / "det.json").path
+        a = run_sil(manifest, out=tmp_path / "det-a.mcap")
+        b = run_sil(manifest, out=tmp_path / "det-b.mcap")
+        assert a.returncode == 0, a.stderr
+        assert b.returncode == 0, b.stderr
+        assert a.mcap_path.read_bytes() == b.mcap_path.read_bytes()
 
     def test_shm_recording_matches_inline_byte_for_byte(self, run_sil, tmp_path):
         # The transport is a delivery detail, not a semantic one: an shm run and
