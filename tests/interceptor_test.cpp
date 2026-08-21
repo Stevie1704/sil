@@ -17,22 +17,26 @@ using sil::InterceptorPlan;
 using sil::InterceptorSpec;
 using sil::SchemaSpec;
 
+/** Fail the test process with a useful message when an invariant is false. */
 void check(bool condition, const std::string &message) {
   if (!condition) throw std::runtime_error(message);
 }
 
+/** Build the minimal schema metadata consumed by the plan compiler. */
 SchemaSpec schema(std::initializer_list<FieldSpec> fields) {
   SchemaSpec result;
   result.fields = fields;
   return result;
 }
 
+/** Compile declarations into the runtime seam under test. */
 std::shared_ptr<InterceptorPlan> plan(
     uint64_t duration_ns, const SchemaSpec &schema,
     std::vector<InterceptorSpec> specs) {
   return sil::compile_interceptor_plan(duration_ns, schema, specs);
 }
 
+/** Build a bounded drop declaration for a test window. */
 InterceptorSpec drop(uint64_t start_ns, uint64_t end_ns) {
   InterceptorSpec spec;
   spec.kind = "drop";
@@ -41,6 +45,7 @@ InterceptorSpec drop(uint64_t start_ns, uint64_t end_ns) {
   return spec;
 }
 
+/** Build an open-ended delay declaration for a test. */
 InterceptorSpec delay(uint64_t delay_ns) {
   InterceptorSpec spec;
   spec.kind = "delay";
@@ -48,6 +53,7 @@ InterceptorSpec delay(uint64_t delay_ns) {
   return spec;
 }
 
+/** Build a bounded drop_nth declaration for a test window. */
 InterceptorSpec drop_nth(uint64_t start_ns, uint64_t end_ns, uint64_t n) {
   InterceptorSpec spec;
   spec.kind = "drop_nth";
@@ -57,6 +63,7 @@ InterceptorSpec drop_nth(uint64_t start_ns, uint64_t end_ns, uint64_t n) {
   return spec;
 }
 
+/** Build an override declaration for one scalar schema field. */
 InterceptorSpec override_field(const char *field, double value) {
   InterceptorSpec spec;
   spec.kind = "override";
@@ -65,6 +72,7 @@ InterceptorSpec override_field(const char *field, double value) {
   return spec;
 }
 
+/** Verify that interceptor windows include start and exclude end. */
 void test_half_open_window_edges() {
   const SchemaSpec s = schema({{"value", "u8", 0}});
   auto p = plan(100, s, {drop(10, 20)});
@@ -76,6 +84,7 @@ void test_half_open_window_edges() {
   check(!p->apply(20, bytes).suppressed, "window included its exclusive end");
 }
 
+/** Verify that delay overflow clamps instead of wrapping into the run. */
 void test_delay_saturates() {
   const SchemaSpec s = schema({{"value", "u8", 0}});
   auto p = plan(UINT64_MAX, s, {delay(UINT64_MAX - 5)});
@@ -88,6 +97,7 @@ void test_delay_saturates() {
         "overflowing delay did not clamp to UINT64_MAX");
 }
 
+/** Verify direct and delayed messages respect the duration boundary. */
 void test_duration_is_half_open() {
   const SchemaSpec s = schema({{"value", "u8", 0}});
   auto p = plan(100, s, {});
@@ -102,6 +112,7 @@ void test_duration_is_half_open() {
         "message landing at duration was not truncated");
 }
 
+/** Verify all matching delays compose in declaration order. */
 void test_delays_compose_in_declared_order() {
   const SchemaSpec s = schema({{"value", "u8", 0}});
   auto p = plan(100, s, {delay(7), delay(11)});
@@ -112,6 +123,7 @@ void test_delays_compose_in_declared_order() {
   check(verdict.visible_ns == 21, "delays did not compose in declaration order");
 }
 
+/** Verify each drop_nth step owns its own in-window counter. */
 void test_drop_nth_has_independent_window_state() {
   const SchemaSpec s = schema({{"value", "u8", 0}});
   auto p = plan(100, s,
@@ -128,24 +140,28 @@ void test_drop_nth_has_independent_window_state() {
         "drop_nth counters were not independent per interceptor");
 }
 
+/** Write an integer bit pattern to a byte vector in little-endian order. */
 void put_le(std::vector<uint8_t> &bytes, size_t offset, uint64_t value,
             size_t width) {
   for (size_t i = 0; i < width; i++)
     bytes[offset + i] = static_cast<uint8_t>(value >> (8 * i));
 }
 
+/** Add a float's bit pattern to the little-endian expected payload. */
 void put_float(std::vector<uint8_t> &bytes, size_t offset, float value) {
   uint32_t bits = 0;
   std::memcpy(&bits, &value, sizeof(value));
   put_le(bytes, offset, bits, sizeof(bits));
 }
 
+/** Add a double's bit pattern to the little-endian expected payload. */
 void put_double(std::vector<uint8_t> &bytes, size_t offset, double value) {
   uint64_t bits = 0;
   std::memcpy(&bits, &value, sizeof(value));
   put_le(bytes, offset, bits, sizeof(bits));
 }
 
+/** Verify load-time field offsets and encodings for every field type. */
 void test_override_offsets_and_encodings() {
   const SchemaSpec s = schema({
       {"u8", "u8", 0},   {"u16", "u16", 0}, {"u32", "u32", 0},

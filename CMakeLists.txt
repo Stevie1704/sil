@@ -42,8 +42,10 @@ target_link_libraries(sil-run PRIVATE nlohmann_json::nlohmann_json mcap_headers)
 # so it has a focused C++ test target in addition to the end-to-end suite.
 add_executable(sil_interceptor_test
   tests/interceptor_test.cpp
-  kernel/src/interceptor.cpp)
+  kernel/src/interceptor.cpp
+  kernel/src/manifest.cpp)
 target_include_directories(sil_interceptor_test PRIVATE kernel/src)
+target_link_libraries(sil_interceptor_test PRIVATE nlohmann_json::nlohmann_json)
 add_test(NAME sil_interceptor_plan COMMAND sil_interceptor_test)
 
 # --- generated message headers (single typed contract per DESIGN #9) ---

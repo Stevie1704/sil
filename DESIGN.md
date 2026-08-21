@@ -191,7 +191,7 @@ in the framework's own CI from day one.**
   that pointer ABI, cross-machine transport, compression, and arena-size or
   backpressure tuning.
 - **Compiled interceptor plan (#40):** the manifest loader compiles each
-  channel's declared interceptors into a private plan. It resolves kind tags,
+  channel's declared interceptors into an encapsulated plan. It resolves kind tags,
   window bounds, mutable `drop_nth` counters, and override offsets plus
   little-endian bytes before the run. The plan's sole runtime entry point is
   `apply(now_ns, bytes)`, with fixed ordering: drop/drop_nth, delay, the
