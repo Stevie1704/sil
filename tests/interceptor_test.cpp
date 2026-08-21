@@ -229,7 +229,8 @@ void test_override_integer_endpoint_clamping() {
 void test_override_rejects_short_payload() {
   const SchemaSpec s = schema({{"value", "u32", 0}});
   auto p = plan(100, s, {override_field("value", 7)});
-  std::vector<uint8_t> bytes(2);
+  std::vector<uint8_t> bytes(2, 0xa5);
+  const std::vector<uint8_t> original = bytes;
   bool threw = false;
   try {
     p->apply(0, bytes);
@@ -237,6 +238,7 @@ void test_override_rejects_short_payload() {
     threw = true;
   }
   check(threw, "short payload did not reject an out-of-range override");
+  check(bytes == original, "buffer was modified after out-of-range exception");
 }
 
 }  // namespace

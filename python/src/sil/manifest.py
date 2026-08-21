@@ -77,6 +77,11 @@ class Manifest:
             field_names: set[str] = set()
             for f in fields:
                 field_name = f.get("name")
+                if not isinstance(field_name, str) or not field_name:
+                    raise ManifestError(
+                        f"schema {name!r}: field name must be a non-empty string, "
+                        f"got {field_name!r}"
+                    )
                 if f.get("type") not in _FIELD_TYPES:
                     raise ManifestError(
                         f"schema {name!r} field {f.get('name')!r}: "
