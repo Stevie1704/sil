@@ -1,9 +1,11 @@
 #include "interceptor.hpp"
 
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <initializer_list>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -206,6 +208,37 @@ void test_override_offsets_and_encodings() {
   check(bytes == expected, "override offset or little-endian encoding mismatch");
 }
 
+/** Verify rounded integer endpoints clamp before conversion. */
+void test_override_integer_endpoint_clamping() {
+  const SchemaSpec s = schema({{"u64", "u64", 0}, {"i64", "i64", 0}});
+  auto p = plan(100, s,
+                {override_field("u64", std::ldexp(1.0, 64)),
+                 override_field("i64", std::ldexp(1.0, 63))});
+  std::vector<uint8_t> bytes(16, 0xa5);
+  check(!p->apply(0, bytes).suppressed,
+        "endpoint-clamped override plan unexpectedly suppressed");
+
+  std::vector<uint8_t> expected(16, 0xa5);
+  put_le(expected, 0, std::numeric_limits<uint64_t>::max(), 8);
+  put_le(expected, 8, static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
+         8);
+  check(bytes == expected, "integer endpoint was not clamped before encoding");
+}
+
+/** Verify malformed caller payloads fail before an override writes out of range. */
+void test_override_rejects_short_payload() {
+  const SchemaSpec s = schema({{"value", "u32", 0}});
+  auto p = plan(100, s, {override_field("value", 7)});
+  std::vector<uint8_t> bytes(2);
+  bool threw = false;
+  try {
+    p->apply(0, bytes);
+  } catch (const std::out_of_range &) {
+    threw = true;
+  }
+  check(threw, "short payload did not reject an out-of-range override");
+}
+
 }  // namespace
 
 int main() {
@@ -216,6 +249,8 @@ int main() {
     test_delays_compose_in_declared_order();
     test_drop_nth_has_independent_window_state();
     test_override_offsets_and_encodings();
+    test_override_integer_endpoint_clamping();
+    test_override_rejects_short_payload();
   } catch (const std::exception &e) {
     std::cerr << "interceptor test failed: " << e.what() << '\n';
     return 1;

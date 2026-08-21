@@ -74,7 +74,9 @@ class Manifest:
             fields = schema.get("fields")
             if not fields:
                 raise ManifestError(f"schema {name!r} has no fields")
+            field_names: set[str] = set()
             for f in fields:
+                field_name = f.get("name")
                 if f.get("type") not in _FIELD_TYPES:
                     raise ManifestError(
                         f"schema {name!r} field {f.get('name')!r}: "
@@ -92,6 +94,12 @@ class Manifest:
                         f"schema {name!r} field {f.get('name')!r}: "
                         f"count must be an integer >= 1, got {count!r}"
                     )
+                if field_name in field_names:
+                    raise ManifestError(
+                        f"schema {name!r} field {field_name!r}: "
+                        "duplicate field name"
+                    )
+                field_names.add(field_name)
             self._schemas[name] = schema
 
     def add_channel(

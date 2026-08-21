@@ -7,6 +7,7 @@
 
 namespace sil {
 
+class Engine;
 struct InterceptorSpec;
 struct SchemaSpec;
 
@@ -36,7 +37,8 @@ class InterceptorPlan {
    *
    * `now_ns` is the message's actual publish time. Window matching always uses
    * that time, including for messages whose visible time is later shifted by a
-   * delay. `bytes` must have the channel schema's declared size.
+   * delay. `bytes` must have the channel schema's declared size. If a compiled
+   * override does not fit in `bytes`, this throws `std::out_of_range`.
    */
   Verdict apply(uint64_t now_ns, std::vector<uint8_t> &bytes);
 
@@ -55,7 +57,9 @@ class InterceptorPlan {
   };
 
   InterceptorPlan(uint64_t duration_ns, std::vector<Step> steps);
+  InterceptorPlan(const InterceptorPlan &other);
 
+  friend class Engine;
   friend std::shared_ptr<InterceptorPlan> compile_interceptor_plan(
       uint64_t duration_ns, const SchemaSpec &schema,
       const std::vector<InterceptorSpec> &specs);

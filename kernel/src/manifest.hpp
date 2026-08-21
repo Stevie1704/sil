@@ -60,9 +60,9 @@ struct ChannelSpec {
   std::optional<uint64_t> latency_ns;
   Transport transport = Transport::Inline;
   std::vector<InterceptorSpec> interceptors;  // applied in declared order
-  // Compiled from `interceptors` by load_manifest; runtime state lives behind
-  // this channel-local seam rather than in Engine's routing state.
-  std::shared_ptr<InterceptorPlan> interceptor_plan;
+  // Compiled from `interceptors` by load_manifest. Engines clone this
+  // immutable template so runtime state stays isolated per run.
+  std::shared_ptr<const InterceptorPlan> interceptor_plan;
 };
 
 struct NativeSpec {

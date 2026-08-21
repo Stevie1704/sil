@@ -1,6 +1,7 @@
 #include "interceptor.hpp"
 
 #include <algorithm>
+#include <stdexcept>
 #include <utility>
 
 namespace sil {
@@ -8,6 +9,11 @@ namespace sil {
 InterceptorPlan::InterceptorPlan(uint64_t duration_ns,
                                  std::vector<Step> steps)
     : duration_ns_(duration_ns), steps_(std::move(steps)) {}
+
+InterceptorPlan::InterceptorPlan(const InterceptorPlan &other)
+    : duration_ns_(other.duration_ns_), steps_(other.steps_) {
+  for (Step &step : steps_) step.window_count = 0;
+}
 
 InterceptorPlan::Verdict InterceptorPlan::apply(
     uint64_t now_ns, std::vector<uint8_t> &bytes) {
@@ -44,6 +50,10 @@ InterceptorPlan::Verdict InterceptorPlan::apply(
 
   for (const Step &step : steps_) {
     if (step.kind != Kind::Override || !in_window(step)) continue;
+    if (step.override_offset > bytes.size() ||
+        step.override_bytes.size() > bytes.size() - step.override_offset)
+      throw std::out_of_range(
+          "compiled interceptor override exceeds message bytes");
     std::copy(step.override_bytes.begin(), step.override_bytes.end(),
               bytes.begin() + step.override_offset);
   }

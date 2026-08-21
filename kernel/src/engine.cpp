@@ -14,11 +14,18 @@ namespace sil {
 
 Engine::Engine(const Manifest &manifest, RecordingSink *recorder)
     : manifest_(manifest), recorder_(recorder) {
+  for (const ChannelSpec &spec : manifest.channels)
+    if (!spec.interceptor_plan)
+      throw ManifestError("manifest error: channel '" + spec.name +
+                          "': missing compiled interceptor plan");
+
   channels_.reserve(manifest.channels.size());
   for (uint32_t i = 0; i < manifest.channels.size(); i++) {
     const ChannelSpec &spec = manifest.channels[i];
+    auto interceptor_plan = std::unique_ptr<InterceptorPlan>(
+        new InterceptorPlan(*spec.interceptor_plan));
     channels_.push_back({&spec, &manifest.schemas.at(spec.schema), i, 0,
-                         spec.interceptor_plan.get(), {}});
+                         std::move(interceptor_plan), {}});
   }
 }
 
@@ -107,7 +114,7 @@ void Engine::publish(const std::string &owner, const std::string &channel,
   const uint8_t *p = static_cast<const uint8_t *>(data);
   PendingMessage msg{0, 0, std::vector<uint8_t>(p, p + len)};
   const InterceptorPlan::Verdict verdict =
-      c.interceptors->apply(now_ns_, msg.bytes);
+      c.interceptor_plan->apply(now_ns_, msg.bytes);
   msg.global_seq = global_seq_++;
   if (verdict.suppressed) return;
   msg.publish_ns = verdict.visible_ns;

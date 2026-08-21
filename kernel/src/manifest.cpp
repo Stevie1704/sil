@@ -1,11 +1,14 @@
 #include "manifest.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <limits>
 #include <map>
 #include <stdexcept>
 #include <sstream>
+#include <set>
 #include <utility>
 
 #include <nlohmann/json.hpp>
@@ -61,6 +64,7 @@ SchemaSpec parse_schema(const std::string &name, const json &js) {
   const json &fields = require(js, "fields", "schema '" + name + "'");
   if (!fields.is_array() || fields.empty())
     fail("schema '" + name + "': fields must be a non-empty array");
+  std::set<std::string> field_names;
   for (const json &f : fields) {
     std::string fname = require(f, "name", "schema '" + name + "' field");
     std::string ftype = require(f, "type", "schema '" + name + "' field");
@@ -78,6 +82,9 @@ SchemaSpec parse_schema(const std::string &name, const json &js) {
              "': count must be an integer >= 1");
       count = cv.get<size_t>();
     }
+    if (!field_names.insert(fname).second)
+      fail("schema '" + name + "' field '" + fname +
+           "': duplicate field name");
     spec.fields.push_back({fname, ftype, count});
     spec.byte_size += it->second.size * (count == 0 ? 1 : count);
   }
@@ -103,16 +110,49 @@ const std::map<std::string, std::pair<double, double>> kIntRanges = {
 std::vector<uint8_t> encode_override(const FieldLayout &layout, double value) {
   uint64_t bits = 0;
   switch (layout.representation) {
-    case FieldLayout::Representation::Unsigned:
-      bits = static_cast<uint64_t>(value);
+    case FieldLayout::Representation::Unsigned: {
+      const int bit_width = static_cast<int>(layout.size * 8);
+      const double upper_exclusive = std::ldexp(1.0, bit_width);
+      const uint64_t maximum =
+          bit_width == 64 ? std::numeric_limits<uint64_t>::max()
+                          : (uint64_t{1} << bit_width) - 1;
+      if (!(value > 0.0))
+        bits = 0;
+      else if (value >= upper_exclusive)
+        bits = maximum;
+      else
+        bits = static_cast<uint64_t>(value);
       break;
-    case FieldLayout::Representation::Signed:
-      bits = static_cast<uint64_t>(static_cast<int64_t>(value));
+    }
+    case FieldLayout::Representation::Signed: {
+      const int bit_width = static_cast<int>(layout.size * 8);
+      const double lower_inclusive = -std::ldexp(1.0, bit_width - 1);
+      const double upper_exclusive = std::ldexp(1.0, bit_width - 1);
+      const int64_t minimum =
+          bit_width == 64
+              ? std::numeric_limits<int64_t>::min()
+              : -static_cast<int64_t>(uint64_t{1} << (bit_width - 1));
+      const int64_t maximum =
+          bit_width == 64
+              ? std::numeric_limits<int64_t>::max()
+              : static_cast<int64_t>(
+                    (uint64_t{1} << (bit_width - 1)) - 1);
+      int64_t integer = 0;
+      if (!(value > lower_inclusive))
+        integer = minimum;
+      else if (!(value < upper_exclusive))
+        integer = maximum;
+      else
+        integer = static_cast<int64_t>(value);
+      bits = static_cast<uint64_t>(integer);
       break;
+    }
     case FieldLayout::Representation::Float:
       if (layout.size == 4) {
         float f = static_cast<float>(value);
-        std::memcpy(&bits, &f, sizeof(f));
+        uint32_t float_bits = 0;
+        std::memcpy(&float_bits, &f, sizeof(float_bits));
+        bits = float_bits;
       } else {
         std::memcpy(&bits, &value, sizeof(value));
       }
@@ -262,16 +302,23 @@ std::shared_ptr<InterceptorPlan> compile_interceptor_plan(
   steps.reserve(specs.size());
 
   for (const InterceptorSpec &spec : specs) {
-    InterceptorPlan::Step step{compile_kind(spec.kind), spec.start_ns, 0,
-                               spec.end_ns.has_value(), 0, 0, 0, {}};
-    if (step.has_end) step.end_ns = *spec.end_ns;
+    InterceptorPlan::Step step{
+        .kind = compile_kind(spec.kind),
+        .start_ns = spec.start_ns,
+        .end_ns = spec.end_ns.value_or(0),
+        .has_end = spec.end_ns.has_value(),
+        .parameter = 0,
+        .window_count = 0,
+        .override_offset = 0,
+        .override_bytes = {}};
 
     if (step.kind == InterceptorPlan::Kind::Delay) {
       if (!spec.delay_ns)
         throw std::logic_error("delay interceptor missing delay_ns");
       step.parameter = *spec.delay_ns;
     } else if (step.kind == InterceptorPlan::Kind::DropNth) {
-      if (!spec.n) throw std::logic_error("drop_nth interceptor missing n");
+      if (!spec.n || *spec.n < 1)
+        throw std::logic_error("drop_nth interceptor n must be positive");
       step.parameter = *spec.n;
     } else if (step.kind == InterceptorPlan::Kind::Override) {
       size_t offset = 0;

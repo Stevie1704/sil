@@ -63,6 +63,20 @@ class TestCanonicalOutput:
 
 
 class TestValidation:
+    def test_duplicate_schema_field_rejected(self):
+        m = Manifest(duration_ns=1_000_000)
+        with pytest.raises(ManifestError, match="duplicate field name"):
+            m.add_schemas(
+                {
+                    "S": {
+                        "fields": [
+                            {"name": "value", "type": "u8"},
+                            {"name": "value", "type": "u16"},
+                        ]
+                    }
+                }
+            )
+
     def test_duplicate_channel_rejected(self):
         m = make_minimal()
         with pytest.raises(ManifestError, match="ticks"):

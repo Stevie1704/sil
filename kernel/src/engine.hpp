@@ -114,7 +114,7 @@ class Engine {
     const SchemaSpec *schema;
     uint32_t index;
     uint32_t next_seq = 0;
-    InterceptorPlan *interceptors;
+    std::unique_ptr<InterceptorPlan> interceptor_plan;
     std::vector<SubQueue *> subscribers;
   };
 
