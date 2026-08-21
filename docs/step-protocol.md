@@ -71,7 +71,7 @@ The kernel owns the arena file. It creates and maps the file before it spawns
 the child, so `shm_path` is valid from the `init` line onward, and it unlinks
 the file when the run ends. A child maps the path during initialization and
 must not expect it to exist after the run. A run that fails while mapping its
-regions unlinks the ones it already mapped, so a failed run leaves nothing in
+arenas unlinks the ones it already mapped, so a failed run leaves nothing in
 the temp directory either.
 
 The first message for an arena-backed channel in one step uses `shm_seq`. Every

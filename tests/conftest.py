@@ -46,11 +46,14 @@ def sil_run(build_dir) -> Path:
 def run_sil(sil_run, tmp_path):
     """Invoke the runner at the run boundary: manifest in, exit code + MCAP out."""
 
-    def _run(manifest_path: Path, out: Path | None = None):
+    def _run(manifest_path: Path, out: Path | None = None,
+             env: dict[str, str] | None = None):
         out = out or tmp_path / "out.mcap"
+        # `env=None` inherits this process's environment, so only callers that
+        # need to scope the run (e.g. TMPDIR) pass one.
         proc = subprocess.run(
             [str(sil_run), str(manifest_path), "-o", str(out)],
-            capture_output=True, text=True,
+            capture_output=True, text=True, env=env,
         )
         proc.mcap_path = out
         return proc

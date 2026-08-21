@@ -33,7 +33,8 @@ class MappedRegion {
   // Creates "<TMPDIR or /tmp>/<prefix>XXXXXX", sizes it to `size` bytes, and
   // maps it MAP_SHARED read/write. On failure returns an empty region, leaves
   // no file behind, and sets `error` to the failing step ("mkstemp failed",
-  // "ftruncate failed", "mmap failed").
+  // "ftruncate failed", "mmap failed"). `error` is left untouched on success,
+  // so test it through the returned region rather than through the string.
   static MappedRegion create(const std::string &prefix, size_t size,
                              std::string &error);
 
