@@ -1193,8 +1193,24 @@ class TestShmTransport:
                 [(10_000_000, 0), (20_000_000, 99), (30_000_000, 99),
                  (40_000_000, 3), (50_000_000, 4)],
             ),
+            (
+                # Open-ended window (no end_ns): silences the channel from
+                # 30ms to the end of the 60ms run, over the arena transport.
+                {"kind": "drop", "start_ns": 30_000_000},
+                [(0, 0), (10_000_000, 1), (20_000_000, 2)],
+                [(10_000_000, 0), (20_000_000, 1), (30_000_000, 2)],
+            ),
+            (
+                # n=1 drops every in-window message: equivalent to a plain
+                # drop over [10ms, 40ms), but exercised through drop_nth.
+                {"kind": "drop_nth", "start_ns": 10_000_000,
+                 "end_ns": 40_000_000, "n": 1},
+                [(0, 0), (40_000_000, 4), (50_000_000, 5)],
+                [(10_000_000, 0), (50_000_000, 4)],
+            ),
         ],
-        ids=["drop", "drop_nth", "delay", "override"],
+        ids=["drop", "drop_nth", "delay", "override", "drop_open_ended",
+             "drop_nth_one"],
     )
     def test_interceptors_have_the_same_effect_over_inline_and_shm(
         self, run_sil, tmp_path, interceptor, payload_messages, mirror_messages
@@ -1242,6 +1258,22 @@ class TestShmTransport:
             if channel == "mirror"
         ]
         assert mirrored == expected[:5]
+
+    def test_shm_interceptor_run_is_deterministic_across_two_runs(
+        self, run_sil, tmp_path
+    ):
+        """An interceptor composed with the shm transport stays deterministic."""
+        m = self._interceptor_manifest(
+            "shm",
+            {"kind": "override", "start_ns": 10_000_000,
+             "end_ns": 30_000_000, "field": "id", "value": 99},
+        )
+        manifest = m.write(tmp_path / "det.json").path
+        a = run_sil(manifest, out=tmp_path / "det-a.mcap")
+        b = run_sil(manifest, out=tmp_path / "det-b.mcap")
+        assert a.returncode == 0, a.stderr
+        assert b.returncode == 0, b.stderr
+        assert a.mcap_path.read_bytes() == b.mcap_path.read_bytes()
 
     def test_shm_recording_matches_inline_byte_for_byte(self, run_sil, tmp_path):
         # The transport is a delivery detail, not a semantic one: an shm run and

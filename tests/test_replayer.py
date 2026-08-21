@@ -193,6 +193,86 @@ def channel_messages(mcap_path, channel):
     return [(t, data) for name, t, data in msgs if name == channel]
 
 
+def expected_burst_payload(message_id):
+    """The fixed-layout payload burst_array_source/multi_channel_burst_source
+    compute for one message id — the same formula both fixtures use."""
+    return {
+        "id": message_id,
+        "blob": bytes((message_id + k) % 256 for k in range(4)),
+        "samples": [float(message_id * 10 + k) for k in range(8)],
+    }
+
+
+class TestArraySourceFixtureRecording:
+    """The burst/multi-channel array fixtures record exactly what their step
+    formula computes; the transport-composition tests below only assert that
+    inline and shm agree, not that either matches the source's own math."""
+
+    def test_burst_array_source_records_two_full_payloads_per_step(
+        self, run_sil, tmp_path
+    ):
+        recording, _ = record_array_source_run(
+            run_sil, tmp_path, participant="burst_array_source.py"
+        )
+        messages = channel_messages(recording, "payload")
+        assert [t for t, _ in messages] == [
+            0, 0, 10_000_000, 10_000_000, 20_000_000, 20_000_000,
+        ]
+        assert [
+            ARRAY_TYPES["big.Payload"].unpack(data) for _, data in messages
+        ] == [expected_burst_payload(i) for i in range(6)]
+
+    def test_multi_channel_burst_source_records_expected_payloads_per_channel(
+        self, run_sil, tmp_path
+    ):
+        recording, _ = record_multi_channel_array_run(run_sil, tmp_path)
+
+        def unpacked(channel):
+            return [
+                (t, ARRAY_TYPES["big.Payload"].unpack(data))
+                for t, data in channel_messages(recording, channel)
+            ]
+
+        # base = step * 4; left publishes base and base+2, right publishes
+        # base+1 and base+3, both at the same timestamp per step.
+        assert unpacked("left") == [
+            (0, expected_burst_payload(0)),
+            (0, expected_burst_payload(2)),
+            (10_000_000, expected_burst_payload(4)),
+            (10_000_000, expected_burst_payload(6)),
+            (20_000_000, expected_burst_payload(8)),
+            (20_000_000, expected_burst_payload(10)),
+        ]
+        assert unpacked("right") == [
+            (0, expected_burst_payload(1)),
+            (0, expected_burst_payload(3)),
+            (10_000_000, expected_burst_payload(5)),
+            (10_000_000, expected_burst_payload(7)),
+            (20_000_000, expected_burst_payload(9)),
+            (20_000_000, expected_burst_payload(11)),
+        ]
+
+    def test_replay_can_select_a_single_channel_from_a_multi_channel_recording(
+        self, run_sil, tmp_path
+    ):
+        """A recording with two live channels can still be replayed selectively."""
+        recording, _ = record_multi_channel_array_run(run_sil, tmp_path)
+
+        m = Manifest(duration_ns=30_000_000)
+        m.add_schemas(ARRAY_SCHEMAS)
+        m.add_channel("left", schema="big.Payload")
+        m.add_replay("rep", recording=str(recording), channels=["left"])
+        proc = run_sil(m.write(tmp_path / "left-only.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        assert channel_messages(proc.mcap_path, "left") == channel_messages(
+            recording, "left"
+        )
+        # 'right' was never declared in this manifest, so nothing is recorded
+        # for it even though the source recording carries it.
+        assert channel_messages(proc.mcap_path, "right") == []
+
+
 class TestFaithfulReplay:
     def test_replay_reproduces_recorded_consumer_output(self, run_sil, tmp_path):
         # Exit criterion: run B's accumulator output == run A's, bit for bit.
@@ -398,6 +478,36 @@ class TestReplayTransportComposition:
             assert channel_messages(shm_proc.mcap_path, channel) == channel_messages(
                 inline_proc.mcap_path, channel
             )
+
+    def test_replay_over_shm_of_burst_source_is_deterministic_across_runs(
+        self, run_sil, tmp_path
+    ):
+        """Two shm runs of the same-time burst replay are bit-identical."""
+        recording, _ = record_array_source_run(
+            run_sil, tmp_path, participant="burst_array_source.py"
+        )
+        manifest = replay_array_manifest(recording, transport="shm").write(
+            tmp_path / "burst-shm-det.json"
+        ).path
+        a = run_sil(manifest, out=tmp_path / "burst-shm-a.mcap")
+        b = run_sil(manifest, out=tmp_path / "burst-shm-b.mcap")
+        assert a.returncode == 0, a.stderr
+        assert b.returncode == 0, b.stderr
+        assert a.mcap_path.read_bytes() == b.mcap_path.read_bytes()
+
+    def test_replay_over_shm_of_multi_channel_source_is_deterministic_across_runs(
+        self, run_sil, tmp_path
+    ):
+        """Two shm runs of the cross-channel replay are bit-identical."""
+        recording, _ = record_multi_channel_array_run(run_sil, tmp_path)
+        manifest = replay_multi_channel_array_manifest(
+            recording, transport="shm"
+        ).write(tmp_path / "multi-shm-det.json").path
+        a = run_sil(manifest, out=tmp_path / "multi-shm-a.mcap")
+        b = run_sil(manifest, out=tmp_path / "multi-shm-b.mcap")
+        assert a.returncode == 0, a.stderr
+        assert b.returncode == 0, b.stderr
+        assert a.mcap_path.read_bytes() == b.mcap_path.read_bytes()
 
 
 class TestReplayDeterminism:
