@@ -114,21 +114,12 @@ class Engine {
     const SchemaSpec *schema;
     uint32_t index;
     uint32_t next_seq = 0;
+    std::unique_ptr<InterceptorPlan> interceptor_plan;
     std::vector<SubQueue *> subscribers;
-    // Per-interceptor count of messages that have fallen inside each
-    // interceptor's window, indexed parallel to `spec->interceptors`. Only
-    // `drop_nth` consumes it, to drop every nth in-window message.
-    std::vector<uint64_t> window_counts;
   };
 
   ChannelState &channel_or_fail(const std::string &name,
                                 const std::string &ctx);
-
-  // Rewrites `bytes` in place for every `override` interceptor on `c` whose
-  // half-open window contains `publish_ns`, so the recording and every
-  // subscriber see the same post-interceptor payload.
-  void apply_overrides(const ChannelState &c, uint64_t publish_ns,
-                       std::vector<uint8_t> &bytes) const;
 
   const Manifest &manifest_;
   RecordingSink *recorder_;

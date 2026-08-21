@@ -1,11 +1,10 @@
 #include "engine.hpp"
 
 #include <algorithm>
-#include <cstring>
 #include <limits>
-#include <map>
 #include <set>
 
+#include "interceptor.hpp"
 #include "native_participant.hpp"
 #include "process_participant.hpp"
 #include "recording_sink.hpp"
@@ -13,59 +12,20 @@
 
 namespace sil {
 
-namespace {
-
-// Byte layout of each field type: little-endian, declared order, no padding —
-// the same wire contract participants pack to (see sil/schema.py and
-// tools/silschema.py). Maps a type name to its width and whether it is signed
-// integer, unsigned integer, or float, so an override constant can be encoded
-// into a message the same way its producer would have.
-struct TypeLayout {
-  size_t size;
-  enum { kUnsigned, kSigned, kFloat } repr;
-};
-
-const std::map<std::string, TypeLayout> kTypeLayouts = {
-    {"u8", {1, TypeLayout::kUnsigned}},  {"u16", {2, TypeLayout::kUnsigned}},
-    {"u32", {4, TypeLayout::kUnsigned}}, {"u64", {8, TypeLayout::kUnsigned}},
-    {"i8", {1, TypeLayout::kSigned}},    {"i16", {2, TypeLayout::kSigned}},
-    {"i32", {4, TypeLayout::kSigned}},   {"i64", {8, TypeLayout::kSigned}},
-    {"f32", {4, TypeLayout::kFloat}},    {"f64", {8, TypeLayout::kFloat}}};
-
-// Writes `value`, interpreted as type `layout`, little-endian into `dst`.
-// `value` is already range-checked at load, so the numeric conversions here
-// cannot overflow their target type.
-void encode_le(const TypeLayout &layout, double value, uint8_t *dst) {
-  uint64_t bits = 0;
-  switch (layout.repr) {
-    case TypeLayout::kUnsigned:
-      bits = static_cast<uint64_t>(value);
-      break;
-    case TypeLayout::kSigned:
-      bits = static_cast<uint64_t>(static_cast<int64_t>(value));
-      break;
-    case TypeLayout::kFloat:
-      if (layout.size == 4) {
-        float f = static_cast<float>(value);
-        std::memcpy(&bits, &f, sizeof(f));
-      } else {
-        std::memcpy(&bits, &value, sizeof(value));
-      }
-      break;
-  }
-  for (size_t i = 0; i < layout.size; i++)
-    dst[i] = static_cast<uint8_t>(bits >> (8 * i));
-}
-
-}  // namespace
-
 Engine::Engine(const Manifest &manifest, RecordingSink *recorder)
     : manifest_(manifest), recorder_(recorder) {
+  for (const ChannelSpec &spec : manifest.channels)
+    if (!spec.interceptor_plan)
+      throw ManifestError("manifest error: channel '" + spec.name +
+                          "': missing compiled interceptor plan");
+
   channels_.reserve(manifest.channels.size());
   for (uint32_t i = 0; i < manifest.channels.size(); i++) {
     const ChannelSpec &spec = manifest.channels[i];
-    channels_.push_back({&spec, &manifest.schemas.at(spec.schema), i, 0, {},
-                         std::vector<uint64_t>(spec.interceptors.size(), 0)});
+    auto interceptor_plan = std::unique_ptr<InterceptorPlan>(
+        new InterceptorPlan(*spec.interceptor_plan));
+    channels_.push_back({&spec, &manifest.schemas.at(spec.schema), i, 0,
+                         std::move(interceptor_plan), {}});
   }
 }
 
@@ -142,30 +102,6 @@ SubQueue *Engine::subscribe(const std::string &owner,
   return queues_.back().get();
 }
 
-void Engine::apply_overrides(const ChannelState &c, uint64_t publish_ns,
-                             std::vector<uint8_t> &bytes) const {
-  for (const InterceptorSpec &i : c.spec->interceptors) {
-    if (i.kind != "override") continue;
-    if (publish_ns < i.start_ns || (i.end_ns && publish_ns >= *i.end_ns))
-      continue;
-    // Field offset is the sum of preceding field widths (no padding). The
-    // field's presence in the schema was validated at load, so the lookups
-    // below always resolve.
-    size_t offset = 0;
-    for (const FieldSpec &f : c.schema->fields) {
-      const TypeLayout &layout = kTypeLayouts.at(f.type);
-      if (f.name == i.field) {
-        // Only scalar fields can be overridden (rejected at load otherwise),
-        // so the matched field is a single element at this offset.
-        encode_le(layout, i.value, bytes.data() + offset);
-        break;
-      }
-      // A preceding array field spans count elements; a scalar spans one.
-      offset += layout.size * (f.count == 0 ? 1 : f.count);
-    }
-  }
-}
-
 void Engine::publish(const std::string &owner, const std::string &channel,
                      const void *data, size_t len) {
   ChannelState &c = channel_or_fail(channel, "participant '" + owner + "'");
@@ -175,62 +111,15 @@ void Engine::publish(const std::string &owner, const std::string &channel,
                    "' but schema '" + c.spec->schema + "' is " +
                    std::to_string(c.schema->byte_size) + " bytes");
 
-  // Fault injection choke point: a `drop` interceptor whose half-open window
-  // [start_ns, end_ns) contains the actual publish time silences the message —
-  // it is never recorded, delivered, nor does it consume a channel sequence
-  // number, exactly like a message shifted past the run duration. A `drop_nth`
-  // interceptor counts each message that falls inside its own window and drops
-  // only every nth one (counting from 1); the count is per-interceptor and
-  // independent of channel sequence numbers. Evaluated before delay so a
-  // dropped message is never shifted or recorded.
-  for (size_t k = 0; k < c.spec->interceptors.size(); k++) {
-    const InterceptorSpec &i = c.spec->interceptors[k];
-    if (i.kind != "drop" && i.kind != "drop_nth") continue;
-    if (now_ns_ < i.start_ns || (i.end_ns && now_ns_ >= *i.end_ns)) continue;
-    if (i.kind == "drop") {
-      global_seq_++;
-      return;
-    }
-    // drop_nth: matched the window — advance its counter and drop on multiples.
-    if (++c.window_counts[k] % *i.n == 0) {
-      global_seq_++;
-      return;
-    }
-  }
-
-  // A surviving message may still be shifted: a `delay` interceptor whose
-  // half-open window [start_ns, end_ns) contains the actual publish time moves
-  // the message's visibility — and the recorded ground truth — later by
-  // delay_ns. Multiple matching delays compose in declared order. The sum
-  // saturates: delay_ns is only bounded to 2^64-1 at load, so an overflowing
-  // total clamps to the max and is dropped below rather than wrapping around
-  // into the visible range.
-  uint64_t visible_ns = now_ns_;
-  for (const InterceptorSpec &i : c.spec->interceptors) {
-    if (i.kind != "delay") continue;
-    if (now_ns_ < i.start_ns || (i.end_ns && now_ns_ >= *i.end_ns)) continue;
-    uint64_t sum = visible_ns + *i.delay_ns;
-    visible_ns = sum < visible_ns ? UINT64_MAX : sum;
-  }
-
-  // A message whose shifted visibility lands at or beyond the run duration
-  // never surfaces: drop it before it is recorded or enqueued, matching the
-  // replayer's [0, duration) truncation. A sequence number is not consumed.
-  if (visible_ns >= manifest_.duration_ns) {
-    global_seq_++;
-    return;
-  }
-
-  // An `override` interceptor rewrites the named field to a constant on the
-  // same choke point, keyed on the actual publish time. The rewrite happens
-  // before recording and enqueueing, so the MCAP is the post-interceptor
-  // ground truth and every subscriber sees the overridden value.
   const uint8_t *p = static_cast<const uint8_t *>(data);
-  PendingMessage msg{visible_ns, global_seq_++,
-                     std::vector<uint8_t>(p, p + len)};
-  apply_overrides(c, now_ns_, msg.bytes);
+  PendingMessage msg{0, 0, std::vector<uint8_t>(p, p + len)};
+  const InterceptorPlan::Verdict verdict =
+      c.interceptor_plan->apply(now_ns_, msg.bytes);
+  msg.global_seq = global_seq_++;
+  if (verdict.suppressed) return;
+  msg.publish_ns = verdict.visible_ns;
   if (recorder_)
-    recorder_->record(c.index, visible_ns, c.next_seq, msg.bytes.data(),
+    recorder_->record(c.index, msg.publish_ns, c.next_seq, msg.bytes.data(),
                       msg.bytes.size());
   c.next_seq++;
   for (SubQueue *q : c.subscribers) q->push(msg);

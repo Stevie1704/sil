@@ -190,3 +190,13 @@ in the framework's own CI from day one.**
   C ABI data plane. Boundaries (out of scope): native-participant shm beyond
   that pointer ABI, cross-machine transport, compression, and arena-size or
   backpressure tuning.
+- **Compiled interceptor plan (#40):** the manifest loader compiles each
+  channel's declared interceptors into an encapsulated plan. It resolves kind tags,
+  window bounds, mutable `drop_nth` counters, and override offsets plus
+  little-endian bytes before the run. The plan's sole runtime entry point is
+  `apply(now_ns, bytes)`, with fixed ordering: drop/drop_nth, delay, the
+  half-open `[0, duration)` truncation, then override. The engine retains
+  ownership of global and channel publish order, including the rule that a
+  suppressed message advances only the global order. Focused arithmetic is
+  covered by a CTest target; run-boundary tests remain the source of truth for
+  routing and recording behavior.

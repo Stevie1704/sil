@@ -1,11 +1,19 @@
 #include "manifest.hpp"
 
 #include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <fstream>
+#include <limits>
+#include <map>
+#include <stdexcept>
 #include <sstream>
+#include <set>
+#include <utility>
 
 #include <nlohmann/json.hpp>
 
+#include "interceptor.hpp"
 #include "sha256.hpp"
 
 namespace sil {
@@ -16,9 +24,24 @@ namespace {
 
 constexpr int kManifestVersion = 1;
 
-const std::map<std::string, size_t> kFieldSizes = {
-    {"u8", 1},  {"u16", 2}, {"u32", 4}, {"u64", 8}, {"i8", 1},
-    {"i16", 2}, {"i32", 4}, {"i64", 8}, {"f32", 4}, {"f64", 8}};
+struct FieldLayout {
+  size_t size;
+  enum class Representation { Unsigned, Signed, Float } representation;
+};
+
+// The loader owns the schema type table. It supplies both schema widths and
+// the representation needed to pre-encode override constants into a plan.
+const std::map<std::string, FieldLayout> kFieldLayouts = {
+    {"u8", {1, FieldLayout::Representation::Unsigned}},
+    {"u16", {2, FieldLayout::Representation::Unsigned}},
+    {"u32", {4, FieldLayout::Representation::Unsigned}},
+    {"u64", {8, FieldLayout::Representation::Unsigned}},
+    {"i8", {1, FieldLayout::Representation::Signed}},
+    {"i16", {2, FieldLayout::Representation::Signed}},
+    {"i32", {4, FieldLayout::Representation::Signed}},
+    {"i64", {8, FieldLayout::Representation::Signed}},
+    {"f32", {4, FieldLayout::Representation::Float}},
+    {"f64", {8, FieldLayout::Representation::Float}}};
 
 [[noreturn]] void fail(const std::string &msg) {
   throw ManifestError("manifest error: " + msg);
@@ -41,11 +64,12 @@ SchemaSpec parse_schema(const std::string &name, const json &js) {
   const json &fields = require(js, "fields", "schema '" + name + "'");
   if (!fields.is_array() || fields.empty())
     fail("schema '" + name + "': fields must be a non-empty array");
+  std::set<std::string> field_names;
   for (const json &f : fields) {
     std::string fname = require(f, "name", "schema '" + name + "' field");
     std::string ftype = require(f, "type", "schema '" + name + "' field");
-    auto it = kFieldSizes.find(ftype);
-    if (it == kFieldSizes.end())
+    auto it = kFieldLayouts.find(ftype);
+    if (it == kFieldLayouts.end())
       fail("schema '" + name + "' field '" + fname + "': unknown type '" +
            ftype + "'");
     // An optional `count` makes the field a fixed-size array of its element
@@ -58,8 +82,11 @@ SchemaSpec parse_schema(const std::string &name, const json &js) {
              "': count must be an integer >= 1");
       count = cv.get<size_t>();
     }
+    if (!field_names.insert(fname).second)
+      fail("schema '" + name + "' field '" + fname +
+           "': duplicate field name");
     spec.fields.push_back({fname, ftype, count});
-    spec.byte_size += it->second * (count == 0 ? 1 : count);
+    spec.byte_size += it->second.size * (count == 0 ? 1 : count);
   }
   spec.canonical_json = js.dump();
   return spec;
@@ -78,6 +105,65 @@ const std::map<std::string, std::pair<double, double>> kIntRanges = {
     {"i32", {-2147483648.0, 2147483647.0}},
     {"i64", {-9223372036854775808.0, 9223372036854775807.0}},
 };
+
+/** Encode one validated override constant as the schema's little-endian bytes. */
+std::vector<uint8_t> encode_override(const FieldLayout &layout, double value) {
+  uint64_t bits = 0;
+  switch (layout.representation) {
+    case FieldLayout::Representation::Unsigned: {
+      const int bit_width = static_cast<int>(layout.size * 8);
+      const double upper_exclusive = std::ldexp(1.0, bit_width);
+      const uint64_t maximum =
+          bit_width == 64 ? std::numeric_limits<uint64_t>::max()
+                          : (uint64_t{1} << bit_width) - 1;
+      if (!(value > 0.0))
+        bits = 0;
+      else if (value >= upper_exclusive)
+        bits = maximum;
+      else
+        bits = static_cast<uint64_t>(value);
+      break;
+    }
+    case FieldLayout::Representation::Signed: {
+      const int bit_width = static_cast<int>(layout.size * 8);
+      const double lower_inclusive = -std::ldexp(1.0, bit_width - 1);
+      const double upper_exclusive = std::ldexp(1.0, bit_width - 1);
+      const int64_t minimum =
+          bit_width == 64
+              ? std::numeric_limits<int64_t>::min()
+              : -static_cast<int64_t>(uint64_t{1} << (bit_width - 1));
+      const int64_t maximum =
+          bit_width == 64
+              ? std::numeric_limits<int64_t>::max()
+              : static_cast<int64_t>(
+                    (uint64_t{1} << (bit_width - 1)) - 1);
+      int64_t integer = 0;
+      if (!(value > lower_inclusive))
+        integer = minimum;
+      else if (!(value < upper_exclusive))
+        integer = maximum;
+      else
+        integer = static_cast<int64_t>(value);
+      bits = static_cast<uint64_t>(integer);
+      break;
+    }
+    case FieldLayout::Representation::Float:
+      if (layout.size == 4) {
+        float f = static_cast<float>(value);
+        uint32_t float_bits = 0;
+        std::memcpy(&float_bits, &f, sizeof(float_bits));
+        bits = float_bits;
+      } else {
+        std::memcpy(&bits, &value, sizeof(value));
+      }
+      break;
+  }
+
+  std::vector<uint8_t> bytes(layout.size);
+  for (size_t i = 0; i < layout.size; i++)
+    bytes[i] = static_cast<uint8_t>(bits >> (8 * i));
+  return bytes;
+}
 
 void parse_interceptors(ChannelSpec &c, const json &arr, const SchemaSpec &schema) {
   if (!arr.is_array())
@@ -201,6 +287,69 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
 
 }  // namespace
 
+std::shared_ptr<InterceptorPlan> compile_interceptor_plan(
+    uint64_t duration_ns, const SchemaSpec &schema,
+    const std::vector<InterceptorSpec> &specs) {
+  const auto compile_kind = [](const std::string &kind) {
+    if (kind == "drop") return InterceptorPlan::Kind::Drop;
+    if (kind == "drop_nth") return InterceptorPlan::Kind::DropNth;
+    if (kind == "delay") return InterceptorPlan::Kind::Delay;
+    if (kind == "override") return InterceptorPlan::Kind::Override;
+    throw std::logic_error("invalid interceptor kind during compilation");
+  };
+
+  std::vector<InterceptorPlan::Step> steps;
+  steps.reserve(specs.size());
+
+  for (const InterceptorSpec &spec : specs) {
+    InterceptorPlan::Step step{
+        .kind = compile_kind(spec.kind),
+        .start_ns = spec.start_ns,
+        .end_ns = spec.end_ns.value_or(0),
+        .has_end = spec.end_ns.has_value(),
+        .parameter = 0,
+        .window_count = 0,
+        .override_offset = 0,
+        .override_bytes = {}};
+
+    if (step.kind == InterceptorPlan::Kind::Delay) {
+      if (!spec.delay_ns)
+        throw std::logic_error("delay interceptor missing delay_ns");
+      step.parameter = *spec.delay_ns;
+    } else if (step.kind == InterceptorPlan::Kind::DropNth) {
+      if (!spec.n || *spec.n < 1)
+        throw std::logic_error("drop_nth interceptor n must be positive");
+      step.parameter = *spec.n;
+    } else if (step.kind == InterceptorPlan::Kind::Override) {
+      size_t offset = 0;
+      const FieldSpec *field = nullptr;
+      FieldLayout layout{};
+      for (const FieldSpec &candidate : schema.fields) {
+        auto type = kFieldLayouts.find(candidate.type);
+        if (type == kFieldLayouts.end())
+          throw std::logic_error("unknown field type during compilation");
+        if (candidate.name == spec.field) {
+          field = &candidate;
+          layout = type->second;
+          break;
+        }
+        offset += type->second.size *
+                  (candidate.count == 0 ? 1 : candidate.count);
+      }
+      if (!field)
+        throw std::logic_error("override field missing during compilation");
+      if (field->count != 0)
+        throw std::logic_error("array override during compilation");
+      step.override_offset = offset;
+      step.override_bytes = encode_override(layout, spec.value);
+    }
+    steps.push_back(std::move(step));
+  }
+
+  return std::shared_ptr<InterceptorPlan>(
+      new InterceptorPlan(duration_ns, std::move(steps)));
+}
+
 const ChannelSpec *Manifest::find_channel(const std::string &name) const {
   for (const ChannelSpec &c : channels)
     if (c.name == name) return &c;
@@ -276,6 +425,8 @@ Manifest load_manifest(const std::filesystem::path &path) {
     }
     if (js.contains("interceptors"))
       parse_interceptors(c, js["interceptors"], m.schemas.at(c.schema));
+    c.interceptor_plan = compile_interceptor_plan(
+        m.duration_ns, m.schemas.at(c.schema), c.interceptors);
     m.channels.push_back(std::move(c));
   }
 

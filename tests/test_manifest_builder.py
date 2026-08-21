@@ -63,6 +63,59 @@ class TestCanonicalOutput:
 
 
 class TestValidation:
+    def test_duplicate_schema_field_rejected(self):
+        m = Manifest(duration_ns=1_000_000)
+        with pytest.raises(ManifestError, match="duplicate field name"):
+            m.add_schemas(
+                {
+                    "S": {
+                        "fields": [
+                            {"name": "value", "type": "u8"},
+                            {"name": "value", "type": "u16"},
+                        ]
+                    }
+                }
+            )
+
+    def test_missing_field_name_rejected(self):
+        m = Manifest(duration_ns=1_000_000)
+        with pytest.raises(ManifestError, match="field name must be a non-empty string"):
+            m.add_schemas(
+                {
+                    "S": {
+                        "fields": [
+                            {"type": "u8"},
+                        ]
+                    }
+                }
+            )
+
+    def test_non_string_field_name_rejected(self):
+        m = Manifest(duration_ns=1_000_000)
+        with pytest.raises(ManifestError, match="field name must be a non-empty string"):
+            m.add_schemas(
+                {
+                    "S": {
+                        "fields": [
+                            {"name": 123, "type": "u8"},
+                        ]
+                    }
+                }
+            )
+
+    def test_empty_string_field_name_rejected(self):
+        m = Manifest(duration_ns=1_000_000)
+        with pytest.raises(ManifestError, match="field name must be a non-empty string"):
+            m.add_schemas(
+                {
+                    "S": {
+                        "fields": [
+                            {"name": "", "type": "u8"},
+                        ]
+                    }
+                }
+            )
+
     def test_duplicate_channel_rejected(self):
         m = make_minimal()
         with pytest.raises(ManifestError, match="ticks"):

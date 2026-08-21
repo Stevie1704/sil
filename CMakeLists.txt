@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.24)
 project(sil LANGUAGES C CXX)
 
+enable_testing()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -26,6 +28,7 @@ target_compile_definitions(mcap_headers INTERFACE
 add_executable(sil-run
   kernel/src/main.cpp
   kernel/src/manifest.cpp
+  kernel/src/interceptor.cpp
   kernel/src/engine.cpp
   kernel/src/clock_shim.cpp
   kernel/src/native_participant.cpp
@@ -34,6 +37,16 @@ add_executable(sil-run
   kernel/src/replayer.cpp)
 target_include_directories(sil-run PRIVATE include)
 target_link_libraries(sil-run PRIVATE nlohmann_json::nlohmann_json mcap_headers)
+
+# The interceptor plan is pure run-boundary arithmetic with a small interface,
+# so it has a focused C++ test target in addition to the end-to-end suite.
+add_executable(sil_interceptor_test
+  tests/interceptor_test.cpp
+  kernel/src/interceptor.cpp
+  kernel/src/manifest.cpp)
+target_include_directories(sil_interceptor_test PRIVATE kernel/src)
+target_link_libraries(sil_interceptor_test PRIVATE nlohmann_json::nlohmann_json)
+add_test(NAME sil_interceptor_plan COMMAND sil_interceptor_test)
 
 # --- generated message headers (single typed contract per DESIGN #9) ---
 set(SIL_GEN_DIR ${CMAKE_BINARY_DIR}/generated)

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <map>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -10,6 +11,8 @@
 #include <vector>
 
 namespace sil {
+
+class InterceptorPlan;
 
 // A manifest that can never be a valid kernel input. Runner exits 2.
 struct ManifestError : std::runtime_error {
@@ -57,6 +60,9 @@ struct ChannelSpec {
   std::optional<uint64_t> latency_ns;
   Transport transport = Transport::Inline;
   std::vector<InterceptorSpec> interceptors;  // applied in declared order
+  // Compiled from `interceptors` by load_manifest. Engines clone this
+  // immutable template so runtime state stays isolated per run.
+  std::shared_ptr<const InterceptorPlan> interceptor_plan;
 };
 
 struct NativeSpec {
