@@ -31,6 +31,7 @@ add_executable(sil-run
   kernel/src/interceptor.cpp
   kernel/src/engine.cpp
   kernel/src/clock_shim.cpp
+  kernel/src/mapped_region.cpp
   kernel/src/native_participant.cpp
   kernel/src/process_participant.cpp
   kernel/src/mcap_recording.cpp
@@ -47,6 +48,15 @@ add_executable(sil_interceptor_test
 target_include_directories(sil_interceptor_test PRIVATE kernel/src)
 target_link_libraries(sil_interceptor_test PRIVATE nlohmann_json::nlohmann_json)
 add_test(NAME sil_interceptor_plan COMMAND sil_interceptor_test)
+
+# The mapped region owns a temp file's mapping, descriptor, and directory entry.
+# Its release-on-destruction and move semantics are invisible at the run
+# boundary, so they get their own focused C++ test target.
+add_executable(sil_mapped_region_test
+  tests/mapped_region_test.cpp
+  kernel/src/mapped_region.cpp)
+target_include_directories(sil_mapped_region_test PRIVATE kernel/src)
+add_test(NAME sil_mapped_region COMMAND sil_mapped_region_test)
 
 # --- generated message headers (single typed contract per DESIGN #9) ---
 set(SIL_GEN_DIR ${CMAKE_BINARY_DIR}/generated)

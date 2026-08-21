@@ -111,9 +111,15 @@ How a channel's payload crosses the kernel↔process boundary — encoded in the
 step line, or through shared memory. Invisible to participant code either way.
 _Avoid_: encoding, serialization, wire format
 
+**Mapped region**:
+A temp file the kernel maps and shares with a participant process, named to the
+child by path. It exists for the length of the run and leaves nothing behind.
+An arena is one; the clock shim's time region is another.
+_Avoid_: shared memory, mapping, segment, shm
+
 **Arena**:
-The fixed-size shared-memory region carrying one channel's payloads across the
-kernel↔process boundary.
+The mapped region carrying one channel's payloads across the kernel↔process
+boundary, sized from the schema.
 _Avoid_: buffer, segment, ring, shm
 
 **Interceptor**:
