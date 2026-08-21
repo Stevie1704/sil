@@ -189,7 +189,8 @@ in the framework's own CI from day one.**
   way — and native participants are unaffected, staying on the pointer-based
   C ABI data plane. Boundaries (out of scope): native-participant shm beyond
   that pointer ABI, cross-machine transport, compression, and arena-size or
-  backpressure tuning.
+  backpressure tuning. The complete line and payload contract is specified in
+  `docs/step-protocol.md`.
 - **Compiled interceptor plan (#40):** the manifest loader compiles each
   channel's declared interceptors into an encapsulated plan. It resolves kind tags,
   window bounds, mutable `drop_nth` counters, and override offsets plus

@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -13,23 +14,9 @@
 
 namespace sil {
 
-// An opaque vECU run as a child process, stepped over a JSON-lines pipe
-// protocol on stdin/stdout. Fully sequential request/response: deterministic
-// by construction regardless of what the child does internally in between.
-//
-//   kernel -> child  {"op":"init","name":...,"channels":{...},"schemas":{...},
-//                     "config_version":1}
-//   child  -> kernel {"op":"ready"}
-//   kernel -> child  {"op":"step","t":...,"dt":...,
-//                     "in":[{"ch":...,"t":...,"data":<base64>}...]}
-//   child  -> kernel {"op":"step_done","out":[{"ch":...,"data":<base64>}...]}
-//                 or {"op":"fail","reason":...}
-//   kernel -> child  {"op":"shutdown"}
-//
-// A channel declared transport "shm" swaps the inline "data":<base64> field for
-// "shm_seq":<n>: the payload rides a per-channel arena (init carries its
-// "shm_path"/"shm_capacity") and the seq marks a fresh write. The
-// participant-facing API is unchanged — only the transport differs.
+// The normative JSON-lines step protocol is specified in
+// docs/step-protocol.md. This endpoint is fully sequential, so a process
+// participant cannot make execution order nondeterministic between requests.
 class ProcessParticipant {
  public:
   ProcessParticipant(Engine &engine, const std::string &name,
@@ -76,12 +63,9 @@ class ProcessParticipant {
 
   // Channel arenas (issue #35). One arena per arena-backed channel this
   // participant subscribes to or publishes, mapped MAP_SHARED before fork so
-  // the child maps the same file at load. The kernel writes an input payload
-  // into the arena (the step line then carries only "shm_seq") and reads a
-  // published payload back out of it, skipping base64/JSON. One slot holds one
-  // payload: when a step carries several messages on the same channel, the
-  // first rides the arena and the rest fall back inline. Empty for
-  // participants with no arena-backed channel.
+  // the child maps the same file at load. The layout and per-step transport
+  // rules are specified in docs/step-protocol.md. Empty for participants with
+  // no arena-backed channel.
   struct Arena {
     int fd = -1;
     std::string path;
@@ -91,6 +75,28 @@ class ProcessParticipant {
     uint64_t seq = 0;      // last seq stamped, for the fresh-payload marker
   };
   std::map<std::string, Arena> arenas_;  // by channel name
+
+  struct StepInput {
+    std::string channel;
+    uint64_t publish_ns;
+    std::vector<uint8_t> bytes;
+  };
+
+  struct StepOutput {
+    std::string channel;
+    std::vector<uint8_t> bytes;
+  };
+
+  // Private step-scoped codec seam. `encode_inputs` receives the complete
+  // input set already merged in global publish order and never reorders it.
+  // It uses the arena for the first message per arena-backed channel in that
+  // step and the inline representation for every subsequent message. `decode_outputs`
+  // honours the field present on each output (`shm_seq` or `data`) rather than
+  // inferring transport from the channel declaration. Arena setup failures
+  // remain ManifestError; stale-seq and capacity violations remain RunError.
+  class StepCodec;
+
+  std::unique_ptr<StepCodec> codec_;
 
   // Maps an arena for every arena-backed channel in `spec`, sized from the
   // schema byte_size.
