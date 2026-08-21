@@ -1,4 +1,4 @@
-"""Python side of the kernel's out-of-process step protocol.
+"""Python endpoint for the step protocol specified in ``docs/step-protocol.md``.
 
 A participant subclasses StepParticipant and hands an instance to run().
 The kernel steps it over JSON lines on stdin/stdout; payloads are decoded
@@ -29,10 +29,9 @@ _ARENA_HEADER = struct.Struct("<QQ")
 class _Arena:
     """A per-channel arena mapped MAP_SHARED with the kernel.
 
-    Payloads cross through this region instead of base64/JSON. One slot holds
-    one payload: when a step carries several messages on the same channel, the
-    first rides the arena and the rest travel inline. `seq` marks a fresh write
-    so a stale read is caught.
+    Payloads cross through this region instead of base64/JSON. Its layout and
+    per-step transport rules are specified in ``docs/step-protocol.md``;
+    `seq` marks a fresh write so a stale read is caught.
 
     `capacity` is the kernel-authoritative arena size (derived from the schema
     `byte_size`, delivered in the init line); this side does not re-derive it
@@ -72,6 +71,85 @@ class _Arena:
         self._file.close()
 
 
+class _InlineAdapter:
+    """Encode and decode the inline base64 representation of one payload."""
+
+    @staticmethod
+    def encode(item: dict, raw: bytes) -> None:
+        item["data"] = base64.b64encode(raw).decode()
+
+    @staticmethod
+    def decode(item: dict) -> bytes:
+        return base64.b64decode(item["data"])
+
+
+class _ArenaAdapter:
+    """Encode and decode payloads through the kernel-owned arena mapping."""
+
+    def __init__(self, arenas: dict[str, _Arena]):
+        self._arenas = arenas
+
+    def encode(self, item: dict, channel: str, raw: bytes) -> None:
+        item["shm_seq"] = self._arenas[channel].write(raw)
+
+    def decode(self, item: dict, channel: str) -> bytes:
+        return self._arenas[channel].read(item["shm_seq"])
+
+
+class _StepCodec:
+    """Step-scoped transport seam for the Python endpoint.
+
+    Inputs are decoded in their received order, which is already global
+    publish order. Outputs use the arena for the first message per channel in
+    this call and the inline representation for later messages; the local set makes the
+    fallback reset naturally for the next step without a caller-visible
+    ``begin_step`` operation.
+    """
+
+    def __init__(
+        self,
+        types_by_channel: dict[str, schema.MessageType],
+        arenas: dict[str, _Arena],
+    ):
+        self._types_by_channel = types_by_channel
+        self._inline = _InlineAdapter()
+        self._arena = _ArenaAdapter(arenas)
+        self._arenas = arenas
+
+    def decode_inputs(self, messages: list[dict]) -> list["Input"]:
+        """Decode the step's input array without inferring transport."""
+        inputs = []
+        for message in messages:
+            channel = message["ch"]
+            if "shm_seq" in message:
+                raw = self._arena.decode(message, channel)
+            else:
+                raw = self._inline.decode(message)
+            inputs.append(
+                Input(
+                    channel,
+                    message["t"],
+                    self._types_by_channel[channel].unpack(raw),
+                )
+            )
+        return inputs
+
+    def encode_outputs(self, outputs) -> list[dict]:
+        """Encode all outputs for one step, preserving their order."""
+        encoded = []
+        arena_used: set[str] = set()
+        for channel, fields in outputs:
+            raw = self._types_by_channel[channel].pack(**fields)
+            item = {"ch": channel}
+            if channel in self._arenas and channel not in arena_used:
+                arena_used.add(channel)
+                self._arena.encode(item, channel, raw)
+            else:
+                self._inline.encode(item, raw)
+            encoded.append(item)
+        return encoded
+
+
 class ParticipantFailure(Exception):
     """Raised by a participant to abort the whole run."""
 
@@ -97,34 +175,12 @@ def run(participant: StepParticipant) -> None:
     stdin = sys.stdin
     stdout = sys.stdout
     types_by_channel: dict[str, schema.MessageType] = {}
-    # A channel declaring transport "shm" maps an arena and moves payloads
-    # through it; inline channels stay on the base64/JSON path. The transport
-    # choice never reaches the participant — on_step sees the same
-    # field-dict/bytes/list either way.
     arenas: dict[str, _Arena] = {}
+    codec: _StepCodec | None = None
 
     def send(msg: dict) -> None:
         stdout.write(json.dumps(msg) + "\n")
         stdout.flush()
-
-    def unpack_input(i: dict) -> Input:
-        # Each input says how it travelled. An arena holds one payload, so when
-        # a step delivers several messages on the same channel the kernel sends
-        # the first through the arena and the rest inline; honour the field
-        # present rather than the channel's declared transport.
-        ch = i["ch"]
-        raw = arenas[ch].read(i["shm_seq"]) if "shm_seq" in i else base64.b64decode(i["data"])
-        return Input(ch, i["t"], types_by_channel[ch].unpack(raw))
-
-    def encode_output(ch: str, fields: dict, arena_used: set[str]) -> dict:
-        # Mirror image of the input rule: the first output per arena-backed
-        # channel in this step rides the arena, any further one goes inline.
-        raw = types_by_channel[ch].pack(**fields)
-        arena = arenas.get(ch)
-        if arena is not None and ch not in arena_used:
-            arena_used.add(ch)
-            return {"ch": ch, "shm_seq": arena.write(raw)}
-        return {"ch": ch, "data": base64.b64encode(raw).decode()}
 
     try:
         for line in stdin:
@@ -141,24 +197,23 @@ def run(participant: StepParticipant) -> None:
                     for ch, info in msg["channels"].items()
                     if info.get("transport") == "shm"
                 }
+                codec = _StepCodec(types_by_channel, arenas)
                 participant.on_init(msg)
                 send({"op": "ready"})
             elif op == "step":
-                inputs = [unpack_input(i) for i in msg["in"]]
                 try:
+                    if codec is None:
+                        raise ParticipantFailure("step received before init")
+                    inputs = codec.decode_inputs(msg["in"])
                     outputs = participant.on_step(msg["t"], msg["dt"], inputs) or []
+                    send({
+                        "op": "step_done",
+                        "out": codec.encode_outputs(outputs),
+                    })
                 except Exception as e:  # noqa: BLE001 — any error must abort the run
                     reason = "".join(traceback.format_exception_only(e)).strip()
                     send({"op": "fail", "reason": reason})
                     continue
-                arena_used: set[str] = set()
-                send({
-                    "op": "step_done",
-                    "out": [
-                        encode_output(ch, fields, arena_used)
-                        for ch, fields in outputs
-                    ],
-                })
             elif op == "shutdown":
                 return
     finally:

@@ -18,6 +18,8 @@ One run = `sil-run manifest.json -o out.mcap`:
   manifest.
 - **Out-of-process participants**: any executable speaking a JSON-lines
   step protocol on stdin/stdout; `sil.participant` provides the Python side.
+  The normative line and payload contract is in
+  [docs/step-protocol.md](docs/step-protocol.md).
 - **Recording**: uncompressed MCAP, virtual timestamps only, manifest hash
   embedded; bit-diff of two runs = determinism check.
 - **Manifest**: canonical JSON, SHA-256 hashed, the single execution input.

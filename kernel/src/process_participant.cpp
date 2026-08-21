@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <set>
+#include <utility>
 
 #include <nlohmann/json.hpp>
 
@@ -80,6 +81,89 @@ std::vector<uint8_t> b64_decode(const std::string &in) {
 }
 
 }  // namespace
+
+class ProcessParticipant::StepCodec {
+ private:
+  class InlineAdapter {
+   public:
+    static void encode(nlohmann::json &item,
+                       const std::vector<uint8_t> &bytes) {
+      item["data"] = b64_encode(bytes);
+    }
+
+    static std::vector<uint8_t> decode(const nlohmann::json &item) {
+      return b64_decode(item.at("data").get<std::string>());
+    }
+  };
+
+  class ArenaAdapter {
+   public:
+    explicit ArenaAdapter(ProcessParticipant &owner) : owner_(owner) {}
+
+    void encode(nlohmann::json &item, const std::string &channel,
+                const std::vector<uint8_t> &bytes) {
+      item["shm_seq"] = owner_.write_arena(channel, bytes);
+    }
+
+    std::vector<uint8_t> decode(const nlohmann::json &item,
+                                const std::string &channel) {
+      std::vector<uint8_t> bytes;
+      owner_.read_arena(channel, item.at("shm_seq").get<uint64_t>(), bytes);
+      return bytes;
+    }
+
+   private:
+    ProcessParticipant &owner_;
+  };
+
+ public:
+  explicit StepCodec(ProcessParticipant &owner)
+      : owner_(owner), arena_(owner) {}
+
+  nlohmann::json encode_inputs(
+      const std::vector<ProcessParticipant::StepInput> &messages) {
+    nlohmann::json in = nlohmann::json::array();
+    // This set belongs to one codec call, so the one-slot fallback is
+    // inherently scoped to one step and cannot leak into the next one.
+    std::set<std::string> arena_used;
+    for (const ProcessParticipant::StepInput &message : messages) {
+      nlohmann::json item = {
+          {"ch", message.channel}, {"t", message.publish_ns}};
+      if (owner_.arenas_.count(message.channel) &&
+          arena_used.insert(message.channel).second) {
+        arena_.encode(item, message.channel, message.bytes);
+      } else {
+        inline_.encode(item, message.bytes);
+      }
+      in.push_back(std::move(item));
+    }
+    return in;
+  }
+
+  std::vector<ProcessParticipant::StepOutput> decode_outputs(
+      const nlohmann::json &message) {
+    std::vector<ProcessParticipant::StepOutput> outputs;
+    for (const nlohmann::json &item :
+         message.value("out", nlohmann::json::array())) {
+      ProcessParticipant::StepOutput output;
+      output.channel = item.at("ch").get<std::string>();
+      // The field on the line is authoritative. A channel can legally carry
+      // inline fallbacks after its arena-backed first message.
+      if (item.contains("shm_seq")) {
+        output.bytes = arena_.decode(item, output.channel);
+      } else {
+        output.bytes = inline_.decode(item);
+      }
+      outputs.push_back(std::move(output));
+    }
+    return outputs;
+  }
+
+ private:
+  ProcessParticipant &owner_;
+  InlineAdapter inline_;
+  ArenaAdapter arena_;
+};
 
 // --- virtual clock shim wiring (issue #28) ---------------------------------
 //
@@ -290,6 +374,7 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     teardown_clock_region();
     throw;
   }
+  codec_ = std::make_unique<StepCodec>(*this);
 
   try {
     int to_child[2], from_child[2];
@@ -364,12 +449,7 @@ ProcessParticipant::~ProcessParticipant() {
 
 void ProcessParticipant::step(uint64_t now_ns) {
   // Merge visible inputs across channels in global publish order.
-  json in = json::array();
-  // An arena holds one payload, but a slower subscriber can see several
-  // messages on the same channel in one step. The first rides the arena; the
-  // rest fall back to the inline encoding, so what the participant receives is
-  // identical either way.
-  std::set<std::string> arena_used;
+  std::vector<StepInput> messages;
   for (;;) {
     SubQueue *best = nullptr;
     for (auto &[ch, q] : inputs_)
@@ -379,17 +459,11 @@ void ProcessParticipant::step(uint64_t now_ns) {
     if (!best) break;
     PendingMessage msg;
     engine_.take(*best, msg);
-    const std::string &ch = best->channel();
-    json item = {{"ch", ch}, {"t", msg.publish_ns}};
-    if (arenas_.count(ch) && arena_used.insert(ch).second) {
-      // Arena-backed: the payload goes through the arena and the step line
-      // carries only a freshness marker, skipping base64/JSON.
-      item["shm_seq"] = write_arena(ch, msg.bytes);
-    } else {
-      item["data"] = b64_encode(msg.bytes);
-    }
-    in.push_back(item);
+    messages.push_back(
+        {best->channel(), msg.publish_ns, std::move(msg.bytes)});
   }
+
+  json in = codec_->encode_inputs(messages);
 
   // Freeze this step's virtual time into the shared region before the child
   // runs, so every clock read inside it (through the shim) returns exactly
@@ -416,17 +490,10 @@ void ProcessParticipant::step(uint64_t now_ns) {
       engine_.fail(name_, "published on undeclared channel '" + ch + "'");
       return;
     }
-    std::vector<uint8_t> bytes;
-    // Each output says how it travelled: the child sends its first payload per
-    // arena-backed channel through the arena and any further one inline, so
-    // honour the field present rather than the channel's declared transport.
-    if (out.contains("shm_seq")) {
-      read_arena(ch, out.at("shm_seq").get<uint64_t>(), bytes);
-    } else {
-      bytes = b64_decode(out.at("data").get<std::string>());
-    }
-    engine_.publish(name_, ch, bytes.data(), bytes.size());
   }
+  for (StepOutput &output : codec_->decode_outputs(done))
+    engine_.publish(name_, output.channel, output.bytes.data(),
+                    output.bytes.size());
 }
 
 void ProcessParticipant::send_line(const std::string &line) {
