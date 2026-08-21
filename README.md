@@ -114,6 +114,7 @@ cross-machine transport, compression, and arena-size/backpressure tuning.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j
+ctest --test-dir build --output-on-failure
 uv venv .venv && uv pip install -p .venv/bin/python -e "python/[dev]"
 .venv/bin/python -m pytest tests/
 ```
@@ -124,8 +125,8 @@ criterion (`tests/test_determinism.py`: run twice → bit-identical MCAP).
 ## Layout
 
 ```
-kernel/src/        C++20 kernel: manifest, engine (scheduler+router),
-                   recorder, native/process participant adapters
+kernel/src/        C++20 kernel: manifest, interceptor plan, engine
+                   (scheduler+router), recorder, native/process adapters
 include/sil/       stable C ABI for native participants; clock-region layout
 participants/      toy native participants (walking-skeleton fixtures)
 shim/              virtual clock shim (preload lib) + probe for POSIX vECUs

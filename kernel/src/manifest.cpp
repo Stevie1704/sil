@@ -6,6 +6,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "interceptor.hpp"
 #include "sha256.hpp"
 
 namespace sil {
@@ -276,6 +277,8 @@ Manifest load_manifest(const std::filesystem::path &path) {
     }
     if (js.contains("interceptors"))
       parse_interceptors(c, js["interceptors"], m.schemas.at(c.schema));
+    c.interceptor_plan = compile_interceptor_plan(
+        m.duration_ns, m.schemas.at(c.schema), c.interceptors);
     m.channels.push_back(std::move(c));
   }
 

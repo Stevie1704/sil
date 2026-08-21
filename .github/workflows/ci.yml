@@ -23,6 +23,9 @@ jobs:
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build -j
 
+      - name: Run C++ unit tests
+        run: ctest --test-dir build --output-on-failure
+
       # Full suite includes the milestone exit criterion: run twice ->
       # bit-identical MCAP (tests/test_determinism.py).
       - name: Run tests

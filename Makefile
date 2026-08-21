@@ -42,6 +42,7 @@ build: configure ## Build the kernel (sil-run)
 # skips that once `make build` has run, matching CI.
 .PHONY: test
 test: venv build ## Run the full pytest suite (incl. determinism exit criterion)
+	ctest --test-dir $(BUILD_DIR) --output-on-failure
 	SIL_SKIP_BUILD=1 $(PYTHON) -m pytest tests/ -v
 
 .PHONY: test-fast
