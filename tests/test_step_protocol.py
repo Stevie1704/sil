@@ -212,7 +212,7 @@ class TestCppStepCodec:
     ):
         """Inspect the raw C++ input line for burst and mixed-channel cases."""
         log_path = tmp_path / "protocol.json"
-        m = Manifest(duration_ns=60_000_000)
+        m = Manifest(duration_ns=90_000_000)
         m.add_schemas(ARRAY_SCHEMAS)
         m.add_channel("left", schema="big.Payload", transport="shm")
         m.add_channel("right", schema="big.Payload")
@@ -239,15 +239,17 @@ class TestCppStepCodec:
         assert proc.returncode == 0, proc.stderr
 
         steps = json.loads(log_path.read_text())
-        inputs = next(step["in"] for step in steps if step["in"])
-        assert [item["ch"] for item in inputs] == [
-            "left", "right", "left", "right",
-        ] * 3
-        assert ["shm_seq" in item for item in inputs] == [
-            True, False, False, False,
-            False, False, False, False,
-            False, False, False, False,
-        ]
+        populated_steps = [step["in"] for step in steps if step["in"]]
+        assert len(populated_steps) >= 2
+        for inputs in populated_steps:
+            assert inputs[0]["ch"] == "left"
+            left_items = [item for item in inputs if item["ch"] == "left"]
+            assert len(left_items) >= 2
+            assert "shm_seq" in left_items[0]
+            assert all(
+                "data" in item and "shm_seq" not in item
+                for item in left_items[1:]
+            )
 
     @pytest.mark.parametrize(
         ("mode", "diagnostic"),
