@@ -205,4 +205,14 @@ in the framework's own CI from day one.**
   ownership of global and channel publish order, including the rule that a
   suppressed message advances only the global order. Focused arithmetic is
   covered by a CTest target; run-boundary tests remain the source of truth for
-  routing and recording behavior.
+  routing and recording behavior. Override constants retain JSON's unsigned,
+  signed, or floating representation until compilation: integer fields require
+  an integral value within their exact Schema range, while floating fields
+  accept integer or floating JSON numbers only when finite, and f32 also
+  requires magnitude no greater than the largest finite binary32. A floating
+  JSON number is parsed as binary64; an integer JSON number is converted once
+  to binary64 and may round beyond its 53-bit exact-integer range (for example,
+  9007199254740993 becomes 9007199254740992). An f64 stores that binary64 value;
+  an f32 narrows it once more to IEEE-754 binary32. Both are emitted as
+  pre-encoded little-endian bytes, so runtime application remains one bounded
+  byte replacement without lookup or numeric conversion.

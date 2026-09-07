@@ -18,6 +18,7 @@ using sil::FieldSpec;
 using sil::InterceptorPlan;
 using sil::InterceptorSpec;
 using sil::SchemaSpec;
+using OverrideValue = InterceptorSpec::OverrideValue;
 
 /** Fail the test process with a useful message when an invariant is false. */
 void check(bool condition, const std::string &message) {
@@ -66,11 +67,17 @@ InterceptorSpec drop_nth(uint64_t start_ns, uint64_t end_ns, uint64_t n) {
 }
 
 /** Build an override declaration for one scalar schema field. */
-InterceptorSpec override_field(const char *field, double value) {
+template <typename T>
+InterceptorSpec override_field(const char *field, T value) {
   InterceptorSpec spec;
   spec.kind = "override";
   spec.field = field;
-  spec.value = value;
+  if constexpr (std::is_floating_point_v<T>)
+    spec.value = static_cast<double>(value);
+  else if constexpr (std::is_signed_v<T>)
+    spec.value = static_cast<int64_t>(value);
+  else
+    spec.value = static_cast<uint64_t>(value);
   return spec;
 }
 
@@ -172,13 +179,13 @@ void test_override_offsets_and_encodings() {
       {"f64", "f64", 0}});
   auto p = plan(
       100, s,
-      {override_field("u8", 0xab),
-       override_field("u16", 0x1234),
-       override_field("u32", 0x12345678),
-       override_field("u64", static_cast<double>(0x01020304050608ULL)),
+      {override_field("u8", 0xabu),
+       override_field("u16", 0x1234u),
+       override_field("u32", 0x12345678u),
+       override_field("u64", 0x01020304050608ULL),
        override_field("i8", -2), override_field("i16", -0x1234),
        override_field("i32", -0x123456),
-       override_field("i64", -static_cast<double>(0x0102030405ULL)),
+       override_field("i64", -0x0102030405LL),
        override_field("f32", 1.5), override_field("f64", -2.25)});
   std::vector<uint8_t> bytes(1 + 2 + 4 + 8 + 1 + 2 + 4 + 8 + 4 + 8, 0xa5);
   const auto verdict = p->apply(0, bytes);
@@ -208,27 +215,106 @@ void test_override_offsets_and_encodings() {
   check(bytes == expected, "override offset or little-endian encoding mismatch");
 }
 
-/** Verify rounded integer endpoints clamp before conversion. */
-void test_override_integer_endpoint_clamping() {
+/** Verify adjacent u64 endpoints retain distinct exact encodings. */
+void test_override_u64_adjacent_endpoints_are_distinct() {
   const SchemaSpec s = schema({{"u64", "u64", 0}, {"i64", "i64", 0}});
   auto p = plan(100, s,
-                {override_field("u64", std::ldexp(1.0, 64)),
-                 override_field("i64", std::ldexp(1.0, 63))});
+                {override_field("u64", UINT64_MAX - 1),
+                 override_field("i64", INT64_MAX)});
   std::vector<uint8_t> bytes(16, 0xa5);
   check(!p->apply(0, bytes).suppressed,
-        "endpoint-clamped override plan unexpectedly suppressed");
+        "exact-endpoint override plan unexpectedly suppressed");
 
   std::vector<uint8_t> expected(16, 0xa5);
-  put_le(expected, 0, std::numeric_limits<uint64_t>::max(), 8);
+  put_le(expected, 0, std::numeric_limits<uint64_t>::max() - 1, 8);
   put_le(expected, 8, static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
          8);
-  check(bytes == expected, "integer endpoint was not clamped before encoding");
+  check(bytes == expected, "integer endpoint lost precision before encoding");
+}
+
+/** Verify exact little-endian bytes at every integer field boundary. */
+void test_override_integer_boundaries_encode_exactly() {
+  struct IntegerCase {
+    const char *type;
+    size_t width;
+    std::vector<std::pair<OverrideValue, uint64_t>> values;
+  };
+  const std::vector<IntegerCase> cases = {
+      {"u8", 1, {{uint64_t{0}, 0}, {uint64_t{1}, 1},
+                  {uint64_t{254}, 254}, {uint64_t{255}, 255}}},
+      {"u16", 2, {{uint64_t{0}, 0}, {uint64_t{1}, 1},
+                   {uint64_t{65534}, 65534}, {uint64_t{65535}, 65535}}},
+      {"u32", 4, {{uint64_t{0}, 0}, {uint64_t{1}, 1},
+                   {uint64_t{UINT32_MAX - 1}, UINT32_MAX - 1},
+                   {uint64_t{UINT32_MAX}, UINT32_MAX}}},
+      {"u64", 8, {{uint64_t{0}, 0}, {uint64_t{1}, 1},
+                   {uint64_t{UINT64_MAX - 1}, UINT64_MAX - 1},
+                   {uint64_t{UINT64_MAX}, UINT64_MAX}}},
+      {"i8", 1, {{int64_t{0}, 0}, {int64_t{1}, 1},
+                  {int64_t{INT8_MIN}, static_cast<uint64_t>(INT8_MIN)},
+                  {int64_t{INT8_MIN + 1}, static_cast<uint64_t>(INT8_MIN + 1)},
+                  {int64_t{INT8_MAX - 1}, INT8_MAX - 1},
+                  {int64_t{INT8_MAX}, INT8_MAX}}},
+      {"i16", 2, {{int64_t{0}, 0}, {int64_t{1}, 1},
+                   {int64_t{INT16_MIN}, static_cast<uint64_t>(INT16_MIN)},
+                   {int64_t{INT16_MIN + 1},
+                    static_cast<uint64_t>(INT16_MIN + 1)},
+                   {int64_t{INT16_MAX - 1}, INT16_MAX - 1},
+                   {int64_t{INT16_MAX}, INT16_MAX}}},
+      {"i32", 4, {{int64_t{0}, 0}, {int64_t{1}, 1},
+                   {int64_t{INT32_MIN}, static_cast<uint64_t>(INT32_MIN)},
+                   {int64_t{INT32_MIN + 1},
+                    static_cast<uint64_t>(INT32_MIN + 1)},
+                   {int64_t{INT32_MAX - 1}, INT32_MAX - 1},
+                   {int64_t{INT32_MAX}, INT32_MAX}}},
+      {"i64", 8, {{int64_t{0}, 0}, {int64_t{1}, 1},
+                   {int64_t{INT64_MIN}, static_cast<uint64_t>(INT64_MIN)},
+                   {int64_t{INT64_MIN + 1},
+                    static_cast<uint64_t>(INT64_MIN + 1)},
+                   {int64_t{INT64_MAX - 1},
+                    static_cast<uint64_t>(INT64_MAX - 1)},
+                   {int64_t{INT64_MAX}, static_cast<uint64_t>(INT64_MAX)}}},
+  };
+
+  for (const IntegerCase &test_case : cases) {
+    for (const auto &[value, expected_bits] : test_case.values) {
+      InterceptorSpec spec;
+      spec.kind = "override";
+      spec.field = "value";
+      spec.value = value;
+      auto p = plan(100, schema({{"value", test_case.type, 0}}), {spec});
+      std::vector<uint8_t> bytes(test_case.width, 0xa5);
+      check(!p->apply(0, bytes).suppressed,
+            std::string(test_case.type) + " boundary was suppressed");
+      std::vector<uint8_t> expected(test_case.width);
+      put_le(expected, 0, expected_bits, test_case.width);
+      check(bytes == expected,
+            std::string(test_case.type) + " boundary encoded incorrectly");
+    }
+  }
+}
+
+/** Verify the documented float narrowing and retention policy. */
+void test_override_float_conversion_policy() {
+  const SchemaSpec s = schema({{"single", "f32", 0}, {"double", "f64", 0}});
+  auto p = plan(100, s,
+                {override_field("single", 16'777'217.0),
+                 override_field("double", 0.1)});
+  std::vector<uint8_t> bytes(12, 0xa5);
+  check(!p->apply(0, bytes).suppressed,
+        "floating override plan unexpectedly suppressed");
+
+  std::vector<uint8_t> expected(12, 0xa5);
+  put_float(expected, 0, 16'777'216.0f);
+  put_double(expected, 4, 0.1);
+  check(bytes == expected,
+        "floating override did not follow f32/f64 conversion policy");
 }
 
 /** Verify malformed caller payloads fail before an override writes out of range. */
 void test_override_rejects_short_payload() {
   const SchemaSpec s = schema({{"value", "u32", 0}});
-  auto p = plan(100, s, {override_field("value", 7)});
+  auto p = plan(100, s, {override_field("value", 7u)});
   std::vector<uint8_t> bytes(2, 0xa5);
   const std::vector<uint8_t> original = bytes;
   bool threw = false;
@@ -251,7 +337,9 @@ int main() {
     test_delays_compose_in_declared_order();
     test_drop_nth_has_independent_window_state();
     test_override_offsets_and_encodings();
-    test_override_integer_endpoint_clamping();
+    test_override_u64_adjacent_endpoints_are_distinct();
+    test_override_integer_boundaries_encode_exactly();
+    test_override_float_conversion_policy();
     test_override_rejects_short_payload();
   } catch (const std::exception &e) {
     std::cerr << "interceptor test failed: " << e.what() << '\n';
