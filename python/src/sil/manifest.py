@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -38,6 +40,58 @@ _INTERCEPTOR_KINDS = {"drop", "drop_nth", "delay", "override"}
 # JSON step line; "shm" hands megabyte-class payloads across the kernel↔process
 # boundary through a per-channel arena, skipping base64/JSON.
 _TRANSPORTS = {"inline", "shm"}
+_FIELD_SIZES = {
+    "u8": 1,
+    "u16": 2,
+    "u32": 4,
+    "u64": 8,
+    "i8": 1,
+    "i16": 2,
+    "i32": 4,
+    "i64": 8,
+    "f32": 4,
+    "f64": 8,
+}
+_SIZE_MAX = sys.maxsize * 2 + 1
+_FLOAT32_MAX = 3.4028234663852886e38
+
+
+def _object(value, context: str) -> dict:
+    if not isinstance(value, dict):
+        raise ManifestError(f"{context} must be an object, got {value!r}")
+    return value
+
+
+def _array(value, context: str) -> list:
+    if not isinstance(value, list):
+        raise ManifestError(f"{context} must be an array, got {value!r}")
+    return value
+
+
+def _string(value, context: str) -> str:
+    if not isinstance(value, str):
+        raise ManifestError(f"{context} must be a string, got {value!r}")
+    return value
+
+
+def _integer(value, context: str, *, minimum=None, maximum=None) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ManifestError(f"{context} must be an integer, got {value!r}")
+    if minimum is not None and value < minimum:
+        raise ManifestError(
+            f"{context} must be >= {minimum}, got {value!r}"
+        )
+    if maximum is not None and value > maximum:
+        raise ManifestError(
+            f"{context} must be <= {maximum}, got {value!r}"
+        )
+    return value
+
+
+def _reject_unknown(entry: dict, allowed: set[str], context: str) -> None:
+    for key in entry:
+        if key not in allowed:
+            raise ManifestError(f"{context}: unknown key {key!r}")
 
 
 class ManifestError(ValueError):
@@ -52,15 +106,13 @@ class ManifestRef:
 
 class Manifest:
     def __init__(self, duration_ns: int, *, epoch_ns: int = 0):
-        if duration_ns <= 0:
-            raise ManifestError(f"duration_ns must be positive, got {duration_ns}")
+        duration_ns = _integer(
+            duration_ns, "duration_ns", minimum=1, maximum=_SIZE_MAX
+        )
         # Realtime epoch handed to shimmed process participants; affects output,
         # so it is hashed. A run's default (0) is omitted from the canonical doc
         # so manifests predating the clock shim keep byte-identical hashes.
-        if not isinstance(epoch_ns, int) or isinstance(epoch_ns, bool):
-            raise ManifestError(f"epoch_ns must be an integer, got {epoch_ns!r}")
-        if epoch_ns < 0:
-            raise ManifestError(f"epoch_ns must be >= 0, got {epoch_ns}")
+        epoch_ns = _integer(epoch_ns, "epoch_ns", minimum=0, maximum=_SIZE_MAX)
         self._duration_ns = duration_ns
         self._epoch_ns = epoch_ns
         self._schemas: dict[str, dict] = {}
@@ -68,24 +120,35 @@ class Manifest:
         self._participants: dict[str, dict] = {}
 
     def add_schemas(self, schemas: dict[str, dict]) -> None:
+        schemas = _object(schemas, "schemas")
         for name, schema in schemas.items():
+            name = _string(name, "schema name")
+            schema = _object(schema, f"schema {name!r}")
             if name in self._schemas:
                 raise ManifestError(f"schema {name!r} already declared")
-            fields = schema.get("fields")
+            _reject_unknown(schema, {"fields"}, f"schema {name!r}")
+            if "fields" not in schema:
+                raise ManifestError(f"schema {name!r} is missing key 'fields'")
+            fields = _array(schema["fields"], f"schema {name!r} key 'fields'")
             if not fields:
                 raise ManifestError(f"schema {name!r} has no fields")
             field_names: set[str] = set()
-            for f in fields:
+            byte_size = 0
+            for index, f in enumerate(fields):
+                field_context = f"schema {name!r} field[{index}]"
+                f = _object(f, field_context)
+                _reject_unknown(f, {"name", "type", "count"}, field_context)
                 field_name = f.get("name")
                 if not isinstance(field_name, str) or not field_name:
                     raise ManifestError(
                         f"schema {name!r}: field name must be a non-empty string, "
                         f"got {field_name!r}"
                     )
-                if f.get("type") not in _FIELD_TYPES:
+                field_type = f.get("type")
+                if not isinstance(field_type, str) or field_type not in _FIELD_TYPES:
                     raise ManifestError(
                         f"schema {name!r} field {f.get('name')!r}: "
-                        f"unknown type {f.get('type')!r}"
+                        f"unknown type {field_type!r}"
                     )
                 # A `count` makes the field a fixed-size array of its element
                 # type; it must be a positive integer. Absent means a scalar.
@@ -99,12 +162,24 @@ class Manifest:
                         f"schema {name!r} field {f.get('name')!r}: "
                         f"count must be an integer >= 1, got {count!r}"
                     )
+                if count is not None and count > _SIZE_MAX:
+                    raise ManifestError(
+                        f"{field_context} key 'count' exceeds size_t: {count!r}"
+                    )
                 if field_name in field_names:
                     raise ManifestError(
                         f"schema {name!r} field {field_name!r}: "
                         "duplicate field name"
                     )
                 field_names.add(field_name)
+                elements = count if count is not None else 1
+                field_size = _FIELD_SIZES[field_type] * elements
+                if field_size > _SIZE_MAX or byte_size > _SIZE_MAX - field_size:
+                    raise ManifestError(
+                        f"schema {name!r}: byte size overflows size_t at "
+                        f"field {field_name!r}"
+                    )
+                byte_size += field_size
             self._schemas[name] = schema
 
     def add_channel(
@@ -115,12 +190,20 @@ class Manifest:
         latency_ns: int | None = None,
         transport: str = "inline",
     ) -> None:
+        name = _string(name, "channel name")
+        schema = _string(schema, f"channel {name!r} schema")
         if name in self._channels:
             raise ManifestError(f"channel {name!r} already declared")
         if schema not in self._schemas:
             raise ManifestError(f"channel {name!r} references unknown schema {schema!r}")
-        if latency_ns is not None and latency_ns < 0:
-            raise ManifestError(f"channel {name!r}: latency_ns must be >= 0")
+        if latency_ns is not None:
+            latency_ns = _integer(
+                latency_ns,
+                f"channel {name!r} latency_ns",
+                minimum=0,
+                maximum=_SIZE_MAX,
+            )
+        transport = _string(transport, f"channel {name!r} transport")
         if transport not in _TRANSPORTS:
             raise ManifestError(
                 f"channel {name!r}: unknown transport {transport!r} "
@@ -155,8 +238,10 @@ class Manifest:
         whole run. Validation here mirrors the kernel's load-time rules so a
         bad declaration fails before a kernel is ever invoked.
         """
+        channel = _string(channel, "interceptor channel")
         if channel not in self._channels:
             raise ManifestError(f"interceptor references unknown channel {channel!r}")
+        kind = _string(kind, f"interceptor on {channel!r} kind")
         if kind not in _INTERCEPTOR_KINDS:
             raise ManifestError(
                 f"interceptor on {channel!r}: unknown kind {kind!r}"
@@ -167,8 +252,12 @@ class Manifest:
 
         for bound_name, bound in (("start_ns", start_ns), ("end_ns", end_ns)):
             if bound is not None:
-                if bound < 0:
-                    raise ManifestError(f"{ctx}: {bound_name} must be >= 0")
+                bound = _integer(
+                    bound,
+                    f"{ctx} {bound_name}",
+                    minimum=0,
+                    maximum=_SIZE_MAX,
+                )
                 entry[bound_name] = bound
         lo = start_ns if start_ns is not None else 0
         if end_ns is not None and end_ns <= lo:
@@ -179,18 +268,19 @@ class Manifest:
         if kind == "delay":
             if delay_ns is None:
                 raise ManifestError(f"{ctx}: delay requires delay_ns")
-            if delay_ns < 0:
-                raise ManifestError(f"{ctx}: delay_ns must be >= 0")
+            delay_ns = _integer(
+                delay_ns, f"{ctx} delay_ns", minimum=0, maximum=_SIZE_MAX
+            )
             entry["delay_ns"] = delay_ns
         elif kind == "drop_nth":
             if n is None:
                 raise ManifestError(f"{ctx}: drop_nth requires n")
-            if n < 1:
-                raise ManifestError(f"{ctx}: n must be >= 1")
+            n = _integer(n, f"{ctx} n", minimum=1, maximum=_SIZE_MAX)
             entry["n"] = n
         elif kind == "override":
             if field is None or value is None:
                 raise ManifestError(f"{ctx}: override requires field and value")
+            field = _string(field, f"{ctx} field")
             self._check_override_value(channel, field, value, ctx)
             entry["field"] = field
             entry["value"] = value
@@ -226,8 +316,27 @@ class Manifest:
                 f"{ctx}: override value {value!r} is not a number for "
                 f"{field!r} ({ftype})"
             )
+        else:
+            try:
+                numeric_value = float(value)
+                if not math.isfinite(numeric_value) or (
+                    ftype == "f32" and abs(numeric_value) > _FLOAT32_MAX
+                ):
+                    raise ManifestError(
+                        f"{ctx}: override value {value!r} is not representable "
+                        f"for {field!r} ({ftype})"
+                    )
+            except (OverflowError, ValueError) as exc:
+                raise ManifestError(
+                    f"{ctx}: override value {value!r} is not representable "
+                    f"for {field!r} ({ftype})"
+                ) from exc
 
     def add_native(self, name: str, *, library: str, config: dict | None = None) -> None:
+        name = _string(name, "participant name")
+        library = _string(library, f"participant {name!r} library")
+        if config is not None:
+            config = _object(config, f"participant {name!r} config")
         self._add_participant(
             name, {"type": "native", "library": library, "config": config or {}}
         )
@@ -243,18 +352,50 @@ class Manifest:
         priority: int = 0,
         shim: bool = False,
     ) -> None:
-        if step_period_ns <= 0:
-            raise ManifestError(
-                f"participant {name!r}: step_period_ns must be positive"
-            )
+        name = _string(name, "participant name")
+        command = _array(command, f"participant {name!r} command")
         if not command:
             raise ManifestError(f"participant {name!r}: command must not be empty")
+        command = [
+            _string(item, f"participant {name!r} command[{index}]")
+            for index, item in enumerate(command)
+        ]
+        step_period_ns = _integer(
+            step_period_ns,
+            f"participant {name!r} step_period_ns",
+            minimum=1,
+            maximum=_SIZE_MAX,
+        )
+        if subscribes is None:
+            subscribes = []
+        else:
+            subscribes = _array(subscribes, f"participant {name!r} subscribes")
+        subscribes = [
+            _string(item, f"participant {name!r} subscribes[{index}]")
+            for index, item in enumerate(subscribes)
+        ]
+        if publishes is None:
+            publishes = []
+        else:
+            publishes = _array(publishes, f"participant {name!r} publishes")
+        publishes = [
+            _string(item, f"participant {name!r} publishes[{index}]")
+            for index, item in enumerate(publishes)
+        ]
+        priority = _integer(
+            priority,
+            f"participant {name!r} priority",
+            minimum=-(2**31),
+            maximum=2**31 - 1,
+        )
+        if not isinstance(shim, bool):
+            raise ManifestError(f"participant {name!r} shim must be a boolean")
         entry: dict = {
             "type": "process",
             "command": command,
             "step_period_ns": step_period_ns,
-            "subscribes": subscribes or [],
-            "publishes": publishes or [],
+            "subscribes": subscribes,
+            "publishes": publishes,
             "priority": priority,
         }
         # The virtual clock shim is opt-in per process participant. Only the
@@ -277,6 +418,7 @@ class Manifest:
         from the file bytes and embedded in the manifest, so the manifest hash
         fully covers the run's stimulus. The file must exist at build time.
         """
+        name = _string(name, "participant name")
         if not channels:
             raise ManifestError(
                 f"participant {name!r}: replay channels must not be empty"
@@ -286,7 +428,18 @@ class Manifest:
                 raise ManifestError(
                     f"participant {name!r} replays unknown channel {ch!r}"
                 )
-        recording = Path(recording)
+        channels = _array(channels, f"participant {name!r} replay channels")
+        channels = [
+            _string(item, f"participant {name!r} replay channels[{index}]")
+            for index, item in enumerate(channels)
+        ]
+        try:
+            recording = Path(recording)
+        except TypeError as exc:
+            raise ManifestError(
+                f"participant {name!r}: recording must be a path-like value, "
+                f"got {recording!r}"
+            ) from exc
         try:
             data = recording.read_bytes()
         except OSError as e:
@@ -304,6 +457,7 @@ class Manifest:
         )
 
     def _add_participant(self, name: str, entry: dict) -> None:
+        name = _string(name, "participant name")
         if name in self._participants:
             raise ManifestError(f"participant {name!r} already declared")
         self._participants[name] = entry
@@ -353,7 +507,16 @@ class Manifest:
         return doc
 
     def to_json(self) -> str:
-        return json.dumps(self.to_doc(), sort_keys=True, separators=(",", ":")) + "\n"
+        try:
+            encoded = json.dumps(
+                self.to_doc(),
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+        except (TypeError, ValueError) as exc:
+            raise ManifestError(f"manifest contains a non-JSON value: {exc}") from exc
+        return encoded + "\n"
 
     def hash(self) -> str:
         return hashlib.sha256(self.to_json().encode()).hexdigest()

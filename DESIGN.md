@@ -83,6 +83,11 @@ canonical, hashable, archived with every run as part of the reproducibility
 contract. A Python builder API generates/validates manifests for test matrices;
 the kernel only ever consumes the manifest.
 
+Manifest objects are closed: unknown keys are rejected at load time. The one
+intentional extension point is a native participant's `config` object; its
+contents are participant-specific and are passed through as JSON to the native
+participant, while the `config` container itself must still be an object.
+
 ### 13. Recording: MCAP native; record/replay inside stepped virtual time
 Recorder and replayer live inside the stepped virtual-time world, so both are
 deterministic by construction: the recorder as a direct sink at the publish

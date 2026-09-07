@@ -31,6 +31,32 @@ def read_mcap(path):
     return meta, msgs
 
 
+def raw_manifest():
+    """Return a valid hand-written document for loader rejection tests."""
+    return {
+        "sil_manifest": 1,
+        "duration_ns": 1_000,
+        "schemas": {
+            "S": {"fields": [{"name": "value", "type": "u8"}]},
+        },
+        "channels": {"c": {"schema": "S"}},
+        "participants": {},
+    }
+
+
+def set_raw_value(document, path, value):
+    target = document
+    for key in path[:-1]:
+        target = target[key]
+    target[path[-1]] = value
+
+
+def write_raw_manifest(tmp_path, document):
+    path = tmp_path / "bad.json"
+    path.write_text(json.dumps(document, sort_keys=True, separators=(",", ":")))
+    return path
+
+
 class TestManifestRejection:
     def test_invalid_json_is_config_error(self, run_sil, tmp_path):
         bad = tmp_path / "bad.json"
@@ -49,6 +75,268 @@ class TestManifestRejection:
         proc = run_sil(bad)
         assert proc.returncode == 2
         assert "sil_manifest" in proc.stderr
+
+    def test_native_library_wrong_type_is_config_error(self, run_sil, tmp_path):
+        # Hand-written JSON bypasses the Python builder: the loader must turn
+        # a typed extraction failure into a contextual configuration error.
+        bad = tmp_path / "bad.json"
+        bad.write_text(
+            '{"sil_manifest":1,"duration_ns":1000,"schemas":{},'
+            '"channels":{},"participants":{"native":{"type":"native",'
+            '"library":42}}}'
+        )
+        proc = run_sil(bad)
+        assert proc.returncode == 2
+        assert "participant 'native'" in proc.stderr
+        assert "library" in proc.stderr
+        assert "number" in proc.stderr
+
+    @pytest.mark.parametrize(
+        "path,value,needle",
+        [
+            (("sil_manifest",), True, "sil_manifest"),
+            (("duration_ns",), True, "duration_ns"),
+            (("duration_ns",), -1, "duration_ns"),
+            (("duration_ns",), 1.5, "duration_ns"),
+            (("epoch_ns",), -1, "epoch_ns"),
+            (("epoch_ns",), 1.5, "epoch_ns"),
+            (("schemas",), [], "schemas"),
+            (("channels",), [], "channels"),
+            (("participants",), [], "participants"),
+        ],
+    )
+    def test_manifest_level_wrong_types_are_config_errors(
+        self, run_sil, tmp_path, path, value, needle
+    ):
+        document = raw_manifest()
+        set_raw_value(document, path, value)
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == 2
+        assert needle in proc.stderr
+        assert "expected" in proc.stderr and "got" in proc.stderr
+
+    @pytest.mark.parametrize(
+        "path,value",
+        [
+            (("schemas", "S"), []),
+            (("schemas", "S", "fields"), {}),
+            (("schemas", "S", "fields", 0), "not an object"),
+            (("schemas", "S", "fields", 0, "name"), 7),
+            (("schemas", "S", "fields", 0, "type"), 7),
+            (("schemas", "S", "fields", 0, "count"), True),
+            (("schemas", "S", "fields", 0, "count"), 1.5),
+            (("schemas", "S", "fields", 0, "count"), -1),
+        ],
+    )
+    def test_schema_extraction_rejects_wrong_shapes(
+        self, run_sil, tmp_path, path, value
+    ):
+        document = raw_manifest()
+        set_raw_value(document, path, value)
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == 2
+        assert "schema 'S'" in proc.stderr
+        assert "expected" in proc.stderr and "got" in proc.stderr
+
+    @pytest.mark.parametrize(
+        "path,value",
+        [
+            (("channels", "c"), []),
+            (("channels", "c", "schema"), 7),
+            (("channels", "c", "latency_ns"), True),
+            (("channels", "c", "latency_ns"), -1),
+            (("channels", "c", "latency_ns"), 1.5),
+            (("channels", "c", "transport"), 7),
+            (("channels", "c", "interceptors"), {}),
+        ],
+    )
+    def test_channel_extraction_rejects_wrong_shapes(
+        self, run_sil, tmp_path, path, value
+    ):
+        document = raw_manifest()
+        set_raw_value(document, path, value)
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == 2
+        assert "channel 'c'" in proc.stderr
+        assert "expected" in proc.stderr and "got" in proc.stderr
+
+    @pytest.mark.parametrize(
+        "path,value",
+        [
+            (("channels", "c", "interceptors", 0), "not an object"),
+            (("channels", "c", "interceptors", 0, "kind"), 7),
+            (("channels", "c", "interceptors", 0, "start_ns"), True),
+            (("channels", "c", "interceptors", 0, "start_ns"), -1),
+            (("channels", "c", "interceptors", 0, "start_ns"), 1.5),
+            (("channels", "c", "interceptors", 0, "end_ns"), True),
+            (("channels", "c", "interceptors", 0, "end_ns"), -1),
+            (("channels", "c", "interceptors", 0, "end_ns"), 1.5),
+            (("channels", "c", "interceptors", 0, "delay_ns"), -1),
+            (("channels", "c", "interceptors", 0, "delay_ns"), 1.5),
+            (("channels", "c", "interceptors", 0, "n"), True),
+            (("channels", "c", "interceptors", 0, "n"), 0),
+            (("channels", "c", "interceptors", 0, "field"), 7),
+            (("channels", "c", "interceptors", 0, "value"), True),
+            (("channels", "c", "interceptors", 0, "value"), 1.5),
+            (("channels", "c", "interceptors", 0, "value"), 256),
+        ],
+    )
+    def test_interceptor_extraction_rejects_wrong_shapes(
+        self, run_sil, tmp_path, path, value
+    ):
+        document = raw_manifest()
+        document["channels"]["c"]["interceptors"] = [{"kind": "drop"}]
+        if path[-1] == "delay_ns":
+            document["channels"]["c"]["interceptors"][0] = {
+                "kind": "delay",
+                "delay_ns": 1,
+            }
+        elif path[-1] == "n":
+            document["channels"]["c"]["interceptors"][0] = {
+                "kind": "drop_nth",
+                "n": 1,
+            }
+        elif path[-1] in {"field", "value"}:
+            document["channels"]["c"]["interceptors"][0] = {
+                "kind": "override",
+                "field": "value",
+                "value": 1,
+            }
+        set_raw_value(document, path, value)
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == 2
+        assert "channel 'c'" in proc.stderr
+        assert "expected" in proc.stderr and "got" in proc.stderr
+
+    @pytest.mark.parametrize(
+        "path,value",
+        [
+            (("participants",), []),
+            (("participants", "p"), "not an object"),
+            (("participants", "p", "type"), 7),
+            (("participants", "p", "command"), {}),
+            (("participants", "p", "command", 0), 7),
+            (("participants", "p", "step_period_ns"), True),
+            (("participants", "p", "step_period_ns"), -1),
+            (("participants", "p", "step_period_ns"), 1.5),
+            (("participants", "p", "subscribes"), {}),
+            (("participants", "p", "publishes"), [7]),
+            (("participants", "p", "priority"), True),
+            (("participants", "p", "priority"), 1.5),
+            (("participants", "p", "priority"), 2**31),
+            (("participants", "p", "shim"), 1),
+        ],
+    )
+    def test_process_extraction_rejects_wrong_shapes(
+        self, run_sil, tmp_path, path, value
+    ):
+        document = raw_manifest()
+        document["participants"] = {
+            "p": {
+                "type": "process",
+                "command": ["true"],
+                "step_period_ns": 1,
+            }
+        }
+        set_raw_value(document, path, value)
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == 2
+        if path == ("participants",):
+            assert "participants" in proc.stderr
+        else:
+            assert "participant 'p'" in proc.stderr
+        assert "expected" in proc.stderr and "got" in proc.stderr
+
+    @pytest.mark.parametrize(
+        "path,value",
+        [
+            (("participants", "p", "recording"), 7),
+            (("participants", "p", "recording_hash"), 7),
+            (("participants", "p", "channels"), {}),
+            (("participants", "p", "channels", 0), 7),
+        ],
+    )
+    def test_replay_extraction_rejects_wrong_shapes(
+        self, run_sil, tmp_path, path, value
+    ):
+        document = raw_manifest()
+        document["participants"] = {
+            "p": {
+                "type": "replay",
+                "recording": "recording.mcap",
+                "recording_hash": "hash",
+                "channels": ["c"],
+            }
+        }
+        set_raw_value(document, path, value)
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == 2
+        assert "participant 'p'" in proc.stderr
+        assert "expected" in proc.stderr and "got" in proc.stderr
+
+    @pytest.mark.parametrize(
+        "scope",
+        ["manifest", "schema", "field", "channel", "interceptor", "participant"],
+    )
+    def test_unknown_keys_are_rejected_at_closed_manifest_levels(
+        self, run_sil, tmp_path, scope
+    ):
+        document = raw_manifest()
+        if scope == "manifest":
+            document["unexpected"] = True
+        elif scope == "schema":
+            document["schemas"]["S"]["unexpected"] = True
+        elif scope == "field":
+            document["schemas"]["S"]["fields"][0]["unexpected"] = True
+        elif scope == "channel":
+            document["channels"]["c"]["unexpected"] = True
+        elif scope == "interceptor":
+            document["channels"]["c"]["interceptors"] = [
+                {"kind": "drop", "unexpected": True}
+            ]
+        else:
+            document["participants"] = {
+                "p": {"type": "native", "library": "x", "unexpected": True}
+            }
+
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == 2
+        assert "unknown key 'unexpected'" in proc.stderr
+
+    def test_native_config_is_an_explicit_extension_object(
+        self, run_sil, tmp_path
+    ):
+        document = raw_manifest()
+        document["participants"] = {
+            "native": {
+                "type": "native",
+                "library": "x",
+                "config": {"vendor_option": {"mode": "opaque"}},
+            }
+        }
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == 2
+        assert "unknown key" not in proc.stderr
+
+    def test_native_config_must_still_be_an_object(self, run_sil, tmp_path):
+        document = raw_manifest()
+        document["participants"] = {
+            "native": {"type": "native", "library": "x", "config": 42}
+        }
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == 2
+        assert "config" in proc.stderr
+        assert "expected" in proc.stderr and "got" in proc.stderr
+
+    def test_f32_override_out_of_range_is_a_config_error(self, run_sil, tmp_path):
+        document = raw_manifest()
+        document["schemas"]["S"]["fields"][0]["type"] = "f32"
+        document["channels"]["c"]["interceptors"] = [
+            {"kind": "override", "field": "value", "value": 1e39}
+        ]
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == 2
+        assert "f32" in proc.stderr
 
 
 class TestClockShimRejection:
