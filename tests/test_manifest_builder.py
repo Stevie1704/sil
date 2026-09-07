@@ -30,6 +30,15 @@ def make_minimal() -> Manifest:
     return m
 
 
+def make_scalar_manifest(field_type: str) -> Manifest:
+    m = Manifest(duration_ns=1)
+    m.add_schemas(
+        {"S": {"fields": [{"name": "value", "type": field_type}]}}
+    )
+    m.add_channel("c", schema="S")
+    return m
+
+
 class TestCanonicalOutput:
     def test_same_content_gives_identical_bytes_and_hash(self):
         a = make_minimal()
@@ -549,3 +558,57 @@ class TestInterceptorBuilder:
         m.add_interceptor("c", kind="override", field="x", value=1.5)
         [entry] = json.loads(m.to_json())["channels"]["c"]["interceptors"]
         assert entry["value"] == 1.5
+
+    @pytest.mark.parametrize(
+        ("field_type", "accepted", "rejected"),
+        [
+            ("u8", [0, 1, 254, 255], [-1, 256]),
+            ("u16", [0, 1, 65534, 65535], [-1, 65536]),
+            ("u32", [0, 1, 2**32 - 2, 2**32 - 1], [-1, 2**32]),
+            ("u64", [0, 1, 2**64 - 2, 2**64 - 1], [-1, 2**64]),
+            ("i8", [-(2**7), -(2**7) + 1, 0, 1, 2**7 - 2, 2**7 - 1],
+             [-(2**7) - 1, 2**7]),
+            ("i16", [-(2**15), -(2**15) + 1, 0, 1, 2**15 - 2, 2**15 - 1],
+             [-(2**15) - 1, 2**15]),
+            ("i32", [-(2**31), -(2**31) + 1, 0, 1, 2**31 - 2, 2**31 - 1],
+             [-(2**31) - 1, 2**31]),
+            ("i64", [-(2**63), -(2**63) + 1, 0, 1, 2**63 - 2, 2**63 - 1],
+             [-(2**63) - 1, 2**63]),
+        ],
+    )
+    def test_integer_override_boundaries_match_schema_range(
+        self, field_type, accepted, rejected
+    ):
+        for value in accepted:
+            m = make_scalar_manifest(field_type)
+            m.add_interceptor("c", kind="override", field="value", value=value)
+
+        for value in [*rejected, 1.5, True]:
+            m = make_scalar_manifest(field_type)
+            with pytest.raises(ManifestError, match="override value"):
+                m.add_interceptor(
+                    "c", kind="override", field="value", value=value
+                )
+
+    @pytest.mark.parametrize(
+        ("field_type", "accepted", "rejected"),
+        [
+            ("f32", [0, 1, 1.5, 3.4028234663852886e38],
+             [3.4028236e38, float("inf"), float("nan"), True]),
+            ("f64", [0, 1, 1.5, 1.7976931348623157e308],
+             [10**400, float("inf"), float("nan"), True]),
+        ],
+    )
+    def test_float_override_policy_accepts_only_finite_representable_values(
+        self, field_type, accepted, rejected
+    ):
+        for value in accepted:
+            m = make_scalar_manifest(field_type)
+            m.add_interceptor("c", kind="override", field="value", value=value)
+
+        for value in rejected:
+            m = make_scalar_manifest(field_type)
+            with pytest.raises(ManifestError, match="override value"):
+                m.add_interceptor(
+                    "c", kind="override", field="value", value=value
+                )

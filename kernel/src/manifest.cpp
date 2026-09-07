@@ -237,56 +237,28 @@ SchemaSpec parse_schema(const std::string &name, const json &js) {
 }
 
 /** Encode one validated override constant as the schema's little-endian bytes. */
-std::vector<uint8_t> encode_override(const FieldLayout &layout, double value) {
+std::vector<uint8_t> encode_override(
+    const FieldLayout &layout, const InterceptorSpec::OverrideValue &value) {
   uint64_t bits = 0;
   switch (layout.representation) {
-    case FieldLayout::Representation::Unsigned: {
-      const int bit_width = static_cast<int>(layout.size * 8);
-      const double upper_exclusive = std::ldexp(1.0, bit_width);
-      const uint64_t maximum =
-          bit_width == 64 ? std::numeric_limits<uint64_t>::max()
-                          : (uint64_t{1} << bit_width) - 1;
-      if (!(value > 0.0))
-        bits = 0;
-      else if (value >= upper_exclusive)
-        bits = maximum;
-      else
-        bits = static_cast<uint64_t>(value);
+    case FieldLayout::Representation::Unsigned:
+      bits = std::get<uint64_t>(value);
       break;
-    }
-    case FieldLayout::Representation::Signed: {
-      const int bit_width = static_cast<int>(layout.size * 8);
-      const double lower_inclusive = -std::ldexp(1.0, bit_width - 1);
-      const double upper_exclusive = std::ldexp(1.0, bit_width - 1);
-      const int64_t minimum =
-          bit_width == 64
-              ? std::numeric_limits<int64_t>::min()
-              : -static_cast<int64_t>(uint64_t{1} << (bit_width - 1));
-      const int64_t maximum =
-          bit_width == 64
-              ? std::numeric_limits<int64_t>::max()
-              : static_cast<int64_t>(
-                    (uint64_t{1} << (bit_width - 1)) - 1);
-      int64_t integer = 0;
-      if (!(value > lower_inclusive))
-        integer = minimum;
-      else if (!(value < upper_exclusive))
-        integer = maximum;
-      else
-        integer = static_cast<int64_t>(value);
-      bits = static_cast<uint64_t>(integer);
+    case FieldLayout::Representation::Signed:
+      bits = static_cast<uint64_t>(std::get<int64_t>(value));
       break;
-    }
-    case FieldLayout::Representation::Float:
+    case FieldLayout::Representation::Float: {
+      const double number = std::get<double>(value);
       if (layout.size == 4) {
-        float f = static_cast<float>(value);
+        const float rounded = static_cast<float>(number);
         uint32_t float_bits = 0;
-        std::memcpy(&float_bits, &f, sizeof(float_bits));
+        std::memcpy(&float_bits, &rounded, sizeof(float_bits));
         bits = float_bits;
       } else {
-        std::memcpy(&bits, &value, sizeof(value));
+        std::memcpy(&bits, &number, sizeof(number));
       }
       break;
+    }
   }
 
   std::vector<uint8_t> bytes(layout.size);
@@ -295,29 +267,26 @@ std::vector<uint8_t> encode_override(const FieldLayout &layout, double value) {
   return bytes;
 }
 
-void validate_integer_override(const json &value, const std::string &ctx,
-                              const std::string &type) {
+InterceptorSpec::OverrideValue extract_override_value(
+    const json &value, const std::string &ctx, const std::string &type) {
   if (type == "u8") {
-    (void)extract<uint8_t>(value, ctx);
+    return static_cast<uint64_t>(extract<uint8_t>(value, ctx));
   } else if (type == "u16") {
-    (void)extract<uint16_t>(value, ctx);
+    return static_cast<uint64_t>(extract<uint16_t>(value, ctx));
   } else if (type == "u32") {
-    (void)extract<uint32_t>(value, ctx);
+    return static_cast<uint64_t>(extract<uint32_t>(value, ctx));
   } else if (type == "u64") {
-    (void)extract<uint64_t>(value, ctx);
+    return extract<uint64_t>(value, ctx);
   } else if (type == "i8") {
-    (void)extract<int8_t>(value, ctx);
+    return static_cast<int64_t>(extract<int8_t>(value, ctx));
   } else if (type == "i16") {
-    (void)extract<int16_t>(value, ctx);
+    return static_cast<int64_t>(extract<int16_t>(value, ctx));
   } else if (type == "i32") {
-    (void)extract<int32_t>(value, ctx);
+    return static_cast<int64_t>(extract<int32_t>(value, ctx));
   } else if (type == "i64") {
-    (void)extract<int64_t>(value, ctx);
+    return extract<int64_t>(value, ctx);
   }
-}
 
-double extract_override_value(const json &value, const std::string &ctx,
-                              const std::string &type) {
   const double result = extract<double>(value, ctx);
   if (type == "f32" &&
       std::abs(result) > static_cast<double>(std::numeric_limits<float>::max()))
@@ -372,9 +341,6 @@ void parse_interceptors(ChannelSpec &c, const json &arr,
       const json &v = require_value(js, "value", ctx);
       const std::string value_ctx = ctx + " key 'value' for field '" +
                                     spec.field + "'";
-      if (kFieldLayouts.at(fs->type).representation !=
-          FieldLayout::Representation::Float)
-        validate_integer_override(v, value_ctx, fs->type);
       spec.value = extract_override_value(v, value_ctx, fs->type);
     }
     c.interceptors.push_back(std::move(spec));

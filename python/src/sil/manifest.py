@@ -20,9 +20,11 @@ MANIFEST_VERSION = 1
 
 _FIELD_TYPES = {"u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64", "f32", "f64"}
 
-# Inclusive [min, max] for the integer field types; float types accept any
-# real value and are handled separately. Used to reject override constants
-# that a field could never hold.
+# Inclusive [min, max] for the integer field types; float override values must
+# be finite. The builder preserves accepted JSON numbers in the Manifest. The
+# loader converts integer JSON numbers to binary64 (which may round beyond 53
+# exact integer bits), retains floating JSON numbers as binary64, and narrows
+# f32 exactly once more during plan compilation.
 _INT_RANGES = {
     "u8": (0, 2**8 - 1),
     "u16": (0, 2**16 - 1),

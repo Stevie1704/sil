@@ -745,6 +745,87 @@ class TestInterceptorRejection:
         assert proc.returncode == 2
         assert "ticks" in proc.stderr
 
+    @pytest.mark.parametrize(
+        ("field_type", "values"),
+        [
+            ("u8", [0, 1, 254, 255]),
+            ("u16", [0, 1, 65534, 65535]),
+            ("u32", [0, 1, 2**32 - 2, 2**32 - 1]),
+            ("u64", [0, 1, 2**64 - 2, 2**64 - 1]),
+            ("i8", [-(2**7), -(2**7) + 1, 0, 1, 2**7 - 2, 2**7 - 1]),
+            ("i16", [-(2**15), -(2**15) + 1, 0, 1, 2**15 - 2, 2**15 - 1]),
+            ("i32", [-(2**31), -(2**31) + 1, 0, 1, 2**31 - 2, 2**31 - 1]),
+            ("i64", [-(2**63), -(2**63) + 1, 0, 1, 2**63 - 2, 2**63 - 1]),
+        ],
+    )
+    def test_integer_override_boundaries_load(self, run_sil, tmp_path,
+                                              field_type, values):
+        document = raw_manifest()
+        document["schemas"]["S"]["fields"][0]["type"] = field_type
+        document["channels"] = {
+            f"c{index}": {
+                "schema": "S",
+                "interceptors": [
+                    {"kind": "override", "field": "value", "value": value}
+                ],
+            }
+            for index, value in enumerate(values)
+        }
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == 0, proc.stderr
+
+    @pytest.mark.parametrize(
+        ("field_type", "value"),
+        [
+            ("u8", -1), ("u8", 256),
+            ("u16", -1), ("u16", 65536),
+            ("u32", -1), ("u32", 2**32),
+            ("u64", -1), ("u64", 2**64),
+            ("i8", -(2**7) - 1), ("i8", 2**7),
+            ("i16", -(2**15) - 1), ("i16", 2**15),
+            ("i32", -(2**31) - 1), ("i32", 2**31),
+            ("i64", -(2**63) - 1), ("i64", 2**63),
+        ],
+    )
+    def test_adjacent_out_of_range_integer_overrides_are_config_errors(
+        self, run_sil, tmp_path, field_type, value
+    ):
+        document = raw_manifest()
+        document["schemas"]["S"]["fields"][0]["type"] = field_type
+        document["channels"]["c"]["interceptors"] = [
+            {"kind": "override", "field": "value", "value": value}
+        ]
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == 2
+        assert "expected" in proc.stderr and "got" in proc.stderr
+
+    @pytest.mark.parametrize(
+        ("field_type", "value", "accepted"),
+        [
+            ("f32", 0, True),
+            ("f32", 1, True),
+            ("f32", 1.5, True),
+            ("f32", 3.4028234663852886e38, True),
+            ("f32", 3.4028236e38, False),
+            ("f32", float("inf"), False),
+            ("f64", 0, True),
+            ("f64", 1, True),
+            ("f64", 1.5, True),
+            ("f64", 1.7976931348623157e308, True),
+            ("f64", float("inf"), False),
+        ],
+    )
+    def test_float_override_policy_matches_builder(
+        self, run_sil, tmp_path, field_type, value, accepted
+    ):
+        document = raw_manifest()
+        document["schemas"]["S"]["fields"][0]["type"] = field_type
+        document["channels"]["c"]["interceptors"] = [
+            {"kind": "override", "field": "value", "value": value}
+        ]
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == (0 if accepted else 2)
+
 
 class TestInterceptorInertness:
     """Inertness proof (req #19): a well-formed interceptor whose window matches
@@ -1021,6 +1102,112 @@ class TestOverrideInterceptor:
         _, msgs = read_mcap(proc.mcap_path)
         counters = [TYPES["toy.Counter"].unpack(d) for _, _, d in msgs]
         assert all(c["value"] == -5 for c in counters)
+
+    @pytest.mark.parametrize("transport", ["inline", "shm"])
+    def test_u64_override_reaches_recording_and_subscriber_exactly(
+        self, run_sil, tmp_path, transport
+    ):
+        import sys as _sys
+
+        from conftest import ROOT
+
+        exact_value = 18_446_744_073_709_551_614
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter", transport=transport)
+        m.add_channel("echo", schema="toy.Counter")
+        m.add_native(
+            "producer",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+        )
+        m.add_process(
+            "echo",
+            command=[_sys.executable, str(ROOT / "tests/participants/echo.py")],
+            step_period_ns=10_000_000,
+            subscribes=["ticks"],
+            publishes=["echo"],
+        )
+        m.add_interceptor(
+            "ticks", kind="override", field="seq", value=exact_value
+        )
+
+        proc = run_sil(m.write(tmp_path / f"{transport}.json").path)
+        assert proc.returncode == 0, proc.stderr
+        _, messages = read_mcap(proc.mcap_path)
+        recorded = [
+            TYPES["toy.Counter"].unpack(data)["seq"]
+            for channel, _, data in messages
+            if channel == "ticks"
+        ]
+        observed = [
+            TYPES["toy.Counter"].unpack(data)["seq"]
+            for channel, _, data in messages
+            if channel == "echo"
+        ]
+        assert recorded == [exact_value] * 3
+        assert observed == [exact_value] * 2
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("seq", 2**53 + 1),
+            ("seq", 2**64 - 1),
+            ("value", -(2**63)),
+            ("value", 2**63 - 1),
+            ("value", -(2**53 + 1)),
+        ],
+    )
+    def test_64_bit_integer_override_roundtrips_exactly(
+        self, run_sil, tmp_path, field, value
+    ):
+        m = self._producer(duration_ns=10_000_000)
+        m.add_interceptor("ticks", kind="override", field=field, value=value)
+        proc = run_sil(m.write(tmp_path / f"{field}-{value}.json").path)
+        assert proc.returncode == 0, proc.stderr
+        _, messages = read_mcap(proc.mcap_path)
+        [message] = [
+            TYPES["toy.Counter"].unpack(data)
+            for channel, _, data in messages
+            if channel == "ticks"
+        ]
+        assert message[field] == value
+
+    def test_f64_integer_override_uses_documented_binary64_rounding(
+        self, run_sil, tmp_path
+    ):
+        integer_value = 2**53 + 1
+        schemas = {
+            "FloatCounter": {
+                "fields": [
+                    {"name": "seq", "type": "u64"},
+                    {"name": "value", "type": "f64"},
+                ]
+            }
+        }
+        types = schema.load(schemas)
+        m = Manifest(duration_ns=10_000_000)
+        m.add_schemas(schemas)
+        m.add_channel("ticks", schema="FloatCounter")
+        m.add_native(
+            "producer",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+        )
+        m.add_interceptor(
+            "ticks", kind="override", field="value", value=integer_value
+        )
+        [entry] = m.to_doc()["channels"]["ticks"]["interceptors"]
+        assert entry["value"] == integer_value
+
+        proc = run_sil(m.write(tmp_path / "f64-integer.json").path)
+        assert proc.returncode == 0, proc.stderr
+        _, messages = read_mcap(proc.mcap_path)
+        [message] = [
+            types["FloatCounter"].unpack(data)
+            for channel, _, data in messages
+            if channel == "ticks"
+        ]
+        assert message["value"] == 9_007_199_254_740_992.0
 
     def test_override_composes_with_delay_on_same_channel(self, run_sil, tmp_path):
         # A delay and an override on the same channel both fire at the choke
