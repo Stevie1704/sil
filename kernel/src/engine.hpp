@@ -97,6 +97,9 @@ class Engine {
   bool take(SubQueue &queue, PendingMessage &out);
   // Marks the run failed; the loop aborts after the current callback returns.
   void fail(const std::string &owner, const std::string &reason);
+  // The first recorded failure, empty while the run is healthy. Adapters read
+  // it to report the real diagnostic when a participant only returns an error.
+  const std::string &failure() const { return failure_; }
 
  private:
   struct Task {

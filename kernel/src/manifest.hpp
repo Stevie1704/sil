@@ -72,6 +72,11 @@ struct ChannelSpec {
 struct NativeSpec {
   std::string library;      // resolved relative to the manifest directory
   std::string config_json;
+  // The declared Channel contract. The manifest is authoritative: the C ABI
+  // has no registration call, so runtime subscribe/publish only prove
+  // conformance to these lists (issue #49).
+  std::vector<std::string> subscribes;
+  std::vector<std::string> publishes;
 };
 
 struct ProcessSpec {

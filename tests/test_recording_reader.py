@@ -17,15 +17,11 @@ def test_unknown_extension_is_rejected_with_a_clear_error(tmp_path):
 
 def test_mcap_extension_reads_recorded_messages(sil_run, tmp_path):
     # A real .mcap produced by the kernel round-trips through the reader.
-    from toys import producer_library, toy_manifest
+    from toys import add_producer, toy_manifest
 
     m = toy_manifest(duration_ns=30_000_000)
     m.add_channel("ticks", schema="toy.Counter")
-    m.add_native(
-        "producer",
-        library=producer_library(),
-        config={"channel": "ticks", "period_ns": 10_000_000},
-    )
+    add_producer(m, "producer", channel="ticks", period_ns=10_000_000)
     out = tmp_path / "out.mcap"
     import subprocess
 

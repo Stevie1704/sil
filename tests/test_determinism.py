@@ -6,7 +6,7 @@ import subprocess
 import sys
 
 from conftest import ROOT
-from toys import accumulator_library, producer_library, toy_manifest
+from toys import add_accumulator, add_producer, toy_manifest
 
 
 def full_pipeline_manifest(tmp_path):
@@ -15,15 +15,13 @@ def full_pipeline_manifest(tmp_path):
     m.add_channel("ticks", schema="toy.Counter")
     m.add_channel("sums", schema="toy.Accum")
     m.add_channel("echo", schema="toy.Counter")
-    m.add_native(
-        "producer",
-        library=producer_library(),
-        config={"channel": "ticks", "period_ns": 10_000_000},
-    )
-    m.add_native(
+    add_producer(m, "producer", channel="ticks", period_ns=10_000_000)
+    add_accumulator(
+        m,
         "accumulator",
-        library=accumulator_library(),
-        config={"input": "ticks", "output": "sums", "period_ns": 20_000_000},
+        input_channel="ticks",
+        output_channel="sums",
+        period_ns=20_000_000,
     )
     m.add_process(
         "pyecho",

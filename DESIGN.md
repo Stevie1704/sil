@@ -216,3 +216,22 @@ in the framework's own CI from day one.**
   an f32 narrows it once more to IEEE-754 binary32. Both are emitted as
   pre-encoded little-endian bytes, so runtime application remains one bounded
   byte replacement without lookup or numeric conversion.
+- **Native Channel declarations (#49):** a native participant declares its
+  Channel contract in the manifest — `subscribes` and `publishes` lists, the
+  same shape a process participant already had — and both are always emitted
+  by the builder, so the contract is covered by the manifest hash. The C ABI
+  gains no registration call: the manifest is authoritative and the runtime
+  `subscribe`/`publish` calls only prove conformance to it. This makes every
+  live publisher known before any participant is loaded or spawned, so the
+  replay/live-publisher collision check runs once, over native and process
+  declarations alike, and names the conflicting publisher. A repeated channel
+  within one declaration is rejected at load, for every participant type: it
+  would otherwise silently double a participant's delivery or production. At
+  runtime, subscribing to an undeclared input is a config error (exit 2) and
+  publishing an undeclared output aborts the run (exit 1); both diagnostics
+  name the participant, the channel, and the declared direction. Live-publisher
+  cardinality is untouched — two live publishers on one channel stay legal, and
+  that policy belongs to #64. An absent list means an empty contract, so a
+  declaration predating this decision still loads and fails explicitly on its
+  first undeclared call; whether that tolerance is the final rule is the shared
+  compatibility policy tracked in #62.

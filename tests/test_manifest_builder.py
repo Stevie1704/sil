@@ -26,7 +26,7 @@ def make_minimal() -> Manifest:
     m = Manifest(duration_ns=100_000_000)
     m.add_schemas(TOY_SCHEMAS)
     m.add_channel("ticks", schema="toy.Counter")
-    m.add_native("producer", library="libtoy_producer.dylib")
+    m.add_native("producer", library="libtoy_producer.dylib", publishes=["ticks"])
     return m
 
 
@@ -246,7 +246,9 @@ class TestTransport:
         shm = Manifest(duration_ns=100_000_000)
         shm.add_schemas(TOY_SCHEMAS)
         shm.add_channel("ticks", schema="toy.Counter", transport="shm")
-        shm.add_native("producer", library="libtoy_producer.dylib")
+        shm.add_native(
+            "producer", library="libtoy_producer.dylib", publishes=["ticks"]
+        )
         assert json.loads(shm.to_json())["channels"]["ticks"]["transport"] == "shm"
         assert shm.hash() != inline.hash()
 
@@ -284,7 +286,9 @@ class TestClockShim:
         )
         with_epoch.add_schemas(TOY_SCHEMAS)
         with_epoch.add_channel("ticks", schema="toy.Counter")
-        with_epoch.add_native("producer", library="libtoy_producer.dylib")
+        with_epoch.add_native(
+            "producer", library="libtoy_producer.dylib", publishes=["ticks"]
+        )
         doc = json.loads(with_epoch.to_json())
         assert doc["epoch_ns"] == 1_700_000_000_000_000_000
         assert with_epoch.hash() != base.hash()
@@ -380,9 +384,17 @@ class TestReplayBuilder:
         rec.write_bytes(b"\x89MCAP0\r\n")  # bytes are irrelevant to the builder
         return str(rec)
 
+    def _replayable(self) -> Manifest:
+        """Like make_minimal, but nothing live publishes the replayed channel."""
+        m = Manifest(duration_ns=100_000_000)
+        m.add_schemas(TOY_SCHEMAS)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_native("consumer", library="x.dylib", subscribes=["ticks"])
+        return m
+
     def test_hash_is_embedded_from_recording_bytes(self, tmp_path):
         rec = self._recording(tmp_path)
-        m = make_minimal()
+        m = self._replayable()
         m.add_replay("rep", recording=rec, channels=["ticks"])
         p = json.loads(m.to_json())["participants"]["rep"]
         assert p["type"] == "replay"
@@ -393,9 +405,9 @@ class TestReplayBuilder:
 
     def test_replay_declaration_is_canonical(self, tmp_path):
         rec = self._recording(tmp_path)
-        a = make_minimal()
+        a = self._replayable()
         a.add_replay("rep", recording=rec, channels=["ticks"])
-        b = make_minimal()
+        b = self._replayable()
         b.add_replay("rep", recording=rec, channels=["ticks"])
         assert a.hash() == b.hash()
 
@@ -612,3 +624,107 @@ class TestInterceptorBuilder:
                 m.add_interceptor(
                     "c", kind="override", field="value", value=value
                 )
+
+
+class TestNativeChannelContract:
+    """A Native participant declares its Channel contract in the Manifest the
+    same way a Process participant does, so the kernel knows every publisher
+    before it loads participant code (issue #49)."""
+
+    def _two_channel(self) -> Manifest:
+        m = Manifest(duration_ns=100_000_000)
+        m.add_schemas(TOY_SCHEMAS)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_channel("sums", schema="toy.Counter")
+        return m
+
+    def test_declarations_are_emitted_in_the_canonical_doc(self):
+        m = self._two_channel()
+        m.add_native(
+            "acc", library="x.dylib", subscribes=["ticks"], publishes=["sums"]
+        )
+        entry = json.loads(m.to_json())["participants"]["acc"]
+        assert entry["subscribes"] == ["ticks"]
+        assert entry["publishes"] == ["sums"]
+
+    def test_absent_declarations_are_emitted_as_empty_lists(self):
+        m = self._two_channel()
+        m.add_native("silent", library="x.dylib")
+        entry = json.loads(m.to_json())["participants"]["silent"]
+        assert entry["subscribes"] == []
+        assert entry["publishes"] == []
+
+    def test_declarations_are_covered_by_the_hash(self):
+        undeclared = self._two_channel()
+        undeclared.add_native("acc", library="x.dylib")
+        declared = self._two_channel()
+        declared.add_native("acc", library="x.dylib", publishes=["sums"])
+        assert declared.hash() != undeclared.hash()
+
+    def test_declared_order_is_preserved(self):
+        m = self._two_channel()
+        m.add_native("acc", library="x.dylib", subscribes=["sums", "ticks"])
+        entry = json.loads(m.to_json())["participants"]["acc"]
+        assert entry["subscribes"] == ["sums", "ticks"]
+
+    def test_unknown_channel_rejected(self):
+        m = self._two_channel()
+        m.add_native("acc", library="x.dylib", subscribes=["nope"])
+        with pytest.raises(ManifestError, match="nope"):
+            m.to_json()
+
+    def test_wrong_element_types_rejected(self):
+        m = self._two_channel()
+        with pytest.raises(ManifestError, match=r"subscribes\[0\]"):
+            m.add_native("bad", library="x.dylib", subscribes=[7])
+        with pytest.raises(ManifestError, match=r"publishes\[0\]"):
+            m.add_native("bad2", library="x.dylib", publishes=[7])
+
+    def test_duplicate_channel_within_one_declaration_rejected(self):
+        m = self._two_channel()
+        m.add_native("acc", library="x.dylib", subscribes=["ticks", "ticks"])
+        with pytest.raises(ManifestError, match="acc.*subscribes.*ticks"):
+            m.to_json()
+
+    def test_duplicate_channel_in_a_process_declaration_rejected(self):
+        # One shared validation path: a duplicate is a defect wherever a
+        # participant declares Channels, not only on Native declarations.
+        m = self._two_channel()
+        m.add_process(
+            "vecu",
+            command=["x"],
+            step_period_ns=10_000_000,
+            publishes=["sums", "sums"],
+        )
+        with pytest.raises(ManifestError, match="vecu.*publishes.*sums"):
+            m.to_json()
+
+    def test_subscribing_and_publishing_one_channel_is_allowed(self):
+        m = self._two_channel()
+        m.add_native(
+            "loop", library="x.dylib", subscribes=["ticks"], publishes=["ticks"]
+        )
+        assert json.loads(m.to_json())["participants"]["loop"]["publishes"] == [
+            "ticks"
+        ]
+
+    def test_replayed_channel_also_published_by_a_native_rejected(self, tmp_path):
+        rec = tmp_path / "rec.mcap"
+        rec.write_bytes(b"\x89MCAP0\r\n")
+        m = self._two_channel()
+        m.add_native("prod", library="x.dylib", publishes=["ticks"])
+        m.add_replay("rep", recording=str(rec), channels=["ticks"])
+        with pytest.raises(ManifestError, match="ticks.*prod|prod.*ticks"):
+            m.to_json()
+
+    def test_multiple_live_publishers_stay_allowed(self):
+        # Cardinality is decided in #64; declaring Native publishers must not
+        # introduce a single-publisher restriction on the way.
+        m = self._two_channel()
+        m.add_native("prod", library="x.dylib", publishes=["ticks"])
+        m.add_process(
+            "vecu", command=["x"], step_period_ns=10_000_000, publishes=["ticks"]
+        )
+        assert json.loads(m.to_json())["participants"]["prod"]["publishes"] == [
+            "ticks"
+        ]
