@@ -1,36 +1,186 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "d56ae0f35cb14bd7e1600a9079e3a28edf15b1ee",
-  "generatedAt": "2026-07-16T17:05:00.324Z",
+  "gitCommitHash": "e253ea9bbb807822abb10afafb9fa1e7b307d7a5",
+  "generatedAt": "2026-08-21T15:50:39.642Z",
   "files": {
     ".github/workflows/ci.yml": {
       "filePath": ".github/workflows/ci.yml",
-      "contentHash": "d0886407d66c539595b7d593b2c63535ecfba59356078e8320658b239cbc9fe4",
+      "contentHash": "8fd7b63dbe292bc75253d88efadc96e281dece3be8e59ccdf6069634cda71b03",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 43,
+      "totalLines": 46,
+      "hasStructuralAnalysis": true
+    },
+    ".understand-anything/.understandignore": {
+      "filePath": ".understand-anything/.understandignore",
+      "contentHash": "58c2d5d03a63897c91264ba90af79a3cf5b64c2fccfaab222667020e0ec0f5c0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 27,
+      "hasStructuralAnalysis": false
+    },
+    ".understand-anything/config.json": {
+      "filePath": ".understand-anything/config.json",
+      "contentHash": "e6e1895a8e3cb71f76daebccd84c4fc9877d8a88fb75e476ca22a320e69d4995",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2,
+      "hasStructuralAnalysis": true
+    },
+    ".understand-anything/fingerprints.json": {
+      "filePath": ".understand-anything/fingerprints.json",
+      "contentHash": "e82ff9bf3cd084b7b4f24b96bae852fb0c3090aedb07ca3830b3a1e5d24a2b94",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 4481,
+      "hasStructuralAnalysis": true
+    },
+    ".understand-anything/intermediate/scan-result.json": {
+      "filePath": ".understand-anything/intermediate/scan-result.json",
+      "contentHash": "33c0aed4a71f7febcfde4d78486f48e3d1a04c1ce68bd8cb6aa2865b1d05a536",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 488,
+      "hasStructuralAnalysis": true
+    },
+    ".understand-anything/knowledge-graph.json": {
+      "filePath": ".understand-anything/knowledge-graph.json",
+      "contentHash": "2f160686e16defc0674c3919bfae9c131984778d1a8972e0eabee7e51de689a7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 6298,
+      "hasStructuralAnalysis": true
+    },
+    ".understand-anything/meta.json": {
+      "filePath": ".understand-anything/meta.json",
+      "contentHash": "d22939004ff30b6375f9f99c84a3d0e57ee43142ddaa6f16c0ad58be285a99fe",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 6,
+      "hasStructuralAnalysis": true
+    },
+    "AGENTS.md": {
+      "filePath": "AGENTS.md",
+      "contentHash": "e60c3ce9571e38422f7747d06e9dab3042595c36e884e952e0e1a07fb4f944ee",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 18,
       "hasStructuralAnalysis": true
     },
     "CMakeLists.txt": {
       "filePath": "CMakeLists.txt",
-      "contentHash": "beee7b77616056b1e24969be7bcdca4b6e5f24b88d1081d7d921ff5f7e8cd22d",
+      "contentHash": "78e94278fa281b4fb35786b398cd026840ae3378f113e5c9d2b5e4607bdbfca5",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 79,
+      "totalLines": 102,
       "hasStructuralAnalysis": false
+    },
+    "CONTEXT.md": {
+      "filePath": "CONTEXT.md",
+      "contentHash": "e2c82fc3ffe68a362c88fe701815af5d5092c5fc6ea408237d599c80d3f39f49",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 163,
+      "hasStructuralAnalysis": true
     },
     "DESIGN.md": {
       "filePath": "DESIGN.md",
-      "contentHash": "f6ac75d6a36d6212b6f2001bc8972fe7d1928f948041187c209ca9bbf987b97c",
+      "contentHash": "55bf267aa1d99db860f2a869676668c29b0e9116df3b11fc4681b2cc467cafb2",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 168,
+      "totalLines": 204,
+      "hasStructuralAnalysis": true
+    },
+    "Makefile": {
+      "filePath": "Makefile",
+      "contentHash": "6b43566a0da70977a1ed9f4dbcaa71e6d78f3ad192b3476a3a3a19ba7c2258ba",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 70,
+      "hasStructuralAnalysis": true
+    },
+    "README.md": {
+      "filePath": "README.md",
+      "contentHash": "92e0625dd9a5d83fa198bf13f135742ed5ffc5ff7a52e34f871b48d7f9781329",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 151,
+      "hasStructuralAnalysis": true
+    },
+    "docs/agents/domain.md": {
+      "filePath": "docs/agents/domain.md",
+      "contentHash": "25be404b58798b3cb2d51c93dba2ab052fc3a425632185726ac3f5fcff193b99",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 52,
+      "hasStructuralAnalysis": true
+    },
+    "docs/agents/issue-tracker.md": {
+      "filePath": "docs/agents/issue-tracker.md",
+      "contentHash": "ec8332bb69e7e79e349989e940be481a0c79b552be3acc613e718278bcc5e03d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 46,
+      "hasStructuralAnalysis": true
+    },
+    "docs/agents/triage-labels.md": {
+      "filePath": "docs/agents/triage-labels.md",
+      "contentHash": "4f53c9b40ce2651e3611aa090eaedbd6dbc9b71ef8c5f7e65eac0d8263190d0d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 16,
+      "hasStructuralAnalysis": true
+    },
+    "docs/step-protocol.md": {
+      "filePath": "docs/step-protocol.md",
+      "contentHash": "6a3f1ba13590509669f52c3b00e1ffb03d2259351a76ad5282a51a1e75218445",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 92,
+      "hasStructuralAnalysis": true
+    },
+    "include/sil/arena.h": {
+      "filePath": "include/sil/arena.h",
+      "contentHash": "180202f867af828d0b74bcd7cf70e439a86743631b4a9d4e96f20ccabc2473d2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 40,
       "hasStructuralAnalysis": true
     },
     "include/sil/clock_region.h": {
@@ -107,19 +257,8 @@
     },
     "kernel/src/engine.cpp": {
       "filePath": "kernel/src/engine.cpp",
-      "contentHash": "65ad1bc7441bf4ea1b039f0560690bfaf167230a9da3563e4958e2c92d2f1983",
+      "contentHash": "a20525918f99b944aa313b56fce31bbdc5b3fdbe67ca0794d797a8a1363c0db6",
       "functions": [
-        {
-          "name": "encode_le",
-          "params": [
-            "layout",
-            "value",
-            "dst"
-          ],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 21
-        },
         {
           "name": "Engine",
           "params": [
@@ -127,7 +266,7 @@
             "recorder"
           ],
           "exported": true,
-          "lineCount": 9
+          "lineCount": 16
         },
         {
           "name": "~Engine",
@@ -157,17 +296,6 @@
           "lineCount": 16
         },
         {
-          "name": "apply_overrides",
-          "params": [
-            "c",
-            "publish_ns",
-            "bytes"
-          ],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 23
-        },
-        {
           "name": "publish",
           "params": [
             "owner",
@@ -177,7 +305,7 @@
           ],
           "returnType": "void",
           "exported": true,
-          "lineCount": 69
+          "lineCount": 22
         },
         {
           "name": "take",
@@ -207,18 +335,7 @@
           "lineCount": 36
         }
       ],
-      "classes": [
-        {
-          "name": "TypeLayout",
-          "methods": [],
-          "properties": [
-            "size",
-            "repr"
-          ],
-          "exported": true,
-          "lineCount": 4
-        }
-      ],
+      "classes": [],
       "imports": [
         {
           "source": "engine.hpp",
@@ -233,27 +350,21 @@
           ]
         },
         {
-          "source": "cstring",
-          "specifiers": [
-            "cstring"
-          ]
-        },
-        {
           "source": "limits",
           "specifiers": [
             "limits"
           ]
         },
         {
-          "source": "map",
-          "specifiers": [
-            "map"
-          ]
-        },
-        {
           "source": "set",
           "specifiers": [
             "set"
+          ]
+        },
+        {
+          "source": "interceptor.hpp",
+          "specifiers": [
+            "interceptor.hpp"
           ]
         },
         {
@@ -282,24 +393,21 @@
         }
       ],
       "exports": [
-        "TypeLayout",
-        "encode_le",
         "Engine",
         "~Engine",
         "setup",
         "register_task",
-        "apply_overrides",
         "publish",
         "take",
         "fail",
         "run"
       ],
-      "totalLines": 288,
+      "totalLines": 177,
       "hasStructuralAnalysis": true
     },
     "kernel/src/engine.hpp": {
       "filePath": "kernel/src/engine.hpp",
-      "contentHash": "4aceec0316cd8d1f92babd40e1ed37c125f9b336e7c8221d8e29ac57e89415be",
+      "contentHash": "27b9840e0753153f462aef05b8c15808161689e70bd1728bec50a7ada0456915",
       "functions": [
         {
           "name": "SubQueue",
@@ -439,8 +547,7 @@
             "register_task",
             "publish",
             "take",
-            "fail",
-            "apply_overrides"
+            "fail"
           ],
           "properties": [
             "subscribe",
@@ -459,7 +566,7 @@
             "failure_"
           ],
           "exported": true,
-          "lineCount": 75
+          "lineCount": 66
         }
       ],
       "imports": [
@@ -536,7 +643,149 @@
         "fail",
         "Engine"
       ],
-      "totalLines": 149,
+      "totalLines": 140,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/interceptor.cpp": {
+      "filePath": "kernel/src/interceptor.cpp",
+      "contentHash": "66422f2fad827417bfd6827e6040224428703a38371c88fbc50b5348ced0d05d",
+      "functions": [
+        {
+          "name": "InterceptorPlan",
+          "params": [
+            "duration_ns",
+            "steps"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "InterceptorPlan",
+          "params": [
+            "other"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "apply",
+          "params": [
+            "now_ns",
+            "bytes"
+          ],
+          "returnType": "InterceptorPlan::Verdict",
+          "exported": true,
+          "lineCount": 44
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "interceptor.hpp",
+          "specifiers": [
+            "interceptor.hpp"
+          ]
+        },
+        {
+          "source": "algorithm",
+          "specifiers": [
+            "algorithm"
+          ]
+        },
+        {
+          "source": "stdexcept",
+          "specifiers": [
+            "stdexcept"
+          ]
+        },
+        {
+          "source": "utility",
+          "specifiers": [
+            "utility"
+          ]
+        }
+      ],
+      "exports": [
+        "InterceptorPlan",
+        "InterceptorPlan",
+        "apply"
+      ],
+      "totalLines": 64,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/interceptor.hpp": {
+      "filePath": "kernel/src/interceptor.hpp",
+      "contentHash": "16ecdaad6dd0858891daefcff51e841cf84ca5a6c48094360d7b9df1c94c5e71",
+      "functions": [],
+      "classes": [
+        {
+          "name": "Engine",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "InterceptorSpec",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "SchemaSpec",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "InterceptorPlan",
+          "methods": [
+            "apply"
+          ],
+          "properties": [
+            "duration_ns_",
+            "steps_"
+          ],
+          "exported": true,
+          "lineCount": 43
+        }
+      ],
+      "imports": [
+        {
+          "source": "cstddef",
+          "specifiers": [
+            "cstddef"
+          ]
+        },
+        {
+          "source": "cstdint",
+          "specifiers": [
+            "cstdint"
+          ]
+        },
+        {
+          "source": "memory",
+          "specifiers": [
+            "memory"
+          ]
+        },
+        {
+          "source": "vector",
+          "specifiers": [
+            "vector"
+          ]
+        }
+      ],
+      "exports": [
+        "Engine",
+        "InterceptorSpec",
+        "SchemaSpec",
+        "apply",
+        "InterceptorPlan"
+      ],
+      "totalLines": 77,
       "hasStructuralAnalysis": true
     },
     "kernel/src/main.cpp": {
@@ -643,7 +892,7 @@
     },
     "kernel/src/manifest.cpp": {
       "filePath": "kernel/src/manifest.cpp",
-      "contentHash": "e988c830512d9b996f86ac384b29889ba6916278e0fb46a19c142257ca4b168c",
+      "contentHash": "142e78e2d41da0c36daf657272bccf577ca7e0f626b59dba49f0e4f90b7c011b",
       "functions": [
         {
           "name": "fail",
@@ -672,7 +921,17 @@
           ],
           "returnType": "SchemaSpec",
           "exported": true,
-          "lineCount": 28
+          "lineCount": 32
+        },
+        {
+          "name": "encode_override",
+          "params": [
+            "layout",
+            "value"
+          ],
+          "returnType": "std::vector<uint8_t>",
+          "exported": true,
+          "lineCount": 57
         },
         {
           "name": "parse_interceptors",
@@ -697,16 +956,38 @@
           "lineCount": 57
         },
         {
+          "name": "compile_interceptor_plan",
+          "params": [
+            "duration_ns",
+            "schema",
+            "specs"
+          ],
+          "returnType": "std::shared_ptr<InterceptorPlan>",
+          "exported": true,
+          "lineCount": 62
+        },
+        {
           "name": "load_manifest",
           "params": [
             "path"
           ],
           "returnType": "Manifest",
           "exported": true,
-          "lineCount": 62
+          "lineCount": 79
         }
       ],
-      "classes": [],
+      "classes": [
+        {
+          "name": "FieldLayout",
+          "methods": [],
+          "properties": [
+            "size",
+            "representation"
+          ],
+          "exported": true,
+          "lineCount": 4
+        }
+      ],
       "imports": [
         {
           "source": "manifest.hpp",
@@ -721,9 +1002,39 @@
           ]
         },
         {
+          "source": "cstdint",
+          "specifiers": [
+            "cstdint"
+          ]
+        },
+        {
+          "source": "cstring",
+          "specifiers": [
+            "cstring"
+          ]
+        },
+        {
           "source": "fstream",
           "specifiers": [
             "fstream"
+          ]
+        },
+        {
+          "source": "limits",
+          "specifiers": [
+            "limits"
+          ]
+        },
+        {
+          "source": "map",
+          "specifiers": [
+            "map"
+          ]
+        },
+        {
+          "source": "stdexcept",
+          "specifiers": [
+            "stdexcept"
           ]
         },
         {
@@ -733,9 +1044,27 @@
           ]
         },
         {
+          "source": "set",
+          "specifiers": [
+            "set"
+          ]
+        },
+        {
+          "source": "utility",
+          "specifiers": [
+            "utility"
+          ]
+        },
+        {
           "source": "nlohmann/json.hpp",
           "specifiers": [
             "nlohmann/json.hpp"
+          ]
+        },
+        {
+          "source": "interceptor.hpp",
+          "specifiers": [
+            "interceptor.hpp"
           ]
         },
         {
@@ -746,21 +1075,31 @@
         }
       ],
       "exports": [
+        "FieldLayout",
         "fail",
         "positive_u64",
         "parse_schema",
+        "encode_override",
         "parse_interceptors",
         "parse_participant",
+        "compile_interceptor_plan",
         "load_manifest"
       ],
-      "totalLines": 274,
+      "totalLines": 440,
       "hasStructuralAnalysis": true
     },
     "kernel/src/manifest.hpp": {
       "filePath": "kernel/src/manifest.hpp",
-      "contentHash": "1166c2e58c0f35632e7fe59f446979068507dc7c478c98638be3de31b043f642",
+      "contentHash": "9831a40772eb2ba27759f4039c2c361404ffb216e81baf63ebc39a894caff76c",
       "functions": [],
       "classes": [
+        {
+          "name": "InterceptorPlan",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 1
+        },
         {
           "name": "ManifestError",
           "methods": [],
@@ -812,10 +1151,12 @@
             "name",
             "schema",
             "latency_ns",
-            "interceptors"
+            "transport",
+            "interceptors",
+            "interceptor_plan"
           ],
           "exported": true,
-          "lineCount": 7
+          "lineCount": 11
         },
         {
           "name": "NativeSpec",
@@ -899,6 +1240,12 @@
           ]
         },
         {
+          "source": "memory",
+          "specifiers": [
+            "memory"
+          ]
+        },
+        {
           "source": "optional",
           "specifiers": [
             "optional"
@@ -930,6 +1277,7 @@
         }
       ],
       "exports": [
+        "InterceptorPlan",
         "ManifestError",
         "FieldSpec",
         "SchemaSpec",
@@ -941,7 +1289,151 @@
         "ParticipantSpec",
         "Manifest"
       ],
-      "totalLines": 95,
+      "totalLines": 108,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/mapped_region.cpp": {
+      "filePath": "kernel/src/mapped_region.cpp",
+      "contentHash": "6cf730400a0872a0039f8d1d50f8e97a710437470bb69a36a331c156d3cc5321",
+      "functions": [
+        {
+          "name": "~MappedRegion",
+          "params": [],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "MappedRegion",
+          "params": [
+            "other"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "create",
+          "params": [
+            "prefix",
+            "size",
+            "error"
+          ],
+          "returnType": "MappedRegion",
+          "exported": true,
+          "lineCount": 34
+        },
+        {
+          "name": "release",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 15
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "mapped_region.hpp",
+          "specifiers": [
+            "mapped_region.hpp"
+          ]
+        },
+        {
+          "source": "sys/mman.h",
+          "specifiers": [
+            "sys/mman.h"
+          ]
+        },
+        {
+          "source": "unistd.h",
+          "specifiers": [
+            "unistd.h"
+          ]
+        },
+        {
+          "source": "cstdlib",
+          "specifiers": [
+            "cstdlib"
+          ]
+        },
+        {
+          "source": "utility",
+          "specifiers": [
+            "utility"
+          ]
+        },
+        {
+          "source": "vector",
+          "specifiers": [
+            "vector"
+          ]
+        }
+      ],
+      "exports": [
+        "~MappedRegion",
+        "MappedRegion",
+        "create",
+        "release"
+      ],
+      "totalLines": 87,
+      "hasStructuralAnalysis": true
+    },
+    "kernel/src/mapped_region.hpp": {
+      "filePath": "kernel/src/mapped_region.hpp",
+      "contentHash": "e991370de86310760e2f41d0c538ed13022c8b5a1686154c62ed63b373b2458c",
+      "functions": [
+        {
+          "name": "MappedRegion",
+          "params": [],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "MappedRegion",
+          "params": [],
+          "exported": true,
+          "lineCount": 1
+        }
+      ],
+      "classes": [
+        {
+          "name": "MappedRegion",
+          "methods": [
+            "MappedRegion",
+            "MappedRegion",
+            "create",
+            "release"
+          ],
+          "properties": [
+            "fd_",
+            "path_",
+            "base_",
+            "size_"
+          ],
+          "exported": true,
+          "lineCount": 32
+        }
+      ],
+      "imports": [
+        {
+          "source": "cstddef",
+          "specifiers": [
+            "cstddef"
+          ]
+        },
+        {
+          "source": "string",
+          "specifiers": [
+            "string"
+          ]
+        }
+      ],
+      "exports": [
+        "MappedRegion",
+        "MappedRegion",
+        "create",
+        "MappedRegion"
+      ],
+      "totalLines": 57,
       "hasStructuralAnalysis": true
     },
     "kernel/src/mcap_recording.cpp": {
@@ -1380,7 +1872,7 @@
     },
     "kernel/src/process_participant.cpp": {
       "filePath": "kernel/src/process_participant.cpp",
-      "contentHash": "bec0499c0b4ffb2a4bf5afde4b1e5470f9960423b6fe6de14c7b2baa2798d7e1",
+      "contentHash": "0c95308bc08a3d6de104c7e3b9f6d876cce8f1103bec66ba8ba424bb0f63490d",
       "functions": [
         {
           "name": "b64_encode",
@@ -1401,11 +1893,37 @@
           "lineCount": 25
         },
         {
+          "name": "StepCodec",
+          "params": [
+            "owner"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "encode_inputs",
+          "params": [
+            "messages"
+          ],
+          "returnType": "nlohmann::json",
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "decode_outputs",
+          "params": [
+            "message"
+          ],
+          "returnType": "std::vector<ProcessParticipant::StepOutput>",
+          "exported": true,
+          "lineCount": 18
+        },
+        {
           "name": "setup_clock_region",
           "params": [],
           "returnType": "void",
           "exported": true,
-          "lineCount": 34
+          "lineCount": 21
         },
         {
           "name": "inject_shim_env",
@@ -1421,14 +1939,37 @@
           ],
           "returnType": "void",
           "exported": true,
-          "lineCount": 4
+          "lineCount": 5
         },
         {
-          "name": "teardown_clock_region",
-          "params": [],
+          "name": "setup_arenas",
+          "params": [
+            "spec"
+          ],
           "returnType": "void",
           "exported": true,
-          "lineCount": 14
+          "lineCount": 42
+        },
+        {
+          "name": "write_arena",
+          "params": [
+            "channel",
+            "bytes"
+          ],
+          "returnType": "uint64_t",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "read_arena",
+          "params": [
+            "channel",
+            "seq",
+            "out"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 15
         },
         {
           "name": "ProcessParticipant",
@@ -1438,7 +1979,7 @@
             "spec"
           ],
           "exported": true,
-          "lineCount": 70
+          "lineCount": 81
         },
         {
           "name": "~ProcessParticipant",
@@ -1453,7 +1994,7 @@
           ],
           "returnType": "void",
           "exported": true,
-          "lineCount": 46
+          "lineCount": 48
         },
         {
           "name": "send_line",
@@ -1476,10 +2017,26 @@
           "params": [],
           "returnType": "void",
           "exported": true,
-          "lineCount": 23
+          "lineCount": 27
         }
       ],
-      "classes": [],
+      "classes": [
+        {
+          "name": "ProcessParticipant::StepCodec",
+          "methods": [
+            "StepCodec",
+            "encode_inputs",
+            "decode_outputs"
+          ],
+          "properties": [
+            "owner_",
+            "inline_",
+            "arena_"
+          ],
+          "exported": true,
+          "lineCount": 82
+        }
+      ],
       "imports": [
         {
           "source": "process_participant.hpp",
@@ -1488,21 +2045,9 @@
           ]
         },
         {
-          "source": "fcntl.h",
-          "specifiers": [
-            "fcntl.h"
-          ]
-        },
-        {
           "source": "signal.h",
           "specifiers": [
             "signal.h"
-          ]
-        },
-        {
-          "source": "sys/mman.h",
-          "specifiers": [
-            "sys/mman.h"
           ]
         },
         {
@@ -1542,9 +2087,27 @@
           ]
         },
         {
+          "source": "set",
+          "specifiers": [
+            "set"
+          ]
+        },
+        {
+          "source": "utility",
+          "specifiers": [
+            "utility"
+          ]
+        },
+        {
           "source": "nlohmann/json.hpp",
           "specifiers": [
             "nlohmann/json.hpp"
+          ]
+        },
+        {
+          "source": "sil/arena.h",
+          "specifiers": [
+            "sil/arena.h"
           ]
         },
         {
@@ -1557,10 +2120,16 @@
       "exports": [
         "b64_encode",
         "b64_decode",
+        "StepCodec",
+        "encode_inputs",
+        "decode_outputs",
+        "ProcessParticipant::StepCodec",
         "setup_clock_region",
         "inject_shim_env",
         "write_clock_region",
-        "teardown_clock_region",
+        "setup_arenas",
+        "write_arena",
+        "read_arena",
         "ProcessParticipant",
         "~ProcessParticipant",
         "step",
@@ -1568,12 +2137,12 @@
         "read_line",
         "shutdown"
       ],
-      "totalLines": 331,
+      "totalLines": 488,
       "hasStructuralAnalysis": true
     },
     "kernel/src/process_participant.hpp": {
       "filePath": "kernel/src/process_participant.hpp",
-      "contentHash": "46c44973e5db9a80c39b7e88d105f47cb9f4a348dedc9e599ad02c6b2489e856",
+      "contentHash": "4fabda43690887b4e5698cbfb944bce098189fcc66b80ea84e862f356acd7bed",
       "functions": [
         {
           "name": "ProcessParticipant",
@@ -1594,7 +2163,9 @@
             "setup_clock_region",
             "inject_shim_env",
             "write_clock_region",
-            "teardown_clock_region"
+            "setup_arenas",
+            "write_arena",
+            "read_arena"
           ],
           "properties": [
             "engine_",
@@ -1607,14 +2178,14 @@
             "pid_",
             "read_buffer_",
             "alive_",
-            "region_fd_",
-            "region_path_",
+            "clock_region_",
             "shim_lib_",
-            "region_",
-            "epoch_ns_"
+            "epoch_ns_",
+            "arenas_",
+            "codec_"
           ],
           "exported": true,
-          "lineCount": 44
+          "lineCount": 87
         }
       ],
       "imports": [
@@ -1628,6 +2199,18 @@
           "source": "cstdint",
           "specifiers": [
             "cstdint"
+          ]
+        },
+        {
+          "source": "map",
+          "specifiers": [
+            "map"
+          ]
+        },
+        {
+          "source": "memory",
+          "specifiers": [
+            "memory"
           ]
         },
         {
@@ -1653,6 +2236,12 @@
           "specifiers": [
             "engine.hpp"
           ]
+        },
+        {
+          "source": "mapped_region.hpp",
+          "specifiers": [
+            "mapped_region.hpp"
+          ]
         }
       ],
       "exports": [
@@ -1661,7 +2250,7 @@
         "shutdown",
         "ProcessParticipant"
       ],
-      "totalLines": 73,
+      "totalLines": 110,
       "hasStructuralAnalysis": true
     },
     "kernel/src/recording_reader.hpp": {
@@ -2064,16 +2653,6 @@
       "totalLines": 113,
       "hasStructuralAnalysis": true
     },
-    "Makefile": {
-      "filePath": "Makefile",
-      "contentHash": "ae0bb3983fdf385bd96ec695e04033b338fd1186264defa1386aa97132fa7c7e",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 69,
-      "hasStructuralAnalysis": true
-    },
     "participants/toy_accumulator.cpp": {
       "filePath": "participants/toy_accumulator.cpp",
       "contentHash": "6bc93c873e395b0602ecd8e342c11990329dd92ab3278396ea0593ed433461c7",
@@ -2309,7 +2888,7 @@
     },
     "python/src/sil/manifest.py": {
       "filePath": "python/src/sil/manifest.py",
-      "contentHash": "d650338bf8334f2f8f55beed76cab1a074a3a2bb86000c77eecbca5dca520fa3",
+      "contentHash": "ecab4e513cd11c6b72f0db8976b43bd2448efdaf45f9eeee1091d4cda226fac6",
       "functions": [],
       "classes": [
         {
@@ -2349,7 +2928,7 @@
           ],
           "properties": [],
           "exported": true,
-          "lineCount": 283
+          "lineCount": 312
         }
       ],
       "imports": [
@@ -2383,12 +2962,12 @@
         "ManifestRef",
         "Manifest"
       ],
-      "totalLines": 331,
+      "totalLines": 365,
       "hasStructuralAnalysis": true
     },
     "python/src/sil/participant.py": {
       "filePath": "python/src/sil/participant.py",
-      "contentHash": "0b1059f1b843b111070fb8e480f418be807b3949f1b7522d83c687ef1b463d51",
+      "contentHash": "0a64856281628f5069a74cd015a72b2b10a5b1cda5825fad61b40b5068120934",
       "functions": [
         {
           "name": "run",
@@ -2397,7 +2976,7 @@
           ],
           "returnType": "None",
           "exported": true,
-          "lineCount": 49
+          "lineCount": 48
         },
         {
           "name": "_load",
@@ -2419,6 +2998,50 @@
         }
       ],
       "classes": [
+        {
+          "name": "_Arena",
+          "methods": [
+            "__init__",
+            "read",
+            "write",
+            "close"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 43
+        },
+        {
+          "name": "_InlineAdapter",
+          "methods": [
+            "encode",
+            "decode"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "_ArenaAdapter",
+          "methods": [
+            "__init__",
+            "encode",
+            "decode"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "_StepCodec",
+          "methods": [
+            "__init__",
+            "decode_inputs",
+            "encode_outputs"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 52
+        },
         {
           "name": "ParticipantFailure",
           "methods": [],
@@ -2462,6 +3085,18 @@
           ]
         },
         {
+          "source": "mmap",
+          "specifiers": [
+            "mmap"
+          ]
+        },
+        {
+          "source": "struct",
+          "specifiers": [
+            "struct"
+          ]
+        },
+        {
           "source": "sys",
           "specifiers": [
             "sys"
@@ -2487,6 +3122,10 @@
         }
       ],
       "exports": [
+        "_Arena",
+        "_InlineAdapter",
+        "_ArenaAdapter",
+        "_StepCodec",
         "ParticipantFailure",
         "Input",
         "StepParticipant",
@@ -2494,7 +3133,7 @@
         "_load",
         "main"
       ],
-      "totalLines": 116,
+      "totalLines": 246,
       "hasStructuralAnalysis": true
     },
     "python/src/sil/recording.py": {
@@ -2733,16 +3372,6 @@
       "totalLines": 69,
       "hasStructuralAnalysis": true
     },
-    "README.md": {
-      "filePath": "README.md",
-      "contentHash": "9cbbd68d7b173493f7d772929c4eee7ccccc0202e9ec24f2e43b443e05446ccb",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 115,
-      "hasStructuralAnalysis": true
-    },
     "schemas/toy.json": {
       "filePath": "schemas/toy.json",
       "contentHash": "bcfdc90f76df405adfdeb44d35a8320badb7ace74c76fe68bfa231878237731f",
@@ -2916,1486 +3545,6 @@
       ],
       "exports": [],
       "totalLines": 244,
-      "hasStructuralAnalysis": true
-    },
-    "tests/conftest.py": {
-      "filePath": "tests/conftest.py",
-      "contentHash": "12f74f7feaf5c2d2dd0fcf6cee382451844ad2d1e07d93e4fa82e137d535b867",
-      "functions": [
-        {
-          "name": "build_dir",
-          "params": [],
-          "returnType": "Path",
-          "exported": true,
-          "lineCount": 14
-        },
-        {
-          "name": "sil_run",
-          "params": [
-            "build_dir"
-          ],
-          "returnType": "Path",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "run_sil",
-          "params": [
-            "sil_run",
-            "tmp_path"
-          ],
-          "exported": true,
-          "lineCount": 13
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "os",
-          "specifiers": [
-            "os"
-          ]
-        },
-        {
-          "source": "subprocess",
-          "specifiers": [
-            "subprocess"
-          ]
-        },
-        {
-          "source": "sys",
-          "specifiers": [
-            "sys"
-          ]
-        },
-        {
-          "source": "pathlib",
-          "specifiers": [
-            "Path"
-          ]
-        },
-        {
-          "source": "pytest",
-          "specifiers": [
-            "pytest"
-          ]
-        }
-      ],
-      "exports": [
-        "build_dir",
-        "sil_run",
-        "run_sil"
-      ],
-      "totalLines": 59,
-      "hasStructuralAnalysis": true
-    },
-    "tests/participants/array_source.py": {
-      "filePath": "tests/participants/array_source.py",
-      "contentHash": "35effc7520d14da2ad8a1bd49eda536bac728c401379c13200c39d2bcb7cc1b8",
-      "functions": [],
-      "classes": [
-        {
-          "name": "ArraySource",
-          "methods": [
-            "on_step"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 6
-        }
-      ],
-      "imports": [
-        {
-          "source": "sil.participant",
-          "specifiers": [
-            "StepParticipant",
-            "run"
-          ]
-        }
-      ],
-      "exports": [
-        "ArraySource"
-      ],
-      "totalLines": 22,
-      "hasStructuralAnalysis": true
-    },
-    "tests/participants/clock_reader.py": {
-      "filePath": "tests/participants/clock_reader.py",
-      "contentHash": "e0df88a0e502153b6fbda38d043696829b73ccf2eec68ba3f50f446fab93ff90",
-      "functions": [],
-      "classes": [
-        {
-          "name": "ClockReader",
-          "methods": [
-            "on_step"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 5
-        }
-      ],
-      "imports": [
-        {
-          "source": "time",
-          "specifiers": [
-            "time"
-          ]
-        },
-        {
-          "source": "sil.participant",
-          "specifiers": [
-            "StepParticipant",
-            "run"
-          ]
-        }
-      ],
-      "exports": [
-        "ClockReader"
-      ],
-      "totalLines": 27,
-      "hasStructuralAnalysis": true
-    },
-    "tests/participants/echo.py": {
-      "filePath": "tests/participants/echo.py",
-      "contentHash": "6842996742336981440774c11e90025d80bb60a19bb2eccebd07117160d7c0aa",
-      "functions": [],
-      "classes": [
-        {
-          "name": "Echo",
-          "methods": [
-            "on_step"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 6
-        }
-      ],
-      "imports": [
-        {
-          "source": "sil.participant",
-          "specifiers": [
-            "StepParticipant",
-            "run"
-          ]
-        }
-      ],
-      "exports": [
-        "Echo"
-      ],
-      "totalLines": 16,
-      "hasStructuralAnalysis": true
-    },
-    "tests/participants/fail_at_20ms.py": {
-      "filePath": "tests/participants/fail_at_20ms.py",
-      "contentHash": "1101c0d8048233ce763da629a1172b220175eeadc981b2a360ad441b59e41a4f",
-      "functions": [],
-      "classes": [
-        {
-          "name": "FailAt20ms",
-          "methods": [
-            "on_step"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 3
-        }
-      ],
-      "imports": [
-        {
-          "source": "sil.participant",
-          "specifiers": [
-            "StepParticipant",
-            "run"
-          ]
-        }
-      ],
-      "exports": [
-        "FailAt20ms"
-      ],
-      "totalLines": 13,
-      "hasStructuralAnalysis": true
-    },
-    "tests/participants/nondet.py": {
-      "filePath": "tests/participants/nondet.py",
-      "contentHash": "0463606f16e2e48f178772b7883aa26beb803a53984c9408b131c56cd16710a2",
-      "functions": [],
-      "classes": [
-        {
-          "name": "NonDeterministic",
-          "methods": [
-            "on_step"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 4
-        }
-      ],
-      "imports": [
-        {
-          "source": "os",
-          "specifiers": [
-            "os"
-          ]
-        },
-        {
-          "source": "sil.participant",
-          "specifiers": [
-            "StepParticipant",
-            "run"
-          ]
-        }
-      ],
-      "exports": [
-        "NonDeterministic"
-      ],
-      "totalLines": 17,
-      "hasStructuralAnalysis": true
-    },
-    "tests/participants/spawn_marker.py": {
-      "filePath": "tests/participants/spawn_marker.py",
-      "contentHash": "6f630268f8aa2290ad42e2c596689f10ace399351f6d5c1b8e3cbc2473b83d17",
-      "functions": [],
-      "classes": [
-        {
-          "name": "SpawnMarker",
-          "methods": [
-            "on_step"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 3
-        }
-      ],
-      "imports": [
-        {
-          "source": "sys",
-          "specifiers": [
-            "sys"
-          ]
-        },
-        {
-          "source": "pathlib",
-          "specifiers": [
-            "Path"
-          ]
-        },
-        {
-          "source": "sil.participant",
-          "specifiers": [
-            "StepParticipant",
-            "run"
-          ]
-        }
-      ],
-      "exports": [
-        "SpawnMarker"
-      ],
-      "totalLines": 22,
-      "hasStructuralAnalysis": true
-    },
-    "tests/participants/tick_checks.py": {
-      "filePath": "tests/participants/tick_checks.py",
-      "contentHash": "94b21070c9063690a030ae38bfc60af86ce182bf1ffa9bde350e648a5c80bc46",
-      "functions": [],
-      "classes": [
-        {
-          "name": "TicksAreCorrect",
-          "methods": [
-            "__init__",
-            "on_step"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 12
-        },
-        {
-          "name": "TicksAreWrong",
-          "methods": [
-            "on_step"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 8
-        }
-      ],
-      "imports": [
-        {
-          "source": "sil.participant",
-          "specifiers": [
-            "StepParticipant"
-          ]
-        }
-      ],
-      "exports": [
-        "TicksAreCorrect",
-        "TicksAreWrong"
-      ],
-      "totalLines": 28,
-      "hasStructuralAnalysis": true
-    },
-    "tests/test_clock_shim.py": {
-      "filePath": "tests/test_clock_shim.py",
-      "contentHash": "7faf931c1fb743388431f49d88b4af99f4eaf23e181895e821e103efe011da4c",
-      "functions": [
-        {
-          "name": "clock_region",
-          "params": [
-            "tmp_path"
-          ],
-          "exported": true,
-          "lineCount": 22
-        },
-        {
-          "name": "probe",
-          "params": [
-            "build_dir"
-          ],
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "shim",
-          "params": [
-            "build_dir"
-          ],
-          "exported": true,
-          "lineCount": 7
-        },
-        {
-          "name": "run_probe",
-          "params": [
-            "probe",
-            "shim",
-            "region_name"
-          ],
-          "exported": true,
-          "lineCount": 17
-        },
-        {
-          "name": "test_monotonic_ids_return_virtual_t",
-          "params": [
-            "probe",
-            "shim",
-            "clock_region"
-          ],
-          "exported": true,
-          "lineCount": 6
-        },
-        {
-          "name": "test_realtime_id_returns_epoch_plus_t",
-          "params": [
-            "probe",
-            "shim",
-            "clock_region"
-          ],
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "test_getres_reports_one_nanosecond",
-          "params": [
-            "probe",
-            "shim",
-            "clock_region"
-          ],
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "test_gettimeofday_and_time_use_realtime",
-          "params": [
-            "probe",
-            "shim",
-            "clock_region"
-          ],
-          "exported": true,
-          "lineCount": 8
-        },
-        {
-          "name": "test_reads_are_frozen_within_a_step",
-          "params": [
-            "probe",
-            "shim",
-            "clock_region"
-          ],
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "test_sleeps_return_success_immediately",
-          "params": [
-            "probe",
-            "shim",
-            "clock_region"
-          ],
-          "exported": true,
-          "lineCount": 11
-        },
-        {
-          "name": "test_frozen_across_steps",
-          "params": [
-            "probe",
-            "shim",
-            "clock_region"
-          ],
-          "exported": true,
-          "lineCount": 9
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "mmap",
-          "specifiers": [
-            "mmap"
-          ]
-        },
-        {
-          "source": "os",
-          "specifiers": [
-            "os"
-          ]
-        },
-        {
-          "source": "struct",
-          "specifiers": [
-            "struct"
-          ]
-        },
-        {
-          "source": "subprocess",
-          "specifiers": [
-            "subprocess"
-          ]
-        },
-        {
-          "source": "sys",
-          "specifiers": [
-            "sys"
-          ]
-        },
-        {
-          "source": "pytest",
-          "specifiers": [
-            "pytest"
-          ]
-        }
-      ],
-      "exports": [
-        "clock_region",
-        "probe",
-        "shim",
-        "run_probe",
-        "test_monotonic_ids_return_virtual_t",
-        "test_realtime_id_returns_epoch_plus_t",
-        "test_getres_reports_one_nanosecond",
-        "test_gettimeofday_and_time_use_realtime",
-        "test_reads_are_frozen_within_a_step",
-        "test_sleeps_return_success_immediately",
-        "test_frozen_across_steps"
-      ],
-      "totalLines": 150,
-      "hasStructuralAnalysis": true
-    },
-    "tests/test_determinism.py": {
-      "filePath": "tests/test_determinism.py",
-      "contentHash": "d48e0207bb7d886447991ccbdb22c2003d46820d7264f64f923a546345ef8c9b",
-      "functions": [
-        {
-          "name": "full_pipeline_manifest",
-          "params": [
-            "tmp_path"
-          ],
-          "exported": true,
-          "lineCount": 25
-        },
-        {
-          "name": "sha256",
-          "params": [
-            "path"
-          ],
-          "exported": true,
-          "lineCount": 2
-        },
-        {
-          "name": "test_two_runs_are_bit_identical",
-          "params": [
-            "run_sil",
-            "tmp_path"
-          ],
-          "exported": true,
-          "lineCount": 7
-        }
-      ],
-      "classes": [
-        {
-          "name": "TestCheckCli",
-          "methods": [
-            "run_check",
-            "test_reports_deterministic_pipeline",
-            "test_flags_nondeterministic_participant",
-            "test_propagates_run_failure"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 41
-        }
-      ],
-      "imports": [
-        {
-          "source": "hashlib",
-          "specifiers": [
-            "hashlib"
-          ]
-        },
-        {
-          "source": "subprocess",
-          "specifiers": [
-            "subprocess"
-          ]
-        },
-        {
-          "source": "sys",
-          "specifiers": [
-            "sys"
-          ]
-        },
-        {
-          "source": "conftest",
-          "specifiers": [
-            "ROOT"
-          ]
-        },
-        {
-          "source": "toys",
-          "specifiers": [
-            "accumulator_library",
-            "producer_library",
-            "toy_manifest"
-          ]
-        }
-      ],
-      "exports": [
-        "full_pipeline_manifest",
-        "sha256",
-        "test_two_runs_are_bit_identical",
-        "TestCheckCli"
-      ],
-      "totalLines": 93,
-      "hasStructuralAnalysis": true
-    },
-    "tests/test_manifest_builder.py": {
-      "filePath": "tests/test_manifest_builder.py",
-      "contentHash": "1cfa62cabea126975ffb3c8ef5d1f1e8e047be12c8407b6c34c2c0335d87c866",
-      "functions": [
-        {
-          "name": "make_minimal",
-          "params": [],
-          "returnType": "Manifest",
-          "exported": true,
-          "lineCount": 6
-        }
-      ],
-      "classes": [
-        {
-          "name": "TestCanonicalOutput",
-          "methods": [
-            "test_same_content_gives_identical_bytes_and_hash",
-            "test_declaration_order_does_not_change_hash",
-            "test_output_is_valid_json_with_version_marker",
-            "test_write_returns_path_and_hash"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 30
-        },
-        {
-          "name": "TestValidation",
-          "methods": [
-            "test_duplicate_channel_rejected",
-            "test_duplicate_participant_rejected",
-            "test_channel_with_unknown_schema_rejected",
-            "test_process_participant_with_unknown_channel_rejected",
-            "test_nonpositive_duration_rejected",
-            "test_nonpositive_step_period_rejected",
-            "test_negative_latency_rejected"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 41
-        },
-        {
-          "name": "TestClockShim",
-          "methods": [
-            "test_negative_epoch_rejected",
-            "test_non_integer_epoch_rejected",
-            "test_default_epoch_is_omitted",
-            "test_positive_epoch_is_emitted_and_changes_hash",
-            "test_shim_flag_emitted_only_when_enabled",
-            "test_unshimmed_process_omits_flag_and_keeps_hash"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 50
-        },
-        {
-          "name": "TestArraySchemas",
-          "methods": [
-            "test_array_schema_accepted_and_canonical",
-            "test_zero_count_rejected",
-            "test_negative_count_rejected",
-            "test_non_integer_count_rejected",
-            "test_unknown_element_type_rejected",
-            "test_override_on_array_field_rejected",
-            "test_override_on_scalar_beside_array_still_works"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 64
-        },
-        {
-          "name": "TestReplayBuilder",
-          "methods": [
-            "_recording",
-            "test_hash_is_embedded_from_recording_bytes",
-            "test_replay_declaration_is_canonical",
-            "test_empty_channel_selection_rejected",
-            "test_unknown_channel_rejected",
-            "test_missing_recording_rejected",
-            "test_replayed_channel_also_published_live_rejected"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 57
-        },
-        {
-          "name": "TestInterceptorBuilder",
-          "methods": [
-            "test_drop_interceptor_is_recorded_on_channel",
-            "test_window_defaults_to_whole_run_when_omitted",
-            "test_absent_interceptors_key_when_none_declared",
-            "test_multiple_interceptors_keep_declared_order",
-            "test_declaration_is_canonical",
-            "test_never_matching_interceptor_only_changes_hash",
-            "test_unknown_channel_rejected",
-            "test_unknown_kind_rejected",
-            "test_inverted_window_rejected",
-            "test_empty_window_rejected",
-            "test_negative_window_bound_rejected",
-            "test_negative_delay_rejected",
-            "test_delay_requires_delay_ns",
-            "test_drop_nth_below_one_rejected",
-            "test_drop_nth_requires_n",
-            "test_override_unknown_field_rejected",
-            "test_override_requires_field_and_value",
-            "test_override_value_out_of_range_rejected",
-            "test_override_value_in_range_accepted",
-            "test_override_float_field_accepts_number"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 125
-        }
-      ],
-      "imports": [
-        {
-          "source": "hashlib",
-          "specifiers": [
-            "hashlib"
-          ]
-        },
-        {
-          "source": "json",
-          "specifiers": [
-            "json"
-          ]
-        },
-        {
-          "source": "pytest",
-          "specifiers": [
-            "pytest"
-          ]
-        },
-        {
-          "source": "sil.manifest",
-          "specifiers": [
-            "Manifest",
-            "ManifestError"
-          ]
-        }
-      ],
-      "exports": [
-        "make_minimal",
-        "TestCanonicalOutput",
-        "TestValidation",
-        "TestClockShim",
-        "TestArraySchemas",
-        "TestReplayBuilder",
-        "TestInterceptorBuilder"
-      ],
-      "totalLines": 410,
-      "hasStructuralAnalysis": true
-    },
-    "tests/test_pytest_frontend.py": {
-      "filePath": "tests/test_pytest_frontend.py",
-      "contentHash": "9868a1fbeb22b48e00d60053971f74d2d03beec8aa9a9bdac16b755821c87d6a",
-      "functions": [
-        {
-          "name": "manifest_with_checker",
-          "params": [
-            "checker"
-          ],
-          "exported": true,
-          "lineCount": 15
-        },
-        {
-          "name": "test_in_schedule_assertions_pass_and_recording_is_typed",
-          "params": [
-            "sil_run",
-            "tmp_path"
-          ],
-          "exported": true,
-          "lineCount": 8
-        },
-        {
-          "name": "test_in_schedule_assertion_failure_fails_the_pytest_test",
-          "params": [
-            "sil_run",
-            "tmp_path"
-          ],
-          "exported": true,
-          "lineCount": 8
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "pytest",
-          "specifiers": [
-            "pytest"
-          ]
-        },
-        {
-          "source": "conftest",
-          "specifiers": [
-            "ROOT"
-          ]
-        },
-        {
-          "source": "toys",
-          "specifiers": [
-            "producer_library",
-            "toy_manifest"
-          ]
-        },
-        {
-          "source": "sil.testing",
-          "specifiers": [
-            "RunFailure",
-            "participant_command",
-            "run_simulation"
-          ]
-        }
-      ],
-      "exports": [
-        "manifest_with_checker",
-        "test_in_schedule_assertions_pass_and_recording_is_typed",
-        "test_in_schedule_assertion_failure_fails_the_pytest_test"
-      ],
-      "totalLines": 50,
-      "hasStructuralAnalysis": true
-    },
-    "tests/test_recording_reader.py": {
-      "filePath": "tests/test_recording_reader.py",
-      "contentHash": "2851dea2e9eb571aef10c37941a6eeb4b6681de6e86c816d2c7b9ea9d3d6c29d",
-      "functions": [
-        {
-          "name": "test_unknown_extension_is_rejected_with_a_clear_error",
-          "params": [
-            "tmp_path"
-          ],
-          "exported": true,
-          "lineCount": 6
-        },
-        {
-          "name": "test_mcap_extension_reads_recorded_messages",
-          "params": [
-            "sil_run",
-            "tmp_path"
-          ],
-          "exported": true,
-          "lineCount": 23
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "pytest",
-          "specifiers": [
-            "pytest"
-          ]
-        },
-        {
-          "source": "sil.recording",
-          "specifiers": [
-            "UnknownRecordingFormat",
-            "read_records"
-          ]
-        }
-      ],
-      "exports": [
-        "test_unknown_extension_is_rejected_with_a_clear_error",
-        "test_mcap_extension_reads_recorded_messages"
-      ],
-      "totalLines": 41,
-      "hasStructuralAnalysis": true
-    },
-    "tests/test_replayer.py": {
-      "filePath": "tests/test_replayer.py",
-      "contentHash": "17dd384636ab8b1f4adc00327fe2936f3a7aa1ca2789009cc4f1ea19ab38d1f4",
-      "functions": [
-        {
-          "name": "record_producer_run",
-          "params": [
-            "run_sil",
-            "tmp_path",
-            "duration_ns"
-          ],
-          "exported": true,
-          "lineCount": 19
-        },
-        {
-          "name": "replay_manifest",
-          "params": [
-            "recording",
-            "channels",
-            "duration_ns"
-          ],
-          "exported": true,
-          "lineCount": 12
-        },
-        {
-          "name": "ticks",
-          "params": [
-            "mcap_path"
-          ],
-          "exported": true,
-          "lineCount": 7
-        },
-        {
-          "name": "channel_streams",
-          "params": [
-            "mcap_path"
-          ],
-          "exported": true,
-          "lineCount": 13
-        },
-        {
-          "name": "_manifest_json",
-          "params": [
-            "recording",
-            "recording_hash",
-            "channels",
-            "ticks_schema"
-          ],
-          "exported": true,
-          "lineCount": 20
-        }
-      ],
-      "classes": [
-        {
-          "name": "TestFaithfulReplay",
-          "methods": [
-            "test_replay_reproduces_recorded_consumer_output",
-            "test_replayed_channel_is_recorded_in_the_new_run"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 21
-        },
-        {
-          "name": "TestReplaySemantics",
-          "methods": [
-            "test_channel_latency_of_new_manifest_is_applied",
-            "test_short_recording_lets_run_reach_full_duration",
-            "test_over_long_recording_truncated_at_duration",
-            "test_message_at_exactly_duration_is_dropped",
-            "test_message_just_below_duration_is_published"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 64
-        },
-        {
-          "name": "TestReplayDeterminism",
-          "methods": [
-            "test_replay_run_is_bit_identical_across_two_runs",
-            "test_record_replay_record_preserves_channel_streams",
-            "test_replay_interleaved_with_live_publisher_is_deterministic"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 54
-        },
-        {
-          "name": "TestReplayRejection",
-          "methods": [
-            "test_missing_recording_is_config_error",
-            "test_hash_mismatch_is_config_error",
-            "test_unknown_selected_channel_is_config_error",
-            "test_schema_mismatch_is_config_error",
-            "test_live_publisher_collision_is_config_error"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 66
-        }
-      ],
-      "imports": [
-        {
-          "source": "hashlib",
-          "specifiers": [
-            "hashlib"
-          ]
-        },
-        {
-          "source": "sys",
-          "specifiers": [
-            "sys"
-          ]
-        },
-        {
-          "source": "collections",
-          "specifiers": [
-            "defaultdict"
-          ]
-        },
-        {
-          "source": "pytest",
-          "specifiers": [
-            "pytest"
-          ]
-        },
-        {
-          "source": "conftest",
-          "specifiers": [
-            "ROOT"
-          ]
-        },
-        {
-          "source": "test_run_boundary",
-          "specifiers": [
-            "TYPES",
-            "read_mcap",
-            "sums"
-          ]
-        },
-        {
-          "source": "toys",
-          "specifiers": [
-            "accumulator_library",
-            "producer_library",
-            "toy_manifest"
-          ]
-        }
-      ],
-      "exports": [
-        "record_producer_run",
-        "replay_manifest",
-        "ticks",
-        "channel_streams",
-        "TestFaithfulReplay",
-        "TestReplaySemantics",
-        "TestReplayDeterminism",
-        "TestReplayRejection",
-        "_manifest_json"
-      ],
-      "totalLines": 311,
-      "hasStructuralAnalysis": true
-    },
-    "tests/test_run_boundary.py": {
-      "filePath": "tests/test_run_boundary.py",
-      "contentHash": "cca0e33f8f8c08ad500b42943499c871384cda16fb4c67c54508ac7b3e830fa9",
-      "functions": [
-        {
-          "name": "read_mcap",
-          "params": [
-            "path"
-          ],
-          "exported": true,
-          "lineCount": 12
-        },
-        {
-          "name": "pipeline_manifest",
-          "params": [
-            "producer_name",
-            "latency_ns",
-            "consumer_priority"
-          ],
-          "exported": true,
-          "lineCount": 16
-        },
-        {
-          "name": "sums",
-          "params": [
-            "mcap_path"
-          ],
-          "exported": true,
-          "lineCount": 7
-        },
-        {
-          "name": "write_with_raw_interceptor",
-          "params": [
-            "tmp_path",
-            "entry",
-            "channel"
-          ],
-          "exported": true,
-          "lineCount": 17
-        },
-        {
-          "name": "write_with_raw_array_schema",
-          "params": [
-            "tmp_path",
-            "schemas"
-          ],
-          "exported": true,
-          "lineCount": 16
-        }
-      ],
-      "classes": [
-        {
-          "name": "TestManifestRejection",
-          "methods": [
-            "test_invalid_json_is_config_error",
-            "test_missing_file_is_config_error",
-            "test_wrong_manifest_version_is_config_error"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 18
-        },
-        {
-          "name": "TestClockShimRejection",
-          "methods": [
-            "test_negative_epoch_is_config_error",
-            "test_shim_on_native_participant_is_config_error",
-            "test_shim_requested_but_library_missing_is_config_error",
-            "test_shim_with_library_present_is_not_rejected_for_missing_shim"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 73
-        },
-        {
-          "name": "TestClockShimRunBoundary",
-          "methods": [
-            "_manifest",
-            "_readings",
-            "test_monotonic_reads_return_step_virtual_time",
-            "test_realtime_reads_return_epoch_plus_virtual_time",
-            "test_default_epoch_is_zero",
-            "test_unshimmed_participant_sees_wall_clock_not_virtual_time",
-            "test_two_shimmed_runs_are_bit_identical",
-            "test_sil_check_passes_on_shimmed_manifest"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 115
-        },
-        {
-          "name": "TestEmptyRun",
-          "methods": [
-            "test_produces_valid_mcap_tied_to_manifest_hash"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 10
-        },
-        {
-          "name": "TestNativeScheduling",
-          "methods": [
-            "test_periodic_producer_records_typed_messages",
-            "test_offset_delays_first_activation"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 30
-        },
-        {
-          "name": "TestDeliverySemantics",
-          "methods": [
-            "test_default_latency_is_unit_delay",
-            "test_output_independent_of_in_slot_execution_order",
-            "test_declared_zero_latency_is_same_slot_feedthrough"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 33
-        },
-        {
-          "name": "TestProcessParticipant",
-          "methods": [
-            "test_python_step_participant_transforms_messages"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 36
-        },
-        {
-          "name": "TestInterceptorRejection",
-          "methods": [
-            "test_unknown_kind_is_config_error",
-            "test_inverted_window_is_config_error",
-            "test_negative_delay_is_config_error",
-            "test_drop_nth_below_one_is_config_error",
-            "test_override_unknown_field_is_config_error",
-            "test_override_out_of_range_is_config_error"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 50
-        },
-        {
-          "name": "TestInterceptorInertness",
-          "methods": [
-            "_producer",
-            "test_never_matching_fault_differs_only_by_manifest_hash"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 69
-        },
-        {
-          "name": "TestDelayInterceptor",
-          "methods": [
-            "_producer",
-            "test_window_scoped_delay_shifts_recorded_time",
-            "test_delay_past_run_duration_drops_message",
-            "test_delay_landing_exactly_at_duration_drops_message",
-            "test_enormous_delay_saturates_and_drops",
-            "test_delay_changes_downstream_consumer_view"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 129
-        },
-        {
-          "name": "TestOverrideInterceptor",
-          "methods": [
-            "_producer",
-            "test_window_scoped_override_rewrites_only_inside_window",
-            "test_override_changes_downstream_consumer_view",
-            "test_override_encodes_negative_constant",
-            "test_override_composes_with_delay_on_same_channel"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 99
-        },
-        {
-          "name": "TestDropInterceptor",
-          "methods": [
-            "_producer",
-            "test_window_scoped_drop_silences_only_inside_window",
-            "test_open_ended_drop_silences_to_end_of_run",
-            "test_drop_removes_message_from_downstream_consumer"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 69
-        },
-        {
-          "name": "TestDropNthInterceptor",
-          "methods": [
-            "_producer",
-            "test_drops_every_nth_message_in_window",
-            "test_window_index_resets_relative_to_window_not_channel",
-            "test_drop_nth_one_drops_every_in_window_message"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 58
-        },
-        {
-          "name": "TestRecordingFormatSeam",
-          "methods": [
-            "_producer_with_marker",
-            "test_unknown_extension_is_config_error_and_starts_no_participants",
-            "test_mcap_output_is_byte_identical"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 57
-        },
-        {
-          "name": "TestRunAbort",
-          "methods": [
-            "test_failing_assertion_aborts_run_with_reason"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 27
-        },
-        {
-          "name": "TestArrayPayload",
-          "methods": [
-            "test_array_payload_roundtrips_bit_for_bit",
-            "test_zero_count_array_is_config_error",
-            "test_unknown_array_element_type_is_config_error"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 50
-        }
-      ],
-      "imports": [
-        {
-          "source": "json",
-          "specifiers": [
-            "json"
-          ]
-        },
-        {
-          "source": "shutil",
-          "specifiers": [
-            "shutil"
-          ]
-        },
-        {
-          "source": "subprocess",
-          "specifiers": [
-            "subprocess"
-          ]
-        },
-        {
-          "source": "pytest",
-          "specifiers": [
-            "pytest"
-          ]
-        },
-        {
-          "source": "mcap.reader",
-          "specifiers": [
-            "make_reader"
-          ]
-        },
-        {
-          "source": "toys",
-          "specifiers": [
-            "TOY_SCHEMAS",
-            "accumulator_library",
-            "producer_library",
-            "toy_manifest"
-          ]
-        },
-        {
-          "source": "sil",
-          "specifiers": [
-            "schema"
-          ]
-        },
-        {
-          "source": "sil.manifest",
-          "specifiers": [
-            "Manifest"
-          ]
-        }
-      ],
-      "exports": [
-        "read_mcap",
-        "TestManifestRejection",
-        "TestClockShimRejection",
-        "TestClockShimRunBoundary",
-        "TestEmptyRun",
-        "TestNativeScheduling",
-        "pipeline_manifest",
-        "sums",
-        "TestDeliverySemantics",
-        "TestProcessParticipant",
-        "write_with_raw_interceptor",
-        "TestInterceptorRejection",
-        "TestInterceptorInertness",
-        "TestDelayInterceptor",
-        "TestOverrideInterceptor",
-        "TestDropInterceptor",
-        "TestDropNthInterceptor",
-        "TestRecordingFormatSeam",
-        "TestRunAbort",
-        "write_with_raw_array_schema",
-        "TestArrayPayload"
-      ],
-      "totalLines": 1062,
-      "hasStructuralAnalysis": true
-    },
-    "tests/test_schema.py": {
-      "filePath": "tests/test_schema.py",
-      "contentHash": "716008cd7245f0dd9ad2e96affdd118d8d476a65357778b1e65265fb4ef327d6",
-      "functions": [],
-      "classes": [
-        {
-          "name": "TestScalarUnchanged",
-          "methods": [
-            "test_pack_unpack_roundtrip"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 7
-        },
-        {
-          "name": "TestArrayLayout",
-          "methods": [
-            "_payload_type",
-            "test_size_includes_array_bytes",
-            "test_list_field_packs_in_declared_order",
-            "test_roundtrip_returns_list_for_non_u8_arrays",
-            "test_u8_array_surfaces_as_bytes",
-            "test_wrong_array_length_is_rejected_on_pack",
-            "test_wrong_u8_array_length_is_rejected_not_silently_padded",
-            "test_mixed_scalar_and_array_fields"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 65
-        }
-      ],
-      "imports": [
-        {
-          "source": "struct",
-          "specifiers": [
-            "struct"
-          ]
-        },
-        {
-          "source": "pytest",
-          "specifiers": [
-            "pytest"
-          ]
-        },
-        {
-          "source": "sil",
-          "specifiers": [
-            "schema"
-          ]
-        }
-      ],
-      "exports": [
-        "TestScalarUnchanged",
-        "TestArrayLayout"
-      ],
-      "totalLines": 92,
-      "hasStructuralAnalysis": true
-    },
-    "tests/test_silschema.py": {
-      "filePath": "tests/test_silschema.py",
-      "contentHash": "95d80ddacb3f699892490a9be881b1d2767732e61c032c7982d54404aa2ff429",
-      "functions": [
-        {
-          "name": "test_scalar_struct_unchanged",
-          "params": [],
-          "exported": true,
-          "lineCount": 6
-        },
-        {
-          "name": "test_array_member_emitted_as_c_array",
-          "params": [],
-          "exported": true,
-          "lineCount": 13
-        },
-        {
-          "name": "test_static_assert_includes_array_bytes",
-          "params": [],
-          "exported": true,
-          "lineCount": 13
-        },
-        {
-          "name": "test_u8_array_member",
-          "params": [],
-          "exported": true,
-          "lineCount": 6
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "importlib.util",
-          "specifiers": [
-            "importlib.util"
-          ]
-        },
-        {
-          "source": "pathlib",
-          "specifiers": [
-            "Path"
-          ]
-        }
-      ],
-      "exports": [
-        "test_scalar_struct_unchanged",
-        "test_array_member_emitted_as_c_array",
-        "test_static_assert_includes_array_bytes",
-        "test_u8_array_member"
-      ],
-      "totalLines": 62,
-      "hasStructuralAnalysis": true
-    },
-    "tests/toys.py": {
-      "filePath": "tests/toys.py",
-      "contentHash": "3f3938de2abc7fc25cad4bbdd84a6b1ea405feb4a2747645488f65d275bdbbba",
-      "functions": [
-        {
-          "name": "toy_manifest",
-          "params": [
-            "duration_ns",
-            "epoch_ns"
-          ],
-          "returnType": "Manifest",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "producer_library",
-          "params": [],
-          "returnType": "str",
-          "exported": true,
-          "lineCount": 2
-        },
-        {
-          "name": "accumulator_library",
-          "params": [],
-          "returnType": "str",
-          "exported": true,
-          "lineCount": 2
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "json",
-          "specifiers": [
-            "json"
-          ]
-        },
-        {
-          "source": "conftest",
-          "specifiers": [
-            "BUILD_DIR",
-            "ROOT"
-          ]
-        },
-        {
-          "source": "sil.manifest",
-          "specifiers": [
-            "Manifest"
-          ]
-        }
-      ],
-      "exports": [
-        "toy_manifest",
-        "producer_library",
-        "accumulator_library"
-      ],
-      "totalLines": 24,
       "hasStructuralAnalysis": true
     },
     "tools/silschema.py": {

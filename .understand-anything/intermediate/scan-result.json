@@ -1,6 +1,6 @@
 {
   "name": "sil",
-  "description": "SiL framework: deterministic scheduling + typed data routing for vECU simulation.",
+  "description": "SiL framework for deterministic scheduling and typed data routing in vECU simulation.",
   "languages": [
     "c",
     "cpp",
@@ -14,16 +14,14 @@
     "yaml"
   ],
   "frameworks": [
-    "pytest",
-    "CMake",
     "GitHub Actions",
-    "hatchling"
+    "Pytest"
   ],
   "files": [
     {
       "path": ".github/workflows/ci.yml",
       "language": "yaml",
-      "sizeLines": 42,
+      "sizeLines": 45,
       "fileCategory": "infra"
     },
     {
@@ -39,16 +37,94 @@
       "fileCategory": "config"
     },
     {
+      "path": ".understand-anything/fingerprints.json",
+      "language": "json",
+      "sizeLines": 4480,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".understand-anything/intermediate/scan-result.json",
+      "language": "json",
+      "sizeLines": 515,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".understand-anything/knowledge-graph.json",
+      "language": "json",
+      "sizeLines": 4232,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".understand-anything/meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "AGENTS.md",
+      "language": "markdown",
+      "sizeLines": 17,
+      "fileCategory": "docs"
+    },
+    {
       "path": "CMakeLists.txt",
       "language": "txt",
-      "sizeLines": 78,
+      "sizeLines": 101,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "CONTEXT.md",
+      "language": "markdown",
+      "sizeLines": 162,
       "fileCategory": "docs"
     },
     {
       "path": "DESIGN.md",
       "language": "markdown",
-      "sizeLines": 167,
+      "sizeLines": 203,
       "fileCategory": "docs"
+    },
+    {
+      "path": "Makefile",
+      "language": "makefile",
+      "sizeLines": 69,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "sizeLines": 150,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/agents/domain.md",
+      "language": "markdown",
+      "sizeLines": 51,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/agents/issue-tracker.md",
+      "language": "markdown",
+      "sizeLines": 45,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/agents/triage-labels.md",
+      "language": "markdown",
+      "sizeLines": 15,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/step-protocol.md",
+      "language": "markdown",
+      "sizeLines": 91,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "include/sil/arena.h",
+      "language": "c",
+      "sizeLines": 39,
+      "fileCategory": "code"
     },
     {
       "path": "include/sil/clock_region.h",
@@ -77,13 +153,25 @@
     {
       "path": "kernel/src/engine.cpp",
       "language": "cpp",
-      "sizeLines": 287,
+      "sizeLines": 176,
       "fileCategory": "code"
     },
     {
       "path": "kernel/src/engine.hpp",
       "language": "cpp",
-      "sizeLines": 148,
+      "sizeLines": 139,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/interceptor.cpp",
+      "language": "cpp",
+      "sizeLines": 63,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/interceptor.hpp",
+      "language": "cpp",
+      "sizeLines": 76,
       "fileCategory": "code"
     },
     {
@@ -95,13 +183,25 @@
     {
       "path": "kernel/src/manifest.cpp",
       "language": "cpp",
-      "sizeLines": 273,
+      "sizeLines": 439,
       "fileCategory": "code"
     },
     {
       "path": "kernel/src/manifest.hpp",
       "language": "cpp",
-      "sizeLines": 94,
+      "sizeLines": 107,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/mapped_region.cpp",
+      "language": "cpp",
+      "sizeLines": 86,
+      "fileCategory": "code"
+    },
+    {
+      "path": "kernel/src/mapped_region.hpp",
+      "language": "cpp",
+      "sizeLines": 56,
       "fileCategory": "code"
     },
     {
@@ -131,13 +231,13 @@
     {
       "path": "kernel/src/process_participant.cpp",
       "language": "cpp",
-      "sizeLines": 330,
+      "sizeLines": 487,
       "fileCategory": "code"
     },
     {
       "path": "kernel/src/process_participant.hpp",
       "language": "cpp",
-      "sizeLines": 72,
+      "sizeLines": 109,
       "fileCategory": "code"
     },
     {
@@ -169,12 +269,6 @@
       "language": "cpp",
       "sizeLines": 112,
       "fileCategory": "code"
-    },
-    {
-      "path": "Makefile",
-      "language": "makefile",
-      "sizeLines": 68,
-      "fileCategory": "infra"
     },
     {
       "path": "participants/toy_accumulator.cpp",
@@ -209,13 +303,13 @@
     {
       "path": "python/src/sil/manifest.py",
       "language": "python",
-      "sizeLines": 330,
+      "sizeLines": 364,
       "fileCategory": "code"
     },
     {
       "path": "python/src/sil/participant.py",
       "language": "python",
-      "sizeLines": 115,
+      "sizeLines": 245,
       "fileCategory": "code"
     },
     {
@@ -237,12 +331,6 @@
       "fileCategory": "code"
     },
     {
-      "path": "README.md",
-      "language": "markdown",
-      "sizeLines": 114,
-      "fileCategory": "docs"
-    },
-    {
       "path": "schemas/toy.json",
       "language": "json",
       "sizeLines": 14,
@@ -261,129 +349,34 @@
       "fileCategory": "code"
     },
     {
-      "path": "tests/conftest.py",
-      "language": "python",
-      "sizeLines": 58,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/participants/array_source.py",
-      "language": "python",
-      "sizeLines": 21,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/participants/clock_reader.py",
-      "language": "python",
-      "sizeLines": 26,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/participants/echo.py",
-      "language": "python",
-      "sizeLines": 15,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/participants/fail_at_20ms.py",
-      "language": "python",
-      "sizeLines": 12,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/participants/nondet.py",
-      "language": "python",
-      "sizeLines": 16,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/participants/spawn_marker.py",
-      "language": "python",
-      "sizeLines": 21,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/participants/tick_checks.py",
-      "language": "python",
-      "sizeLines": 27,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/test_clock_shim.py",
-      "language": "python",
-      "sizeLines": 149,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/test_determinism.py",
-      "language": "python",
-      "sizeLines": 92,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/test_manifest_builder.py",
-      "language": "python",
-      "sizeLines": 409,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/test_pytest_frontend.py",
-      "language": "python",
-      "sizeLines": 49,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/test_recording_reader.py",
-      "language": "python",
-      "sizeLines": 40,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/test_replayer.py",
-      "language": "python",
-      "sizeLines": 310,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/test_run_boundary.py",
-      "language": "python",
-      "sizeLines": 1061,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/test_schema.py",
-      "language": "python",
-      "sizeLines": 91,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/test_silschema.py",
-      "language": "python",
-      "sizeLines": 61,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tests/toys.py",
-      "language": "python",
-      "sizeLines": 23,
-      "fileCategory": "code"
-    },
-    {
       "path": "tools/silschema.py",
       "language": "python",
       "sizeLines": 81,
       "fileCategory": "code"
     }
   ],
-  "totalFiles": 59,
-  "filteredByIgnore": 1,
+  "totalFiles": 56,
+  "filteredByIgnore": 27,
   "estimatedComplexity": "moderate",
   "importMap": {
     ".github/workflows/ci.yml": [],
     ".understand-anything/.understandignore": [],
     ".understand-anything/config.json": [],
+    ".understand-anything/fingerprints.json": [],
+    ".understand-anything/intermediate/scan-result.json": [],
+    ".understand-anything/knowledge-graph.json": [],
+    ".understand-anything/meta.json": [],
+    "AGENTS.md": [],
     "CMakeLists.txt": [],
+    "CONTEXT.md": [],
     "DESIGN.md": [],
+    "Makefile": [],
+    "README.md": [],
+    "docs/agents/domain.md": [],
+    "docs/agents/issue-tracker.md": [],
+    "docs/agents/triage-labels.md": [],
+    "docs/step-protocol.md": [],
+    "include/sil/arena.h": [],
     "include/sil/clock_region.h": [],
     "include/sil/participant.h": [],
     "kernel/src/clock_shim.cpp": [
@@ -392,6 +385,7 @@
     "kernel/src/clock_shim.hpp": [],
     "kernel/src/engine.cpp": [
       "kernel/src/engine.hpp",
+      "kernel/src/interceptor.hpp",
       "kernel/src/native_participant.hpp",
       "kernel/src/process_participant.hpp",
       "kernel/src/recording_sink.hpp",
@@ -400,6 +394,10 @@
     "kernel/src/engine.hpp": [
       "kernel/src/manifest.hpp"
     ],
+    "kernel/src/interceptor.cpp": [
+      "kernel/src/interceptor.hpp"
+    ],
+    "kernel/src/interceptor.hpp": [],
     "kernel/src/main.cpp": [
       "kernel/src/clock_shim.hpp",
       "kernel/src/engine.hpp",
@@ -407,10 +405,15 @@
       "kernel/src/recording_sink.hpp"
     ],
     "kernel/src/manifest.cpp": [
+      "kernel/src/interceptor.hpp",
       "kernel/src/manifest.hpp",
       "kernel/src/sha256.hpp"
     ],
     "kernel/src/manifest.hpp": [],
+    "kernel/src/mapped_region.cpp": [
+      "kernel/src/mapped_region.hpp"
+    ],
+    "kernel/src/mapped_region.hpp": [],
     "kernel/src/mcap_recording.cpp": [
       "kernel/src/engine.hpp",
       "kernel/src/mcap_recording.hpp",
@@ -428,12 +431,14 @@
       "kernel/src/engine.hpp"
     ],
     "kernel/src/process_participant.cpp": [
+      "include/sil/arena.h",
       "kernel/src/clock_shim.hpp",
       "kernel/src/process_participant.hpp"
     ],
     "kernel/src/process_participant.hpp": [
       "include/sil/clock_region.h",
-      "kernel/src/engine.hpp"
+      "kernel/src/engine.hpp",
+      "kernel/src/mapped_region.hpp"
     ],
     "kernel/src/recording_reader.hpp": [],
     "kernel/src/recording_sink.hpp": [
@@ -449,7 +454,6 @@
       "kernel/src/manifest.hpp"
     ],
     "kernel/src/sha256.hpp": [],
-    "Makefile": [],
     "participants/toy_accumulator.cpp": [
       "include/sil/participant.h"
     ],
@@ -473,43 +477,10 @@
       "python/src/sil/manifest.py",
       "python/src/sil/schema.py"
     ],
-    "README.md": [],
     "schemas/toy.json": [],
     "shim/clock_probe.c": [],
     "shim/clock_shim.c": [
       "include/sil/clock_region.h"
-    ],
-    "tests/conftest.py": [],
-    "tests/participants/array_source.py": [],
-    "tests/participants/clock_reader.py": [],
-    "tests/participants/echo.py": [],
-    "tests/participants/fail_at_20ms.py": [],
-    "tests/participants/nondet.py": [],
-    "tests/participants/spawn_marker.py": [],
-    "tests/participants/tick_checks.py": [],
-    "tests/test_clock_shim.py": [],
-    "tests/test_determinism.py": [
-      "tests/conftest.py",
-      "tests/toys.py"
-    ],
-    "tests/test_manifest_builder.py": [],
-    "tests/test_pytest_frontend.py": [
-      "tests/conftest.py",
-      "tests/toys.py"
-    ],
-    "tests/test_recording_reader.py": [],
-    "tests/test_replayer.py": [
-      "tests/conftest.py",
-      "tests/test_run_boundary.py",
-      "tests/toys.py"
-    ],
-    "tests/test_run_boundary.py": [
-      "tests/toys.py"
-    ],
-    "tests/test_schema.py": [],
-    "tests/test_silschema.py": [],
-    "tests/toys.py": [
-      "tests/conftest.py"
     ],
     "tools/silschema.py": []
   }
