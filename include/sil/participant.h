@@ -30,9 +30,15 @@ typedef struct sil_api_v1 {
   int (*register_task)(void *ctx, const char *name, uint64_t period_ns,
                        uint64_t offset_ns, int32_t priority, sil_task_fn fn,
                        void *user);
+  /* The channel must be listed in this participant's manifest "subscribes".
+   * The manifest is the authoritative declaration; this call only proves
+   * conformance to it. An undeclared channel returns SIL_ERR and aborts
+   * startup with a diagnostic. */
   int (*subscribe)(void *ctx, const char *channel);
 
   /* Data plane — valid only inside a task callback. */
+  /* The channel must be listed in this participant's manifest "publishes".
+   * An undeclared channel returns SIL_ERR and aborts the run. */
   int (*publish)(void *ctx, const char *channel, const void *data, size_t len);
   /* Takes the next visible message on a subscribed channel.
    * Returns 1 and sets data/len (kernel-owned, valid until the next take

@@ -36,7 +36,8 @@ struct NativeApiBridge {
   static int subscribe(void *ctx, const char *channel) {
     NativeParticipant *p = self(ctx);
     if (!p->engine_.in_setup() || !channel) return SIL_ERR;
-    if (!p->declares(p->subscribes_, channel, "input")) return SIL_ERR;
+    if (p->fail_if_undeclared(p->subscribes_, channel, "input"))
+      return SIL_ERR;
     try {
       p->subscriptions_[channel] = p->engine_.subscribe(p->name_, channel);
     } catch (const std::exception &e) {
@@ -51,7 +52,8 @@ struct NativeApiBridge {
     NativeParticipant *p = self(ctx);
     // Data plane is only valid inside a task callback (see participant.h).
     if (!p->engine_.in_task() || !channel || !data) return SIL_ERR;
-    if (!p->declares(p->publishes_, channel, "output")) return SIL_ERR;
+    if (p->fail_if_undeclared(p->publishes_, channel, "output"))
+      return SIL_ERR;
     try {
       p->engine_.publish(p->name_, channel, data, len);
     } catch (const std::exception &e) {
@@ -87,13 +89,14 @@ struct NativeApiBridge {
   }
 };
 
-bool NativeParticipant::declares(const std::vector<std::string> &declared,
-                                 const char *channel, const char *direction) {
+bool NativeParticipant::fail_if_undeclared(
+    const std::vector<std::string> &declared, const char *channel,
+    const char *direction) {
   if (std::find(declared.begin(), declared.end(), channel) != declared.end())
-    return true;
+    return false;
   engine_.fail(name_, std::string("channel '") + channel +
                           "' is not a declared " + direction);
-  return false;
+  return true;
 }
 
 NativeParticipant::NativeParticipant(Engine &engine, const std::string &name,
@@ -127,13 +130,12 @@ NativeParticipant::NativeParticipant(Engine &engine, const std::string &name,
   api.fail = &NativeApiBridge::fail;
 
   api_ = api;
+  // fail() keeps the first failure, so a contract violation raised during init
+  // survives with its channel and direction; this is the fallback for a
+  // participant that refuses to start without saying why. Engine::setup turns
+  // either into a config error before the run begins.
   if (init(&api_, name_.c_str(), spec.config_json.c_str()) != SIL_OK)
-    // A contract violation during init already carries the channel and
-    // direction; keep it rather than the generic init failure.
-    throw ManifestError(
-        engine_.failure().empty()
-            ? "manifest error: participant '" + name + "': init failed"
-            : "manifest error: " + engine_.failure());
+    engine_.fail(name_, "init failed");
 }
 
 NativeParticipant::~NativeParticipant() {

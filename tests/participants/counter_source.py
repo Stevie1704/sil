@@ -1,4 +1,4 @@
-"""Toy out-of-process participant: publishes toy.Counter on the channel named
+"""Toy process participant: publishes toy.Counter on the channel named
 on its command line, so a run can declare more than one live publisher for one
 channel.
 

@@ -504,8 +504,10 @@ class Manifest:
         # publishers go through this one path, so a collision is visible
         # wherever it is declared. Multiple live publishers stay allowed —
         # that cardinality is decided in #64, not here.
+        # Name-sorted, like the kernel's manifest order, so both validators
+        # name the same publisher when a channel has more than one.
         live_published: dict[str, str] = {}
-        for pname, p in self._participants.items():
+        for pname, p in sorted(self._participants.items()):
             if p["type"] == "replay":
                 continue
             for ch in p.get("publishes", []):

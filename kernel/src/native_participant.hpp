@@ -36,10 +36,11 @@ class NativeParticipant {
   std::map<std::string, SubQueue *> subscriptions_;
   std::vector<uint8_t> take_buffer_;
 
-  // Reports a call the manifest does not authorize, naming the participant,
-  // the channel, and the declared direction it violates.
-  bool declares(const std::vector<std::string> &declared, const char *channel,
-                const char *direction);
+  // Fails the run when the manifest does not authorize this call, naming the
+  // participant, the channel, and the declared direction it violates.
+  // Returns true when it has failed the run.
+  bool fail_if_undeclared(const std::vector<std::string> &declared,
+                          const char *channel, const char *direction);
 
   friend struct NativeApiBridge;
 };

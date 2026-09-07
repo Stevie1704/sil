@@ -621,7 +621,7 @@ class TestReplayRejection:
         rec, h = record_producer_run(run_sil, tmp_path)
         manifest = tmp_path / "m.json"
         doc = json.loads(_manifest_json(recording=str(rec), recording_hash=h))
-        doc["participants"]["live"] = {
+        doc["participants"]["stimulus"] = {
             "type": "process",
             "command": [sys.executable,
                         str(ROOT / "tests" / "participants" / "echo.py")],
@@ -635,7 +635,7 @@ class TestReplayRejection:
         assert proc.returncode == 2
         assert "ticks" in proc.stderr
         # The diagnostic names the conflicting publisher, not just the channel.
-        assert "live" in proc.stderr
+        assert "'stimulus'" in proc.stderr
 
     def test_native_live_publisher_collision_is_config_error(
         self, run_sil, tmp_path
@@ -648,7 +648,7 @@ class TestReplayRejection:
         rec, h = record_producer_run(run_sil, tmp_path)
         manifest = tmp_path / "m.json"
         doc = json.loads(_manifest_json(recording=str(rec), recording_hash=h))
-        doc["participants"]["live"] = {
+        doc["participants"]["stimulus"] = {
             "type": "native",
             "library": str(tmp_path / "never-loaded.silp"),
             "config": {"channel": "ticks", "period_ns": 10_000_000},
@@ -659,7 +659,7 @@ class TestReplayRejection:
         proc = run_sil(manifest)
         assert proc.returncode == 2
         assert "ticks" in proc.stderr
-        assert "live" in proc.stderr
+        assert "'stimulus'" in proc.stderr
         assert "never-loaded" not in proc.stderr
 
 
