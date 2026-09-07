@@ -147,6 +147,11 @@ class TestValidation:
         with pytest.raises(ManifestError, match="duration"):
             Manifest(duration_ns=0)
 
+    @pytest.mark.parametrize("value", [True, 1.5, "1000"])
+    def test_non_integer_duration_rejected(self, value):
+        with pytest.raises(ManifestError, match="duration_ns"):
+            Manifest(duration_ns=value)
+
     def test_nonpositive_step_period_rejected(self):
         m = make_minimal()
         with pytest.raises(ManifestError, match="step_period"):
@@ -156,6 +161,53 @@ class TestValidation:
         m = make_minimal()
         with pytest.raises(ManifestError, match="latency"):
             m.add_channel("c", schema="toy.Counter", latency_ns=-1)
+
+    def test_wrong_schema_container_rejected(self):
+        m = Manifest(duration_ns=1_000_000)
+        with pytest.raises(ManifestError, match="fields.*array"):
+            m.add_schemas({"S": {"fields": {"name": "value"}}})
+
+    def test_unknown_schema_key_rejected(self):
+        m = Manifest(duration_ns=1_000_000)
+        with pytest.raises(ManifestError, match="unknown key"):
+            m.add_schemas(
+                {"S": {"fields": [{"name": "value", "type": "u8"}], "extra": 1}}
+            )
+
+    def test_wrong_process_element_types_rejected(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match=r"command\[0\]"):
+            m.add_process("p", command=[7], step_period_ns=1)
+        with pytest.raises(ManifestError, match=r"subscribes\[0\]"):
+            m.add_process("p2", command=["x"], step_period_ns=1, subscribes=[7])
+
+    def test_process_numeric_constraints_rejected(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="priority"):
+            m.add_process("p", command=["x"], step_period_ns=1, priority=True)
+        with pytest.raises(ManifestError, match="priority"):
+            m.add_process("p2", command=["x"], step_period_ns=1, priority=2**31)
+
+    def test_native_library_and_config_types_rejected(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="library"):
+            m.add_native("bad", library=42)
+        with pytest.raises(ManifestError, match="config"):
+            m.add_native("bad_config", library="x", config=[])
+
+    def test_interceptor_integer_fields_reject_fractional_values(self):
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="start_ns"):
+            m.add_interceptor("ticks", kind="drop", start_ns=1.5)
+        with pytest.raises(ManifestError, match="value"):
+            m.add_interceptor("ticks", kind="override", field="seq", value=1.5)
+
+    def test_f32_override_rejects_out_of_range_value(self):
+        m = Manifest(duration_ns=1_000_000)
+        m.add_schemas({"S": {"fields": [{"name": "value", "type": "f32"}]}})
+        m.add_channel("c", schema="S")
+        with pytest.raises(ManifestError, match="representable"):
+            m.add_interceptor("c", kind="override", field="value", value=1e39)
 
 
 class TestTransport:

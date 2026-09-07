@@ -4,11 +4,13 @@
 #include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <initializer_list>
 #include <limits>
 #include <map>
 #include <stdexcept>
 #include <sstream>
 #include <set>
+#include <type_traits>
 #include <utility>
 
 #include <nlohmann/json.hpp>
@@ -47,64 +49,192 @@ const std::map<std::string, FieldLayout> kFieldLayouts = {
   throw ManifestError("manifest error: " + msg);
 }
 
-const json &require(const json &obj, const char *key, const std::string &ctx) {
-  auto it = obj.find(key);
-  if (it == obj.end()) fail(ctx + ": missing required key '" + key + "'");
-  return *it;
+std::string describe_json(const json &value) {
+  return std::string(value.type_name()) + " " + value.dump();
 }
 
-uint64_t positive_u64(const json &v, const std::string &ctx) {
-  if (!v.is_number_unsigned() || v.get<uint64_t>() == 0)
-    fail(ctx + ": must be a positive integer");
-  return v.get<uint64_t>();
+[[noreturn]] void type_error(const json &value, const std::string &ctx,
+                             const std::string &expected) {
+  fail(ctx + ": expected " + expected + ", got " + describe_json(value));
+}
+
+const json &require_object(const json &value, const std::string &ctx) {
+  if (!value.is_object()) type_error(value, ctx, "an object");
+  return value;
+}
+
+const json &require_array(const json &value, const std::string &ctx) {
+  if (!value.is_array()) type_error(value, ctx, "an array");
+  return value;
+}
+
+const json &require_value(const json &value, const char *key,
+                          const std::string &ctx) {
+  const json &object = require_object(value, ctx);
+  auto it = object.find(key);
+  if (it == object.end()) fail(ctx + ": missing required key '" + key + "'");
+  return it.value();
+}
+
+const json *find_value(const json &value, const char *key,
+                       const std::string &ctx) {
+  const json &object = require_object(value, ctx);
+  auto it = object.find(key);
+  return it == object.end() ? nullptr : &it.value();
+}
+
+void reject_unknown_keys(const json &value, const std::string &ctx,
+                         std::initializer_list<const char *> allowed) {
+  const json &object = require_object(value, ctx);
+  for (auto it = object.begin(); it != object.end(); ++it) {
+    bool known = false;
+    for (const char *key : allowed)
+      if (it.key() == key) known = true;
+    if (!known)
+      fail(ctx + ": unknown key '" + it.key() + "' (value " +
+           describe_json(it.value()) + ")");
+  }
+}
+
+template <typename T>
+std::string integer_range() {
+  if constexpr (std::is_unsigned_v<T>) {
+    return "[0, " +
+           std::to_string(static_cast<unsigned long long>(
+               std::numeric_limits<T>::max())) +
+           "]";
+  } else {
+    return "[" +
+           std::to_string(static_cast<long long>(
+               std::numeric_limits<T>::min())) +
+           ", " +
+           std::to_string(static_cast<long long>(
+               std::numeric_limits<T>::max())) +
+           "]";
+  }
+}
+
+template <typename T>
+T extract_integer(const json &value, const std::string &ctx) {
+  const std::string expected =
+      (std::is_unsigned_v<T> ? "a non-negative integer in " : "an integer in ") +
+      integer_range<T>();
+  if (!value.is_number_integer()) type_error(value, ctx, expected);
+
+  if constexpr (std::is_unsigned_v<T>) {
+    uint64_t raw = 0;
+    if (value.is_number_unsigned()) {
+      raw = value.get<uint64_t>();
+    } else {
+      const int64_t signed_raw = value.get<int64_t>();
+      if (signed_raw < 0) type_error(value, ctx, expected);
+      raw = static_cast<uint64_t>(signed_raw);
+    }
+    if (raw > static_cast<uint64_t>(std::numeric_limits<T>::max()))
+      type_error(value, ctx, expected);
+    return static_cast<T>(raw);
+  } else {
+    if (value.is_number_unsigned()) {
+      const uint64_t raw = value.get<uint64_t>();
+      if (raw > static_cast<uint64_t>(std::numeric_limits<T>::max()))
+        type_error(value, ctx, expected);
+      return static_cast<T>(raw);
+    }
+    const int64_t raw = value.get<int64_t>();
+    if (raw < static_cast<int64_t>(std::numeric_limits<T>::min()) ||
+        raw > static_cast<int64_t>(std::numeric_limits<T>::max()))
+      type_error(value, ctx, expected);
+    return static_cast<T>(raw);
+  }
+}
+
+template <typename T>
+T extract_number(const json &value, const std::string &ctx) {
+  if (!value.is_number()) type_error(value, ctx, "a number");
+
+  double result = 0.0;
+  if (value.is_number_unsigned())
+    result = static_cast<double>(value.get<uint64_t>());
+  else if (value.is_number_integer())
+    result = static_cast<double>(value.get<int64_t>());
+  else
+    result = value.get<double>();
+  if (!std::isfinite(result))
+    type_error(value, ctx, "a finite number");
+  return static_cast<T>(result);
+}
+
+template <typename T>
+T extract(const json &value, const std::string &ctx) {
+  if constexpr (std::is_same_v<T, std::string>) {
+    if (!value.is_string()) type_error(value, ctx, "a string");
+    return value.get<std::string>();
+  } else if constexpr (std::is_same_v<T, bool>) {
+    if (!value.is_boolean()) type_error(value, ctx, "a boolean");
+    return value.get<bool>();
+  } else if constexpr (std::is_integral_v<T>) {
+    return extract_integer<T>(value, ctx);
+  } else if constexpr (std::is_floating_point_v<T>) {
+    return extract_number<T>(value, ctx);
+  } else {
+    static_assert(std::is_same_v<T, void>, "unsupported manifest JSON type");
+  }
+}
+
+template <typename T>
+T required(const json &object, const char *key, const std::string &ctx) {
+  return extract<T>(require_value(object, key, ctx),
+                    ctx + " key '" + key + "'");
+}
+
+uint64_t positive_u64(const json &value, const std::string &ctx) {
+  const uint64_t result = extract<uint64_t>(value, ctx);
+  if (result == 0) type_error(value, ctx, "a positive integer");
+  return result;
 }
 
 SchemaSpec parse_schema(const std::string &name, const json &js) {
+  const std::string ctx = "schema '" + name + "'";
+  reject_unknown_keys(js, ctx, {"fields"});
   SchemaSpec spec;
-  const json &fields = require(js, "fields", "schema '" + name + "'");
-  if (!fields.is_array() || fields.empty())
-    fail("schema '" + name + "': fields must be a non-empty array");
+  const json &fields = require_array(
+      require_value(js, "fields", ctx), ctx + " key 'fields'");
+  if (fields.empty()) fail(ctx + ": fields must be a non-empty array");
   std::set<std::string> field_names;
-  for (const json &f : fields) {
-    std::string fname = require(f, "name", "schema '" + name + "' field");
-    std::string ftype = require(f, "type", "schema '" + name + "' field");
+  for (size_t index = 0; index < fields.size(); index++) {
+    const json &f = fields.at(index);
+    const std::string field_ctx =
+        ctx + " field[" + std::to_string(index) + "]";
+    reject_unknown_keys(f, field_ctx, {"name", "type", "count"});
+    std::string fname = required<std::string>(f, "name", field_ctx);
+    std::string ftype = required<std::string>(f, "type", field_ctx);
     auto it = kFieldLayouts.find(ftype);
     if (it == kFieldLayouts.end())
-      fail("schema '" + name + "' field '" + fname + "': unknown type '" +
-           ftype + "'");
+      fail(ctx + " field '" + fname + "': unknown type '" + ftype + "'");
     // An optional `count` makes the field a fixed-size array of its element
     // type; it must be a positive integer. Absent means a scalar.
     size_t count = 0;
-    if (f.contains("count")) {
-      const json &cv = f["count"];
-      if (!cv.is_number_unsigned() || cv.get<uint64_t>() < 1)
-        fail("schema '" + name + "' field '" + fname +
-             "': count must be an integer >= 1");
-      count = cv.get<size_t>();
+    if (const json *cv = find_value(f, "count", field_ctx)) {
+      count = extract<size_t>(*cv, field_ctx + " key 'count'");
+      if (count < 1)
+        type_error(*cv, field_ctx + " key 'count'", "an integer >= 1");
     }
     if (!field_names.insert(fname).second)
-      fail("schema '" + name + "' field '" + fname +
-           "': duplicate field name");
+      fail(ctx + " field '" + fname + "': duplicate field name");
+    const size_t elements = count == 0 ? 1 : count;
+    if (elements > std::numeric_limits<size_t>::max() / it->second.size)
+      fail(ctx + " field '" + fname + "': byte size overflows size_t for " +
+           "count " + std::to_string(count));
+    const size_t field_size = it->second.size * elements;
+    if (spec.byte_size > std::numeric_limits<size_t>::max() - field_size)
+      fail(ctx + ": total byte size overflows size_t at field '" + fname +
+           "'");
     spec.fields.push_back({fname, ftype, count});
-    spec.byte_size += it->second.size * (count == 0 ? 1 : count);
+    spec.byte_size += field_size;
   }
   spec.canonical_json = js.dump();
   return spec;
 }
-
-// Inclusive [min, max] for integer field types, expressed as doubles so a
-// single range check covers both bounds. Float types are not listed and
-// accept any numeric value. Mirrors _INT_RANGES in the Python builder.
-const std::map<std::string, std::pair<double, double>> kIntRanges = {
-    {"u8", {0.0, 255.0}},
-    {"u16", {0.0, 65535.0}},
-    {"u32", {0.0, 4294967295.0}},
-    {"u64", {0.0, 18446744073709551615.0}},
-    {"i8", {-128.0, 127.0}},
-    {"i16", {-32768.0, 32767.0}},
-    {"i32", {-2147483648.0, 2147483647.0}},
-    {"i64", {-9223372036854775808.0, 9223372036854775807.0}},
-};
 
 /** Encode one validated override constant as the schema's little-endian bytes. */
 std::vector<uint8_t> encode_override(const FieldLayout &layout, double value) {
@@ -165,44 +295,71 @@ std::vector<uint8_t> encode_override(const FieldLayout &layout, double value) {
   return bytes;
 }
 
-void parse_interceptors(ChannelSpec &c, const json &arr, const SchemaSpec &schema) {
-  if (!arr.is_array())
-    fail("channel '" + c.name + "': interceptors must be an array");
-  for (const json &js : arr) {
-    const std::string ctx = "interceptor on '" + c.name + "'";
+void validate_integer_override(const json &value, const std::string &ctx,
+                              const std::string &type) {
+  if (type == "u8") {
+    (void)extract<uint8_t>(value, ctx);
+  } else if (type == "u16") {
+    (void)extract<uint16_t>(value, ctx);
+  } else if (type == "u32") {
+    (void)extract<uint32_t>(value, ctx);
+  } else if (type == "u64") {
+    (void)extract<uint64_t>(value, ctx);
+  } else if (type == "i8") {
+    (void)extract<int8_t>(value, ctx);
+  } else if (type == "i16") {
+    (void)extract<int16_t>(value, ctx);
+  } else if (type == "i32") {
+    (void)extract<int32_t>(value, ctx);
+  } else if (type == "i64") {
+    (void)extract<int64_t>(value, ctx);
+  }
+}
+
+double extract_override_value(const json &value, const std::string &ctx,
+                              const std::string &type) {
+  const double result = extract<double>(value, ctx);
+  if (type == "f32" &&
+      std::abs(result) > static_cast<double>(std::numeric_limits<float>::max()))
+    type_error(value, ctx, "a number representable as f32");
+  return result;
+}
+
+void parse_interceptors(ChannelSpec &c, const json &arr,
+                        const SchemaSpec &schema) {
+  const json &interceptors = require_array(
+      arr, "channel '" + c.name + "' key 'interceptors'");
+  for (size_t index = 0; index < interceptors.size(); index++) {
+    const json &js = interceptors.at(index);
+    const std::string ctx = "channel '" + c.name + "' interceptor[" +
+                            std::to_string(index) + "]";
+    reject_unknown_keys(js, ctx,
+                        {"kind", "start_ns", "end_ns", "delay_ns", "n",
+                         "field", "value"});
     InterceptorSpec spec;
-    spec.kind = require(js, "kind", ctx).get<std::string>();
+    spec.kind = required<std::string>(js, "kind", ctx);
     if (spec.kind != "drop" && spec.kind != "drop_nth" &&
         spec.kind != "delay" && spec.kind != "override")
       fail(ctx + ": unknown kind '" + spec.kind + "'");
 
-    if (js.contains("start_ns")) {
-      const json &v = js["start_ns"];
-      if (!v.is_number_unsigned())
-        fail(ctx + ": start_ns must be a non-negative integer");
-      spec.start_ns = v.get<uint64_t>();
-    }
-    if (js.contains("end_ns")) {
-      const json &v = js["end_ns"];
-      if (!v.is_number_unsigned())
-        fail(ctx + ": end_ns must be a non-negative integer");
-      if (v.get<uint64_t>() <= spec.start_ns)
+    if (const json *v = find_value(js, "start_ns", ctx))
+      spec.start_ns = extract<uint64_t>(*v, ctx + " key 'start_ns'");
+    if (const json *v = find_value(js, "end_ns", ctx)) {
+      const uint64_t end = extract<uint64_t>(*v, ctx + " key 'end_ns'");
+      if (end <= spec.start_ns)
         fail(ctx + ": window end_ns must be greater than start_ns");
-      spec.end_ns = v.get<uint64_t>();
+      spec.end_ns = end;
     }
 
     if (spec.kind == "delay") {
-      const json &v = require(js, "delay_ns", ctx + " (delay)");
-      if (!v.is_number_unsigned())
-        fail(ctx + ": delay_ns must be a non-negative integer");
-      spec.delay_ns = v.get<uint64_t>();
+      spec.delay_ns = required<uint64_t>(js, "delay_ns", ctx);
     } else if (spec.kind == "drop_nth") {
-      const json &v = require(js, "n", ctx + " (drop_nth)");
-      if (!v.is_number_unsigned() || v.get<uint64_t>() < 1)
-        fail(ctx + ": n must be an integer >= 1");
-      spec.n = v.get<uint64_t>();
+      const json &v = require_value(js, "n", ctx);
+      const uint64_t n = extract<uint64_t>(v, ctx + " key 'n'");
+      if (n < 1) type_error(v, ctx + " key 'n'", "an integer >= 1");
+      spec.n = n;
     } else if (spec.kind == "override") {
-      spec.field = require(js, "field", ctx + " (override)").get<std::string>();
+      spec.field = required<std::string>(js, "field", ctx);
       const FieldSpec *fs = nullptr;
       for (const FieldSpec &f : schema.fields)
         if (f.name == spec.field) fs = &f;
@@ -212,16 +369,13 @@ void parse_interceptors(ChannelSpec &c, const json &arr, const SchemaSpec &schem
       if (fs->count != 0)
         fail(ctx + ": override field '" + spec.field +
              "' is a fixed-size array; only scalar fields can be overridden");
-      const json &v = require(js, "value", ctx + " (override)");
-      if (!v.is_number())
-        fail(ctx + ": override value for '" + spec.field + "' must be a number");
-      spec.value = v.get<double>();
-      auto rit = kIntRanges.find(fs->type);
-      if (rit != kIntRanges.end() &&
-          (spec.value < rit->second.first || spec.value > rit->second.second ||
-           spec.value != std::floor(spec.value)))
-        fail(ctx + ": override value is unrepresentable in '" + spec.field +
-             "' (" + fs->type + ")");
+      const json &v = require_value(js, "value", ctx);
+      const std::string value_ctx = ctx + " key 'value' for field '" +
+                                    spec.field + "'";
+      if (kFieldLayouts.at(fs->type).representation !=
+          FieldLayout::Representation::Float)
+        validate_integer_override(v, value_ctx, fs->type);
+      spec.value = extract_override_value(v, value_ctx, fs->type);
     }
     c.interceptors.push_back(std::move(spec));
   }
@@ -230,10 +384,15 @@ void parse_interceptors(ChannelSpec &c, const json &arr, const SchemaSpec &schem
 ParticipantSpec parse_participant(const std::string &name, const json &js,
                                   const Manifest &m) {
   const std::string ctx = "participant '" + name + "'";
-  auto check_channels = [&](const json &arr, const char *key) {
+  const json &participant = require_object(js, ctx);
+  const auto check_channels = [&](const json &value, const char *key) {
+    const json &arr = require_array(value, ctx + " key '" + key + "'");
     std::vector<std::string> out;
-    for (const json &ch : arr) {
-      std::string cname = ch.get<std::string>();
+    for (size_t index = 0; index < arr.size(); index++) {
+      const json &ch = arr.at(index);
+      const std::string item_ctx = ctx + " key '" + key + "'[" +
+                                   std::to_string(index) + "]";
+      std::string cname = extract<std::string>(ch, item_ctx);
       if (!m.find_channel(cname))
         fail(ctx + " " + key + " references unknown channel '" + cname + "'");
       out.push_back(cname);
@@ -243,39 +402,61 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
 
   ParticipantSpec p;
   p.name = name;
-  std::string type = require(js, "type", ctx);
+  std::string type = required<std::string>(participant, "type", ctx);
   // The clock shim is a process-participant-only opt-in; on any other type it
   // is a config error (the Python builder cannot even express it there).
-  if (type != "process" && js.contains("shim"))
+  if (type != "process" && find_value(participant, "shim", ctx))
     fail(ctx + ": shim is only valid on process participants");
   if (type == "native") {
+    reject_unknown_keys(participant, ctx, {"type", "library", "config", "shim"});
     NativeSpec n;
-    n.library = require(js, "library", ctx).get<std::string>();
-    n.config_json = js.value("config", json::object()).dump();
+    n.library = required<std::string>(participant, "library", ctx);
+    // Native config is the explicit extension point for participant-specific
+    // options. Its keys are intentionally not closed by the Manifest format;
+    // the container itself is still validated so malformed JSON cannot escape.
+    if (const json *config = find_value(participant, "config", ctx)) {
+      n.config_json = require_object(*config, ctx + " key 'config'").dump();
+    } else {
+      n.config_json = json::object().dump();
+    }
     p.impl = std::move(n);
   } else if (type == "process") {
+    reject_unknown_keys(participant, ctx,
+                        {"type", "command", "step_period_ns", "subscribes",
+                         "publishes", "priority", "shim"});
     ProcessSpec ps;
-    const json &cmd = require(js, "command", ctx);
-    if (!cmd.is_array() || cmd.empty())
+    const json &cmd = require_array(
+        require_value(participant, "command", ctx),
+        ctx + " key 'command'");
+    if (cmd.empty())
       fail(ctx + ": command must be a non-empty array");
-    for (const json &c : cmd) ps.command.push_back(c.get<std::string>());
-    ps.step_period_ns =
-        positive_u64(require(js, "step_period_ns", ctx), ctx + " step_period_ns");
-    ps.subscribes = check_channels(js.value("subscribes", json::array()), "subscribes");
-    ps.publishes = check_channels(js.value("publishes", json::array()), "publishes");
-    ps.priority = js.value("priority", 0);
-    if (js.contains("shim")) {
-      const json &v = js["shim"];
-      if (!v.is_boolean()) fail(ctx + ": shim must be a boolean");
-      ps.shim = v.get<bool>();
-    }
+    for (size_t index = 0; index < cmd.size(); index++)
+      ps.command.push_back(extract<std::string>(
+          cmd.at(index), ctx + " key 'command'[" + std::to_string(index) + "]"));
+    ps.step_period_ns = positive_u64(
+        require_value(participant, "step_period_ns", ctx),
+        ctx + " key 'step_period_ns'");
+    if (const json *subscribes = find_value(participant, "subscribes", ctx))
+      ps.subscribes = check_channels(*subscribes, "subscribes");
+    if (const json *publishes = find_value(participant, "publishes", ctx))
+      ps.publishes = check_channels(*publishes, "publishes");
+    if (const json *priority = find_value(participant, "priority", ctx))
+      ps.priority = extract<int32_t>(*priority, ctx + " key 'priority'");
+    if (const json *shim = find_value(participant, "shim", ctx))
+      ps.shim = extract<bool>(*shim, ctx + " key 'shim'");
     p.impl = std::move(ps);
   } else if (type == "replay") {
+    reject_unknown_keys(participant, ctx,
+                        {"type", "recording", "recording_hash", "channels",
+                         "shim"});
     ReplaySpec rs;
-    rs.recording = require(js, "recording", ctx).get<std::string>();
-    rs.recording_hash = require(js, "recording_hash", ctx).get<std::string>();
-    const json &chans = require(js, "channels", ctx);
-    if (!chans.is_array() || chans.empty())
+    rs.recording = required<std::string>(participant, "recording", ctx);
+    rs.recording_hash =
+        required<std::string>(participant, "recording_hash", ctx);
+    const json &chans = require_array(
+        require_value(participant, "channels", ctx),
+        ctx + " key 'channels'");
+    if (chans.empty())
       fail(ctx + ": channels must be a non-empty array");
     rs.channels = check_channels(chans, "channels");
     p.impl = std::move(rs);
@@ -357,83 +538,99 @@ const ChannelSpec *Manifest::find_channel(const std::string &name) const {
 }
 
 Manifest load_manifest(const std::filesystem::path &path) {
-  std::ifstream in(path, std::ios::binary);
-  if (!in) fail("cannot open manifest file: " + path.string());
-  std::stringstream buf;
-  buf << in.rdbuf();
-  const std::string bytes = buf.str();
-
-  json doc;
   try {
-    doc = json::parse(bytes);
+    std::ifstream in(path, std::ios::binary);
+    if (!in) fail("cannot open manifest file: " + path.string());
+    std::stringstream buf;
+    buf << in.rdbuf();
+    const std::string bytes = buf.str();
+
+    json doc;
+    try {
+      doc = json::parse(bytes);
+    } catch (const json::exception &e) {
+      fail(std::string("invalid JSON: ") + e.what());
+    }
+    require_object(doc, "manifest");
+    reject_unknown_keys(doc, "manifest",
+                        {"sil_manifest", "duration_ns", "epoch_ns", "schemas",
+                         "channels", "participants"});
+
+    const int version = required<int>(doc, "sil_manifest", "manifest");
+    if (version != kManifestVersion)
+      fail("unsupported sil_manifest version " + std::to_string(version) +
+           ", expected " + std::to_string(kManifestVersion));
+
+    Manifest m;
+    m.hash_hex = sha256_hex(bytes);
+    m.base_dir = std::filesystem::absolute(path).parent_path();
+    m.duration_ns = positive_u64(
+        require_value(doc, "duration_ns", "manifest"),
+        "manifest key 'duration_ns'");
+
+    // Optional realtime epoch for shimmed participants; absent means 0.
+    if (const json *epoch = find_value(doc, "epoch_ns", "manifest"))
+      m.epoch_ns = extract<uint64_t>(*epoch, "manifest key 'epoch_ns'");
+
+    const json &schemas = require_object(
+        require_value(doc, "schemas", "manifest"),
+        "manifest key 'schemas'");
+    for (auto it = schemas.begin(); it != schemas.end(); ++it)
+      m.schemas.emplace(it.key(), parse_schema(it.key(), it.value()));
+
+    // nlohmann objects iterate key-sorted: channel/participant order is
+    // name-determined, never author-order, so hashes and IDs are stable.
+    const json &channels = require_object(
+        require_value(doc, "channels", "manifest"),
+        "manifest key 'channels'");
+    for (auto it = channels.begin(); it != channels.end(); ++it) {
+      const std::string &name = it.key();
+      const json &js = it.value();
+      const std::string ctx = "channel '" + name + "'";
+      reject_unknown_keys(js, ctx,
+                          {"schema", "latency_ns", "transport", "interceptors"});
+      ChannelSpec c;
+      c.name = name;
+      c.schema = required<std::string>(js, "schema", ctx);
+      auto schema_it = m.schemas.find(c.schema);
+      if (schema_it == m.schemas.end())
+        fail(ctx + " references unknown schema '" + c.schema + "'");
+      if (const json *latency = find_value(js, "latency_ns", ctx))
+        c.latency_ns = extract<uint64_t>(*latency, ctx + " key 'latency_ns'");
+
+      // Inline is the default (and omitted from the canonical doc). Only
+      // "shm" is otherwise valid; anything else is a config error before setup.
+      if (const json *transport = find_value(js, "transport", ctx)) {
+        const std::string transport_value =
+            extract<std::string>(*transport, ctx + " key 'transport'");
+        if (transport_value == "inline")
+          c.transport = Transport::Inline;
+        else if (transport_value == "shm")
+          c.transport = Transport::Shm;
+        else
+          fail(ctx + ": unknown transport '" + transport_value +
+               "' (expected 'inline' or 'shm')");
+      }
+      if (const json *interceptors = find_value(js, "interceptors", ctx))
+        parse_interceptors(c, *interceptors, schema_it->second);
+      c.interceptor_plan = compile_interceptor_plan(
+          m.duration_ns, schema_it->second, c.interceptors);
+      m.channels.push_back(std::move(c));
+    }
+
+    const json &participants = require_object(
+        require_value(doc, "participants", "manifest"),
+        "manifest key 'participants'");
+    for (auto it = participants.begin(); it != participants.end(); ++it)
+      m.participants.push_back(parse_participant(it.key(), it.value(), m));
+
+    return m;
   } catch (const json::exception &e) {
-    fail(std::string("invalid JSON: ") + e.what());
+    // Every conversion in this seam should already carry its field context.
+    // Keep this guard for future nlohmann operations added to the loader.
+    throw ManifestError("manifest error: JSON validation failed while loading '" +
+                        path.string() + "': " + e.what());
   }
-  if (!doc.is_object()) fail("top level must be an object");
-
-  const json &version = require(doc, "sil_manifest", "manifest");
-  if (!version.is_number_integer() || version.get<int>() != kManifestVersion)
-    fail("unsupported sil_manifest version " + version.dump() + ", expected " +
-         std::to_string(kManifestVersion));
-
-  Manifest m;
-  m.hash_hex = sha256_hex(bytes);
-  m.base_dir = std::filesystem::absolute(path).parent_path();
-  m.duration_ns =
-      positive_u64(require(doc, "duration_ns", "manifest"), "duration_ns");
-
-  // Optional realtime epoch for shimmed participants; absent means 0. A JSON
-  // negative is not is_number_unsigned(), so this rejects negative epochs.
-  if (doc.contains("epoch_ns")) {
-    const json &e = doc["epoch_ns"];
-    if (!e.is_number_unsigned())
-      fail("epoch_ns must be a non-negative integer");
-    m.epoch_ns = e.get<uint64_t>();
-  }
-
-  for (const auto &[name, js] : require(doc, "schemas", "manifest").items())
-    m.schemas.emplace(name, parse_schema(name, js));
-
-  // nlohmann objects iterate key-sorted: channel/participant order is
-  // name-determined, never author-order, so hashes and IDs are stable.
-  for (const auto &[name, js] : require(doc, "channels", "manifest").items()) {
-    ChannelSpec c;
-    c.name = name;
-    c.schema = require(js, "schema", "channel '" + name + "'").get<std::string>();
-    if (!m.schemas.count(c.schema))
-      fail("channel '" + name + "' references unknown schema '" + c.schema + "'");
-    if (js.contains("latency_ns")) {
-      const json &lat = js["latency_ns"];
-      if (!lat.is_number_unsigned())
-        fail("channel '" + name + "': latency_ns must be a non-negative integer");
-      c.latency_ns = lat.get<uint64_t>();
-    }
-    // Inline is the default (and omitted from the canonical doc). Only "shm"
-    // is otherwise valid; anything else is a config error before setup.
-    if (js.contains("transport")) {
-      const json &t = js["transport"];
-      if (!t.is_string())
-        fail("channel '" + name + "': transport must be a string");
-      const std::string tv = t.get<std::string>();
-      if (tv == "inline")
-        c.transport = Transport::Inline;
-      else if (tv == "shm")
-        c.transport = Transport::Shm;
-      else
-        fail("channel '" + name + "': unknown transport '" + tv +
-             "' (expected 'inline' or 'shm')");
-    }
-    if (js.contains("interceptors"))
-      parse_interceptors(c, js["interceptors"], m.schemas.at(c.schema));
-    c.interceptor_plan = compile_interceptor_plan(
-        m.duration_ns, m.schemas.at(c.schema), c.interceptors);
-    m.channels.push_back(std::move(c));
-  }
-
-  for (const auto &[name, js] : require(doc, "participants", "manifest").items())
-    m.participants.push_back(parse_participant(name, js, m));
-
-  return m;
 }
 
 }  // namespace sil
