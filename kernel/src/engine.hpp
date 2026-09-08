@@ -4,11 +4,13 @@
 #include <deque>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 #include "manifest.hpp"
+#include "virtual_time.hpp"
 
 namespace sil {
 
@@ -48,9 +50,15 @@ class SubQueue {
     // Default semantics: visible at the consumer's next activation after
     // publish, so results are independent of execution order within a slot.
     // Explicit latency L: visible at publish + L (L=0 is declared
-    // same-slot feedthrough).
-    return latency_ns_ ? m.publish_ns + *latency_ns_ <= now_ns
-                       : m.publish_ns < now_ns;
+    // same-slot feedthrough). A visibility the clock cannot represent lies
+    // beyond every slot the run can open, so the message is never delivered.
+    // The run duration needs no separate test here: a slot only opens for a
+    // task activation or a replay timestamp below the duration, so a visible
+    // time that passes `<= now_ns` is inside the run by construction.
+    if (!latency_ns_) return m.publish_ns < now_ns;
+    const std::optional<uint64_t> visible_ns =
+        advance_virtual_time(m.publish_ns, *latency_ns_);
+    return visible_ns && *visible_ns <= now_ns;
   }
 
   uint64_t front_seq() const { return pending_.front().global_seq; }

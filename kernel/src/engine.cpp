@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <limits>
 #include <map>
+#include <optional>
 
 #include "interceptor.hpp"
 #include "native_participant.hpp"
@@ -184,8 +185,16 @@ void Engine::run() {
       t->fn(slot);
       in_task_ = false;
       if (!failure_.empty()) throw RunError(failure_);
-      t->next_ns += t->period_ns;
-      if (t->next_ns >= manifest_.duration_ns) t->done = true;
+      // A next activation the clock cannot represent, or one at or beyond the
+      // half-open run duration, ends this task and nothing else. `next_ns`
+      // stays at the activation just executed, so slot selection never sees
+      // an earlier instant than the one it just left.
+      const std::optional<uint64_t> next_ns =
+          advance_virtual_time(t->next_ns, t->period_ns);
+      if (!next_ns || *next_ns >= manifest_.duration_ns)
+        t->done = true;
+      else
+        t->next_ns = *next_ns;
     }
   }
 
