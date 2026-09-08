@@ -354,6 +354,7 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
   const auto check_channels = [&](const json &value, const char *key) {
     const json &arr = require_array(value, ctx + " key '" + key + "'");
     std::vector<std::string> out;
+    std::set<std::string> seen;
     for (size_t index = 0; index < arr.size(); index++) {
       const json &ch = arr.at(index);
       const std::string item_ctx = ctx + " key '" + key + "'[" +
@@ -361,6 +362,10 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
       std::string cname = extract<std::string>(ch, item_ctx);
       if (!m.find_channel(cname))
         fail(ctx + " " + key + " references unknown channel '" + cname + "'");
+      // A repeated Channel would silently double a participant's delivery or
+      // production, so it is a declaration defect wherever it appears.
+      if (!seen.insert(cname).second)
+        fail(ctx + " " + key + " lists channel '" + cname + "' twice");
       out.push_back(cname);
     }
     return out;
@@ -374,9 +379,19 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
   if (type != "process" && find_value(participant, "shim", ctx))
     fail(ctx + ": shim is only valid on process participants");
   if (type == "native") {
-    reject_unknown_keys(participant, ctx, {"type", "library", "config", "shim"});
+    reject_unknown_keys(participant, ctx,
+                        {"type", "library", "config", "subscribes",
+                         "publishes", "shim"});
     NativeSpec n;
     n.library = required<std::string>(participant, "library", ctx);
+    // Absent lists mean an empty contract, matching process participants. A
+    // native declaration predating issue #49 therefore still loads and fails
+    // explicitly on its first undeclared call; whether that stays tolerated is
+    // the shared compatibility policy tracked in #62.
+    if (const json *subscribes = find_value(participant, "subscribes", ctx))
+      n.subscribes = check_channels(*subscribes, "subscribes");
+    if (const json *publishes = find_value(participant, "publishes", ctx))
+      n.publishes = check_channels(*publishes, "publishes");
     // Native config is the explicit extension point for participant-specific
     // options. Its keys are intentionally not closed by the Manifest format;
     // the container itself is still validated so malformed JSON cannot escape.

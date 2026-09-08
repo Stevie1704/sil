@@ -9,7 +9,14 @@ import subprocess
 import pytest
 from mcap.reader import make_reader
 
-from toys import TOY_SCHEMAS, accumulator_library, producer_library, toy_manifest
+from toys import (
+    TOY_SCHEMAS,
+    accumulator_library,
+    add_accumulator,
+    add_producer,
+    producer_library,
+    toy_manifest,
+)
 
 from sil import schema
 from sil.manifest import Manifest
@@ -547,11 +554,7 @@ class TestNativeScheduling:
     def test_periodic_producer_records_typed_messages(self, run_sil, tmp_path):
         m = toy_manifest(duration_ns=100_000_000)
         m.add_channel("ticks", schema="toy.Counter")
-        m.add_native(
-            "producer",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 10_000_000},
-        )
+        add_producer(m, "producer", channel="ticks", period_ns=10_000_000)
         proc = run_sil(m.write(tmp_path / "m.json").path)
         assert proc.returncode == 0, proc.stderr
 
@@ -563,11 +566,12 @@ class TestNativeScheduling:
     def test_offset_delays_first_activation(self, run_sil, tmp_path):
         m = toy_manifest(duration_ns=50_000_000)
         m.add_channel("ticks", schema="toy.Counter")
-        m.add_native(
+        add_producer(
+            m,
             "producer",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 20_000_000,
-                    "offset_ns": 5_000_000},
+            channel="ticks",
+            period_ns=20_000_000,
+            offset_ns=5_000_000,
         )
         proc = run_sil(m.write(tmp_path / "m.json").path)
         assert proc.returncode == 0, proc.stderr
@@ -575,20 +579,141 @@ class TestNativeScheduling:
         assert [t for _, t, _ in msgs] == [5_000_000, 25_000_000, 45_000_000]
 
 
+class TestNativeChannelContract:
+    """A native participant's Channel contract is declared in the manifest, so
+    the kernel knows every publisher before it loads participant code. A call
+    the declaration does not cover aborts the run with a diagnostic naming the
+    participant, the channel, and the declared direction (issue #49)."""
+
+    def test_subscribing_to_an_undeclared_input_is_a_config_error(
+        self, run_sil, tmp_path
+    ):
+        # The toy reads its input channel from config; the declaration omits
+        # it, so the participant is rejected during setup, before any run.
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_channel("sums", schema="toy.Accum")
+        m.add_native(
+            "acc",
+            library=accumulator_library(),
+            config={"input": "ticks", "output": "sums", "period_ns": 10_000_000},
+            publishes=["sums"],
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 2
+        assert "acc" in proc.stderr
+        assert "ticks" in proc.stderr
+        assert "input" in proc.stderr
+
+    def test_publishing_an_undeclared_output_aborts_the_run(
+        self, run_sil, tmp_path
+    ):
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_native(
+            "producer",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+        )
+        path = m.write(tmp_path / "m.json").path
+        first = run_sil(path, out=tmp_path / "a.mcap")
+        assert first.returncode == 1
+        assert "producer" in first.stderr
+        assert "ticks" in first.stderr
+        assert "output" in first.stderr
+        # The abort is part of the deterministic world: same manifest, same
+        # exit code and same diagnostic.
+        second = run_sil(path, out=tmp_path / "b.mcap")
+        assert (second.returncode, second.stderr) == (
+            first.returncode,
+            first.stderr,
+        )
+
+    def test_declaring_an_unknown_channel_is_a_config_error(
+        self, run_sil, tmp_path
+    ):
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_native(
+            "producer",
+            library=producer_library(),
+            config={"channel": "ticks", "period_ns": 10_000_000},
+            publishes=["ticks"],
+        )
+        doc = m.to_doc()
+        doc["participants"]["producer"]["publishes"] = ["nope"]
+        proc = run_sil(_write_doc(tmp_path, doc))
+        assert proc.returncode == 2
+        assert "nope" in proc.stderr
+
+    def test_duplicate_channel_in_one_declaration_is_a_config_error(
+        self, run_sil, tmp_path
+    ):
+        # The builder rejects duplicates; a hand-written manifest bypasses
+        # that, so prove the kernel rejects them too, at load.
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        add_producer(m, "producer", channel="ticks", period_ns=10_000_000)
+        doc = m.to_doc()
+        doc["participants"]["producer"]["publishes"] = ["ticks", "ticks"]
+        proc = run_sil(_write_doc(tmp_path, doc))
+        assert proc.returncode == 2
+        assert "producer" in proc.stderr
+        assert "twice" in proc.stderr
+
+    def test_a_native_and_a_process_may_publish_one_channel(
+        self, run_sil, tmp_path
+    ):
+        # Live-publisher cardinality is decided in #64. Declaring native
+        # publishers must not introduce a single-publisher rule on the way.
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        add_producer(m, "aprod", channel="ticks", period_ns=10_000_000)
+        m.add_process(
+            "psource",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "counter_source.py"),
+                     "ticks"],
+            step_period_ns=10_000_000,
+            publishes=["ticks"],
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        values = sorted(
+            TYPES["toy.Counter"].unpack(data)["value"]
+            for topic, _, data in msgs
+            if topic == "ticks"
+        )
+        # Both publishers reach the recording: the native's non-negative
+        # values and the process participant's non-positive ones.
+        assert min(values) < 0 < max(values)
+
+
+def _write_doc(tmp_path, doc):
+    """Write a hand-edited manifest document the Python builder would reject."""
+    path = tmp_path / "raw.json"
+    path.write_text(json.dumps(doc, sort_keys=True, separators=(",", ":")) + "\n")
+    return path
+
+
 def pipeline_manifest(producer_name, *, latency_ns=None, consumer_priority=0):
     m = toy_manifest(duration_ns=30_000_000)
     m.add_channel("ticks", schema="toy.Counter", latency_ns=latency_ns)
     m.add_channel("sums", schema="toy.Accum")
-    m.add_native(
-        producer_name,
-        library=producer_library(),
-        config={"channel": "ticks", "period_ns": 10_000_000},
-    )
-    m.add_native(
+    add_producer(m, producer_name, channel="ticks", period_ns=10_000_000)
+    add_accumulator(
+        m,
         "mid",
-        library=accumulator_library(),
-        config={"input": "ticks", "output": "sums", "period_ns": 10_000_000,
-                "priority": consumer_priority},
+        input_channel="ticks",
+        output_channel="sums",
+        period_ns=10_000_000,
+        priority=consumer_priority,
     )
     return m
 
@@ -646,11 +771,7 @@ class TestProcessParticipant:
         m = toy_manifest(duration_ns=30_000_000)
         m.add_channel("ticks", schema="toy.Counter")
         m.add_channel("echo", schema="toy.Counter")
-        m.add_native(
-            "aprod",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 10_000_000},
-        )
+        add_producer(m, "aprod", channel="ticks", period_ns=10_000_000)
         m.add_process(
             "pecho",
             command=[_sys.executable,
@@ -682,11 +803,7 @@ def write_with_raw_interceptor(tmp_path, entry, *, channel="ticks"):
     would itself reject."""
     m = toy_manifest(duration_ns=100_000_000)
     m.add_channel(channel, schema="toy.Counter")
-    m.add_native(
-        "producer",
-        library=producer_library(),
-        config={"channel": channel, "period_ns": 10_000_000},
-    )
+    add_producer(m, "producer", channel=channel, period_ns=10_000_000)
     doc = m.to_doc()
     doc["channels"][channel]["interceptors"] = [entry]
     path = tmp_path / "m.json"
@@ -859,11 +976,7 @@ class TestInterceptorInertness:
     def _producer(self, fault):
         m = toy_manifest(duration_ns=100_000_000)
         m.add_channel("ticks", schema="toy.Counter")
-        m.add_native(
-            "producer",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 10_000_000},
-        )
+        add_producer(m, "producer", channel="ticks", period_ns=10_000_000)
         if fault is not None:
             m.add_interceptor("ticks", **fault)
         return m
@@ -906,11 +1019,7 @@ class TestDelayInterceptor:
     def _producer(self, duration_ns=100_000_000):
         m = toy_manifest(duration_ns=duration_ns)
         m.add_channel("ticks", schema="toy.Counter")
-        m.add_native(
-            "producer",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 10_000_000},
-        )
+        add_producer(m, "producer", channel="ticks", period_ns=10_000_000)
         return m
 
     def test_window_scoped_delay_shifts_recorded_time(self, run_sil, tmp_path):
@@ -994,16 +1103,14 @@ class TestDelayInterceptor:
         m = toy_manifest(duration_ns=60_000_000)
         m.add_channel("ticks", schema="toy.Counter")
         m.add_channel("sums", schema="toy.Accum")
-        m.add_native(
-            "aprod",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 10_000_000},
-        )
-        m.add_native(
+        add_producer(m, "aprod", channel="ticks", period_ns=10_000_000)
+        add_accumulator(
+            m,
             "mid",
-            library=accumulator_library(),
-            config={"input": "ticks", "output": "sums",
-                    "period_ns": 10_000_000, "priority": 0},
+            input_channel="ticks",
+            output_channel="sums",
+            period_ns=10_000_000,
+            priority=0,
         )
         # Delay the tick published at 10ms by 15ms → it becomes visible at 25ms,
         # so the consumer at 20ms no longer sees it but the one at 30ms does.
@@ -1017,11 +1124,15 @@ class TestDelayInterceptor:
         base = toy_manifest(duration_ns=60_000_000)
         base.add_channel("ticks", schema="toy.Counter")
         base.add_channel("sums", schema="toy.Accum")
-        base.add_native("aprod", library=producer_library(),
-                        config={"channel": "ticks", "period_ns": 10_000_000})
-        base.add_native("mid", library=accumulator_library(),
-                        config={"input": "ticks", "output": "sums",
-                                "period_ns": 10_000_000, "priority": 0})
+        add_producer(base, "aprod", channel="ticks", period_ns=10_000_000)
+        add_accumulator(
+            base,
+            "mid",
+            input_channel="ticks",
+            output_channel="sums",
+            period_ns=10_000_000,
+            priority=0,
+        )
         base_sums = sums(run_sil(base.write(tmp_path / "b.json").path,
                                  out=tmp_path / "b.mcap").mcap_path)
         # The delay must change what the consumer folds in — otherwise the
@@ -1038,11 +1149,7 @@ class TestOverrideInterceptor:
     def _producer(self, duration_ns=100_000_000):
         m = toy_manifest(duration_ns=duration_ns)
         m.add_channel("ticks", schema="toy.Counter")
-        m.add_native(
-            "producer",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 10_000_000},
-        )
+        add_producer(m, "producer", channel="ticks", period_ns=10_000_000)
         return m
 
     def test_window_scoped_override_rewrites_only_inside_window(
@@ -1075,11 +1182,15 @@ class TestOverrideInterceptor:
             m = toy_manifest(duration_ns=40_000_000)
             m.add_channel("ticks", schema="toy.Counter")
             m.add_channel("sums", schema="toy.Accum")
-            m.add_native("aprod", library=producer_library(),
-                         config={"channel": "ticks", "period_ns": 10_000_000})
-            m.add_native("mid", library=accumulator_library(),
-                         config={"input": "ticks", "output": "sums",
-                                 "period_ns": 10_000_000, "priority": 0})
+            add_producer(m, "aprod", channel="ticks", period_ns=10_000_000)
+            add_accumulator(
+                m,
+                "mid",
+                input_channel="ticks",
+                output_channel="sums",
+                period_ns=10_000_000,
+                priority=0,
+            )
             return m
 
         faulted = build()
@@ -1115,11 +1226,7 @@ class TestOverrideInterceptor:
         m = toy_manifest(duration_ns=30_000_000)
         m.add_channel("ticks", schema="toy.Counter", transport=transport)
         m.add_channel("echo", schema="toy.Counter")
-        m.add_native(
-            "producer",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 10_000_000},
-        )
+        add_producer(m, "producer", channel="ticks", period_ns=10_000_000)
         m.add_process(
             "echo",
             command=[_sys.executable, str(ROOT / "tests/participants/echo.py")],
@@ -1188,11 +1295,7 @@ class TestOverrideInterceptor:
         m = Manifest(duration_ns=10_000_000)
         m.add_schemas(schemas)
         m.add_channel("ticks", schema="FloatCounter")
-        m.add_native(
-            "producer",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 10_000_000},
-        )
+        add_producer(m, "producer", channel="ticks", period_ns=10_000_000)
         m.add_interceptor(
             "ticks", kind="override", field="value", value=integer_value
         )
@@ -1245,11 +1348,7 @@ class TestDropInterceptor:
     def _producer(self, duration_ns=100_000_000):
         m = toy_manifest(duration_ns=duration_ns)
         m.add_channel("ticks", schema="toy.Counter")
-        m.add_native(
-            "producer",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 10_000_000},
-        )
+        add_producer(m, "producer", channel="ticks", period_ns=10_000_000)
         return m
 
     def test_window_scoped_drop_silences_only_inside_window(self, run_sil, tmp_path):
@@ -1289,11 +1388,15 @@ class TestDropInterceptor:
             m = toy_manifest(duration_ns=40_000_000)
             m.add_channel("ticks", schema="toy.Counter")
             m.add_channel("sums", schema="toy.Accum")
-            m.add_native("aprod", library=producer_library(),
-                         config={"channel": "ticks", "period_ns": 10_000_000})
-            m.add_native("mid", library=accumulator_library(),
-                         config={"input": "ticks", "output": "sums",
-                                 "period_ns": 10_000_000, "priority": 0})
+            add_producer(m, "aprod", channel="ticks", period_ns=10_000_000)
+            add_accumulator(
+                m,
+                "mid",
+                input_channel="ticks",
+                output_channel="sums",
+                period_ns=10_000_000,
+                priority=0,
+            )
             return m
 
         faulted = build()
@@ -1315,11 +1418,7 @@ class TestDropNthInterceptor:
     def _producer(self, duration_ns=100_000_000):
         m = toy_manifest(duration_ns=duration_ns)
         m.add_channel("ticks", schema="toy.Counter")
-        m.add_native(
-            "producer",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 10_000_000},
-        )
+        add_producer(m, "producer", channel="ticks", period_ns=10_000_000)
         return m
 
     def test_drops_every_nth_message_in_window(self, run_sil, tmp_path):
@@ -1382,11 +1481,7 @@ class TestRecordingFormatSeam:
         marker = tmp_path / "spawned.marker"
         m = toy_manifest(duration_ns=30_000_000)
         m.add_channel("ticks", schema="toy.Counter")
-        m.add_native(
-            "aprod",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 10_000_000},
-        )
+        add_producer(m, "aprod", channel="ticks", period_ns=10_000_000)
         m.add_process(
             "marker",
             command=[_sys.executable,
@@ -1413,11 +1508,7 @@ class TestRecordingFormatSeam:
         # as the default path: the seam is a pure dispatch, not a re-encode.
         m = toy_manifest(duration_ns=100_000_000)
         m.add_channel("ticks", schema="toy.Counter")
-        m.add_native(
-            "producer",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 10_000_000},
-        )
+        add_producer(m, "producer", channel="ticks", period_ns=10_000_000)
         ref = m.write(tmp_path / "m.json").path
         a = run_sil(ref, out=tmp_path / "a.mcap")
         b = run_sil(ref, out=tmp_path / "b.mcap")
@@ -1434,11 +1525,7 @@ class TestRunAbort:
 
         m = toy_manifest(duration_ns=100_000_000)
         m.add_channel("ticks", schema="toy.Counter")
-        m.add_native(
-            "aprod",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 10_000_000},
-        )
+        add_producer(m, "aprod", channel="ticks", period_ns=10_000_000)
         m.add_process(
             "test",
             command=[_sys.executable,
@@ -1473,11 +1560,7 @@ def write_with_raw_array_schema(tmp_path, schemas):
     declarations the Python builder would itself reject."""
     m = toy_manifest(duration_ns=100_000_000)
     m.add_channel("ticks", schema="toy.Counter")
-    m.add_native(
-        "producer",
-        library=producer_library(),
-        config={"channel": "ticks", "period_ns": 10_000_000},
-    )
+    add_producer(m, "producer", channel="ticks", period_ns=10_000_000)
     doc = m.to_doc()
     doc["schemas"] = schemas
     path = tmp_path / "m.json"
@@ -1946,11 +2029,7 @@ class TestShmTransport:
         # error at load, before any participant starts.
         m = toy_manifest(duration_ns=100_000_000)
         m.add_channel("ticks", schema="toy.Counter")
-        m.add_native(
-            "producer",
-            library=producer_library(),
-            config={"channel": "ticks", "period_ns": 10_000_000},
-        )
+        add_producer(m, "producer", channel="ticks", period_ns=10_000_000)
         doc = m.to_doc()
         doc["channels"]["ticks"]["transport"] = "rdma"
         path = tmp_path / "m.json"

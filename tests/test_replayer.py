@@ -14,7 +14,7 @@ import pytest
 from conftest import ROOT
 from test_run_boundary import ARRAY_SCHEMAS, ARRAY_TYPES, TYPES, read_mcap, sums
 from sil.manifest import Manifest
-from toys import accumulator_library, producer_library, toy_manifest
+from toys import add_accumulator, add_producer, toy_manifest
 
 
 def record_producer_run(run_sil, tmp_path, *, duration_ns=50_000_000):
@@ -22,15 +22,13 @@ def record_producer_run(run_sil, tmp_path, *, duration_ns=50_000_000):
     m = toy_manifest(duration_ns=duration_ns)
     m.add_channel("ticks", schema="toy.Counter")
     m.add_channel("sums", schema="toy.Accum")
-    m.add_native(
-        "aprod",
-        library=producer_library(),
-        config={"channel": "ticks", "period_ns": 10_000_000},
-    )
-    m.add_native(
+    add_producer(m, "aprod", channel="ticks", period_ns=10_000_000)
+    add_accumulator(
+        m,
         "acc",
-        library=accumulator_library(),
-        config={"input": "ticks", "output": "sums", "period_ns": 10_000_000},
+        input_channel="ticks",
+        output_channel="sums",
+        period_ns=10_000_000,
     )
     out = tmp_path / "record.mcap"
     proc = run_sil(m.write(tmp_path / "record.json").path, out=out)
@@ -44,10 +42,12 @@ def replay_manifest(recording, *, channels=("ticks",), duration_ns=50_000_000):
     m.add_channel("ticks", schema="toy.Counter")
     m.add_channel("sums", schema="toy.Accum")
     m.add_replay("rep", recording=str(recording), channels=list(channels))
-    m.add_native(
+    add_accumulator(
+        m,
         "acc",
-        library=accumulator_library(),
-        config={"input": "ticks", "output": "sums", "period_ns": 10_000_000},
+        input_channel="ticks",
+        output_channel="sums",
+        period_ns=10_000_000,
     )
     return m
 
@@ -307,11 +307,13 @@ class TestReplaySemantics:
         m.add_channel("ticks", schema="toy.Counter", latency_ns=0)
         m.add_channel("sums", schema="toy.Accum")
         m.add_replay("rep", recording=str(rec), channels=["ticks"])
-        m.add_native(
+        add_accumulator(
+            m,
             "acc",
-            library=accumulator_library(),
-            config={"input": "ticks", "output": "sums",
-                    "period_ns": 10_000_000, "priority": 10},
+            input_channel="ticks",
+            output_channel="sums",
+            period_ns=10_000_000,
+            priority=10,
         )
         proc = run_sil(m.write(tmp_path / "replay.json").path)
         assert proc.returncode == 0, proc.stderr
@@ -619,7 +621,7 @@ class TestReplayRejection:
         rec, h = record_producer_run(run_sil, tmp_path)
         manifest = tmp_path / "m.json"
         doc = json.loads(_manifest_json(recording=str(rec), recording_hash=h))
-        doc["participants"]["live"] = {
+        doc["participants"]["stimulus"] = {
             "type": "process",
             "command": [sys.executable,
                         str(ROOT / "tests" / "participants" / "echo.py")],
@@ -632,6 +634,33 @@ class TestReplayRejection:
         proc = run_sil(manifest)
         assert proc.returncode == 2
         assert "ticks" in proc.stderr
+        # The diagnostic names the conflicting publisher, not just the channel.
+        assert "'stimulus'" in proc.stderr
+
+    def test_native_live_publisher_collision_is_config_error(
+        self, run_sil, tmp_path
+    ):
+        # Native publishers are declared in the manifest too, so they run
+        # through the same collision check. The library path does not exist:
+        # the collision must be found before any participant is loaded.
+        import json
+
+        rec, h = record_producer_run(run_sil, tmp_path)
+        manifest = tmp_path / "m.json"
+        doc = json.loads(_manifest_json(recording=str(rec), recording_hash=h))
+        doc["participants"]["stimulus"] = {
+            "type": "native",
+            "library": str(tmp_path / "never-loaded.silp"),
+            "config": {"channel": "ticks", "period_ns": 10_000_000},
+            "subscribes": [],
+            "publishes": ["ticks"],
+        }
+        manifest.write_text(json.dumps(doc))
+        proc = run_sil(manifest)
+        assert proc.returncode == 2
+        assert "ticks" in proc.stderr
+        assert "'stimulus'" in proc.stderr
+        assert "never-loaded" not in proc.stderr
 
 
 def _manifest_json(*, recording, recording_hash, channels=("ticks",),

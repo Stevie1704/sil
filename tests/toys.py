@@ -21,3 +21,35 @@ def producer_library() -> str:
 
 def accumulator_library() -> str:
     return str(BUILD_DIR / "toy_accumulator.silp")
+
+
+def add_producer(m, name: str = "producer", *, channel: str = "ticks", **config):
+    """Declare the toy producer, config and Channel contract from one source.
+
+    The toy reads its channel from `config`; the Manifest declares the same
+    channel as an output. Deriving both here keeps them from drifting apart.
+    """
+    m.add_native(
+        name,
+        library=producer_library(),
+        config={"channel": channel, **config},
+        publishes=[channel],
+    )
+
+
+def add_accumulator(
+    m,
+    name: str = "acc",
+    *,
+    input_channel: str = "ticks",
+    output_channel: str = "sums",
+    **config,
+):
+    """Declare the toy accumulator, config and Channel contract from one source."""
+    m.add_native(
+        name,
+        library=accumulator_library(),
+        config={"input": input_channel, "output": output_channel, **config},
+        subscribes=[input_channel],
+        publishes=[output_channel],
+    )

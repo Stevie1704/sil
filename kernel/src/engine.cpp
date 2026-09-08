@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <limits>
-#include <set>
+#include <map>
 
 #include "interceptor.hpp"
 #include "native_participant.hpp"
@@ -43,13 +43,33 @@ void Engine::setup() {
   in_setup_ = true;
 
   // Open-loop replay must not race live production on the same channel: a
-  // channel a live participant publishes cannot also be replayed. Process
-  // participants declare their publishes in the manifest, so the collision is
-  // caught here, at load, before any message flows.
-  std::set<std::string> live_published;
-  for (const ParticipantSpec &p : manifest_.participants)
+  // channel a live participant publishes cannot also be replayed. Every live
+  // publisher declares its outputs in the manifest, native and process alike,
+  // so one pass over the declarations catches the collision before any
+  // participant is loaded or spawned. Two live publishers on one channel stay
+  // allowed here; that cardinality is decided separately (#64).
+  std::map<std::string, std::string> live_publisher;
+  for (const ParticipantSpec &p : manifest_.participants) {
+    const std::vector<std::string> *publishes = nullptr;
     if (const auto *proc = std::get_if<ProcessSpec>(&p.impl))
-      for (const std::string &ch : proc->publishes) live_published.insert(ch);
+      publishes = &proc->publishes;
+    else if (const auto *native = std::get_if<NativeSpec>(&p.impl))
+      publishes = &native->publishes;
+    if (!publishes) continue;
+    for (const std::string &ch : *publishes) live_publisher.emplace(ch, p.name);
+  }
+  for (const ParticipantSpec &p : manifest_.participants) {
+    const auto *replay = std::get_if<ReplaySpec>(&p.impl);
+    if (!replay) continue;
+    for (const std::string &ch : replay->channels) {
+      auto publisher = live_publisher.find(ch);
+      if (publisher != live_publisher.end())
+        throw ManifestError("manifest error: participant '" + p.name +
+                            "': replayed channel '" + ch +
+                            "' is also published by live participant '" +
+                            publisher->second + "'");
+    }
+  }
 
   // Manifest order is name-sorted: registration indices, and with them all
   // scheduling tie-breaks, are independent of authoring order.
@@ -57,12 +77,11 @@ void Engine::setup() {
     if (const auto *native = std::get_if<NativeSpec>(&p.impl)) {
       natives_.push_back(std::make_unique<NativeParticipant>(
           *this, p.name, *native, manifest_.base_dir));
+      // A contract violation during init is reported through fail(). A
+      // participant that ignores the callback's return code must not carry
+      // that failure into the run.
+      if (!failure_.empty()) throw ManifestError("manifest error: " + failure_);
     } else if (const auto *replay = std::get_if<ReplaySpec>(&p.impl)) {
-      for (const std::string &ch : replay->channels)
-        if (live_published.count(ch))
-          throw ManifestError("manifest error: participant '" + p.name +
-                              "': replayed channel '" + ch +
-                              "' is also published by a live participant");
       replayers_.push_back(
           std::make_unique<Replayer>(*this, p.name, *replay, manifest_.base_dir));
     } else {

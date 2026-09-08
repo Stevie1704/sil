@@ -90,6 +90,17 @@ def _integer(value, context: str, *, minimum=None, maximum=None) -> int:
     return value
 
 
+def _channel_list(value, participant: str, key: str) -> list[str]:
+    """Normalize one participant's declared Channel list to a list of names."""
+    if value is None:
+        return []
+    context = f"participant {participant!r} {key}"
+    return [
+        _string(item, f"{context}[{index}]")
+        for index, item in enumerate(_array(value, context))
+    ]
+
+
 def _reject_unknown(entry: dict, allowed: set[str], context: str) -> None:
     for key in entry:
         if key not in allowed:
@@ -334,13 +345,35 @@ class Manifest:
                     f"for {field!r} ({ftype})"
                 ) from exc
 
-    def add_native(self, name: str, *, library: str, config: dict | None = None) -> None:
+    def add_native(
+        self,
+        name: str,
+        *,
+        library: str,
+        config: dict | None = None,
+        subscribes: list[str] | None = None,
+        publishes: list[str] | None = None,
+    ) -> None:
+        """Declare a native participant and its Channel contract.
+
+        The contract is declarative like a process participant's: the kernel
+        knows every publisher before it loads participant code, and the C ABI
+        stays free of a registration call. Both lists are always emitted, so a
+        contract can never be silently absent from the hashed manifest.
+        """
         name = _string(name, "participant name")
         library = _string(library, f"participant {name!r} library")
         if config is not None:
             config = _object(config, f"participant {name!r} config")
         self._add_participant(
-            name, {"type": "native", "library": library, "config": config or {}}
+            name,
+            {
+                "type": "native",
+                "library": library,
+                "config": config or {},
+                "subscribes": _channel_list(subscribes, name, "subscribes"),
+                "publishes": _channel_list(publishes, name, "publishes"),
+            },
         )
 
     def add_process(
@@ -368,22 +401,8 @@ class Manifest:
             minimum=1,
             maximum=_SIZE_MAX,
         )
-        if subscribes is None:
-            subscribes = []
-        else:
-            subscribes = _array(subscribes, f"participant {name!r} subscribes")
-        subscribes = [
-            _string(item, f"participant {name!r} subscribes[{index}]")
-            for index, item in enumerate(subscribes)
-        ]
-        if publishes is None:
-            publishes = []
-        else:
-            publishes = _array(publishes, f"participant {name!r} publishes")
-        publishes = [
-            _string(item, f"participant {name!r} publishes[{index}]")
-            for index, item in enumerate(publishes)
-        ]
+        subscribes = _channel_list(subscribes, name, "subscribes")
+        publishes = _channel_list(publishes, name, "publishes")
         priority = _integer(
             priority,
             f"participant {name!r} priority",
@@ -467,30 +486,41 @@ class Manifest:
     def _validate(self) -> None:
         for pname, p in self._participants.items():
             for key in ("subscribes", "publishes", "channels"):
+                seen: set[str] = set()
                 for ch in p.get(key, []):
                     if ch not in self._channels:
                         raise ManifestError(
                             f"participant {pname!r} {key} unknown channel {ch!r}"
                         )
+                    if ch in seen:
+                        raise ManifestError(
+                            f"participant {pname!r} {key} lists channel "
+                            f"{ch!r} twice"
+                        )
+                    seen.add(ch)
 
-        # Open-loop replay must not race live production: a channel a process
-        # participant publishes cannot also be replayed. The kernel enforces
-        # this at load (over process publishes); reject it here so a bad
-        # manifest never gets written.
-        live_published = {
-            ch
-            for p in self._participants.values()
-            if p["type"] == "process"
-            for ch in p["publishes"]
-        }
+        # Open-loop replay must not race live production: a channel a live
+        # participant publishes cannot also be replayed. Native and process
+        # publishers go through this one path, so a collision is visible
+        # wherever it is declared. Multiple live publishers stay allowed —
+        # that cardinality is decided in #64, not here.
+        # Name-sorted, like the kernel's manifest order, so both validators
+        # name the same publisher when a channel has more than one.
+        live_published: dict[str, str] = {}
+        for pname, p in sorted(self._participants.items()):
+            if p["type"] == "replay":
+                continue
+            for ch in p.get("publishes", []):
+                live_published.setdefault(ch, pname)
         for pname, p in self._participants.items():
             if p["type"] != "replay":
                 continue
             for ch in p["channels"]:
-                if ch in live_published:
+                publisher = live_published.get(ch)
+                if publisher is not None:
                     raise ManifestError(
                         f"participant {pname!r}: replayed channel {ch!r} is also "
-                        f"published by a live participant"
+                        f"published by live participant {publisher!r}"
                     )
 
     def to_doc(self) -> dict:
@@ -509,9 +539,10 @@ class Manifest:
         return doc
 
     def to_json(self) -> str:
+        doc = self.to_doc()
         try:
             encoded = json.dumps(
-                self.to_doc(),
+                doc,
                 sort_keys=True,
                 separators=(",", ":"),
                 allow_nan=False,
