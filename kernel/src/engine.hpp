@@ -57,7 +57,7 @@ class SubQueue {
     // time that passes `<= now_ns` is inside the run by construction.
     if (!latency_ns_) return m.publish_ns < now_ns;
     const std::optional<uint64_t> visible_ns =
-        advance_virtual_time(m.publish_ns, *latency_ns_);
+        virtual_time_after(m.publish_ns, *latency_ns_);
     return visible_ns && *visible_ns <= now_ns;
   }
 

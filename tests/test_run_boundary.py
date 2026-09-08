@@ -908,7 +908,20 @@ class TestChannelLatencyOverflow:
         ] * 3
 
     def test_latency_uint64_max_is_never_delivered(self, run_sil, tmp_path):
-        m = pipeline_manifest("aprod", latency_ns=U64_MAX)
+        # A single publish away from zero, so the wrapped visible time would
+        # land in the past rather than behind an already-blocked front: the
+        # unchecked addition delivered it in the very slot it was published.
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter", latency_ns=U64_MAX)
+        m.add_channel("sums", schema="toy.Accum")
+        add_producer(
+            m,
+            "aprod",
+            channel="ticks",
+            period_ns=100_000_000,
+            offset_ns=10_000_000,
+        )
+        add_accumulator(m, "mid", period_ns=10_000_000)
         proc = run_sil(m.write(tmp_path / "m.json").path)
         assert proc.returncode == 0, proc.stderr
         assert [count for _, count in sums(proc.mcap_path)] == [
@@ -944,7 +957,7 @@ class TestChannelLatencyOverflow:
             (U64_MAX - 1, {"count": 1, "sum": 0}),
         ]
 
-    def test_one_nanosecond_over_a_near_saturated_visible_time_is_not(
+    def test_one_nanosecond_over_a_near_saturated_visible_time_is_not_delivered(
         self, run_sil, tmp_path
     ):
         # Visible at UINT64_MAX: representable, but past every slot the run

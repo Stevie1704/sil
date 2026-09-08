@@ -190,7 +190,7 @@ void Engine::run() {
       // stays at the activation just executed, so slot selection never sees
       // an earlier instant than the one it just left.
       const std::optional<uint64_t> next_ns =
-          advance_virtual_time(t->next_ns, t->period_ns);
+          virtual_time_after(t->next_ns, t->period_ns);
       if (!next_ns || *next_ns >= manifest_.duration_ns)
         t->done = true;
       else

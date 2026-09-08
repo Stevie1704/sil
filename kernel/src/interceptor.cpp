@@ -41,7 +41,7 @@ InterceptorPlan::Verdict InterceptorPlan::apply(
   for (const Step &step : steps_) {
     if (step.kind != Kind::Delay || !in_window(step)) continue;
     visible_ns =
-        advance_virtual_time(visible_ns, step.parameter).value_or(UINT64_MAX);
+        virtual_time_after(visible_ns, step.parameter).value_or(UINT64_MAX);
   }
 
   // The run covers [0, duration_ns); a message at or beyond the boundary is

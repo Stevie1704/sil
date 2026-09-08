@@ -17,7 +17,7 @@ namespace sil {
  * delivered, and an interceptor delay saturates at UINT64_MAX so the plan's
  * run-duration truncation suppresses it.
  */
-inline std::optional<uint64_t> advance_virtual_time(uint64_t from_ns,
+inline std::optional<uint64_t> virtual_time_after(uint64_t from_ns,
                                                     uint64_t delta_ns) {
   if (delta_ns > UINT64_MAX - from_ns) return std::nullopt;
   return from_ns + delta_ns;

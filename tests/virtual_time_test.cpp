@@ -9,7 +9,7 @@
 
 namespace {
 
-using sil::advance_virtual_time;
+using sil::virtual_time_after;
 
 /** Fail the test process with a useful message when an invariant is false. */
 void check(bool condition, const std::string &message) {
@@ -45,14 +45,16 @@ void test_boundaries() {
   };
   for (const Case &c : cases) {
     const std::optional<uint64_t> actual =
-        advance_virtual_time(c.from_ns, c.delta_ns);
+        virtual_time_after(c.from_ns, c.delta_ns);
     check(actual.has_value() == c.expected.has_value(),
           describe(c.from_ns, c.delta_ns) +
               ": representability did not match the table");
-    check(!actual || *actual == *c.expected,
-          describe(c.from_ns, c.delta_ns) + " gave " +
-              std::to_string(*actual) + ", expected " +
-              std::to_string(*c.expected));
+    // Only reached with both engaged: check()'s arguments evaluate eagerly,
+    // so the message must not dereference the unrepresentable rows.
+    if (actual && *actual != *c.expected)
+      throw std::runtime_error(describe(c.from_ns, c.delta_ns) + " gave " +
+                               std::to_string(*actual) + ", expected " +
+                               std::to_string(*c.expected));
   }
 }
 
@@ -69,7 +71,7 @@ void test_never_runs_backwards() {
   for (uint64_t from_ns : points)
     for (uint64_t delta_ns : points) {
       const std::optional<uint64_t> actual =
-          advance_virtual_time(from_ns, delta_ns);
+          virtual_time_after(from_ns, delta_ns);
       check(!actual || *actual >= from_ns,
             describe(from_ns, delta_ns) + " wrapped to an earlier instant");
     }
