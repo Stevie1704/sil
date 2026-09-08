@@ -253,3 +253,52 @@ in the framework's own CI from day one.**
   the plan's existing Run-Duration truncation suppresses the Message.
   Recording timestamps stay post-Interceptor, never subscriber-specific
   visibility times. Unchanged Manifests keep byte-identical Recordings.
+- **Manifest and Step-protocol evolution policy (#62):** one Manifest hash
+  means one Run semantics. A hash may map to a contextual rejection, but it
+  must never map to two different *successful* Runs across kernel versions.
+  Every new hash-covered field therefore takes one of three shapes, chosen by
+  a single test — does the prior kernel behavior still exist, and is it the
+  default the builder wants? **Omit-default:** the field's default is exactly
+  the prior behavior and the builder wants that default, so the builder omits
+  it and existing documents keep byte-identical hashes (`epoch_ns`,
+  `transport`, `shim`). **Always-emit with a legacy-absent default:** the
+  builder's default differs from the prior behavior, but the prior behavior
+  still exists, so the builder always emits the field and the loader reads an
+  absent field as the legacy behavior; existing documents keep their hashes
+  and their semantics, while regenerated ones get a new hash that states the
+  new default. **Required:** the prior behavior no longer exists, so no
+  default can preserve it and the loader fails at load naming the field —
+  rejecting an old document rather than reinterpreting it. There is no strict
+  mode: a kernel switch outside the Manifest would let one Manifest produce
+  two behaviors, which decision 12 forbids. The Python builder is the strict
+  authoring path and the kernel loader is the compatible path; that asymmetry
+  is what makes the always-emit shape safe. **Manifest version 2** is required
+  only when a legacy-absent default is removed or an existing field changes
+  meaning, never for an additive field, so none is planned. The `sil_manifest`
+  integer plus closed objects already stop a version-1 kernel from misreading
+  a later document. **Applied to the open work:** Native `subscribes` and
+  `publishes` (#49) are *required* — pre-#49 declarations had no contract
+  enforcement at all, and that behavior is gone, so an absent list must fail
+  at load instead of loading as an empty contract that aborts after the
+  participants are up. Process participants stay tolerant of absent lists,
+  because absent-means-empty genuinely was their prior behavior. The Clock
+  shim `sleep` policy (#52) is always-emit: the builder defaults to `reject`
+  and also accepts an explicit `immediate`, so compatibility is expressible in
+  hashed bytes, and an absent field keeps today's immediate-success behavior.
+  Bounded-route `capacity` and `overflow` (#55) are always-emit with an absent
+  field meaning unbounded; removing unbounded later is the one change that
+  would trigger version 2. The BufferPool transport (#58) takes a new
+  `transport` name rather than redefining `shm`, which keeps `shm` the
+  single-slot arena and every existing shared-memory Manifest byte-identical.
+  **Step protocol:** the `init` line gains a `protocol` integer, derived from
+  the Manifest's transport set and so covered by the Manifest hash
+  transitively; a child may echo it on `ready` and an absent echo means 1. A
+  child below the required level is a setup failure (exit 2) naming the
+  participant and both levels. The per-Channel `transport` in `init` already
+  distinguishes arena from descriptor at run time, so the integer only buys
+  early, explicit rejection. **Support floor:** the inline Step transport and
+  the copied Native ABI v1 data plane are supported for the life of Manifest
+  version 1; the leased data plane does not deprecate them. **Expected
+  consequence:** each always-emit field changes the hash of every regenerated
+  Manifest once. That is correct — the declared semantics did change — and CI
+  matrices should expect it.
