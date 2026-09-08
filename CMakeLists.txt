@@ -49,6 +49,13 @@ target_include_directories(sil_interceptor_test PRIVATE kernel/src)
 target_link_libraries(sil_interceptor_test PRIVATE nlohmann_json::nlohmann_json)
 add_test(NAME sil_interceptor_plan COMMAND sil_interceptor_test)
 
+# Unsigned virtual-time addition is the one arithmetic boundary every
+# scheduling and delivery decision rests on, so its table of edge cases is a
+# focused C++ test rather than an end-to-end one.
+add_executable(sil_virtual_time_test tests/virtual_time_test.cpp)
+target_include_directories(sil_virtual_time_test PRIVATE kernel/src)
+add_test(NAME sil_virtual_time COMMAND sil_virtual_time_test)
+
 # The mapped region owns a temp file's mapping, descriptor, and directory entry.
 # Its release-on-destruction and move semantics are invisible at the run
 # boundary, so they get their own focused C++ test target.

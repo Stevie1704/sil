@@ -235,3 +235,21 @@ in the framework's own CI from day one.**
   declaration predating this decision still loads and fails explicitly on its
   first undeclared call; whether that tolerance is the final rule is the shared
   compatibility policy tracked in #62.
+- **Overflow-safe Virtual-time addition (#50):** Virtual time is unsigned and
+  only ever advances, so every addition to it goes through one primitive,
+  `sil::virtual_time_after`, which answers with nothing when the instant
+  cannot be represented. Each of the three sites reads that as its own end of
+  the line, refining the decisions above. **Scheduling (#5):** a Task whose
+  next Activation is unrepresentable, or falls at or beyond the half-open Run
+  Duration, is complete; its `next_ns` stays at the Activation just executed,
+  so Slot selection never sees an earlier instant than the one it left. A
+  period of zero remains a configuration error at registration.
+  **Delivery (#8):** a Message whose post-Latency visibility is
+  unrepresentable is never delivered. A visibility at or beyond the Run
+  Duration needs no separate test — a Slot only opens for an Activation or a
+  replay timestamp below the Duration — so the predicate stays a pure
+  comparison against the current Slot. **Interceptors (#40):** delays keep
+  their saturating semantics by reading the empty result as UINT64_MAX, where
+  the plan's existing Run-Duration truncation suppresses the Message.
+  Recording timestamps stay post-Interceptor, never subscriber-specific
+  visibility times. Unchanged Manifests keep byte-identical Recordings.

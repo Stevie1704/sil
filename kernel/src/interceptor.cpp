@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <utility>
 
+#include "virtual_time.hpp"
+
 namespace sil {
 
 InterceptorPlan::InterceptorPlan(uint64_t duration_ns,
@@ -38,10 +40,8 @@ InterceptorPlan::Verdict InterceptorPlan::apply(
   uint64_t visible_ns = now_ns;
   for (const Step &step : steps_) {
     if (step.kind != Kind::Delay || !in_window(step)) continue;
-    if (step.parameter > UINT64_MAX - visible_ns)
-      visible_ns = UINT64_MAX;
-    else
-      visible_ns += step.parameter;
+    visible_ns =
+        virtual_time_after(visible_ns, step.parameter).value_or(UINT64_MAX);
   }
 
   // The run covers [0, duration_ns); a message at or beyond the boundary is

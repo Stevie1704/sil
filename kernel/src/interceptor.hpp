@@ -17,8 +17,9 @@ struct SchemaSpec;
  * A plan is compiled while the manifest is loaded. Runtime evaluation has one
  * entry point and deliberately keeps its ordering private:
  * drop/drop_nth, then delay, then the half-open run-duration truncation, then
- * override. Delays saturate at UINT64_MAX and compose in declared order. A
- * dropped message is never shifted, recorded, or delivered.
+ * override. Delays compose in declared order over `virtual_time_after` and
+ * saturate at UINT64_MAX, where the run-duration truncation suppresses them.
+ * A dropped message is never shifted, recorded, or delivered.
  *
  * The plan never owns sequence numbers. The engine still advances its global
  * publish order for every suppressed message, while channel sequence numbers

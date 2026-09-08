@@ -23,6 +23,8 @@ from sil.manifest import Manifest
 
 TYPES = schema.load(TOY_SCHEMAS)
 
+U64_MAX = 2**64 - 1
+
 
 def read_mcap(path):
     """Returns (metadata dict, [(topic, log_time, data), ...])."""
@@ -579,6 +581,105 @@ class TestNativeScheduling:
         assert [t for _, t, _ in msgs] == [5_000_000, 25_000_000, 45_000_000]
 
 
+class TestActivationOverflow:
+    """Virtual time is unsigned and only ever advances. A Task whose next
+    Activation cannot be represented is complete, rather than wrapping the
+    clock back to an earlier instant (issue #50)."""
+
+    def test_period_zero_is_a_config_error(self, run_sil, tmp_path):
+        # The registration itself is invalid, so it is rejected during setup,
+        # before any Task runs.
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        add_producer(m, "producer", channel="ticks", period_ns=0)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 2
+        assert "period must be positive" in proc.stderr
+
+    def test_hostile_period_activates_once_and_completes(
+        self, run_sil, tmp_path
+    ):
+        # Offset 5 with period UINT64_MAX, through the real C ABI: the next
+        # Activation is unrepresentable, so the Task is complete after its
+        # first one. Unchecked, the addition wrapped it to 4 and walked
+        # virtual time down to 0.
+        m = toy_manifest(duration_ns=U64_MAX)
+        m.add_channel("ticks", schema="toy.Counter")
+        add_producer(
+            m, "producer", channel="ticks", period_ns=U64_MAX, offset_ns=5
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        _, msgs = read_mcap(proc.mcap_path)
+        assert [t for _, t, _ in msgs] == [5]
+
+    def test_offset_and_period_near_max_activate_once(self, run_sil, tmp_path):
+        m = toy_manifest(duration_ns=U64_MAX)
+        m.add_channel("ticks", schema="toy.Counter")
+        add_producer(
+            m,
+            "producer",
+            channel="ticks",
+            period_ns=U64_MAX - 1,
+            offset_ns=U64_MAX - 1,
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        _, msgs = read_mcap(proc.mcap_path)
+        assert [t for _, t, _ in msgs] == [U64_MAX - 1]
+
+    def test_activation_at_exactly_the_duration_is_outside_the_run(
+        self, run_sil, tmp_path
+    ):
+        # The run covers the half-open [0, duration).
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        add_producer(m, "producer", channel="ticks", period_ns=15_000_000)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        _, msgs = read_mcap(proc.mcap_path)
+        assert [t for _, t, _ in msgs] == [0, 15_000_000]
+
+    def test_offset_at_the_duration_never_activates(self, run_sil, tmp_path):
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        add_producer(
+            m,
+            "producer",
+            channel="ticks",
+            period_ns=10_000_000,
+            offset_ns=30_000_000,
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        _, msgs = read_mcap(proc.mcap_path)
+        assert msgs == []
+
+    def test_slots_stay_ordered_when_one_task_completes_early(
+        self, run_sil, tmp_path
+    ):
+        # 'aprod' overflows after 2^63; 'acc' keeps activating past it. Slot
+        # selection must stay monotonically non-decreasing across the two.
+        m = toy_manifest(duration_ns=U64_MAX)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_channel("sums", schema="toy.Accum")
+        add_producer(m, "aprod", channel="ticks", period_ns=2**63)
+        add_accumulator(m, "acc", period_ns=2**62)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        _, msgs = read_mcap(proc.mcap_path)
+        times = [t for _, t, _ in msgs]
+        assert times == sorted(times)
+        assert [t for topic, t, _ in msgs if topic == "ticks"] == [0, 2**63]
+        assert [t for topic, t, _ in msgs if topic == "sums"] == [
+            0,
+            2**62,
+            2**63,
+            3 * 2**62,
+        ]
+
+
 class TestNativeChannelContract:
     """A native participant's Channel contract is declared in the manifest, so
     the kernel knows every publisher before it loads participant code. A call
@@ -760,6 +861,129 @@ class TestDeliverySemantics:
             (10_000_000, {"count": 2, "sum": 3}),
             (20_000_000, {"count": 3, "sum": 9}),
         ]
+
+
+def near_saturated_manifest(latency_ns):
+    """A Run where an Interceptor delay leaves a Message visible one
+    nanosecond below UINT64_MAX, so an explicit Channel Latency composes on
+    top of an almost-saturated visible time."""
+    m = toy_manifest(duration_ns=U64_MAX)
+    m.add_channel("ticks", schema="toy.Counter", latency_ns=latency_ns)
+    m.add_channel("sums", schema="toy.Accum")
+    add_producer(m, "aprod", channel="ticks", period_ns=U64_MAX - 1)
+    # Ordered after the producer, so the last slot's publish is already in the
+    # queue when the consumer runs.
+    add_accumulator(m, "mid", period_ns=U64_MAX - 1, priority=10)
+    m.add_interceptor("ticks", kind="delay", delay_ns=U64_MAX - 1)
+    return m
+
+
+class TestChannelLatencyOverflow:
+    """Explicit Channel Latency is added to a Message's post-Interceptor
+    visible time. That addition never wraps: a visibility virtual time cannot
+    represent is never delivered (issue #50)."""
+
+    def test_latency_of_one_nanosecond_delivers_at_the_next_slot(
+        self, run_sil, tmp_path
+    ):
+        m = pipeline_manifest("aprod", latency_ns=1)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        assert sums(proc.mcap_path) == [
+            (0, {"count": 0, "sum": 0}),
+            (10_000_000, {"count": 1, "sum": 0}),
+            (20_000_000, {"count": 2, "sum": 3}),
+        ]
+
+    def test_visibility_at_exactly_the_duration_is_never_delivered(
+        self, run_sil, tmp_path
+    ):
+        # Publish at 0 plus a latency of the whole run: no slot ever reaches
+        # the visible time, because the run covers [0, duration).
+        m = pipeline_manifest("aprod", latency_ns=30_000_000)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        assert [count for _, count in sums(proc.mcap_path)] == [
+            {"count": 0, "sum": 0}
+        ] * 3
+
+    def test_latency_uint64_max_is_never_delivered(self, run_sil, tmp_path):
+        # A single publish away from zero, so the wrapped visible time would
+        # land in the past rather than behind an already-blocked front: the
+        # unchecked addition delivered it in the very slot it was published.
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter", latency_ns=U64_MAX)
+        m.add_channel("sums", schema="toy.Accum")
+        add_producer(
+            m,
+            "aprod",
+            channel="ticks",
+            period_ns=100_000_000,
+            offset_ns=10_000_000,
+        )
+        add_accumulator(m, "mid", period_ns=10_000_000)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        assert [count for _, count in sums(proc.mcap_path)] == [
+            {"count": 0, "sum": 0}
+        ] * 3
+
+    def test_latency_just_below_max_is_delivered_at_the_last_slot(
+        self, run_sil, tmp_path
+    ):
+        m = toy_manifest(duration_ns=U64_MAX)
+        m.add_channel("ticks", schema="toy.Counter", latency_ns=U64_MAX - 1)
+        m.add_channel("sums", schema="toy.Accum")
+        add_producer(m, "aprod", channel="ticks", period_ns=U64_MAX - 1)
+        add_accumulator(m, "mid", period_ns=U64_MAX - 1)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        # The tick published at 0 becomes visible at exactly UINT64_MAX - 1;
+        # the one published there would only be visible past the clock.
+        assert sums(proc.mcap_path) == [
+            (0, {"count": 0, "sum": 0}),
+            (U64_MAX - 1, {"count": 1, "sum": 0}),
+        ]
+
+    def test_zero_latency_over_a_near_saturated_visible_time_is_delivered(
+        self, run_sil, tmp_path
+    ):
+        proc = run_sil(
+            near_saturated_manifest(0).write(tmp_path / "m.json").path
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert sums(proc.mcap_path) == [
+            (0, {"count": 0, "sum": 0}),
+            (U64_MAX - 1, {"count": 1, "sum": 0}),
+        ]
+
+    def test_one_nanosecond_over_a_near_saturated_visible_time_is_not_delivered(
+        self, run_sil, tmp_path
+    ):
+        # Visible at UINT64_MAX: representable, but past every slot the run
+        # can open.
+        proc = run_sil(
+            near_saturated_manifest(1).write(tmp_path / "m.json").path
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert [count for _, count in sums(proc.mcap_path)] == [
+            {"count": 0, "sum": 0}
+        ] * 2
+
+    def test_latency_past_a_near_saturated_visible_time_is_not_delivered(
+        self, run_sil, tmp_path
+    ):
+        # Visible time overflows; the message is never delivered, and the
+        # recorded timestamp stays the post-Interceptor one.
+        proc = run_sil(
+            near_saturated_manifest(2).write(tmp_path / "m.json").path
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert [count for _, count in sums(proc.mcap_path)] == [
+            {"count": 0, "sum": 0}
+        ] * 2
+        _, msgs = read_mcap(proc.mcap_path)
+        assert [t for topic, t, _ in msgs if topic == "ticks"] == [U64_MAX - 1]
 
 
 class TestProcessParticipant:
