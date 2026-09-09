@@ -1,4 +1,4 @@
-// Bench fixture: publishes a fixed-size payload on one channel, `burst` times
+// Bench fixture: publishes a fixed-size payload on one Channel, `burst` times
 // per activation, for the routing baseline in issue #61.
 //
 // The payload buffer is filled once at init and only its leading sequence
@@ -17,7 +17,7 @@
 
 namespace {
 
-struct Source {
+struct Publisher {
   const sil_api_v1 *api;
   std::string channel;
   std::vector<uint8_t> payload;
@@ -26,7 +26,7 @@ struct Source {
 };
 
 void tick(void *user, uint64_t) {
-  auto *s = static_cast<Source *>(user);
+  auto *s = static_cast<Publisher *>(user);
   for (uint32_t i = 0; i < s->burst; i++) {
     std::memcpy(s->payload.data(), &s->seq, sizeof s->seq);
     s->seq++;
@@ -44,17 +44,17 @@ extern "C" int sil_participant_init(const sil_api_v1 *api, const char *,
                                     const char *config_json) {
   nlohmann::json cfg = nlohmann::json::parse(config_json);
   // One instance per init call: the same library backs several bench
-  // participants in one run, so no state may live in a global.
-  auto source = std::make_unique<Source>();
-  source->api = api;
-  source->channel = cfg.at("channel").get<std::string>();
-  source->burst = cfg.value("burst", 1U);
+  // participants in one Run, so no state may live in a global.
+  auto publisher = std::make_unique<Publisher>();
+  publisher->api = api;
+  publisher->channel = cfg.at("channel").get<std::string>();
+  publisher->burst = cfg.value("burst", 1U);
   const size_t bytes = cfg.at("bytes").get<size_t>();
-  source->payload.assign(bytes, 0);
+  publisher->payload.assign(bytes, 0);
   for (size_t i = sizeof(uint64_t); i < bytes; i++)
-    source->payload[i] = uint8_t(i % 251);
+    publisher->payload[i] = uint8_t(i % 251);
 
   const uint64_t period = cfg.at("period_ns").get<uint64_t>();
-  Source *raw = source.release();  // owned by the run; freed at process exit
+  Publisher *raw = publisher.release();  // owned by the run; freed at process exit
   return api->register_task(api->ctx, "tick", period, 0, 0, tick, raw);
 }

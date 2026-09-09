@@ -113,9 +113,9 @@ target_include_directories(sil_clock_probe PRIVATE include)
 # --- bench participants (routing baseline fixtures, issue #61) ---
 # Payload size, publish period, and burst size come from manifest config, so
 # the whole baseline matrix is driven without rebuilding.
-add_library(bench_source MODULE participants/bench_source.cpp)
-add_library(bench_sink MODULE participants/bench_sink.cpp)
-foreach(bench bench_source bench_sink)
+add_library(bench_publisher MODULE participants/bench_publisher.cpp)
+add_library(bench_subscriber MODULE participants/bench_subscriber.cpp)
+foreach(bench bench_publisher bench_subscriber)
   target_include_directories(${bench} PRIVATE include)
   target_link_libraries(${bench} PRIVATE nlohmann_json::nlohmann_json)
   set_target_properties(${bench} PROPERTIES PREFIX "" SUFFIX ".silp")

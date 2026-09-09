@@ -5,7 +5,7 @@ run without a Recording, so subscriber copies can be told apart from Recording
 I/O, and the copy counters report the copies the routing path actually makes
 rather than a number inferred from timing. Both are asserted here as counts,
 never as durations, so the baseline's conclusions stay independent of
-wall-clock behaviour.
+wall-clock behavior.
 """
 
 import json
@@ -32,7 +32,7 @@ def native_manifest(tmp_path, *, subscribers: int):
     m.add_channel("frames", schema="bench.Small")
     m.add_native(
         "source",
-        library=str(BUILD_DIR / "bench_source.silp"),
+        library=str(BUILD_DIR / "bench_publisher.silp"),
         config={"channel": "frames", "bytes": SMALL_BYTES,
                 "period_ns": PERIOD_NS, "burst": 1},
         publishes=["frames"],
@@ -40,7 +40,7 @@ def native_manifest(tmp_path, *, subscribers: int):
     for i in range(subscribers):
         m.add_native(
             f"sink{i}",
-            library=str(BUILD_DIR / "bench_sink.silp"),
+            library=str(BUILD_DIR / "bench_subscriber.silp"),
             config={"input": "frames", "period_ns": PERIOD_NS},
             subscribes=["frames"],
         )
