@@ -85,7 +85,7 @@ def _base(payload: str, messages: int, burst: int, transport: str) -> Manifest:
     schema_name = PAYLOADS[payload]
     m = Manifest(duration_ns=(messages // burst) * PERIOD_NS)
     m.add_schemas({schema_name: BENCH_SCHEMAS[schema_name]})
-    m.add_channel("frames", schema=schema_name, transport=transport)
+    m.add_channel("payload", schema=schema_name, transport=transport)
     return m
 
 
@@ -94,9 +94,9 @@ def _native_publisher(m: Manifest, build_dir: Path, payload: str,
     m.add_native(
         "publisher",
         library=str(build_dir / "bench_publisher.silp"),
-        config={"channel": "frames", "bytes": payload_bytes(payload),
+        config={"channel": "payload", "bytes": payload_bytes(payload),
                 "period_ns": PERIOD_NS, "burst": burst},
-        publishes=["frames"],
+        publishes=["payload"],
     )
 
 
@@ -104,8 +104,8 @@ def _native_subscriber(m: Manifest, build_dir: Path, name: str) -> None:
     m.add_native(
         name,
         library=str(build_dir / "bench_subscriber.silp"),
-        config={"input": "frames", "period_ns": PERIOD_NS},
-        subscribes=["frames"],
+        config={"input": "payload", "period_ns": PERIOD_NS},
+        subscribes=["payload"],
     )
 
 
@@ -146,9 +146,9 @@ def process_config(build_dir, payload, *, direction, transport, burst,
     m = _base(payload, messages, burst, transport)
     if direction == "in":
         _native_publisher(m, build_dir, payload, burst)
-        _process(m, "subscriber", burst, subscribes=["frames"])
+        _process(m, "subscriber", burst, subscribes=["payload"])
     else:
-        _process(m, "publisher", burst, publishes=["frames"])
+        _process(m, "publisher", burst, publishes=["payload"])
         _native_subscriber(m, build_dir, "subscriber0")
     return Config(
         name=f"process-{payload}-{direction}-{transport}-burst{burst}"
@@ -225,6 +225,10 @@ def run_once(args: list[str], workdir: Path, env: dict | None = None):
     instead of a high-water mark shared with every earlier row. The child's
     stdout is discarded — it is one manifest-hash line per run — and its stderr
     is inherited, so a failure is visible where the driver's own output goes.
+
+    The user and system split is kept apart rather than summed: Recording puts
+    its cost in system time and I/O wait, and per-byte routing work in user
+    time, so one total would hide the difference the baseline turns on.
     """
     start = time.perf_counter()
     pid = os.fork()
@@ -240,7 +244,7 @@ def run_once(args: list[str], workdir: Path, env: dict | None = None):
     if status != 0:
         code = os.waitstatus_to_exitcode(status)
         raise SystemExit(f"run failed (exit {code}): {' '.join(args)}")
-    return wall, usage.ru_utime + usage.ru_stime, _max_rss_bytes(usage)
+    return wall, usage.ru_utime, usage.ru_stime, _max_rss_bytes(usage)
 
 
 def run_timed(runner: Path, manifest_path: Path, workdir: Path, recording: bool):
@@ -272,8 +276,9 @@ def measure(config: Config, build_dir: Path, repeats: int) -> dict:
                              config.recording) for _ in range(repeats)]
 
     walls = sorted(sample[0] for sample in samples)
-    cpus = sorted(sample[1] for sample in samples)
-    peak_rss = max(sample[2] for sample in samples)
+    users = sorted(sample[1] for sample in samples)
+    systems = sorted(sample[2] for sample in samples)
+    peak_rss = max(sample[3] for sample in samples)
     payload = config.dimensions["payload"]
     copies = {site: counters[site] for site in COPY_SITES}
     copied_bytes = sum(copies[site]["bytes"] for site in COPY_SITES
@@ -286,12 +291,18 @@ def measure(config: Config, build_dir: Path, repeats: int) -> dict:
         "manifest_hash": ref.hash,
         "wall_s": {"median": statistics.median(walls), "min": walls[0],
                    "max": walls[-1], "repeats": repeats},
-        "tree_cpu_s": {"median": statistics.median(cpus), "min": cpus[0],
-                       "max": cpus[-1]},
-        "kernel_user_s": counters["kernel_user_s"],
-        "kernel_system_s": counters["kernel_system_s"],
-        "kernel_max_rss_bytes": counters["kernel_max_rss_bytes"],
-        "tree_max_rss_bytes": peak_rss,
+        # Uninstrumented and repeated, for the whole process tree. Every
+        # conclusion the baseline draws rests on these.
+        "user_s": {"median": statistics.median(users), "min": users[0],
+                   "max": users[-1]},
+        "system_s": {"median": statistics.median(systems), "min": systems[0],
+                     "max": systems[-1]},
+        "max_rss_bytes": peak_rss,
+        # From the single instrumented run: the kernel process alone, which
+        # RUSAGE_CHILDREN cannot separate from a Process participant.
+        "instrumented_kernel_user_s": counters["kernel_user_s"],
+        "instrumented_kernel_system_s": counters["kernel_system_s"],
+        "instrumented_kernel_max_rss_bytes": counters["kernel_max_rss_bytes"],
         "copies": copies,
         "copied_bytes_per_message": copied_bytes / config.messages,
         "us_per_message": statistics.median(walls) / config.messages * 1e6,
@@ -314,8 +325,8 @@ def _copy_cell(result: dict, site: str) -> str:
 def _native_table(results: list[dict]) -> list[str]:
     lines = [
         "| payload | messages | subscribers | recording | run ms | "
-        "µs/message | MiB/s | kernel user s | kernel system s | "
-        "kernel RSS MiB | caller copies | subscriber copies | recorded |",
+        "µs/message | MiB/s | user s | system s | peak RSS MiB | "
+        "caller copies | subscriber copies | recorded |",
         "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in results:
@@ -324,9 +335,9 @@ def _native_table(results: list[dict]) -> list[str]:
             f"| {d['payload']} | {r['messages']} | {d['subscribers']} | "
             f"{'on' if d['recording'] else 'off'} | "
             f"{r['wall_s']['median'] * 1e3:.1f} | {r['us_per_message']:.1f} | "
-            f"{r['payload_mib_per_s']:.1f} | {r['kernel_user_s']:.3f} | "
-            f"{r['kernel_system_s']:.3f} | "
-            f"{_mib(r['kernel_max_rss_bytes'])} | "
+            f"{r['payload_mib_per_s']:.1f} | {r['user_s']['median']:.3f} | "
+            f"{r['system_s']['median']:.3f} | "
+            f"{_mib(r['max_rss_bytes'])} | "
             f"{_copy_cell(r, 'caller_to_kernel')} | "
             f"{_copy_cell(r, 'subscriber_copy')} | {_copy_cell(r, 'recorded')} |"
         )
@@ -342,18 +353,18 @@ def _process_row_prefix(result: dict) -> str:
 def _process_cost_table(results: list[dict]) -> list[str]:
     lines = [
         "| payload | direction | transport | burst | recording | messages | "
-        "µs/message | MiB/s | kernel user s | kernel system s | tree CPU s | "
-        "kernel RSS MiB | tree RSS MiB |",
+        "µs/message | MiB/s | tree user s | tree system s | tree RSS MiB | "
+        "kernel user s* | kernel RSS MiB* |",
         "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in results:
         lines.append(
             _process_row_prefix(r)
             + f"| {r['messages']} | {r['us_per_message']:.1f} | "
-            f"{r['payload_mib_per_s']:.1f} | {r['kernel_user_s']:.3f} | "
-            f"{r['kernel_system_s']:.3f} | {r['tree_cpu_s']['median']:.3f} | "
-            f"{_mib(r['kernel_max_rss_bytes'])} | "
-            f"{_mib(r['tree_max_rss_bytes'])} |"
+            f"{r['payload_mib_per_s']:.1f} | {r['user_s']['median']:.3f} | "
+            f"{r['system_s']['median']:.3f} | {_mib(r['max_rss_bytes'])} | "
+            f"{r['instrumented_kernel_user_s']:.3f} | "
+            f"{_mib(r['instrumented_kernel_max_rss_bytes'])} |"
         )
     return lines
 
@@ -408,10 +419,21 @@ def render_markdown(report: dict) -> str:
         f"- payload sizes: "
         + ", ".join(f"{name} {payload_bytes(name)} B" for name in PAYLOADS),
         "",
-        "Copy columns are counts reported by the instrumented kernel, not",
-        "figures inferred from timing. A Recording row is I/O-bound: its",
-        "wall-clock follows the host's page-cache state and is not comparable",
-        "across machines or across days. Its kernel user time is.",
+        "Which binary each column comes from:",
+        "",
+        "- Wall-clock, user, system and peak RSS come from the production",
+        "  `sil-run`, repeated, median (peak RSS: max). A Native row has no",
+        "  child process, so these are the kernel's own figures.",
+        "- Copy counts come from one `sil-run-instrumented` run. They are",
+        "  counts, never figures inferred from timing.",
+        "- Columns marked * come from that same single instrumented run and",
+        "  cover the kernel process alone. They exist only for Process rows,",
+        "  where the uninstrumented figures cover the participant too, and are",
+        "  one sample carrying the counters' own small overhead.",
+        "",
+        "A Recording row is I/O-bound: its wall-clock follows the host's",
+        "page-cache state and is not comparable across machines or across",
+        "days. Its user and system time are.",
         "",
     ]
     if control:
@@ -448,7 +470,7 @@ def render_markdown(report: dict) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    # Resolved below: run_once chdirs into a temporary directory before exec,
+    # Resolved here: run_once chdirs into a temporary directory before exec,
     # so a relative runner path (make passes "build") would not exist there.
     parser.add_argument("--build-dir", type=Path, default=ROOT / "build",
                         help="directory holding sil-run and sil-run-instrumented")
