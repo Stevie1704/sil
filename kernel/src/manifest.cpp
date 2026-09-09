@@ -384,14 +384,14 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
                          "publishes", "shim"});
     NativeSpec n;
     n.library = required<std::string>(participant, "library", ctx);
-    // Absent lists mean an empty contract, matching process participants. A
-    // native declaration predating issue #49 therefore still loads and fails
-    // explicitly on its first undeclared call; whether that stays tolerated is
-    // the shared compatibility policy tracked in #62.
-    if (const json *subscribes = find_value(participant, "subscribes", ctx))
-      n.subscribes = check_channels(*subscribes, "subscribes");
-    if (const json *publishes = find_value(participant, "publishes", ctx))
-      n.publishes = check_channels(*publishes, "publishes");
+    // Native contract enforcement replaced the pre-#49 behavior, so an
+    // absent list cannot default without changing the Run semantics of an
+    // existing Manifest hash. Process participants remain tolerant below
+    // because absent-means-empty was their prior behavior.
+    n.subscribes = check_channels(
+        require_value(participant, "subscribes", ctx), "subscribes");
+    n.publishes = check_channels(
+        require_value(participant, "publishes", ctx), "publishes");
     // Native config is the explicit extension point for participant-specific
     // options. Its keys are intentionally not closed by the Manifest format;
     // the container itself is still validated so malformed JSON cannot escape.
@@ -417,6 +417,8 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
     ps.step_period_ns = positive_u64(
         require_value(participant, "step_period_ns", ctx),
         ctx + " key 'step_period_ns'");
+    // Process participants predate contract enforcement and absent lists
+    // therefore retain their established empty-contract behavior.
     if (const json *subscribes = find_value(participant, "subscribes", ctx))
       ps.subscribes = check_channels(*subscribes, "subscribes");
     if (const json *publishes = find_value(participant, "publishes", ctx))
