@@ -448,7 +448,10 @@ def render_markdown(report: dict) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--build-dir", type=Path, default=ROOT / "build")
+    # Resolved below: run_once chdirs into a temporary directory before exec,
+    # so a relative runner path (make passes "build") would not exist there.
+    parser.add_argument("--build-dir", type=Path, default=ROOT / "build",
+                        help="directory holding sil-run and sil-run-instrumented")
     parser.add_argument("--out-dir", type=Path, default=ROOT / "docs" / "bench")
     parser.add_argument("--messages", type=int, default=200,
                         help="small-payload messages per run (default: 200)")
@@ -459,6 +462,7 @@ def main() -> None:
     parser.add_argument("--only", default="",
                         help="run only rows whose name contains this substring")
     args = parser.parse_args()
+    args.build_dir = args.build_dir.resolve()
 
     for exe in ("sil-run", "sil-run-instrumented"):
         if not (args.build_dir / exe).exists():
