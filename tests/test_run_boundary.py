@@ -16,6 +16,7 @@ from toys import (
     accumulator_library,
     add_accumulator,
     add_producer,
+    add_thrower,
     producer_library,
     toy_manifest,
 )
@@ -846,6 +847,77 @@ class TestNativeChannelContract:
         # Both publishers reach the recording: the native's non-negative
         # values and the process participant's non-positive ones.
         assert min(values) < 0 < max(values)
+
+
+class TestNativeExceptionContainment:
+    """A native participant runs in the kernel's own process, so an escaping
+    C++ exception would unwind kernel frames — and across the C ABI, where the
+    participant may be built against a different runtime, that is undefined.
+    Every kernel frame that calls into participant code therefore catches
+    everything and turns it into the first failure of the setup or the run,
+    naming the participant and, for a task, the activation (issue #65)."""
+
+    @pytest.mark.parametrize(
+        "kind, needle",
+        [("std", "boom"), ("other", "unknown exception")],
+    )
+    def test_a_throw_from_init_is_a_config_error(
+        self, run_sil, tmp_path, kind, needle
+    ):
+        # Setup has not finished, so this is a config error like any other
+        # unloadable participant, not a run that starts and then aborts.
+        m = toy_manifest(duration_ns=30_000_000)
+        add_thrower(m, throw_in="init", kind=kind)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 2
+        assert "thrower" in proc.stderr
+        assert needle in proc.stderr
+        # A non-std throw is the case no handler can describe, so it is the one
+        # that would abort the process instead of reporting.
+        assert "terminating" not in proc.stderr
+
+    @pytest.mark.parametrize(
+        "kind, needle",
+        [("std", "boom"), ("other", "unknown exception")],
+    )
+    def test_a_throw_from_a_task_aborts_the_run(
+        self, run_sil, tmp_path, kind, needle
+    ):
+        m = toy_manifest(duration_ns=30_000_000)
+        add_thrower(m, throw_in="task", kind=kind, period_ns=10_000_000)
+        path = m.write(tmp_path / "m.json").path
+        first = run_sil(path, out=tmp_path / "a.mcap")
+        assert first.returncode == 1
+        assert "thrower" in first.stderr
+        # The task is named, so the diagnostic points at one activation rather
+        # than at the participant as a whole.
+        assert "explode" in first.stderr
+        assert needle in first.stderr
+        assert "terminating" not in first.stderr
+        # The abort is part of the deterministic world: same manifest, same
+        # exit code and same diagnostic.
+        second = run_sil(path, out=tmp_path / "b.mcap")
+        assert (second.returncode, second.stderr) == (
+            first.returncode,
+            first.stderr,
+        )
+
+    @pytest.mark.parametrize(
+        "throw_in, returncode", [("init", 2), ("task", 1)]
+    )
+    def test_a_reported_failure_survives_a_later_throw(
+        self, run_sil, tmp_path, throw_in, returncode
+    ):
+        # Containment is a safety net, not a diagnostic. A participant that
+        # said why it is failing keeps that reason; the throw only stops it.
+        m = toy_manifest(duration_ns=30_000_000)
+        add_thrower(
+            m, throw_in=throw_in, fail_first=True, period_ns=10_000_000
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == returncode
+        assert "real reason" in proc.stderr
+        assert "threw" not in proc.stderr
 
 
 def _write_doc(tmp_path, doc):

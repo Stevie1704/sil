@@ -303,3 +303,22 @@ in the framework's own CI from day one.**
   consequence:** each always-emit field changes the hash of every regenerated
   Manifest once. That is correct — the declared semantics did change — and CI
   matrices should expect it.
+- **Exception containment at the C ABI seam (#65):** the seam runs in both
+  directions and neither carries an exception. A kernel frame the participant
+  calls into must not throw back across the ABI — the participant may be built
+  against a different C++ runtime, so an unwind across the boundary is
+  undefined — and participant code the kernel calls into must not unwind kernel
+  frames. Every `sil_api_v1` service call that can allocate,
+  `sil_participant_init`, and every registered Task activation therefore catches
+  both `std::exception` and anything else, and records it through one `noexcept`
+  helper that builds the diagnostic inside its own guard. The two exceptions are
+  `now_ns`, which reads one member and carries no error value to report through,
+  and `fail` itself, which can only discard: it is already the reporting path. Containment is a safety
+  net, not a diagnostic: `fail` keeps the *first* failure, so a participant that
+  said why it is stopping keeps its own reason and the throw only stops it. An
+  init throw is a setup failure (exit 2) naming the Participant; a Task throw
+  aborts the Run (exit 1) naming the Participant and the Task. Recording the
+  failure rather than rethrowing is what keeps the Participant in the Engine so
+  its library is still closed, and what lets the scheduler leave its in-Task
+  state normally. This is containment only: no ABI revision, no prefix
+  negotiation, no lifecycle states (those stay with #51).

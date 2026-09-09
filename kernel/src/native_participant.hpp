@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <map>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <sil/participant.h>
@@ -35,6 +36,12 @@ class NativeParticipant {
   void *handle_ = nullptr;
   std::map<std::string, SubQueue *> subscriptions_;
   std::vector<uint8_t> take_buffer_;
+
+  // Records this participant's failure without ever throwing. The two reason
+  // pieces are joined here, inside the guard, so building the diagnostic
+  // cannot itself escape across the seam in place of the failure it reports.
+  // `context` names the seam the failure escaped from and may be empty.
+  void fail(std::string_view context, std::string_view detail) noexcept;
 
   // Fails the run when the manifest does not authorize this call, naming the
   // participant, the channel, and the declared direction it violates.
