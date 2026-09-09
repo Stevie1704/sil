@@ -1,0 +1,2598 @@
+{
+  "messages": {
+    "small": 200,
+    "camera": 50
+  },
+  "repeats": 5,
+  "period_ns": 10000000,
+  "environment": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "python": "3.14.5"
+  },
+  "results": [
+    {
+      "name": "fixed-cost-control",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "small",
+        "subscribers": 1,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 1,
+      "payload_bytes": 16,
+      "manifest_hash": "9eb5032db9f7d166be1fbb192d87323b63c3a628217c56b294a80ef874fee557",
+      "wall_s": {
+        "median": 0.007439332999638282,
+        "min": 0.0072655830008443445,
+        "max": 0.010479042000952177,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.004429,
+        "min": 0.004102,
+        "max": 0.004932
+      },
+      "kernel_user_s": 0.002123,
+      "kernel_system_s": 0.003935,
+      "kernel_max_rss_bytes": 1933312,
+      "tree_max_rss_bytes": 1916928,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 1,
+          "bytes": 16
+        },
+        "subscriber_copy": {
+          "count": 1,
+          "bytes": 16
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 32.0,
+      "us_per_message": 7439.332999638282,
+      "payload_mib_per_s": 0.0020510963903943966
+    },
+    {
+      "name": "native-small-fanout0-recon",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "small",
+        "subscribers": 0,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "8e18c3f91252b86470860e13c2240352082aa94f4d157d05dc2418b998d13699",
+      "wall_s": {
+        "median": 0.012806667000404559,
+        "min": 0.009318666998296976,
+        "max": 0.013703375007025898,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.004654999999999999,
+        "min": 0.004371999999999999,
+        "max": 0.004898
+      },
+      "kernel_user_s": 0.001918,
+      "kernel_system_s": 0.003039,
+      "kernel_max_rss_bytes": 2080768,
+      "tree_max_rss_bytes": 2080768,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 0,
+          "bytes": 0
+        },
+        "recorded": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 16.0,
+      "us_per_message": 64.0333350020228,
+      "payload_mib_per_s": 0.23829446118990957
+    },
+    {
+      "name": "native-small-fanout0-recoff",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "small",
+        "subscribers": 0,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "8e18c3f91252b86470860e13c2240352082aa94f4d157d05dc2418b998d13699",
+      "wall_s": {
+        "median": 0.007619916010298766,
+        "min": 0.006917000006069429,
+        "max": 0.010212584005785175,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.004145,
+        "min": 0.003919,
+        "max": 0.005004
+      },
+      "kernel_user_s": 0.001789,
+      "kernel_system_s": 0.002559,
+      "kernel_max_rss_bytes": 1900544,
+      "tree_max_rss_bytes": 1900544,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 0,
+          "bytes": 0
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 16.0,
+      "us_per_message": 38.09958005149383,
+      "payload_mib_per_s": 0.40049756563922345
+    },
+    {
+      "name": "native-small-fanout1-recon",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "small",
+        "subscribers": 1,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "862e570ecec28da0359196807f5a99d4e53be319be9af2514808e2dc9d7583fb",
+      "wall_s": {
+        "median": 0.013710541999898851,
+        "min": 0.012789959000656381,
+        "max": 0.014605042000766844,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.005043,
+        "min": 0.004938,
+        "max": 0.005152
+      },
+      "kernel_user_s": 0.002116,
+      "kernel_system_s": 0.002953,
+      "kernel_max_rss_bytes": 2195456,
+      "tree_max_rss_bytes": 2228224,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "recorded": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 32.0,
+      "us_per_message": 68.55270999949425,
+      "payload_mib_per_s": 0.2225847681676271
+    },
+    {
+      "name": "native-small-fanout1-recoff",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "small",
+        "subscribers": 1,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "862e570ecec28da0359196807f5a99d4e53be319be9af2514808e2dc9d7583fb",
+      "wall_s": {
+        "median": 0.008573500002967194,
+        "min": 0.008092042000498623,
+        "max": 0.009981416995287873,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.005089,
+        "min": 0.004425,
+        "max": 0.005195
+      },
+      "kernel_user_s": 0.002044,
+      "kernel_system_s": 0.003068,
+      "kernel_max_rss_bytes": 2015232,
+      "tree_max_rss_bytes": 2031616,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 32.0,
+      "us_per_message": 42.86750001483597,
+      "payload_mib_per_s": 0.355952389507648
+    },
+    {
+      "name": "native-small-fanout2-recon",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "small",
+        "subscribers": 2,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "ca35dcfe7b67c138728b474af3903b8c9ae42b9c010df6cf13bdec24ded17b63",
+      "wall_s": {
+        "median": 0.014473458999418654,
+        "min": 0.013211750003392808,
+        "max": 0.014633500002673827,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.005116,
+        "min": 0.005020999999999999,
+        "max": 0.005199
+      },
+      "kernel_user_s": 0.002211,
+      "kernel_system_s": 0.003166,
+      "kernel_max_rss_bytes": 2277376,
+      "tree_max_rss_bytes": 2260992,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 400,
+          "bytes": 6400
+        },
+        "recorded": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 48.0,
+      "us_per_message": 72.36729499709327,
+      "payload_mib_per_s": 0.21085200245653635
+    },
+    {
+      "name": "native-small-fanout2-recoff",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "small",
+        "subscribers": 2,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "ca35dcfe7b67c138728b474af3903b8c9ae42b9c010df6cf13bdec24ded17b63",
+      "wall_s": {
+        "median": 0.008370583993382752,
+        "min": 0.008077583988779224,
+        "max": 0.00986412500787992,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.004872,
+        "min": 0.004503,
+        "max": 0.004889
+      },
+      "kernel_user_s": 0.001965,
+      "kernel_system_s": 0.002377,
+      "kernel_max_rss_bytes": 2031616,
+      "tree_max_rss_bytes": 2064384,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 400,
+          "bytes": 6400
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 48.0,
+      "us_per_message": 41.85291996691376,
+      "payload_mib_per_s": 0.36458123052256863
+    },
+    {
+      "name": "native-small-fanout4-recon",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "small",
+        "subscribers": 4,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "265da8cc85aac9b9b7e0563524ccfe7a632b50c360864d331c98fb44da03cc5b",
+      "wall_s": {
+        "median": 0.013661832999787293,
+        "min": 0.013372415996855125,
+        "max": 0.014618750006775372,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.005398999999999999,
+        "min": 0.005154000000000001,
+        "max": 0.005653999999999999
+      },
+      "kernel_user_s": 0.002322,
+      "kernel_system_s": 0.003321,
+      "kernel_max_rss_bytes": 2277376,
+      "tree_max_rss_bytes": 2326528,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 800,
+          "bytes": 12800
+        },
+        "recorded": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 80.0,
+      "us_per_message": 68.30916499893647,
+      "payload_mib_per_s": 0.22337835724880506
+    },
+    {
+      "name": "native-small-fanout4-recoff",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "small",
+        "subscribers": 4,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "265da8cc85aac9b9b7e0563524ccfe7a632b50c360864d331c98fb44da03cc5b",
+      "wall_s": {
+        "median": 0.008807332997093908,
+        "min": 0.008516250003594905,
+        "max": 0.008893624995835125,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.005013999999999999,
+        "min": 0.004796,
+        "max": 0.005233
+      },
+      "kernel_user_s": 0.002086,
+      "kernel_system_s": 0.002534,
+      "kernel_max_rss_bytes": 2064384,
+      "tree_max_rss_bytes": 2097152,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 800,
+          "bytes": 12800
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 80.0,
+      "us_per_message": 44.03666498546954,
+      "payload_mib_per_s": 0.34650192214907355
+    },
+    {
+      "name": "native-small-fanout8-recon",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "small",
+        "subscribers": 8,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "1d1149c464858394dec4e47d27a623e365928130512c7ec799179013f24f8a0a",
+      "wall_s": {
+        "median": 0.014617958004237153,
+        "min": 0.013509791999240406,
+        "max": 0.01890300000377465,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.005509,
+        "min": 0.00548,
+        "max": 0.005715
+      },
+      "kernel_user_s": 0.002414,
+      "kernel_system_s": 0.003386,
+      "kernel_max_rss_bytes": 2424832,
+      "tree_max_rss_bytes": 2424832,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 1600,
+          "bytes": 25600
+        },
+        "recorded": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 144.0,
+      "us_per_message": 73.08979002118576,
+      "payload_mib_per_s": 0.20876772334517715
+    },
+    {
+      "name": "native-small-fanout8-recoff",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "small",
+        "subscribers": 8,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "1d1149c464858394dec4e47d27a623e365928130512c7ec799179013f24f8a0a",
+      "wall_s": {
+        "median": 0.009012792012072168,
+        "min": 0.008520875009708107,
+        "max": 0.010104417000547983,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.004975,
+        "min": 0.004635,
+        "max": 0.0053879999999999996
+      },
+      "kernel_user_s": 0.002192,
+      "kernel_system_s": 0.002527,
+      "kernel_max_rss_bytes": 2162688,
+      "tree_max_rss_bytes": 2179072,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 1600,
+          "bytes": 25600
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 144.0,
+      "us_per_message": 45.06396006036084,
+      "payload_mib_per_s": 0.33860293329884106
+    },
+    {
+      "name": "native-camera-fanout0-recon",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "camera",
+        "subscribers": 0,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "4f07ce719f7b832cce3b53368b2484e95398d1443cba12306a38e59d783131f2",
+      "wall_s": {
+        "median": 0.4262218329968164,
+        "min": 0.41684750000422355,
+        "max": 0.44152045900409576,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.113604,
+        "min": 0.112508,
+        "max": 0.11652599999999999
+      },
+      "kernel_user_s": 0.08187,
+      "kernel_system_s": 0.034384,
+      "kernel_max_rss_bytes": 10420224,
+      "tree_max_rss_bytes": 10403840,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 0,
+          "bytes": 0
+        },
+        "recorded": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 2764808.0,
+      "us_per_message": 8524.436659936327,
+      "payload_mib_per_s": 309.3138566900004
+    },
+    {
+      "name": "native-camera-fanout0-recoff",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "camera",
+        "subscribers": 0,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "4f07ce719f7b832cce3b53368b2484e95398d1443cba12306a38e59d783131f2",
+      "wall_s": {
+        "median": 0.01342066600045655,
+        "min": 0.013207875002990477,
+        "max": 0.015397291994304396,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.010204,
+        "min": 0.009845,
+        "max": 0.010485999999999999
+      },
+      "kernel_user_s": 0.006984,
+      "kernel_system_s": 0.003058,
+      "kernel_max_rss_bytes": 7438336,
+      "tree_max_rss_bytes": 7454720,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 0,
+          "bytes": 0
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 2764808.0,
+      "us_per_message": 268.413320009131,
+      "payload_mib_per_s": 9823.381266268136
+    },
+    {
+      "name": "native-camera-fanout1-recon",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "camera",
+        "subscribers": 1,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "30eed54b118c704a472f13a45923eb98cb6f45c8df9a83ca5169ce75f084c96a",
+      "wall_s": {
+        "median": 0.4313447499880567,
+        "min": 0.4042457089963136,
+        "max": 0.43683775000681635,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.119308,
+        "min": 0.11749099999999998,
+        "max": 0.11973999999999999
+      },
+      "kernel_user_s": 0.085626,
+      "kernel_system_s": 0.033307,
+      "kernel_max_rss_bytes": 18857984,
+      "tree_max_rss_bytes": 18874368,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "recorded": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 5529616.0,
+      "us_per_message": 8626.894999761134,
+      "payload_mib_per_s": 305.6402540505637
+    },
+    {
+      "name": "native-camera-fanout1-recoff",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "camera",
+        "subscribers": 1,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "30eed54b118c704a472f13a45923eb98cb6f45c8df9a83ca5169ce75f084c96a",
+      "wall_s": {
+        "median": 0.020227957997121848,
+        "min": 0.019025583998882212,
+        "max": 0.02088812500005588,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.015967,
+        "min": 0.015267,
+        "max": 0.016751
+      },
+      "kernel_user_s": 0.011894,
+      "kernel_system_s": 0.003756,
+      "kernel_max_rss_bytes": 15908864,
+      "tree_max_rss_bytes": 15925248,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 5529616.0,
+      "us_per_message": 404.55915994243696,
+      "payload_mib_per_s": 6517.529796556084
+    },
+    {
+      "name": "native-camera-fanout2-recon",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "camera",
+        "subscribers": 2,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "2e95c1446eaa8abe47ecaf02b7dc925603988c3a37f875e5cb134f33446297e5",
+      "wall_s": {
+        "median": 0.43775024999922607,
+        "min": 0.38728241600620095,
+        "max": 0.488966333999997,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.12317299999999999,
+        "min": 0.12221399999999999,
+        "max": 0.12335299999999999
+      },
+      "kernel_user_s": 0.088753,
+      "kernel_system_s": 0.031709,
+      "kernel_max_rss_bytes": 27262976,
+      "tree_max_rss_bytes": 27279360,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 100,
+          "bytes": 276480800
+        },
+        "recorded": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 8294424.0,
+      "us_per_message": 8755.004999984521,
+      "payload_mib_per_s": 301.16788961276353
+    },
+    {
+      "name": "native-camera-fanout2-recoff",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "camera",
+        "subscribers": 2,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "2e95c1446eaa8abe47ecaf02b7dc925603988c3a37f875e5cb134f33446297e5",
+      "wall_s": {
+        "median": 0.024467625000397675,
+        "min": 0.023812042010831647,
+        "max": 0.03537487500580028,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.020477,
+        "min": 0.020059,
+        "max": 0.022361
+      },
+      "kernel_user_s": 0.015503,
+      "kernel_system_s": 0.004429,
+      "kernel_max_rss_bytes": 24297472,
+      "tree_max_rss_bytes": 24313856,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 100,
+          "bytes": 276480800
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 8294424.0,
+      "us_per_message": 489.35250000795355,
+      "payload_mib_per_s": 5388.194357547322
+    },
+    {
+      "name": "native-camera-fanout4-recon",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "camera",
+        "subscribers": 4,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "5e85e573fdbce66f2c7113712cd3bce86dc1d0deef787a671d497f87077f1f57",
+      "wall_s": {
+        "median": 0.4183353340049507,
+        "min": 0.39416191600321326,
+        "max": 0.4313207500090357,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.131792,
+        "min": 0.130426,
+        "max": 0.132453
+      },
+      "kernel_user_s": 0.097016,
+      "kernel_system_s": 0.03583,
+      "kernel_max_rss_bytes": 44007424,
+      "tree_max_rss_bytes": 43991040,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 552961600
+        },
+        "recorded": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 13824040.0,
+      "us_per_message": 8366.706680099014,
+      "payload_mib_per_s": 315.1450720348819
+    },
+    {
+      "name": "native-camera-fanout4-recoff",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "camera",
+        "subscribers": 4,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "5e85e573fdbce66f2c7113712cd3bce86dc1d0deef787a671d497f87077f1f57",
+      "wall_s": {
+        "median": 0.032927416992606595,
+        "min": 0.032226625000475906,
+        "max": 0.035751000003074296,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.029868,
+        "min": 0.027948999999999998,
+        "max": 0.030992999999999996
+      },
+      "kernel_user_s": 0.02308,
+      "kernel_system_s": 0.006581,
+      "kernel_max_rss_bytes": 41041920,
+      "tree_max_rss_bytes": 41058304,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 552961600
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 13824040.0,
+      "us_per_message": 658.5483398521319,
+      "payload_mib_per_s": 4003.846369101124
+    },
+    {
+      "name": "native-camera-fanout8-recon",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "camera",
+        "subscribers": 8,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "2cd1b6cdaf37470d782856ffc1bdd02d7214cadc9c3948c510d4cf3cd5442c3d",
+      "wall_s": {
+        "median": 0.45992408400343265,
+        "min": 0.40695816700463183,
+        "max": 0.4942712080082856,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.149448,
+        "min": 0.147468,
+        "max": 0.158218
+      },
+      "kernel_user_s": 0.110977,
+      "kernel_system_s": 0.037756,
+      "kernel_max_rss_bytes": 77545472,
+      "tree_max_rss_bytes": 77545472,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 400,
+          "bytes": 1105923200
+        },
+        "recorded": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 24883272.0,
+      "us_per_message": 9198.481680068653,
+      "payload_mib_per_s": 286.64800030072485
+    },
+    {
+      "name": "native-camera-fanout8-recoff",
+      "dimensions": {
+        "participants": "native",
+        "direction": "n/a",
+        "payload": "camera",
+        "subscribers": 8,
+        "transport": "n/a",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "2cd1b6cdaf37470d782856ffc1bdd02d7214cadc9c3948c510d4cf3cd5442c3d",
+      "wall_s": {
+        "median": 0.05528308299835771,
+        "min": 0.052148792005027644,
+        "max": 0.06116212499910034,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.049693,
+        "min": 0.046719,
+        "max": 0.055534999999999994
+      },
+      "kernel_user_s": 0.040056,
+      "kernel_system_s": 0.010089,
+      "kernel_max_rss_bytes": 74563584,
+      "tree_max_rss_bytes": 74563584,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 400,
+          "bytes": 1105923200
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 24883272.0,
+      "us_per_message": 1105.6616599671543,
+      "payload_mib_per_s": 2384.749761037079
+    },
+    {
+      "name": "process-small-in-inline-burst1-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "in",
+        "payload": "small",
+        "subscribers": 1,
+        "transport": "inline",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "d255b76eb057bcb1af602aef053fd7afe36f75f0c360eb088c001a10eef6f26d",
+      "wall_s": {
+        "median": 0.07722308298980352,
+        "min": 0.0737965830048779,
+        "max": 0.08107979100896046,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.059025999999999995,
+        "min": 0.055980999999999996,
+        "max": 0.060443
+      },
+      "kernel_user_s": 0.003653,
+      "kernel_system_s": 0.004535,
+      "kernel_max_rss_bytes": 2408448,
+      "tree_max_rss_bytes": 23101440,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "recorded": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 199,
+          "bytes": 3184
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 47.92,
+      "us_per_message": 386.1154149490176,
+      "payload_mib_per_s": 0.0395187254166342
+    },
+    {
+      "name": "process-small-in-inline-burst2-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "in",
+        "payload": "small",
+        "subscribers": 1,
+        "transport": "inline",
+        "burst": 2,
+        "recording": true
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "e40a6ddba563a4a9c1a1cd7d657438cc767e59f35ba99a38d238d6aeda17ba25",
+      "wall_s": {
+        "median": 0.07452445900707971,
+        "min": 0.07382666600460652,
+        "max": 0.0766828330088174,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.057384000000000004,
+        "min": 0.05574899999999999,
+        "max": 0.05918799999999999
+      },
+      "kernel_user_s": 0.002957,
+      "kernel_system_s": 0.004219,
+      "kernel_max_rss_bytes": 2408448,
+      "tree_max_rss_bytes": 22986752,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "recorded": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 198,
+          "bytes": 3168
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 47.84,
+      "us_per_message": 372.62229503539857,
+      "payload_mib_per_s": 0.040949747950670634
+    },
+    {
+      "name": "process-small-in-shm-burst1-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "in",
+        "payload": "small",
+        "subscribers": 1,
+        "transport": "shm",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "9137df896fd0969d4c99bf30fec77688db9471024c8b8ed5979c57a5daf54489",
+      "wall_s": {
+        "median": 0.08761175000108778,
+        "min": 0.08390620899444912,
+        "max": 0.09475499999825843,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.06028699999999999,
+        "min": 0.059218,
+        "max": 0.060547
+      },
+      "kernel_user_s": 0.003544,
+      "kernel_system_s": 0.005043,
+      "kernel_max_rss_bytes": 2392064,
+      "tree_max_rss_bytes": 23101440,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "recorded": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "arena_write": {
+          "count": 199,
+          "bytes": 3184
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 47.92,
+      "us_per_message": 438.0587500054389,
+      "payload_mib_per_s": 0.03483274574999483
+    },
+    {
+      "name": "process-small-in-shm-burst2-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "in",
+        "payload": "small",
+        "subscribers": 1,
+        "transport": "shm",
+        "burst": 2,
+        "recording": true
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "136affb63d56e9387fc4930f13115d9283bb2bfa38cd36cf227456d9bafae0fb",
+      "wall_s": {
+        "median": 0.08673058298882097,
+        "min": 0.0808157090068562,
+        "max": 0.1060986250085989,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.05721,
+        "min": 0.054889999999999994,
+        "max": 0.061945
+      },
+      "kernel_user_s": 0.002836,
+      "kernel_system_s": 0.00396,
+      "kernel_max_rss_bytes": 2441216,
+      "tree_max_rss_bytes": 22937600,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "recorded": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "arena_write": {
+          "count": 99,
+          "bytes": 1584
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 99,
+          "bytes": 1584
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 47.84,
+      "us_per_message": 433.65291494410485,
+      "payload_mib_per_s": 0.035186640137001644
+    },
+    {
+      "name": "process-small-out-inline-burst1-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "out",
+        "payload": "small",
+        "subscribers": 1,
+        "transport": "inline",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "1c313e2f4358393e514d6839e674f2227d6067b39c30b8c92e3dee822dce49c7",
+      "wall_s": {
+        "median": 0.07980087499890942,
+        "min": 0.07526479200168978,
+        "max": 0.08321983400674071,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.0582,
+        "min": 0.05764,
+        "max": 0.060247999999999996
+      },
+      "kernel_user_s": 0.003098,
+      "kernel_system_s": 0.00401,
+      "kernel_max_rss_bytes": 2359296,
+      "tree_max_rss_bytes": 22921216,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "recorded": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 200,
+          "bytes": 3200
+        }
+      },
+      "copied_bytes_per_message": 48.0,
+      "us_per_message": 399.0043749945471,
+      "payload_mib_per_s": 0.038242159782605215
+    },
+    {
+      "name": "process-small-out-inline-burst2-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "out",
+        "payload": "small",
+        "subscribers": 1,
+        "transport": "inline",
+        "burst": 2,
+        "recording": true
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "53cbff3aa5da876234329c280aacd4e620aeb890f67b6025e7c4885c0f28d882",
+      "wall_s": {
+        "median": 0.07956370800093282,
+        "min": 0.07387508299143519,
+        "max": 0.08006633300101385,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.05851,
+        "min": 0.056021999999999995,
+        "max": 0.060344
+      },
+      "kernel_user_s": 0.002867,
+      "kernel_system_s": 0.003873,
+      "kernel_max_rss_bytes": 2408448,
+      "tree_max_rss_bytes": 23003136,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "recorded": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 200,
+          "bytes": 3200
+        }
+      },
+      "copied_bytes_per_message": 48.0,
+      "us_per_message": 397.8185400046641,
+      "payload_mib_per_s": 0.03835615369339273
+    },
+    {
+      "name": "process-small-out-shm-burst1-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "out",
+        "payload": "small",
+        "subscribers": 1,
+        "transport": "shm",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "ff29f9b575cb7afa7615f367794a44eef58a5e2b37002c308b693f444655aacf",
+      "wall_s": {
+        "median": 0.08718658299767412,
+        "min": 0.08298800000920892,
+        "max": 0.09084999999322463,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.060452,
+        "min": 0.058519,
+        "max": 0.063927
+      },
+      "kernel_user_s": 0.003179,
+      "kernel_system_s": 0.004674,
+      "kernel_max_rss_bytes": 2359296,
+      "tree_max_rss_bytes": 23068672,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "recorded": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 48.0,
+      "us_per_message": 435.9329149883706,
+      "payload_mib_per_s": 0.035002608286431085
+    },
+    {
+      "name": "process-small-out-shm-burst2-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "out",
+        "payload": "small",
+        "subscribers": 1,
+        "transport": "shm",
+        "burst": 2,
+        "recording": true
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "99d327b312b357dcb381ce4697e2e0de3464a9c660f34d2b451feffa4dfe08cc",
+      "wall_s": {
+        "median": 0.09111595900321845,
+        "min": 0.08555891699506901,
+        "max": 0.10164037499635015,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.061213000000000004,
+        "min": 0.058263999999999996,
+        "max": 0.064928
+      },
+      "kernel_user_s": 0.002798,
+      "kernel_system_s": 0.004184,
+      "kernel_max_rss_bytes": 2392064,
+      "tree_max_rss_bytes": 23134208,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "recorded": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 100,
+          "bytes": 1600
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 100,
+          "bytes": 1600
+        }
+      },
+      "copied_bytes_per_message": 48.0,
+      "us_per_message": 455.57979501609225,
+      "payload_mib_per_s": 0.033493120699000754
+    },
+    {
+      "name": "process-camera-in-inline-burst1-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "in",
+        "payload": "camera",
+        "subscribers": 1,
+        "transport": "inline",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "e422698f113aa493d3d6ee35e98ed70e60ffa81dc553d0682a15fd5938821aee",
+      "wall_s": {
+        "median": 2.145560791992466,
+        "min": 1.9776721249945695,
+        "max": 2.328857707994757,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 1.804409,
+        "min": 1.782133,
+        "max": 1.811967
+      },
+      "kernel_user_s": 1.026353,
+      "kernel_system_s": 0.093294,
+      "kernel_max_rss_bytes": 36208640,
+      "tree_max_rss_bytes": 45318144,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "recorded": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 49,
+          "bytes": 135475592
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 8239127.84,
+      "us_per_message": 42911.21583984932,
+      "payload_mib_per_s": 61.44608880892968
+    },
+    {
+      "name": "process-camera-in-inline-burst2-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "in",
+        "payload": "camera",
+        "subscribers": 1,
+        "transport": "inline",
+        "burst": 2,
+        "recording": true
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "87870da738fb204b7acb5db1952a2cc66f0bfd4a840e6c4a58edceeef4c8b3e3",
+      "wall_s": {
+        "median": 1.988951499995892,
+        "min": 1.965263040998252,
+        "max": 2.507959167007357,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 1.7892389999999998,
+        "min": 1.769147,
+        "max": 1.808554
+      },
+      "kernel_user_s": 1.002649,
+      "kernel_system_s": 0.087602,
+      "kernel_max_rss_bytes": 60719104,
+      "tree_max_rss_bytes": 80773120,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "recorded": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 48,
+          "bytes": 132710784
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 8183831.68,
+      "us_per_message": 39779.02999991784,
+      "payload_mib_per_s": 66.28433069886262
+    },
+    {
+      "name": "process-camera-in-shm-burst1-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "in",
+        "payload": "camera",
+        "subscribers": 1,
+        "transport": "shm",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "de66d052572131ae7a2da52fd84c0fd9e528a657e50455a701b3d6d5ab83f8f7",
+      "wall_s": {
+        "median": 0.37154416600242257,
+        "min": 0.3496172910090536,
+        "max": 0.37783966700953897,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.189688,
+        "min": 0.18636799999999998,
+        "max": 0.19067399999999998
+      },
+      "kernel_user_s": 0.090865,
+      "kernel_system_s": 0.036608,
+      "kernel_max_rss_bytes": 18989056,
+      "tree_max_rss_bytes": 34095104,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "recorded": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "arena_write": {
+          "count": 49,
+          "bytes": 135475592
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 8239127.84,
+      "us_per_message": 7430.883320048451,
+      "payload_mib_per_s": 354.83350576649065
+    },
+    {
+      "name": "process-camera-in-shm-burst2-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "in",
+        "payload": "camera",
+        "subscribers": 1,
+        "transport": "shm",
+        "burst": 2,
+        "recording": true
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "ccb8e34ed6c9ff56735b90a2a82eaabd70d81deec64bf06c458dc1c1cfe7e0b0",
+      "wall_s": {
+        "median": 1.1780935840070015,
+        "min": 1.1598715000000084,
+        "max": 1.203326749993721,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.978735,
+        "min": 0.974609,
+        "max": 0.9890709999999999
+      },
+      "kernel_user_s": 0.54636,
+      "kernel_system_s": 0.061383,
+      "kernel_max_rss_bytes": 48119808,
+      "tree_max_rss_bytes": 56360960,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "recorded": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "arena_write": {
+          "count": 24,
+          "bytes": 66355392
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 24,
+          "bytes": 66355392
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 8183831.68,
+      "us_per_message": 23561.87168014003,
+      "payload_mib_per_s": 111.90649092690674
+    },
+    {
+      "name": "process-camera-out-inline-burst1-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "out",
+        "payload": "camera",
+        "subscribers": 1,
+        "transport": "inline",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "91f50c7dd5f0858cdb06c4f9436f070af799cae4e8efadbdb80e4a82251e900b",
+      "wall_s": {
+        "median": 4.090164374996675,
+        "min": 4.040854209000827,
+        "max": 5.285851167005603,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 3.972219,
+        "min": 3.944764,
+        "max": 3.979802
+      },
+      "kernel_user_s": 3.005691,
+      "kernel_system_s": 0.163055,
+      "kernel_max_rss_bytes": 56115200,
+      "tree_max_rss_bytes": 271302656,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "recorded": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 50,
+          "bytes": 138240400
+        }
+      },
+      "copied_bytes_per_message": 8294424.0,
+      "us_per_message": 81803.2874999335,
+      "payload_mib_per_s": 32.23252341046409
+    },
+    {
+      "name": "process-camera-out-inline-burst2-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "out",
+        "payload": "camera",
+        "subscribers": 1,
+        "transport": "inline",
+        "burst": 2,
+        "recording": true
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "f728eab8629bc25407f90d1d10ccf8205684115bbf3a38d5fa38b626f9e25413",
+      "wall_s": {
+        "median": 6.047278625002946,
+        "min": 5.992141875001835,
+        "max": 6.208109790997696,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 5.960089999999999,
+        "min": 5.951483,
+        "max": 6.032031
+      },
+      "kernel_user_s": 5.017263,
+      "kernel_system_s": 0.164428,
+      "kernel_max_rss_bytes": 78561280,
+      "tree_max_rss_bytes": 269418496,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "recorded": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 50,
+          "bytes": 138240400
+        }
+      },
+      "copied_bytes_per_message": 8294424.0,
+      "us_per_message": 120945.57250005892,
+      "payload_mib_per_s": 21.800933468591808
+    },
+    {
+      "name": "process-camera-out-shm-burst1-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "out",
+        "payload": "camera",
+        "subscribers": 1,
+        "transport": "shm",
+        "burst": 1,
+        "recording": true
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "c8c2af103036171d5bd55b6086b8c5f87e0349eea58162dc133806e137744466",
+      "wall_s": {
+        "median": 0.37906658300198615,
+        "min": 0.36982216700562276,
+        "max": 0.39618262500152923,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.18457099999999999,
+        "min": 0.183441,
+        "max": 0.188801
+      },
+      "kernel_user_s": 0.089413,
+      "kernel_system_s": 0.033499,
+      "kernel_max_rss_bytes": 21708800,
+      "tree_max_rss_bytes": 31326208,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "recorded": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 8294424.0,
+      "us_per_message": 7581.331660039723,
+      "payload_mib_per_s": 347.7919839983252
+    },
+    {
+      "name": "process-camera-out-shm-burst2-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "out",
+        "payload": "camera",
+        "subscribers": 1,
+        "transport": "shm",
+        "burst": 2,
+        "recording": true
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "172bdec27a8d8497896ff81d5766e432cbf468ccff0d6f83b9cdae7fe5351133",
+      "wall_s": {
+        "median": 2.1773034169891616,
+        "min": 2.145609291997971,
+        "max": 2.187669042003108,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 2.050152,
+        "min": 2.039462,
+        "max": 2.0516360000000002
+      },
+      "kernel_user_s": 1.543365,
+      "kernel_system_s": 0.096727,
+      "kernel_max_rss_bytes": 70615040,
+      "tree_max_rss_bytes": 223674368,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "recorded": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 25,
+          "bytes": 69120200
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 25,
+          "bytes": 69120200
+        }
+      },
+      "copied_bytes_per_message": 8294424.0,
+      "us_per_message": 43546.06833978323,
+      "payload_mib_per_s": 60.550274225001516
+    },
+    {
+      "name": "process-small-in-shm-burst1-recoff",
+      "dimensions": {
+        "participants": "process",
+        "direction": "in",
+        "payload": "small",
+        "subscribers": 1,
+        "transport": "shm",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "9137df896fd0969d4c99bf30fec77688db9471024c8b8ed5979c57a5daf54489",
+      "wall_s": {
+        "median": 0.0848585829953663,
+        "min": 0.08120133299962617,
+        "max": 0.08844691699778195,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.059662999999999994,
+        "min": 0.058354,
+        "max": 0.062280999999999996
+      },
+      "kernel_user_s": 0.003204,
+      "kernel_system_s": 0.005589,
+      "kernel_max_rss_bytes": 2179072,
+      "tree_max_rss_bytes": 23003136,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 199,
+          "bytes": 3184
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 47.92,
+      "us_per_message": 424.2929149768315,
+      "payload_mib_per_s": 0.03596286556737155
+    },
+    {
+      "name": "process-small-out-shm-burst1-recoff",
+      "dimensions": {
+        "participants": "process",
+        "direction": "out",
+        "payload": "small",
+        "subscribers": 1,
+        "transport": "shm",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "ff29f9b575cb7afa7615f367794a44eef58a5e2b37002c308b693f444655aacf",
+      "wall_s": {
+        "median": 0.08479683399491478,
+        "min": 0.08063279199996032,
+        "max": 0.11084049999772105,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.060521,
+        "min": 0.058691999999999994,
+        "max": 0.068842
+      },
+      "kernel_user_s": 0.003173,
+      "kernel_system_s": 0.004418,
+      "kernel_max_rss_bytes": 2179072,
+      "tree_max_rss_bytes": 23035904,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 48.0,
+      "us_per_message": 423.9841699745739,
+      "payload_mib_per_s": 0.03598905370314902
+    },
+    {
+      "name": "process-camera-in-shm-burst1-recoff",
+      "dimensions": {
+        "participants": "process",
+        "direction": "in",
+        "payload": "camera",
+        "subscribers": 1,
+        "transport": "shm",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "de66d052572131ae7a2da52fd84c0fd9e528a657e50455a701b3d6d5ab83f8f7",
+      "wall_s": {
+        "median": 0.11762262499541976,
+        "min": 0.1117818329948932,
+        "max": 0.12000566700589843,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.08173799999999999,
+        "min": 0.080592,
+        "max": 0.083071
+      },
+      "kernel_user_s": 0.01594,
+      "kernel_system_s": 0.006228,
+      "kernel_max_rss_bytes": 16039936,
+      "tree_max_rss_bytes": 34062336,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 49,
+          "bytes": 135475592
+        },
+        "arena_read": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 8239127.84,
+      "us_per_message": 2352.452499908395,
+      "payload_mib_per_s": 1120.8414960545242
+    },
+    {
+      "name": "process-camera-out-shm-burst1-recoff",
+      "dimensions": {
+        "participants": "process",
+        "direction": "out",
+        "payload": "camera",
+        "subscribers": 1,
+        "transport": "shm",
+        "burst": 1,
+        "recording": false
+      },
+      "messages": 50,
+      "payload_bytes": 2764808,
+      "manifest_hash": "c8c2af103036171d5bd55b6086b8c5f87e0349eea58162dc133806e137744466",
+      "wall_s": {
+        "median": 0.11308870800712612,
+        "min": 0.1127976249990752,
+        "max": 0.11457283300114796,
+        "repeats": 5
+      },
+      "tree_cpu_s": {
+        "median": 0.082127,
+        "min": 0.08069699999999999,
+        "max": 0.08319399999999999
+      },
+      "kernel_user_s": 0.015767,
+      "kernel_system_s": 0.005092,
+      "kernel_max_rss_bytes": 18808832,
+      "tree_max_rss_bytes": 31391744,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "subscriber_copy": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "recorded": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 50,
+          "bytes": 138240400
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 8294424.0,
+      "us_per_message": 2261.7741601425223,
+      "payload_mib_per_s": 1165.7779215358894
+    }
+  ]
+}

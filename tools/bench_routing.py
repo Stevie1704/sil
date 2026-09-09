@@ -167,8 +167,12 @@ def matrix(build_dir: Path, counts: dict[str, int]) -> list[Config]:
     # small-payload rows. Every figure is reported per message, and the count
     # is stated per row, so the two remain comparable.
     configs = [
-        # Fixed cost of a run, so every other row can be read net of it.
-        native_config(build_dir, "small", 1, True, 1, name="fixed-cost-control"),
+        # What a Run costs before it routes anything: process start, library
+        # load, Manifest parse. Recording is off, because a Recording row is
+        # I/O-bound and would put a variable write cost inside the constant.
+        # It nets the Recording-off rows only; Recording rows are read from
+        # kernel CPU instead.
+        native_config(build_dir, "small", 1, False, 1, name="fixed-cost-control"),
     ]
     # Native fan-out at both payload sizes, with and without Recording: this is
     # where a per-subscriber payload copy would show up.
@@ -414,9 +418,11 @@ def render_markdown(report: dict) -> str:
         lines += [
             "## Fixed cost control",
             "",
-            f"A one-Message run of the same shape costs "
-            f"{control['wall_s']['median'] * 1e3:.1f} ms wall-clock; every "
-            "µs/message figure below still carries that fixed cost once.",
+            f"A one-Message Run of the same shape, with Recording off, costs "
+            f"{control['wall_s']['median'] * 1e3:.1f} ms wall-clock. Every "
+            "µs/message figure below still carries that fixed cost once. It "
+            "nets the Recording-off rows only, and no Process row: a Process "
+            "row also pays its participant's interpreter start-up.",
             "",
         ]
     lines += [
