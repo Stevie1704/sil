@@ -26,7 +26,6 @@ import os
 import platform
 import resource
 import statistics
-import subprocess
 import sys
 import tempfile
 import time
@@ -90,50 +89,53 @@ def _base(payload: str, messages: int, burst: int, transport: str) -> Manifest:
     return m
 
 
-def _native_source(m: Manifest, build_dir: Path, payload: str, burst: int) -> None:
+def _native_publisher(m: Manifest, build_dir: Path, payload: str,
+                      burst: int) -> None:
     m.add_native(
-        "source",
-        library=str(build_dir / "bench_source.silp"),
+        "publisher",
+        library=str(build_dir / "bench_publisher.silp"),
         config={"channel": "frames", "bytes": payload_bytes(payload),
                 "period_ns": PERIOD_NS, "burst": burst},
         publishes=["frames"],
     )
 
 
-def _native_sink(m: Manifest, build_dir: Path, name: str) -> None:
+def _native_subscriber(m: Manifest, build_dir: Path, name: str) -> None:
     m.add_native(
         name,
-        library=str(build_dir / "bench_sink.silp"),
+        library=str(build_dir / "bench_subscriber.silp"),
         config={"input": "frames", "period_ns": PERIOD_NS},
         subscribes=["frames"],
     )
 
 
-def _process(m: Manifest, name: str, shape: str, burst: int, **channels) -> None:
+def _process(m: Manifest, shape: str, burst: int, **channels) -> None:
     command = [sys.executable, str(ROOT / "tools" / "bench_participants.py"), shape]
-    if shape == "source":
+    if shape == "publisher":
         command.append(str(burst))
-    m.add_process(name, command=command, step_period_ns=PERIOD_NS,
+    m.add_process(shape, command=command, step_period_ns=PERIOD_NS,
                   priority=1, **channels)
 
 
-def native_config(build_dir, payload, subscribers, recording, messages) -> Config:
+def native_config(build_dir, payload, subscribers, recording, messages, *,
+                  name: str = "") -> Config:
     """Native fan-out: one publisher, `subscribers` in-process subscribers."""
     m = _base(payload, messages, burst=1, transport="inline")
-    _native_source(m, build_dir, payload, burst=1)
-    for i in range(subscribers):
-        _native_sink(m, build_dir, f"sink{i}")
+    _native_publisher(m, build_dir, payload, burst=1)
+    for index in range(subscribers):
+        _native_subscriber(m, build_dir, f"subscriber{index}")
     return Config(
-        name=f"native-{payload}-fanout{subscribers}-rec{'on' if recording else 'off'}",
-        dimensions={"participants": "native", "payload": payload,
-                    "subscribers": subscribers, "transport": "n/a",
-                    "burst": 1, "recording": recording},
+        name=name or
+        f"native-{payload}-fanout{subscribers}-rec{'on' if recording else 'off'}",
+        dimensions={"participants": "native", "direction": "n/a",
+                    "payload": payload, "subscribers": subscribers,
+                    "transport": "n/a", "burst": 1, "recording": recording},
         manifest=m, messages=messages, recording=recording,
     )
 
 
-def process_config(build_dir, payload, direction, transport, burst, recording,
-                   messages) -> Config:
+def process_config(build_dir, payload, *, direction, transport, burst,
+                   recording, messages) -> Config:
     """Process delivery in one direction, over one Transport, at one burst size.
 
     `direction` names which side the payload crosses the boundary towards:
@@ -143,17 +145,18 @@ def process_config(build_dir, payload, direction, transport, burst, recording,
     """
     m = _base(payload, messages, burst, transport)
     if direction == "in":
-        _native_source(m, build_dir, payload, burst)
-        _process(m, "sink", "sink", burst, subscribes=["frames"])
+        _native_publisher(m, build_dir, payload, burst)
+        _process(m, "subscriber", burst, subscribes=["frames"])
     else:
-        _process(m, "source", "source", burst, publishes=["frames"])
-        _native_sink(m, build_dir, "sink0")
+        _process(m, "publisher", burst, publishes=["frames"])
+        _native_subscriber(m, build_dir, "subscriber0")
     return Config(
         name=f"process-{payload}-{direction}-{transport}-burst{burst}"
              f"-rec{'on' if recording else 'off'}",
-        dimensions={"participants": f"process-{direction}", "payload": payload,
-                    "subscribers": 1, "transport": transport,
-                    "burst": burst, "recording": recording},
+        dimensions={"participants": "process", "direction": direction,
+                    "payload": payload, "subscribers": 1,
+                    "transport": transport, "burst": burst,
+                    "recording": recording},
         manifest=m, messages=messages, recording=recording,
     )
 
@@ -165,7 +168,7 @@ def matrix(build_dir: Path, counts: dict[str, int]) -> list[Config]:
     # is stated per row, so the two remain comparable.
     configs = [
         # Fixed cost of a run, so every other row can be read net of it.
-        native_config(build_dir, "small", 1, True, 1),
+        native_config(build_dir, "small", 1, True, 1, name="fixed-cost-control"),
     ]
     # Native fan-out at both payload sizes, with and without Recording: this is
     # where a per-subscriber payload copy would show up.
@@ -182,15 +185,18 @@ def matrix(build_dir: Path, counts: dict[str, int]) -> list[Config]:
             for transport in ("inline", "shm"):
                 for burst in (1, 2):
                     configs.append(
-                        process_config(build_dir, payload, direction, transport,
-                                       burst, True, messages))
+                        process_config(build_dir, payload,
+                                       direction=direction,
+                                       transport=transport, burst=burst,
+                                       recording=True, messages=messages))
     # Recording-off counterparts for the shared-memory rows, so Recording I/O
     # can be separated from transport cost on the Process path too.
     for payload, messages in counts.items():
         for direction in ("in", "out"):
             configs.append(
-                process_config(build_dir, payload, direction, "shm", 1, False,
-                               messages))
+                process_config(build_dir, payload, direction=direction,
+                               transport="shm", burst=1, recording=False,
+                               messages=messages))
     return configs
 
 
@@ -202,29 +208,43 @@ def _args(runner: Path, manifest_path: Path, out: Path, recording: bool):
     return args + (["-o", str(out)] if recording else ["--no-recording"])
 
 
-def _cpu_seconds() -> float:
-    usage = resource.getrusage(resource.RUSAGE_CHILDREN)
-    return usage.ru_utime + usage.ru_stime
+def _max_rss_bytes(usage: resource.struct_rusage) -> int:
+    """ru_maxrss is bytes on macOS and kilobytes on Linux; report bytes."""
+    return usage.ru_maxrss if sys.platform == "darwin" else usage.ru_maxrss * 1024
+
+
+def run_once(args: list[str], workdir: Path, env: dict | None = None):
+    """Runs one child to completion and returns what it alone cost.
+
+    fork and wait4 rather than subprocess.run: wait4 attributes resource use to
+    this exact child, so a Process participant's own peak memory is reported
+    instead of a high-water mark shared with every earlier row. The child's
+    stdout is discarded — it is one manifest-hash line per run — and its stderr
+    is inherited, so a failure is visible where the driver's own output goes.
+    """
+    start = time.perf_counter()
+    pid = os.fork()
+    if pid == 0:
+        try:
+            os.chdir(workdir)
+            os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
+            os.execve(args[0], args, env if env is not None else os.environ)
+        finally:
+            os._exit(127)
+    _, status, usage = os.wait4(pid, 0)
+    wall = time.perf_counter() - start
+    if status != 0:
+        code = os.waitstatus_to_exitcode(status)
+        raise SystemExit(f"run failed (exit {code}): {' '.join(args)}")
+    return wall, usage.ru_utime + usage.ru_stime, _max_rss_bytes(usage)
 
 
 def run_timed(runner: Path, manifest_path: Path, workdir: Path, recording: bool):
-    """One production run: wall-clock, and CPU for the whole process tree.
-
-    RUSAGE_CHILDREN accumulates monotonically and this driver runs one child at
-    a time, so the difference across a run is exactly that run's CPU — kernel
-    and any Process participants together.
-    """
+    """One production run: wall-clock and resource use for the process tree."""
     out = workdir / "out.mcap"
-    before = _cpu_seconds()
-    start = time.perf_counter()
-    proc = subprocess.run(_args(runner, manifest_path, out, recording),
-                          capture_output=True, text=True, cwd=workdir)
-    wall = time.perf_counter() - start
-    cpu = _cpu_seconds() - before
-    if proc.returncode != 0:
-        raise SystemExit(f"run failed ({proc.returncode}): {proc.stderr.strip()}")
+    sample = run_once(_args(runner, manifest_path, out, recording), workdir)
     out.unlink(missing_ok=True)
-    return wall, cpu
+    return sample
 
 
 def run_instrumented(runner: Path, manifest_path: Path, workdir: Path,
@@ -233,10 +253,7 @@ def run_instrumented(runner: Path, manifest_path: Path, workdir: Path,
     report = workdir / "counters.json"
     env = dict(os.environ, SIL_COPY_COUNTERS_OUT=str(report))
     out = workdir / "out.mcap"
-    proc = subprocess.run(_args(runner, manifest_path, out, recording),
-                          capture_output=True, text=True, cwd=workdir, env=env)
-    if proc.returncode != 0:
-        raise SystemExit(f"run failed ({proc.returncode}): {proc.stderr.strip()}")
+    run_once(_args(runner, manifest_path, out, recording), workdir, env)
     out.unlink(missing_ok=True)
     return json.loads(report.read_text())
 
@@ -250,8 +267,9 @@ def measure(config: Config, build_dir: Path, repeats: int) -> dict:
         samples = [run_timed(build_dir / "sil-run", ref.path, workdir,
                              config.recording) for _ in range(repeats)]
 
-    walls = sorted(s[0] for s in samples)
-    cpus = sorted(s[1] for s in samples)
+    walls = sorted(sample[0] for sample in samples)
+    cpus = sorted(sample[1] for sample in samples)
+    peak_rss = max(sample[2] for sample in samples)
     payload = config.dimensions["payload"]
     copies = {site: counters[site] for site in COPY_SITES}
     copied_bytes = sum(copies[site]["bytes"] for site in COPY_SITES
@@ -269,6 +287,7 @@ def measure(config: Config, build_dir: Path, repeats: int) -> dict:
         "kernel_user_s": counters["kernel_user_s"],
         "kernel_system_s": counters["kernel_system_s"],
         "kernel_max_rss_bytes": counters["kernel_max_rss_bytes"],
+        "tree_max_rss_bytes": peak_rss,
         "copies": copies,
         "copied_bytes_per_message": copied_bytes / config.messages,
         "us_per_message": statistics.median(walls) / config.messages * 1e6,
@@ -288,16 +307,12 @@ def _copy_cell(result: dict, site: str) -> str:
     return str(result["copies"][site]["count"])
 
 
-def _kernel_cpu(result: dict) -> float:
-    return result["kernel_user_s"] + result["kernel_system_s"]
-
-
 def _native_table(results: list[dict]) -> list[str]:
     lines = [
         "| payload | messages | subscribers | recording | run ms | "
-        "µs/message | MiB/s | kernel CPU s | kernel RSS MiB | caller copies | "
-        "subscriber copies | recorded |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "µs/message | MiB/s | kernel user s | kernel system s | "
+        "kernel RSS MiB | caller copies | subscriber copies | recorded |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in results:
         d = r["dimensions"]
@@ -305,7 +320,8 @@ def _native_table(results: list[dict]) -> list[str]:
             f"| {d['payload']} | {r['messages']} | {d['subscribers']} | "
             f"{'on' if d['recording'] else 'off'} | "
             f"{r['wall_s']['median'] * 1e3:.1f} | {r['us_per_message']:.1f} | "
-            f"{r['payload_mib_per_s']:.1f} | {_kernel_cpu(r):.3f} | "
+            f"{r['payload_mib_per_s']:.1f} | {r['kernel_user_s']:.3f} | "
+            f"{r['kernel_system_s']:.3f} | "
             f"{_mib(r['kernel_max_rss_bytes'])} | "
             f"{_copy_cell(r, 'caller_to_kernel')} | "
             f"{_copy_cell(r, 'subscriber_copy')} | {_copy_cell(r, 'recorded')} |"
@@ -313,26 +329,27 @@ def _native_table(results: list[dict]) -> list[str]:
     return lines
 
 
-def _process_dimensions(result: dict) -> str:
+def _process_row_prefix(result: dict) -> str:
     d = result["dimensions"]
-    return (f"| {d['payload']} | {d['participants'].removeprefix('process-')} | "
-            f"{d['transport']} | {d['burst']} | "
-            f"{'on' if d['recording'] else 'off'} ")
+    return (f"| {d['payload']} | {d['direction']} | {d['transport']} | "
+            f"{d['burst']} | {'on' if d['recording'] else 'off'} ")
 
 
 def _process_cost_table(results: list[dict]) -> list[str]:
     lines = [
         "| payload | direction | transport | burst | recording | messages | "
-        "µs/message | MiB/s | kernel CPU s | tree CPU s | kernel RSS MiB |",
-        "|---|---|---|---|---|---|---|---|---|---|---|",
+        "µs/message | MiB/s | kernel user s | kernel system s | tree CPU s | "
+        "kernel RSS MiB | tree RSS MiB |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in results:
         lines.append(
-            _process_dimensions(r)
+            _process_row_prefix(r)
             + f"| {r['messages']} | {r['us_per_message']:.1f} | "
-            f"{r['payload_mib_per_s']:.1f} | {_kernel_cpu(r):.3f} | "
-            f"{r['tree_cpu_s']['median']:.3f} | "
-            f"{_mib(r['kernel_max_rss_bytes'])} |"
+            f"{r['payload_mib_per_s']:.1f} | {r['kernel_user_s']:.3f} | "
+            f"{r['kernel_system_s']:.3f} | {r['tree_cpu_s']['median']:.3f} | "
+            f"{_mib(r['kernel_max_rss_bytes'])} | "
+            f"{_mib(r['tree_max_rss_bytes'])} |"
         )
     return lines
 
@@ -353,7 +370,7 @@ def _process_copy_table(results: list[dict]) -> list[str]:
     ]
     for r in results:
         lines.append(
-            _process_dimensions(r)
+            _process_row_prefix(r)
             + f"| {_copy_cell(r, 'caller_to_kernel')} | "
             f"{_copy_cell(r, 'subscriber_copy')} | "
             f"{_copy_cell(r, 'arena_write')} | {_copy_cell(r, 'arena_read')} | "
@@ -367,8 +384,8 @@ def render_markdown(report: dict) -> str:
     native = [r for r in report["results"]
               if r["dimensions"]["participants"] == "native"]
     process = [r for r in report["results"]
-               if r["dimensions"]["participants"].startswith("process")]
-    control = next((r for r in native if r["messages"] == 1), None)
+               if r["dimensions"]["participants"] == "process"]
+    control = next((r for r in native if r["name"] == "fixed-cost-control"), None)
     native = [r for r in native if r is not control]
     lines = [
         "# Routing baseline — raw results",
@@ -388,7 +405,9 @@ def render_markdown(report: dict) -> str:
         + ", ".join(f"{name} {payload_bytes(name)} B" for name in PAYLOADS),
         "",
         "Copy columns are counts reported by the instrumented kernel, not",
-        "figures inferred from timing.",
+        "figures inferred from timing. A Recording row is I/O-bound: its",
+        "wall-clock follows the host's page-cache state and is not comparable",
+        "across machines or across days. Its kernel user time is.",
         "",
     ]
     if control:
