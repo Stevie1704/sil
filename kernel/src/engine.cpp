@@ -133,7 +133,7 @@ void Engine::publish(const std::string &owner, const std::string &channel,
                    std::to_string(c.schema->byte_size) + " bytes");
 
   const uint8_t *p = static_cast<const uint8_t *>(data);
-  counters::count_caller_copy(len);
+  counters::count(counters::Site::kCallerToKernel, len);
   PendingMessage msg{0, 0, std::vector<uint8_t>(p, p + len)};
   const InterceptorPlan::Verdict verdict =
       c.interceptor_plan->apply(now_ns_, msg.bytes);
@@ -141,13 +141,13 @@ void Engine::publish(const std::string &owner, const std::string &channel,
   if (verdict.suppressed) return;
   msg.publish_ns = verdict.visible_ns;
   if (recorder_) {
-    counters::count_recorded(msg.bytes.size());
+    counters::count(counters::Site::kRecorded, msg.bytes.size());
     recorder_->record(c.index, msg.publish_ns, c.next_seq, msg.bytes.data(),
                       msg.bytes.size());
   }
   c.next_seq++;
   for (SubQueue *q : c.subscribers) {
-    counters::count_subscriber_copy(msg.bytes.size());
+    counters::count(counters::Site::kSubscriberCopy, msg.bytes.size());
     q->push(msg);
   }
 }
