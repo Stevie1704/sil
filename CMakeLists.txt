@@ -99,7 +99,10 @@ target_include_directories(sil_clock_probe PRIVATE include)
 # --- toy participants (walking-skeleton fixtures) ---
 add_library(toy_producer MODULE participants/toy_producer.cpp)
 add_library(toy_accumulator MODULE participants/toy_accumulator.cpp)
-foreach(toy toy_producer toy_accumulator)
+# Throws across the C ABI seam on purpose, so exception containment is tested
+# through a real shared library (issue #65).
+add_library(toy_thrower MODULE participants/toy_thrower.cpp)
+foreach(toy toy_producer toy_accumulator toy_thrower)
   add_dependencies(${toy} toy_messages)
   target_include_directories(${toy} PRIVATE include ${SIL_GEN_DIR})
   target_link_libraries(${toy} PRIVATE nlohmann_json::nlohmann_json)

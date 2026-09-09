@@ -53,3 +53,21 @@ def add_accumulator(
         subscribes=[input_channel],
         publishes=[output_channel],
     )
+
+
+def thrower_library() -> str:
+    return str(BUILD_DIR / "toy_thrower.silp")
+
+
+def add_thrower(m, name: str = "thrower", **config):
+    """Declare the toy thrower, whose only job is to throw across the seam.
+
+    Its Channel contract is empty: it publishes and subscribes to nothing.
+    """
+    m.add_native(
+        name,
+        library=thrower_library(),
+        config=config,
+        subscribes=[],
+        publishes=[],
+    )

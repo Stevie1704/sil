@@ -4,6 +4,14 @@
  * The kernel passes a function table; the participant registers periodic
  * tasks and channel subscriptions during init. All callbacks run on the
  * kernel thread, strictly sequentially, under stepped virtual time.
+ *
+ * This is a C ABI, so no exception may cross it in either direction. The kernel
+ * holds up its side: it catches everything an init or a task callback throws and
+ * turns it into a setup or run failure that names the participant, and no call
+ * in the table below throws back into participant code. A participant built
+ * against a different C++ runtime is therefore safe, but it must still not rely
+ * on a throw as its own error path — return SIL_ERR or call fail() instead,
+ * because a contained exception carries no more detail than its message.
  */
 #ifndef SIL_PARTICIPANT_H
 #define SIL_PARTICIPANT_H
