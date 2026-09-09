@@ -231,10 +231,11 @@ in the framework's own CI from day one.**
   publishing an undeclared output aborts the run (exit 1); both diagnostics
   name the participant, the channel, and the declared direction. Live-publisher
   cardinality is untouched — two live publishers on one channel stay legal, and
-  that policy belongs to #64. An absent list means an empty contract, so a
-  declaration predating this decision still loads and fails explicitly on its
-  first undeclared call; whether that tolerance is the final rule is the shared
-  compatibility policy tracked in #62.
+  that policy belongs to #64. Native `subscribes` and `publishes` are required:
+  pre-#49 declarations had no contract enforcement at all, and that behavior is
+  gone, so an absent list must fail at load rather than load as an empty contract
+  and abort after participants are up. Process participants remain tolerant of
+  absent lists because absent-means-empty genuinely was their prior behavior.
 - **Overflow-safe Virtual-time addition (#50):** Virtual time is unsigned and
   only ever advances, so every addition to it goes through one primitive,
   `sil::virtual_time_after`, which answers with nothing when the instant
