@@ -1,0 +1,14 @@
+{
+  "bench.Small": {
+    "fields": [
+      {"name": "seq", "type": "u64"},
+      {"name": "value", "type": "i64"}
+    ]
+  },
+  "bench.CameraFrame": {
+    "fields": [
+      {"name": "seq", "type": "u64"},
+      {"name": "pixels", "type": "u8", "count": 2764800}
+    ]
+  }
+}

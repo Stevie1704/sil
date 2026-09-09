@@ -18,7 +18,7 @@ constexpr int kExitRunFailure = 1;
 constexpr int kExitConfigError = 2;
 
 void usage() {
-  std::cerr << "usage: sil-run <manifest.json> [-o <out.mcap>]\n";
+  std::cerr << "usage: sil-run <manifest.json> [-o <out.mcap> | --no-recording]\n";
 }
 
 // Fail fast at load if a participant opted into the shim but the shim library
@@ -41,9 +41,17 @@ int main(int argc, char **argv) {
 
   const char *manifest_path = nullptr;
   const char *out_path = "out.mcap";
+  // Running without a Recording is what separates the cost of routing to
+  // subscribers from the cost of Recording I/O (issue #61). The engine already
+  // treats a null sink as "do not record"; this is the switch that reaches it.
+  bool recording = true;
+  bool out_given = false;
   for (int i = 1; i < argc; i++) {
     if (std::strcmp(argv[i], "-o") == 0 && i + 1 < argc) {
       out_path = argv[++i];
+      out_given = true;
+    } else if (std::strcmp(argv[i], "--no-recording") == 0) {
+      recording = false;
     } else if (argv[i][0] == '-') {
       usage();
       return kExitConfigError;
@@ -55,6 +63,12 @@ int main(int argc, char **argv) {
     }
   }
   if (!manifest_path) {
+    usage();
+    return kExitConfigError;
+  }
+  // An output path that would never be written is a configuration mistake, not
+  // a silently ignored argument.
+  if (!recording && out_given) {
     usage();
     return kExitConfigError;
   }
@@ -73,13 +87,13 @@ int main(int argc, char **argv) {
     // Selecting the recording format is a manifest/config concern: an
     // unrecognized output extension is a config error (exit 2) and must reject
     // before any participant is created.
-    std::unique_ptr<sil::RecordingSink> recorder =
-        sil::make_recording_sink(out_path, manifest);
+    std::unique_ptr<sil::RecordingSink> recorder;
+    if (recording) recorder = sil::make_recording_sink(out_path, manifest);
     try {
       sil::Engine engine(manifest, recorder.get());
       engine.setup();
       engine.run();
-      recorder->close();
+      if (recorder) recorder->close();
     } catch (const sil::ManifestError &) {
       throw;
     } catch (const std::exception &e) {
