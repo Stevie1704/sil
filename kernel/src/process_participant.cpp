@@ -16,6 +16,7 @@
 #include "sil/arena.h"
 
 #include "clock_shim.hpp"
+#include "copy_counters.hpp"
 
 namespace sil {
 
@@ -86,11 +87,14 @@ class ProcessParticipant::StepCodec {
    public:
     static void encode(nlohmann::json &item,
                        const std::vector<uint8_t> &bytes) {
+      counters::count(counters::Site::kInlineEncode, bytes.size());
       item["data"] = b64_encode(bytes);
     }
 
     static std::vector<uint8_t> decode(const nlohmann::json &item) {
-      return b64_decode(item.at("data").get<std::string>());
+      std::vector<uint8_t> bytes = b64_decode(item.at("data").get<std::string>());
+      counters::count(counters::Site::kInlineDecode, bytes.size());
+      return bytes;
     }
   };
 
@@ -271,6 +275,7 @@ uint64_t ProcessParticipant::write_arena(const std::string &channel,
     throw RunError("participant '" + name_ + "' channel '" + channel +
                    "': payload exceeds arena capacity");
   auto *hdr = static_cast<sil_arena *>(a.region.base());
+  counters::count(counters::Site::kArenaWrite, bytes.size());
   std::memcpy(static_cast<uint8_t *>(a.region.base()) + sizeof(sil_arena),
               bytes.data(), bytes.size());
   hdr->len = bytes.size();
@@ -291,6 +296,7 @@ void ProcessParticipant::read_arena(const std::string &channel, uint64_t seq,
                    "': arena len exceeds capacity");
   const auto *payload =
       static_cast<const uint8_t *>(a.region.base()) + sizeof(sil_arena);
+  counters::count(counters::Site::kArenaRead, hdr->len);
   out.assign(payload, payload + hdr->len);
 }
 

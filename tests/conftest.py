@@ -42,6 +42,14 @@ def sil_run(build_dir) -> Path:
     return exe
 
 
+@pytest.fixture(scope="session")
+def sil_run_instrumented(build_dir) -> Path:
+    """The same kernel built with payload-copy counters (issue #61)."""
+    exe = build_dir / "sil-run-instrumented"
+    assert exe.exists(), f"instrumented runner not built at {exe}"
+    return exe
+
+
 @pytest.fixture
 def run_sil(sil_run, tmp_path):
     """Invoke the runner at the run boundary: manifest in, exit code + MCAP out."""

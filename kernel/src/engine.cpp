@@ -5,6 +5,7 @@
 #include <map>
 #include <optional>
 
+#include "copy_counters.hpp"
 #include "interceptor.hpp"
 #include "native_participant.hpp"
 #include "process_participant.hpp"
@@ -132,17 +133,23 @@ void Engine::publish(const std::string &owner, const std::string &channel,
                    std::to_string(c.schema->byte_size) + " bytes");
 
   const uint8_t *p = static_cast<const uint8_t *>(data);
+  counters::count(counters::Site::kCallerToKernel, len);
   PendingMessage msg{0, 0, std::vector<uint8_t>(p, p + len)};
   const InterceptorPlan::Verdict verdict =
       c.interceptor_plan->apply(now_ns_, msg.bytes);
   msg.global_seq = global_seq_++;
   if (verdict.suppressed) return;
   msg.publish_ns = verdict.visible_ns;
-  if (recorder_)
+  if (recorder_) {
+    counters::count(counters::Site::kRecorded, msg.bytes.size());
     recorder_->record(c.index, msg.publish_ns, c.next_seq, msg.bytes.data(),
                       msg.bytes.size());
+  }
   c.next_seq++;
-  for (SubQueue *q : c.subscribers) q->push(msg);
+  for (SubQueue *q : c.subscribers) {
+    counters::count(counters::Site::kSubscriberCopy, msg.bytes.size());
+    q->push(msg);
+  }
 }
 
 bool Engine::take(SubQueue &queue, PendingMessage &out) {

@@ -112,6 +112,27 @@ pointer-based C ABI data plane and need no rebuild.
 participant-facing copy stays), native-participant shm beyond the pointer ABI,
 cross-machine transport, compression, and arena-size/backpressure tuning.
 
+## Large-Message routing baseline
+
+The current data path copies a payload once from the publisher into the kernel.
+It copies it again into every subscriber's queue.
+[docs/bench/large-message-routing-baseline.md](docs/bench/large-message-routing-baseline.md)
+measures what that costs today, before the project commits to a leased buffer
+pool. The matrix varies payload size, subscriber fan-out, recording on or off,
+native against process participants, inline against shared-memory transport,
+and burst delivery.
+
+```sh
+make bench                     # regenerate docs/bench/routing-baseline.{json,md}
+```
+
+Copy counts come from `sil-run-instrumented`, the same kernel sources compiled
+with `SIL_COPY_COUNTERS`. Wall-clock comes from the production `sil-run`, which
+carries no instrumentation. Keeping the two apart lets a run report copies as
+counts instead of inferring them from timing. `sil-run --no-recording` runs a
+manifest and writes no recording. That separates the cost of routing to
+subscribers from the cost of recording I/O.
+
 ## Build & test
 
 ```sh
@@ -130,11 +151,15 @@ criterion (`tests/test_determinism.py`: run twice → bit-identical MCAP).
 kernel/src/        C++20 kernel: manifest, interceptor plan, engine
                    (scheduler+router), recorder, native/process adapters
 include/sil/       stable C ABI for native participants; clock-region layout
-participants/      toy native participants (walking-skeleton fixtures)
+participants/      toy native participants (walking-skeleton fixtures) and
+                   the bench publisher/subscriber fixtures for the
+                   routing baseline
 shim/              virtual clock shim (preload lib) + probe for POSIX vECUs
 schemas/           message schemas (single typed contract)
 tools/silschema.py schema → packed C structs; sil.schema packs the same
                    layout in Python
+tools/bench_*.py   routing-baseline driver and its process participants
+docs/bench/        routing baseline: procedure, raw results, decision inputs
 python/src/sil/    manifest builder, step-participant lib, test API,
                    determinism check
 tests/             behavior tests at the run boundary
