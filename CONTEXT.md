@@ -122,6 +122,11 @@ The mapped region carrying one channel's payloads across the kernel↔process
 boundary, sized from the schema.
 _Avoid_: buffer, segment, ring, shm
 
+**Burst**:
+Several Messages published on one Channel inside one Slot. An Arena holds one
+payload, so every Message after the first falls back to the inline transport.
+_Avoid_: batch, salvo, backlog
+
 **Interceptor**:
 A manifest-declared modification of a channel's message stream over a time
 window — dropping, delaying, or rewriting messages. How fault injection is
