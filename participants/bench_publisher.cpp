@@ -25,7 +25,7 @@ struct Publisher {
   uint64_t seq = 0;
 };
 
-void tick(void *user, uint64_t) {
+void publish(void *user, uint64_t) {
   auto *s = static_cast<Publisher *>(user);
   for (uint32_t i = 0; i < s->burst; i++) {
     std::memcpy(s->payload.data(), &s->seq, sizeof s->seq);
@@ -56,5 +56,5 @@ extern "C" int sil_participant_init(const sil_api_v1 *api, const char *,
 
   const uint64_t period = cfg.at("period_ns").get<uint64_t>();
   Publisher *raw = publisher.release();  // owned by the run; freed at process exit
-  return api->register_task(api->ctx, "tick", period, 0, 0, tick, raw);
+  return api->register_task(api->ctx, "publish", period, 0, 0, publish, raw);
 }

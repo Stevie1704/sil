@@ -26,23 +26,23 @@ SMALL_BYTES = 16
 
 
 def native_manifest(tmp_path, *, subscribers: int):
-    """One native source publishing bench.Small to `subscribers` native sinks."""
+    """One Native publisher sending bench.Small to `subscribers` subscribers."""
     m = Manifest(duration_ns=DURATION_NS)
     m.add_schemas({"bench.Small": BENCH_SCHEMAS["bench.Small"]})
-    m.add_channel("frames", schema="bench.Small")
+    m.add_channel("payload", schema="bench.Small")
     m.add_native(
         "source",
         library=str(BUILD_DIR / "bench_publisher.silp"),
-        config={"channel": "frames", "bytes": SMALL_BYTES,
+        config={"channel": "payload", "bytes": SMALL_BYTES,
                 "period_ns": PERIOD_NS, "burst": 1},
-        publishes=["frames"],
+        publishes=["payload"],
     )
     for i in range(subscribers):
         m.add_native(
             f"sink{i}",
             library=str(BUILD_DIR / "bench_subscriber.silp"),
-            config={"input": "frames", "period_ns": PERIOD_NS},
-            subscribes=["frames"],
+            config={"input": "payload", "period_ns": PERIOD_NS},
+            subscribes=["payload"],
         )
     return m.write(tmp_path / f"bench{subscribers}.json")
 

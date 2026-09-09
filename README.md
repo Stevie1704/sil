@@ -152,7 +152,8 @@ kernel/src/        C++20 kernel: manifest, interceptor plan, engine
                    (scheduler+router), recorder, native/process adapters
 include/sil/       stable C ABI for native participants; clock-region layout
 participants/      toy native participants (walking-skeleton fixtures) and
-                   the bench source/sink fixtures for the routing baseline
+                   the bench publisher/subscriber fixtures for the
+                   routing baseline
 shim/              virtual clock shim (preload lib) + probe for POSIX vECUs
 schemas/           message schemas (single typed contract)
 tools/silschema.py schema → packed C structs; sil.schema packs the same

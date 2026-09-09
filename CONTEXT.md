@@ -152,7 +152,10 @@ _Avoid_: config id, fingerprint, version
 
 **Recording**:
 The output artifact of a run: every published message with its virtual
-timestamp, plus the schemas and manifest hash needed to interpret it.
+timestamp, plus the schemas and manifest hash needed to interpret it. Whether
+a run writes one, and where, is chosen at the run boundary rather than in the
+manifest, so the same manifest hash covers a run with and without one. What the
+run computes is identical either way; only the artifact differs.
 _Avoid_: log, trace, output file, mcap
 
 **Determinism**:
