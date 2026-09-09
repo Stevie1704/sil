@@ -5,10 +5,12 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 
 import pytest
 from mcap.reader import make_reader
 
+from conftest import ROOT
 from toys import (
     TOY_SCHEMAS,
     accumulator_library,
@@ -99,6 +101,48 @@ class TestManifestRejection:
         assert "participant 'native'" in proc.stderr
         assert "library" in proc.stderr
         assert "number" in proc.stderr
+
+    @pytest.mark.parametrize(
+        "missing, present",
+        [
+            ("subscribes", {"publishes": []}),
+            ("publishes", {"subscribes": []}),
+        ],
+    )
+    def test_native_channel_lists_are_required_before_library_load(
+        self, run_sil, tmp_path, missing, present
+    ):
+        document = raw_manifest()
+        document["participants"] = {
+            "native": {
+                "type": "native",
+                "library": str(tmp_path / "never-loaded.silp"),
+                **present,
+            }
+        }
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == 2
+        assert "participant 'native'" in proc.stderr
+        assert f"missing required key '{missing}'" in proc.stderr
+        assert "never-loaded.silp" not in proc.stderr
+
+    def test_process_channel_lists_remain_optional(self, run_sil, tmp_path):
+        marker = tmp_path / "spawned"
+        document = raw_manifest()
+        document["participants"] = {
+            "process": {
+                "type": "process",
+                "command": [
+                    sys.executable,
+                    str(ROOT / "tests" / "participants" / "spawn_marker.py"),
+                    str(marker),
+                ],
+                "step_period_ns": 1_000,
+            }
+        }
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+        assert proc.returncode == 0, proc.stderr
+        assert marker.read_text() == "spawned"
 
     @pytest.mark.parametrize(
         "path,value,needle",
@@ -321,6 +365,8 @@ class TestManifestRejection:
                 "type": "native",
                 "library": "x",
                 "config": {"vendor_option": {"mode": "opaque"}},
+                "subscribes": [],
+                "publishes": [],
             }
         }
         proc = run_sil(write_raw_manifest(tmp_path, document))
@@ -330,7 +376,13 @@ class TestManifestRejection:
     def test_native_config_must_still_be_an_object(self, run_sil, tmp_path):
         document = raw_manifest()
         document["participants"] = {
-            "native": {"type": "native", "library": "x", "config": 42}
+            "native": {
+                "type": "native",
+                "library": "x",
+                "config": 42,
+                "subscribes": [],
+                "publishes": [],
+            }
         }
         proc = run_sil(write_raw_manifest(tmp_path, document))
         assert proc.returncode == 2
