@@ -71,16 +71,24 @@ make bench ARGS="--only native"     # one group
 Each row is run twice over:
 
 - once through `sil-run-instrumented` — the same kernel sources compiled with
-  `SIL_COPY_COUNTERS`. It reports the copy counts above plus the kernel
-  process's own user time, system time and peak RSS (`RUSAGE_SELF`), which is
-  what separates kernel memory from a Python Process participant's.
-- `--repeats` times through the production `sil-run`, for wall-clock and for
-  the CPU of the whole process tree. The median is reported with its range.
+  `SIL_COPY_COUNTERS`. This run is the source of the copy counts, and of
+  nothing else the findings rest on.
+- `--repeats` times through the production `sil-run`, for wall-clock, user
+  time, system time and peak RSS. `fork` and `wait4` attribute all four to one
+  child, so a Process participant's own peak memory is readable rather than
+  folded into a high-water mark shared with every earlier row. The median is
+  reported with its range; peak RSS is the maximum.
 
-Copy counts therefore never come from a timed binary, and timings never come
-from a binary carrying counters. Runs are sequential and each recording is
-deleted immediately, so `RUSAGE_CHILDREN` deltas attribute cleanly and a camera
-row does not fill the disk.
+**Every figure a finding rests on comes from the uninstrumented binary,
+repeated.** The instrumented run contributes copy counts, which are counts and
+not durations. It also reports the kernel process's own user time and peak RSS
+through `RUSAGE_SELF`; those appear only in the Process table, marked with an
+asterisk, because there the uninstrumented figures cover the participant
+process too. They are a single sample and carry the counters' own overhead, so
+no conclusion below is drawn from them.
+
+Each recording is deleted immediately after its run, so a camera row does not
+fill the disk.
 
 Results are machine-specific. The environment is recorded in
 `routing-baseline.json`; compare a later run against a fresh baseline on the
@@ -92,13 +100,13 @@ compare across sessions.
 ## Findings
 
 From [routing-baseline.json](routing-baseline.json), measured on an Apple
-Silicon laptop (macOS 26.6, arm64). Every copy figure is a count the
-instrumented kernel reported. Every duration is a median over five runs of the
-uninstrumented kernel.
+Silicon laptop (macOS 26.6, arm64). Copy figures are counts the instrumented
+kernel reported. Every duration and memory figure is from the production
+kernel, median (peak RSS: maximum) over five runs.
 
-A Run with Recording off costs **7.44 ms** before it routes anything. Figures
-below marked *net* have that subtracted. It nets Recording-off Native rows
-only: a Recording row adds a variable write cost, and a Process row adds its
+A Run with Recording off costs **8.41 ms** before it routes anything. Figures
+marked *net* have that subtracted. It nets Recording-off Native rows only: a
+Recording row adds a variable write cost, and a Process row adds its
 participant's interpreter start-up.
 
 ### One publication is copied once, plus once per subscriber
@@ -109,23 +117,23 @@ and Recording changes neither. Publish therefore holds N+1 live copies of a
 payload at its peak — the kernel's own Message, plus one per subscriber queue.
 
 The camera timings agree with the counts from the other side. Net of fixed
-cost, a 2.76 MB frame with no subscriber costs **120 µs** (21.5 GiB/s) and each
-added subscriber costs **105 µs** (24.6 GiB/s). The caller copy and a
-subscriber copy cost the same, because they are the same copy.
+cost, a 2.76 MB frame with no subscriber costs **94 µs** (27.4 GiB/s) and each
+added subscriber costs **104 µs** (24.9 GiB/s). The caller copy and a
+subscriber copy cost about the same, because they are the same copy.
 
-### Native fan-out costs 105 µs and 8.0 MiB per subscriber
+### Native fan-out costs 104 µs and 8.0 MiB per subscriber
 
-Net cost per camera frame runs 120, 256, 341, 510, 957 µs at zero, one, two,
+Net cost per camera frame runs 94, 226, 320, 515, 923 µs at zero, one, two,
 four and eight subscribers — a straight line. Net throughput falls from
-21.5 GiB/s to 2.7 GiB/s across that range. Kernel peak RSS rises from 7.1 MiB
-to 71.1 MiB: **8.0 MiB per subscriber**, near three times the payload, because
-a queue holds Messages the subscriber has not drained yet.
+27.4 GiB/s to 2.8 GiB/s across that range. Peak RSS rises from 7.1 MiB to
+71.1 MiB: **8.0 MiB per subscriber**, near three times the payload, because a
+queue holds Messages the subscriber has not drained yet.
 
-### Recording costs about eighteen subscriber copies of CPU, plus I/O
+### Recording costs about nineteen subscriber copies of CPU, plus I/O
 
-Recording one 2.76 MB frame adds **1498 µs of kernel user time** and 627 µs of
-system time. Against a subscriber copy's 83 µs of user time, Recording's
-per-byte CPU is worth about **eighteen subscriber copies**.
+Recording one 2.76 MB frame adds **1523 µs of user time** and 555 µs of system
+time. Against a subscriber copy's 81 µs of user time, Recording's per-byte CPU
+is worth about **nineteen subscriber copies**.
 
 That CPU is real per-byte work, and the counters do not see it: `recorded`
 measures bytes crossing the RecordingSink seam, and nothing inside the MCAP
@@ -135,42 +143,43 @@ kernel-owned payload copy; it does not show that no copy happens inside the
 container library.** #56 should be judged on lease lifetime and on that
 writer-side cost, not on a copy this instrumentation could have found.
 
-On top of the CPU, Recording adds I/O wait — 8256 µs per frame in this run.
+On top of the CPU, Recording adds I/O wait — 7973 µs per frame in this run.
 That figure is not stable: the same row moved several-fold between runs of this
 matrix in one session as the host's page cache filled. Read Recording as CPU
 plus a host-dependent write cost, never as one number.
 
 ### The small control payload costs about 1 µs per subscriber
 
-Net of fixed cost, a 16-byte Message costs under 1 µs per message at zero
-subscribers and about **0.87 µs per added subscriber** — queue and allocation
-overhead, not bandwidth. Eight subscribers cost 7.9 µs per message against a
-7.44 ms fixed Run cost. The copied path is not a problem for small Messages,
-which is what #46 already assumes.
+A 16-byte Message costs about **1.18 µs per added subscriber** — queue and
+allocation overhead, not bandwidth. Its cost at zero subscribers is smaller
+than the run-to-run spread of the 8.41 ms fixed cost itself, so only the slope
+is worth reading. The copied path is not a problem for small Messages, which is
+what #46 already assumes.
 
 ### Process transport: the single-slot Arena fallback is the sharp edge
 
 Wall-clock on these rows includes Recording I/O, so the comparison below is
-kernel user time over 50 camera frames, which is stable.
+user time over 50 camera frames. It covers the whole process tree, kernel and
+participant together, which is the right total for a Transport whose cost is
+paid on both sides of the boundary.
 
-| Row | kernel user s | versus the Arena |
+| Row | user s | versus the Arena |
 |---|---|---|
-| kernel→process, Arena, one Message per step | 0.091 | — |
-| kernel→process, Arena, burst of two | 0.546 | 6.0× |
-| kernel→process, inline | 1.026 | 11.3× |
-| process→kernel, Arena, one Message per step | 0.089 | — |
-| process→kernel, Arena, burst of two | 1.543 | 17.3× |
-| process→kernel, inline | 3.006 | 33.6× |
+| kernel→process, Arena, one Message per step | 0.140 | — |
+| kernel→process, Arena, burst of two | 0.875 | 6.3× |
+| kernel→process, inline | 1.646 | 11.8× |
+| process→kernel, Arena, one Message per step | 0.146 | — |
+| process→kernel, Arena, burst of two | 1.844 | 12.7× |
+| process→kernel, inline | 3.607 | 24.8× |
 
 The burst rows are not a timing mystery: their counts say exactly half the
 Messages took the Arena and half fell back to base64 — 24 Arena writes against
 24 inline encodes inbound, 25 Arena reads against 25 inline decodes outbound.
 One extra Message per step on one Channel pays the full inline penalty for it.
 
-Memory says the same thing from the participant's side. Peak RSS across the
-whole process tree is 29.9 MiB on the outbound Arena row and **258.7 MiB** on
-the outbound inline row: the base64 representation is held on both sides of the
-boundary at once.
+Memory says the same thing. Peak RSS across the process tree is 30.0 MiB on the
+outbound Arena row and **257.8 MiB** on the outbound inline row: the base64
+representation is held on both sides of the boundary at once.
 
 ### A Process publication crosses the kernel three times
 
@@ -189,10 +198,10 @@ document does not record one. The evidence each issue should be judged against:
 | Issue | Evidence from this baseline |
 |---|---|
 | #54 Leased tracer bullet | No independent value measured; it is the prerequisite for #55 and #58. |
-| #55 Handle fan-out | 105 µs and 8.0 MiB per added Native subscriber on a camera frame, linear, and confirmed by counts. Material at high fan-out and for peak memory. At one to four subscribers it is small against Recording. |
-| #56 Recording leases | Recording is the largest single cost on the camera path: about eighteen subscriber copies of CPU, plus host-dependent I/O. The counters find no second kernel-owned payload copy, but they stop at the RecordingSink seam, so they cannot rule one out inside the writer. Judge this on lease lifetime and on the writer-side cost, not on a removable kernel copy. |
+| #55 Handle fan-out | 104 µs and 8.0 MiB per added Native subscriber on a camera frame, linear, and confirmed by counts. Material at high fan-out and for peak memory. At one to four subscribers it is small against Recording. |
+| #56 Recording leases | Recording is the largest single cost on the camera path: about nineteen subscriber copies of CPU, plus host-dependent I/O. The counters find no second kernel-owned payload copy, but they stop at the RecordingSink seam, so they cannot rule one out inside the writer. Judge this on lease lifetime and on the writer-side cost, not on a removable kernel copy. |
 | #57 Native leased ABI | Not addressed here. It needs a named Native supplier requirement, not a measurement. |
-| #58 Mapped Process pools | The strongest measured case. One extra Message per step on a shared-memory Channel costs 6.0× to 17.3× the CPU, inline costs 11.3× to 33.6×, and the inline path holds 8.7× the peak memory across the process tree. All confirmed by counts. |
+| #58 Mapped Process pools | The strongest measured case. One extra Message per step on a shared-memory Channel costs 6.3× to 12.7× the CPU, inline costs 11.8× to 24.8×, and the inline path holds 8.6× the peak memory across the process tree. All confirmed by counts. |
 | #59 Crash reclamation | Conditional on #58; nothing here changes that. |
 
 Nothing in this baseline is a threshold. If the leased data plane proceeds, its
