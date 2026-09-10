@@ -375,9 +375,12 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
   p.name = name;
   std::string type = required<std::string>(participant, "type", ctx);
   // The clock shim is a process-participant-only opt-in; on any other type it
-  // is a config error (the Python builder cannot even express it there).
+  // is a config error (the Python builder cannot even express it there). The
+  // sleep policy (#52) is part of that same opt-in and follows it.
   if (type != "process" && find_value(participant, "shim", ctx))
     fail(ctx + ": shim is only valid on process participants");
+  if (type != "process" && find_value(participant, "sleep", ctx))
+    fail(ctx + ": sleep is only valid on process participants");
   if (type == "native") {
     reject_unknown_keys(participant, ctx,
                         {"type", "library", "config", "subscribes",
@@ -404,7 +407,7 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
   } else if (type == "process") {
     reject_unknown_keys(participant, ctx,
                         {"type", "command", "step_period_ns", "subscribes",
-                         "publishes", "priority", "shim"});
+                         "publishes", "priority", "shim", "sleep"});
     ProcessSpec ps;
     const json &cmd = require_array(
         require_value(participant, "command", ctx),
@@ -427,6 +430,27 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
       ps.priority = extract<int32_t>(*priority, ctx + " key 'priority'");
     if (const json *shim = find_value(participant, "shim", ctx))
       ps.shim = extract<bool>(*shim, ctx + " key 'shim'");
+    // Sleep policy for the shimmed clock (#52). Absent means "immediate",
+    // which is the behavior every pre-#52 Manifest already has, so those keep
+    // both their hash and their semantics. The Python builder always emits it
+    // and defaults to "reject", so a newly authored Manifest cannot land on
+    // the compatibility behavior by accident.
+    if (const json *sleep = find_value(participant, "sleep", ctx)) {
+      // The policy only exists inside the shim. Silently ignoring it on an
+      // unshimmed participant would let a Manifest declare a rejection that
+      // never happens.
+      if (!ps.shim)
+        fail(ctx + ": sleep requires shim (the policy only applies to the "
+                   "virtual clock shim)");
+      const std::string value = extract<std::string>(*sleep, ctx + " key 'sleep'");
+      if (value == "immediate")
+        ps.sleep = SleepPolicy::Immediate;
+      else if (value == "reject")
+        ps.sleep = SleepPolicy::Reject;
+      else
+        fail(ctx + ": unknown sleep policy '" + value +
+             "' (expected 'reject' or 'immediate')");
+    }
     p.impl = std::move(ps);
   } else if (type == "replay") {
     reject_unknown_keys(participant, ctx,

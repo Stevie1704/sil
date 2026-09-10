@@ -312,6 +312,70 @@ class TestClockShim:
         assert shimless.hash() == explicit_off.hash()
 
 
+class TestSleepPolicy:
+    """The always-emit half of the #62 compatibility shape, for #52.
+
+    The builder always states the policy and defaults to `reject`; the kernel
+    loader reads an absent field as `immediate`. That asymmetry is deliberate:
+    a Manifest written here can never land on the compatibility behavior
+    silently, and one written before #52 keeps both its hash and its meaning.
+    """
+
+    def _shimmed(self, **kwargs):
+        m = make_minimal()
+        m.add_process(
+            "vecu", command=["x"], step_period_ns=10_000_000, shim=True, **kwargs
+        )
+        return m
+
+    def test_shimmed_participant_always_states_its_policy(self):
+        entry = json.loads(self._shimmed().to_json())["participants"]["vecu"]
+        assert entry["sleep"] == "reject"
+
+    def test_immediate_is_expressible(self):
+        entry = json.loads(
+            self._shimmed(sleep="immediate").to_json()
+        )["participants"]["vecu"]
+        assert entry["sleep"] == "immediate"
+
+    def test_the_two_policies_hash_differently(self):
+        assert self._shimmed(sleep="reject").hash() != self._shimmed(
+            sleep="immediate"
+        ).hash()
+
+    def test_unknown_policy_rejected(self):
+        with pytest.raises(ManifestError, match="sleep must be"):
+            self._shimmed(sleep="block")
+
+    def test_policy_without_the_shim_is_rejected(self):
+        # The policy only exists inside the shim, so an unshimmed participant
+        # cannot declare one.
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="sleep requires shim"):
+            m.add_process(
+                "vecu", command=["x"], step_period_ns=10_000_000,
+                sleep="immediate",
+            )
+
+    def test_unshimmed_process_omits_the_policy_and_keeps_its_hash(self):
+        # The default is exempt from the rule above: not asking for the shim is
+        # not declaring a policy, so pre-#52 unshimmed manifests are untouched.
+        plain = make_minimal()
+        plain.add_process("vecu", command=["x"], step_period_ns=10_000_000)
+        entry = json.loads(plain.to_json())["participants"]["vecu"]
+        assert "sleep" not in entry
+
+    def test_omitting_the_field_is_not_expressible_through_the_builder(self):
+        # The compatibility behavior is reachable by an existing document, not
+        # by authoring a new one: every shimmed participant the builder emits
+        # carries an explicit policy.
+        for policy in ("reject", "immediate"):
+            entry = json.loads(
+                self._shimmed(sleep=policy).to_json()
+            )["participants"]["vecu"]
+            assert "sleep" in entry
+
+
 class TestArraySchemas:
     """Fixed-size array fields are declared with `count`. The builder rejects
     malformed declarations eagerly, mirroring the kernel's load-time rules."""

@@ -1,6 +1,7 @@
 """External behavior at the run boundary: invoke the runner with a manifest
 and artifacts, assert on exit code and MCAP content only."""
 
+import errno
 import json
 import os
 import shutil
@@ -428,6 +429,42 @@ class TestClockShimRejection:
         assert proc.returncode == 2
         assert "shim" in proc.stderr
 
+    def test_sleep_on_native_participant_is_config_error(self, run_sil, tmp_path):
+        bad = tmp_path / "bad.json"
+        bad.write_text(
+            '{"sil_manifest":1,"duration_ns":1000,"schemas":{},"channels":{},'
+            '"participants":{"n":{"type":"native","library":"x",'
+            '"sleep":"reject"}}}'
+        )
+        proc = run_sil(bad)
+        assert proc.returncode == 2
+        assert "sleep" in proc.stderr
+
+    def test_sleep_without_shim_is_config_error(self, run_sil, tmp_path):
+        # The policy only exists inside the shim; declaring one without it
+        # would promise a rejection that never happens.
+        bad = tmp_path / "bad.json"
+        bad.write_text(
+            '{"sil_manifest":1,"duration_ns":1000,"schemas":{},"channels":{},'
+            '"participants":{"p":{"type":"process","command":["x"],'
+            '"step_period_ns":1000,"sleep":"reject"}}}'
+        )
+        proc = run_sil(bad)
+        assert proc.returncode == 2
+        assert "sleep requires shim" in proc.stderr
+
+    def test_unknown_sleep_policy_is_config_error(self, run_sil, tmp_path):
+        bad = tmp_path / "bad.json"
+        bad.write_text(
+            '{"sil_manifest":1,"duration_ns":1000,"schemas":{},"channels":{},'
+            '"participants":{"p":{"type":"process","command":["x"],'
+            '"step_period_ns":1000,"shim":true,"sleep":"block"}}}'
+        )
+        proc = run_sil(bad)
+        assert proc.returncode == 2
+        assert "unknown sleep policy" in proc.stderr
+        assert "'reject' or 'immediate'" in proc.stderr
+
     def test_shim_requested_but_library_missing_is_config_error(
         self, sil_run, tmp_path
     ):
@@ -591,6 +628,109 @@ class TestClockShimRunBoundary:
         )
         assert proc.returncode == 0, proc.stderr
         assert proc.stdout.startswith("deterministic: ")
+
+
+class TestClockShimSleepPolicy:
+    """End-to-end sleep policy at the run boundary (issue #52).
+
+    A shimmed participant runs a bounded retry loop around ``nanosleep`` each
+    step. Virtual time is frozen inside a step, so the loop can never make
+    progress: under ``immediate`` every call succeeds and it runs to its cap,
+    and under ``reject`` the first call fails with ENOSYS and it leaves. The
+    assertions read only what the participant recorded — nothing about the
+    shared region or the preload leaks in.
+    """
+
+    PERIOD = 10_000_000
+    DURATION = 30_000_000  # steps at t = 0, 10ms, 20ms
+    CAP = 200  # mirrors CAP in tests/participants/sleep_retry.py
+
+    def _manifest(self, **kwargs):
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = toy_manifest(duration_ns=self.DURATION)
+        m.add_channel("readings", schema="toy.Counter")
+        m.add_process(
+            "vecu",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "sleep_retry.py")],
+            step_period_ns=self.PERIOD,
+            publishes=["readings"],
+            shim=True,
+            **kwargs,
+        )
+        return m
+
+    def _readings(self, mcap_path):
+        _, msgs = read_mcap(mcap_path)
+        return [
+            TYPES["toy.Counter"].unpack(data)
+            for topic, _, data in msgs
+            if topic == "readings"
+        ]
+
+    def test_reject_ends_the_retry_loop_on_the_first_call(self, run_sil, tmp_path):
+        m = self._manifest(sleep="reject")
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        readings = self._readings(proc.mcap_path)
+        assert [r["seq"] for r in readings] == [1, 1, 1]
+        assert [r["value"] for r in readings] == [errno.ENOSYS] * 3
+
+    def test_builder_default_is_reject(self, run_sil, tmp_path):
+        # Same run without naming a policy: a Manifest authored today must not
+        # land on the compatibility behavior by accident.
+        m = self._manifest()
+        assert json.loads(m.to_json())["participants"]["vecu"]["sleep"] == "reject"
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        assert [r["seq"] for r in self._readings(proc.mcap_path)] == [1, 1, 1]
+
+    def test_immediate_spins_the_retry_loop_to_its_cap(self, run_sil, tmp_path):
+        m = self._manifest(sleep="immediate")
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        readings = self._readings(proc.mcap_path)
+        assert [r["seq"] for r in readings] == [self.CAP] * 3
+        assert [r["value"] for r in readings] == [0, 0, 0]
+
+    def test_absent_sleep_field_keeps_the_pre_issue_behavior(
+        self, run_sil, tmp_path
+    ):
+        # The compatibility half of the always-emit shape (#62): a Manifest
+        # written before #52 has no `sleep` key, and must keep running exactly
+        # as it did. Built here by removing the key the builder now emits.
+        m = self._manifest(sleep="immediate")
+        path = m.write(tmp_path / "m.json").path
+        doc = json.loads(path.read_text())
+        del doc["participants"]["vecu"]["sleep"]
+        path.write_text(json.dumps(doc))
+
+        proc = run_sil(path)
+        assert proc.returncode == 0, proc.stderr
+        assert [r["seq"] for r in self._readings(proc.mcap_path)] == [self.CAP] * 3
+
+    def test_the_policy_does_not_advance_virtual_time(self, run_sil, tmp_path):
+        # Neither policy may block or move the clock: the recorded timestamps
+        # are the declared step grid under both.
+        stamps = {}
+        for policy in ("reject", "immediate"):
+            m = self._manifest(sleep=policy)
+            proc = run_sil(m.write(tmp_path / f"{policy}.json").path)
+            assert proc.returncode == 0, proc.stderr
+            _, msgs = read_mcap(proc.mcap_path)
+            stamps[policy] = [t for topic, t, _ in msgs if topic == "readings"]
+        assert stamps["reject"] == [0, self.PERIOD, 2 * self.PERIOD]
+        assert stamps["immediate"] == stamps["reject"]
+
+    def test_two_reject_runs_are_bit_identical(self, run_sil, tmp_path):
+        m = self._manifest(sleep="reject")
+        first = run_sil(m.write(tmp_path / "a.json").path)
+        second = run_sil(m.write(tmp_path / "b.json").path)
+        assert first.returncode == 0 and second.returncode == 0
+        assert first.mcap_path.read_bytes() == second.mcap_path.read_bytes()
 
 
 class TestEmptyRun:

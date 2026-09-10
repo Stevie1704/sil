@@ -54,6 +54,7 @@ class ProcessParticipant {
   MappedRegion clock_region_;
   std::string shim_lib_;  // resolved in the parent so the child only setenv()s
   uint64_t epoch_ns_ = 0;
+  SleepPolicy sleep_policy_ = SleepPolicy::Immediate;  // issue #52
 
   void setup_clock_region();
   void inject_shim_env() const;  // runs in the forked child before exec

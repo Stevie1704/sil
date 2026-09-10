@@ -107,6 +107,11 @@ def _reject_unknown(entry: dict, allowed: set[str], context: str) -> None:
             raise ManifestError(f"{context}: unknown key {key!r}")
 
 
+# Sleep policies for a shimmed process participant (issue #52). "immediate" is
+# the pre-#52 behavior an absent field selects in the kernel loader.
+_SLEEP_POLICIES = ("reject", "immediate")
+
+
 class ManifestError(ValueError):
     """A manifest that could never be a valid kernel input."""
 
@@ -386,6 +391,7 @@ class Manifest:
         publishes: list[str] | None = None,
         priority: int = 0,
         shim: bool = False,
+        sleep: str = "reject",
     ) -> None:
         name = _string(name, "participant name")
         command = _array(command, f"participant {name!r} command")
@@ -411,6 +417,18 @@ class Manifest:
         )
         if not isinstance(shim, bool):
             raise ManifestError(f"participant {name!r} shim must be a boolean")
+        if sleep not in _SLEEP_POLICIES:
+            expected = " or ".join(repr(p) for p in _SLEEP_POLICIES)
+            raise ManifestError(
+                f"participant {name!r} sleep must be {expected}, got {sleep!r}"
+            )
+        if not shim and sleep != "reject":
+            # The policy only exists inside the shim, so declaring one without
+            # it would promise a behavior nothing implements. The default is
+            # exempt: it is what an unshimmed participant carries by not asking.
+            raise ManifestError(
+                f"participant {name!r}: sleep requires shim=True"
+            )
         entry: dict = {
             "type": "process",
             "command": command,
@@ -424,6 +442,13 @@ class Manifest:
         # same run hash differently while unshimmed manifests are unaffected.
         if shim:
             entry["shim"] = True
+            # Always emitted alongside the shim (issue #52, policy in #62).
+            # The builder defaults to "reject" while an absent field means
+            # "immediate", so this is the one place the two differ: a manifest
+            # written here states its policy in hashed bytes, and one written
+            # before #52 keeps its behavior by staying silent. That is why the
+            # field cannot be omitted when it matches the builder's default.
+            entry["sleep"] = sleep
         self._add_participant(name, entry)
 
     def add_replay(
