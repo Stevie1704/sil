@@ -158,9 +158,31 @@ in the framework's own CI from day one.**
   not call a new API. The shim interposes `clock_gettime` (monotonic-class IDs
   → virtual `t`; realtime-class → epoch + `t`), `gettimeofday`, `time`,
   `clock_getres` (reports 1 ns), and the sleep family (`nanosleep`,
-  `clock_nanosleep`, `usleep`, `sleep`), which return immediately with success;
-  CPU-time clock IDs pass through. **Frozen-step semantics:** every clock read
-  during one step returns the same `t`; time advances only between steps.
+  `clock_nanosleep`, `usleep`, `sleep`); CPU-time clock IDs pass through.
+  **Amended by #52 — sleep policy:** the sleep family is declared per shimmed
+  participant with `sleep` in the hashed manifest. Neither policy can block:
+  virtual time is frozen for the whole step and the kernel is synchronously
+  waiting for the step response, so a sleep that waited for `t` to move would
+  deadlock against the only thing that could move it. `immediate` keeps the
+  original recorded behavior — return success as if the full duration had
+  elapsed — and is what an absent field selects, so every manifest written
+  before #52 keeps its hash and its meaning. `reject` fails the call instead,
+  with `ENOSYS`, so that a retry loop ends rather than spinning the CPU for the
+  rest of the step. ENOSYS and not EINTR: EINTR is the one errno every correct
+  caller retries on, which is the spin the policy exists to end. `sleep()` is
+  the exception the policy cannot cover — POSIX gives it no error return, so
+  reject reports the full duration as unslept and sets `ENOSYS` for callers
+  that look, and a caller ignoring the return value cannot tell the policies
+  apart. Per #62 the Python builder always emits the field and defaults to
+  `reject`, so the compatibility behavior is reachable by an existing document
+  but never by authoring a new one. A cooperative virtual wake-up protocol,
+  where a sleep would yield the step and resume at a later `t`, stays out of
+  scope: it would change Activation ordering, which #46 preserves. Boundary:
+  a sleep on a CPU-time clock ID is not virtualized and passes through to the
+  real libc — `clock_gettime` does not yet make the same distinction, a
+  deviation from this decision tracked as #76. **Frozen-step semantics:** every
+  clock read during one step returns the same `t`; time advances only between
+  steps.
   **Time transport:** the kernel writes the current virtual time into a small
   fixed-layout region shared with the child (a memory-mapped file whose path is
   handed over in `SIL_CLOCK_REGION` at spawn) before each step; the shim maps it
