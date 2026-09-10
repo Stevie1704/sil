@@ -238,10 +238,13 @@ def test_absolute_clock_nanosleep_leaves_remaining_untouched(
 def test_cpu_time_clock_sleeps_pass_through(probe, shim, clock_region):
     """A CPU-time clock is not virtualized, so the policy cannot reach it.
 
-    Asserted as "both policies agree" rather than "returns 0": the point is
-    that the shim steps aside, and whatever the real libc answers for
-    CLOCK_PROCESS_CPUTIME_ID is then the same under either policy. Pinning a
-    return value here would test libc, not the shim.
+    Asserted as "both policies agree" rather than pinning a return value: the
+    point is that the shim steps aside, and whatever the real libc answers is
+    then the same under either policy. Pinning the value would test libc.
+
+    The probe uses CLOCK_THREAD_CPUTIME_ID because it returns immediately;
+    sleeping on a process CPU clock never returns, since a process blocked in
+    the call accrues no CPU time.
     """
     name, write = clock_region
     write(T, EPOCH, IMMEDIATE)

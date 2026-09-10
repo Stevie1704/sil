@@ -97,12 +97,17 @@ int main(void) {
            clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &abs_req, &rem));
     printf("clock_nanosleep_abs_rem=%llu\n", (unsigned long long)ts_ns(&rem));
 
-    /* A CPU-time clock is not virtualized: this must reach the real libc and
-     * actually sleep for the (tiny) requested CPU duration under both
-     * policies. */
-    struct timespec cpu_req = {0, 1000000}; /* 1 ms of CPU time */
+    /* A CPU-time clock is not virtualized, so this must reach the real libc.
+     *
+     * CLOCK_THREAD_CPUTIME_ID, which Linux documents as EINVAL for this call,
+     * is deliberate: it returns immediately. Asking to sleep on a *process*
+     * CPU clock would hang forever — a process blocked in the call burns no
+     * CPU, so the deadline it is waiting for never arrives. What matters here
+     * is only that the shim stepped aside, and an error from libc proves that
+     * as well as a success would. */
+    struct timespec cpu_req = {0, 1000000};
     printf("clock_nanosleep_cpu=%d\n",
-           clock_nanosleep(CLOCK_PROCESS_CPUTIME_ID, 0, &cpu_req, NULL));
+           clock_nanosleep(CLOCK_THREAD_CPUTIME_ID, 0, &cpu_req, NULL));
 #endif
 
     errno = 0;
