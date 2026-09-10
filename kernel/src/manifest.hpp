@@ -57,6 +57,10 @@ struct InterceptorSpec {
 // Native participants are unaffected either way (pointer-based data plane).
 enum class Transport { Inline, Shm };
 
+// What a shimmed Process participant's sleep family does while Virtual time is
+// frozen (issue #52). Absent means Immediate, which is the pre-#52 behavior.
+enum class SleepPolicy { Immediate, Reject };
+
 struct ChannelSpec {
   std::string name;
   std::string schema;
@@ -86,6 +90,7 @@ struct ProcessSpec {
   std::vector<std::string> publishes;
   int32_t priority = 0;
   bool shim = false;  // opt-in virtual clock shim (issue #27)
+  SleepPolicy sleep = SleepPolicy::Immediate;  // issue #52
 };
 
 struct ReplaySpec {

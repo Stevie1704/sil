@@ -17,6 +17,7 @@
  * If the region is absent or unmappable the interposers fall back to the real
  * libc functions, so a mis-set environment degrades to real time rather than
  * crashing the process. */
+#include <errno.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -73,6 +74,57 @@ static void fill_timespec(struct timespec *ts, uint64_t ns) {
     ts->tv_nsec = (long)(ns % 1000000000ull);
 }
 
+/* --- sleep family (issue #52) ----------------------------------------------
+ * Virtual time is frozen for the whole step, so no policy can actually sleep.
+ * `immediate` reports the full duration as elapsed, which is the recorded
+ * pre-#52 behavior. `reject` fails the call instead.
+ *
+ * Reject fails with ENOSYS, not EINTR. EINTR is the one errno every correct
+ * caller retries on, with the remaining time — which is exactly the spin this
+ * policy exists to end. ENOSYS says the call is unavailable here, so a loop
+ * that checks its errno leaves. */
+
+/* True when the mapped region selects reject. An unmapped region never reaches
+ * here (the interposers fall back to libc first), and an unrecognized policy
+ * value reads as immediate. */
+static int sleep_rejected(void) {
+    return g_region && g_region->sleep_policy == SIL_SLEEP_REJECT;
+}
+
+/* Fill a relative sleep's `rem`. Immediate reports nothing remaining, because
+ * the whole duration "elapsed"; reject reports all of it, because none did. */
+static void fill_remaining(const struct timespec *req, struct timespec *rem,
+                           int rejected) {
+    if (!rem)
+        return;
+    if (rejected && req) {
+        *rem = *req;
+        return;
+    }
+    rem->tv_sec = 0;
+    rem->tv_nsec = 0;
+}
+
+/* nanosleep and usleep convention: 0, or -1 with errno set. */
+static int sleep_status(void) {
+    if (!sleep_rejected())
+        return 0;
+    errno = ENOSYS;
+    return -1;
+}
+
+/* sleep() returns seconds-left-unslept and has no errno channel in POSIX, so
+ * reject cannot signal failure unambiguously here: it returns the full
+ * duration as unslept and sets ENOSYS for callers that look. A caller that
+ * ignores the return value cannot tell reject from immediate. nanosleep,
+ * clock_nanosleep and usleep are the three a retry loop can act on. */
+static unsigned int sleep_seconds_left(unsigned int seconds) {
+    if (!sleep_rejected())
+        return 0;
+    errno = ENOSYS;
+    return seconds;
+}
+
 /* --- interposed implementations -------------------------------------------- */
 /* Each interposer serves virtual time when the region is mapped and otherwise
  * falls back to the real libc function. On macOS the replacement is a distinct
@@ -122,23 +174,20 @@ time_t sil_time(time_t *out) {
 int sil_nanosleep(const struct timespec *req, struct timespec *rem) {
     if (!g_region)
         return nanosleep(req, rem);
-    if (rem) {
-        rem->tv_sec = 0;
-        rem->tv_nsec = 0;
-    }
-    return 0; /* immediate success, no blocking */
+    fill_remaining(req, rem, sleep_rejected());
+    return sleep_status();
 }
 
 unsigned int sil_sleep(unsigned int seconds) {
     if (!g_region)
         return sleep(seconds);
-    return 0; /* full duration "elapsed" instantly */
+    return sleep_seconds_left(seconds);
 }
 
 int sil_usleep(useconds_t usec) {
     if (!g_region)
         return usleep(usec);
-    return 0;
+    return sleep_status();
 }
 
 /* DYLD interpose table: pairs (replacement, original). */
@@ -210,34 +259,41 @@ time_t time(time_t *out) {
 int nanosleep(const struct timespec *req, struct timespec *rem) {
     if (!g_region)
         return REAL(nanosleep)(req, rem);
-    if (rem) {
-        rem->tv_sec = 0;
-        rem->tv_nsec = 0;
-    }
-    return 0;
+    fill_remaining(req, rem, sleep_rejected());
+    return sleep_status();
+}
+
+/* True when the shim serves this clock ID from the region. CPU-time IDs are
+ * not virtualized, so a sleep against one passes through to the real libc and
+ * measures real CPU time, as DESIGN.md records. (clock_gettime does not yet
+ * make the same distinction — that deviation is issue #76.) */
+static int is_virtualized(clockid_t id) {
+    return is_monotonic(id) || id == CLOCK_REALTIME;
 }
 
 int clock_nanosleep(clockid_t id, int flags, const struct timespec *req,
                     struct timespec *rem) {
-    if (!g_region)
+    if (!g_region || !is_virtualized(id))
         return REAL(clock_nanosleep)(id, flags, req, rem);
-    if (rem) {
-        rem->tv_sec = 0;
-        rem->tv_nsec = 0;
-    }
-    return 0;
+    /* POSIX makes clock_nanosleep the exception twice over: it returns the
+     * error number rather than setting errno, and it ignores `rem` entirely
+     * for an absolute sleep. */
+    const int rejected = sleep_rejected();
+    if (!(flags & TIMER_ABSTIME))
+        fill_remaining(req, rem, rejected);
+    return rejected ? ENOSYS : 0;
 }
 
 unsigned int sleep(unsigned int seconds) {
     if (!g_region)
         return REAL(sleep)(seconds);
-    return 0;
+    return sleep_seconds_left(seconds);
 }
 
 int usleep(useconds_t usec) {
     if (!g_region)
         return REAL(usleep)(usec);
-    return 0;
+    return sleep_status();
 }
 
 #endif

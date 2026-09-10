@@ -54,6 +54,7 @@ m.add_process(
     step_period_ns=10_000_000,
     publishes=["readings"],
     shim=True,           # this participant sees virtual time; others do not
+    sleep="reject",      # default: fail sleeps instead of faking them
 )
 ```
 
@@ -63,15 +64,29 @@ Inside a shimmed child, per step at virtual time `t`:
   from run start;
 - realtime-class reads (`CLOCK_REALTIME`, `gettimeofday`, `time`) return
   `epoch_ns + t`;
-- `clock_getres` reports 1 ns; the sleep family (`nanosleep`, `clock_nanosleep`,
-  `usleep`, `sleep`) returns success immediately without advancing time;
+- `clock_getres` reports 1 ns;
 - **reads are frozen within a step** — every read during one step returns the
   same value; time advances only between steps.
 
+Because a step's time is frozen and the kernel waits for the step response, no
+sleep can wait for the clock to move — it would deadlock against the only thing
+that could move it. The `sleep` policy decides what a sleep call says instead:
+
+| `sleep` | The sleep family does | Use it for |
+| --- | --- | --- |
+| `"reject"` (default) | fails with `ENOSYS` | new manifests: a retry loop ends instead of spinning the CPU for the rest of the step |
+| `"immediate"` | returns success, as if the whole duration had elapsed | code that treats a failed sleep as fatal, and manifests written before the policy existed |
+
+`sleep()` is the exception: POSIX gives it no error return, so `reject` reports
+the full duration as unslept and sets `ENOSYS` for callers that check it. An
+older manifest with no `sleep` field keeps `"immediate"`, so its hash and its
+behavior are both unchanged.
+
 The shim applies **per participant**: a shimmed vECU and ordinary unshimmed
-participants coexist in one manifest and one run. Both `shim` and `epoch_ns`
-are hashed into the manifest (they change output), so shimmed and unshimmed
-variants of a run never collide under hash-based caching, and two shimmed runs
+participants coexist in one manifest and one run. `shim`, `sleep` and
+`epoch_ns` are all hashed into the manifest (they change output), so shimmed
+and unshimmed variants of a run never collide under hash-based caching, and two
+shimmed runs
 started at different wall-clock times still produce bit-identical MCAPs — run
 `sil-check` on a shimmed manifest to prove it.
 

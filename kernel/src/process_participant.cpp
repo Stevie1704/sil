@@ -189,6 +189,11 @@ void ProcessParticipant::setup_clock_region() {
   // child's load-time reads (before its first step) see run start, not garbage.
   region->t = 0;
   region->epoch = epoch_ns_;
+  // Fixed for the run, like epoch: the shim reads it on every sleep call but
+  // the kernel writes it once, here (issue #52).
+  region->sleep_policy = sleep_policy_ == SleepPolicy::Reject
+                             ? SIL_SLEEP_REJECT
+                             : SIL_SLEEP_IMMEDIATE;
 
   // Resolve the shim library path here, in the parent: inject_shim_env runs
   // between fork and exec, where allocation and filesystem canonicalization are
@@ -303,7 +308,8 @@ void ProcessParticipant::read_arena(const std::string &channel, uint64_t seq,
 ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
                                        const ProcessSpec &spec)
     : engine_(engine), name_(name), period_ns_(spec.step_period_ns),
-      publishes_(spec.publishes), epoch_ns_(engine.manifest().epoch_ns) {
+      publishes_(spec.publishes), epoch_ns_(engine.manifest().epoch_ns),
+      sleep_policy_(spec.sleep) {
   for (const std::string &ch : spec.subscribes)
     inputs_.emplace_back(ch, engine.subscribe(name, ch));
 
