@@ -105,7 +105,8 @@ class ProcessParticipant::StepCodec {
 
     void encode(nlohmann::json &item, const std::string &channel, size_t slot,
                 const std::vector<uint8_t> &bytes) {
-      if (owner_.protocol_ >= 2) item["shm_slot"] = slot;
+      if (owner_.protocol_ >= ProcessParticipant::kIndexedSlotsProtocol)
+        item["shm_slot"] = slot;
       item["shm_seq"] = owner_.write_arena(channel, slot, bytes);
     }
 
@@ -114,7 +115,10 @@ class ProcessParticipant::StepCodec {
       std::vector<uint8_t> bytes;
       const size_t slot = item.value("shm_slot", size_t{0});
       const Arena &arena = owner_.arenas_.at(channel);
-      const size_t available = owner_.protocol_ >= 2 ? arena.slots : 1;
+      const size_t available =
+          owner_.protocol_ >= ProcessParticipant::kIndexedSlotsProtocol
+              ? arena.slots
+              : 1;
       if (slot >= available)
         throw RunError("participant '" + owner_.name_ + "' channel '" +
                        channel + "': arena slot " + std::to_string(slot) +
@@ -138,18 +142,20 @@ class ProcessParticipant::StepCodec {
     nlohmann::json in = nlohmann::json::array();
     // These indices belong to one codec call, so slot reuse is inherently
     // scoped to one Step and cannot leak into the next one.
-    std::map<std::string, size_t> arena_used;
+    std::map<std::string, size_t> next_slot_by_channel;
     for (const ProcessParticipant::StepInput &message : messages) {
       nlohmann::json item = {
           {"ch", message.channel}, {"t", message.publish_ns}};
       auto arena_it = owner_.arenas_.find(message.channel);
-      const size_t slot = arena_used[message.channel];
+      const size_t slot = next_slot_by_channel[message.channel];
       const size_t available =
           arena_it == owner_.arenas_.end()
               ? 0
-              : (owner_.protocol_ >= 2 ? arena_it->second.slots : 1);
+              : (owner_.protocol_ >= ProcessParticipant::kIndexedSlotsProtocol
+                     ? arena_it->second.slots
+                     : 1);
       if (slot < available) {
-        arena_used[message.channel] = slot + 1;
+        next_slot_by_channel[message.channel] = slot + 1;
         arena_.encode(item, message.channel, slot, message.bytes);
       } else {
         inline_.encode(item, message.bytes);
@@ -368,7 +374,7 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
   codec_ = std::make_unique<StepCodec>(*this);
   for (const auto &[channel, arena] : arenas_) {
     (void)channel;
-    if (arena.slots > 1) protocol_ = 2;
+    if (arena.slots > 1) protocol_ = kIndexedSlotsProtocol;
   }
   const int offered_protocol = protocol_;
 
@@ -433,7 +439,7 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
   if (ready.value("op", "") != "ready")
     throw RunError("participant '" + name + "': expected ready, got " +
                    ready.dump());
-  int announced_protocol = 1;
+  int announced_protocol = kSingleSlotProtocol;
   if (ready.contains("protocol")) {
     const json &value = ready.at("protocol");
     if (!value.is_number_integer())

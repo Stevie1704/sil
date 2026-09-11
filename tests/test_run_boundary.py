@@ -229,7 +229,7 @@ class TestManifestRejection:
         assert proc.returncode == 2
         assert "channel 'c' key 'slots'" in proc.stderr
 
-    def test_slots_on_inline_channel_are_a_config_error(
+    def test_slots_on_inline_channel_are_a_manifest_error(
         self, run_sil, tmp_path
     ):
         document = raw_manifest()

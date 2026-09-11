@@ -24,6 +24,8 @@ from sil import schema
 # then one payload. Mirrors include/sil/arena.h — the kernel is the writer for
 # inputs and the reader for outputs; this side is the mirror image.
 _ARENA_HEADER = struct.Struct("<QQ")
+_STEP_PROTOCOL_SINGLE_SLOT = 1
+_STEP_PROTOCOL_INDEXED_SLOTS = 2
 
 
 class _Arena:
@@ -159,13 +161,13 @@ class _StepCodec:
     def encode_outputs(self, outputs) -> list[dict]:
         """Encode all outputs for one step, preserving their order."""
         encoded = []
-        arena_used: dict[str, int] = {}
+        next_slot_by_channel: dict[str, int] = {}
         for channel, fields in outputs:
             raw = self._types_by_channel[channel].pack(**fields)
             item = {"ch": channel}
-            slot = arena_used.get(channel, 0)
+            slot = next_slot_by_channel.get(channel, 0)
             if channel in self._arenas and slot < self._arenas[channel].slots:
-                arena_used[channel] = slot + 1
+                next_slot_by_channel[channel] = slot + 1
                 self._arena.encode(
                     item, channel, raw, slot, self._indexed_slots
                 )
@@ -212,7 +214,10 @@ def run(participant: StepParticipant) -> None:
             msg = json.loads(line)
             op = msg["op"]
             if op == "init":
-                protocol = min(msg.get("protocol", 1), 2)
+                protocol = min(
+                    msg.get("protocol", _STEP_PROTOCOL_SINGLE_SLOT),
+                    _STEP_PROTOCOL_INDEXED_SLOTS,
+                )
                 types = schema.load(msg["schemas"])
                 types_by_channel = {
                     ch: types[info["schema"]]
@@ -227,7 +232,8 @@ def run(participant: StepParticipant) -> None:
                     if info.get("transport") == "shm"
                 }
                 codec = _StepCodec(
-                    types_by_channel, arenas, indexed_slots=protocol >= 2
+                    types_by_channel, arenas,
+                    indexed_slots=protocol >= _STEP_PROTOCOL_INDEXED_SLOTS,
                 )
                 participant.on_init(msg)
                 ready = {"op": "ready"}

@@ -94,7 +94,10 @@ class ProcessParticipant {
   class StepCodec;
 
   std::unique_ptr<StepCodec> codec_;
-  int protocol_ = 1;  // negotiated Step protocol; absent ready echo means 1
+  static constexpr int kSingleSlotProtocol = 1;
+  static constexpr int kIndexedSlotsProtocol = 2;
+  // Negotiated Step protocol; an absent ready echo selects the legacy level.
+  int protocol_ = kSingleSlotProtocol;
 
   // Maps an arena for every arena-backed channel in `spec`, sized from the
   // schema byte_size.

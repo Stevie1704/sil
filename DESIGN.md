@@ -219,7 +219,7 @@ in the framework's own CI from day one.**
   and the current `init.channels` shape names only one mapping per Channel;
   lifting this requires separate input and output Arenas, not phase-order
   assumptions in third-party participants. A
-  run that cannot create or map an arena is an environment/config error (exit
+  run that cannot create or map an Arena is an environment/Manifest error (exit
   2), distinct from a test failure (exit 1). The transport never reaches
   participant code — the step API is the same field-dict/`bytes`/`list` either
   way — and native participants are unaffected, staying on the pointer-based
