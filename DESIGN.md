@@ -195,21 +195,30 @@ in the framework's own CI from day one.**
 - **Shared-memory channel transport (#9, #35):** a channel opts in with
   `transport: "shm"` in the hashed manifest; `inline` (base64 inside the JSON
   step line) stays the default and is omitted from the canonical document, so
-  pre-shm manifests keep byte-identical hashes. The kernel maps one arena per
-  (participant, channel) at startup, sized from the schema `byte_size`, as a
-  memory-mapped temp file shared with the child; the step line carries only a
-  `shm_seq` freshness marker. **Refined from the decision text:** a single-slot
-  arena, not a ring buffer, and the participant-facing copy stays — so this is
-  *not* zero-copy into user code (out of scope per the PRD). One slot holds one
-  payload, and a slower subscriber can see several messages on a channel in one
-  step, so the first message rides the arena and the rest fall back to the
-  inline encoding. Every message states in the step line how it travelled; a
+  pre-shm manifests keep byte-identical hashes. **Amended by #74:** a shared-
+  memory Channel declares `slots`; the Python builder always emits it and
+  defaults to 2, while absence means the legacy single slot. Two covers the
+  measured burst and a subscriber missing one Step, at the bounded cost of one
+  extra schema-sized payload per Arena. The kernel maps one Arena per
+  (participant, Channel), with payload storage sized `byte_size * slots`; each
+  slot repeats the original `seq`, `len`, payload layout so slot zero remains
+  protocol-1 compatible. The participant-facing copy stays, so this is *not*
+  zero-copy into user code (out of scope per the PRD). Messages fill slots in
+  Publish order and only excess Messages use the inline fallback. Each shared-
+  memory Message carries `shm_slot` and a per-write `shm_seq` freshness marker;
+  every Message states in the Step line how it travelled. A
   receiver never infers that from the channel's declared transport. This keeps
   the arena an optimization that correctness never depends on, and is why the
-  transport can stay invisible to participant code. Because one slot carries
-  one direction, a participant that both subscribes and publishes the same
-  channel over shared memory is rejected at load rather than silently racing
-  its own writes. A
+  transport can stay invisible to participant code. Protocol 2 is offered on
+  `init` when any participating Channel has more than one slot. The child echoes
+  support on `ready`; an absent echo means protocol 1, and the kernel then uses
+  only slot zero over the same Manifest. Slot allocation resets only after the
+  synchronous Step response, when every slot written by the kernel has been
+  consumed. A participant that both subscribes and publishes the same shared-
+  memory Channel remains rejected: the Arena path intentionally has one writer
+  and the current `init.channels` shape names only one mapping per Channel;
+  lifting this requires separate input and output Arenas, not phase-order
+  assumptions in third-party participants. A
   run that cannot create or map an arena is an environment/config error (exit
   2), distinct from a test failure (exit 1). The transport never reaches
   participant code — the step API is the same field-dict/`bytes`/`list` either
@@ -310,16 +319,18 @@ in the framework's own CI from day one.**
   hashed bytes, and an absent field keeps today's immediate-success behavior.
   Bounded-route `capacity` and `overflow` (#55) are always-emit with an absent
   field meaning unbounded; removing unbounded later is the one change that
-  would trigger version 2. The BufferPool transport (#58) takes a new
-  `transport` name rather than redefining `shm`, which keeps `shm` the
-  single-slot arena and every existing shared-memory Manifest byte-identical.
+  would trigger version 2. The superseded BufferPool transport (#58) would have
+  taken a new transport name. Its replacement (#74) instead extends `shm` with
+  always-emitted `slots`; absence retains the original single-slot behavior and
+  hash.
   **Step protocol:** the `init` line gains a `protocol` integer, derived from
   the Manifest's transport set and so covered by the Manifest hash
   transitively; a child may echo it on `ready` and an absent echo means 1. A
-  child below the required level is a setup failure (exit 2) naming the
-  participant and both levels. The per-Channel `transport` in `init` already
-  distinguishes arena from descriptor at run time, so the integer only buys
-  early, explicit rejection. **Support floor:** the inline Step transport and
+  child below a required semantic protocol level is a setup failure (exit 2).
+  Multi-slot Arena support is an optimization-only exception: protocol 1
+  negotiates down to slot zero, preserving identical Run semantics. The per-
+  Channel `transport` in `init` distinguishes the payload representation at
+  run time. **Support floor:** the inline Step transport and
   the copied Native ABI v1 data plane are supported for the life of Manifest
   version 1; the leased data plane does not deprecate them. **Expected
   consequence:** each always-emit field changes the hash of every regenerated

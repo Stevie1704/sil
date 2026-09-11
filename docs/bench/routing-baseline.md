@@ -7,7 +7,7 @@ The procedure, the reading, and the go/no-go inputs are in
 - machine: macOS-26.6.2-arm64-arm-64bit-Mach-O
 - messages per run: small 200, camera 50
 - publish period: 10 ms (100 Hz)
-- wall-clock repeats per row: 5 (median reported)
+- wall-clock repeats per row: 3 (median reported)
 - payload sizes: small 16 B, camera 2764808 B
 
 Which binary each column comes from:
@@ -28,83 +28,86 @@ days. Its user and system time are.
 
 ## Fixed cost control
 
-A one-Message Run of the same shape, with Recording off, costs 8.4 ms wall-clock. Every µs/message figure below still carries that fixed cost once. It nets the Recording-off rows only, and no Process row: a Process row also pays its participant's interpreter start-up.
+A one-Message Run of the same shape, with Recording off, costs 7.3 ms wall-clock. Every µs/message figure below still carries that fixed cost once. It nets the Recording-off rows only, and no Process row: a Process row also pays its participant's interpreter start-up.
 
 ## Native fan-out
 
 | payload | messages | subscribers | recording | run ms | µs/message | MiB/s | user s | system s | peak RSS MiB | caller copies | subscriber copies | recorded |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| small | 200 | 0 | on | 15.2 | 75.9 | 0.2 | 0.002 | 0.003 | 2.0 | 200 | 0 | 200 |
-| small | 200 | 0 | off | 7.5 | 37.3 | 0.4 | 0.002 | 0.002 | 1.8 | 200 | 0 | 0 |
-| small | 200 | 1 | on | 14.5 | 72.4 | 0.2 | 0.002 | 0.003 | 2.1 | 200 | 200 | 200 |
-| small | 200 | 1 | off | 8.3 | 41.5 | 0.4 | 0.002 | 0.003 | 2.0 | 200 | 200 | 0 |
-| small | 200 | 2 | on | 13.6 | 67.9 | 0.2 | 0.002 | 0.003 | 2.1 | 200 | 400 | 200 |
-| small | 200 | 2 | off | 8.7 | 43.7 | 0.3 | 0.002 | 0.003 | 2.0 | 200 | 400 | 0 |
-| small | 200 | 4 | on | 13.4 | 67.0 | 0.2 | 0.002 | 0.003 | 2.2 | 200 | 800 | 200 |
-| small | 200 | 4 | off | 8.8 | 44.1 | 0.3 | 0.002 | 0.003 | 2.0 | 200 | 800 | 0 |
-| small | 200 | 8 | on | 13.7 | 68.6 | 0.2 | 0.003 | 0.003 | 2.3 | 200 | 1600 | 200 |
-| small | 200 | 8 | off | 9.4 | 46.8 | 0.3 | 0.002 | 0.003 | 2.1 | 200 | 1600 | 0 |
-| camera | 50 | 0 | on | 411.8 | 8235.7 | 320.2 | 0.083 | 0.030 | 9.9 | 50 | 0 | 50 |
-| camera | 50 | 0 | off | 13.1 | 262.2 | 10057.6 | 0.007 | 0.003 | 7.1 | 50 | 0 | 0 |
-| camera | 50 | 1 | on | 412.7 | 8254.3 | 319.4 | 0.086 | 0.034 | 18.0 | 50 | 50 | 50 |
-| camera | 50 | 1 | off | 19.7 | 393.9 | 6694.1 | 0.012 | 0.004 | 15.2 | 50 | 50 | 0 |
-| camera | 50 | 2 | on | 510.9 | 10217.8 | 258.1 | 0.098 | 0.038 | 26.0 | 50 | 100 | 50 |
-| camera | 50 | 2 | off | 24.4 | 488.6 | 5397.0 | 0.016 | 0.005 | 23.2 | 50 | 100 | 0 |
-| camera | 50 | 4 | on | 510.2 | 10203.9 | 258.4 | 0.106 | 0.042 | 42.0 | 50 | 200 | 50 |
-| camera | 50 | 4 | off | 34.1 | 682.8 | 3861.5 | 0.024 | 0.007 | 39.2 | 50 | 200 | 0 |
-| camera | 50 | 8 | on | 440.2 | 8803.7 | 299.5 | 0.111 | 0.039 | 74.0 | 50 | 400 | 50 |
-| camera | 50 | 8 | off | 54.6 | 1091.1 | 2416.6 | 0.040 | 0.010 | 71.1 | 50 | 400 | 0 |
+| small | 200 | 0 | on | 7.7 | 38.3 | 0.4 | 0.002 | 0.002 | 2.0 | 200 | 0 | 200 |
+| small | 200 | 0 | off | 6.8 | 33.8 | 0.5 | 0.002 | 0.002 | 1.8 | 200 | 0 | 0 |
+| small | 200 | 1 | on | 8.1 | 40.4 | 0.4 | 0.002 | 0.003 | 2.1 | 200 | 200 | 200 |
+| small | 200 | 1 | off | 7.6 | 38.2 | 0.4 | 0.002 | 0.002 | 2.0 | 200 | 200 | 0 |
+| small | 200 | 2 | on | 8.1 | 40.3 | 0.4 | 0.002 | 0.003 | 2.1 | 200 | 400 | 200 |
+| small | 200 | 2 | off | 24.4 | 121.9 | 0.1 | 0.002 | 0.004 | 2.0 | 200 | 400 | 0 |
+| small | 200 | 4 | on | 8.4 | 42.2 | 0.4 | 0.002 | 0.003 | 2.2 | 200 | 800 | 200 |
+| small | 200 | 4 | off | 8.2 | 40.8 | 0.4 | 0.002 | 0.002 | 2.0 | 200 | 800 | 0 |
+| small | 200 | 8 | on | 8.1 | 40.3 | 0.4 | 0.002 | 0.002 | 2.2 | 200 | 1600 | 200 |
+| small | 200 | 8 | off | 8.9 | 44.3 | 0.3 | 0.002 | 0.003 | 2.1 | 200 | 1600 | 0 |
+| camera | 50 | 0 | on | 107.9 | 2157.9 | 1221.9 | 0.080 | 0.022 | 9.9 | 50 | 0 | 50 |
+| camera | 50 | 0 | off | 13.6 | 272.3 | 9684.9 | 0.008 | 0.003 | 7.1 | 50 | 0 | 0 |
+| camera | 50 | 1 | on | 119.6 | 2392.2 | 1102.2 | 0.087 | 0.024 | 18.0 | 50 | 50 | 50 |
+| camera | 50 | 1 | off | 19.9 | 397.3 | 6637.0 | 0.012 | 0.004 | 15.2 | 50 | 50 | 0 |
+| camera | 50 | 2 | on | 119.2 | 2383.8 | 1106.1 | 0.087 | 0.024 | 26.0 | 50 | 100 | 50 |
+| camera | 50 | 2 | off | 24.2 | 483.7 | 5450.6 | 0.016 | 0.004 | 23.2 | 50 | 100 | 0 |
+| camera | 50 | 4 | on | 125.8 | 2515.7 | 1048.1 | 0.093 | 0.027 | 42.0 | 50 | 200 | 50 |
+| camera | 50 | 4 | off | 34.0 | 680.2 | 3876.2 | 0.023 | 0.007 | 39.2 | 50 | 200 | 0 |
+| camera | 50 | 8 | on | 140.8 | 2817.0 | 936.0 | 0.105 | 0.029 | 73.9 | 50 | 400 | 50 |
+| camera | 50 | 8 | off | 57.0 | 1139.4 | 2314.1 | 0.041 | 0.009 | 71.1 | 50 | 400 | 0 |
 
 ## Process transport
 
-| payload | direction | transport | burst | recording | messages | µs/message | MiB/s | tree user s | tree system s | tree RSS MiB | kernel user s* | kernel RSS MiB* |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| small | in | inline | 1 | on | 200 | 392.7 | 0.0 | 0.043 | 0.016 | 22.1 | 0.003 | 2.3 |
-| small | in | inline | 2 | on | 200 | 382.5 | 0.0 | 0.041 | 0.015 | 22.1 | 0.003 | 2.3 |
-| small | in | shm | 1 | on | 200 | 418.4 | 0.0 | 0.043 | 0.016 | 22.0 | 0.003 | 2.3 |
-| small | in | shm | 2 | on | 200 | 420.4 | 0.0 | 0.042 | 0.016 | 22.0 | 0.003 | 2.3 |
-| small | out | inline | 1 | on | 200 | 392.0 | 0.0 | 0.044 | 0.017 | 21.9 | 0.003 | 2.3 |
-| small | out | inline | 2 | on | 200 | 380.2 | 0.0 | 0.042 | 0.015 | 22.0 | 0.003 | 2.3 |
-| small | out | shm | 1 | on | 200 | 464.3 | 0.0 | 0.043 | 0.018 | 22.0 | 0.003 | 2.2 |
-| small | out | shm | 2 | on | 200 | 395.7 | 0.0 | 0.041 | 0.015 | 21.9 | 0.003 | 2.3 |
-| camera | in | inline | 1 | on | 50 | 41196.1 | 64.0 | 1.646 | 0.148 | 43.2 | 1.027 | 34.1 |
-| camera | in | inline | 2 | on | 50 | 41000.9 | 64.3 | 1.609 | 0.156 | 77.0 | 1.003 | 57.9 |
-| camera | in | shm | 1 | on | 50 | 9958.7 | 264.8 | 0.140 | 0.047 | 32.6 | 0.090 | 18.1 |
-| camera | in | shm | 2 | on | 50 | 25070.0 | 105.2 | 0.875 | 0.103 | 53.8 | 0.550 | 45.9 |
-| camera | out | inline | 1 | on | 50 | 82986.4 | 31.8 | 3.607 | 0.341 | 257.8 | 3.010 | 54.5 |
-| camera | out | inline | 2 | on | 50 | 135763.9 | 19.4 | 6.150 | 0.415 | 241.7 | 5.353 | 75.6 |
-| camera | out | shm | 1 | on | 50 | 4781.6 | 551.4 | 0.146 | 0.044 | 30.0 | 0.089 | 20.8 |
-| camera | out | shm | 2 | on | 50 | 39981.4 | 65.9 | 1.844 | 0.162 | 213.4 | 1.530 | 66.2 |
-| small | in | shm | 1 | off | 200 | 388.2 | 0.0 | 0.042 | 0.015 | 22.1 | 0.003 | 2.1 |
-| small | out | shm | 1 | off | 200 | 382.0 | 0.0 | 0.040 | 0.015 | 22.0 | 0.003 | 2.0 |
-| camera | in | shm | 1 | off | 50 | 2109.8 | 1249.8 | 0.062 | 0.018 | 32.6 | 0.016 | 15.3 |
-| camera | out | shm | 1 | off | 50 | 2111.1 | 1249.0 | 0.063 | 0.018 | 30.0 | 0.016 | 17.9 |
+| payload | direction | transport | slots | burst | recording | messages | µs/message | MiB/s | tree user s | tree system s | tree RSS MiB | kernel user s* | kernel RSS MiB* |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| small | in | inline | n/a | 1 | on | 200 | 358.5 | 0.0 | 0.040 | 0.014 | 21.9 | 0.003 | 2.3 |
+| small | in | inline | n/a | 2 | on | 200 | 338.3 | 0.0 | 0.038 | 0.012 | 21.8 | 0.003 | 2.3 |
+| small | in | shm | 2 | 1 | on | 200 | 370.0 | 0.0 | 0.039 | 0.013 | 21.9 | 0.003 | 2.2 |
+| small | in | shm | 2 | 2 | on | 200 | 358.3 | 0.0 | 0.038 | 0.014 | 21.8 | 0.003 | 2.2 |
+| small | out | inline | n/a | 1 | on | 200 | 371.1 | 0.0 | 0.042 | 0.016 | 21.9 | 0.003 | 2.2 |
+| small | out | inline | n/a | 2 | on | 200 | 337.3 | 0.0 | 0.038 | 0.014 | 22.0 | 0.003 | 2.2 |
+| small | out | shm | 2 | 1 | on | 200 | 487.7 | 0.0 | 0.040 | 0.015 | 22.1 | 0.003 | 2.2 |
+| small | out | shm | 2 | 2 | on | 200 | 425.6 | 0.0 | 0.042 | 0.017 | 21.9 | 0.003 | 2.2 |
+| camera | in | inline | n/a | 1 | on | 50 | 35079.1 | 75.2 | 1.621 | 0.109 | 43.2 | 1.015 | 34.2 |
+| camera | in | inline | n/a | 2 | on | 50 | 36064.7 | 73.1 | 1.622 | 0.145 | 77.1 | 1.023 | 57.7 |
+| camera | in | shm | 2 | 1 | on | 50 | 4119.6 | 640.0 | 0.141 | 0.042 | 32.5 | 0.089 | 18.1 |
+| camera | in | shm | 2 | 2 | on | 50 | 4458.1 | 591.4 | 0.138 | 0.042 | 40.5 | 0.090 | 26.1 |
+| camera | out | inline | n/a | 1 | on | 50 | 76955.2 | 34.3 | 3.605 | 0.339 | 258.7 | 3.010 | 53.9 |
+| camera | out | inline | n/a | 2 | on | 50 | 118313.4 | 22.3 | 5.638 | 0.386 | 247.6 | 5.048 | 78.1 |
+| camera | out | shm | 2 | 1 | on | 50 | 4059.6 | 649.5 | 0.137 | 0.038 | 30.0 | 0.089 | 20.7 |
+| camera | out | shm | 2 | 2 | on | 50 | 4179.6 | 630.8 | 0.137 | 0.042 | 35.2 | 0.087 | 31.4 |
+| small | in | shm | 2 | 1 | off | 200 | 403.3 | 0.0 | 0.043 | 0.016 | 21.9 | 0.003 | 2.1 |
+| small | out | shm | 2 | 1 | off | 200 | 392.6 | 0.0 | 0.043 | 0.016 | 22.0 | 0.003 | 2.1 |
+| camera | in | shm | 2 | 1 | off | 50 | 2076.9 | 1269.6 | 0.063 | 0.018 | 32.5 | 0.016 | 15.4 |
+| camera | out | shm | 2 | 1 | off | 50 | 2112.8 | 1248.0 | 0.065 | 0.019 | 30.0 | 0.016 | 18.0 |
 
 ### Process transport — copy counts
+
+The `slots` column is the value declared in the hashed Manifest;
+inline Channels report `n/a`.
 
 Counts on an input Channel are of delivered Messages: the last
 activation's inputs become visible after the Run ends, so a row shows
 `messages - burst` crossings rather than `messages`.
 
-| payload | direction | transport | burst | recording | caller | subscriber | arena write | arena read | inline encode | inline decode |
-|---|---|---|---|---|---|---|---|---|---|---|
-| small | in | inline | 1 | on | 200 | 200 | 0 | 0 | 199 | 0 |
-| small | in | inline | 2 | on | 200 | 200 | 0 | 0 | 198 | 0 |
-| small | in | shm | 1 | on | 200 | 200 | 199 | 0 | 0 | 0 |
-| small | in | shm | 2 | on | 200 | 200 | 99 | 0 | 99 | 0 |
-| small | out | inline | 1 | on | 200 | 200 | 0 | 0 | 0 | 200 |
-| small | out | inline | 2 | on | 200 | 200 | 0 | 0 | 0 | 200 |
-| small | out | shm | 1 | on | 200 | 200 | 0 | 200 | 0 | 0 |
-| small | out | shm | 2 | on | 200 | 200 | 0 | 100 | 0 | 100 |
-| camera | in | inline | 1 | on | 50 | 50 | 0 | 0 | 49 | 0 |
-| camera | in | inline | 2 | on | 50 | 50 | 0 | 0 | 48 | 0 |
-| camera | in | shm | 1 | on | 50 | 50 | 49 | 0 | 0 | 0 |
-| camera | in | shm | 2 | on | 50 | 50 | 24 | 0 | 24 | 0 |
-| camera | out | inline | 1 | on | 50 | 50 | 0 | 0 | 0 | 50 |
-| camera | out | inline | 2 | on | 50 | 50 | 0 | 0 | 0 | 50 |
-| camera | out | shm | 1 | on | 50 | 50 | 0 | 50 | 0 | 0 |
-| camera | out | shm | 2 | on | 50 | 50 | 0 | 25 | 0 | 25 |
-| small | in | shm | 1 | off | 200 | 200 | 199 | 0 | 0 | 0 |
-| small | out | shm | 1 | off | 200 | 200 | 0 | 200 | 0 | 0 |
-| camera | in | shm | 1 | off | 50 | 50 | 49 | 0 | 0 | 0 |
-| camera | out | shm | 1 | off | 50 | 50 | 0 | 50 | 0 | 0 |
+| payload | direction | transport | slots | burst | recording | caller | subscriber | arena write | arena read | inline encode | inline decode |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| small | in | inline | n/a | 1 | on | 200 | 200 | 0 | 0 | 199 | 0 |
+| small | in | inline | n/a | 2 | on | 200 | 200 | 0 | 0 | 198 | 0 |
+| small | in | shm | 2 | 1 | on | 200 | 200 | 199 | 0 | 0 | 0 |
+| small | in | shm | 2 | 2 | on | 200 | 200 | 198 | 0 | 0 | 0 |
+| small | out | inline | n/a | 1 | on | 200 | 200 | 0 | 0 | 0 | 200 |
+| small | out | inline | n/a | 2 | on | 200 | 200 | 0 | 0 | 0 | 200 |
+| small | out | shm | 2 | 1 | on | 200 | 200 | 0 | 200 | 0 | 0 |
+| small | out | shm | 2 | 2 | on | 200 | 200 | 0 | 200 | 0 | 0 |
+| camera | in | inline | n/a | 1 | on | 50 | 50 | 0 | 0 | 49 | 0 |
+| camera | in | inline | n/a | 2 | on | 50 | 50 | 0 | 0 | 48 | 0 |
+| camera | in | shm | 2 | 1 | on | 50 | 50 | 49 | 0 | 0 | 0 |
+| camera | in | shm | 2 | 2 | on | 50 | 50 | 48 | 0 | 0 | 0 |
+| camera | out | inline | n/a | 1 | on | 50 | 50 | 0 | 0 | 0 | 50 |
+| camera | out | inline | n/a | 2 | on | 50 | 50 | 0 | 0 | 0 | 50 |
+| camera | out | shm | 2 | 1 | on | 50 | 50 | 0 | 50 | 0 | 0 |
+| camera | out | shm | 2 | 2 | on | 50 | 50 | 0 | 50 | 0 | 0 |
+| small | in | shm | 2 | 1 | off | 200 | 200 | 199 | 0 | 0 | 0 |
+| small | out | shm | 2 | 1 | off | 200 | 200 | 0 | 200 | 0 | 0 |
+| camera | in | shm | 2 | 1 | off | 50 | 50 | 49 | 0 | 0 | 0 |
+| camera | out | shm | 2 | 1 | off | 50 | 50 | 0 | 50 | 0 | 0 |

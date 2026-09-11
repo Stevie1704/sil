@@ -140,8 +140,8 @@ def process_config(build_dir, payload, *, direction, transport, burst,
 
     `direction` names which side the payload crosses the boundary towards:
     "in" is kernel to Process participant, "out" is Process participant to
-    kernel. A burst larger than one puts several Messages on one Channel in one
-    step, which is what makes the single-slot Arena fall back to inline.
+    kernel. A burst deeper than the Channel's declared slot count puts only the
+    excess Messages on the inline fallback path.
     """
     m = _base(payload, messages, burst, transport)
     if direction == "in":
@@ -150,12 +150,14 @@ def process_config(build_dir, payload, *, direction, transport, burst,
     else:
         _process(m, "publisher", burst, publishes=["payload"])
         _native_subscriber(m, build_dir, "subscriber0")
+    slots = m.to_doc()["channels"]["payload"].get("slots", "n/a")
     return Config(
-        name=f"process-{payload}-{direction}-{transport}-burst{burst}"
+        name=f"process-{payload}-{direction}-{transport}-slots{slots}"
+             f"-burst{burst}"
              f"-rec{'on' if recording else 'off'}",
         dimensions={"participants": "process", "direction": direction,
                     "payload": payload, "subscribers": 1,
-                    "transport": transport, "burst": burst,
+                    "transport": transport, "slots": slots, "burst": burst,
                     "recording": recording},
         manifest=m, messages=messages, recording=recording,
     )
@@ -182,8 +184,8 @@ def matrix(build_dir: Path, counts: dict[str, int]) -> list[Config]:
                 configs.append(
                     native_config(build_dir, payload, subscribers, recording,
                                   messages))
-    # Process delivery: both directions, inline against the single-slot Arena,
-    # single Message against a burst that forces the inline fallback.
+    # Process delivery: both directions, inline against the declared Arena,
+    # single Message against the default two-slot burst depth.
     for payload, messages in counts.items():
         for direction in ("in", "out"):
             for transport in ("inline", "shm"):
@@ -347,15 +349,16 @@ def _native_table(results: list[dict]) -> list[str]:
 def _process_row_prefix(result: dict) -> str:
     d = result["dimensions"]
     return (f"| {d['payload']} | {d['direction']} | {d['transport']} | "
-            f"{d['burst']} | {'on' if d['recording'] else 'off'} ")
+            f"{d['slots']} | {d['burst']} | "
+            f"{'on' if d['recording'] else 'off'} ")
 
 
 def _process_cost_table(results: list[dict]) -> list[str]:
     lines = [
-        "| payload | direction | transport | burst | recording | messages | "
+        "| payload | direction | transport | slots | burst | recording | messages | "
         "µs/message | MiB/s | tree user s | tree system s | tree RSS MiB | "
         "kernel user s* | kernel RSS MiB* |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in results:
         lines.append(
@@ -374,14 +377,14 @@ def _process_copy_table(results: list[dict]) -> list[str]:
 
     A Process publication is copied out of the Arena or the base64 line into a
     kernel buffer and then copied again by the publish path, so the two
-    kernel-side columns are the ones that decide whether #58 has a payload-copy
-    case at all.
+    kernel-side columns show whether a burst stayed within the declared Arena
+    slots or reached the inline fallback addressed by #74.
     """
     lines = [
-        "| payload | direction | transport | burst | recording | caller | "
+        "| payload | direction | transport | slots | burst | recording | caller | "
         "subscriber | arena write | arena read | inline encode | "
         "inline decode |",
-        "|---|---|---|---|---|---|---|---|---|---|---|",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in results:
         lines.append(
@@ -457,6 +460,9 @@ def render_markdown(report: dict) -> str:
         *_process_cost_table(process),
         "",
         "### Process transport — copy counts",
+        "",
+        "The `slots` column is the value declared in the hashed Manifest;",
+        "inline Channels report `n/a`.",
         "",
         "Counts on an input Channel are of delivered Messages: the last",
         "activation's inputs become visible after the Run ends, so a row shows",

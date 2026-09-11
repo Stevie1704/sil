@@ -8,7 +8,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <set>
+#include <limits>
+#include <map>
 #include <utility>
 
 #include <nlohmann/json.hpp>
@@ -102,15 +103,25 @@ class ProcessParticipant::StepCodec {
    public:
     explicit ArenaAdapter(ProcessParticipant &owner) : owner_(owner) {}
 
-    void encode(nlohmann::json &item, const std::string &channel,
+    void encode(nlohmann::json &item, const std::string &channel, size_t slot,
                 const std::vector<uint8_t> &bytes) {
-      item["shm_seq"] = owner_.write_arena(channel, bytes);
+      if (owner_.protocol_ >= 2) item["shm_slot"] = slot;
+      item["shm_seq"] = owner_.write_arena(channel, slot, bytes);
     }
 
     std::vector<uint8_t> decode(const nlohmann::json &item,
                                 const std::string &channel) {
       std::vector<uint8_t> bytes;
-      owner_.read_arena(channel, item.at("shm_seq").get<uint64_t>(), bytes);
+      const size_t slot = item.value("shm_slot", size_t{0});
+      const Arena &arena = owner_.arenas_.at(channel);
+      const size_t available = owner_.protocol_ >= 2 ? arena.slots : 1;
+      if (slot >= available)
+        throw RunError("participant '" + owner_.name_ + "' channel '" +
+                       channel + "': arena slot " + std::to_string(slot) +
+                       " exceeds negotiated slot count " +
+                       std::to_string(available));
+      owner_.read_arena(channel, slot,
+                        item.at("shm_seq").get<uint64_t>(), bytes);
       return bytes;
     }
 
@@ -125,15 +136,21 @@ class ProcessParticipant::StepCodec {
   nlohmann::json encode_inputs(
       const std::vector<ProcessParticipant::StepInput> &messages) {
     nlohmann::json in = nlohmann::json::array();
-    // This set belongs to one codec call, so the one-slot fallback is
-    // inherently scoped to one step and cannot leak into the next one.
-    std::set<std::string> arena_used;
+    // These indices belong to one codec call, so slot reuse is inherently
+    // scoped to one Step and cannot leak into the next one.
+    std::map<std::string, size_t> arena_used;
     for (const ProcessParticipant::StepInput &message : messages) {
       nlohmann::json item = {
           {"ch", message.channel}, {"t", message.publish_ns}};
-      if (owner_.arenas_.count(message.channel) &&
-          arena_used.insert(message.channel).second) {
-        arena_.encode(item, message.channel, message.bytes);
+      auto arena_it = owner_.arenas_.find(message.channel);
+      const size_t slot = arena_used[message.channel];
+      const size_t available =
+          arena_it == owner_.arenas_.end()
+              ? 0
+              : (owner_.protocol_ >= 2 ? arena_it->second.slots : 1);
+      if (slot < available) {
+        arena_used[message.channel] = slot + 1;
+        arena_.encode(item, message.channel, slot, message.bytes);
       } else {
         inline_.encode(item, message.bytes);
       }
@@ -150,7 +167,7 @@ class ProcessParticipant::StepCodec {
       ProcessParticipant::StepOutput output;
       output.channel = item.at("ch").get<std::string>();
       // The field on the line is authoritative. A channel can legally carry
-      // inline fallbacks after its arena-backed first message.
+      // inline fallbacks after its Arena slots are full.
       if (item.contains("shm_seq")) {
         output.bytes = arena_.decode(item, output.channel);
       } else {
@@ -233,10 +250,9 @@ void ProcessParticipant::write_clock_region(uint64_t now_ns) {
 void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
   const Manifest &m = engine_.manifest();
 
-  // A single-slot arena carries one direction. A participant that both
-  // subscribes and publishes the same arena-backed channel would race an input
-  // and an output write through one header — out of scope (no feedback loop over the
-  // large-payload path), so reject it at load rather than silently corrupt.
+  // One Arena mapping has one writer direction. Supporting the same Channel in
+  // both directions requires two mappings in the init shape; do not rely on a
+  // third-party participant fully consuming inputs before it starts outputs.
   for (const std::string &ch : spec.publishes) {
     const ChannelSpec *c = m.find_channel(ch);
     if (c && c->transport == Transport::Shm &&
@@ -252,21 +268,30 @@ void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
     const ChannelSpec *c = m.find_channel(ch);
     if (!c || c->transport != Transport::Shm) return;
     const size_t capacity = m.schemas.at(c->schema).byte_size;
+    if (capacity > std::numeric_limits<size_t>::max() - sizeof(sil_arena) ||
+        c->slots > std::numeric_limits<size_t>::max() /
+                       (sizeof(sil_arena) + capacity))
+      throw ManifestError("participant '" + name_ + "' channel '" + ch +
+                          "': arena mapping size overflows size_t");
+    const size_t stride = sizeof(sil_arena) + capacity;
 
     // The failure taxonomy is this call site's: an arena the environment cannot
     // supply is a config error (exit 2). Arenas already mapped in this loop, and
     // the clock region, are released by their own destructors as this throws.
     std::string error;
     Arena a;
-    a.region =
-        MappedRegion::create("sil_arena_", sizeof(sil_arena) + capacity, error);
+    a.region = MappedRegion::create("sil_arena_", stride * c->slots, error);
     if (!a.region)
       throw ManifestError("participant '" + name_ + "' channel '" + ch +
                           "': arena: " + error);
     a.capacity = capacity;
-    auto *hdr = static_cast<sil_arena *>(a.region.base());
-    hdr->seq = 0;
-    hdr->len = 0;
+    a.slots = c->slots;
+    for (size_t slot = 0; slot < a.slots; ++slot) {
+      auto *hdr = reinterpret_cast<sil_arena *>(
+          static_cast<uint8_t *>(a.region.base()) + slot * stride);
+      hdr->seq = 0;
+      hdr->len = 0;
+    }
     arenas_.emplace(ch, std::move(a));
   };
   for (const std::string &ch : spec.subscribes) map_channel(ch);
@@ -274,33 +299,48 @@ void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
 }
 
 uint64_t ProcessParticipant::write_arena(const std::string &channel,
+                                         size_t slot,
                                          const std::vector<uint8_t> &bytes) {
   Arena &a = arenas_.at(channel);
+  if (slot >= a.slots)
+    throw RunError("participant '" + name_ + "' channel '" + channel +
+                   "': arena slot out of range");
   if (bytes.size() > a.capacity)
     throw RunError("participant '" + name_ + "' channel '" + channel +
                    "': payload exceeds arena capacity");
-  auto *hdr = static_cast<sil_arena *>(a.region.base());
+  const size_t offset = slot * (sizeof(sil_arena) + a.capacity);
+  auto *hdr = reinterpret_cast<sil_arena *>(
+      static_cast<uint8_t *>(a.region.base()) + offset);
   counters::count(counters::Site::kArenaWrite, bytes.size());
-  std::memcpy(static_cast<uint8_t *>(a.region.base()) + sizeof(sil_arena),
+  std::memcpy(static_cast<uint8_t *>(a.region.base()) + offset +
+                  sizeof(sil_arena),
               bytes.data(), bytes.size());
   hdr->len = bytes.size();
   hdr->seq = ++a.seq;
   return a.seq;
 }
 
-void ProcessParticipant::read_arena(const std::string &channel, uint64_t seq,
+void ProcessParticipant::read_arena(const std::string &channel, size_t slot,
+                                    uint64_t seq,
                                     std::vector<uint8_t> &out) {
   Arena &a = arenas_.at(channel);
-  auto *hdr = static_cast<sil_arena *>(a.region.base());
+  if (slot >= a.slots)
+    throw RunError("participant '" + name_ + "' channel '" + channel +
+                   "': arena slot out of range");
+  const size_t offset = slot * (sizeof(sil_arena) + a.capacity);
+  auto *hdr = reinterpret_cast<sil_arena *>(
+      static_cast<uint8_t *>(a.region.base()) + offset);
   if (hdr->seq != seq)
     throw RunError("participant '" + name_ + "' channel '" + channel +
-                   "': stale arena (expected seq " + std::to_string(seq) +
+                   "': stale arena slot " + std::to_string(slot) +
+                   " (expected seq " + std::to_string(seq) +
                    ", got " + std::to_string(hdr->seq) + ")");
   if (hdr->len > a.capacity)
     throw RunError("participant '" + name_ + "' channel '" + channel +
                    "': arena len exceeds capacity");
   const auto *payload =
-      static_cast<const uint8_t *>(a.region.base()) + sizeof(sil_arena);
+      static_cast<const uint8_t *>(a.region.base()) + offset +
+      sizeof(sil_arena);
   counters::count(counters::Site::kArenaRead, hdr->len);
   out.assign(payload, payload + hdr->len);
 }
@@ -326,6 +366,11 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
   // built so far, and each mapped region releases its own file.
   setup_arenas(spec);
   codec_ = std::make_unique<StepCodec>(*this);
+  for (const auto &[channel, arena] : arenas_) {
+    (void)channel;
+    if (arena.slots > 1) protocol_ = 2;
+  }
+  const int offered_protocol = protocol_;
 
   int to_child[2], from_child[2];
   if (pipe(to_child) != 0 || pipe(from_child) != 0)
@@ -370,6 +415,7 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
       entry["transport"] = "shm";
       entry["shm_path"] = a.region.path();
       entry["shm_capacity"] = a.capacity;
+      entry["shm_slots"] = a.slots;
     }
     channels[ch] = entry;
     schemas[c->schema] = json::parse(m.schemas.at(c->schema).canonical_json);
@@ -379,6 +425,7 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
 
   json init = {{"op", "init"},
                {"name", name},
+               {"protocol", offered_protocol},
                {"channels", channels},
                {"schemas", schemas}};
   send_line(init.dump());
@@ -386,6 +433,19 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
   if (ready.value("op", "") != "ready")
     throw RunError("participant '" + name + "': expected ready, got " +
                    ready.dump());
+  int announced_protocol = 1;
+  if (ready.contains("protocol")) {
+    const json &value = ready.at("protocol");
+    if (!value.is_number_integer())
+      throw ManifestError("participant '" + name +
+                          "': ready protocol must be a positive integer");
+    const int64_t announced = value.get<int64_t>();
+    if (announced < 1 || announced > std::numeric_limits<int>::max())
+      throw ManifestError("participant '" + name +
+                          "': ready protocol must be a positive integer");
+    announced_protocol = static_cast<int>(announced);
+  }
+  protocol_ = std::min(offered_protocol, announced_protocol);
 }
 
 ProcessParticipant::~ProcessParticipant() {

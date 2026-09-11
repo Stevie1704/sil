@@ -595,7 +595,8 @@ Manifest load_manifest(const std::filesystem::path &path) {
       const json &js = it.value();
       const std::string ctx = "channel '" + name + "'";
       reject_unknown_keys(js, ctx,
-                          {"schema", "latency_ns", "transport", "interceptors"});
+                          {"schema", "latency_ns", "transport", "slots",
+                           "interceptors"});
       ChannelSpec c;
       c.name = name;
       c.schema = required<std::string>(js, "schema", ctx);
@@ -618,6 +619,17 @@ Manifest load_manifest(const std::filesystem::path &path) {
           fail(ctx + ": unknown transport '" + transport_value +
                "' (expected 'inline' or 'shm')");
       }
+      if (const json *slots = find_value(js, "slots", ctx)) {
+        if (c.transport != Transport::Shm)
+          fail(ctx + ": slots is only valid with shm transport");
+        c.slots = extract<size_t>(*slots, ctx + " key 'slots'");
+        if (c.slots == 0)
+          type_error(*slots, ctx + " key 'slots'", "a positive integer");
+      }
+      if (schema_it->second.byte_size >
+          std::numeric_limits<size_t>::max() / c.slots)
+        fail(ctx + ": arena byte size overflows size_t for slots " +
+             std::to_string(c.slots));
       if (const json *interceptors = find_value(js, "interceptors", ctx))
         parse_interceptors(c, *interceptors, schema_it->second);
       c.interceptor_plan = compile_interceptor_plan(

@@ -428,7 +428,7 @@ class TestReplayTransportComposition:
 
         # Two messages share each source timestamp. Their file order is the
         # recording's global publish-order tie-break, and the process receives
-        # that order even though the first message uses the arena and the rest
+        # that order even though the first Messages fill the Arena and the rest
         # use the protocol's inline burst fallback.
         assert [t for t, _ in channel_messages(shm_proc.mcap_path, "payload")] == [
             0, 0, 10_000_000, 10_000_000, 20_000_000, 20_000_000,
