@@ -10,19 +10,30 @@ not expose the selected transport.
 The kernel starts a participant with:
 
 ```json
-{"op":"init","name":"sink","channels":{"payload":{"schema":"big.Payload","direction":"in"}},"schemas":{"big.Payload":{"fields":[]}}}
+{"op":"init","name":"sink","protocol":2,"channels":{"payload":{"schema":"big.Payload","direction":"in","transport":"shm","shm_path":"/tmp/sil_arena_x","shm_capacity":1048576,"shm_slots":2}},"schemas":{"big.Payload":{"fields":[]}}}
 ```
 
 `channels` contains the participant's declared inputs and outputs. Every entry
 has `schema` and `direction` (`"in"` or `"out"`). A shared-memory entry also
-has `transport: "shm"`, `shm_path`, and `shm_capacity`. The `schemas` object
-contains the canonical schema declarations referenced by those entries.
+has `transport: "shm"`, `shm_path`, `shm_capacity` (bytes per slot), and
+`shm_slots`. The `schemas` object contains the canonical schema declarations
+referenced by those entries.
+
+`protocol` is 2 when any shared-memory Channel in this participant's contract
+declares more than one slot; otherwise it is 1. Protocol 2 adds indexed Arena
+slots.
 
 The child acknowledges initialization:
 
 ```json
-{"op":"ready"}
+{"op":"ready","protocol":2}
 ```
+
+The child echoes the highest offered protocol it supports. An absent
+`ready.protocol` means 1. If a child answers 1 (or omits the field) to an offer
+of 2, the kernel uses only slot zero and applies the established inline fallback
+after the first Message. Because the Transport is an optimization, this changes
+neither participant-visible payloads nor Run semantics.
 
 For each activation, the kernel sends:
 
@@ -35,7 +46,8 @@ activation, in global publish order. Each input has its channel (`ch`), its
 publish time (`t`), and exactly one payload representation:
 
 - `data` is the base64-encoded inline representation.
-- `shm_seq` is the freshness sequence of the channel's shared-memory arena.
+- `shm_slot` and `shm_seq` name an Arena slot and its freshness sequence.
+  Protocol-1 lines may omit `shm_slot`, which means slot zero.
 
 The child responds with either:
 
@@ -50,8 +62,9 @@ or:
 ```
 
 `out` preserves the participant's output order. Each output has `ch` and
-exactly one of `data` or `shm_seq`; the field present on the line is
-authoritative. A child failure is a run failure, not a manifest failure.
+exactly one of `data` or `shm_seq`; `shm_slot` accompanies `shm_seq` under
+protocol 2. The representation present on the line is authoritative. A child
+failure is a run failure, not a manifest failure.
 
 After the run, the kernel sends:
 
@@ -63,9 +76,11 @@ The child exits without another protocol response.
 
 ## Shared-memory payloads
 
-An arena is a single-slot mapping containing a fixed header (`seq`, `len`) and
-then the payload bytes. Its capacity is supplied in the `init` line and comes
-from the channel schema's `byte_size`.
+An Arena contains `shm_slots` fixed-layout slots. Each slot repeats the original
+single-slot layout: a header (`seq`, `len`) followed by `shm_capacity` payload
+bytes. Payload storage is therefore the schema `byte_size * slots`, plus one
+fixed header per slot. Keeping slot zero byte-compatible lets protocol-1
+participants map only the original prefix of a multi-slot Arena.
 
 The kernel owns the arena file. It creates and maps the file before it spawns
 the child, so `shm_path` is valid from the `init` line onward, and it unlinks
@@ -74,12 +89,19 @@ must not expect it to exist after the run. A run that fails while mapping its
 arenas unlinks the ones it already mapped, so a failed run leaves nothing in
 the temp directory either.
 
-The first message for an arena-backed channel in one step uses `shm_seq`. Every
-later message for that channel in the same step uses inline `data`, because one
-slot holds one payload. The rule resets at the next step. This applies
-independently to each channel, so inline and arena-backed channels may be mixed
-in one step. Receivers always inspect the field on each message instead of
-inferring transport from the channel declaration.
+Messages for one Arena-backed Channel fill slots from zero in Publish order.
+Every Message after the declared slot count uses inline `data`. Slot allocation
+resets only across a Step boundary: the kernel writes inputs, sends the Step
+line, and waits for the response, so all input slots are free after the child
+responds; likewise the child writes output slots before that response and the
+kernel consumes them before the next Step. This applies independently to each
+Channel, so inline and Arena-backed Channels may be mixed in one Step. Receivers
+always inspect each Message's representation instead of inferring it from the
+Channel declaration.
+
+`seq` increases on every Arena write, across all slots. The receiver compares
+the Message's `shm_seq` to the header in its named slot, distinguishing a slot
+written for this Message from stale contents left by an earlier Step.
 
 Inputs arrive already merged in global publish order; transport handling never
 reorders them.

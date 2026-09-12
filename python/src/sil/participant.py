@@ -20,10 +20,12 @@ from dataclasses import dataclass
 
 from sil import schema
 
-# Fixed-layout header at the front of every arena: seq (u64), len (u64),
-# then the payload. Mirrors include/sil/arena.h — the kernel is the writer
-# for inputs and the reader for outputs; this side is the mirror image.
+# Fixed-layout header at the front of every arena slot: seq (u64), len (u64),
+# then one payload. Mirrors include/sil/arena.h — the kernel is the writer for
+# inputs and the reader for outputs; this side is the mirror image.
 _ARENA_HEADER = struct.Struct("<QQ")
+_STEP_PROTOCOL_SINGLE_SLOT = 1
+_STEP_PROTOCOL_INDEXED_SLOTS = 2
 
 
 class _Arena:
@@ -38,32 +40,45 @@ class _Arena:
     from the schema, so the two ends cannot disagree.
     """
 
-    def __init__(self, path: str, capacity: int):
+    def __init__(self, path: str, capacity: int, slots: int = 1):
         self._capacity = capacity
+        self.slots = slots
+        self._stride = _ARENA_HEADER.size + capacity
         self._file = open(path, "r+b")
-        self._mmap = mmap.mmap(
-            self._file.fileno(), _ARENA_HEADER.size + capacity
-        )
+        self._mmap = mmap.mmap(self._file.fileno(), self._stride * slots)
         self._seq = 0
 
-    def read(self, seq: int) -> bytes:
-        got_seq, length = _ARENA_HEADER.unpack_from(self._mmap, 0)
+    def _offset(self, slot: int) -> int:
+        if (
+            not isinstance(slot, int)
+            or isinstance(slot, bool)
+            or not 0 <= slot < self.slots
+        ):
+            raise ParticipantFailure(f"arena slot {slot!r} out of range")
+        return slot * self._stride
+
+    def read(self, seq: int, slot: int = 0) -> bytes:
+        offset = self._offset(slot)
+        got_seq, length = _ARENA_HEADER.unpack_from(self._mmap, offset)
         if got_seq != seq:
             raise ParticipantFailure(
-                f"stale arena (expected seq {seq}, got {got_seq})"
+                f"stale arena slot {slot} (expected seq {seq}, got {got_seq})"
             )
         if length > self._capacity:
             raise ParticipantFailure("arena len exceeds capacity")
-        start = _ARENA_HEADER.size
+        start = offset + _ARENA_HEADER.size
         return bytes(self._mmap[start : start + length])
 
-    def write(self, payload: bytes) -> int:
+    def write(self, payload: bytes, slot: int = 0) -> int:
         if len(payload) > self._capacity:
             raise ParticipantFailure("payload exceeds arena capacity")
-        start = _ARENA_HEADER.size
+        offset = self._offset(slot)
+        start = offset + _ARENA_HEADER.size
         self._mmap[start : start + len(payload)] = payload
         self._seq += 1
-        _ARENA_HEADER.pack_into(self._mmap, 0, self._seq, len(payload))
+        _ARENA_HEADER.pack_into(
+            self._mmap, offset, self._seq, len(payload)
+        )
         return self._seq
 
     def close(self) -> None:
@@ -89,20 +104,26 @@ class _ArenaAdapter:
     def __init__(self, arenas: dict[str, _Arena]):
         self._arenas = arenas
 
-    def encode(self, item: dict, channel: str, raw: bytes) -> None:
-        item["shm_seq"] = self._arenas[channel].write(raw)
+    def encode(
+        self, item: dict, channel: str, raw: bytes, slot: int, indexed: bool
+    ) -> None:
+        if indexed:
+            item["shm_slot"] = slot
+        item["shm_seq"] = self._arenas[channel].write(raw, slot)
 
     def decode(self, item: dict, channel: str) -> bytes:
-        return self._arenas[channel].read(item["shm_seq"])
+        return self._arenas[channel].read(
+            item["shm_seq"], item.get("shm_slot", 0)
+        )
 
 
 class _StepCodec:
     """Step-scoped transport seam for the Python endpoint.
 
     Inputs are decoded in their received order, which is already global
-    publish order. Outputs use the arena for the first message per channel in
-    this call and the inline representation for later messages; the local set makes the
-    fallback reset naturally for the next step without a caller-visible
+    Publish order. Outputs fill the Arena's declared slots per Channel and use
+    the inline representation for excess Messages; the local indices make slot
+    allocation reset naturally for the next Step without a caller-visible
     ``begin_step`` operation.
     """
 
@@ -110,11 +131,14 @@ class _StepCodec:
         self,
         types_by_channel: dict[str, schema.MessageType],
         arenas: dict[str, _Arena],
+        *,
+        indexed_slots: bool = False,
     ):
         self._types_by_channel = types_by_channel
         self._inline = _InlineAdapter()
         self._arena = _ArenaAdapter(arenas)
         self._arenas = arenas
+        self._indexed_slots = indexed_slots
 
     def decode_inputs(self, messages: list[dict]) -> list["Input"]:
         """Decode the step's input array without inferring transport."""
@@ -137,13 +161,16 @@ class _StepCodec:
     def encode_outputs(self, outputs) -> list[dict]:
         """Encode all outputs for one step, preserving their order."""
         encoded = []
-        arena_used: set[str] = set()
+        next_slot_by_channel: dict[str, int] = {}
         for channel, fields in outputs:
             raw = self._types_by_channel[channel].pack(**fields)
             item = {"ch": channel}
-            if channel in self._arenas and channel not in arena_used:
-                arena_used.add(channel)
-                self._arena.encode(item, channel, raw)
+            slot = next_slot_by_channel.get(channel, 0)
+            if channel in self._arenas and slot < self._arenas[channel].slots:
+                next_slot_by_channel[channel] = slot + 1
+                self._arena.encode(
+                    item, channel, raw, slot, self._indexed_slots
+                )
             else:
                 self._inline.encode(item, raw)
             encoded.append(item)
@@ -187,19 +214,32 @@ def run(participant: StepParticipant) -> None:
             msg = json.loads(line)
             op = msg["op"]
             if op == "init":
+                protocol = min(
+                    msg.get("protocol", _STEP_PROTOCOL_SINGLE_SLOT),
+                    _STEP_PROTOCOL_INDEXED_SLOTS,
+                )
                 types = schema.load(msg["schemas"])
                 types_by_channel = {
                     ch: types[info["schema"]]
                     for ch, info in msg["channels"].items()
                 }
                 arenas = {
-                    ch: _Arena(info["shm_path"], info["shm_capacity"])
+                    ch: _Arena(
+                        info["shm_path"], info["shm_capacity"],
+                        info.get("shm_slots", 1),
+                    )
                     for ch, info in msg["channels"].items()
                     if info.get("transport") == "shm"
                 }
-                codec = _StepCodec(types_by_channel, arenas)
+                codec = _StepCodec(
+                    types_by_channel, arenas,
+                    indexed_slots=protocol >= _STEP_PROTOCOL_INDEXED_SLOTS,
+                )
                 participant.on_init(msg)
-                send({"op": "ready"})
+                ready = {"op": "ready"}
+                if "protocol" in msg:
+                    ready["protocol"] = protocol
+                send(ready)
             elif op == "step":
                 try:
                     if codec is None:

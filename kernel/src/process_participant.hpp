@@ -66,9 +66,10 @@ class ProcessParticipant {
   // rules are specified in docs/step-protocol.md. Empty for participants with
   // no arena-backed channel.
   struct Arena {
-    MappedRegion region;  // sizeof(header) + capacity, unlinked when released
-    size_t capacity = 0;  // schema byte_size
-    uint64_t seq = 0;     // last seq stamped, for the fresh-payload marker
+    MappedRegion region;  // slots * (sizeof(header) + capacity)
+    size_t capacity = 0;  // schema byte_size per slot
+    size_t slots = 1;     // Manifest declaration; protocol 1 uses only slot 0
+    uint64_t seq = 0;     // last seq stamped across all slots
   };
   std::map<std::string, Arena> arenas_;  // by channel name
 
@@ -85,14 +86,18 @@ class ProcessParticipant {
 
   // Private step-scoped codec seam. `encode_inputs` receives the complete
   // input set already merged in global publish order and never reorders it.
-  // It uses the arena for the first message per arena-backed channel in that
-  // step and the inline representation for every subsequent message. `decode_outputs`
+  // It fills the declared Arena slots per Channel in that Step and uses the
+  // inline representation for every excess Message. `decode_outputs`
   // honours the field present on each output (`shm_seq` or `data`) rather than
   // inferring transport from the channel declaration. Arena setup failures
   // remain ManifestError; stale-seq and capacity violations remain RunError.
   class StepCodec;
 
   std::unique_ptr<StepCodec> codec_;
+  static constexpr int kSingleSlotProtocol = 1;
+  static constexpr int kIndexedSlotsProtocol = 2;
+  // Negotiated Step protocol; an absent ready echo selects the legacy level.
+  int protocol_ = kSingleSlotProtocol;
 
   // Maps an arena for every arena-backed channel in `spec`, sized from the
   // schema byte_size.
@@ -100,10 +105,10 @@ class ProcessParticipant {
   // problem is distinguishable from a run/test failure.
   void setup_arenas(const ProcessSpec &spec);
   // Writes `bytes` into the channel's arena and returns its post-write seq.
-  uint64_t write_arena(const std::string &channel,
+  uint64_t write_arena(const std::string &channel, size_t slot,
                        const std::vector<uint8_t> &bytes);
   // Reads the channel's arena payload back into `out`, checking `seq` freshness.
-  void read_arena(const std::string &channel, uint64_t seq,
+  void read_arena(const std::string &channel, size_t slot, uint64_t seq,
                   std::vector<uint8_t> &out);
 };
 

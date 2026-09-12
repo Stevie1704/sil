@@ -10,12 +10,14 @@ wall-clock behavior.
 
 import json
 import subprocess
+import sys
 
 import pytest
 
 from conftest import BUILD_DIR, ROOT
 
 from sil.manifest import Manifest
+from tools import bench_routing
 
 BENCH_SCHEMAS = json.loads((ROOT / "schemas" / "bench.json").read_text())
 
@@ -23,6 +25,46 @@ PERIOD_NS = 10_000_000
 DURATION_NS = 100_000_000
 PUBLISHES = DURATION_NS // PERIOD_NS
 SMALL_BYTES = 16
+
+
+def process_manifest(tmp_path, *, direction: str, burst: int):
+    """One small-payload Process crossing with the default two-slot Arena."""
+    messages = 30
+    m = Manifest(duration_ns=(messages // burst) * PERIOD_NS)
+    m.add_schemas({"bench.Small": BENCH_SCHEMAS["bench.Small"]})
+    m.add_channel("payload", schema="bench.Small", transport="shm")
+    command = [
+        sys.executable,
+        str(ROOT / "tools" / "bench_participants.py"),
+    ]
+    if direction == "in":
+        m.add_native(
+            "publisher",
+            library=str(BUILD_DIR / "bench_publisher.silp"),
+            config={
+                "channel": "payload", "bytes": SMALL_BYTES,
+                "period_ns": PERIOD_NS, "burst": burst,
+            },
+            publishes=["payload"],
+        )
+        m.add_process(
+            "subscriber", command=command + ["subscriber"],
+            step_period_ns=PERIOD_NS, priority=1,
+            subscribes=["payload"],
+        )
+    else:
+        m.add_process(
+            "publisher", command=command + ["publisher", str(burst)],
+            step_period_ns=PERIOD_NS, priority=1,
+            publishes=["payload"],
+        )
+        m.add_native(
+            "subscriber",
+            library=str(BUILD_DIR / "bench_subscriber.silp"),
+            config={"input": "payload", "period_ns": PERIOD_NS},
+            subscribes=["payload"],
+        )
+    return m.write(tmp_path / f"{direction}-burst{burst}.json")
 
 
 def native_manifest(tmp_path, *, subscribers: int):
@@ -86,6 +128,17 @@ class TestRecordingSwitch:
         assert not (tmp_path / "out.mcap").exists()
 
 
+def test_process_benchmark_reports_declared_slot_count(build_dir):
+    config = bench_routing.process_config(
+        build_dir, "small", direction="in", transport="shm", burst=2,
+        recording=False, messages=30,
+    )
+
+    assert config.dimensions["slots"] == 2
+    channel = config.manifest.to_doc()["channels"]["payload"]
+    assert channel["slots"] == config.dimensions["slots"]
+
+
 class TestCopyCounters:
     """The counters state copies; they never stand in for a timing threshold."""
 
@@ -125,3 +178,44 @@ class TestCopyCounters:
         )
         assert proc.returncode == 0, proc.stderr
         assert not out.exists()
+
+    @pytest.mark.parametrize(
+        ("direction", "arena_site", "inline_site", "expected_arena"),
+        [
+            ("in", "arena_write", "inline_encode", 28),
+            ("out", "arena_read", "inline_decode", 30),
+        ],
+    )
+    def test_burst_within_default_slots_stays_entirely_in_arena(
+        self, sil_run_instrumented, tmp_path, direction, arena_site,
+        inline_site, expected_arena
+    ):
+        ref = process_manifest(tmp_path, direction=direction, burst=2)
+
+        counters = count_copies(
+            sil_run_instrumented, ref.path, tmp_path, recording=False
+        )
+
+        assert counters[arena_site]["count"] == expected_arena
+        assert counters[inline_site]["count"] == 0
+
+    @pytest.mark.parametrize(
+        ("direction", "arena_site", "inline_site", "expected_arena",
+         "expected_inline"),
+        [
+            ("in", "arena_write", "inline_encode", 18, 9),
+            ("out", "arena_read", "inline_decode", 20, 10),
+        ],
+    )
+    def test_burst_beyond_slots_falls_back_per_message(
+        self, sil_run_instrumented, tmp_path, direction, arena_site,
+        inline_site, expected_arena, expected_inline
+    ):
+        ref = process_manifest(tmp_path, direction=direction, burst=3)
+
+        counters = count_copies(
+            sil_run_instrumented, ref.path, tmp_path, recording=False
+        )
+
+        assert counters[arena_site]["count"] == expected_arena
+        assert counters[inline_site]["count"] == expected_inline

@@ -215,6 +215,32 @@ class TestManifestRejection:
         assert "channel 'c'" in proc.stderr
         assert "expected" in proc.stderr and "got" in proc.stderr
 
+    @pytest.mark.parametrize("slots", [0, -1, True, 1.5, "2"])
+    def test_shm_slots_reject_non_positive_or_unparsable_values(
+        self, run_sil, tmp_path, slots
+    ):
+        document = raw_manifest()
+        document["channels"]["c"].update(
+            {"transport": "shm", "slots": slots}
+        )
+
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+
+        assert proc.returncode == 2
+        assert "channel 'c' key 'slots'" in proc.stderr
+
+    def test_slots_on_inline_channel_are_a_manifest_error(
+        self, run_sil, tmp_path
+    ):
+        document = raw_manifest()
+        document["channels"]["c"]["slots"] = 2
+
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+
+        assert proc.returncode == 2
+        assert "channel 'c'" in proc.stderr
+        assert "slots" in proc.stderr and "shm" in proc.stderr
+
     @pytest.mark.parametrize(
         "path,value",
         [
@@ -2430,9 +2456,9 @@ class TestShmTransport:
         assert leftover == [], f"arena files leaked: {leftover}"
 
     def test_bidirectional_shm_channel_is_config_error(self, run_sil, tmp_path):
-        # A single-slot arena carries one direction; a participant that both
-        # subscribes and publishes the same shm channel is rejected at startup
-        # (exit 2) rather than silently racing input/output writes.
+        # An Arena mapping has one writer direction; a participant that both
+        # subscribes and publishes the same shm Channel is rejected at startup
+        # until the protocol provides direction-separated mappings.
         import sys as _sys
 
         from conftest import ROOT
@@ -2455,7 +2481,7 @@ class TestShmTransport:
     def _burst_manifest(self, transport):
         # A sink stepping 3x slower than the source sees three messages on the
         # channel in one step, and republishes all three in one step_done — an
-        # input burst and an output burst through a one-payload arena.
+        # input burst and an output burst through a bounded Arena.
         import sys as _sys
 
         from conftest import ROOT
@@ -2490,10 +2516,9 @@ class TestShmTransport:
         ]
 
     def test_message_burst_matches_inline_exactly(self, run_sil, tmp_path):
-        # The regression this transport shipped with: an arena holds one
-        # payload, so a step carrying several messages on one channel must fall
-        # back to the inline encoding for the rest instead of overwriting the
-        # slot. A manifest that runs inline must run identically over shm —
+        # A burst deeper than the declared Arena must fall back to inline for
+        # only its excess Messages instead of overwriting a slot. A Manifest
+        # that runs inline must run identically over shm —
         # otherwise the transport has leaked into participant code.
         inline = run_sil(
             self._burst_manifest("inline").write(tmp_path / "inline.json").path,

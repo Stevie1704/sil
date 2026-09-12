@@ -207,6 +207,7 @@ class Manifest:
         schema: str,
         latency_ns: int | None = None,
         transport: str = "inline",
+        slots: int | None = None,
     ) -> None:
         name = _string(name, "channel name")
         schema = _string(schema, f"channel {name!r} schema")
@@ -227,6 +228,19 @@ class Manifest:
                 f"channel {name!r}: unknown transport {transport!r} "
                 f"(expected one of {sorted(_TRANSPORTS)})"
             )
+        if transport == "shm":
+            # Two covers the measured burst and the common subscriber case of
+            # missing one step. Each extra slot costs one schema-sized payload
+            # in every participant/Channel Arena, so keep the authoring default
+            # deliberately small and explicit in the hashed Manifest.
+            slots = 2 if slots is None else _integer(
+                slots, f"channel {name!r} slots", minimum=1,
+                maximum=_SIZE_MAX,
+            )
+        elif slots is not None:
+            raise ManifestError(
+                f"channel {name!r}: slots is only valid with shm transport"
+            )
         entry: dict = {"schema": schema}
         if latency_ns is not None:
             entry["latency_ns"] = latency_ns
@@ -234,6 +248,7 @@ class Manifest:
         # manifests keep byte-identical hashes.
         if transport != "inline":
             entry["transport"] = transport
+            entry["slots"] = slots
         self._channels[name] = entry
 
     def add_interceptor(

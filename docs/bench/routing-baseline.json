@@ -3,7 +3,7 @@
     "small": 200,
     "camera": 50
   },
-  "repeats": 5,
+  "repeats": 3,
   "period_ns": 10000000,
   "environment": {
     "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
@@ -26,24 +26,24 @@
       "payload_bytes": 16,
       "manifest_hash": "c3e437f85c1ffa47cda0c6f6483481e9d50c38385f61d6b0bd8115f1d92e3423",
       "wall_s": {
-        "median": 0.008410709007875994,
-        "min": 0.007934540990390815,
-        "max": 0.009063082994543947,
-        "repeats": 5
+        "median": 0.007346500002313405,
+        "min": 0.00710687498212792,
+        "max": 0.14389949999167584,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.002127,
-        "min": 0.0020759999999999997,
-        "max": 0.0023079999999999997
+        "median": 0.0019279999999999998,
+        "min": 0.00187,
+        "max": 0.001941
       },
       "system_s": {
-        "median": 0.002637,
-        "min": 0.002536,
-        "max": 0.002864
+        "median": 0.002289,
+        "min": 0.002286,
+        "max": 0.0026869999999999997
       },
-      "max_rss_bytes": 1933312,
-      "instrumented_kernel_user_s": 0.002311,
-      "instrumented_kernel_system_s": 0.003228,
+      "max_rss_bytes": 1949696,
+      "instrumented_kernel_user_s": 0.001989,
+      "instrumented_kernel_system_s": 0.002968,
       "instrumented_kernel_max_rss_bytes": 1949696,
       "copies": {
         "caller_to_kernel": {
@@ -76,8 +76,8 @@
         }
       },
       "copied_bytes_per_message": 32.0,
-      "us_per_message": 8410.709007875994,
-      "payload_mib_per_s": 0.0018142096044710732
+      "us_per_message": 7346.500002313405,
+      "payload_mib_per_s": 0.002077014776790992
     },
     {
       "name": "native-small-fanout0-recon",
@@ -94,25 +94,25 @@
       "payload_bytes": 16,
       "manifest_hash": "2bdc44ddc240d93ae8aedf10d27ad2caad75a11291f601f8fc5af387aaa1b69a",
       "wall_s": {
-        "median": 0.015173499996308237,
-        "min": 0.013157833003788255,
-        "max": 0.02099425000778865,
-        "repeats": 5
+        "median": 0.007659499999135733,
+        "min": 0.006785457982914522,
+        "max": 0.008019000000786036,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.001957,
-        "min": 0.001838,
-        "max": 0.002018
+        "median": 0.001803,
+        "min": 0.001725,
+        "max": 0.0018299999999999998
       },
       "system_s": {
-        "median": 0.002879,
-        "min": 0.002412,
-        "max": 0.0029389999999999998
+        "median": 0.002326,
+        "min": 0.002178,
+        "max": 0.002436
       },
-      "max_rss_bytes": 2097152,
-      "instrumented_kernel_user_s": 0.001828,
-      "instrumented_kernel_system_s": 0.002573,
-      "instrumented_kernel_max_rss_bytes": 2080768,
+      "max_rss_bytes": 2064384,
+      "instrumented_kernel_user_s": 0.00172,
+      "instrumented_kernel_system_s": 0.002463,
+      "instrumented_kernel_max_rss_bytes": 2048000,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -144,8 +144,8 @@
         }
       },
       "copied_bytes_per_message": 16.0,
-      "us_per_message": 75.86749998154119,
-      "payload_mib_per_s": 0.20112418448232133
+      "us_per_message": 38.29749999567866,
+      "payload_mib_per_s": 0.3984278102806121
     },
     {
       "name": "native-small-fanout0-recoff",
@@ -162,25 +162,25 @@
       "payload_bytes": 16,
       "manifest_hash": "2bdc44ddc240d93ae8aedf10d27ad2caad75a11291f601f8fc5af387aaa1b69a",
       "wall_s": {
-        "median": 0.007454874998074956,
-        "min": 0.0069352910068118945,
-        "max": 0.007625459009432234,
-        "repeats": 5
+        "median": 0.006763040990335867,
+        "min": 0.006679874990368262,
+        "max": 0.0070961669844109565,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.001795,
-        "min": 0.001754,
-        "max": 0.001888
+        "median": 0.001763,
+        "min": 0.0017469999999999999,
+        "max": 0.0017679999999999998
       },
       "system_s": {
-        "median": 0.0022129999999999997,
-        "min": 0.002098,
-        "max": 0.002448
+        "median": 0.002209,
+        "min": 0.002118,
+        "max": 0.002351
       },
-      "max_rss_bytes": 1900544,
-      "instrumented_kernel_user_s": 0.001768,
-      "instrumented_kernel_system_s": 0.002483,
-      "instrumented_kernel_max_rss_bytes": 1900544,
+      "max_rss_bytes": 1916928,
+      "instrumented_kernel_user_s": 0.001666,
+      "instrumented_kernel_system_s": 0.00209,
+      "instrumented_kernel_max_rss_bytes": 1916928,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -212,8 +212,8 @@
         }
       },
       "copied_bytes_per_message": 16.0,
-      "us_per_message": 37.27437499037478,
-      "payload_mib_per_s": 0.4093640487986779
+      "us_per_message": 33.815204951679334,
+      "payload_mib_per_s": 0.4512404725715618
     },
     {
       "name": "native-small-fanout1-recon",
@@ -230,25 +230,25 @@
       "payload_bytes": 16,
       "manifest_hash": "e4b351862395fdc8b645714dc3714915408975aaf3493d84c79e91f05bc864ee",
       "wall_s": {
-        "median": 0.0144862919987645,
-        "min": 0.013268624999909662,
-        "max": 0.017869332994450815,
-        "repeats": 5
+        "median": 0.008075166988419369,
+        "min": 0.007753959012916312,
+        "max": 0.008383082982618362,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.002297,
-        "min": 0.002225,
-        "max": 0.0023669999999999997
+        "median": 0.002157,
+        "min": 0.002067,
+        "max": 0.002219
       },
       "system_s": {
-        "median": 0.003221,
-        "min": 0.003087,
-        "max": 0.0035949999999999997
+        "median": 0.002627,
+        "min": 0.0023899999999999998,
+        "max": 0.002692
       },
-      "max_rss_bytes": 2228224,
-      "instrumented_kernel_user_s": 0.00228,
-      "instrumented_kernel_system_s": 0.003474,
-      "instrumented_kernel_max_rss_bytes": 2228224,
+      "max_rss_bytes": 2211840,
+      "instrumented_kernel_user_s": 0.002106,
+      "instrumented_kernel_system_s": 0.002638,
+      "instrumented_kernel_max_rss_bytes": 2195456,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -280,8 +280,8 @@
         }
       },
       "copied_bytes_per_message": 32.0,
-      "us_per_message": 72.4314599938225,
-      "payload_mib_per_s": 0.21066521458771348
+      "us_per_message": 40.375834942096844,
+      "payload_mib_per_s": 0.37791884884566956
     },
     {
       "name": "native-small-fanout1-recoff",
@@ -298,25 +298,25 @@
       "payload_bytes": 16,
       "manifest_hash": "e4b351862395fdc8b645714dc3714915408975aaf3493d84c79e91f05bc864ee",
       "wall_s": {
-        "median": 0.008305833005579188,
-        "min": 0.008096667006611824,
-        "max": 0.013045082989265211,
-        "repeats": 5
+        "median": 0.007646582991583273,
+        "min": 0.007583500002510846,
+        "max": 0.007752707984764129,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.002139,
-        "min": 0.002034,
-        "max": 0.002387
+        "median": 0.002046,
+        "min": 0.002029,
+        "max": 0.002052
       },
       "system_s": {
-        "median": 0.002545,
-        "min": 0.002492,
-        "max": 0.004539
+        "median": 0.002376,
+        "min": 0.002356,
+        "max": 0.002469
       },
-      "max_rss_bytes": 2064384,
-      "instrumented_kernel_user_s": 0.002255,
-      "instrumented_kernel_system_s": 0.003247,
-      "instrumented_kernel_max_rss_bytes": 1998848,
+      "max_rss_bytes": 2048000,
+      "instrumented_kernel_user_s": 0.00207,
+      "instrumented_kernel_system_s": 0.00268,
+      "instrumented_kernel_max_rss_bytes": 2080768,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -348,8 +348,8 @@
         }
       },
       "copied_bytes_per_message": 32.0,
-      "us_per_message": 41.52916502789594,
-      "payload_mib_per_s": 0.3674234493337484
+      "us_per_message": 38.232914957916364,
+      "payload_mib_per_s": 0.39910085535710826
     },
     {
       "name": "native-small-fanout2-recon",
@@ -366,25 +366,25 @@
       "payload_bytes": 16,
       "manifest_hash": "7682f7f20fd316362c686ef1ee834c4737130f6ce7910cf0f595ece70a21c994",
       "wall_s": {
-        "median": 0.013574584008892998,
-        "min": 0.01247450000664685,
-        "max": 0.014536917005898431,
-        "repeats": 5
+        "median": 0.00806445800117217,
+        "min": 0.008056083985138685,
+        "max": 0.008406125009059906,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.002319,
-        "min": 0.002228,
-        "max": 0.002361
+        "median": 0.0020469999999999998,
+        "min": 0.0020469999999999998,
+        "max": 0.002059
       },
       "system_s": {
-        "median": 0.00316,
-        "min": 0.002934,
-        "max": 0.003196
+        "median": 0.002551,
+        "min": 0.0023929999999999997,
+        "max": 0.002597
       },
-      "max_rss_bytes": 2244608,
-      "instrumented_kernel_user_s": 0.002319,
-      "instrumented_kernel_system_s": 0.003523,
-      "instrumented_kernel_max_rss_bytes": 2244608,
+      "max_rss_bytes": 2211840,
+      "instrumented_kernel_user_s": 0.002049,
+      "instrumented_kernel_system_s": 0.002434,
+      "instrumented_kernel_max_rss_bytes": 2195456,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -416,8 +416,8 @@
         }
       },
       "copied_bytes_per_message": 48.0,
-      "us_per_message": 67.87292004446499,
-      "payload_mib_per_s": 0.2248140945240553
+      "us_per_message": 40.32229000586085,
+      "payload_mib_per_s": 0.3784206963513762
     },
     {
       "name": "native-small-fanout2-recoff",
@@ -434,25 +434,25 @@
       "payload_bytes": 16,
       "manifest_hash": "7682f7f20fd316362c686ef1ee834c4737130f6ce7910cf0f595ece70a21c994",
       "wall_s": {
-        "median": 0.008734125003684312,
-        "min": 0.00825345799967181,
-        "max": 0.011607666994677857,
-        "repeats": 5
+        "median": 0.024378125002840534,
+        "min": 0.00976433398318477,
+        "max": 0.027088500006357208,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.0021969999999999997,
-        "min": 0.002085,
-        "max": 0.002257
+        "median": 0.002244,
+        "min": 0.00211,
+        "max": 0.002408
       },
       "system_s": {
-        "median": 0.002675,
-        "min": 0.002463,
-        "max": 0.002797
+        "median": 0.004418,
+        "min": 0.0030269999999999997,
+        "max": 0.005624
       },
       "max_rss_bytes": 2064384,
-      "instrumented_kernel_user_s": 0.002085,
-      "instrumented_kernel_system_s": 0.002729,
-      "instrumented_kernel_max_rss_bytes": 2031616,
+      "instrumented_kernel_user_s": 0.002247,
+      "instrumented_kernel_system_s": 0.003066,
+      "instrumented_kernel_max_rss_bytes": 2064384,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -484,8 +484,8 @@
         }
       },
       "copied_bytes_per_message": 48.0,
-      "us_per_message": 43.67062501842156,
-      "payload_mib_per_s": 0.3494062440384902
+      "us_per_message": 121.89062501420267,
+      "payload_mib_per_s": 0.12518427123268955
     },
     {
       "name": "native-small-fanout4-recon",
@@ -502,25 +502,25 @@
       "payload_bytes": 16,
       "manifest_hash": "5f86c541037aec64300cb35a312548229d60ae1b65d52bc864024714007e7403",
       "wall_s": {
-        "median": 0.01339279099192936,
-        "min": 0.012458375000278465,
-        "max": 0.014627500000642613,
-        "repeats": 5
+        "median": 0.00844358399626799,
+        "min": 0.008129833004204556,
+        "max": 0.010386459005530924,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.002407,
-        "min": 0.002324,
-        "max": 0.0024749999999999998
+        "median": 0.002178,
+        "min": 0.002064,
+        "max": 0.002179
       },
       "system_s": {
-        "median": 0.003351,
-        "min": 0.002951,
-        "max": 0.003715
+        "median": 0.002608,
+        "min": 0.002349,
+        "max": 0.002701
       },
-      "max_rss_bytes": 2293760,
-      "instrumented_kernel_user_s": 0.002287,
-      "instrumented_kernel_system_s": 0.003594,
-      "instrumented_kernel_max_rss_bytes": 2244608,
+      "max_rss_bytes": 2277376,
+      "instrumented_kernel_user_s": 0.002152,
+      "instrumented_kernel_system_s": 0.002647,
+      "instrumented_kernel_max_rss_bytes": 2260992,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -552,8 +552,8 @@
         }
       },
       "copied_bytes_per_message": 80.0,
-      "us_per_message": 66.9639549596468,
-      "payload_mib_per_s": 0.22786570882342763
+      "us_per_message": 42.217919981339946,
+      "payload_mib_per_s": 0.3614292004258923
     },
     {
       "name": "native-small-fanout4-recoff",
@@ -570,25 +570,25 @@
       "payload_bytes": 16,
       "manifest_hash": "5f86c541037aec64300cb35a312548229d60ae1b65d52bc864024714007e7403",
       "wall_s": {
-        "median": 0.008815708992187865,
-        "min": 0.008458750002318993,
-        "max": 0.010629166994476691,
-        "repeats": 5
+        "median": 0.008164583006873727,
+        "min": 0.008091665979009122,
+        "max": 0.00826450000749901,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.00226,
-        "min": 0.002118,
-        "max": 0.0023409999999999998
+        "median": 0.002082,
+        "min": 0.002068,
+        "max": 0.002091
       },
       "system_s": {
-        "median": 0.002719,
-        "min": 0.002499,
-        "max": 0.00331
+        "median": 0.002314,
+        "min": 0.002307,
+        "max": 0.002327
       },
-      "max_rss_bytes": 2080768,
-      "instrumented_kernel_user_s": 0.002448,
-      "instrumented_kernel_system_s": 0.003451,
-      "instrumented_kernel_max_rss_bytes": 2064384,
+      "max_rss_bytes": 2097152,
+      "instrumented_kernel_user_s": 0.002137,
+      "instrumented_kernel_system_s": 0.002512,
+      "instrumented_kernel_max_rss_bytes": 2113536,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -620,8 +620,8 @@
         }
       },
       "copied_bytes_per_message": 80.0,
-      "us_per_message": 44.078544960939325,
-      "payload_mib_per_s": 0.34617270320564664
+      "us_per_message": 40.822915034368634,
+      "payload_mib_per_s": 0.3737799970838362
     },
     {
       "name": "native-small-fanout8-recon",
@@ -638,25 +638,25 @@
       "payload_bytes": 16,
       "manifest_hash": "5f3c962e02c55bdfe9f2753d63c7b4a46bdc8e138550f48fd0dad34e2df1b545",
       "wall_s": {
-        "median": 0.013723000010941178,
-        "min": 0.012450040987459943,
-        "max": 0.023249916994245723,
-        "repeats": 5
+        "median": 0.00805941698490642,
+        "min": 0.007964624994201586,
+        "max": 0.008240082999691367,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.00251,
-        "min": 0.0024649999999999997,
-        "max": 0.003006
+        "median": 0.002054,
+        "min": 0.002039,
+        "max": 0.0020599999999999998
       },
       "system_s": {
-        "median": 0.003279,
-        "min": 0.0032129999999999997,
-        "max": 0.005312
+        "median": 0.002165,
+        "min": 0.002156,
+        "max": 0.002168
       },
-      "max_rss_bytes": 2408448,
-      "instrumented_kernel_user_s": 0.002609,
-      "instrumented_kernel_system_s": 0.003687,
-      "instrumented_kernel_max_rss_bytes": 2375680,
+      "max_rss_bytes": 2359296,
+      "instrumented_kernel_user_s": 0.002261,
+      "instrumented_kernel_system_s": 0.00286,
+      "instrumented_kernel_max_rss_bytes": 2342912,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -688,8 +688,8 @@
         }
       },
       "copied_bytes_per_message": 144.0,
-      "us_per_message": 68.61500005470589,
-      "payload_mib_per_s": 0.22238270130925245
+      "us_per_message": 40.2970849245321,
+      "payload_mib_per_s": 0.37865739149808175
     },
     {
       "name": "native-small-fanout8-recoff",
@@ -706,24 +706,24 @@
       "payload_bytes": 16,
       "manifest_hash": "5f3c962e02c55bdfe9f2753d63c7b4a46bdc8e138550f48fd0dad34e2df1b545",
       "wall_s": {
-        "median": 0.009350042004371062,
-        "min": 0.008788040999206714,
-        "max": 0.00960133399348706,
-        "repeats": 5
+        "median": 0.008868500008247793,
+        "min": 0.00855962498462759,
+        "max": 0.009445375006180257,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.002323,
-        "min": 0.002232,
-        "max": 0.002362
+        "median": 0.002214,
+        "min": 0.0022099999999999997,
+        "max": 0.002346
       },
       "system_s": {
-        "median": 0.002708,
-        "min": 0.0026049999999999997,
-        "max": 0.002835
+        "median": 0.002506,
+        "min": 0.002434,
+        "max": 0.0031149999999999997
       },
       "max_rss_bytes": 2179072,
-      "instrumented_kernel_user_s": 0.002226,
-      "instrumented_kernel_system_s": 0.002762,
+      "instrumented_kernel_user_s": 0.002177,
+      "instrumented_kernel_system_s": 0.002566,
       "instrumented_kernel_max_rss_bytes": 2162688,
       "copies": {
         "caller_to_kernel": {
@@ -756,8 +756,8 @@
         }
       },
       "copied_bytes_per_message": 144.0,
-      "us_per_message": 46.75021002185531,
-      "payload_mib_per_s": 0.32638974360471645
+      "us_per_message": 44.342500041238964,
+      "payload_mib_per_s": 0.34411206062601735
     },
     {
       "name": "native-camera-fanout0-recon",
@@ -774,25 +774,25 @@
       "payload_bytes": 2764808,
       "manifest_hash": "7e70d76125a8c5e2fc4a4582f28622b7519bfd5e4fe605b8614ec0c268a69b54",
       "wall_s": {
-        "median": 0.4117826250003418,
-        "min": 0.3405133750056848,
-        "max": 0.4759469580021687,
-        "repeats": 5
+        "median": 0.10789362498326227,
+        "min": 0.10638450001715682,
+        "max": 0.1145217920129653,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.08336299999999999,
-        "min": 0.080764,
-        "max": 0.086731
+        "median": 0.080092,
+        "min": 0.07935199999999999,
+        "max": 0.080173
       },
       "system_s": {
-        "median": 0.030494,
-        "min": 0.028558999999999998,
-        "max": 0.03671
+        "median": 0.022319,
+        "min": 0.021393,
+        "max": 0.024048999999999997
       },
-      "max_rss_bytes": 10387456,
-      "instrumented_kernel_user_s": 0.082094,
-      "instrumented_kernel_system_s": 0.033805,
-      "instrumented_kernel_max_rss_bytes": 10403840,
+      "max_rss_bytes": 10403840,
+      "instrumented_kernel_user_s": 0.079,
+      "instrumented_kernel_system_s": 0.02421,
+      "instrumented_kernel_max_rss_bytes": 10354688,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -824,8 +824,8 @@
         }
       },
       "copied_bytes_per_message": 2764808.0,
-      "us_per_message": 8235.652500006836,
-      "payload_mib_per_s": 320.1599848211593
+      "us_per_message": 2157.8724996652454,
+      "payload_mib_per_s": 1221.9101822760942
     },
     {
       "name": "native-camera-fanout0-recoff",
@@ -842,25 +842,25 @@
       "payload_bytes": 2764808,
       "manifest_hash": "7e70d76125a8c5e2fc4a4582f28622b7519bfd5e4fe605b8614ec0c268a69b54",
       "wall_s": {
-        "median": 0.013108084007399157,
-        "min": 0.012824707999243401,
-        "max": 0.013863499989383854,
-        "repeats": 5
+        "median": 0.013612625014502555,
+        "min": 0.013265416986541823,
+        "max": 0.014017083012731746,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.007234999999999999,
-        "min": 0.007098999999999999,
-        "max": 0.007658
+        "median": 0.00767,
+        "min": 0.007568,
+        "max": 0.008073
       },
       "system_s": {
-        "median": 0.00276,
-        "min": 0.002562,
-        "max": 0.00284
+        "median": 0.00268,
+        "min": 0.002623,
+        "max": 0.00293
       },
       "max_rss_bytes": 7454720,
-      "instrumented_kernel_user_s": 0.007095,
-      "instrumented_kernel_system_s": 0.002677,
-      "instrumented_kernel_max_rss_bytes": 7454720,
+      "instrumented_kernel_user_s": 0.007835,
+      "instrumented_kernel_system_s": 0.00288,
+      "instrumented_kernel_max_rss_bytes": 7471104,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -892,8 +892,8 @@
         }
       },
       "copied_bytes_per_message": 2764808.0,
-      "us_per_message": 262.16168014798313,
-      "payload_mib_per_s": 10057.634578425692
+      "us_per_message": 272.2525002900511,
+      "payload_mib_per_s": 9684.856435057265
     },
     {
       "name": "native-camera-fanout1-recon",
@@ -910,25 +910,25 @@
       "payload_bytes": 2764808,
       "manifest_hash": "55427c374d155f8edb5ea243a40e639dc44332c8a1a739530d0ae43d3170b53f",
       "wall_s": {
-        "median": 0.41271491699444596,
-        "min": 0.35676574999524746,
-        "max": 0.5225139590038452,
-        "repeats": 5
+        "median": 0.11961195801268332,
+        "min": 0.11103237498900853,
+        "max": 0.12557679100427777,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.086445,
-        "min": 0.085342,
-        "max": 0.10069199999999999
+        "median": 0.087173,
+        "min": 0.083342,
+        "max": 0.087729
       },
       "system_s": {
-        "median": 0.033888,
-        "min": 0.032317,
-        "max": 0.041707999999999995
+        "median": 0.024255,
+        "min": 0.023760999999999997,
+        "max": 0.026982
       },
-      "max_rss_bytes": 18874368,
-      "instrumented_kernel_user_s": 0.085062,
-      "instrumented_kernel_system_s": 0.030928,
-      "instrumented_kernel_max_rss_bytes": 18874368,
+      "max_rss_bytes": 18907136,
+      "instrumented_kernel_user_s": 0.083312,
+      "instrumented_kernel_system_s": 0.022161,
+      "instrumented_kernel_max_rss_bytes": 18825216,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -960,8 +960,8 @@
         }
       },
       "copied_bytes_per_message": 5529616.0,
-      "us_per_message": 8254.29833988892,
-      "payload_mib_per_s": 319.4367674660539
+      "us_per_message": 2392.2391602536663,
+      "payload_mib_per_s": 1102.2001575774473
     },
     {
       "name": "native-camera-fanout1-recoff",
@@ -978,25 +978,25 @@
       "payload_bytes": 2764808,
       "manifest_hash": "55427c374d155f8edb5ea243a40e639dc44332c8a1a739530d0ae43d3170b53f",
       "wall_s": {
-        "median": 0.019694542002980597,
-        "min": 0.01830304200120736,
-        "max": 0.021094583004014567,
-        "repeats": 5
+        "median": 0.019863833993440494,
+        "min": 0.019861709006363526,
+        "max": 0.027975750010227785,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.012203,
-        "min": 0.011097,
-        "max": 0.01273
+        "median": 0.012299,
+        "min": 0.012086999999999999,
+        "max": 0.012666
       },
       "system_s": {
-        "median": 0.003722,
-        "min": 0.0034999999999999996,
-        "max": 0.004352
+        "median": 0.004118999999999999,
+        "min": 0.0037939999999999996,
+        "max": 0.004503
       },
-      "max_rss_bytes": 15908864,
-      "instrumented_kernel_user_s": 0.011595,
-      "instrumented_kernel_system_s": 0.003591,
-      "instrumented_kernel_max_rss_bytes": 15908864,
+      "max_rss_bytes": 15958016,
+      "instrumented_kernel_user_s": 0.014111,
+      "instrumented_kernel_system_s": 0.003751,
+      "instrumented_kernel_max_rss_bytes": 15941632,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -1028,8 +1028,8 @@
         }
       },
       "copied_bytes_per_message": 5529616.0,
-      "us_per_message": 393.89084005961195,
-      "payload_mib_per_s": 6694.053558075851
+      "us_per_message": 397.2766798688099,
+      "payload_mib_per_s": 6637.00265584489
     },
     {
       "name": "native-camera-fanout2-recon",
@@ -1046,25 +1046,25 @@
       "payload_bytes": 2764808,
       "manifest_hash": "50b8e91a411437b71f80f89ab2e6350bfdbfbf90aa3bbe6624b343d8d68d89c6",
       "wall_s": {
-        "median": 0.5108905829983996,
-        "min": 0.36583983300079126,
-        "max": 0.5351061669935007,
-        "repeats": 5
+        "median": 0.11918916599825025,
+        "min": 0.11762020800961182,
+        "max": 0.12102562500513159,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.098477,
-        "min": 0.090857,
-        "max": 0.102947
+        "median": 0.08718999999999999,
+        "min": 0.086255,
+        "max": 0.08777399999999999
       },
       "system_s": {
-        "median": 0.038482999999999996,
-        "min": 0.032934,
-        "max": 0.043948
+        "median": 0.023977,
+        "min": 0.023892,
+        "max": 0.025082
       },
-      "max_rss_bytes": 27279360,
-      "instrumented_kernel_user_s": 0.088383,
-      "instrumented_kernel_system_s": 0.031062,
-      "instrumented_kernel_max_rss_bytes": 27213824,
+      "max_rss_bytes": 27262976,
+      "instrumented_kernel_user_s": 0.088348,
+      "instrumented_kernel_system_s": 0.028711,
+      "instrumented_kernel_max_rss_bytes": 27246592,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -1096,8 +1096,8 @@
         }
       },
       "copied_bytes_per_message": 8294424.0,
-      "us_per_message": 10217.811659967992,
-      "payload_mib_per_s": 258.05196524857365
+      "us_per_message": 2383.783319965005,
+      "payload_mib_per_s": 1106.1099208602734
     },
     {
       "name": "native-camera-fanout2-recoff",
@@ -1114,25 +1114,25 @@
       "payload_bytes": 2764808,
       "manifest_hash": "50b8e91a411437b71f80f89ab2e6350bfdbfbf90aa3bbe6624b343d8d68d89c6",
       "wall_s": {
-        "median": 0.024427541997283697,
-        "min": 0.023293291000300087,
-        "max": 0.026008500004536472,
-        "repeats": 5
+        "median": 0.024187375005567446,
+        "min": 0.02345445897663012,
+        "max": 0.02428791599231772,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.015888,
-        "min": 0.015274999999999999,
-        "max": 0.017277999999999998
+        "median": 0.016016,
+        "min": 0.015602999999999999,
+        "max": 0.016026
       },
       "system_s": {
-        "median": 0.004555,
-        "min": 0.004259,
-        "max": 0.005131999999999999
+        "median": 0.004357,
+        "min": 0.0039499999999999995,
+        "max": 0.0047989999999999994
       },
-      "max_rss_bytes": 24313856,
-      "instrumented_kernel_user_s": 0.017454,
-      "instrumented_kernel_system_s": 0.008061,
-      "instrumented_kernel_max_rss_bytes": 24297472,
+      "max_rss_bytes": 24363008,
+      "instrumented_kernel_user_s": 0.016811,
+      "instrumented_kernel_system_s": 0.004659,
+      "instrumented_kernel_max_rss_bytes": 24330240,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -1164,8 +1164,8 @@
         }
       },
       "copied_bytes_per_message": 8294424.0,
-      "us_per_message": 488.55083994567394,
-      "payload_mib_per_s": 5397.0358124606455
+      "us_per_message": 483.7475001113489,
+      "payload_mib_per_s": 5450.625334058801
     },
     {
       "name": "native-camera-fanout4-recon",
@@ -1182,25 +1182,25 @@
       "payload_bytes": 2764808,
       "manifest_hash": "bbc85972c71d9d8685452c1a9d657f53bbffa613abf08f5145b26ddd65c6bbc6",
       "wall_s": {
-        "median": 0.5101941250031814,
-        "min": 0.4016069999925094,
-        "max": 0.5778810840129154,
-        "repeats": 5
+        "median": 0.12578366699744947,
+        "min": 0.1240292500006035,
+        "max": 0.14521945800515823,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.106318,
-        "min": 0.09595899999999999,
-        "max": 0.11431
+        "median": 0.09343599999999999,
+        "min": 0.093265,
+        "max": 0.093453
       },
       "system_s": {
-        "median": 0.042106,
-        "min": 0.033965999999999996,
-        "max": 0.045514
+        "median": 0.027337999999999998,
+        "min": 0.026858999999999997,
+        "max": 0.027937999999999998
       },
-      "max_rss_bytes": 44056576,
-      "instrumented_kernel_user_s": 0.097235,
-      "instrumented_kernel_system_s": 0.034984,
-      "instrumented_kernel_max_rss_bytes": 43991040,
+      "max_rss_bytes": 44023808,
+      "instrumented_kernel_user_s": 0.090718,
+      "instrumented_kernel_system_s": 0.02479,
+      "instrumented_kernel_max_rss_bytes": 43941888,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -1232,8 +1232,8 @@
         }
       },
       "copied_bytes_per_message": 13824040.0,
-      "us_per_message": 10203.882500063628,
-      "payload_mib_per_s": 258.40422793756096
+      "us_per_message": 2515.6733399489895,
+      "payload_mib_per_s": 1048.1195382258957
     },
     {
       "name": "native-camera-fanout4-recoff",
@@ -1250,25 +1250,25 @@
       "payload_bytes": 2764808,
       "manifest_hash": "bbc85972c71d9d8685452c1a9d657f53bbffa613abf08f5145b26ddd65c6bbc6",
       "wall_s": {
-        "median": 0.03414133300248068,
-        "min": 0.034019833998172544,
-        "max": 0.03629516599175986,
-        "repeats": 5
+        "median": 0.034011792013188824,
+        "min": 0.03385691702715121,
+        "max": 0.0341944579849951,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.024023,
-        "min": 0.022650999999999998,
-        "max": 0.024547
+        "median": 0.023125,
+        "min": 0.022688999999999997,
+        "max": 0.023205999999999997
       },
       "system_s": {
-        "median": 0.006532,
-        "min": 0.0057209999999999995,
-        "max": 0.006836
+        "median": 0.00663,
+        "min": 0.006593,
+        "max": 0.0072959999999999995
       },
-      "max_rss_bytes": 41074688,
-      "instrumented_kernel_user_s": 0.023828,
-      "instrumented_kernel_system_s": 0.006423,
-      "instrumented_kernel_max_rss_bytes": 41041920,
+      "max_rss_bytes": 41091072,
+      "instrumented_kernel_user_s": 0.023788,
+      "instrumented_kernel_system_s": 0.007424,
+      "instrumented_kernel_max_rss_bytes": 41091072,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -1300,8 +1300,8 @@
         }
       },
       "copied_bytes_per_message": 13824040.0,
-      "us_per_message": 682.8266600496136,
-      "payload_mib_per_s": 3861.487158692587
+      "us_per_message": 680.2358402637765,
+      "payload_mib_per_s": 3876.1944362885706
     },
     {
       "name": "native-camera-fanout8-recon",
@@ -1318,25 +1318,25 @@
       "payload_bytes": 2764808,
       "manifest_hash": "107b406a19318bd19a1e184ea54b837e7e369b43bccc18ac0534bf614ba0e629",
       "wall_s": {
-        "median": 0.4401864579995163,
-        "min": 0.3860098330042092,
-        "max": 0.47891254199203104,
-        "repeats": 5
+        "median": 0.14084970799740404,
+        "min": 0.13985208398662508,
+        "max": 0.1501210000133142,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.1109,
-        "min": 0.110457,
-        "max": 0.118638
+        "median": 0.10497999999999999,
+        "min": 0.104085,
+        "max": 0.10740899999999999
       },
       "system_s": {
-        "median": 0.038734,
-        "min": 0.036919,
-        "max": 0.041697
+        "median": 0.029183999999999998,
+        "min": 0.029047999999999997,
+        "max": 0.033382
       },
-      "max_rss_bytes": 77545472,
-      "instrumented_kernel_user_s": 0.11084,
-      "instrumented_kernel_system_s": 0.040779,
-      "instrumented_kernel_max_rss_bytes": 77496320,
+      "max_rss_bytes": 77512704,
+      "instrumented_kernel_user_s": 0.105908,
+      "instrumented_kernel_system_s": 0.030038,
+      "instrumented_kernel_max_rss_bytes": 77479936,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -1368,8 +1368,8 @@
         }
       },
       "copied_bytes_per_message": 24883272.0,
-      "us_per_message": 8803.729159990326,
-      "payload_mib_per_s": 299.5010786312546
+      "us_per_message": 2816.994159948081,
+      "payload_mib_per_s": 936.0070449855416
     },
     {
       "name": "native-camera-fanout8-recoff",
@@ -1386,25 +1386,25 @@
       "payload_bytes": 2764808,
       "manifest_hash": "107b406a19318bd19a1e184ea54b837e7e369b43bccc18ac0534bf614ba0e629",
       "wall_s": {
-        "median": 0.054555333001189865,
-        "min": 0.052981458997237496,
-        "max": 0.058938624992151745,
-        "repeats": 5
+        "median": 0.05697033301112242,
+        "min": 0.053037542005768046,
+        "max": 0.0627254169958178,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.039795,
-        "min": 0.038690999999999996,
-        "max": 0.041585
+        "median": 0.041451999999999996,
+        "min": 0.03881,
+        "max": 0.042019999999999995
       },
       "system_s": {
-        "median": 0.010136,
-        "min": 0.00889,
-        "max": 0.01141
+        "median": 0.009396999999999999,
+        "min": 0.009290999999999999,
+        "max": 0.012650999999999999
       },
       "max_rss_bytes": 74563584,
-      "instrumented_kernel_user_s": 0.041394,
-      "instrumented_kernel_system_s": 0.010957,
-      "instrumented_kernel_max_rss_bytes": 74563584,
+      "instrumented_kernel_user_s": 0.03986,
+      "instrumented_kernel_system_s": 0.008686,
+      "instrumented_kernel_max_rss_bytes": 74547200,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -1436,17 +1436,18 @@
         }
       },
       "copied_bytes_per_message": 24883272.0,
-      "us_per_message": 1091.1066600237973,
-      "payload_mib_per_s": 2416.561529683105
+      "us_per_message": 1139.4066602224484,
+      "payload_mib_per_s": 2314.122315977825
     },
     {
-      "name": "process-small-in-inline-burst1-recon",
+      "name": "process-small-in-inline-slotsn/a-burst1-recon",
       "dimensions": {
         "participants": "process",
         "direction": "in",
         "payload": "small",
         "subscribers": 1,
         "transport": "inline",
+        "slots": "n/a",
         "burst": 1,
         "recording": true
       },
@@ -1454,25 +1455,25 @@
       "payload_bytes": 16,
       "manifest_hash": "533d7a21de5b0e900ab23189799490f09d9d3fbd53fdd247464e6988ee81acc5",
       "wall_s": {
-        "median": 0.07853320900176186,
-        "min": 0.0756636659934884,
-        "max": 0.08322366699576378,
-        "repeats": 5
+        "median": 0.07169937499566004,
+        "min": 0.06961249999585561,
+        "max": 0.07631933302036487,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.042928999999999995,
-        "min": 0.041007999999999996,
-        "max": 0.043567999999999996
+        "median": 0.039800999999999996,
+        "min": 0.039784,
+        "max": 0.04221
       },
       "system_s": {
-        "median": 0.016056,
-        "min": 0.014891,
-        "max": 0.016586999999999998
+        "median": 0.014334999999999999,
+        "min": 0.013784,
+        "max": 0.015269
       },
-      "max_rss_bytes": 23150592,
-      "instrumented_kernel_user_s": 0.002897,
-      "instrumented_kernel_system_s": 0.003969,
-      "instrumented_kernel_max_rss_bytes": 2375680,
+      "max_rss_bytes": 22937600,
+      "instrumented_kernel_user_s": 0.00285,
+      "instrumented_kernel_system_s": 0.003712,
+      "instrumented_kernel_max_rss_bytes": 2408448,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -1504,17 +1505,18 @@
         }
       },
       "copied_bytes_per_message": 47.92,
-      "us_per_message": 392.6660450088093,
-      "payload_mib_per_s": 0.03885945641711311
+      "us_per_message": 358.4968749783002,
+      "payload_mib_per_s": 0.04256324148829363
     },
     {
-      "name": "process-small-in-inline-burst2-recon",
+      "name": "process-small-in-inline-slotsn/a-burst2-recon",
       "dimensions": {
         "participants": "process",
         "direction": "in",
         "payload": "small",
         "subscribers": 1,
         "transport": "inline",
+        "slots": "n/a",
         "burst": 2,
         "recording": true
       },
@@ -1522,25 +1524,25 @@
       "payload_bytes": 16,
       "manifest_hash": "84652ef60e82f83b3cd827ff5d8cf49803d4833a1f926946e3f4731e897d83ec",
       "wall_s": {
-        "median": 0.07649875000061002,
-        "min": 0.07369108300190419,
-        "max": 0.08150274999206886,
-        "repeats": 5
+        "median": 0.06766104101552628,
+        "min": 0.06686883300426416,
+        "max": 0.06960008401074447,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.041406,
-        "min": 0.040698,
-        "max": 0.043865999999999995
+        "median": 0.037593999999999995,
+        "min": 0.037419,
+        "max": 0.038925999999999995
       },
       "system_s": {
-        "median": 0.014865999999999999,
-        "min": 0.014417999999999999,
-        "max": 0.016456
+        "median": 0.012414,
+        "min": 0.012121999999999999,
+        "max": 0.012752999999999999
       },
-      "max_rss_bytes": 23134208,
-      "instrumented_kernel_user_s": 0.00288,
-      "instrumented_kernel_system_s": 0.003802,
-      "instrumented_kernel_max_rss_bytes": 2424832,
+      "max_rss_bytes": 22872064,
+      "instrumented_kernel_user_s": 0.002602,
+      "instrumented_kernel_system_s": 0.00312,
+      "instrumented_kernel_max_rss_bytes": 2392064,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -1572,43 +1574,44 @@
         }
       },
       "copied_bytes_per_message": 47.84,
-      "us_per_message": 382.4937500030501,
-      "payload_mib_per_s": 0.03989291083155822
+      "us_per_message": 338.3052050776314,
+      "payload_mib_per_s": 0.04510361896145979
     },
     {
-      "name": "process-small-in-shm-burst1-recon",
+      "name": "process-small-in-shm-slots2-burst1-recon",
       "dimensions": {
         "participants": "process",
         "direction": "in",
         "payload": "small",
         "subscribers": 1,
         "transport": "shm",
+        "slots": 2,
         "burst": 1,
         "recording": true
       },
       "messages": 200,
       "payload_bytes": 16,
-      "manifest_hash": "95547b84d64a7660f4e05296cb2aaed3caa6b34a5c13f62c8f7abfc503a2f957",
+      "manifest_hash": "aa7058d44fc0507a9d71cc15898a1eed3527d8552d60843badfe768bba1e98b3",
       "wall_s": {
-        "median": 0.08368058300402481,
-        "min": 0.08116620899818372,
-        "max": 0.0967258330056211,
-        "repeats": 5
+        "median": 0.07399108400568366,
+        "min": 0.07190849998733029,
+        "max": 0.07860312500270084,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.042503,
-        "min": 0.04017,
-        "max": 0.043078
+        "median": 0.038911999999999995,
+        "min": 0.038336999999999996,
+        "max": 0.039827
       },
       "system_s": {
-        "median": 0.015854,
-        "min": 0.014516999999999999,
-        "max": 0.016345
+        "median": 0.013406,
+        "min": 0.013368999999999999,
+        "max": 0.013418
       },
-      "max_rss_bytes": 23019520,
-      "instrumented_kernel_user_s": 0.003087,
-      "instrumented_kernel_system_s": 0.004215,
-      "instrumented_kernel_max_rss_bytes": 2392064,
+      "max_rss_bytes": 22953984,
+      "instrumented_kernel_user_s": 0.002912,
+      "instrumented_kernel_system_s": 0.003444,
+      "instrumented_kernel_max_rss_bytes": 2359296,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -1640,43 +1643,44 @@
         }
       },
       "copied_bytes_per_message": 47.92,
-      "us_per_message": 418.40291502012406,
-      "payload_mib_per_s": 0.03646912704173223
+      "us_per_message": 369.9554200284183,
+      "payload_mib_per_s": 0.041244939893914485
     },
     {
-      "name": "process-small-in-shm-burst2-recon",
+      "name": "process-small-in-shm-slots2-burst2-recon",
       "dimensions": {
         "participants": "process",
         "direction": "in",
         "payload": "small",
         "subscribers": 1,
         "transport": "shm",
+        "slots": 2,
         "burst": 2,
         "recording": true
       },
       "messages": 200,
       "payload_bytes": 16,
-      "manifest_hash": "26698b3fdd92eb1ea90239397cd88bf896e8391acb60cf9c3a9156321e48a79f",
+      "manifest_hash": "9a5baade405cf53d02a80c2a86b128755cb47ff914fea2faf4ddcd668ddb37b6",
       "wall_s": {
-        "median": 0.0840769589995034,
-        "min": 0.0823457079968648,
-        "max": 0.08833808300551027,
-        "repeats": 5
+        "median": 0.07166708301519975,
+        "min": 0.07103295900742523,
+        "max": 0.07315362498047762,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.041708999999999996,
-        "min": 0.040265999999999996,
-        "max": 0.043334
+        "median": 0.03832,
+        "min": 0.038064,
+        "max": 0.038744
       },
       "system_s": {
-        "median": 0.015611,
-        "min": 0.014593,
-        "max": 0.01629
+        "median": 0.013748999999999999,
+        "min": 0.012903999999999999,
+        "max": 0.013940999999999999
       },
-      "max_rss_bytes": 23052288,
-      "instrumented_kernel_user_s": 0.002764,
-      "instrumented_kernel_system_s": 0.004085,
-      "instrumented_kernel_max_rss_bytes": 2424832,
+      "max_rss_bytes": 22822912,
+      "instrumented_kernel_user_s": 0.002606,
+      "instrumented_kernel_system_s": 0.003614,
+      "instrumented_kernel_max_rss_bytes": 2342912,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -1691,16 +1695,16 @@
           "bytes": 3200
         },
         "arena_write": {
-          "count": 99,
-          "bytes": 1584
+          "count": 198,
+          "bytes": 3168
         },
         "arena_read": {
           "count": 0,
           "bytes": 0
         },
         "inline_encode": {
-          "count": 99,
-          "bytes": 1584
+          "count": 0,
+          "bytes": 0
         },
         "inline_decode": {
           "count": 0,
@@ -1708,17 +1712,18 @@
         }
       },
       "copied_bytes_per_message": 47.84,
-      "us_per_message": 420.384794997517,
-      "payload_mib_per_s": 0.03629719543636236
+      "us_per_message": 358.33541507599875,
+      "payload_mib_per_s": 0.04258241976798132
     },
     {
-      "name": "process-small-out-inline-burst1-recon",
+      "name": "process-small-out-inline-slotsn/a-burst1-recon",
       "dimensions": {
         "participants": "process",
         "direction": "out",
         "payload": "small",
         "subscribers": 1,
         "transport": "inline",
+        "slots": "n/a",
         "burst": 1,
         "recording": true
       },
@@ -1726,25 +1731,25 @@
       "payload_bytes": 16,
       "manifest_hash": "9095b28d35ea2bbf69a17cf4789b891b44ce2d676b094a6d0ff260c32cabb564",
       "wall_s": {
-        "median": 0.07839045900618657,
-        "min": 0.0769459159928374,
-        "max": 0.08766716599348001,
-        "repeats": 5
+        "median": 0.07422512499033473,
+        "min": 0.06946937498287298,
+        "max": 0.08609820800484158,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.044072,
-        "min": 0.043342,
-        "max": 0.044426
+        "median": 0.041677,
+        "min": 0.039817,
+        "max": 0.044767999999999995
       },
       "system_s": {
-        "median": 0.016524,
-        "min": 0.015952,
-        "max": 0.016694999999999998
+        "median": 0.015554,
+        "min": 0.014105999999999999,
+        "max": 0.016534
       },
-      "max_rss_bytes": 22986752,
-      "instrumented_kernel_user_s": 0.003186,
-      "instrumented_kernel_system_s": 0.004043,
-      "instrumented_kernel_max_rss_bytes": 2375680,
+      "max_rss_bytes": 22970368,
+      "instrumented_kernel_user_s": 0.003075,
+      "instrumented_kernel_system_s": 0.003792,
+      "instrumented_kernel_max_rss_bytes": 2342912,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -1776,17 +1781,18 @@
         }
       },
       "copied_bytes_per_message": 48.0,
-      "us_per_message": 391.9522950309329,
-      "payload_mib_per_s": 0.03893021996795752
+      "us_per_message": 371.1256249516737,
+      "payload_mib_per_s": 0.04111488950537148
     },
     {
-      "name": "process-small-out-inline-burst2-recon",
+      "name": "process-small-out-inline-slotsn/a-burst2-recon",
       "dimensions": {
         "participants": "process",
         "direction": "out",
         "payload": "small",
         "subscribers": 1,
         "transport": "inline",
+        "slots": "n/a",
         "burst": 2,
         "recording": true
       },
@@ -1794,25 +1800,25 @@
       "payload_bytes": 16,
       "manifest_hash": "1112550d821af39099e731bb8bf2fedcc4dcef91496e89384cc0de2291c96c7c",
       "wall_s": {
-        "median": 0.07603554200613871,
-        "min": 0.07478675000311341,
-        "max": 0.07665004099544603,
-        "repeats": 5
+        "median": 0.06745937501545995,
+        "min": 0.06710204199771397,
+        "max": 0.0717904580233153,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.041729999999999996,
-        "min": 0.041521999999999996,
-        "max": 0.04389
+        "median": 0.038138,
+        "min": 0.037524999999999996,
+        "max": 0.040234
       },
       "system_s": {
-        "median": 0.014858,
-        "min": 0.014596999999999999,
-        "max": 0.017004
+        "median": 0.013744,
+        "min": 0.012357,
+        "max": 0.013829999999999999
       },
-      "max_rss_bytes": 23019520,
-      "instrumented_kernel_user_s": 0.003042,
-      "instrumented_kernel_system_s": 0.004308,
-      "instrumented_kernel_max_rss_bytes": 2375680,
+      "max_rss_bytes": 23052288,
+      "instrumented_kernel_user_s": 0.002699,
+      "instrumented_kernel_system_s": 0.003308,
+      "instrumented_kernel_max_rss_bytes": 2342912,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -1844,42 +1850,112 @@
         }
       },
       "copied_bytes_per_message": 48.0,
-      "us_per_message": 380.17771003069356,
-      "payload_mib_per_s": 0.040135938167621885
+      "us_per_message": 337.2968750772998,
+      "payload_mib_per_s": 0.04523845368861801
     },
     {
-      "name": "process-small-out-shm-burst1-recon",
+      "name": "process-small-out-shm-slots2-burst1-recon",
       "dimensions": {
         "participants": "process",
         "direction": "out",
         "payload": "small",
         "subscribers": 1,
         "transport": "shm",
+        "slots": 2,
         "burst": 1,
         "recording": true
       },
       "messages": 200,
       "payload_bytes": 16,
-      "manifest_hash": "095334d1c29a8b34021fbe9946168027343c663b88e2ce4ca569bdbb3f723339",
+      "manifest_hash": "a47a2158c624c52582d2638dea595c71f4055bd2e15d039c62a9e06a107fe297",
       "wall_s": {
-        "median": 0.09286304100533016,
-        "min": 0.09009712500846945,
-        "max": 0.10982212499948218,
-        "repeats": 5
+        "median": 0.0975466670060996,
+        "min": 0.07526400001370348,
+        "max": 0.0991634159872774,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.042769999999999996,
-        "min": 0.042402999999999996,
-        "max": 0.044093
+        "median": 0.040153999999999995,
+        "min": 0.039866,
+        "max": 0.043586
       },
       "system_s": {
-        "median": 0.017556,
-        "min": 0.01627,
-        "max": 0.019649
+        "median": 0.014854,
+        "min": 0.014537,
+        "max": 0.019017
       },
-      "max_rss_bytes": 23068672,
-      "instrumented_kernel_user_s": 0.003025,
-      "instrumented_kernel_system_s": 0.00446,
+      "max_rss_bytes": 23183360,
+      "instrumented_kernel_user_s": 0.00276,
+      "instrumented_kernel_system_s": 0.003453,
+      "instrumented_kernel_max_rss_bytes": 2310144,
+      "copies": {
+        "caller_to_kernel": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "subscriber_copy": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "recorded": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "arena_write": {
+          "count": 0,
+          "bytes": 0
+        },
+        "arena_read": {
+          "count": 200,
+          "bytes": 3200
+        },
+        "inline_encode": {
+          "count": 0,
+          "bytes": 0
+        },
+        "inline_decode": {
+          "count": 0,
+          "bytes": 0
+        }
+      },
+      "copied_bytes_per_message": 48.0,
+      "us_per_message": 487.733335030498,
+      "payload_mib_per_s": 0.03128510595148447
+    },
+    {
+      "name": "process-small-out-shm-slots2-burst2-recon",
+      "dimensions": {
+        "participants": "process",
+        "direction": "out",
+        "payload": "small",
+        "subscribers": 1,
+        "transport": "shm",
+        "slots": 2,
+        "burst": 2,
+        "recording": true
+      },
+      "messages": 200,
+      "payload_bytes": 16,
+      "manifest_hash": "f18c9e57132a0949174c923ba625a7fd3f1c8cfc4b04a4d7111c8f2630b9d6e8",
+      "wall_s": {
+        "median": 0.08512258299742825,
+        "min": 0.07959616600419395,
+        "max": 0.09019091699155979,
+        "repeats": 3
+      },
+      "user_s": {
+        "median": 0.042325,
+        "min": 0.041153999999999996,
+        "max": 0.043163
+      },
+      "system_s": {
+        "median": 0.017148999999999998,
+        "min": 0.015512999999999999,
+        "max": 0.017683
+      },
+      "max_rss_bytes": 22937600,
+      "instrumented_kernel_user_s": 0.002706,
+      "instrumented_kernel_system_s": 0.003691,
       "instrumented_kernel_max_rss_bytes": 2342912,
       "copies": {
         "caller_to_kernel": {
@@ -1912,85 +1988,18 @@
         }
       },
       "copied_bytes_per_message": 48.0,
-      "us_per_message": 464.3152050266508,
-      "payload_mib_per_s": 0.03286299672573543
+      "us_per_message": 425.61291498714127,
+      "payload_mib_per_s": 0.035851329988332244
     },
     {
-      "name": "process-small-out-shm-burst2-recon",
-      "dimensions": {
-        "participants": "process",
-        "direction": "out",
-        "payload": "small",
-        "subscribers": 1,
-        "transport": "shm",
-        "burst": 2,
-        "recording": true
-      },
-      "messages": 200,
-      "payload_bytes": 16,
-      "manifest_hash": "3dcd2f7bd280f03ed51ff8ba388c27fe4a2baa7b67042ff108256fecc25efd58",
-      "wall_s": {
-        "median": 0.0791354999964824,
-        "min": 0.07789804200001527,
-        "max": 0.08508579099725466,
-        "repeats": 5
-      },
-      "user_s": {
-        "median": 0.040926,
-        "min": 0.040589,
-        "max": 0.042634
-      },
-      "system_s": {
-        "median": 0.014731999999999999,
-        "min": 0.01445,
-        "max": 0.015671
-      },
-      "max_rss_bytes": 22986752,
-      "instrumented_kernel_user_s": 0.002885,
-      "instrumented_kernel_system_s": 0.004265,
-      "instrumented_kernel_max_rss_bytes": 2408448,
-      "copies": {
-        "caller_to_kernel": {
-          "count": 200,
-          "bytes": 3200
-        },
-        "subscriber_copy": {
-          "count": 200,
-          "bytes": 3200
-        },
-        "recorded": {
-          "count": 200,
-          "bytes": 3200
-        },
-        "arena_write": {
-          "count": 0,
-          "bytes": 0
-        },
-        "arena_read": {
-          "count": 100,
-          "bytes": 1600
-        },
-        "inline_encode": {
-          "count": 0,
-          "bytes": 0
-        },
-        "inline_decode": {
-          "count": 100,
-          "bytes": 1600
-        }
-      },
-      "copied_bytes_per_message": 48.0,
-      "us_per_message": 395.677499982412,
-      "payload_mib_per_s": 0.038563701658998195
-    },
-    {
-      "name": "process-camera-in-inline-burst1-recon",
+      "name": "process-camera-in-inline-slotsn/a-burst1-recon",
       "dimensions": {
         "participants": "process",
         "direction": "in",
         "payload": "camera",
         "subscribers": 1,
         "transport": "inline",
+        "slots": "n/a",
         "burst": 1,
         "recording": true
       },
@@ -1998,25 +2007,25 @@
       "payload_bytes": 2764808,
       "manifest_hash": "03b30f4415f5110a6365e97e0c196eea0e79bacd335f49896897abe3a99abd97",
       "wall_s": {
-        "median": 2.059803791999002,
-        "min": 2.026802625012351,
-        "max": 2.109888791994308,
-        "repeats": 5
+        "median": 1.753955499996664,
+        "min": 1.7431636250112206,
+        "max": 1.7754105839994736,
+        "repeats": 3
       },
       "user_s": {
-        "median": 1.646332,
-        "min": 1.640604,
-        "max": 1.6538249999999999
+        "median": 1.621198,
+        "min": 1.618707,
+        "max": 1.639837
       },
       "system_s": {
-        "median": 0.147914,
-        "min": 0.145237,
-        "max": 0.151395
+        "median": 0.10869,
+        "min": 0.107957,
+        "max": 0.114548
       },
-      "max_rss_bytes": 45318144,
-      "instrumented_kernel_user_s": 1.026836,
-      "instrumented_kernel_system_s": 0.085773,
-      "instrumented_kernel_max_rss_bytes": 35766272,
+      "max_rss_bytes": 45252608,
+      "instrumented_kernel_user_s": 1.014605,
+      "instrumented_kernel_system_s": 0.069616,
+      "instrumented_kernel_max_rss_bytes": 35815424,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -2048,17 +2057,18 @@
         }
       },
       "copied_bytes_per_message": 8239127.84,
-      "us_per_message": 41196.07583998004,
-      "payload_mib_per_s": 64.00430928510032
+      "us_per_message": 35079.10999993328,
+      "payload_mib_per_s": 75.1651447086185
     },
     {
-      "name": "process-camera-in-inline-burst2-recon",
+      "name": "process-camera-in-inline-slotsn/a-burst2-recon",
       "dimensions": {
         "participants": "process",
         "direction": "in",
         "payload": "camera",
         "subscribers": 1,
         "transport": "inline",
+        "slots": "n/a",
         "burst": 2,
         "recording": true
       },
@@ -2066,25 +2076,25 @@
       "payload_bytes": 2764808,
       "manifest_hash": "b44b36a786bb552e25f72e10dd591c790c4c3885ca24b5d4a5f01518c4058f91",
       "wall_s": {
-        "median": 2.050043708004523,
-        "min": 1.9893128330004402,
-        "max": 2.0633592499943916,
-        "repeats": 5
+        "median": 1.8032344579987694,
+        "min": 1.7853517920011654,
+        "max": 1.8409088329935912,
+        "repeats": 3
       },
       "user_s": {
-        "median": 1.608613,
-        "min": 1.597984,
-        "max": 1.61484
+        "median": 1.6219459999999999,
+        "min": 1.617689,
+        "max": 1.634649
       },
       "system_s": {
-        "median": 0.155836,
-        "min": 0.153631,
-        "max": 0.162994
+        "median": 0.14473999999999998,
+        "min": 0.134212,
+        "max": 0.156102
       },
-      "max_rss_bytes": 80723968,
-      "instrumented_kernel_user_s": 1.003476,
-      "instrumented_kernel_system_s": 0.092779,
-      "instrumented_kernel_max_rss_bytes": 60702720,
+      "max_rss_bytes": 80855040,
+      "instrumented_kernel_user_s": 1.023031,
+      "instrumented_kernel_system_s": 0.085541,
+      "instrumented_kernel_max_rss_bytes": 60538880,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -2116,43 +2126,44 @@
         }
       },
       "copied_bytes_per_message": 8183831.68,
-      "us_per_message": 41000.87416009046,
-      "payload_mib_per_s": 64.30902836606042
+      "us_per_message": 36064.68915997539,
+      "payload_mib_per_s": 73.11102468396626
     },
     {
-      "name": "process-camera-in-shm-burst1-recon",
+      "name": "process-camera-in-shm-slots2-burst1-recon",
       "dimensions": {
         "participants": "process",
         "direction": "in",
         "payload": "camera",
         "subscribers": 1,
         "transport": "shm",
+        "slots": 2,
         "burst": 1,
         "recording": true
       },
       "messages": 50,
       "payload_bytes": 2764808,
-      "manifest_hash": "8fe3b42c3fb08d4232d667d8fc9ba76c4d2e468a9661969415f982484b5d7dc4",
+      "manifest_hash": "90d8e2c009c29d388d29158ee070ec621af75b4d5e8c95b8632af1d47dfb0f61",
       "wall_s": {
-        "median": 0.4979328330082353,
-        "min": 0.4884997079934692,
-        "max": 0.5076594169950113,
-        "repeats": 5
+        "median": 0.20597920802538283,
+        "min": 0.2036445419944357,
+        "max": 0.2068156659952365,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.13957799999999998,
-        "min": 0.13899699999999998,
-        "max": 0.14088499999999998
+        "median": 0.140672,
+        "min": 0.139018,
+        "max": 0.141061
       },
       "system_s": {
-        "median": 0.046682999999999995,
-        "min": 0.045370999999999995,
-        "max": 0.048257
+        "median": 0.041946,
+        "min": 0.039659,
+        "max": 0.042047999999999995
       },
-      "max_rss_bytes": 34144256,
-      "instrumented_kernel_user_s": 0.090044,
-      "instrumented_kernel_system_s": 0.033413,
-      "instrumented_kernel_max_rss_bytes": 19005440,
+      "max_rss_bytes": 34127872,
+      "instrumented_kernel_user_s": 0.089283,
+      "instrumented_kernel_system_s": 0.027358,
+      "instrumented_kernel_max_rss_bytes": 19021824,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -2184,43 +2195,44 @@
         }
       },
       "copied_bytes_per_message": 8239127.84,
-      "us_per_message": 9958.656660164706,
-      "payload_mib_per_s": 264.7672742792322
+      "us_per_message": 4119.584160507657,
+      "payload_mib_per_s": 640.0467320637546
     },
     {
-      "name": "process-camera-in-shm-burst2-recon",
+      "name": "process-camera-in-shm-slots2-burst2-recon",
       "dimensions": {
         "participants": "process",
         "direction": "in",
         "payload": "camera",
         "subscribers": 1,
         "transport": "shm",
+        "slots": 2,
         "burst": 2,
         "recording": true
       },
       "messages": 50,
       "payload_bytes": 2764808,
-      "manifest_hash": "7c3120e342e65340dfc090e1d90912022730c6e3968b313eb828a24a75e49a10",
+      "manifest_hash": "05eeaa9f45598b0f8f45e735e4daf6f2f68bcb4251e917ed703e2acb69460c50",
       "wall_s": {
-        "median": 1.2534976249880856,
-        "min": 1.2382903329998953,
-        "max": 1.300770250003552,
-        "repeats": 5
+        "median": 0.22290595900267363,
+        "min": 0.20916091700200923,
+        "max": 0.24523299999418668,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.875041,
-        "min": 0.8721,
-        "max": 0.875917
+        "median": 0.13822399999999999,
+        "min": 0.136783,
+        "max": 0.14021999999999998
       },
       "system_s": {
-        "median": 0.103018,
-        "min": 0.09887699999999999,
-        "max": 0.10480199999999999
+        "median": 0.042262999999999995,
+        "min": 0.041873,
+        "max": 0.044975
       },
-      "max_rss_bytes": 56410112,
-      "instrumented_kernel_user_s": 0.549807,
-      "instrumented_kernel_system_s": 0.062839,
-      "instrumented_kernel_max_rss_bytes": 48152576,
+      "max_rss_bytes": 42418176,
+      "instrumented_kernel_user_s": 0.090052,
+      "instrumented_kernel_system_s": 0.029215,
+      "instrumented_kernel_max_rss_bytes": 27328512,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -2235,16 +2247,16 @@
           "bytes": 138240400
         },
         "arena_write": {
-          "count": 24,
-          "bytes": 66355392
+          "count": 48,
+          "bytes": 132710784
         },
         "arena_read": {
           "count": 0,
           "bytes": 0
         },
         "inline_encode": {
-          "count": 24,
-          "bytes": 66355392
+          "count": 0,
+          "bytes": 0
         },
         "inline_decode": {
           "count": 0,
@@ -2252,17 +2264,18 @@
         }
       },
       "copied_bytes_per_message": 8183831.68,
-      "us_per_message": 25069.95249976171,
-      "payload_mib_per_s": 105.17476566497656
+      "us_per_message": 4458.1191800534725,
+      "payload_mib_per_s": 591.4436722983492
     },
     {
-      "name": "process-camera-out-inline-burst1-recon",
+      "name": "process-camera-out-inline-slotsn/a-burst1-recon",
       "dimensions": {
         "participants": "process",
         "direction": "out",
         "payload": "camera",
         "subscribers": 1,
         "transport": "inline",
+        "slots": "n/a",
         "burst": 1,
         "recording": true
       },
@@ -2270,25 +2283,25 @@
       "payload_bytes": 2764808,
       "manifest_hash": "570499f7fc2df47576fa26f9d077b37c8301679595ec4fa94519d61e18de834d",
       "wall_s": {
-        "median": 4.149321791992406,
-        "min": 4.0600062500016065,
-        "max": 4.277009875004296,
-        "repeats": 5
+        "median": 3.8477612909919117,
+        "min": 3.8476873339968733,
+        "max": 3.8509985000127926,
+        "repeats": 3
       },
       "user_s": {
-        "median": 3.607046,
-        "min": 3.584337,
-        "max": 3.729118
+        "median": 3.604921,
+        "min": 3.60308,
+        "max": 3.609645
       },
       "system_s": {
-        "median": 0.341362,
-        "min": 0.33674299999999996,
-        "max": 0.36260899999999996
+        "median": 0.339292,
+        "min": 0.33299799999999996,
+        "max": 0.346643
       },
-      "max_rss_bytes": 270270464,
-      "instrumented_kernel_user_s": 3.009531,
-      "instrumented_kernel_system_s": 0.152839,
-      "instrumented_kernel_max_rss_bytes": 57147392,
+      "max_rss_bytes": 271237120,
+      "instrumented_kernel_user_s": 3.010254,
+      "instrumented_kernel_system_s": 0.136488,
+      "instrumented_kernel_max_rss_bytes": 56541184,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -2320,17 +2333,18 @@
         }
       },
       "copied_bytes_per_message": 8294424.0,
-      "us_per_message": 82986.43583984813,
-      "payload_mib_per_s": 31.772980158866368
+      "us_per_message": 76955.22581983823,
+      "payload_mib_per_s": 34.263123151213094
     },
     {
-      "name": "process-camera-out-inline-burst2-recon",
+      "name": "process-camera-out-inline-slotsn/a-burst2-recon",
       "dimensions": {
         "participants": "process",
         "direction": "out",
         "payload": "camera",
         "subscribers": 1,
         "transport": "inline",
+        "slots": "n/a",
         "burst": 2,
         "recording": true
       },
@@ -2338,25 +2352,25 @@
       "payload_bytes": 2764808,
       "manifest_hash": "79bf47d6a26f4cbd20049beaeb79e8bdcfbc09002dd7e735e696c3557968247c",
       "wall_s": {
-        "median": 6.788197333007702,
-        "min": 6.522080499998992,
-        "max": 7.222770417007268,
-        "repeats": 5
+        "median": 5.9156698750157375,
+        "min": 5.9110869580181316,
+        "max": 5.939999750000425,
+        "repeats": 3
       },
       "user_s": {
-        "median": 6.150204,
-        "min": 5.739205,
-        "max": 6.280848
+        "median": 5.638081,
+        "min": 5.625786,
+        "max": 5.638477
       },
       "system_s": {
-        "median": 0.41520199999999996,
-        "min": 0.41059599999999996,
-        "max": 0.43283499999999997
+        "median": 0.385613,
+        "min": 0.383332,
+        "max": 0.39214699999999997
       },
-      "max_rss_bytes": 253427712,
-      "instrumented_kernel_user_s": 5.352651,
-      "instrumented_kernel_system_s": 0.188517,
-      "instrumented_kernel_max_rss_bytes": 79282176,
+      "max_rss_bytes": 259620864,
+      "instrumented_kernel_user_s": 5.047671,
+      "instrumented_kernel_system_s": 0.164087,
+      "instrumented_kernel_max_rss_bytes": 81887232,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -2388,43 +2402,44 @@
         }
       },
       "copied_bytes_per_message": 8294424.0,
-      "us_per_message": 135763.94666015403,
-      "payload_mib_per_s": 19.42140343043221
+      "us_per_message": 118313.39750031475,
+      "payload_mib_per_s": 22.285949310072994
     },
     {
-      "name": "process-camera-out-shm-burst1-recon",
+      "name": "process-camera-out-shm-slots2-burst1-recon",
       "dimensions": {
         "participants": "process",
         "direction": "out",
         "payload": "camera",
         "subscribers": 1,
         "transport": "shm",
+        "slots": 2,
         "burst": 1,
         "recording": true
       },
       "messages": 50,
       "payload_bytes": 2764808,
-      "manifest_hash": "80b500f79c33d1cbf6948c13524cfbe8d0a945d65dec881dca9c6b173b8a8082",
+      "manifest_hash": "9d36a1c6459870cedd43658172b3b7bff13f88dddb16ca95c307d6ea4ea90a0f",
       "wall_s": {
-        "median": 0.23907883300853427,
-        "min": 0.21734287499566562,
-        "max": 0.2719739589956589,
-        "repeats": 5
+        "median": 0.20297829099581577,
+        "min": 0.1972854589985218,
+        "max": 0.20651008302229457,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.14554699999999998,
-        "min": 0.137062,
-        "max": 0.147763
+        "median": 0.137181,
+        "min": 0.135983,
+        "max": 0.139296
       },
       "system_s": {
-        "median": 0.044437,
-        "min": 0.040931999999999996,
-        "max": 0.047439999999999996
+        "median": 0.038244,
+        "min": 0.037177,
+        "max": 0.039923
       },
-      "max_rss_bytes": 31408128,
-      "instrumented_kernel_user_s": 0.088823,
-      "instrumented_kernel_system_s": 0.02924,
-      "instrumented_kernel_max_rss_bytes": 21757952,
+      "max_rss_bytes": 31424512,
+      "instrumented_kernel_user_s": 0.088985,
+      "instrumented_kernel_system_s": 0.029076,
+      "instrumented_kernel_max_rss_bytes": 21725184,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -2456,43 +2471,44 @@
         }
       },
       "copied_bytes_per_message": 8294424.0,
-      "us_per_message": 4781.5766601706855,
-      "payload_mib_per_s": 551.4345093236275
+      "us_per_message": 4059.565819916316,
+      "payload_mib_per_s": 649.5094540550855
     },
     {
-      "name": "process-camera-out-shm-burst2-recon",
+      "name": "process-camera-out-shm-slots2-burst2-recon",
       "dimensions": {
         "participants": "process",
         "direction": "out",
         "payload": "camera",
         "subscribers": 1,
         "transport": "shm",
+        "slots": 2,
         "burst": 2,
         "recording": true
       },
       "messages": 50,
       "payload_bytes": 2764808,
-      "manifest_hash": "2d68116192b6df766f91e39386957e393307b1d13d0af830e10ee05438ace8d7",
+      "manifest_hash": "fb21a613ebcf4c7561cf8bb765c19718e2a3383e73429b6537948503408c974b",
       "wall_s": {
-        "median": 1.999070040998049,
-        "min": 1.976114166987827,
-        "max": 2.211973666009726,
-        "repeats": 5
+        "median": 0.20898208301514387,
+        "min": 0.2011812090058811,
+        "max": 0.21672299999045208,
+        "repeats": 3
       },
       "user_s": {
-        "median": 1.8441589999999999,
-        "min": 1.827858,
-        "max": 1.886436
+        "median": 0.13650299999999999,
+        "min": 0.136438,
+        "max": 0.136754
       },
       "system_s": {
-        "median": 0.161705,
-        "min": 0.154322,
-        "max": 0.232228
+        "median": 0.042262,
+        "min": 0.041093,
+        "max": 0.042386
       },
-      "max_rss_bytes": 223756288,
-      "instrumented_kernel_user_s": 1.530252,
-      "instrumented_kernel_system_s": 0.089913,
-      "instrumented_kernel_max_rss_bytes": 69435392,
+      "max_rss_bytes": 36962304,
+      "instrumented_kernel_user_s": 0.086572,
+      "instrumented_kernel_system_s": 0.0262,
+      "instrumented_kernel_max_rss_bytes": 32882688,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -2511,56 +2527,57 @@
           "bytes": 0
         },
         "arena_read": {
-          "count": 25,
-          "bytes": 69120200
+          "count": 50,
+          "bytes": 138240400
         },
         "inline_encode": {
           "count": 0,
           "bytes": 0
         },
         "inline_decode": {
-          "count": 25,
-          "bytes": 69120200
+          "count": 0,
+          "bytes": 0
         }
       },
       "copied_bytes_per_message": 8294424.0,
-      "us_per_message": 39981.40081996098,
-      "payload_mib_per_s": 65.94882433629309
+      "us_per_message": 4179.641660302877,
+      "payload_mib_per_s": 630.8498655369085
     },
     {
-      "name": "process-small-in-shm-burst1-recoff",
+      "name": "process-small-in-shm-slots2-burst1-recoff",
       "dimensions": {
         "participants": "process",
         "direction": "in",
         "payload": "small",
         "subscribers": 1,
         "transport": "shm",
+        "slots": 2,
         "burst": 1,
         "recording": false
       },
       "messages": 200,
       "payload_bytes": 16,
-      "manifest_hash": "95547b84d64a7660f4e05296cb2aaed3caa6b34a5c13f62c8f7abfc503a2f957",
+      "manifest_hash": "aa7058d44fc0507a9d71cc15898a1eed3527d8552d60843badfe768bba1e98b3",
       "wall_s": {
-        "median": 0.07764395899721421,
-        "min": 0.07516679199761711,
-        "max": 0.0826237090077484,
-        "repeats": 5
+        "median": 0.08066079198033549,
+        "min": 0.08005650000995956,
+        "max": 0.08111304198973812,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.041698,
-        "min": 0.039944,
-        "max": 0.042163
+        "median": 0.043336,
+        "min": 0.043106,
+        "max": 0.043803999999999996
       },
       "system_s": {
-        "median": 0.014634999999999999,
-        "min": 0.014247999999999999,
-        "max": 0.015479999999999999
+        "median": 0.016337,
+        "min": 0.016263,
+        "max": 0.016496999999999998
       },
-      "max_rss_bytes": 23134208,
-      "instrumented_kernel_user_s": 0.002703,
-      "instrumented_kernel_system_s": 0.003736,
-      "instrumented_kernel_max_rss_bytes": 2195456,
+      "max_rss_bytes": 22921216,
+      "instrumented_kernel_user_s": 0.003281,
+      "instrumented_kernel_system_s": 0.004487,
+      "instrumented_kernel_max_rss_bytes": 2244608,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -2592,43 +2609,44 @@
         }
       },
       "copied_bytes_per_message": 47.92,
-      "us_per_message": 388.21979498607107,
-      "payload_mib_per_s": 0.03930451063951407
+      "us_per_message": 403.30395990167744,
+      "payload_mib_per_s": 0.03783446377818849
     },
     {
-      "name": "process-small-out-shm-burst1-recoff",
+      "name": "process-small-out-shm-slots2-burst1-recoff",
       "dimensions": {
         "participants": "process",
         "direction": "out",
         "payload": "small",
         "subscribers": 1,
         "transport": "shm",
+        "slots": 2,
         "burst": 1,
         "recording": false
       },
       "messages": 200,
       "payload_bytes": 16,
-      "manifest_hash": "095334d1c29a8b34021fbe9946168027343c663b88e2ce4ca569bdbb3f723339",
+      "manifest_hash": "a47a2158c624c52582d2638dea595c71f4055bd2e15d039c62a9e06a107fe297",
       "wall_s": {
-        "median": 0.07639187498716637,
-        "min": 0.07345495899789967,
-        "max": 0.08305674999428447,
-        "repeats": 5
+        "median": 0.07852483302121982,
+        "min": 0.07654029101831838,
+        "max": 0.08228454098571092,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.040485,
-        "min": 0.039382,
-        "max": 0.042922999999999996
+        "median": 0.043497,
+        "min": 0.043442,
+        "max": 0.044677999999999995
       },
       "system_s": {
-        "median": 0.015089,
-        "min": 0.014046,
-        "max": 0.015718
+        "median": 0.016323,
+        "min": 0.016054,
+        "max": 0.017512
       },
-      "max_rss_bytes": 23101440,
-      "instrumented_kernel_user_s": 0.002832,
-      "instrumented_kernel_system_s": 0.003402,
-      "instrumented_kernel_max_rss_bytes": 2146304,
+      "max_rss_bytes": 23117824,
+      "instrumented_kernel_user_s": 0.00329,
+      "instrumented_kernel_system_s": 0.004372,
+      "instrumented_kernel_max_rss_bytes": 2195456,
       "copies": {
         "caller_to_kernel": {
           "count": 200,
@@ -2660,43 +2678,44 @@
         }
       },
       "copied_bytes_per_message": 48.0,
-      "us_per_message": 381.9593749358319,
-      "payload_mib_per_s": 0.03994872246574242
+      "us_per_message": 392.6241651060991,
+      "payload_mib_per_s": 0.03886360142498261
     },
     {
-      "name": "process-camera-in-shm-burst1-recoff",
+      "name": "process-camera-in-shm-slots2-burst1-recoff",
       "dimensions": {
         "participants": "process",
         "direction": "in",
         "payload": "camera",
         "subscribers": 1,
         "transport": "shm",
+        "slots": 2,
         "burst": 1,
         "recording": false
       },
       "messages": 50,
       "payload_bytes": 2764808,
-      "manifest_hash": "8fe3b42c3fb08d4232d667d8fc9ba76c4d2e468a9661969415f982484b5d7dc4",
+      "manifest_hash": "90d8e2c009c29d388d29158ee070ec621af75b4d5e8c95b8632af1d47dfb0f61",
       "wall_s": {
-        "median": 0.10548979199666064,
-        "min": 0.10206966700206976,
-        "max": 0.1079750420030905,
-        "repeats": 5
+        "median": 0.10384329198859632,
+        "min": 0.10301879199687392,
+        "max": 0.112411209003767,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.062241,
-        "min": 0.05996,
-        "max": 0.06729399999999999
+        "median": 0.06326,
+        "min": 0.062278999999999994,
+        "max": 0.06344
       },
       "system_s": {
-        "median": 0.017932999999999998,
-        "min": 0.016829,
-        "max": 0.018446999999999998
+        "median": 0.018108,
+        "min": 0.017717,
+        "max": 0.018135
       },
-      "max_rss_bytes": 34177024,
-      "instrumented_kernel_user_s": 0.015648,
-      "instrumented_kernel_system_s": 0.005359,
-      "instrumented_kernel_max_rss_bytes": 16039936,
+      "max_rss_bytes": 34095104,
+      "instrumented_kernel_user_s": 0.015987,
+      "instrumented_kernel_system_s": 0.005585,
+      "instrumented_kernel_max_rss_bytes": 16105472,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -2728,43 +2747,44 @@
         }
       },
       "copied_bytes_per_message": 8239127.84,
-      "us_per_message": 2109.795839933213,
-      "payload_mib_per_s": 1249.7542792946253
+      "us_per_message": 2076.8658397719264,
+      "payload_mib_per_s": 1269.5699110175005
     },
     {
-      "name": "process-camera-out-shm-burst1-recoff",
+      "name": "process-camera-out-shm-slots2-burst1-recoff",
       "dimensions": {
         "participants": "process",
         "direction": "out",
         "payload": "camera",
         "subscribers": 1,
         "transport": "shm",
+        "slots": 2,
         "burst": 1,
         "recording": false
       },
       "messages": 50,
       "payload_bytes": 2764808,
-      "manifest_hash": "80b500f79c33d1cbf6948c13524cfbe8d0a945d65dec881dca9c6b173b8a8082",
+      "manifest_hash": "9d36a1c6459870cedd43658172b3b7bff13f88dddb16ca95c307d6ea4ea90a0f",
       "wall_s": {
-        "median": 0.10555333300726488,
-        "min": 0.10163933300646022,
-        "max": 0.1076426669897046,
-        "repeats": 5
+        "median": 0.10564166700351052,
+        "min": 0.10557154202251695,
+        "max": 0.10749795800074935,
+        "repeats": 3
       },
       "user_s": {
-        "median": 0.062771,
-        "min": 0.062217999999999996,
-        "max": 0.063668
+        "median": 0.06472,
+        "min": 0.063502,
+        "max": 0.065124
       },
       "system_s": {
-        "median": 0.017710999999999998,
-        "min": 0.017159,
-        "max": 0.019011999999999998
+        "median": 0.019058,
+        "min": 0.018569,
+        "max": 0.019226
       },
-      "max_rss_bytes": 31424512,
-      "instrumented_kernel_user_s": 0.015873,
-      "instrumented_kernel_system_s": 0.00528,
-      "instrumented_kernel_max_rss_bytes": 18792448,
+      "max_rss_bytes": 31473664,
+      "instrumented_kernel_user_s": 0.015653,
+      "instrumented_kernel_system_s": 0.004808,
+      "instrumented_kernel_max_rss_bytes": 18825216,
       "copies": {
         "caller_to_kernel": {
           "count": 50,
@@ -2796,8 +2816,8 @@
         }
       },
       "copied_bytes_per_message": 8294424.0,
-      "us_per_message": 2111.0666601452976,
-      "payload_mib_per_s": 1249.001952033601
+      "us_per_message": 2112.8333400702104,
+      "payload_mib_per_s": 1247.9575787586311
     }
   ]
 }

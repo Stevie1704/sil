@@ -103,22 +103,25 @@ the run. Declare `transport: "shm"` on such a channel and its payload crosses th
 kernel↔process boundary through a per-channel shared-memory arena instead:
 
 ```python
-m.add_channel("frames", schema="sensor.Frame", transport="shm")
+m.add_channel("frames", schema="sensor.Frame", transport="shm", slots=2)
 ```
 
-The kernel sizes and maps one arena per such channel from the schema `byte_size`
-at startup and hands the process participant its path. Publishing writes the
-payload into the arena and the step line carries only a freshness marker; the
-participant reads the bytes directly. An arena holds one payload, so when a
-step carries several messages on the same channel the first rides the arena and
-the rest fall back to the inline encoding — a detail of delivery that never
-changes what the participant sees. **The transport choice never leaks into
+The kernel sizes and maps one arena per such channel from `byte_size * slots`
+at startup and hands the process participant its path. Publishing writes each
+payload into its indexed slot and the step line carries the slot plus a
+freshness marker; the participant reads the bytes directly. The builder always
+emits `slots` for `shm` Channels and defaults it to 2: that covers the measured
+two-Message burst at the cost of one additional schema-sized payload per Arena.
+A deeper burst falls back to inline only after filling the declared slots — a
+detail of delivery that never changes what the participant sees. **The
+transport choice never leaks into
 participant code** — `on_step` still sees the same field-dict (scalars) and
 `bytes`/`list` (array fields) whether the channel is inline or shm. Flip the flag
 and rebuild nothing.
 
-`transport` is hashed (inline, the default, is omitted so pre-shm manifests keep
-byte-identical hashes). A run that cannot create or map its arena fails at
+`transport` and `slots` are hashed (inline, the default, is omitted; absent
+`slots` means the legacy single-slot behavior). A run that cannot create or map
+its arena fails at
 **startup with exit 2** (a config/environment problem), distinct from a test
 failure's exit 1. Native participants are unaffected — they stay on the existing
 pointer-based C ABI data plane and need no rebuild.

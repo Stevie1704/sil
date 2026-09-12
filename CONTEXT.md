@@ -119,12 +119,13 @@ _Avoid_: shared memory, mapping, segment, shm
 
 **Arena**:
 The mapped region carrying one channel's payloads across the kernel↔process
-boundary, sized from the schema.
+boundary, with a Manifest-declared number of schema-sized payload slots.
 _Avoid_: buffer, segment, ring, shm
 
 **Burst**:
-Several Messages published on one Channel inside one Slot. An Arena holds one
-payload, so every Message after the first falls back to the inline transport.
+Several Messages published on one Channel inside one Slot. Messages fill the
+Channel's declared Arena slots in Publish order; only excess Messages fall back
+to the inline transport.
 _Avoid_: batch, salvo, backlog
 
 **Interceptor**:

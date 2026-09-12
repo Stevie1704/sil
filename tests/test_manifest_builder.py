@@ -249,8 +249,34 @@ class TestTransport:
         shm.add_native(
             "producer", library="libtoy_producer.dylib", publishes=["ticks"]
         )
-        assert json.loads(shm.to_json())["channels"]["ticks"]["transport"] == "shm"
+        channel = json.loads(shm.to_json())["channels"]["ticks"]
+        assert channel["transport"] == "shm"
+        assert channel["slots"] == 2
         assert shm.hash() != inline.hash()
+
+    def test_explicit_shm_slot_count_is_always_emitted(self):
+        m = Manifest(duration_ns=1_000_000)
+        m.add_schemas(TOY_SCHEMAS)
+        m.add_channel("c", schema="toy.Counter", transport="shm", slots=1)
+
+        assert json.loads(m.to_json())["channels"]["c"]["slots"] == 1
+
+    @pytest.mark.parametrize("slots", [0, -1, 1.5, True, "2"])
+    def test_invalid_shm_slot_count_is_rejected(self, slots):
+        m = Manifest(duration_ns=1_000_000)
+        m.add_schemas(TOY_SCHEMAS)
+
+        with pytest.raises(ManifestError, match="slots"):
+            m.add_channel(
+                "c", schema="toy.Counter", transport="shm", slots=slots
+            )
+
+    def test_slots_are_only_valid_for_shm_channels(self):
+        m = Manifest(duration_ns=1_000_000)
+        m.add_schemas(TOY_SCHEMAS)
+
+        with pytest.raises(ManifestError, match="slots.*shm"):
+            m.add_channel("c", schema="toy.Counter", slots=1)
 
     def test_unknown_transport_rejected(self):
         m = make_minimal()

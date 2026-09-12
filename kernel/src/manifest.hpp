@@ -67,6 +67,10 @@ struct ChannelSpec {
   // Explicit latency in ns; empty means default "next activation" semantics.
   std::optional<uint64_t> latency_ns;
   Transport transport = Transport::Inline;
+  // Payload slots in each Process participant Arena. Absent in a Manifest is
+  // the legacy single-slot contract; the Python builder emits 2 for newly
+  // authored shared-memory Channels.
+  size_t slots = 1;
   std::vector<InterceptorSpec> interceptors;  // applied in declared order
   // Compiled from `interceptors` by load_manifest. Engines clone this
   // immutable template so runtime state stays isolated per run.
