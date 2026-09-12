@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from sil.manifest import Manifest, ManifestError
+from sil.manifest import Manifest, ManifestError, SubscriberRoute
 
 TOY_SCHEMAS = {
     "toy.Counter": {
@@ -69,6 +69,102 @@ class TestCanonicalOutput:
         ref = m.write(tmp_path / "m.json")
         assert ref.path.read_text() == m.to_json()
         assert ref.hash == m.hash()
+
+
+class TestSubscriberRoutes:
+    def test_builder_emits_bounded_route_with_fail_default(self):
+        m = Manifest(duration_ns=1)
+        m.add_schemas(TOY_SCHEMAS)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_native(
+            "consumer",
+            library="consumer.silp",
+            subscribes=[SubscriberRoute("ticks", capacity=4)],
+        )
+
+        [route] = json.loads(m.to_json())["participants"]["consumer"][
+            "subscribes"
+        ]
+        assert route == {
+            "channel": "ticks",
+            "capacity": 4,
+            "overflow": "fail",
+        }
+
+    def test_route_policy_participates_in_hash(self):
+        fail = Manifest(duration_ns=1)
+        fail.add_schemas(TOY_SCHEMAS)
+        fail.add_channel("ticks", schema="toy.Counter")
+        fail.add_native(
+            "consumer",
+            library="consumer.silp",
+            subscribes=[SubscriberRoute("ticks", capacity=4)],
+        )
+
+        drop = Manifest(duration_ns=1)
+        drop.add_schemas(TOY_SCHEMAS)
+        drop.add_channel("ticks", schema="toy.Counter")
+        drop.add_native(
+            "consumer",
+            library="consumer.silp",
+            subscribes=[
+                SubscriberRoute("ticks", capacity=4, overflow="drop_newest")
+            ],
+        )
+
+        assert fail.hash() != drop.hash()
+
+    def test_route_capacity_participates_in_hash(self):
+        def with_capacity(capacity):
+            m = Manifest(duration_ns=1)
+            m.add_schemas(TOY_SCHEMAS)
+            m.add_channel("ticks", schema="toy.Counter")
+            m.add_native(
+                "consumer",
+                library="consumer.silp",
+                subscribes=[SubscriberRoute("ticks", capacity=capacity)],
+            )
+            return m
+
+        assert with_capacity(1).hash() != with_capacity(2).hash()
+
+    def test_blocking_route_explains_sequential_scheduler_constraint(self):
+        m = Manifest(duration_ns=1)
+        m.add_schemas(TOY_SCHEMAS)
+        m.add_channel("ticks", schema="toy.Counter")
+
+        with pytest.raises(
+            ManifestError, match="blocking.*sequential scheduler"
+        ):
+            m.add_native(
+                "consumer",
+                library="consumer.silp",
+                subscribes=[
+                    SubscriberRoute("ticks", capacity=1, overflow="blocking")
+                ],
+            )
+
+    @pytest.mark.parametrize("capacity", [0, -1, True, 1.5, "2"])
+    def test_capacity_must_be_a_positive_integer(self, capacity):
+        m = Manifest(duration_ns=1)
+        m.add_schemas(TOY_SCHEMAS)
+        m.add_channel("ticks", schema="toy.Counter")
+        with pytest.raises(ManifestError, match="capacity"):
+            m.add_process(
+                "consumer",
+                command=["consumer"],
+                step_period_ns=1,
+                subscribes=[SubscriberRoute("ticks", capacity=capacity)],
+            )
+
+    def test_unbounded_string_route_is_not_available_from_builder(self):
+        m = Manifest(duration_ns=1)
+        m.add_schemas(TOY_SCHEMAS)
+        m.add_channel("ticks", schema="toy.Counter")
+        with pytest.raises(ManifestError, match="SubscriberRoute"):
+            m.add_native(
+                "consumer", library="consumer.silp", subscribes=["ticks"]
+            )
 
 
 class TestValidation:
@@ -147,7 +243,7 @@ class TestValidation:
             "echo",
             command=["python3", "echo.py"],
             step_period_ns=10_000_000,
-            subscribes=["nope"],
+            subscribes=[SubscriberRoute("nope", capacity=1)],
         )
         with pytest.raises(ManifestError, match="nope"):
             m.to_json()
@@ -479,7 +575,11 @@ class TestReplayBuilder:
         m = Manifest(duration_ns=100_000_000)
         m.add_schemas(TOY_SCHEMAS)
         m.add_channel("ticks", schema="toy.Counter")
-        m.add_native("consumer", library="x.dylib", subscribes=["ticks"])
+        m.add_native(
+            "consumer",
+            library="x.dylib",
+            subscribes=[SubscriberRoute("ticks", capacity=1)],
+        )
         return m
 
     def test_hash_is_embedded_from_recording_bytes(self, tmp_path):
@@ -731,10 +831,15 @@ class TestNativeChannelContract:
     def test_declarations_are_emitted_in_the_canonical_doc(self):
         m = self._two_channel()
         m.add_native(
-            "acc", library="x.dylib", subscribes=["ticks"], publishes=["sums"]
+            "acc",
+            library="x.dylib",
+            subscribes=[SubscriberRoute("ticks", capacity=4)],
+            publishes=["sums"],
         )
         entry = json.loads(m.to_json())["participants"]["acc"]
-        assert entry["subscribes"] == ["ticks"]
+        assert entry["subscribes"] == [
+            {"channel": "ticks", "capacity": 4, "overflow": "fail"}
+        ]
         assert entry["publishes"] == ["sums"]
 
     def test_absent_declarations_are_emitted_as_empty_lists(self):
@@ -753,13 +858,27 @@ class TestNativeChannelContract:
 
     def test_declared_order_is_preserved(self):
         m = self._two_channel()
-        m.add_native("acc", library="x.dylib", subscribes=["sums", "ticks"])
+        m.add_native(
+            "acc",
+            library="x.dylib",
+            subscribes=[
+                SubscriberRoute("sums", capacity=2),
+                SubscriberRoute("ticks", capacity=3),
+            ],
+        )
         entry = json.loads(m.to_json())["participants"]["acc"]
-        assert entry["subscribes"] == ["sums", "ticks"]
+        assert [route["channel"] for route in entry["subscribes"]] == [
+            "sums",
+            "ticks",
+        ]
 
     def test_unknown_channel_rejected(self):
         m = self._two_channel()
-        m.add_native("acc", library="x.dylib", subscribes=["nope"])
+        m.add_native(
+            "acc",
+            library="x.dylib",
+            subscribes=[SubscriberRoute("nope", capacity=1)],
+        )
         with pytest.raises(ManifestError, match="nope"):
             m.to_json()
 
@@ -772,7 +891,14 @@ class TestNativeChannelContract:
 
     def test_duplicate_channel_within_one_declaration_rejected(self):
         m = self._two_channel()
-        m.add_native("acc", library="x.dylib", subscribes=["ticks", "ticks"])
+        m.add_native(
+            "acc",
+            library="x.dylib",
+            subscribes=[
+                SubscriberRoute("ticks", capacity=1),
+                SubscriberRoute("ticks", capacity=2),
+            ],
+        )
         with pytest.raises(ManifestError, match="acc.*subscribes.*ticks"):
             m.to_json()
 
@@ -792,7 +918,10 @@ class TestNativeChannelContract:
     def test_subscribing_and_publishing_one_channel_is_allowed(self):
         m = self._two_channel()
         m.add_native(
-            "loop", library="x.dylib", subscribes=["ticks"], publishes=["ticks"]
+            "loop",
+            library="x.dylib",
+            subscribes=[SubscriberRoute("ticks", capacity=1)],
+            publishes=["ticks"],
         )
         assert json.loads(m.to_json())["participants"]["loop"]["publishes"] == [
             "ticks"

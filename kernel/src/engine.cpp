@@ -31,6 +31,13 @@ Engine::Engine(const Manifest &manifest, RecordingSink *recorder)
   }
 }
 
+SubscriberRoute::~SubscriberRoute() {
+  // Teardown releases queued Messages before test instrumentation observes
+  // the route's final current depth. Production builds compile the call away.
+  pending_.clear();
+  counters::route_depth(channel_, owner_, pending_.size());
+}
+
 Engine::~Engine() = default;
 
 Engine::ChannelState &Engine::channel_or_fail(const std::string &name,
@@ -115,12 +122,15 @@ void Engine::register_task(const std::string &owner, const std::string &task,
   tasks_.push_back(std::move(t));
 }
 
-SubQueue *Engine::subscribe(const std::string &owner,
-                            const std::string &channel) {
-  ChannelState &c = channel_or_fail(channel, "participant '" + owner + "'");
-  queues_.push_back(std::make_unique<SubQueue>(channel, c.spec->latency_ns));
-  c.subscribers.push_back(queues_.back().get());
-  return queues_.back().get();
+SubscriberRoute *Engine::subscribe(const std::string &owner,
+                                   const SubscriberRouteSpec &route) {
+  ChannelState &c =
+      channel_or_fail(route.channel, "participant '" + owner + "'");
+  subscriber_routes_.push_back(std::make_unique<SubscriberRoute>(
+      owner, route.channel, c.spec->latency_ns, route.capacity, route.overflow));
+  counters::route_created(route.channel, owner);
+  c.subscriber_routes.push_back(subscriber_routes_.back().get());
+  return subscriber_routes_.back().get();
 }
 
 void Engine::publish(const std::string &owner, const std::string &channel,
@@ -146,15 +156,31 @@ void Engine::publish(const std::string &owner, const std::string &channel,
                       msg.bytes.size());
   }
   c.next_seq++;
-  for (SubQueue *q : c.subscribers) {
-    counters::count(counters::Site::kSubscriberCopy, msg.bytes.size());
-    q->push(msg);
+  for (SubscriberRoute *route : c.subscriber_routes) {
+    const SubscriberRoute::PushResult result = route->push(msg);
+    if (result == SubscriberRoute::PushResult::Enqueued) {
+      counters::count(counters::Site::kSubscriberCopy, msg.bytes.size());
+      counters::route_depth(route->channel(), route->owner(), route->depth());
+      continue;
+    }
+    if (result == SubscriberRoute::PushResult::DroppedNewest) {
+      counters::route_dropped_newest(route->channel(), route->owner());
+      continue;
+    }
+    counters::route_overflow_failure(route->channel(), route->owner());
+    throw RunError(
+        "subscriber route capacity exceeded: Channel '" + channel +
+        "', publisher '" + owner + "', subscriber '" + route->owner() +
+        "', configured capacity " + std::to_string(*route->capacity()) +
+        ", current depth " + std::to_string(route->depth()) +
+        ", policy 'fail'");
   }
 }
 
-bool Engine::take(SubQueue &queue, PendingMessage &out) {
-  if (!queue.visible_at(now_ns_)) return false;
-  out = queue.pop();
+bool Engine::take(SubscriberRoute &route, PendingMessage &out) {
+  if (!route.visible_at(now_ns_)) return false;
+  out = route.pop();
+  counters::route_depth(route.channel(), route.owner(), route.depth());
   return true;
 }
 

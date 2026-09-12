@@ -130,6 +130,40 @@ pointer-based C ABI data plane and need no rebuild.
 participant-facing copy stays), native-participant shm beyond the pointer ABI,
 cross-machine transport, compression, and arena-size/backpressure tuning.
 
+## Bounded subscriber routes
+
+Every subscriber route authored by the Python builder has an explicit finite
+Message capacity. Declare it with `SubscriberRoute`; a full route aborts the Run
+by default, while a non-critical subscriber can explicitly discard only its
+newest attempted delivery:
+
+```python
+from sil import Manifest, SubscriberRoute
+
+m.add_process(
+    "detector",
+    command=["./detector"],
+    step_period_ns=10_000_000,
+    subscribes=[SubscriberRoute("frames", capacity=4)],
+)
+m.add_process(
+    "preview",
+    command=["./preview"],
+    step_period_ns=20_000_000,
+    subscribes=[
+        SubscriberRoute("frames", capacity=2, overflow="drop_newest")
+    ],
+)
+```
+
+Capacity and overflow policy are part of the canonical Manifest bytes and hash.
+Choose capacity from the route's declared burst and drain behavior; the builder
+does not guess a workload-specific number. A Manifest written before bounded
+routes uses string entries such as `"subscribes":["frames"]`; the loader keeps
+those routes unbounded, preserving both their behavior and byte-identical hash.
+Blocking overflow is invalid because the sequential scheduler cannot activate a
+consumer while stopped inside its publisher's call.
+
 ## Large-Message routing baseline
 
 The current data path copies a payload once from the publisher into the kernel.

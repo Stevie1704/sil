@@ -23,7 +23,7 @@ from toys import (
 )
 
 from sil import schema
-from sil.manifest import Manifest
+from sil.manifest import Manifest, SubscriberRoute
 
 TYPES = schema.load(TOY_SCHEMAS)
 
@@ -145,6 +145,75 @@ class TestManifestRejection:
         proc = run_sil(write_raw_manifest(tmp_path, document))
         assert proc.returncode == 0, proc.stderr
         assert marker.read_text() == "spawned"
+
+    def test_blocking_subscriber_route_is_rejected_before_process_spawn(
+        self, run_sil, tmp_path
+    ):
+        marker = tmp_path / "spawned"
+        document = raw_manifest()
+        document["participants"] = {
+            "process": {
+                "type": "process",
+                "command": [
+                    sys.executable,
+                    str(ROOT / "tests" / "participants" / "spawn_marker.py"),
+                    str(marker),
+                ],
+                "step_period_ns": 1_000,
+                "subscribes": [
+                    {"channel": "c", "capacity": 1, "overflow": "blocking"}
+                ],
+            }
+        }
+
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+
+        assert proc.returncode == 2
+        assert "blocking" in proc.stderr
+        assert "sequential scheduler" in proc.stderr
+        assert not marker.exists()
+
+    @pytest.mark.parametrize(
+        "route,needle",
+        [
+            ({"channel": "c", "capacity": 0, "overflow": "fail"}, "capacity"),
+            ({"channel": "c", "capacity": True, "overflow": "fail"}, "capacity"),
+            ({"channel": "c", "overflow": "fail"}, "capacity"),
+            ({"channel": "c", "capacity": 1}, "overflow"),
+            (
+                {"channel": "c", "capacity": 1, "overflow": "oldest"},
+                "overflow",
+            ),
+            (
+                {
+                    "channel": "c",
+                    "capacity": 1,
+                    "overflow": "fail",
+                    "extra": True,
+                },
+                "unknown key",
+            ),
+            (7, "expected an object"),
+        ],
+    )
+    def test_malformed_subscriber_routes_are_load_errors(
+        self, run_sil, tmp_path, route, needle
+    ):
+        document = raw_manifest()
+        document["participants"] = {
+            "process": {
+                "type": "process",
+                "command": ["true"],
+                "step_period_ns": 1_000,
+                "subscribes": [route],
+            }
+        }
+
+        proc = run_sil(write_raw_manifest(tmp_path, document))
+
+        assert proc.returncode == 2
+        assert "participant 'process' key 'subscribes'[0]" in proc.stderr
+        assert needle in proc.stderr
 
     @pytest.mark.parametrize(
         "path,value,needle",
@@ -1291,7 +1360,7 @@ class TestProcessParticipant:
             command=[_sys.executable,
                      str(ROOT / "tests" / "participants" / "echo.py")],
             step_period_ns=10_000_000,
-            subscribes=["ticks"],
+            subscribes=[SubscriberRoute("ticks", capacity=1024)],
             publishes=["echo"],
         )
         proc = run_sil(m.write(tmp_path / "m.json").path)
@@ -1745,7 +1814,7 @@ class TestOverrideInterceptor:
             "echo",
             command=[_sys.executable, str(ROOT / "tests/participants/echo.py")],
             step_period_ns=10_000_000,
-            subscribes=["ticks"],
+            subscribes=[SubscriberRoute("ticks", capacity=1024)],
             publishes=["echo"],
         )
         m.add_interceptor(
@@ -2205,7 +2274,7 @@ class TestShmTransport:
             command=[_sys.executable,
                      str(ROOT / "tests" / "participants" / "array_echo.py")],
             step_period_ns=10_000_000,
-            subscribes=["payload"],
+            subscribes=[SubscriberRoute("payload", capacity=1024)],
             publishes=["mirror"],
         )
         m.add_interceptor("payload", **interceptor)
@@ -2413,7 +2482,7 @@ class TestShmTransport:
             command=[_sys.executable,
                      str(ROOT / "tests" / "participants" / "array_echo.py")],
             step_period_ns=10_000_000,
-            subscribes=["payload"],
+            subscribes=[SubscriberRoute("payload", capacity=1024)],
             publishes=["mirror"],
         )
         proc = run_sil(m.write(tmp_path / "m.json").path)
@@ -2471,7 +2540,7 @@ class TestShmTransport:
             command=[_sys.executable,
                      str(ROOT / "tests" / "participants" / "array_echo.py")],
             step_period_ns=10_000_000,
-            subscribes=["payload"],
+            subscribes=[SubscriberRoute("payload", capacity=1024)],
             publishes=["payload"],
         )
         proc = run_sil(m.write(tmp_path / "m.json").path)
@@ -2502,7 +2571,7 @@ class TestShmTransport:
             command=[_sys.executable,
                      str(ROOT / "tests" / "participants" / "array_echo.py")],
             step_period_ns=30_000_000,
-            subscribes=["payload"],
+            subscribes=[SubscriberRoute("payload", capacity=1024)],
             publishes=["mirror"],
         )
         return m

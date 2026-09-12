@@ -32,12 +32,24 @@ struct PendingMessage {
 
 // One subscriber's view of one channel: FIFO in publish order, messages
 // become visible according to the channel's declared latency.
-class SubQueue {
+class SubscriberRoute {
  public:
-  SubQueue(std::string channel, std::optional<uint64_t> latency_ns)
-      : channel_(std::move(channel)), latency_ns_(latency_ns) {}
+  enum class PushResult { Enqueued, DroppedNewest, OverflowFailure };
 
+  SubscriberRoute(std::string owner, std::string channel,
+                  std::optional<uint64_t> latency_ns,
+                  std::optional<size_t> capacity, OverflowPolicy overflow)
+      : owner_(std::move(owner)),
+        channel_(std::move(channel)),
+        latency_ns_(latency_ns),
+        capacity_(capacity),
+        overflow_(overflow) {}
+  ~SubscriberRoute();
+
+  const std::string &owner() const { return owner_; }
   const std::string &channel() const { return channel_; }
+  size_t depth() const { return pending_.size(); }
+  const std::optional<size_t> &capacity() const { return capacity_; }
 
   bool visible_at(uint64_t now_ns) const {
     if (pending_.empty()) return false;
@@ -69,11 +81,21 @@ class SubQueue {
     return m;
   }
 
-  void push(PendingMessage m) { pending_.push_back(std::move(m)); }
+  PushResult push(const PendingMessage &m) {
+    if (capacity_ && pending_.size() >= *capacity_)
+      return overflow_ == OverflowPolicy::DropNewest
+                 ? PushResult::DroppedNewest
+                 : PushResult::OverflowFailure;
+    pending_.push_back(m);
+    return PushResult::Enqueued;
+  }
 
  private:
+  std::string owner_;
   std::string channel_;
   std::optional<uint64_t> latency_ns_;
+  std::optional<size_t> capacity_;
+  OverflowPolicy overflow_;
   std::deque<PendingMessage> pending_;
 };
 
@@ -99,10 +121,11 @@ class Engine {
   void register_task(const std::string &owner, const std::string &task,
                      uint64_t period_ns, uint64_t offset_ns, int32_t priority,
                      std::function<void(uint64_t)> fn);
-  SubQueue *subscribe(const std::string &owner, const std::string &channel);
+  SubscriberRoute *subscribe(const std::string &owner,
+                             const SubscriberRouteSpec &route);
   void publish(const std::string &owner, const std::string &channel,
                const void *data, size_t len);
-  bool take(SubQueue &queue, PendingMessage &out);
+  bool take(SubscriberRoute &route, PendingMessage &out);
   // Marks the run failed; the loop aborts after the current callback returns.
   void fail(const std::string &owner, const std::string &reason);
 
@@ -123,7 +146,7 @@ class Engine {
     uint32_t index;
     uint32_t next_seq = 0;
     std::unique_ptr<InterceptorPlan> interceptor_plan;
-    std::vector<SubQueue *> subscribers;
+    std::vector<SubscriberRoute *> subscriber_routes;
   };
 
   ChannelState &channel_or_fail(const std::string &name,
@@ -132,7 +155,7 @@ class Engine {
   const Manifest &manifest_;
   RecordingSink *recorder_;
   std::vector<ChannelState> channels_;  // manifest (name-sorted) order
-  std::vector<std::unique_ptr<SubQueue>> queues_;
+  std::vector<std::unique_ptr<SubscriberRoute>> subscriber_routes_;
   std::vector<Task> tasks_;
   std::vector<std::unique_ptr<NativeParticipant>> natives_;
   std::vector<std::unique_ptr<ProcessParticipant>> processes_;

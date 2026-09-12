@@ -317,9 +317,10 @@ in the framework's own CI from day one.**
   shim `sleep` policy (#52) is always-emit: the builder defaults to `reject`
   and also accepts an explicit `immediate`, so compatibility is expressible in
   hashed bytes, and an absent field keeps today's immediate-success behavior.
-  Bounded-route `capacity` and `overflow` (#55) are always-emit with an absent
-  field meaning unbounded; removing unbounded later is the one change that
-  would trigger version 2. The superseded BufferPool transport (#58) would have
+  Bounded-route `capacity` and `overflow` (#75, split from #55) are
+  always-emit with an absent field meaning unbounded; removing unbounded later
+  is the one change that would trigger version 2. The superseded BufferPool
+  transport (#58) would have
   taken a new transport name. Its replacement (#74) instead extends `shm` with
   always-emitted `slots`; absence retains the original single-slot behavior and
   hash.
@@ -336,6 +337,21 @@ in the framework's own CI from day one.**
   consequence:** each always-emit field changes the hash of every regenerated
   Manifest once. That is correct — the declared semantics did change — and CI
   matrices should expect it.
+- **Bounded subscriber routes (#75):** each newly authored `subscribes` entry
+  is an object naming its `channel`, a positive Message `capacity`, and an
+  `overflow` policy. The builder requires capacity rather than guessing one
+  for a workload and always emits both policy fields; `overflow` defaults to
+  `fail`. The loader retains the pre-#75 string entry as an unbounded route, so
+  an existing Manifest keeps both its exact bytes and its successful Run
+  semantics. A full bounded route either fails the Run with Channel,
+  publisher, subscriber, capacity, current depth, and policy in the diagnostic,
+  or explicitly `drop_newest`s that delivery. Blocking is rejected at load:
+  the sequential scheduler cannot activate the consumer from inside a blocked
+  publication. Capacity is checked after Interceptors, so a suppressed Message
+  still consumes its global Publish order but no route slot. Live and replay
+  publication meet at the same fan-out path. Current depth, high-water depth,
+  drop count, and overflow-failure count exist only in the separately compiled
+  test-instrumented runner; #63 still owns any external metrics surface.
 - **Exception containment at the C ABI seam (#65):** the seam runs in both
   directions and neither carries an exception. A kernel frame the participant
   calls into must not throw back across the ABI — the participant may be built

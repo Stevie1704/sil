@@ -370,6 +370,56 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
     }
     return out;
   };
+  const auto check_subscriber_routes = [&](const json &value) {
+    const char *key = "subscribes";
+    const json &arr = require_array(value, ctx + " key 'subscribes'");
+    std::vector<SubscriberRouteSpec> out;
+    std::set<std::string> seen;
+    for (size_t index = 0; index < arr.size(); index++) {
+      const json &entry = arr.at(index);
+      const std::string item_ctx = ctx + " key 'subscribes'[" +
+                                   std::to_string(index) + "]";
+      SubscriberRouteSpec route;
+      if (entry.is_string()) {
+        // Compatibility shape: pre-#75 manifests named only the Channel and
+        // therefore retain their unbounded queue behavior.
+        route.channel = extract<std::string>(entry, item_ctx);
+      } else {
+        const json &object = require_object(entry, item_ctx);
+        reject_unknown_keys(object, item_ctx,
+                            {"channel", "capacity", "overflow"});
+        route.channel = required<std::string>(object, "channel", item_ctx);
+        const json &capacity = require_value(object, "capacity", item_ctx);
+        route.capacity = extract<size_t>(capacity, item_ctx + " key 'capacity'");
+        if (*route.capacity == 0)
+          type_error(capacity, item_ctx + " key 'capacity'",
+                     "a positive integer");
+        const std::string overflow =
+            required<std::string>(object, "overflow", item_ctx);
+        if (overflow == "fail") {
+          route.overflow = OverflowPolicy::Fail;
+        } else if (overflow == "drop_newest") {
+          route.overflow = OverflowPolicy::DropNewest;
+        } else if (overflow == "blocking") {
+          fail(item_ctx +
+               ": blocking overflow is unsupported because the sequential "
+               "scheduler cannot activate the consumer while the publisher "
+               "is blocked");
+        } else {
+          fail(item_ctx + ": unknown overflow policy '" + overflow +
+               "' (expected 'fail' or 'drop_newest')");
+        }
+      }
+      if (!m.find_channel(route.channel))
+        fail(ctx + " " + key + " references unknown channel '" +
+             route.channel + "'");
+      if (!seen.insert(route.channel).second)
+        fail(ctx + " " + key + " lists channel '" + route.channel +
+             "' twice");
+      out.push_back(std::move(route));
+    }
+    return out;
+  };
 
   ParticipantSpec p;
   p.name = name;
@@ -391,8 +441,8 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
     // absent list cannot default without changing the Run semantics of an
     // existing Manifest hash. Process participants remain tolerant below
     // because absent-means-empty was their prior behavior.
-    n.subscribes = check_channels(
-        require_value(participant, "subscribes", ctx), "subscribes");
+    n.subscribes = check_subscriber_routes(
+        require_value(participant, "subscribes", ctx));
     n.publishes = check_channels(
         require_value(participant, "publishes", ctx), "publishes");
     // Native config is the explicit extension point for participant-specific
@@ -423,7 +473,7 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
     // Process participants predate contract enforcement and absent lists
     // therefore retain their established empty-contract behavior.
     if (const json *subscribes = find_value(participant, "subscribes", ctx))
-      ps.subscribes = check_channels(*subscribes, "subscribes");
+      ps.subscribes = check_subscriber_routes(*subscribes);
     if (const json *publishes = find_value(participant, "publishes", ctx))
       ps.publishes = check_channels(*publishes, "publishes");
     if (const json *priority = find_value(participant, "priority", ctx))

@@ -42,6 +42,7 @@ _INTERCEPTOR_KINDS = {"drop", "drop_nth", "delay", "override"}
 # JSON step line; "shm" hands megabyte-class payloads across the kernel↔process
 # boundary through a per-channel arena, skipping base64/JSON.
 _TRANSPORTS = {"inline", "shm"}
+_OVERFLOW_POLICIES = {"fail", "drop_newest"}
 _FIELD_SIZES = {
     "u8": 1,
     "u16": 2,
@@ -101,6 +102,45 @@ def _channel_list(value, participant: str, key: str) -> list[str]:
     ]
 
 
+def _subscriber_routes(
+    value, participant: str
+) -> list[dict[str, str | int]]:
+    """Normalize one participant's bounded subscriber routes."""
+    if value is None:
+        return []
+    context = f"participant {participant!r} subscribes"
+    routes = []
+    for index, route in enumerate(_array(value, context)):
+        item_context = f"{context}[{index}]"
+        if not isinstance(route, SubscriberRoute):
+            raise ManifestError(
+                f"{item_context} must be a SubscriberRoute, got {route!r}"
+            )
+        channel = _string(route.channel, f"{item_context} channel")
+        capacity = _integer(
+            route.capacity,
+            f"{item_context} capacity",
+            minimum=1,
+            maximum=_SIZE_MAX,
+        )
+        overflow = _string(route.overflow, f"{item_context} overflow")
+        if overflow == "blocking":
+            raise ManifestError(
+                f"{item_context}: blocking overflow is unsupported because "
+                "the sequential scheduler cannot activate the consumer while "
+                "the publisher is blocked"
+            )
+        if overflow not in _OVERFLOW_POLICIES:
+            raise ManifestError(
+                f"{item_context}: unknown overflow policy {overflow!r} "
+                f"(expected one of {sorted(_OVERFLOW_POLICIES)})"
+            )
+        routes.append(
+            {"channel": channel, "capacity": capacity, "overflow": overflow}
+        )
+    return routes
+
+
 def _reject_unknown(entry: dict, allowed: set[str], context: str) -> None:
     for key in entry:
         if key not in allowed:
@@ -120,6 +160,19 @@ class ManifestError(ValueError):
 class ManifestRef:
     path: Path
     hash: str
+
+
+@dataclass(frozen=True)
+class SubscriberRoute:
+    """One bounded Channel delivery route for a subscriber.
+
+    ``capacity`` counts queued Messages. ``overflow`` defaults to ``"fail"``;
+    ``"drop_newest"`` is the explicit non-critical-route alternative.
+    """
+
+    channel: str
+    capacity: int
+    overflow: str = "fail"
 
 
 class Manifest:
@@ -371,15 +424,16 @@ class Manifest:
         *,
         library: str,
         config: dict | None = None,
-        subscribes: list[str] | None = None,
+        subscribes: list[SubscriberRoute] | None = None,
         publishes: list[str] | None = None,
     ) -> None:
         """Declare a native participant and its Channel contract.
 
         The contract is declarative like a process participant's: the kernel
         knows every publisher before it loads participant code, and the C ABI
-        stays free of a registration call. Both lists are always emitted, so a
-        contract can never be silently absent from the hashed manifest.
+        stays free of a registration call. Both lists are always emitted, and
+        every subscriber entry carries its route capacity and overflow policy,
+        so the contract cannot be silently absent from the hashed Manifest.
         """
         name = _string(name, "participant name")
         library = _string(library, f"participant {name!r} library")
@@ -391,7 +445,7 @@ class Manifest:
                 "type": "native",
                 "library": library,
                 "config": config or {},
-                "subscribes": _channel_list(subscribes, name, "subscribes"),
+                "subscribes": _subscriber_routes(subscribes, name),
                 "publishes": _channel_list(publishes, name, "publishes"),
             },
         )
@@ -402,7 +456,7 @@ class Manifest:
         *,
         command: list[str],
         step_period_ns: int,
-        subscribes: list[str] | None = None,
+        subscribes: list[SubscriberRoute] | None = None,
         publishes: list[str] | None = None,
         priority: int = 0,
         shim: bool = False,
@@ -422,7 +476,7 @@ class Manifest:
             minimum=1,
             maximum=_SIZE_MAX,
         )
-        subscribes = _channel_list(subscribes, name, "subscribes")
+        subscribes = _subscriber_routes(subscribes, name)
         publishes = _channel_list(publishes, name, "publishes")
         priority = _integer(
             priority,
@@ -527,7 +581,12 @@ class Manifest:
         for pname, p in self._participants.items():
             for key in ("subscribes", "publishes", "channels"):
                 seen: set[str] = set()
-                for ch in p.get(key, []):
+                for declaration in p.get(key, []):
+                    ch = (
+                        declaration["channel"]
+                        if key == "subscribes"
+                        else declaration
+                    )
                     if ch not in self._channels:
                         raise ManifestError(
                             f"participant {pname!r} {key} unknown channel {ch!r}"

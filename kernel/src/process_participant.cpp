@@ -262,7 +262,10 @@ void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
   for (const std::string &ch : spec.publishes) {
     const ChannelSpec *c = m.find_channel(ch);
     if (c && c->transport == Transport::Shm &&
-        std::find(spec.subscribes.begin(), spec.subscribes.end(), ch) !=
+        std::find_if(spec.subscribes.begin(), spec.subscribes.end(),
+                     [&ch](const auto &route) {
+                       return route.channel == ch;
+                     }) !=
             spec.subscribes.end())
       throw ManifestError("participant '" + name_ + "': channel '" + ch +
                           "' cannot be both subscribed and published over "
@@ -300,7 +303,8 @@ void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
     }
     arenas_.emplace(ch, std::move(a));
   };
-  for (const std::string &ch : spec.subscribes) map_channel(ch);
+  for (const SubscriberRouteSpec &route : spec.subscribes)
+    map_channel(route.channel);
   for (const std::string &ch : spec.publishes) map_channel(ch);
 }
 
@@ -356,8 +360,8 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     : engine_(engine), name_(name), period_ns_(spec.step_period_ns),
       publishes_(spec.publishes), epoch_ns_(engine.manifest().epoch_ns),
       sleep_policy_(spec.sleep) {
-  for (const std::string &ch : spec.subscribes)
-    inputs_.emplace_back(ch, engine.subscribe(name, ch));
+  for (const SubscriberRouteSpec &route : spec.subscribes)
+    inputs_.emplace_back(route.channel, engine.subscribe(name, route));
 
   // Shimmed participants get a shared time region mapped before fork, so the
   // child can map it read-only at load and the kernel can write virtual time
@@ -426,7 +430,8 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     channels[ch] = entry;
     schemas[c->schema] = json::parse(m.schemas.at(c->schema).canonical_json);
   };
-  for (const std::string &ch : spec.subscribes) add_channel(ch, "in");
+  for (const SubscriberRouteSpec &route : spec.subscribes)
+    add_channel(route.channel, "in");
   for (const std::string &ch : spec.publishes) add_channel(ch, "out");
 
   json init = {{"op", "init"},
@@ -462,7 +467,7 @@ void ProcessParticipant::step(uint64_t now_ns) {
   // Merge visible inputs across channels in global publish order.
   std::vector<StepInput> messages;
   for (;;) {
-    SubQueue *best = nullptr;
+    SubscriberRoute *best = nullptr;
     for (auto &[ch, q] : inputs_)
       if (q->visible_at(now_ns) &&
           (!best || q->front_seq() < best->front_seq()))

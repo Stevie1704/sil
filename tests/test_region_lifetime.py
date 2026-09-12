@@ -11,7 +11,7 @@ import sys
 
 import pytest
 
-from sil.manifest import Manifest
+from sil.manifest import Manifest, SubscriberRoute
 
 from conftest import ROOT
 from test_run_boundary import ARRAY_SCHEMAS
@@ -60,11 +60,11 @@ class TestRegionLifetime:
         m.add_schemas(ARRAY_SCHEMAS)
         m.add_channel("payload", schema="big.Payload", transport="shm")
         m.add_channel("mirror", schema="big.Payload")
-        subscribes = ["payload"]
+        subscribes = [SubscriberRoute("payload", capacity=1024)]
         if extra_channel:
             m.add_schemas(UNMAPPABLE_SCHEMAS)
             m.add_channel(extra_channel, schema="big.Unmappable", transport="shm")
-            subscribes.append(extra_channel)
+            subscribes.append(SubscriberRoute(extra_channel, capacity=1024))
         m.add_process(
             "source",
             command=participant("array_source.py"),

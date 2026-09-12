@@ -7,7 +7,7 @@ import sys
 import pytest
 
 from sil import schema
-from sil.manifest import Manifest
+from sil.manifest import Manifest, SubscriberRoute
 from sil.participant import (
     ParticipantFailure,
     _Arena,
@@ -157,7 +157,7 @@ def _cpp_manifest(*, transport, source, sink=None):
             "sink",
             command=[sys.executable, str(ROOT / "tests" / "participants" / sink)],
             step_period_ns=10_000_000,
-            subscribes=["payload"],
+            subscribes=[SubscriberRoute("payload", capacity=1024)],
             publishes=["mirror"],
         )
     return m
@@ -199,7 +199,7 @@ class TestCppStepCodec:
                 "echo",
             ],
             step_period_ns=10_000_000,
-            subscribes=["payload"],
+            subscribes=[SubscriberRoute("payload", capacity=1024)],
         )
         document = m.to_doc()
         del document["channels"]["payload"]["slots"]
@@ -239,7 +239,10 @@ class TestCppStepCodec:
                 str(ROOT / "tests" / "participants" / "array_echo.py"),
             ],
             step_period_ns=10_000_000,
-            subscribes=["left", "right"],
+            subscribes=[
+                SubscriberRoute("left", capacity=1024),
+                SubscriberRoute("right", capacity=1024),
+            ],
             publishes=["mirror"],
         )
         proc = run_sil(mixed.write(tmp_path / "mixed.json").path)
@@ -291,7 +294,10 @@ class TestCppStepCodec:
                 str(log_path),
             ],
             step_period_ns=30_000_000,
-            subscribes=["left", "right"],
+            subscribes=[
+                SubscriberRoute("left", capacity=1024),
+                SubscriberRoute("right", capacity=1024),
+            ],
         )
         proc = run_sil(m.write(tmp_path / "wire.json").path)
         assert proc.returncode == 0, proc.stderr
@@ -338,7 +344,10 @@ class TestCppStepCodec:
                 "echo",
             ],
             step_period_ns=30_000_000,
-            subscribes=["left", "right"],
+            subscribes=[
+                SubscriberRoute("left", capacity=1024),
+                SubscriberRoute("right", capacity=1024),
+            ],
         )
 
         proc = run_sil(m.write(tmp_path / "wire-v2.json").path)

@@ -37,7 +37,8 @@ class ProcessParticipant {
   Engine &engine_;
   std::string name_;
   uint64_t period_ns_;
-  std::vector<std::pair<std::string, SubQueue *>> inputs_;  // declared order
+  // Subscriber routes in the participant's declared Channel order.
+  std::vector<std::pair<std::string, SubscriberRoute *>> inputs_;
   std::vector<std::string> publishes_;
   int child_stdin_ = -1;
   int child_stdout_ = -1;

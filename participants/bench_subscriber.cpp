@@ -45,6 +45,10 @@ extern "C" int sil_participant_init(const sil_api_v1 *api, const char *,
   subscriber->input = cfg.at("input").get<std::string>();
   if (api->subscribe(api->ctx, subscriber->input.c_str()) != SIL_OK) return SIL_ERR;
 
+  // Bounded-route tests use the same real subscription seam without a Task
+  // draining it. The Engine still owns and tears down the resulting queue.
+  if (!cfg.value("drain", true)) return SIL_OK;
+
   const uint64_t period = cfg.at("period_ns").get<uint64_t>();
   const int32_t priority = cfg.value("priority", 1);
   Subscriber *raw = subscriber.release();  // owned by the run; freed at process exit
