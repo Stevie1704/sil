@@ -58,6 +58,12 @@ run: build ## Run a manifest: make run ARGS="manifest.json -o out.mcap"
 check: venv build ## Determinism check: make check ARGS="manifest.json"
 	PYTHONPATH=python/src $(PYTHON) -m sil.check $(ARGS) --runner ./$(BUILD_DIR)/sil-run
 
+# Static: reads declared capacities and slot counts, runs nothing. This is the
+# evidence #55's peak-memory gate asks for.
+.PHONY: footprint
+footprint: venv ## Declared payload memory: make footprint ARGS="manifest.json"
+	PYTHONPATH=python/src $(PYTHON) -m sil.footprint $(ARGS)
+
 # Benchmark --------------------------------------------------------------------
 # Regenerates the routing baseline in docs/bench/ (issue #61). Long-running:
 # every row is run once instrumented for copy counts and several times
