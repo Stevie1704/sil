@@ -18,14 +18,28 @@
 #include <time.h>
 #include <unistd.h>
 
+/* No POSIX or platform clock uses this ID, so the shim cannot classify it and
+ * the real libc must reject it. */
+#define UNKNOWN_CLOCK_ID ((clockid_t)9999)
+
+/* Iterations of the CPU-burn loop. Enough work that a real CPU clock moves
+ * measurably; small enough that the probe stays fast. */
+#define BURN_ITERATIONS 20000000ull
+
 static uint64_t ts_ns(const struct timespec *ts) {
     return (uint64_t)ts->tv_sec * 1000000000ull + (uint64_t)ts->tv_nsec;
+}
+
+/* A failed read prints its errno, so the test can tell an ID this kernel does
+ * not have (EINVAL — skip) from a shim regression (anything else — fail). */
+static void print_error(const char *key) {
+    printf("%s=error:%d\n", key, errno);
 }
 
 static void print_clock(const char *key, clockid_t id) {
     struct timespec ts;
     if (clock_gettime(id, &ts) != 0) {
-        printf("%s=error\n", key);
+        print_error(key);
         return;
     }
     printf("%s=%llu\n", key, (unsigned long long)ts_ns(&ts));
@@ -36,7 +50,7 @@ static void print_clock(const char *key, clockid_t id) {
  * move would never end. `volatile` keeps the compiler from deleting it. */
 static void burn_cpu(void) {
     volatile uint64_t sink = 0;
-    for (uint64_t i = 0; i < 20000000ull; i++)
+    for (uint64_t i = 0; i < BURN_ITERATIONS; i++)
         sink += i;
 }
 
@@ -46,12 +60,12 @@ static void burn_cpu(void) {
 static void print_cpu_clock_pair(const char *key, clockid_t id) {
     struct timespec before, after;
     if (clock_gettime(id, &before) != 0) {
-        printf("%s=error\n", key);
+        print_error(key);
         return;
     }
     burn_cpu();
     if (clock_gettime(id, &after) != 0) {
-        printf("%s=error\n", key);
+        print_error(key);
         return;
     }
     printf("%s_before=%llu\n", key, (unsigned long long)ts_ns(&before));
@@ -78,7 +92,7 @@ int main(void) {
     /* An unrecognized clock ID has no class, so it passes through and the real
      * libc rejects it. Virtualizing it would answer a question the shim cannot
      * know the answer to. */
-    print_clock("unknown", (clockid_t)9999);
+    print_clock("unknown", UNKNOWN_CLOCK_ID);
 
     /* CPU-time IDs pass through (issue #76): they measure consumed CPU, not
      * wall time, so they keep running while virtual time is frozen. Printed
@@ -111,7 +125,7 @@ int main(void) {
     if (clock_getres(CLOCK_PROCESS_CPUTIME_ID, &res) == 0)
         printf("getres_cpu=%llu\n", (unsigned long long)ts_ns(&res));
     else
-        printf("getres_cpu=error\n");
+        print_error("getres_cpu");
 #else
     printf("getres_cpu=unavailable\n");
 #endif

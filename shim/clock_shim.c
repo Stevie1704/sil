@@ -4,9 +4,11 @@
  *
  * It knows nothing about the step protocol, manifest, or kernel: at load it
  * maps the fixed-layout region — a small memory-mapped file whose path is named
- * by SIL_CLOCK_REGION — and thereafter answers every interposed clock read
- * directly from that mapping (no per-read syscall). Reads are frozen within a
- * step: the region's `t` only changes when the writer advances it between steps.
+ * by SIL_CLOCK_REGION — and thereafter answers every *virtualized* clock read
+ * directly from that mapping (no per-read syscall). Which clock IDs those are
+ * is one table, below; the rest reach the real libc unchanged. Virtualized
+ * reads are frozen within a step: the region's `t` only changes when the writer
+ * advances it between steps.
  * (A plain mmap'd file is used rather than POSIX shm for portability — macOS
  * shm_open rejects reopening an object by name with EACCES.)
  *
@@ -49,8 +51,8 @@ __attribute__((constructor)) static void sil_clock_shim_init(void) {
 }
 
 /* --- clock ID classification (issue #76) ------------------------------------
- * Every interposer that takes a clock ID asks this one table which class the
- * ID is in, so no two of them can disagree about what is virtualized.
+ * Every interposed call that takes a clock ID asks this one table which class
+ * the ID is in, so no two of them can disagree about what is virtualized.
  *
  * Only wall-clock IDs are virtualized. A CPU-time ID measures consumed CPU,
  * not elapsed wall time, so freezing it would report the participant using no
@@ -109,9 +111,10 @@ static clock_class classify(clockid_t id) {
     }
 }
 
-/* True when the shim serves this clock ID from the region. */
+/* True when the shim serves this clock ID from the region — which an unmapped
+ * region never is, so this one predicate is the whole guard at every call. */
 static int is_virtualized(clockid_t id) {
-    return classify(id) != CLASS_PASSTHROUGH;
+    return g_region && classify(id) != CLASS_PASSTHROUGH;
 }
 
 /* Virtual nanoseconds for a virtualized clock ID: t for monotonic-class,
@@ -187,14 +190,14 @@ static unsigned int sleep_seconds_left(unsigned int seconds) {
 #if defined(__APPLE__)
 
 int sil_clock_gettime(clockid_t id, struct timespec *ts) {
-    if (!g_region || !is_virtualized(id))
+    if (!is_virtualized(id))
         return clock_gettime(id, ts);
     fill_timespec(ts, virtual_ns(id));
     return 0;
 }
 
 int sil_clock_getres(clockid_t id, struct timespec *res) {
-    if (!g_region || !is_virtualized(id))
+    if (!is_virtualized(id))
         return clock_getres(id, res);
     if (res) {
         res->tv_sec = 0;
@@ -272,14 +275,14 @@ DYLD_INTERPOSE(sil_usleep, usleep);
     })
 
 int clock_gettime(clockid_t id, struct timespec *ts) {
-    if (!g_region || !is_virtualized(id))
+    if (!is_virtualized(id))
         return REAL(clock_gettime)(id, ts);
     fill_timespec(ts, virtual_ns(id));
     return 0;
 }
 
 int clock_getres(clockid_t id, struct timespec *res) {
-    if (!g_region || !is_virtualized(id))
+    if (!is_virtualized(id))
         return REAL(clock_getres)(id, res);
     if (res) {
         res->tv_sec = 0;
@@ -317,7 +320,7 @@ int nanosleep(const struct timespec *req, struct timespec *rem) {
 
 int clock_nanosleep(clockid_t id, int flags, const struct timespec *req,
                     struct timespec *rem) {
-    if (!g_region || !is_virtualized(id))
+    if (!is_virtualized(id))
         return REAL(clock_nanosleep)(id, flags, req, rem);
     /* POSIX makes clock_nanosleep the exception twice over: it returns the
      * error number rather than setting errno, and it ignores `rem` entirely

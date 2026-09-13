@@ -39,7 +39,8 @@ An out-of-process participant is expected to derive time from the `step(t, Δt)`
 protocol and never read the wall clock. Opaque binaries you cannot change often
 break that rule — they call `clock_gettime`, `gettimeofday`, `time`, or sleep.
 The **clock shim** makes such a participant deterministic without touching it:
-preload a small library that answers every POSIX clock read from virtual time.
+preload a small library that answers every POSIX wall-clock read from virtual
+time.
 
 Opt a process participant in per participant via the manifest `shim` flag, and
 set the run's realtime `epoch_ns` (calendar time, ns since 1970) that

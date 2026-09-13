@@ -72,8 +72,8 @@ def run_probe(probe, shim, region_name=None):
     """Run the probe under the preload, return parsed key=value output.
 
     ``region_name`` of None leaves the region unset, which is the shim's
-    region-absent fallback: every interposer defers to the real libc. That is
-    the oracle for what a pass-through clock ID must answer.
+    region-absent fallback: every interposed call defers to the real libc. That
+    is the oracle for what a pass-through clock ID must answer.
     """
     env = dict(os.environ)
     if region_name is None:
@@ -288,6 +288,23 @@ def test_retry_loop_spins_under_immediate_and_exits_under_reject(
 # to the real libc.
 
 
+def require_clock(out, key):
+    """Skip when the platform has no such clock ID; fail on any other error.
+
+    The probe prints ``unavailable`` when the ID is not defined at all and
+    ``error:<errno>`` when the read failed. EINVAL is the kernel saying it does
+    not support the ID; every other errno is a shim regression and must fail.
+    """
+    value = out.get(key, "")
+    if value == "unavailable":
+        pytest.skip(f"{key} clock ID is not defined on this platform")
+    if value.startswith("error:"):
+        code = int(value.split(":", 1)[1])
+        if code == errno.EINVAL:
+            pytest.skip(f"{key} clock ID is not supported by this kernel")
+        pytest.fail(f"{key} read failed with errno {code}")
+
+
 @pytest.mark.parametrize("key", ["process_cpu", "thread_cpu"])
 def test_cpu_time_clocks_pass_through(probe, shim, clock_region, key):
     """A CPU-time clock counts work done, so it advances inside a frozen step.
@@ -299,9 +316,7 @@ def test_cpu_time_clocks_pass_through(probe, shim, clock_region, key):
     name, write = clock_region
     write(T, EPOCH)
     out = run_probe(probe, shim, name)
-    if out.get(key) == "unavailable":
-        pytest.skip(f"{key} clock ID not available on this platform")
-    assert out.get(key) != "error", f"{key} read failed"
+    require_clock(out, key)
     assert int(out[f"{key}_after"]) > int(out[f"{key}_before"])
 
 
@@ -310,8 +325,7 @@ def test_cpu_time_clock_is_not_the_virtual_clock(probe, shim, clock_region):
     name, write = clock_region
     write(T, EPOCH)
     out = run_probe(probe, shim, name)
-    if out.get("process_cpu") == "unavailable":
-        pytest.skip("CLOCK_PROCESS_CPUTIME_ID not available on this platform")
+    require_clock(out, "process_cpu")
     assert int(out["process_cpu_before"]) != EPOCH + T
 
 
@@ -319,16 +333,15 @@ def test_getres_for_a_cpu_time_clock_matches_the_real_libc(probe, shim,
                                                            clock_region):
     """clock_getres passes CPU-time IDs through rather than reporting 1 ns.
 
-    The oracle is the same probe run with no region, where every interposer
-    falls back to libc. Where libc itself answers 1 ns the two values agree
+    The oracle is the same probe run with no region, where every interposed
+    call falls back to libc. Where libc itself answers 1 ns the two values agree
     either way, so this assertion only discriminates on platforms whose CPU
     clocks report a coarser resolution.
     """
     name, write = clock_region
     write(T, EPOCH)
     shimmed = run_probe(probe, shim, name)
-    if shimmed["getres_cpu"] == "unavailable":
-        pytest.skip("CLOCK_PROCESS_CPUTIME_ID not available on this platform")
+    require_clock(shimmed, "getres_cpu")
     real = run_probe(probe, shim)
     assert shimmed["getres_cpu"] == real["getres_cpu"]
     # The virtualized IDs still report 1 ns.
@@ -344,7 +357,7 @@ def test_unknown_clock_id_passes_through(probe, shim, clock_region):
     name, write = clock_region
     write(T, EPOCH)
     out = run_probe(probe, shim, name)
-    assert out["unknown"] == "error"
+    assert int(out["unknown"].split(":", 1)[1]) == errno.EINVAL
 
 
 @pytest.mark.skipif(not sys.platform.startswith("linux"),
