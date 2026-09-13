@@ -1,4 +1,4 @@
-"""Shared fixtures for toy-participant manifests."""
+"""Shared manifest fixtures for the end-to-end suites."""
 
 import json
 
@@ -79,3 +79,30 @@ def add_thrower(m, name: str = "thrower", **config):
         subscribes=[],
         publishes=[],
     )
+
+
+def add_slow_subscriber(m, name: str = "slow", *, capacity: int,
+                        overflow: str = "fail"):
+    """Declare a subscriber that never drains, so its route fills up.
+
+    The bench subscriber with `drain: False` is the shortest way to reach a
+    bounded route's capacity from a manifest, so the bounded-route suites and
+    the determinism fixtures share it.
+    """
+    m.add_native(
+        name,
+        library=str(BUILD_DIR / "bench_subscriber.silp"),
+        config={"input": "ticks", "period_ns": 1_000_000_000, "drain": False},
+        subscribes=[
+            SubscriberRoute("ticks", capacity=capacity, overflow=overflow)
+        ],
+    )
+
+
+def bounded_route_manifest(*, capacity: int, overflow: str = "fail"):
+    """A producer publishing faster than one slow subscriber consumes."""
+    m = toy_manifest(duration_ns=50_000_000)
+    m.add_channel("ticks", schema="toy.Counter")
+    add_producer(m, "publisher", channel="ticks", period_ns=10_000_000)
+    add_slow_subscriber(m, capacity=capacity, overflow=overflow)
+    return m

@@ -281,8 +281,8 @@ def measure(config: Config, build_dir: Path, repeats: int) -> dict:
     with tempfile.TemporaryDirectory() as tmp:
         workdir = Path(tmp)
         ref = config.manifest.write(workdir / "manifest.json")
-        counters = run_instrumented(build_dir / "sil-run-instrumented", ref.path,
-                                    workdir, config.recording)
+        report = run_instrumented(build_dir / "sil-run-instrumented", ref.path,
+                                  workdir, config.recording)
         samples = [run_timed(build_dir / "sil-run", ref.path, workdir,
                              config.recording) for _ in range(repeats)]
 
@@ -291,6 +291,10 @@ def measure(config: Config, build_dir: Path, repeats: int) -> dict:
     systems = sorted(sample[2] for sample in samples)
     peak_rss = max(sample[3] for sample in samples)
     payload = config.dimensions["payload"]
+    # The copies and route state repeat between Runs; the kernel's own cost,
+    # reported apart from them, does not.
+    counters = report["deterministic"]
+    kernel_cost = report["observational"]
     copies = {site: counters[site] for site in COPY_SITES}
     copied_bytes = sum(copies[site]["bytes"] for site in COPY_SITES
                        if site != "recorded")
@@ -311,9 +315,9 @@ def measure(config: Config, build_dir: Path, repeats: int) -> dict:
         "max_rss_bytes": peak_rss,
         # From the single instrumented run: the kernel process alone, which
         # RUSAGE_CHILDREN cannot separate from a Process participant.
-        "instrumented_kernel_user_s": counters["kernel_user_s"],
-        "instrumented_kernel_system_s": counters["kernel_system_s"],
-        "instrumented_kernel_max_rss_bytes": counters["kernel_max_rss_bytes"],
+        "instrumented_kernel_user_s": kernel_cost["kernel_user_s"],
+        "instrumented_kernel_system_s": kernel_cost["kernel_system_s"],
+        "instrumented_kernel_max_rss_bytes": kernel_cost["kernel_max_rss_bytes"],
         "copies": copies,
         "copied_bytes_per_message": copied_bytes / config.messages,
         "us_per_message": statistics.median(walls) / config.messages * 1e6,

@@ -55,20 +55,30 @@ def sil_run_instrumented(build_dir) -> Path:
     return exe
 
 
+def run_manifest(runner: Path, manifest_path: Path, out: Path,
+                 env: dict[str, str] | None = None):
+    """One Run at the run boundary: manifest in, exit code + MCAP out.
+
+    The runner is an argument because the production and the instrumented
+    kernel have to be run the same way to be compared (issue #82).
+    """
+    # `env=None` inherits this process's environment, so only callers that
+    # need to scope the run (e.g. TMPDIR) pass one.
+    proc = subprocess.run(
+        [str(runner), str(manifest_path), "-o", str(out)],
+        capture_output=True, text=True, env=env,
+    )
+    proc.mcap_path = out
+    return proc
+
+
 @pytest.fixture
 def run_sil(sil_run, tmp_path):
-    """Invoke the runner at the run boundary: manifest in, exit code + MCAP out."""
+    """Invoke the production runner, with an output path if none is given."""
 
     def _run(manifest_path: Path, out: Path | None = None,
              env: dict[str, str] | None = None):
-        out = out or tmp_path / "out.mcap"
-        # `env=None` inherits this process's environment, so only callers that
-        # need to scope the run (e.g. TMPDIR) pass one.
-        proc = subprocess.run(
-            [str(sil_run), str(manifest_path), "-o", str(out)],
-            capture_output=True, text=True, env=env,
-        )
-        proc.mcap_path = out
-        return proc
+        return run_manifest(sil_run, manifest_path, out or tmp_path / "out.mcap",
+                            env)
 
     return _run

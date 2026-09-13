@@ -195,9 +195,14 @@ carries no instrumentation. Keeping the two apart lets a run report copies as
 counts instead of inferring them from timing. These counters are the whole
 counter surface (#63): there is no metrics artifact and no metrics flag on
 `sil-run`, because a run reproduces exactly, so re-running it instrumented
-answers the question for the price of one run. `sil-run --no-recording` runs a
-manifest and writes no recording. That separates the cost of routing to
-subscribers from the cost of recording I/O.
+answers the question for the price of one run — an inertness the determinism
+suite asserts per fixture, as the same exit code and the same recording bytes
+under both runners. The report states the run's exit code and keeps its
+repeatable counters (`deterministic`) apart from its wall-clock and RSS values
+(`observational`).
+
+`sil-run --no-recording` runs a manifest and writes no recording. That
+separates the cost of routing to subscribers from the cost of recording I/O.
 
 ## Build & test
 

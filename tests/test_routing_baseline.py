@@ -89,8 +89,8 @@ def native_manifest(tmp_path, *, subscribers: int):
     return m.write(tmp_path / f"bench{subscribers}.json")
 
 
-def count_copies(runner, manifest_path, tmp_path, *, recording: bool):
-    """Runs the instrumented kernel and returns its copy-counter report."""
+def run_report(runner, manifest_path, tmp_path, *, recording: bool):
+    """Runs the instrumented kernel and returns its whole report."""
     out = tmp_path / "counters.json"
     args = [str(runner), str(manifest_path)]
     args += ["-o", str(tmp_path / "out.mcap")] if recording else ["--no-recording"]
@@ -100,6 +100,13 @@ def count_copies(runner, manifest_path, tmp_path, *, recording: bool):
     )
     assert proc.returncode == 0, proc.stderr
     return json.loads(out.read_text())
+
+
+def count_copies(runner, manifest_path, tmp_path, *, recording: bool):
+    """The deterministic subtree of that report: counts and route state."""
+    return run_report(runner, manifest_path, tmp_path, recording=recording)[
+        "deterministic"
+    ]
 
 
 class TestRecordingSwitch:
@@ -137,6 +144,56 @@ def test_process_benchmark_reports_declared_slot_count(build_dir):
     assert config.dimensions["slots"] == 2
     channel = config.manifest.to_doc()["channels"]["payload"]
     assert channel["slots"] == config.dimensions["slots"]
+
+
+class TestReportShape:
+    """What repeats and what varies live in separate subtrees (#63, #82)."""
+
+    def test_deterministic_counters_and_observational_values_are_separate(
+        self, sil_run_instrumented, tmp_path
+    ):
+        ref = native_manifest(tmp_path, subscribers=1)
+
+        report = run_report(
+            sil_run_instrumented, ref.path, tmp_path, recording=True
+        )
+
+        assert set(report) == {"run_exit_code", "deterministic", "observational"}
+        assert set(report["deterministic"]) == (
+            set(bench_routing.COPY_SITES) | {"routes"}
+        )
+        assert set(report["observational"]) == {
+            "kernel_user_s", "kernel_system_s", "kernel_max_rss_bytes",
+        }
+
+    def test_a_clean_run_states_its_exit_code(
+        self, sil_run_instrumented, tmp_path
+    ):
+        ref = native_manifest(tmp_path, subscribers=1)
+
+        report = run_report(
+            sil_run_instrumented, ref.path, tmp_path, recording=True
+        )
+
+        assert report["run_exit_code"] == 0
+
+    def test_a_config_error_reports_before_any_counter_moves(
+        self, sil_run_instrumented, tmp_path
+    ):
+        """The report describes the Run that failed to start, not a clean one."""
+        out = tmp_path / "counters.json"
+        proc = subprocess.run(
+            [str(sil_run_instrumented), str(tmp_path / "absent.json"),
+             "-o", str(tmp_path / "out.mcap")],
+            capture_output=True, text=True,
+            env={"SIL_COPY_COUNTERS_OUT": str(out), "PATH": "/usr/bin:/bin"},
+        )
+
+        assert proc.returncode == 2
+        report = json.loads(out.read_text())
+        assert report["run_exit_code"] == 2
+        assert report["deterministic"]["routes"] == []
+        assert report["deterministic"]["caller_to_kernel"]["count"] == 0
 
 
 class TestCopyCounters:

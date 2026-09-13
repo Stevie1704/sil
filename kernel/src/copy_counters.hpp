@@ -12,6 +12,15 @@
 // carries each route's last live depth plus high-water/drop/failure state. Per
 // the decision on #63 this is the only counter surface there is: no external
 // metrics surface exists, and none of these names carries a stability promise.
+//
+// Its three top-level members say how each value may be read (#82):
+//   run_exit_code   the Run's own exit code, so a partial report from a failed
+//                   Run cannot be read as a clean one.
+//   deterministic   the counters and route state, which two Runs of the same
+//                   Manifest repeat exactly. A repeated-run test compares this
+//                   subtree wholesale.
+//   observational   the kernel's wall-clock and RSS use, which varies per Run
+//                   and is therefore never asserted on.
 
 #include <cstddef>
 #include <string>
@@ -30,6 +39,8 @@ enum class Site {
 };
 
 #ifdef SIL_COPY_COUNTERS
+// Called once with `main`'s return value, before the report is written.
+void record_exit_code(int code) noexcept;
 void count(Site site, size_t len);
 void route_created(const std::string &channel,
                    const std::string &subscriber) noexcept;
@@ -40,6 +51,7 @@ void route_dropped_newest(const std::string &channel,
 void route_overflow_failure(const std::string &channel,
                             const std::string &subscriber) noexcept;
 #else
+inline void record_exit_code(int) noexcept {}
 inline void count(Site, size_t) {}
 inline void route_created(const std::string &,
                           const std::string &) noexcept {}
