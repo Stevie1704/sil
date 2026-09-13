@@ -86,6 +86,12 @@ A named, typed stream of messages that participants publish to and subscribe
 to. The only path data takes between participants.
 _Avoid_: topic, signal, bus, stream, port
 
+**Subscriber route**:
+One Participant's bounded FIFO delivery path from one Channel. Its Manifest
+declaration owns the queue capacity and overflow policy because subscribers on
+the same Channel can have different criticality and drain rates.
+_Avoid_: subscriber queue, consumer buffer
+
 **Message**:
 One published payload on a channel, laid out exactly as its schema declares.
 _Avoid_: sample, frame, event, packet, record

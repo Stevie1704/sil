@@ -41,7 +41,8 @@ add_executable(sil-run ${SIL_KERNEL_SOURCES})
 target_include_directories(sil-run PRIVATE include)
 target_link_libraries(sil-run PRIVATE nlohmann_json::nlohmann_json mcap_headers)
 
-# The same kernel with payload-copy instrumentation compiled in (issue #61).
+# The same kernel with routing test instrumentation compiled in (issues #61,
+# #75): payload-copy counts plus subscriber-route queue counters.
 # It is a second binary rather than a runtime switch so the production runner
 # carries no counter, no branch, and no reporting code on the routing path; the
 # routing baseline reports copy counts from this one and wall-clock from

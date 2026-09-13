@@ -5,8 +5,9 @@ import hashlib
 import subprocess
 import sys
 
-from conftest import ROOT
+from conftest import COMPAT_ROUTE_CAPACITY, ROOT
 from toys import add_accumulator, add_producer, toy_manifest
+from sil.manifest import SubscriberRoute
 
 
 def full_pipeline_manifest(tmp_path):
@@ -28,7 +29,7 @@ def full_pipeline_manifest(tmp_path):
         command=[sys.executable,
                  str(ROOT / "tests" / "participants" / "echo.py")],
         step_period_ns=10_000_000,
-        subscribes=["ticks"],
+        subscribes=[SubscriberRoute("ticks", capacity=COMPAT_ROUTE_CAPACITY)],
         publishes=["echo"],
     )
     return m.write(tmp_path / "pipeline.json")

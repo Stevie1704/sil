@@ -43,7 +43,15 @@ extern "C" int sil_participant_init(const sil_api_v1 *api, const char *,
   auto subscriber = std::make_unique<Subscriber>();
   subscriber->api = api;
   subscriber->input = cfg.at("input").get<std::string>();
-  if (api->subscribe(api->ctx, subscriber->input.c_str()) != SIL_OK) return SIL_ERR;
+  if (api->subscribe(api->ctx, subscriber->input.c_str()) != SIL_OK)
+    return SIL_ERR;
+  if (cfg.value("subscribe_twice", false) &&
+      api->subscribe(api->ctx, subscriber->input.c_str()) != SIL_OK)
+    return SIL_ERR;
+
+  // Bounded-route tests use the same real subscription seam without a Task
+  // draining it. The Engine still owns and tears down the resulting queue.
+  if (!cfg.value("drain", true)) return SIL_OK;
 
   const uint64_t period = cfg.at("period_ns").get<uint64_t>();
   const int32_t priority = cfg.value("priority", 1);

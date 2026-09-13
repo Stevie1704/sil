@@ -61,6 +61,16 @@ enum class Transport { Inline, Shm };
 // frozen (issue #52). Absent means Immediate, which is the pre-#52 behavior.
 enum class SleepPolicy { Immediate, Reject };
 
+// One participant's delivery route from a Channel. A missing capacity is the
+// legacy unbounded behavior for Manifest documents written before issue #75.
+enum class OverflowPolicy { Fail, DropNewest };
+
+struct SubscriberRouteSpec {
+  std::string channel;
+  std::optional<size_t> capacity;
+  OverflowPolicy overflow = OverflowPolicy::Fail;
+};
+
 struct ChannelSpec {
   std::string name;
   std::string schema;
@@ -83,14 +93,14 @@ struct NativeSpec {
   // The declared Channel contract. The manifest is authoritative: the C ABI
   // has no registration call, so runtime subscribe/publish only prove
   // conformance to these lists (issue #49).
-  std::vector<std::string> subscribes;
+  std::vector<SubscriberRouteSpec> subscribes;
   std::vector<std::string> publishes;
 };
 
 struct ProcessSpec {
   std::vector<std::string> command;
   uint64_t step_period_ns = 0;
-  std::vector<std::string> subscribes;
+  std::vector<SubscriberRouteSpec> subscribes;
   std::vector<std::string> publishes;
   int32_t priority = 0;
   bool shim = false;  // opt-in virtual clock shim (issue #27)

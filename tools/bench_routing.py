@@ -36,7 +36,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "python" / "src"))
 
 from sil import schema as sil_schema  # noqa: E402
-from sil.manifest import Manifest  # noqa: E402
+from sil.manifest import Manifest, SubscriberRoute  # noqa: E402
 
 BENCH_SCHEMAS = json.loads((ROOT / "schemas" / "bench.json").read_text())
 _TYPES = sil_schema.load(BENCH_SCHEMAS)
@@ -44,6 +44,10 @@ _TYPES = sil_schema.load(BENCH_SCHEMAS)
 # One activation period for every participant in the matrix, so a row's cost
 # scales with its message count rather than with its schedule.
 PERIOD_NS = 10_000_000
+
+# This benchmark measures copy/transport costs, not overflow. Its finite route
+# ceiling is deliberately above every configured message burst.
+BENCH_ROUTE_CAPACITY = 1024
 
 # The two payloads the baseline is stated over: a small control message and one
 # representative sensor frame. Their byte layout comes from schemas/bench.json.
@@ -105,7 +109,7 @@ def _native_subscriber(m: Manifest, build_dir: Path, name: str) -> None:
         name,
         library=str(build_dir / "bench_subscriber.silp"),
         config={"input": "payload", "period_ns": PERIOD_NS},
-        subscribes=["payload"],
+        subscribes=[SubscriberRoute("payload", capacity=BENCH_ROUTE_CAPACITY)],
     )
 
 
@@ -146,7 +150,12 @@ def process_config(build_dir, payload, *, direction, transport, burst,
     m = _base(payload, messages, burst, transport)
     if direction == "in":
         _native_publisher(m, build_dir, payload, burst)
-        _process(m, "subscriber", burst, subscribes=["payload"])
+        _process(
+            m,
+            "subscriber",
+            burst,
+            subscribes=[SubscriberRoute("payload", capacity=BENCH_ROUTE_CAPACITY)],
+        )
     else:
         _process(m, "publisher", burst, publishes=["payload"])
         _native_subscriber(m, build_dir, "subscriber0")

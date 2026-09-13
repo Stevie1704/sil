@@ -4,9 +4,10 @@ the simulation fails the pytest test with that message."""
 
 import pytest
 
-from conftest import ROOT
+from conftest import COMPAT_ROUTE_CAPACITY, ROOT
 from toys import add_producer, toy_manifest
 
+from sil.manifest import SubscriberRoute
 from sil.testing import RunFailure, participant_command, run_simulation
 
 CHECKS = ROOT / "tests" / "participants" / "tick_checks.py"
@@ -20,7 +21,7 @@ def manifest_with_checker(checker: str):
         "test",
         command=participant_command(CHECKS, checker),
         step_period_ns=10_000_000,
-        subscribes=["ticks"],
+        subscribes=[SubscriberRoute("ticks", capacity=COMPAT_ROUTE_CAPACITY)],
     )
     return m
 

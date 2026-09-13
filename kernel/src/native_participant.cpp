@@ -76,9 +76,18 @@ struct NativeApiBridge {
     NativeParticipant *p = self(ctx);
     if (!p->engine_.in_setup() || !channel) return SIL_ERR;
     return with_containment(p, [p, channel] {
-      if (p->fail_if_undeclared(p->subscribes_, channel, "input"))
+      const SubscriberRouteSpec *route = p->subscriber_route(channel);
+      if (!route) {
+        p->fail("", std::string("channel '") + channel +
+                        "' is not a declared input");
         return SIL_ERR;
-      p->subscriptions_[channel] = p->engine_.subscribe(p->name_, channel);
+      }
+      if (p->subscriber_routes_.count(channel)) {
+        p->fail("", std::string("subscribed to Channel '") + channel +
+                        "' more than once");
+        return SIL_ERR;
+      }
+      p->subscriber_routes_[channel] = p->engine_.subscribe(p->name_, *route);
       return SIL_OK;
     });
   }
@@ -101,8 +110,8 @@ struct NativeApiBridge {
     NativeParticipant *p = self(ctx);
     if (!p->engine_.in_task() || !channel || !data || !len) return SIL_ERR;
     return with_containment(p, [p, channel, data, len] {
-      auto it = p->subscriptions_.find(channel);
-      if (it == p->subscriptions_.end()) {
+      auto it = p->subscriber_routes_.find(channel);
+      if (it == p->subscriber_routes_.end()) {
         p->fail("", std::string("take on unsubscribed channel '") + channel +
                         "'");
         return SIL_ERR;
@@ -145,6 +154,15 @@ bool NativeParticipant::fail_if_undeclared(
   fail("", std::string("channel '") + channel + "' is not a declared " +
                direction);
   return true;
+}
+
+const SubscriberRouteSpec *NativeParticipant::subscriber_route(
+    const char *channel) {
+  auto it = std::find_if(
+      subscribes_.begin(), subscribes_.end(), [channel](const auto &route) {
+        return route.channel == channel;
+      });
+  return it == subscribes_.end() ? nullptr : &*it;
 }
 
 NativeParticipant::NativeParticipant(Engine &engine, const std::string &name,
