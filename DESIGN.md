@@ -573,10 +573,10 @@ in the framework's own CI from day one.**
   Participant. A Participant that keeps its state behind the `user` pointer it
   registers therefore gets two independent instances today, and the handle #51
   wanted to add is `ctx`. What is missing is a fixture and a documented rule,
-  not an ABI: every toy in `participants/` holds one global instance, so two
+  not an ABI: every toy in `participants/` held one global instance, so two
   entries on one library would run without any diagnostic while the second
   `init` overwrote the first one's state and both Tasks published through the
-  second context. That is a fixture defect and it is #88. **Repeated lifecycles
+  second context. That fixture defect is closed by #88. **Repeated lifecycles
   in one process are a much larger job than the ABI part, and one this design
   argues against.** The candidate was an in-process embedding running many
   Manifests without spawning `sil-run` for each, which is what would genuinely
@@ -604,3 +604,23 @@ in the framework's own CI from day one.**
   consequence:** #46's ABI criterion is amended to what #49 and #65 delivered,
   with multiple-instance support recorded as ABI v1 behavior rather than
   withdrawn.
+- **Several Participants per shared library (#88):** one shared library backs
+  any number of Participants in one Run, on ABI v1 unchanged. This is what #86
+  asserted and did not prove. The kernel already built one `NativeParticipant`
+  per Manifest entry and passed it as `api.ctx`, alongside that entry's own
+  `name` and `config`; what was missing was a Participant that kept its state
+  where that shape requires — behind the `user` pointer it registers,
+  allocated from its own `config_json` — and a Run that exercised two of them.
+  `toy_producer` and `toy_accumulator` now allocate per `init`, and a
+  run-boundary fixture declares two Manifest entries on one library with
+  different Channels and periods, asserting each Participant's own Channel,
+  its own timestamps, and its own sequence counter. The rule is stated at
+  `sil_participant_init` in `include/sil/participant.h`, together with its
+  consequence: a library that keeps state in a global supports at most one
+  Participant per Run, and the kernel does not diagnose a second — the earlier
+  Participant's declared output is simply never published. That silence is the
+  reason the rule needs a fixture rather than a check. `toy_thrower` keeps its
+  global, because one Participant is all a containment fixture needs, and says
+  so against the rule. **Destruction is untouched:** a Participant's state
+  lives until the process exits, which is the whole lifecycle ABI v1 has and
+  #86 declined to extend.

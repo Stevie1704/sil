@@ -869,6 +869,54 @@ class TestNativeScheduling:
         assert [t for _, t, _ in msgs] == [5_000_000, 25_000_000, 45_000_000]
 
 
+def counters_on(mcap_path, channel):
+    """The (t, toy.Counter) pairs recorded on one Channel, in stored order."""
+    _, msgs = read_mcap(mcap_path)
+    return [
+        (t, TYPES["toy.Counter"].unpack(data))
+        for topic, t, data in msgs
+        if topic == channel
+    ]
+
+
+class TestOneLibraryTwoParticipants:
+    """Two Manifest entries on one shared library, in one Run (issue #88).
+
+    Each entry is its own Participant with its own `config`, so a Participant
+    that keeps its state behind the `user` pointer it registers gets one
+    independent set of that state per entry. Nothing diagnoses a library that
+    keeps the state in a global instead: both Tasks would publish the second
+    entry's Channel, and the first entry's declared output would never be
+    published. The rule in include/sil/participant.h is worth only as much as
+    this fixture.
+    """
+
+    def test_two_participants_on_one_library_stay_independent(
+        self, run_sil, tmp_path
+    ):
+        m = toy_manifest(duration_ns=100_000_000)
+        m.add_channel("fast", schema="toy.Counter")
+        m.add_channel("slow", schema="toy.Counter")
+        add_producer(m, "fast_producer", channel="fast", period_ns=10_000_000)
+        add_producer(m, "slow_producer", channel="slow", period_ns=20_000_000)
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+
+        fast = counters_on(proc.mcap_path, "fast")
+        slow = counters_on(proc.mcap_path, "slow")
+
+        # Each Participant publishes its own declared Channel on its own
+        # period, both taken from the `config` of its own Manifest entry.
+        assert [t for t, _ in fast] == [i * 10_000_000 for i in range(10)]
+        assert [t for t, _ in slow] == [i * 20_000_000 for i in range(5)]
+        # Each counts only its own Activations: one shared counter would
+        # spread a single 0..14 sequence across the two Channels.
+        assert [c["seq"] for _, c in fast] == list(range(10))
+        assert [c["seq"] for _, c in slow] == list(range(5))
+        assert [c["value"] for _, c in fast] == [seq * 3 for seq in range(10)]
+        assert [c["value"] for _, c in slow] == [seq * 3 for seq in range(5)]
+
+
 class TestActivationOverflow:
     """Virtual time is unsigned and only ever advances. A Task whose next
     Activation cannot be represented is complete, rather than wrapping the
