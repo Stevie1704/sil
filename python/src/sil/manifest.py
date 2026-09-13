@@ -600,24 +600,25 @@ class Manifest:
 
         # A channel has at most one publisher (#64). Native, process, and
         # replay publishers go through this one path, so open-loop replay
-        # racing a live producer is the same rule rather than a separate
+        # racing a live publisher is the same rule rather than a separate
         # check; only the diagnostic still names the two kinds, because the
-        # two situations are repaired differently.
+        # two are repaired differently.
         # Name-sorted, like the kernel's manifest order, so both validators
         # name the same pair when a channel has more than one publisher.
-        published: dict[str, tuple[str, str]] = {}
+        publisher_of: dict[str, tuple[str, str]] = {}
         for pname, p in sorted(self._participants.items()):
             kind = p["type"]
             channels = p["channels"] if kind == "replay" else p.get("publishes", [])
             for ch in channels:
-                first = published.get(ch)
+                first = publisher_of.get(ch)
                 if first is not None:
+                    first_name, first_kind = first
                     raise ManifestError(
                         f"channel {ch!r} has more than one publisher: "
-                        f"participant {first[0]!r} ({first[1]}) and "
+                        f"participant {first_name!r} ({first_kind}) and "
                         f"participant {pname!r} ({kind})"
                     )
-                published[ch] = (pname, kind)
+                publisher_of[ch] = (pname, kind)
 
     def to_doc(self) -> dict:
         self._validate()

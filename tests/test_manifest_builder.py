@@ -976,8 +976,9 @@ class TestNativeChannelContract:
         assert "ticks" in json.loads(m.to_json())["channels"]
 
     def test_the_named_pair_does_not_depend_on_declaration_order(self):
-        # Both validators walk participants name-sorted, so the two documents
-        # below are one document and must produce one diagnostic.
+        # The builder walks participants name-sorted, like the kernel's
+        # manifest order, so the two documents below are one document and must
+        # produce one diagnostic.
         def build(first: str, second: str) -> str:
             m = self._two_channel()
             for name in (first, second):

@@ -44,13 +44,17 @@ Engine::ChannelState &Engine::channel_or_fail(const std::string &name,
 void Engine::setup() {
   in_setup_ = true;
 
-  // A Channel has at most one publisher (#64). Every publisher declares its
-  // outputs in the manifest — native, process, and replay alike — so one pass
-  // over the declarations catches a second one before any participant is
-  // loaded or spawned. Open-loop replay racing a live producer is the same
-  // rule rather than a separate check; only the diagnostic still names the
-  // two kinds, because the two situations are repaired differently.
-  std::map<std::string, std::pair<std::string, const char *>> publisher;
+  // A channel has at most one publisher (#64). Every publisher declares its
+  // outputs in the manifest — native, process, and replay participants alike —
+  // so one pass over the declarations catches a second one before any
+  // participant is loaded or spawned. Open-loop replay racing a live publisher
+  // is the same rule rather than a separate check; only the diagnostic still
+  // names the two kinds, because the two are repaired differently.
+  struct Publisher {
+    std::string name;
+    const char *kind;
+  };
+  std::map<std::string, Publisher> publisher_of;
   for (const ParticipantSpec &p : manifest_.participants) {
     const std::vector<std::string> *publishes = nullptr;
     const char *kind = nullptr;
@@ -65,15 +69,14 @@ void Engine::setup() {
       kind = "replay";
     }
     for (const std::string &ch : *publishes) {
-      // Manifest order is name-sorted, so the pair named here is the same one
-      // the Python builder names for the same document.
-      auto [entry, inserted] = publisher.try_emplace(ch, p.name, kind);
+      auto [entry, inserted] =
+          publisher_of.try_emplace(ch, Publisher{p.name, kind});
       if (!inserted)
         throw ManifestError(
             "manifest error: channel '" + ch +
-            "' has more than one publisher: participant '" +
-            entry->second.first + "' (" + entry->second.second +
-            ") and participant '" + p.name + "' (" + kind + ")");
+            "' has more than one publisher: participant '" + entry->second.name +
+            "' (" + entry->second.kind + ") and participant '" + p.name + "' (" +
+            kind + ")");
     }
   }
 
