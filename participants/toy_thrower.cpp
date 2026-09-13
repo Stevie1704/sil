@@ -6,7 +6,9 @@
 // is thrown ("kind": "std" | "other" — a non-std type is what proves the
 // catch-all), and whether the participant reports a functional failure through
 // api->fail before throwing ("fail_first"), which containment must preserve.
-// Uses one global instance: at most one participant per library per run.
+//
+// Its state lives in a global, so by the rule in sil/participant.h this library
+// backs at most one Participant per Run — all any containment fixture asks.
 #include <sil/participant.h>
 
 #include <stdexcept>

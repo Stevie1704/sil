@@ -60,7 +60,20 @@ typedef struct sil_api_v1 {
 
 /* Entry point exported by the participant library.
  * config_json is the participant's "config" object from the manifest.
- * Return SIL_OK, or SIL_ERR to abort startup. */
+ * Return SIL_OK, or SIL_ERR to abort startup.
+ *
+ * One manifest entry is one participant: the kernel calls this once per entry,
+ * with that entry's own name and config_json, through its own api — whose ctx
+ * is that participant's kernel-side handle. Both the api pointer and its ctx
+ * stay valid for the whole run, so a participant may keep them. A
+ * participant's state therefore belongs behind the user pointer passed to
+ * register_task, which the kernel never reads and hands back unchanged to
+ * every task callback; a library that does this backs any number of
+ * participants in one run. A library that keeps its state in a global
+ * supports at most one participant per run, and the kernel does not diagnose
+ * a second: the later init overwrites the earlier participant's state, every
+ * registered task then publishes through the later ctx, and the earlier
+ * participant's declared output is never published. */
 int sil_participant_init(const sil_api_v1 *api, const char *name,
                          const char *config_json);
 
