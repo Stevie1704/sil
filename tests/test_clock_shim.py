@@ -68,10 +68,18 @@ def shim(build_dir):
     pytest.fail(f"clock shim library not built in {build_dir}")
 
 
-def run_probe(probe, shim, region_name):
-    """Run the probe under the preload, return parsed key=value output."""
+def run_probe(probe, shim, region_name=None):
+    """Run the probe under the preload, return parsed key=value output.
+
+    ``region_name`` of None leaves the region unset, which is the shim's
+    region-absent fallback: every interposer defers to the real libc. That is
+    the oracle for what a pass-through clock ID must answer.
+    """
     env = dict(os.environ)
-    env[REGION_ENV] = region_name
+    if region_name is None:
+        env.pop(REGION_ENV, None)
+    else:
+        env[REGION_ENV] = region_name
     if sys.platform == "darwin":
         env["DYLD_INSERT_LIBRARIES"] = str(shim)
     else:
@@ -272,6 +280,82 @@ def test_retry_loop_spins_under_immediate_and_exits_under_reject(
     out = run_probe(probe, shim, name)
     assert int(out["retry_iterations"]) == expected_iterations
     assert out["retry_capped"] == ("1" if policy == IMMEDIATE else "0")
+
+
+# --- clock ID classification (issue #76) -------------------------------------
+# The shim serves monotonic-class and realtime-class IDs from the region and
+# passes every other ID — CPU-time IDs and any unknown or future one — through
+# to the real libc.
+
+
+@pytest.mark.parametrize("key", ["process_cpu", "thread_cpu"])
+def test_cpu_time_clocks_pass_through(probe, shim, clock_region, key):
+    """A CPU-time clock counts work done, so it advances inside a frozen step.
+
+    This is the property no virtualized clock has: the region's ``t`` does not
+    move during a step, so a virtualized read would report the same value both
+    times. The probe does a fixed amount of work between the two reads.
+    """
+    name, write = clock_region
+    write(T, EPOCH)
+    out = run_probe(probe, shim, name)
+    if out.get(key) == "unavailable":
+        pytest.skip(f"{key} clock ID not available on this platform")
+    assert out.get(key) != "error", f"{key} read failed"
+    assert int(out[f"{key}_after"]) > int(out[f"{key}_before"])
+
+
+def test_cpu_time_clock_is_not_the_virtual_clock(probe, shim, clock_region):
+    """Pinning the old defect: the CPU clock read was epoch + t."""
+    name, write = clock_region
+    write(T, EPOCH)
+    out = run_probe(probe, shim, name)
+    if out.get("process_cpu") == "unavailable":
+        pytest.skip("CLOCK_PROCESS_CPUTIME_ID not available on this platform")
+    assert int(out["process_cpu_before"]) != EPOCH + T
+
+
+def test_getres_for_a_cpu_time_clock_matches_the_real_libc(probe, shim,
+                                                           clock_region):
+    """clock_getres passes CPU-time IDs through rather than reporting 1 ns.
+
+    The oracle is the same probe run with no region, where every interposer
+    falls back to libc. Where libc itself answers 1 ns the two values agree
+    either way, so this assertion only discriminates on platforms whose CPU
+    clocks report a coarser resolution.
+    """
+    name, write = clock_region
+    write(T, EPOCH)
+    shimmed = run_probe(probe, shim, name)
+    if shimmed["getres_cpu"] == "unavailable":
+        pytest.skip("CLOCK_PROCESS_CPUTIME_ID not available on this platform")
+    real = run_probe(probe, shim)
+    assert shimmed["getres_cpu"] == real["getres_cpu"]
+    # The virtualized IDs still report 1 ns.
+    assert int(shimmed["getres"]) == 1
+
+
+def test_unknown_clock_id_passes_through(probe, shim, clock_region):
+    """An ID the shim does not classify reaches libc, which rejects it.
+
+    Answering it from the region would invent a class for a clock whose
+    meaning the shim cannot know.
+    """
+    name, write = clock_region
+    write(T, EPOCH)
+    out = run_probe(probe, shim, name)
+    assert out["unknown"] == "error"
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"),
+                    reason="the COARSE clock IDs are Linux-only")
+def test_coarse_ids_keep_their_class(probe, shim, clock_region):
+    """COARSE variants are the same class as the clocks they approximate."""
+    name, write = clock_region
+    write(T, EPOCH)
+    out = run_probe(probe, shim, name)
+    assert int(out["realtime_coarse"]) == EPOCH + T
+    assert int(out["monotonic_coarse"]) == T
 
 
 def test_frozen_across_steps(probe, shim, clock_region):

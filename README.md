@@ -60,13 +60,18 @@ m.add_process(
 
 Inside a shimmed child, per step at virtual time `t`:
 
-- monotonic-class reads (`CLOCK_MONOTONIC`, `..._RAW`) return `t` — nanoseconds
-  from run start;
-- realtime-class reads (`CLOCK_REALTIME`, `gettimeofday`, `time`) return
-  `epoch_ns + t`;
-- `clock_getres` reports 1 ns;
-- **reads are frozen within a step** — every read during one step returns the
-  same value; time advances only between steps.
+- monotonic-class reads (`CLOCK_MONOTONIC`, `..._RAW`, `CLOCK_BOOTTIME`, the
+  `_COARSE`/`UPTIME_RAW` variants) return `t` — nanoseconds from run start;
+- realtime-class reads (`CLOCK_REALTIME` and its `_COARSE` variant,
+  `gettimeofday`, `time`) return `epoch_ns + t`;
+- `clock_getres` reports 1 ns for those IDs;
+- **every other clock ID passes through to the real libc** — the CPU-time IDs
+  (`CLOCK_PROCESS_CPUTIME_ID`, `CLOCK_THREAD_CPUTIME_ID`), which measure
+  consumed CPU rather than elapsed wall time, and any ID the shim does not
+  name, which has no known class to answer from. A participant that profiles
+  itself with a CPU clock reads real CPU time and is not deterministic;
+- **virtualized reads are frozen within a step** — every such read during one
+  step returns the same value; time advances only between steps.
 
 Because a step's time is frozen and the kernel waits for the step response, no
 sleep can wait for the clock to move — it would deadlock against the only thing

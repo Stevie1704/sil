@@ -6,7 +6,11 @@
  * All times are printed in nanoseconds. Sleep calls print their return value,
  * their errno and their remaining-time output, so one probe run covers both
  * sleep policies (issue #52) and the test asserts which one the region
- * selected. No sleep call may block under either policy. */
+ * selected. No sleep call may block under either policy.
+ *
+ * Clock IDs the shim does not virtualize — the CPU-time IDs and an
+ * unrecognized one (issue #76) — are printed too, so the test can assert the
+ * shim stepped aside rather than answering from the region. */
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -27,6 +31,33 @@ static void print_clock(const char *key, clockid_t id) {
     printf("%s=%llu\n", key, (unsigned long long)ts_ns(&ts));
 }
 
+/* Burn a fixed amount of CPU. Counted in iterations, not measured against a
+ * clock: a virtualized clock never advances, so a loop that waited for one to
+ * move would never end. `volatile` keeps the compiler from deleting it. */
+static void burn_cpu(void) {
+    volatile uint64_t sink = 0;
+    for (uint64_t i = 0; i < 20000000ull; i++)
+        sink += i;
+}
+
+/* Read a CPU-time clock, do work, read it again. A passed-through CPU clock
+ * counts the work; a virtualized one is frozen for the whole step and reports
+ * the same value twice. */
+static void print_cpu_clock_pair(const char *key, clockid_t id) {
+    struct timespec before, after;
+    if (clock_gettime(id, &before) != 0) {
+        printf("%s=error\n", key);
+        return;
+    }
+    burn_cpu();
+    if (clock_gettime(id, &after) != 0) {
+        printf("%s=error\n", key);
+        return;
+    }
+    printf("%s_before=%llu\n", key, (unsigned long long)ts_ns(&before));
+    printf("%s_after=%llu\n", key, (unsigned long long)ts_ns(&after));
+}
+
 int main(void) {
     /* Monotonic-class: virtual t only. */
     print_clock("monotonic", CLOCK_MONOTONIC);
@@ -37,13 +68,53 @@ int main(void) {
 
     /* Realtime-class: epoch + virtual t. */
     print_clock("realtime", CLOCK_REALTIME);
+#ifdef CLOCK_REALTIME_COARSE
+    print_clock("realtime_coarse", CLOCK_REALTIME_COARSE);
+#endif
+#ifdef CLOCK_MONOTONIC_COARSE
+    print_clock("monotonic_coarse", CLOCK_MONOTONIC_COARSE);
+#endif
 
-    /* clock_getres reports 1 ns. */
+    /* An unrecognized clock ID has no class, so it passes through and the real
+     * libc rejects it. Virtualizing it would answer a question the shim cannot
+     * know the answer to. */
+    print_clock("unknown", (clockid_t)9999);
+
+    /* CPU-time IDs pass through (issue #76): they measure consumed CPU, not
+     * wall time, so they keep running while virtual time is frozen. Printed
+     * twice around a fixed amount of work, so the test can assert that the
+     * second read is larger — the property no virtualized clock has.
+     *
+     * The busy loop is bounded by an iteration count, never by a clock read:
+     * a virtualized clock would never advance and the loop would never end. */
+#ifdef CLOCK_PROCESS_CPUTIME_ID
+    print_cpu_clock_pair("process_cpu", CLOCK_PROCESS_CPUTIME_ID);
+#else
+    printf("process_cpu=unavailable\n");
+#endif
+#ifdef CLOCK_THREAD_CPUTIME_ID
+    print_cpu_clock_pair("thread_cpu", CLOCK_THREAD_CPUTIME_ID);
+#else
+    printf("thread_cpu=unavailable\n");
+#endif
+
+    /* clock_getres reports 1 ns for virtualized IDs. */
     struct timespec res;
     if (clock_getres(CLOCK_MONOTONIC, &res) == 0)
         printf("getres=%llu\n", (unsigned long long)ts_ns(&res));
     else
         printf("getres=error\n");
+
+    /* clock_getres for a CPU-time ID passes through, so it reports whatever
+     * the real libc does rather than the shim's 1 ns. */
+#ifdef CLOCK_PROCESS_CPUTIME_ID
+    if (clock_getres(CLOCK_PROCESS_CPUTIME_ID, &res) == 0)
+        printf("getres_cpu=%llu\n", (unsigned long long)ts_ns(&res));
+    else
+        printf("getres_cpu=error\n");
+#else
+    printf("getres_cpu=unavailable\n");
+#endif
 
     /* gettimeofday: epoch + virtual t, in microseconds. */
     struct timeval tv;
