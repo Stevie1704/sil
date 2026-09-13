@@ -85,7 +85,9 @@ _Avoid_: clock hook, time patch, LD_PRELOAD hack, interposer
 
 **Channel**:
 A named, typed stream of messages that participants publish to and subscribe
-to. The only path data takes between participants.
+to. The only path data takes between participants. At most one Participant
+publishes a Channel — a Replayer counts as that publisher — so a Channel's
+producer is a static fact of the Manifest.
 _Avoid_: topic, signal, bus, stream, port
 
 **Subscriber route**:
