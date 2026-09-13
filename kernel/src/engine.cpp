@@ -44,32 +44,39 @@ Engine::ChannelState &Engine::channel_or_fail(const std::string &name,
 void Engine::setup() {
   in_setup_ = true;
 
-  // Open-loop replay must not race live production on the same channel: a
-  // channel a live participant publishes cannot also be replayed. Every live
-  // publisher declares its outputs in the manifest, native and process alike,
-  // so one pass over the declarations catches the collision before any
-  // participant is loaded or spawned. Two live publishers on one channel stay
-  // allowed here; that cardinality is decided separately (#64).
-  std::map<std::string, std::string> live_publisher;
+  // A channel has at most one publisher (#64). Every publisher declares its
+  // outputs in the manifest — native, process, and replay participants alike —
+  // so one pass over the declarations catches a second one before any
+  // participant is loaded or spawned. Open-loop replay racing a live publisher
+  // is the same rule rather than a separate check; only the diagnostic still
+  // names the two kinds, because the two are repaired differently.
+  struct Publisher {
+    std::string name;
+    const char *kind;
+  };
+  std::map<std::string, Publisher> publisher_of;
   for (const ParticipantSpec &p : manifest_.participants) {
     const std::vector<std::string> *publishes = nullptr;
-    if (const auto *proc = std::get_if<ProcessSpec>(&p.impl))
+    const char *kind = nullptr;
+    if (const auto *proc = std::get_if<ProcessSpec>(&p.impl)) {
       publishes = &proc->publishes;
-    else if (const auto *native = std::get_if<NativeSpec>(&p.impl))
+      kind = "process";
+    } else if (const auto *native = std::get_if<NativeSpec>(&p.impl)) {
       publishes = &native->publishes;
-    if (!publishes) continue;
-    for (const std::string &ch : *publishes) live_publisher.emplace(ch, p.name);
-  }
-  for (const ParticipantSpec &p : manifest_.participants) {
-    const auto *replay = std::get_if<ReplaySpec>(&p.impl);
-    if (!replay) continue;
-    for (const std::string &ch : replay->channels) {
-      auto publisher = live_publisher.find(ch);
-      if (publisher != live_publisher.end())
-        throw ManifestError("manifest error: participant '" + p.name +
-                            "': replayed channel '" + ch +
-                            "' is also published by live participant '" +
-                            publisher->second + "'");
+      kind = "native";
+    } else {
+      publishes = &std::get<ReplaySpec>(p.impl).channels;
+      kind = "replay";
+    }
+    for (const std::string &ch : *publishes) {
+      auto [entry, inserted] =
+          publisher_of.try_emplace(ch, Publisher{p.name, kind});
+      if (!inserted)
+        throw ManifestError(
+            "manifest error: channel '" + ch +
+            "' has more than one publisher: participant '" + entry->second.name +
+            "' (" + entry->second.kind + ") and participant '" + p.name + "' (" +
+            kind + ")");
     }
   }
 

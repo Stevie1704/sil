@@ -1050,17 +1050,19 @@ class TestNativeChannelContract:
         assert "producer" in proc.stderr
         assert "twice" in proc.stderr
 
-    def test_a_native_and_a_process_may_publish_one_channel(
+    def test_a_native_and_a_process_publishing_one_channel_is_a_config_error(
         self, run_sil, tmp_path
     ):
-        # Live-publisher cardinality is decided in #64. Declaring native
-        # publishers must not introduce a single-publisher rule on the way.
+        # A channel has at most one publisher (#64). The builder rejects this
+        # too; here the kernel must reject it at load, before any participant
+        # is loaded or spawned, and name both publishers with their kinds.
         import sys as _sys
 
         from conftest import ROOT
 
         m = toy_manifest(duration_ns=30_000_000)
         m.add_channel("ticks", schema="toy.Counter")
+        m.add_channel("spare", schema="toy.Counter")
         add_producer(m, "aprod", channel="ticks", period_ns=10_000_000)
         m.add_process(
             "psource",
@@ -1068,20 +1070,68 @@ class TestNativeChannelContract:
                      str(ROOT / "tests" / "participants" / "counter_source.py"),
                      "ticks"],
             step_period_ns=10_000_000,
-            publishes=["ticks"],
+            publishes=["spare"],
         )
+        # The builder would reject the collision, so declare it elsewhere and
+        # move it onto 'ticks' in the document the kernel actually loads.
+        doc = m.to_doc()
+        doc["participants"]["psource"]["publishes"] = ["ticks"]
+        proc = run_sil(_write_doc(tmp_path, doc))
+        assert proc.returncode == 2
+        assert "'ticks' has more than one publisher" in proc.stderr
+        assert "'aprod' (native)" in proc.stderr
+        assert "'psource' (process)" in proc.stderr
+
+    def test_two_replayers_of_one_channel_is_a_config_error(
+        self, run_sil, tmp_path
+    ):
+        # Replay participants are publishers under the same rule, so the check
+        # that used to compare replay against live only now covers this too.
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        add_producer(m, "aprod", channel="ticks", period_ns=10_000_000)
+        doc = m.to_doc()
+        del doc["participants"]["aprod"]
+        for name in ("r1", "r2"):
+            doc["participants"][name] = {
+                "type": "replay",
+                "recording": "rec.mcap",
+                "recording_hash": "0" * 64,
+                "channels": ["ticks"],
+            }
+        proc = run_sil(_write_doc(tmp_path, doc))
+        assert proc.returncode == 2
+        assert "'ticks' has more than one publisher" in proc.stderr
+        assert "'r1' (replay)" in proc.stderr
+        assert "'r2' (replay)" in proc.stderr
+
+    def test_a_channel_with_no_publisher_runs(self, run_sil, tmp_path):
+        # The rule is at most one publisher, not exactly one: a declared but
+        # undriven channel still loads and the run completes.
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_channel("undriven", schema="toy.Counter")
+        add_producer(m, "aprod", channel="ticks", period_ns=10_000_000)
         proc = run_sil(m.write(tmp_path / "m.json").path)
         assert proc.returncode == 0, proc.stderr
 
-        _, msgs = read_mcap(proc.mcap_path)
-        values = sorted(
-            TYPES["toy.Counter"].unpack(data)["value"]
-            for topic, _, data in msgs
-            if topic == "ticks"
+    def test_the_second_publisher_is_rejected_before_the_library_loads(
+        self, run_sil, tmp_path
+    ):
+        # The library path does not exist, so a run that reaches loading fails
+        # differently. Reaching the cardinality diagnostic proves the check
+        # still runs ahead of every participant.
+        m = toy_manifest(duration_ns=30_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        add_producer(m, "aprod", channel="ticks", period_ns=10_000_000)
+        doc = m.to_doc()
+        doc["participants"]["bprod"] = dict(
+            doc["participants"]["aprod"], library="does-not-exist.so"
         )
-        # Both publishers reach the recording: the native's non-negative
-        # values and the process participant's non-positive ones.
-        assert min(values) < 0 < max(values)
+        proc = run_sil(_write_doc(tmp_path, doc))
+        assert proc.returncode == 2
+        assert "'ticks' has more than one publisher" in proc.stderr
+        assert "does-not-exist" not in proc.stderr
 
 
 class TestNativeExceptionContainment:

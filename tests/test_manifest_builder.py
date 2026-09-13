@@ -936,14 +936,55 @@ class TestNativeChannelContract:
         with pytest.raises(ManifestError, match="ticks.*prod|prod.*ticks"):
             m.to_json()
 
-    def test_multiple_live_publishers_stay_allowed(self):
-        # Cardinality is decided in #64; declaring Native publishers must not
-        # introduce a single-publisher restriction on the way.
+    def test_two_live_publishers_rejected(self):
+        # A channel has at most one publisher (#64). The diagnostic names the
+        # channel and both participants with their kinds.
         m = self._two_channel()
         m.add_native("prod", library="x.dylib", publishes=["ticks"])
         m.add_process(
             "vecu", command=["x"], step_period_ns=10_000_000, publishes=["ticks"]
         )
-        assert json.loads(m.to_json())["participants"]["prod"]["publishes"] == [
-            "ticks"
-        ]
+        with pytest.raises(ManifestError) as excinfo:
+            m.to_json()
+        message = str(excinfo.value)
+        assert "'ticks' has more than one publisher" in message
+        assert "'prod' (native)" in message
+        assert "'vecu' (process)" in message
+
+    def test_two_replayers_of_one_channel_rejected(self, tmp_path):
+        # Replayers are publishers under the same rule, so replay/replay is
+        # covered by the check that used to compare replay against live only.
+        rec = tmp_path / "rec.mcap"
+        rec.write_bytes(b"\x89MCAP0\r\n")
+        m = self._two_channel()
+        m.add_replay("r1", recording=str(rec), channels=["ticks"])
+        m.add_replay("r2", recording=str(rec), channels=["ticks"])
+        with pytest.raises(ManifestError) as excinfo:
+            m.to_json()
+        message = str(excinfo.value)
+        assert "'r1' (replay)" in message and "'r2' (replay)" in message
+
+    def test_a_channel_with_no_publisher_is_allowed(self):
+        # The rule is at most one publisher, not exactly one: a declared but
+        # undriven channel still loads.
+        m = self._two_channel()
+        m.add_native(
+            "sink",
+            library="x.dylib",
+            subscribes=[SubscriberRoute("ticks", capacity=1)],
+        )
+        assert "ticks" in json.loads(m.to_json())["channels"]
+
+    def test_the_named_pair_does_not_depend_on_declaration_order(self):
+        # The builder walks participants name-sorted, like the kernel's
+        # manifest order, so the two documents below are one document and must
+        # produce one diagnostic.
+        def build(first: str, second: str) -> str:
+            m = self._two_channel()
+            for name in (first, second):
+                m.add_native(name, library="x.dylib", publishes=["ticks"])
+            with pytest.raises(ManifestError) as excinfo:
+                m.to_json()
+            return str(excinfo.value)
+
+        assert build("aaa", "zzz") == build("zzz", "aaa")

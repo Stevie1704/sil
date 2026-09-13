@@ -290,8 +290,9 @@ in the framework's own CI from day one.**
   runtime, subscribing to an undeclared input is a config error (exit 2) and
   publishing an undeclared output aborts the run (exit 1); both diagnostics
   name the participant, the channel, and the declared direction. Live-publisher
-  cardinality is untouched — two live publishers on one channel stay legal, and
-  that policy belongs to #64. Native `subscribes` and `publishes` are required:
+  cardinality was left untouched here and decided separately in #64 below,
+  which folded this collision check into one publisher rule. Native
+  `subscribes` and `publishes` are required:
   pre-#49 declarations had no contract enforcement at all, and that behavior is
   gone, so an absent list must fail at load rather than load as an empty contract
   and abort after participants are up. Process participants remain tolerant of
@@ -405,3 +406,48 @@ in the framework's own CI from day one.**
   its library is still closed, and what lets the scheduler leave its in-Task
   state normally. This is containment only: no ABI revision, no prefix
   negotiation, no lifecycle states (those stay with #51).
+- **Channel publisher cardinality (#64):** a Channel has at most one publisher.
+  The baseline this replaces is that several live Participants could publish
+  one Channel, ordered deterministically by Task order and global Publish
+  order. Determinism is therefore not the reason to restrict it — both
+  policies are deterministic. Ownership is. Every publisher already declares
+  its outputs in the Manifest, native, process, and replay participants alike,
+  so one name-sorted pass over the declarations rejects a second publisher
+  before any Participant is loaded or spawned, and a Channel's publisher
+  becomes a static fact of the Manifest. Three things follow. Open-loop replay
+  stops being a special case: a replay participant *is* the publisher, so the
+  bespoke replay-versus-live collision check is now the same
+  duplicate-publisher check, and replay versus replay, which that check never
+  covered, is closed by the same rule. Message provenance derives from the
+  Manifest alone, so no per-Message publisher field is ever needed to
+  attribute one. And an Interceptor, a route-capacity diagnostic, and a fault
+  window each name exactly one publisher. The rule is *at most* one, not
+  exactly one: a declared but undriven Channel still loads. The diagnostic
+  names both participants and their kinds, because a replay/live collision and
+  a live/live collision are repaired differently even though one rule now
+  finds both. **That merge has a cost to remember:** the replay/live safety
+  rule is now a corollary of cardinality, so relaxing cardinality later would
+  silently take the safety check with it and must restore it separately.
+  **Compatibility (per #62): a rejection, not a declared field.** #62 governs
+  new hash-covered fields; this adds none. A Manifest that declares two
+  publishers now fails at load with exit 2, which is the mapping #62
+  explicitly allows — one hash may map to a contextual rejection, and only two
+  different *successful* Runs are forbidden. No Channel field, no hash change,
+  no document to regenerate, and no way to turn the rule off: a kernel switch
+  outside the Manifest would let one Manifest produce two behaviors, which
+  decision 12 forbids. This is not the #76 shape, despite both being
+  fieldless. #76 corrected a behavior this document had never recorded as
+  supported; here the previous behavior *was* recorded as legal, in the #49
+  entry above, and is being withdrawn deliberately. Declaring cardinality per
+  Channel instead was rejected as configurability without a use case: it would
+  spend a hash-covered field to keep a topology nothing in the project needs.
+  **What it forfeits.** The Interceptor kinds are `drop`, `drop_nth`, `delay`,
+  and `override`; none injects. So a test Participant can no longer add a
+  phantom Message to a Channel the system under test also publishes. The
+  natural replacement would be an `inject` Interceptor kind rather than a
+  second publisher, because injection at the publish choke point keeps the
+  Interceptor ordering and suppression contract that a second publisher
+  bypasses — a direction, not yet a scoped decision. Bus-style fan-in, several
+  ECUs on one diagnostic or log Channel, becomes one Channel per ECU plus a
+  bus Participant, which native bus emulation in the core already being a
+  non-goal points to.

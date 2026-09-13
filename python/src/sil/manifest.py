@@ -598,29 +598,27 @@ class Manifest:
                         )
                     seen.add(ch)
 
-        # Open-loop replay must not race live production: a channel a live
-        # participant publishes cannot also be replayed. Native and process
-        # publishers go through this one path, so a collision is visible
-        # wherever it is declared. Multiple live publishers stay allowed —
-        # that cardinality is decided in #64, not here.
+        # A channel has at most one publisher (#64). Native, process, and
+        # replay publishers go through this one path, so open-loop replay
+        # racing a live publisher is the same rule rather than a separate
+        # check; only the diagnostic still names the two kinds, because the
+        # two are repaired differently.
         # Name-sorted, like the kernel's manifest order, so both validators
-        # name the same publisher when a channel has more than one.
-        live_published: dict[str, str] = {}
+        # name the same pair when a channel has more than one publisher.
+        publisher_of: dict[str, tuple[str, str]] = {}
         for pname, p in sorted(self._participants.items()):
-            if p["type"] == "replay":
-                continue
-            for ch in p.get("publishes", []):
-                live_published.setdefault(ch, pname)
-        for pname, p in self._participants.items():
-            if p["type"] != "replay":
-                continue
-            for ch in p["channels"]:
-                publisher = live_published.get(ch)
-                if publisher is not None:
+            kind = p["type"]
+            channels = p["channels"] if kind == "replay" else p.get("publishes", [])
+            for ch in channels:
+                first = publisher_of.get(ch)
+                if first is not None:
+                    first_name, first_kind = first
                     raise ManifestError(
-                        f"participant {pname!r}: replayed channel {ch!r} is also "
-                        f"published by live participant {publisher!r}"
+                        f"channel {ch!r} has more than one publisher: "
+                        f"participant {first_name!r} ({first_kind}) and "
+                        f"participant {pname!r} ({kind})"
                     )
+                publisher_of[ch] = (pname, kind)
 
     def to_doc(self) -> dict:
         self._validate()

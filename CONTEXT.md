@@ -88,6 +88,13 @@ A named, typed stream of messages that participants publish to and subscribe
 to. The only path data takes between participants.
 _Avoid_: topic, signal, bus, stream, port
 
+**Publisher**:
+The one participant that publishes a channel, declared in its manifest
+contract. A channel has at most one, and a replay participant is the publisher
+of every channel it replays, so a channel's publisher is a static fact of the
+manifest rather than something the run discovers.
+_Avoid_: producer, source, writer, owner
+
 **Subscriber route**:
 One Participant's bounded FIFO delivery path from one Channel. Its Manifest
 declaration owns the queue capacity and overflow policy because subscribers on
