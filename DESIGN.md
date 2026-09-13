@@ -196,11 +196,12 @@ in the framework's own CI from day one.**
   them as realtime.
   **Compatibility (per #62): a straight correction, not a declared field.**
   #62 governs new hash-covered fields, and its selection test — does the prior
-  behavior still exist and is it worth a default — has no answer here: under
-  frozen-step semantics a CPU-time delta measured inside a step always read
-  zero, so no participant can hold a working dependency on it, and there is
-  nothing to preserve. A field would instead enshrine the deviation as a
-  supported mode for the life of Manifest version 1. No Manifest field ever
+  behavior still exist and is it worth a default — has no answer here. What a
+  CPU-time ID returned was never CPU time: within a step the delta read zero,
+  because virtual time is frozen, and across steps it read the virtual wall
+  clock. Neither is a CPU-time semantics, so there is none to preserve. A field
+  would instead enshrine the deviation as a supported mode for the life of
+  Manifest version 1. No Manifest field ever
   declared CPU-clock virtualization, so no hash changes and no document needs
   regenerating. The reclassified variants ride on the same call for the same
   reason: this document already assigned every wall clock to its class, so an
