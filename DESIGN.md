@@ -559,3 +559,48 @@ in the framework's own CI from day one.**
   before reopening anything. **Expected consequence:** #46's fan-out and
   zero-copy-routing criteria are withdrawn rather than left undelivered, and
   the epic keeps the correctness track it always had.
+- **Native ABI revision declined (#86, closing #51):** no second revision of the
+  Native participant C ABI is built. #51 asked for compatible-prefix
+  negotiation, explicit instance lifecycle, multiple-instance support, capability
+  discovery, and destruction, and was explicit that it was not ready as one
+  slice; #86 gated it on naming the consumer that justifies it. All three
+  candidates the gate listed are rejected, for three different reasons.
+  **Multiple instances of one shared library already work in ABI v1.** The
+  kernel builds one `NativeParticipant` per Manifest entry and passes
+  `api.ctx = this`, from a `sil_api_v1` that is a member of that object, into an
+  `sil_participant_init` that also receives that entry's own `name` and
+  `config`; nothing in the builder or the loader makes a library unique to one
+  Participant. A Participant that keeps its state behind the `user` pointer it
+  registers therefore gets two independent instances today, and the handle #51
+  wanted to add is `ctx`. What is missing is a fixture and a documented rule,
+  not an ABI: every toy in `participants/` holds one global instance, so two
+  entries on one library would run without any diagnostic while the second
+  `init` overwrote the first one's state and both Tasks published through the
+  second context. That is a fixture defect and it is #88. **Repeated lifecycles
+  in one process are a much larger job than the ABI part, and one this design
+  argues against.** The candidate was an in-process embedding running many
+  Manifests without spawning `sil-run` for each, which is what would genuinely
+  require creation, start, reset, stop, and destruction states. But there is no
+  kernel library form and no binding — the suite shells out to the `sil-run`
+  binary — so the ABI revision is the small tail of building one, and the stated
+  payoff is weak: the expensive spawns in a Run are the Python Step
+  participants, and an in-process kernel keeps every one of them. Against that,
+  reusing one process across Runs means `dlopen`/`dlclose` cycles over supplier
+  libraries whose static initializers this project does not control, which is a
+  determinism hazard in the one place determinism is the product, and decision
+  15 already fixes the CI unit at one Run per container. **No first optional
+  capability exists to discover.** #57 was the only candidate and closed with
+  the leased data plane under #85, so an extension mechanism designed now would
+  be a guess at the shape of something withdrawn. **What stays.** ABI v1, its
+  copied publish and take path, and the support floor recorded with #62 are
+  unchanged — this decision removes nothing and declares no field, so it needs
+  no compatibility shape. Exception containment, the one real defect #51
+  carried, is delivered by #65; the declared Channel contract #51 would have
+  consumed at instance setup is delivered by #49. **Reopening.** #86 holds the
+  record. A supplier Participant that cannot keep its instance state behind
+  `user`, a named embedding that must run repeated Runs in one process, or a
+  concrete optional capability reopens it — and the first of those should be
+  tested against #88's fixture before it reopens anything. **Expected
+  consequence:** #46's ABI criterion is amended to what #49 and #65 delivered,
+  with multiple-instance support recorded as ABI v1 behavior rather than
+  withdrawn.
