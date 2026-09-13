@@ -386,7 +386,10 @@ in the framework's own CI from day one.**
   still consumes its global Publish order but no route slot. Live and replay
   publication meet at the same fan-out path. Current depth, high-water depth,
   drop count, and overflow-failure count exist only in the separately compiled
-  test-instrumented runner; #63 still owns any external metrics surface.
+  test-instrumented runner. #63, decided below, keeps them there: it is the
+  whole counter surface, with no export path and no stability promise. The
+  route diagnostic above is the part that stays always on, because it is what
+  repairs the Manifest that failed.
 - **Exception containment at the C ABI seam (#65):** the seam runs in both
   directions and neither carries an exception. A kernel frame the participant
   calls into must not throw back across the ABI — the participant may be built
@@ -469,8 +472,8 @@ in the framework's own CI from day one.**
   for always-on telemetry — that the failure cannot be reproduced — is the one
   argument this project does not have. The same Manifest hash on the same
   machine class re-runs exactly, so `sil-run-instrumented` answers that
-  question for the price of one Run, and the counters stay off the routing path
-  the other 99% of the time. That is why the production path carries no counter,
+  question for the price of one Run, and every other Run keeps a routing path
+  with no counter on it. That is why the production path carries no counter,
   no branch, and no reporting code, and why a second binary is the shape rather
   than a runtime switch. **A `--metrics <path>` flag is rejected**, despite
   looking like the precedented `-o` / `--no-recording` run-boundary switch: a
@@ -490,8 +493,8 @@ in the framework's own CI from day one.**
   outstanding lease age per route is dropped rather than reclassified: under
   FIFO with no cross-step leases it collapses to the queue depth already
   reported. #59's oldest lease age is kept but defined as a virtual-time delta
-  from the envelope's publication time, which #54's envelope already carries —
-  deterministic, and therefore assertable. The report's wall-clock and RSS
+  from the publication time #54 specifies for the envelope — deterministic,
+  and therefore assertable. The report's wall-clock and RSS
   values remain, separated from the counters as observational, so repeated-run
   expectations compare the deterministic counters wholesale and never the
   timings. **Nothing from the counters reaches the Recording**, not even an
