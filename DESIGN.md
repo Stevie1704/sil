@@ -157,7 +157,7 @@ in the framework's own CI from day one.**
   binaries cannot be relinked; explicit-API-only is rejected — opaque code will
   not call a new API. The shim interposes `clock_gettime` (monotonic-class IDs
   → virtual `t`; realtime-class → epoch + `t`), `gettimeofday`, `time`,
-  `clock_getres` (reports 1 ns), and the sleep family (`nanosleep`,
+  `clock_getres` (reports 1 ns for those IDs), and the sleep family (`nanosleep`,
   `clock_nanosleep`, `usleep`, `sleep`); CPU-time clock IDs pass through.
   **Amended by #52 — sleep policy:** the sleep family is declared per shimmed
   participant with `sleep` in the hashed manifest. Neither policy can block:
@@ -177,12 +177,41 @@ in the framework's own CI from day one.**
   `reject`, so the compatibility behavior is reachable by an existing document
   but never by authoring a new one. A cooperative virtual wake-up protocol,
   where a sleep would yield the step and resume at a later `t`, stays out of
-  scope: it would change Activation ordering, which #46 preserves. Boundary:
-  a sleep on a CPU-time clock ID is not virtualized and passes through to the
-  real libc — `clock_gettime` does not yet make the same distinction, a
-  deviation from this decision tracked as #76. **Frozen-step semantics:** every
-  clock read during one step returns the same `t`; time advances only between
-  steps.
+  scope: it would change Activation ordering, which #46 preserves.
+  **Amended by #76 — one classification, pass-through default:** which IDs are
+  virtualized is one table every interposed call asks, so `clock_gettime`,
+  `clock_getres` and `clock_nanosleep` cannot disagree. Two classes are
+  virtualized — monotonic (`CLOCK_MONOTONIC`, `CLOCK_BOOTTIME` and their raw,
+  coarse, approximate and alarm variants) and realtime (`CLOCK_REALTIME`, its
+  coarse and alarm variants, and `CLOCK_TAI`, which reads as realtime because
+  a Manifest declares one `epoch` and the model has no TAI-UTC offset) — and
+  **every other ID passes through to the real libc**, including the CPU-time
+  IDs and any unknown or future one. Pass-through is the default rather than realtime because an
+  unnamed clock has no known class. The region can only answer with an
+  epoch-based wall-clock value, and the clock may measure neither wall time
+  nor this process. A CPU-time ID measures consumed CPU, so
+  virtualizing it would report the participant using no CPU at all. The same
+  table also puts the coarse, approximate and alarm variants into the class of
+  the clock each approximates, where the two-way split had read every one of
+  them as realtime.
+  **Compatibility (per #62): a straight correction, not a declared field.**
+  #62 governs new hash-covered fields, and its selection test — does the prior
+  behavior still exist and is it worth a default — has no answer here. What a
+  CPU-time ID returned was never CPU time: within a step the delta read zero,
+  because virtual time is frozen, and across steps it read the virtual wall
+  clock. Neither is a CPU-time semantics, so there is none to preserve. A field
+  would instead enshrine the deviation as a supported mode for the life of
+  Manifest version 1. No Manifest field ever
+  declared CPU-clock virtualization, so no hash changes and no document needs
+  regenerating. The reclassified variants ride on the same call for the same
+  reason: this document already assigned every wall clock to its class, so an
+  ID answered from the wrong one was never a declared semantics either, and
+  those reads stay deterministic — only their class is corrected. Expected consequence: a participant that publishes its own CPU
+  time into a Channel now records a nondeterministic value — CPU-time reads
+  sit outside the deterministic envelope by this decision, and restoring that
+  boundary changes no Activation order and no virtual-clock-derived Message.
+  **Frozen-step semantics:** every *virtualized* clock read during one step
+  returns the same `t`; time advances only between steps.
   **Time transport:** the kernel writes the current virtual time into a small
   fixed-layout region shared with the child (a memory-mapped file whose path is
   handed over in `SIL_CLOCK_REGION` at spawn) before each step; the shim maps it
@@ -319,7 +348,10 @@ in the framework's own CI from day one.**
   hashed bytes, and an absent field keeps today's immediate-success behavior.
   Bounded-route `capacity` and `overflow` (#75, split from #55) are
   always-emit; a route with both fields absent is unbounded, while a partial
-  pair is invalid. Removing the legacy unbounded behavior later is the one
+  pair is invalid. The Clock shim's CPU-time pass-through (#76) takes none of
+  the three shapes: it corrects shipped behavior back to this document's
+  recorded decision rather than declaring a field, on the grounds recorded
+  with that decision above. Removing the legacy unbounded behavior later is the one
   change that would trigger version 2. The superseded BufferPool
   transport (#58) would have
   taken a new transport name. Its replacement (#74) instead extends `shm` with

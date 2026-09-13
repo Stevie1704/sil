@@ -4,9 +4,11 @@
  *
  * It knows nothing about the step protocol, manifest, or kernel: at load it
  * maps the fixed-layout region — a small memory-mapped file whose path is named
- * by SIL_CLOCK_REGION — and thereafter answers every interposed clock read
- * directly from that mapping (no per-read syscall). Reads are frozen within a
- * step: the region's `t` only changes when the writer advances it between steps.
+ * by SIL_CLOCK_REGION — and thereafter answers every *virtualized* clock read
+ * directly from that mapping (no per-read syscall). Which clock IDs those are
+ * is one table, below; the rest reach the real libc unchanged. Virtualized
+ * reads are frozen within a step: the region's `t` only changes when the writer
+ * advances it between steps.
  * (A plain mmap'd file is used rather than POSIX shm for portability — macOS
  * shm_open rejects reopening an object by name with EACCES.)
  *
@@ -48,25 +50,78 @@ __attribute__((constructor)) static void sil_clock_shim_init(void) {
     g_region = (const volatile sil_clock_region *)p;
 }
 
-/* True when a monotonic-class clock ID (virtual t only, no epoch). */
-static int is_monotonic(clockid_t id) {
+/* --- clock ID classification (issue #76) ------------------------------------
+ * Every interposed call that takes a clock ID asks this one table which class
+ * the ID is in, so no two of them can disagree about what is virtualized.
+ *
+ * Only wall-clock IDs are virtualized. A CPU-time ID measures consumed CPU,
+ * not elapsed wall time, so freezing it would report the participant using no
+ * CPU at all; it passes through to the real libc, as DESIGN.md records. An ID
+ * the table does not name passes through for the same reason it cannot be
+ * answered: an unknown clock has no known class, and guessing realtime would
+ * hand a caller an epoch-based answer for a clock that may measure neither
+ * wall time nor this process. */
+typedef enum clock_class {
+    CLASS_MONOTONIC,   /* virtual t, no epoch */
+    CLASS_REALTIME,    /* epoch + virtual t */
+    CLASS_PASSTHROUGH  /* not virtualized: the real libc answers */
+} clock_class;
+
+static clock_class classify(clockid_t id) {
     switch (id) {
         case CLOCK_MONOTONIC:
         case CLOCK_MONOTONIC_RAW:
 #ifdef CLOCK_BOOTTIME
         case CLOCK_BOOTTIME:
 #endif
-            return 1;
+#ifdef CLOCK_BOOTTIME_ALARM
+        case CLOCK_BOOTTIME_ALARM:
+#endif
+#ifdef CLOCK_MONOTONIC_COARSE
+        case CLOCK_MONOTONIC_COARSE:
+#endif
+#ifdef CLOCK_UPTIME_RAW
+        case CLOCK_UPTIME_RAW:
+#endif
+        /* The cheap, less precise variants of the clocks above: same class,
+         * and the region answers both at the same cost anyway. */
+#ifdef CLOCK_MONOTONIC_RAW_APPROX
+        case CLOCK_MONOTONIC_RAW_APPROX:
+#endif
+#ifdef CLOCK_UPTIME_RAW_APPROX
+        case CLOCK_UPTIME_RAW_APPROX:
+#endif
+            return CLASS_MONOTONIC;
+        case CLOCK_REALTIME:
+#ifdef CLOCK_REALTIME_COARSE
+        case CLOCK_REALTIME_COARSE:
+#endif
+#ifdef CLOCK_REALTIME_ALARM
+        case CLOCK_REALTIME_ALARM:
+#endif
+        /* CLOCK_TAI reads as realtime. A Manifest declares one `epoch`, so the
+         * model has no TAI-UTC offset to add; the leap-second difference is a
+         * far smaller error than letting real time leak into a shimmed run. */
+#ifdef CLOCK_TAI
+        case CLOCK_TAI:
+#endif
+            return CLASS_REALTIME;
         default:
-            return 0;
+            return CLASS_PASSTHROUGH;
     }
 }
 
-/* Virtual nanoseconds for a clock ID: t for monotonic-class, epoch + t for
- * realtime-class. */
+/* True when the shim serves this clock ID from the region — which an unmapped
+ * region never is, so this one predicate is the whole guard at every call. */
+static int is_virtualized(clockid_t id) {
+    return g_region && classify(id) != CLASS_PASSTHROUGH;
+}
+
+/* Virtual nanoseconds for a virtualized clock ID: t for monotonic-class,
+ * epoch + t for realtime-class. */
 static uint64_t virtual_ns(clockid_t id) {
     uint64_t t = g_region->t;
-    return is_monotonic(id) ? t : g_region->epoch + t;
+    return classify(id) == CLASS_MONOTONIC ? t : g_region->epoch + t;
 }
 
 static void fill_timespec(struct timespec *ts, uint64_t ns) {
@@ -135,14 +190,14 @@ static unsigned int sleep_seconds_left(unsigned int seconds) {
 #if defined(__APPLE__)
 
 int sil_clock_gettime(clockid_t id, struct timespec *ts) {
-    if (!g_region)
+    if (!is_virtualized(id))
         return clock_gettime(id, ts);
     fill_timespec(ts, virtual_ns(id));
     return 0;
 }
 
 int sil_clock_getres(clockid_t id, struct timespec *res) {
-    if (!g_region)
+    if (!is_virtualized(id))
         return clock_getres(id, res);
     if (res) {
         res->tv_sec = 0;
@@ -220,14 +275,14 @@ DYLD_INTERPOSE(sil_usleep, usleep);
     })
 
 int clock_gettime(clockid_t id, struct timespec *ts) {
-    if (!g_region)
+    if (!is_virtualized(id))
         return REAL(clock_gettime)(id, ts);
     fill_timespec(ts, virtual_ns(id));
     return 0;
 }
 
 int clock_getres(clockid_t id, struct timespec *res) {
-    if (!g_region)
+    if (!is_virtualized(id))
         return REAL(clock_getres)(id, res);
     if (res) {
         res->tv_sec = 0;
@@ -263,17 +318,9 @@ int nanosleep(const struct timespec *req, struct timespec *rem) {
     return sleep_status();
 }
 
-/* True when the shim serves this clock ID from the region. CPU-time IDs are
- * not virtualized, so a sleep against one passes through to the real libc and
- * measures real CPU time, as DESIGN.md records. (clock_gettime does not yet
- * make the same distinction — that deviation is issue #76.) */
-static int is_virtualized(clockid_t id) {
-    return is_monotonic(id) || id == CLOCK_REALTIME;
-}
-
 int clock_nanosleep(clockid_t id, int flags, const struct timespec *req,
                     struct timespec *rem) {
-    if (!g_region || !is_virtualized(id))
+    if (!is_virtualized(id))
         return REAL(clock_nanosleep)(id, flags, req, rem);
     /* POSIX makes clock_nanosleep the exception twice over: it returns the
      * error number rather than setting errno, and it ignores `rem` entirely

@@ -39,7 +39,8 @@ An out-of-process participant is expected to derive time from the `step(t, Δt)`
 protocol and never read the wall clock. Opaque binaries you cannot change often
 break that rule — they call `clock_gettime`, `gettimeofday`, `time`, or sleep.
 The **clock shim** makes such a participant deterministic without touching it:
-preload a small library that answers every POSIX clock read from virtual time.
+preload a small library that answers every POSIX wall-clock read from virtual
+time.
 
 Opt a process participant in per participant via the manifest `shim` flag, and
 set the run's realtime `epoch_ns` (calendar time, ns since 1970) that
@@ -60,13 +61,18 @@ m.add_process(
 
 Inside a shimmed child, per step at virtual time `t`:
 
-- monotonic-class reads (`CLOCK_MONOTONIC`, `..._RAW`) return `t` — nanoseconds
-  from run start;
-- realtime-class reads (`CLOCK_REALTIME`, `gettimeofday`, `time`) return
-  `epoch_ns + t`;
-- `clock_getres` reports 1 ns;
-- **reads are frozen within a step** — every read during one step returns the
-  same value; time advances only between steps.
+- monotonic-class reads (`CLOCK_MONOTONIC`, `CLOCK_BOOTTIME` and their raw,
+  coarse and approximate variants) return `t` — nanoseconds from run start;
+- realtime-class reads (`CLOCK_REALTIME` and its variants, `gettimeofday`,
+  `time`) return `epoch_ns + t`;
+- `clock_getres` reports 1 ns for those IDs;
+- **every other clock ID passes through to the real libc** — the CPU-time IDs
+  (`CLOCK_PROCESS_CPUTIME_ID`, `CLOCK_THREAD_CPUTIME_ID`), which measure
+  consumed CPU rather than elapsed wall time, and any ID the shim does not
+  name, which has no known class to answer from. A participant that profiles
+  itself with a CPU clock reads real CPU time and is not deterministic;
+- **virtualized reads are frozen within a step** — every such read during one
+  step returns the same value; time advances only between steps.
 
 Because a step's time is frozen and the kernel waits for the step response, no
 sleep can wait for the clock to move — it would deadlock against the only thing
