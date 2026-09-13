@@ -57,6 +57,7 @@ struct Totals {
   uint64_t count[size_t(Site::kSiteCount)] = {};
   uint64_t bytes[size_t(Site::kSiteCount)] = {};
   std::map<RouteKey, Route> routes;
+  int exit_code = 0;
 
   ~Totals();
 };
@@ -97,18 +98,22 @@ Totals::~Totals() {
     return;
   }
 
-  std::fprintf(out, "{\n");
+  // The Run's exit code first: a reader that stops there still knows whether
+  // the counters below describe a complete Run or a failed one.
+  std::fprintf(out, "{\n  \"run_exit_code\": %d,\n", exit_code);
+
+  std::fprintf(out, "  \"deterministic\": {\n");
   for (size_t i = 0; i < size_t(Site::kSiteCount); i++)
-    std::fprintf(out, "  \"%s\": {\"count\": %llu, \"bytes\": %llu},\n",
+    std::fprintf(out, "    \"%s\": {\"count\": %llu, \"bytes\": %llu},\n",
                  kSiteNames[i], (unsigned long long)count[i],
                  (unsigned long long)bytes[i]);
 
-  std::fprintf(out, "  \"routes\": [");
+  std::fprintf(out, "    \"routes\": [");
   bool first = true;
   for (const auto &[key, route] : routes) {
     if (!first) std::fputc(',', out);
     first = false;
-    std::fputs("\n    {\"channel\": ", out);
+    std::fputs("\n      {\"channel\": ", out);
     write_json_string(out, key.channel);
     std::fputs(", \"subscriber\": ", out);
     write_json_string(out, key.subscriber);
@@ -120,17 +125,20 @@ Totals::~Totals() {
                  (unsigned long long)route.dropped_newest,
                  (unsigned long long)route.overflow_failures);
   }
-  if (!routes.empty()) std::fputc('\n', out);
-  std::fprintf(out, "  ],\n");
+  if (!routes.empty()) std::fputs("\n    ", out);
+  std::fprintf(out, "]\n  },\n");
 
   // The kernel's own resource use, separate from the participant processes it
-  // spawns: RUSAGE_CHILDREN in the driver cannot tell the two apart.
+  // spawns: RUSAGE_CHILDREN in the driver cannot tell the two apart. It varies
+  // between two Runs of the same Manifest, so it is reported apart from the
+  // counters that do not.
   rusage usage;
   if (getrusage(RUSAGE_SELF, &usage) != 0) usage = rusage{};
   std::fprintf(out,
-               "  \"kernel_user_s\": %.6f,\n"
-               "  \"kernel_system_s\": %.6f,\n"
-               "  \"kernel_max_rss_bytes\": %llu\n}\n",
+               "  \"observational\": {\n"
+               "    \"kernel_user_s\": %.6f,\n"
+               "    \"kernel_system_s\": %.6f,\n"
+               "    \"kernel_max_rss_bytes\": %llu\n  }\n}\n",
                seconds(usage.ru_utime), seconds(usage.ru_stime),
                (unsigned long long)max_rss_bytes(usage));
   if (std::fclose(out) != 0)
@@ -153,6 +161,16 @@ void update_route(const std::string &channel, const std::string &subscriber,
 }
 
 }  // namespace
+
+void record_exit_code(int code) noexcept {
+  try {
+    // Also the point where the report's own object is created for a Run that
+    // counted nothing, so a config error still produces a report that says so.
+    totals().exit_code = code;
+  } catch (...) {
+    // Instrumentation must never replace or abort the Run it observes.
+  }
+}
 
 void count(Site site, size_t len) {
   Totals &t = totals();

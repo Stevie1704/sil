@@ -6,33 +6,19 @@ import os
 import subprocess
 
 from conftest import BUILD_DIR
-from toys import add_producer, toy_manifest
+from toys import (
+    add_producer,
+    add_slow_subscriber,
+    bounded_route_manifest,
+    toy_manifest,
+)
 
 from sil.manifest import SubscriberRoute
 
 
-def slow_subscriber(m, *, capacity, overflow="fail", name="slow"):
-    m.add_native(
-        name,
-        library=str(BUILD_DIR / "bench_subscriber.silp"),
-        config={"input": "ticks", "period_ns": 1_000_000_000, "drain": False},
-        subscribes=[
-            SubscriberRoute("ticks", capacity=capacity, overflow=overflow)
-        ],
-    )
-
-
-def bounded_manifest(*, capacity, overflow="fail"):
-    m = toy_manifest(duration_ns=50_000_000)
-    m.add_channel("ticks", schema="toy.Counter")
-    add_producer(m, "publisher", channel="ticks", period_ns=10_000_000)
-    slow_subscriber(m, capacity=capacity, overflow=overflow)
-    return m
-
-
 class TestFailOnCapacity:
     def test_aborts_with_the_complete_route_diagnostic(self, run_sil, tmp_path):
-        path = bounded_manifest(capacity=2).write(tmp_path / "m.json").path
+        path = bounded_route_manifest(capacity=2).write(tmp_path / "m.json").path
 
         proc = run_sil(path)
 
@@ -47,7 +33,7 @@ class TestFailOnCapacity:
     def test_overflow_failure_and_final_live_depth_are_instrumented(
         self, sil_run_instrumented, tmp_path
     ):
-        path = bounded_manifest(capacity=2).write(tmp_path / "m.json").path
+        path = bounded_route_manifest(capacity=2).write(tmp_path / "m.json").path
         report = tmp_path / "routes.json"
         env = os.environ.copy()
         env["SIL_COPY_COUNTERS_OUT"] = str(report)
@@ -65,7 +51,9 @@ class TestFailOnCapacity:
         )
 
         assert proc.returncode == 1
-        assert json.loads(report.read_text())["routes"] == [
+        written = json.loads(report.read_text())
+        assert written["run_exit_code"] == 1
+        assert written["deterministic"]["routes"] == [
             {
                 "channel": "ticks",
                 "subscriber": "slow",
@@ -81,7 +69,7 @@ class TestDropNewest:
     def test_drops_are_deterministic_and_reported_by_test_instrumentation(
         self, sil_run_instrumented, tmp_path
     ):
-        path = bounded_manifest(capacity=2, overflow="drop_newest").write(
+        path = bounded_route_manifest(capacity=2, overflow="drop_newest").write(
             tmp_path / "m.json"
         ).path
 
@@ -103,9 +91,13 @@ class TestDropNewest:
 
         assert results[0][0].returncode == results[1][0].returncode == 0
         assert results[0][1] == results[1][1]
-        assert results[0][2]["subscriber_copy"]["count"] == 2
-        assert results[1][2]["subscriber_copy"]["count"] == 2
-        assert results[0][2]["routes"] == results[1][2]["routes"] == [
+        # The whole deterministic subtree repeats, not a chosen field of it:
+        # anything that varies between two Runs of the same Manifest belongs in
+        # the observational subtree instead (#63).
+        assert results[0][2]["deterministic"] == results[1][2]["deterministic"]
+        deterministic = results[0][2]["deterministic"]
+        assert deterministic["subscriber_copy"]["count"] == 2
+        assert deterministic["routes"] == [
             {
                 "channel": "ticks",
                 "subscriber": "slow",
@@ -133,8 +125,8 @@ class TestBoundedPathCoverage:
         m = toy_manifest(duration_ns=50_000_000)
         m.add_channel("ticks", schema="toy.Counter")
         add_producer(m, "publisher", channel="ticks", period_ns=10_000_000)
-        slow_subscriber(m, name="a", capacity=1, overflow="drop_newest")
-        slow_subscriber(m, name="b", capacity=2)
+        add_slow_subscriber(m, "a", capacity=1, overflow="drop_newest")
+        add_slow_subscriber(m, "b", capacity=2)
 
         proc = run_sil(m.write(tmp_path / "m.json").path)
 
@@ -145,7 +137,7 @@ class TestBoundedPathCoverage:
     def test_suppressed_messages_never_occupy_capacity(
         self, run_sil, tmp_path
     ):
-        m = bounded_manifest(capacity=1)
+        m = bounded_route_manifest(capacity=1)
         m.add_interceptor("ticks", kind="drop")
 
         proc = run_sil(m.write(tmp_path / "m.json").path)
@@ -153,7 +145,7 @@ class TestBoundedPathCoverage:
         assert proc.returncode == 0, proc.stderr
 
     def test_legacy_string_route_remains_unbounded(self, run_sil, tmp_path):
-        document = bounded_manifest(capacity=1).to_doc()
+        document = bounded_route_manifest(capacity=1).to_doc()
         document["participants"]["slow"]["subscribes"] = ["ticks"]
         path = tmp_path / "legacy.json"
         path.write_text(json.dumps(document, sort_keys=True, separators=(",", ":")))
@@ -166,7 +158,7 @@ class TestBoundedPathCoverage:
     def test_route_object_without_policy_fields_remains_unbounded(
         self, run_sil, tmp_path
     ):
-        document = bounded_manifest(capacity=1).to_doc()
+        document = bounded_route_manifest(capacity=1).to_doc()
         document["participants"]["slow"]["subscribes"] = [{"channel": "ticks"}]
         path = tmp_path / "legacy-object.json"
         path.write_text(
@@ -197,7 +189,7 @@ class TestBoundedPathCoverage:
         replay.add_replay(
             "replay", recording=source_run.mcap_path, channels=["ticks"]
         )
-        slow_subscriber(replay, capacity=2)
+        add_slow_subscriber(replay, capacity=2)
 
         proc = run_sil(replay.write(tmp_path / "replay.json").path)
 

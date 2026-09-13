@@ -7,6 +7,7 @@
 #include <variant>
 
 #include "clock_shim.hpp"
+#include "copy_counters.hpp"
 #include "engine.hpp"
 #include "manifest.hpp"
 #include "recording_sink.hpp"
@@ -32,9 +33,7 @@ bool manifest_requests_shim(const sil::Manifest &m) {
   return false;
 }
 
-}  // namespace
-
-int main(int argc, char **argv) {
+int run(int argc, char **argv) {
   // A participant process dying mid-write must surface as a RunError,
   // not kill the kernel via SIGPIPE.
   signal(SIGPIPE, SIG_IGN);
@@ -106,4 +105,14 @@ int main(int argc, char **argv) {
     return kExitConfigError;
   }
   return kExitOk;
+}
+
+}  // namespace
+
+int main(int argc, char **argv) {
+  const int code = run(argc, argv);
+  // The Run is over and its exit code is fixed before the instrumented build
+  // records it; the production build compiles this call away entirely.
+  sil::counters::record_exit_code(code);
+  return code;
 }

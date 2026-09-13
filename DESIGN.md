@@ -505,12 +505,17 @@ in the framework's own CI from day one.**
   so on stderr and still cannot change the exit code; a hard crash writes no
   report at all, which is unambiguous. The report states the Run's exit code so
   a partial report from a failed Run cannot be read as a clean one.
-  **What the decision owes:** the re-run argument above is a claim until one
-  check runs each determinism fixture through both runners and asserts an
-  identical exit code and a byte-identical Recording. That check, the
-  deterministic/observational split, and the exit-code field are #82, which
-  turns #46's "counters exist, while remaining inert to functional execution"
-  into a checked invariant rather than a comment in `CMakeLists.txt`. **No
+  **The re-run argument is checked, not claimed (#82).** Every determinism
+  fixture in `tests/test_determinism.py` — a clean pipeline, a dropping bounded
+  route, a bounded-route overflow abort, and a participant failure — runs under
+  both runners and must produce the same exit code and a byte-identical
+  Recording. That byte-identity is also what keeps every counter out of the
+  Recording, including an MCAP metadata record. The report itself is three
+  members: `run_exit_code`, a `deterministic` subtree of counters and route
+  state that a repeated-run test compares wholesale, and an `observational`
+  subtree holding the wall-clock and RSS values that vary. This turns #46's
+  "counters exist, while remaining inert to functional execution" into a
+  checked invariant rather than a comment in `CMakeLists.txt`. **No
   stability promise** attaches to the report: field names, nesting, and the
   `SIL_COPY_COUNTERS` name itself may change with the counters they describe,
   because the tests, `tools/bench_routing.py`, and `docs/bench/` are its only

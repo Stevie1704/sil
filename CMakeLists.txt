@@ -49,8 +49,9 @@ target_link_libraries(sil-run PRIVATE nlohmann_json::nlohmann_json mcap_headers)
 # sil-run. See docs/bench/large-message-routing-baseline.md.
 # Per #63 this is the whole counter surface: a Run reproduces exactly, so a
 # question about pool or route pressure is answered by re-running it here
-# rather than by exporting metrics from the production runner. #82 proves the
-# two binaries agree on every functional output.
+# rather than by exporting metrics from the production runner. That the two
+# binaries agree on exit code and Recording bytes is asserted per determinism
+# fixture in tests/test_determinism.py (#82), not assumed here.
 add_executable(sil-run-instrumented
   ${SIL_KERNEL_SOURCES} kernel/src/copy_counters.cpp)
 target_include_directories(sil-run-instrumented PRIVATE include)
