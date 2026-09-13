@@ -188,7 +188,10 @@ make bench                     # regenerate docs/bench/routing-baseline.{json,md
 Copy counts come from `sil-run-instrumented`, the same kernel sources compiled
 with `SIL_COPY_COUNTERS`. Wall-clock comes from the production `sil-run`, which
 carries no instrumentation. Keeping the two apart lets a run report copies as
-counts instead of inferring them from timing. `sil-run --no-recording` runs a
+counts instead of inferring them from timing. These counters are the whole
+counter surface (#63): there is no metrics artifact and no metrics flag on
+`sil-run`, because a run reproduces exactly, so re-running it instrumented
+answers the question for the price of one run. `sil-run --no-recording` runs a
 manifest and writes no recording. That separates the cost of routing to
 subscribers from the cost of recording I/O.
 

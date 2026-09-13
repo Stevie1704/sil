@@ -386,7 +386,10 @@ in the framework's own CI from day one.**
   still consumes its global Publish order but no route slot. Live and replay
   publication meet at the same fan-out path. Current depth, high-water depth,
   drop count, and overflow-failure count exist only in the separately compiled
-  test-instrumented runner; #63 still owns any external metrics surface.
+  test-instrumented runner. #63, decided below, keeps them there: it is the
+  whole counter surface, with no export path and no stability promise. The
+  route diagnostic above is the part that stays always on, because it is what
+  repairs the Manifest that failed.
 - **Exception containment at the C ABI seam (#65):** the seam runs in both
   directions and neither carries an exception. A kernel frame the participant
   calls into must not throw back across the ABI — the participant may be built
@@ -451,3 +454,68 @@ in the framework's own CI from day one.**
   ECUs on one diagnostic or log Channel, becomes one Channel per ECU plus a
   bus Participant, which native bus emulation in the core already being a
   non-goal points to.
+- **Metrics surface for pool and route counters (#63):** there is no external
+  metrics surface. Every counter #54, #55, and #59 ask for is test
+  instrumentation in `sil-run-instrumented`, reported as one JSON object to the
+  path in `SIL_COPY_COUNTERS_OUT` after the Run. The production runner writes
+  exactly one artifact, the Recording. **The classification rule is not
+  per-counter but per-purpose.** A value needed to *repair the configuration
+  that failed* is a **diagnostic**: always on, in the production runner, named
+  in the failure message at the failure site, owned by the code that fails the
+  Run. #75's overflow abort naming Channel, publisher, subscriber, capacity,
+  current depth, and policy is the model. A value that is merely
+  **observational** is a counter, and lives only in the instrumented runner.
+  Nothing is an external contract. **The reason is determinism, not absence of
+  a consumer.** A consumer does exist: a bounded route (#75) aborts a
+  production CI Run, and the person setting capacities wants the high-water
+  depth of *every* route, not only the one that overflowed. The usual argument
+  for always-on telemetry — that the failure cannot be reproduced — is the one
+  argument this project does not have. The same Manifest hash on the same
+  machine class re-runs exactly, so `sil-run-instrumented` answers that
+  question for the price of one Run, and every other Run keeps a routing path
+  with no counter on it. That is why the production path carries no counter,
+  no branch, and no reporting code, and why a second binary is the shape rather
+  than a runtime switch. **A `--metrics <path>` flag is rejected**, despite
+  looking like the precedented `-o` / `--no-recording` run-boundary switch: a
+  Recording writes what the Run *computed*, while a metrics flag adds code to
+  the *computing*. Metrics on stderr are rejected for mixing observational
+  values into the channel that carries the authoritative failure.
+  **Owner and lifetime:** each counter is owned by the subsystem that owns the
+  resource it counts — the BufferPool for capacity, free slots, high-water
+  slots, allocation failures, outstanding leases, and stale-handle attempts
+  (#54); the route for current depth, high-water depth, drop count, and
+  overflow failures (#75, shipped); the Process-participant ownership registry
+  for outstanding leases by Participant, abandoned writes, forced releases,
+  forced crash reclamations, and stale post-crash descriptor attempts (#59).
+  Lifetime is one Run: a counter is never reset mid-Run and is reported once,
+  at exit, from a static destructor after every other kernel object is gone.
+  **Wall-clock values cannot enter a deterministic counter.** #55's oldest
+  outstanding lease age per route is dropped rather than reclassified: under
+  FIFO with no cross-step leases it collapses to the queue depth already
+  reported. #59's oldest lease age is kept but defined as a virtual-time delta
+  from the publication time #54 specifies for the envelope — deterministic,
+  and therefore assertable. The report's wall-clock and RSS
+  values remain, separated from the counters as observational, so repeated-run
+  expectations compare the deterministic counters wholesale and never the
+  timings. **Nothing from the counters reaches the Recording**, not even an
+  MCAP metadata record: the report carries rusage, and one metadata record
+  would break bit-identity. **Failure and partial Runs:** the exit code and the
+  first stderr diagnostic stay authoritative. The report is written after
+  `main` returns and can change neither; a report that cannot be written says
+  so on stderr and still cannot change the exit code; a hard crash writes no
+  report at all, which is unambiguous. The report states the Run's exit code so
+  a partial report from a failed Run cannot be read as a clean one.
+  **What the decision owes:** the re-run argument above is a claim until one
+  check runs each determinism fixture through both runners and asserts an
+  identical exit code and a byte-identical Recording. That check, the
+  deterministic/observational split, and the exit-code field are #82, which
+  turns #46's "counters exist, while remaining inert to functional execution"
+  into a checked invariant rather than a comment in `CMakeLists.txt`. **No
+  stability promise** attaches to the report: field names, nesting, and the
+  `SIL_COPY_COUNTERS` name itself may change with the counters they describe,
+  because the tests, `tools/bench_routing.py`, and `docs/bench/` are its only
+  consumers and all three change together. Deferred, not decided against: an
+  exported metrics contract becomes a question again if a Run ever stops being
+  exactly reproducible, or if a fleet-level consumer appears — which
+  run-fleet orchestration and a result database being explicit non-goals makes
+  unlikely in v1.
