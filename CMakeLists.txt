@@ -47,6 +47,10 @@ target_link_libraries(sil-run PRIVATE nlohmann_json::nlohmann_json mcap_headers)
 # carries no counter, no branch, and no reporting code on the routing path; the
 # routing baseline reports copy counts from this one and wall-clock from
 # sil-run. See docs/bench/large-message-routing-baseline.md.
+# Per #63 this is the whole counter surface: a Run reproduces exactly, so a
+# question about pool or route pressure is answered by re-running it here
+# rather than by exporting metrics from the production runner. #82 proves the
+# two binaries agree on every functional output.
 add_executable(sil-run-instrumented
   ${SIL_KERNEL_SOURCES} kernel/src/copy_counters.cpp)
 target_include_directories(sil-run-instrumented PRIVATE include)

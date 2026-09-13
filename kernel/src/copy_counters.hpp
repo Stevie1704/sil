@@ -9,8 +9,9 @@
 // to the path in SIL_COPY_COUNTERS_OUT at exit.
 //
 // The report states copy counts rather than inferring them from timing and also
-// carries each route's last live depth plus high-water/drop/failure state. It
-// is test instrumentation, not the external metrics surface deferred to #63.
+// carries each route's last live depth plus high-water/drop/failure state. Per
+// the decision on #63 this is the only counter surface there is: no external
+// metrics surface exists, and none of these names carries a stability promise.
 
 #include <cstddef>
 #include <string>
