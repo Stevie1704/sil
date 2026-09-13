@@ -11,7 +11,7 @@ import sys
 import pytest
 from mcap.reader import make_reader
 
-from conftest import ROOT
+from conftest import COMPAT_ROUTE_CAPACITY, ROOT
 from toys import (
     TOY_SCHEMAS,
     accumulator_library,
@@ -178,8 +178,8 @@ class TestManifestRejection:
         [
             ({"channel": "c", "capacity": 0, "overflow": "fail"}, "capacity"),
             ({"channel": "c", "capacity": True, "overflow": "fail"}, "capacity"),
-            ({"channel": "c", "overflow": "fail"}, "capacity"),
-            ({"channel": "c", "capacity": 1}, "overflow"),
+            ({"channel": "c", "overflow": "fail"}, "both be present"),
+            ({"channel": "c", "capacity": 1}, "both be present"),
             (
                 {"channel": "c", "capacity": 1, "overflow": "oldest"},
                 "overflow",
@@ -1360,7 +1360,7 @@ class TestProcessParticipant:
             command=[_sys.executable,
                      str(ROOT / "tests" / "participants" / "echo.py")],
             step_period_ns=10_000_000,
-            subscribes=[SubscriberRoute("ticks", capacity=1024)],
+            subscribes=[SubscriberRoute("ticks", capacity=COMPAT_ROUTE_CAPACITY)],
             publishes=["echo"],
         )
         proc = run_sil(m.write(tmp_path / "m.json").path)
@@ -1814,7 +1814,7 @@ class TestOverrideInterceptor:
             "echo",
             command=[_sys.executable, str(ROOT / "tests/participants/echo.py")],
             step_period_ns=10_000_000,
-            subscribes=[SubscriberRoute("ticks", capacity=1024)],
+            subscribes=[SubscriberRoute("ticks", capacity=COMPAT_ROUTE_CAPACITY)],
             publishes=["echo"],
         )
         m.add_interceptor(
@@ -2274,7 +2274,7 @@ class TestShmTransport:
             command=[_sys.executable,
                      str(ROOT / "tests" / "participants" / "array_echo.py")],
             step_period_ns=10_000_000,
-            subscribes=[SubscriberRoute("payload", capacity=1024)],
+            subscribes=[SubscriberRoute("payload", capacity=COMPAT_ROUTE_CAPACITY)],
             publishes=["mirror"],
         )
         m.add_interceptor("payload", **interceptor)
@@ -2482,7 +2482,7 @@ class TestShmTransport:
             command=[_sys.executable,
                      str(ROOT / "tests" / "participants" / "array_echo.py")],
             step_period_ns=10_000_000,
-            subscribes=[SubscriberRoute("payload", capacity=1024)],
+            subscribes=[SubscriberRoute("payload", capacity=COMPAT_ROUTE_CAPACITY)],
             publishes=["mirror"],
         )
         proc = run_sil(m.write(tmp_path / "m.json").path)
@@ -2540,7 +2540,7 @@ class TestShmTransport:
             command=[_sys.executable,
                      str(ROOT / "tests" / "participants" / "array_echo.py")],
             step_period_ns=10_000_000,
-            subscribes=[SubscriberRoute("payload", capacity=1024)],
+            subscribes=[SubscriberRoute("payload", capacity=COMPAT_ROUTE_CAPACITY)],
             publishes=["payload"],
         )
         proc = run_sil(m.write(tmp_path / "m.json").path)
@@ -2571,7 +2571,7 @@ class TestShmTransport:
             command=[_sys.executable,
                      str(ROOT / "tests" / "participants" / "array_echo.py")],
             step_period_ns=30_000_000,
-            subscribes=[SubscriberRoute("payload", capacity=1024)],
+            subscribes=[SubscriberRoute("payload", capacity=COMPAT_ROUTE_CAPACITY)],
             publishes=["mirror"],
         )
         return m

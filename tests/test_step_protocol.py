@@ -14,7 +14,7 @@ from sil.participant import (
     _StepCodec,
 )
 
-from conftest import ROOT
+from conftest import COMPAT_ROUTE_CAPACITY, ROOT
 from test_run_boundary import ARRAY_SCHEMAS, ARRAY_TYPES, read_mcap
 
 
@@ -157,7 +157,7 @@ def _cpp_manifest(*, transport, source, sink=None):
             "sink",
             command=[sys.executable, str(ROOT / "tests" / "participants" / sink)],
             step_period_ns=10_000_000,
-            subscribes=[SubscriberRoute("payload", capacity=1024)],
+            subscribes=[SubscriberRoute("payload", capacity=COMPAT_ROUTE_CAPACITY)],
             publishes=["mirror"],
         )
     return m
@@ -199,7 +199,7 @@ class TestCppStepCodec:
                 "echo",
             ],
             step_period_ns=10_000_000,
-            subscribes=[SubscriberRoute("payload", capacity=1024)],
+            subscribes=[SubscriberRoute("payload", capacity=COMPAT_ROUTE_CAPACITY)],
         )
         document = m.to_doc()
         del document["channels"]["payload"]["slots"]
@@ -240,8 +240,8 @@ class TestCppStepCodec:
             ],
             step_period_ns=10_000_000,
             subscribes=[
-                SubscriberRoute("left", capacity=1024),
-                SubscriberRoute("right", capacity=1024),
+                SubscriberRoute("left", capacity=COMPAT_ROUTE_CAPACITY),
+                SubscriberRoute("right", capacity=COMPAT_ROUTE_CAPACITY),
             ],
             publishes=["mirror"],
         )
@@ -295,8 +295,8 @@ class TestCppStepCodec:
             ],
             step_period_ns=30_000_000,
             subscribes=[
-                SubscriberRoute("left", capacity=1024),
-                SubscriberRoute("right", capacity=1024),
+                SubscriberRoute("left", capacity=COMPAT_ROUTE_CAPACITY),
+                SubscriberRoute("right", capacity=COMPAT_ROUTE_CAPACITY),
             ],
         )
         proc = run_sil(m.write(tmp_path / "wire.json").path)
@@ -345,8 +345,8 @@ class TestCppStepCodec:
             ],
             step_period_ns=30_000_000,
             subscribes=[
-                SubscriberRoute("left", capacity=1024),
-                SubscriberRoute("right", capacity=1024),
+                SubscriberRoute("left", capacity=COMPAT_ROUTE_CAPACITY),
+                SubscriberRoute("right", capacity=COMPAT_ROUTE_CAPACITY),
             ],
         )
 

@@ -8,6 +8,11 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_DIR = Path(os.environ.get("SIL_BUILD_DIR", ROOT / "build"))
 
+# Existing behavior suites are not capacity tests. This finite ceiling is well
+# above their declared bursts so migrating them to issue #75 does not turn an
+# old behavior assertion into an accidental overflow-policy assertion.
+COMPAT_ROUTE_CAPACITY = 1024
+
 # Make the sil package importable here and in every child process the kernel
 # spawns (Python step participants), independent of install state.
 # (Editable installs are unreliable here: Python 3.14 skips .pth files that

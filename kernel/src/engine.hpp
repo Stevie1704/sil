@@ -44,7 +44,6 @@ class SubscriberRoute {
         latency_ns_(latency_ns),
         capacity_(capacity),
         overflow_(overflow) {}
-  ~SubscriberRoute();
 
   const std::string &owner() const { return owner_; }
   const std::string &channel() const { return channel_; }

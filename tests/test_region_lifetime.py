@@ -13,7 +13,7 @@ import pytest
 
 from sil.manifest import Manifest, SubscriberRoute
 
-from conftest import ROOT
+from conftest import COMPAT_ROUTE_CAPACITY, ROOT
 from test_run_boundary import ARRAY_SCHEMAS
 
 # A single field far larger than any address space: its arena passes manifest
@@ -60,11 +60,15 @@ class TestRegionLifetime:
         m.add_schemas(ARRAY_SCHEMAS)
         m.add_channel("payload", schema="big.Payload", transport="shm")
         m.add_channel("mirror", schema="big.Payload")
-        subscribes = [SubscriberRoute("payload", capacity=1024)]
+        subscribes = [
+            SubscriberRoute("payload", capacity=COMPAT_ROUTE_CAPACITY)
+        ]
         if extra_channel:
             m.add_schemas(UNMAPPABLE_SCHEMAS)
             m.add_channel(extra_channel, schema="big.Unmappable", transport="shm")
-            subscribes.append(SubscriberRoute(extra_channel, capacity=1024))
+            subscribes.append(
+                SubscriberRoute(extra_channel, capacity=COMPAT_ROUTE_CAPACITY)
+            )
         m.add_process(
             "source",
             command=participant("array_source.py"),

@@ -45,6 +45,10 @@ _TYPES = sil_schema.load(BENCH_SCHEMAS)
 # scales with its message count rather than with its schedule.
 PERIOD_NS = 10_000_000
 
+# This benchmark measures copy/transport costs, not overflow. Its finite route
+# ceiling is deliberately above every configured message burst.
+BENCH_ROUTE_CAPACITY = 1024
+
 # The two payloads the baseline is stated over: a small control message and one
 # representative sensor frame. Their byte layout comes from schemas/bench.json.
 PAYLOADS = {
@@ -105,7 +109,7 @@ def _native_subscriber(m: Manifest, build_dir: Path, name: str) -> None:
         name,
         library=str(build_dir / "bench_subscriber.silp"),
         config={"input": "payload", "period_ns": PERIOD_NS},
-        subscribes=[SubscriberRoute("payload", capacity=1024)],
+        subscribes=[SubscriberRoute("payload", capacity=BENCH_ROUTE_CAPACITY)],
     )
 
 
@@ -150,7 +154,7 @@ def process_config(build_dir, payload, *, direction, transport, burst,
             m,
             "subscriber",
             burst,
-            subscribes=[SubscriberRoute("payload", capacity=1024)],
+            subscribes=[SubscriberRoute("payload", capacity=BENCH_ROUTE_CAPACITY)],
         )
     else:
         _process(m, "publisher", burst, publishes=["payload"])

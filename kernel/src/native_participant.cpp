@@ -82,6 +82,11 @@ struct NativeApiBridge {
                         "' is not a declared input");
         return SIL_ERR;
       }
+      if (p->subscriber_routes_.count(channel)) {
+        p->fail("", std::string("subscribed to Channel '") + channel +
+                        "' more than once");
+        return SIL_ERR;
+      }
       p->subscriber_routes_[channel] = p->engine_.subscribe(p->name_, *route);
       return SIL_OK;
     });

@@ -318,8 +318,9 @@ in the framework's own CI from day one.**
   and also accepts an explicit `immediate`, so compatibility is expressible in
   hashed bytes, and an absent field keeps today's immediate-success behavior.
   Bounded-route `capacity` and `overflow` (#75, split from #55) are
-  always-emit with an absent field meaning unbounded; removing unbounded later
-  is the one change that would trigger version 2. The superseded BufferPool
+  always-emit; a route with both fields absent is unbounded, while a partial
+  pair is invalid. Removing the legacy unbounded behavior later is the one
+  change that would trigger version 2. The superseded BufferPool
   transport (#58) would have
   taken a new transport name. Its replacement (#74) instead extends `shm` with
   always-emitted `slots`; absence retains the original single-slot behavior and
@@ -341,11 +342,12 @@ in the framework's own CI from day one.**
   is an object naming its `channel`, a positive Message `capacity`, and an
   `overflow` policy. The builder requires capacity rather than guessing one
   for a workload and always emits both policy fields; `overflow` defaults to
-  `fail`. The loader retains the pre-#75 string entry as an unbounded route, so
-  an existing Manifest keeps both its exact bytes and its successful Run
-  semantics. A full bounded route either fails the Run with Channel,
-  publisher, subscriber, capacity, current depth, and policy in the diagnostic,
-  or explicitly `drop_newest`s that delivery. Blocking is rejected at load:
+  `fail`. The loader accepts both the pre-#75 string entry and a route object
+  with neither policy field as unbounded; it rejects an object containing only
+  one of the two fields. An existing Manifest therefore keeps both its exact
+  bytes and its successful Run semantics. A full bounded route fails the Run
+  with Channel, publisher, subscriber, capacity, current depth, and policy in
+  the diagnostic, or explicitly `drop_newest`s that delivery. Blocking is rejected at load:
   the sequential scheduler cannot activate the consumer from inside a blocked
   publication. Capacity is checked after Interceptors, so a suppressed Message
   still consumes its global Publish order but no route slot. Live and replay

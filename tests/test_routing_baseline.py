@@ -14,7 +14,7 @@ import sys
 
 import pytest
 
-from conftest import BUILD_DIR, ROOT
+from conftest import BUILD_DIR, COMPAT_ROUTE_CAPACITY, ROOT
 
 from sil.manifest import Manifest, SubscriberRoute
 from tools import bench_routing
@@ -50,7 +50,7 @@ def process_manifest(tmp_path, *, direction: str, burst: int):
         m.add_process(
             "subscriber", command=command + ["subscriber"],
             step_period_ns=PERIOD_NS, priority=1,
-            subscribes=[SubscriberRoute("payload", capacity=1024)],
+            subscribes=[SubscriberRoute("payload", capacity=COMPAT_ROUTE_CAPACITY)],
         )
     else:
         m.add_process(
@@ -62,7 +62,7 @@ def process_manifest(tmp_path, *, direction: str, burst: int):
             "subscriber",
             library=str(BUILD_DIR / "bench_subscriber.silp"),
             config={"input": "payload", "period_ns": PERIOD_NS},
-            subscribes=[SubscriberRoute("payload", capacity=1024)],
+            subscribes=[SubscriberRoute("payload", capacity=COMPAT_ROUTE_CAPACITY)],
         )
     return m.write(tmp_path / f"{direction}-burst{burst}.json")
 
@@ -84,7 +84,7 @@ def native_manifest(tmp_path, *, subscribers: int):
             f"sink{i}",
             library=str(BUILD_DIR / "bench_subscriber.silp"),
             config={"input": "payload", "period_ns": PERIOD_NS},
-            subscribes=[SubscriberRoute("payload", capacity=1024)],
+            subscribes=[SubscriberRoute("payload", capacity=COMPAT_ROUTE_CAPACITY)],
         )
     return m.write(tmp_path / f"bench{subscribers}.json")
 

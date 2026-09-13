@@ -2,7 +2,7 @@
 
 import json
 
-from conftest import BUILD_DIR, ROOT
+from conftest import BUILD_DIR, COMPAT_ROUTE_CAPACITY, ROOT
 
 from sil.manifest import Manifest, SubscriberRoute
 
@@ -43,7 +43,7 @@ def add_accumulator(
     *,
     input_channel: str = "ticks",
     output_channel: str = "sums",
-    route_capacity: int = 1024,
+    route_capacity: int = COMPAT_ROUTE_CAPACITY,
     route_overflow: str = "fail",
     **config,
 ):

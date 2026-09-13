@@ -31,13 +31,6 @@ Engine::Engine(const Manifest &manifest, RecordingSink *recorder)
   }
 }
 
-SubscriberRoute::~SubscriberRoute() {
-  // Teardown releases queued Messages before test instrumentation observes
-  // the route's final current depth. Production builds compile the call away.
-  pending_.clear();
-  counters::route_depth(channel_, owner_, pending_.size());
-}
-
 Engine::~Engine() = default;
 
 Engine::ChannelState &Engine::channel_or_fail(const std::string &name,

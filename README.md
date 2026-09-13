@@ -158,11 +158,12 @@ m.add_process(
 
 Capacity and overflow policy are part of the canonical Manifest bytes and hash.
 Choose capacity from the route's declared burst and drain behavior; the builder
-does not guess a workload-specific number. A Manifest written before bounded
-routes uses string entries such as `"subscribes":["frames"]`; the loader keeps
-those routes unbounded, preserving both their behavior and byte-identical hash.
-Blocking overflow is invalid because the sequential scheduler cannot activate a
-consumer while stopped inside its publisher's call.
+does not guess a workload-specific number. A Manifest route with both fields
+absent is unbounded: the loader accepts either a pre-#75 string entry such as
+`"subscribes":["frames"]` or `{"channel":"frames"}`. Supplying only one of
+`capacity` and `overflow` is invalid. This preserves existing behavior and
+byte-identical hashes. Blocking overflow is invalid because the sequential
+scheduler cannot activate a consumer while stopped inside its publisher's call.
 
 ## Large-Message routing baseline
 

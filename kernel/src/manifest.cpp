@@ -382,32 +382,41 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
       SubscriberRouteSpec route;
       if (entry.is_string()) {
         // Compatibility shape: pre-#75 manifests named only the Channel and
-        // therefore retain their unbounded queue behavior.
+        // therefore retain their unbounded route behavior. An object with
+        // neither policy field is the equivalent explicit shape below.
         route.channel = extract<std::string>(entry, item_ctx);
       } else {
         const json &object = require_object(entry, item_ctx);
         reject_unknown_keys(object, item_ctx,
                             {"channel", "capacity", "overflow"});
         route.channel = required<std::string>(object, "channel", item_ctx);
-        const json &capacity = require_value(object, "capacity", item_ctx);
-        route.capacity = extract<size_t>(capacity, item_ctx + " key 'capacity'");
-        if (*route.capacity == 0)
-          type_error(capacity, item_ctx + " key 'capacity'",
-                     "a positive integer");
-        const std::string overflow =
-            required<std::string>(object, "overflow", item_ctx);
-        if (overflow == "fail") {
-          route.overflow = OverflowPolicy::Fail;
-        } else if (overflow == "drop_newest") {
-          route.overflow = OverflowPolicy::DropNewest;
-        } else if (overflow == "blocking") {
+        const json *capacity = find_value(object, "capacity", item_ctx);
+        const json *overflow_value = find_value(object, "overflow", item_ctx);
+        if (bool(capacity) != bool(overflow_value))
           fail(item_ctx +
-               ": blocking overflow is unsupported because the sequential "
-               "scheduler cannot activate the consumer while the publisher "
-               "is blocked");
-        } else {
-          fail(item_ctx + ": unknown overflow policy '" + overflow +
-               "' (expected 'fail' or 'drop_newest')");
+               ": 'capacity' and 'overflow' must either both be present or "
+               "both be absent for an unbounded route");
+        if (capacity) {
+          route.capacity =
+              extract<size_t>(*capacity, item_ctx + " key 'capacity'");
+          if (*route.capacity == 0)
+            type_error(*capacity, item_ctx + " key 'capacity'",
+                       "a positive integer");
+          const std::string overflow = extract<std::string>(
+              *overflow_value, item_ctx + " key 'overflow'");
+          if (overflow == "fail") {
+            route.overflow = OverflowPolicy::Fail;
+          } else if (overflow == "drop_newest") {
+            route.overflow = OverflowPolicy::DropNewest;
+          } else if (overflow == "blocking") {
+            fail(item_ctx +
+                 ": blocking overflow is unsupported because the sequential "
+                 "scheduler cannot activate the consumer while the publisher "
+                 "is blocked");
+          } else {
+            fail(item_ctx + ": unknown overflow policy '" + overflow +
+                 "' (expected 'fail' or 'drop_newest')");
+          }
         }
       }
       if (!m.find_channel(route.channel))

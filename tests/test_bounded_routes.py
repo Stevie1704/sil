@@ -44,7 +44,7 @@ class TestFailOnCapacity:
         assert "current depth 2" in proc.stderr
         assert "policy 'fail'" in proc.stderr
 
-    def test_overflow_failure_and_cleanup_are_instrumented(
+    def test_overflow_failure_and_final_live_depth_are_instrumented(
         self, sil_run_instrumented, tmp_path
     ):
         path = bounded_manifest(capacity=2).write(tmp_path / "m.json").path
@@ -69,7 +69,7 @@ class TestFailOnCapacity:
             {
                 "channel": "ticks",
                 "subscriber": "slow",
-                "current_depth": 0,
+                "current_depth": 2,
                 "high_water_depth": 2,
                 "dropped_newest": 0,
                 "overflow_failures": 1,
@@ -109,7 +109,7 @@ class TestDropNewest:
             {
                 "channel": "ticks",
                 "subscriber": "slow",
-                "current_depth": 0,
+                "current_depth": 2,
                 "high_water_depth": 2,
                 "dropped_newest": 3,
                 "overflow_failures": 0,
@@ -163,6 +163,21 @@ class TestBoundedPathCoverage:
         assert proc.returncode == 0, proc.stderr
         assert hashlib.sha256(path.read_bytes()).hexdigest() in proc.stdout
 
+    def test_route_object_without_policy_fields_remains_unbounded(
+        self, run_sil, tmp_path
+    ):
+        document = bounded_manifest(capacity=1).to_doc()
+        document["participants"]["slow"]["subscribes"] = [{"channel": "ticks"}]
+        path = tmp_path / "legacy-object.json"
+        path.write_text(
+            json.dumps(document, sort_keys=True, separators=(",", ":"))
+        )
+
+        proc = run_sil(path)
+
+        assert proc.returncode == 0, proc.stderr
+        assert hashlib.sha256(path.read_bytes()).hexdigest() in proc.stdout
+
     def test_replay_publication_uses_the_same_bounded_route(
         self, run_sil, tmp_path
     ):
@@ -189,3 +204,28 @@ class TestBoundedPathCoverage:
         assert proc.returncode == 1
         assert "publisher 'replay'" in proc.stderr
         assert "subscriber 'slow'" in proc.stderr
+
+
+class TestNativeSubscriptionContract:
+    def test_subscribing_twice_reports_the_actual_setup_defect(
+        self, run_sil, tmp_path
+    ):
+        m = toy_manifest(duration_ns=50_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_native(
+            "duplicate",
+            library=str(BUILD_DIR / "bench_subscriber.silp"),
+            config={
+                "input": "ticks",
+                "period_ns": 10_000_000,
+                "subscribe_twice": True,
+            },
+            subscribes=[SubscriberRoute("ticks", capacity=2)],
+        )
+
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+
+        assert proc.returncode == 2
+        assert "participant 'duplicate'" in proc.stderr
+        assert "subscribed to Channel 'ticks' more than once" in proc.stderr
+        assert "capacity exceeded" not in proc.stderr

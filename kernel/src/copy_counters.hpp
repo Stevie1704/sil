@@ -9,8 +9,8 @@
 // to the path in SIL_COPY_COUNTERS_OUT at exit.
 //
 // The report states copy counts rather than inferring them from timing and also
-// carries per-route queue depth/drop/failure state. It is test instrumentation,
-// not the external metrics surface deferred to #63.
+// carries each route's last live depth plus high-water/drop/failure state. It
+// is test instrumentation, not the external metrics surface deferred to #63.
 
 #include <cstddef>
 #include <string>

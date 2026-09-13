@@ -11,7 +11,7 @@ from collections import defaultdict
 
 import pytest
 
-from conftest import ROOT
+from conftest import COMPAT_ROUTE_CAPACITY, ROOT
 from test_run_boundary import ARRAY_SCHEMAS, ARRAY_TYPES, TYPES, read_mcap, sums
 from sil.manifest import Manifest, SubscriberRoute
 from toys import add_accumulator, add_producer, toy_manifest
@@ -156,7 +156,7 @@ def replay_array_manifest(recording, *, transport):
         "sink",
         command=[sys.executable, str(ROOT / "tests" / "participants" / "array_echo.py")],
         step_period_ns=10_000_000,
-        subscribes=[SubscriberRoute("payload", capacity=1024)],
+        subscribes=[SubscriberRoute("payload", capacity=COMPAT_ROUTE_CAPACITY)],
         publishes=["mirror"],
     )
     return m
@@ -182,8 +182,8 @@ def replay_multi_channel_array_manifest(recording, *, transport):
         command=[sys.executable, str(ROOT / "tests" / "participants" / "array_echo.py")],
         step_period_ns=10_000_000,
         subscribes=[
-            SubscriberRoute("left", capacity=1024),
-            SubscriberRoute("right", capacity=1024),
+            SubscriberRoute("left", capacity=COMPAT_ROUTE_CAPACITY),
+            SubscriberRoute("right", capacity=COMPAT_ROUTE_CAPACITY),
         ],
         publishes=["mirror"],
     )
@@ -560,7 +560,7 @@ class TestReplayDeterminism:
             command=[sys.executable,
                      str(ROOT / "tests" / "participants" / "echo.py")],
             step_period_ns=10_000_000,
-            subscribes=[SubscriberRoute("ticks", capacity=1024)],
+            subscribes=[SubscriberRoute("ticks", capacity=COMPAT_ROUTE_CAPACITY)],
             publishes=["echo"],
         )
         manifest = m.write(tmp_path / "interleaved.json").path
