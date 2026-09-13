@@ -72,16 +72,36 @@ static clock_class classify(clockid_t id) {
 #ifdef CLOCK_BOOTTIME
         case CLOCK_BOOTTIME:
 #endif
+#ifdef CLOCK_BOOTTIME_ALARM
+        case CLOCK_BOOTTIME_ALARM:
+#endif
 #ifdef CLOCK_MONOTONIC_COARSE
         case CLOCK_MONOTONIC_COARSE:
 #endif
 #ifdef CLOCK_UPTIME_RAW
         case CLOCK_UPTIME_RAW:
 #endif
+        /* The cheap, less precise variants of the clocks above: same class,
+         * and the region answers both at the same cost anyway. */
+#ifdef CLOCK_MONOTONIC_RAW_APPROX
+        case CLOCK_MONOTONIC_RAW_APPROX:
+#endif
+#ifdef CLOCK_UPTIME_RAW_APPROX
+        case CLOCK_UPTIME_RAW_APPROX:
+#endif
             return CLASS_MONOTONIC;
         case CLOCK_REALTIME:
 #ifdef CLOCK_REALTIME_COARSE
         case CLOCK_REALTIME_COARSE:
+#endif
+#ifdef CLOCK_REALTIME_ALARM
+        case CLOCK_REALTIME_ALARM:
+#endif
+        /* CLOCK_TAI reads as realtime. A Manifest declares one `epoch`, so the
+         * model has no TAI-UTC offset to add; the leap-second difference is a
+         * far smaller error than letting real time leak into a shimmed run. */
+#ifdef CLOCK_TAI
+        case CLOCK_TAI:
 #endif
             return CLASS_REALTIME;
         default:

@@ -60,10 +60,10 @@ m.add_process(
 
 Inside a shimmed child, per step at virtual time `t`:
 
-- monotonic-class reads (`CLOCK_MONOTONIC`, `..._RAW`, `CLOCK_BOOTTIME`, the
-  `_COARSE`/`UPTIME_RAW` variants) return `t` — nanoseconds from run start;
-- realtime-class reads (`CLOCK_REALTIME` and its `_COARSE` variant,
-  `gettimeofday`, `time`) return `epoch_ns + t`;
+- monotonic-class reads (`CLOCK_MONOTONIC`, `CLOCK_BOOTTIME` and their raw,
+  coarse and approximate variants) return `t` — nanoseconds from run start;
+- realtime-class reads (`CLOCK_REALTIME` and its variants, `gettimeofday`,
+  `time`) return `epoch_ns + t`;
 - `clock_getres` reports 1 ns for those IDs;
 - **every other clock ID passes through to the real libc** — the CPU-time IDs
   (`CLOCK_PROCESS_CPUTIME_ID`, `CLOCK_THREAD_CPUTIME_ID`), which measure

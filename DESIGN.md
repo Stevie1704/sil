@@ -181,11 +181,12 @@ in the framework's own CI from day one.**
   **Amended by #76 — one classification, pass-through default:** which IDs are
   virtualized is one table every interposer asks, so `clock_gettime`,
   `clock_getres` and `clock_nanosleep` cannot disagree. Two classes are
-  virtualized — monotonic (`CLOCK_MONOTONIC`, `..._RAW`, `CLOCK_BOOTTIME`,
-  `CLOCK_MONOTONIC_COARSE`, `CLOCK_UPTIME_RAW`) and realtime
-  (`CLOCK_REALTIME`, `CLOCK_REALTIME_COARSE`) — and **every other ID passes
-  through to the real libc**, including the CPU-time IDs and any unknown or
-  future one. Pass-through is the default rather than realtime because an
+  virtualized — monotonic (`CLOCK_MONOTONIC`, `CLOCK_BOOTTIME` and their raw,
+  coarse, approximate and alarm variants) and realtime (`CLOCK_REALTIME`, its
+  coarse and alarm variants, and `CLOCK_TAI`, which reads as realtime because
+  a Manifest declares one `epoch` and the model has no TAI-UTC offset) — and
+  **every other ID passes through to the real libc**, including the CPU-time
+  IDs and any unknown or future one. Pass-through is the default rather than realtime because an
   unnamed clock has no known class: answering it from the region would hand a
   caller an epoch-based wall-clock value for a clock that may measure neither
   wall time nor this process. A CPU-time ID measures consumed CPU, so
