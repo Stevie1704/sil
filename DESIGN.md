@@ -519,3 +519,38 @@ in the framework's own CI from day one.**
   exactly reproducible, or if a fleet-level consumer appears — which
   run-fleet orchestration and a result database being explicit non-goals makes
   unlikely in v1.
+- **Handle fan-out declined (#85, closing #54, #55 and #57):** one immutable
+  payload routed to many subscribers by handle, rather than copied per route,
+  is not built. The gate #55 carried after the #61 re-scope accepted two forms
+  of evidence — a named workload with six or more subscribers on a sensor
+  Channel, or one where peak memory binds. **The memory half is answerable
+  without a workload, and the answer is no.** Since #75 every newly authored
+  route declares a capacity, so worst-case route memory is arithmetic over the
+  hashed Manifest rather than a measurement: capacity times payload size,
+  reported by `python -m sil.footprint`. Inverting it asks how much fan-out
+  memory would take to bind. At capacity three, the depth the baseline's
+  never-draining subscriber actually held, one subscriber costs 7.91 MiB on a
+  720p RGB8 frame, 17.80 MiB on 1080p, 71.19 MiB on 4K, and 12.00 MiB on a
+  128-by-2048 lidar sweep. This project's CI runner has 7 GB, so binding it
+  needs 906, 402, 100 and 597 subscribers respectively. At the six the gate
+  itself names, the worst case is 47 MiB to 427 MiB — between 0.7% and 6% of
+  the machine. The constraint the feature relieves misses by one to two orders
+  of magnitude, and the CPU half was already weak: Recording one camera frame
+  costs about nineteen subscriber copies, so removing per-subscriber copies
+  stays noise while Recording is on. **The subscriber half is not answerable
+  and must not be manufactured.** It requires a named integration, and this
+  project has none. Authoring a Manifest with enough subscribers to open the
+  gate would choose the number that justifies the feature, which is the
+  reasoning #61 exists to prevent; a gate that can only ever open is not a
+  gate. **What stays.** The copied publish and take path and ABI v1 remain the
+  supported data plane, per the support floor recorded with #62 — this decision
+  removes nothing that exists. Bounded routes (#75) already deliver #46's
+  deterministic bounded-capacity criterion, and multi-slot Arenas (#74) already
+  deliver its burst criterion, both without leases. #57 closes with #55 because
+  leased Native operations have nothing left to expose. **Reopening.** #85
+  holds the record and the arithmetic. A real integration with six or more
+  subscribers on a sensor Channel reopens it, as does a payload and fan-out
+  combination that genuinely binds — which the numbers above make easy to test
+  before reopening anything. **Expected consequence:** #46's fan-out and
+  zero-copy-routing criteria are withdrawn rather than left undelivered, and
+  the epic keeps the correctness track it always had.

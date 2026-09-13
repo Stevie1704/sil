@@ -29,6 +29,10 @@ One run = `sil-run manifest.json -o out.mcap`:
   aborts the run non-zero and fails the pytest test with that message.
 - **Determinism check**: `sil-check manifest.json --runner build/sil-run`
   runs twice and bit-compares (exit 3 on violation). Enforced in CI.
+- **Declared memory footprint**: `python -m sil.footprint manifest.json` reports
+  the worst-case payload memory a manifest promises, from route capacities and
+  arena slot counts alone — no run, no benchmark. It also names any route that
+  declares no capacity, whose worst case is unbounded.
 
 Exit codes: `0` ok, `1` run/test failure, `2` config error, `3` determinism
 violation (sil-check).
@@ -223,7 +227,7 @@ tools/silschema.py schema → packed C structs; sil.schema packs the same
 tools/bench_*.py   routing-baseline driver and its process participants
 docs/bench/        routing baseline: procedure, raw results, decision inputs
 python/src/sil/    manifest builder, step-participant lib, test API,
-                   determinism check
+                   determinism check, declared memory footprint
 tests/             behavior tests at the run boundary
 ```
 
