@@ -1,12 +1,21 @@
 """The ACC example's Manifest — the single definition of the example Run.
 
+Two participants in a closed loop: the plant publishes `acc.Sensing` and
+subscribes to `acc.Command`, the controller does the reverse. Messages travel
+in both directions, so this is a Run rather than a pipeline.
+
+Latency at the loop boundary: the Channels take the default unit latency, so a
+Message published at `t` is visible at the subscriber's next activation. The
+plant→controller→plant path therefore closes with one Step of delay in each
+direction — a declared property of the example, not a defect to work around.
+
 Build it and run it:
 
     PYTHONPATH=python/src python examples/acc/manifest.py build/acc.json
     PYTHONPATH=python/src ./build/sil-run build/acc.json -o build/acc.mcap
 
-`sil-run` spawns the plant as a child process, so `PYTHONPATH` has to be set on
-the run as well as on the build. Both paths are under the already-ignored
+`sil-run` spawns the participants as child processes, so `PYTHONPATH` has to be
+set on the run as well as on the build. Both paths are under the already-ignored
 build directory, so a demo leaves the working tree clean.
 """
 
@@ -14,29 +23,54 @@ import json
 import sys
 from pathlib import Path
 
-from sil.manifest import Manifest
+from sil.manifest import Manifest, SubscriberRoute
 from sil.testing import participant_command
 
 EXAMPLE_DIR = Path(__file__).resolve().parent
 ROOT = EXAMPLE_DIR.parents[1]
 ACC_SCHEMAS = json.loads((ROOT / "schemas" / "acc.json").read_text())
 
-PLANT_STEP_PERIOD_NS = 10_000_000
+STEP_PERIOD_NS = 10_000_000
 DURATION_NS = 5_000_000_000
+
+# Both participants step at the same period, so a route carries one Message per
+# activation and its steady-state depth is one. A route holds a second Message
+# for part of a Slot when its publisher activates ahead of it, before the drain
+# — which of the two routes that is depends on the declared priorities, so both
+# declare the same worst case. The policy is the default: an overrun is a
+# declaration that no longer matches the run, and it should abort loudly.
+ROUTE_CAPACITY = 2
 
 
 def acc_manifest() -> Manifest:
     m = Manifest(duration_ns=DURATION_NS)
     m.add_schemas(ACC_SCHEMAS)
     m.add_channel("acc.Sensing", schema="acc.Sensing")
-    # Priority is declared rather than left implicit, even though one
-    # participant cannot contend with itself: the example shows the field.
+    m.add_channel("acc.Command", schema="acc.Command")
+    # Priorities are declared rather than left implicit. Under unit latency
+    # they cannot change what the Run computes — that is the point of the
+    # default — so the example shows the field without depending on it.
     m.add_process(
         "plant",
         command=participant_command(EXAMPLE_DIR / "plant.py", "Plant"),
-        step_period_ns=PLANT_STEP_PERIOD_NS,
+        step_period_ns=STEP_PERIOD_NS,
+        subscribes=[SubscriberRoute("acc.Command", capacity=ROUTE_CAPACITY)],
         publishes=["acc.Sensing"],
         priority=0,
+    )
+    # The controller is the vECU: shimmed, so every wall-clock read it makes
+    # comes from virtual time, and left on the builder's default sleep policy.
+    # The plant is unshimmed, which is also how the example shows that the
+    # shim is per participant and that both kinds share one Run.
+    m.add_process(
+        "controller",
+        command=participant_command(EXAMPLE_DIR / "controller.py",
+                                    "Controller"),
+        step_period_ns=STEP_PERIOD_NS,
+        subscribes=[SubscriberRoute("acc.Sensing", capacity=ROUTE_CAPACITY)],
+        publishes=["acc.Command"],
+        priority=1,
+        shim=True,
     )
     return m
 

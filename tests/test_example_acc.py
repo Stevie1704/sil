@@ -6,11 +6,12 @@ here while breaking the artifact a reader copies.
 """
 
 import importlib.util
+import io
 from pathlib import Path
 
 from conftest import ROOT
 
-from sil import schema
+from sil import footprint, schema
 from sil.testing import run_simulation
 
 
@@ -24,7 +25,7 @@ def _load(name: str, path: Path):
 
 silschema = _load("silschema", ROOT / "tools" / "silschema.py")
 manifest = _load("acc_manifest", ROOT / "examples" / "acc" / "manifest.py")
-plant = _load("acc_plant", ROOT / "examples" / "acc" / "plant.py")
+controller = _load("acc_controller", ROOT / "examples" / "acc" / "controller.py")
 
 
 def test_both_ends_of_the_typed_contract_agree_on_the_layout():
@@ -37,35 +38,61 @@ def test_both_ends_of_the_typed_contract_agree_on_the_layout():
     assert "sizeof(acc_Command) == 8" in header
 
 
-def _gaps(result):
-    return [fields["gap_m"] for _, fields in result.messages("acc.Sensing")]
+def _sensings(result):
+    return result.messages("acc.Sensing")
+
+
+def _commands(result):
+    return result.messages("acc.Command")
 
 
 def test_the_plant_publishes_sensing_every_step(sil_run, tmp_path):
     result = run_simulation(
         manifest.acc_manifest(), runner=sil_run, workdir=tmp_path
     )
-    assert len(_gaps(result)) == (
-        manifest.DURATION_NS // manifest.PLANT_STEP_PERIOD_NS
+    assert len(_sensings(result)) == (
+        manifest.DURATION_NS // manifest.STEP_PERIOD_NS
     )
 
 
-def test_the_gap_moves_the_way_the_fixed_command_implies(sil_run, tmp_path):
+def test_the_controller_commands_one_step_after_the_sensing_it_answers(
+    sil_run, tmp_path
+):
     result = run_simulation(
         manifest.acc_manifest(), runner=sil_run, workdir=tmp_path
     )
-    gaps = _gaps(result)
-    # Both vehicles start at the same speed, so the gap's whole motion comes
-    # from the acceleration difference: the ego pulls in when it is commanded
-    # to out-accelerate the lead, and drops back when it is not.
-    assert plant.EGO_SPEED_MPS == plant.LEAD_SPEED_MPS, (
-        "the direction below is only implied by the command while the two "
-        "vehicles start at the same speed"
+    sensings = _sensings(result)
+    commands = _commands(result)
+    # Under the default unit latency the controller first sees sensing one
+    # Step after the plant publishes it, so it commands one time fewer.
+    assert len(commands) == len(sensings) - 1
+    for (sensing_ns, sensing), (command_ns, command) in zip(sensings, commands):
+        assert command_ns == sensing_ns + manifest.STEP_PERIOD_NS
+        assert command["accel_mps2"] == controller.command_for(**sensing)
+
+
+def test_the_commanded_acceleration_moves_with_the_measured_gap(
+    sil_run, tmp_path
+):
+    result = run_simulation(
+        manifest.acc_manifest(), runner=sil_run, workdir=tmp_path
     )
-    closing = plant.COMMANDED_ACCEL_MPS2 > plant.LEAD_ACCEL_MPS2
-    steps = list(zip(gaps, gaps[1:]))
-    assert steps, "the run recorded too few messages to show motion"
-    assert all(
-        (later < earlier) if closing else (later > earlier)
-        for earlier, later in steps
-    )
+    commands = [fields["accel_mps2"] for _, fields in _commands(result)]
+    # A loop that has silently degraded into two participants ignoring each
+    # other still publishes both Channels; a command that answers the gap is
+    # what tells the two apart.
+    assert len(set(commands)) > 1, "the command never moved, so nothing closed"
+    gaps = [fields["gap_m"] for _, fields in _sensings(result)]
+    assert gaps[-1] < gaps[0], "the ego never closed the gap it was commanded to"
+
+
+def test_the_declared_footprint_is_finite_and_names_no_unbounded_route():
+    doc = manifest.acc_manifest().to_doc()
+    routes = footprint.routes(doc)
+    out = io.StringIO()
+    footprint.report(doc, out)
+
+    assert routes, "the example declares no subscriber route to bound"
+    assert all(route.capacity is not None for route in routes)
+    assert sum(route.total_bytes for route in routes) > 0
+    assert "unbounded" not in out.getvalue()
