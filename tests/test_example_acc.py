@@ -44,6 +44,16 @@ def acc_result(sil_run, tmp_path_factory):
     )
 
 
+@pytest.fixture(scope="module")
+def delayed_sensing_result(sil_run, tmp_path_factory):
+    """The same Run with the sensing Channel's delay Interceptor declared."""
+    return run_simulation(
+        manifest.acc_manifest(delayed_sensing=True),
+        runner=sil_run,
+        workdir=tmp_path_factory.mktemp("acc-delayed"),
+    )
+
+
 def test_both_ends_of_the_typed_contract_agree_on_the_layout():
     types = schema.load(manifest.ACC_SCHEMAS)
     header = silschema.generate(manifest.ACC_SCHEMAS)
@@ -121,20 +131,83 @@ def test_an_unmeetable_safety_gap_aborts_the_run_with_its_own_message(
     assert failure.value.exit_code == 1
 
 
-def test_the_declared_footprint_names_no_unbounded_route():
-    doc = manifest.acc_manifest().to_doc()
+def test_the_delayed_variant_differs_by_the_one_declared_interceptor():
+    """The two variants are one Manifest apart, and the hashes say so.
+
+    A reader comparing the delayed Run against the nominal one needs more than
+    two hashes that differ: two hashes only say the Runs are not the same Run.
+    Taking the Interceptor back out of the delayed document has to leave the
+    nominal one exactly, and that is what says nothing else moved.
+    """
+    nominal_builder = manifest.acc_manifest()
+    delayed_builder = manifest.acc_manifest(delayed_sensing=True)
+    assert delayed_builder.hash() != nominal_builder.hash()
+
+    delayed = delayed_builder.to_doc()
+    declared = delayed["channels"]["acc.Sensing"].pop("interceptors")
+
+    assert declared == [
+        {
+            "kind": "delay",
+            "delay_ns": manifest.SENSING_DELAY_NS,
+            "start_ns": manifest.SENSING_DELAY_START_NS,
+            "end_ns": manifest.SENSING_DELAY_END_NS,
+        }
+    ]
+    assert delayed == nominal_builder.to_doc()
+
+
+def test_the_delayed_variant_drives_a_different_trajectory(
+    acc_result, delayed_sensing_result,
+):
+    """The Interceptor's effect is shown on the vehicles, not asserted to exist.
+
+    Both Runs are the same plant and the same control law. Only when the
+    controller sees the gap differs, so every metre between the two
+    trajectories was put there by the declared delay.
+    """
+    nominal_gaps_m = [f["gap_m"] for _, f in acc_result.messages("acc.Sensing")]
+    delayed_gaps_m = [
+        f["gap_m"] for _, f in delayed_sensing_result.messages("acc.Sensing")
+    ]
+
+    # The Interceptor shifts when a Message becomes visible, not whether it
+    # exists, so both Runs publish one sensing Message per Step and an index
+    # into either list is the same plant Step.
+    assert len(delayed_gaps_m) == len(nominal_gaps_m)
+
+    # Nothing can differ before the window opens.
+    window_start = manifest.SENSING_DELAY_START_NS // manifest.STEP_PERIOD_NS
+    assert delayed_gaps_m[:window_start] == nominal_gaps_m[:window_start]
+
+    # A centimetre is far above the last bits of a double and is a distance a
+    # reader can picture, so a delay that changed only rounding fails here.
+    divergence_m = [abs(d - n) for d, n in zip(delayed_gaps_m, nominal_gaps_m)]
+    assert max(divergence_m) > 0.01, "the declared delay changed nothing"
+
+    # Late sensing is late braking: the delayed ego ends the Run nearer the
+    # lead vehicle than the nominal one, which is the direction the delay has.
+    assert delayed_gaps_m[-1] < nominal_gaps_m[-1]
+
+
+@pytest.mark.parametrize("delayed_sensing", [False, True])
+def test_the_declared_footprint_names_no_unbounded_route(delayed_sensing):
+    doc = manifest.acc_manifest(delayed_sensing=delayed_sensing).to_doc()
     out = io.StringIO()
 
     footprint.report(doc, out)
 
     # The whole route set, so a route added later without a bound fails here
-    # rather than quietly widening the example's declared worst case.
+    # rather than quietly widening the example's declared worst case. Both
+    # variants declare the same routes: an Interceptor is a property of a
+    # Channel, and the route depth it builds is what the sensing capacity
+    # covers.
     assert {
         (route.participant, route.channel): route.capacity
         for route in footprint.routes(doc)
     } == {
-        ("controller", "acc.Sensing"): manifest.ROUTE_CAPACITY,
+        ("controller", "acc.Sensing"): manifest.SENSING_ROUTE_CAPACITY,
         ("plant", "acc.Command"): manifest.ROUTE_CAPACITY,
-        ("test", "acc.Sensing"): manifest.ROUTE_CAPACITY,
+        ("test", "acc.Sensing"): manifest.SENSING_ROUTE_CAPACITY,
     }
     assert "unbounded" not in out.getvalue()

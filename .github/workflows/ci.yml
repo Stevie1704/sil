@@ -31,15 +31,28 @@ jobs:
       - name: Run tests
         run: SIL_SKIP_BUILD=1 .venv/bin/python -m pytest tests/ -v
 
-      - name: Determinism gate on reference pipeline
+      # The reference pipeline and both variants of the ACC reference example,
+      # so the example is proven bit-identical on every push rather than when
+      # someone remembers to run it.
+      - name: Determinism gate on reference manifests
+        env:
+          PYTHONPATH: python/src
         run: |
           .venv/bin/python - <<'EOF'
           import sys
           from pathlib import Path
           sys.path.insert(0, "tests")
-          sys.path.insert(0, "python/src")
+          sys.path.insert(0, "examples/acc")
           from test_determinism import full_pipeline_manifest
+          from manifest import acc_manifest
           from sil.check import check
-          ref = full_pipeline_manifest(Path("."))
-          raise SystemExit(check(Path("build/sil-run"), ref.path))
+          refs = [
+              full_pipeline_manifest(Path("build")),
+              acc_manifest().write("build/acc.json"),
+              acc_manifest(delayed_sensing=True).write("build/acc-delayed.json"),
+          ]
+          for ref in refs:
+              code = check(Path("build/sil-run"), ref.path)
+              if code:
+                  raise SystemExit(code)
           EOF

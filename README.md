@@ -204,6 +204,37 @@ repeatable counters (`deterministic`) apart from its wall-clock and RSS values
 `sil-run --no-recording` runs a manifest and writes no recording. That
 separates the cost of routing to subscribers from the cost of recording I/O.
 
+## ACC reference example
+
+[examples/acc/](examples/acc/) is one closed loop end to end: a plant carrying
+the longitudinal motion of two vehicles, a shimmed vECU controller, and a test
+participant holding the Run to a minimum-gap KPI. `examples/acc/manifest.py`
+is the whole Run — three participants, two Channels, and the Duration — and
+the pytest suite in `tests/test_example_acc.py` imports that same file rather
+than restating it.
+
+```sh
+make example                                    # run it, record it into build/
+```
+
+It ships in two variants. The second declares one Interceptor — five Steps of
+delay on the sensing Channel over a one-second window — and comes from the same
+builder:
+
+```sh
+PYTHONPATH=python/src python examples/acc/manifest.py build/acc.json
+PYTHONPATH=python/src python examples/acc/manifest.py --delayed-sensing \
+    build/acc-delayed.json
+```
+
+The two hashes differ, which says the Runs are not the same Run;
+`tests/test_example_acc.py` is what says the Interceptor is the whole of the
+difference, by taking it back out of the delayed Manifest and getting the
+nominal one. Late sensing is late braking: the delayed Run drives a measurably
+different trajectory, which is what shows the Interceptor doing something
+rather than merely being declared. Both variants are in the CI determinism
+gate.
+
 ## Build & test
 
 ```sh
@@ -231,6 +262,8 @@ tools/silschema.py schema → packed C structs; sil.schema packs the same
                    layout in Python
 tools/bench_*.py   routing-baseline driver and its process participants
 docs/bench/        routing baseline: procedure, raw results, decision inputs
+examples/acc/      the ACC reference example: one closed-loop Run in a
+                   nominal and a delayed-sensing variant
 python/src/sil/    manifest builder, step-participant lib, test API,
                    determinism check, declared memory footprint
 tests/             behavior tests at the run boundary
