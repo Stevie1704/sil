@@ -9,6 +9,7 @@ import importlib.util
 import io
 from pathlib import Path
 
+import pytest
 from conftest import ROOT
 
 from sil import footprint, schema
@@ -28,6 +29,20 @@ manifest = _load("acc_manifest", ROOT / "examples" / "acc" / "manifest.py")
 controller = _load("acc_controller", ROOT / "examples" / "acc" / "controller.py")
 
 
+@pytest.fixture(scope="module")
+def acc_result(sil_run, tmp_path_factory):
+    """One Run of the example, shared by every assertion made about it.
+
+    The Run is deterministic, so running it once per assertion would only buy
+    the same bytes again.
+    """
+    return run_simulation(
+        manifest.acc_manifest(),
+        runner=sil_run,
+        workdir=tmp_path_factory.mktemp("acc"),
+    )
+
+
 def test_both_ends_of_the_typed_contract_agree_on_the_layout():
     types = schema.load(manifest.ACC_SCHEMAS)
     header = silschema.generate(manifest.ACC_SCHEMAS)
@@ -38,61 +53,52 @@ def test_both_ends_of_the_typed_contract_agree_on_the_layout():
     assert "sizeof(acc_Command) == 8" in header
 
 
-def _sensings(result):
-    return result.messages("acc.Sensing")
-
-
-def _commands(result):
-    return result.messages("acc.Command")
-
-
-def test_the_plant_publishes_sensing_every_step(sil_run, tmp_path):
-    result = run_simulation(
-        manifest.acc_manifest(), runner=sil_run, workdir=tmp_path
-    )
-    assert len(_sensings(result)) == (
+def test_the_plant_publishes_sensing_every_step(acc_result):
+    assert len(acc_result.messages("acc.Sensing")) == (
         manifest.DURATION_NS // manifest.STEP_PERIOD_NS
     )
 
 
 def test_the_controller_commands_one_step_after_the_sensing_it_answers(
-    sil_run, tmp_path
+    acc_result,
 ):
-    result = run_simulation(
-        manifest.acc_manifest(), runner=sil_run, workdir=tmp_path
-    )
-    sensings = _sensings(result)
-    commands = _commands(result)
-    # Under the default unit latency the controller first sees sensing one
-    # Step after the plant publishes it, so it commands one time fewer.
+    sensings = acc_result.messages("acc.Sensing")
+    commands = acc_result.messages("acc.Command")
+
+    # Under the default Latency the controller first sees sensing one Step
+    # after the plant publishes it, so it commands one time fewer.
     assert len(commands) == len(sensings) - 1
     for (sensing_ns, sensing), (command_ns, command) in zip(sensings, commands):
         assert command_ns == sensing_ns + manifest.STEP_PERIOD_NS
         assert command["accel_mps2"] == controller.command_for(**sensing)
 
 
-def test_the_commanded_acceleration_moves_with_the_measured_gap(
-    sil_run, tmp_path
+def test_the_commanded_acceleration_varies_and_the_ego_closes_the_gap(
+    acc_result,
 ):
-    result = run_simulation(
-        manifest.acc_manifest(), runner=sil_run, workdir=tmp_path
-    )
-    commands = [fields["accel_mps2"] for _, fields in _commands(result)]
+    commands = [f["accel_mps2"] for _, f in acc_result.messages("acc.Command")]
+    gaps = [f["gap_m"] for _, f in acc_result.messages("acc.Sensing")]
+
     # A loop that has silently degraded into two participants ignoring each
-    # other still publishes both Channels; a command that answers the gap is
-    # what tells the two apart.
+    # other still publishes both Channels. A command that moves, and a gap
+    # that answers it, is what tells the two apart.
     assert len(set(commands)) > 1, "the command never moved, so nothing closed"
-    gaps = [fields["gap_m"] for _, fields in _sensings(result)]
     assert gaps[-1] < gaps[0], "the ego never closed the gap it was commanded to"
 
 
-def test_the_declared_footprint_is_finite_and_names_no_unbounded_route():
+def test_the_declared_footprint_names_no_unbounded_route():
     doc = manifest.acc_manifest().to_doc()
-    routes = footprint.routes(doc)
     out = io.StringIO()
+
     footprint.report(doc, out)
 
-    assert routes, "the example declares no subscriber route to bound"
-    assert all(route.capacity is not None for route in routes)
-    assert sum(route.total_bytes for route in routes) > 0
+    # The whole route set, so a route added later without a bound fails here
+    # rather than quietly widening the example's declared worst case.
+    assert {
+        (route.participant, route.channel): route.capacity
+        for route in footprint.routes(doc)
+    } == {
+        ("controller", "acc.Sensing"): manifest.ROUTE_CAPACITY,
+        ("plant", "acc.Command"): manifest.ROUTE_CAPACITY,
+    }
     assert "unbounded" not in out.getvalue()

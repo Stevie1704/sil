@@ -23,8 +23,8 @@ LEAD_ACCEL_MPS2 = 0.0
 EGO_POSITION_M = 0.0
 EGO_SPEED_MPS = 25.0
 
-# What the ego holds until the first command arrives. Under the default unit
-# latency that is two Steps: the controller sees the first sensing Message one
+# What the ego holds until the first command arrives. Under the default
+# Latency that is two Steps: the controller sees the first sensing Message one
 # Step after it is published, and its answer arrives one Step after that.
 INITIAL_COMMAND_MPS2 = 0.0
 
@@ -48,10 +48,10 @@ class Plant(StepParticipant):
 
     def on_step(self, t, dt, inputs):
         # The command in hand answers sensing published two Steps ago, which
-        # is what the default unit latency costs around a loop. The newest
-        # command wins, and the last one is held while none arrives.
-        for message in inputs:
-            self.commanded_accel_mps2 = message.data["accel_mps2"]
+        # is what the default Latency costs around a loop. The newest command
+        # wins, and the last one is held while none arrives.
+        if inputs:
+            self.commanded_accel_mps2 = inputs[-1].data["accel_mps2"]
         # The Message carries the state at t; integrating one step of dt comes
         # after it, so the next Step publishes the state it reaches.
         sensing = {

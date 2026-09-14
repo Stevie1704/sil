@@ -4,9 +4,9 @@ Two participants in a closed loop: the plant publishes `acc.Sensing` and
 subscribes to `acc.Command`, the controller does the reverse. Messages travel
 in both directions, so this is a Run rather than a pipeline.
 
-Latency at the loop boundary: the Channels take the default unit latency, so a
+Latency at the loop boundary: the Channels take the default Latency, so a
 Message published at `t` is visible at the subscriber's next activation. The
-plant→controller→plant path therefore closes with one Step of delay in each
+plant→controller→plant path therefore closes with one Step of Latency in each
 direction — a declared property of the example, not a defect to work around.
 
 Build it and run it:
@@ -47,9 +47,9 @@ def acc_manifest() -> Manifest:
     m.add_schemas(ACC_SCHEMAS)
     m.add_channel("acc.Sensing", schema="acc.Sensing")
     m.add_channel("acc.Command", schema="acc.Command")
-    # Priorities are declared rather than left implicit. Under unit latency
-    # they cannot change what the Run computes — that is the point of the
-    # default — so the example shows the field without depending on it.
+    # Priorities are declared rather than left implicit. Under the default
+    # Latency they cannot change what the Run computes — that is the point of
+    # the default — so the example shows the field without depending on it.
     m.add_process(
         "plant",
         command=participant_command(EXAMPLE_DIR / "plant.py", "Plant"),

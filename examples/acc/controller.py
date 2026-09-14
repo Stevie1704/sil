@@ -7,8 +7,8 @@ damping term on the relative speed, clamped to a comfort envelope — small
 enough to read in one sitting, because the example teaches the framework
 rather than control design.
 
-Latency at the loop boundary: under the default unit latency a Message
-published at `t` is visible at the subscriber's next activation. The sensing
+Latency at the loop boundary: under the default Latency a Message published
+at `t` is visible at the subscriber's next activation. The sensing
 this participant answers is therefore one Step old, and the command it
 publishes reaches the plant one Step later still. A reader who assumes
 same-slot feedthrough will write a wrong controller.
