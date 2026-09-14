@@ -174,6 +174,13 @@ manifest, so the same manifest hash covers a run with and without one. What the
 run computes is identical either way; only the artifact differs.
 _Avoid_: log, trace, output file, mcap
 
+**KPI**:
+A property of a Run's behavior that decides whether it passed. It is evaluated
+in-run by a test participant at defined virtual times, post-hoc over a
+recording, or both — the same property, measured on the live Run or on its
+artifact.
+_Avoid_: metric, score
+
 **Determinism**:
 The guarantee that the same artifacts on the same machine class produce a
 bit-identical recording. Scoped deliberately: cross-platform bit-exactness is

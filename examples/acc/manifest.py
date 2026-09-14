@@ -1,8 +1,9 @@
 """The ACC example's Manifest — the single definition of the example Run.
 
-Two participants in a closed loop: the plant publishes `acc.Sensing` and
-subscribes to `acc.Command`, the controller does the reverse. Messages travel
-in both directions, so this is a Run rather than a pipeline.
+Three participants. The plant publishes `acc.Sensing` and subscribes to
+`acc.Command`, the controller does the reverse — Messages travel in both
+directions, so this is a Run rather than a pipeline. The test participant
+subscribes to the sensing Channel and holds the loop to its safety KPI.
 
 Latency at the loop boundary: the Channels take the default Latency, so a
 Message published at `t` is visible at the subscriber's next activation. The
@@ -33,16 +34,20 @@ ACC_SCHEMAS = json.loads((ROOT / "schemas" / "acc.json").read_text())
 STEP_PERIOD_NS = 10_000_000
 DURATION_NS = 5_000_000_000
 
-# Both participants step at the same period, so a route carries one Message per
-# activation and its steady-state depth is one. A route holds a second Message
-# for part of a Slot when its publisher activates ahead of it, before the drain
-# — which of the two routes that is depends on the declared priorities, so both
-# declare the same worst case. The policy is the default: an overrun is a
-# declaration that no longer matches the run, and it should abort loudly.
+# Every participant steps at the same period, so a route carries one Message
+# per activation and its steady-state depth is one. A route holds a second
+# Message for part of a Slot when its publisher activates ahead of it, before
+# the drain — which routes those are depends on the declared priorities, so
+# every route declares the same worst case. The policy is the default: an
+# overrun is a declaration that no longer matches the run, and it should abort
+# loudly.
 ROUTE_CAPACITY = 2
 
 
-def acc_manifest() -> Manifest:
+def acc_manifest(*, safety_kpi: str = "MinimumGapKPI") -> Manifest:
+    """The example Run. `safety_kpi` names the KPI class the test participant
+    holds the loop to, so a test can rebuild the same Run under a threshold it
+    cannot meet."""
     m = Manifest(duration_ns=DURATION_NS)
     m.add_schemas(ACC_SCHEMAS)
     m.add_channel("acc.Sensing", schema="acc.Sensing")
@@ -71,6 +76,15 @@ def acc_manifest() -> Manifest:
         publishes=["acc.Command"],
         priority=1,
         shim=True,
+    )
+    # The test participant: it publishes no Channel and commands nothing, so
+    # the loop cannot see it. Its only output is the Run's exit code.
+    m.add_process(
+        "test",
+        command=participant_command(EXAMPLE_DIR / "safety.py", safety_kpi),
+        step_period_ns=STEP_PERIOD_NS,
+        subscribes=[SubscriberRoute("acc.Sensing", capacity=ROUTE_CAPACITY)],
+        priority=2,
     )
     return m
 

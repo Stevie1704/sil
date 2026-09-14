@@ -18,7 +18,15 @@ from sil.manifest import Manifest
 
 
 class RunFailure(AssertionError):
-    """The simulation aborted; the message carries the participant's reason."""
+    """The Run aborted; the message carries the participant's reason.
+
+    `exit_code` is the Run's own, so a test can tell an assertion the Run
+    failed (1) from a Manifest the loader rejected (2).
+    """
+
+    def __init__(self, reason: str, exit_code: int):
+        super().__init__(reason)
+        self.exit_code = exit_code
 
 
 def participant_command(file: str | Path, cls: str) -> list[str]:
@@ -57,7 +65,7 @@ def run_simulation(manifest: Manifest, *, runner: str | Path,
         capture_output=True, text=True,
     )
     if proc.returncode != 0:
-        raise RunFailure(proc.stderr.strip())
+        raise RunFailure(proc.stderr.strip(), proc.returncode)
 
     doc = manifest.to_doc()
     return RunResult(
