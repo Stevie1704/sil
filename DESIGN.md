@@ -128,7 +128,7 @@ in the framework's own CI from day one.**
 - L4 (ISS) vECUs in v1.
 
 ## Open questions (not yet decided)
-- Which environment tool gets the first reference adapter.
+None open.
 
 ## Resolved since (2026-07-07)
 - **Schema/code-gen (#9):** custom minimal generator. `tools/silschema.py`
@@ -624,3 +624,14 @@ in the framework's own CI from day one.**
   so against the rule. **Destruction is untouched:** a Participant's state
   lives until the process exits, which is the whole lifecycle ABI v1 has and
   #86 declined to extend.
+- **First environment reference adapter (#96):** the internal dynamics model.
+  `examples/acc/plant.py` carries the longitudinal motion of two vehicles and
+  is stepped over the same step protocol as any other process participant —
+  an adapter in exactly the sense #10 means, with nothing simulator-shaped
+  added to the kernel to carry it. esmini is deferred, not rejected: the
+  question was which comes first, and the internal model came first because it
+  can live in this repository, be imported by the example's own tests instead
+  of restated by them, and be held to the determinism gate on every push. The
+  example is also the evidence — its second variant delays the sensing Channel
+  by one declared Interceptor and the vehicles drive a different trajectory for
+  it, so the environment half is a closed loop and not a playback.

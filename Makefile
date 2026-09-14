@@ -64,6 +64,15 @@ check: venv build ## Determinism check: make check ARGS="manifest.json"
 footprint: venv ## Declared payload memory: make footprint ARGS="manifest.json"
 	PYTHONPATH=python/src $(PYTHON) -m sil.footprint $(ARGS)
 
+# Example ----------------------------------------------------------------------
+# Convenience over `make run`: builds the ACC reference example's nominal
+# Manifest and runs it. `sil-run` spawns the participants as child processes,
+# so PYTHONPATH has to be set on the run as well as on the build.
+.PHONY: example
+example: venv build ## Run the ACC example and record it into the build directory
+	PYTHONPATH=python/src $(PYTHON) examples/acc/manifest.py $(BUILD_DIR)/acc.json
+	PYTHONPATH=python/src ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/acc.json -o $(BUILD_DIR)/acc.mcap
+
 # Benchmark --------------------------------------------------------------------
 # Regenerates the routing baseline in docs/bench/ (issue #61). Long-running:
 # every row is run once instrumented for copy counts and several times
