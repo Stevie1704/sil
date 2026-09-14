@@ -13,7 +13,7 @@ import pytest
 from conftest import ROOT
 
 from sil import footprint, schema
-from sil.testing import run_simulation
+from sil.testing import RunFailure, run_simulation
 
 
 def _load(name: str, path: Path):
@@ -27,6 +27,7 @@ def _load(name: str, path: Path):
 silschema = _load("silschema", ROOT / "tools" / "silschema.py")
 manifest = _load("acc_manifest", ROOT / "examples" / "acc" / "manifest.py")
 controller = _load("acc_controller", ROOT / "examples" / "acc" / "controller.py")
+safety = _load("acc_safety", ROOT / "examples" / "acc" / "safety.py")
 
 
 @pytest.fixture(scope="module")
@@ -86,6 +87,40 @@ def test_the_commanded_acceleration_varies_and_the_ego_closes_the_gap(
     assert gaps[-1] < gaps[0], "the ego never closed the gap it was commanded to"
 
 
+def test_the_recorded_run_holds_the_safety_gap(acc_result):
+    """The post-hoc half of the KPI the test participant asserts in-run.
+
+    The fixture reaching a Recording at all is the nominal Run's exit 0:
+    `run_simulation` raises on any other exit code. What is left to compute is
+    the KPI itself — a comprehension over the typed Messages, with no
+    evaluation machinery between the Recording and the assertion.
+    """
+    gaps_m = [fields["gap_m"] for _, fields in acc_result.messages("acc.Sensing")]
+
+    assert min(gaps_m) >= safety.SAFE_GAP_M
+
+
+def test_an_unmeetable_safety_gap_aborts_the_run_with_its_own_message(
+    sil_run, tmp_path,
+):
+    """The in-run assertion is load-bearing, not decorative.
+
+    Same example, same plant and controller; only the threshold the test
+    participant holds them to changes. What the Run cannot meet has to abort
+    it, and the participant's own words have to be what a reader sees.
+    """
+    with pytest.raises(RunFailure, match="safety gap") as failure:
+        run_simulation(
+            manifest.acc_manifest(safety_kpi="UnmeetableMinimumGapKPI"),
+            runner=sil_run,
+            workdir=tmp_path,
+        )
+
+    # The kernel's run-failure exit code (kExitRunFailure in kernel/src/main.cpp),
+    # as distinct from the exit 2 a Manifest the loader rejects would give.
+    assert failure.value.exit_code == 1
+
+
 def test_the_declared_footprint_names_no_unbounded_route():
     doc = manifest.acc_manifest().to_doc()
     out = io.StringIO()
@@ -100,5 +135,6 @@ def test_the_declared_footprint_names_no_unbounded_route():
     } == {
         ("controller", "acc.Sensing"): manifest.ROUTE_CAPACITY,
         ("plant", "acc.Command"): manifest.ROUTE_CAPACITY,
+        ("test", "acc.Sensing"): manifest.ROUTE_CAPACITY,
     }
     assert "unbounded" not in out.getvalue()
