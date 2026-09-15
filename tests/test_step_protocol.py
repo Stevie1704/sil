@@ -3,6 +3,7 @@
 import json
 import struct
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -13,6 +14,7 @@ from sil.participant import (
     _Arena,
     _StepCodec,
 )
+from sil.testing import participant_command
 
 from conftest import COMPAT_ROUTE_CAPACITY, ROOT
 from test_run_boundary import ARRAY_SCHEMAS, ARRAY_TYPES, read_mcap
@@ -397,3 +399,42 @@ class TestCppStepCodec:
         proc = run_sil(m.write(tmp_path / f"{mode}.json").path)
         assert proc.returncode == 1
         assert diagnostic in proc.stderr
+
+
+class TestInitializationFailure:
+    """A participant that never reaches `ready`, and why it did not.
+
+    A participant that rejects its init line answers `fail`, and the kernel
+    calls that a configuration error — a Manifest that names it this way is
+    wrong, not a Run that went wrong. A participant that merely breaks on the
+    way up says nothing, and stays an ordinary Run failure.
+    """
+
+    def manifest(self, tmp_path, cls: str) -> Path:
+        m = Manifest(duration_ns=10_000_000)
+        m.add_schemas(ARRAY_SCHEMAS)
+        m.add_channel("payload", schema="big.Payload")
+        m.add_process(
+            "starter",
+            command=participant_command(
+                ROOT / "tests" / "participants" / "reject_at_init.py", cls
+            ),
+            step_period_ns=10_000_000,
+            publishes=["payload"],
+        )
+        return m.write(tmp_path / f"{cls}.json").path
+
+    def test_a_rejected_init_line_is_a_configuration_error(
+        self, run_sil, tmp_path
+    ):
+        proc = run_sil(self.manifest(tmp_path, "RejectAtInit"))
+        assert proc.returncode == 2, proc.stderr
+        assert "starter" in proc.stderr
+        assert "refuses its init line" in proc.stderr
+
+    def test_any_other_failure_while_initializing_stays_a_run_failure(
+        self, run_sil, tmp_path
+    ):
+        proc = run_sil(self.manifest(tmp_path, "BreakAtInit"))
+        assert proc.returncode == 1, proc.stderr
+        assert "broke while initializing" in proc.stderr

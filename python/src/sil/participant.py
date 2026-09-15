@@ -181,6 +181,16 @@ class ParticipantFailure(Exception):
     """Raised by a participant to abort the whole run."""
 
 
+class ConfigurationError(Exception):
+    """Raised by a participant whose init line cannot be honoured at all.
+
+    It is answered with `fail` instead of `ready`, which the kernel treats as a
+    configuration error rather than a Run failure — see docs/step-protocol.md.
+    Every other exception during initialization stays a Run failure, so a
+    participant that breaks on the way up is not reported as a bad Manifest.
+    """
+
+
 @dataclass(frozen=True)
 class Input:
     channel: str
@@ -196,6 +206,11 @@ class StepParticipant:
         """Advance from t to t+dt. Returns [(channel, fields_dict), ...]
         to publish at t, or None."""
         return None
+
+
+def _reason(error: Exception) -> str:
+    """The one-line diagnostic a `fail` line carries for an exception."""
+    return "".join(traceback.format_exception_only(error)).strip()
 
 
 def run(participant: StepParticipant) -> None:
@@ -235,7 +250,15 @@ def run(participant: StepParticipant) -> None:
                     types_by_channel, arenas,
                     indexed_slots=protocol >= _STEP_PROTOCOL_INDEXED_SLOTS,
                 )
-                participant.on_init(msg)
+                try:
+                    participant.on_init(msg)
+                except ConfigurationError as e:
+                    # Only a deliberate rejection answers `fail`: that line
+                    # before `ready` is what makes the kernel call this a
+                    # configuration error. Returning ends the loop — no step
+                    # can follow an initialization that never finished.
+                    send({"op": "fail", "reason": _reason(e)})
+                    return
                 ready = {"op": "ready"}
                 if "protocol" in msg:
                     ready["protocol"] = protocol
@@ -251,8 +274,7 @@ def run(participant: StepParticipant) -> None:
                         "out": codec.encode_outputs(outputs),
                     })
                 except Exception as e:  # noqa: BLE001 — any error must abort the run
-                    reason = "".join(traceback.format_exception_only(e)).strip()
-                    send({"op": "fail", "reason": reason})
+                    send({"op": "fail", "reason": _reason(e)})
                     continue
             elif op == "shutdown":
                 return
@@ -282,4 +304,10 @@ def main(argv: list[str] | None = None) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    # `python -m sil.participant` runs this file as `__main__`, so the classes
+    # defined here are not the ones a participant gets from `import
+    # sil.participant`. Delegating to the imported module gives both sides the
+    # same ConfigurationError, which the init handshake compares by identity.
+    from sil.participant import main as _main
+
+    _main()

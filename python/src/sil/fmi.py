@@ -28,13 +28,22 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 from sil import schema
-from sil.participant import ParticipantFailure, StepParticipant, run
+from sil.participant import (
+    ConfigurationError,
+    ParticipantFailure,
+    StepParticipant,
+    run,
+)
 
 # Virtual time is integer nanoseconds; seconds are derived from those integers
 # on every step and never accumulated, so the same integer always produces the
 # same double. An integer denominator keeps that true past the 53 bits an
 # int-to-float conversion holds exactly.
 NS_PER_S = 1_000_000_000
+
+# The one FMI version this importer drives. Anything else is rejected rather
+# than half-driven.
+_FMI_VERSION = "3.0"
 
 # fmi3Status. Warning still carries a result; Discard, Error and Fatal do not.
 _FMI_STATUS_NAMES = ("OK", "Warning", "Discard", "Error", "Fatal")
@@ -88,35 +97,88 @@ _SIGNATURES = {
 }
 
 
+def platform_directory() -> str:
+    """The `binaries/` subdirectory this platform's shared library lives in."""
+    machine = platform.machine()
+    machine = _MACHINES.get(machine, machine)
+    system, _ = _SYSTEMS[platform.system()]
+    return f"{machine}-{system}"
+
+
+def _by_causality(variables, causality: str) -> dict[str, int]:
+    """The Float64 variables of one causality, by name.
+
+    Only `input` and `output` variables take part in the Channel mapping. A
+    parameter, a local, or the independent variable `time` is the FMU's own
+    business and no Channel names it.
+    """
+    return {
+        variable.get("name"): int(variable.get("valueReference"))
+        for variable in variables
+        if variable.get("causality") == causality
+    }
+
+
 @dataclass(frozen=True)
 class ModelDescription:
     """What `modelDescription.xml` says that driving the FMU depends on."""
 
     model_identifier: str
     instantiation_token: str
-    float64_references: dict[str, int]
+    inputs: dict[str, int]
+    outputs: dict[str, int]
 
     @staticmethod
     def read(extracted: Path) -> ModelDescription:
-        root = ElementTree.parse(extracted / "modelDescription.xml").getroot()
+        """Parse the description, rejecting an FMU this importer cannot drive.
+
+        Both rejections are eager and specific: an FMI 2.0 export otherwise
+        loads and fails on a missing symbol, and a Model Exchange FMU
+        otherwise fails on an absent element.
+        """
+        try:
+            root = ElementTree.parse(
+                extracted / "modelDescription.xml"
+            ).getroot()
+        except (OSError, ElementTree.ParseError) as error:
+            raise ConfigurationError(
+                f"FMU has no readable modelDescription.xml: {error}"
+            ) from error
+        version = root.get("fmiVersion")
+        if version != _FMI_VERSION:
+            raise ConfigurationError(
+                f"FMU declares fmiVersion {version!r}; this importer drives "
+                f"FMI {_FMI_VERSION} co-simulation only"
+            )
+        co_simulation = root.find("CoSimulation")
+        if co_simulation is None:
+            raise ConfigurationError(
+                "FMU declares no co-simulation interface; this importer "
+                "drives neither Model Exchange nor Scheduled Execution"
+            )
+        variables = root.find("ModelVariables").findall("Float64")
         return ModelDescription(
-            model_identifier=root.find("CoSimulation").get("modelIdentifier"),
+            model_identifier=co_simulation.get("modelIdentifier"),
             instantiation_token=root.get("instantiationToken"),
-            float64_references={
-                variable.get("name"): int(variable.get("valueReference"))
-                for variable in root.find("ModelVariables").findall("Float64")
-            },
+            inputs=_by_causality(variables, "input"),
+            outputs=_by_causality(variables, "output"),
         )
 
     def binary(self, extracted: Path) -> Path:
         """The shared library this platform loads out of the FMU."""
-        machine = platform.machine()
-        machine = _MACHINES.get(machine, machine)
-        system, suffix = _SYSTEMS[platform.system()]
-        return (
-            extracted / "binaries" / f"{machine}-{system}"
+        directory = platform_directory()
+        _, suffix = _SYSTEMS[platform.system()]
+        binary = (
+            extracted / "binaries" / directory
             / f"{self.model_identifier}{suffix}"
         )
+        if not binary.exists():
+            raise ConfigurationError(
+                f"FMU {self.model_identifier!r} carries no binary for "
+                f"{directory}: binaries/{directory}/{binary.name} is not in "
+                f"the archive"
+            )
+        return binary
 
 
 def _load(binary: Path) -> ctypes.CDLL:
@@ -248,6 +310,47 @@ class _Binding:
         return dict(zip(self._field_names, self._values))
 
 
+def _declarations(init: dict, types: dict) -> dict[str, dict[str, str]]:
+    """Each declared schema field name, mapped to the Channel that declared it.
+
+    Split by the direction the init line gives, because the direction decides
+    which side of the step the FMU variable of that name is touched on.
+    """
+    declared: dict[str, dict[str, str]] = {"in": {}, "out": {}}
+    for channel, declaration in init["channels"].items():
+        declared[declaration["direction"]].update(
+            dict.fromkeys(types[declaration["schema"]].field_names, channel)
+        )
+    return declared
+
+
+def _require_total_match(
+    declared: dict[str, str],
+    variables: dict[str, int],
+    causality: str,
+    model_identifier: str,
+) -> None:
+    """Require every name on one side of the mapping to be on the other.
+
+    `declared` maps each schema field name to the Channel that declared it, so
+    both diagnostics can name the Channel and the FMU.
+    """
+    for name, channel in declared.items():
+        if name not in variables:
+            raise ConfigurationError(
+                f"Channel {channel!r} declares schema field {name!r}, which is "
+                f"no {causality} variable of FMU {model_identifier!r}"
+            )
+    searched = ", ".join(sorted(repr(c) for c in set(declared.values())))
+    for name in variables:
+        if name not in declared:
+            raise ConfigurationError(
+                f"FMU {model_identifier!r} declares {causality} variable "
+                f"{name!r}, which is a schema field of no {causality}-direction "
+                f"Channel (searched: {searched or 'none'})"
+            )
+
+
 class FmuParticipant(StepParticipant):
     """A process participant whose behavior is an imported FMU's."""
 
@@ -261,29 +364,45 @@ class FmuParticipant(StepParticipant):
     def on_init(self, init: dict) -> None:
         self._extraction = tempfile.TemporaryDirectory(prefix="sil-fmu-")
         extracted = Path(self._extraction.name)
-        with zipfile.ZipFile(self._fmu_path) as archive:
-            archive.extractall(extracted)
+        try:
+            with zipfile.ZipFile(self._fmu_path) as archive:
+                archive.extractall(extracted)
+        except (OSError, zipfile.BadZipFile) as error:
+            raise ConfigurationError(
+                f"cannot read FMU {str(self._fmu_path)!r}: {error}"
+            ) from error
         description = ModelDescription.read(extracted)
-        self._bind_channels(init, description.float64_references)
+        self._bind_channels(init, description)
         self._fmu = CoSimulation(description.binary(extracted), description)
         self._fmu.initialize()
 
-    def _bind_channels(self, init: dict, references: dict[str, int]) -> None:
+    def _bind_channels(self, init: dict, description: ModelDescription) -> None:
         """Split the declared Channels by the direction the init line gives.
 
         An input-direction Channel is written into the FMU before its step; an
         output-direction Channel is published from it after. The schema field
-        names name the FMU variables on both sides.
+        names name the FMU variables on both sides, and the match is total in
+        both directions — a name on one side and not the other is a mapping
+        mistake, which is worth rejecting rather than carrying as a silently
+        zero-valued variable.
         """
         types = schema.load(init["schemas"])
+        declared = _declarations(init, types)
+        _require_total_match(
+            declared["in"], description.inputs, "input",
+            description.model_identifier,
+        )
+        _require_total_match(
+            declared["out"], description.outputs, "output",
+            description.model_identifier,
+        )
         for channel, declaration in init["channels"].items():
-            binding = _Binding(
-                types[declaration["schema"]].field_names, references
+            incoming = declaration["direction"] == "in"
+            bindings = self._inputs if incoming else self._outputs
+            bindings[channel] = _Binding(
+                types[declaration["schema"]].field_names,
+                description.inputs if incoming else description.outputs,
             )
-            bindings = (
-                self._inputs if declaration["direction"] == "in" else self._outputs
-            )
-            bindings[channel] = binding
 
     def on_step(self, t: int, dt: int, inputs: list):
         # Inputs arrive in publish order, so writing each in turn leaves the
