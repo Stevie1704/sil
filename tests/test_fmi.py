@@ -8,6 +8,8 @@ stepped, and its output variables are published on the Channel it publishes.
 """
 
 import copy
+import math
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -20,6 +22,7 @@ from sil.fmi import (
     FmuParticipant,
     ModelDescription,
     platform_directory,
+    reference_result,
 )
 from sil.manifest import Manifest, SubscriberRoute
 from sil.participant import ConfigurationError, Input
@@ -27,6 +30,12 @@ from sil.testing import run_simulation
 
 FIXTURES = ROOT / "tests" / "fixtures" / "reference-fmus" / "3.0"
 FEEDTHROUGH = FIXTURES / "Feedthrough.fmu"
+BOUNCING_BALL = FIXTURES / "BouncingBall.fmu"
+
+# The FMI-LS-REF layered standard's directory inside an FMU, and the reference
+# CSV `BouncingBall.fmu` declares there.
+LS_REF = "extra/org.fmi-standard.fmi-ls-ref"
+BALL_REFERENCE_CSV = "BouncingBall_out.csv"
 
 STEP_PERIOD_NS = 10_000_000
 DURATION_NS = 100_000_000
@@ -234,11 +243,12 @@ def described(tmp_path, rewrite=lambda text: text) -> Path:
     return tmp_path
 
 
-def fmu_variant(tmp_path, name: str, *, rewrite=lambda text: text,
+def fmu_variant(tmp_path, name: str, *, source_fmu=FEEDTHROUGH,
+                rewrite=lambda text: text,
                 drop=lambda member: False) -> Path:
-    """A copy of `Feedthrough.fmu` with members rewritten or left out."""
+    """A copy of a vendored FMU with members rewritten or left out."""
     path = tmp_path / f"{name}.fmu"
-    with zipfile.ZipFile(FEEDTHROUGH) as source, zipfile.ZipFile(path, "w") as target:
+    with zipfile.ZipFile(source_fmu) as source, zipfile.ZipFile(path, "w") as target:
         for member in source.infolist():
             if drop(member.filename):
                 continue
@@ -419,3 +429,83 @@ class TestRejectedAtStartup:
             fmu.write_text("this is not a zip archive")
         stderr = self.run_rejection(run_sil, tmp_path, fmu=fmu)
         assert f"cannot read FMU '{fmu}'" in stderr
+
+
+def ball_with_reference(tmp_path, name: str, *,
+                        csv_name: str = BALL_REFERENCE_CSV,
+                        manifest_xml: str | None = None) -> Path:
+    """`BouncingBall.fmu` with its FMI-LS-REF members altered.
+
+    Renaming the CSV rewrites the layered-standard manifest to name it, so an
+    importer that reads the manifest still finds the trajectory and one that
+    guesses the filename no longer does. Replacing the manifest outright is
+    how a declaration the importer must reject is provoked.
+    """
+    path = tmp_path / f"{name}.fmu"
+    with zipfile.ZipFile(BOUNCING_BALL) as source, zipfile.ZipFile(path, "w") as target:
+        for member in source.infolist():
+            data = source.read(member.filename)
+            if member.filename == f"{LS_REF}/{BALL_REFERENCE_CSV}":
+                member.filename = f"{LS_REF}/{csv_name}"
+            elif member.filename == f"{LS_REF}/fmi-ls-manifest.xml":
+                data = (
+                    data.replace(BALL_REFERENCE_CSV.encode(), csv_name.encode())
+                    if manifest_xml is None
+                    else manifest_xml.encode()
+                )
+            target.writestr(member, data)
+    return path
+
+
+class TestReferenceResultDiscovery:
+    """Finding the shipped trajectory inside the FMU, under FMI-LS-REF.
+
+    The Reference FMU carries its own result: a layered-standard manifest
+    declaring a related CSV with the `result` role, and the CSV itself. That
+    is the whole source — no side file and no vendored copy to keep in sync
+    with the archive it came from.
+    """
+
+    def test_the_layered_standard_manifest_names_the_file_that_is_read(
+        self, tmp_path
+    ):
+        """Discovery goes through the manifest, not through a known filename."""
+        renamed = ball_with_reference(
+            tmp_path, "renamed", csv_name="somewhere-else.csv"
+        )
+        assert reference_result(renamed).rows == reference_result(BOUNCING_BALL).rows
+
+    def test_an_fmu_carrying_no_reference_result_is_rejected(self, tmp_path):
+        stripped = fmu_variant(
+            tmp_path,
+            "no-reference",
+            source_fmu=BOUNCING_BALL,
+            drop=lambda member: member.startswith(f"{LS_REF}/"),
+        )
+        with pytest.raises(ConfigurationError, match=LS_REF):
+            reference_result(stripped)
+
+    def test_an_fmu_declaring_no_result_role_is_rejected(self, tmp_path):
+        """A related file of another role is not a trajectory to check against."""
+        roleless = ball_with_reference(
+            tmp_path,
+            "no-result-role",
+            manifest_xml=(
+                '<fmiReferences><Related type="text/csv" '
+                f'source="{BALL_REFERENCE_CSV}" role="input"/></fmiReferences>'
+            ),
+        )
+        with pytest.raises(ConfigurationError, match="result"):
+            reference_result(roleless)
+
+    def test_an_fmu_declaring_no_default_step_size_is_rejected(self):
+        """The trajectory is only valid at the step it was produced at.
+
+        `Feedthrough` ships a reference result and a default experiment
+        without a step size, so there is no step to reproduce it at.
+        """
+        with pytest.raises(ConfigurationError, match="step size"):
+            reference_result(FEEDTHROUGH)
+
+    def test_the_declared_step_size_comes_back_in_seconds(self):
+        assert reference_result(BOUNCING_BALL).step_size == 1e-2
