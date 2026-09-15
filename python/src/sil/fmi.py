@@ -200,8 +200,8 @@ class ReferenceResult:
     `rows` is the reference CSV in file order, each row mapping a column name
     to its value, the independent variable `time` included. The first row is
     the post-initialization value, read after initialization and before the
-    first step, so a driver that steps first produces its `k`-th value for
-    row `k + 1`.
+    first step, so an importer that steps first produces its `k`-th value
+    for row `k + 1`.
 
     `step_size` is the default experiment's declared step, in seconds. The
     trajectory is only valid at that step: a different step is a different
@@ -212,24 +212,14 @@ class ReferenceResult:
     rows: list[dict[str, float]]
 
 
-def _member(archive: zipfile.ZipFile, name: str, fmu_path: Path) -> bytes:
-    """One member of the FMU archive, or a diagnostic naming what is missing."""
-    try:
-        return archive.read(name)
-    except KeyError:
-        raise ConfigurationError(
-            f"FMU {str(fmu_path)!r} carries no {name}"
-        ) from None
-
-
-def _result_source(manifest: bytes, fmu_path: Path) -> str:
+def _result_source(ls_ref_manifest: bytes, fmu_path: Path) -> str:
     """The related file the FMI-LS-REF manifest gives the `result` role."""
-    for related in ElementTree.fromstring(manifest).findall("Related"):
-        if related.get("role") == _RESULT_ROLE:
+    for related in ElementTree.fromstring(ls_ref_manifest).findall("Related"):
+        if related.get("role") == _RESULT_ROLE and related.get("source"):
             return related.get("source")
     raise ConfigurationError(
-        f"FMU {str(fmu_path)!r} declares no FMI-LS-REF related file with the "
-        f"{_RESULT_ROLE!r} role"
+        f"FMU {str(fmu_path)!r} declares no FMI-LS-REF related file naming a "
+        f"source for the {_RESULT_ROLE!r} role"
     )
 
 
@@ -245,32 +235,40 @@ def _default_step_size(description: bytes, fmu_path: Path) -> float:
     return float(step_size)
 
 
+def _rows(result: bytes) -> list[dict[str, float]]:
+    """The reference CSV, one dict per row, at the precision it was written."""
+    return [
+        {name: float(value) for name, value in row.items()}
+        for row in csv.DictReader(io.StringIO(result.decode()))
+    ]
+
+
 def reference_result(fmu_path: Path) -> ReferenceResult:
     """Read the reference trajectory the FMU carries under FMI-LS-REF.
 
     Everything comes out of the archive: the layered standard's manifest names
     the related file holding the result, so nothing has to be vendored beside
     the FMU and kept in sync with it.
+
+    Every way the archive can disappoint — absent, not an archive, missing a
+    member, or carrying one that does not parse — is answered with the same
+    configuration error the rest of this module raises, because all of them
+    say the same thing: this FMU carries no reference result to check against.
     """
     try:
         with zipfile.ZipFile(fmu_path) as archive:
-            manifest = _member(archive, _LS_REF_MANIFEST, fmu_path)
-            source = _result_source(manifest, fmu_path)
-            result = _member(
-                archive, f"{_LS_REF_DIRECTORY}/{source}", fmu_path
+            source = _result_source(archive.read(_LS_REF_MANIFEST), fmu_path)
+            rows = _rows(archive.read(f"{_LS_REF_DIRECTORY}/{source}"))
+            step_size = _default_step_size(
+                archive.read(_DESCRIPTION), fmu_path
             )
-            description = _member(archive, _DESCRIPTION, fmu_path)
-    except (OSError, zipfile.BadZipFile) as error:
+    except (OSError, zipfile.BadZipFile, KeyError, ElementTree.ParseError,
+            UnicodeDecodeError, ValueError) as error:
         raise ConfigurationError(
-            f"cannot read FMU {str(fmu_path)!r}: {error}"
+            f"cannot read the reference result of FMU {str(fmu_path)!r}: "
+            f"{error}"
         ) from error
-    return ReferenceResult(
-        step_size=_default_step_size(description, fmu_path),
-        rows=[
-            {name: float(value) for name, value in row.items()}
-            for row in csv.DictReader(io.StringIO(result.decode()))
-        ],
-    )
+    return ReferenceResult(step_size=step_size, rows=rows)
 
 
 def _load(binary: Path) -> ctypes.CDLL:

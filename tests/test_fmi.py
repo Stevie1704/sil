@@ -434,7 +434,7 @@ class TestRejectedAtStartup:
 
 def ball_with_reference(tmp_path, name: str, *,
                         csv_name: str = BALL_REFERENCE_CSV,
-                        manifest_xml: str | None = None) -> Path:
+                        ls_ref_xml: str | None = None) -> Path:
     """`BouncingBall.fmu` with its FMI-LS-REF members altered.
 
     Renaming the CSV rewrites the layered-standard manifest to name it, so an
@@ -451,8 +451,8 @@ def ball_with_reference(tmp_path, name: str, *,
             elif member.filename == f"{LS_REF}/fmi-ls-manifest.xml":
                 data = (
                     data.replace(BALL_REFERENCE_CSV.encode(), csv_name.encode())
-                    if manifest_xml is None
-                    else manifest_xml.encode()
+                    if ls_ref_xml is None
+                    else ls_ref_xml.encode()
                 )
             target.writestr(member, data)
     return path
@@ -491,7 +491,7 @@ class TestReferenceResultDiscovery:
         roleless = ball_with_reference(
             tmp_path,
             "no-result-role",
-            manifest_xml=(
+            ls_ref_xml=(
                 '<fmiReferences><Related type="text/csv" '
                 f'source="{BALL_REFERENCE_CSV}" role="input"/></fmiReferences>'
             ),
@@ -499,14 +499,16 @@ class TestReferenceResultDiscovery:
         with pytest.raises(ConfigurationError, match="result"):
             reference_result(roleless)
 
-    def test_an_fmu_declaring_no_default_step_size_is_rejected(self):
-        """The trajectory is only valid at the step it was produced at.
-
-        `Feedthrough` ships a reference result and a default experiment
-        without a step size, so there is no step to reproduce it at.
-        """
+    def test_an_fmu_declaring_no_default_step_size_is_rejected(self, tmp_path):
+        """The trajectory is only valid at the step it was produced at."""
+        stepless = fmu_variant(
+            tmp_path,
+            "no-step-size",
+            source_fmu=BOUNCING_BALL,
+            rewrite=lambda text: text.replace(' stepSize="1e-2"', ""),
+        )
         with pytest.raises(ConfigurationError, match="step size"):
-            reference_result(FEEDTHROUGH)
+            reference_result(stepless)
 
     def test_the_declared_step_size_comes_back_in_seconds(self):
         assert reference_result(BOUNCING_BALL).step_size == 1e-2
@@ -614,7 +616,8 @@ class TestShippedReference:
         """A tolerance check, and never a byte or bit comparison.
 
         The distinction is measured, not assumed. Stepping this FMU through
-        its full default experiment leaves 399 of the 600 recorded values
+        its full default experiment on macOS aarch64 leaves 399 of the 600
+        recorded values
         bit-identical to the shipped ones and 201 differing, at a maximum
         relative deviation of 1.144e-14 — a worst case of 59 units in the last
         place near a bounce, where the height approaches zero and cancellation
@@ -625,15 +628,18 @@ class TestShippedReference:
         into a single rounding and another compiles as two.
 
         Determinism here is scoped to the same artifacts on the same machine
-        class, and this CSV was produced elsewhere. Bit-comparing it would
-        assert the cross-platform bit-exactness the design record declares a
-        non-goal, and would fail on a machine the importer is correct on.
+        class, and this CSV was produced elsewhere — on the vendor's machine
+        class the same 600 values would be bit-identical. Bit-comparing would
+        assert the cross-platform bit-exactness `CONTEXT.md` (Determinism)
+        declares is not claimed, and would fail on a machine the importer is
+        correct on.
         """
         deviations = [
             (row["time"], name, row[name], fields[name])
             for (_, fields), row in zip(
                 bouncing_ball_result.messages(BALL_CHANNEL),
                 shipped_reference.rows[1:],
+                strict=True,
             )
             for name in ("h", "v")
             if not math.isclose(
