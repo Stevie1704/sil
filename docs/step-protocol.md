@@ -28,6 +28,16 @@ executable name still uses `PATH`. Other relative arguments stay unchanged and
 are therefore interpreted by the participant from its private directory; this
 is where a relative output path naturally creates Run-scoped state.
 
+That resolution covers the command line, which the kernel builds. It does not
+cover the environment, which the child inherits unchanged apart from the shim
+and clock-region variables the kernel sets itself — and those the kernel
+resolves in the parent, so the values it passes are already absolute. A
+relative entry the caller put in `PYTHONPATH`, `LD_LIBRARY_PATH`, or any other
+variable is therefore resolved from the participant's own directory rather than
+from the runner's invocation directory. Make such entries absolute. The kernel
+does not rewrite them: it would have to know which variables of which language
+name a search path, and it knows neither.
+
 `channels` contains the participant's declared inputs and outputs. Every entry
 has `schema` and `direction` (`"in"` or `"out"`). A shared-memory entry also
 has `transport: "shm"`, `shm_path`, `shm_capacity` (bytes per slot), and
