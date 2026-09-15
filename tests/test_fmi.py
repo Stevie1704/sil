@@ -11,7 +11,9 @@ import copy
 import csv
 import io
 import itertools
+import json
 import math
+import signal
 import subprocess
 import sys
 import zipfile
@@ -26,10 +28,11 @@ from sil.fmi import (
     CoSimulation,
     FmuParticipant,
     ModelDescription,
+    library_suffix,
     platform_directory,
 )
 from sil.manifest import Manifest, SubscriberRoute
-from sil.participant import ConfigurationError, Input
+from sil.participant import Input, ManifestError, ParticipantFailure
 from sil.testing import run_simulation
 
 FIXTURES = ROOT / "tests" / "fixtures" / "reference-fmus" / "3.0"
@@ -236,6 +239,192 @@ class TestRunBoundary:
             for t, fields in inputs[:-1]
         ]
 
+    @pytest.mark.parametrize(
+        "status", ["Warning", "Discard", "Error", "Fatal"]
+    )
+    def test_an_fmu_status_failure_aborts_the_run(
+        self, run_sil, tmp_path, build_dir, status
+    ):
+        fmu = failing_fmu(tmp_path, build_dir, status)
+        proc = run_sil(
+            fmu_manifest(fmu=fmu).write(tmp_path / f"failure-{status}.json").path
+        )
+
+        assert proc.returncode == 1
+        assert "participant 'feedthrough' failed" in proc.stderr
+        assert f"fmi3DoStep returned {status}" in proc.stderr
+
+    def test_a_terminate_status_failure_aborts_the_run(
+        self, run_sil, tmp_path, build_dir
+    ):
+        fmu = failing_fmu(tmp_path, build_dir, "Terminate")
+        proc = run_sil(
+            fmu_manifest(fmu=fmu).write(tmp_path / "failure-Terminate.json").path
+        )
+
+        assert proc.returncode == 1
+        assert (
+            "participant 'feedthrough' failed: fmi3Terminate returned Error"
+            in proc.stderr
+        )
+
+    def test_an_fmu_termination_request_aborts_the_run(
+        self, run_sil, tmp_path, build_dir
+    ):
+        fmu = failing_fmu(tmp_path, build_dir, "TerminateFlag")
+        proc = run_sil(
+            fmu_manifest(fmu=fmu).write(
+                tmp_path / "failure-TerminateFlag.json"
+            ).path
+        )
+
+        assert proc.returncode == 1
+        assert "participant 'feedthrough' failed" in proc.stderr
+        assert (
+            "fmi3DoStep requested termination via terminateSimulation"
+            in proc.stderr
+        )
+
+    def test_an_initialization_failure_is_a_run_failure(
+        self, run_sil, tmp_path, build_dir
+    ):
+        """The importer accepted the init line, then its own call failed.
+
+        That is a Run failure (exit 1), not a Manifest error (exit 2): the
+        Manifest named an FMU the importer could drive.
+        """
+        fmu = failing_fmu(tmp_path, build_dir, "Initialize")
+        proc = run_sil(
+            fmu_manifest(fmu=fmu).write(tmp_path / "failure-Initialize.json").path
+        )
+
+        assert proc.returncode == 1, proc.stderr
+        assert "participant 'feedthrough' failed" in proc.stderr
+        assert "fmi3ExitInitializationMode returned Error" in proc.stderr
+
+
+class TestExtractionLifetime:
+    """An imported FMU's extracted archive belongs to one Run only."""
+
+    def test_extraction_is_under_the_working_directory_and_is_cleaned(
+        self, monkeypatch, tmp_path
+    ):
+        monkeypatch.chdir(tmp_path)
+        participant = FmuParticipant(FEEDTHROUGH)
+        try:
+            participant.on_init(init_line({"fmu.In": "in", "fmu.Out": "out"}))
+            extracted = list(tmp_path.glob("sil-fmu-*"))
+            assert len(extracted) == 1
+            assert extracted[0].is_dir()
+        finally:
+            participant.close()
+
+        assert list(tmp_path.glob("sil-fmu-*")) == []
+
+    def test_a_run_leaves_no_extraction_directory(
+        self, sil_run, tmp_path
+    ):
+        run_dir = tmp_path / "run"
+        run_dir.mkdir()
+        manifest = fmu_manifest().write(run_dir / "manifest.json").path
+        proc = subprocess.run(
+            [str(sil_run), str(manifest), "-o", str(run_dir / "out.mcap")],
+            capture_output=True,
+            text=True,
+            cwd=run_dir,
+        )
+
+        assert proc.returncode == 0, proc.stderr
+        assert list(run_dir.glob("sil-fmu-*")) == []
+
+    def test_a_failed_run_leaves_no_extraction_directory(
+        self, sil_run, tmp_path, build_dir
+    ):
+        """The Run the issue is about: an FMU that cannot continue.
+
+        Aborting must not be the path that litters, so the failing Run gets
+        the same assertion the passing one does.
+        """
+        fmu = failing_fmu(tmp_path, build_dir, "Error")
+        run_dir = tmp_path / "failed-run"
+        run_dir.mkdir()
+        manifest = fmu_manifest(fmu=fmu).write(run_dir / "manifest.json").path
+        proc = subprocess.run(
+            [str(sil_run), str(manifest), "-o", str(run_dir / "out.mcap")],
+            capture_output=True,
+            text=True,
+            cwd=run_dir,
+        )
+
+        assert proc.returncode == 1, proc.stderr
+        assert list(run_dir.glob("sil-fmu-*")) == []
+
+    def test_a_fatal_status_leaves_the_instance_alone(
+        self, monkeypatch, tmp_path, build_dir
+    ):
+        """FMI 3.0 allows no further call on an instance that answered Fatal.
+
+        This build's `fmi3Terminate` answers Error, so an importer that still
+        terminated the instance would raise out of `close`.
+        """
+        monkeypatch.chdir(tmp_path)
+        fmu = failing_fmu(tmp_path, build_dir, "FatalTerminateError")
+        participant = FmuParticipant(fmu)
+        participant.on_init(init_line({"fmu.In": "in", "fmu.Out": "out"}))
+        with pytest.raises(ParticipantFailure, match="fmi3DoStep returned Fatal"):
+            participant.on_step(0, STEP_PERIOD_NS, [])
+
+        participant.close()
+
+        assert list(tmp_path.glob("sil-fmu-*")) == []
+
+    def test_a_fatal_terminate_still_drops_the_extraction(
+        self, monkeypatch, tmp_path, build_dir
+    ):
+        """Fatal from `fmi3Terminate` bars the free that would have followed.
+
+        Freeing is a call like any other, so the instance is abandoned; the
+        extraction is the importer's own and is dropped either way.
+        """
+        monkeypatch.chdir(tmp_path)
+        fmu = failing_fmu(tmp_path, build_dir, "TerminateFatal")
+        participant = FmuParticipant(fmu)
+        participant.on_init(init_line({"fmu.In": "in", "fmu.Out": "out"}))
+        participant.on_step(0, STEP_PERIOD_NS, [])
+
+        with pytest.raises(ParticipantFailure, match="fmi3Terminate returned Fatal"):
+            participant.close()
+
+        assert list(tmp_path.glob("sil-fmu-*")) == []
+
+    def test_sigterm_leaves_no_extraction_directory(self, tmp_path):
+        """A wedged importer is asked with SIGTERM before it is killed.
+
+        The kernel escalates SIGTERM before SIGKILL precisely so this cleanup
+        still runs; under SIGKILL the extraction would survive the Run.
+        """
+        importer = subprocess.Popen(
+            [sys.executable, "-m", "sil.fmi", str(FEEDTHROUGH)],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            text=True, cwd=tmp_path,
+        )
+        try:
+            importer.stdin.write(
+                json.dumps(init_line({"fmu.In": "in", "fmu.Out": "out"})) + "\n"
+            )
+            importer.stdin.flush()
+            assert json.loads(importer.stdout.readline())["op"] == "ready"
+            assert len(list(tmp_path.glob("sil-fmu-*"))) == 1
+
+            importer.send_signal(signal.SIGTERM)
+            assert importer.wait(timeout=10) != 0
+        finally:
+            if importer.poll() is None:
+                importer.kill()
+                importer.wait()
+
+        assert list(tmp_path.glob("sil-fmu-*")) == []
+
 
 def described(tmp_path, rewrite=lambda text: text) -> Path:
     """An extracted FMU directory holding `Feedthrough`'s description alone.
@@ -265,6 +454,33 @@ def fmu_variant(tmp_path, name: str, *, source_fmu=FEEDTHROUGH,
     return path
 
 
+def failing_fmu(tmp_path, build_dir, status: str) -> Path:
+    """Package the test FMU binary with the Reference description."""
+    suffix = library_suffix()
+    model_identifier = f"Failing{status}"
+    binary = build_dir / f"{model_identifier}{suffix}"
+    assert binary.exists(), f"failing FMU binary was not built at {binary}"
+    path = tmp_path / f"failing-{status}.fmu"
+    with zipfile.ZipFile(FEEDTHROUGH) as source, zipfile.ZipFile(path, "w") as target:
+        for member in source.infolist():
+            if member.filename.startswith("binaries/") and not member.filename.endswith("/"):
+                continue
+            data = source.read(member.filename)
+            if member.filename == "modelDescription.xml":
+                data = data.replace(
+                    b'modelIdentifier="Feedthrough"',
+                    b'modelIdentifier="' + model_identifier.encode() + b'"',
+                )
+            target.writestr(member, data)
+        target.write(
+            binary,
+            arcname=(
+                f"binaries/{platform_directory()}/{model_identifier}{suffix}"
+            ),
+        )
+    return path
+
+
 def without_co_simulation(text: str) -> str:
     """The description with its `CoSimulation` element removed."""
     start = text.index("<CoSimulation")
@@ -285,14 +501,14 @@ class TestDescription:
         extracted = described(
             tmp_path, lambda text: text.replace('fmiVersion="3.0"', 'fmiVersion="2.0"')
         )
-        with pytest.raises(ConfigurationError, match="2.0"):
+        with pytest.raises(ManifestError, match="2.0"):
             ModelDescription.read(extracted)
 
     def test_a_description_without_a_co_simulation_interface_is_rejected(
         self, tmp_path
     ):
         extracted = described(tmp_path, without_co_simulation)
-        with pytest.raises(ConfigurationError, match="co-simulation"):
+        with pytest.raises(ManifestError, match="co-simulation"):
             ModelDescription.read(extracted)
 
     def test_causality_decides_which_variables_take_part_in_the_mapping(
@@ -348,7 +564,7 @@ class TestPlatformDirectory:
 class TestRejectedAtStartup:
     """Every way of pointing the importer at the wrong FMU, at the Run boundary.
 
-    Each of these is a configuration error (exit 2), distinct from a Run
+    Each of these is a Manifest error (exit 2), distinct from a Run
     failure (exit 1), and each is raised before the first Step is taken.
     """
 

@@ -405,7 +405,7 @@ class TestInitializationFailure:
     """A participant that never reaches `ready`, and why it did not.
 
     A participant that rejects its init line answers `fail`, and the kernel
-    calls that a configuration error — a Manifest that names it this way is
+    calls that a Manifest error — a Manifest that names it this way is
     wrong, not a Run that went wrong. A participant that merely breaks on the
     way up says nothing, and stays an ordinary Run failure.
     """
@@ -424,7 +424,7 @@ class TestInitializationFailure:
         )
         return m.write(tmp_path / f"{cls}.json").path
 
-    def test_a_rejected_init_line_is_a_configuration_error(
+    def test_a_rejected_init_line_is_a_manifest_error(
         self, run_sil, tmp_path
     ):
         proc = run_sil(self.manifest(tmp_path, "RejectAtInit"))
@@ -438,3 +438,10 @@ class TestInitializationFailure:
         proc = run_sil(self.manifest(tmp_path, "BreakAtInit"))
         assert proc.returncode == 1, proc.stderr
         assert "broke while initializing" in proc.stderr
+
+    def test_a_reported_initialization_failure_keeps_its_run_diagnostic(
+        self, run_sil, tmp_path
+    ):
+        proc = run_sil(self.manifest(tmp_path, "FailAtInit"))
+        assert proc.returncode == 1, proc.stderr
+        assert "the participant's own initialization failed" in proc.stderr

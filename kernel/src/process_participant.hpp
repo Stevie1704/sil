@@ -31,6 +31,9 @@ class ProcessParticipant {
   void shutdown();
 
  private:
+  // Reaps the child and releases its regions, and answers its wait status.
+  // `shutdown` turns a bad status into a RunError; the destructor cannot.
+  int terminate_child();
   void send_line(const std::string &line);
   std::string read_line();
 

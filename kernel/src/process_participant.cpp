@@ -250,7 +250,7 @@ void ProcessParticipant::write_clock_region(uint64_t now_ns) {
 // before fork
 // so the child maps the same file by path at load. A create/map failure is an
 // environment problem, not a bad manifest expressed in code — but the issue
-// requires it to surface as a startup config error (exit 2), so we throw
+// requires it to surface as a startup Manifest error (exit 2), so we throw
 // ManifestError, which main() maps to exit 2 (RunError would be exit 1).
 
 void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
@@ -285,7 +285,7 @@ void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
     const size_t stride = sizeof(sil_arena) + capacity;
 
     // The failure taxonomy is this call site's: an arena the environment cannot
-    // supply is a config error (exit 2). Arenas already mapped in this loop, and
+    // supply is a Manifest error (exit 2). Arenas already mapped in this loop, and
     // the clock region, are released by their own destructors as this throws.
     std::string error;
     Arena a;
@@ -442,12 +442,17 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
   send_line(init.dump());
   json ready = json::parse(read_line());
   const std::string op = ready.value("op", "");
-  // `fail` in answer to `init` is a config error (exit 2), the same taxonomy a
-  // native participant's init throw already gets; the same line after a Step is
-  // a Run failure (exit 1). See docs/step-protocol.md.
-  if (op == "fail")
-    throw ManifestError("participant '" + name + "': " +
-                        ready.value("reason", "rejected its init line"));
+  // `fail` in answer to `init` is a Manifest error (exit 2), unless the child
+  // explicitly marks a failure from its own initialization work as a Run
+  // failure (exit 1). The same line after a Step is always a Run failure.
+  // See docs/step-protocol.md.
+  if (op == "fail") {
+    const std::string reason =
+        ready.value("reason", "rejected its init line");
+    if (ready.value("failure", "") == "run")
+      throw RunError("participant '" + name + "' failed: " + reason);
+    throw ManifestError("participant '" + name + "': " + reason);
+  }
   if (op != "ready")
     throw RunError("participant '" + name + "': expected ready, got " +
                    ready.dump());
@@ -467,7 +472,11 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
 }
 
 ProcessParticipant::~ProcessParticipant() {
-  shutdown();
+  // Destruction is also the cleanup path after an already-reported RunError,
+  // so it reaps the child without inspecting the exit status: a diagnostic
+  // thrown from here would replace the original one, and a destructor must
+  // not throw at all.
+  terminate_child();
 }
 
 void ProcessParticipant::step(uint64_t now_ns) {
@@ -546,8 +555,8 @@ std::string ProcessParticipant::read_line() {
   }
 }
 
-void ProcessParticipant::shutdown() {
-  if (!alive_) return;
+int ProcessParticipant::terminate_child() {
+  if (!alive_) return 0;
   alive_ = false;
   json bye = {{"op", "shutdown"}};
   std::string data = bye.dump() + "\n";
@@ -556,22 +565,43 @@ void ProcessParticipant::shutdown() {
   close(child_stdin_);
   close(child_stdout_);
 
-  bool reaped = false;
-  for (int i = 0; i < 200 && !reaped; i++) {
-    if (waitpid(pid_, nullptr, WNOHANG) == pid_)
-      reaped = true;
-    else
+  int wait_status = 0;
+  auto reap_within = [&](int centiseconds) {
+    for (int i = 0; i < centiseconds; i++) {
+      if (waitpid(pid_, &wait_status, WNOHANG) == pid_) return true;
       usleep(10000);
-  }
-  if (!reaped) {
-    kill(pid_, SIGKILL);
-    waitpid(pid_, nullptr, 0);
+    }
+    return false;
+  };
+  // A child that does not answer `shutdown` is asked with SIGTERM before it is
+  // killed, so a participant holding run-scoped state of its own — an imported
+  // FMU's extracted archive, say — still reaches its own cleanup. SIGKILL is
+  // the last resort for a child that ignores both, and leaves that cleanup
+  // undone by definition.
+  if (!reap_within(200)) {
+    kill(pid_, SIGTERM);
+    if (!reap_within(100)) {
+      kill(pid_, SIGKILL);
+      waitpid(pid_, &wait_status, 0);
+    }
   }
   // Release the regions at run end rather than at destruction, so a finished
   // run leaves nothing in the temp directory even while the engine still holds
   // the participant. Both releases are the owning type's destructor.
   arenas_.clear();
   clock_region_ = MappedRegion();
+  return wait_status;
+}
+
+void ProcessParticipant::shutdown() {
+  if (!alive_) return;
+  const int wait_status = terminate_child();
+  if (WIFEXITED(wait_status) && WEXITSTATUS(wait_status) != 0)
+    throw RunError("participant '" + name_ + "' exited with status " +
+                   std::to_string(WEXITSTATUS(wait_status)));
+  if (WIFSIGNALED(wait_status))
+    throw RunError("participant '" + name_ + "' terminated by signal " +
+                   std::to_string(WTERMSIG(wait_status)));
 }
 
 }  // namespace sil

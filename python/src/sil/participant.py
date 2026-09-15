@@ -13,6 +13,7 @@ from __future__ import annotations
 import base64
 import json
 import mmap
+import signal
 import struct
 import sys
 import traceback
@@ -181,11 +182,11 @@ class ParticipantFailure(Exception):
     """Raised by a participant to abort the whole run."""
 
 
-class ConfigurationError(Exception):
+class ManifestError(Exception):
     """Raised by a participant whose init line cannot be honoured at all.
 
     It is answered with `fail` instead of `ready`, which the kernel treats as a
-    configuration error rather than a Run failure — see docs/step-protocol.md.
+    Manifest error rather than a Run failure — see docs/step-protocol.md.
     Every other exception during initialization stays a Run failure, so a
     participant that breaks on the way up is not reported as a bad Manifest.
     """
@@ -213,7 +214,19 @@ def _reason(error: Exception) -> str:
     return "".join(traceback.format_exception_only(error)).strip()
 
 
+def _unwind_on_sigterm(signum, frame) -> None:
+    """Turn the kernel's SIGTERM into an unwind, so `finally` blocks run.
+
+    A participant that stops answering the step protocol is asked with SIGTERM
+    before it is killed (see ProcessParticipant::terminate_child). Python's
+    default handler would end the process without running the cleanup a
+    participant holding run-scoped state depends on.
+    """
+    raise SystemExit(f"participant terminated by signal {signum}")
+
+
 def run(participant: StepParticipant) -> None:
+    signal.signal(signal.SIGTERM, _unwind_on_sigterm)
     stdin = sys.stdin
     stdout = sys.stdout
     types_by_channel: dict[str, schema.MessageType] = {}
@@ -252,12 +265,23 @@ def run(participant: StepParticipant) -> None:
                 )
                 try:
                     participant.on_init(msg)
-                except ConfigurationError as e:
+                except ManifestError as e:
                     # Only a deliberate rejection answers `fail`: that line
                     # before `ready` is what makes the kernel call this a
-                    # configuration error. Returning ends the loop — no step
+                    # Manifest error. Returning ends the loop — no step
                     # can follow an initialization that never finished.
                     send({"op": "fail", "reason": _reason(e)})
+                    return
+                except ParticipantFailure as e:
+                    # An FMU can report that its own initialization call
+                    # failed. That is a Run failure, not a malformed init
+                    # contract, so preserve the same diagnostic path used by
+                    # a failure during a Step.
+                    send({
+                        "op": "fail",
+                        "reason": _reason(e),
+                        "failure": "run",
+                    })
                     return
                 ready = {"op": "ready"}
                 if "protocol" in msg:
@@ -279,6 +303,10 @@ def run(participant: StepParticipant) -> None:
             elif op == "shutdown":
                 return
     finally:
+        # The protocol loop is what SIGTERM is meant to interrupt. Teardown is
+        # not: unwinding out of a participant's own cleanup is what leaves the
+        # run-scoped state behind that the signal exists to release.
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
         for arena in arenas.values():
             arena.close()
 
@@ -307,7 +335,7 @@ if __name__ == "__main__":
     # `python -m sil.participant` runs this file as `__main__`, so the classes
     # defined here are not the ones a participant gets from `import
     # sil.participant`. Delegating to the imported module gives both sides the
-    # same ConfigurationError, which the init handshake compares by identity.
+    # same ManifestError, which the init handshake compares by identity.
     from sil.participant import main as _main
 
     _main()

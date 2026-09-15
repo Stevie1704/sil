@@ -34,7 +34,7 @@ One run = `sil-run manifest.json -o out.mcap`:
   arena slot counts alone — no run, no benchmark. It also names any route that
   declares no capacity, whose worst case is unbounded.
 
-Exit codes: `0` ok, `1` run/test failure, `2` config error, `3` determinism
+Exit codes: `0` ok, `1` run/test failure, `2` Manifest error, `3` determinism
 violation (sil-check).
 
 ## Virtual clock shim for opaque POSIX vECUs
@@ -132,7 +132,7 @@ and rebuild nothing.
 `transport` and `slots` are hashed (inline, the default, is omitted; absent
 `slots` means the legacy single-slot behavior). A run that cannot create or map
 its arena fails at
-**startup with exit 2** (a config/environment problem), distinct from a test
+**startup with exit 2** (a Manifest/environment problem), distinct from a test
 failure's exit 1. Native participants are unaffected — they stay on the existing
 pointer-based C ABI data plane and need no rebuild.
 
@@ -174,6 +174,50 @@ absent is unbounded: the loader accepts either a pre-#75 string entry such as
 `capacity` and `overflow` is invalid. This preserves existing behavior and
 byte-identical hashes. Blocking overflow is invalid because the sequential
 scheduler cannot activate a consumer while stopped inside its publisher's call.
+
+## FMI 3.0 co-simulation importer
+
+An FMU is a vendor model or vECU packaged to the FMI standard: one archive
+containing a machine-readable model description and a shared library for each
+target platform. SiL imports an FMU as an ordinary process participant. The
+importer extracts it under the Run's working directory during initialization,
+drives its FMI 3.0 co-simulation interface, and removes the extraction at
+shutdown. Channel schema field names map directly to the FMU's Float64 input and
+output variables; Channel direction decides whether a field is written before
+the FMU Step or published after it.
+
+The FMU path is just a command argument, so it is part of the hashed Manifest:
+
+```python
+import sys
+
+from sil import Manifest, SubscriberRoute
+
+m = Manifest(duration_ns=100_000_000)
+m.add_schemas({
+    "fmu.In": {"fields": [{"name": "u", "type": "f64"}]},
+    "fmu.Out": {"fields": [{"name": "y", "type": "f64"}]},
+})
+m.add_channel("fmu.In", schema="fmu.In")
+m.add_channel("fmu.Out", schema="fmu.Out")
+m.add_process(
+    "fmu",
+    command=[sys.executable, "-m", "sil.fmi", "models/fmu.fmu"],
+    step_period_ns=10_000_000,
+    subscribes=[SubscriberRoute("fmu.In", capacity=4)],
+    publishes=["fmu.Out"],
+)
+```
+
+Any co-simulation call that answers a status other than `fmi3OK` aborts the
+Run with exit 1, and the diagnostic names the call, the participant and the
+status. `Warning` aborts too: a Run that steps past a status the FMU raised is
+not evidence of anything. An FMU that answers `Fatal` is abandoned rather than
+terminated, which is what FMI 3.0 requires of its importer.
+
+This milestone deliberately supports FMI 3.0 co-simulation only and Float64
+variables only. It does not implement the bus layered standard because the
+repository has no demo FMU against which to write a conformance test.
 
 ## Large-Message routing baseline
 
@@ -271,8 +315,7 @@ tests/             behavior tests at the run boundary
 
 ## Notes / deferred (per DESIGN.md)
 
-- Shared-memory zero-copy payloads, bus adapters, FMI importer: later
-  milestones.
+- Shared-memory zero-copy payloads and bus adapters: later milestones.
 - The recorder is fed in global publish order — behaviorally identical to a
   latency-0 subscriber scheduled last in every slot.
 - Message layout is packed little-endian; cross-platform bit-exactness is an

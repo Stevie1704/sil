@@ -29,7 +29,7 @@ from xml.etree import ElementTree
 
 from sil import schema
 from sil.participant import (
-    ConfigurationError,
+    ManifestError,
     ParticipantFailure,
     StepParticipant,
     run,
@@ -45,9 +45,11 @@ NS_PER_S = 1_000_000_000
 # than half-driven.
 _FMI_VERSION = "3.0"
 
-# fmi3Status. Warning still carries a result; Discard, Error and Fatal do not.
+# fmi3Status. Only OK means the call succeeded; every other status aborts the
+# Run before the importer can continue with a possibly invalid FMU state.
 _FMI_STATUS_NAMES = ("OK", "Warning", "Discard", "Error", "Fatal")
-_FMI_FIRST_FAILING_STATUS = 2
+_FMI_SUCCESS_STATUS = 0
+_FMI_FATAL_STATUS = 4
 
 # The FMU's `binaries/` subdirectory for the running platform, and the shared
 # library suffix that goes with it.
@@ -105,6 +107,12 @@ def platform_directory() -> str:
     return f"{machine}-{system}"
 
 
+def library_suffix() -> str:
+    """The shared-library suffix this platform's FMU binary carries."""
+    _, suffix = _SYSTEMS[platform.system()]
+    return suffix
+
+
 def _by_causality(variables, causality: str) -> dict[str, int]:
     """The Float64 variables of one causality, by name.
 
@@ -141,18 +149,18 @@ class ModelDescription:
                 extracted / "modelDescription.xml"
             ).getroot()
         except (OSError, ElementTree.ParseError) as error:
-            raise ConfigurationError(
+            raise ManifestError(
                 f"FMU has no readable modelDescription.xml: {error}"
             ) from error
         version = root.get("fmiVersion")
         if version != _FMI_VERSION:
-            raise ConfigurationError(
+            raise ManifestError(
                 f"FMU declares fmiVersion {version!r}; this importer drives "
                 f"FMI {_FMI_VERSION} co-simulation only"
             )
         co_simulation = root.find("CoSimulation")
         if co_simulation is None:
-            raise ConfigurationError(
+            raise ManifestError(
                 "FMU declares no co-simulation interface; this importer "
                 "drives neither Model Exchange nor Scheduled Execution"
             )
@@ -167,13 +175,12 @@ class ModelDescription:
     def binary(self, extracted: Path) -> Path:
         """The shared library this platform loads out of the FMU."""
         directory = platform_directory()
-        _, suffix = _SYSTEMS[platform.system()]
         binary = (
             extracted / "binaries" / directory
-            / f"{self.model_identifier}{suffix}"
+            / f"{self.model_identifier}{library_suffix()}"
         )
         if not binary.exists():
-            raise ConfigurationError(
+            raise ManifestError(
                 f"FMU {self.model_identifier!r} carries no binary for "
                 f"{directory}: binaries/{directory}/{binary.name} is not in "
                 f"the archive"
@@ -198,6 +205,13 @@ def _load(binary: Path) -> ctypes.CDLL:
 def _log_to_stderr(environment, status, category, message) -> None:
     """The FMU's logger. stdout is the step protocol, so it cannot go there."""
     print(f"fmu: {message.decode(errors='replace')}", file=sys.stderr)
+
+
+def _status_name(status: int) -> str:
+    """Name an FMI status without losing an unknown status to IndexError."""
+    if 0 <= status < len(_FMI_STATUS_NAMES):
+        return _FMI_STATUS_NAMES[status]
+    return f"unknown status {status}"
 
 
 class CoSimulation:
@@ -260,20 +274,28 @@ class CoSimulation:
             ctypes.byref(event_needed), ctypes.byref(terminate),
             ctypes.byref(early_return), ctypes.byref(last_successful_time),
         )
+        if terminate.value:
+            raise ParticipantFailure(
+                "fmi3DoStep requested termination via terminateSimulation"
+            )
 
     def close(self) -> None:
         """Terminate the instance and free it, even if terminating failed.
 
         The instance holds the FMU's memory either way, so the free is the
-        half the failing path needs most.
+        half the failing path needs most — unless the FMU answered Fatal, which
+        bars the free along with every other call.
         """
         if self._instance is None:
             return
         try:
             self._call("fmi3Terminate")
         finally:
-            self._library.fmi3FreeInstance(self._instance)
-            self._instance = None
+            # `_call` drops the handle when a call answers Fatal, and freeing
+            # is itself a call this FMU may no longer take.
+            if self._instance is not None:
+                self._library.fmi3FreeInstance(self._instance)
+                self._instance = None
 
     def _call(self, name: str, *arguments) -> None:
         """Invoke one co-simulation entry point on this instance.
@@ -283,11 +305,18 @@ class CoSimulation:
         that was called.
         """
         status = getattr(self._library, name)(self._instance, *arguments)
-        if status >= _FMI_FIRST_FAILING_STATUS:
-            raise ParticipantFailure(f"{name} returned {_FMI_STATUS_NAMES[status]}")
+        if status == _FMI_SUCCESS_STATUS:
+            return
+        if status == _FMI_FATAL_STATUS:
+            # FMI 3.0 allows no further call on an instance that answered
+            # Fatal, terminating and freeing it included. Dropping the handle
+            # here is what stops `close` from calling into a dead FMU; the
+            # instance's memory goes when this process does.
+            self._instance = None
+        raise ParticipantFailure(f"{name} returned {_status_name(status)}")
 
 
-class _Binding:
+class _ChannelBinding:
     """One Channel's schema fields bound to FMU variables of the same names.
 
     The value references and the value buffer are built once, at
@@ -337,14 +366,14 @@ def _require_total_match(
     """
     for name, channel in declared.items():
         if name not in variables:
-            raise ConfigurationError(
+            raise ManifestError(
                 f"Channel {channel!r} declares schema field {name!r}, which is "
                 f"no {causality} variable of FMU {model_identifier!r}"
             )
     searched = ", ".join(sorted(repr(c) for c in set(declared.values())))
     for name in variables:
         if name not in declared:
-            raise ConfigurationError(
+            raise ManifestError(
                 f"FMU {model_identifier!r} declares {causality} variable "
                 f"{name!r}, which is a schema field of no {causality}-direction "
                 f"Channel (searched: {searched or 'none'})"
@@ -355,20 +384,27 @@ class FmuParticipant(StepParticipant):
     """A process participant whose behavior is an imported FMU's."""
 
     def __init__(self, fmu_path: Path):
+        self.name = ""  # the init line's, for the one diagnostic the kernel misses
         self._fmu_path = fmu_path
         self._extraction = None
         self._fmu = None
-        self._inputs: dict[str, _Binding] = {}
-        self._outputs: dict[str, _Binding] = {}
+        self._inputs: dict[str, _ChannelBinding] = {}
+        self._outputs: dict[str, _ChannelBinding] = {}
 
     def on_init(self, init: dict) -> None:
-        self._extraction = tempfile.TemporaryDirectory(prefix="sil-fmu-")
+        self.name = init["name"]
+        # The extracted archive belongs to the Run, not to the machine-wide
+        # temporary directory. The process participant inherits the runner's
+        # working directory, which is the Run's working directory here.
+        self._extraction = tempfile.TemporaryDirectory(
+            prefix="sil-fmu-", dir=Path.cwd()
+        )
         extracted = Path(self._extraction.name)
         try:
             with zipfile.ZipFile(self._fmu_path) as archive:
                 archive.extractall(extracted)
         except (OSError, zipfile.BadZipFile) as error:
-            raise ConfigurationError(
+            raise ManifestError(
                 f"cannot read FMU {str(self._fmu_path)!r}: {error}"
             ) from error
         description = ModelDescription.read(extracted)
@@ -399,7 +435,7 @@ class FmuParticipant(StepParticipant):
         for channel, declaration in init["channels"].items():
             incoming = declaration["direction"] == "in"
             bindings = self._inputs if incoming else self._outputs
-            bindings[channel] = _Binding(
+            bindings[channel] = _ChannelBinding(
                 types[declaration["schema"]].field_names,
                 description.inputs if incoming else description.outputs,
             )
@@ -416,11 +452,32 @@ class FmuParticipant(StepParticipant):
         ]
 
     def close(self) -> None:
-        """Terminate and free the instance, and drop the extracted FMU."""
-        if self._fmu is not None:
-            self._fmu.close()
-        if self._extraction is not None:
-            self._extraction.cleanup()
+        """Terminate and free the instance, and drop the extracted FMU.
+
+        The diagnostic stays unframed: on every path the kernel can see, the
+        kernel is what names the participant.
+        """
+        fmu, extraction = self._fmu, self._extraction
+        self._fmu = None
+        self._extraction = None
+        try:
+            if fmu is not None:
+                fmu.close()
+        finally:
+            if extraction is not None:
+                extraction.cleanup()
+
+
+def _close_after_failure(participant: FmuParticipant) -> None:
+    """Drop the FMU on the way out of a failure that is already reported.
+
+    Terminating an FMU that has already failed may fail in turn; that second
+    diagnostic must not replace the first one.
+    """
+    try:
+        participant.close()
+    except ParticipantFailure:
+        pass
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -430,8 +487,18 @@ def main(argv: list[str] | None = None) -> None:
     participant = FmuParticipant(Path(args[0]))
     try:
         run(participant)
-    finally:
+    except BaseException:
+        _close_after_failure(participant)
+        raise
+    try:
         participant.close()
+    except ParticipantFailure as error:
+        # The step protocol is over by the time the FMU is terminated, so this
+        # failure cannot travel as a `fail` line and the kernel sees only a
+        # nonzero exit. Name the participant, the call and the status here.
+        raise SystemExit(
+            f"participant {participant.name!r} failed: {error}"
+        ) from error
 
 
 if __name__ == "__main__":

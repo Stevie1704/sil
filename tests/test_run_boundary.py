@@ -91,7 +91,7 @@ class TestManifestRejection:
 
     def test_native_library_wrong_type_is_config_error(self, run_sil, tmp_path):
         # Hand-written JSON bypasses the Python builder: the loader must turn
-        # a typed extraction failure into a contextual configuration error.
+        # a typed extraction failure into a contextual Manifest error.
         bad = tmp_path / "bad.json"
         bad.write_text(
             '{"sil_manifest":1,"duration_ns":1000,"schemas":{},'
@@ -499,7 +499,7 @@ class TestManifestRejection:
 
 class TestClockShimRejection:
     """Eager load-time validation of the clock-shim manifest surface. Each rule
-    is a config error (exit 2) with a diagnostic, distinguishable from a run
+    is a Manifest error (exit 2) with a diagnostic, distinguishable from a run
     failure (exit 1)."""
 
     def test_negative_epoch_is_config_error(self, run_sil, tmp_path):
@@ -1197,7 +1197,7 @@ class TestNativeExceptionContainment:
     def test_a_throw_from_init_is_a_config_error(
         self, run_sil, tmp_path, kind, needle
     ):
-        # Setup has not finished, so this is a config error like any other
+        # Setup has not finished, so this is a Manifest error like any other
         # unloadable participant, not a run that starts and then aborts.
         m = toy_manifest(duration_ns=30_000_000)
         add_thrower(m, throw_in="init", kind=kind)
@@ -1494,7 +1494,7 @@ def write_with_raw_interceptor(tmp_path, entry, *, channel="ticks"):
 
 class TestInterceptorRejection:
     """The kernel mirrors the builder's eager checks at load: a malformed
-    interceptor is a config error (exit 2), distinguishable from a test
+    interceptor is a Manifest error (exit 2), distinguishable from a test
     failure (exit 1), with a diagnostic naming the offending channel."""
 
     def test_unknown_kind_is_config_error(self, run_sil, tmp_path):
@@ -2149,7 +2149,7 @@ class TestDropNthInterceptor:
 
 class TestRecordingFormatSeam:
     """The recording format is selected from the output extension at the run
-    boundary (req #24). An unrecognized extension is a config error, caught
+    boundary (req #24). An unrecognized extension is a Manifest error, caught
     before any participant starts; the sole v1 format, .mcap, is unchanged."""
 
     def _producer_with_marker(self, tmp_path):

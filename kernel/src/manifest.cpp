@@ -434,7 +434,7 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
   p.name = name;
   std::string type = required<std::string>(participant, "type", ctx);
   // The clock shim is a process-participant-only opt-in; on any other type it
-  // is a config error (the Python builder cannot even express it there). The
+  // is a Manifest error (the Python builder cannot even express it there). The
   // sleep policy (#52) is part of that same opt-in and follows it.
   if (type != "process" && find_value(participant, "shim", ctx))
     fail(ctx + ": shim is only valid on process participants");
@@ -666,7 +666,7 @@ Manifest load_manifest(const std::filesystem::path &path) {
         c.latency_ns = extract<uint64_t>(*latency, ctx + " key 'latency_ns'");
 
       // Inline is the default (and omitted from the canonical doc). Only
-      // "shm" is otherwise valid; anything else is a config error before setup.
+      // "shm" is otherwise valid; anything else is a Manifest error before setup.
       if (const json *transport = find_value(js, "transport", ctx)) {
         const std::string transport_value =
             extract<std::string>(*transport, ctx + " key 'transport'");

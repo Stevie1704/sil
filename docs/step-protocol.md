@@ -35,14 +35,23 @@ Or it rejects initialization:
 {"op":"fail","reason":"..."}
 ```
 
-A child that cannot honour the contract the `init` line describes answers
-`fail` instead of `ready` and exits. The kernel treats that as a configuration
-failure and exits with status 2 before any participant is stepped, because a
-Manifest that names a participant it cannot initialize is wrong, rather than a
-Run that went wrong. This matches the taxonomy a native participant's init
-failure already gets.
+If the participant's own initialization work fails after it has accepted the
+contract, it may mark that failure as a Run failure:
 
-Only that deliberate line is a configuration failure. Any other answer to
+```json
+{"op":"fail","failure":"run","reason":"..."}
+```
+
+A child that cannot honour the contract the `init` line describes answers
+`fail` instead of `ready` and exits. Without `failure: "run"`, the kernel
+treats that as a Manifest error and exits with status 2 before any
+participant is stepped, because a Manifest that names a participant it cannot
+initialize is wrong, rather than a Run that went wrong. A participant that
+accepts the contract but then reports its own initialization failure with
+`failure: "run"` exits with status 1. This lets an imported FMU preserve an
+FMI diagnostic instead of turning it into a generic child-exited message.
+
+Only that deliberate line is a Manifest error. Any other answer to
 `init`, and a child that dies while initializing without answering at all,
 stays a run failure — a participant that breaks on the way up is not a bad
 Manifest.
@@ -82,8 +91,8 @@ or:
 `out` preserves the participant's output order. Each output has `ch` and
 exactly one of `data` or `shm_seq`; `shm_slot` accompanies `shm_seq` under
 protocol 2. The representation present on the line is authoritative. A child
-failure at Step time is a run failure, not a manifest failure; only a `fail`
-answering `init` is a configuration failure.
+failure at Step time is a run failure, not a Manifest error; only a `fail`
+answering `init` is a Manifest error.
 
 After the run, the kernel sends:
 
@@ -91,7 +100,12 @@ After the run, the kernel sends:
 {"op":"shutdown"}
 ```
 
-The child exits without another protocol response.
+The child exits without another protocol response. Its exit status is still
+read: a child that exits nonzero, or dies on a signal, fails the Run with
+status 1 even though every Step succeeded, because work a participant only
+finishes at shutdown can fail there. A child that does not exit on its own is
+sent SIGTERM and then, if it still does not exit, SIGKILL — so a participant
+holding run-scoped state of its own gets the chance to release it.
 
 ## Shared-memory payloads
 
@@ -125,7 +139,7 @@ written for this Message from stale contents left by an earlier Step.
 Inputs arrive already merged in global publish order; transport handling never
 reorders them.
 
-Arena creation or mapping failure is a configuration/environment failure and
+Arena creation or mapping failure is a Manifest/environment error and
 exits with status 2 before the participant starts. A stale `shm_seq`, an arena
 length beyond capacity, or a payload beyond capacity is a runtime failure and
 exits with status 1. The diagnostics identify the participant and, where
