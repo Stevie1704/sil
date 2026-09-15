@@ -35,12 +35,21 @@ Or it rejects initialization:
 {"op":"fail","reason":"..."}
 ```
 
+If the participant's own initialization work fails after it has accepted the
+contract, it may mark that failure as a Run failure:
+
+```json
+{"op":"fail","failure":"run","reason":"..."}
+```
+
 A child that cannot honour the contract the `init` line describes answers
-`fail` instead of `ready` and exits. The kernel treats that as a configuration
-failure and exits with status 2 before any participant is stepped, because a
-Manifest that names a participant it cannot initialize is wrong, rather than a
-Run that went wrong. This matches the taxonomy a native participant's init
-failure already gets.
+`fail` instead of `ready` and exits. Without `failure: "run"`, the kernel
+treats that as a configuration failure and exits with status 2 before any
+participant is stepped, because a Manifest that names a participant it cannot
+initialize is wrong, rather than a Run that went wrong. A participant that
+accepts the contract but then reports its own initialization failure with
+`failure: "run"` exits with status 1. This lets an imported model preserve an
+FMI diagnostic instead of turning it into a generic child-exited message.
 
 Only that deliberate line is a configuration failure. Any other answer to
 `init`, and a child that dies while initializing without answering at all,

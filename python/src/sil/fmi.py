@@ -45,9 +45,10 @@ NS_PER_S = 1_000_000_000
 # than half-driven.
 _FMI_VERSION = "3.0"
 
-# fmi3Status. Warning still carries a result; Discard, Error and Fatal do not.
-_FMI_STATUS_NAMES = ("OK", "Warning", "Discard", "Error", "Fatal")
-_FMI_FIRST_FAILING_STATUS = 2
+# fmi3Status. Only OK means the call succeeded; every other status aborts the
+# Run before the importer can continue with a possibly invalid FMU state.
+_FMI_STATUS_NAMES = ("OK", "Warning", "Discard", "Error", "Fatal", "Pending")
+_FMI_SUCCESS_STATUS = 0
 
 # The FMU's `binaries/` subdirectory for the running platform, and the shared
 # library suffix that goes with it.
@@ -200,6 +201,13 @@ def _log_to_stderr(environment, status, category, message) -> None:
     print(f"fmu: {message.decode(errors='replace')}", file=sys.stderr)
 
 
+def _status_name(status: int) -> str:
+    """Name an FMI status without losing an unknown status to IndexError."""
+    if 0 <= status < len(_FMI_STATUS_NAMES):
+        return _FMI_STATUS_NAMES[status]
+    return f"unknown status {status}"
+
+
 class CoSimulation:
     """One instantiated FMU, driven through its co-simulation entry points.
 
@@ -283,8 +291,8 @@ class CoSimulation:
         that was called.
         """
         status = getattr(self._library, name)(self._instance, *arguments)
-        if status >= _FMI_FIRST_FAILING_STATUS:
-            raise ParticipantFailure(f"{name} returned {_FMI_STATUS_NAMES[status]}")
+        if status != _FMI_SUCCESS_STATUS:
+            raise ParticipantFailure(f"{name} returned {_status_name(status)}")
 
 
 class _Binding:
@@ -356,13 +364,20 @@ class FmuParticipant(StepParticipant):
 
     def __init__(self, fmu_path: Path):
         self._fmu_path = fmu_path
+        self._participant_name = None
         self._extraction = None
         self._fmu = None
         self._inputs: dict[str, _Binding] = {}
         self._outputs: dict[str, _Binding] = {}
 
     def on_init(self, init: dict) -> None:
-        self._extraction = tempfile.TemporaryDirectory(prefix="sil-fmu-")
+        self._participant_name = init["name"]
+        # The extracted archive belongs to the Run, not to the machine-wide
+        # temporary directory. The process participant inherits the runner's
+        # working directory, which is the Run's working directory here.
+        self._extraction = tempfile.TemporaryDirectory(
+            prefix="sil-fmu-", dir=Path.cwd()
+        )
         extracted = Path(self._extraction.name)
         try:
             with zipfile.ZipFile(self._fmu_path) as archive:
@@ -417,10 +432,20 @@ class FmuParticipant(StepParticipant):
 
     def close(self) -> None:
         """Terminate and free the instance, and drop the extracted FMU."""
-        if self._fmu is not None:
-            self._fmu.close()
-        if self._extraction is not None:
-            self._extraction.cleanup()
+        fmu, extraction = self._fmu, self._extraction
+        self._fmu = None
+        self._extraction = None
+        try:
+            if fmu is not None:
+                try:
+                    fmu.close()
+                except ParticipantFailure as error:
+                    raise ParticipantFailure(
+                        f"participant {self._participant_name!r} failed: {error}"
+                    ) from error
+        finally:
+            if extraction is not None:
+                extraction.cleanup()
 
 
 def main(argv: list[str] | None = None) -> None:

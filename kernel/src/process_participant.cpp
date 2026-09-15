@@ -442,12 +442,17 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
   send_line(init.dump());
   json ready = json::parse(read_line());
   const std::string op = ready.value("op", "");
-  // `fail` in answer to `init` is a config error (exit 2), the same taxonomy a
-  // native participant's init throw already gets; the same line after a Step is
-  // a Run failure (exit 1). See docs/step-protocol.md.
-  if (op == "fail")
-    throw ManifestError("participant '" + name + "': " +
-                        ready.value("reason", "rejected its init line"));
+  // `fail` in answer to `init` is a config error (exit 2), unless the child
+  // explicitly marks a failure from its own initialization work as a Run
+  // failure (exit 1). The same line after a Step is always a Run failure.
+  // See docs/step-protocol.md.
+  if (op == "fail") {
+    const std::string reason =
+        ready.value("reason", "rejected its init line");
+    if (ready.value("failure", "") == "run")
+      throw RunError("participant '" + name + "' failed: " + reason);
+    throw ManifestError("participant '" + name + "': " + reason);
+  }
   if (op != "ready")
     throw RunError("participant '" + name + "': expected ready, got " +
                    ready.dump());
@@ -467,7 +472,10 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
 }
 
 ProcessParticipant::~ProcessParticipant() {
-  shutdown();
+  // Destruction is also the cleanup path after an already-reported RunError;
+  // a participant's shutdown exit status must not throw from a destructor and
+  // replace the original diagnostic.
+  shutdown(false);
 }
 
 void ProcessParticipant::step(uint64_t now_ns) {
@@ -546,7 +554,7 @@ std::string ProcessParticipant::read_line() {
   }
 }
 
-void ProcessParticipant::shutdown() {
+void ProcessParticipant::shutdown(bool report_failure) {
   if (!alive_) return;
   alive_ = false;
   json bye = {{"op", "shutdown"}};
@@ -556,22 +564,31 @@ void ProcessParticipant::shutdown() {
   close(child_stdin_);
   close(child_stdout_);
 
+  int wait_status = 0;
   bool reaped = false;
   for (int i = 0; i < 200 && !reaped; i++) {
-    if (waitpid(pid_, nullptr, WNOHANG) == pid_)
+    if (waitpid(pid_, &wait_status, WNOHANG) == pid_)
       reaped = true;
     else
       usleep(10000);
   }
   if (!reaped) {
     kill(pid_, SIGKILL);
-    waitpid(pid_, nullptr, 0);
+    waitpid(pid_, &wait_status, 0);
   }
   // Release the regions at run end rather than at destruction, so a finished
   // run leaves nothing in the temp directory even while the engine still holds
   // the participant. Both releases are the owning type's destructor.
   arenas_.clear();
   clock_region_ = MappedRegion();
+
+  if (!report_failure) return;
+  if (WIFEXITED(wait_status) && WEXITSTATUS(wait_status) != 0)
+    throw RunError("participant '" + name_ + "' exited with status " +
+                   std::to_string(WEXITSTATUS(wait_status)));
+  if (WIFSIGNALED(wait_status))
+    throw RunError("participant '" + name_ + "' terminated by signal " +
+                   std::to_string(WTERMSIG(wait_status)));
 }
 
 }  // namespace sil

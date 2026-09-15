@@ -28,7 +28,7 @@ class ProcessParticipant {
   ProcessParticipant &operator=(const ProcessParticipant &) = delete;
 
   void step(uint64_t now_ns);
-  void shutdown();
+  void shutdown(bool report_failure = true);
 
  private:
   void send_line(const std::string &line);

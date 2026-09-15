@@ -438,3 +438,10 @@ class TestInitializationFailure:
         proc = run_sil(self.manifest(tmp_path, "BreakAtInit"))
         assert proc.returncode == 1, proc.stderr
         assert "broke while initializing" in proc.stderr
+
+    def test_a_reported_initialization_failure_keeps_its_run_diagnostic(
+        self, run_sil, tmp_path
+    ):
+        proc = run_sil(self.manifest(tmp_path, "FailAtInit"))
+        assert proc.returncode == 1, proc.stderr
+        assert "the participant's own initialization failed" in proc.stderr

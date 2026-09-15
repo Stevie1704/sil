@@ -116,6 +116,42 @@ endif()
 add_executable(sil_clock_probe shim/clock_probe.c)
 target_include_directories(sil_clock_probe PRIVATE include)
 
+# A deliberately failing FMI shared library backs the importer run-failure
+# test. The Python test packages it with the Reference FMU description so the
+# regression exercises the same archive extraction and ctypes boundary as a
+# real imported FMU.
+foreach(fmi_failure_status IN ITEMS Warning Discard Error Fatal)
+  add_library(fmi_failure_${fmi_failure_status} SHARED
+    tests/fixtures/fmi_failure.c)
+  if(fmi_failure_status STREQUAL "Warning")
+    target_compile_definitions(fmi_failure_${fmi_failure_status} PRIVATE
+      FMI_FAILURE_STATUS=1)
+  elseif(fmi_failure_status STREQUAL "Discard")
+    target_compile_definitions(fmi_failure_${fmi_failure_status} PRIVATE
+      FMI_FAILURE_STATUS=2)
+  elseif(fmi_failure_status STREQUAL "Error")
+    target_compile_definitions(fmi_failure_${fmi_failure_status} PRIVATE
+      FMI_FAILURE_STATUS=3)
+  else()
+    target_compile_definitions(fmi_failure_${fmi_failure_status} PRIVATE
+      FMI_FAILURE_STATUS=4)
+  endif()
+  set_target_properties(fmi_failure_${fmi_failure_status} PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME "Failing${fmi_failure_status}"
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endforeach()
+
+add_library(fmi_failure_terminate SHARED tests/fixtures/fmi_failure.c)
+target_compile_definitions(fmi_failure_terminate PRIVATE
+  FMI_FAILURE_STATUS=0 FMI_TERMINATE_STATUS=3)
+set_target_properties(fmi_failure_terminate PROPERTIES
+  PREFIX ""
+  OUTPUT_NAME "FailingTerminate"
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
 # --- bench participants (routing baseline fixtures, issue #61) ---
 # Payload size, publish period, and burst size come from manifest config, so
 # the whole baseline matrix is driven without rebuilding.

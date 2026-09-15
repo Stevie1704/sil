@@ -259,6 +259,17 @@ def run(participant: StepParticipant) -> None:
                     # can follow an initialization that never finished.
                     send({"op": "fail", "reason": _reason(e)})
                     return
+                except ParticipantFailure as e:
+                    # An FMU can report that its own initialization call
+                    # failed. That is a Run failure, not a malformed init
+                    # contract, so preserve the same diagnostic path used by
+                    # a failure during a Step.
+                    send({
+                        "op": "fail",
+                        "reason": _reason(e),
+                        "failure": "run",
+                    })
+                    return
                 ready = {"op": "ready"}
                 if "protocol" in msg:
                     ready["protocol"] = protocol

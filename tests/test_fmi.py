@@ -12,6 +12,7 @@ import csv
 import io
 import itertools
 import math
+import platform
 import subprocess
 import sys
 import zipfile
@@ -236,6 +237,68 @@ class TestRunBoundary:
             for t, fields in inputs[:-1]
         ]
 
+    @pytest.mark.parametrize(
+        "status", ["Warning", "Discard", "Error", "Fatal"]
+    )
+    def test_an_fmu_status_failure_aborts_the_run(
+        self, run_sil, tmp_path, build_dir, status
+    ):
+        fmu = failing_fmu(tmp_path, build_dir, status)
+        proc = run_sil(
+            fmu_manifest(fmu=fmu).write(tmp_path / f"failure-{status}.json").path
+        )
+
+        assert proc.returncode == 1
+        assert "participant 'feedthrough' failed" in proc.stderr
+        assert f"fmi3DoStep returned {status}" in proc.stderr
+
+    def test_a_terminate_status_failure_aborts_the_run(
+        self, run_sil, tmp_path, build_dir
+    ):
+        fmu = failing_fmu(tmp_path, build_dir, "Terminate")
+        proc = run_sil(
+            fmu_manifest(fmu=fmu).write(tmp_path / "failure-Terminate.json").path
+        )
+
+        assert proc.returncode == 1
+        assert "participant 'feedthrough'" in proc.stderr
+        assert "fmi3Terminate returned Error" in proc.stderr
+
+
+class TestExtractionLifetime:
+    """An imported FMU's extracted archive belongs to one Run only."""
+
+    def test_extraction_is_under_the_working_directory_and_is_cleaned(
+        self, monkeypatch, tmp_path
+    ):
+        monkeypatch.chdir(tmp_path)
+        participant = FmuParticipant(FEEDTHROUGH)
+        try:
+            participant.on_init(init_line({"fmu.In": "in", "fmu.Out": "out"}))
+            extracted = list(tmp_path.glob("sil-fmu-*"))
+            assert len(extracted) == 1
+            assert extracted[0].is_dir()
+        finally:
+            participant.close()
+
+        assert list(tmp_path.glob("sil-fmu-*")) == []
+
+    def test_a_run_leaves_no_extraction_directory(
+        self, sil_run, tmp_path
+    ):
+        run_dir = tmp_path / "run"
+        run_dir.mkdir()
+        manifest = fmu_manifest().write(run_dir / "manifest.json").path
+        proc = subprocess.run(
+            [str(sil_run), str(manifest), "-o", str(run_dir / "out.mcap")],
+            capture_output=True,
+            text=True,
+            cwd=run_dir,
+        )
+
+        assert proc.returncode == 0, proc.stderr
+        assert list(run_dir.glob("sil-fmu-*")) == []
+
 
 def described(tmp_path, rewrite=lambda text: text) -> Path:
     """An extracted FMU directory holding `Feedthrough`'s description alone.
@@ -262,6 +325,33 @@ def fmu_variant(tmp_path, name: str, *, source_fmu=FEEDTHROUGH,
             if member.filename == "modelDescription.xml":
                 data = rewrite(data.decode()).encode()
             target.writestr(member, data)
+    return path
+
+
+def failing_fmu(tmp_path, build_dir, status: str) -> Path:
+    """Package the test FMU binary with the Reference description."""
+    suffix = ".dylib" if platform.system() == "Darwin" else ".so"
+    model_identifier = f"Failing{status}"
+    binary = build_dir / f"{model_identifier}{suffix}"
+    assert binary.exists(), f"failing FMU binary was not built at {binary}"
+    path = tmp_path / f"failing-{status}.fmu"
+    with zipfile.ZipFile(FEEDTHROUGH) as source, zipfile.ZipFile(path, "w") as target:
+        for member in source.infolist():
+            if member.filename.startswith("binaries/") and not member.filename.endswith("/"):
+                continue
+            data = source.read(member.filename)
+            if member.filename == "modelDescription.xml":
+                data = data.replace(
+                    b'modelIdentifier="Feedthrough"',
+                    b'modelIdentifier="' + model_identifier.encode() + b'"',
+                )
+            target.writestr(member, data)
+        target.write(
+            binary,
+            arcname=(
+                f"binaries/{platform_directory()}/{model_identifier}{suffix}"
+            ),
+        )
     return path
 
 
