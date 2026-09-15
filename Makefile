@@ -5,6 +5,10 @@
 BUILD_DIR    ?= build
 BUILD_TYPE   ?= Release
 PYTHON       := .venv/bin/python
+# Absolute, because `sil-run` starts each participant in its own kernel-owned
+# working directory: a relative entry would be resolved from there, not from
+# the source tree. See docs/step-protocol.md.
+SRC          := $(CURDIR)/python/src
 JOBS         ?=
 
 # Args passed through to `make run` / `make check`, e.g.
@@ -56,22 +60,31 @@ run: build ## Run a manifest: make run ARGS="manifest.json -o out.mcap"
 
 .PHONY: check
 check: venv build ## Determinism check: make check ARGS="manifest.json"
-	PYTHONPATH=python/src $(PYTHON) -m sil.check $(ARGS) --runner ./$(BUILD_DIR)/sil-run
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.check $(ARGS) --runner ./$(BUILD_DIR)/sil-run
 
 # Static: reads declared capacities and slot counts, runs nothing. This is the
 # evidence #55's peak-memory gate asks for.
 .PHONY: footprint
 footprint: venv ## Declared payload memory: make footprint ARGS="manifest.json"
-	PYTHONPATH=python/src $(PYTHON) -m sil.footprint $(ARGS)
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.footprint $(ARGS)
 
 # Example ----------------------------------------------------------------------
 # Convenience over `make run`: builds the ACC reference example's nominal
 # Manifest and runs it. `sil-run` spawns the participants as child processes,
-# so PYTHONPATH has to be set on the run as well as on the build.
+# so PYTHONPATH has to be set on the run as well as on the build — absolute,
+# because each child starts in its own kernel-owned working directory.
 .PHONY: example
 example: venv build ## Run the ACC example and record it into the build directory
-	PYTHONPATH=python/src $(PYTHON) examples/acc/manifest.py $(BUILD_DIR)/acc.json
-	PYTHONPATH=python/src ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/acc.json -o $(BUILD_DIR)/acc.mcap
+	PYTHONPATH=$(SRC) $(PYTHON) examples/acc/manifest.py $(BUILD_DIR)/acc.json
+	PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/acc.json -o $(BUILD_DIR)/acc.mcap
+
+# Convenience over `make run` for the FMU import example. The importer extracts
+# the archive into the participant's kernel-owned working directory, which the
+# kernel removes after the Run, so this leaves the working tree clean.
+.PHONY: example-fmu
+example-fmu: venv build ## Run the FMU example and record it into the build directory
+	PYTHONPATH=$(SRC) $(PYTHON) examples/fmu/manifest.py $(BUILD_DIR)/fmu.json
+	PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/fmu.json -o $(BUILD_DIR)/fmu.mcap
 
 # Benchmark --------------------------------------------------------------------
 # Regenerates the routing baseline in docs/bench/ (issue #61). Long-running:

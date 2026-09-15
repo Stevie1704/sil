@@ -180,9 +180,10 @@ scheduler cannot activate a consumer while stopped inside its publisher's call.
 An FMU is a vendor model or vECU packaged to the FMI standard: one archive
 containing a machine-readable model description and a shared library for each
 target platform. SiL imports an FMU as an ordinary process participant. The
-importer extracts it under the Run's working directory during initialization,
-drives its FMI 3.0 co-simulation interface, and removes the extraction at
-shutdown. Channel schema field names map directly to the FMU's Float64 input and
+importer extracts it into the participant's kernel-owned working directory
+during initialization and drives its FMI 3.0 co-simulation interface. The
+extraction is dropped at shutdown and, either way, goes with the tree the
+kernel removes after the Run. Channel schema field names map directly to the FMU's Float64 input and
 output variables; Channel direction decides whether a field is written before
 the FMU Step or published after it.
 
@@ -208,6 +209,21 @@ m.add_process(
     publishes=["fmu.Out"],
 )
 ```
+
+[examples/fmu/](examples/fmu/) is that snippet as a Run you can execute:
+`Feedthrough`, the Modelica Association's own Reference FMU, driven by one
+stimulus participant. `examples/fmu/manifest.py` is the whole Run, and
+`tests/test_example_fmu.py` imports that same file rather than restating it.
+
+```sh
+make example-fmu                                # run it, record it into build/
+```
+
+Because `Feedthrough` copies each input to the output of the same name, the
+Recording shows the mapping round-trip directly: an output at `t` is the input
+published one Step earlier, which is the Channel's Latency rather than the
+FMU's. To point it at your own FMU, change the path, the schemas, and the
+stimulus — nothing else.
 
 Any co-simulation call that answers a status other than `fmi3OK` aborts the
 Run with exit 1, and the diagnostic names the call, the participant and the
@@ -266,8 +282,8 @@ delay on the sensing Channel over a one-second window — and comes from the sam
 builder:
 
 ```sh
-PYTHONPATH=python/src python examples/acc/manifest.py build/acc.json
-PYTHONPATH=python/src python examples/acc/manifest.py --delayed-sensing \
+PYTHONPATH=$PWD/python/src python examples/acc/manifest.py build/acc.json
+PYTHONPATH=$PWD/python/src python examples/acc/manifest.py --delayed-sensing \
     build/acc-delayed.json
 ```
 
@@ -308,6 +324,8 @@ tools/bench_*.py   routing-baseline driver and its process participants
 docs/bench/        routing baseline: procedure, raw results, decision inputs
 examples/acc/      the ACC reference example: one closed-loop Run in a
                    nominal and a delayed-sensing variant
+examples/fmu/      the FMU import example: one Reference FMU driven as a
+                   process participant
 python/src/sil/    manifest builder, step-participant lib, test API,
                    determinism check, declared memory footprint
 tests/             behavior tests at the run boundary
