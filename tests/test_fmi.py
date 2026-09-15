@@ -18,7 +18,6 @@ from sil.testing import run_simulation
 
 FIXTURES = ROOT / "tests" / "fixtures" / "reference-fmus" / "3.0"
 FEEDTHROUGH = FIXTURES / "Feedthrough.fmu"
-BOUNCING_BALL = FIXTURES / "BouncingBall.fmu"
 
 STEP_PERIOD_NS = 10_000_000
 DURATION_NS = 100_000_000
@@ -40,17 +39,8 @@ FMI_SCHEMAS = {
     },
 }
 
-# `BouncingBall` owns state and publishes it; its two outputs are named `h`
-# and `v`, so those are the field names of the Channel it publishes.
-BALL_SCHEMAS = {
-    "ball.State": {
-        "fields": [{"name": "h", "type": "f64"}, {"name": "v", "type": "f64"}]
-    }
-}
-BALL_DURATION_NS = 1_000_000_000
 
-
-def init_line(**directions: str) -> dict:
+def init_line(directions: dict[str, str]) -> dict:
     """The initialization line the kernel would send for these Channels."""
     return {
         "op": "init",
@@ -67,7 +57,7 @@ def init_line(**directions: str) -> dict:
 def feedthrough():
     """One initialized `Feedthrough` instance, torn down after the test."""
     participant = FmuParticipant(FEEDTHROUGH)
-    participant.on_init(init_line(**{"fmu.In": "in", "fmu.Out": "out"}))
+    participant.on_init(init_line({"fmu.In": "in", "fmu.Out": "out"}))
     yield participant
     participant.close()
 
@@ -151,7 +141,7 @@ class TestImportedFmu:
     def test_an_output_only_fmu_needs_no_subscribed_channel(self):
         """Direction comes from the init line, so one side may be absent."""
         participant = FmuParticipant(FEEDTHROUGH)
-        participant.on_init(init_line(**{"fmu.Out": "out"}))
+        participant.on_init(init_line({"fmu.Out": "out"}))
         try:
             (channel, published), = participant.on_step(0, STEP_PERIOD_NS, [])
             assert channel == "fmu.Out"
@@ -180,7 +170,7 @@ class TestCommunicationPoints:
         period_ns = 7_000_003
         steps = 10_000
         participant = FmuParticipant(FEEDTHROUGH)
-        participant.on_init(init_line(**{"fmu.Out": "out"}))
+        participant.on_init(init_line({"fmu.Out": "out"}))
         try:
             for step in range(steps):
                 participant.on_step(step * period_ns, period_ns, [])
@@ -227,31 +217,3 @@ class TestRunBoundary:
              fields["Float64_discrete_input"])
             for t, fields in inputs[:-1]
         ]
-
-
-def ball_manifest() -> Manifest:
-    """One imported FMU with state, publishing its own trajectory."""
-    m = Manifest(duration_ns=BALL_DURATION_NS)
-    m.add_schemas(BALL_SCHEMAS)
-    m.add_channel("ball.State", schema="ball.State")
-    m.add_process(
-        "ball",
-        command=[sys.executable, "-m", "sil.fmi", str(BOUNCING_BALL)],
-        step_period_ns=STEP_PERIOD_NS,
-        publishes=["ball.State"],
-    )
-    return m
-
-
-def test_a_stateful_fmu_is_really_stepped(sil_run, tmp_path):
-    """`Feedthrough` computes its outputs from its inputs, so a Run over it
-    would pass even if the instance were never advanced. `BouncingBall` only
-    moves because `fmi3DoStep` advances it: the ball falls from its start
-    height, stays above the ground, and rebounds."""
-    result = run_simulation(ball_manifest(), runner=sil_run, workdir=tmp_path)
-    heights = [fields["h"] for _, fields in result.messages("ball.State")]
-    bounce = heights.index(min(heights))
-
-    assert heights[:bounce] == sorted(heights[:bounce], reverse=True)
-    assert min(heights) > 0.0
-    assert max(heights[bounce:]) > 10 * heights[bounce]

@@ -52,9 +52,8 @@ _VALUE_REFERENCES = ctypes.POINTER(ctypes.c_uint32)
 _FLOAT64_VALUES = ctypes.POINTER(ctypes.c_double)
 _FLAG = ctypes.POINTER(ctypes.c_bool)
 
-# The co-simulation entry points this importer drives, with the argument and
-# return types ctypes cannot infer. An instance handle is a pointer: without a
-# declared `c_void_p` restype ctypes would truncate it to an int.
+# The co-simulation entry points this importer drives, with their argument and
+# return types.
 _SIGNATURES = {
     "fmi3InstantiateCoSimulation": (
         ctypes.c_void_p,
@@ -120,6 +119,20 @@ class ModelDescription:
         )
 
 
+def _load(binary: Path) -> ctypes.CDLL:
+    """Open the FMU's shared library with the signatures ctypes cannot infer.
+
+    An instance handle is a pointer: without a declared `c_void_p` restype
+    ctypes would truncate it to an int.
+    """
+    library = ctypes.CDLL(str(binary))
+    for name, (restype, argtypes) in _SIGNATURES.items():
+        entry_point = getattr(library, name)
+        entry_point.restype = restype
+        entry_point.argtypes = argtypes
+    return library
+
+
 def _log_to_stderr(environment, status, category, message) -> None:
     """The FMU's logger. stdout is the step protocol, so it cannot go there."""
     print(f"fmu: {message.decode(errors='replace')}", file=sys.stderr)
@@ -135,11 +148,7 @@ class CoSimulation:
     """
 
     def __init__(self, binary: Path, description: ModelDescription):
-        self._library = ctypes.CDLL(str(binary))
-        for name, (restype, argtypes) in _SIGNATURES.items():
-            entry_point = getattr(self._library, name)
-            entry_point.restype = restype
-            entry_point.argtypes = argtypes
+        self._library = _load(binary)
         # The FMU calls this for the life of the instance, so the ctypes
         # trampoline has to outlive this constructor.
         self._logger = _LOG_CALLBACK(_log_to_stderr)
@@ -166,33 +175,17 @@ class CoSimulation:
         No stop time is declared: the Manifest's duration is the kernel's, and
         an FMU told a stop time it never reaches would reject the last step.
         """
-        self._call(
-            "fmi3EnterInitializationMode",
-            self._library.fmi3EnterInitializationMode(
-                self._instance, False, 0.0, 0.0, False, 0.0
-            ),
-        )
-        self._call(
-            "fmi3ExitInitializationMode",
-            self._library.fmi3ExitInitializationMode(self._instance),
-        )
+        self._call("fmi3EnterInitializationMode", False, 0.0, 0.0, False, 0.0)
+        self._call("fmi3ExitInitializationMode")
 
     def set_float64(self, references, values) -> None:
         self._call(
-            "fmi3SetFloat64",
-            self._library.fmi3SetFloat64(
-                self._instance, references, len(references),
-                values, len(values),
-            ),
+            "fmi3SetFloat64", references, len(references), values, len(values)
         )
 
     def get_float64(self, references, values) -> None:
         self._call(
-            "fmi3GetFloat64",
-            self._library.fmi3GetFloat64(
-                self._instance, references, len(references),
-                values, len(values),
-            ),
+            "fmi3GetFloat64", references, len(references), values, len(values)
         )
 
     def do_step(self, communication_point: float, step_size: float) -> None:
@@ -201,23 +194,33 @@ class CoSimulation:
         early_return = ctypes.c_bool()
         last_successful_time = ctypes.c_double()
         self._call(
-            "fmi3DoStep",
-            self._library.fmi3DoStep(
-                self._instance, communication_point, step_size, True,
-                ctypes.byref(event_needed), ctypes.byref(terminate),
-                ctypes.byref(early_return), ctypes.byref(last_successful_time),
-            ),
+            "fmi3DoStep", communication_point, step_size, True,
+            ctypes.byref(event_needed), ctypes.byref(terminate),
+            ctypes.byref(early_return), ctypes.byref(last_successful_time),
         )
 
     def close(self) -> None:
+        """Terminate the instance and free it, even if terminating failed.
+
+        The instance holds the FMU's memory either way, so the free is the
+        half the failing path needs most.
+        """
         if self._instance is None:
             return
-        instance, self._instance = self._instance, None
-        self._call("fmi3Terminate", self._library.fmi3Terminate(instance))
-        self._library.fmi3FreeInstance(instance)
+        try:
+            self._call("fmi3Terminate")
+        finally:
+            self._library.fmi3FreeInstance(self._instance)
+            self._instance = None
 
-    @staticmethod
-    def _call(name: str, status: int) -> None:
+    def _call(self, name: str, *arguments) -> None:
+        """Invoke one co-simulation entry point on this instance.
+
+        Every entry point takes the instance first and answers an fmi3Status,
+        so naming it once here keeps the name in the diagnostic the same name
+        that was called.
+        """
+        status = getattr(self._library, name)(self._instance, *arguments)
         if status >= _FMI_FIRST_FAILING_STATUS:
             raise ParticipantFailure(f"{name} returned {_FMI_STATUS_NAMES[status]}")
 
@@ -286,9 +289,7 @@ class FmuParticipant(StepParticipant):
         # Inputs arrive in publish order, so writing each in turn leaves the
         # newest Message on a Channel as the value the step sees.
         for message in inputs:
-            binding = self._inputs.get(message.channel)
-            if binding is not None:
-                binding.write(self._fmu, message.data)
+            self._inputs[message.channel].write(self._fmu, message.data)
         self._fmu.do_step(t / NS_PER_S, dt / NS_PER_S)
         return [
             (channel, binding.read(self._fmu))

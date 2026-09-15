@@ -68,6 +68,18 @@ A piece of vehicle software under test, brought into a run as a participant.
 Opaque when the framework cannot see or change its internals.
 _Avoid_: ECU, SUT, model, target
 
+**FMU**:
+A vendor model or vECU packaged to the FMI standard: one archive holding a
+machine-readable description of its variables and a shared library per
+platform. What a supplier or a modeling tool actually hands over.
+_Avoid_: FMI model, functional mockup unit, black box
+
+**Importer**:
+The adapter that brings a model in a foreign standard into a run as an
+ordinary participant, translating that standard's stepping contract to this
+one. It lives at the edge; the kernel never learns the standard exists.
+_Avoid_: wrapper, bridge, master, co-simulation master
+
 **Step protocol**:
 The line-based contract over a process participant's stdin/stdout by which the
 kernel initializes it, steps it, and shuts it down.
