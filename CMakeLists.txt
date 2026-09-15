@@ -144,6 +144,8 @@ add_failing_fmu(Initialize FMI_INIT_STATUS=3)
 # Fatal at Step, and an fmi3Terminate that would answer Error if the importer
 # wrongly called it afterwards.
 add_failing_fmu(FatalTerminateError FMI_STEP_STATUS=4 FMI_TERMINATE_STATUS=3)
+# Fatal from fmi3Terminate itself, which bars the free that would follow it.
+add_failing_fmu(TerminateFatal FMI_TERMINATE_STATUS=4)
 add_failing_fmu(Terminate FMI_TERMINATE_STATUS=3)
 add_failing_fmu(TerminateFlag FMI_TERMINATE_FLAG=1)
 

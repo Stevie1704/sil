@@ -283,15 +283,19 @@ class CoSimulation:
         """Terminate the instance and free it, even if terminating failed.
 
         The instance holds the FMU's memory either way, so the free is the
-        half the failing path needs most.
+        half the failing path needs most — unless the FMU answered Fatal, which
+        bars the free along with every other call.
         """
         if self._instance is None:
             return
         try:
             self._call("fmi3Terminate")
         finally:
-            self._library.fmi3FreeInstance(self._instance)
-            self._instance = None
+            # `_call` drops the handle when a call answers Fatal, and freeing
+            # is itself a call this FMU may no longer take.
+            if self._instance is not None:
+                self._library.fmi3FreeInstance(self._instance)
+                self._instance = None
 
     def _call(self, name: str, *arguments) -> None:
         """Invoke one co-simulation entry point on this instance.

@@ -378,6 +378,25 @@ class TestExtractionLifetime:
 
         assert list(tmp_path.glob("sil-fmu-*")) == []
 
+    def test_a_fatal_terminate_still_drops_the_extraction(
+        self, monkeypatch, tmp_path, build_dir
+    ):
+        """Fatal from `fmi3Terminate` bars the free that would have followed.
+
+        Freeing is a call like any other, so the instance is abandoned; the
+        extraction is the importer's own and is dropped either way.
+        """
+        monkeypatch.chdir(tmp_path)
+        fmu = failing_fmu(tmp_path, build_dir, "TerminateFatal")
+        participant = FmuParticipant(fmu)
+        participant.on_init(init_line({"fmu.In": "in", "fmu.Out": "out"}))
+        participant.on_step(0, STEP_PERIOD_NS, [])
+
+        with pytest.raises(ParticipantFailure, match="fmi3Terminate returned Fatal"):
+            participant.close()
+
+        assert list(tmp_path.glob("sil-fmu-*")) == []
+
     def test_sigterm_leaves_no_extraction_directory(self, tmp_path):
         """A wedged importer is asked with SIGTERM before it is killed.
 

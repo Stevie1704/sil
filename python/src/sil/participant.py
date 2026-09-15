@@ -303,6 +303,10 @@ def run(participant: StepParticipant) -> None:
             elif op == "shutdown":
                 return
     finally:
+        # The protocol loop is what SIGTERM is meant to interrupt. Teardown is
+        # not: unwinding out of a participant's own cleanup is what leaves the
+        # run-scoped state behind that the signal exists to release.
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
         for arena in arenas.values():
             arena.close()
 
