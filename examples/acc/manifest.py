@@ -16,11 +16,13 @@ Build it and run it:
 
 or, without the convenience target:
 
-    PYTHONPATH=python/src python examples/acc/manifest.py build/acc.json
-    PYTHONPATH=python/src ./build/sil-run build/acc.json -o build/acc.mcap
+    PYTHONPATH=$PWD/python/src python examples/acc/manifest.py build/acc.json
+    PYTHONPATH=$PWD/python/src ./build/sil-run build/acc.json -o build/acc.mcap
 
 `sil-run` spawns the participants as child processes, so `PYTHONPATH` has to be
-set on the run as well as on the build. Both paths are under the already-ignored
+set on the run as well as on the build, and absolute: each child starts in its
+own kernel-owned working directory, so a relative entry would be resolved from
+there rather than from the source tree. Both paths are under the already-ignored
 build directory, so a demo leaves the working tree clean.
 
 `--delayed-sensing` builds the second variant of the same Run: one declared

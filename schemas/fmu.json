@@ -1,0 +1,14 @@
+{
+  "fmu.In": {
+    "fields": [
+      {"name": "Float64_continuous_input", "type": "f64"},
+      {"name": "Float64_discrete_input", "type": "f64"}
+    ]
+  },
+  "fmu.Out": {
+    "fields": [
+      {"name": "Float64_continuous_output", "type": "f64"},
+      {"name": "Float64_discrete_output", "type": "f64"}
+    ]
+  }
+}
