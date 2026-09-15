@@ -13,6 +13,21 @@ The kernel starts a participant with:
 {"op":"init","name":"sink","protocol":2,"channels":{"payload":{"schema":"big.Payload","direction":"in","transport":"shm","shm_path":"/tmp/sil_arena_x","shm_capacity":1048576,"shm_slots":2}},"schemas":{"big.Payload":{"fields":[]}}}
 ```
 
+Before starting the process participants, the kernel creates the Run working
+directory beneath the runner's invocation directory. Each child starts in its
+own directory beneath that root. The kernel removes the complete tree after
+reaping the children, whether the Run passes or fails. Generated directory
+names are runtime state: they are absent from the Manifest, its hash, and the
+init line.
+
+Changing directory must not strand commands written for the earlier launch
+contract. Before the fork, the kernel resolves a relative `command[0]` that
+contains a directory component, and every argument that names an existing
+relative filesystem entry, against the runner's invocation directory. A bare
+executable name still uses `PATH`. Other relative arguments stay unchanged and
+are therefore interpreted by the participant from its private directory; this
+is where a relative output path naturally creates Run-scoped state.
+
 `channels` contains the participant's declared inputs and outputs. Every entry
 has `schema` and `direction` (`"in"` or `"out"`). A shared-memory entry also
 has `transport: "shm"`, `shm_path`, `shm_capacity` (bytes per slot), and
