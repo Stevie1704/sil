@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <limits>
 #include <map>
 #include <utility>
@@ -18,6 +19,7 @@
 
 #include "clock_shim.hpp"
 #include "copy_counters.hpp"
+#include "owned_directory.hpp"
 
 namespace sil {
 
@@ -78,6 +80,40 @@ std::vector<uint8_t> b64_decode(const std::string &in) {
     }
   }
   return out;
+}
+
+std::vector<std::string> resolve_command(
+    const std::vector<std::string> &command,
+    const std::filesystem::path &invocation_directory) {
+  std::vector<std::string> resolved = command;
+  for (size_t index = 0; index < resolved.size(); ++index) {
+    if (resolved[index].empty()) continue;
+    std::filesystem::path argument(resolved[index]);
+    if (argument.is_absolute()) continue;
+
+    const std::filesystem::path from_invocation =
+        invocation_directory / argument;
+    std::error_code error;
+    const bool names_existing_path =
+        std::filesystem::exists(from_invocation, error);
+    const bool should_resolve = index == 0
+                                    ? argument.has_parent_path()
+                                    : !error && names_existing_path;
+    if (should_resolve)
+      resolved[index] = from_invocation.lexically_normal().string();
+  }
+  return resolved;
+}
+
+std::string participant_directory_name(const std::string &name) {
+  static constexpr char hex[] = "0123456789abcdef";
+  std::string encoded = "participant-";
+  encoded.reserve(encoded.size() + name.size() * 2);
+  for (const unsigned char ch : name) {
+    encoded.push_back(hex[ch >> 4]);
+    encoded.push_back(hex[ch & 0x0f]);
+  }
+  return encoded;
 }
 
 }  // namespace
@@ -360,6 +396,20 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     : engine_(engine), name_(name), period_ns_(spec.step_period_ns),
       publishes_(spec.publishes), epoch_ns_(engine.manifest().epoch_ns),
       sleep_policy_(spec.sleep) {
+  const std::filesystem::path invocation_directory =
+      std::filesystem::current_path();
+  const std::vector<std::string> command =
+      resolve_command(spec.command, invocation_directory);
+  std::string directory_error;
+  OwnedDirectory directory = OwnedDirectory::create_child(
+      engine.run_working_directory(), participant_directory_name(name),
+      directory_error);
+  if (!directory)
+    throw ManifestError("participant '" + name +
+                        "': cannot create working directory: " +
+                        directory_error);
+  working_directory_ = std::make_unique<OwnedDirectory>(std::move(directory));
+
   for (const SubscriberRouteSpec &route : spec.subscribes)
     inputs_.emplace_back(route.channel, engine.subscribe(name, route));
 
@@ -395,9 +445,13 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     close(to_child[1]);
     close(from_child[0]);
     close(from_child[1]);
+    if (chdir(working_directory_->path().c_str()) != 0) {
+      perror("sil: chdir participant");
+      _exit(127);
+    }
     if (shimmed) inject_shim_env();
     std::vector<char *> argv;
-    for (const std::string &arg : spec.command)
+    for (const std::string &arg : command)
       argv.push_back(const_cast<char *>(arg.c_str()));
     argv.push_back(nullptr);
     execvp(argv[0], argv.data());
@@ -590,6 +644,7 @@ int ProcessParticipant::terminate_child() {
   // the participant. Both releases are the owning type's destructor.
   arenas_.clear();
   clock_region_ = MappedRegion();
+  working_directory_.reset();
   return wait_status;
 }
 

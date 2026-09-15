@@ -191,10 +191,13 @@ a manifest error is what was at fault, not when it was caught.
 _Avoid_: runtime error, crash, test failure
 
 **Run working directory**:
-The directory a run is started in, which every process participant inherits.
+The kernel-owned directory tree for one Run. The kernel creates its root beneath
+the runner's invocation directory and gives every process participant its own
+directory beneath that root. It starts each child there and removes the entire
+tree after reaping the children on both the passing and failing paths.
 Run-scoped files a participant needs on disk — an imported FMU's extracted
-archive, say — live here and are removed when the run ends. The kernel neither
-creates nor changes it.
+archive, say — live in its directory. Generated names are runtime details and
+never part of the Manifest or Manifest hash.
 _Avoid_: cwd, temp dir, scratch dir
 
 **Recording**:

@@ -32,6 +32,7 @@ set(SIL_KERNEL_SOURCES
   kernel/src/engine.cpp
   kernel/src/clock_shim.cpp
   kernel/src/mapped_region.cpp
+  kernel/src/owned_directory.cpp
   kernel/src/native_participant.cpp
   kernel/src/process_participant.cpp
   kernel/src/mcap_recording.cpp

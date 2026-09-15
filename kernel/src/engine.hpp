@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <deque>
+#include <filesystem>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -21,6 +22,7 @@ struct RunError : std::runtime_error {
 
 class RecordingSink;
 class NativeParticipant;
+class OwnedDirectory;
 class ProcessParticipant;
 class Replayer;
 
@@ -116,6 +118,7 @@ class Engine {
   bool in_setup() const { return in_setup_; }
   bool in_task() const { return in_task_; }
   const Manifest &manifest() const { return manifest_; }
+  const std::filesystem::path &run_working_directory();
 
   void register_task(const std::string &owner, const std::string &task,
                      uint64_t period_ns, uint64_t offset_ns, int32_t priority,
@@ -157,6 +160,9 @@ class Engine {
   std::vector<std::unique_ptr<SubscriberRoute>> subscriber_routes_;
   std::vector<Task> tasks_;
   std::vector<std::unique_ptr<NativeParticipant>> natives_;
+  // Declared before processes_ so reverse-order destruction reaps every child
+  // before removing their common Run directory.
+  std::unique_ptr<OwnedDirectory> run_working_directory_;
   std::vector<std::unique_ptr<ProcessParticipant>> processes_;
   std::vector<std::unique_ptr<Replayer>> replayers_;
   uint64_t now_ns_ = 0;

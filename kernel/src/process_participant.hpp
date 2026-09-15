@@ -15,6 +15,8 @@
 
 namespace sil {
 
+class OwnedDirectory;
+
 // The normative JSON-lines step protocol is specified in
 // docs/step-protocol.md. This endpoint is fully sequential, so a process
 // participant cannot make execution order nondeterministic between requests.
@@ -48,6 +50,11 @@ class ProcessParticipant {
   pid_t pid_ = -1;
   std::string read_buffer_;
   bool alive_ = false;
+
+  // Kernel-owned directory for this participant. It is created under the Run
+  // working directory before fork and removed after the child is reaped,
+  // including destruction after a failed Run.
+  std::unique_ptr<OwnedDirectory> working_directory_;
 
   // Virtual clock shim (issue #28). When the participant opts in, the kernel
   // maps a small fixed-layout time region shared with the child, injects the

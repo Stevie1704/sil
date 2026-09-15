@@ -8,6 +8,7 @@
 #include "copy_counters.hpp"
 #include "interceptor.hpp"
 #include "native_participant.hpp"
+#include "owned_directory.hpp"
 #include "process_participant.hpp"
 #include "recording_sink.hpp"
 #include "replayer.hpp"
@@ -32,6 +33,19 @@ Engine::Engine(const Manifest &manifest, RecordingSink *recorder)
 }
 
 Engine::~Engine() = default;
+
+const std::filesystem::path &Engine::run_working_directory() {
+  if (!run_working_directory_) {
+    std::string error;
+    OwnedDirectory directory = OwnedDirectory::create_unique(
+        std::filesystem::current_path(), ".sil-run-", error);
+    if (!directory)
+      throw ManifestError("cannot create Run working directory: " + error);
+    run_working_directory_ =
+        std::make_unique<OwnedDirectory>(std::move(directory));
+  }
+  return run_working_directory_->path();
+}
 
 Engine::ChannelState &Engine::channel_or_fail(const std::string &name,
                                               const std::string &ctx) {
@@ -232,6 +246,7 @@ void Engine::run() {
   }
 
   for (auto &proc : processes_) proc->shutdown();
+  run_working_directory_.reset();
 }
 
 }  // namespace sil

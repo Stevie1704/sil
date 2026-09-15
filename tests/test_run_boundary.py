@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 from mcap.reader import make_reader
@@ -1444,6 +1445,115 @@ class TestChannelLatencyOverflow:
 
 
 class TestProcessParticipant:
+    def test_each_process_gets_a_cleaned_working_directory_under_the_run(
+        self, sil_run, tmp_path
+    ):
+        run_dir = tmp_path / "run"
+        run_dir.mkdir()
+        probe = run_dir / "working_directory_probe.py"
+        shutil.copy2(
+            ROOT / "tests" / "participants" / "working_directory_probe.py", probe
+        )
+        probe.chmod(0o755)
+
+        m = toy_manifest(duration_ns=1)
+        observers = []
+        for name in ("first", "second"):
+            observer = run_dir / f"{name}-observer"
+            observer.mkdir()
+            observers.append(observer)
+            m.add_process(
+                name,
+                command=["./working_directory_probe.py", observer.name],
+                step_period_ns=1,
+            )
+        manifest = m.write(run_dir / "m.json").path
+
+        proc = subprocess.run(
+            [str(sil_run), str(manifest), "--no-recording"],
+            cwd=run_dir,
+            capture_output=True,
+            text=True,
+        )
+
+        assert proc.returncode == 0, proc.stderr
+        working_directories = [
+            observer.joinpath("cwd").read_text() for observer in observers
+        ]
+        assert len(set(working_directories)) == 2
+        paths = list(map(Path, working_directories))
+        run_working_directories = {path.parent for path in paths}
+        assert len(run_working_directories) == 1
+        run_working_directory = run_working_directories.pop()
+        assert run_working_directory.parent == run_dir
+        assert all(not path.exists() for path in paths)
+        assert not run_working_directory.exists()
+
+    def test_sigkill_leaves_no_process_working_directory(
+        self, sil_run, tmp_path
+    ):
+        run_dir = tmp_path / "run"
+        run_dir.mkdir()
+        probe = run_dir / "working_directory_probe.py"
+        shutil.copy2(
+            ROOT / "tests" / "participants" / "working_directory_probe.py", probe
+        )
+        probe.chmod(0o755)
+        observer = run_dir / "observer"
+        observer.mkdir()
+
+        m = toy_manifest(duration_ns=2)
+        m.add_process(
+            "killed",
+            command=["./working_directory_probe.py", observer.name, "sigkill"],
+            step_period_ns=1,
+        )
+        manifest = m.write(run_dir / "m.json").path
+
+        proc = subprocess.run(
+            [str(sil_run), str(manifest), "--no-recording"],
+            cwd=run_dir,
+            capture_output=True,
+            text=True,
+        )
+
+        assert proc.returncode == 1
+        working_directory = Path(observer.joinpath("cwd").read_text())
+        assert working_directory.parent.parent == run_dir
+        assert not working_directory.exists()
+        assert not working_directory.parent.exists()
+
+    def test_bare_executable_still_uses_path(self, sil_run, tmp_path):
+        run_dir = tmp_path / "run"
+        run_dir.mkdir()
+        shutil.copy2(
+            ROOT / "tests" / "participants" / "working_directory_probe.py",
+            run_dir / "working_directory_probe.py",
+        )
+        observer = run_dir / "observer"
+        observer.mkdir()
+        # An existing invocation-relative entry with the same name must not
+        # capture a bare executable; only command[0] values containing a path
+        # component resolve against the invocation directory.
+        run_dir.joinpath("python3").write_text("not an executable")
+
+        m = toy_manifest(duration_ns=1)
+        m.add_process(
+            "probe",
+            command=["python3", "working_directory_probe.py", observer.name],
+            step_period_ns=1,
+        )
+        manifest = m.write(run_dir / "m.json").path
+
+        proc = subprocess.run(
+            [str(sil_run), str(manifest), "--no-recording"],
+            cwd=run_dir,
+            capture_output=True,
+            text=True,
+        )
+
+        assert proc.returncode == 0, proc.stderr
+
     def test_python_step_participant_transforms_messages(self, run_sil, tmp_path):
         import sys as _sys
 

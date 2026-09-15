@@ -393,9 +393,10 @@ class FmuParticipant(StepParticipant):
 
     def on_init(self, init: dict) -> None:
         self.name = init["name"]
-        # The extracted archive belongs to the Run, not to the machine-wide
-        # temporary directory. The process participant inherits the runner's
-        # working directory, which is the Run's working directory here.
+        # The kernel starts this process in its kernel-owned Run working
+        # directory, so the extracted archive is inside the tree the kernel
+        # removes after reaping us. TemporaryDirectory's own cleanup is an
+        # eager optimization for a cooperative shutdown, not the guarantee.
         self._extraction = tempfile.TemporaryDirectory(
             prefix="sil-fmu-", dir=Path.cwd()
         )
