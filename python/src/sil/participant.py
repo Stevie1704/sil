@@ -181,6 +181,16 @@ class ParticipantFailure(Exception):
     """Raised by a participant to abort the whole run."""
 
 
+class ConfigurationError(Exception):
+    """Raised by a participant whose init line cannot be honoured at all.
+
+    It is answered with `fail` instead of `ready`, which the kernel treats as a
+    configuration error rather than a Run failure — see docs/step-protocol.md.
+    Every other exception during initialization stays a Run failure, so a
+    participant that breaks on the way up is not reported as a bad Manifest.
+    """
+
+
 @dataclass(frozen=True)
 class Input:
     channel: str
@@ -242,12 +252,11 @@ def run(participant: StepParticipant) -> None:
                 )
                 try:
                     participant.on_init(msg)
-                except Exception as e:  # noqa: BLE001 — see docs/step-protocol.md
-                    # Answering init with `fail` instead of `ready` says the
-                    # contract cannot be honoured at all, which the kernel
-                    # treats as a configuration error. Returning ends the run
-                    # loop: no step can follow a participant that never
-                    # initialized.
+                except ConfigurationError as e:
+                    # Only a deliberate rejection answers `fail`: that line
+                    # before `ready` is what makes the kernel call this a
+                    # configuration error. Returning ends the loop — no step
+                    # can follow an initialization that never finished.
                     send({"op": "fail", "reason": _reason(e)})
                     return
                 ready = {"op": "ready"}
@@ -295,4 +304,10 @@ def main(argv: list[str] | None = None) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    # `python -m sil.participant` runs this file as `__main__`, so the classes
+    # defined here are not the ones a participant gets from `import
+    # sil.participant`. Delegating to the imported module gives both sides the
+    # same ConfigurationError, which the init handshake compares by identity.
+    from sil.participant import main as _main
+
+    _main()

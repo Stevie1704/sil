@@ -22,7 +22,7 @@ from sil.fmi import (
     platform_directory,
 )
 from sil.manifest import Manifest, SubscriberRoute
-from sil.participant import Input, ParticipantFailure
+from sil.participant import ConfigurationError, Input
 from sil.testing import run_simulation
 
 FIXTURES = ROOT / "tests" / "fixtures" / "reference-fmus" / "3.0"
@@ -269,14 +269,14 @@ class TestDescription:
         extracted = described(
             tmp_path, lambda text: text.replace('fmiVersion="3.0"', 'fmiVersion="2.0"')
         )
-        with pytest.raises(ParticipantFailure, match="2.0"):
+        with pytest.raises(ConfigurationError, match="2.0"):
             ModelDescription.read(extracted)
 
     def test_a_description_without_a_co_simulation_interface_is_rejected(
         self, tmp_path
     ):
         extracted = described(tmp_path, without_co_simulation)
-        with pytest.raises(ParticipantFailure, match="co-simulation"):
+        with pytest.raises(ConfigurationError, match="co-simulation"):
             ModelDescription.read(extracted)
 
     def test_causality_decides_which_variables_take_part_in_the_mapping(
@@ -317,6 +317,16 @@ class TestPlatformDirectory:
         monkeypatch.setattr("platform.machine", lambda: machine)
         monkeypatch.setattr("platform.system", lambda: system)
         assert platform_directory() == directory
+
+    def test_the_selected_directory_is_one_the_vendored_fmu_ships(
+        self, tmp_path
+    ):
+        """The mapping has to land where `Feedthrough` carries a binary."""
+        with zipfile.ZipFile(FEEDTHROUGH) as archive:
+            archive.extractall(tmp_path)
+        binary = ModelDescription.read(tmp_path).binary(tmp_path)
+        assert binary.parent.name == platform_directory()
+        assert binary.exists()
 
 
 class TestRejectedAtStartup:
@@ -371,7 +381,7 @@ class TestRejectedAtStartup:
                 drop=lambda member: member.startswith(f"binaries/{directory}/"),
             ),
         )
-        assert directory in stderr
+        assert f"carries no binary for {directory}" in stderr
 
     def test_a_schema_field_matching_no_fmu_variable_is_rejected(
         self, run_sil, tmp_path
@@ -400,6 +410,7 @@ class TestRejectedAtStartup:
         )
         assert "Float64_discrete_output" in stderr
         assert "Feedthrough" in stderr
+        assert "fmu.Out" in stderr
 
     @pytest.mark.parametrize("name", ["absent.fmu", "not-an-archive.fmu"])
     def test_an_unreadable_fmu_path_is_rejected(self, run_sil, tmp_path, name):
@@ -407,4 +418,4 @@ class TestRejectedAtStartup:
         if name != "absent.fmu":
             fmu.write_text("this is not a zip archive")
         stderr = self.run_rejection(run_sil, tmp_path, fmu=fmu)
-        assert name in stderr
+        assert f"cannot read FMU '{fmu}'" in stderr

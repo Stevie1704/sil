@@ -39,7 +39,13 @@ A child that cannot honour the contract the `init` line describes answers
 `fail` instead of `ready` and exits. The kernel treats that as a configuration
 failure and exits with status 2 before any participant is stepped, because a
 Manifest that names a participant it cannot initialize is wrong, rather than a
-Run that went wrong. Any other answer to `init` is a run failure.
+Run that went wrong. This matches the taxonomy a native participant's init
+failure already gets.
+
+Only that deliberate line is a configuration failure. Any other answer to
+`init`, and a child that dies while initializing without answering at all,
+stays a run failure — a participant that breaks on the way up is not a bad
+Manifest.
 
 The child echoes the highest offered protocol it supports. An absent
 `ready.protocol` means 1. If a child answers 1 (or omits the field) to an offer

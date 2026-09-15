@@ -441,14 +441,14 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
                {"schemas", schemas}};
   send_line(init.dump());
   json ready = json::parse(read_line());
-  // A `fail` in answer to `init` is the participant saying its contract cannot
-  // be honoured at all, before any Step has been taken — a Manifest that names
-  // it this way is wrong, so it is a config error (exit 2). The same line after
-  // a Step is a Run failure (exit 1); it is when it arrives that decides.
-  if (ready.value("op", "") == "fail")
+  const std::string op = ready.value("op", "");
+  // `fail` in answer to `init` is a config error (exit 2), the same taxonomy a
+  // native participant's init throw already gets; the same line after a Step is
+  // a Run failure (exit 1). See docs/step-protocol.md.
+  if (op == "fail")
     throw ManifestError("participant '" + name + "': " +
                         ready.value("reason", "rejected its init line"));
-  if (ready.value("op", "") != "ready")
+  if (op != "ready")
     throw RunError("participant '" + name + "': expected ready, got " +
                    ready.dump());
   int announced_protocol = kSingleSlotProtocol;

@@ -28,7 +28,12 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 from sil import schema
-from sil.participant import ParticipantFailure, StepParticipant, run
+from sil.participant import (
+    ConfigurationError,
+    ParticipantFailure,
+    StepParticipant,
+    run,
+)
 
 # Virtual time is integer nanoseconds; seconds are derived from those integers
 # on every step and never accumulated, so the same integer always produces the
@@ -38,7 +43,7 @@ NS_PER_S = 1_000_000_000
 
 # The one FMI version this importer drives. Anything else is rejected rather
 # than half-driven.
-FMI_VERSION = "3.0"
+_FMI_VERSION = "3.0"
 
 # fmi3Status. Warning still carries a result; Discard, Error and Fatal do not.
 _FMI_STATUS_NAMES = ("OK", "Warning", "Discard", "Error", "Fatal")
@@ -131,16 +136,23 @@ class ModelDescription:
         loads and fails on a missing symbol, and a Model Exchange FMU
         otherwise fails on an absent element.
         """
-        root = ElementTree.parse(extracted / "modelDescription.xml").getroot()
+        try:
+            root = ElementTree.parse(
+                extracted / "modelDescription.xml"
+            ).getroot()
+        except (OSError, ElementTree.ParseError) as error:
+            raise ConfigurationError(
+                f"FMU has no readable modelDescription.xml: {error}"
+            ) from error
         version = root.get("fmiVersion")
-        if version != FMI_VERSION:
-            raise ParticipantFailure(
+        if version != _FMI_VERSION:
+            raise ConfigurationError(
                 f"FMU declares fmiVersion {version!r}; this importer drives "
-                f"FMI {FMI_VERSION} co-simulation only"
+                f"FMI {_FMI_VERSION} co-simulation only"
             )
         co_simulation = root.find("CoSimulation")
         if co_simulation is None:
-            raise ParticipantFailure(
+            raise ConfigurationError(
                 "FMU declares no co-simulation interface; this importer "
                 "drives neither Model Exchange nor Scheduled Execution"
             )
@@ -161,7 +173,7 @@ class ModelDescription:
             / f"{self.model_identifier}{suffix}"
         )
         if not binary.exists():
-            raise ParticipantFailure(
+            raise ConfigurationError(
                 f"FMU {self.model_identifier!r} carries no binary for "
                 f"{directory}: binaries/{directory}/{binary.name} is not in "
                 f"the archive"
@@ -298,28 +310,44 @@ class _Binding:
         return dict(zip(self._field_names, self._values))
 
 
-def _reject_mismatch(
-    declaring_channel: dict[str, str],
+def _declarations(init: dict, types: dict) -> dict[str, dict[str, str]]:
+    """Each declared schema field name, mapped to the Channel that declared it.
+
+    Split by the direction the init line gives, because the direction decides
+    which side of the step the FMU variable of that name is touched on.
+    """
+    declared: dict[str, dict[str, str]] = {"in": {}, "out": {}}
+    for channel, declaration in init["channels"].items():
+        declared[declaration["direction"]].update(
+            dict.fromkeys(types[declaration["schema"]].field_names, channel)
+        )
+    return declared
+
+
+def _require_total_match(
+    declared: dict[str, str],
     variables: dict[str, int],
     causality: str,
     model_identifier: str,
 ) -> None:
-    """Reject any name on one side of the mapping and not on the other.
+    """Require every name on one side of the mapping to be on the other.
 
-    `declaring_channel` maps each schema field name to the Channel that
-    declared it, so both diagnostics can name the Channel and the FMU.
+    `declared` maps each schema field name to the Channel that declared it, so
+    both diagnostics can name the Channel and the FMU.
     """
-    for name, channel in declaring_channel.items():
+    for name, channel in declared.items():
         if name not in variables:
-            raise ParticipantFailure(
+            raise ConfigurationError(
                 f"Channel {channel!r} declares schema field {name!r}, which is "
                 f"no {causality} variable of FMU {model_identifier!r}"
             )
+    searched = ", ".join(sorted(repr(c) for c in set(declared.values())))
     for name in variables:
-        if name not in declaring_channel:
-            raise ParticipantFailure(
+        if name not in declared:
+            raise ConfigurationError(
                 f"FMU {model_identifier!r} declares {causality} variable "
-                f"{name!r}, which no Channel's schema declares as a field"
+                f"{name!r}, which is a schema field of no {causality}-direction "
+                f"Channel (searched: {searched or 'none'})"
             )
 
 
@@ -340,7 +368,7 @@ class FmuParticipant(StepParticipant):
             with zipfile.ZipFile(self._fmu_path) as archive:
                 archive.extractall(extracted)
         except (OSError, zipfile.BadZipFile) as error:
-            raise ParticipantFailure(
+            raise ConfigurationError(
                 f"cannot read FMU {str(self._fmu_path)!r}: {error}"
             ) from error
         description = ModelDescription.read(extracted)
@@ -356,20 +384,16 @@ class FmuParticipant(StepParticipant):
         names name the FMU variables on both sides, and the match is total in
         both directions — a name on one side and not the other is a mapping
         mistake, which is worth rejecting rather than carrying as a silently
-        zero-valued signal.
+        zero-valued variable.
         """
         types = schema.load(init["schemas"])
-        declaring_channel: dict[str, dict[str, str]] = {"in": {}, "out": {}}
-        for channel, declaration in init["channels"].items():
-            declaring_channel[declaration["direction"]].update(
-                dict.fromkeys(types[declaration["schema"]].field_names, channel)
-            )
-        _reject_mismatch(
-            declaring_channel["in"], description.inputs, "input",
+        declared = _declarations(init, types)
+        _require_total_match(
+            declared["in"], description.inputs, "input",
             description.model_identifier,
         )
-        _reject_mismatch(
-            declaring_channel["out"], description.outputs, "output",
+        _require_total_match(
+            declared["out"], description.outputs, "output",
             description.model_identifier,
         )
         for channel, declaration in init["channels"].items():

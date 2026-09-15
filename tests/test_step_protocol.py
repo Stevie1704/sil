@@ -3,6 +3,7 @@
 import json
 import struct
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -401,30 +402,39 @@ class TestCppStepCodec:
 
 
 class TestInitializationFailure:
-    """A participant that rejects its init line never reaches its first Step."""
+    """A participant that never reaches `ready`, and why it did not.
 
-    def test_a_failure_before_ready_is_a_configuration_error(
-        self, run_sil, tmp_path
-    ):
-        """Exit 2, because nothing about the Run has started yet.
+    A participant that rejects its init line answers `fail`, and the kernel
+    calls that a configuration error — a Manifest that names it this way is
+    wrong, not a Run that went wrong. A participant that merely breaks on the
+    way up says nothing, and stays an ordinary Run failure.
+    """
 
-        The participant answers `init` with `fail` instead of `ready`, which
-        says its contract cannot be honoured at all — a Manifest that names it
-        this way is wrong, not a Run that went wrong.
-        """
+    def manifest(self, tmp_path, cls: str) -> Path:
         m = Manifest(duration_ns=10_000_000)
         m.add_schemas(ARRAY_SCHEMAS)
         m.add_channel("payload", schema="big.Payload")
         m.add_process(
-            "rejector",
+            "starter",
             command=participant_command(
-                ROOT / "tests" / "participants" / "reject_at_init.py",
-                "RejectAtInit",
+                ROOT / "tests" / "participants" / "reject_at_init.py", cls
             ),
             step_period_ns=10_000_000,
             publishes=["payload"],
         )
-        proc = run_sil(m.write(tmp_path / "reject.json").path)
-        assert proc.returncode == 2
-        assert "rejector" in proc.stderr
+        return m.write(tmp_path / f"{cls}.json").path
+
+    def test_a_rejected_init_line_is_a_configuration_error(
+        self, run_sil, tmp_path
+    ):
+        proc = run_sil(self.manifest(tmp_path, "RejectAtInit"))
+        assert proc.returncode == 2, proc.stderr
+        assert "starter" in proc.stderr
         assert "refuses its init line" in proc.stderr
+
+    def test_any_other_failure_while_initializing_stays_a_run_failure(
+        self, run_sil, tmp_path
+    ):
+        proc = run_sil(self.manifest(tmp_path, "BreakAtInit"))
+        assert proc.returncode == 1, proc.stderr
+        assert "broke while initializing" in proc.stderr
