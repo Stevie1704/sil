@@ -250,7 +250,7 @@ void ProcessParticipant::write_clock_region(uint64_t now_ns) {
 // before fork
 // so the child maps the same file by path at load. A create/map failure is an
 // environment problem, not a bad manifest expressed in code — but the issue
-// requires it to surface as a startup config error (exit 2), so we throw
+// requires it to surface as a startup Manifest error (exit 2), so we throw
 // ManifestError, which main() maps to exit 2 (RunError would be exit 1).
 
 void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
@@ -285,7 +285,7 @@ void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
     const size_t stride = sizeof(sil_arena) + capacity;
 
     // The failure taxonomy is this call site's: an arena the environment cannot
-    // supply is a config error (exit 2). Arenas already mapped in this loop, and
+    // supply is a Manifest error (exit 2). Arenas already mapped in this loop, and
     // the clock region, are released by their own destructors as this throws.
     std::string error;
     Arena a;
@@ -442,7 +442,7 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
   send_line(init.dump());
   json ready = json::parse(read_line());
   const std::string op = ready.value("op", "");
-  // `fail` in answer to `init` is a config error (exit 2), unless the child
+  // `fail` in answer to `init` is a Manifest error (exit 2), unless the child
   // explicitly marks a failure from its own initialization work as a Run
   // failure (exit 1). The same line after a Step is always a Run failure.
   // See docs/step-protocol.md.

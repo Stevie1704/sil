@@ -34,7 +34,7 @@ One run = `sil-run manifest.json -o out.mcap`:
   arena slot counts alone — no run, no benchmark. It also names any route that
   declares no capacity, whose worst case is unbounded.
 
-Exit codes: `0` ok, `1` run/test failure, `2` config error, `3` determinism
+Exit codes: `0` ok, `1` run/test failure, `2` Manifest error, `3` determinism
 violation (sil-check).
 
 ## Virtual clock shim for opaque POSIX vECUs
@@ -132,7 +132,7 @@ and rebuild nothing.
 `transport` and `slots` are hashed (inline, the default, is omitted; absent
 `slots` means the legacy single-slot behavior). A run that cannot create or map
 its arena fails at
-**startup with exit 2** (a config/environment problem), distinct from a test
+**startup with exit 2** (a Manifest/environment problem), distinct from a test
 failure's exit 1. Native participants are unaffected — they stay on the existing
 pointer-based C ABI data plane and need no rebuild.
 
@@ -195,17 +195,17 @@ from sil import Manifest, SubscriberRoute
 
 m = Manifest(duration_ns=100_000_000)
 m.add_schemas({
-    "model.In": {"fields": [{"name": "u", "type": "f64"}]},
-    "model.Out": {"fields": [{"name": "y", "type": "f64"}]},
+    "fmu.In": {"fields": [{"name": "u", "type": "f64"}]},
+    "fmu.Out": {"fields": [{"name": "y", "type": "f64"}]},
 })
-m.add_channel("model.In", schema="model.In")
-m.add_channel("model.Out", schema="model.Out")
+m.add_channel("fmu.In", schema="fmu.In")
+m.add_channel("fmu.Out", schema="fmu.Out")
 m.add_process(
-    "model",
-    command=[sys.executable, "-m", "sil.fmi", "models/model.fmu"],
+    "fmu",
+    command=[sys.executable, "-m", "sil.fmi", "models/fmu.fmu"],
     step_period_ns=10_000_000,
-    subscribes=[SubscriberRoute("model.In", capacity=4)],
-    publishes=["model.Out"],
+    subscribes=[SubscriberRoute("fmu.In", capacity=4)],
+    publishes=["fmu.Out"],
 )
 ```
 

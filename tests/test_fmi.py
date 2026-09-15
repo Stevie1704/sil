@@ -30,7 +30,7 @@ from sil.fmi import (
     platform_directory,
 )
 from sil.manifest import Manifest, SubscriberRoute
-from sil.participant import ConfigurationError, Input
+from sil.participant import Input, ManifestError
 from sil.testing import run_simulation
 
 FIXTURES = ROOT / "tests" / "fixtures" / "reference-fmus" / "3.0"
@@ -264,6 +264,23 @@ class TestRunBoundary:
         assert "participant 'feedthrough'" in proc.stderr
         assert "fmi3Terminate returned Error" in proc.stderr
 
+    def test_an_fmu_termination_request_aborts_the_run(
+        self, run_sil, tmp_path, build_dir
+    ):
+        fmu = failing_fmu(tmp_path, build_dir, "TerminateFlag")
+        proc = run_sil(
+            fmu_manifest(fmu=fmu).write(
+                tmp_path / "failure-TerminateFlag.json"
+            ).path
+        )
+
+        assert proc.returncode == 1
+        assert "participant 'feedthrough' failed" in proc.stderr
+        assert (
+            "fmi3DoStep requested termination via terminateSimulation"
+            in proc.stderr
+        )
+
 
 class TestExtractionLifetime:
     """An imported FMU's extracted archive belongs to one Run only."""
@@ -375,14 +392,14 @@ class TestDescription:
         extracted = described(
             tmp_path, lambda text: text.replace('fmiVersion="3.0"', 'fmiVersion="2.0"')
         )
-        with pytest.raises(ConfigurationError, match="2.0"):
+        with pytest.raises(ManifestError, match="2.0"):
             ModelDescription.read(extracted)
 
     def test_a_description_without_a_co_simulation_interface_is_rejected(
         self, tmp_path
     ):
         extracted = described(tmp_path, without_co_simulation)
-        with pytest.raises(ConfigurationError, match="co-simulation"):
+        with pytest.raises(ManifestError, match="co-simulation"):
             ModelDescription.read(extracted)
 
     def test_causality_decides_which_variables_take_part_in_the_mapping(
@@ -438,7 +455,7 @@ class TestPlatformDirectory:
 class TestRejectedAtStartup:
     """Every way of pointing the importer at the wrong FMU, at the Run boundary.
 
-    Each of these is a configuration error (exit 2), distinct from a Run
+    Each of these is a Manifest error (exit 2), distinct from a Run
     failure (exit 1), and each is raised before the first Step is taken.
     """
 

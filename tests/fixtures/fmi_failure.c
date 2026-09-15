@@ -8,6 +8,9 @@
 #ifndef FMI_TERMINATE_STATUS
 #define FMI_TERMINATE_STATUS 0
 #endif
+#ifndef FMI_TERMINATE_FLAG
+#define FMI_TERMINATE_FLAG 0
+#endif
 
 typedef void (*fmi3_log_message)(void *, int, const char *, const char *);
 
@@ -60,7 +63,11 @@ int fmi3DoStep(void *instance, double communication_point, double step_size,
   (void)step_size;
   (void)no_set_fmu_state_prior_to_current_point;
   (void)event_handling_needed;
+#if FMI_TERMINATE_FLAG
+  *terminate_simulation = true;
+#else
   (void)terminate_simulation;
+#endif
   (void)early_return;
   (void)last_successful_time;
   return FMI_FAILURE_STATUS;

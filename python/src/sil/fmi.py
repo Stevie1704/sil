@@ -29,7 +29,7 @@ from xml.etree import ElementTree
 
 from sil import schema
 from sil.participant import (
-    ConfigurationError,
+    ManifestError,
     ParticipantFailure,
     StepParticipant,
     run,
@@ -142,18 +142,18 @@ class ModelDescription:
                 extracted / "modelDescription.xml"
             ).getroot()
         except (OSError, ElementTree.ParseError) as error:
-            raise ConfigurationError(
+            raise ManifestError(
                 f"FMU has no readable modelDescription.xml: {error}"
             ) from error
         version = root.get("fmiVersion")
         if version != _FMI_VERSION:
-            raise ConfigurationError(
+            raise ManifestError(
                 f"FMU declares fmiVersion {version!r}; this importer drives "
                 f"FMI {_FMI_VERSION} co-simulation only"
             )
         co_simulation = root.find("CoSimulation")
         if co_simulation is None:
-            raise ConfigurationError(
+            raise ManifestError(
                 "FMU declares no co-simulation interface; this importer "
                 "drives neither Model Exchange nor Scheduled Execution"
             )
@@ -174,7 +174,7 @@ class ModelDescription:
             / f"{self.model_identifier}{suffix}"
         )
         if not binary.exists():
-            raise ConfigurationError(
+            raise ManifestError(
                 f"FMU {self.model_identifier!r} carries no binary for "
                 f"{directory}: binaries/{directory}/{binary.name} is not in "
                 f"the archive"
@@ -268,6 +268,10 @@ class CoSimulation:
             ctypes.byref(event_needed), ctypes.byref(terminate),
             ctypes.byref(early_return), ctypes.byref(last_successful_time),
         )
+        if terminate.value:
+            raise ParticipantFailure(
+                "fmi3DoStep requested termination via terminateSimulation"
+            )
 
     def close(self) -> None:
         """Terminate the instance and free it, even if terminating failed.
@@ -295,7 +299,7 @@ class CoSimulation:
             raise ParticipantFailure(f"{name} returned {_status_name(status)}")
 
 
-class _Binding:
+class _ChannelBinding:
     """One Channel's schema fields bound to FMU variables of the same names.
 
     The value references and the value buffer are built once, at
@@ -345,14 +349,14 @@ def _require_total_match(
     """
     for name, channel in declared.items():
         if name not in variables:
-            raise ConfigurationError(
+            raise ManifestError(
                 f"Channel {channel!r} declares schema field {name!r}, which is "
                 f"no {causality} variable of FMU {model_identifier!r}"
             )
     searched = ", ".join(sorted(repr(c) for c in set(declared.values())))
     for name in variables:
         if name not in declared:
-            raise ConfigurationError(
+            raise ManifestError(
                 f"FMU {model_identifier!r} declares {causality} variable "
                 f"{name!r}, which is a schema field of no {causality}-direction "
                 f"Channel (searched: {searched or 'none'})"
@@ -367,8 +371,8 @@ class FmuParticipant(StepParticipant):
         self._participant_name = None
         self._extraction = None
         self._fmu = None
-        self._inputs: dict[str, _Binding] = {}
-        self._outputs: dict[str, _Binding] = {}
+        self._inputs: dict[str, _ChannelBinding] = {}
+        self._outputs: dict[str, _ChannelBinding] = {}
 
     def on_init(self, init: dict) -> None:
         self._participant_name = init["name"]
@@ -383,7 +387,7 @@ class FmuParticipant(StepParticipant):
             with zipfile.ZipFile(self._fmu_path) as archive:
                 archive.extractall(extracted)
         except (OSError, zipfile.BadZipFile) as error:
-            raise ConfigurationError(
+            raise ManifestError(
                 f"cannot read FMU {str(self._fmu_path)!r}: {error}"
             ) from error
         description = ModelDescription.read(extracted)
@@ -414,7 +418,7 @@ class FmuParticipant(StepParticipant):
         for channel, declaration in init["channels"].items():
             incoming = declaration["direction"] == "in"
             bindings = self._inputs if incoming else self._outputs
-            bindings[channel] = _Binding(
+            bindings[channel] = _ChannelBinding(
                 types[declaration["schema"]].field_names,
                 description.inputs if incoming else description.outputs,
             )

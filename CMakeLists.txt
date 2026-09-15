@@ -152,6 +152,15 @@ set_target_properties(fmi_failure_terminate PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
   LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
+add_library(fmi_failure_terminate_flag SHARED tests/fixtures/fmi_failure.c)
+target_compile_definitions(fmi_failure_terminate_flag PRIVATE
+  FMI_FAILURE_STATUS=0 FMI_TERMINATE_FLAG=1)
+set_target_properties(fmi_failure_terminate_flag PROPERTIES
+  PREFIX ""
+  OUTPUT_NAME "FailingTerminateFlag"
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
 # --- bench participants (routing baseline fixtures, issue #61) ---
 # Payload size, publish period, and burst size come from manifest config, so
 # the whole baseline matrix is driven without rebuilding.

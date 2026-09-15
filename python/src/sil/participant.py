@@ -181,14 +181,19 @@ class ParticipantFailure(Exception):
     """Raised by a participant to abort the whole run."""
 
 
-class ConfigurationError(Exception):
+class ManifestError(Exception):
     """Raised by a participant whose init line cannot be honoured at all.
 
     It is answered with `fail` instead of `ready`, which the kernel treats as a
-    configuration error rather than a Run failure — see docs/step-protocol.md.
+    Manifest error rather than a Run failure — see docs/step-protocol.md.
     Every other exception during initialization stays a Run failure, so a
     participant that breaks on the way up is not reported as a bad Manifest.
     """
+
+
+# Kept for participants written against the original endpoint API. New code
+# should raise ManifestError so the exception name follows the glossary.
+ConfigurationError = ManifestError
 
 
 @dataclass(frozen=True)
@@ -252,10 +257,10 @@ def run(participant: StepParticipant) -> None:
                 )
                 try:
                     participant.on_init(msg)
-                except ConfigurationError as e:
+                except ManifestError as e:
                     # Only a deliberate rejection answers `fail`: that line
                     # before `ready` is what makes the kernel call this a
-                    # configuration error. Returning ends the loop — no step
+                    # Manifest error. Returning ends the loop — no step
                     # can follow an initialization that never finished.
                     send({"op": "fail", "reason": _reason(e)})
                     return
@@ -318,7 +323,7 @@ if __name__ == "__main__":
     # `python -m sil.participant` runs this file as `__main__`, so the classes
     # defined here are not the ones a participant gets from `import
     # sil.participant`. Delegating to the imported module gives both sides the
-    # same ConfigurationError, which the init handshake compares by identity.
+    # same ManifestError, which the init handshake compares by identity.
     from sil.participant import main as _main
 
     _main()

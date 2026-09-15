@@ -44,14 +44,14 @@ contract, it may mark that failure as a Run failure:
 
 A child that cannot honour the contract the `init` line describes answers
 `fail` instead of `ready` and exits. Without `failure: "run"`, the kernel
-treats that as a configuration failure and exits with status 2 before any
+treats that as a Manifest error and exits with status 2 before any
 participant is stepped, because a Manifest that names a participant it cannot
 initialize is wrong, rather than a Run that went wrong. A participant that
 accepts the contract but then reports its own initialization failure with
-`failure: "run"` exits with status 1. This lets an imported model preserve an
+`failure: "run"` exits with status 1. This lets an imported FMU preserve an
 FMI diagnostic instead of turning it into a generic child-exited message.
 
-Only that deliberate line is a configuration failure. Any other answer to
+Only that deliberate line is a Manifest error. Any other answer to
 `init`, and a child that dies while initializing without answering at all,
 stays a run failure — a participant that breaks on the way up is not a bad
 Manifest.
@@ -91,8 +91,8 @@ or:
 `out` preserves the participant's output order. Each output has `ch` and
 exactly one of `data` or `shm_seq`; `shm_slot` accompanies `shm_seq` under
 protocol 2. The representation present on the line is authoritative. A child
-failure at Step time is a run failure, not a manifest failure; only a `fail`
-answering `init` is a configuration failure.
+failure at Step time is a run failure, not a Manifest error; only a `fail`
+answering `init` is a Manifest error.
 
 After the run, the kernel sends:
 
