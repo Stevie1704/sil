@@ -18,9 +18,7 @@ Float64 variables only.
 
 from __future__ import annotations
 
-import csv
 import ctypes
-import io
 import platform
 import sys
 import tempfile
@@ -55,16 +53,6 @@ _FMI_FIRST_FAILING_STATUS = 2
 # library suffix that goes with it.
 _MACHINES = {"arm64": "aarch64", "AMD64": "x86_64"}
 _SYSTEMS = {"Darwin": ("darwin", ".dylib"), "Linux": ("linux", ".so")}
-
-_DESCRIPTION = "modelDescription.xml"
-
-# The FMI-LS-REF layered standard's reserved directory inside an FMU. Its
-# manifest declares the files the FMU carries under that standard, each with
-# a role; the one with the `result` role is the vendor's own output of the
-# model's default experiment.
-_LS_REF_DIRECTORY = "extra/org.fmi-standard.fmi-ls-ref"
-_LS_REF_MANIFEST = f"{_LS_REF_DIRECTORY}/fmi-ls-manifest.xml"
-_RESULT_ROLE = "result"
 
 _LOG_CALLBACK = ctypes.CFUNCTYPE(
     None, ctypes.c_void_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_char_p
@@ -150,7 +138,7 @@ class ModelDescription:
         """
         try:
             root = ElementTree.parse(
-                extracted / _DESCRIPTION
+                extracted / "modelDescription.xml"
             ).getroot()
         except (OSError, ElementTree.ParseError) as error:
             raise ConfigurationError(
@@ -191,84 +179,6 @@ class ModelDescription:
                 f"the archive"
             )
         return binary
-
-
-@dataclass(frozen=True)
-class ReferenceResult:
-    """The trajectory an FMU ships for its own default experiment.
-
-    `rows` is the reference CSV in file order, each row mapping a column name
-    to its value, the independent variable `time` included. The first row is
-    the post-initialization value, read after initialization and before the
-    first step, so an importer that steps first produces its `k`-th value
-    for row `k + 1`.
-
-    `step_size` is the default experiment's declared step, in seconds. The
-    trajectory is only valid at that step: a different step is a different
-    experiment, with no reference to check against.
-    """
-
-    step_size: float
-    rows: list[dict[str, float]]
-
-
-def _result_source(ls_ref_manifest: bytes, fmu_path: Path) -> str:
-    """The related file the FMI-LS-REF manifest gives the `result` role."""
-    for related in ElementTree.fromstring(ls_ref_manifest).findall("Related"):
-        if related.get("role") == _RESULT_ROLE and related.get("source"):
-            return related.get("source")
-    raise ConfigurationError(
-        f"FMU {str(fmu_path)!r} declares no FMI-LS-REF related file naming a "
-        f"source for the {_RESULT_ROLE!r} role"
-    )
-
-
-def _default_step_size(description: bytes, fmu_path: Path) -> float:
-    """The step the default experiment declares, in seconds."""
-    experiment = ElementTree.fromstring(description).find("DefaultExperiment")
-    step_size = None if experiment is None else experiment.get("stepSize")
-    if step_size is None:
-        raise ConfigurationError(
-            f"FMU {str(fmu_path)!r} declares no default experiment step size, "
-            f"so its reference result names no step to reproduce it at"
-        )
-    return float(step_size)
-
-
-def _rows(result: bytes) -> list[dict[str, float]]:
-    """The reference CSV, one dict per row, at the precision it was written."""
-    return [
-        {name: float(value) for name, value in row.items()}
-        for row in csv.DictReader(io.StringIO(result.decode()))
-    ]
-
-
-def reference_result(fmu_path: Path) -> ReferenceResult:
-    """Read the reference trajectory the FMU carries under FMI-LS-REF.
-
-    Everything comes out of the archive: the layered standard's manifest names
-    the related file holding the result, so nothing has to be vendored beside
-    the FMU and kept in sync with it.
-
-    Every way the archive can disappoint — absent, not an archive, missing a
-    member, or carrying one that does not parse — is answered with the same
-    configuration error the rest of this module raises, because all of them
-    say the same thing: this FMU carries no reference result to check against.
-    """
-    try:
-        with zipfile.ZipFile(fmu_path) as archive:
-            source = _result_source(archive.read(_LS_REF_MANIFEST), fmu_path)
-            rows = _rows(archive.read(f"{_LS_REF_DIRECTORY}/{source}"))
-            step_size = _default_step_size(
-                archive.read(_DESCRIPTION), fmu_path
-            )
-    except (OSError, zipfile.BadZipFile, KeyError, ElementTree.ParseError,
-            UnicodeDecodeError, ValueError) as error:
-        raise ConfigurationError(
-            f"cannot read the reference result of FMU {str(fmu_path)!r}: "
-            f"{error}"
-        ) from error
-    return ReferenceResult(step_size=step_size, rows=rows)
 
 
 def _load(binary: Path) -> ctypes.CDLL:

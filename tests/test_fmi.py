@@ -8,12 +8,16 @@ stepped, and its output variables are published on the Channel it publishes.
 """
 
 import copy
+import csv
+import io
 import itertools
 import math
 import subprocess
 import sys
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
+from xml.etree import ElementTree
 
 import pytest
 from conftest import COMPAT_ROUTE_CAPACITY, ROOT
@@ -23,7 +27,6 @@ from sil.fmi import (
     FmuParticipant,
     ModelDescription,
     platform_directory,
-    reference_result,
 )
 from sil.manifest import Manifest, SubscriberRoute
 from sil.participant import ConfigurationError, Input
@@ -36,7 +39,9 @@ BOUNCING_BALL = FIXTURES / "BouncingBall.fmu"
 # The FMI-LS-REF layered standard's directory inside an FMU, and the reference
 # CSV `BouncingBall.fmu` declares there.
 LS_REF = "extra/org.fmi-standard.fmi-ls-ref"
+LS_REF_MANIFEST = f"{LS_REF}/fmi-ls-manifest.xml"
 BALL_REFERENCE_CSV = "BouncingBall_out.csv"
+RESULT_ROLE = "result"
 
 STEP_PERIOD_NS = 10_000_000
 DURATION_NS = 100_000_000
@@ -432,6 +437,87 @@ class TestRejectedAtStartup:
         assert f"cannot read FMU '{fmu}'" in stderr
 
 
+@dataclass(frozen=True)
+class ReferenceResult:
+    """The trajectory an FMU ships for its own default experiment.
+
+    `rows` is the reference CSV in file order, each row mapping a column name
+    to its value, the independent variable `time` included. The first row is
+    the post-initialization value, read after initialization and before the
+    first step, so an importer that steps first produces its `k`-th value
+    for row `k + 1`.
+
+    `step_size` is the default experiment's declared step, in seconds. The
+    trajectory is only valid at that step: a different step is a different
+    experiment, with no reference to check against.
+    """
+
+    step_size: float
+    rows: list[dict[str, float]]
+
+
+def _result_source(ls_ref_manifest: bytes, fmu_path: Path) -> str:
+    """The related file the FMI-LS-REF manifest gives the `result` role."""
+    for related in ElementTree.fromstring(ls_ref_manifest).findall("Related"):
+        if related.get("role") == RESULT_ROLE and related.get("source"):
+            return related.get("source")
+    raise AssertionError(
+        f"FMU {str(fmu_path)!r} declares no FMI-LS-REF related file naming a "
+        f"source for the {RESULT_ROLE!r} role"
+    )
+
+
+def _default_step_size(description: bytes, fmu_path: Path) -> float:
+    """The step the default experiment declares, in seconds."""
+    experiment = ElementTree.fromstring(description).find("DefaultExperiment")
+    step_size = None if experiment is None else experiment.get("stepSize")
+    if step_size is None:
+        raise AssertionError(
+            f"FMU {str(fmu_path)!r} declares no default experiment step size, "
+            f"so its reference result names no step to reproduce it at"
+        )
+    return float(step_size)
+
+
+def _reference_rows(result: bytes) -> list[dict[str, float]]:
+    """The reference CSV, one dict per row, at the precision it was written."""
+    return [
+        {name: float(value) for name, value in row.items()}
+        for row in csv.DictReader(io.StringIO(result.decode()))
+    ]
+
+
+def reference_result(fmu_path: Path) -> ReferenceResult:
+    """Read the reference trajectory the FMU carries under FMI-LS-REF.
+
+    Everything comes out of the archive: the layered standard's manifest names
+    the related file holding the result, so nothing has to be vendored beside
+    the FMU and kept in sync with it.
+
+    This reads an FMU but is not part of driving one, so it lives with the
+    checks that need it rather than in `sil.fmi`. A Run never asks an FMU what
+    it should have computed; only a test does.
+
+    Every way the archive can disappoint — absent, not an archive, missing a
+    member, or carrying one that does not parse — fails loudly here, because
+    the alternative is a comparison that comes back empty and passes.
+    """
+    try:
+        with zipfile.ZipFile(fmu_path) as archive:
+            source = _result_source(archive.read(LS_REF_MANIFEST), fmu_path)
+            rows = _reference_rows(archive.read(f"{LS_REF}/{source}"))
+            step_size = _default_step_size(
+                archive.read("modelDescription.xml"), fmu_path
+            )
+    except (OSError, zipfile.BadZipFile, KeyError, ElementTree.ParseError,
+            UnicodeDecodeError, ValueError) as error:
+        raise AssertionError(
+            f"cannot read the reference result of FMU {str(fmu_path)!r}: "
+            f"{error}"
+        ) from error
+    return ReferenceResult(step_size=step_size, rows=rows)
+
+
 def ball_with_reference(tmp_path, name: str, *,
                         csv_name: str = BALL_REFERENCE_CSV,
                         ls_ref_xml: str | None = None) -> Path:
@@ -465,6 +551,10 @@ class TestReferenceResultDiscovery:
     declaring a related CSV with the `result` role, and the CSV itself. That
     is the whole source — no side file and no vendored copy to keep in sync
     with the archive it came from.
+
+    An archive that cannot give up its trajectory has to say so. Coming back
+    with no rows would leave the comparison below with nothing to compare and
+    passing on an empty answer.
     """
 
     def test_the_layered_standard_manifest_names_the_file_that_is_read(
@@ -476,17 +566,17 @@ class TestReferenceResultDiscovery:
         )
         assert reference_result(renamed).rows == reference_result(BOUNCING_BALL).rows
 
-    def test_an_fmu_carrying_no_reference_result_is_rejected(self, tmp_path):
+    def test_an_fmu_carrying_no_reference_result_cannot_be_read(self, tmp_path):
         stripped = fmu_variant(
             tmp_path,
             "no-reference",
             source_fmu=BOUNCING_BALL,
             drop=lambda member: member.startswith(f"{LS_REF}/"),
         )
-        with pytest.raises(ConfigurationError, match=LS_REF):
+        with pytest.raises(AssertionError, match=LS_REF):
             reference_result(stripped)
 
-    def test_an_fmu_declaring_no_result_role_is_rejected(self, tmp_path):
+    def test_an_fmu_declaring_no_result_role_cannot_be_read(self, tmp_path):
         """A related file of another role is not a trajectory to check against."""
         roleless = ball_with_reference(
             tmp_path,
@@ -496,10 +586,10 @@ class TestReferenceResultDiscovery:
                 f'source="{BALL_REFERENCE_CSV}" role="input"/></fmiReferences>'
             ),
         )
-        with pytest.raises(ConfigurationError, match="result"):
+        with pytest.raises(AssertionError, match="result"):
             reference_result(roleless)
 
-    def test_an_fmu_declaring_no_default_step_size_is_rejected(self, tmp_path):
+    def test_an_fmu_declaring_no_default_step_size_cannot_be_read(self, tmp_path):
         """The trajectory is only valid at the step it was produced at."""
         stepless = fmu_variant(
             tmp_path,
@@ -507,7 +597,7 @@ class TestReferenceResultDiscovery:
             source_fmu=BOUNCING_BALL,
             rewrite=lambda text: text.replace(' stepSize="1e-2"', ""),
         )
-        with pytest.raises(ConfigurationError, match="step size"):
+        with pytest.raises(AssertionError, match="step size"):
             reference_result(stepless)
 
     def test_the_declared_step_size_comes_back_in_seconds(self):
