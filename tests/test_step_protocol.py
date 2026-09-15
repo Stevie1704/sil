@@ -13,6 +13,7 @@ from sil.participant import (
     _Arena,
     _StepCodec,
 )
+from sil.testing import participant_command
 
 from conftest import COMPAT_ROUTE_CAPACITY, ROOT
 from test_run_boundary import ARRAY_SCHEMAS, ARRAY_TYPES, read_mcap
@@ -397,3 +398,33 @@ class TestCppStepCodec:
         proc = run_sil(m.write(tmp_path / f"{mode}.json").path)
         assert proc.returncode == 1
         assert diagnostic in proc.stderr
+
+
+class TestInitializationFailure:
+    """A participant that rejects its init line never reaches its first Step."""
+
+    def test_a_failure_before_ready_is_a_configuration_error(
+        self, run_sil, tmp_path
+    ):
+        """Exit 2, because nothing about the Run has started yet.
+
+        The participant answers `init` with `fail` instead of `ready`, which
+        says its contract cannot be honoured at all — a Manifest that names it
+        this way is wrong, not a Run that went wrong.
+        """
+        m = Manifest(duration_ns=10_000_000)
+        m.add_schemas(ARRAY_SCHEMAS)
+        m.add_channel("payload", schema="big.Payload")
+        m.add_process(
+            "rejector",
+            command=participant_command(
+                ROOT / "tests" / "participants" / "reject_at_init.py",
+                "RejectAtInit",
+            ),
+            step_period_ns=10_000_000,
+            publishes=["payload"],
+        )
+        proc = run_sil(m.write(tmp_path / "reject.json").path)
+        assert proc.returncode == 2
+        assert "rejector" in proc.stderr
+        assert "refuses its init line" in proc.stderr

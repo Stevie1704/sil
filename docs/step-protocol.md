@@ -29,6 +29,18 @@ The child acknowledges initialization:
 {"op":"ready","protocol":2}
 ```
 
+Or it rejects initialization:
+
+```json
+{"op":"fail","reason":"..."}
+```
+
+A child that cannot honour the contract the `init` line describes answers
+`fail` instead of `ready` and exits. The kernel treats that as a configuration
+failure and exits with status 2 before any participant is stepped, because a
+Manifest that names a participant it cannot initialize is wrong, rather than a
+Run that went wrong. Any other answer to `init` is a run failure.
+
 The child echoes the highest offered protocol it supports. An absent
 `ready.protocol` means 1. If a child answers 1 (or omits the field) to an offer
 of 2, the kernel uses only slot zero and applies the established inline fallback
@@ -64,7 +76,8 @@ or:
 `out` preserves the participant's output order. Each output has `ch` and
 exactly one of `data` or `shm_seq`; `shm_slot` accompanies `shm_seq` under
 protocol 2. The representation present on the line is authoritative. A child
-failure is a run failure, not a manifest failure.
+failure at Step time is a run failure, not a manifest failure; only a `fail`
+answering `init` is a configuration failure.
 
 After the run, the kernel sends:
 

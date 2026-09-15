@@ -198,6 +198,11 @@ class StepParticipant:
         return None
 
 
+def _reason(error: Exception) -> str:
+    """The one-line diagnostic a `fail` line carries for an exception."""
+    return "".join(traceback.format_exception_only(error)).strip()
+
+
 def run(participant: StepParticipant) -> None:
     stdin = sys.stdin
     stdout = sys.stdout
@@ -235,7 +240,16 @@ def run(participant: StepParticipant) -> None:
                     types_by_channel, arenas,
                     indexed_slots=protocol >= _STEP_PROTOCOL_INDEXED_SLOTS,
                 )
-                participant.on_init(msg)
+                try:
+                    participant.on_init(msg)
+                except Exception as e:  # noqa: BLE001 — see docs/step-protocol.md
+                    # Answering init with `fail` instead of `ready` says the
+                    # contract cannot be honoured at all, which the kernel
+                    # treats as a configuration error. Returning ends the run
+                    # loop: no step can follow a participant that never
+                    # initialized.
+                    send({"op": "fail", "reason": _reason(e)})
+                    return
                 ready = {"op": "ready"}
                 if "protocol" in msg:
                     ready["protocol"] = protocol
@@ -251,8 +265,7 @@ def run(participant: StepParticipant) -> None:
                         "out": codec.encode_outputs(outputs),
                     })
                 except Exception as e:  # noqa: BLE001 — any error must abort the run
-                    reason = "".join(traceback.format_exception_only(e)).strip()
-                    send({"op": "fail", "reason": reason})
+                    send({"op": "fail", "reason": _reason(e)})
                     continue
             elif op == "shutdown":
                 return
