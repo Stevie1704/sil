@@ -28,9 +28,12 @@ class ProcessParticipant {
   ProcessParticipant &operator=(const ProcessParticipant &) = delete;
 
   void step(uint64_t now_ns);
-  void shutdown(bool report_failure = true);
+  void shutdown();
 
  private:
+  // Reaps the child and releases its regions, and answers its wait status.
+  // `shutdown` turns a bad status into a RunError; the destructor cannot.
+  int terminate_child();
   void send_line(const std::string &line);
   std::string read_line();
 

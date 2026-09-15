@@ -144,7 +144,7 @@ None open.
 - **Project name:** sil.
 - **Recording-format seam (#13, #24):** the container is chosen from the output
   extension behind a format-neutral sink (write side) and reader (read side);
-  MCAP is the only v1 format, an unrecognized extension is a config error
+  MCAP is the only v1 format, an unrecognized extension is a Manifest error
   (exit 2) that rejects before any participant starts. **A recording format
   must preserve, or explicitly store, the total publish order** — for messages
   sharing a timestamp the replayer's tie-break is the recording's stored order,
@@ -287,7 +287,7 @@ None open.
   declarations alike, and names the conflicting publisher. A repeated channel
   within one declaration is rejected at load, for every participant type: it
   would otherwise silently double a participant's delivery or production. At
-  runtime, subscribing to an undeclared input is a config error (exit 2) and
+  runtime, subscribing to an undeclared input is a Manifest error (exit 2) and
   publishing an undeclared output aborts the run (exit 1); both diagnostics
   name the participant, the channel, and the declared direction. Live-publisher
   cardinality was left untouched here and decided separately in #64 below,
@@ -305,7 +305,7 @@ None open.
   next Activation is unrepresentable, or falls at or beyond the half-open Run
   Duration, is complete; its `next_ns` stays at the Activation just executed,
   so Slot selection never sees an earlier instant than the one it left. A
-  period of zero remains a configuration error at registration.
+  period of zero remains a Manifest error at registration.
   **Delivery (#8):** a Message whose post-Latency visibility is
   unrepresentable is never delivered. A visibility at or beyond the Run
   Duration needs no separate test — a Slot only opens for an Activation or a

@@ -47,8 +47,9 @@ _FMI_VERSION = "3.0"
 
 # fmi3Status. Only OK means the call succeeded; every other status aborts the
 # Run before the importer can continue with a possibly invalid FMU state.
-_FMI_STATUS_NAMES = ("OK", "Warning", "Discard", "Error", "Fatal", "Pending")
+_FMI_STATUS_NAMES = ("OK", "Warning", "Discard", "Error", "Fatal")
 _FMI_SUCCESS_STATUS = 0
+_FMI_FATAL_STATUS = 4
 
 # The FMU's `binaries/` subdirectory for the running platform, and the shared
 # library suffix that goes with it.
@@ -104,6 +105,12 @@ def platform_directory() -> str:
     machine = _MACHINES.get(machine, machine)
     system, _ = _SYSTEMS[platform.system()]
     return f"{machine}-{system}"
+
+
+def library_suffix() -> str:
+    """The shared-library suffix this platform's FMU binary carries."""
+    _, suffix = _SYSTEMS[platform.system()]
+    return suffix
 
 
 def _by_causality(variables, causality: str) -> dict[str, int]:
@@ -168,10 +175,9 @@ class ModelDescription:
     def binary(self, extracted: Path) -> Path:
         """The shared library this platform loads out of the FMU."""
         directory = platform_directory()
-        _, suffix = _SYSTEMS[platform.system()]
         binary = (
             extracted / "binaries" / directory
-            / f"{self.model_identifier}{suffix}"
+            / f"{self.model_identifier}{library_suffix()}"
         )
         if not binary.exists():
             raise ManifestError(
@@ -295,8 +301,15 @@ class CoSimulation:
         that was called.
         """
         status = getattr(self._library, name)(self._instance, *arguments)
-        if status != _FMI_SUCCESS_STATUS:
-            raise ParticipantFailure(f"{name} returned {_status_name(status)}")
+        if status == _FMI_SUCCESS_STATUS:
+            return
+        if status == _FMI_FATAL_STATUS:
+            # FMI 3.0 allows no further call on an instance that answered
+            # Fatal, terminating and freeing it included. Dropping the handle
+            # here is what stops `close` from calling into a dead FMU; the
+            # instance's memory goes when this process does.
+            self._instance = None
+        raise ParticipantFailure(f"{name} returned {_status_name(status)}")
 
 
 class _ChannelBinding:
@@ -367,15 +380,15 @@ class FmuParticipant(StepParticipant):
     """A process participant whose behavior is an imported FMU's."""
 
     def __init__(self, fmu_path: Path):
+        self.name = ""  # the init line's, for the one diagnostic the kernel misses
         self._fmu_path = fmu_path
-        self._participant_name = None
         self._extraction = None
         self._fmu = None
         self._inputs: dict[str, _ChannelBinding] = {}
         self._outputs: dict[str, _ChannelBinding] = {}
 
     def on_init(self, init: dict) -> None:
-        self._participant_name = init["name"]
+        self.name = init["name"]
         # The extracted archive belongs to the Run, not to the machine-wide
         # temporary directory. The process participant inherits the runner's
         # working directory, which is the Run's working directory here.
@@ -435,21 +448,32 @@ class FmuParticipant(StepParticipant):
         ]
 
     def close(self) -> None:
-        """Terminate and free the instance, and drop the extracted FMU."""
+        """Terminate and free the instance, and drop the extracted FMU.
+
+        The diagnostic stays unframed: on every path the kernel can see, the
+        kernel is what names the participant.
+        """
         fmu, extraction = self._fmu, self._extraction
         self._fmu = None
         self._extraction = None
         try:
             if fmu is not None:
-                try:
-                    fmu.close()
-                except ParticipantFailure as error:
-                    raise ParticipantFailure(
-                        f"participant {self._participant_name!r} failed: {error}"
-                    ) from error
+                fmu.close()
         finally:
             if extraction is not None:
                 extraction.cleanup()
+
+
+def _close_after_failure(participant: FmuParticipant) -> None:
+    """Drop the FMU on the way out of a failure that is already reported.
+
+    Terminating an FMU that has already failed may fail in turn; that second
+    diagnostic must not replace the first one.
+    """
+    try:
+        participant.close()
+    except ParticipantFailure:
+        pass
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -459,8 +483,18 @@ def main(argv: list[str] | None = None) -> None:
     participant = FmuParticipant(Path(args[0]))
     try:
         run(participant)
-    finally:
+    except BaseException:
+        _close_after_failure(participant)
+        raise
+    try:
         participant.close()
+    except ParticipantFailure as error:
+        # The step protocol is over by the time the FMU is terminated, so this
+        # failure cannot travel as a `fail` line and the kernel sees only a
+        # nonzero exit. Name the participant, the call and the status here.
+        raise SystemExit(
+            f"participant {participant.name!r} failed: {error}"
+        ) from error
 
 
 if __name__ == "__main__":

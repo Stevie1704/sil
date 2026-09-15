@@ -2,8 +2,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifndef FMI_FAILURE_STATUS
-#define FMI_FAILURE_STATUS 2
+// Every call answers fmi3OK unless this build was told otherwise, so one
+// variant fails in exactly one place. See add_failing_fmu in CMakeLists.txt.
+#ifndef FMI_INIT_STATUS
+#define FMI_INIT_STATUS 0
+#endif
+#ifndef FMI_STEP_STATUS
+#define FMI_STEP_STATUS 0
 #endif
 #ifndef FMI_TERMINATE_STATUS
 #define FMI_TERMINATE_STATUS 0
@@ -51,7 +56,7 @@ int fmi3EnterInitializationMode(void *instance, bool tolerance_defined,
 
 int fmi3ExitInitializationMode(void *instance) {
   (void)instance;
-  return 0;
+  return FMI_INIT_STATUS;
 }
 
 int fmi3DoStep(void *instance, double communication_point, double step_size,
@@ -70,7 +75,7 @@ int fmi3DoStep(void *instance, double communication_point, double step_size,
 #endif
   (void)early_return;
   (void)last_successful_time;
-  return FMI_FAILURE_STATUS;
+  return FMI_STEP_STATUS;
 }
 
 int fmi3GetFloat64(void *instance, const uint32_t *value_references,

@@ -165,7 +165,7 @@ void update_route(const std::string &channel, const std::string &subscriber,
 void record_exit_code(int code) noexcept {
   try {
     // Also the point where the report's own object is created for a Run that
-    // counted nothing, so a config error still produces a report that says so.
+    // counted nothing, so a Manifest error still produces a report that says so.
     totals().exit_code = code;
   } catch (...) {
     // Instrumentation must never replace or abort the Run it observes.

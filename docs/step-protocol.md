@@ -100,7 +100,12 @@ After the run, the kernel sends:
 {"op":"shutdown"}
 ```
 
-The child exits without another protocol response.
+The child exits without another protocol response. Its exit status is still
+read: a child that exits nonzero, or dies on a signal, fails the Run with
+status 1 even though every Step succeeded, because work a participant only
+finishes at shutdown can fail there. A child that does not exit on its own is
+sent SIGTERM and then, if it still does not exit, SIGKILL — so a participant
+holding run-scoped state of its own gets the chance to release it.
 
 ## Shared-memory payloads
 
@@ -134,7 +139,7 @@ written for this Message from stale contents left by an earlier Step.
 Inputs arrive already merged in global publish order; transport handling never
 reorders them.
 
-Arena creation or mapping failure is a configuration/environment failure and
+Arena creation or mapping failure is a Manifest/environment error and
 exits with status 2 before the participant starts. A stale `shm_seq`, an arena
 length beyond capacity, or a payload beyond capacity is a runtime failure and
 exits with status 1. The diagnostics identify the participant and, where

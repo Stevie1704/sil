@@ -13,6 +13,7 @@ from __future__ import annotations
 import base64
 import json
 import mmap
+import signal
 import struct
 import sys
 import traceback
@@ -191,11 +192,6 @@ class ManifestError(Exception):
     """
 
 
-# Kept for participants written against the original endpoint API. New code
-# should raise ManifestError so the exception name follows the glossary.
-ConfigurationError = ManifestError
-
-
 @dataclass(frozen=True)
 class Input:
     channel: str
@@ -218,7 +214,19 @@ def _reason(error: Exception) -> str:
     return "".join(traceback.format_exception_only(error)).strip()
 
 
+def _unwind_on_sigterm(signum, frame) -> None:
+    """Turn the kernel's SIGTERM into an unwind, so `finally` blocks run.
+
+    A participant that stops answering the step protocol is asked with SIGTERM
+    before it is killed (see ProcessParticipant::terminate_child). Python's
+    default handler would end the process without running the cleanup a
+    participant holding run-scoped state depends on.
+    """
+    raise SystemExit(f"participant terminated by signal {signum}")
+
+
 def run(participant: StepParticipant) -> None:
+    signal.signal(signal.SIGTERM, _unwind_on_sigterm)
     stdin = sys.stdin
     stdout = sys.stdout
     types_by_channel: dict[str, schema.MessageType] = {}

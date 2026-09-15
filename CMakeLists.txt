@@ -117,49 +117,35 @@ add_executable(sil_clock_probe shim/clock_probe.c)
 target_include_directories(sil_clock_probe PRIVATE include)
 
 # A deliberately failing FMI shared library backs the importer run-failure
-# test. The Python test packages it with the Reference FMU description so the
+# tests. The Python test packages it with the Reference FMU description so the
 # regression exercises the same archive extraction and ctypes boundary as a
-# real imported FMU.
-foreach(fmi_failure_status IN ITEMS Warning Discard Error Fatal)
-  add_library(fmi_failure_${fmi_failure_status} SHARED
-    tests/fixtures/fmi_failure.c)
-  if(fmi_failure_status STREQUAL "Warning")
-    target_compile_definitions(fmi_failure_${fmi_failure_status} PRIVATE
-      FMI_FAILURE_STATUS=1)
-  elseif(fmi_failure_status STREQUAL "Discard")
-    target_compile_definitions(fmi_failure_${fmi_failure_status} PRIVATE
-      FMI_FAILURE_STATUS=2)
-  elseif(fmi_failure_status STREQUAL "Error")
-    target_compile_definitions(fmi_failure_${fmi_failure_status} PRIVATE
-      FMI_FAILURE_STATUS=3)
-  else()
-    target_compile_definitions(fmi_failure_${fmi_failure_status} PRIVATE
-      FMI_FAILURE_STATUS=4)
-  endif()
-  set_target_properties(fmi_failure_${fmi_failure_status} PROPERTIES
+# real imported FMU. Every variant is the same source built once more, with
+# the call that fails and the status it answers chosen by the preprocessor.
+function(add_failing_fmu name)
+  set(target fmi_failure_${name})
+  add_library(${target} SHARED tests/fixtures/fmi_failure.c)
+  target_compile_definitions(${target} PRIVATE ${ARGN})
+  set_target_properties(${target} PROPERTIES
     PREFIX ""
-    OUTPUT_NAME "Failing${fmi_failure_status}"
+    OUTPUT_NAME "Failing${name}"
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endfunction()
+
+# The fmi3Status enum, so a variant is named by the status it answers rather
+# than by its integer.
+set(fmi_status_names OK Warning Discard Error Fatal)
+foreach(fmi_step_status IN ITEMS Warning Discard Error Fatal)
+  list(FIND fmi_status_names ${fmi_step_status} fmi_status_value)
+  add_failing_fmu(${fmi_step_status} FMI_STEP_STATUS=${fmi_status_value})
 endforeach()
 
-add_library(fmi_failure_terminate SHARED tests/fixtures/fmi_failure.c)
-target_compile_definitions(fmi_failure_terminate PRIVATE
-  FMI_FAILURE_STATUS=0 FMI_TERMINATE_STATUS=3)
-set_target_properties(fmi_failure_terminate PROPERTIES
-  PREFIX ""
-  OUTPUT_NAME "FailingTerminate"
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-
-add_library(fmi_failure_terminate_flag SHARED tests/fixtures/fmi_failure.c)
-target_compile_definitions(fmi_failure_terminate_flag PRIVATE
-  FMI_FAILURE_STATUS=0 FMI_TERMINATE_FLAG=1)
-set_target_properties(fmi_failure_terminate_flag PROPERTIES
-  PREFIX ""
-  OUTPUT_NAME "FailingTerminateFlag"
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+add_failing_fmu(Initialize FMI_INIT_STATUS=3)
+# Fatal at Step, and an fmi3Terminate that would answer Error if the importer
+# wrongly called it afterwards.
+add_failing_fmu(FatalTerminateError FMI_STEP_STATUS=4 FMI_TERMINATE_STATUS=3)
+add_failing_fmu(Terminate FMI_TERMINATE_STATUS=3)
+add_failing_fmu(TerminateFlag FMI_TERMINATE_FLAG=1)
 
 # --- bench participants (routing baseline fixtures, issue #61) ---
 # Payload size, publish period, and burst size come from manifest config, so

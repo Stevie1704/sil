@@ -199,7 +199,7 @@ NativeParticipant::NativeParticipant(Engine &engine, const std::string &name,
   // fail() keeps the first failure, so a contract violation raised during init
   // survives with its channel and direction; the return code and the
   // containment here are the fallbacks for a participant that stops without
-  // saying why. Engine::setup turns any of them into a config error before the
+  // saying why. Engine::setup turns any of them into a Manifest error before the
   // run begins. Recording the failure rather than throwing keeps this object
   // in the engine, so its destructor still closes the library.
   int rc = SIL_ERR;

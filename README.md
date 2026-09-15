@@ -209,6 +209,12 @@ m.add_process(
 )
 ```
 
+Any co-simulation call that answers a status other than `fmi3OK` aborts the
+Run with exit 1, and the diagnostic names the call, the participant and the
+status. `Warning` aborts too: a Run that steps past a status the FMU raised is
+not evidence of anything. An FMU that answers `Fatal` is abandoned rather than
+terminated, which is what FMI 3.0 requires of its importer.
+
 This milestone deliberately supports FMI 3.0 co-simulation only and Float64
 variables only. It does not implement the bus layered standard because the
 repository has no demo FMU against which to write a conformance test.

@@ -472,10 +472,11 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
 }
 
 ProcessParticipant::~ProcessParticipant() {
-  // Destruction is also the cleanup path after an already-reported RunError;
-  // a participant's shutdown exit status must not throw from a destructor and
-  // replace the original diagnostic.
-  shutdown(false);
+  // Destruction is also the cleanup path after an already-reported RunError,
+  // so it reaps the child without inspecting the exit status: a diagnostic
+  // thrown from here would replace the original one, and a destructor must
+  // not throw at all.
+  terminate_child();
 }
 
 void ProcessParticipant::step(uint64_t now_ns) {
@@ -554,8 +555,8 @@ std::string ProcessParticipant::read_line() {
   }
 }
 
-void ProcessParticipant::shutdown(bool report_failure) {
-  if (!alive_) return;
+int ProcessParticipant::terminate_child() {
+  if (!alive_) return 0;
   alive_ = false;
   json bye = {{"op", "shutdown"}};
   std::string data = bye.dump() + "\n";
@@ -565,24 +566,36 @@ void ProcessParticipant::shutdown(bool report_failure) {
   close(child_stdout_);
 
   int wait_status = 0;
-  bool reaped = false;
-  for (int i = 0; i < 200 && !reaped; i++) {
-    if (waitpid(pid_, &wait_status, WNOHANG) == pid_)
-      reaped = true;
-    else
+  auto reap_within = [&](int centiseconds) {
+    for (int i = 0; i < centiseconds; i++) {
+      if (waitpid(pid_, &wait_status, WNOHANG) == pid_) return true;
       usleep(10000);
-  }
-  if (!reaped) {
-    kill(pid_, SIGKILL);
-    waitpid(pid_, &wait_status, 0);
+    }
+    return false;
+  };
+  // A child that does not answer `shutdown` is asked with SIGTERM before it is
+  // killed, so a participant holding run-scoped state of its own — an imported
+  // FMU's extracted archive, say — still reaches its own cleanup. SIGKILL is
+  // the last resort for a child that ignores both, and leaves that cleanup
+  // undone by definition.
+  if (!reap_within(200)) {
+    kill(pid_, SIGTERM);
+    if (!reap_within(100)) {
+      kill(pid_, SIGKILL);
+      waitpid(pid_, &wait_status, 0);
+    }
   }
   // Release the regions at run end rather than at destruction, so a finished
   // run leaves nothing in the temp directory even while the engine still holds
   // the participant. Both releases are the owning type's destructor.
   arenas_.clear();
   clock_region_ = MappedRegion();
+  return wait_status;
+}
 
-  if (!report_failure) return;
+void ProcessParticipant::shutdown() {
+  if (!alive_) return;
+  const int wait_status = terminate_child();
   if (WIFEXITED(wait_status) && WEXITSTATUS(wait_status) != 0)
     throw RunError("participant '" + name_ + "' exited with status " +
                    std::to_string(WEXITSTATUS(wait_status)));

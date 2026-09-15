@@ -95,7 +95,7 @@ class TestRegionLifetime:
         self, run_sil, tmp_path, regions
     ):
         # The sink maps "payload" first and fails on the second arena. The run
-        # must report the config error and still leave neither the first arena
+        # must report the Manifest error and still leave neither the first arena
         # nor the clock region behind.
         manifest = (
             self._manifest(extra_channel="oversized").write(tmp_path / "m.json").path

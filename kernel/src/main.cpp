@@ -23,7 +23,7 @@ void usage() {
 }
 
 // Fail fast at load if a participant opted into the shim but the shim library
-// is missing next to the runner, so a broken install is a config error rather
+// is missing next to the runner, so a broken install is a Manifest error rather
 // than a silently wall-clocked run. The shim is injected at spawn (issue #28).
 bool manifest_requests_shim(const sil::Manifest &m) {
   for (const sil::ParticipantSpec &p : m.participants) {
@@ -65,7 +65,7 @@ int run(int argc, char **argv) {
     usage();
     return kExitConfigError;
   }
-  // An output path that would never be written is a configuration mistake, not
+  // An output path that would never be written is a Manifest mistake, not
   // a silently ignored argument.
   if (!recording && out_given) {
     usage();
@@ -84,7 +84,7 @@ int run(int argc, char **argv) {
       }
     }
     // Selecting the recording format is a manifest/config concern: an
-    // unrecognized output extension is a config error (exit 2) and must reject
+    // unrecognized output extension is a Manifest error (exit 2) and must reject
     // before any participant is created.
     std::unique_ptr<sil::RecordingSink> recorder;
     if (recording) recorder = sil::make_recording_sink(out_path, manifest);

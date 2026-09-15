@@ -175,8 +175,27 @@ _Avoid_: config, scenario, setup, spec file
 
 **Manifest hash**:
 The digest of a manifest's exact bytes, archived with every run so results can
-be attributed to a configuration and deduplicated.
+be attributed to a manifest and deduplicated.
 _Avoid_: config id, fingerprint, version
+
+**Manifest error**:
+A run rejected before any participant is stepped, because its manifest — or
+the environment that manifest names — cannot be honoured. Exit code 2. Nothing
+ran, so there is no behavior to attribute it to.
+_Avoid_: config error, configuration error, setup error, startup error
+
+**Run failure**:
+A run that started and then went wrong: a participant aborted, a participant's
+shutdown reported an error, or a KPI failed. Exit code 1. The distinction from
+a manifest error is what was at fault, not when it was caught.
+_Avoid_: runtime error, crash, test failure
+
+**Run working directory**:
+The directory a run is started in, which every process participant inherits.
+Run-scoped files a participant needs on disk — an imported FMU's extracted
+archive, say — live here and are removed when the run ends. The kernel neither
+creates nor changes it.
+_Avoid_: cwd, temp dir, scratch dir
 
 **Recording**:
 The output artifact of a run: every published message with its virtual
