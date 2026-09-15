@@ -34,6 +34,7 @@ set(SIL_KERNEL_SOURCES
   kernel/src/mapped_region.cpp
   kernel/src/owned_directory.cpp
   kernel/src/native_participant.cpp
+  kernel/src/channel_arenas.cpp
   kernel/src/process_participant.cpp
   kernel/src/mcap_recording.cpp
   kernel/src/replayer.cpp)
@@ -76,6 +77,16 @@ add_test(NAME sil_interceptor_plan COMMAND sil_interceptor_test)
 add_executable(sil_virtual_time_test tests/virtual_time_test.cpp)
 target_include_directories(sil_virtual_time_test PRIVATE kernel/src)
 add_test(NAME sil_virtual_time COMMAND sil_virtual_time_test)
+
+# The Arena layout — slot stride, seq freshness, capacity bounds — is the
+# binary contract a Process participant maps, and it holds without a child
+# process, so it gets a focused C++ test target.
+add_executable(sil_channel_arenas_test
+  tests/channel_arenas_test.cpp
+  kernel/src/channel_arenas.cpp
+  kernel/src/mapped_region.cpp)
+target_include_directories(sil_channel_arenas_test PRIVATE kernel/src include)
+add_test(NAME sil_channel_arenas COMMAND sil_channel_arenas_test)
 
 # The mapped region owns a temp file's mapping, descriptor, and directory entry.
 # Its release-on-destruction and move semantics are invisible at the run

@@ -3,13 +3,14 @@
 #include <sys/types.h>
 
 #include <cstdint>
-#include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "sil/clock_region.h"
 
+#include "channel_arenas.hpp"
 #include "engine.hpp"
 #include "mapped_region.hpp"
 
@@ -17,9 +18,18 @@ namespace sil {
 
 class OwnedDirectory;
 
+// One Process participant's child: its lifetime, its working directory, its
+// half of the step protocol, and the virtual clock it reads time from.
+//
 // The normative JSON-lines step protocol is specified in
 // docs/step-protocol.md. This endpoint is fully sequential, so a process
 // participant cannot make execution order nondeterministic between requests.
+//
+// The Arena layout is a separate type (ChannelArenas): it is the binary
+// contract the child maps, and it holds without a child process. The step-line
+// representation stays a seam private to this implementation, per issue #41 —
+// this class is a deep module behind four declarations, and its step protocol
+// is not a second public interface.
 class ProcessParticipant {
  public:
   ProcessParticipant(Engine &engine, const std::string &name,
@@ -71,18 +81,11 @@ class ProcessParticipant {
   void inject_shim_env() const;  // runs in the forked child before exec
   void write_clock_region(uint64_t now_ns);
 
-  // Channel arenas (issue #35). One arena per arena-backed channel this
-  // participant subscribes to or publishes, mapped MAP_SHARED before fork so
-  // the child maps the same file at load. The layout and per-step transport
-  // rules are specified in docs/step-protocol.md. Empty for participants with
-  // no arena-backed channel.
-  struct Arena {
-    MappedRegion region;  // slots * (sizeof(header) + capacity)
-    size_t capacity = 0;  // schema byte_size per slot
-    size_t slots = 1;     // Manifest declaration; protocol 1 uses only slot 0
-    uint64_t seq = 0;     // last seq stamped across all slots
-  };
-  std::map<std::string, Arena> arenas_;  // by channel name
+  // Channel Arenas (issue #35). Created before fork so the child reaches the
+  // same regions at load; empty for participants with no arena-backed Channel.
+  // This class translates the Manifest into Arenas and names them to the child
+  // in the init line; only the codec moves payloads through them afterwards.
+  ChannelArenas arenas_;
 
   struct StepInput {
     std::string channel;
@@ -95,32 +98,32 @@ class ProcessParticipant {
     std::vector<uint8_t> bytes;
   };
 
-  // Private step-scoped codec seam. `encode_inputs` receives the complete
-  // input set already merged in global publish order and never reorders it.
-  // It fills the declared Arena slots per Channel in that Step and uses the
-  // inline representation for every excess Message. `decode_outputs`
-  // honours the field present on each output (`shm_seq` or `data`) rather than
-  // inferring transport from the channel declaration. Arena setup failures
-  // remain ManifestError; stale-seq and capacity violations remain RunError.
+  // Private step-scoped codec seam (issue #41), with inline and Arena as
+  // adapters behind it. `encode_inputs` receives the complete input set
+  // already merged in global publish order and never reorders it. It fills the
+  // declared Arena slots per Channel in that Step and uses the inline
+  // representation for every excess Message. `decode_outputs` honours the
+  // field present on each output (`shm_seq` or `data`) rather than inferring
+  // Transport from the Channel declaration. Arena setup failures remain
+  // ManifestError; stale-seq and capacity violations remain RunError.
+  //
+  // It reaches the child through nothing but `arenas_` and the negotiated
+  // protocol level, so the seam carries no back-reference to this class.
   class StepCodec;
 
+  // Built after the init handshake, so it holds the negotiated protocol level
+  // by value rather than watching this class's.
   std::unique_ptr<StepCodec> codec_;
   static constexpr int kSingleSlotProtocol = 1;
   static constexpr int kIndexedSlotsProtocol = 2;
   // Negotiated Step protocol; an absent ready echo selects the legacy level.
   int protocol_ = kSingleSlotProtocol;
 
-  // Maps an arena for every arena-backed channel in `spec`, sized from the
-  // schema byte_size.
-  // Throws ManifestError (exit 2) on any create/map failure so an environment
+  // Creates an Arena for every arena-backed Channel in `spec`, sized from the
+  // schema byte_size, and rejects a Channel declared in both directions.
+  // Throws ManifestError (exit 2) on any create failure so an environment
   // problem is distinguishable from a run/test failure.
   void setup_arenas(const ProcessSpec &spec);
-  // Writes `bytes` into the channel's arena and returns its post-write seq.
-  uint64_t write_arena(const std::string &channel, size_t slot,
-                       const std::vector<uint8_t> &bytes);
-  // Reads the channel's arena payload back into `out`, checking `seq` freshness.
-  void read_arena(const std::string &channel, size_t slot, uint64_t seq,
-                  std::vector<uint8_t> &out);
 };
 
 }  // namespace sil
