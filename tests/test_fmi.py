@@ -8,9 +8,16 @@ stepped, and its output variables are published on the Channel it publishes.
 """
 
 import copy
+import csv
+import io
+import itertools
+import math
+import subprocess
 import sys
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
+from xml.etree import ElementTree
 
 import pytest
 from conftest import COMPAT_ROUTE_CAPACITY, ROOT
@@ -27,6 +34,14 @@ from sil.testing import run_simulation
 
 FIXTURES = ROOT / "tests" / "fixtures" / "reference-fmus" / "3.0"
 FEEDTHROUGH = FIXTURES / "Feedthrough.fmu"
+BOUNCING_BALL = FIXTURES / "BouncingBall.fmu"
+
+# The FMI-LS-REF layered standard's directory inside an FMU, and the reference
+# CSV `BouncingBall.fmu` declares there.
+LS_REF = "extra/org.fmi-standard.fmi-ls-ref"
+LS_REF_MANIFEST = f"{LS_REF}/fmi-ls-manifest.xml"
+BALL_REFERENCE_CSV = "BouncingBall_out.csv"
+RESULT_ROLE = "result"
 
 STEP_PERIOD_NS = 10_000_000
 DURATION_NS = 100_000_000
@@ -234,11 +249,12 @@ def described(tmp_path, rewrite=lambda text: text) -> Path:
     return tmp_path
 
 
-def fmu_variant(tmp_path, name: str, *, rewrite=lambda text: text,
+def fmu_variant(tmp_path, name: str, *, source_fmu=FEEDTHROUGH,
+                rewrite=lambda text: text,
                 drop=lambda member: False) -> Path:
-    """A copy of `Feedthrough.fmu` with members rewritten or left out."""
+    """A copy of a vendored FMU with members rewritten or left out."""
     path = tmp_path / f"{name}.fmu"
-    with zipfile.ZipFile(FEEDTHROUGH) as source, zipfile.ZipFile(path, "w") as target:
+    with zipfile.ZipFile(source_fmu) as source, zipfile.ZipFile(path, "w") as target:
         for member in source.infolist():
             if drop(member.filename):
                 continue
@@ -419,3 +435,372 @@ class TestRejectedAtStartup:
             fmu.write_text("this is not a zip archive")
         stderr = self.run_rejection(run_sil, tmp_path, fmu=fmu)
         assert f"cannot read FMU '{fmu}'" in stderr
+
+
+@dataclass(frozen=True)
+class ReferenceResult:
+    """The trajectory an FMU ships for its own default experiment.
+
+    `rows` is the reference CSV in file order, each row mapping a column name
+    to its value, the independent variable `time` included. The first row is
+    the post-initialization value, read after initialization and before the
+    first step, so an importer that steps first produces its `k`-th value
+    for row `k + 1`.
+
+    `step_size` is the default experiment's declared step, in seconds. The
+    trajectory is only valid at that step: a different step is a different
+    experiment, with no reference to check against.
+    """
+
+    step_size: float
+    rows: list[dict[str, float]]
+
+
+def _result_source(ls_ref_manifest: bytes, fmu_path: Path) -> str:
+    """The related file the FMI-LS-REF manifest gives the `result` role."""
+    for related in ElementTree.fromstring(ls_ref_manifest).findall("Related"):
+        if related.get("role") == RESULT_ROLE and related.get("source"):
+            return related.get("source")
+    raise AssertionError(
+        f"FMU {str(fmu_path)!r} declares no FMI-LS-REF related file naming a "
+        f"source for the {RESULT_ROLE!r} role"
+    )
+
+
+def _default_step_size(description: bytes, fmu_path: Path) -> float:
+    """The step the default experiment declares, in seconds."""
+    experiment = ElementTree.fromstring(description).find("DefaultExperiment")
+    step_size = None if experiment is None else experiment.get("stepSize")
+    if step_size is None:
+        raise AssertionError(
+            f"FMU {str(fmu_path)!r} declares no default experiment step size, "
+            f"so its reference result names no step to reproduce it at"
+        )
+    return float(step_size)
+
+
+def _reference_rows(result: bytes) -> list[dict[str, float]]:
+    """The reference CSV, one dict per row, at the precision it was written."""
+    return [
+        {name: float(value) for name, value in row.items()}
+        for row in csv.DictReader(io.StringIO(result.decode()))
+    ]
+
+
+def reference_result(fmu_path: Path) -> ReferenceResult:
+    """Read the reference trajectory the FMU carries under FMI-LS-REF.
+
+    Everything comes out of the archive: the layered standard's manifest names
+    the related file holding the result, so nothing has to be vendored beside
+    the FMU and kept in sync with it.
+
+    This reads an FMU but is not part of driving one, so it lives with the
+    checks that need it rather than in `sil.fmi`. A Run never asks an FMU what
+    it should have computed; only a test does.
+
+    Every way the archive can disappoint — absent, not an archive, missing a
+    member, or carrying one that does not parse — fails loudly here, because
+    the alternative is a comparison that comes back empty and passes.
+    """
+    try:
+        with zipfile.ZipFile(fmu_path) as archive:
+            source = _result_source(archive.read(LS_REF_MANIFEST), fmu_path)
+            rows = _reference_rows(archive.read(f"{LS_REF}/{source}"))
+            step_size = _default_step_size(
+                archive.read("modelDescription.xml"), fmu_path
+            )
+    except (OSError, zipfile.BadZipFile, KeyError, ElementTree.ParseError,
+            UnicodeDecodeError, ValueError) as error:
+        raise AssertionError(
+            f"cannot read the reference result of FMU {str(fmu_path)!r}: "
+            f"{error}"
+        ) from error
+    return ReferenceResult(step_size=step_size, rows=rows)
+
+
+def ball_with_reference(tmp_path, name: str, *,
+                        csv_name: str = BALL_REFERENCE_CSV,
+                        ls_ref_xml: str | None = None) -> Path:
+    """`BouncingBall.fmu` with its FMI-LS-REF members altered.
+
+    Renaming the CSV rewrites the layered-standard manifest to name it, so an
+    importer that reads the manifest still finds the trajectory and one that
+    guesses the filename no longer does. Replacing the manifest outright is
+    how a declaration the importer must reject is provoked.
+    """
+    path = tmp_path / f"{name}.fmu"
+    with zipfile.ZipFile(BOUNCING_BALL) as source, zipfile.ZipFile(path, "w") as target:
+        for member in source.infolist():
+            data = source.read(member.filename)
+            if member.filename == f"{LS_REF}/{BALL_REFERENCE_CSV}":
+                member.filename = f"{LS_REF}/{csv_name}"
+            elif member.filename == f"{LS_REF}/fmi-ls-manifest.xml":
+                data = (
+                    data.replace(BALL_REFERENCE_CSV.encode(), csv_name.encode())
+                    if ls_ref_xml is None
+                    else ls_ref_xml.encode()
+                )
+            target.writestr(member, data)
+    return path
+
+
+class TestReferenceResultDiscovery:
+    """Finding the shipped trajectory inside the FMU, under FMI-LS-REF.
+
+    The Reference FMU carries its own result: a layered-standard manifest
+    declaring a related CSV with the `result` role, and the CSV itself. That
+    is the whole source — no side file and no vendored copy to keep in sync
+    with the archive it came from.
+
+    An archive that cannot give up its trajectory has to say so. Coming back
+    with no rows would leave the comparison below with nothing to compare and
+    passing on an empty answer.
+    """
+
+    def test_the_layered_standard_manifest_names_the_file_that_is_read(
+        self, tmp_path
+    ):
+        """Discovery goes through the manifest, not through a known filename."""
+        renamed = ball_with_reference(
+            tmp_path, "renamed", csv_name="somewhere-else.csv"
+        )
+        assert reference_result(renamed).rows == reference_result(BOUNCING_BALL).rows
+
+    def test_an_fmu_carrying_no_reference_result_cannot_be_read(self, tmp_path):
+        stripped = fmu_variant(
+            tmp_path,
+            "no-reference",
+            source_fmu=BOUNCING_BALL,
+            drop=lambda member: member.startswith(f"{LS_REF}/"),
+        )
+        with pytest.raises(AssertionError, match=LS_REF):
+            reference_result(stripped)
+
+    def test_an_fmu_declaring_no_result_role_cannot_be_read(self, tmp_path):
+        """A related file of another role is not a trajectory to check against."""
+        roleless = ball_with_reference(
+            tmp_path,
+            "no-result-role",
+            ls_ref_xml=(
+                '<fmiReferences><Related type="text/csv" '
+                f'source="{BALL_REFERENCE_CSV}" role="input"/></fmiReferences>'
+            ),
+        )
+        with pytest.raises(AssertionError, match="result"):
+            reference_result(roleless)
+
+    def test_an_fmu_declaring_no_default_step_size_cannot_be_read(self, tmp_path):
+        """The trajectory is only valid at the step it was produced at."""
+        stepless = fmu_variant(
+            tmp_path,
+            "no-step-size",
+            source_fmu=BOUNCING_BALL,
+            rewrite=lambda text: text.replace(' stepSize="1e-2"', ""),
+        )
+        with pytest.raises(AssertionError, match="step size"):
+            reference_result(stepless)
+
+    def test_the_declared_step_size_comes_back_in_seconds(self):
+        assert reference_result(BOUNCING_BALL).step_size == 1e-2
+
+
+BALL_CHANNEL = "ball.State"
+BALL_SCHEMAS = {
+    BALL_CHANNEL: {
+        "fields": [{"name": "h", "type": "f64"}, {"name": "v", "type": "f64"}]
+    }
+}
+# `BouncingBall`'s default experiment: dropped from 1 m, stopping at 3 s, and
+# stepped at the 10 ms its description declares. The shipped trajectory is the
+# output of exactly this experiment, so the Manifest has to declare the same
+# step — that equality is asserted below rather than left as a comment.
+BALL_DURATION_NS = 3_000_000_000
+BALL_STEP_PERIOD_NS = 10_000_000
+DROP_HEIGHT = 1.0
+
+# The tolerance the reference comparison holds to. Well above the deviation
+# measured here (1.144e-14 relative) and far below anything a mapping or
+# stepping mistake would produce.
+RELATIVE_TOLERANCE = 1e-12
+
+
+def bouncing_ball_manifest() -> Manifest:
+    """`BouncingBall`'s default experiment as a Run.
+
+    The FMU takes no input, so the importer only publishes: the Channel
+    carries the two output variables the model declares.
+    """
+    m = Manifest(duration_ns=BALL_DURATION_NS)
+    m.add_schemas(BALL_SCHEMAS)
+    m.add_channel(BALL_CHANNEL, schema=BALL_CHANNEL)
+    m.add_process(
+        "ball",
+        command=[sys.executable, "-m", "sil.fmi", str(BOUNCING_BALL)],
+        step_period_ns=BALL_STEP_PERIOD_NS,
+        publishes=[BALL_CHANNEL],
+    )
+    return m
+
+
+@pytest.fixture(scope="module")
+def bouncing_ball_result(sil_run, tmp_path_factory):
+    """One Run of the default experiment, shared by every check made on it."""
+    return run_simulation(
+        bouncing_ball_manifest(),
+        runner=sil_run,
+        workdir=tmp_path_factory.mktemp("ball"),
+    )
+
+
+@pytest.fixture(scope="module")
+def shipped_reference():
+    return reference_result(BOUNCING_BALL)
+
+
+def trajectory(result) -> list[tuple[float, float]]:
+    """The recorded Run as `(h, v)` pairs, in the order they were published."""
+    return [(fields["h"], fields["v"]) for _, fields in result.messages(BALL_CHANNEL)]
+
+
+class TestShippedReference:
+    """The recorded trajectory against the result the FMU ships for itself.
+
+    This is what the Determinism check cannot answer. Running twice and
+    bit-comparing catches a Run that is not reproducible; it says nothing
+    about a Run that is reproducibly wrong. An importer that maps the wrong
+    variable, drops an input, or steps at the wrong communication point is
+    perfectly deterministic and perfectly incorrect, and only the vendor's own
+    trajectory tells the two apart.
+    """
+
+    def test_the_manifest_steps_at_the_declared_default_step_size(
+        self, shipped_reference
+    ):
+        """A different step is a different experiment with no reference."""
+        assert BALL_STEP_PERIOD_NS == shipped_reference.step_size * NS_PER_S
+
+    def test_the_first_reference_row_is_read_before_the_first_step(
+        self, bouncing_ball_result, shipped_reference
+    ):
+        """The first row is the post-initialization value, which no Message carries.
+
+        The importer publishes after its step, so the first recorded Message
+        already holds the state one step in and the recorded trajectory lines
+        up with the reference from its second row. A comparison that starts at
+        the first row is off by one on every row after it — which the recorded
+        times make visible, because being off by one shifts each of them by a
+        whole step.
+        """
+        recorded = bouncing_ball_result.messages(BALL_CHANNEL)
+        assert shipped_reference.rows[0] == {
+            "time": 0.0, "h": DROP_HEIGHT, "v": 0.0
+        }
+        assert len(recorded) == len(shipped_reference.rows) - 1
+        assert [
+            (t + BALL_STEP_PERIOD_NS) / NS_PER_S for t, _ in recorded
+        ] == pytest.approx([row["time"] for row in shipped_reference.rows[1:]])
+
+    def test_the_recorded_trajectory_matches_the_shipped_reference(
+        self, bouncing_ball_result, shipped_reference
+    ):
+        """A tolerance check, and never a byte or bit comparison.
+
+        The distinction is measured, not assumed. Stepping this FMU through
+        its full default experiment on macOS aarch64 leaves 399 of the 600
+        recorded values
+        bit-identical to the shipped ones and 201 differing, at a maximum
+        relative deviation of 1.144e-14 — a worst case of 59 units in the last
+        place near a bounce, where the height approaches zero and cancellation
+        amplifies the difference. It is not accumulated time: driving the
+        communication point from integer nanoseconds and accumulating it in a
+        double diverge first on the same row. It is the machine class — the
+        model integrates with a multiply-add that one architecture contracts
+        into a single rounding and another compiles as two.
+
+        Determinism here is scoped to the same artifacts on the same machine
+        class, and this CSV was produced elsewhere — on the vendor's machine
+        class the same 600 values would be bit-identical. Bit-comparing would
+        assert the cross-platform bit-exactness `CONTEXT.md` (Determinism)
+        declares is not claimed, and would fail on a machine the importer is
+        correct on.
+        """
+        deviations = [
+            (row["time"], name, row[name], fields[name])
+            for (_, fields), row in zip(
+                bouncing_ball_result.messages(BALL_CHANNEL),
+                shipped_reference.rows[1:],
+                strict=True,
+            )
+            for name in ("h", "v")
+            if not math.isclose(
+                fields[name], row[name],
+                rel_tol=RELATIVE_TOLERANCE, abs_tol=0.0,
+            )
+        ]
+        assert deviations == []
+
+    def test_the_determinism_check_still_passes_for_an_fmu_run(
+        self, sil_run, tmp_path
+    ):
+        """The two checks answer different questions and both belong.
+
+        The reference check asks whether the importer is correct; the
+        Determinism check asks whether the Run reproduces. Importing an FMU
+        leaves the second one exactly as it was.
+        """
+        ref = bouncing_ball_manifest().write(tmp_path / "ball.json")
+        proc = subprocess.run(
+            [sys.executable, "-m", "sil.check", str(ref.path),
+             "--runner", str(sil_run)],
+            capture_output=True, text=True,
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert proc.stdout.startswith("deterministic: ")
+
+
+def rebound_peaks(states: list[tuple[float, float]]) -> list[float]:
+    """The height reached after each bounce.
+
+    A bounce reverses the velocity, so every stretch of upward motion ends at
+    one peak, and the coefficient of restitution is what takes the next one
+    down.
+    """
+    peaks = []
+    climb: list[float] = []
+    for height, velocity in states:
+        if velocity > 0:
+            climb.append(height)
+        elif climb:
+            peaks.append(max(climb))
+            climb = []
+    return peaks
+
+
+class TestRecordedBehavior:
+    """The recorded trajectory read as behavior rather than as numbers.
+
+    A Run that stepped a dead instance — never entered, or entered and never
+    advanced — would hold its start values and still reproduce bit-for-bit on
+    a second Run. Requiring the ball to fall, to bounce lower each time, and
+    to come to rest is what a constant trajectory cannot satisfy.
+    """
+
+    def test_the_ball_falls_until_it_first_bounces(self, bouncing_ball_result):
+        states = trajectory(bouncing_ball_result)
+        falling = [h for h, v in itertools.takewhile(lambda s: s[1] < 0, states)]
+        assert len(falling) > 1
+        assert falling[0] < DROP_HEIGHT
+        assert all(a > b for a, b in zip(falling, falling[1:]))
+
+    def test_each_rebound_is_lower_than_the_one_before(self, bouncing_ball_result):
+        peaks = rebound_peaks(trajectory(bouncing_ball_result))
+        assert len(peaks) >= 3
+        assert peaks[0] < DROP_HEIGHT
+        assert all(a > b for a, b in zip(peaks, peaks[1:]))
+
+    def test_the_ball_comes_to_rest_on_the_floor(self, bouncing_ball_result):
+        states = trajectory(bouncing_ball_result)
+        assert min(h for h, _ in states) >= 0.0
+        height, velocity = states[-1]
+        assert velocity == 0.0
+        assert height < 1e-9
