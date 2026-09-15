@@ -8,6 +8,7 @@ stepped, and its output variables are published on the Channel it publishes.
 """
 
 import copy
+import itertools
 import math
 import subprocess
 import sys
@@ -509,3 +510,201 @@ class TestReferenceResultDiscovery:
 
     def test_the_declared_step_size_comes_back_in_seconds(self):
         assert reference_result(BOUNCING_BALL).step_size == 1e-2
+
+
+BALL_CHANNEL = "ball.State"
+BALL_SCHEMAS = {
+    BALL_CHANNEL: {
+        "fields": [{"name": "h", "type": "f64"}, {"name": "v", "type": "f64"}]
+    }
+}
+# `BouncingBall`'s default experiment: dropped from 1 m, stopping at 3 s, and
+# stepped at the 10 ms its description declares. The shipped trajectory is the
+# output of exactly this experiment, so the Manifest has to declare the same
+# step — that equality is asserted below rather than left as a comment.
+BALL_DURATION_NS = 3_000_000_000
+BALL_STEP_PERIOD_NS = 10_000_000
+DROP_HEIGHT = 1.0
+
+# The tolerance the reference comparison holds to. Well above the deviation
+# measured here (1.144e-14 relative) and far below anything a mapping or
+# stepping mistake would produce.
+RELATIVE_TOLERANCE = 1e-12
+
+
+def bouncing_ball_manifest() -> Manifest:
+    """`BouncingBall`'s default experiment as a Run.
+
+    The FMU takes no input, so the importer only publishes: the Channel
+    carries the two output variables the model declares.
+    """
+    m = Manifest(duration_ns=BALL_DURATION_NS)
+    m.add_schemas(BALL_SCHEMAS)
+    m.add_channel(BALL_CHANNEL, schema=BALL_CHANNEL)
+    m.add_process(
+        "ball",
+        command=[sys.executable, "-m", "sil.fmi", str(BOUNCING_BALL)],
+        step_period_ns=BALL_STEP_PERIOD_NS,
+        publishes=[BALL_CHANNEL],
+    )
+    return m
+
+
+@pytest.fixture(scope="module")
+def bouncing_ball_result(sil_run, tmp_path_factory):
+    """One Run of the default experiment, shared by every check made on it."""
+    return run_simulation(
+        bouncing_ball_manifest(),
+        runner=sil_run,
+        workdir=tmp_path_factory.mktemp("ball"),
+    )
+
+
+@pytest.fixture(scope="module")
+def shipped_reference():
+    return reference_result(BOUNCING_BALL)
+
+
+def trajectory(result) -> list[tuple[float, float]]:
+    """The recorded Run as `(h, v)` pairs, in the order they were published."""
+    return [(fields["h"], fields["v"]) for _, fields in result.messages(BALL_CHANNEL)]
+
+
+class TestShippedReference:
+    """The recorded trajectory against the result the FMU ships for itself.
+
+    This is what the Determinism check cannot answer. Running twice and
+    bit-comparing catches a Run that is not reproducible; it says nothing
+    about a Run that is reproducibly wrong. An importer that maps the wrong
+    variable, drops an input, or steps at the wrong communication point is
+    perfectly deterministic and perfectly incorrect, and only the vendor's own
+    trajectory tells the two apart.
+    """
+
+    def test_the_manifest_steps_at_the_declared_default_step_size(
+        self, shipped_reference
+    ):
+        """A different step is a different experiment with no reference."""
+        assert BALL_STEP_PERIOD_NS == shipped_reference.step_size * NS_PER_S
+
+    def test_the_first_reference_row_is_read_before_the_first_step(
+        self, bouncing_ball_result, shipped_reference
+    ):
+        """The first row is the post-initialization value, which no Message carries.
+
+        The importer publishes after its step, so the first recorded Message
+        already holds the state one step in and the recorded trajectory lines
+        up with the reference from its second row. A comparison that starts at
+        the first row is off by one on every row after it — which the recorded
+        times make visible, because being off by one shifts each of them by a
+        whole step.
+        """
+        recorded = bouncing_ball_result.messages(BALL_CHANNEL)
+        assert shipped_reference.rows[0] == {
+            "time": 0.0, "h": DROP_HEIGHT, "v": 0.0
+        }
+        assert len(recorded) == len(shipped_reference.rows) - 1
+        assert [
+            (t + BALL_STEP_PERIOD_NS) / NS_PER_S for t, _ in recorded
+        ] == pytest.approx([row["time"] for row in shipped_reference.rows[1:]])
+
+    def test_the_recorded_trajectory_matches_the_shipped_reference(
+        self, bouncing_ball_result, shipped_reference
+    ):
+        """A tolerance check, and never a byte or bit comparison.
+
+        The distinction is measured, not assumed. Stepping this FMU through
+        its full default experiment leaves 399 of the 600 recorded values
+        bit-identical to the shipped ones and 201 differing, at a maximum
+        relative deviation of 1.144e-14 — a worst case of 59 units in the last
+        place near a bounce, where the height approaches zero and cancellation
+        amplifies the difference. It is not accumulated time: driving the
+        communication point from integer nanoseconds and accumulating it in a
+        double diverge first on the same row. It is the machine class — the
+        model integrates with a multiply-add that one architecture contracts
+        into a single rounding and another compiles as two.
+
+        Determinism here is scoped to the same artifacts on the same machine
+        class, and this CSV was produced elsewhere. Bit-comparing it would
+        assert the cross-platform bit-exactness the design record declares a
+        non-goal, and would fail on a machine the importer is correct on.
+        """
+        deviations = [
+            (row["time"], name, row[name], fields[name])
+            for (_, fields), row in zip(
+                bouncing_ball_result.messages(BALL_CHANNEL),
+                shipped_reference.rows[1:],
+            )
+            for name in ("h", "v")
+            if not math.isclose(
+                fields[name], row[name],
+                rel_tol=RELATIVE_TOLERANCE, abs_tol=0.0,
+            )
+        ]
+        assert deviations == []
+
+    def test_the_determinism_check_still_passes_for_an_fmu_run(
+        self, sil_run, tmp_path
+    ):
+        """The two checks answer different questions and both belong.
+
+        The reference check asks whether the importer is correct; the
+        Determinism check asks whether the Run reproduces. Importing an FMU
+        leaves the second one exactly as it was.
+        """
+        ref = bouncing_ball_manifest().write(tmp_path / "ball.json")
+        proc = subprocess.run(
+            [sys.executable, "-m", "sil.check", str(ref.path),
+             "--runner", str(sil_run)],
+            capture_output=True, text=True,
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert proc.stdout.startswith("deterministic: ")
+
+
+def rebound_peaks(states: list[tuple[float, float]]) -> list[float]:
+    """The height reached after each bounce.
+
+    A bounce reverses the velocity, so every stretch of upward motion ends at
+    one peak, and the coefficient of restitution is what takes the next one
+    down.
+    """
+    peaks = []
+    climb: list[float] = []
+    for height, velocity in states:
+        if velocity > 0:
+            climb.append(height)
+        elif climb:
+            peaks.append(max(climb))
+            climb = []
+    return peaks
+
+
+class TestRecordedBehavior:
+    """The recorded trajectory read as behavior rather than as numbers.
+
+    A Run that stepped a dead instance — never entered, or entered and never
+    advanced — would hold its start values and still reproduce bit-for-bit on
+    a second Run. Requiring the ball to fall, to bounce lower each time, and
+    to come to rest is what a constant trajectory cannot satisfy.
+    """
+
+    def test_the_ball_falls_until_it_first_bounces(self, bouncing_ball_result):
+        states = trajectory(bouncing_ball_result)
+        falling = [h for h, v in itertools.takewhile(lambda s: s[1] < 0, states)]
+        assert len(falling) > 1
+        assert falling[0] < DROP_HEIGHT
+        assert all(a > b for a, b in zip(falling, falling[1:]))
+
+    def test_each_rebound_is_lower_than_the_one_before(self, bouncing_ball_result):
+        peaks = rebound_peaks(trajectory(bouncing_ball_result))
+        assert len(peaks) >= 3
+        assert peaks[0] < DROP_HEIGHT
+        assert all(a > b for a, b in zip(peaks, peaks[1:]))
+
+    def test_the_ball_comes_to_rest_on_the_floor(self, bouncing_ball_result):
+        states = trajectory(bouncing_ball_result)
+        assert min(h for h, _ in states) >= 0.0
+        height, velocity = states[-1]
+        assert velocity == 0.0
+        assert height < 1e-9

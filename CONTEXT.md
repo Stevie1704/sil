@@ -203,3 +203,11 @@ _Avoid_: reproducibility, repeatability, stability
 Running one manifest twice and bit-comparing the recordings — the mechanism
 that makes a determinism violation visible rather than assumed away.
 _Avoid_: repro test, bit-diff test, sanity run
+
+**Reference result**:
+The trajectory an FMU ships for its own default experiment, declared inside
+the archive under the FMI-LS-REF layered standard. Checking a recording
+against it answers what the determinism check cannot: whether the importer is
+correct, not whether the run reproduces. A tolerance check and never a bit
+comparison — the vendor produced it on another machine class.
+_Avoid_: golden file, expected output, baseline, ground truth
