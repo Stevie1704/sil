@@ -7,13 +7,22 @@ subscribed Channel is written into the FMU's input variables, the FMU is
 stepped, and its output variables are published on the Channel it publishes.
 """
 
+import copy
 import sys
+import zipfile
+from pathlib import Path
 
 import pytest
 from conftest import COMPAT_ROUTE_CAPACITY, ROOT
-from sil.fmi import NS_PER_S, CoSimulation, FmuParticipant
+from sil.fmi import (
+    NS_PER_S,
+    CoSimulation,
+    FmuParticipant,
+    ModelDescription,
+    platform_directory,
+)
 from sil.manifest import Manifest, SubscriberRoute
-from sil.participant import Input
+from sil.participant import Input, ParticipantFailure
 from sil.testing import run_simulation
 
 FIXTURES = ROOT / "tests" / "fixtures" / "reference-fmus" / "3.0"
@@ -69,10 +78,15 @@ def stimulus(step: int) -> dict:
     }
 
 
-def fmu_manifest(duration_ns: int = DURATION_NS) -> Manifest:
+def fmu_manifest(
+    duration_ns: int = DURATION_NS,
+    *,
+    fmu=FEEDTHROUGH,
+    schemas: dict = FMI_SCHEMAS,
+) -> Manifest:
     """A ramp source feeding the imported FMU, which publishes its outputs."""
     m = Manifest(duration_ns=duration_ns)
-    m.add_schemas(FMI_SCHEMAS)
+    m.add_schemas(schemas)
     m.add_channel("fmu.In", schema="fmu.In")
     m.add_channel("fmu.Out", schema="fmu.Out")
     m.add_process(
@@ -89,7 +103,7 @@ def fmu_manifest(duration_ns: int = DURATION_NS) -> Manifest:
     # the FMU path is a command argument — which the Manifest already hashes.
     m.add_process(
         "feedthrough",
-        command=[sys.executable, "-m", "sil.fmi", str(FEEDTHROUGH)],
+        command=[sys.executable, "-m", "sil.fmi", str(fmu)],
         step_period_ns=STEP_PERIOD_NS,
         subscribes=[SubscriberRoute("fmu.In", capacity=COMPAT_ROUTE_CAPACITY)],
         publishes=["fmu.Out"],
@@ -138,17 +152,6 @@ class TestImportedFmu:
         )
         assert published["Float64_continuous_output"] == 2.0
 
-    def test_an_output_only_fmu_needs_no_subscribed_channel(self):
-        """Direction comes from the init line, so one side may be absent."""
-        participant = FmuParticipant(FEEDTHROUGH)
-        participant.on_init(init_line({"fmu.Out": "out"}))
-        try:
-            (channel, published), = participant.on_step(0, STEP_PERIOD_NS, [])
-            assert channel == "fmu.Out"
-            assert published["Float64_continuous_output"] == 0.0
-        finally:
-            participant.close()
-
 
 class TestCommunicationPoints:
     """The FMU's time base is derived from the kernel's integers, not summed."""
@@ -170,7 +173,7 @@ class TestCommunicationPoints:
         period_ns = 7_000_003
         steps = 10_000
         participant = FmuParticipant(FEEDTHROUGH)
-        participant.on_init(init_line({"fmu.Out": "out"}))
+        participant.on_init(init_line({"fmu.In": "in", "fmu.Out": "out"}))
         try:
             for step in range(steps):
                 participant.on_step(step * period_ns, period_ns, [])
@@ -217,3 +220,191 @@ class TestRunBoundary:
              fields["Float64_discrete_input"])
             for t, fields in inputs[:-1]
         ]
+
+
+def described(tmp_path, rewrite=lambda text: text) -> Path:
+    """An extracted FMU directory holding `Feedthrough`'s description alone.
+
+    Parsing needs nothing else, so a rejection can be provoked by rewriting
+    the vendored description rather than by hand-writing a second one.
+    """
+    with zipfile.ZipFile(FEEDTHROUGH) as archive:
+        text = archive.read("modelDescription.xml").decode()
+    (tmp_path / "modelDescription.xml").write_text(rewrite(text))
+    return tmp_path
+
+
+def fmu_variant(tmp_path, name: str, *, rewrite=lambda text: text,
+                drop=lambda member: False) -> Path:
+    """A copy of `Feedthrough.fmu` with members rewritten or left out."""
+    path = tmp_path / f"{name}.fmu"
+    with zipfile.ZipFile(FEEDTHROUGH) as source, zipfile.ZipFile(path, "w") as target:
+        for member in source.infolist():
+            if drop(member.filename):
+                continue
+            data = source.read(member.filename)
+            if member.filename == "modelDescription.xml":
+                data = rewrite(data.decode()).encode()
+            target.writestr(member, data)
+    return path
+
+
+def without_co_simulation(text: str) -> str:
+    """The description with its `CoSimulation` element removed."""
+    start = text.index("<CoSimulation")
+    return text[:start] + text[text.index("/>", start) + 2:]
+
+
+def schemas_with(fmu_out: list[dict]) -> dict:
+    """The Channel schemas, with the FMU's published fields replaced."""
+    schemas = copy.deepcopy(FMI_SCHEMAS)
+    schemas["fmu.Out"]["fields"] = fmu_out
+    return schemas
+
+
+class TestDescription:
+    """Reading `modelDescription.xml`, against the vendored fixture."""
+
+    def test_a_version_other_than_3_0_is_rejected(self, tmp_path):
+        extracted = described(
+            tmp_path, lambda text: text.replace('fmiVersion="3.0"', 'fmiVersion="2.0"')
+        )
+        with pytest.raises(ParticipantFailure, match="2.0"):
+            ModelDescription.read(extracted)
+
+    def test_a_description_without_a_co_simulation_interface_is_rejected(
+        self, tmp_path
+    ):
+        extracted = described(tmp_path, without_co_simulation)
+        with pytest.raises(ParticipantFailure, match="co-simulation"):
+            ModelDescription.read(extracted)
+
+    def test_causality_decides_which_variables_take_part_in_the_mapping(
+        self, tmp_path
+    ):
+        """Only `input` and `output` variables map to Channel fields.
+
+        `Feedthrough` also declares Float64 parameters and the independent
+        variable `time`, which belong to the FMU itself and must not appear on
+        either side of the mapping.
+        """
+        description = ModelDescription.read(described(tmp_path))
+        assert description.inputs == {
+            "Float64_continuous_input": 7,
+            "Float64_discrete_input": 9,
+        }
+        assert description.outputs == {
+            "Float64_continuous_output": 8,
+            "Float64_discrete_output": 10,
+        }
+
+
+class TestPlatformDirectory:
+    """The `binaries/` subdirectory the running platform loads from."""
+
+    @pytest.mark.parametrize(
+        ("machine", "system", "directory"),
+        [
+            ("arm64", "Darwin", "aarch64-darwin"),
+            ("x86_64", "Darwin", "x86_64-darwin"),
+            ("aarch64", "Linux", "aarch64-linux"),
+            ("AMD64", "Linux", "x86_64-linux"),
+        ],
+    )
+    def test_the_platform_names_the_directory(
+        self, monkeypatch, machine, system, directory
+    ):
+        monkeypatch.setattr("platform.machine", lambda: machine)
+        monkeypatch.setattr("platform.system", lambda: system)
+        assert platform_directory() == directory
+
+
+class TestRejectedAtStartup:
+    """Every way of pointing the importer at the wrong FMU, at the Run boundary.
+
+    Each of these is a configuration error (exit 2), distinct from a Run
+    failure (exit 1), and each is raised before the first Step is taken.
+    """
+
+    def run_rejection(self, run_sil, tmp_path, **manifest) -> str:
+        """Run a Manifest expected to be rejected; return its diagnostic."""
+        proc = run_sil(
+            fmu_manifest(**manifest).write(tmp_path / "manifest.json").path
+        )
+        assert proc.returncode == 2, proc.stderr
+        return proc.stderr
+
+    def test_a_version_other_than_3_0_is_rejected(self, run_sil, tmp_path):
+        stderr = self.run_rejection(
+            run_sil,
+            tmp_path,
+            fmu=fmu_variant(
+                tmp_path,
+                "fmi2",
+                rewrite=lambda text: text.replace(
+                    'fmiVersion="3.0"', 'fmiVersion="2.0"'
+                ),
+            ),
+        )
+        assert "2.0" in stderr
+
+    def test_an_fmu_without_a_co_simulation_interface_is_rejected(
+        self, run_sil, tmp_path
+    ):
+        stderr = self.run_rejection(
+            run_sil,
+            tmp_path,
+            fmu=fmu_variant(tmp_path, "me-only", rewrite=without_co_simulation),
+        )
+        assert "co-simulation" in stderr
+
+    def test_an_fmu_without_a_binary_for_this_platform_names_the_platform(
+        self, run_sil, tmp_path
+    ):
+        directory = platform_directory()
+        stderr = self.run_rejection(
+            run_sil,
+            tmp_path,
+            fmu=fmu_variant(
+                tmp_path,
+                "foreign",
+                drop=lambda member: member.startswith(f"binaries/{directory}/"),
+            ),
+        )
+        assert directory in stderr
+
+    def test_a_schema_field_matching_no_fmu_variable_is_rejected(
+        self, run_sil, tmp_path
+    ):
+        stderr = self.run_rejection(
+            run_sil,
+            tmp_path,
+            schemas=schemas_with([
+                {"name": "Float64_continuous_output", "type": "f64"},
+                {"name": "Float64_typo_output", "type": "f64"},
+            ]),
+        )
+        assert "Float64_typo_output" in stderr
+        assert "fmu.Out" in stderr
+        assert "Feedthrough" in stderr
+
+    def test_an_fmu_variable_matching_no_schema_field_is_rejected(
+        self, run_sil, tmp_path
+    ):
+        stderr = self.run_rejection(
+            run_sil,
+            tmp_path,
+            schemas=schemas_with([
+                {"name": "Float64_continuous_output", "type": "f64"},
+            ]),
+        )
+        assert "Float64_discrete_output" in stderr
+        assert "Feedthrough" in stderr
+
+    @pytest.mark.parametrize("name", ["absent.fmu", "not-an-archive.fmu"])
+    def test_an_unreadable_fmu_path_is_rejected(self, run_sil, tmp_path, name):
+        fmu = tmp_path / name
+        if name != "absent.fmu":
+            fmu.write_text("this is not a zip archive")
+        stderr = self.run_rejection(run_sil, tmp_path, fmu=fmu)
+        assert name in stderr
