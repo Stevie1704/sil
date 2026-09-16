@@ -37,33 +37,4 @@ jobs:
       - name: Determinism gate on reference manifests
         env:
           PYTHONPATH: ${{ github.workspace }}/python/src
-        run: |
-          .venv/bin/python - <<'EOF'
-          import sys
-          from pathlib import Path
-          import importlib.util
-          sys.path.insert(0, "tests")
-          from test_determinism import full_pipeline_manifest
-          from sil.check import check
-
-          def load(name, path):
-              # Both examples define a module called `manifest`, so they are
-              # loaded by path rather than found on sys.path.
-              spec = importlib.util.spec_from_file_location(name, path)
-              module = importlib.util.module_from_spec(spec)
-              spec.loader.exec_module(module)
-              return module
-
-          acc = load("acc_manifest", "examples/acc/manifest.py")
-          fmu = load("fmu_manifest", "examples/fmu/manifest.py")
-          refs = [
-              full_pipeline_manifest(Path("build")),
-              acc.acc_manifest().write("build/acc.json"),
-              acc.acc_manifest(delayed_sensing=True).write("build/acc-delayed.json"),
-              fmu.fmu_manifest().write("build/fmu.json"),
-          ]
-          for ref in refs:
-              code = check(Path("build/sil-run"), ref.path)
-              if code:
-                  raise SystemExit(code)
-          EOF
+        run: .venv/bin/python tools/determinism_gate.py
