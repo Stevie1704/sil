@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "records": [
+    {
+      "image_digest": "sha256:e0016a74e93218122208a93e5c76988985ebbf81ebb0d97e7e2ca4ebc3cfd8cc",
+      "harness": "claude",
+      "harness_version": "2.1.232 (Claude Code)",
+      "skills": [
+        "implement",
+        "specification-review",
+        "standards-review"
+      ],
+      "verified_at": "2026-09-16T10:24:10Z"
+    },
+    {
+      "image_digest": "sha256:e0016a74e93218122208a93e5c76988985ebbf81ebb0d97e7e2ca4ebc3cfd8cc",
+      "harness": "codex",
+      "harness_version": "codex-cli 0.148.0",
+      "skills": [
+        "implement",
+        "specification-review",
+        "standards-review"
+      ],
+      "verified_at": "2026-09-16T10:09:09Z"
+    }
+  ]
+}
