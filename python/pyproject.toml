@@ -10,6 +10,9 @@ dev = ["pytest>=8"]
 
 [project.scripts]
 sil-check = "sil.check:main"
+sil-footprint = "sil.footprint:main"
+sil-participant = "sil.participant:main"
+sil-acc = "sil.examples.acc.manifest:main"
 
 [build-system]
 requires = ["hatchling"]
