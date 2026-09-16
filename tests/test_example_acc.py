@@ -1,8 +1,8 @@
 """The ACC reference example, exercised at the run boundary.
 
-The example is defined once, in `examples/acc/`; this suite imports that one
-definition rather than restating it, so a change to the example cannot pass
-here while breaking the artifact a reader copies.
+The example is defined once, in the packaged `sil.examples.acc` module; the
+source-tree files are compatibility entry points, and this suite imports that
+same definition rather than restating it.
 """
 
 import importlib.util

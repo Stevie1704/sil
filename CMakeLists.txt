@@ -3,6 +3,8 @@ project(sil LANGUAGES C CXX)
 
 enable_testing()
 
+include(GNUInstallDirs)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -123,6 +125,24 @@ if(NOT APPLE)
   # dlsym(RTLD_NEXT, ...), which needs libdl.
   target_link_libraries(sil_clock_shim PRIVATE dl)
 endif()
+
+# The runner is installed in the conventional executable directory and the
+# shim in the conventional library directory.  The runner carries the
+# relative library directory as a configure-time value so its runtime lookup
+# follows custom GNUInstallDirs settings as well as the default layout.
+target_compile_definitions(sil-run PRIVATE
+  SIL_INSTALL_LIBDIR="${CMAKE_INSTALL_LIBDIR}")
+target_compile_definitions(sil-run-instrumented PRIVATE
+  SIL_INSTALL_LIBDIR="${CMAKE_INSTALL_LIBDIR}")
+
+install(TARGETS sil-run
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS sil_clock_shim
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(DIRECTORY include/sil/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/sil)
 
 # Probe executable: exercises every interposed API for the shim's unit tests.
 add_executable(sil_clock_probe shim/clock_probe.c)

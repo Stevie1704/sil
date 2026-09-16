@@ -18,6 +18,7 @@ import struct
 import sys
 import traceback
 from dataclasses import dataclass
+from pathlib import Path
 
 from sil import schema
 
@@ -312,15 +313,29 @@ def run(participant: StepParticipant) -> None:
 
 
 def _load(spec: str) -> StepParticipant:
-    """Instantiates a participant from a '<file.py>:<ClassName>' spec."""
+    """Instantiate a participant from a file or package module spec.
+
+    File specs keep the original ``<file.py>:<ClassName>`` interface. Package
+    modules use ``<package.module>:<ClassName>`` so a wheel can refer to its
+    own process participants without embedding an installation path in a
+    Manifest.
+    """
+    import importlib
     import importlib.util
 
     path, _, cls_name = spec.rpartition(":")
     if not path:
         raise SystemExit(f"participant spec must be <file.py>:<Class>, got {spec!r}")
-    module_spec = importlib.util.spec_from_file_location("sil_participant_module", path)
-    module = importlib.util.module_from_spec(module_spec)
-    module_spec.loader.exec_module(module)
+    if Path(path).suffix == ".py" or Path(path).is_file():
+        module_spec = importlib.util.spec_from_file_location(
+            "sil_participant_module", path
+        )
+        if module_spec is None or module_spec.loader is None:
+            raise SystemExit(f"cannot load participant module from {path!r}")
+        module = importlib.util.module_from_spec(module_spec)
+        module_spec.loader.exec_module(module)
+    else:
+        module = importlib.import_module(path)
     return getattr(module, cls_name)()
 
 

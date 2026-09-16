@@ -13,6 +13,10 @@ namespace sil {
 
 namespace {
 
+#ifndef SIL_INSTALL_LIBDIR
+#define SIL_INSTALL_LIBDIR "lib"
+#endif
+
 #ifdef __APPLE__
 constexpr const char *kClockShimLib = "libsil_clock_shim.dylib";
 #else
@@ -37,7 +41,14 @@ std::filesystem::path runner_dir() {
 std::filesystem::path clock_shim_library_path() {
   std::filesystem::path dir = runner_dir();
   if (dir.empty()) return {};
-  return dir / kClockShimLib;
+  // The build tree keeps the shim beside the runner for the existing
+  // development workflow.  An installed runner uses the conventional
+  // <prefix>/bin and <prefix>/<libdir> layout, so resolve that sibling only
+  // when the build-tree location is absent.
+  const std::filesystem::path beside_runner = dir / kClockShimLib;
+  std::error_code error;
+  if (std::filesystem::exists(beside_runner, error)) return beside_runner;
+  return dir.parent_path() / SIL_INSTALL_LIBDIR / kClockShimLib;
 }
 
 }  // namespace sil
