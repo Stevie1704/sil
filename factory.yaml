@@ -1,0 +1,72 @@
+schema_version: 1
+target_branch: main
+# No lockfile exists, so this resolves the dependency graph at run time.
+setup: uv venv -p /usr/bin/python3 .venv && uv pip install -p .venv/bin/python -e "python/[dev]"
+setup_files: [python/pyproject.toml]
+setup_environment_policy: clean
+gates:
+  # CMake fetches nlohmann_json and mcap at configure time, so this gate needs
+  # the bridge network a run supplies.
+  - name: build
+    command: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j
+    timeout: 15m
+    blocking: true
+    environment_policy: clean
+  - name: ctest
+    command: ctest --test-dir build --output-on-failure
+    timeout: 5m
+    blocking: true
+    depends_on: [build]
+    environment_policy: clean
+  # SIL_SKIP_BUILD=1 stops conftest.py rebuilding what the build gate produced.
+  - name: pytest
+    command: SIL_SKIP_BUILD=1 .venv/bin/python -m pytest tests/ -v
+    timeout: 20m
+    blocking: true
+    depends_on: [ctest]
+    environment_policy: clean
+  # The milestone exit criterion over every checked-in reference manifest:
+  # run twice, compare the MCAP byte for byte.
+  - name: determinism
+    command: PYTHONPATH=/work/python/src .venv/bin/python tools/determinism_gate.py
+    timeout: 10m
+    blocking: true
+    depends_on: [pytest]
+    environment_policy: clean
+role_harness_defaults:
+  implementation: codex
+  spec_review: codex
+  standards_review: codex
+model_options:
+  implementation: [gpt-5.6-luna]
+  spec_review: [gpt-5.6-luna]
+  standards_review: [gpt-5.6-luna]
+reasoning_effort_options:
+  implementation: [max]
+  spec_review: [high]
+  standards_review: [high]
+timeouts:
+  setup: 10m
+  agent: 90m
+  gate: 20m
+  review: 30m
+review_units:
+  max_unit_bytes: 65536
+  max_units: 4
+retry_limits:
+  check_repair: 3
+  review_repair: 2
+  test_revision: 2
+test_policy:
+  mode: advisory
+  allow_human_exemption: true
+  allow_technical_exemption: true
+  # Enable only after the measured pilot records a proceed decision in #26.
+  allow_automated_objections: false
+allowed_overrides: []
+worker_build:
+  image: ghcr.io/stevie1704/sil-worker
+  digest: sha256:e0016a74e93218122208a93e5c76988985ebbf81ebb0d97e7e2ca4ebc3cfd8cc
+  definition: worker/Dockerfile
+base_synchronization:
+  mode: never
