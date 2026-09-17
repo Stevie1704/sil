@@ -320,12 +320,13 @@ def _load(spec: str) -> StepParticipant:
     own process participants without embedding an installation path in a
     Manifest.
     """
-    import importlib
     import importlib.util
 
     path, _, cls_name = spec.rpartition(":")
     if not path:
-        raise SystemExit(f"participant spec must be <file.py>:<Class>, got {spec!r}")
+        raise SystemExit(
+            f"participant spec must be <file.py|module>:<Class>, got {spec!r}"
+        )
     if Path(path).suffix == ".py" or Path(path).is_file():
         module_spec = importlib.util.spec_from_file_location(
             "sil_participant_module", path
@@ -342,7 +343,9 @@ def _load(spec: str) -> StepParticipant:
 def main(argv: list[str] | None = None) -> None:
     args = sys.argv[1:] if argv is None else argv
     if len(args) != 1:
-        raise SystemExit("usage: python -m sil.participant <file.py>:<Class>")
+        raise SystemExit(
+            "usage: python -m sil.participant <file.py|module>:<Class>"
+        )
     run(_load(args[0]))
 
 

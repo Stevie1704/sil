@@ -5,6 +5,7 @@
 BUILD_DIR    ?= build
 BUILD_TYPE   ?= Release
 PYTHON       := .venv/bin/python
+PYTHON_BIN   := $(CURDIR)/.venv/bin
 # Absolute, because `sil-run` starts each participant in its own kernel-owned
 # working directory: a relative entry would be resolved from there, not from
 # the source tree. See docs/step-protocol.md.
@@ -70,13 +71,16 @@ footprint: venv ## Declared payload memory: make footprint ARGS="manifest.json"
 
 # Example ----------------------------------------------------------------------
 # Convenience over `make run`: builds the ACC reference example's nominal
-# Manifest and runs it. `sil-run` spawns the participants as child processes,
-# so PYTHONPATH has to be set on the run as well as on the build — absolute,
-# because each child starts in its own kernel-owned working directory.
+# Manifest and runs it. The Manifest deliberately names `python3` so source
+# and wheel builds have identical bytes; put this venv first on PATH so the
+# child participants use the declared Python environment. `sil-run` spawns the
+# participants as child processes, so PYTHONPATH has to be set on the run as
+# well as on the build — absolute, because each child starts in its own
+# kernel-owned working directory.
 .PHONY: example
 example: venv build ## Run the ACC example and record it into the build directory
-	PYTHONPATH=$(SRC) $(PYTHON) examples/acc/manifest.py $(BUILD_DIR)/acc.json
-	PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/acc.json -o $(BUILD_DIR)/acc.mcap
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) $(PYTHON) -m sil.examples.acc.manifest $(BUILD_DIR)/acc.json
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/acc.json -o $(BUILD_DIR)/acc.mcap
 
 # Convenience over `make run` for the FMU import example. The importer extracts
 # the archive into the participant's kernel-owned working directory, which the

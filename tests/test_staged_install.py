@@ -27,20 +27,19 @@ def participant_operations(stdout: str) -> list[str]:
     return [json.loads(line)["op"] for line in stdout.splitlines()]
 
 
-def uv_environment(cache_dir: Path) -> dict[str, str]:
+def uv_environment() -> dict[str, str]:
     env = dict(os.environ)
-    env["UV_CACHE_DIR"] = str(cache_dir)
+    env.setdefault("UV_CACHE_DIR", str(ROOT / "build" / "uv-cache"))
     return env
 
 
 @pytest.fixture(scope="session")
 def wheel_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
     wheel_dir = tmp_path_factory.mktemp("sil-wheel")
-    cache_dir = tmp_path_factory.mktemp("uv-cache-build")
     subprocess.run(
         ["uv", "build", "--wheel", "--out-dir", str(wheel_dir),
          str(ROOT / "python")],
-        check=True, env=uv_environment(cache_dir),
+        check=True, env=uv_environment(),
         capture_output=True,
         text=True,
     )
@@ -54,8 +53,7 @@ def installed_python(
     wheel_path: Path, tmp_path_factory: pytest.TempPathFactory,
 ) -> Path:
     venv = tmp_path_factory.mktemp("sil-venv")
-    cache_dir = tmp_path_factory.mktemp("uv-cache-install")
-    env = uv_environment(cache_dir)
+    env = uv_environment()
     subprocess.run(
         ["uv", "venv", "-p", sys.executable, str(venv)],
         check=True, env=env,
@@ -94,6 +92,42 @@ def staged_prefix(build_dir: Path, tmp_path_factory: pytest.TempPathFactory) -> 
     return prefix
 
 
+@pytest.fixture(scope="session")
+def custom_staged_prefix(
+    build_dir: Path, tmp_path_factory: pytest.TempPathFactory,
+) -> Path:
+    """Install a second runner with a slash-terminated custom bindir."""
+    custom_build = tmp_path_factory.mktemp("sil-custom-build")
+    prefix = tmp_path_factory.mktemp("sil-custom-prefix")
+    deps = build_dir / "_deps"
+    subprocess.run(
+        [
+            "cmake", "-S", str(ROOT), "-B", str(custom_build),
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_INSTALL_BINDIR=custom/bin/",
+            f"-DFETCHCONTENT_SOURCE_DIR_NLOHMANN_JSON={deps / 'nlohmann_json-src'}",
+            f"-DFETCHCONTENT_SOURCE_DIR_MCAP={deps / 'mcap-src'}",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["cmake", "--build", str(custom_build),
+         "--target", "sil-run", "sil_clock_shim", "-j"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["cmake", "--install", str(custom_build), "--prefix", str(prefix)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return prefix
+
+
 def test_cmake_stages_the_production_runtime_and_public_headers(
     staged_prefix: Path,
 ):
@@ -110,6 +144,44 @@ def test_cmake_stages_the_production_runtime_and_public_headers(
         pytest.skip("staged runtime layout is only exercised on POSIX hosts")
     assert shim.is_file()
     assert not (staged_prefix / "bin" / "sil-run-instrumented").exists()
+
+
+@pytest.mark.skipif(
+    not (sys.platform == "darwin" or sys.platform.startswith("linux")),
+    reason="staged runtime layout is only exercised on POSIX hosts",
+)
+def test_custom_bindir_with_trailing_slash_resolves_the_staged_shim(
+    custom_staged_prefix: Path, installed_python: Path, tmp_path: Path,
+):
+    assert (custom_staged_prefix / "custom" / "bin" / "sil-run").is_file()
+    if sys.platform == "darwin":
+        shim = custom_staged_prefix / "lib" / "libsil_clock_shim.dylib"
+    else:
+        shim = custom_staged_prefix / "lib" / "libsil_clock_shim.so"
+    assert shim.is_file()
+
+    manifest = tmp_path / "acc.json"
+    recording = tmp_path / "acc.mcap"
+    env = installed_environment(installed_python)
+    built = subprocess.run(
+        [str(installed_python / "bin" / "sil-acc"), str(manifest)],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    run = subprocess.run(
+        [str(custom_staged_prefix / "custom" / "bin" / "sil-run"),
+         str(manifest), "-o", str(recording)],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    assert built.returncode == 0, built.stderr
+    assert run.returncode == 0, run.stderr
+    assert recording.is_file()
 
 
 def test_acc_manifest_cli_uses_installable_participant_specs(tmp_path: Path):
@@ -136,24 +208,18 @@ def test_acc_manifest_cli_uses_installable_participant_specs(tmp_path: Path):
 
 
 @pytest.mark.parametrize("delayed_sensing", [False, True])
-def test_acc_manifest_bytes_match_the_source_tree_development_setup(
+def test_acc_manifest_source_tree_hash_is_stable(
     tmp_path: Path, delayed_sensing: bool,
 ):
     variant = "delayed" if delayed_sensing else "nominal"
     source_manifest = tmp_path / f"source-{variant}.json"
-    package_manifest = tmp_path / f"package-{variant}.json"
     env = dict(os.environ, PYTHONPATH=str(ROOT / "python" / "src"))
     source_build = [
-        sys.executable, str(ROOT / "examples" / "acc" / "manifest.py"),
-        str(source_manifest),
-    ]
-    package_build = [
         sys.executable, "-m", "sil.examples.acc.manifest",
-        str(package_manifest),
+        str(source_manifest),
     ]
     if delayed_sensing:
         source_build.append("--delayed-sensing")
-        package_build.append("--delayed-sensing")
     source = subprocess.run(
         source_build,
         cwd=tmp_path,
@@ -161,18 +227,10 @@ def test_acc_manifest_bytes_match_the_source_tree_development_setup(
         capture_output=True,
         text=True,
     )
-    package = subprocess.run(
-        package_build,
-        cwd=tmp_path,
-        env=env,
-        capture_output=True,
-        text=True,
-    )
 
-    assert source.returncode == package.returncode == 0
-    assert source_manifest.read_bytes() == package_manifest.read_bytes()
-    assert source.stdout == package.stdout
-    assert package.stdout.strip() == ACC_MANIFEST_HASHES[variant]
+    assert source.returncode == 0, source.stderr
+    assert source_manifest.is_file()
+    assert source.stdout.strip() == ACC_MANIFEST_HASHES[variant]
 
 
 def test_wheel_installs_acc_entrypoint_without_checkout_imports(
@@ -198,6 +256,7 @@ def test_wheel_installs_acc_entrypoint_without_checkout_imports(
     )
 
     assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip() == ACC_MANIFEST_HASHES["nominal"]
     assert manifest.is_file()
     for entrypoint in ("sil-acc", "sil-check", "sil-footprint",
                        "sil-participant"):
@@ -241,7 +300,7 @@ def test_installed_acc_run_matches_source_tree_run(
 
     source_env = dict(os.environ, PYTHONPATH=str(ROOT / "python" / "src"))
     source_build = [
-        sys.executable, str(ROOT / "examples" / "acc" / "manifest.py"),
+        sys.executable, "-m", "sil.examples.acc.manifest",
         str(source_manifest),
     ]
     installed_build = [

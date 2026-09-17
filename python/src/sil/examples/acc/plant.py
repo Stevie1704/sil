@@ -1,19 +1,37 @@
-"""ACC reference Run plant process participant."""
+"""ACC example: the plant, carrying the longitudinal motion of both vehicles.
+
+The kinematics are deliberately trivial — constant-acceleration integration of
+two positions along one axis. The example teaches the framework, not vehicle
+dynamics: if you have to understand the plant to understand the example, the
+plant is too big.
+
+The plant is the environment half of the closed loop. It publishes the sensing
+Channel the controller subscribes to, and integrates the acceleration the
+controller commands back.
+"""
 
 from sil.participant import StepParticipant, run
 
 NS_PER_S = 1e9
+
+# The lead vehicle holds its speed; the ego starts one gap behind it, at the
+# same speed, so every metre the gap moves comes from the commanded
+# acceleration rather than from the initial conditions.
 LEAD_POSITION_M = 60.0
 LEAD_SPEED_MPS = 25.0
 LEAD_ACCEL_MPS2 = 0.0
 EGO_POSITION_M = 0.0
 EGO_SPEED_MPS = 25.0
+
+# What the ego holds until the first command arrives. Under the default
+# Latency that is two Steps: the controller sees the first sensing Message one
+# Step after it is published, and its answer arrives one Step after that.
 INITIAL_COMMAND_MPS2 = 0.0
 
 
 def advance(position_m: float, speed_mps: float, accel_mps2: float,
             dt_s: float) -> tuple[float, float]:
-    """Advance one vehicle with constant-acceleration kinematics."""
+    """One vehicle's exact constant-acceleration motion over one step."""
     return (
         position_m + speed_mps * dt_s + 0.5 * accel_mps2 * dt_s * dt_s,
         speed_mps + accel_mps2 * dt_s,
@@ -29,8 +47,13 @@ class Plant(StepParticipant):
         self.commanded_accel_mps2 = INITIAL_COMMAND_MPS2
 
     def on_step(self, t, dt, inputs):
+        # The command in hand answers sensing published two Steps ago, which
+        # is what the default Latency costs around a loop. The newest command
+        # wins, and the last one is held while none arrives.
         if inputs:
             self.commanded_accel_mps2 = inputs[-1].data["accel_mps2"]
+        # The Message carries the state at t; integrating one step of dt comes
+        # after it, so the next Step publishes the state it reaches.
         sensing = {
             "gap_m": self.lead_position_m - self.ego_position_m,
             "relative_speed_mps": self.lead_speed_mps - self.ego_speed_mps,

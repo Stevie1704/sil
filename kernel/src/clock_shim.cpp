@@ -48,7 +48,12 @@ std::filesystem::path installed_prefix(
   std::filesystem::path prefix = runner_directory;
   for (const auto &component : bindir) {
     if (component == "..") return {};
-    if (component != ".") prefix = prefix.parent_path();
+    // GNUInstallDirs preserves a trailing slash in values such as
+    // "custom/bin/".  std::filesystem iterates that as an empty component;
+    // it is not another directory to strip from the installed prefix.
+    if (!component.empty() && component != ".") {
+      prefix = prefix.parent_path();
+    }
   }
   return prefix;
 }

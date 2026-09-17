@@ -266,12 +266,13 @@ separates the cost of routing to subscribers from the cost of recording I/O.
 
 ## ACC reference example
 
-[examples/acc/](examples/acc/) is one closed loop end to end: a plant carrying
+[python/src/sil/examples/acc/](python/src/sil/examples/acc/) is one closed loop
+end to end: a plant carrying
 the longitudinal motion of two vehicles, a shimmed vECU controller, and a test
-participant holding the Run to a minimum-gap KPI. `examples/acc/manifest.py`
-is the whole Run — three participants, two Channels, and the Duration — and
-the pytest suite in `tests/test_example_acc.py` imports that same file rather
-than restating it.
+participant holding the Run to a minimum-gap KPI. The packaged
+`sil.examples.acc.manifest` module is the whole Run — three participants, two
+Channels, and the Duration — and the pytest suite in `tests/test_example_acc.py`
+imports that same module rather than restating it.
 
 ```sh
 make example                                    # run it, record it into build/
@@ -282,9 +283,10 @@ delay on the sensing Channel over a one-second window — and comes from the sam
 builder:
 
 ```sh
-PYTHONPATH=$PWD/python/src python examples/acc/manifest.py build/acc.json
-PYTHONPATH=$PWD/python/src python examples/acc/manifest.py --delayed-sensing \
-    build/acc-delayed.json
+PYTHONPATH=$PWD/python/src .venv/bin/python -m sil.examples.acc.manifest \
+    build/acc.json
+PYTHONPATH=$PWD/python/src .venv/bin/python -m sil.examples.acc.manifest \
+    --delayed-sensing build/acc-delayed.json
 ```
 
 The two hashes differ, which says the Runs are not the same Run;
@@ -358,13 +360,14 @@ participants/      toy native participants (walking-skeleton fixtures) and
                    the bench publisher/subscriber fixtures for the
                    routing baseline
 shim/              virtual clock shim (preload lib) + probe for POSIX vECUs
-schemas/           message schemas (single typed contract)
+schemas/           message schemas for benchmark, FMU, and toy fixtures
 tools/silschema.py schema → packed C structs; sil.schema packs the same
                    layout in Python
 tools/bench_*.py   routing-baseline driver and its process participants
 docs/bench/        routing baseline: procedure, raw results, decision inputs
-examples/acc/      the ACC reference example: one closed-loop Run in a
-                   nominal and a delayed-sensing variant
+python/src/sil/examples/acc/
+                   the packaged ACC reference example: one closed-loop Run
+                   in a nominal and a delayed-sensing variant
 examples/fmu/      the FMU import example: one Reference FMU driven as a
                    process participant
 python/src/sil/    manifest builder, step-participant lib, test API,
