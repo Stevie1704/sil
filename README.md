@@ -266,12 +266,13 @@ separates the cost of routing to subscribers from the cost of recording I/O.
 
 ## ACC reference example
 
-[examples/acc/](examples/acc/) is one closed loop end to end: a plant carrying
+[python/src/sil/examples/acc/](python/src/sil/examples/acc/) is one closed loop
+end to end: a plant carrying
 the longitudinal motion of two vehicles, a shimmed vECU controller, and a test
-participant holding the Run to a minimum-gap KPI. `examples/acc/manifest.py`
-is the whole Run — three participants, two Channels, and the Duration — and
-the pytest suite in `tests/test_example_acc.py` imports that same file rather
-than restating it.
+participant holding the Run to a minimum-gap KPI. The packaged
+`sil.examples.acc.manifest` module is the whole Run — three participants, two
+Channels, and the Duration — and the pytest suite in `tests/test_example_acc.py`
+imports that same module rather than restating it.
 
 ```sh
 make example                                    # run it, record it into build/
@@ -282,9 +283,10 @@ delay on the sensing Channel over a one-second window — and comes from the sam
 builder:
 
 ```sh
-PYTHONPATH=$PWD/python/src python examples/acc/manifest.py build/acc.json
-PYTHONPATH=$PWD/python/src python examples/acc/manifest.py --delayed-sensing \
-    build/acc-delayed.json
+PYTHONPATH=$PWD/python/src .venv/bin/python -m sil.examples.acc.manifest \
+    build/acc.json
+PYTHONPATH=$PWD/python/src .venv/bin/python -m sil.examples.acc.manifest \
+    --delayed-sensing build/acc-delayed.json
 ```
 
 The two hashes differ, which says the Runs are not the same Run;
@@ -294,6 +296,47 @@ nominal one. Late sensing is late braking: the delayed Run drives a measurably
 different trajectory, which is what shows the Interceptor doing something
 rather than merely being declared. Both variants are in the CI determinism
 gate.
+
+## Install and run from a staged prefix
+
+The production runner, virtual Clock shim, and public Native participant
+headers can be staged independently of the build tree. The Python wheel
+contains the `sil` package, the ACC reference Run, and its command-line entry
+points. Build the two parts from the repository:
+
+```sh
+uv build --wheel --out-dir dist python
+wheel=$(find dist -maxdepth 1 -name 'sil-*.whl' -print -quit)
+uv venv .venv-staged
+uv pip install -p .venv-staged/bin/python "$wheel"
+
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+prefix=$(mktemp -d)
+cmake --install build --prefix "$prefix"
+```
+
+Add both installation `bin` directories to `PATH`, then run from any directory
+outside the checkout. No `PYTHONPATH`, build-tree path, or preload-library path
+is needed:
+
+```sh
+export PATH="$PWD/.venv-staged/bin:$prefix/bin:$PATH"
+workdir=$(mktemp -d)
+cd "$workdir"
+sil-acc acc.json
+sil-run acc.json -o acc.mcap
+sil-check acc.json --runner sil-run
+
+sil-acc --delayed-sensing acc-delayed.json
+sil-run acc-delayed.json -o acc-delayed.mcap
+sil-check acc-delayed.json --runner sil-run
+```
+
+The installed runner resolves the Clock shim from the staged prefix's
+conventional library directory. The installed headers are under
+`$prefix/include/sil`; development fixtures and `sil-run-instrumented` are
+not part of the production installation.
 
 ## Build & test
 
@@ -317,13 +360,14 @@ participants/      toy native participants (walking-skeleton fixtures) and
                    the bench publisher/subscriber fixtures for the
                    routing baseline
 shim/              virtual clock shim (preload lib) + probe for POSIX vECUs
-schemas/           message schemas (single typed contract)
+schemas/           message schemas for benchmark, FMU, and toy fixtures
 tools/silschema.py schema → packed C structs; sil.schema packs the same
                    layout in Python
 tools/bench_*.py   routing-baseline driver and its process participants
 docs/bench/        routing baseline: procedure, raw results, decision inputs
-examples/acc/      the ACC reference example: one closed-loop Run in a
-                   nominal and a delayed-sensing variant
+python/src/sil/examples/acc/
+                   the packaged ACC reference example: one closed-loop Run
+                   in a nominal and a delayed-sensing variant
 examples/fmu/      the FMU import example: one Reference FMU driven as a
                    process participant
 python/src/sil/    manifest builder, step-participant lib, test API,

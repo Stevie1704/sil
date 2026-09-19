@@ -78,7 +78,7 @@ int run(int argc, char **argv) {
       std::filesystem::path shim = sil::clock_shim_library_path();
       if (shim.empty() || !std::filesystem::exists(shim)) {
         std::cerr << "sil-run: clock shim requested but shim library not found "
-                     "next to the runner: "
+                     "in the runner installation layout: "
                   << shim.string() << "\n";
         return kExitConfigError;
       }

@@ -16,7 +16,8 @@ Build it and run it:
 
 or, without the convenience target:
 
-    PYTHONPATH=$PWD/python/src python examples/acc/manifest.py build/acc.json
+    PYTHONPATH=$PWD/python/src .venv/bin/python -m sil.examples.acc.manifest \
+        build/acc.json
     PYTHONPATH=$PWD/python/src ./build/sil-run build/acc.json -o build/acc.mcap
 
 `sil-run` spawns the participants as child processes, so `PYTHONPATH` has to be
@@ -33,25 +34,20 @@ the same Run; what says the Interceptor is the whole of the difference is
 Manifest.
 """
 
+from __future__ import annotations
+
 import argparse
 import json
-from pathlib import Path
+from importlib.resources import files
 
 from sil.manifest import Manifest, SubscriberRoute
-from sil.testing import participant_command
 
-EXAMPLE_DIR = Path(__file__).resolve().parent
-ROOT = EXAMPLE_DIR.parents[1]
-ACC_SCHEMAS = json.loads((ROOT / "schemas" / "acc.json").read_text())
+ACC_SCHEMAS = json.loads(
+    files("sil.examples.acc").joinpath("acc.json").read_text()
+)
 
 STEP_PERIOD_NS = 10_000_000
 DURATION_NS = 5_000_000_000
-
-# The delayed-sensing variant's one Interceptor: five Steps of extra Latency on
-# the sensing Channel over a one-second window. The window opens after the
-# commanded acceleration has left its comfort clamp, because a clamped command
-# answers stale and fresh sensing with the same number — a delay injected into
-# the clamped phase would be declared and have no effect.
 SENSING_DELAY_NS = 5 * STEP_PERIOD_NS
 SENSING_DELAY_START_NS = 2_000_000_000
 SENSING_DELAY_END_NS = 3_000_000_000
@@ -66,16 +62,26 @@ SENSING_DELAY_END_NS = 3_000_000_000
 ROUTE_CAPACITY = 2
 
 # The sensing routes carry more, because both variants are one Manifest apart
-# and a capacity is not one of the things that differs. A delayed Message holds
-# the front of its route until its visible time arrives, and per-Channel order
-# is preserved rather than reordered by shifted time, so the window queues one
-# further Message behind it per Step of delay. Those sit on top of the two any
-# route already declares. The route drains back to its steady depth in one
-# Burst at the first activation after the last delayed Message becomes visible,
-# which is why the delayed Run's trajectory rejoins the nominal one instead of
-# staying a fixed distance from it. The nominal variant declares a worst case
-# only its delayed twin reaches.
+# and a capacity is not one of the things that differs. A delayed Message
+# holds the front of its route until its visible time arrives, and per-Channel
+# order is preserved rather than reordered by shifted time, so the window
+# queues one further Message behind it per Step of delay. Those sit on top of
+# the two any route already declares. The route drains back to its steady depth
+# in one Burst at the first activation after the last delayed Message becomes
+# visible, which is why the delayed Run's trajectory rejoins the nominal one
+# instead of staying a fixed distance from it. The nominal variant declares a
+# worst case only its delayed twin reaches.
 SENSING_ROUTE_CAPACITY = ROUTE_CAPACITY + SENSING_DELAY_NS // STEP_PERIOD_NS
+
+
+def _participant(module: str, cls: str) -> list[str]:
+    # Keep this command location-independent so source and wheel Manifests
+    # have the same bytes. A consumer activates the venv (or puts its bin
+    # directory on PATH), and the child then imports the installed package.
+    return [
+        "python3", "-m", "sil.participant",
+        f"sil.examples.acc.{module}:{cls}",
+    ]
 
 
 def acc_manifest(*, safety_kpi: str = "MinimumGapKPI",
@@ -107,7 +113,7 @@ def acc_manifest(*, safety_kpi: str = "MinimumGapKPI",
     # the default — so the example shows the field without depending on it.
     m.add_process(
         "plant",
-        command=participant_command(EXAMPLE_DIR / "plant.py", "Plant"),
+        command=_participant("plant", "Plant"),
         step_period_ns=STEP_PERIOD_NS,
         subscribes=[SubscriberRoute("acc.Command", capacity=ROUTE_CAPACITY)],
         publishes=["acc.Sensing"],
@@ -119,11 +125,11 @@ def acc_manifest(*, safety_kpi: str = "MinimumGapKPI",
     # shim is per participant and that both kinds share one Run.
     m.add_process(
         "controller",
-        command=participant_command(EXAMPLE_DIR / "controller.py",
-                                    "Controller"),
+        command=_participant("controller", "Controller"),
         step_period_ns=STEP_PERIOD_NS,
-        subscribes=[SubscriberRoute("acc.Sensing",
-                                    capacity=SENSING_ROUTE_CAPACITY)],
+        subscribes=[SubscriberRoute(
+            "acc.Sensing", capacity=SENSING_ROUTE_CAPACITY
+        )],
         publishes=["acc.Command"],
         priority=1,
         shim=True,
@@ -132,21 +138,27 @@ def acc_manifest(*, safety_kpi: str = "MinimumGapKPI",
     # the loop cannot see it. Its only output is the Run's exit code.
     m.add_process(
         "test",
-        command=participant_command(EXAMPLE_DIR / "safety.py", safety_kpi),
+        command=_participant("safety", safety_kpi),
         step_period_ns=STEP_PERIOD_NS,
-        subscribes=[SubscriberRoute("acc.Sensing",
-                                    capacity=SENSING_ROUTE_CAPACITY)],
+        subscribes=[SubscriberRoute(
+            "acc.Sensing", capacity=SENSING_ROUTE_CAPACITY
+        )],
         priority=2,
     )
     return m
 
 
-if __name__ == "__main__":
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("out", help="path to write the Manifest to")
     parser.add_argument(
         "--delayed-sensing", action="store_true",
         help="declare the delay Interceptor on the sensing Channel",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     print(acc_manifest(delayed_sensing=args.delayed_sensing).write(args.out).hash)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

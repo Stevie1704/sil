@@ -21,11 +21,7 @@ from sil.check import check  # noqa: E402
 
 
 def load(name: str, path: str):
-    """Load an example manifest by path.
-
-    Both examples name their module `manifest`, so importing them by name
-    would give the second one the first one's module.
-    """
+    """Load the FMU manifest by path so its source-relative imports work."""
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -34,7 +30,8 @@ def load(name: str, path: str):
 
 def main() -> int:
     build = Path("build")
-    acc = load("acc_manifest", "examples/acc/manifest.py")
+    from sil.examples.acc import manifest as acc
+
     fmu = load("fmu_manifest", "examples/fmu/manifest.py")
     references = [
         full_pipeline_manifest(build),

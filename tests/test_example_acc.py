@@ -1,9 +1,4 @@
-"""The ACC reference example, exercised at the run boundary.
-
-The example is defined once, in `examples/acc/`; this suite imports that one
-definition rather than restating it, so a change to the example cannot pass
-here while breaking the artifact a reader copies.
-"""
+"""The packaged ACC reference example, exercised at the run boundary."""
 
 import importlib.util
 import io
@@ -13,6 +8,7 @@ import pytest
 from conftest import ROOT
 
 from sil import footprint, schema
+from sil.examples.acc import controller, manifest, safety
 from sil.testing import RunFailure, run_simulation
 
 
@@ -25,9 +21,6 @@ def _load(name: str, path: Path):
 
 
 silschema = _load("silschema", ROOT / "tools" / "silschema.py")
-manifest = _load("acc_manifest", ROOT / "examples" / "acc" / "manifest.py")
-controller = _load("acc_controller", ROOT / "examples" / "acc" / "controller.py")
-safety = _load("acc_safety", ROOT / "examples" / "acc" / "safety.py")
 
 
 @pytest.fixture(scope="module")

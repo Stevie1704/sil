@@ -625,7 +625,8 @@ None open.
   lives until the process exits, which is the whole lifecycle ABI v1 has and
   #86 declined to extend.
 - **First environment reference adapter (#96):** the internal dynamics model.
-  `examples/acc/plant.py` carries the longitudinal motion of two vehicles and
+  `python/src/sil/examples/acc/plant.py` carries the longitudinal motion of two
+  vehicles and
   is stepped over the same step protocol as any other process participant —
   an adapter in exactly the sense #10 means, with nothing simulator-shaped
   added to the kernel to carry it. esmini is deferred, not rejected: the
