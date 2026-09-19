@@ -37,6 +37,18 @@ One run = `sil-run manifest.json -o out.mcap`:
 Exit codes: `0` ok, `1` run/test failure, `2` Manifest error, `3` determinism
 violation (sil-check).
 
+For a bounded CI wait, add the optional run-boundary guard:
+
+```sh
+sil-run manifest.json --participant-timeout-ms 5000 -o out.mcap
+```
+
+The value is a positive wall-clock duration in milliseconds. It applies
+independently to each Process participant's complete `ready` and `step_done`
+response wait. A missed deadline is a Run failure (exit 1), not a Manifest
+change: the option is absent from the Manifest and its hash. Omitting it keeps
+the existing unlimited-wait behavior.
+
 ## Virtual clock shim for opaque POSIX vECUs
 
 An out-of-process participant is expected to derive time from the `step(t, Δt)`

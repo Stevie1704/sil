@@ -81,6 +81,14 @@ Only that deliberate line is a Manifest error. Any other answer to
 stays a run failure — a participant that breaks on the way up is not a bad
 Manifest.
 
+The run boundary may be given `--participant-timeout-ms N`. When present, the
+kernel gives each Process participant an independent `N`-millisecond,
+wall-clock deadline for the complete wait for this `ready` response. The
+deadline starts with the `init` request and is not extended by receiving only a
+partial response line. A missed initialization deadline is a Run failure (exit
+1) naming the participant and initialization phase. Without the option, the
+wait remains unlimited for compatibility.
+
 The child echoes the highest offered protocol it supports. An absent
 `ready.protocol` means 1. If a child answers 1 (or omits the field) to an offer
 of 2, the kernel uses only slot zero and applies the established inline fallback
@@ -118,6 +126,15 @@ exactly one of `data` or `shm_seq`; `shm_slot` accompanies `shm_seq` under
 protocol 2. The representation present on the line is authoritative. A child
 failure at Step time is a run failure, not a Manifest error; only a `fail`
 answering `init` is a Manifest error.
+
+The same `--participant-timeout-ms N` deadline starts anew with every `step`
+request and covers the complete wait for its `step_done` response. It is a
+wall-clock guard: partial line reads do not reset it, and it is independent of
+the Step's virtual time. A missed deadline is a Run failure (exit 1) whose
+diagnostic names the Process participant, the Step phase, and that Step's
+virtual time. The option is a run-boundary argument, not Manifest data, so it
+does not change the Manifest hash, protocol messages, or Recording bytes of a
+Run that completes before all deadlines.
 
 After the run, the kernel sends:
 
