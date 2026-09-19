@@ -1,5 +1,22 @@
 cmake_minimum_required(VERSION 3.24)
-project(sil LANGUAGES C CXX)
+
+# The Python distribution owns the public version.  The native runner, the
+# staged development prefix, and the container are all built from this value
+# so a release cannot quietly contain two versions.
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/python/pyproject.toml" SIL_PYPROJECT)
+string(REGEX MATCH
+  "version[ \t]*=[ \t]*\"([0-9]+\\.[0-9]+\\.[0-9]+)\""
+  SIL_VERSION_MATCH "${SIL_PYPROJECT}")
+if(NOT SIL_VERSION_MATCH)
+  message(FATAL_ERROR "cannot find a semantic project version in python/pyproject.toml")
+endif()
+set(SIL_VERSION "${CMAKE_MATCH_1}")
+set(SIL_SOURCE_REPOSITORY "https://github.com/Stevie1704/sil" CACHE STRING
+  "Canonical source repository URL embedded in release metadata")
+set(SIL_SOURCE_REVISION "unknown" CACHE STRING
+  "Source revision embedded in release metadata")
+
+project(sil VERSION "${SIL_VERSION}" LANGUAGES C CXX)
 
 enable_testing()
 
@@ -64,6 +81,14 @@ target_include_directories(sil-run-instrumented PRIVATE include)
 target_compile_definitions(sil-run-instrumented PRIVATE SIL_COPY_COUNTERS)
 target_link_libraries(sil-run-instrumented
   PRIVATE nlohmann_json::nlohmann_json mcap_headers)
+
+set(SIL_RELEASE_DEFINITIONS
+  SIL_VERSION="${SIL_VERSION}"
+  SIL_SOURCE_REPOSITORY="${SIL_SOURCE_REPOSITORY}"
+  SIL_SOURCE_REVISION="${SIL_SOURCE_REVISION}"
+  SIL_LICENSE_IDENTIFIER="Apache-2.0")
+target_compile_definitions(sil-run PRIVATE ${SIL_RELEASE_DEFINITIONS})
+target_compile_definitions(sil-run-instrumented PRIVATE ${SIL_RELEASE_DEFINITIONS})
 
 # The interceptor plan is pure run-boundary arithmetic with a small interface,
 # so it has a focused C++ test target in addition to the end-to-end suite.
@@ -147,6 +172,18 @@ install(TARGETS sil_clock_shim
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(DIRECTORY include/sil/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/sil)
+
+# Native participants need the schema compiler as well as the C ABI headers.
+# It is installed as a small, dependency-free command rather than as a
+# development-only build-tree fixture.
+install(PROGRAMS tools/silschema.py
+  DESTINATION ${CMAKE_INSTALL_BINDIR}
+  RENAME silschema)
+
+configure_file(cmake/release.json.in ${CMAKE_CURRENT_BINARY_DIR}/release.json
+  @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/release.json
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/sil)
 
 # The staged prefix is what the release archives, so the grant travels with the
 # binaries rather than staying behind in the checkout. The two header-only

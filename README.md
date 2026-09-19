@@ -469,3 +469,5 @@ tests/             behavior tests at the run boundary
   qualification.
 - [CONTRIBUTING.md](CONTRIBUTING.md) — the terms a contribution is accepted
   under, and how to get a change reviewed.
+- [docs/releasing.md](docs/releasing.md) — how maintainers prepare, publish,
+  verify, and recover a versioned release bundle.

@@ -19,13 +19,43 @@
 
 namespace {
 
+#ifndef SIL_VERSION
+#define SIL_VERSION "unknown"
+#endif
+#ifndef SIL_SOURCE_REPOSITORY
+#define SIL_SOURCE_REPOSITORY "unknown"
+#endif
+#ifndef SIL_SOURCE_REVISION
+#define SIL_SOURCE_REVISION "unknown"
+#endif
+#ifndef SIL_LICENSE_IDENTIFIER
+#define SIL_LICENSE_IDENTIFIER "Apache-2.0"
+#endif
+
 constexpr int kExitOk = 0;
 constexpr int kExitRunFailure = 1;
 constexpr int kExitConfigError = 2;
 
 void usage() {
   std::cerr << "usage: sil-run <manifest.json> [--participant-timeout-ms <N>] "
-               "[-o <out.mcap> | --no-recording]\n";
+               "[-o <out.mcap> | --no-recording]\n"
+               "       sil-run --version\n"
+               "       sil-run --build-info\n";
+}
+
+int report_version(int argc, char **argv) {
+  if (argc == 2 && std::strcmp(argv[1], "--version") == 0) {
+    std::cout << SIL_VERSION << "\n";
+    return kExitOk;
+  }
+  if (argc == 2 && std::strcmp(argv[1], "--build-info") == 0) {
+    std::cout << "{\"license\":\"" << SIL_LICENSE_IDENTIFIER
+              << "\",\"source_repository\":\"" << SIL_SOURCE_REPOSITORY
+              << "\",\"source_revision\":\"" << SIL_SOURCE_REVISION
+              << "\",\"version\":\"" << SIL_VERSION << "\"}\n";
+    return kExitOk;
+  }
+  return -1;
 }
 
 bool parse_participant_timeout(std::string_view text,
@@ -56,6 +86,9 @@ bool manifest_requests_shim(const sil::Manifest &m) {
 }
 
 int run(int argc, char **argv) {
+  const int report = report_version(argc, argv);
+  if (report >= 0) return report;
+
   // A participant process dying mid-write must surface as a RunError,
   // not kill the kernel via SIGPIPE.
   signal(SIGPIPE, SIG_IGN);

@@ -3,8 +3,15 @@
 # The tag documents the Python release; the digest makes every build resolve
 # the same multi-platform OCI index. It contains both amd64 (CI) and arm64.
 ARG PYTHON_IMAGE=python:3.13.7-slim-bookworm@sha256:adafcc17694d715c905b4c7bebd96907a1fd5cf183395f0ebc4d3428bd22d92d
+ARG SIL_VERSION=0.1.0
+ARG SIL_SOURCE_REPOSITORY=https://github.com/Stevie1704/sil
+ARG SIL_SOURCE_REVISION=unknown
 
 FROM ${PYTHON_IMAGE} AS build
+
+ARG SIL_VERSION
+ARG SIL_SOURCE_REPOSITORY
+ARG SIL_SOURCE_REVISION
 
 # Freeze Debian's package index as well as the base filesystem. Build tools
 # never cross into the runtime stage.
@@ -31,10 +38,15 @@ COPY schemas schemas
 COPY shim shim
 COPY tests tests
 COPY tools tools
+COPY cmake cmake
 COPY python python
 COPY container container
 
-RUN cmake -S . -B /build -DCMAKE_BUILD_TYPE=Release \
+RUN python tools/release.py stamp-python --root /src \
+      --version "${SIL_VERSION}" --source-revision "${SIL_SOURCE_REVISION}" \
+    && cmake -S . -B /build -DCMAKE_BUILD_TYPE=Release \
+      -DSIL_SOURCE_REPOSITORY="${SIL_SOURCE_REPOSITORY}" \
+      -DSIL_SOURCE_REVISION="${SIL_SOURCE_REVISION}" \
     && cmake --build /build --target sil-run sil_clock_shim -j2 \
     && cmake --install /build --prefix /opt/sil/native
 
@@ -55,6 +67,7 @@ RUN python -m pip install --no-cache-dir \
 # that carry them. cp fails the build if a notice disappears upstream.
 RUN install -d /opt/sil/licenses \
     && cp -a /opt/sil/native/share/licenses/sil/. /opt/sil/licenses/ \
+    && cp /opt/sil/native/share/sil/release.json /opt/sil/licenses/release.json \
     && install -d /opt/sil/licenses/lz4 /opt/sil/licenses/zstandard \
     && cp /opt/sil/python/lib/python*/site-packages/lz4-*.dist-info/licenses/LICENSE \
       /opt/sil/licenses/lz4/LICENSE \
@@ -63,9 +76,15 @@ RUN install -d /opt/sil/licenses \
 
 FROM ${PYTHON_IMAGE} AS runtime
 
+ARG SIL_VERSION
+ARG SIL_SOURCE_REPOSITORY
+ARG SIL_SOURCE_REVISION
+
 LABEL org.opencontainers.image.title="SiL Run runtime" \
       org.opencontainers.image.description="One deterministic SiL Run per Linux container" \
-      org.opencontainers.image.source="https://github.com/Stevie1704/sil" \
+      org.opencontainers.image.source="${SIL_SOURCE_REPOSITORY}" \
+      org.opencontainers.image.revision="${SIL_SOURCE_REVISION}" \
+      org.opencontainers.image.version="${SIL_VERSION}" \
       org.opencontainers.image.licenses="Apache-2.0"
 
 COPY --from=build /opt/sil/native/bin/sil-run /usr/local/bin/sil-run

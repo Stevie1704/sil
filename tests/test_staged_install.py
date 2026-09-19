@@ -132,6 +132,7 @@ def test_cmake_stages_the_production_runtime_and_public_headers(
     staged_prefix: Path,
 ):
     assert (staged_prefix / "bin" / "sil-run").is_file()
+    assert (staged_prefix / "bin" / "silschema").is_file()
     assert (staged_prefix / "include" / "sil" / "participant.h").is_file()
     assert (staged_prefix / "include" / "sil" / "arena.h").is_file()
     assert (staged_prefix / "include" / "sil" / "clock_region.h").is_file()
@@ -144,6 +145,10 @@ def test_cmake_stages_the_production_runtime_and_public_headers(
         pytest.skip("staged runtime layout is only exercised on POSIX hosts")
     assert shim.is_file()
     assert not (staged_prefix / "bin" / "sil-run-instrumented").exists()
+    metadata = json.loads((staged_prefix / "share" / "sil" / "release.json").read_text())
+    assert metadata["version"] == "0.1.0"
+    assert metadata["license"] == "Apache-2.0"
+    assert metadata["source_repository"] == "https://github.com/Stevie1704/sil"
 
 
 def test_cmake_stages_the_license_the_release_archives(staged_prefix: Path):
