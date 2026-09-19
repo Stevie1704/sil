@@ -1,9 +1,14 @@
 #include <signal.h>
 
+#include <charconv>
+#include <chrono>
 #include <cstring>
 #include <filesystem>
 #include <iostream>
+#include <limits>
 #include <memory>
+#include <optional>
+#include <string_view>
 #include <variant>
 
 #include "clock_shim.hpp"
@@ -19,7 +24,24 @@ constexpr int kExitRunFailure = 1;
 constexpr int kExitConfigError = 2;
 
 void usage() {
-  std::cerr << "usage: sil-run <manifest.json> [-o <out.mcap> | --no-recording]\n";
+  std::cerr << "usage: sil-run <manifest.json> [--participant-timeout-ms <N>] "
+               "[-o <out.mcap> | --no-recording]\n";
+}
+
+bool parse_participant_timeout(std::string_view text,
+                               std::chrono::milliseconds &timeout) {
+  if (text.empty()) return false;
+  uint64_t value = 0;
+  const auto result = std::from_chars(text.data(), text.data() + text.size(),
+                                     value);
+  if (result.ec != std::errc{} || result.ptr != text.data() + text.size() ||
+      value == 0 ||
+      value > static_cast<uint64_t>(
+                   std::chrono::milliseconds::max().count()))
+    return false;
+  timeout = std::chrono::milliseconds(
+      static_cast<std::chrono::milliseconds::rep>(value));
+  return true;
 }
 
 // Fail fast at load if a participant opted into the shim but the shim library
@@ -45,10 +67,23 @@ int run(int argc, char **argv) {
   // treats a null sink as "do not record"; this is the switch that reaches it.
   bool recording = true;
   bool out_given = false;
+  std::optional<std::chrono::milliseconds> participant_timeout;
   for (int i = 1; i < argc; i++) {
     if (std::strcmp(argv[i], "-o") == 0 && i + 1 < argc) {
       out_path = argv[++i];
       out_given = true;
+    } else if (std::strcmp(argv[i], "--participant-timeout-ms") == 0) {
+      if (participant_timeout || i + 1 >= argc) {
+        usage();
+        return kExitConfigError;
+      }
+      std::chrono::milliseconds timeout;
+      if (!parse_participant_timeout(argv[++i], timeout)) {
+        std::cerr << "sil-run: --participant-timeout-ms must be a positive "
+                     "integer representable as milliseconds\n";
+        return kExitConfigError;
+      }
+      participant_timeout = timeout;
     } else if (std::strcmp(argv[i], "--no-recording") == 0) {
       recording = false;
     } else if (argv[i][0] == '-') {
@@ -89,7 +124,7 @@ int run(int argc, char **argv) {
     std::unique_ptr<sil::RecordingSink> recorder;
     if (recording) recorder = sil::make_recording_sink(out_path, manifest);
     try {
-      sil::Engine engine(manifest, recorder.get());
+      sil::Engine engine(manifest, recorder.get(), participant_timeout);
       engine.setup();
       engine.run();
       if (recorder) recorder->close();

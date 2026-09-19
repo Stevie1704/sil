@@ -2,8 +2,10 @@
 
 #include <sys/types.h>
 
+#include <chrono>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -33,7 +35,9 @@ class OwnedDirectory;
 class ProcessParticipant {
  public:
   ProcessParticipant(Engine &engine, const std::string &name,
-                     const ProcessSpec &spec);
+                     const ProcessSpec &spec,
+                     std::optional<std::chrono::milliseconds>
+                         participant_timeout);
   ~ProcessParticipant();
 
   ProcessParticipant(const ProcessParticipant &) = delete;
@@ -43,11 +47,19 @@ class ProcessParticipant {
   void shutdown();
 
  private:
+  using Clock = std::chrono::steady_clock;
+
   // Reaps the child and releases its regions, and answers its wait status.
   // `shutdown` turns a bad status into a RunError; the destructor cannot.
   int terminate_child();
   void send_line(const std::string &line);
-  std::string read_line();
+  // `step_time` is absent for the initialization response and otherwise
+  // contains the virtual time of the Step request.
+  std::string request_response(const std::string &line,
+                               std::optional<uint64_t> step_time);
+  std::string read_line(
+      const std::optional<Clock::time_point> &deadline,
+      std::optional<uint64_t> step_time);
 
   Engine &engine_;
   std::string name_;
@@ -60,6 +72,7 @@ class ProcessParticipant {
   pid_t pid_ = -1;
   std::string read_buffer_;
   bool alive_ = false;
+  std::optional<std::chrono::milliseconds> participant_timeout_;
 
   // Kernel-owned directory for this participant. It is created under the Run
   // working directory before fork and removed after the child is reaped,

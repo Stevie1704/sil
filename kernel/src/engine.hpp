@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <deque>
 #include <filesystem>
@@ -102,7 +103,9 @@ class SubscriberRoute {
 
 class Engine {
  public:
-  Engine(const Manifest &manifest, RecordingSink *recorder);
+  Engine(const Manifest &manifest, RecordingSink *recorder,
+         std::optional<std::chrono::milliseconds> participant_timeout =
+             std::nullopt);
   ~Engine();
 
   // Loads native libraries, spawns process participants, collects task
@@ -156,6 +159,7 @@ class Engine {
 
   const Manifest &manifest_;
   RecordingSink *recorder_;
+  std::optional<std::chrono::milliseconds> participant_timeout_;
   std::vector<ChannelState> channels_;  // manifest (name-sorted) order
   std::vector<std::unique_ptr<SubscriberRoute>> subscriber_routes_;
   std::vector<Task> tasks_;

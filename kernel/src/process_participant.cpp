@@ -1,10 +1,13 @@
 #include "process_participant.hpp"
 
+#include <errno.h>
+#include <poll.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -324,136 +327,148 @@ void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
 }
 
 ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
-                                       const ProcessSpec &spec)
+                                       const ProcessSpec &spec,
+                                       std::optional<std::chrono::milliseconds>
+                                           participant_timeout)
     : engine_(engine), name_(name), period_ns_(spec.step_period_ns),
       publishes_(spec.publishes), epoch_ns_(engine.manifest().epoch_ns),
-      sleep_policy_(spec.sleep), arenas_(name) {
-  const std::filesystem::path invocation_directory =
-      std::filesystem::current_path();
-  const std::vector<std::string> command =
-      resolve_command(spec.command, invocation_directory);
-  std::string directory_error;
-  OwnedDirectory directory = OwnedDirectory::create_child(
-      engine.run_working_directory(), participant_directory_name(name),
-      directory_error);
-  if (!directory)
-    throw ManifestError("participant '" + name +
-                        "': cannot create working directory: " +
-                        directory_error);
-  working_directory_ = std::make_unique<OwnedDirectory>(std::move(directory));
+      sleep_policy_(spec.sleep), arenas_(name),
+      participant_timeout_(participant_timeout) {
+  try {
+    const std::filesystem::path invocation_directory =
+        std::filesystem::current_path();
+    const std::vector<std::string> command =
+        resolve_command(spec.command, invocation_directory);
+    std::string directory_error;
+    OwnedDirectory directory = OwnedDirectory::create_child(
+        engine.run_working_directory(), participant_directory_name(name),
+        directory_error);
+    if (!directory)
+      throw ManifestError("participant '" + name +
+                          "': cannot create working directory: " +
+                          directory_error);
+    working_directory_ =
+        std::make_unique<OwnedDirectory>(std::move(directory));
 
-  for (const SubscriberRouteSpec &route : spec.subscribes)
-    inputs_.emplace_back(route.channel, engine.subscribe(name, route));
+    for (const SubscriberRouteSpec &route : spec.subscribes)
+      inputs_.emplace_back(route.channel, engine.subscribe(name, route));
 
-  // Shimmed participants get a shared time region mapped before fork, so the
-  // child can map it read-only at load and the kernel can write virtual time
-  // into it before each step. The region path and shim preload are injected
-  // into the child's environment below.
-  const bool shimmed = spec.shim;
-  if (shimmed) setup_clock_region();
+    // Shimmed participants get a shared time region mapped before fork, so the
+    // child can map it read-only at load and the kernel can write virtual time
+    // into it before each step. The region path and shim preload are injected
+    // into the child's environment below.
+    const bool shimmed = spec.shim;
+    if (shimmed) setup_clock_region();
 
-  // Create the Arenas before fork so the child inherits nothing but a path it
-  // can re-open. Failures anywhere below leave no region behind: a throwing
-  // constructor skips this class's destructor but still destroys the members
-  // built so far, and each Mapped region releases its own file.
-  setup_arenas(spec);
-  // A Manifest that declares more than one slot on any Channel needs the
-  // indexed-slot level to address the rest of them.
-  if (arenas_.max_slots() > 1) protocol_ = kIndexedSlotsProtocol;
-  const int offered_protocol = protocol_;
+    // Create the Arenas before fork so the child inherits nothing but a path it
+    // can re-open. Failures anywhere below leave no region behind: a throwing
+    // constructor skips this class's destructor but still destroys the members
+    // built so far, and each Mapped region releases its own file.
+    setup_arenas(spec);
+    // A Manifest that declares more than one slot on any Channel needs the
+    // indexed-slot level to address the rest of them.
+    if (arenas_.max_slots() > 1) protocol_ = kIndexedSlotsProtocol;
+    const int offered_protocol = protocol_;
 
-  int to_child[2], from_child[2];
-  if (pipe(to_child) != 0 || pipe(from_child) != 0)
-    throw RunError("participant '" + name + "': pipe failed");
+    int to_child[2], from_child[2];
+    if (pipe(to_child) != 0 || pipe(from_child) != 0)
+      throw RunError("participant '" + name + "': pipe failed");
 
-  pid_ = fork();
-  if (pid_ < 0) throw RunError("participant '" + name + "': fork failed");
-  if (pid_ == 0) {
-    dup2(to_child[0], STDIN_FILENO);
-    dup2(from_child[1], STDOUT_FILENO);
-    close(to_child[0]);
-    close(to_child[1]);
-    close(from_child[0]);
-    close(from_child[1]);
-    if (chdir(working_directory_->path().c_str()) != 0) {
-      perror("sil: chdir participant");
+    pid_ = fork();
+    if (pid_ < 0) throw RunError("participant '" + name + "': fork failed");
+    if (pid_ == 0) {
+      dup2(to_child[0], STDIN_FILENO);
+      dup2(from_child[1], STDOUT_FILENO);
+      close(to_child[0]);
+      close(to_child[1]);
+      close(from_child[0]);
+      close(from_child[1]);
+      if (chdir(working_directory_->path().c_str()) != 0) {
+        perror("sil: chdir participant");
+        _exit(127);
+      }
+      if (shimmed) inject_shim_env();
+      std::vector<char *> argv;
+      for (const std::string &arg : command)
+        argv.push_back(const_cast<char *>(arg.c_str()));
+      argv.push_back(nullptr);
+      execvp(argv[0], argv.data());
+      perror("sil: exec participant");
       _exit(127);
     }
-    if (shimmed) inject_shim_env();
-    std::vector<char *> argv;
-    for (const std::string &arg : command)
-      argv.push_back(const_cast<char *>(arg.c_str()));
-    argv.push_back(nullptr);
-    execvp(argv[0], argv.data());
-    perror("sil: exec participant");
-    _exit(127);
-  }
-  close(to_child[0]);
-  close(from_child[1]);
-  child_stdin_ = to_child[1];
-  child_stdout_ = from_child[0];
-  alive_ = true;
+    close(to_child[0]);
+    close(from_child[1]);
+    child_stdin_ = to_child[1];
+    child_stdout_ = from_child[0];
+    alive_ = true;
 
-  const Manifest &m = engine.manifest();
-  json channels = json::object();
-  json schemas = json::object();
-  auto add_channel = [&](const std::string &ch, const char *direction) {
-    const ChannelSpec *c = m.find_channel(ch);
-    json entry = {{"schema", c->schema}, {"direction", direction}};
-    // For arena-backed channels, hand the child the arena path + capacity so it maps
-    // the same MAP_SHARED region and moves payloads through it. Absent
-    // "transport" means inline (the base64/JSON path), keeping existing
-    // manifests byte-identical on the wire.
-    if (c->transport == Transport::Shm) {
-      const ChannelArenas::Layout layout = arenas_.layout(ch);
-      entry["transport"] = "shm";
-      entry["shm_path"] = layout.path;
-      entry["shm_capacity"] = layout.capacity;
-      entry["shm_slots"] = layout.slots;
+    const Manifest &m = engine.manifest();
+    json channels = json::object();
+    json schemas = json::object();
+    auto add_channel = [&](const std::string &ch, const char *direction) {
+      const ChannelSpec *c = m.find_channel(ch);
+      json entry = {{"schema", c->schema}, {"direction", direction}};
+      // For arena-backed channels, hand the child the arena path + capacity so it maps
+      // the same MAP_SHARED region and moves payloads through it. Absent
+      // "transport" means inline (the base64/JSON path), keeping existing
+      // manifests byte-identical on the wire.
+      if (c->transport == Transport::Shm) {
+        const ChannelArenas::Layout layout = arenas_.layout(ch);
+        entry["transport"] = "shm";
+        entry["shm_path"] = layout.path;
+        entry["shm_capacity"] = layout.capacity;
+        entry["shm_slots"] = layout.slots;
+      }
+      channels[ch] = entry;
+      schemas[c->schema] = json::parse(m.schemas.at(c->schema).canonical_json);
+    };
+    for (const SubscriberRouteSpec &route : spec.subscribes)
+      add_channel(route.channel, "in");
+    for (const std::string &ch : spec.publishes) add_channel(ch, "out");
+
+    json init = {{"op", "init"},
+                 {"name", name},
+                 {"protocol", offered_protocol},
+                 {"channels", channels},
+                 {"schemas", schemas}};
+    json ready = json::parse(request_response(init.dump(), std::nullopt));
+    const std::string op = ready.value("op", "");
+    // `fail` in answer to `init` is a Manifest error (exit 2), unless the child
+    // explicitly marks a failure from its own initialization work as a Run
+    // failure (exit 1). The same line after a Step is always a Run failure.
+    // See docs/step-protocol.md.
+    if (op == "fail") {
+      const std::string reason =
+          ready.value("reason", "rejected its init line");
+      if (ready.value("failure", "") == "run")
+        throw RunError("participant '" + name + "' failed: " + reason);
+      throw ManifestError("participant '" + name + "': " + reason);
     }
-    channels[ch] = entry;
-    schemas[c->schema] = json::parse(m.schemas.at(c->schema).canonical_json);
-  };
-  for (const SubscriberRouteSpec &route : spec.subscribes)
-    add_channel(route.channel, "in");
-  for (const std::string &ch : spec.publishes) add_channel(ch, "out");
-
-  json init = {{"op", "init"},
-               {"name", name},
-               {"protocol", offered_protocol},
-               {"channels", channels},
-               {"schemas", schemas}};
-  send_line(init.dump());
-  json ready = json::parse(read_line());
-  const std::string op = ready.value("op", "");
-  // `fail` in answer to `init` is a Manifest error (exit 2), unless the child
-  // explicitly marks a failure from its own initialization work as a Run
-  // failure (exit 1). The same line after a Step is always a Run failure.
-  // See docs/step-protocol.md.
-  if (op == "fail") {
-    const std::string reason =
-        ready.value("reason", "rejected its init line");
-    if (ready.value("failure", "") == "run")
-      throw RunError("participant '" + name + "' failed: " + reason);
-    throw ManifestError("participant '" + name + "': " + reason);
+    if (op != "ready")
+      throw RunError("participant '" + name + "': expected ready, got " +
+                     ready.dump());
+    int announced_protocol = kSingleSlotProtocol;
+    if (ready.contains("protocol")) {
+      const json &value = ready.at("protocol");
+      if (!value.is_number_integer())
+        throw ManifestError("participant '" + name +
+                            "': ready protocol must be a positive integer");
+      const int64_t announced = value.get<int64_t>();
+      if (announced < 1 || announced > std::numeric_limits<int>::max())
+        throw ManifestError("participant '" + name +
+                            "': ready protocol must be a positive integer");
+      announced_protocol = static_cast<int>(announced);
+    }
+    protocol_ = std::min(offered_protocol, announced_protocol);
+    codec_ = std::make_unique<StepCodec>(arenas_, protocol_);
+  } catch (...) {
+    // This intentionally covers every init-path throw, not only timeouts: an
+    // object whose child has already been spawned is not fully constructed,
+    // so its destructor cannot reap the child. Keep the same cleanup policy
+    // used for every later Run failure here.
+    (void)terminate_child();
+    throw;
   }
-  if (op != "ready")
-    throw RunError("participant '" + name + "': expected ready, got " +
-                   ready.dump());
-  int announced_protocol = kSingleSlotProtocol;
-  if (ready.contains("protocol")) {
-    const json &value = ready.at("protocol");
-    if (!value.is_number_integer())
-      throw ManifestError("participant '" + name +
-                          "': ready protocol must be a positive integer");
-    const int64_t announced = value.get<int64_t>();
-    if (announced < 1 || announced > std::numeric_limits<int>::max())
-      throw ManifestError("participant '" + name +
-                          "': ready protocol must be a positive integer");
-    announced_protocol = static_cast<int>(announced);
-  }
-  protocol_ = std::min(offered_protocol, announced_protocol);
-  codec_ = std::make_unique<StepCodec>(arenas_, protocol_);
 }
 
 ProcessParticipant::~ProcessParticipant() {
@@ -489,9 +504,8 @@ void ProcessParticipant::step(uint64_t now_ns) {
 
   json step = {
       {"op", "step"}, {"t", now_ns}, {"dt", period_ns_}, {"in", in}};
-  send_line(step.dump());
+  json done = json::parse(request_response(step.dump(), now_ns));
 
-  json done = json::parse(read_line());
   std::string op = done.value("op", "");
   if (op == "fail") {
     engine_.fail(name_, done.value("reason", "(no reason)"));
@@ -524,7 +538,42 @@ void ProcessParticipant::send_line(const std::string &line) {
   }
 }
 
-std::string ProcessParticipant::read_line() {
+std::string ProcessParticipant::request_response(
+    const std::string &line, std::optional<uint64_t> step_time) {
+  std::optional<Clock::time_point> deadline;
+  if (participant_timeout_) {
+    const Clock::time_point start = Clock::now();
+    const auto max_timeout = std::chrono::duration_cast<
+        std::chrono::milliseconds>(Clock::time_point::max() - start);
+    if (*participant_timeout_ >= max_timeout) {
+      // A milliseconds duration can outlive the clock's nanosecond time_point
+      // range. Treat that valid CLI value as an effectively unbounded deadline
+      // rather than allowing the time_point addition to overflow.
+      deadline = Clock::time_point::max();
+    } else {
+      deadline = start +
+                 std::chrono::duration_cast<Clock::duration>(
+                     *participant_timeout_);
+    }
+  }
+  send_line(line);
+  return read_line(deadline, step_time);
+}
+
+std::string ProcessParticipant::read_line(
+    const std::optional<Clock::time_point> &deadline,
+    std::optional<uint64_t> step_time) {
+  const auto timeout = [&]() -> RunError {
+    if (!step_time)
+      return RunError("participant '" + name_ +
+                      "': timeout waiting for initialization ready response");
+    return RunError(
+        "participant '" + name_ +
+        "': timeout waiting for step_done response during Step at virtual "
+        "time " +
+        std::to_string(*step_time) + " ns");
+  };
+
   for (;;) {
     size_t nl = read_buffer_.find('\n');
     if (nl != std::string::npos) {
@@ -532,8 +581,37 @@ std::string ProcessParticipant::read_line() {
       read_buffer_.erase(0, nl + 1);
       return line;
     }
+
+    if (!deadline) {
+      char buf[4096];
+      ssize_t n = read(child_stdout_, buf, sizeof buf);
+      if (n < 0 && errno == EINTR) continue;
+      if (n <= 0)
+        throw RunError("participant '" + name_ + "' exited unexpectedly");
+      read_buffer_.append(buf, size_t(n));
+      continue;
+    }
+
+    const Clock::duration remaining = *deadline - Clock::now();
+    if (remaining <= Clock::duration::zero()) throw timeout();
+    auto wait_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        remaining);
+    if (wait_ms.count() == 0) wait_ms = std::chrono::milliseconds(1);
+    const auto max_poll_ms = std::chrono::milliseconds(
+        std::numeric_limits<int>::max());
+    if (wait_ms > max_poll_ms) wait_ms = max_poll_ms;
+
+    pollfd descriptor{child_stdout_, POLLIN, 0};
+    const int ready =
+        poll(&descriptor, 1, static_cast<int>(wait_ms.count()));
+    if (ready < 0 && errno == EINTR) continue;
+    if (ready == 0) throw timeout();
+    if (ready < 0)
+      throw RunError("participant '" + name_ + "': poll failed");
+
     char buf[4096];
     ssize_t n = read(child_stdout_, buf, sizeof buf);
+    if (n < 0 && errno == EINTR) continue;
     if (n <= 0)
       throw RunError("participant '" + name_ + "' exited unexpectedly");
     read_buffer_.append(buf, size_t(n));
