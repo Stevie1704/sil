@@ -148,6 +148,17 @@ install(TARGETS sil_clock_shim
 install(DIRECTORY include/sil/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/sil)
 
+# The staged prefix is what the release archives, so the grant travels with the
+# binaries rather than staying behind in the checkout. The two header-only
+# dependencies are compiled into sil-run, so their MIT notices ship with it.
+set(SIL_LICENSE_DIR ${CMAKE_INSTALL_DATAROOTDIR}/licenses/sil)
+install(FILES LICENSE NOTICE THIRD-PARTY-NOTICES.md
+  DESTINATION ${SIL_LICENSE_DIR})
+install(FILES ${mcap_SOURCE_DIR}/LICENSE
+  DESTINATION ${SIL_LICENSE_DIR}/mcap)
+install(FILES ${nlohmann_json_SOURCE_DIR}/LICENSE.MIT
+  DESTINATION ${SIL_LICENSE_DIR}/nlohmann-json)
+
 # Probe executable: exercises every interposed API for the shim's unit tests.
 add_executable(sil_clock_probe shim/clock_probe.c)
 target_include_directories(sil_clock_probe PRIVATE include)

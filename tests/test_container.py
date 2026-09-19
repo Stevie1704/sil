@@ -175,6 +175,32 @@ def test_production_image_contains_only_the_installed_runtime():
     assert probe.returncode == 0, probe.stderr
 
 
+def test_production_image_declares_and_carries_its_license():
+    """A published image states its grant and contains the text (issue #122)."""
+    inspected = _docker("image", "inspect", PRODUCTION_IMAGE)
+    assert inspected.returncode == 0, inspected.stderr
+    labels = json.loads(inspected.stdout)[0]["Config"]["Labels"]
+    assert labels["org.opencontainers.image.licenses"] == "Apache-2.0"
+
+    probe = _docker(
+        "run",
+        "--rm",
+        "--entrypoint",
+        "/bin/sh",
+        PRODUCTION_IMAGE,
+        "-ec",
+        """
+          grep -q 'Apache License' /usr/share/licenses/sil/LICENSE
+          grep -q 'SPDX-License-Identifier: Apache-2.0' /usr/share/licenses/sil/NOTICE
+          test -f /usr/share/licenses/sil/THIRD-PARTY-NOTICES.md
+          test -f /usr/share/licenses/sil/lz4/LICENSE
+          test -f /usr/share/licenses/sil/zstandard/LICENSE
+          grep -q 'Apache-2.0' /opt/sil/python/lib/python3.13/site-packages/sil-*.dist-info/METADATA
+        """,
+    )
+    assert probe.returncode == 0, probe.stderr
+
+
 @pytest.mark.parametrize("delayed", [False, True], ids=["nominal", "delayed"])
 def test_acc_reference_run_is_bounded_deterministic_and_matches_native(
     tmp_path: Path, delayed: bool
