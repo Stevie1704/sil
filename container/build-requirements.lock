@@ -1,0 +1,6 @@
+# Exact build-backend closure used only while producing the sil wheel.
+hatchling==1.27.0
+packaging==25.0
+pathspec==0.12.1
+pluggy==1.6.0
+trove-classifiers==2025.5.9.12
