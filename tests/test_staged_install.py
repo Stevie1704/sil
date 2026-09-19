@@ -146,6 +146,18 @@ def test_cmake_stages_the_production_runtime_and_public_headers(
     assert not (staged_prefix / "bin" / "sil-run-instrumented").exists()
 
 
+def test_cmake_stages_the_license_the_release_archives(staged_prefix: Path):
+    """The native-development archive is made from this prefix (issue #122)."""
+    licenses = staged_prefix / "share" / "licenses" / "sil"
+    assert "Apache License" in (licenses / "LICENSE").read_text()
+    assert "SPDX-License-Identifier: Apache-2.0" in (licenses / "NOTICE").read_text()
+    assert (licenses / "THIRD-PARTY-NOTICES.md").is_file()
+    # Both are header-only and compiled into sil-run, so their notices travel
+    # with the binary the archive carries.
+    assert (licenses / "mcap" / "LICENSE").is_file()
+    assert (licenses / "nlohmann-json" / "LICENSE.MIT").is_file()
+
+
 @pytest.mark.skipif(
     not (sys.platform == "darwin" or sys.platform.startswith("linux")),
     reason="staged runtime layout is only exercised on POSIX hosts",

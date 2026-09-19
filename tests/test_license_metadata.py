@@ -61,34 +61,25 @@ def test_python_metadata_declares_the_same_identifier():
     assert metadata["build-system"]["requires"] == ["hatchling>=1.27"]
 
 
-def test_image_labels_and_carries_the_license():
-    dockerfile = (ROOT / "Dockerfile").read_text()
-    assert (
-        f'org.opencontainers.image.licenses="{SPDX_IDENTIFIER}"' in dockerfile
-    )
-    assert (
-        "COPY --from=build /opt/sil/licenses /usr/share/licenses/sil"
-        in dockerfile
-    )
+def test_third_party_inventory_matches_the_container_lock():
+    """Every pinned runtime dependency is inventoried at the version shipped.
 
-
-def test_staged_prefix_carries_the_license():
-    """The native-development archive is made from the installed prefix."""
-    cmake = (ROOT / "CMakeLists.txt").read_text()
-    assert "install(FILES LICENSE NOTICE THIRD-PARTY-NOTICES.md" in cmake
-    assert "${CMAKE_INSTALL_DATAROOTDIR}/licenses/sil" in cmake
-
-
-def test_third_party_inventory_names_every_bundled_component():
+    The image itself is checked in tests/test_container.py; this keeps the
+    inventory honest without a Docker daemon.
+    """
     inventory = (ROOT / "THIRD-PARTY-NOTICES.md").read_text()
-    for component in ("nlohmann/json", "MCAP C++", "mcap", "lz4", "zstandard"):
-        assert component in inventory
+    for name in ("nlohmann/json", "MCAP C++"):
+        assert name in inventory
     lock = (ROOT / "container" / "requirements.lock").read_text()
-    for pin in lock.splitlines():
-        if pin.startswith("#") or not pin.strip():
-            continue
-        name, version = pin.split("==")
-        assert version in inventory, f"{name} {version} is not inventoried"
+    pins = [
+        line.split("==")
+        for line in lock.splitlines()
+        if line.strip() and not line.startswith("#")
+    ]
+    assert pins, "the runtime lock declares no dependency"
+    for name, version in pins:
+        row = f"[{name}](https://pypi.org/project/{name}/) | {version} |"
+        assert row in inventory, f"{name} {version} is not inventoried"
 
 
 def test_support_statement_keeps_its_two_disclaimers():

@@ -15,7 +15,7 @@ development process.
 
 SiL is a regression-testing tool. A test that passes under SiL says that the
 Participants behaved as the test asserted, on that machine class, with those
-artifacts. It says nothing about the safety of the system under test, and a
+artifacts. It says nothing about the safety of the vECU it ran, and a
 determinism check is not a verification argument.
 
 If your process needs a qualified tool, qualify it yourself under your own
@@ -38,7 +38,7 @@ not police it.
 
 What follows:
 
-- A recording from another machine class is not a valid bit comparison.
+- A Recording from another machine class is not a valid bit comparison.
   Compare it with a tolerance, the way a Reference result is compared.
 - Pin the container image by digest, not by a mutable tag. The digest is the
   artifact identity a deterministic CI Run needs.
@@ -53,11 +53,12 @@ What follows:
 | Operating system | Linux |
 | CPU architecture | x86-64 |
 | libc | glibc, Debian bookworm level or newer |
-| Python | 3.11 or newer |
+| Python | 3.11 or newer, as the distribution metadata declares; the image pins 3.13 |
 | Reference environment | the pinned `runtime` container image in [Dockerfile](Dockerfile) |
 
-Continuous integration runs on x86-64 Linux, and that is the only machine
-class this project verifies. The pinned base image also resolves an arm64
+Continuous integration runs on x86-64 Linux with one interpreter, and that is
+the only machine class this project verifies. An older supported Python is
+declared, not exercised. The pinned base image also resolves an arm64
 layer, so an arm64 build may succeed; it is untested, and no determinism claim
 covers it. macOS and Windows are not supported; the Clock shim is a
 `LD_PRELOAD` library and has no counterpart there.

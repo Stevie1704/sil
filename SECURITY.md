@@ -15,7 +15,7 @@ A report is actionable when it contains:
 
 - The affected artifact and version: the SiL release tag, the Python
   distribution version, or the container image digest.
-- The affected component: kernel, Native participant ABI, Clock shim, Manifest
+- The affected part of SiL: kernel, Native participant ABI, Clock shim, Manifest
   builder or validator, Step protocol, FMI importer, Recording reader, or
   container image.
 - The impact you claim, stated plainly. Example: a Manifest from an untrusted
@@ -55,7 +55,8 @@ that is your right, and an early date can still be planned around.
 
 SiL is below 1.0. A fix lands on `main` and ships in the next release. There
 are no backports and no patch releases for earlier tags. Pin a release by tag
-or image digest for reproducibility, and move the pin forward to take a fix.
+or image digest so a Run stays deterministic, and move the pin forward to
+take a fix.
 
 ## Scope
 

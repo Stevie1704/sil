@@ -3,6 +3,7 @@ Copyright 2026 Steffen Krakau
 
 SPDX-License-Identifier: Apache-2.0
 
-This product includes software developed by third parties. Their copyright
-notices and license texts are listed in THIRD-PARTY-NOTICES.md and are
-reproduced inside every published artifact that contains their code.
+An artifact of this product may contain software developed by third parties.
+Where it does, their license texts are inside that artifact. The full
+inventory is THIRD-PARTY-NOTICES.md, at
+https://github.com/Stevie1704/sil/blob/main/THIRD-PARTY-NOTICES.md
