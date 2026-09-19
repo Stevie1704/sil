@@ -5,6 +5,10 @@ Deterministic software-in-the-loop kernel for ADAS/AD regression testing:
 Same artifacts + same machine class ⇒ bit-identical recordings. See
 [DESIGN.md](DESIGN.md) for the decision record.
 
+Apache-2.0 licensed. Read [SUPPORT.md](SUPPORT.md) before you build a process
+on SiL: it names the supported machine class, the exact bound on the
+determinism guarantee, and the fact that SiL is not safety-qualified.
+
 ## Milestone 1 — walking skeleton + determinism proof
 
 One run = `sil-run manifest.json -o out.mcap`:
@@ -448,3 +452,20 @@ tests/             behavior tests at the run boundary
   latency-0 subscriber scheduled last in every slot.
 - Message layout is packed little-endian; cross-platform bit-exactness is an
   explicit non-goal.
+
+## License, security, and support
+
+- [LICENSE](LICENSE) — Apache License 2.0, SPDX `Apache-2.0`, covering the
+  kernel, the public C ABI headers, the Clock shim, the Python distribution,
+  and the schema-generation surface a Participant compiles against.
+- [NOTICE](NOTICE) — the attribution notice the license propagates.
+- [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) — every third-party
+  component in a published artifact, with its license.
+- [SECURITY.md](SECURITY.md) — how to report a vulnerability privately, what a
+  report should contain, what response to expect, and which versions get fixes.
+- [SUPPORT.md](SUPPORT.md) — supported machine class, the interfaces under the
+  compatibility policy, the interfaces that are implementation details, the
+  boundary of the determinism guarantee, and the absence of any safety
+  qualification.
+- [CONTRIBUTING.md](CONTRIBUTING.md) — the terms a contribution is accepted
+  under, and how to get a change reviewed.

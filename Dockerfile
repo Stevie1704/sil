@@ -23,7 +23,7 @@ RUN rm -f /etc/apt/sources.list.d/*.sources \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
-COPY CMakeLists.txt ./
+COPY CMakeLists.txt LICENSE NOTICE THIRD-PARTY-NOTICES.md ./
 COPY include include
 COPY kernel kernel
 COPY participants participants
@@ -50,17 +50,28 @@ RUN python -m pip install --no-cache-dir \
       --requirement container/requirements.lock \
       /wheels/sil-*.whl
 
+# One license tree for the whole image: the grant for SiL and its own notices
+# come from the staged prefix, the two compression libraries from the wheels
+# that carry them. cp fails the build if a notice disappears upstream.
+RUN install -d /opt/sil/licenses \
+    && cp -a /opt/sil/native/share/licenses/sil/. /opt/sil/licenses/ \
+    && install -d /opt/sil/licenses/lz4 /opt/sil/licenses/zstandard \
+    && cp /opt/sil/python/lib/python*/site-packages/lz4-*.dist-info/licenses/LICENSE \
+      /opt/sil/licenses/lz4/LICENSE \
+    && cp /opt/sil/python/lib/python*/site-packages/zstandard-*.dist-info/licenses/LICENSE \
+      /opt/sil/licenses/zstandard/LICENSE
+
 FROM ${PYTHON_IMAGE} AS runtime
 
 LABEL org.opencontainers.image.title="SiL Run runtime" \
       org.opencontainers.image.description="One deterministic SiL Run per Linux container" \
-      org.opencontainers.image.source="https://github.com/Stevie1704/sil"
+      org.opencontainers.image.source="https://github.com/Stevie1704/sil" \
+      org.opencontainers.image.licenses="Apache-2.0"
 
 COPY --from=build /opt/sil/native/bin/sil-run /usr/local/bin/sil-run
 COPY --from=build /opt/sil/native/lib/libsil_clock_shim.so /usr/local/lib/libsil_clock_shim.so
 COPY --from=build /opt/sil/python /opt/sil/python
-COPY --from=build /build/_deps/mcap-src/LICENSE /usr/share/licenses/sil/mcap/LICENSE
-COPY --from=build /build/_deps/nlohmann_json-src/LICENSE.MIT /usr/share/licenses/sil/nlohmann-json/LICENSE.MIT
+COPY --from=build /opt/sil/licenses /usr/share/licenses/sil
 
 ENV HOME=/tmp \
     PATH="/opt/sil/python/bin:/usr/local/bin:${PATH}" \
