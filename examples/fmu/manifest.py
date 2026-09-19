@@ -43,11 +43,9 @@ variables are what this milestone maps; see the README for the boundaries.
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 from sil.manifest import Manifest, SubscriberRoute
-from sil.testing import participant_command
 
 EXAMPLE_DIR = Path(__file__).resolve().parent
 ROOT = EXAMPLE_DIR.parents[1]
@@ -63,6 +61,11 @@ DURATION_NS = 1_000_000_000
 ROUTE_CAPACITY = 2
 
 
+def _participant(file: Path, cls: str) -> list[str]:
+    """Location-independent command for an installed Python Participant."""
+    return ["python3", "-m", "sil.participant", f"{file}:{cls}"]
+
+
 def fmu_manifest(*, fmu: Path = FMU_PATH) -> Manifest:
     """The example Run. `fmu` is the archive the importer drives."""
     m = Manifest(duration_ns=DURATION_NS)
@@ -71,7 +74,7 @@ def fmu_manifest(*, fmu: Path = FMU_PATH) -> Manifest:
     m.add_channel("fmu.Out", schema="fmu.Out")
     m.add_process(
         "stimulus",
-        command=participant_command(EXAMPLE_DIR / "stimulus.py", "Stimulus"),
+        command=_participant(EXAMPLE_DIR / "stimulus.py", "Stimulus"),
         step_period_ns=STEP_PERIOD_NS,
         publishes=["fmu.In"],
     )
@@ -80,7 +83,7 @@ def fmu_manifest(*, fmu: Path = FMU_PATH) -> Manifest:
     # `priority` puts it after the stimulus in the same Step.
     m.add_process(
         "fmu",
-        command=[sys.executable, "-m", "sil.fmi", str(fmu)],
+        command=["python3", "-m", "sil.fmi", str(fmu)],
         step_period_ns=STEP_PERIOD_NS,
         subscribes=[SubscriberRoute("fmu.In", capacity=ROUTE_CAPACITY)],
         publishes=["fmu.Out"],

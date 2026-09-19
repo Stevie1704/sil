@@ -1,0 +1,12 @@
+.git
+.cache
+.pytest_cache
+.ruff_cache
+.serena
+.understand-anything
+.venv
+.sil-run-*
+build
+__pycache__
+*.egg-info
+vecu_interface_handoff_18_09.md

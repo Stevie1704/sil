@@ -1,0 +1,5 @@
+# Runtime closure for python/pyproject.toml. Keep exact versions here while the
+# package metadata retains compatibility ranges for library consumers.
+lz4==4.4.5
+mcap==1.4.0
+zstandard==0.25.0

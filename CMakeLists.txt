@@ -13,11 +13,13 @@ include(FetchContent)
 
 FetchContent_Declare(nlohmann_json
   URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+  URL_HASH SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
   DOWNLOAD_EXTRACT_TIMESTAMP ON)
 FetchContent_MakeAvailable(nlohmann_json)
 
 FetchContent_Declare(mcap
   URL https://github.com/foxglove/mcap/archive/refs/tags/releases/cpp/v2.1.3.tar.gz
+  URL_HASH SHA256=181a7c52cc982444cdef533087b321538b025fcc5eec258e0489d68b9ce53ded
   DOWNLOAD_EXTRACT_TIMESTAMP ON)
 FetchContent_MakeAvailable(mcap)
 

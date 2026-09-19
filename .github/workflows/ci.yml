@@ -38,3 +38,23 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}/python/src
         run: .venv/bin/python tools/determinism_gate.py
+
+      - name: Stage native Linux installation for container parity
+        run: |
+          cmake --install build --prefix build/native
+          uv build --wheel --out-dir build/wheels python
+          uv venv build/native/python
+          uv pip install -p build/native/python/bin/python \
+            --constraint container/requirements.lock build/wheels/sil-*.whl
+
+      - name: Build production and reference acceptance images
+        run: |
+          docker build --target runtime --tag sil-runtime:ci .
+          docker build --target acceptance --tag sil-acceptance:ci .
+
+      - name: Run Linux container acceptance checks
+        env:
+          SIL_CONTAINER_IMAGE: sil-runtime:ci
+          SIL_CONTAINER_ACCEPTANCE_IMAGE: sil-acceptance:ci
+          SIL_NATIVE_RUNNER: build/native/bin/sil-run
+        run: .venv/bin/python -m pytest tests/test_container.py -v
