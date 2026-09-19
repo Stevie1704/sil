@@ -431,8 +431,7 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
                  {"protocol", offered_protocol},
                  {"channels", channels},
                  {"schemas", schemas}};
-    json ready = json::parse(request_response(
-        init.dump(), ResponsePhase::Initialization, std::nullopt));
+    json ready = json::parse(request_response(init.dump(), std::nullopt));
     const std::string op = ready.value("op", "");
     // `fail` in answer to `init` is a Manifest error (exit 2), unless the child
     // explicitly marks a failure from its own initialization work as a Run
@@ -463,9 +462,10 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     protocol_ = std::min(offered_protocol, announced_protocol);
     codec_ = std::make_unique<StepCodec>(arenas_, protocol_);
   } catch (...) {
-    // A constructor that times out during the init handshake is not a fully
-    // constructed C++ object, so its destructor cannot reap the child. Keep
-    // the same cleanup policy used for every later Run failure here.
+    // This intentionally covers every init-path throw, not only timeouts: an
+    // object whose child has already been spawned is not fully constructed,
+    // so its destructor cannot reap the child. Keep the same cleanup policy
+    // used for every later Run failure here.
     (void)terminate_child();
     throw;
   }
@@ -504,8 +504,7 @@ void ProcessParticipant::step(uint64_t now_ns) {
 
   json step = {
       {"op", "step"}, {"t", now_ns}, {"dt", period_ns_}, {"in", in}};
-  json done = json::parse(
-      request_response(step.dump(), ResponsePhase::Step, now_ns));
+  json done = json::parse(request_response(step.dump(), now_ns));
 
   std::string op = done.value("op", "");
   if (op == "fail") {
@@ -540,8 +539,7 @@ void ProcessParticipant::send_line(const std::string &line) {
 }
 
 std::string ProcessParticipant::request_response(
-    const std::string &line, ResponsePhase phase,
-    std::optional<uint64_t> virtual_time) {
+    const std::string &line, std::optional<uint64_t> step_time) {
   std::optional<Clock::time_point> deadline;
   if (participant_timeout_) {
     const Clock::time_point start = Clock::now();
@@ -559,21 +557,21 @@ std::string ProcessParticipant::request_response(
     }
   }
   send_line(line);
-  return read_line(deadline, phase, virtual_time);
+  return read_line(deadline, step_time);
 }
 
 std::string ProcessParticipant::read_line(
-    const std::optional<Clock::time_point> &deadline, ResponsePhase phase,
-    std::optional<uint64_t> virtual_time) {
+    const std::optional<Clock::time_point> &deadline,
+    std::optional<uint64_t> step_time) {
   const auto timeout = [&]() -> RunError {
-    if (phase == ResponsePhase::Initialization)
+    if (!step_time)
       return RunError("participant '" + name_ +
                       "': timeout waiting for initialization ready response");
     return RunError(
         "participant '" + name_ +
         "': timeout waiting for step_done response during Step at virtual "
         "time " +
-        std::to_string(*virtual_time) + " ns");
+        std::to_string(*step_time) + " ns");
   };
 
   for (;;) {

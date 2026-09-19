@@ -49,18 +49,17 @@ class ProcessParticipant {
  private:
   using Clock = std::chrono::steady_clock;
 
-  enum class ResponsePhase { Initialization, Step };
-
   // Reaps the child and releases its regions, and answers its wait status.
   // `shutdown` turns a bad status into a RunError; the destructor cannot.
   int terminate_child();
   void send_line(const std::string &line);
+  // `step_time` is absent for the initialization response and otherwise
+  // contains the virtual time of the Step request.
   std::string request_response(const std::string &line,
-                               ResponsePhase phase,
-                               std::optional<uint64_t> virtual_time);
+                               std::optional<uint64_t> step_time);
   std::string read_line(
       const std::optional<Clock::time_point> &deadline,
-      ResponsePhase phase, std::optional<uint64_t> virtual_time);
+      std::optional<uint64_t> step_time);
 
   Engine &engine_;
   std::string name_;

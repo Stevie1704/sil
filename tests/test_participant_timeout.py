@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import subprocess
 import sys
@@ -10,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from conftest import ROOT
+from test_run_boundary import read_mcap
 from toys import toy_manifest
 
 
@@ -162,9 +164,10 @@ def test_timeout_reaps_sigterm_ignoring_child_and_removes_working_directory(
 
 def test_timeout_leaves_only_a_partial_recording_on_failure(sil_run, tmp_path):
     output = tmp_path / "partial.mcap"
+    manifest = _manifest(tmp_path, "step")
     proc = _run(
         sil_run,
-        _manifest(tmp_path, "step"),
+        manifest,
         "--participant-timeout-ms",
         "100",
         "-o",
@@ -173,5 +176,8 @@ def test_timeout_leaves_only_a_partial_recording_on_failure(sil_run, tmp_path):
 
     assert proc.returncode == 1
     assert output.exists()
-    assert "manifest_hash" not in proc.stdout
-    assert output.stat().st_size > 0
+    metadata, messages = read_mcap(output)
+    assert metadata["manifest_hash"] == hashlib.sha256(
+        manifest.read_bytes()
+    ).hexdigest()
+    assert messages == []

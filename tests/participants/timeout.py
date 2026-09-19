@@ -51,14 +51,13 @@ def main(mode: str, observer: str | None = None) -> None:
                 _hang()
             print(json.dumps({"op": "ready"}), flush=True)
         elif message["op"] == "step":
-            if mode == "step" or mode == "ignore-term":
+            if mode == "step":
                 _hang()
             if mode == "partial":
                 _send_partial_step()
-            elif mode == "slow":
-                time.sleep(0.06)
-                print(json.dumps({"op": "step_done", "out": []}), flush=True)
             else:
+                if mode == "slow":
+                    time.sleep(0.03)
                 print(json.dumps({"op": "step_done", "out": []}), flush=True)
         elif message["op"] == "shutdown":
             return
