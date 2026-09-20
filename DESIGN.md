@@ -150,6 +150,19 @@ in the framework's own CI from day one.**
 ## Open questions (not yet decided)
 None open.
 
+## Consumer capability gate (2026-09-20, #118)
+
+The completed esmini v3.8.1 proof against SiL v0.1.0 justifies **no new
+framework capability**. The existing consumer-side Process participant
+satisfies its scenario, KPI and determinism requirements. The
+[decision record](docs/decisions/118-consumer-capability-gate.md) binds the
+artifact identities and results, evaluates each alternative, and states the
+consumer evidence required to reopen it. The early FMI-LS-BUS and zero-copy
+directions above do not authorize implementation without that evidence.
+All existing core contracts remain unchanged. The concrete checker omission
+is isolated in [#134](https://github.com/Stevie1704/sil/issues/134): forward the
+existing Process-participant response deadline through `sil-check`.
+
 ## Resolved since (2026-07-07)
 - **Schema/code-gen (#9):** custom minimal generator. `tools/silschema.py`
   emits packed C structs; `sil.schema` packs the identical layout in Python

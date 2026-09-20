@@ -309,15 +309,18 @@ generated code, no code generator, and no patch to esmini.
 The nine items above. None of them required changing SiL, and none of them
 required changing esmini.
 
-### Could not be represented by the current contracts
+### Unexercised scenarios and a tooling gap
 
 Recorded, not built. Each is narrow and is deferred to the capability-gate
 issue.
 
-- **A variable-length object list has no Channel shape.** A Schema is a fixed,
-  packed layout, so this Run works because the scenario's two objects are
-  known when the Manifest is written. esmini can add and delete entities
-  during a scenario; such a scenario has no representation here today.
+- **Dynamic entities are not covered by this adapter.** A Schema is a fixed,
+  packed layout, and this Run maps two objects known when the Manifest is
+  written onto two Channels. esmini can add and delete entities during a
+  scenario; this proof did not exercise that behavior. Fixed-capacity arrays
+  with an active count, or bounded entity-update Messages, are candidate
+  consumer-side representations under current contracts. They must be tested
+  against a named scenario before claiming a framework limitation.
 - **OSI over UDP has no adapter.** esmini's standard interface for
   sensor-grade ground truth is Open Simulation Interface over a UDP socket.
   The proof did not need it — it read the C API directly — so no bus adapter
@@ -330,7 +333,12 @@ issue.
 
 ## Deferred
 
-Everything in the last section is evidence for the capability gate
-([#118](https://github.com/Stevie1704/sil/issues/118)) and is deliberately not
-implemented here. This proof adds no bus adapter, no Native ABI change, no FMI
-type expansion, and no data-plane change.
+The capability gate
+([#118](https://github.com/Stevie1704/sil/issues/118)) selected **no new framework
+capability** from this evidence. Its
+[decision record](../../docs/decisions/118-consumer-capability-gate.md) states
+the evidence needed to reopen each deferred alternative. The checker deadline
+omission is a separate tooling follow-up,
+[#134](https://github.com/Stevie1704/sil/issues/134). This proof adds no bus
+adapter, no Native ABI change, no FMI type expansion, and no data-plane change;
+its retained v0.1.0 evidence remains unchanged.
