@@ -14,6 +14,7 @@ import gzip
 import hashlib
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -84,10 +85,14 @@ def write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
 
 
-def stamp_python(root: Path, version: str, revision: str) -> Path:
-    """Stamp the revision into the package file consumed by wheel/sdist builds."""
+def stamp_python(
+    root: Path, version: str, revision: str, output_dir: Path
+) -> Path:
+    """Copy and stamp the Python tree without mutating the checkout."""
     version = checked_version(root, version)
-    destination = root / "python" / "src" / "sil" / "release.json"
+    source_dir = root / "python"
+    shutil.copytree(source_dir, output_dir)
+    destination = output_dir / "src" / "sil" / "release.json"
     write_json(destination, source_metadata(version, revision))
     return destination
 
@@ -191,32 +196,27 @@ def validate_distributions(
     return [wheels[0], sdists[0]]
 
 
-def required_native_paths(prefix: Path) -> tuple[str, ...]:
-    return (
-        "bin/sil-run",
-        "bin/silschema",
-        "include/sil/arena.h",
-        "include/sil/clock_region.h",
-        "include/sil/participant.h",
-        "share/licenses/sil/LICENSE",
-        "share/licenses/sil/NOTICE",
-        "share/licenses/sil/THIRD-PARTY-NOTICES.md",
-        "share/sil/release.json",
-    )
+REQUIRED_NATIVE_PATHS = (
+    "bin/sil-run",
+    "bin/silschema",
+    "include/sil/arena.h",
+    "include/sil/clock_region.h",
+    "include/sil/participant.h",
+    "share/licenses/sil/LICENSE",
+    "share/licenses/sil/NOTICE",
+    "share/licenses/sil/THIRD-PARTY-NOTICES.md",
+    "share/sil/release.json",
+)
 
 
 def validate_native_prefix(
     prefix: Path, version: str, revision: str | None = None
 ) -> None:
-    for relative in required_native_paths(prefix):
+    for relative in REQUIRED_NATIVE_PATHS:
         if not (prefix / relative).is_file():
             raise fail(f"native prefix is missing {relative}")
-    libraries = [
-        prefix / "lib" / "libsil_clock_shim.so",
-        prefix / "lib" / "libsil_clock_shim.dylib",
-    ]
-    if not any(library.is_file() for library in libraries):
-        raise fail("native prefix is missing libsil_clock_shim.so or libsil_clock_shim.dylib")
+    if not (prefix / "lib" / "libsil_clock_shim.so").is_file():
+        raise fail("native prefix is missing libsil_clock_shim.so")
     metadata = read_release_metadata(
         (prefix / "share/sil/release.json").read_text(), "native prefix"
     )
@@ -240,9 +240,7 @@ def _tar_add(archive: tarfile.TarFile, path: Path, name: str) -> None:
 def make_native_archive(prefix: Path, output: Path, version: str) -> Path:
     """Create a deterministic Linux x86-64 development archive."""
     validate_native_prefix(prefix, version)
-    is_linux = (prefix / "lib" / "libsil_clock_shim.so").is_file()
-    platform_name = "linux-x86_64" if is_linux else "macos"
-    root_name = f"sil-native-dev-{version}-{platform_name}"
+    root_name = f"sil-native-dev-{version}-linux-x86_64"
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("wb") as stream:
         with gzip.GzipFile(
@@ -269,7 +267,7 @@ def make_native_archive(prefix: Path, output: Path, version: str) -> Path:
 
 def validate_native_archive(
     archive_path: Path, version: str, revision: str | None = None
-) -> None:
+) -> str:
     context = f"native archive {archive_path.name}"
     with tarfile.open(archive_path, "r:gz") as archive:
         members = archive.getmembers()
@@ -279,19 +277,20 @@ def validate_native_archive(
         if len(roots) != 1:
             raise fail(f"{context}: expected one archive root")
         root = next(iter(roots))
+        expected_root = f"sil-native-dev-{version}-linux-x86_64"
+        if root != expected_root:
+            raise fail(f"{context}: archive root {root!r} != {expected_root!r}")
         names = {member.name.removeprefix(root + "/") for member in members}
-        for required in required_native_paths(Path(".")):
+        for required in REQUIRED_NATIVE_PATHS:
             if required not in names:
                 raise fail(f"{context}: missing {required}")
-        if not any(
-            name in names
-            for name in ("lib/libsil_clock_shim.so", "lib/libsil_clock_shim.dylib")
-        ):
+        if "lib/libsil_clock_shim.so" not in names:
             raise fail(f"{context}: missing the installed Clock shim library")
         metadata_member = archive.extractfile(f"{root}/share/sil/release.json")
         assert metadata_member is not None
         metadata = read_release_metadata(metadata_member.read(), context)
         assert_metadata(metadata, version, revision, context)
+        return root
 
 
 def validate_runner(runner: Path, version: str, revision: str | None = None) -> None:
@@ -350,8 +349,14 @@ def render_notes(template: Path, output: Path, values: dict[str, str]) -> Path:
     unresolved = sorted(set(re.findall(r"@[A-Z_]+@", text)))
     if unresolved:
         raise fail(f"release notes contain unresolved placeholders: {', '.join(unresolved)}")
+    output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(text)
     return output
+
+
+def validate_release_title(title: str, version: str) -> None:
+    if title != version:
+        raise fail(f"release title {title!r} does not equal version {version!r}")
 
 
 def write_release_metadata(
@@ -372,7 +377,8 @@ def write_release_metadata(
     return output
 
 
-def write_checksums(directory: Path, filename: str = "SHA256SUMS") -> Path:
+def write_checksums(directory: Path) -> Path:
+    filename = "SHA256SUMS"
     paths = sorted(
         path
         for path in directory.iterdir()
@@ -405,6 +411,7 @@ def parser() -> argparse.ArgumentParser:
 
     stamp = sub.add_parser("stamp-python")
     root_arg(stamp)
+    stamp.add_argument("--output-dir", type=Path, required=True)
     stamp.add_argument("--version", required=True)
     stamp.add_argument("--source-revision", required=True)
 
@@ -442,6 +449,10 @@ def parser() -> argparse.ArgumentParser:
     notes.add_argument("--image-reference", required=True)
     notes.add_argument("--image-digest", required=True)
 
+    title = sub.add_parser("validate-release-title")
+    title.add_argument("--title", required=True)
+    title.add_argument("--version", required=True)
+
     metadata = sub.add_parser("write-release-metadata")
     metadata.add_argument("--output", type=Path, required=True)
     metadata.add_argument("--version", required=True)
@@ -466,7 +477,14 @@ def main(argv: list[str] | None = None) -> int:
                 raise fail(f"tag version {version!r} does not match project version")
             print(version)
         elif args.command == "stamp-python":
-            print(stamp_python(args.root, args.version, args.source_revision))
+            print(
+                stamp_python(
+                    args.root,
+                    args.version,
+                    args.source_revision,
+                    args.output_dir,
+                )
+            )
         elif args.command == "validate-distributions":
             for artifact in validate_distributions(
                 args.root, args.dist, args.version, args.source_revision
@@ -488,6 +506,8 @@ def main(argv: list[str] | None = None) -> int:
                 "IMAGE_DIGEST": args.image_digest,
             }
             print(render_notes(args.template, args.output, values))
+        elif args.command == "validate-release-title":
+            validate_release_title(args.title, args.version)
         elif args.command == "write-release-metadata":
             print(
                 write_release_metadata(

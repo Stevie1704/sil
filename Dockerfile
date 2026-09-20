@@ -3,7 +3,7 @@
 # The tag documents the Python release; the digest makes every build resolve
 # the same multi-platform OCI index. It contains both amd64 (CI) and arm64.
 ARG PYTHON_IMAGE=python:3.13.7-slim-bookworm@sha256:adafcc17694d715c905b4c7bebd96907a1fd5cf183395f0ebc4d3428bd22d92d
-ARG SIL_VERSION=0.1.0
+ARG SIL_VERSION
 ARG SIL_SOURCE_REPOSITORY=https://github.com/Stevie1704/sil
 ARG SIL_SOURCE_REVISION=unknown
 
@@ -42,8 +42,9 @@ COPY cmake cmake
 COPY python python
 COPY container container
 
-RUN python tools/release.py stamp-python --root /src \
-      --version "${SIL_VERSION}" --source-revision "${SIL_SOURCE_REVISION}" \
+RUN version="${SIL_VERSION:-$(python tools/release.py project-version --root /src)}" \
+    && python tools/release.py stamp-python --root /src --output-dir /release-python \
+      --version "${version}" --source-revision "${SIL_SOURCE_REVISION}" \
     && cmake -S . -B /build -DCMAKE_BUILD_TYPE=Release \
       -DSIL_SOURCE_REPOSITORY="${SIL_SOURCE_REPOSITORY}" \
       -DSIL_SOURCE_REVISION="${SIL_SOURCE_REVISION}" \
@@ -53,7 +54,7 @@ RUN python tools/release.py stamp-python --root /src \
 RUN python -m pip install --no-cache-dir \
       --requirement container/build-requirements.lock \
     && python -m pip wheel --no-build-isolation --no-deps \
-      --wheel-dir /wheels ./python \
+      --wheel-dir /wheels /release-python \
     && python -m pip download --only-binary=:all: --dest /wheels \
       --requirement container/requirements.lock \
     && python -m venv /opt/sil/python \

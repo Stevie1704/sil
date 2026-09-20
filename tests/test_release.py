@@ -13,10 +13,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from release import (  # noqa: E402
+    REQUIRED_NATIVE_PATHS,
     ReleaseError,
     make_native_archive,
     project_version,
+    stamp_python,
     tag_version,
+    validate_release_title,
     validate_native_archive,
 )
 
@@ -35,26 +38,36 @@ def test_tag_convention_rejects_non_release_names():
 def test_python_build_metadata_is_self_describing():
     from sil.build_info import metadata
 
-    assert metadata() == {
-        "license": "Apache-2.0",
-        "source_repository": "https://github.com/Stevie1704/sil",
-        "source_revision": "development",
-        "version": "0.1.0",
-    }
+    value = metadata()
+    assert value["license"] == "Apache-2.0"
+    assert value["source_repository"] == "https://github.com/Stevie1704/sil"
+    assert value["source_revision"]
+    assert value["version"] == "0.1.0"
+
+
+def test_stamp_python_does_not_mutate_the_checkout(tmp_path: Path):
+    source = ROOT / "python" / "src" / "sil" / "release.json"
+    before = source.read_bytes()
+    destination = tmp_path / "python-release"
+
+    stamp_python(ROOT, "0.1.0", "test-revision", destination)
+
+    assert source.read_bytes() == before
+    assert json.loads(
+        (destination / "src" / "sil" / "release.json").read_text()
+    )["source_revision"] == "test-revision"
+
+
+def test_release_title_must_match_version():
+    validate_release_title("0.1.0", "0.1.0")
+    with pytest.raises(ReleaseError):
+        validate_release_title("SiL 0.1.0", "0.1.0")
 
 
 def test_native_archive_is_complete_and_deterministic(tmp_path: Path):
     prefix = tmp_path / "prefix"
     files = (
-        "bin/sil-run",
-        "bin/silschema",
-        "include/sil/arena.h",
-        "include/sil/clock_region.h",
-        "include/sil/participant.h",
-        "share/licenses/sil/LICENSE",
-        "share/licenses/sil/NOTICE",
-        "share/licenses/sil/THIRD-PARTY-NOTICES.md",
-        "share/sil/release.json",
+        *REQUIRED_NATIVE_PATHS,
         "lib/libsil_clock_shim.so",
     )
     for relative in files:

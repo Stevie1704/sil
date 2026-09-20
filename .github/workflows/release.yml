@@ -25,39 +25,68 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.ref }}
 
       - uses: astral-sh/setup-uv@v5
 
       - name: Resolve and validate version
         id: version
         shell: bash
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
             version="$(python3 tools/release.py validate-tag --root . --tag "$GITHUB_REF_NAME")"
+            source_revision="$GITHUB_SHA"
           else
             version="$(python3 tools/release.py project-version --root .)"
+            source_revision="$PR_HEAD_SHA"
           fi
+          test -n "$source_revision"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "source_revision=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          echo "source_revision=$source_revision" >> "$GITHUB_OUTPUT"
+
+      - name: Validate release notes before building or publishing
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          REVISION: ${{ steps.version.outputs.source_revision }}
+        run: |
+          set -euo pipefail
+          note="docs/releases/v${VERSION}.md"
+          test -f "$note"
+          if grep -Eq '@[A-Z_]+@' "$note"; then
+            echo "$note contains unresolved release placeholders" >&2
+            exit 1
+          fi
+          python3 tools/release.py render-notes \
+            --template docs/releases/template.md \
+            --output build/release-notes.verify.md \
+            --version "$VERSION" --source-revision "$REVISION" \
+            --image-reference "${IMAGE_NAME}:${VERSION}-ci" \
+            --image-digest pending
+          cat "$note" >> build/release-notes.verify.md
 
       - name: Build wheel and source distribution from the checkout
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          REVISION: ${{ steps.version.outputs.source_revision }}
         run: |
           set -euo pipefail
           python3 tools/release.py stamp-python --root . \
-            --version "$VERSION" --source-revision "$GITHUB_SHA"
-          uv build --wheel --sdist --out-dir dist python
+            --output-dir build/python-release \
+            --version "$VERSION" --source-revision "$REVISION"
+          uv build --wheel --sdist --out-dir dist build/python-release
 
       - name: Build and stage the native development prefix
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          REVISION: ${{ steps.version.outputs.source_revision }}
         run: |
           set -euo pipefail
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
             -DSIL_SOURCE_REPOSITORY="$SOURCE_REPOSITORY" \
-            -DSIL_SOURCE_REVISION="$GITHUB_SHA"
+            -DSIL_SOURCE_REVISION="$REVISION"
           cmake --build build -j2
           cmake --install build --prefix build/native
           python3 tools/release.py make-native-archive \
@@ -66,36 +95,38 @@ jobs:
             --version "$VERSION"
           python3 tools/release.py validate-runner \
             --runner build/native/bin/sil-run --version "$VERSION" \
-            --source-revision "$GITHUB_SHA"
+            --source-revision "$REVISION"
           python3 tools/release.py validate-native-archive \
             --archive "dist/sil-native-dev-${VERSION}-linux-x86_64.tar.gz" \
-            --version "$VERSION" --source-revision "$GITHUB_SHA"
+            --version "$VERSION" --source-revision "$REVISION"
           python3 tools/release.py validate-distributions \
             --root . --dist dist --version "$VERSION" \
-            --source-revision "$GITHUB_SHA"
+            --source-revision "$REVISION"
 
       - name: Build the non-publishing runtime image
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          REVISION: ${{ steps.version.outputs.source_revision }}
         run: |
           docker build --target runtime \
             --tag "sil-runtime:${VERSION}-ci" \
             --build-arg SIL_VERSION="$VERSION" \
             --build-arg SIL_SOURCE_REPOSITORY="$SOURCE_REPOSITORY" \
-            --build-arg SIL_SOURCE_REVISION="$GITHUB_SHA" .
+            --build-arg SIL_SOURCE_REVISION="$REVISION" .
           python3 tools/release.py validate-image \
             --image "sil-runtime:${VERSION}-ci" --version "$VERSION" \
-            --source-revision "$GITHUB_SHA"
+            --source-revision "$REVISION"
 
       - name: Smoke-test only the new wheel, native archive, and image
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          REVISION: ${{ steps.version.outputs.source_revision }}
         run: |
           python3 tools/release_smoke.py \
             --bundle dist \
             --image "sil-runtime:${VERSION}-ci" \
             --version "$VERSION" \
-            --source-revision "$GITHUB_SHA"
+            --source-revision "$REVISION"
 
       - name: Preserve the verified downloadable artifacts
         uses: actions/upload-artifact@v4
@@ -142,6 +173,13 @@ jobs:
         run: |
           set -euo pipefail
           test "$(python3 tools/release.py validate-tag --root . --tag "$GITHUB_REF_NAME")" = "$VERSION"
+          test -f "docs/releases/v${VERSION}.md"
+          if grep -Eq '@[A-Z_]+@' "docs/releases/v${VERSION}.md"; then
+            echo "version release notes contain unresolved placeholders" >&2
+            exit 1
+          fi
+          python3 tools/release.py validate-release-title \
+            --title "$VERSION" --version "$VERSION"
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "GitHub release $GITHUB_REF_NAME already exists" >&2
             exit 1
@@ -159,7 +197,6 @@ jobs:
           set -euo pipefail
           docker buildx build --platform linux/amd64 --target runtime \
             --tag "${IMAGE_NAME}:${VERSION}" \
-            --tag "${IMAGE_NAME}:sha-${GITHUB_SHA}" \
             --build-arg SIL_VERSION="$VERSION" \
             --build-arg SIL_SOURCE_REPOSITORY="$SOURCE_REPOSITORY" \
             --build-arg SIL_SOURCE_REVISION="$GITHUB_SHA" \
@@ -196,10 +233,11 @@ jobs:
             --version "$VERSION" --source-revision "$GITHUB_SHA" \
             --image-reference "$IMAGE_REFERENCE" --image-digest "$IMAGE_DIGEST"
           python3 tools/release.py render-notes \
-            --template "docs/releases/v${VERSION}.md" \
+            --template docs/releases/template.md \
             --output release-notes.md --version "$VERSION" \
             --source-revision "$GITHUB_SHA" \
             --image-reference "$IMAGE_REFERENCE" --image-digest "$IMAGE_DIGEST"
+          cat "docs/releases/v${VERSION}.md" >> release-notes.md
           python3 tools/release.py checksums --directory dist
           (cd dist && sha256sum -c SHA256SUMS)
 

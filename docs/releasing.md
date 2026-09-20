@@ -10,10 +10,13 @@ with publishing disabled.
 
 1. Bump `project.version` and add `docs/releases/v<VERSION>.md`. Copy the
    previous note and state the machine class, determinism boundary, Native ABI,
-   Manifest, Step protocol, Recording, and Python API compatibility. List
-   changes to Manifest bytes, Manifest hashes, Run behavior, exit-code
-   classification, and Recording bytes explicitly; write `none` when there is
-   no change.
+   Manifest, Step protocol, Recording, runner command line, schema-generation
+   tool, and Python API compatibility. List changes to Manifest bytes, Manifest
+   hashes, Run behavior, exit-code classification, and Recording bytes
+   explicitly; write `none` when there is no change. Keep this version note
+   readable in the repository and free of `@PLACEHOLDER@` tokens. The release
+   workflow prepends the dynamic identity header from
+   `docs/releases/template.md`.
 2. Open a pull request. The release workflow builds the wheel and source
    distribution, stages and archives the Linux native development prefix,
    builds the pinned runtime image, and runs the clean-environment smoke job.
@@ -27,7 +30,7 @@ with publishing disabled.
    Configure the `release` GitHub environment with required maintainer review.
    The publish job has only `contents: write` and `packages: write`; it checks
    that the tag, Python metadata, runner report, OCI version label, and release
-   title all equal `<VERSION>` before it attaches anything.
+   title all equal `<VERSION>` before it publishes anything.
 4. After the job succeeds, download every release asset and verify it:
 
    ```sh

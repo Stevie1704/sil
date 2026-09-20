@@ -73,17 +73,25 @@ def clean_environment(python_bin: Path, archive_bin: Path) -> dict[str, str]:
     return environment
 
 
-def extract_archive(archive_path: Path, destination: Path) -> Path:
+def python_metadata_check(version: str, revision: str) -> str:
+    return (
+        "import importlib.metadata as m; import sil; "
+        f"assert m.version('sil') == {version!r}; "
+        f"assert sil.__version__ == {version!r}; "
+        "from sil.build_info import metadata; "
+        f"assert metadata()['source_revision'] == {revision!r}"
+    )
+
+
+def extract_archive(
+    archive_path: Path, destination: Path, expected_root: str
+) -> Path:
     destination.mkdir(parents=True, exist_ok=True)
     with tarfile.open(archive_path, "r:gz") as archive:
         members = archive.getmembers()
         if not members:
             raise SmokeError("native archive is empty")
-        roots = {member.name.split("/", 1)[0] for member in members}
-        if len(roots) != 1:
-            raise SmokeError("native archive must have one root directory")
-        root = next(iter(roots))
-        root_path = (destination / root).resolve()
+        root_path = (destination / expected_root).resolve()
         destination_resolved = destination.resolve()
         for member in members:
             target = (destination / member.name).resolve()
@@ -93,10 +101,19 @@ def extract_archive(archive_path: Path, destination: Path) -> Path:
     return root_path
 
 
-def assert_manifest_hash(result: subprocess.CompletedProcess[str], manifest: Path) -> str:
+def assert_manifest_hash(
+    result: subprocess.CompletedProcess[str],
+    manifest: Path,
+    expected_exit_code: int = 0,
+) -> str:
     expected = hashlib.sha256(manifest.read_bytes()).hexdigest()
-    if result.returncode != 0:
-        raise SmokeError(f"representative Run failed: {result.stderr}")
+    if result.returncode != expected_exit_code:
+        raise SmokeError(
+            f"representative Run returned {result.returncode}, "
+            f"expected {expected_exit_code}: {result.stderr}"
+        )
+    if expected_exit_code != 0:
+        return expected
     if result.stdout != f"manifest_hash {expected}\n":
         raise SmokeError(
             f"runner did not emit the expected Manifest hash: {result.stdout!r}"
@@ -109,12 +126,14 @@ def smoke_native(
 ) -> tuple[Path, str]:
     bundle = bundle.resolve()
     wheels = sorted(bundle.glob(f"sil-{version}-*.whl"))
-    archives = sorted(bundle.glob(f"sil-native-dev-{version}-*.tar.gz"))
+    archives = sorted(
+        bundle.glob(f"sil-native-dev-{version}-linux-x86_64.tar.gz")
+    )
     if len(wheels) != 1 or len(archives) != 1:
         raise SmokeError("bundle must contain exactly one wheel and native archive")
 
-    native_root = extract_archive(archives[0], workdir / "native")
-    validate_native_archive(archives[0], version, revision)
+    archive_root = validate_native_archive(archives[0], version, revision)
+    native_root = extract_archive(archives[0], workdir / "native", archive_root)
     venv_dir = workdir / "python"
     venv.EnvBuilder(with_pip=True, clear=True).create(venv_dir)
     python_bin = venv_dir / "bin"
@@ -127,11 +146,7 @@ def smoke_native(
     environment = clean_environment(python_bin, native_root / "bin")
     checked(
         [str(python_bin / "python"), "-c", (
-            "import importlib.metadata as m; import sil; "
-            f"assert m.version('sil') == {version!r}; "
-            f"assert sil.__version__ == {version!r}; "
-            "from sil.build_info import metadata; "
-            f"assert metadata()['source_revision'] == {revision!r}"
+            python_metadata_check(version, revision)
         )],
         cwd=workdir,
         env=environment,
@@ -174,6 +189,16 @@ def smoke_native(
     manifest_hash = assert_manifest_hash(first_result, acc_manifest)
     second_result = run([str(runner), str(acc_manifest), "-o", str(second)], cwd=workdir, env=environment)
     assert_manifest_hash(second_result, acc_manifest)
+    invalid_manifest = workdir / "invalid.json"
+    invalid_document = json.loads(acc_manifest.read_text())
+    invalid_document["sil_manifest"] = 99
+    invalid_manifest.write_text(json.dumps(invalid_document, sort_keys=True) + "\n")
+    invalid_result = run(
+        [str(runner), str(invalid_manifest), "--no-recording"],
+        cwd=workdir,
+        env=environment,
+    )
+    assert_manifest_hash(invalid_result, invalid_manifest, expected_exit_code=2)
     if first.read_bytes() != second.read_bytes():
         raise SmokeError("two native release Runs produced different Recordings")
     check = checked(
@@ -221,13 +246,7 @@ def smoke_container(
         manifest.parent,
         [
             "-c",
-            (
-                "import importlib.metadata as m; import sil; "
-                f"assert m.version('sil') == {version!r}; "
-                f"assert sil.__version__ == {version!r}; "
-                "from sil.build_info import metadata; "
-                f"assert metadata()['source_revision'] == {revision!r}"
-            ),
+            python_metadata_check(version, revision),
         ],
         "python3",
     )
@@ -245,6 +264,17 @@ def smoke_container(
         )
         if result.returncode or result.stdout != f"manifest_hash {manifest_hash}\n":
             raise SmokeError(f"container Run failed: {result.stdout}\n{result.stderr}")
+    invalid_result = docker_run(
+        image,
+        manifest.parent,
+        ["/workspace/invalid.json", "--no-recording"],
+        "sil-run",
+    )
+    if invalid_result.returncode != 2:
+        raise SmokeError(
+            f"container Manifest error returned {invalid_result.returncode}, "
+            f"expected 2: {invalid_result.stderr}"
+        )
     if first.read_bytes() != second.read_bytes():
         raise SmokeError("two container release Runs produced different Recordings")
     check = docker_run(

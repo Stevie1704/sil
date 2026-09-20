@@ -362,7 +362,10 @@ artifact for this repository's CI checks; it is not part of the production
 image.
 
 ```sh
-docker build --target runtime -t sil:local .
+version="$(python3 tools/release.py project-version)"
+docker build --target runtime -t sil:local \
+  --build-arg SIL_VERSION="$version" \
+  --build-arg SIL_SOURCE_REVISION=local .
 ```
 
 Mount a workspace at `/workspace` and use the host user's numeric identity so
