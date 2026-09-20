@@ -172,8 +172,11 @@ NativeParticipant::NativeParticipant(Engine &engine, const std::string &name,
       name_(name),
       subscribes_(spec.subscribes),
       publishes_(spec.publishes) {
-  std::filesystem::path lib = spec.library;
-  if (lib.is_relative()) lib = base_dir / lib;
+  std::filesystem::path lib = spec.resolved_library;
+  if (lib.empty()) {
+    lib = spec.library;
+    if (lib.is_relative()) lib = base_dir / lib;
+  }
 
   handle_ = dlopen(lib.c_str(), RTLD_NOW | RTLD_LOCAL);
   if (!handle_)

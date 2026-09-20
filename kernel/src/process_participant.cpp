@@ -377,8 +377,9 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
   try {
     const std::filesystem::path invocation_directory =
         std::filesystem::current_path();
-    const std::vector<std::string> command =
-        resolve_command(spec.command, invocation_directory);
+    std::vector<std::string> command = spec.resolved_command;
+    if (command.empty())
+      command = resolve_command(spec.command, invocation_directory);
     std::string directory_error;
     OwnedDirectory directory = OwnedDirectory::create_child(
         engine.run_working_directory(), participant_directory_name(name),

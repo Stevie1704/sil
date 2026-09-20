@@ -89,6 +89,9 @@ struct ChannelSpec {
 
 struct NativeSpec {
   std::string library;      // resolved relative to the manifest directory
+  // Filled by the Run-boundary provenance preflight. It is deliberately not
+  // serialized: the Manifest hash remains the hash of the caller's bytes.
+  std::filesystem::path resolved_library;
   std::string config_json;
   // The declared Channel contract. The manifest is authoritative: the C ABI
   // has no registration call, so runtime subscribe/publish only prove
@@ -99,6 +102,9 @@ struct NativeSpec {
 
 struct ProcessSpec {
   std::vector<std::string> command;
+  // Filled by the Run-boundary provenance preflight. The child is launched
+  // with this resolved vector so the bytes digested are the bytes exec loads.
+  std::vector<std::string> resolved_command;
   uint64_t step_period_ns = 0;
   std::vector<SubscriberRouteSpec> subscribes;
   std::vector<std::string> publishes;
