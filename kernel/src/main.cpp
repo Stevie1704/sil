@@ -14,6 +14,7 @@
 #include "clock_shim.hpp"
 #include "copy_counters.hpp"
 #include "engine.hpp"
+#include "exit_codes.hpp"
 #include "manifest.hpp"
 #include "provenance.hpp"
 #include "recording_sink.hpp"
@@ -33,9 +34,9 @@ namespace {
 #define SIL_LICENSE_IDENTIFIER "Apache-2.0"
 #endif
 
-constexpr int kExitOk = 0;
-constexpr int kExitRunFailure = 1;
-constexpr int kExitConfigError = 2;
+using sil::kExitConfigError;
+using sil::kExitOk;
+using sil::kExitRunFailure;
 
 void usage() {
   std::cerr << "usage: sil-run <manifest.json> "
@@ -103,6 +104,31 @@ struct SizeLimitOption {
   size_t *destination;
   bool given;
 };
+
+// Completes the provenance record once the Run's outcome is known and writes
+// it beside the Recording. The Recording is digested here rather than during
+// the preflight because its bytes do not exist until the sink has closed.
+void write_side_car(sil::Provenance &provenance, int exit_code, bool recording,
+                    const char *out_path, const char *requested_path) {
+  provenance.run_exit_code = exit_code;
+  if (recording) {
+    try {
+      provenance.recording_sha256 = sil::sha256_file(out_path);
+    } catch (const std::exception &e) {
+      provenance.errors.push_back({"Recording", out_path, e.what()});
+    }
+  }
+  const std::filesystem::path path =
+      requested_path ? std::filesystem::path(requested_path)
+                     : sil::default_provenance_path(out_path);
+  try {
+    sil::write_provenance(path, provenance);
+  } catch (const std::exception &e) {
+    // The Run's exit code and its first diagnostic remain authoritative. A
+    // side-car write problem is reported without rewriting either.
+    std::cerr << "sil-run: " << e.what() << "\n";
+  }
+}
 
 int run(int argc, char **argv) {
   const int report = report_version(argc, argv);
@@ -190,21 +216,26 @@ int run(int argc, char **argv) {
     return kExitConfigError;
   }
 
-  std::unique_ptr<sil::Provenance> provenance;
+  std::optional<sil::Provenance> provenance;
   std::unique_ptr<sil::RecordingSink> recorder;
   std::optional<sil::Manifest> manifest;
   int exit_code = kExitConfigError;
 
   try {
     manifest.emplace(sil::load_manifest(manifest_path));
-    provenance = std::make_unique<sil::Provenance>(
+    provenance.emplace(
         sil::initialize_provenance(manifest.value(), SIL_VERSION,
                                    SIL_SOURCE_REPOSITORY, SIL_SOURCE_REVISION));
+
+    // Engine::setup rejects a second publisher before it loads or spawns
+    // anything. Run the same check first so the artifact preflight, which now
+    // precedes setup, cannot change which diagnostic a bad Manifest reports.
+    sil::validate_one_publisher_per_channel(manifest.value());
 
     // Resolve and digest all artifacts before Engine::setup can load a Native
     // library or spawn a Process participant. The preflight also writes the
     // resolved paths back into the in-memory Manifest, never its source bytes.
-    sil::collect_provenance(manifest.value(), *provenance);
+    sil::preflight_run_artifacts(manifest.value(), *provenance);
 
     // Selecting the recording format is a manifest/config concern: an
     // unrecognized output extension is a Manifest error (exit 2) and must reject
@@ -241,28 +272,9 @@ int run(int argc, char **argv) {
     }
   }
 
-  if (provenance) {
-    provenance->run_exit_code = exit_code;
-    if (recording) {
-      try {
-        provenance->recording_sha256 = sil::sha256_file(out_path);
-      } catch (const std::exception &e) {
-        provenance->errors.push_back(
-            {"Recording", out_path, e.what()});
-      }
-    }
-    const std::filesystem::path provenance_path =
-        provenance_path_arg
-            ? std::filesystem::path(provenance_path_arg)
-            : sil::default_provenance_path(out_path);
-    try {
-      sil::write_provenance(provenance_path, *provenance);
-    } catch (const std::exception &e) {
-      // The Run's exit code and its first diagnostic remain authoritative. A
-      // side-car write problem is reported without rewriting either.
-      std::cerr << "sil-run: " << e.what() << "\n";
-    }
-  }
+  if (provenance)
+    write_side_car(*provenance, exit_code, recording, out_path,
+                   provenance_path_arg);
 
   if (exit_code == kExitOk && manifest)
     std::cout << "manifest_hash " << manifest->hash_hex << "\n";

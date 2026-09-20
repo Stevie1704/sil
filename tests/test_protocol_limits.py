@@ -46,6 +46,10 @@ def _run(sil_run: Path, manifest: Path, *args: str):
         [str(sil_run), str(manifest), *args],
         capture_output=True,
         text=True,
+        # With --no-recording the runner still writes a provenance side-car
+        # beside its default output path. Run beside the manifest so it
+        # cannot land in whatever directory pytest was started from.
+        cwd=manifest.parent,
     )
 
 
@@ -326,6 +330,9 @@ def test_the_kernel_buffers_no_more_than_the_line_limit(sil_run, tmp_path):
         capture_output=True,
         text=True,
         env=dict(os.environ, SIL_TEST_FLOOD_LINE_BYTES=str(sent_bytes)),
+        # --no-recording still writes a provenance side-car beside the
+        # default output path; keep it out of the repository root.
+        cwd=tmp_path,
     )
 
     assert proc.returncode == 1

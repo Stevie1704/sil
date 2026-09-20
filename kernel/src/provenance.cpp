@@ -59,10 +59,8 @@ std::string error_message(const std::error_code &error) {
   return error ? error.message() : "unknown filesystem error";
 }
 
-fs::path canonical_file(const fs::path &input, const fs::path &base,
-                        const std::string &artifact) {
-  if (input.empty())
-    throw std::runtime_error(artifact + " path is empty");
+fs::path canonical_file(const fs::path &input, const fs::path &base) {
+  if (input.empty()) throw std::runtime_error("path is empty");
 
   fs::path candidate = input;
   if (candidate.is_relative()) candidate = base / candidate;
@@ -82,26 +80,10 @@ fs::path canonical_file(const fs::path &input, const fs::path &base,
   return resolved;
 }
 
-std::string digest_file(const fs::path &path) {
-  std::ifstream input(path, std::ios::binary);
-  if (!input)
-    throw std::runtime_error("cannot open '" + path.string() + "': " +
-                             std::strerror(errno));
-
-  Sha256 digest;
-  char buffer[64 * 1024];
-  while (input.read(buffer, sizeof buffer) || input.gcount() != 0)
-    digest.update(buffer, static_cast<size_t>(input.gcount()));
-  if (!input.eof())
-    throw std::runtime_error("cannot read '" + path.string() + "'");
-  return digest.hex_digest();
-}
-
-ResolvedFile resolve_and_digest(const fs::path &input, const fs::path &base,
-                                const std::string &artifact) {
+ResolvedFile resolve_and_digest(const fs::path &input, const fs::path &base) {
   ResolvedFile file;
-  file.path = canonical_file(input, base, artifact);
-  file.sha256 = digest_file(file.path);
+  file.path = canonical_file(input, base);
+  file.sha256 = sha256_file(file.path);
   return file;
 }
 
@@ -139,9 +121,9 @@ fs::path running_executable() {
   std::string buffer(size, '\0');
   if (_NSGetExecutablePath(buffer.data(), &size) != 0)
     throw std::runtime_error("cannot resolve the running executable path");
-  return canonical_file(buffer.c_str(), {}, "runner");
+  return canonical_file(buffer.c_str(), {});
 #else
-  return canonical_file("/proc/self/exe", {}, "runner");
+  return canonical_file("/proc/self/exe", {});
 #endif
 }
 
@@ -167,8 +149,7 @@ ResolvedExecutable path_from_path_environment(
     std::error_code error;
     if (fs::is_regular_file(candidate, error) && !error &&
         executable_file(candidate))
-      return {candidate,
-              canonical_file(candidate, {}, "Process participant executable")};
+      return {candidate, canonical_file(candidate, {})};
 
     if (separator == std::string::npos) break;
     start = separator + 1;
@@ -185,8 +166,7 @@ ResolvedExecutable resolve_executable(
     fs::path launch_path = argument.is_absolute()
                                ? argument
                                : (invocation_directory / argument).lexically_normal();
-    return {launch_path,
-            canonical_file(launch_path, {}, "Process participant executable")};
+    return {launch_path, canonical_file(launch_path, {})};
   }
   return path_from_path_environment(command, invocation_directory);
 }
@@ -291,21 +271,16 @@ Provenance initialize_provenance(const Manifest &manifest,
   return provenance;
 }
 
-void collect_provenance(Manifest &manifest, Provenance &provenance) {
+void preflight_run_artifacts(Manifest &manifest, Provenance &provenance) {
   // Every Manifest-named path resolves against the Manifest directory, so the
   // record describes the same artifacts from any working directory. Anchoring
   // to the invocation directory instead would put it in the record, and two
   // Runs of one Manifest from different directories would not be byte-identical.
   const fs::path &base = manifest.base_dir;
 
-  // Engine::setup performs this check before it loads or spawns anything. Keep
-  // that observable validation order while still doing artifact preflight
-  // before setup can reach a participant.
-  validate_one_publisher_per_channel(manifest);
-
   if (const auto file = collect_file(
           provenance, "runner", "/proc/self/exe", [] {
-            return resolve_and_digest(running_executable(), {}, "runner");
+            return resolve_and_digest(running_executable(), {});
           }))
     provenance.runner = artifact(*file);
 
@@ -318,7 +293,7 @@ void collect_provenance(Manifest &manifest, Provenance &provenance) {
     const fs::path shim = clock_shim_library_path();
     if (const auto file = collect_file(
             provenance, "Clock shim", shim.string(), [&shim] {
-              return resolve_and_digest(shim, {}, "Clock shim");
+              return resolve_and_digest(shim, {});
             }))
       provenance.clock_shim = artifact(*file);
   }
@@ -335,8 +310,7 @@ void collect_provenance(Manifest &manifest, Provenance &provenance) {
               provenance, "Native participant '" + participant.name +
                               "' library",
               requested.string(), [&requested, &manifest] {
-                return resolve_and_digest(requested, manifest.base_dir,
-                                          "Native participant library");
+                return resolve_and_digest(requested, manifest.base_dir);
               })) {
         native->resolved_library = launch_path;
         record.library = artifact(*file);
@@ -374,8 +348,7 @@ void collect_provenance(Manifest &manifest, Provenance &provenance) {
                 "Process participant '" + participant.name +
                     "' executable",
                 executable->target_path.string(), [&executable] {
-                  return resolve_and_digest(executable->target_path, {},
-                                            "Process participant executable");
+                  return resolve_and_digest(executable->target_path, {});
                 }))
           record.executable = artifact(*file);
       }
@@ -389,8 +362,7 @@ void collect_provenance(Manifest &manifest, Provenance &provenance) {
                 provenance,
                 "File named by participant '" + participant.name + "' command",
                 requested.string(), [&requested, &base] {
-                  return resolve_and_digest(requested, base,
-                                            "Command file");
+                  return resolve_and_digest(requested, base);
                 }))
           named.file = artifact(*file);
         provenance.command_files.push_back(std::move(named));
@@ -401,7 +373,20 @@ void collect_provenance(Manifest &manifest, Provenance &provenance) {
   if (!provenance.errors.empty()) throw ManifestError(preflight_error(provenance));
 }
 
-std::string sha256_file(const fs::path &path) { return digest_file(path); }
+std::string sha256_file(const fs::path &path) {
+  std::ifstream input(path, std::ios::binary);
+  if (!input)
+    throw std::runtime_error("cannot open '" + path.string() + "': " +
+                             std::strerror(errno));
+
+  Sha256 digest;
+  char buffer[64 * 1024];
+  while (input.read(buffer, sizeof buffer) || input.gcount() != 0)
+    digest.update(buffer, static_cast<size_t>(input.gcount()));
+  if (!input.eof())
+    throw std::runtime_error("cannot read '" + path.string() + "'");
+  return digest.hex_digest();
+}
 
 fs::path default_provenance_path(const fs::path &recording_path) {
   return fs::path(recording_path.string() + ".provenance.json");

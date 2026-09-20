@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "exit_codes.hpp"
 #include "manifest.hpp"
 
 namespace sil {
@@ -61,7 +62,7 @@ struct Provenance {
   std::vector<ProvenanceCommandFile> command_files;
   std::vector<ProvenanceError> errors;
 
-  int run_exit_code = 2;
+  int run_exit_code = kExitConfigError;
   std::optional<std::string> recording_sha256;
 };
 
@@ -73,11 +74,12 @@ Provenance initialize_provenance(const Manifest &manifest,
                                  const std::string &source_repository,
                                  const std::string &source_revision);
 
-// Resolves and hashes every artifact before a participant is loaded or
-// spawned. On success it also stores the exact paths that Native and Process
-// adapters must use. On failure it records every artifact error found and
-// throws ManifestError after the preflight has finished.
-void collect_provenance(Manifest &manifest, Provenance &provenance);
+// Resolves and hashes every artifact the Manifest names, before a Participant
+// is loaded or spawned, and writes the resolved paths back into the Manifest
+// for the Native and Process adapters to use. Records every artifact error it
+// finds, then throws ManifestError once the whole preflight has run, so one
+// diagnostic names every unreadable artifact rather than only the first.
+void preflight_run_artifacts(Manifest &manifest, Provenance &provenance);
 
 // Computes the SHA-256 of an already-resolved file. Used for the Recording
 // after its sink has closed.
