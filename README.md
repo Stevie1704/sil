@@ -411,6 +411,25 @@ The default image user is non-root. Callers may still select their host UID and
 GID as above; the installed runner and Python Participant entry points do not
 depend on a passwd entry or a writable home directory.
 
+## Consumer adoption proof
+
+[proofs/esmini/](proofs/esmini/) is that derived-image pattern carried through
+end to end with a Participant this repository did not write: the third-party
+scenario engine [esmini](https://github.com/esmini/esmini) `v3.8.1`, driving a
+UN-R157 cut-in scenario as a Process participant. It starts from the published
+runner image by digest, declares its own Schema, Channels, route capacities
+and Duration, is judged by a domain KPI in-run and post-hoc, reproduces
+esmini's own expected trajectory within tolerance, and records bit-identically
+across two Runs.
+
+```sh
+proofs/esmini/run-proof.sh            # needs docker and network
+```
+
+Nothing in that directory is part of the framework. Its README is the evidence:
+what worked unchanged, what needed consumer-side adaptation, and what the
+current contracts cannot represent.
+
 ## Build & test
 
 ```sh
@@ -443,6 +462,8 @@ python/src/sil/examples/acc/
                    in a nominal and a delayed-sensing variant
 examples/fmu/      the FMU import example: one Reference FMU driven as a
                    process participant
+proofs/esmini/     consumer-side adoption proof: a third-party scenario
+                   engine run on the published release, with its evidence
 python/src/sil/    manifest builder, step-participant lib, test API,
                    determinism check, declared memory footprint
 tests/             behavior tests at the run boundary

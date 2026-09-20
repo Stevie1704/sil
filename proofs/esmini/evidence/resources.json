@@ -1,0 +1,15 @@
+{
+  "command": [
+    "sil-run",
+    "/workspace/alks-cut-in.json",
+    "--participant-timeout-ms",
+    "30000",
+    "-o",
+    "/workspace/run-1.mcap"
+  ],
+  "exit_code": 0,
+  "peak_child_rss_bytes": 61952000,
+  "system_cpu_s": 0.05,
+  "user_cpu_s": 0.586,
+  "wall_clock_s": 0.663
+}

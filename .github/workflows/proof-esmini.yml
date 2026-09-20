@@ -1,0 +1,48 @@
+name: proof-esmini
+
+# The esmini adoption proof (issue #117), on the supported machine class.
+#
+# It downloads a 200 MB third-party release and executes against the published
+# SiL runner image by digest, so it tests the release rather than the checkout
+# and is unaffected by the commit that triggers it. That is why it is not part
+# of the push gate — but it does run on any pull request that touches the
+# proof, because the evidence a maintainer reviews has to come from the
+# supported machine class rather than from whatever laptop wrote it.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'proofs/esmini/**'
+      - '.github/workflows/proof-esmini.yml'
+
+jobs:
+  proof:
+    # Native linux/amd64 — the machine class the release supports, and the
+    # one the committed evidence is missing.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Execute the proof
+        run: |
+          proofs/esmini/run-proof.sh \
+            "$RUNNER_TEMP/evidence" "$RUNNER_TEMP/workspace"
+
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: esmini-proof-evidence
+          path: ${{ runner.temp }}/evidence
+
+      # The Manifests and both Recordings, so the Run can be read back rather
+      # than only its hashes believed.
+      - name: Keep the Manifests and Recordings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: esmini-proof-workspace
+          path: |
+            ${{ runner.temp }}/workspace/*.json
+            ${{ runner.temp }}/workspace/*.mcap
