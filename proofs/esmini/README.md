@@ -371,16 +371,20 @@ release containing the option exists, and records that release's identity.
 | Checker verdict | `deterministic: 4ff77017…16c4` |
 | Retained Recording | `4ff77017…16c4`, 191,911 bytes |
 
-Both deadline-bounded Runs completed and agreed byte for byte, and their
-digest is the one the v0.1.0 proof recorded without a deadline. The KPI and
-the ten upstream-reference samples pass on the retained Recording with values
-identical to `evidence/observations.json`.
+Both deadline-bounded Runs completed and agreed byte for byte. That is a
+comparison between two Runs of one machine class, which is the only kind of
+bit comparison the determinism boundary in
+[SUPPORT.md](../../SUPPORT.md) covers. The KPI and the ten upstream-reference
+samples pass on the retained Recording, with values identical to
+`evidence/observations.json`.
 
-One difference from the release evidence: this validation ran `linux/amd64`
-emulated on a `Darwin arm64` host, recorded in its `identity.txt`, rather than
-on the native x86-64 machine class the v0.1.0 evidence names. Reproducing the
-released digest there is a stronger result than the deadline needs, not a
-claim that determinism is now asserted across machine classes.
+This validation ran `linux/amd64` emulated on a `Darwin arm64` host, recorded
+in its `identity.txt`, and not on the native x86-64 machine class the v0.1.0
+evidence names. Its digest equals the one the release proof recorded, and
+`recording-hashes.txt` prints the two beside each other, but those two Runs
+are of different machine classes: that equality is an observation and not a
+valid bit comparison. Re-running this script on a native x86-64 host is what
+would make it one. Nothing the deadline has to demonstrate depends on it.
 
 The stalled-Participant behavior the option exists for is covered at the run
 boundary by `tests/test_check_participant_timeout.py`, not here: this

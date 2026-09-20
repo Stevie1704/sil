@@ -158,6 +158,23 @@ class TestArgumentRejection:
         assert "--participant-timeout-ms" in proc.stderr
         assert not marker.exists()
 
+    @pytest.mark.parametrize(
+        "abbreviation", ["--participant-timeout-m", "--partic"]
+    )
+    def test_an_abbreviated_option_is_not_the_option(
+        self, sil_run, tmp_path, abbreviation
+    ):
+        # The runner answers to the exact flag and nothing else, so a checker
+        # that accepted a prefix of it would accept a Run the runner refuses.
+        marker = tmp_path / "spawned"
+        manifest = timeout_manifest(tmp_path, "ok", marker)
+
+        proc = run_check(sil_run, manifest, abbreviation, "100")
+
+        assert proc.returncode == 2
+        assert abbreviation in proc.stderr
+        assert not marker.exists()
+
 
 class TestRunBoundary:
     def test_stalled_participant_fails_the_check_with_the_run_diagnostic(

@@ -109,6 +109,9 @@ sil_run /workspace/alks-cut-in.json \
     --participant-timeout-ms "$PARTICIPANT_TIMEOUT_MS" -o /workspace/run-1.mcap
 retained_digest="$(sha256_of "$WORKSPACE/run-1.mcap")"
 release_digest="$(awk '$1 == "run-1.mcap" { print $2 }' "$PROOF_DIR/evidence/determinism.txt")"
+# The release proof's digest is recorded beside the two this run produced and
+# never compared with them: run on another machine class it is an observation,
+# not a bit comparison (SUPPORT.md, "Determinism: the exact boundary").
 {
     echo "checked      $checked_digest"
     echo "retained     $retained_digest"
