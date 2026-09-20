@@ -103,7 +103,7 @@ commit. The pull request updates the Binary variables' `mimeType` to
 `version="1.0.0"` while leaving that manifest at `1.0.0-beta.1`, so it
 declares both versions at once.
 
-**2. The CAN operations on the wire are v1.0.0's.** The headers upstream pins
+**2. The CAN operation bytes are v1.0.0's.** The headers upstream pins
 (`468127f2`) are an ancestor of the `v1.0.0` tag, and the difference between
 them, for everything that decides a byte, is nil:
 
