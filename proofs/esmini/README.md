@@ -329,7 +329,40 @@ issue.
   determinism check invokes the runner without `--participant-timeout-ms`, so
   the Run it checks is not the Run a caller with a deadline executes. Here
   both were run and both produced the same Recording hash, which is why this
-  is a gap in the tool rather than a result that differs.
+  is a gap in the tool rather than a result that differs. Closed in the
+  development checkout and validated separately below; the released checker
+  this proof ran still has no such option.
+
+## Validating the updated checker
+
+[Issue #134](https://github.com/Stevie1704/sil/issues/134) gives `sil-check` a
+`--participant-timeout-ms` option and forwards it to both of its Runs. That
+checker is not in any release, so it is not in the image above and does not
+belong in the release evidence. It is validated on the same consumer artifact
+by a separate script:
+
+```sh
+./validate-checker-deadline.sh
+```
+
+The script builds the same derived image from the same pinned runner digest
+and mounts only `python/src/sil/check.py` into it, read-only, as the checker
+under test. The runner, the Manifest builder, the Step endpoint, and the
+consumer participants all remain the released ones the proof ran. It rebuilds
+the nominal 8 s / 10 ms Manifest, refuses to continue if its hash is no longer
+the one above, runs the check with a 30000 ms response deadline, then retains
+one deadline-bounded Run so the existing KPI and upstream-reference checks
+have bytes to read and the digest the checker reported is tied to an artifact.
+
+Its evidence is written to `evidence-checker-deadline/` — identities of the
+runner and the checker under test, the Manifest hash, the Recording hashes
+next to the v0.1.0 one, and the post-hoc observations. Nothing in `evidence/`
+is touched. The release-only reproduction in `run-proof.sh` is updated when a
+release containing the option exists, and records that release's identity.
+
+The stalled-Participant behavior the option exists for is covered at the run
+boundary by `tests/test_check_participant_timeout.py`, not here: this
+consumer answers every request well inside the deadline.
 
 ## Deferred
 

@@ -53,6 +53,18 @@ response wait. A missed deadline is a Run failure (exit 1), not a Manifest
 change: the option is absent from the Manifest and its hash. Omitting it keeps
 the existing unlimited-wait behavior.
 
+The determinism check takes the same option and hands it to both of the runs
+it compares, so a stalled participant fails the check instead of hanging it:
+
+```sh
+sil-check manifest.json --runner build/sil-run --participant-timeout-ms 5000
+```
+
+The check then reports the run's own exit code and diagnostic — a missed
+deadline is a run failure (exit 1), not a determinism violation. The
+recorded bytes of a run that answers in time are the same either way, so a
+bounded check and an unbounded one report the same digest.
+
 ### Process participant descendants
 
 Each Process participant becomes the leader of its own process group before it
