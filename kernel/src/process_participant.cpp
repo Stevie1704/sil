@@ -68,24 +68,17 @@ int8_t b64_value(uint8_t ch) {
   return table[ch];
 }
 
+// What b64_decode would produce, without decoding and without allocating.
+// The budget check runs before the payloads exist, so walking every character
+// a second time would put the whole inline decode cost on the line twice; the
+// count is arithmetic instead. b64_decode emits one byte per 8 accumulated
+// bits and stops at the first '=', so n source characters yield floor(3n/4).
+// Splitting n into quotient and remainder keeps the product inside size_t.
+// Characters outside the alphabet are not rejected here: b64_decode raises
+// that, and a Step that trips this budget fails the Run either way.
 size_t b64_decoded_size(const std::string &in) {
-  size_t size = 0;
-  uint32_t acc = 0;
-  int bits = 0;
-  for (char ch : in) {
-    if (ch == '=') break;
-    const int8_t value = b64_value(uint8_t(ch));
-    if (value < 0) throw RunError("invalid base64 in participant message");
-    acc = acc << 6 | uint32_t(value);
-    bits += 6;
-    if (bits >= 8) {
-      bits -= 8;
-      if (size == std::numeric_limits<size_t>::max())
-        throw RunError("base64 payload size overflows size_t");
-      ++size;
-    }
-  }
-  return size;
+  const size_t chars = std::min(in.find('='), in.size());
+  return chars / 4 * 3 + chars % 4 * 3 / 4;
 }
 
 std::vector<uint8_t> b64_decode(const std::string &in) {
@@ -227,6 +220,10 @@ class ProcessParticipant::StepCodec {
  public:
   StepCodec(ChannelArenas &arenas, int protocol) : arena_(arenas, protocol) {}
 
+  // The field on the line is authoritative, so the inline budget measures
+  // exactly the Messages the decode pass will inline. Both passes ask here.
+  static bool is_inline(const json &item) { return !item.contains("shm_seq"); }
+
   json encode_inputs(const std::vector<StepInput> &messages) {
     json in = json::array();
     // These indices belong to one codec call, so slot reuse is inherently
@@ -249,7 +246,7 @@ class ProcessParticipant::StepCodec {
   size_t inline_payload_bytes(const json &outputs) const {
     size_t total = 0;
     for (const json &item : outputs) {
-      if (item.contains("shm_seq")) continue;
+      if (!is_inline(item)) continue;
       const size_t bytes = InlineAdapter::decoded_size(item);
       if (bytes > std::numeric_limits<size_t>::max() - total)
         throw RunError("inline payload byte count overflows size_t");
@@ -263,11 +260,11 @@ class ProcessParticipant::StepCodec {
     for (const json &item : encoded) {
       StepOutput output;
       output.channel = item.at("ch").get<std::string>();
-      // The field on the line is authoritative. A Channel can legally carry
-      // inline fallbacks after its Arena slots are full.
-      output.bytes = item.contains("shm_seq")
-                         ? arena_.decode(item, output.channel)
-                         : InlineAdapter::decode(item);
+      // A Channel can legally carry inline fallbacks once its Arena slots
+      // are full, so the Transport is read per Message, never per Channel.
+      output.bytes = is_inline(item)
+                         ? InlineAdapter::decode(item)
+                         : arena_.decode(item, output.channel);
       outputs.push_back(std::move(output));
     }
     return outputs;
@@ -558,8 +555,8 @@ void ProcessParticipant::step(uint64_t now_ns) {
     throw RunError("participant '" + name_ + "': expected step_done, got " +
                    done.dump());
 
-  const json empty_outputs = json::array();
-  const json &outputs = done.contains("out") ? done.at("out") : empty_outputs;
+  static const json kNoOutputs = json::array();
+  const json &outputs = done.contains("out") ? done.at("out") : kNoOutputs;
   if (!outputs.is_array())
     throw RunError("participant '" + name_ +
                    "': step_done out must be an array");
@@ -636,14 +633,14 @@ std::string ProcessParticipant::read_line(
           "participant '" + name_ +
           "': maximum protocol line length exceeded while waiting for "
           "initialization ready response: configured " +
-          std::to_string(limits_.max_protocol_line_bytes) + " bytes, observed " +
-          std::to_string(observed) + " bytes");
+          std::to_string(limits_.max_protocol_line_bytes) +
+          " bytes, observed " + std::to_string(observed) + " bytes");
     return RunError(
         "participant '" + name_ +
-        "': maximum protocol line length exceeded during Step at virtual time " +
-        std::to_string(*step_time) + " ns: configured " +
-        std::to_string(limits_.max_protocol_line_bytes) + " bytes, observed " +
-        std::to_string(observed) + " bytes");
+        "': maximum protocol line length exceeded during Step at virtual "
+        "time " + std::to_string(*step_time) + " ns: configured " +
+        std::to_string(limits_.max_protocol_line_bytes) +
+        " bytes, observed " + std::to_string(observed) + " bytes");
   };
 
   const auto over_limit_observed = [&](size_t base, size_t added) {

@@ -273,3 +273,62 @@ def test_limit_failure_keeps_only_partial_recording_metadata(
         manifest.read_bytes()
     ).hexdigest()
     assert messages == []
+
+
+def test_inline_fallback_on_an_arena_channel_is_charged(sil_run, tmp_path):
+    """The Transport is read per Message, not per Channel.
+
+    The Arena exemption belongs to a Message the line names with `shm_seq`.
+    A participant that answers with an inline `data` field on an Arena-backed
+    Channel is taking the inline transport and is charged for it, which is
+    what keeps the exemption from becoming a way to opt out of the budget.
+    """
+    manifest = toy_manifest(duration_ns=10_000_000)
+    manifest.add_channel("ticks", schema="toy.Counter", transport="shm")
+    manifest.add_process(
+        "bounded",
+        command=[sys.executable, str(LIMIT_PARTICIPANT), "inline"],
+        step_period_ns=10_000_000,
+        publishes=["ticks"],
+    )
+    path = manifest.write(tmp_path / "arena-inline.json").path
+
+    proc = _run(
+        sil_run, path, "--max-step-inline-payload-bytes", "8", "--no-recording"
+    )
+
+    assert proc.returncode == 1
+    assert "maximum total inline payload bytes per Step" in proc.stderr
+    assert "observed 16 bytes" in proc.stderr
+
+
+def test_the_kernel_buffers_no_more_than_the_line_limit(sil_run, tmp_path):
+    """The read-side guarantee, asserted without measuring memory.
+
+    copy_counters.hpp states that the kernel's own resource use is
+    observational and never asserted on, so this pins the bound through the
+    diagnostic instead. The fixture offers a 64 MiB line against a 1 MiB
+    limit. The kernel inspects each read before appending it and stops at the
+    limit, so the observed value can exceed the limit by at most the 4 KiB it
+    reads at a time. A kernel that buffered the line first would report a
+    number near what the child sent.
+    """
+    sent_bytes = 64 * 1024 * 1024
+    line_bytes = 1024 * 1024
+    proc = subprocess.run(
+        [
+            str(sil_run),
+            str(_manifest(tmp_path, "flood", publishes=True)),
+            "--max-protocol-line-bytes",
+            str(line_bytes),
+            "--no-recording",
+        ],
+        capture_output=True,
+        text=True,
+        env=dict(os.environ, SIL_TEST_FLOOD_LINE_BYTES=str(sent_bytes)),
+    )
+
+    assert proc.returncode == 1
+    assert "maximum protocol line length" in proc.stderr
+    observed = int(proc.stderr.split("observed ")[1].split(" bytes")[0])
+    assert line_bytes < observed <= line_bytes + 4096

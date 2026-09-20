@@ -11,6 +11,39 @@ from pathlib import Path
 
 PAYLOAD = base64.b64encode(b"\0" * 16).decode()
 
+# The cheapest legal `out` entry, so a line of a given size carries as many
+# JSON nodes as a participant can put in it. That is the worst case for what
+# the kernel parses before the output-Message guard can reject it.
+SMALLEST_OUTPUT = '{"ch":"ticks","data":"AAAA"}'
+
+
+def _write_flood_line(line_bytes: int) -> None:
+    """Stream one `step_done` line of about `line_bytes` packed with tiny outputs.
+
+    Written in chunks rather than built as one string: the kernel may close
+    the pipe partway through, and a fixture that materialised the whole line
+    first would put its own footprint next to the kernel's.
+    """
+    envelope = '{"op":"step_done","out":[]}\n'
+    count = max((line_bytes - len(envelope)) // (len(SMALLEST_OUTPUT) + 1), 1)
+    chunk = ",".join([SMALLEST_OUTPUT] * 1024)
+    try:
+        sys.stdout.write('{"op":"step_done","out":[')
+        written = 0
+        while written < count:
+            batch = min(1024, count - written)
+            sys.stdout.write(chunk[: batch * (len(SMALLEST_OUTPUT) + 1) - 1]
+                             if batch < 1024 else chunk)
+            written += batch
+            if written < count:
+                sys.stdout.write(",")
+        sys.stdout.write(']}\n')
+        sys.stdout.flush()
+    except BrokenPipeError:
+        # The kernel rejected the line and closed the pipe. That is the point
+        # of this fixture, not a fixture failure.
+        os._exit(0)
+
 
 def _write_observer(path: str | None) -> None:
     if path is None:
@@ -50,6 +83,10 @@ def main(mode: str, observer: str | None = None) -> None:
                         }
                     ),
                     flush=True,
+                )
+            elif mode == "flood":
+                _write_flood_line(
+                    int(os.environ["SIL_TEST_FLOOD_LINE_BYTES"])
                 )
             elif mode == "inline":
                 print(

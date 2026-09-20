@@ -69,6 +69,14 @@ are run-boundary arguments, not Manifest data: a Run that stays within them
 has the same Manifest hash and Recording bytes. An over-limit Process
 participant causes a Run failure (exit 1).
 
+`--max-protocol-line-bytes` is the one to turn down for a tighter memory
+ceiling. It bounds the read buffer exactly, but the kernel parses a line that
+stays inside it before it can count that line's outputs, and the kernel's
+peak resident memory runs to 13-16 times the line limit in the worst case. The inline
+payload of a Step is capped at three quarters of the line limit by base64
+expansion, so `--max-step-inline-payload-bytes` only bites once the line limit
+is raised. [docs/step-protocol.md](docs/step-protocol.md) has the detail.
+
 ## Virtual clock shim for opaque POSIX vECUs
 
 An out-of-process participant is expected to derive time from the `step(t, Δt)`
