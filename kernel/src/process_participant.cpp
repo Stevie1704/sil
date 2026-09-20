@@ -21,6 +21,7 @@
 #include "clock_shim.hpp"
 #include "copy_counters.hpp"
 #include "owned_directory.hpp"
+#include "run_signal.hpp"
 
 namespace sil {
 
@@ -132,6 +133,95 @@ std::string participant_directory_name(const std::string &name) {
   }
   return encoded;
 }
+
+// Owns the direct child's wait status and the process-group escalation policy.
+// Descendants cannot be waitpid()'d by the runner, so group existence is the
+// observation that keeps their bounded TERM/KILL grace period meaningful.
+class ChildProcessGroup {
+ public:
+  ChildProcessGroup(pid_t pid, pid_t process_group_id)
+      : pid_(pid), process_group_id_(process_group_id) {}
+
+  int terminate() noexcept {
+    (void)reap_within(200);
+
+    // Do not signal a group after a clean direct-child reap has already shown
+    // it empty: the child PID may be reused after that point. If the group is
+    // still present, the child or one of its descendants still owns the ID.
+    if (!child_reaped_ || process_group_exists()) signal_group(SIGTERM);
+
+    const bool group_drained = group_drained_within(100);
+    if (!child_reaped_ || !group_drained) {
+      // Recheck immediately before escalation for the same PID-reuse reason.
+      if (process_group_exists()) signal_group(SIGKILL);
+      reap_blocking();
+      (void)group_drained_within(100);
+    }
+    return wait_status_;
+  }
+
+ private:
+  pid_t wait_for_child(int options) noexcept {
+    for (;;) {
+      const pid_t result = waitpid(pid_, &wait_status_, options);
+      if (result < 0 && errno == EINTR) continue;
+      return result;
+    }
+  }
+
+  bool reap_once() noexcept {
+    if (child_reaped_) return true;
+    if (wait_for_child(WNOHANG) != pid_) return false;
+    child_reaped_ = true;
+    return true;
+  }
+
+  bool reap_within(int centiseconds) noexcept {
+    for (int i = 0; i < centiseconds; ++i) {
+      if (reap_once()) return true;
+      usleep(10000);
+    }
+    return false;
+  }
+
+  bool process_group_exists() const noexcept {
+    if (process_group_id_ <= 0) return false;
+    for (;;) {
+      if (kill(-process_group_id_, 0) == 0) return true;
+      if (errno == EINTR) continue;
+      // EPERM means the group exists but has no member the runner can probe.
+      // Other failures describe an unusable/nonexistent group, not a reason
+      // to signal a potentially reused ID.
+      return errno == EPERM;
+    }
+  }
+
+  void signal_group(int signal_number) const noexcept {
+    if (process_group_id_ <= 0) return;
+    // ESRCH is expected when the group drained between the probe and signal.
+    (void)kill(-process_group_id_, signal_number);
+  }
+
+  bool group_drained_within(int centiseconds) noexcept {
+    for (int i = 0; i < centiseconds; ++i) {
+      if (!process_group_exists()) return true;
+      (void)reap_once();
+      usleep(10000);
+    }
+    (void)reap_once();
+    return !process_group_exists();
+  }
+
+  void reap_blocking() noexcept {
+    if (child_reaped_) return;
+    if (wait_for_child(0) == pid_) child_reaped_ = true;
+  }
+
+  pid_t pid_;
+  pid_t process_group_id_;
+  int wait_status_ = 0;
+  bool child_reaped_ = false;
+};
 
 }  // namespace
 
@@ -417,6 +507,14 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     pid_ = fork();
     if (pid_ < 0) throw RunError("participant '" + name + "': fork failed");
     if (pid_ == 0) {
+      // Keep every descendant in a group owned by this Process participant.
+      // This is deliberately the first child-side operation, before the
+      // existing pre-exec work. A failure uses the same child-start failure
+      // path as chdir/exec below.
+      if (setpgid(0, 0) != 0) {
+        perror("sil: setpgid participant");
+        _exit(127);
+      }
       dup2(to_child[0], STDIN_FILENO);
       dup2(from_child[1], STDOUT_FILENO);
       close(to_child[0]);
@@ -436,10 +534,18 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
       perror("sil: exec participant");
       _exit(127);
     }
+    // Repeat the operation in the parent to close the fork-to-child race. If
+    // the child already exec'd, EACCES means its child-side call succeeded.
+    (void)setpgid(pid_, pid_);
     close(to_child[0]);
     close(from_child[1]);
     child_stdin_ = to_child[1];
     child_stdout_ = from_child[0];
+    // The child-side setpgid above runs before exec, so a successfully
+    // started child and every descendant it creates share this group. A
+    // failed setpgid exits before exec and cannot leave a live participant in
+    // the runner's group.
+    process_group_id_ = pid_;
     alive_ = true;
 
     const Manifest &m = engine.manifest();
@@ -596,6 +702,11 @@ void ProcessParticipant::send_line(const std::string &line) {
   size_t off = 0;
   while (off < data.size()) {
     ssize_t n = write(child_stdin_, data.data() + off, data.size() - off);
+    if (n < 0 && errno == EINTR) {
+      if (run_interrupted())
+        throw RunError(run_interrupt_message());
+      continue;
+    }
     if (n < 0)
       throw RunError("participant '" + name_ + "': write failed (exited?)");
     off += size_t(n);
@@ -701,7 +812,10 @@ std::string ProcessParticipant::read_line(
     if (!deadline) {
       char buf[4096];
       ssize_t n = read(child_stdout_, buf, sizeof buf);
-      if (n < 0 && errno == EINTR) continue;
+      if (n < 0 && errno == EINTR) {
+        if (run_interrupted()) throw RunError(run_interrupt_message());
+        continue;
+      }
       if (n <= 0)
         throw RunError("participant '" + name_ + "' exited unexpectedly");
       append_checked(buf, size_t(n));
@@ -720,14 +834,20 @@ std::string ProcessParticipant::read_line(
     pollfd descriptor{child_stdout_, POLLIN, 0};
     const int ready =
         poll(&descriptor, 1, static_cast<int>(wait_ms.count()));
-    if (ready < 0 && errno == EINTR) continue;
+    if (ready < 0 && errno == EINTR) {
+      if (run_interrupted()) throw RunError(run_interrupt_message());
+      continue;
+    }
     if (ready == 0) throw timeout();
     if (ready < 0)
       throw RunError("participant '" + name_ + "': poll failed");
 
     char buf[4096];
     ssize_t n = read(child_stdout_, buf, sizeof buf);
-    if (n < 0 && errno == EINTR) continue;
+    if (n < 0 && errno == EINTR) {
+      if (run_interrupted()) throw RunError(run_interrupt_message());
+      continue;
+    }
     if (n <= 0)
       throw RunError("participant '" + name_ + "' exited unexpectedly");
     append_checked(buf, size_t(n));
@@ -744,26 +864,8 @@ int ProcessParticipant::terminate_child() {
   close(child_stdin_);
   close(child_stdout_);
 
-  int wait_status = 0;
-  auto reap_within = [&](int centiseconds) {
-    for (int i = 0; i < centiseconds; i++) {
-      if (waitpid(pid_, &wait_status, WNOHANG) == pid_) return true;
-      usleep(10000);
-    }
-    return false;
-  };
-  // A child that does not answer `shutdown` is asked with SIGTERM before it is
-  // killed, so a participant holding run-scoped state of its own — an imported
-  // FMU's extracted archive, say — still reaches its own cleanup. SIGKILL is
-  // the last resort for a child that ignores both, and leaves that cleanup
-  // undone by definition.
-  if (!reap_within(200)) {
-    kill(pid_, SIGTERM);
-    if (!reap_within(100)) {
-      kill(pid_, SIGKILL);
-      waitpid(pid_, &wait_status, 0);
-    }
-  }
+  const int wait_status =
+      ChildProcessGroup(pid_, process_group_id_).terminate();
   // Release the regions at run end rather than at destruction, so a finished
   // run leaves nothing in the temp directory even while the engine still holds
   // the participant. Both releases are the owning type's destructor.
