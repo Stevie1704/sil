@@ -347,7 +347,9 @@ runs the same script on `ubuntu-latest`.
 The committed evidence was produced by that script on `linux/amd64` — the
 supported machine class — in an emulated container on a `Darwin arm64` host,
 which [`evidence/identity.txt`](evidence/identity.txt) states. The workflow
-reproduces it on a native amd64 runner.
+reproduced it on a native amd64 runner, down to the archive digests above:
+the same pinned image builds the same FMU bytes whether the host executes
+x86-64 or emulates it.
 
 The decoder has its own tests, which need no fixture and no docker:
 
