@@ -329,7 +329,66 @@ issue.
   determinism check invokes the runner without `--participant-timeout-ms`, so
   the Run it checks is not the Run a caller with a deadline executes. Here
   both were run and both produced the same Recording hash, which is why this
-  is a gap in the tool rather than a result that differs.
+  is a gap in the tool rather than a result that differs. Closed in the
+  development checkout and validated separately below; the released checker
+  this proof ran still has no such option.
+
+## Validating the updated checker
+
+[Issue #134](https://github.com/Stevie1704/sil/issues/134) gives `sil-check` a
+`--participant-timeout-ms` option and forwards it to both of its Runs. That
+checker is not in any release, so it is not in the image above and does not
+belong in the release evidence. It is validated on the same consumer artifact
+by a separate script:
+
+```sh
+./validate-checker-deadline.sh
+```
+
+The script builds the same derived image from the same pinned runner digest
+and mounts only `python/src/sil/check.py` into it, read-only, as the checker
+under test. The runner, the Manifest builder, the Step endpoint, and the
+consumer participants all remain the released ones the proof ran. It rebuilds
+the nominal 8 s / 10 ms Manifest, refuses to continue if its hash is no longer
+the one above, runs the check with a 30000 ms response deadline, then retains
+one deadline-bounded Run so the existing KPI and upstream-reference checks
+have bytes to read and the digest the checker reported is tied to an artifact.
+
+Its evidence is written to `evidence-checker-deadline/` — identities of the
+runner and the checker under test, the Manifest hash, the Recording hashes
+next to the v0.1.0 one, and the post-hoc observations. Nothing in `evidence/`
+is touched. The release-only reproduction in `run-proof.sh` is updated when a
+release containing the option exists, and records that release's identity.
+
+### What the validation produced
+
+| Field | Value |
+| --- | --- |
+| Checker under test | `python/src/sil/check.py`, SHA-256 `d57495cb…8fd6`, revision `5fe843e` |
+| Runner | the pinned `v0.1.0` image above, unchanged |
+| Manifest SHA-256 | `fd33135e…2757` — the release proof's nominal Manifest |
+| Response deadline | `30000` ms, on both checked Runs and on the retained one |
+| Checker verdict | `deterministic: 4ff77017…16c4` |
+| Retained Recording | `4ff77017…16c4`, 191,911 bytes |
+
+Both deadline-bounded Runs completed and agreed byte for byte. That is a
+comparison between two Runs of one machine class, which is the only kind of
+bit comparison the determinism boundary in
+[SUPPORT.md](../../SUPPORT.md) covers. The KPI and the ten upstream-reference
+samples pass on the retained Recording, with values identical to
+`evidence/observations.json`.
+
+This validation ran `linux/amd64` emulated on a `Darwin arm64` host, recorded
+in its `identity.txt`, and not on the native x86-64 machine class the v0.1.0
+evidence names. Its digest equals the one the release proof recorded, and
+`recording-hashes.txt` prints the two beside each other, but those two Runs
+are of different machine classes: that equality is an observation and not a
+valid bit comparison. Re-running this script on a native x86-64 host is what
+would make it one. Nothing the deadline has to demonstrate depends on it.
+
+The stalled-Participant behavior the option exists for is covered at the run
+boundary by `tests/test_check_participant_timeout.py`, not here: this
+consumer answers every request well inside the deadline.
 
 ## Deferred
 

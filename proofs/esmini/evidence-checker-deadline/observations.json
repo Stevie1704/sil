@@ -1,0 +1,25 @@
+{
+  "first_virtual_time_ns": 0,
+  "kpi": {
+    "ego_speed_at_evaluation_mps": 6.080000000000254,
+    "initial_gap_m": 24.960000038146973,
+    "lateral_offset_at_evaluation_m": 7.676081992258332e-13,
+    "minimum_gap_at_ns": 7680000000,
+    "minimum_gap_m": 0.35777506742172704,
+    "target_speed_at_evaluation_mps": 2.832000000000031
+  },
+  "last_virtual_time_ns": 7990000000,
+  "messages": {
+    "esmini.Ego": 800,
+    "esmini.Target": 800
+  },
+  "recording_bytes": 191911,
+  "reference_max_deviation": {
+    "heading_rad": 0.00024279759026057945,
+    "speed_mps": 2.540190280342358e-13,
+    "x_m": 0.0003999999986774583,
+    "y_m": 0.00044582426423822596
+  },
+  "reference_samples_checked": 10,
+  "slots": 800
+}

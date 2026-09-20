@@ -18,7 +18,7 @@ from toys import toy_manifest
 TIMEOUT_PARTICIPANT = ROOT / "tests" / "participants" / "timeout.py"
 
 
-def _manifest(
+def timeout_manifest(
     tmp_path: Path,
     mode: str,
     observer: Path | None = None,
@@ -48,7 +48,7 @@ def _run(sil_run: Path, manifest: Path, *args: str) -> subprocess.CompletedProce
 def test_timeout_argument_is_not_part_of_manifest_or_recording(
     sil_run, tmp_path
 ):
-    manifest = _manifest(tmp_path, "ok")
+    manifest = timeout_manifest(tmp_path, "ok")
     without = _run(sil_run, manifest, "-o", str(tmp_path / "without.mcap"))
     with_deadline = _run(
         sil_run,
@@ -81,7 +81,7 @@ def test_invalid_timeout_is_rejected_before_spawn(
     sil_run, tmp_path, arguments
 ):
     marker = tmp_path / "spawned"
-    manifest = _manifest(tmp_path, "ok", marker)
+    manifest = timeout_manifest(tmp_path, "ok", marker)
     proc = _run(sil_run, manifest, *arguments, "--no-recording")
 
     assert proc.returncode == 2
@@ -93,7 +93,7 @@ def test_timeout_during_initialization_is_a_run_failure(
 ):
     proc = _run(
         sil_run,
-        _manifest(tmp_path, "init"),
+        timeout_manifest(tmp_path, "init"),
         "--participant-timeout-ms",
         "100",
         "--no-recording",
@@ -108,7 +108,7 @@ def test_timeout_during_initialization_is_a_run_failure(
 def test_timeout_during_step_reports_virtual_time(sil_run, tmp_path):
     proc = _run(
         sil_run,
-        _manifest(tmp_path, "step"),
+        timeout_manifest(tmp_path, "step"),
         "--participant-timeout-ms",
         "100",
         "--no-recording",
@@ -123,7 +123,7 @@ def test_timeout_during_step_reports_virtual_time(sil_run, tmp_path):
 def test_each_step_gets_a_fresh_deadline(sil_run, tmp_path):
     proc = _run(
         sil_run,
-        _manifest(tmp_path, "slow", duration_ns=3),
+        timeout_manifest(tmp_path, "slow", duration_ns=3),
         "--participant-timeout-ms",
         "100",
         "--no-recording",
@@ -135,7 +135,7 @@ def test_each_step_gets_a_fresh_deadline(sil_run, tmp_path):
 def test_partial_response_does_not_extend_step_deadline(sil_run, tmp_path):
     proc = _run(
         sil_run,
-        _manifest(tmp_path, "partial"),
+        timeout_manifest(tmp_path, "partial"),
         "--participant-timeout-ms",
         "100",
         "--no-recording",
@@ -152,7 +152,7 @@ def test_timeout_reaps_sigterm_ignoring_child_and_removes_working_directory(
     observer = tmp_path / "observer.txt"
     proc = _run(
         sil_run,
-        _manifest(tmp_path, "ignore-term", observer),
+        timeout_manifest(tmp_path, "ignore-term", observer),
         "--participant-timeout-ms",
         "100",
         "--no-recording",
@@ -168,7 +168,7 @@ def test_timeout_reaps_sigterm_ignoring_child_and_removes_working_directory(
 
 def test_timeout_leaves_only_a_partial_recording_on_failure(sil_run, tmp_path):
     output = tmp_path / "partial.mcap"
-    manifest = _manifest(tmp_path, "step")
+    manifest = timeout_manifest(tmp_path, "step")
     proc = _run(
         sil_run,
         manifest,
