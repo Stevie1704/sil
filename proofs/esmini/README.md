@@ -364,7 +364,7 @@ release containing the option exists, and records that release's identity.
 
 | Field | Value |
 | --- | --- |
-| Checker under test | `python/src/sil/check.py`, SHA-256 `4cca8482…fb70`, revision `613d553` |
+| Checker under test | `python/src/sil/check.py`, SHA-256 `d57495cb…8fd6`, revision `5fe843e` |
 | Runner | the pinned `v0.1.0` image above, unchanged |
 | Manifest SHA-256 | `fd33135e…2757` — the release proof's nominal Manifest |
 | Response deadline | `30000` ms, on both checked Runs and on the retained one |
