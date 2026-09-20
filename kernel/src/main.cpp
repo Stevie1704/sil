@@ -37,7 +37,11 @@ constexpr int kExitRunFailure = 1;
 constexpr int kExitConfigError = 2;
 
 void usage() {
-  std::cerr << "usage: sil-run <manifest.json> [--participant-timeout-ms <N>] "
+  std::cerr << "usage: sil-run <manifest.json> "
+               "[--participant-timeout-ms <N>] "
+               "[--max-protocol-line-bytes <N>] "
+               "[--max-step-output-messages <N>] "
+               "[--max-step-inline-payload-bytes <N>] "
                "[-o <out.mcap> | --no-recording]\n"
                "       sil-run --version\n"
                "       sil-run --build-info\n";
@@ -58,21 +62,45 @@ int report_version(int argc, char **argv) {
   return -1;
 }
 
-bool parse_participant_timeout(std::string_view text,
-                               std::chrono::milliseconds &timeout) {
+// Every run-boundary number on the command line is one positive integer with
+// no sign and no trailing text, differing only in the ceiling its destination
+// can hold. from_chars over an unsigned type rejects "-1" and "1.5" and
+// reports an out-of-range literal, so `ceiling` only has to bound the type.
+bool parse_positive(std::string_view text, uint64_t ceiling, uint64_t &value) {
   if (text.empty()) return false;
-  uint64_t value = 0;
   const auto result = std::from_chars(text.data(), text.data() + text.size(),
                                      value);
-  if (result.ec != std::errc{} || result.ptr != text.data() + text.size() ||
-      value == 0 ||
-      value > static_cast<uint64_t>(
-                   std::chrono::milliseconds::max().count()))
+  return result.ec == std::errc{} && result.ptr == text.data() + text.size() &&
+         value != 0 && value <= ceiling;
+}
+
+bool parse_participant_timeout(std::string_view text,
+                               std::chrono::milliseconds &timeout) {
+  uint64_t value = 0;
+  if (!parse_positive(
+          text, uint64_t(std::chrono::milliseconds::max().count()), value))
     return false;
   timeout = std::chrono::milliseconds(
       static_cast<std::chrono::milliseconds::rep>(value));
   return true;
 }
+
+bool parse_positive_size(std::string_view text, size_t &value) {
+  uint64_t parsed = 0;
+  if (!parse_positive(text, std::numeric_limits<size_t>::max(), parsed))
+    return false;
+  value = static_cast<size_t>(parsed);
+  return true;
+}
+
+// The three Step-protocol size guards differ only in the flag that names them
+// and the field they land in, so the loop below matches them through here
+// rather than repeating the same parse-and-reject block once per guard.
+struct SizeLimitOption {
+  const char *flag;
+  size_t *destination;
+  bool given;
+};
 
 // Fail fast at load if a participant opted into the shim but the shim library
 // is missing next to the runner, so a broken install is a Manifest error rather
@@ -101,6 +129,18 @@ int run(int argc, char **argv) {
   bool recording = true;
   bool out_given = false;
   std::optional<std::chrono::milliseconds> participant_timeout;
+  sil::RunBoundaryLimits limits;
+  SizeLimitOption size_limits[] = {
+      {"--max-protocol-line-bytes", &limits.max_protocol_line_bytes, false},
+      {"--max-step-output-messages", &limits.max_step_output_messages, false},
+      {"--max-step-inline-payload-bytes",
+       &limits.max_step_inline_payload_bytes, false},
+  };
+  const auto size_limit_for = [&size_limits](const char *argument) {
+    for (SizeLimitOption &option : size_limits)
+      if (std::strcmp(argument, option.flag) == 0) return &option;
+    return static_cast<SizeLimitOption *>(nullptr);
+  };
   for (int i = 1; i < argc; i++) {
     if (std::strcmp(argv[i], "-o") == 0 && i + 1 < argc) {
       out_path = argv[++i];
@@ -117,6 +157,18 @@ int run(int argc, char **argv) {
         return kExitConfigError;
       }
       participant_timeout = timeout;
+    } else if (SizeLimitOption *option = size_limit_for(argv[i])) {
+      if (option->given || i + 1 >= argc) {
+        usage();
+        return kExitConfigError;
+      }
+      if (!parse_positive_size(argv[++i], *option->destination)) {
+        std::cerr << "sil-run: " << option->flag
+                  << " must be a positive integer representable as a "
+                     "size_t\n";
+        return kExitConfigError;
+      }
+      option->given = true;
     } else if (std::strcmp(argv[i], "--no-recording") == 0) {
       recording = false;
     } else if (argv[i][0] == '-') {
@@ -157,7 +209,7 @@ int run(int argc, char **argv) {
     std::unique_ptr<sil::RecordingSink> recorder;
     if (recording) recorder = sil::make_recording_sink(out_path, manifest);
     try {
-      sil::Engine engine(manifest, recorder.get(), participant_timeout);
+      sil::Engine engine(manifest, recorder.get(), participant_timeout, limits);
       engine.setup();
       engine.run();
       if (recorder) recorder->close();

@@ -136,6 +136,69 @@ virtual time. The option is a run-boundary argument, not Manifest data, so it
 does not change the Manifest hash, protocol messages, or Recording bytes of a
 Run that completes before all deadlines.
 
+The run boundary also supplies three resource guards for every Process
+participant. Their defaults are deliberately above the payloads used by the
+examples and routing benchmark:
+
+| argument | default | measured value |
+| --- | ---: | --- |
+| `--max-protocol-line-bytes N` | `16 MiB` (`16777216`) | response-line bytes, excluding the terminating newline |
+| `--max-step-output-messages N` | `1024` | entries in one `step_done.out` array |
+| `--max-step-inline-payload-bytes N` | `64 MiB` (`67108864`) | decoded bytes in that Step's inline `data` fields |
+
+Each `N` must be a positive integer representable as the runner's `size_t`.
+The line limit is enforced while reading, before the kernel appends bytes to
+the response buffer, and applies to both `ready` and every `step_done`
+response. The output-Message limit is checked before any output is decoded.
+The inline-payload limit is checked against the decoded bytes before any
+output reaches the Engine. A Message represented by `shm_seq` (and its Arena
+descriptor) is not charged to the inline-payload limit; an inline fallback on
+an Arena-backed Channel is charged.
+
+The guards are configured separately but they are not independent of each
+other. Every inline byte of a Step arrives base64-encoded inside that Step's
+one response line, so the inline payload of a Step can never exceed three
+quarters of the line limit: at the default line limit the inline budget is
+capped at 12 MiB whatever `--max-step-inline-payload-bytes` says. The
+inline-payload guard therefore does nothing at the shipped defaults. It exists
+for the deployment that raises `--max-protocol-line-bytes`, where it bounds
+decoded payload independently of how much encoded text the line may carry.
+
+Exceeding one of these limits is a Run failure (exit 1), never a Manifest
+error or a successful determinism check. The diagnostic names the Process
+participant, the limit, its configured value, and the observed value; a Step
+diagnostic also names the Step's virtual time. For a line-length failure the
+observed value is how many bytes the kernel had buffered for that line when
+the guard tripped, not the length of the line the participant meant to send:
+the kernel stops reading at the limit and never learns the rest. It is a
+lower bound, and it varies with how the child's output is chunked into pipe
+reads. The child is terminated and reaped through the normal
+SIGTERM-to-SIGKILL path, and the existing Mapped region, Run working
+directory, and partial-Recording lifetime behavior remains in force.
+
+### What the guards bound, and what they do not
+
+The line limit bounds the read buffer exactly: the kernel inspects each chunk
+before appending it, so the buffer never grows past the limit while a child
+withholds the newline. It does not bound the parsed form of a line that stays
+inside it. A line is parsed into a JSON document before the output-Message
+count can be checked, and that document costs a multiple of the line's bytes.
+The worst case is a line packed with the smallest legal `out` entries. The
+kernel process alone, measured through `sil-run-instrumented`, peaks at 12.8
+to 16.4 times the line limit across limits from 1 MiB to 16 MiB — 205 MiB at
+the 16 MiB default — before the count guard trips. Peak memory is therefore
+linear in `--max-protocol-line-bytes`, and that argument is the one to lower
+when a Run must hold a tighter memory ceiling. A line carrying large payloads
+rather than many small entries costs far less, because the cost is per JSON
+node, not per byte. Those figures are observational, in the sense
+`kernel/src/copy_counters.hpp` gives the word: they are measurements of one
+machine, not thresholds the test suite asserts.
+
+These are operational Run-boundary arguments. They are not Manifest fields,
+do not affect virtual time or the Manifest hash, and cannot change the
+Recording of a Run that stays within them. Omitting an argument selects its
+documented default.
+
 After the run, the kernel sends:
 
 ```json

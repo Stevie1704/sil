@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <limits>
 #include <map>
+#include <string_view>
 #include <utility>
 
 #include <nlohmann/json.hpp>
@@ -56,7 +57,7 @@ std::string b64_encode(const std::vector<uint8_t> &in) {
   return out;
 }
 
-std::vector<uint8_t> b64_decode(const std::string &in) {
+int8_t b64_value(uint8_t ch) {
   static int8_t table[256];
   static bool init = [] {
     for (int i = 0; i < 256; i++) table[i] = -1;
@@ -64,13 +65,29 @@ std::vector<uint8_t> b64_decode(const std::string &in) {
     return true;
   }();
   (void)init;
+  return table[ch];
+}
 
+// What b64_decode would produce, without decoding and without allocating.
+// The budget check runs before the payloads exist, so walking every character
+// a second time would put the whole inline decode cost on the line twice; the
+// count is arithmetic instead. b64_decode emits one byte per 8 accumulated
+// bits and stops at the first '=', so n source characters yield floor(3n/4).
+// Splitting n into quotient and remainder keeps the product inside size_t.
+// Characters outside the alphabet are not rejected here: b64_decode raises
+// that, and a Step that trips this budget fails the Run either way.
+size_t b64_decoded_size(const std::string &in) {
+  const size_t chars = std::min(in.find('='), in.size());
+  return chars / 4 * 3 + chars % 4 * 3 / 4;
+}
+
+std::vector<uint8_t> b64_decode(const std::string &in) {
   std::vector<uint8_t> out;
   uint32_t acc = 0;
   int bits = 0;
   for (char ch : in) {
     if (ch == '=') break;
-    int8_t v = table[uint8_t(ch)];
+    int8_t v = b64_value(uint8_t(ch));
     if (v < 0) throw RunError("invalid base64 in participant message");
     acc = acc << 6 | uint32_t(v);
     bits += 6;
@@ -148,8 +165,14 @@ class ProcessParticipant::StepCodec {
       item["data"] = b64_encode(bytes);
     }
 
+    static size_t decoded_size(const json &item) {
+      return b64_decoded_size(
+          item.at("data").get_ref<const std::string &>());
+    }
+
     static std::vector<uint8_t> decode(const json &item) {
-      std::vector<uint8_t> bytes = b64_decode(item.at("data").get<std::string>());
+      std::vector<uint8_t> bytes =
+          b64_decode(item.at("data").get_ref<const std::string &>());
       counters::count(counters::Site::kInlineDecode, bytes.size());
       return bytes;
     }
@@ -197,6 +220,10 @@ class ProcessParticipant::StepCodec {
  public:
   StepCodec(ChannelArenas &arenas, int protocol) : arena_(arenas, protocol) {}
 
+  // The field on the line is authoritative, so the inline budget measures
+  // exactly the Messages the decode pass will inline. Both passes ask here.
+  static bool is_inline(const json &item) { return !item.contains("shm_seq"); }
+
   json encode_inputs(const std::vector<StepInput> &messages) {
     json in = json::array();
     // These indices belong to one codec call, so slot reuse is inherently
@@ -216,16 +243,28 @@ class ProcessParticipant::StepCodec {
     return in;
   }
 
-  std::vector<StepOutput> decode_outputs(const json &message) {
+  size_t inline_payload_bytes(const json &outputs) const {
+    size_t total = 0;
+    for (const json &item : outputs) {
+      if (!is_inline(item)) continue;
+      const size_t bytes = InlineAdapter::decoded_size(item);
+      if (bytes > std::numeric_limits<size_t>::max() - total)
+        throw RunError("inline payload byte count overflows size_t");
+      total += bytes;
+    }
+    return total;
+  }
+
+  std::vector<StepOutput> decode_outputs(const json &encoded) {
     std::vector<StepOutput> outputs;
-    for (const json &item : message.value("out", json::array())) {
+    for (const json &item : encoded) {
       StepOutput output;
       output.channel = item.at("ch").get<std::string>();
-      // The field on the line is authoritative. A Channel can legally carry
-      // inline fallbacks after its Arena slots are full.
-      output.bytes = item.contains("shm_seq")
-                         ? arena_.decode(item, output.channel)
-                         : InlineAdapter::decode(item);
+      // A Channel can legally carry inline fallbacks once its Arena slots
+      // are full, so the Transport is read per Message, never per Channel.
+      output.bytes = is_inline(item)
+                         ? InlineAdapter::decode(item)
+                         : arena_.decode(item, output.channel);
       outputs.push_back(std::move(output));
     }
     return outputs;
@@ -329,11 +368,12 @@ void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
 ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
                                        const ProcessSpec &spec,
                                        std::optional<std::chrono::milliseconds>
-                                           participant_timeout)
+                                           participant_timeout,
+                                       RunBoundaryLimits limits)
     : engine_(engine), name_(name), period_ns_(spec.step_period_ns),
       publishes_(spec.publishes), epoch_ns_(engine.manifest().epoch_ns),
       sleep_policy_(spec.sleep), arenas_(name),
-      participant_timeout_(participant_timeout) {
+      participant_timeout_(participant_timeout), limits_(limits) {
   try {
     const std::filesystem::path invocation_directory =
         std::filesystem::current_path();
@@ -514,7 +554,21 @@ void ProcessParticipant::step(uint64_t now_ns) {
   if (op != "step_done")
     throw RunError("participant '" + name_ + "': expected step_done, got " +
                    done.dump());
-  for (const json &out : done.value("out", json::array())) {
+
+  static const json kNoOutputs = json::array();
+  const json &outputs = done.contains("out") ? done.at("out") : kNoOutputs;
+  if (!outputs.is_array())
+    throw RunError("participant '" + name_ +
+                   "': step_done out must be an array");
+  if (outputs.size() > limits_.max_step_output_messages)
+    throw RunError(
+        "participant '" + name_ +
+        "': maximum output-Message count per Step exceeded during Step at "
+        "virtual time " + std::to_string(now_ns) + " ns: configured " +
+        std::to_string(limits_.max_step_output_messages) + " Messages, "
+        "observed " + std::to_string(outputs.size()) + " Messages");
+
+  for (const json &out : outputs) {
     std::string ch = out.at("ch").get<std::string>();
     if (std::find(publishes_.begin(), publishes_.end(), ch) ==
         publishes_.end()) {
@@ -522,7 +576,17 @@ void ProcessParticipant::step(uint64_t now_ns) {
       return;
     }
   }
-  for (StepOutput &output : codec_->decode_outputs(done))
+
+  const size_t inline_bytes = codec_->inline_payload_bytes(outputs);
+  if (inline_bytes > limits_.max_step_inline_payload_bytes)
+    throw RunError(
+        "participant '" + name_ +
+        "': maximum total inline payload bytes per Step exceeded during Step "
+        "at virtual time " + std::to_string(now_ns) + " ns: configured " +
+        std::to_string(limits_.max_step_inline_payload_bytes) + " bytes, "
+        "observed " + std::to_string(inline_bytes) + " bytes");
+
+  for (StepOutput &output : codec_->decode_outputs(outputs))
     engine_.publish(name_, output.channel, output.bytes.data(),
                     output.bytes.size());
 }
@@ -563,6 +627,58 @@ std::string ProcessParticipant::request_response(
 std::string ProcessParticipant::read_line(
     const std::optional<Clock::time_point> &deadline,
     std::optional<uint64_t> step_time) {
+  const auto line_limit = [&](size_t observed) -> RunError {
+    if (!step_time)
+      return RunError(
+          "participant '" + name_ +
+          "': maximum protocol line length exceeded while waiting for "
+          "initialization ready response: configured " +
+          std::to_string(limits_.max_protocol_line_bytes) +
+          " bytes, observed " + std::to_string(observed) + " bytes");
+    return RunError(
+        "participant '" + name_ +
+        "': maximum protocol line length exceeded during Step at virtual "
+        "time " + std::to_string(*step_time) + " ns: configured " +
+        std::to_string(limits_.max_protocol_line_bytes) +
+        " bytes, observed " + std::to_string(observed) + " bytes");
+  };
+
+  const auto over_limit_observed = [&](size_t base, size_t added) {
+    if (base > std::numeric_limits<size_t>::max() - added)
+      return std::numeric_limits<size_t>::max();
+    return base + added;
+  };
+
+  // Inspect the bytes before appending them. The local read buffer is fixed at
+  // 4 KiB, but a participant cannot make the persistent response buffer grow
+  // beyond the configured line limit while it withholds the newline.
+  const auto append_checked = [&](const char *data, size_t length) {
+    size_t chunk_start = 0;
+    bool first_line = true;
+    for (;;) {
+      const size_t newline =
+          std::string_view(data + chunk_start, length - chunk_start)
+              .find('\n');
+      if (newline == std::string_view::npos) {
+        const size_t base = first_line ? read_buffer_.size() : 0;
+        if (base > limits_.max_protocol_line_bytes ||
+            length - chunk_start >
+                limits_.max_protocol_line_bytes - base)
+          throw line_limit(over_limit_observed(base, length - chunk_start));
+        break;
+      }
+
+      const size_t base = first_line ? read_buffer_.size() : 0;
+      if (base > limits_.max_protocol_line_bytes ||
+          newline > limits_.max_protocol_line_bytes - base)
+        throw line_limit(over_limit_observed(base, newline));
+      first_line = false;
+      chunk_start += newline + 1;
+      if (chunk_start == length) break;
+    }
+    read_buffer_.append(data, length);
+  };
+
   const auto timeout = [&]() -> RunError {
     if (!step_time)
       return RunError("participant '" + name_ +
@@ -588,7 +704,7 @@ std::string ProcessParticipant::read_line(
       if (n < 0 && errno == EINTR) continue;
       if (n <= 0)
         throw RunError("participant '" + name_ + "' exited unexpectedly");
-      read_buffer_.append(buf, size_t(n));
+      append_checked(buf, size_t(n));
       continue;
     }
 
@@ -614,7 +730,7 @@ std::string ProcessParticipant::read_line(
     if (n < 0 && errno == EINTR) continue;
     if (n <= 0)
       throw RunError("participant '" + name_ + "' exited unexpectedly");
-    read_buffer_.append(buf, size_t(n));
+    append_checked(buf, size_t(n));
   }
 }
 

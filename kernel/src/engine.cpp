@@ -16,9 +16,10 @@
 namespace sil {
 
 Engine::Engine(const Manifest &manifest, RecordingSink *recorder,
-               std::optional<std::chrono::milliseconds> participant_timeout)
+               std::optional<std::chrono::milliseconds> participant_timeout,
+               RunBoundaryLimits limits)
     : manifest_(manifest), recorder_(recorder),
-      participant_timeout_(participant_timeout) {
+      participant_timeout_(participant_timeout), limits_(limits) {
   for (const ChannelSpec &spec : manifest.channels)
     if (!spec.interceptor_plan)
       throw ManifestError("manifest error: channel '" + spec.name +
@@ -112,7 +113,7 @@ void Engine::setup() {
     } else {
       const auto &spec = std::get<ProcessSpec>(p.impl);
       auto proc = std::make_unique<ProcessParticipant>(
-          *this, p.name, spec, participant_timeout_);
+          *this, p.name, spec, participant_timeout_, limits_);
       ProcessParticipant *raw = proc.get();
       register_task(p.name, "step", spec.step_period_ns, 0, spec.priority,
                     [raw](uint64_t now) { raw->step(now); });

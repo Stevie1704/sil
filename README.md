@@ -53,6 +53,30 @@ response wait. A missed deadline is a Run failure (exit 1), not a Manifest
 change: the option is absent from the Manifest and its hash. Omitting it keeps
 the existing unlimited-wait behavior.
 
+The runner also has independent Step-protocol resource guards:
+
+```sh
+sil-run manifest.json \
+  --max-protocol-line-bytes 16777216 \
+  --max-step-output-messages 1024 \
+  --max-step-inline-payload-bytes 67108864 \
+  -o out.mcap
+```
+
+These positive `size_t` values default to 16 MiB per response line, 1,024
+output Messages per Step, and 64 MiB of decoded inline payload per Step. They
+are run-boundary arguments, not Manifest data: a Run that stays within them
+has the same Manifest hash and Recording bytes. An over-limit Process
+participant causes a Run failure (exit 1).
+
+`--max-protocol-line-bytes` is the one to turn down for a tighter memory
+ceiling. It bounds the read buffer exactly, but the kernel parses a line that
+stays inside it before it can count that line's outputs, and the kernel's
+peak resident memory runs to 13-16 times the line limit in the worst case. The inline
+payload of a Step is capped at three quarters of the line limit by base64
+expansion, so `--max-step-inline-payload-bytes` only bites once the line limit
+is raised. [docs/step-protocol.md](docs/step-protocol.md) has the detail.
+
 ## Virtual clock shim for opaque POSIX vECUs
 
 An out-of-process participant is expected to derive time from the `step(t, Δt)`

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <deque>
 #include <filesystem>
@@ -19,6 +20,20 @@ namespace sil {
 // Failure while executing an otherwise valid manifest. Runner exits 1.
 struct RunError : std::runtime_error {
   using std::runtime_error::runtime_error;
+};
+
+// Operational guards supplied at the Run boundary. They are deliberately
+// outside the Manifest: changing one does not change the Run's identity or
+// the bytes produced by a Run that stays within the guard.
+struct RunBoundaryLimits {
+  static constexpr size_t kDefaultMaxProtocolLineBytes = 16 * 1024 * 1024;
+  static constexpr size_t kDefaultMaxStepOutputMessages = 1024;
+  static constexpr size_t kDefaultMaxStepInlinePayloadBytes = 64 * 1024 * 1024;
+
+  size_t max_protocol_line_bytes = kDefaultMaxProtocolLineBytes;
+  size_t max_step_output_messages = kDefaultMaxStepOutputMessages;
+  size_t max_step_inline_payload_bytes =
+      kDefaultMaxStepInlinePayloadBytes;
 };
 
 class RecordingSink;
@@ -105,7 +120,8 @@ class Engine {
  public:
   Engine(const Manifest &manifest, RecordingSink *recorder,
          std::optional<std::chrono::milliseconds> participant_timeout =
-             std::nullopt);
+             std::nullopt,
+         RunBoundaryLimits limits = {});
   ~Engine();
 
   // Loads native libraries, spawns process participants, collects task
@@ -160,6 +176,7 @@ class Engine {
   const Manifest &manifest_;
   RecordingSink *recorder_;
   std::optional<std::chrono::milliseconds> participant_timeout_;
+  RunBoundaryLimits limits_;
   std::vector<ChannelState> channels_;  // manifest (name-sorted) order
   std::vector<std::unique_ptr<SubscriberRoute>> subscriber_routes_;
   std::vector<Task> tasks_;
