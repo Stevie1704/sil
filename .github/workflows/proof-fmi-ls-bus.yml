@@ -1,0 +1,56 @@
+name: proof-fmi-ls-bus
+
+# The FMI-LS-BUS CAN acceptance fixture (issue #137), on the supported machine
+# class.
+#
+# It builds third-party FMUs from pinned upstream sources and executes them
+# against the published SiL runner image by digest, so it tests the release
+# rather than the checkout and is unaffected by the commit that triggers it.
+# That is why it is not part of the push gate — but it does run on any pull
+# request that touches the fixture, because the evidence a maintainer reviews
+# has to come from the supported machine class rather than from whatever
+# laptop wrote it.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'proofs/fmi-ls-bus/**'
+      - '.github/workflows/proof-fmi-ls-bus.yml'
+
+jobs:
+  proof:
+    # Native linux/amd64 — the machine class the release supports, and the one
+    # the fixture's compiled binaries are built for.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The decoder the reference exchange reads payloads with, tested against
+      # byte strings written from the standard's headers rather than from a
+      # Run. It needs no fixture, so it runs before one is built.
+      - name: Test the operation decoder
+        run: |
+          python -m pip install --quiet pytest
+          python -m pytest proofs/fmi-ls-bus/test_can_operations.py -q
+
+      - name: Execute the proof
+        run: |
+          proofs/fmi-ls-bus/run-proof.sh \
+            "$RUNNER_TEMP/evidence" "$RUNNER_TEMP/workspace"
+
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fmi-ls-bus-fixture-evidence
+          path: ${{ runner.temp }}/evidence
+
+      # The Manifests themselves, so the rejected Runs can be read back rather
+      # than only their diagnostics believed.
+      - name: Keep the Manifests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fmi-ls-bus-fixture-manifests
+          path: ${{ runner.temp }}/workspace/*.json
