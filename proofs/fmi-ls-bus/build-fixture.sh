@@ -15,8 +15,9 @@
 # afterwards runs against the built fixture with no network at all.
 #
 # It exits non-zero when a revision does not produce a loadable FMU, which is
-# a result rather than an accident. The two compile-time definitions below are
-# what keeps the selected revision on the loadable side of that line.
+# a result rather than an accident. The two compile-time definitions that keep
+# the selected revision on the loadable side of that line are in
+# `pack_fixture.py`, with the reason for each.
 
 set -euo pipefail
 
@@ -46,10 +47,17 @@ mkdir -p "$CHECKOUT" "$OUTPUT"
 cd "$CHECKOUT"
 
 git init -q .
-git remote add origin "$EXAMPLES_REPOSITORY" 2>/dev/null || true
+git remote add origin "$EXAMPLES_REPOSITORY"
 git fetch -q --depth 1 origin "$REVISION"
 git checkout -q FETCH_HEAD
-test "$(git rev-parse HEAD)" = "$REVISION"
+# A revision is fetched by SHA, and what arrives is checked rather than
+# assumed: a pin that silently resolved to something else would take the whole
+# fixture with it.
+checked_out="$(git rev-parse HEAD)"
+if [ "$checked_out" != "$REVISION" ]; then
+    echo "checked out $checked_out, and the pinned revision is $REVISION" >&2
+    exit 1
+fi
 echo "examples revision $REVISION"
 
 # Fetched with the same library upstream's own packaging script fetches the
@@ -74,72 +82,6 @@ for demo in "${DEMOS[@]}"; do
     mv "$demo"/*.fmu "$OUTPUT/"
 done
 
-# Compile each source-code FMU for this platform and pack it back up. The
-# archive is written with one fixed timestamp for every member, so an FMU's
-# own bytes depend on its contents and not on when it was built.
-python - "$OUTPUT" <<'PY'
-import ctypes
-import os
-import sys
-import zipfile
-from pathlib import Path
-
-from fmpy import extract
-from fmpy.build import build_platform_binary
-
-FIXED_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
-
-# Two compile-time definitions, and no edit to any upstream file. Both are
-# what this machine class needs to turn upstream's sources into a loadable
-# shared-object FMU; neither changes what the FMU does.
-#
-# `FMU_IDENTIFIER_H` is the include guard of upstream's `FmuIdentifier.h`,
-# which defines FMI3_FUNCTION_PREFIX unconditionally and would export
-# `DemoCanNodeTriggeredOutput_fmi3InstantiateCoSimulation` instead of
-# `fmi3InstantiateCoSimulation`. `fmi3Functions.h` reserves that prefix for
-# source and static-library distribution: "For FMUs compiled in a
-# DLL/sharedObject, the 'actual' function names are used and
-# 'FMI3_FUNCTION_PREFIX' must not be defined." Defining the guard makes that
-# header a no-op, which is what a shared object needs.
-#
-# `_strdup` is MSVC's spelling of POSIX `strdup`. Upstream's `Fmu.c` calls it
-# unconditionally, and a C compiler that is not MSVC links a shared object
-# with `_strdup` undefined — it builds, and then cannot be loaded at all. The
-# definition maps the one call onto the standard function.
-COMPILE_DEFINITIONS = {
-    "FMI_DEFINITIONS:STRING": "FMU_IDENTIFIER_H;_strdup=strdup"
-}
-
-
-def repack(source: Path, destination: Path) -> None:
-    with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED) as archive:
-        for path in sorted(p for p in source.rglob("*") if p.is_file()):
-            member = zipfile.ZipInfo(
-                str(path.relative_to(source)), date_time=FIXED_TIMESTAMP
-            )
-            member.compress_type = zipfile.ZIP_DEFLATED
-            executable = os.access(path, os.X_OK)
-            member.external_attr = (0o755 if executable else 0o644) << 16
-            archive.writestr(member, path.read_bytes())
-
-
-for fmu in sorted(Path(sys.argv[1]).glob("*.fmu")):
-    print(f"=== compiling {fmu.name} ===", flush=True)
-    extracted = Path(extract(fmu))
-    build_platform_binary(extracted,
-                          cmake_options=dict(COMPILE_DEFINITIONS))
-    binaries = sorted(
-        str(path.relative_to(extracted))
-        for path in (extracted / "binaries").rglob("*") if path.is_file()
-    )
-    if not binaries:
-        raise SystemExit(f"{fmu.name} carries no compiled binary")
-    # Load it with every symbol resolved, and resolve one entry point. A
-    # shared object links even with an undefined symbol in it, and a prefixed
-    # export satisfies no importer, so "the compiler said nothing" is not the
-    # same as "this FMU can be driven".
-    library = ctypes.CDLL(str(extracted / binaries[0]), mode=os.RTLD_NOW)
-    library.fmi3InstantiateCoSimulation
-    repack(extracted, fmu)
-    print(f"{fmu.name} {' '.join(binaries)}")
-PY
+# Compile each source-code FMU for this platform and pack it back up. What
+# that takes, and why, is in `pack_fixture.py` beside this script.
+python /usr/local/bin/pack_fixture.py "$OUTPUT"

@@ -62,9 +62,17 @@ CAPABILITY_FLAGS = (
 # these a variable carries is reported; the rest are not invented.
 VARIABLE_ATTRIBUTES = (
     "name", "valueReference", "causality", "variability", "initial",
-    "clocks", "maxSize", "mimeType", "intervalVariability", "start",
-    "description",
+    "clocks", "maxSize", "mimeType", "start", "description",
+    # Clock metadata. An importer needs every one of these that a Clock
+    # declares, and the absence of the interval attributes is itself the
+    # answer for a countdown Clock whose interval is read at run time.
+    "intervalVariability", "intervalDecimal", "shiftDecimal", "priority",
+    "resolution", "supportsFraction",
 )
+
+
+class FixtureError(ValueError):
+    """An archive that is not an FMU this fixture can state a profile for."""
 
 
 def member_digests(archive: Path) -> dict[str, str]:
@@ -104,9 +112,20 @@ def _xml(archive: Path, member: str):
 
 
 def model_description(archive: Path) -> dict:
-    """The capability flags, experiment defaults and variables, as declared."""
+    """The capability flags, experiment defaults and variables, as declared.
+
+    Both absences are rejected by name. This reads third-party archives, and
+    an FMU without a description or without a co-simulation interface is not
+    a fixture with a thin profile — it is the wrong file.
+    """
     root = _xml(archive, MODEL_DESCRIPTION)
+    if root is None:
+        raise FixtureError(f"{archive.name} carries no {MODEL_DESCRIPTION}")
     co_simulation = root.find("CoSimulation")
+    if co_simulation is None:
+        raise FixtureError(
+            f"{archive.name} declares no co-simulation interface"
+        )
     experiment = root.find("DefaultExperiment")
     variables = []
     for variable in root.find("ModelVariables"):

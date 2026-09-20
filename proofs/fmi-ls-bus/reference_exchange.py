@@ -30,6 +30,8 @@ from pathlib import Path
 from fmpy import extract, read_model_description
 from fmpy.fmi3 import FMU3Slave
 
+# The decoder lives beside this file rather than on the path: the harness runs
+# from wherever the proof mounts it, and the two are one unit.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from can_operations import Operation, decode
@@ -41,11 +43,19 @@ EXPECTED = Path(__file__).resolve().parent / "expected.json"
 
 @dataclass(frozen=True)
 class Event:
-    """One activation of the node's output Clock, and what it carried."""
+    """One activation of the node's output Clock, and what it carried.
+
+    `next_event_time_s` is what `fmi3UpdateDiscreteStates` said about the next
+    event when this one ended, and `None` means it declared none. It is part
+    of the event because an importer's step grid depends on it: an FMU that
+    announces its next event can be stepped onto it, and one that does not
+    cannot.
+    """
 
     time_ns: int
     payload: bytes
     operations: list[Operation]
+    next_event_time_s: float | None
 
     def as_dict(self) -> dict:
         return {
@@ -55,6 +65,7 @@ class Event:
                 {"name": operation.name, "fields": operation.fields}
                 for operation in self.operations
             ],
+            "next_event_time_s": self.next_event_time_s,
         }
 
 
@@ -148,14 +159,14 @@ class Node:
         node never asks twice, and iterating rather than assuming that is what
         would expose it if it did.
         """
-        event = None
+        payload = None
         if self._slave.getClock([self._clock])[0]:
             # A Binary value the FMU answers as a null pointer is an empty
             # buffer, not a missing one.
             payload = self._slave.getBinary([self._data])[0] or b""
-            event = Event(time_ns, payload, decode(payload))
         while True:
-            states_need_update, terminate, *_ = (
+            (states_need_update, terminate, _, _,
+             next_event_defined, next_event_time) = (
                 self._slave.updateDiscreteStates()
             )
             if terminate:
@@ -164,9 +175,16 @@ class Node:
                     f"{time_ns} ns"
                 )
             if not states_need_update:
-                return event
+                break
+        if payload is None:
+            return None
+        return Event(
+            time_ns, payload, decode(payload),
+            next_event_time if next_event_defined else None,
+        )
 
     def close(self) -> None:
+        """Terminate the instance and free it."""
         self._slave.terminate()
         self._slave.freeInstance()
 
@@ -236,7 +254,9 @@ def main(argv: list[str]) -> int:
                 "duration_ns": case["duration_ns"],
                 "events": [event.as_dict() for event in events],
             })
-            matched &= compare(case["name"], events, case["events"])
+            matched = compare(
+                case["name"], events, case["events"]
+            ) and matched
     finally:
         # An FMU that refuses a call says why in its own log, and that is the
         # half of the diagnostic the traceback does not carry. It is written

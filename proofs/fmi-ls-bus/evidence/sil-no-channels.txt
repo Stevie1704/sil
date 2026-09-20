@@ -2,4 +2,4 @@ manifest    no-channels.json
 exit status 1
 --- output ---
 fmu: Event mode is must be supported by the importer to use this FMU.
-sil-run: participant 'node' failed: sil.participant.ParticipantFailure: fmi3InstantiateCoSimulation returned no instance for 'DemoCanNodeTriggeredOutput'
+sil-run: participant 'importer' failed: sil.participant.ParticipantFailure: fmi3InstantiateCoSimulation returned no instance for 'DemoCanNodeTriggeredOutput'

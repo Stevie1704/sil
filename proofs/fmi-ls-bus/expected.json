@@ -2,7 +2,7 @@
   "fmu": "DemoCanNodeTriggeredOutput.fmu",
   "clock": "CanChannel.Tx_Clock",
   "data": "CanChannel.Tx_Data",
-  "why": "Stated from the upstream node's source and the FMI-LS-BUS headers, not from a Run. App_Instantiate creates one CAN baudrate and one arbitration-lost-behavior configuration operation and raises the Tx clock; App_DoStep creates one CAN transmit operation, ID 0x1 with payload 01 02 03 04, for every 300 ms boundary the step crosses, and raises the Tx clock at the end of that step. fmi3UpdateDiscreteStates reports no next event time, so an operation is observable only at the communication point of the step that produced it.",
+  "why": "Stated from the upstream node's source and the FMI-LS-BUS headers, not from a Run. App_Instantiate creates one CAN baudrate and one arbitration-lost-behavior configuration operation and raises the Tx clock; App_DoStep creates one CAN transmit operation, ID 0x1 with payload 01 02 03 04, for every 300 ms boundary the step crosses, and raises the Tx clock at the end of that step. fmi3UpdateDiscreteStates declares no next event time \u2014 every event below carries next_event_time_s null \u2014 so an operation is observable only at the communication point of the step that produced it, and an importer cannot be told when to step next.",
   "cases": [
     {
       "name": "aligned",
@@ -16,7 +16,10 @@
           "operations": [
             {
               "name": "Configuration",
-              "fields": {"parameter": "CanBaudrate", "baudrate": 100000}
+              "fields": {
+                "parameter": "CanBaudrate",
+                "baudrate": 100000
+              }
             },
             {
               "name": "Configuration",
@@ -25,7 +28,8 @@
                 "behavior": "BufferAndRetransmit"
               }
             }
-          ]
+          ],
+          "next_event_time_s": null
         },
         {
           "time_ns": 300000000,
@@ -33,9 +37,15 @@
           "operations": [
             {
               "name": "CanTransmit",
-              "fields": {"id": 1, "ide": false, "rtr": false, "data": "01020304"}
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
             }
-          ]
+          ],
+          "next_event_time_s": null
         },
         {
           "time_ns": 600000000,
@@ -43,9 +53,15 @@
           "operations": [
             {
               "name": "CanTransmit",
-              "fields": {"id": 1, "ide": false, "rtr": false, "data": "01020304"}
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
             }
-          ]
+          ],
+          "next_event_time_s": null
         },
         {
           "time_ns": 900000000,
@@ -53,9 +69,15 @@
           "operations": [
             {
               "name": "CanTransmit",
-              "fields": {"id": 1, "ide": false, "rtr": false, "data": "01020304"}
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
             }
-          ]
+          ],
+          "next_event_time_s": null
         }
       ]
     },
@@ -71,7 +93,10 @@
           "operations": [
             {
               "name": "Configuration",
-              "fields": {"parameter": "CanBaudrate", "baudrate": 100000}
+              "fields": {
+                "parameter": "CanBaudrate",
+                "baudrate": 100000
+              }
             },
             {
               "name": "Configuration",
@@ -80,7 +105,8 @@
                 "behavior": "BufferAndRetransmit"
               }
             }
-          ]
+          ],
+          "next_event_time_s": null
         },
         {
           "time_ns": 500000000,
@@ -88,9 +114,15 @@
           "operations": [
             {
               "name": "CanTransmit",
-              "fields": {"id": 1, "ide": false, "rtr": false, "data": "01020304"}
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
             }
-          ]
+          ],
+          "next_event_time_s": null
         },
         {
           "time_ns": 750000000,
@@ -98,9 +130,15 @@
           "operations": [
             {
               "name": "CanTransmit",
-              "fields": {"id": 1, "ide": false, "rtr": false, "data": "01020304"}
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
             }
-          ]
+          ],
+          "next_event_time_s": null
         },
         {
           "time_ns": 1000000000,
@@ -108,9 +146,15 @@
           "operations": [
             {
               "name": "CanTransmit",
-              "fields": {"id": 1, "ide": false, "rtr": false, "data": "01020304"}
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
             }
-          ]
+          ],
+          "next_event_time_s": null
         }
       ]
     }

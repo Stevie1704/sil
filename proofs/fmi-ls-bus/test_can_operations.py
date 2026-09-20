@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+# The decoder is proof-local, so the test finds it beside itself rather than
+# through an installed package.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from can_operations import Operation, OperationError, decode

@@ -29,9 +29,11 @@ jobs:
       # The decoder the reference exchange reads payloads with, tested against
       # byte strings written from the standard's headers rather than from a
       # Run. It needs no fixture, so it runs before one is built.
+      # Pinned like everything else this proof runs: the fixture's whole
+      # claim is that what it executed is what someone else can execute.
       - name: Test the operation decoder
         run: |
-          python -m pip install --quiet pytest
+          python -m pip install --quiet "pytest==9.1.1"
           python -m pytest proofs/fmi-ls-bus/test_can_operations.py -q
 
       - name: Execute the proof

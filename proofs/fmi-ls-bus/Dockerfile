@@ -45,7 +45,7 @@ RUN apt-get update \
 
 RUN python -m pip install --no-cache-dir "fmpy==${FMPY_VERSION}"
 
-COPY build-fixture.sh /usr/local/bin/build-fixture.sh
+COPY build-fixture.sh pack_fixture.py /usr/local/bin/
 
 # The built FMUs are what says the build worked: a pipe into `tee` reports the
 # exit status of `tee`, so the artifacts are checked rather than the status.
@@ -54,6 +54,19 @@ RUN build-fixture.sh "${EXAMPLES_REVISION}" /opt/fixture \
     && test -s /opt/fixture/DemoCanNodeTriggeredOutput.fmu \
     && test -s /opt/fixture/DemoCanBusSimulation.fmu \
     && rm -rf /fixture-build
+
+# The same revision again, into a second directory, and the two are compared
+# byte for byte. Pinning a built artifact's digest is only worth doing if the
+# pinned image produces the same artifact twice: the archives are packed with
+# a fixed timestamp, so what this compares is the compiler's output.
+RUN build-fixture.sh "${EXAMPLES_REVISION}" /opt/fixture-repeat \
+      > /opt/repeat-build.log 2>&1 \
+    && for fmu in /opt/fixture/*.fmu; do \
+         cmp "$fmu" "/opt/fixture-repeat/$(basename "$fmu")" \
+           && echo "$(basename "$fmu") is byte-identical to the first build" \
+              >> /opt/repeat-build.log; \
+       done \
+    && rm -rf /opt/fixture-repeat /fixture-build
 
 # The alternative revision, built the same way and kept beside the fixture so
 # the reference exchange can be run against both. Its build succeeds; what

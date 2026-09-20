@@ -39,8 +39,9 @@ PLATFORM="${SIL_LSBUS_PLATFORM:-linux/amd64}"
 # Runs is slow; the deadline is declared so a Run that hangs fails instead.
 PARTICIPANT_TIMEOUT_MS="${SIL_LSBUS_PARTICIPANT_TIMEOUT_MS:-10000}"
 
-# The one place the base image digests and the upstream revisions are written
-# down is the Dockerfile.
+# The base images and the upstream revisions are written down in the
+# Dockerfile, and read back from it here so this script carries no second copy
+# of them.
 SIL_IMAGE="$(sed -n 's/^FROM \(ghcr\.io[^ ]*\) AS proof$/\1/p' "$PROOF_DIR/Dockerfile")"
 
 NODE_FMU=/opt/fixture/DemoCanNodeTriggeredOutput.fmu
@@ -48,11 +49,20 @@ BUS_FMU=/opt/fixture/DemoCanBusSimulation.fmu
 # The same node, built from the upstream revision this fixture did not select.
 ALTERNATIVE_NODE_FMU=/opt/alternative/DemoCanNodeTriggeredOutput.fmu
 
-# The fixture's identity: one digest over every FMU member that comes from
-# upstream, compiled binaries excluded. `inspect_fixture.py` explains why the
-# binaries are outside it. A build that does not reproduce this digest is not
-# this fixture, and the proof stops rather than report about another one.
+# The fixture's identity, pinned twice over.
+#
+# The fixture digest is one digest over every FMU member that comes from
+# upstream, compiled binaries excluded, so it says what upstream contributed
+# and nothing about a compiler. The archive digests below are the built FMUs
+# as executed, binaries and all; the image build proves them reproducible by
+# building the same revision twice and comparing the archives byte for byte.
+# A build that reproduces neither is not this fixture, and the proof stops
+# rather than report about another one.
 EXPECTED_FIXTURE_DIGEST=9974aa8e4c9e1b50e43d7433bdaef72e14b5d9e23997e1600a9725c92c5148e3
+EXPECTED_ARCHIVE_DIGESTS="\
+58ff71a28bb2a9b6021bbf7d7d286f0a219056ad772ead7ecef1e2ba2bca71c1  $NODE_FMU
+c475f76c0530d5a5aaf38a5bfde0ad31d2bfb2b48a0cf1ea6dd9bb38649fa041  $BUS_FMU"
+
 
 mkdir -p "$EVIDENCE_DIR" "$WORKSPACE"
 
@@ -82,6 +92,8 @@ step "Keep the upstream build logs"
 # machine class.
 docker_run --entrypoint cat "$FIXTURE_IMAGE" /opt/fixture-build.log \
     > "$EVIDENCE_DIR/fixture-build.log"
+docker_run --entrypoint cat "$FIXTURE_IMAGE" /opt/repeat-build.log \
+    > "$EVIDENCE_DIR/repeat-build.log"
 docker_run --entrypoint cat "$FIXTURE_IMAGE" /opt/alternative-build.log \
     > "$EVIDENCE_DIR/alternative-build.log"
 tail -n 2 "$EVIDENCE_DIR/fixture-build.log"
@@ -118,13 +130,25 @@ harness /opt/harness/inspect_fixture.py "$ALTERNATIVE_NODE_FMU" \
     | tee "$EVIDENCE_DIR/alternative-profile.txt"
 
 step "Check the fixture digest against its pin"
-digest="$(sed -n 's/^  "fixture_digest": "\(.*\)",$/\1/p' "$EVIDENCE_DIR/profile.json")"
+# Read as JSON rather than scraped: a digest that failed to match because
+# the document was formatted differently would be a confusing way to
+# report that the fixture changed.
+digest="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["fixture_digest"])' \
+    "$EVIDENCE_DIR/profile.json")"
 if [ "$digest" != "$EXPECTED_FIXTURE_DIGEST" ]; then
     echo "fixture digest $digest does not match the pinned" \
          "$EXPECTED_FIXTURE_DIGEST" >&2
     exit 1
 fi
 echo "fixture digest $digest"
+
+step "Check the built archives against their pins"
+# Checked inside the image, where the archives are: `sha256sum -c` reports
+# which archive moved, and the built FMUs are what the rest of this script
+# and every downstream issue actually execute.
+printf '%s\n' "$EXPECTED_ARCHIVE_DIGESTS" \
+    | docker_run --entrypoint sha256sum -i "$FIXTURE_IMAGE" -c - \
+    | tee "$EVIDENCE_DIR/archive-digests.txt"
 
 step "Reference exchange: the CAN node under an independent FMI importer"
 harness /opt/harness/reference_exchange.py "$NODE_FMU" \
@@ -166,7 +190,15 @@ sil_tool python3 /opt/consumer/manifest.py "$NODE_FMU" /workspace \
 
 step "What the released FMI Importer answers"
 # Both Runs are expected to fail, so their exit codes are recorded rather than
-# allowed to end the script.
+# allowed to end the script — and then checked, because the measurement this
+# gate publishes is those two exit codes. A release that answers differently
+# has moved the gate, and saying so here is cheaper than noticing later that
+# README.md describes a Run nobody reproduces.
+#
+#   1  run failure: the FMU refused to be instantiated without Event Mode
+#   2  Manifest error: the Channel names variables the importer cannot see
+expect_no_channels=1
+expect_binary_channel=2
 for variant in no-channels binary-channel; do
     set +e
     sil_run "/workspace/$variant.json" -o "/workspace/$variant.mcap" \
@@ -180,6 +212,12 @@ for variant in no-channels binary-channel; do
         echo "--- output ---"
         cat "$WORKSPACE/$variant.out"
     } | tee "$EVIDENCE_DIR/sil-$variant.txt"
+    expected="expect_${variant//-/_}"
+    if [ "$status" != "${!expected}" ]; then
+        echo "$variant exited $status, and this fixture is written against" \
+             "${!expected}" >&2
+        exit 1
+    fi
 done
 
 step "What the kernel says about the Channel the importer could not fill"

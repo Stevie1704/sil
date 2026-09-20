@@ -72,22 +72,46 @@ Both are consequences of the same upstream assumption — that these demos are
 built by MSVC, or by an importer that compiles sources into its own process —
 and both are build-time only. Neither changes what the FMU computes.
 
+One file is *added* rather than changed, and only for the rejected revision
+built beside the fixture: upstream's own `LICENSE.txt`, taken from the merged
+revision that carries it, placed where that revision's packaging script looks
+for it. The selected revision finds the notice in its own checkout and the
+added copy goes unused. It is packaging, not behavior — the notice ends up
+inside the built FMU at `documentation/licenses/LICENSE.txt`, which is where
+upstream's script puts it either way.
+
 ### Identity
 
-The FMU archives are built, not downloaded, so pinning their file digests
-would pin a compiler's output. What is pinned instead is their content:
-`inspect_fixture.py` digests every archive member and reduces the upstream
-ones — everything except `binaries/` — to a single **fixture digest**:
+The FMU archives are built rather than downloaded, so the fixture is pinned
+twice: once by what upstream contributed, and once by what this image built
+out of it.
+
+**Fixture digest** — one digest over every archive member that comes from
+upstream, `binaries/` excluded, computed by `inspect_fixture.py`. It says
+nothing about a compiler, and it changes when anything inside an FMU's
+sources, descriptions or headers does:
 
 ```
 9974aa8e4c9e1b50e43d7433bdaef72e14b5d9e23997e1600a9725c92c5148e3
 ```
 
-`run-proof.sh` compares it against that pin and stops if it differs. Every
-member digest, including the compiled binaries as an observation, is in
-[`evidence/profile.json`](evidence/profile.json). The archives themselves are
-written with one fixed timestamp per member, so an FMU's own bytes depend on
-its contents rather than on when it was built.
+**Archive digests** — the built FMUs as executed, binaries included:
+
+```
+58ff71a28bb2a9b6021bbf7d7d286f0a219056ad772ead7ecef1e2ba2bca71c1  DemoCanNodeTriggeredOutput.fmu
+c475f76c0530d5a5aaf38a5bfde0ad31d2bfb2b48a0cf1ea6dd9bb38649fa041  DemoCanBusSimulation.fmu
+```
+
+Pinning those is only worth doing because they reproduce: the image build
+builds the selected revision a second time into another directory and
+compares the archives byte for byte
+([`evidence/repeat-build.log`](evidence/repeat-build.log)). Two things make
+that possible — the archives are packed with one fixed timestamp per member,
+and the pinned toolchain compiles the same sources into the same bytes even
+though each build runs in a different temporary directory.
+
+`run-proof.sh` checks both pins and stops if either differs. Every member
+digest is in [`evidence/profile.json`](evidence/profile.json).
 
 ## Why this revision, and what "BUS 1.0.0" means here
 
@@ -198,8 +222,10 @@ everything this FMU communicates is a Binary buffer gated by a Clock.
 
 `fmi3UpdateDiscreteStates` reports **no next event time** on this FMU, and
 `fmi3DoStep` never returns early. An operation is therefore observable only at
-the communication point of the step that produced it — the timing consequence
-the expected exchange below makes explicit.
+the communication point of the step that produced it, and an importer cannot
+be told when to step next. Both halves are checked rather than asserted: every
+event in the reference exchange carries the next event time the FMU declared,
+and every expected event declares it absent.
 
 ### The bus simulation FMU — `DemoCanBusSimulation`
 
@@ -268,11 +294,11 @@ the same quantity**, and a later Channel publication time is a third. #139 and
 | The pinned revision builds into a loadable FMU on the supported machine class | both FMUs carry `binaries/x86_64-linux/…so`, each loaded with every symbol resolved and `fmi3InstantiateCoSimulation` looked up during the build — [`fixture-build.log`](evidence/fixture-build.log) |
 | The fixture is identified by content, not by build time | fixture digest `9974aa8e…48e3`, checked by `run-proof.sh` — [`profile.json`](evidence/profile.json) |
 | Descriptions, BUS manifests and terminals are published | [`profile.txt`](evidence/profile.txt), [`profile.json`](evidence/profile.json) |
-| A runnable reference exchange matches expectations stated beforehand | `aligned: 4 events, all as expected` / `quantised: 4 events, all as expected` — [`reference-exchange.txt`](evidence/reference-exchange.txt), trace in [`reference-exchange.json`](evidence/reference-exchange.json) |
+| A runnable reference exchange matches expectations written from upstream's sources, not captured from a Run | `aligned: 4 events, all as expected` / `quantised: 4 events, all as expected` — [`reference-exchange.txt`](evidence/reference-exchange.txt), trace in [`reference-exchange.json`](evidence/reference-exchange.json) |
 | The rejected upstream revision is rejected on evidence | `fmi3GetBinary failed with status 3 (error)`, on the buffer whose Clock `fmi3GetClock` had just reported active — [`alternative-exchange.txt`](evidence/alternative-exchange.txt), [`alternative-fmu.log`](evidence/alternative-fmu.log) |
-| Current SiL cannot drive the FMU, and says why | exit 1, `participant 'node' failed: … fmi3InstantiateCoSimulation returned no instance for 'DemoCanNodeTriggeredOutput'`, under the FMU's own `Event mode is must be supported by the importer to use this FMU.` — [`sil-no-channels.txt`](evidence/sil-no-channels.txt) |
+| Current SiL cannot drive the FMU, and says why | exit 1, `participant 'importer' failed: … fmi3InstantiateCoSimulation returned no instance for 'DemoCanNodeTriggeredOutput'`, under the FMU's own `Event mode is must be supported by the importer to use this FMU.` — [`sil-no-channels.txt`](evidence/sil-no-channels.txt) |
 | Current SiL cannot map the FMU's Binary variables, and says why | exit 2, `Channel 'can.Tx' declares schema field 'CanChannel.Tx_Data_length', which is no output variable of FMU 'DemoCanNodeTriggeredOutput'` — [`sil-binary-channel.txt`](evidence/sil-binary-channel.txt) |
-| The gap is in the Importer, not in the kernel's Channel contract | the same Manifest's bounded CAN frame Channel is accepted and costed — [`footprint.txt`](evidence/footprint.txt) |
+| The gap is in the Importer, not in the kernel's Channel contract | the same Manifest's bounded CAN frame Channel is accepted and sized: `observer <- can.Tx  cap 2 x 2050 B` — [`footprint.txt`](evidence/footprint.txt) |
 
 ## What current SiL does, and where the gap is
 
@@ -283,8 +309,8 @@ participant driving the fixture's CAN node.
 
 | Manifest | Hash | What it asks for | What happens |
 | --- | --- | --- | --- |
-| `no-channels` | `0d9cb924…01ef` | nothing — the Run reaches the FMU itself | exit 1, `ParticipantFailure: fmi3InstantiateCoSimulation returned no instance for 'DemoCanNodeTriggeredOutput'` |
-| `binary-channel` | `d3cf178e…b0cf` | one bounded CAN frame Channel, schema field names = the FMU's Binary variable names | exit 2, `ManifestError: Channel 'can.Tx' declares schema field 'CanChannel.Tx_Data_length', which is no output variable of FMU 'DemoCanNodeTriggeredOutput'` |
+| `no-channels` | `180b353a…f23b` | nothing — the Run reaches the FMU itself | exit 1, `ParticipantFailure: fmi3InstantiateCoSimulation returned no instance for 'DemoCanNodeTriggeredOutput'` |
+| `binary-channel` | `2bf32b33…8ef5` | one bounded CAN frame Channel, schema field names = the FMU's Binary variable names | exit 2, `ManifestError: Channel 'can.Tx' declares schema field 'CanChannel.Tx_Data_length', which is no output variable of FMU 'DemoCanNodeTriggeredOutput'` |
 
 Both failures are the Importer's, and they are different capabilities:
 
@@ -334,7 +360,8 @@ The decoder has its own tests, which need no fixture and no docker:
 | File | What it is |
 | --- | --- |
 | [`Dockerfile`](Dockerfile) | The fixture image (upstream sources, toolchain, independent importer) and the proof image (released SiL runner by digest, plus the fixture) |
-| [`build-fixture.sh`](build-fixture.sh) | Check out one pinned revision, pack each demo, compile it, prove it loads |
+| [`build-fixture.sh`](build-fixture.sh) | Check out one pinned revision and pack each demo with upstream's own script |
+| [`pack_fixture.py`](pack_fixture.py) | Compile each packed source-code FMU, prove it loads, and write the archive back reproducibly |
 | [`inspect_fixture.py`](inspect_fixture.py) | Read the descriptions, manifests and terminals; digest the archives |
 | [`can_operations.py`](can_operations.py) | Decode CAN bus operations out of a Binary payload; reject everything outside the profile |
 | [`test_can_operations.py`](test_can_operations.py) | The decoder's tests, written from the standard's headers |

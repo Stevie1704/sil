@@ -58,7 +58,7 @@ SCHEMAS = {
 ROUTE_CAPACITY = 2
 
 
-def importer(fmu: Path) -> list[str]:
+def importer_command(fmu: Path) -> list[str]:
     """The released FMI Importer, driving one FMU archive."""
     return ["python3", "-m", "sil.fmi", str(fmu)]
 
@@ -67,7 +67,8 @@ def no_channels(fmu: Path) -> Manifest:
     """One participant, no Channels: the Run reaches the FMU itself."""
     manifest = Manifest(duration_ns=DURATION_NS)
     manifest.add_process(
-        "node", command=importer(fmu), step_period_ns=STEP_PERIOD_NS
+        "importer", command=importer_command(fmu),
+        step_period_ns=STEP_PERIOD_NS,
     )
     return manifest
 
@@ -78,8 +79,8 @@ def binary_channel(fmu: Path) -> Manifest:
     manifest.add_schemas(SCHEMAS)
     manifest.add_channel(CAN_CHANNEL, schema="can.Buffer")
     manifest.add_process(
-        "node",
-        command=importer(fmu),
+        "importer",
+        command=importer_command(fmu),
         step_period_ns=STEP_PERIOD_NS,
         publishes=[CAN_CHANNEL],
     )

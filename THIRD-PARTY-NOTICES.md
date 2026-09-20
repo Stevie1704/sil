@@ -59,7 +59,7 @@ this repository.
 | Component | Version | License | Where |
 | --- | --- | --- | --- |
 | [esmini](https://github.com/esmini/esmini) | v3.8.1 | MPL-2.0 | downloaded by [proofs/esmini/Dockerfile](proofs/esmini/Dockerfile) into a locally built consumer image; the upstream `LICENSE` is kept at `/opt/esmini/LICENSE` there |
-| [fmi-ls-bus-examples](https://github.com/modelica/fmi-ls-bus-examples) | revision `de019a6e` | BSD-2-Clause | built by [proofs/fmi-ls-bus/build-fixture.sh](proofs/fmi-ls-bus/build-fixture.sh) into a locally built fixture image; upstream's own packaging script keeps `LICENSE.txt` inside each built FMU at `documentation/licenses/LICENSE.txt` |
+| [fmi-ls-bus-examples](https://github.com/modelica/fmi-ls-bus-examples) | revisions `cc42cacd` (the fixture) and `de019a6e` (the revision it rejected, built beside it) | BSD-2-Clause | built by [proofs/fmi-ls-bus/build-fixture.sh](proofs/fmi-ls-bus/build-fixture.sh) into a locally built fixture image; upstream's own packaging script keeps `LICENSE.txt` inside each built FMU at `documentation/licenses/LICENSE.txt` |
 | [fmi-ls-bus](https://github.com/modelica/fmi-ls-bus) headers | revision `468127f2` | BSD-2-Clause | fetched by upstream's packaging script into each built FMU's `sources/`, where each header carries the license text in its own comment block |
 | [FMPy](https://github.com/CATIA-Systems/FMPy) | 0.3.32 | BSD-2-Clause | installed into the fixture image; it compiles the source-code FMUs and supplies the FMI 3.0 bindings the reference exchange is driven through |
 

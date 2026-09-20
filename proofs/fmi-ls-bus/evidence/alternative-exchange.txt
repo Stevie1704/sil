@@ -2,17 +2,17 @@ fmu         /opt/alternative/DemoCanNodeTriggeredOutput.fmu
 exit status 1
 --- output ---
 Traceback (most recent call last):
-  File "/opt/harness/reference_exchange.py", line 252, in <module>
+  File "/opt/harness/reference_exchange.py", line 272, in <module>
     raise SystemExit(main(sys.argv[1:]))
                      ~~~~^^^^^^^^^^^^^^
-  File "/opt/harness/reference_exchange.py", line 232, in main
+  File "/opt/harness/reference_exchange.py", line 250, in main
     events = run_case(arguments.fmu, case, log)
-  File "/opt/harness/reference_exchange.py", line 179, in run_case
+  File "/opt/harness/reference_exchange.py", line 197, in run_case
     events = [event for event in [node.initialize()] if event is not None]
                                   ~~~~~~~~~~~~~~~^^
-  File "/opt/harness/reference_exchange.py", line 116, in initialize
+  File "/opt/harness/reference_exchange.py", line 127, in initialize
     event = self._handle_event(0)
-  File "/opt/harness/reference_exchange.py", line 155, in _handle_event
+  File "/opt/harness/reference_exchange.py", line 166, in _handle_event
     payload = self._slave.getBinary([self._data])[0] or b""
               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
   File "/usr/local/lib/python3.13/site-packages/fmpy/fmi3.py", line 1454, in getBinary
