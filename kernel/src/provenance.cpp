@@ -16,7 +16,6 @@
 #include <cstring>
 #include <cstdlib>
 #include <fstream>
-#include <map>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -210,23 +209,25 @@ std::vector<std::string> resolve_command(
   return resolved;
 }
 
-bool looks_like_fmu(const std::string &argument) {
-  return fs::path(argument).extension() == ".fmu";
-}
-
-std::vector<std::string> fmu_arguments(const std::vector<std::string> &command) {
+// Every command argument that names a readable file is an artifact this Run
+// loaded, so it is digested. The rule is deliberately about files rather than
+// about any one foreign standard: an imported FMU archive is covered because it
+// is a file the command names, and the kernel never learns FMI exists. An
+// argument that names no file — a channel name, a flag, a numeric literal — is
+// not an artifact and is left alone.
+std::vector<std::string> command_file_arguments(
+    const std::vector<std::string> &command, const fs::path &base) {
   std::vector<std::string> result;
   std::set<std::string> seen;
-  for (size_t index = 0; index < command.size(); ++index) {
-    bool imported = looks_like_fmu(command[index]);
-    // The shipped FMI adapter is deliberately an ordinary Process participant.
-    // This identifies its archive without adding FMI knowledge to the Manifest
-    // or changing the command bytes it hashes.
-    if (index >= 2 && command[index - 2] == "-m" &&
-        command[index - 1] == "sil.fmi")
-      imported = true;
-    if (imported && seen.insert(command[index]).second)
-      result.push_back(command[index]);
+  // Index 0 is the executable, which is resolved and digested on its own.
+  for (size_t index = 1; index < command.size(); ++index) {
+    const std::string &argument = command[index];
+    if (argument.empty()) continue;
+    fs::path candidate(argument);
+    if (candidate.is_relative()) candidate = base / candidate;
+    std::error_code error;
+    if (!fs::is_regular_file(candidate, error) || error) continue;
+    if (seen.insert(argument).second) result.push_back(argument);
   }
   return result;
 }
@@ -262,38 +263,6 @@ std::string preflight_error(const Provenance &provenance) {
   return message.str();
 }
 
-void validate_publishers(const Manifest &manifest) {
-  struct Publisher {
-    std::string name;
-    const char *kind;
-  };
-  std::map<std::string, Publisher> publisher_of;
-  for (const ParticipantSpec &participant : manifest.participants) {
-    const std::vector<std::string> *publishes = nullptr;
-    const char *kind = nullptr;
-    if (const auto *process = std::get_if<ProcessSpec>(&participant.impl)) {
-      publishes = &process->publishes;
-      kind = "process";
-    } else if (const auto *native = std::get_if<NativeSpec>(&participant.impl)) {
-      publishes = &native->publishes;
-      kind = "native";
-    } else {
-      publishes = &std::get<ReplaySpec>(participant.impl).channels;
-      kind = "replay";
-    }
-    for (const std::string &channel : *publishes) {
-      auto [entry, inserted] = publisher_of.try_emplace(
-          channel, Publisher{participant.name, kind});
-      if (!inserted)
-        throw ManifestError(
-            "manifest error: channel '" + channel +
-            "' has more than one publisher: participant '" +
-            entry->second.name + "' (" + entry->second.kind +
-            ") and participant '" + participant.name + "' (" + kind + ")");
-    }
-  }
-}
-
 json artifact_json(const std::optional<ProvenanceArtifact> &value) {
   if (!value) return nullptr;
   return { {"path", value->path}, {"sha256", value->sha256} };
@@ -323,12 +292,16 @@ Provenance initialize_provenance(const Manifest &manifest,
 }
 
 void collect_provenance(Manifest &manifest, Provenance &provenance) {
-  const fs::path invocation_directory = fs::current_path();
+  // Every Manifest-named path resolves against the Manifest directory, so the
+  // record describes the same artifacts from any working directory. Anchoring
+  // to the invocation directory instead would put it in the record, and two
+  // Runs of one Manifest from different directories would not be byte-identical.
+  const fs::path &base = manifest.base_dir;
 
   // Engine::setup performs this check before it loads or spawns anything. Keep
   // that observable validation order while still doing artifact preflight
   // before setup can reach a participant.
-  validate_publishers(manifest);
+  validate_one_publisher_per_channel(manifest);
 
   if (const auto file = collect_file(
           provenance, "runner", "/proc/self/exe", [] {
@@ -377,8 +350,7 @@ void collect_provenance(Manifest &manifest, Provenance &provenance) {
                                           std::nullopt};
       std::optional<ResolvedExecutable> executable;
       try {
-        executable = resolve_executable(process->command.at(0),
-                                        invocation_directory);
+        executable = resolve_executable(process->command.at(0), base);
       } catch (const std::exception &error) {
         add_error(provenance,
                   "Process participant '" + participant.name +
@@ -388,8 +360,7 @@ void collect_provenance(Manifest &manifest, Provenance &provenance) {
       }
       if (executable) {
         try {
-          record.command = resolve_command(process->command,
-                                           invocation_directory, *executable);
+          record.command = resolve_command(process->command, base, *executable);
           process->resolved_command = record.command;
         } catch (const std::exception &error) {
           add_error(provenance,
@@ -410,24 +381,19 @@ void collect_provenance(Manifest &manifest, Provenance &provenance) {
       }
       provenance.process_participants.push_back(std::move(record));
 
-      for (const std::string &argument : fmu_arguments(process->command)) {
-        ProvenanceFmu fmu{participant.name, std::nullopt};
+      for (const std::string &argument :
+           command_file_arguments(process->command, base)) {
+        ProvenanceCommandFile named{participant.name, std::nullopt};
         const fs::path requested = argument;
         if (const auto file = collect_file(
-                provenance, "FMU imported by participant '" + participant.name +
-                                "'",
-                requested.string(), [&requested, &invocation_directory] {
-                  try {
-                    return resolve_and_digest(requested, invocation_directory,
-                                              "FMU archive");
-                  } catch (const std::exception &error) {
-                    throw std::runtime_error(
-                        "cannot read FMU '" + requested.string() + "': " +
-                        error.what());
-                  }
+                provenance,
+                "File named by participant '" + participant.name + "' command",
+                requested.string(), [&requested, &base] {
+                  return resolve_and_digest(requested, base,
+                                            "Command file");
                 }))
-          fmu.archive = artifact(*file);
-        provenance.fmus.push_back(std::move(fmu));
+          named.file = artifact(*file);
+        provenance.command_files.push_back(std::move(named));
       }
     }
   }
@@ -456,15 +422,16 @@ void write_provenance(const fs::path &path, const Provenance &provenance) {
               return left.name < right.name;
             });
 
-  auto fmu_records = provenance.fmus;
-  std::sort(fmu_records.begin(), fmu_records.end(),
-            [](const ProvenanceFmu &left, const ProvenanceFmu &right) {
+  auto command_files = provenance.command_files;
+  std::sort(command_files.begin(), command_files.end(),
+            [](const ProvenanceCommandFile &left,
+               const ProvenanceCommandFile &right) {
               if (left.participant != right.participant)
                 return left.participant < right.participant;
               const std::string left_path =
-                  left.archive ? left.archive->path : std::string();
+                  left.file ? left.file->path : std::string();
               const std::string right_path =
-                  right.archive ? right.archive->path : std::string();
+                  right.file ? right.file->path : std::string();
               return left_path < right_path;
             });
 
@@ -481,10 +448,10 @@ void write_provenance(const fs::path &path, const Provenance &provenance) {
                          {"executable", artifact_json(participant.executable)}});
   }
 
-  json fmus = json::array();
-  for (const ProvenanceFmu &fmu : fmu_records) {
-    fmus.push_back({{"participant", fmu.participant},
-                    {"archive", artifact_json(fmu.archive)}});
+  json named_files = json::array();
+  for (const ProvenanceCommandFile &named : command_files) {
+    named_files.push_back({{"participant", named.participant},
+                           {"file", artifact_json(named.file)}});
   }
 
   json errors = json::array();
@@ -497,7 +464,7 @@ void write_provenance(const fs::path &path, const Provenance &provenance) {
   json document = {
       {"artifacts",
        {{"clock_shim", artifact_json(provenance.clock_shim)},
-        {"fmus", std::move(fmus)},
+        {"command_files", std::move(named_files)},
         {"native_participants", std::move(native)},
         {"process_participants", std::move(processes)},
         {"runner", artifact_json(provenance.runner)}}},

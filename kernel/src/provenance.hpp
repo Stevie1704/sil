@@ -31,9 +31,12 @@ struct ProvenanceProcessParticipant {
   std::optional<ProvenanceArtifact> executable;
 };
 
-struct ProvenanceFmu {
+// A file named by a Process participant's command, digested because the Run
+// opened it. An imported FMU archive is the motivating case, but the kernel
+// records files rather than any one foreign standard.
+struct ProvenanceCommandFile {
   std::string participant;
-  std::optional<ProvenanceArtifact> archive;
+  std::optional<ProvenanceArtifact> file;
 };
 
 // The deterministic, format-neutral data that becomes the JSON side-car. The
@@ -55,7 +58,7 @@ struct Provenance {
   std::optional<ProvenanceArtifact> clock_shim;
   std::vector<ProvenanceNativeParticipant> native_participants;
   std::vector<ProvenanceProcessParticipant> process_participants;
-  std::vector<ProvenanceFmu> fmus;
+  std::vector<ProvenanceCommandFile> command_files;
   std::vector<ProvenanceError> errors;
 
   int run_exit_code = 2;

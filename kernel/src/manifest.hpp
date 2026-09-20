@@ -91,6 +91,7 @@ struct NativeSpec {
   std::string library;      // resolved relative to the manifest directory
   // Filled by the Run-boundary provenance preflight. It is deliberately not
   // serialized: the Manifest hash remains the hash of the caller's bytes.
+  // Engine::setup runs after the preflight and treats it as a precondition.
   std::filesystem::path resolved_library;
   std::string config_json;
   // The declared Channel contract. The manifest is authoritative: the C ABI
@@ -101,9 +102,13 @@ struct NativeSpec {
 };
 
 struct ProcessSpec {
+  // Resolved relative to the manifest directory, like a native library or a
+  // replay recording. The anchor is the Manifest rather than the invocation
+  // directory so a Run describes the same artifacts from anywhere.
   std::vector<std::string> command;
   // Filled by the Run-boundary provenance preflight. The child is launched
   // with this resolved vector so the bytes digested are the bytes exec loads.
+  // Engine::setup runs after the preflight and treats it as a precondition.
   std::vector<std::string> resolved_command;
   uint64_t step_period_ns = 0;
   std::vector<SubscriberRouteSpec> subscribes;
@@ -137,5 +142,16 @@ struct Manifest {
 };
 
 Manifest load_manifest(const std::filesystem::path &path);
+
+// A Channel has at most one publisher (#64). Native, Process, and Replay
+// participants all declare their outputs in the Manifest, so one pass over the
+// declarations catches a second publisher before any participant is loaded or
+// spawned. Open-loop replay racing a live publisher is the same rule rather
+// than a separate check; only the diagnostic still names the two kinds, because
+// the two are repaired differently.
+//
+// Both the Run-boundary provenance preflight and Engine::setup run it, so the
+// diagnostic is identical whichever reaches the Manifest first.
+void validate_one_publisher_per_channel(const Manifest &manifest);
 
 }  // namespace sil

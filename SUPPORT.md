@@ -49,8 +49,10 @@ What follows:
 Each Run writes a deterministic JSON provenance side-car next to its Recording:
 `<recording>.provenance.json` by default, or the path selected with
 `--provenance`. It records the resolved runner, Clock shim, Native libraries,
-Process executables and imported FMUs, their SHA-256 digests, the Manifest hash,
-the SiL version, and the machine class. With `--no-recording`, the side-car is
+Process executables, and the files those commands name (an imported FMU archive
+among them), their SHA-256 digests, the Manifest hash, the SiL version, and the
+machine class. Every Manifest-named path, Process commands included, resolves
+against the Manifest's directory. With `--no-recording`, the side-car is
 still emitted next to the default `out.mcap` location and its `recording` value
 is `null`.
 

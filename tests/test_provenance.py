@@ -11,8 +11,35 @@ from test_fmi import fmu_manifest
 from toys import add_producer, add_thrower, toy_manifest
 
 
+# A Process participant that completes the Step protocol and exits. Several
+# tests only need a participant that runs to completion.
+STEP_LOOP = (
+    "#!/bin/sh\n"
+    "printf '%s\\n' '{\"op\":\"ready\"}'\n"
+    "while IFS= read -r line; do\n"
+    "  case \"$line\" in\n"
+    "    *'\"op\":\"step\"'* ) printf '%s\\n' '{\"op\":\"step_done\",\"out\":[]}' ;;\n"
+    "    *'\"op\":\"shutdown\"'* ) exit 0 ;;\n"
+    "  esac\n"
+    "done\n"
+)
+
+
 def sidecar(path: Path) -> dict:
     return json.loads(path.with_name(path.name + ".provenance.json").read_text())
+
+
+def command_files(document: dict) -> dict:
+    """Digest of every file a Participant command named, keyed by path."""
+    return {
+        entry["file"]["path"]: entry["file"]["sha256"]
+        for entry in document["artifacts"]["command_files"]
+        if entry["file"]
+    }
+
+
+def archive_digest(document: dict, archive: Path) -> str:
+    return command_files(document)[str(archive.resolve())]
 
 
 def native_manifest(library: Path):
@@ -31,16 +58,7 @@ def test_successful_record_binds_runner_process_and_machine(
     run_sil, sil_run, tmp_path
 ):
     script = tmp_path / "participant.sh"
-    script.write_text(
-        "#!/bin/sh\n"
-        "printf '%s\\n' '{\"op\":\"ready\"}'\n"
-        "while IFS= read -r line; do\n"
-        "  case \"$line\" in\n"
-        "    *'\"op\":\"step\"'* ) printf '%s\\n' '{\"op\":\"step_done\",\"out\":[]}' ;;\n"
-        "    *'\"op\":\"shutdown\"'* ) exit 0 ;;\n"
-        "  esac\n"
-        "done\n"
-    )
+    script.write_text(STEP_LOOP)
     script.chmod(0o755)
 
     manifest = toy_manifest(duration_ns=1)
@@ -89,16 +107,7 @@ def test_provenance_is_byte_deterministic_and_has_no_recording_path(
     run_sil, tmp_path
 ):
     script = tmp_path / "participant.sh"
-    script.write_text(
-        "#!/bin/sh\n"
-        "printf '%s\\n' '{\"op\":\"ready\"}'\n"
-        "while IFS= read -r line; do\n"
-        "  case \"$line\" in\n"
-        "    *'\"op\":\"step\"'* ) printf '%s\\n' '{\"op\":\"step_done\",\"out\":[]}' ;;\n"
-        "    *'\"op\":\"shutdown\"'* ) exit 0 ;;\n"
-        "  esac\n"
-        "done\n"
-    )
+    script.write_text(STEP_LOOP)
     script.chmod(0o755)
     manifest = toy_manifest(duration_ns=1)
     manifest.add_process("process", command=[str(script)], step_period_ns=1)
@@ -118,16 +127,7 @@ def test_provenance_is_byte_deterministic_and_has_no_recording_path(
 
 def test_participant_entries_are_sorted_by_name(run_sil, tmp_path):
     script = tmp_path / "participant.sh"
-    script.write_text(
-        "#!/bin/sh\n"
-        "printf '%s\\n' '{\"op\":\"ready\"}'\n"
-        "while IFS= read -r line; do\n"
-        "  case \"$line\" in\n"
-        "    *'\"op\":\"step\"'* ) printf '%s\\n' '{\"op\":\"step_done\",\"out\":[]}' ;;\n"
-        "    *'\"op\":\"shutdown\"'* ) exit 0 ;;\n"
-        "  esac\n"
-        "done\n"
-    )
+    script.write_text(STEP_LOOP)
     script.chmod(0o755)
     manifest = toy_manifest(duration_ns=1)
     manifest.add_process("zulu", command=[str(script)], step_period_ns=1)
@@ -172,16 +172,7 @@ def test_replacing_process_executable_bytes_changes_provenance(
     run_sil, tmp_path
 ):
     script = tmp_path / "participant.sh"
-    script.write_text(
-        "#!/bin/sh\n"
-        "printf '%s\\n' '{\"op\":\"ready\"}'\n"
-        "while IFS= read -r line; do\n"
-        "  case \"$line\" in\n"
-        "    *'\"op\":\"step\"'* ) printf '%s\\n' '{\"op\":\"step_done\",\"out\":[]}' ;;\n"
-        "    *'\"op\":\"shutdown\"'* ) exit 0 ;;\n"
-        "  esac\n"
-        "done\n"
-    )
+    script.write_text(STEP_LOOP)
     script.chmod(0o755)
     manifest = toy_manifest(duration_ns=1)
     manifest.add_process("process", command=[str(script)], step_period_ns=1)
@@ -214,13 +205,13 @@ def test_replacing_fmu_bytes_changes_provenance(
 
     first = tmp_path / "first.mcap"
     assert run_sil(ref.path, out=first).returncode == 0
-    first_digest = sidecar(first)["artifacts"]["fmus"][0]["archive"]["sha256"]
+    first_digest = archive_digest(sidecar(first), fmu)
 
     fmu.write_bytes(fmu.read_bytes() + b"provenance variant")
     second = tmp_path / "second.mcap"
     proc = run_sil(ref.path, out=second)
     assert proc.returncode == 0, proc.stderr
-    second_digest = sidecar(second)["artifacts"]["fmus"][0]["archive"]["sha256"]
+    second_digest = archive_digest(sidecar(second), fmu)
     assert ref.hash == manifest.hash()
     assert first_digest != second_digest
 
@@ -278,3 +269,68 @@ def test_unreadable_artifact_is_exit_two_and_explained_in_sidecar(
     assert document["run_exit_code"] == 2
     assert any("Process participant 'missing'" in error["artifact"]
                for error in document["errors"])
+
+
+def test_record_is_byte_identical_from_any_working_directory(
+    sil_run, tmp_path
+):
+    """Manifest-named artifacts anchor to the Manifest, not to the caller's cwd.
+
+    Two Runs of one Manifest launched from two different directories describe
+    the same artifacts, so their records have to be the same bytes.
+    """
+    script = tmp_path / "participant.sh"
+    script.write_text(STEP_LOOP)
+    script.chmod(0o755)
+    manifest = toy_manifest(duration_ns=1)
+    manifest.add_process("process", command=[str(script)], step_period_ns=1)
+    ref = manifest.write(tmp_path / "manifest.json")
+
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+
+    records = []
+    for index, directory in enumerate((tmp_path, elsewhere)):
+        out = tmp_path / f"run{index}.mcap"
+        proc = subprocess.run(
+            [str(sil_run), str(ref.path), "-o", str(out)],
+            cwd=directory,
+            capture_output=True,
+            text=True,
+        )
+        assert proc.returncode == 0, proc.stderr
+        records.append(out.with_name(out.name + ".provenance.json").read_bytes())
+
+    assert records[0] == records[1]
+
+
+def test_command_files_are_digested_without_knowing_the_standard(
+    run_sil, tmp_path
+):
+    """The kernel digests files a command names; it does not parse the command.
+
+    An argument that names no file is not an artifact, so an unrecognised flag
+    can never turn a working Run into a Manifest error.
+    """
+    payload = tmp_path / "scenario.xosc"
+    payload.write_text("<OpenSCENARIO/>\n")
+    script = tmp_path / "participant.sh"
+    script.write_text(STEP_LOOP)
+    script.chmod(0o755)
+
+    manifest = toy_manifest(duration_ns=1)
+    manifest.add_process(
+        "consumer",
+        command=[str(script), "--verbose", str(payload), "ticks"],
+        step_period_ns=1,
+    )
+    ref = manifest.write(tmp_path / "manifest.json")
+    out = tmp_path / "out.mcap"
+
+    proc = run_sil(ref.path, out=out)
+    assert proc.returncode == 0, proc.stderr
+
+    files = command_files(sidecar(out))
+    assert files == {
+        str(payload.resolve()): hashlib.sha256(payload.read_bytes()).hexdigest()
+    }

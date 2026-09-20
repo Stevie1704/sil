@@ -22,7 +22,8 @@ Every Run also emits a deterministic JSON provenance side-car beside its
 Recording (or beside the default output location when recording is disabled).
 It binds the Manifest hash to the SHA-256 of the production runner, the Clock
 shim when used, every resolved Native participant library, every resolved
-Process participant executable and argument vector, and every imported FMU.
+Process participant executable and argument vector, and every other file a
+Participant's command names — an imported FMU archive among them.
 It carries the SiL version, source revision, and the machine-class identifier
 (OS, CPU architecture, and libc), plus the Recording digest when a Recording
 exists. The side-car deliberately does not claim to capture kernel build
@@ -30,6 +31,12 @@ details, hostnames, process IDs, Run working directories, wall-clock timing,
 environment variables, dependency search state, or the internal environment of
 an opaque Participant. Release metadata identifies the per-release bundle;
 this side-car is the per-Run complement.
+
+Every artifact a Manifest names resolves against the Manifest's own directory,
+Process participant commands included. The anchor is deliberately not the
+invocation directory: two Runs of one Manifest from two different working
+directories must produce byte-identical records, and a record that named the
+directory the operator happened to be in would not.
 
 ### 3. vECU scope (v1)
 - **L0/L1** host-compiled algorithm/application code (in-process).
