@@ -54,6 +54,21 @@ The `acceptance` image target exists for this repository's own checks. The
 production `runtime` target contains no test fixture and no FMU supplied by
 this repository.
 
+## Downloaded by a proof, never shipped
+
+| Component | Version | License | Where |
+| --- | --- | --- | --- |
+| [esmini](https://github.com/esmini/esmini) | v3.8.1 | MPL-2.0 | downloaded by [proofs/esmini/Dockerfile](proofs/esmini/Dockerfile) into a locally built consumer image; the upstream `LICENSE` is kept at `/opt/esmini/LICENSE` there |
+
+esmini is the subject of the consumer adoption proof in
+[proofs/esmini/](proofs/esmini/), not a dependency of SiL. No esmini file is in
+this repository, nothing here links against it, and none of it reaches a
+published SiL artifact — which is why it sits outside the permissive inventory
+above rather than in it. Its binaries are redistributed unmodified, which is
+what its weak-copyleft grant asks for. The same image build installs five
+Debian X and OpenGL packages esmini links against, under their own terms and
+recorded where Debian records them, in the image's `/usr/share/doc/*/copyright`.
+
 ## Python wheel and source distribution
 
 The wheel and the source distribution contain SiL code only. They declare

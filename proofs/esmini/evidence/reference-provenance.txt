@@ -1,0 +1,7 @@
+transcription: 10 samples match the smoke test
+identification: reproducing the transcribed row per model
+  ReferenceDriver  ego x=146.870 m speed=14.191 m/s
+  Regulation       ego x=152.710 m speed=6.080 m/s
+  FSM              ego x=155.824 m speed=6.321 m/s
+  RSS              ego x=148.191 m speed=4.367 m/s
+identification: only 'Regulation' reproduces it, as declared

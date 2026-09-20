@@ -22,9 +22,11 @@ consumer keeps rather than the process that produced them.
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import math
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from sil.recording import read_records
@@ -37,7 +39,59 @@ class VerificationError(AssertionError):
     """A recorded Run that does not hold up."""
 
 
-def read_channel(recording: Path, manifest: dict) -> dict[str, list[tuple[int, dict]]]:
+@dataclass(frozen=True)
+class Kpi:
+    """The Channels and thresholds the Run itself enforced.
+
+    They are read back out of the Manifest rather than restated here: the
+    Manifest is what the Run was executed from, so a post-hoc judgement built
+    from anything else could disagree with the Run it is judging.
+    """
+
+    ego_channel: str
+    target_channel: str
+    min_gap_m: float
+    evaluate_at_ns: int
+    max_ego_speed_mps: float
+    max_lateral_offset_m: float
+
+    @classmethod
+    def from_manifest(cls, manifest: dict, participant: str) -> Kpi:
+        declaration = manifest.get("participants", {}).get(participant)
+        if declaration is None:
+            raise VerificationError(
+                f"manifest declares no participant {participant!r}"
+            )
+        command = declaration.get("command", [])
+        # The Test participant's thresholds are its command-line options, and
+        # the command is Manifest data. Pairing each token with the next one
+        # reads them back without re-declaring the option list.
+        options = dict(itertools.pairwise(command))
+
+        def option(name: str, convert):
+            if name not in options:
+                raise VerificationError(
+                    f"participant {participant!r} declares no {name}"
+                )
+            try:
+                return convert(options[name])
+            except ValueError as error:
+                raise VerificationError(
+                    f"participant {participant!r} {name} is not a "
+                    f"{convert.__name__}: {error}"
+                ) from error
+
+        return cls(
+            ego_channel=option("--ego", str),
+            target_channel=option("--target", str),
+            min_gap_m=option("--min-gap-m", float),
+            evaluate_at_ns=option("--evaluate-at-ns", int),
+            max_ego_speed_mps=option("--max-ego-speed-mps", float),
+            max_lateral_offset_m=option("--max-lateral-offset-m", float),
+        )
+
+
+def read_channels(recording: Path, manifest: dict) -> dict[str, list[tuple[int, dict]]]:
     """Channel name -> [(virtual_time_ns, fields), ...] in recorded order."""
     types = load_schemas(manifest["schemas"])
     schema_of = {
@@ -47,26 +101,32 @@ def read_channel(recording: Path, manifest: dict) -> dict[str, list[tuple[int, d
     messages: dict[str, list[tuple[int, dict]]] = {
         name: [] for name in schema_of
     }
-    for topic, log_time_ns, data in read_records(recording):
-        if topic not in schema_of:
+    for channel, log_time_ns, data in read_records(recording):
+        if channel not in schema_of:
             raise VerificationError(
-                f"recording carries channel {topic!r}, which the Manifest "
+                f"recording carries channel {channel!r}, which the Manifest "
                 "does not declare"
             )
-        messages[topic].append((log_time_ns, types[schema_of[topic]].unpack(data)))
+        messages[channel].append(
+            (log_time_ns, types[schema_of[channel]].unpack(data))
+        )
     return messages
 
 
-def check_slots(
-    messages: dict[str, list[tuple[int, dict]]], manifest: dict
-) -> list[int]:
-    """Every declared Channel carries one Message per Slot, and no other."""
+def slot_times(manifest: dict) -> list[int]:
+    """Every Virtual time the Manifest's Duration and Step period define."""
     period_ns = min(
         participant["step_period_ns"]
         for participant in manifest["participants"].values()
         if participant["type"] == "process"
     )
-    expected = list(range(0, manifest["duration_ns"], period_ns))
+    return list(range(0, manifest["duration_ns"], period_ns))
+
+
+def check_slots(
+    messages: dict[str, list[tuple[int, dict]]], expected: list[int]
+) -> None:
+    """Every declared Channel carries one Message per Slot, and no other."""
     for channel, recorded in messages.items():
         if not recorded:
             raise VerificationError(f"channel {channel!r} recorded no Message")
@@ -78,7 +138,6 @@ def check_slots(
                 f"and Step period define {len(expected)} between "
                 f"{expected[0]} ns and {expected[-1]} ns"
             )
-    return expected
 
 
 def freespace_gap_m(ego: dict, target: dict) -> float:
@@ -97,23 +156,17 @@ def trajectory(
     return [(time_ns, ego[time_ns], target[time_ns]) for time_ns in sorted(ego)]
 
 
-def check_kpi(
-    samples: list[tuple[int, dict, dict]],
-    *,
-    min_gap_m: float,
-    evaluate_at_ns: int,
-    max_ego_speed_mps: float,
-    max_lateral_offset_m: float,
-) -> dict:
+def check_kpi(samples: list[tuple[int, dict, dict]], kpi: Kpi) -> dict:
     """The domain KPI over the finished Recording."""
     gaps = [(freespace_gap_m(ego, target), t) for t, ego, target in samples]
     minimum_gap_m, minimum_gap_at_ns = min(gaps)
-    if minimum_gap_m < min_gap_m:
+    if minimum_gap_m < kpi.min_gap_m:
         raise VerificationError(
             f"minimum freespace gap {minimum_gap_m:.3f} m at "
-            f"{minimum_gap_at_ns} ns is below the {min_gap_m:.3f} m floor"
+            f"{minimum_gap_at_ns} ns is below the {kpi.min_gap_m:.3f} m floor"
         )
 
+    evaluate_at_ns = kpi.evaluate_at_ns
     evaluated = [s for s in samples if s[0] == evaluate_at_ns]
     if not evaluated:
         raise VerificationError(
@@ -134,17 +187,17 @@ def check_kpi(
             "complete"
         )
     lateral_offset_m = abs(target["y_m"] - ego["y_m"])
-    if lateral_offset_m > max_lateral_offset_m:
+    if lateral_offset_m > kpi.max_lateral_offset_m:
         raise VerificationError(
             f"target is {lateral_offset_m:.3f} m laterally off the ego's path "
             f"at {evaluate_at_ns} ns, above the allowed "
-            f"{max_lateral_offset_m:.3f} m"
+            f"{kpi.max_lateral_offset_m:.3f} m"
         )
-    if ego["speed_mps"] > max_ego_speed_mps:
+    if ego["speed_mps"] > kpi.max_ego_speed_mps:
         raise VerificationError(
             f"ego is still doing {ego['speed_mps']:.3f} m/s at "
-            f"{evaluate_at_ns} ns, above the {max_ego_speed_mps:.3f} m/s a "
-            "braking response must reach"
+            f"{evaluate_at_ns} ns, above the {kpi.max_ego_speed_mps:.3f} m/s "
+            "a braking response must reach"
         )
     return {
         "minimum_gap_m": minimum_gap_m,
@@ -213,12 +266,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--recording", type=Path, required=True)
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--reference", type=Path, required=True)
-    parser.add_argument("--ego-channel", required=True)
-    parser.add_argument("--target-channel", required=True)
-    parser.add_argument("--min-gap-m", type=float, required=True)
-    parser.add_argument("--evaluate-at-ns", type=int, required=True)
-    parser.add_argument("--max-ego-speed-mps", type=float, required=True)
-    parser.add_argument("--max-lateral-offset-m", type=float, required=True)
+    parser.add_argument(
+        "--kpi-participant",
+        default="kpi",
+        help="the Test participant whose declared thresholds are re-applied",
+    )
     parser.add_argument(
         "--observations",
         type=Path,
@@ -230,16 +282,12 @@ def main(argv: list[str] | None = None) -> int:
     reference = json.loads(args.reference.read_text())
 
     try:
-        messages = read_channel(args.recording, manifest)
-        slots = check_slots(messages, manifest)
-        samples = trajectory(messages, args.ego_channel, args.target_channel)
-        kpi = check_kpi(
-            samples,
-            min_gap_m=args.min_gap_m,
-            evaluate_at_ns=args.evaluate_at_ns,
-            max_ego_speed_mps=args.max_ego_speed_mps,
-            max_lateral_offset_m=args.max_lateral_offset_m,
-        )
+        kpi = Kpi.from_manifest(manifest, args.kpi_participant)
+        messages = read_channels(args.recording, manifest)
+        slots = slot_times(manifest)
+        check_slots(messages, slots)
+        samples = trajectory(messages, kpi.ego_channel, kpi.target_channel)
+        measured = check_kpi(samples, kpi)
         reference_check = check_reference(samples, reference)
     except VerificationError as error:
         sys.stderr.write(f"verify: {error}\n")
@@ -251,7 +299,7 @@ def main(argv: list[str] | None = None) -> int:
         "slots": len(slots),
         "first_virtual_time_ns": slots[0],
         "last_virtual_time_ns": slots[-1],
-        "kpi": kpi,
+        "kpi": measured,
         "reference_samples_checked": len(reference_check),
         "reference_max_deviation": {
             field: max(

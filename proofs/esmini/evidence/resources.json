@@ -8,8 +8,8 @@
     "/workspace/run-1.mcap"
   ],
   "exit_code": 0,
-  "peak_child_rss_bytes": 152522752,
-  "system_cpu_s": 0.214,
-  "user_cpu_s": 7.187,
-  "wall_clock_s": 7.466
+  "peak_child_rss_bytes": 152481792,
+  "system_cpu_s": 0.16,
+  "user_cpu_s": 6.806,
+  "wall_clock_s": 7.045
 }

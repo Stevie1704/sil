@@ -31,12 +31,10 @@ PARTICIPANT_TIMEOUT_MS="${SIL_ESMINI_PARTICIPANT_TIMEOUT_MS:-30000}"
 # The one place the base image digest is written down is the Dockerfile.
 SIL_IMAGE="$(sed -n 's/^FROM \(ghcr\.io[^ ]*\) AS consumer$/\1/p' "$PROOF_DIR/Dockerfile")"
 
-EGO_CHANNEL=esmini.Ego
-TARGET_CHANNEL=esmini.Target
-MIN_GAP_M=0.25
-EVALUATE_AT_NS=6350000000
-MAX_EGO_SPEED_MPS=10.0
-MAX_LATERAL_OFFSET_M=0.5
+# The Channels and KPI thresholds are not repeated here. `verify.py` reads
+# them back out of the Manifest the Run was executed from, so the post-hoc
+# judgement cannot drift from the one the Run enforced.
+SCENARIO=/opt/esmini/resources/xosc/alks_r157_cut_in_quick_brake.xosc
 
 mkdir -p "$EVIDENCE_DIR" "$WORKSPACE"
 
@@ -115,15 +113,21 @@ sil_tool python3 /opt/consumer/observe.py /workspace/resources.json \
 cp "$WORKSPACE/resources.json" "$EVIDENCE_DIR/resources.json"
 cat "$EVIDENCE_DIR/resources.json"
 
+step "Audit the vendor expectation against esmini's own smoke test"
+sil_tool python3 /opt/consumer/reference/check_transcription.py \
+    --reference /opt/consumer/reference/alks_r157_expected.json \
+    --smoke-test /opt/esmini/test/smoke_test.py \
+    --scenario "$SCENARIO" \
+    --resources /opt/esmini/resources \
+    --library /opt/esmini/bin/libesminiLib.so \
+    --object-id Ego=300 --object-id Target=301 \
+    | tee "$EVIDENCE_DIR/reference-provenance.txt"
+
 step "Verify the Recording, the KPI, and the vendor's expected trajectory"
 sil_tool python3 /opt/consumer/verify.py \
     --recording /workspace/run-1.mcap \
     --manifest /workspace/alks-cut-in.json \
     --reference /opt/consumer/reference/alks_r157_expected.json \
-    --ego-channel "$EGO_CHANNEL" --target-channel "$TARGET_CHANNEL" \
-    --min-gap-m "$MIN_GAP_M" --evaluate-at-ns "$EVALUATE_AT_NS" \
-    --max-ego-speed-mps "$MAX_EGO_SPEED_MPS" \
-    --max-lateral-offset-m "$MAX_LATERAL_OFFSET_M" \
     --observations /workspace/observations.json
 cp "$WORKSPACE/observations.json" "$EVIDENCE_DIR/observations.json"
 
@@ -173,7 +177,7 @@ step "Manifest-error path"
 # environment the Participant cannot honour is rejected before anything is
 # stepped, and stays distinct from the Run failure above.
 sil_tool python3 /opt/consumer/manifest.py \
-    --scenario /opt/esmini/resources/xosc/does-not-exist.xosc \
+    --scenario "$(dirname "$SCENARIO")/does-not-exist.xosc" \
     /workspace/missing-scenario.json >/dev/null
 set +e
 missing_output="$(sil_run /workspace/missing-scenario.json \

@@ -49,7 +49,7 @@ binary, wheel, or Python module comes from a SiL checkout or build directory.
 | Version | `v3.8.1`, build 6383 |
 | Binaries | `esmini-bin_Linux.zip`, SHA-256 `05e6c9bb…9654` |
 | Scenarios and roads | `esmini-fullsrc.zip`, SHA-256 `dacb0d3c…105e` |
-| License | Mozilla Public License 2.0; the unmodified binaries are redistributed inside a locally built image with the upstream `LICENSE` kept at `/opt/esmini/LICENSE` |
+| License | Mozilla Public License 2.0; the unmodified binaries are redistributed inside a locally built image with the upstream `LICENSE` kept at `/opt/esmini/LICENSE`. Recorded in [THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md) as downloaded by a proof and shipped in no SiL artifact |
 | Scenario | `resources/xosc/alks_r157_cut_in_quick_brake.xosc`, shipped unmodified |
 
 Both checksums are verified during the image build and fail it on mismatch.
@@ -99,7 +99,9 @@ Three things are asserted, deliberately different in kind:
 - **Post-hoc, over the whole Recording**: the same properties, plus the final
   Message the in-run half cannot see. Under the default Latency a Message
   published one Step before the Duration becomes visible at the Duration,
-  where no activation is due.
+  where no activation is due. `verify.py` reads the Channels and thresholds
+  back out of the Manifest the Run was executed from, so the two halves
+  cannot drift apart.
 
 A Participant that published syntactically valid but unchanging object state
 would satisfy the gap floor and fail all three encounter assertions: no lane
@@ -116,6 +118,7 @@ change, no deceleration.
 | A Manifest naming an environment the Participant cannot honour is a Manifest error | exit 2, `participant 'scenario': sil.participant.ManifestError: esmini SE_Init returned -1 for scenario '…/does-not-exist.xosc'` — [`manifest-error.txt`](evidence/manifest-error.txt) |
 | Two Runs are bit-identical | both Recordings SHA-256 `4ff77017…16c4` — [`determinism.txt`](evidence/determinism.txt) |
 | The recorded trajectory matches the vendor's expectation | 10 samples at 5 Virtual times, worst deviation 4.5e-4 m against a 1e-2 tolerance |
+| The vendor expectation is what esmini actually says | all 10 samples matched against esmini's own smoke test in the image, and the id block confirmed against all four ALKS models — [`reference-provenance.txt`](evidence/reference-provenance.txt) |
 
 ### Against the vendor's expectation
 
@@ -130,9 +133,26 @@ two Runs agree with each other, this says the Run agrees with esmini.
 Identifying *which* expected values apply was consumer work in itself. The
 smoke test runs the scenario once per ALKS safety model and merges the four
 recordings, which offsets object ids by 100 per merged file — and the block
-order is the merge order, not the order of the model list in the test. Running
-all four models through `SE_InitWithString` settled it: `0/1` is FSM, `100/101`
-is RSS, `300/301` is Regulation, which is what the scenario file declares.
+order is the merge order, not the order of the model list in the test.
+
+That is checked rather than claimed.
+[`reference/check_transcription.py`](reference/check_transcription.py) reads
+esmini's smoke test out of the derived image and holds the reference file to
+it twice over: every transcribed sample must be a row the smoke test actually
+asserts, and the block it was taken from must be reproduced by the model the
+scenario file declares — and by no other. It is, and the four models are
+plainly different:
+
+```
+transcription: 10 samples match the smoke test
+  ReferenceDriver  ego x=146.870 m speed=14.191 m/s
+  Regulation       ego x=152.710 m speed=6.080 m/s
+  FSM              ego x=155.824 m speed=6.321 m/s
+  RSS              ego x=148.191 m speed=4.367 m/s
+identification: only 'Regulation' reproduces it, as declared
+```
+
+A mistranscribed digit cannot pass as a vendor expectation.
 
 ### Observations, not thresholds
 
@@ -142,7 +162,7 @@ are machine-dependent and are recorded rather than asserted.
 
 | Observation | Value |
 | --- | --- |
-| Wall-clock time, 800 Slots | 7.47 s |
+| Wall-clock time, 800 Slots | 7.05 s |
 | Peak resident set, largest child | 152.5 MB |
 | Declared payload footprint | 2 routes × 2 × 72 B; no Arena, no unbounded route |
 | Recording size | 191 911 B for 1 600 Messages |
@@ -218,9 +238,10 @@ Consumer-authored files: one adapter
 ([`participants/esmini_participant.py`](participants/esmini_participant.py)),
 one Test participant ([`participants/kpi.py`](participants/kpi.py)), one
 Schema ([`schemas/esmini.json`](schemas/esmini.json)), one Manifest builder
-([`manifest.py`](manifest.py)), and two scripts that judge and measure the
-result ([`verify.py`](verify.py), [`observe.py`](observe.py)). No generated
-code, no code generator, and no patch to esmini.
+([`manifest.py`](manifest.py)), and three scripts that judge, measure, and
+audit the result ([`verify.py`](verify.py), [`observe.py`](observe.py),
+[`reference/check_transcription.py`](reference/check_transcription.py)). No
+generated code, no code generator, and no patch to esmini.
 
 ## Integration friction
 

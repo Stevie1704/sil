@@ -30,10 +30,11 @@ RUN base="https://github.com/esmini/esmini/releases/download/${ESMINI_VERSION}" 
     && unzip -q bin.zip 'esmini/bin/libesminiLib.so' 'esmini/version.txt' \
       'esmini/EnvironmentSimulator/Libraries/esminiLib/esminiLib.hpp' \
     && unzip -q src.zip 'esmini/resources/xosc/*' 'esmini/resources/xodr/*' \
-      'esmini/LICENSE' \
+      'esmini/test/smoke_test.py' 'esmini/LICENSE' \
     && install -d /opt/esmini \
     && mv esmini/bin /opt/esmini/bin \
     && mv esmini/resources /opt/esmini/resources \
+    && mv esmini/test /opt/esmini/test \
     && mv esmini/version.txt /opt/esmini/version.txt \
     && mv esmini/LICENSE /opt/esmini/LICENSE \
     && mv esmini/EnvironmentSimulator/Libraries/esminiLib/esminiLib.hpp \
