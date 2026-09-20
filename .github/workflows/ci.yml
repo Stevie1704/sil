@@ -49,8 +49,15 @@ jobs:
 
       - name: Build production and reference acceptance images
         run: |
-          docker build --target runtime --tag sil-runtime:ci .
-          docker build --target acceptance --tag sil-acceptance:ci .
+          version="$(python3 tools/release.py project-version)"
+          docker build --target runtime --tag sil-runtime:ci \
+            --build-arg SIL_VERSION="$version" \
+            --build-arg SIL_SOURCE_REPOSITORY="https://github.com/Stevie1704/sil" \
+            --build-arg SIL_SOURCE_REVISION="$GITHUB_SHA" .
+          docker build --target acceptance --tag sil-acceptance:ci \
+            --build-arg SIL_VERSION="$version" \
+            --build-arg SIL_SOURCE_REPOSITORY="https://github.com/Stevie1704/sil" \
+            --build-arg SIL_SOURCE_REVISION="$GITHUB_SHA" .
 
       - name: Run Linux container acceptance checks
         env:

@@ -362,7 +362,10 @@ artifact for this repository's CI checks; it is not part of the production
 image.
 
 ```sh
-docker build --target runtime -t sil:local .
+version="$(python3 tools/release.py project-version)"
+docker build --target runtime -t sil:local \
+  --build-arg SIL_VERSION="$version" \
+  --build-arg SIL_SOURCE_REVISION=local .
 ```
 
 Mount a workspace at `/workspace` and use the host user's numeric identity so
@@ -469,3 +472,5 @@ tests/             behavior tests at the run boundary
   qualification.
 - [CONTRIBUTING.md](CONTRIBUTING.md) — the terms a contribution is accepted
   under, and how to get a change reviewed.
+- [docs/releasing.md](docs/releasing.md) — how maintainers prepare, publish,
+  verify, and recover a versioned release bundle.

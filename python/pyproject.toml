@@ -7,6 +7,10 @@ license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 dependencies = ["mcap>=1.1"]
 
+[project.urls]
+Repository = "https://github.com/Stevie1704/sil"
+Source = "https://github.com/Stevie1704/sil"
+
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 
