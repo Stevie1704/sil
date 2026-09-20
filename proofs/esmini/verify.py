@@ -29,6 +29,11 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+# The Test participant and this verifier must agree on what they measure,
+# so the quantities come from the one module that defines them.
+sys.path.insert(0, str(Path(__file__).resolve().parent / "participants"))
+
+from cutin import freespace_gap_m, in_same_lane, lateral_offset_m
 from sil.recording import read_records
 from sil.schema import load as load_schemas
 
@@ -140,11 +145,6 @@ def check_slots(
             )
 
 
-def freespace_gap_m(ego: dict, target: dict) -> float:
-    return (
-        target["s_m"] - ego["s_m"] - (ego["length_m"] + target["length_m"]) / 2
-    )
-
 
 def trajectory(
     messages: dict[str, list[tuple[int, dict]]],
@@ -175,21 +175,21 @@ def check_kpi(samples: list[tuple[int, dict, dict]], kpi: Kpi) -> dict:
         )
     _, ego, target = evaluated[0]
 
-    if not any(e["lane_id"] != t["lane_id"] for _, e, t in samples):
+    if all(in_same_lane(e, t) for _, e, t in samples):
         raise VerificationError(
             "target never occupied a lane other than the ego's, so the "
             "recording contains no cut-in"
         )
-    if ego["lane_id"] != target["lane_id"]:
+    if not in_same_lane(ego, target):
         raise VerificationError(
             f"target is in lane {target['lane_id']} and the ego in lane "
             f"{ego['lane_id']} at {evaluate_at_ns} ns, so the cut-in did not "
             "complete"
         )
-    lateral_offset_m = abs(target["y_m"] - ego["y_m"])
-    if lateral_offset_m > kpi.max_lateral_offset_m:
+    offset_m = lateral_offset_m(ego, target)
+    if offset_m > kpi.max_lateral_offset_m:
         raise VerificationError(
-            f"target is {lateral_offset_m:.3f} m laterally off the ego's path "
+            f"target is {offset_m:.3f} m laterally off the ego's path "
             f"at {evaluate_at_ns} ns, above the allowed "
             f"{kpi.max_lateral_offset_m:.3f} m"
         )
@@ -204,7 +204,7 @@ def check_kpi(samples: list[tuple[int, dict, dict]], kpi: Kpi) -> dict:
         "minimum_gap_at_ns": minimum_gap_at_ns,
         "ego_speed_at_evaluation_mps": ego["speed_mps"],
         "target_speed_at_evaluation_mps": target["speed_mps"],
-        "lateral_offset_at_evaluation_m": lateral_offset_m,
+        "lateral_offset_at_evaluation_m": offset_m,
         "initial_gap_m": gaps[0][0],
     }
 

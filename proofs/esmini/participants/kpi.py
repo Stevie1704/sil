@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 
+from cutin import freespace_gap_m, in_same_lane, lateral_offset_m
 from sil.participant import StepParticipant, run
 
 
@@ -56,13 +57,13 @@ class CutInSafetyKPI(StepParticipant):
             inputs, self._ego_channel, self._target_channel
         ):
             self._check_gap(publish_ns, ego, target)
-            if ego["lane_id"] != target["lane_id"]:
+            if not in_same_lane(ego, target):
                 self._saw_target_in_another_lane = True
             if publish_ns == self._evaluate_at_ns:
                 self._check_encounter(publish_ns, ego, target)
 
     def _check_gap(self, publish_ns: int, ego: dict, target: dict) -> None:
-        gap_m = _freespace_gap_m(ego, target)
+        gap_m = freespace_gap_m(ego, target)
         assert gap_m >= self._min_gap_m, (
             f"freespace gap {gap_m:.3f} m is below the "
             f"{self._min_gap_m:.3f} m floor at t={publish_ns} ns "
@@ -76,14 +77,14 @@ class CutInSafetyKPI(StepParticipant):
             f"target never occupied a lane other than the ego's before "
             f"t={publish_ns} ns, so the Run contains no cut-in"
         )
-        assert ego["lane_id"] == target["lane_id"], (
+        assert in_same_lane(ego, target), (
             f"target is in lane {target['lane_id']} and the ego in lane "
             f"{ego['lane_id']} at t={publish_ns} ns, so the cut-in did not "
             "complete"
         )
-        lateral_offset_m = abs(target["y_m"] - ego["y_m"])
-        assert lateral_offset_m <= self._max_lateral_offset_m, (
-            f"target is {lateral_offset_m:.3f} m laterally off the ego's path "
+        offset_m = lateral_offset_m(ego, target)
+        assert offset_m <= self._max_lateral_offset_m, (
+            f"target is {offset_m:.3f} m laterally off the ego's path "
             f"at t={publish_ns} ns, above the "
             f"{self._max_lateral_offset_m:.3f} m the completed cut-in allows"
         )
@@ -93,20 +94,6 @@ class CutInSafetyKPI(StepParticipant):
             "a braking response to the cut-in target must reach"
         )
 
-
-def _freespace_gap_m(ego: dict, target: dict) -> float:
-    """Longitudinal bumper-to-bumper gap in road coordinates.
-
-    Both vehicles travel along increasing `s` on a straight road, so the road
-    coordinate is the distance measure the scenario is written in. Half a
-    vehicle length at each end turns the reference-point distance into the
-    freespace gap the regulation talks about.
-    """
-    return (
-        target["s_m"]
-        - ego["s_m"]
-        - (ego["length_m"] + target["length_m"]) / 2
-    )
 
 
 def _paired(inputs: list, ego_channel: str, target_channel: str):

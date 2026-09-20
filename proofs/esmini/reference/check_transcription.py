@@ -36,7 +36,7 @@ _report = os.fdopen(os.dup(1), "w")
 os.dup2(2, 1)
 sys.stdout = _report
 
-sys.path.insert(0, "/opt/consumer/participants")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "participants"))
 
 from esmini_participant import SE_ScenarioObjectState, _bind
 

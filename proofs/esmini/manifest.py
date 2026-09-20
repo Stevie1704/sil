@@ -39,8 +39,8 @@ SCENARIO = ESMINI_RESOURCES / "xosc" / "alks_r157_cut_in_quick_brake.xosc"
 EGO_CHANNEL = "esmini.Ego"
 TARGET_CHANNEL = "esmini.Target"
 
-# esmini's own smoke test drives this scenario at a 10 ms fixed timestep, and
-# its API documents a fixed timestep as the precondition for repeatable
+# esmini's own smoke test drives this scenario at `--fixed_timestep 0.01`,
+# and its API documents a fixed step size as the precondition for repeatable
 # results. The Manifest declares the same period for both participants.
 STEP_PERIOD_NS = 10_000_000
 
@@ -129,9 +129,17 @@ def _kpi_command(min_gap_m: float) -> list[str]:
 
 
 def cut_in_manifest(
-    *, scenario: Path = SCENARIO, unmeetable_gap: bool = False
+    *,
+    scenario: Path = SCENARIO,
+    unmeetable_gap: bool = False,
+    shim: bool = True,
 ) -> Manifest:
-    """The proof Run, in both its variants."""
+    """The proof Run, in its variants.
+
+    `shim` is the clock-shim control: the same Run with the shim withdrawn,
+    which is what says whether esmini's trajectory depends on a wall-clock
+    read at all rather than leaving the question to an assertion.
+    """
     schemas = json.loads(
         (CONSUMER_DIR / "schemas" / "esmini.json").read_text()
     )
@@ -148,7 +156,7 @@ def cut_in_manifest(
         step_period_ns=STEP_PERIOD_NS,
         publishes=[EGO_CHANNEL, TARGET_CHANNEL],
         priority=0,
-        shim=True,
+        shim=shim,
     )
     # The Test participant publishes nothing, so the scenario cannot see it.
     # Its only output is the Run's exit code.
@@ -176,6 +184,11 @@ def main(argv: list[str] | None = None) -> int:
         help="declare a gap floor the Run cannot hold",
     )
     parser.add_argument(
+        "--no-shim",
+        action="store_true",
+        help="withdraw the Clock shim, as a control",
+    )
+    parser.add_argument(
         "--scenario",
         type=Path,
         default=SCENARIO,
@@ -183,7 +196,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     manifest = cut_in_manifest(
-        scenario=args.scenario, unmeetable_gap=args.unmeetable_gap
+        scenario=args.scenario,
+        unmeetable_gap=args.unmeetable_gap,
+        shim=not args.no_shim,
     )
     print(manifest.write(args.out).hash)
     return 0

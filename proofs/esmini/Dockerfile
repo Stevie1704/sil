@@ -64,7 +64,7 @@ COPY --from=fetch /opt/esmini /opt/esmini
 COPY participants /opt/consumer/participants
 COPY schemas /opt/consumer/schemas
 COPY reference /opt/consumer/reference
-COPY manifest.py verify.py observe.py /opt/consumer/
+COPY manifest.py verify.py observe.py clock_shim_control.py /opt/consumer/
 
 ENV ESMINI_LIBRARY=/opt/esmini/bin/libesminiLib.so \
     ESMINI_RESOURCES=/opt/esmini/resources

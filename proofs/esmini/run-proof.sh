@@ -145,11 +145,29 @@ if [ "$first" != "$second" ]; then
     echo "DETERMINISM VIOLATION: the two Recordings differ" >&2
     exit 1
 fi
+# The Recording is an artifact of the proof, not a by-product of it: #117 asks
+# for it to be retained, so it is kept beside the Manifests it came from and
+# not left in a temporary workspace.
+cp "$WORKSPACE/run-1.mcap" "$EVIDENCE_DIR/run-1.mcap"
 # The released determinism check runs the same comparison from inside the
 # image. It has no way to pass a Process-participant deadline, so both are
 # run: this one for the shipped tool, the pair above for the deadline.
 sil_tool sil-check /workspace/alks-cut-in.json --runner sil-run \
     | tee -a "$EVIDENCE_DIR/determinism.txt"
+
+step "Clock-shim control"
+# Declaring the shim is not evidence that it does anything. The same Run
+# without it answers whether esmini ever reads the wall clock at all.
+sil_tool python3 /opt/consumer/manifest.py --no-shim \
+    /workspace/alks-cut-in-unshimmed.json >/dev/null
+sil_run /workspace/alks-cut-in-unshimmed.json \
+    --participant-timeout-ms "$PARTICIPANT_TIMEOUT_MS" \
+    -o /workspace/run-unshimmed.mcap
+sil_tool python3 /opt/consumer/clock_shim_control.py \
+    --manifest /workspace/alks-cut-in.json \
+    --with-shim /workspace/run-1.mcap \
+    --without-shim /workspace/run-unshimmed.mcap \
+    | tee "$EVIDENCE_DIR/clock-shim-control.json"
 
 step "Deliberately failing variant"
 set +e

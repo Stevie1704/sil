@@ -12,9 +12,10 @@ Mapping decisions, all of them consumer-side:
   scenario time `t`. `t = 0` is therefore published without stepping — that is
   the state `SE_Init` leaves behind — and every later activation advances the
   scenario by exactly the Manifest's Step period first.
-- **Fixed timestep.** `dt` comes from the kernel as integer nanoseconds and is
-  converted once per Step. esmini's own API documents that repeatable results
-  need `SE_StepDT` with a fixed timestep, which is what the Manifest declares.
+- **Fixed Step period.** `dt` comes from the kernel as integer nanoseconds
+  and is converted once per Step. esmini's own API documents that repeatable
+  results need `SE_StepDT` with what it calls a fixed timestep; the Manifest's
+  declared Step period is that.
 - **stdout.** The Step protocol reserves the participant's stdout for protocol
   lines; esmini logs to stdout. `_reserve_protocol_stdout` moves the real
   stdout onto a private descriptor before anything loads the library, so
@@ -95,7 +96,7 @@ def _bind(library: ctypes.CDLL) -> None:
     """Declare the argument and result types of every call this adapter makes.
 
     ctypes defaults to `int` results and unconverted arguments, which silently
-    truncates the `double` returns and mis-passes the `double` timestep on
+    truncates the `double` returns and mis-passes the `double` `dt` on
     x86-64. Every entry point used below is declared here instead.
     """
     library.SE_SetLogFilePath.argtypes = [ctypes.c_char_p]

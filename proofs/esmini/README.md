@@ -17,7 +17,7 @@ a domain KPI, and reproducing the upstream project's own expected trajectory.
 | Question | Answer |
 | --- | --- |
 | Does a third-party simulator fit the Step protocol? | Yes, through one ctypes adapter and no change to SiL |
-| Does the Clock shim hold an opaque C++ simulator? | Yes, with the strict `reject` sleep policy unbroken |
+| Does an opaque C++ simulator need the Clock shim? | Not this one: withdraw it and 0 of 16 000 recorded field readings change |
 | Is the Run deterministic? | Yes, bit-identical Recordings |
 | Does the Run reproduce the vendor's expected values? | Yes, worst deviation 4.5e-4 against a 1e-2 tolerance |
 | Does a KPI failure reach the caller? | Yes, exit 1 with the value, the floor, and the Virtual time |
@@ -68,12 +68,12 @@ scenario (esmini, shimmed)  --esmini.Ego----->  kpi (Test participant)
 | Declaration | Value | Why |
 | --- | --- | --- |
 | Duration | 8 s | Covers the encounter and the standstill that ends it, and stays inside esmini's own stop trigger at 10.00 s |
-| Step period | 10 ms, both Participants | esmini's own smoke test drives this scenario at a 10 ms fixed timestep, which its API documents as the precondition for repeatable results |
+| Step period | 10 ms, both Participants | esmini's own smoke test drives this scenario at `--fixed_timestep 0.01`, and its API documents a fixed step size as the precondition for repeatable results |
 | Channels | `esmini.Ego`, `esmini.Target`, Schema `esmini.ObjectState`, 72 B | One Channel per named scenario object; inline Transport, because 72 B does not need an Arena |
 | Subscriber routes | capacity 2, overflow `fail` | Both Participants step at the same period, so a route's steady depth is one and its worst case is two: the publisher activates first in the Slot |
 | Arenas | none | Declaring one for a 72 B payload would reserve memory the Run cannot use. The [footprint report](evidence/footprint.txt) shows no unbounded route and no Arena |
 | Process deadline | `--participant-timeout-ms 30000` | Wall-clock guard on every request; esmini parses the OpenDRIVE network inside its initialization, which is the longest one |
-| Clock shim | on the `scenario` Participant | esmini keeps its own time and its applications synchronise to the wall clock by default |
+| Clock shim | on the `scenario` Participant | esmini keeps its own time and its applications synchronise to the wall clock by default. Declared as insurance; the control below shows this scenario does not depend on it |
 | Sleep policy | `reject`, the builder default | A sleeping Participant would be a determinism hole. The Run never trips it |
 
 Manifest hashes are in
@@ -118,6 +118,8 @@ change, no deceleration.
 | A Manifest naming an environment the Participant cannot honour is a Manifest error | exit 2, `participant 'scenario': sil.participant.ManifestError: esmini SE_Init returned -1 for scenario '…/does-not-exist.xosc'` — [`manifest-error.txt`](evidence/manifest-error.txt) |
 | Two Runs are bit-identical | both Recordings SHA-256 `4ff77017…16c4` — [`determinism.txt`](evidence/determinism.txt) |
 | The recorded trajectory matches the vendor's expectation | 10 samples at 5 Virtual times, worst deviation 4.5e-4 m against a 1e-2 tolerance |
+| The Recording is retained, not only its hash | [`evidence/run-1.mcap`](evidence/run-1.mcap), 191 911 B, SHA-256 `4ff77017…16c4` |
+| Withdrawing the Clock shim changes no object state | 0 differing readings out of 16 000 — [`clock-shim-control.json`](evidence/clock-shim-control.json) |
 | The vendor expectation is what esmini actually says | all 10 samples matched against esmini's own smoke test in the image, and the id block confirmed against all four ALKS models — [`reference-provenance.txt`](evidence/reference-provenance.txt) |
 
 ### Against the vendor's expectation
@@ -154,6 +156,34 @@ identification: only 'Regulation' reproduces it, as declared
 
 A mistranscribed digit cannot pass as a vendor expectation.
 
+### The Clock shim, controlled rather than asserted
+
+Declaring `shim: true` proves nothing about whether esmini ever reads the wall
+clock. So the same Run is executed with the shim withdrawn and the two
+Recordings compared —
+[`clock_shim_control.py`](clock_shim_control.py), result in
+[`evidence/clock-shim-control.json`](evidence/clock-shim-control.json).
+
+The comparison is by payload, not by file bytes, and that distinction turned
+out to matter. A Recording embeds its own Manifest hash, so withdrawing the
+shim changes the Manifest, changes the hash, and changes the file — the two
+Recordings differ by construction whatever esmini does. Comparing the bytes
+would have "proved" the shim load-bearing when it is not.
+
+By object state the two Runs are identical: **0 differing field readings out
+of 16 000**, across 800 Slots and both vehicles. esmini driven through
+`SE_StepDT` with a fixed step size makes no wall-clock read that reaches its
+output. The shim is correct insurance for a scenario that does — esmini's
+applications synchronise to the wall clock by default — but this Run does not
+depend on it, and the honest claim is that the strict `reject` sleep policy
+was never tripped, not that an interception was observed.
+
+This does not weaken what the proof exercises. The production integration
+boundary here is the Process-participant Step protocol, and it is exercised
+on every one of the 800 Slots. The Clock shim is a second boundary, declared
+and carried through the Run — the control is what says it is not the one
+doing the work.
+
 ### Observations, not thresholds
 
 From [`evidence/resources.json`](evidence/resources.json) and
@@ -165,7 +195,7 @@ are machine-dependent and are recorded rather than asserted.
 | Wall-clock time, 800 Slots | 7.05 s |
 | Peak resident set, largest child | 152.5 MB |
 | Declared payload footprint | 2 routes × 2 × 72 B; no Arena, no unbounded route |
-| Recording size | 191 911 B for 1 600 Messages |
+| Recording size | 191 911 B for 1 600 Messages, retained at [`evidence/run-1.mcap`](evidence/run-1.mcap) |
 | Deterministic routing counters | not applicable: the instrumented runner is a development fixture and is deliberately absent from the production image |
 
 **Machine class.** The committed numbers come from the published `linux/amd64`
@@ -212,7 +242,7 @@ convention, and manual transformation this adoption needed.
    or esmini writes a log into the kernel-owned Run working directory.
 4. **A hand-written ctypes binding.** No binding ships for Python. The adapter
    declares `argtypes` and `restype` for every entry point it calls — without
-   them ctypes mis-passes the `double` timestep and truncates the `double`
+   them ctypes mis-passes the `double` `dt` and truncates the `double`
    returns — and mirrors the 28-field `SE_ScenarioObjectState` struct field
    for field from `esminiLib.hpp`.
 5. **An object-to-Channel mapping in the Manifest.** esmini discovers its
@@ -252,8 +282,9 @@ generated code, no code generator, and no patch to esmini.
 - The Step protocol took a foreign stepping API directly. Mapping one Step
   onto `SE_StepDT(dt)` needed no shim in between, and the Manifest's integer
   nanosecond period converts to exactly the 0.01 s esmini's own tests use.
-- The Clock shim held. Enabling it is one Manifest field and no change to
-  esmini, and the Run never tripped the strict `reject` sleep policy.
+- The Clock shim cost one Manifest field and no change to esmini, and the
+  Run never tripped the strict `reject` sleep policy. What it did *not* do is
+  matter — see the control below.
 - Both validators accepted the Manifest, and the declared Channel contract
   needed no compatibility escape hatch.
 - Determinism needed no special handling at all. Two Runs, bit-identical, with

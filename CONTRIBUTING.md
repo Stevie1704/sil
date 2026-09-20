@@ -28,6 +28,14 @@ under Apache-2.0. Name the source and its license in the pull request when you
 do. A new third-party dependency must be permissive and must be added to
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) in the same pull request.
 
+That permissive requirement is about what SiL ships. A third-party artifact
+that a proof under [proofs/](proofs/) downloads to run against a release is
+not a dependency: no copy of it is in this repository, nothing here links
+against it, and none of it reaches a published SiL artifact. Such an artifact
+may carry any license that permits the use the proof makes of it, and is
+recorded in its own section of THIRD-PARTY-NOTICES.md rather than in the
+permissive inventory. Name it and its license in the pull request as above.
+
 Do not add a per-file copyright header. The root [LICENSE](LICENSE) and
 [NOTICE](NOTICE) cover the whole repository.
 
