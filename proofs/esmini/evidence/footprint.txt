@@ -1,0 +1,7 @@
+subscriber routes
+  kpi <- esmini.Ego  cap      2  x         72 B  =      0.00 MiB
+  kpi <- esmini.Target  cap      2  x         72 B  =      0.00 MiB
+
+  bounded route queues           0.00 MiB
+  shared-memory arenas           0.00 MiB
+  declared payload total         0.00 MiB

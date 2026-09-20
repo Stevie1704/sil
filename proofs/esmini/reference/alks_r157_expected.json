@@ -1,0 +1,38 @@
+{
+  "scenario": "resources/xosc/alks_r157_cut_in_quick_brake.xosc",
+  "artifact": "esmini v3.8.1 (build 6383)",
+  "source": "esmini/test/smoke_test.py, TestSuite.test_alks, from esmini-fullsrc.zip",
+  "note": [
+    "esmini ships no FMI-LS-REF reference result. What it does ship is the",
+    "vendor's own expected trajectory for this scenario: exact positions and",
+    "speeds asserted by its smoke test, produced with --headless and",
+    "--fixed_timestep 0.01 on the upstream project's machines.",
+    "The smoke test runs the scenario once per ALKS safety model and merges",
+    "the four recordings with the replayer, which offsets object ids by 100",
+    "per merged file. The id block is therefore the merge order of the",
+    "recording files, not the order of the model list in the test. Which",
+    "block belongs to which model was determined here by running all four",
+    "models through SE_InitWithString and comparing: 0/1 is FSM, 100/101 is",
+    "RSS, 300/301 is Regulation. The scenario file as distributed declares",
+    "model=Regulation with cruise=true, so the 300/301 rows are its",
+    "expectation and those are the rows transcribed below.",
+    "Values are quoted to the three decimals the vendor's csv carries."
+  ],
+  "tolerance": {
+    "position_m": 0.01,
+    "heading_rad": 0.01,
+    "speed_mps": 0.01
+  },
+  "samples": [
+    {"t_s": 0.0, "object": "Ego", "x_m": 50.0, "y_m": -1.535, "heading_rad": 0.0, "speed_mps": 20.0},
+    {"t_s": 0.0, "object": "Target", "x_m": 80.0, "y_m": 1.535, "heading_rad": 0.0, "speed_mps": 15.0},
+    {"t_s": 2.84, "object": "Ego", "x_m": 106.8, "y_m": -1.535, "heading_rad": 0.0, "speed_mps": 20.0},
+    {"t_s": 2.84, "object": "Target", "x_m": 122.585, "y_m": 0.991, "heading_rad": 6.202, "speed_mps": 15.0},
+    {"t_s": 2.85, "object": "Ego", "x_m": 107.0, "y_m": -1.535, "heading_rad": 0.0, "speed_mps": 20.0},
+    {"t_s": 2.85, "object": "Target", "x_m": 122.734, "y_m": 0.978, "heading_rad": 6.201, "speed_mps": 15.0},
+    {"t_s": 4.99, "object": "Ego", "x_m": 140.769, "y_m": -1.535, "heading_rad": 0.0, "speed_mps": 11.52},
+    {"t_s": 4.99, "object": "Target", "x_m": 152.246, "y_m": -1.535, "heading_rad": 6.278, "speed_mps": 9.904},
+    {"t_s": 6.35, "object": "Ego", "x_m": 152.71, "y_m": -1.535, "heading_rad": 0.0, "speed_mps": 6.08},
+    {"t_s": 6.35, "object": "Target", "x_m": 160.872, "y_m": -1.535, "heading_rad": 0.0, "speed_mps": 2.832}
+  ]
+}

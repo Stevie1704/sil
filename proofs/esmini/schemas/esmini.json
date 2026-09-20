@@ -1,0 +1,16 @@
+{
+  "esmini.ObjectState": {
+    "fields": [
+      {"name": "id", "type": "i32"},
+      {"name": "lane_id", "type": "i32"},
+      {"name": "x_m", "type": "f64"},
+      {"name": "y_m", "type": "f64"},
+      {"name": "z_m", "type": "f64"},
+      {"name": "heading_rad", "type": "f64"},
+      {"name": "speed_mps", "type": "f64"},
+      {"name": "s_m", "type": "f64"},
+      {"name": "length_m", "type": "f64"},
+      {"name": "width_m", "type": "f64"}
+    ]
+  }
+}

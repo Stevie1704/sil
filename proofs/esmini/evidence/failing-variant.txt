@@ -1,0 +1,3 @@
+exit code  1
+--- diagnostic ---
+sil-run: participant 'kpi' failed: AssertionError: freespace gap 1.971 m is below the 2.000 m floor at t=6690000000 ns (ego s=154.515 m at 4.420 m/s, target s=161.526 m at 1.064 m/s)

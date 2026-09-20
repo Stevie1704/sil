@@ -1,0 +1,31 @@
+name: proof-esmini
+
+# The esmini adoption proof (issue #117), on the supported machine class.
+#
+# It is dispatched deliberately rather than run on every push: it downloads a
+# 200 MB third-party release and executes against the published SiL runner
+# image by digest, so it tests the release rather than the checkout and is
+# unaffected by the commit that triggers it.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  proof:
+    # Native linux/amd64 — the machine class the release supports, and the
+    # one the committed evidence is missing.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Execute the proof
+        run: |
+          proofs/esmini/run-proof.sh \
+            "$RUNNER_TEMP/evidence" "$RUNNER_TEMP/workspace"
+
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: esmini-proof-evidence
+          path: ${{ runner.temp }}/evidence
