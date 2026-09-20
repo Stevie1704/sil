@@ -209,8 +209,22 @@ The child exits without another protocol response. Its exit status is still
 read: a child that exits nonzero, or dies on a signal, fails the Run with
 status 1 even though every Step succeeded, because work a participant only
 finishes at shutdown can fail there. A child that does not exit on its own is
-sent SIGTERM and then, if it still does not exit, SIGKILL — so a participant
-holding run-scoped state of its own gets the chance to release it.
+sent SIGTERM and then, if it still does not exit, SIGKILL. The child becomes
+the leader of a private process group before `exec`, so both signals address
+the Process participant and its descendants. The kernel waits for that group
+to drain during the bounded TERM/KILL grace periods even if the direct child
+exits first, then releases the Run working directory, Arenas, and protocol
+resources after reaping the direct child. The direct child's exit status
+remains the one interpreted by the Run; descendants do not change it.
+
+This process group is a lifetime boundary for cooperative descendants, not a
+sandbox. It supplies no CPU or memory quota, syscall filter, namespace, or
+protection against a descendant that deliberately escapes its group. Stronger
+isolation belongs to the container Run described in issue #115.
+
+The runner handles SIGINT, SIGHUP, and SIGTERM as Run interruptions. It stops
+waiting at the next safe protocol or scheduler point, reports a Run failure,
+and performs this same group teardown before releasing Run resources.
 
 ## Shared-memory payloads
 

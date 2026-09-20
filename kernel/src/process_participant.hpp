@@ -71,6 +71,10 @@ class ProcessParticipant {
   int child_stdin_ = -1;
   int child_stdout_ = -1;
   pid_t pid_ = -1;
+  // The child sets its own process group before it can exec or spawn any
+  // descendants. The group ID is therefore the child's PID, and never the
+  // runner's process group.
+  pid_t process_group_id_ = -1;
   std::string read_buffer_;
   bool alive_ = false;
   std::optional<std::chrono::milliseconds> participant_timeout_;

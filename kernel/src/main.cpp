@@ -16,6 +16,7 @@
 #include "engine.hpp"
 #include "manifest.hpp"
 #include "recording_sink.hpp"
+#include "run_signal.hpp"
 
 namespace {
 
@@ -119,6 +120,10 @@ int run(int argc, char **argv) {
 
   // A participant process dying mid-write must surface as a RunError,
   // not kill the kernel via SIGPIPE.
+  if (!sil::install_run_signal_handlers()) {
+    std::cerr << "sil-run: failed to install termination handlers\n";
+    return kExitRunFailure;
+  }
   signal(SIGPIPE, SIG_IGN);
 
   const char *manifest_path = nullptr;
@@ -209,10 +214,14 @@ int run(int argc, char **argv) {
     std::unique_ptr<sil::RecordingSink> recorder;
     if (recording) recorder = sil::make_recording_sink(out_path, manifest);
     try {
+      if (sil::run_interrupted())
+        throw sil::RunError(sil::run_interrupt_message());
       sil::Engine engine(manifest, recorder.get(), participant_timeout, limits);
       engine.setup();
       engine.run();
       if (recorder) recorder->close();
+      if (sil::run_interrupted())
+        throw sil::RunError(sil::run_interrupt_message());
     } catch (const sil::ManifestError &) {
       throw;
     } catch (const std::exception &e) {
