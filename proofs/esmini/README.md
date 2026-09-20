@@ -360,6 +360,28 @@ next to the v0.1.0 one, and the post-hoc observations. Nothing in `evidence/`
 is touched. The release-only reproduction in `run-proof.sh` is updated when a
 release containing the option exists, and records that release's identity.
 
+### What the validation produced
+
+| Field | Value |
+| --- | --- |
+| Checker under test | `python/src/sil/check.py`, SHA-256 `12efb549…d5c0`, revision `38da0f0` |
+| Runner | the pinned `v0.1.0` image above, unchanged |
+| Manifest SHA-256 | `fd33135e…2757` — the release proof's nominal Manifest |
+| Response deadline | `30000` ms, on both checked Runs and on the retained one |
+| Checker verdict | `deterministic: 4ff77017…16c4` |
+| Retained Recording | `4ff77017…16c4`, 191,911 bytes |
+
+Both deadline-bounded Runs completed and agreed byte for byte, and their
+digest is the one the v0.1.0 proof recorded without a deadline. The KPI and
+the ten upstream-reference samples pass on the retained Recording with values
+identical to `evidence/observations.json`.
+
+One difference from the release evidence: this validation ran `linux/amd64`
+emulated on a `Darwin arm64` host, recorded in its `identity.txt`, rather than
+on the native x86-64 machine class the v0.1.0 evidence names. Reproducing the
+released digest there is a stronger result than the deadline needs, not a
+claim that determinism is now asserted across machine classes.
+
 The stalled-Participant behavior the option exists for is covered at the run
 boundary by `tests/test_check_participant_timeout.py`, not here: this
 consumer answers every request well inside the deadline.
