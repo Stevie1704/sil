@@ -9,6 +9,6 @@ esmini_bin_sha256        05e6c9bb0f3156cef6f193c126b5ae340d42256da9c4a9eb7436d3b
 esmini_src_sha256        dacb0d3c7e8919e27c456d5cbbc3458c07134fa6ce3f84800dc1f0473d77105e
 participant timeout ms   30000
 checker source           python/src/sil/check.py (unreleased)
-checker sha256           12efb5493b2a766bb9020201dfffbd1f71c7b5a7e8b95331133253e7f86cd5c0
-checker revision         38da0f0aa3bb821f36e32cb0701bbce24d140818
+checker sha256           4cca8482e72a3000c3d1c1987df6c8bab20a5c019733981cb709945ae88dfb70
+checker revision         613d5531ba03c66f262f7ec6deebc485a4784bf7
 checker worktree         0 local modifications
