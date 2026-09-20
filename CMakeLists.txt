@@ -58,6 +58,7 @@ set(SIL_KERNEL_SOURCES
   kernel/src/channel_arenas.cpp
   kernel/src/process_participant.cpp
   kernel/src/provenance.cpp
+  kernel/src/run_signal.cpp
   kernel/src/mcap_recording.cpp
   kernel/src/replayer.cpp)
 

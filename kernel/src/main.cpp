@@ -18,6 +18,7 @@
 #include "manifest.hpp"
 #include "provenance.hpp"
 #include "recording_sink.hpp"
+#include "run_signal.hpp"
 
 namespace {
 
@@ -136,6 +137,10 @@ int run(int argc, char **argv) {
 
   // A participant process dying mid-write must surface as a RunError,
   // not kill the kernel via SIGPIPE.
+  if (!sil::install_run_signal_handlers()) {
+    std::cerr << "sil-run: failed to install termination handlers\n";
+    return kExitRunFailure;
+  }
   signal(SIGPIPE, SIG_IGN);
 
   const char *manifest_path = nullptr;
@@ -242,10 +247,17 @@ int run(int argc, char **argv) {
     // before any participant is created.
     if (recording) recorder = sil::make_recording_sink(out_path, manifest.value());
     try {
+      if (sil::run_interrupted())
+        throw sil::RunError(sil::run_interrupt_message());
       sil::Engine engine(manifest.value(), recorder.get(), participant_timeout,
                          limits);
       engine.setup();
       engine.run();
+      // A signal that arrived during the Run is a Run failure. Raising it here
+      // rather than after the Recording is closed keeps that close, and the
+      // provenance record that follows it, on the interrupted path too.
+      if (sil::run_interrupted())
+        throw sil::RunError(sil::run_interrupt_message());
       exit_code = kExitOk;
     } catch (const sil::ManifestError &) {
       throw;

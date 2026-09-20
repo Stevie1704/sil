@@ -53,6 +53,24 @@ response wait. A missed deadline is a Run failure (exit 1), not a Manifest
 change: the option is absent from the Manifest and its hash. Omitting it keeps
 the existing unlimited-wait behavior.
 
+### Process participant descendants
+
+Each Process participant becomes the leader of its own process group before it
+starts. At Run shutdown, the kernel gives the group the normal SIGTERM grace
+period and escalates the group to SIGKILL if needed, including when the direct
+child has already exited. This bounds the lifetime of cooperative descendants
+and releases the participant's Run working directory, Arenas, and protocol
+resources with the Run.
+
+The group is a lifetime boundary, not a sandbox: it adds no CPU or memory
+quota, syscall filter, namespace, or protection against a descendant that
+deliberately escapes the group. Use the [container Run](#run-one-manifest-in-a-linux-container)
+(issue #115) for stronger isolation.
+
+SIGINT, SIGHUP, and SIGTERM interrupt the Run through the same failure and
+group-cleanup path, so terminal or service shutdown does not orphan
+participants.
+
 The runner also has independent Step-protocol resource guards:
 
 ```sh

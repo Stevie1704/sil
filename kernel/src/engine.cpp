@@ -11,6 +11,7 @@
 #include "process_participant.hpp"
 #include "recording_sink.hpp"
 #include "replayer.hpp"
+#include "run_signal.hpp"
 
 namespace sil {
 
@@ -58,6 +59,7 @@ Engine::ChannelState &Engine::channel_or_fail(const std::string &name,
 }
 
 void Engine::setup() {
+  if (run_interrupted()) throw RunError(run_interrupt_message());
   in_setup_ = true;
 
   validate_one_publisher_per_channel(manifest_);
@@ -65,6 +67,7 @@ void Engine::setup() {
   // Manifest order is name-sorted: registration indices, and with them all
   // scheduling tie-breaks, are independent of authoring order.
   for (const ParticipantSpec &p : manifest_.participants) {
+    if (run_interrupted()) throw RunError(run_interrupt_message());
     if (const auto *native = std::get_if<NativeSpec>(&p.impl)) {
       natives_.push_back(
           std::make_unique<NativeParticipant>(*this, p.name, *native));
@@ -174,6 +177,7 @@ void Engine::fail(const std::string &owner, const std::string &reason) {
 
 void Engine::run() {
   for (;;) {
+    if (run_interrupted()) throw RunError(run_interrupt_message());
     uint64_t slot = std::numeric_limits<uint64_t>::max();
     for (const Task &t : tasks_)
       if (!t.done) slot = std::min(slot, t.next_ns);
@@ -200,6 +204,7 @@ void Engine::run() {
       in_task_ = true;
       t->fn(slot);
       in_task_ = false;
+      if (run_interrupted()) throw RunError(run_interrupt_message());
       if (!failure_.empty()) throw RunError(failure_);
       // A next activation the clock cannot represent, or one at or beyond the
       // half-open run duration, ends this task and nothing else. `next_ns`
@@ -215,6 +220,7 @@ void Engine::run() {
   }
 
   for (auto &proc : processes_) proc->shutdown();
+  if (run_interrupted()) throw RunError(run_interrupt_message());
   run_working_directory_.reset();
 }
 

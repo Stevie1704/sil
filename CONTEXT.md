@@ -53,6 +53,12 @@ A participant that runs as a separate executable and is driven over the step
 protocol.
 _Avoid_: external participant, subprocess, worker
 
+**Process group**:
+The kernel-created POSIX process group led by one Process participant's child.
+It bounds the lifetime of cooperative descendants during Run cleanup; it is a
+lifetime boundary, not a sandbox or a resource quota.
+_Avoid_: sandbox, container, worker group
+
 **Replay participant**:
 A participant that publishes messages from an existing recording as stimulus,
 at their recorded virtual times.
