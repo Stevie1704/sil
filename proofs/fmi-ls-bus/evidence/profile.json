@@ -1,0 +1,341 @@
+{
+  "fixture_digest": "9974aa8e4c9e1b50e43d7433bdaef72e14b5d9e23997e1600a9725c92c5148e3",
+  "fmus": {
+    "DemoCanBusSimulation.fmu": {
+      "binaries": [
+        "binaries/x86_64-linux/DemoCanBusSimulation.so"
+      ],
+      "layeredStandardManifest": {
+        "isBusSimulationFMU": "true",
+        "name": "org.fmi-standard.fmi-ls-bus",
+        "schema": "https://raw.githubusercontent.com/modelica/fmi-ls-bus/473bd5b80730c47373bf41f1c31d44f50de82dd0/schema/fmi3LayeredStandardBusManifest.xsd",
+        "version": "1.0.0-beta.1"
+      },
+      "members": {
+        "binaries/x86_64-linux/DemoCanBusSimulation.so": "3e9d63039b1022c8956527e1181cc269423573ce9c24c3fe28ddcb51e68ab5e0",
+        "documentation/README.md": "a55fcb6cbc35252dc2863cac1af86051322f57091b750832bd089d51d646d4a0",
+        "documentation/licenses/LICENSE.txt": "71bc00b50a908efc960aab506d523d4ac81123089ed124f7a442cd1106bbdd44",
+        "extra/org.fmi-standard.fmi-ls-bus/fmi-ls-manifest.xml": "1eb082ba4fa41140a09c49535e78ed3dc8ea30e107283d7462ceb08ce5ba8394",
+        "modelDescription.xml": "3dfa98843eed2bdffb485fe4c7d264ccde4ded50eec49e0bb40d201b365040d7",
+        "sources/App.c": "2477562b98579679ff451d308189347fcbb1480405fc5e5c856588288c3ff45c",
+        "sources/App.h": "230e9a03701d292f09c32929811d76359ec637c3847e09f8c5a5c2d1a769ffe7",
+        "sources/Fmu.c": "fa0763674daf1e941700d702f7f5e532a9edc5d4ca45238196452612807d5fa7",
+        "sources/FmuIdentifier.h": "fbd21655aaebb17a39ce3bdac6c98d07c6acbdc3eb2586683c3775a58f840465",
+        "sources/Instance.h": "6bfe02b1c4d12acca53e1b79e6116bdc2a78679918174e66982eb5db13465b7d",
+        "sources/Logging.c": "512b8642e669a314172a51418aed88d2be39c8bf7e64d051b3db4f3ab35abbde",
+        "sources/Logging.h": "ae1c9b6bb5661b933f5d0e21c7e30b4f9bd5d9f73d4f44a9dcbcb2f01c15a04f",
+        "sources/buildDescription.xml": "ef48fddb0c2e10ed2c897ad176165147d0911c74a5ad4987085b9ce87c8d1a03",
+        "sources/fmi3LsBus.h": "942ee307a8b99008d86ece28749dce1f212f6e4cea02f9780a2629c4295eabdc",
+        "sources/fmi3LsBusCan.h": "4cbc4a956ca1fbf923ae27ef6e9aea30b792447c98b1769fb100b702216e502b",
+        "sources/fmi3LsBusUtil.h": "202a70de6f8608537265199b3373583db65e055ebbe541b2b26a5728a7c71937",
+        "sources/fmi3LsBusUtilCan.h": "97e41e1e6d89c08d29876710b10bc3c4c49ff8fb6b9a3d39f3ff9e495caf808b",
+        "terminalsAndIcons/terminalsAndIcons.xml": "98df0660bc2131e4187fadbef8851e841ef9e3ffeb31cde24ee3ce674957a46c"
+      },
+      "modelDescription": {
+        "capabilities": {
+          "canBeInstantiatedOnlyOncePerProcess": "false",
+          "canGetAndSetFMUState": "false",
+          "canHandleVariableCommunicationStepSize": "true",
+          "canReturnEarlyAfterIntermediateUpdate": "false",
+          "canSerializeFMUState": "false",
+          "hasEventMode": "true",
+          "needsExecutionTool": "false",
+          "providesEvaluateDiscreteStates": "true",
+          "providesIntermediateUpdate": "false"
+        },
+        "defaultExperiment": {
+          "startTime": "0",
+          "stepSize": "0.001"
+        },
+        "fmiVersion": "3.0",
+        "instantiationToken": "",
+        "modelIdentifier": "DemoCanBusSimulation",
+        "modelName": "DemoCanBusSimulation",
+        "variables": [
+          {
+            "causality": "independent",
+            "description": "Simulation time",
+            "name": "time",
+            "type": "Float64",
+            "valueReference": "1024",
+            "variability": "continuous"
+          },
+          {
+            "causality": "input",
+            "clocks": "2",
+            "initial": "exact",
+            "maxSize": "2048",
+            "mimeType": "application/org.fmi-standard.fmi-ls-bus.can; version=\"1.0.0-beta.1\"",
+            "name": "Node1.Rx_Data",
+            "start": "",
+            "type": "Binary",
+            "valueReference": "0",
+            "variability": "discrete"
+          },
+          {
+            "causality": "output",
+            "clocks": "3",
+            "initial": "calculated",
+            "maxSize": "2048",
+            "mimeType": "application/org.fmi-standard.fmi-ls-bus.can; version=\"1.0.0-beta.1\"",
+            "name": "Node1.Tx_Data",
+            "type": "Binary",
+            "valueReference": "1",
+            "variability": "discrete"
+          },
+          {
+            "causality": "input",
+            "intervalVariability": "triggered",
+            "name": "Node1.Rx_Clock",
+            "type": "Clock",
+            "valueReference": "2"
+          },
+          {
+            "causality": "input",
+            "intervalVariability": "countdown",
+            "name": "Node1.Tx_Clock",
+            "type": "Clock",
+            "valueReference": "3"
+          },
+          {
+            "causality": "input",
+            "clocks": "6",
+            "initial": "exact",
+            "maxSize": "2048",
+            "mimeType": "application/org.fmi-standard.fmi-ls-bus.can; version=\"1.0.0-beta.1\"",
+            "name": "Node2.Rx_Data",
+            "start": "",
+            "type": "Binary",
+            "valueReference": "4",
+            "variability": "discrete"
+          },
+          {
+            "causality": "output",
+            "clocks": "7",
+            "initial": "calculated",
+            "maxSize": "2048",
+            "mimeType": "application/org.fmi-standard.fmi-ls-bus.can; version=\"1.0.0-beta.1\"",
+            "name": "Node2.Tx_Data",
+            "type": "Binary",
+            "valueReference": "5",
+            "variability": "discrete"
+          },
+          {
+            "causality": "input",
+            "intervalVariability": "triggered",
+            "name": "Node2.Rx_Clock",
+            "type": "Clock",
+            "valueReference": "6"
+          },
+          {
+            "causality": "input",
+            "intervalVariability": "countdown",
+            "name": "Node2.Tx_Clock",
+            "type": "Clock",
+            "valueReference": "7"
+          },
+          {
+            "causality": "input",
+            "name": "BusErrorProbability",
+            "start": "0.0",
+            "type": "Float64",
+            "valueReference": "255",
+            "variability": "discrete"
+          }
+        ]
+      },
+      "terminals": [
+        {
+          "matchingRule": "org.fmi-ls-bus.transceiver",
+          "members": [
+            {
+              "memberName": "Rx_Clock",
+              "variableKind": "signal",
+              "variableName": "Node1.Rx_Clock"
+            },
+            {
+              "memberName": "Rx_Data",
+              "variableKind": "signal",
+              "variableName": "Node1.Rx_Data"
+            },
+            {
+              "memberName": "Tx_Clock",
+              "variableKind": "signal",
+              "variableName": "Node1.Tx_Clock"
+            },
+            {
+              "memberName": "Tx_Data",
+              "variableKind": "signal",
+              "variableName": "Node1.Tx_Data"
+            }
+          ],
+          "name": "Node1",
+          "terminalKind": "org.fmi-ls-bus.network-terminal"
+        },
+        {
+          "matchingRule": "org.fmi-ls-bus.transceiver",
+          "members": [
+            {
+              "memberName": "Rx_Clock",
+              "variableKind": "signal",
+              "variableName": "Node2.Rx_Clock"
+            },
+            {
+              "memberName": "Rx_Data",
+              "variableKind": "signal",
+              "variableName": "Node2.Rx_Data"
+            },
+            {
+              "memberName": "Tx_Clock",
+              "variableKind": "signal",
+              "variableName": "Node2.Tx_Clock"
+            },
+            {
+              "memberName": "Tx_Data",
+              "variableKind": "signal",
+              "variableName": "Node2.Tx_Data"
+            }
+          ],
+          "name": "Node2",
+          "terminalKind": "org.fmi-ls-bus.network-terminal"
+        }
+      ]
+    },
+    "DemoCanNodeTriggeredOutput.fmu": {
+      "binaries": [
+        "binaries/x86_64-linux/DemoCanNodeTriggeredOutput.so"
+      ],
+      "layeredStandardManifest": {
+        "isBusSimulationFMU": "false",
+        "name": "org.fmi-standard.fmi-ls-bus",
+        "schema": "https://raw.githubusercontent.com/modelica/fmi-ls-bus/473bd5b80730c47373bf41f1c31d44f50de82dd0/schema/fmi3LayeredStandardBusManifest.xsd",
+        "version": "1.0.0-beta.1"
+      },
+      "members": {
+        "binaries/x86_64-linux/DemoCanNodeTriggeredOutput.so": "61ef9ffe838900b2a6c7cbaad1c36284a7d9041d904cd5a7f63d7d48f3f33ae9",
+        "documentation/README.md": "9afdb986c703bae56a5e49d7dd6494af5ac2591538602dc58d27158d1f3684e0",
+        "documentation/licenses/LICENSE.txt": "71bc00b50a908efc960aab506d523d4ac81123089ed124f7a442cd1106bbdd44",
+        "extra/org.fmi-standard.fmi-ls-bus/fmi-ls-manifest.xml": "cdae3d4f7ba0c0ea2aa60183df7a3d685efba9aaa4790dd4a03ed913ef9625ae",
+        "modelDescription.xml": "0a17c17d4aab96ded09c8d5ce7aab1db9829bd1546989bf71ddb31e2aae73995",
+        "sources/App.c": "66b2d993db0c3eb266a033687af5911af93cb34f6829787025ee722ffbce91a4",
+        "sources/App.h": "f37d0fd3fad60998132661a8a13618073b18fc142cbc21818806a9ada1ef7452",
+        "sources/Fmu.c": "fa0763674daf1e941700d702f7f5e532a9edc5d4ca45238196452612807d5fa7",
+        "sources/FmuIdentifier.h": "99b852aa8bc16d4a1ae41e548d4fbab7292e1dcd87ea812256b62b63fd3009e6",
+        "sources/Instance.h": "6bfe02b1c4d12acca53e1b79e6116bdc2a78679918174e66982eb5db13465b7d",
+        "sources/Logging.c": "512b8642e669a314172a51418aed88d2be39c8bf7e64d051b3db4f3ab35abbde",
+        "sources/Logging.h": "ae1c9b6bb5661b933f5d0e21c7e30b4f9bd5d9f73d4f44a9dcbcb2f01c15a04f",
+        "sources/buildDescription.xml": "6a1ea60a44249c4eb5698698023bf882ed4862f9bd5beb96e795af0d25985ccf",
+        "sources/fmi3LsBus.h": "942ee307a8b99008d86ece28749dce1f212f6e4cea02f9780a2629c4295eabdc",
+        "sources/fmi3LsBusCan.h": "4cbc4a956ca1fbf923ae27ef6e9aea30b792447c98b1769fb100b702216e502b",
+        "sources/fmi3LsBusUtil.h": "202a70de6f8608537265199b3373583db65e055ebbe541b2b26a5728a7c71937",
+        "sources/fmi3LsBusUtilCan.h": "97e41e1e6d89c08d29876710b10bc3c4c49ff8fb6b9a3d39f3ff9e495caf808b",
+        "terminalsAndIcons/terminalsAndIcons.xml": "f5f22b79da7b0df54f149182602dc907f8d7194e2645be634f657b6fbb0173d0"
+      },
+      "modelDescription": {
+        "capabilities": {
+          "canBeInstantiatedOnlyOncePerProcess": "false",
+          "canGetAndSetFMUState": "false",
+          "canHandleVariableCommunicationStepSize": "true",
+          "canReturnEarlyAfterIntermediateUpdate": "false",
+          "canSerializeFMUState": "false",
+          "hasEventMode": "true",
+          "needsExecutionTool": "false",
+          "providesIntermediateUpdate": "false"
+        },
+        "defaultExperiment": {
+          "startTime": "0",
+          "stepSize": "0.001"
+        },
+        "fmiVersion": "3.0",
+        "instantiationToken": "",
+        "modelIdentifier": "DemoCanNodeTriggeredOutput",
+        "modelName": "DemoCanNodeTriggeredOutput",
+        "variables": [
+          {
+            "causality": "independent",
+            "description": "Simulation time",
+            "name": "time",
+            "type": "Float64",
+            "valueReference": "1024",
+            "variability": "continuous"
+          },
+          {
+            "causality": "input",
+            "clocks": "2",
+            "dimension_start": "1",
+            "initial": "exact",
+            "maxSize": "2048",
+            "mimeType": "application/org.fmi-standard.fmi-ls-bus.can; version=\"1.0.0-beta.1\"",
+            "name": "CanChannel.Rx_Data",
+            "start": "",
+            "type": "Binary",
+            "valueReference": "0",
+            "variability": "discrete"
+          },
+          {
+            "causality": "output",
+            "clocks": "3",
+            "initial": "calculated",
+            "maxSize": "2048",
+            "mimeType": "application/org.fmi-standard.fmi-ls-bus.can; version=\"1.0.0-beta.1\"",
+            "name": "CanChannel.Tx_Data",
+            "type": "Binary",
+            "valueReference": "1",
+            "variability": "discrete"
+          },
+          {
+            "causality": "input",
+            "intervalVariability": "triggered",
+            "name": "CanChannel.Rx_Clock",
+            "type": "Clock",
+            "valueReference": "2"
+          },
+          {
+            "causality": "output",
+            "intervalVariability": "triggered",
+            "name": "CanChannel.Tx_Clock",
+            "type": "Clock",
+            "valueReference": "3"
+          },
+          {
+            "causality": "structuralParameter",
+            "name": "org.fmi_standard.fmi_ls_bus.Can_BusNotifications",
+            "start": "false",
+            "type": "Boolean",
+            "valueReference": "128",
+            "variability": "fixed"
+          }
+        ]
+      },
+      "terminals": [
+        {
+          "matchingRule": "org.fmi-ls-bus.transceiver",
+          "members": [
+            {
+              "memberName": "Rx_Clock",
+              "variableKind": "signal",
+              "variableName": "CanChannel.Rx_Clock"
+            },
+            {
+              "memberName": "Rx_Data",
+              "variableKind": "signal",
+              "variableName": "CanChannel.Rx_Data"
+            },
+            {
+              "memberName": "Tx_Clock",
+              "variableKind": "signal",
+              "variableName": "CanChannel.Tx_Clock"
+            },
+            {
+              "memberName": "Tx_Data",
+              "variableKind": "signal",
+              "variableName": "CanChannel.Tx_Data"
+            }
+          ],
+          "name": "CanChannel",
+          "terminalKind": "org.fmi-ls-bus.network-terminal"
+        }
+      ]
+    }
+  }
+}

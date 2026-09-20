@@ -1,0 +1,22 @@
+fixture digest  d182ea6423bff2d845b4a3d1eea04d48fa0c3216cb0ef381c14542bc64eb420a
+
+=== DemoCanNodeTriggeredOutput.fmu ===
+model            DemoCanNodeTriggeredOutput (FMI 3.0)
+layered standard org.fmi-standard.fmi-ls-bus 1.0.0-beta.1 (bus simulation FMU: false)
+capabilities     needsExecutionTool=false, canBeInstantiatedOnlyOncePerProcess=false, canGetAndSetFMUState=false, canSerializeFMUState=false, canHandleVariableCommunicationStepSize=true, providesIntermediateUpdate=false, canReturnEarlyAfterIntermediateUpdate=false, hasEventMode=true
+binaries         binaries/x86_64-linux/DemoCanNodeTriggeredOutput.so
+variables
+  Float64  time                                     valueReference=1024 causality=independent variability=continuous description=Simulation time
+  Binary   CanChannel.Rx_Data                       valueReference=0 causality=input variability=discrete initial=exact clocks=2 maxSize=2048 mimeType=application/org.fmi-standard.fmi-ls-bus.can; version="1.0.0" start=
+  Binary   CanChannel.Tx_Data                       valueReference=1 causality=output variability=discrete initial=calculated clocks=3 maxSize=2048 mimeType=application/org.fmi-standard.fmi-ls-bus.can; version="1.0.0"
+  Clock    CanChannel.Rx_Clock                      valueReference=2 causality=input intervalVariability=triggered
+  Clock    CanChannel.Tx_Clock                      valueReference=3 causality=output intervalVariability=triggered
+  Boolean  BusNotifications                         valueReference=128 causality=parameter variability=fixed start=false
+terminals
+  CanChannel kind=org.fmi-ls-bus.network-terminal rule=org.fmi-ls-bus.transceiver
+    Rx_Clock -> CanChannel.Rx_Clock (signal)
+    Rx_Data -> CanChannel.Rx_Data (signal)
+    Tx_Clock -> CanChannel.Tx_Clock (signal)
+    Tx_Data -> CanChannel.Tx_Data (signal)
+  Configuration kind=org.fmi-ls-bus.network-terminal.configuration rule=bus
+    BusNotifications -> BusNotifications (signal)

@@ -1,0 +1,2 @@
+aligned: 4 events, all as expected
+quantised: 4 events, all as expected

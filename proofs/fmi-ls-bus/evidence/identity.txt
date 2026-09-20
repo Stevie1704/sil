@@ -1,0 +1,10 @@
+platform                 linux/amd64
+host                     Darwin arm64
+sil runner image         ghcr.io/stevie1704/sil@sha256:d67a254125fbe44467bf1354a04d19955815098d86a4c94c74f73ead6a943c0b
+sil version              0.1.0
+fixture image id         sha256:f2cb9aed505edce622631709c5c02811fd78404e8f40fd5388d7cf5f2c955e93
+proof image id           sha256:f17429afbfb6a8f57f7df8ede1d4b7e354d0e2947f6aa51a0b8eb88ee4d73f32
+examples_revision        cc42cacd26c7f5edbb20959b0e0c56922c2f0cc2
+examples_alternative_revision de019a6efbad810795835f2fd9bbf9e62eb451b9
+fmpy_version             0.3.32
+participant timeout ms   10000

@@ -1,0 +1,9 @@
+--- case aligned ---
+Trace/0: Instance node instantiated.
+Trace/0: Entering initialization mode.
+Trace/0: Entering event mode.
+Trace/0: Get TX clock of 1
+Error/3: Getting clocked binary variable in current state is not allowed
+logStatusError/3: fmi3GetBinary: Invalid call with value reference 1
+Trace/0: Terminating.
+Trace/0: Instance node freed.

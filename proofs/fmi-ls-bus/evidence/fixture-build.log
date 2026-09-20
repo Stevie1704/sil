@@ -1,0 +1,54 @@
+examples revision cc42cacd26c7f5edbb20959b0e0c56922c2f0cc2
+/fixture-build/LICENSE.txt: OK
+=== packing can-node-triggered-output ===
+=== packing can-bus-simulation ===
+=== compiling DemoCanBusSimulation.fmu ===
+-- The C compiler identification is GNU 12.2.0
+-- The CXX compiler identification is GNU 12.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (4.4s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/tmpa3j3rdul
+[ 25%] Building C object CMakeFiles/DemoCanBusSimulation.dir/tmp/tmplja63rx8/sources/App.c.o
+[ 50%] Building C object CMakeFiles/DemoCanBusSimulation.dir/tmp/tmplja63rx8/sources/Fmu.c.o
+[ 75%] Building C object CMakeFiles/DemoCanBusSimulation.dir/tmp/tmplja63rx8/sources/Logging.c.o
+[100%] Linking C shared library DemoCanBusSimulation.so
+[100%] Built target DemoCanBusSimulation
+Install the project...
+-- Install configuration: "Release"
+-- Installing: /tmp/tmplja63rx8/binaries/x86_64-linux/DemoCanBusSimulation.so
+DemoCanBusSimulation.fmu binaries/x86_64-linux/DemoCanBusSimulation.so
+=== compiling DemoCanNodeTriggeredOutput.fmu ===
+-- The C compiler identification is GNU 12.2.0
+-- The CXX compiler identification is GNU 12.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (4.4s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/tmpahil9w2y
+[ 25%] Building C object CMakeFiles/DemoCanNodeTriggeredOutput.dir/tmp/tmp8unc9hpy/sources/App.c.o
+[ 50%] Building C object CMakeFiles/DemoCanNodeTriggeredOutput.dir/tmp/tmp8unc9hpy/sources/Fmu.c.o
+[ 75%] Building C object CMakeFiles/DemoCanNodeTriggeredOutput.dir/tmp/tmp8unc9hpy/sources/Logging.c.o
+[100%] Linking C shared library DemoCanNodeTriggeredOutput.so
+[100%] Built target DemoCanNodeTriggeredOutput
+Install the project...
+-- Install configuration: "Release"
+-- Installing: /tmp/tmp8unc9hpy/binaries/x86_64-linux/DemoCanNodeTriggeredOutput.so
+DemoCanNodeTriggeredOutput.fmu binaries/x86_64-linux/DemoCanNodeTriggeredOutput.so

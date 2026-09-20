@@ -1,0 +1,149 @@
+{
+  "cases": [
+    {
+      "duration_ns": 1000000000,
+      "events": [
+        {
+          "operations": [
+            {
+              "fields": {
+                "baudrate": 100000,
+                "parameter": "CanBaudrate"
+              },
+              "name": "Configuration"
+            },
+            {
+              "fields": {
+                "behavior": "BufferAndRetransmit",
+                "parameter": "ArbitrationLostBehavior"
+              },
+              "name": "Configuration"
+            }
+          ],
+          "payload_hex": "400000000d00000001a0860100400000000a0000000401",
+          "time_ns": 0
+        },
+        {
+          "operations": [
+            {
+              "fields": {
+                "data": "01020304",
+                "id": 1,
+                "ide": false,
+                "rtr": false
+              },
+              "name": "CanTransmit"
+            }
+          ],
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "time_ns": 300000000
+        },
+        {
+          "operations": [
+            {
+              "fields": {
+                "data": "01020304",
+                "id": 1,
+                "ide": false,
+                "rtr": false
+              },
+              "name": "CanTransmit"
+            }
+          ],
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "time_ns": 600000000
+        },
+        {
+          "operations": [
+            {
+              "fields": {
+                "data": "01020304",
+                "id": 1,
+                "ide": false,
+                "rtr": false
+              },
+              "name": "CanTransmit"
+            }
+          ],
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "time_ns": 900000000
+        }
+      ],
+      "name": "aligned",
+      "step_size_ns": 100000000
+    },
+    {
+      "duration_ns": 1000000000,
+      "events": [
+        {
+          "operations": [
+            {
+              "fields": {
+                "baudrate": 100000,
+                "parameter": "CanBaudrate"
+              },
+              "name": "Configuration"
+            },
+            {
+              "fields": {
+                "behavior": "BufferAndRetransmit",
+                "parameter": "ArbitrationLostBehavior"
+              },
+              "name": "Configuration"
+            }
+          ],
+          "payload_hex": "400000000d00000001a0860100400000000a0000000401",
+          "time_ns": 0
+        },
+        {
+          "operations": [
+            {
+              "fields": {
+                "data": "01020304",
+                "id": 1,
+                "ide": false,
+                "rtr": false
+              },
+              "name": "CanTransmit"
+            }
+          ],
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "time_ns": 500000000
+        },
+        {
+          "operations": [
+            {
+              "fields": {
+                "data": "01020304",
+                "id": 1,
+                "ide": false,
+                "rtr": false
+              },
+              "name": "CanTransmit"
+            }
+          ],
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "time_ns": 750000000
+        },
+        {
+          "operations": [
+            {
+              "fields": {
+                "data": "01020304",
+                "id": 1,
+                "ide": false,
+                "rtr": false
+              },
+              "name": "CanTransmit"
+            }
+          ],
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "time_ns": 1000000000
+        }
+      ],
+      "name": "quantised",
+      "step_size_ns": 250000000
+    }
+  ],
+  "fmu": "DemoCanNodeTriggeredOutput.fmu"
+}
