@@ -37,7 +37,11 @@ constexpr int kExitRunFailure = 1;
 constexpr int kExitConfigError = 2;
 
 void usage() {
-  std::cerr << "usage: sil-run <manifest.json> [--participant-timeout-ms <N>] "
+  std::cerr << "usage: sil-run <manifest.json> "
+               "[--participant-timeout-ms <N>] "
+               "[--max-protocol-line-bytes <N>] "
+               "[--max-step-output-messages <N>] "
+               "[--max-step-inline-payload-bytes <N>] "
                "[-o <out.mcap> | --no-recording]\n"
                "       sil-run --version\n"
                "       sil-run --build-info\n";
@@ -74,6 +78,19 @@ bool parse_participant_timeout(std::string_view text,
   return true;
 }
 
+bool parse_positive_size(std::string_view text, size_t &value) {
+  if (text.empty()) return false;
+  uint64_t parsed = 0;
+  const auto result = std::from_chars(text.data(), text.data() + text.size(),
+                                     parsed);
+  if (result.ec != std::errc{} || result.ptr != text.data() + text.size() ||
+      parsed == 0 ||
+      parsed > static_cast<uint64_t>(std::numeric_limits<size_t>::max()))
+    return false;
+  value = static_cast<size_t>(parsed);
+  return true;
+}
+
 // Fail fast at load if a participant opted into the shim but the shim library
 // is missing next to the runner, so a broken install is a Manifest error rather
 // than a silently wall-clocked run. The shim is injected at spawn (issue #28).
@@ -101,6 +118,10 @@ int run(int argc, char **argv) {
   bool recording = true;
   bool out_given = false;
   std::optional<std::chrono::milliseconds> participant_timeout;
+  sil::RunBoundaryLimits limits;
+  bool max_protocol_line_bytes_given = false;
+  bool max_step_output_messages_given = false;
+  bool max_step_inline_payload_bytes_given = false;
   for (int i = 1; i < argc; i++) {
     if (std::strcmp(argv[i], "-o") == 0 && i + 1 < argc) {
       out_path = argv[++i];
@@ -117,6 +138,42 @@ int run(int argc, char **argv) {
         return kExitConfigError;
       }
       participant_timeout = timeout;
+    } else if (std::strcmp(argv[i], "--max-protocol-line-bytes") == 0) {
+      if (max_protocol_line_bytes_given || i + 1 >= argc) {
+        usage();
+        return kExitConfigError;
+      }
+      if (!parse_positive_size(argv[++i], limits.max_protocol_line_bytes)) {
+        std::cerr << "sil-run: --max-protocol-line-bytes must be a positive "
+                     "integer representable as a size_t\n";
+        return kExitConfigError;
+      }
+      max_protocol_line_bytes_given = true;
+    } else if (std::strcmp(argv[i], "--max-step-output-messages") == 0) {
+      if (max_step_output_messages_given || i + 1 >= argc) {
+        usage();
+        return kExitConfigError;
+      }
+      if (!parse_positive_size(argv[++i], limits.max_step_output_messages)) {
+        std::cerr << "sil-run: --max-step-output-messages must be a positive "
+                     "integer representable as a size_t\n";
+        return kExitConfigError;
+      }
+      max_step_output_messages_given = true;
+    } else if (std::strcmp(argv[i],
+                           "--max-step-inline-payload-bytes") == 0) {
+      if (max_step_inline_payload_bytes_given || i + 1 >= argc) {
+        usage();
+        return kExitConfigError;
+      }
+      if (!parse_positive_size(argv[++i],
+                              limits.max_step_inline_payload_bytes)) {
+        std::cerr
+            << "sil-run: --max-step-inline-payload-bytes must be a positive "
+               "integer representable as a size_t\n";
+        return kExitConfigError;
+      }
+      max_step_inline_payload_bytes_given = true;
     } else if (std::strcmp(argv[i], "--no-recording") == 0) {
       recording = false;
     } else if (argv[i][0] == '-') {
@@ -157,7 +214,7 @@ int run(int argc, char **argv) {
     std::unique_ptr<sil::RecordingSink> recorder;
     if (recording) recorder = sil::make_recording_sink(out_path, manifest);
     try {
-      sil::Engine engine(manifest, recorder.get(), participant_timeout);
+      sil::Engine engine(manifest, recorder.get(), participant_timeout, limits);
       engine.setup();
       engine.run();
       if (recorder) recorder->close();

@@ -136,6 +136,38 @@ virtual time. The option is a run-boundary argument, not Manifest data, so it
 does not change the Manifest hash, protocol messages, or Recording bytes of a
 Run that completes before all deadlines.
 
+The run boundary also supplies three independent resource guards for every
+Process participant. Their defaults are deliberately above the payloads used
+by the examples and routing benchmark:
+
+| argument | default | measured value |
+| --- | ---: | --- |
+| `--max-protocol-line-bytes N` | `16 MiB` (`16777216`) | response-line bytes, excluding the terminating newline |
+| `--max-step-output-messages N` | `1024` | entries in one `step_done.out` array |
+| `--max-step-inline-payload-bytes N` | `64 MiB` (`67108864`) | decoded bytes in that Step's inline `data` fields |
+
+Each `N` must be a positive integer representable as the runner's `size_t`.
+The line limit is enforced while reading, before the kernel appends bytes to
+the response buffer, and applies to both `ready` and every `step_done`
+response. The output-Message limit is checked before any output is decoded.
+The inline-payload limit is checked against the decoded bytes before any
+output reaches the Engine. A Message represented by `shm_seq` (and its Arena
+descriptor) is not charged to the inline-payload limit; an inline fallback on
+an Arena-backed Channel is charged.
+
+Exceeding one of these limits is a Run failure (exit 1), never a Manifest
+error or a successful determinism check. The diagnostic names the Process
+participant, the limit, its configured value, and the observed value; a Step
+diagnostic also names the Step's virtual time. The child is terminated and
+reaped through the normal SIGTERM-to-SIGKILL path, and the existing Mapped
+region, Run working directory, and partial-Recording lifetime behavior remains
+in force.
+
+These are operational Run-boundary arguments. They are not Manifest fields,
+do not affect virtual time or the Manifest hash, and cannot change the
+Recording of a Run that stays within them. Omitting an argument selects its
+documented default.
+
 After the run, the kernel sends:
 
 ```json

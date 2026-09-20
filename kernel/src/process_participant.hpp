@@ -37,7 +37,8 @@ class ProcessParticipant {
   ProcessParticipant(Engine &engine, const std::string &name,
                      const ProcessSpec &spec,
                      std::optional<std::chrono::milliseconds>
-                         participant_timeout);
+                         participant_timeout,
+                     RunBoundaryLimits limits = {});
   ~ProcessParticipant();
 
   ProcessParticipant(const ProcessParticipant &) = delete;
@@ -73,6 +74,7 @@ class ProcessParticipant {
   std::string read_buffer_;
   bool alive_ = false;
   std::optional<std::chrono::milliseconds> participant_timeout_;
+  RunBoundaryLimits limits_;
 
   // Kernel-owned directory for this participant. It is created under the Run
   // working directory before fork and removed after the child is reaped,
