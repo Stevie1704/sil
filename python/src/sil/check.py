@@ -31,7 +31,7 @@ def file_sha256(path: Path) -> str:
 
 def check(runner: Path, manifest: Path, out=sys.stdout, err=sys.stderr,
           *, participant_timeout_ms: int | None = None) -> int:
-    deadline = [] if participant_timeout_ms is None else [
+    deadline_argument = [] if participant_timeout_ms is None else [
         "--participant-timeout-ms", str(participant_timeout_ms)
     ]
     hashes = []
@@ -39,7 +39,8 @@ def check(runner: Path, manifest: Path, out=sys.stdout, err=sys.stderr,
         for i in (1, 2):
             mcap_path = Path(tmp) / f"run{i}.mcap"
             proc = subprocess.run(
-                [str(runner), str(manifest), "-o", str(mcap_path), *deadline],
+                [str(runner), str(manifest), "-o", str(mcap_path),
+                 *deadline_argument],
                 capture_output=True, text=True,
             )
             if proc.returncode != 0:
@@ -70,7 +71,7 @@ def _positive_milliseconds(text: str) -> int:
 
 
 class _GivenOnce(argparse.Action):
-    """Two deadlines are a mistake, not a choice; the runner rejects them too."""
+    """Two deadlines are a mistake, not a choice; the runner agrees."""
 
     def __call__(self, parser, namespace, values, option_string=None):
         if getattr(namespace, self.dest) is not None:
@@ -86,11 +87,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("manifest", type=Path)
     parser.add_argument("--runner", type=Path, default=Path("sil-run"),
                         help="path to the sil-run executable")
-    parser.add_argument("--participant-timeout-ms", type=_positive_milliseconds,
-                        action=_GivenOnce, default=None,
+    parser.add_argument("--participant-timeout-ms", action=_GivenOnce,
+                        type=_positive_milliseconds, default=None,
                         help="wall-clock deadline in milliseconds for each "
-                             "Process participant response, forwarded to both "
-                             "runs")
+                             "Process participant response, forwarded to "
+                             "both runs")
     args = parser.parse_args(argv)
     return check(args.runner, args.manifest,
                  participant_timeout_ms=args.participant_timeout_ms)

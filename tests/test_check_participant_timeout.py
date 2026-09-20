@@ -37,17 +37,20 @@ calls.append(sys.argv[1:])
 log.write_text(json.dumps(calls))
 
 pathlib.Path(sys.argv[sys.argv.index("-o") + 1]).write_bytes(b"recording")
-if len(calls) == {fails_on_call}:
+if len(calls) == {fails_on_call!r}:
     sys.stderr.write("stub runner failed\\n")
     raise SystemExit(1)
 '''
 
 
-def stub_runner(tmp_path: Path, *, fails_on_call: int = 0) -> tuple[Path, Path]:
+def stub_runner(tmp_path: Path, *, fails_on_call: int | None = None
+                ) -> tuple[Path, Path]:
     """A fake runner and the file it appends each invocation's arguments to."""
     log = tmp_path / "calls.json"
     runner = tmp_path / "stub-run"
-    runner.write_text(STUB_RUNNER.format(log=str(log), fails_on_call=fails_on_call))
+    runner.write_text(
+        STUB_RUNNER.format(log=str(log), fails_on_call=fails_on_call)
+    )
     runner.chmod(0o755)
     return runner, log
 
@@ -74,16 +77,11 @@ def run_check(runner: Path, manifest: Path, *arguments: str):
     )
 
 
-def stub_manifest(tmp_path: Path) -> Path:
-    """A Manifest the stub runner never reads, but the checker takes a path."""
-    return timeout_manifest(tmp_path, "ok")
-
-
 class TestForwarding:
     def test_deadline_reaches_both_runs(self, tmp_path):
         runner, log = stub_runner(tmp_path)
 
-        proc = run_check(runner, stub_manifest(tmp_path),
+        proc = run_check(runner, timeout_manifest(tmp_path, "ok"),
                          "--participant-timeout-ms", "30000")
 
         assert proc.returncode == 0, proc.stderr
@@ -93,16 +91,29 @@ class TestForwarding:
     def test_omitting_the_deadline_passes_no_argument(self, tmp_path):
         runner, log = stub_runner(tmp_path)
 
-        proc = run_check(runner, stub_manifest(tmp_path))
+        proc = run_check(runner, timeout_manifest(tmp_path, "ok"))
 
         assert proc.returncode == 0, proc.stderr
         assert len(calls(log)) == 2
         assert deadlines(log) == []
 
+    def test_the_runners_largest_deadline_is_forwarded_verbatim(self, tmp_path):
+        # The literal the runner's own suite pins as its largest accepted
+        # deadline. The checker's ceiling is a copy of the runner's, so both
+        # suites have to name the same number for either to stay honest.
+        runner, log = stub_runner(tmp_path)
+        largest = str(2**63 - 1)
+
+        proc = run_check(runner, timeout_manifest(tmp_path, "ok"),
+                         "--participant-timeout-ms", largest)
+
+        assert proc.returncode == 0, proc.stderr
+        assert deadlines(log) == [["--participant-timeout-ms", largest]] * 2
+
     def test_first_run_failure_prevents_the_second(self, tmp_path):
         runner, log = stub_runner(tmp_path, fails_on_call=1)
 
-        proc = run_check(runner, stub_manifest(tmp_path),
+        proc = run_check(runner, timeout_manifest(tmp_path, "ok"),
                          "--participant-timeout-ms", "30000")
 
         assert proc.returncode == 1
@@ -114,7 +125,7 @@ class TestForwarding:
     ):
         runner, log = stub_runner(tmp_path, fails_on_call=2)
 
-        proc = run_check(runner, stub_manifest(tmp_path),
+        proc = run_check(runner, timeout_manifest(tmp_path, "ok"),
                          "--participant-timeout-ms", "30000")
 
         assert proc.returncode == 1

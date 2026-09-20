@@ -62,6 +62,9 @@ step "Build the derived consumer image"
 docker build --platform "$PLATFORM" --tag "$IMAGE" "$PROOF_DIR"
 
 step "Record the identities this validation runs on"
+# An uncommitted checker is still a valid subject, but the evidence has to say
+# so: the revision alone would not identify what was run.
+modified="$(git -C "$REPO_ROOT" status --porcelain -- "$CHECKER" | wc -l | tr -d ' ')"
 {
     echo "platform                 $PLATFORM"
     echo "host                     $(uname -s) $(uname -m)"
@@ -75,7 +78,7 @@ step "Record the identities this validation runs on"
     echo "checker source           python/src/sil/check.py (unreleased)"
     echo "checker sha256           $(sha256_of "$CHECKER")"
     echo "checker revision         $(git -C "$REPO_ROOT" rev-parse HEAD)"
-    echo "checker worktree         $(git -C "$REPO_ROOT" status --porcelain -- python/src/sil/check.py | wc -l | tr -d ' ') local modifications"
+    echo "checker worktree         $modified local modifications"
 } | tee "$EVIDENCE_DIR/identity.txt"
 
 step "Build the nominal Manifest with the released builder"

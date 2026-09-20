@@ -196,6 +196,14 @@ shutdown reported an error, or a KPI failed. Exit code 1. The distinction from
 a manifest error is what was at fault, not when it was caught.
 _Avoid_: runtime error, crash, test failure
 
+**Response deadline**:
+The wall-clock time one process participant gets to complete a single `ready`
+or `step_done` answer. Chosen at the run boundary, never in the manifest, and
+started afresh for every request. Missing it is a run failure; meeting it says
+nothing about how fast the run was, and a run that answers in time records the
+same bytes with or without one.
+_Avoid_: step budget, watchdog, latency budget, whole-run timeout
+
 **Run working directory**:
 The kernel-owned directory tree for one Run. The kernel creates its root beneath
 the runner's invocation directory and gives every process participant its own
