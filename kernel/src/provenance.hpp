@@ -1,0 +1,97 @@
+#pragma once
+
+#include <filesystem>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "exit_codes.hpp"
+#include "manifest.hpp"
+
+namespace sil {
+
+struct ProvenanceArtifact {
+  std::string path;
+  std::string sha256;
+};
+
+struct ProvenanceError {
+  std::string artifact;
+  std::string path;
+  std::string reason;
+};
+
+struct ProvenanceNativeParticipant {
+  std::string name;
+  std::optional<ProvenanceArtifact> library;
+};
+
+struct ProvenanceProcessParticipant {
+  std::string name;
+  std::vector<std::string> command;
+  std::optional<ProvenanceArtifact> executable;
+};
+
+// A file named by a Process participant's command, digested because the Run
+// opened it. An imported FMU archive is the motivating case, but the kernel
+// records files rather than any one foreign standard.
+struct ProvenanceCommandFile {
+  std::string participant;
+  std::optional<ProvenanceArtifact> file;
+};
+
+// The deterministic, format-neutral data that becomes the JSON side-car. The
+// structure intentionally contains no wall-clock, pid, hostname, Run working
+// directory, or elapsed-time fields.
+struct Provenance {
+  static constexpr int kSchemaVersion = 1;
+
+  std::string manifest_hash;
+  std::string sil_version;
+  std::string source_repository;
+  std::string source_revision;
+  std::string machine_class_id;
+  std::string machine_os;
+  std::string machine_architecture;
+  std::string machine_libc;
+
+  std::optional<ProvenanceArtifact> runner;
+  std::optional<ProvenanceArtifact> clock_shim;
+  std::vector<ProvenanceNativeParticipant> native_participants;
+  std::vector<ProvenanceProcessParticipant> process_participants;
+  std::vector<ProvenanceCommandFile> command_files;
+  std::vector<ProvenanceError> errors;
+
+  int run_exit_code = kExitConfigError;
+  std::optional<std::string> recording_sha256;
+};
+
+// Builds the fixed metadata portion of a Run provenance record. Artifact
+// collection is separate so the caller can still serialize a partial record
+// if a preflight artifact is unreadable.
+Provenance initialize_provenance(const Manifest &manifest,
+                                 const std::string &sil_version,
+                                 const std::string &source_repository,
+                                 const std::string &source_revision);
+
+// Resolves and hashes every artifact the Manifest names, before a Participant
+// is loaded or spawned, and writes the resolved paths back into the Manifest
+// for the Native and Process adapters to use. Records every artifact error it
+// finds, then throws ManifestError once the whole preflight has run, so one
+// diagnostic names every unreadable artifact rather than only the first.
+void preflight_run_artifacts(Manifest &manifest, Provenance &provenance);
+
+// Computes the SHA-256 of an already-resolved file. Used for the Recording
+// after its sink has closed.
+std::string sha256_file(const std::filesystem::path &path);
+
+// The default side-car is adjacent to the selected Recording path. With
+// --no-recording, the runner still uses its default conceptual out.mcap path,
+// so the same name remains predictable; --provenance can override it.
+std::filesystem::path default_provenance_path(
+    const std::filesystem::path &recording_path);
+
+void write_provenance(const std::filesystem::path &path,
+                      const Provenance &provenance);
+
+}  // namespace sil

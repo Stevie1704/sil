@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <limits>
-#include <map>
 #include <optional>
 
 #include "copy_counters.hpp"
@@ -63,49 +62,15 @@ void Engine::setup() {
   if (run_interrupted()) throw RunError(run_interrupt_message());
   in_setup_ = true;
 
-  // A channel has at most one publisher (#64). Every publisher declares its
-  // outputs in the manifest — native, process, and replay participants alike —
-  // so one pass over the declarations catches a second one before any
-  // participant is loaded or spawned. Open-loop replay racing a live publisher
-  // is the same rule rather than a separate check; only the diagnostic still
-  // names the two kinds, because the two are repaired differently.
-  struct Publisher {
-    std::string name;
-    const char *kind;
-  };
-  std::map<std::string, Publisher> publisher_of;
-  for (const ParticipantSpec &p : manifest_.participants) {
-    const std::vector<std::string> *publishes = nullptr;
-    const char *kind = nullptr;
-    if (const auto *proc = std::get_if<ProcessSpec>(&p.impl)) {
-      publishes = &proc->publishes;
-      kind = "process";
-    } else if (const auto *native = std::get_if<NativeSpec>(&p.impl)) {
-      publishes = &native->publishes;
-      kind = "native";
-    } else {
-      publishes = &std::get<ReplaySpec>(p.impl).channels;
-      kind = "replay";
-    }
-    for (const std::string &ch : *publishes) {
-      auto [entry, inserted] =
-          publisher_of.try_emplace(ch, Publisher{p.name, kind});
-      if (!inserted)
-        throw ManifestError(
-            "manifest error: channel '" + ch +
-            "' has more than one publisher: participant '" + entry->second.name +
-            "' (" + entry->second.kind + ") and participant '" + p.name + "' (" +
-            kind + ")");
-    }
-  }
+  validate_one_publisher_per_channel(manifest_);
 
   // Manifest order is name-sorted: registration indices, and with them all
   // scheduling tie-breaks, are independent of authoring order.
   for (const ParticipantSpec &p : manifest_.participants) {
     if (run_interrupted()) throw RunError(run_interrupt_message());
     if (const auto *native = std::get_if<NativeSpec>(&p.impl)) {
-      natives_.push_back(std::make_unique<NativeParticipant>(
-          *this, p.name, *native, manifest_.base_dir));
+      natives_.push_back(
+          std::make_unique<NativeParticipant>(*this, p.name, *native));
       // A contract violation during init is reported through fail(). A
       // participant that ignores the callback's return code must not carry
       // that failure into the run.

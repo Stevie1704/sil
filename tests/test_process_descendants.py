@@ -126,6 +126,9 @@ def test_response_deadline_reaps_process_participant_descendants(sil_run, descen
         ],
         capture_output=True,
         text=True,
+        # --no-recording still writes a provenance side-car beside the
+        # default output path; keep it out of the repository root.
+        cwd=manifest.parent,
         env=_scoped_env(regions),
     )
 
@@ -152,6 +155,9 @@ def test_terminal_signal_reaps_process_participant_descendants(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        # --no-recording still writes a provenance side-car beside the
+        # default output path; keep it out of the repository root.
+        cwd=manifest.parent,
         env=_scoped_env(regions),
     )
     _wait_for_observer(observer)

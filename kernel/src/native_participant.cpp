@@ -166,16 +166,14 @@ const SubscriberRouteSpec *NativeParticipant::subscriber_route(
 }
 
 NativeParticipant::NativeParticipant(Engine &engine, const std::string &name,
-                                     const NativeSpec &spec,
-                                     const std::filesystem::path &base_dir)
+                                     const NativeSpec &spec)
     : engine_(engine),
       name_(name),
       subscribes_(spec.subscribes),
       publishes_(spec.publishes) {
-  std::filesystem::path lib = spec.library;
-  if (lib.is_relative()) lib = base_dir / lib;
-
-  handle_ = dlopen(lib.c_str(), RTLD_NOW | RTLD_LOCAL);
+  // The provenance preflight resolved and digested this path before setup ran,
+  // so the bytes dlopen loads are the bytes the record names.
+  handle_ = dlopen(spec.resolved_library.c_str(), RTLD_NOW | RTLD_LOCAL);
   if (!handle_)
     throw ManifestError("manifest error: participant '" + name +
                         "': cannot load library: " + dlerror());

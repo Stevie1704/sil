@@ -100,29 +100,6 @@ std::vector<uint8_t> b64_decode(const std::string &in) {
   return out;
 }
 
-std::vector<std::string> resolve_command(
-    const std::vector<std::string> &command,
-    const std::filesystem::path &invocation_directory) {
-  std::vector<std::string> resolved = command;
-  for (size_t index = 0; index < resolved.size(); ++index) {
-    if (resolved[index].empty()) continue;
-    std::filesystem::path argument(resolved[index]);
-    if (argument.is_absolute()) continue;
-
-    const std::filesystem::path from_invocation =
-        invocation_directory / argument;
-    std::error_code error;
-    const bool names_existing_path =
-        std::filesystem::exists(from_invocation, error);
-    const bool should_resolve = index == 0
-                                    ? argument.has_parent_path()
-                                    : !error && names_existing_path;
-    if (should_resolve)
-      resolved[index] = from_invocation.lexically_normal().string();
-  }
-  return resolved;
-}
-
 std::string participant_directory_name(const std::string &name) {
   static constexpr char hex[] = "0123456789abcdef";
   std::string encoded = "participant-";
@@ -465,10 +442,10 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
       sleep_policy_(spec.sleep), arenas_(name),
       participant_timeout_(participant_timeout), limits_(limits) {
   try {
-    const std::filesystem::path invocation_directory =
-        std::filesystem::current_path();
-    const std::vector<std::string> command =
-        resolve_command(spec.command, invocation_directory);
+    // The provenance preflight resolved this vector against the Manifest
+    // directory and digested its executable, so the bytes exec loads are the
+    // bytes the record names.
+    const std::vector<std::string> &command = spec.resolved_command;
     std::string directory_error;
     OwnedDirectory directory = OwnedDirectory::create_child(
         engine.run_working_directory(), participant_directory_name(name),

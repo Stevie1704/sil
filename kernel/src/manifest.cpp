@@ -711,4 +711,36 @@ Manifest load_manifest(const std::filesystem::path &path) {
   }
 }
 
+void validate_one_publisher_per_channel(const Manifest &manifest) {
+  struct Publisher {
+    std::string name;
+    const char *kind;
+  };
+  std::map<std::string, Publisher> publisher_of;
+  for (const ParticipantSpec &p : manifest.participants) {
+    const std::vector<std::string> *publishes = nullptr;
+    const char *kind = nullptr;
+    if (const auto *proc = std::get_if<ProcessSpec>(&p.impl)) {
+      publishes = &proc->publishes;
+      kind = "process";
+    } else if (const auto *native = std::get_if<NativeSpec>(&p.impl)) {
+      publishes = &native->publishes;
+      kind = "native";
+    } else {
+      publishes = &std::get<ReplaySpec>(p.impl).channels;
+      kind = "replay";
+    }
+    for (const std::string &ch : *publishes) {
+      auto [entry, inserted] =
+          publisher_of.try_emplace(ch, Publisher{p.name, kind});
+      if (!inserted)
+        throw ManifestError(
+            "manifest error: channel '" + ch +
+            "' has more than one publisher: participant '" + entry->second.name +
+            "' (" + entry->second.kind + ") and participant '" + p.name + "' (" +
+            kind + ")");
+    }
+  }
+}
+
 }  // namespace sil

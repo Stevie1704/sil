@@ -14,7 +14,9 @@
 #include "clock_shim.hpp"
 #include "copy_counters.hpp"
 #include "engine.hpp"
+#include "exit_codes.hpp"
 #include "manifest.hpp"
+#include "provenance.hpp"
 #include "recording_sink.hpp"
 #include "run_signal.hpp"
 
@@ -33,9 +35,9 @@ namespace {
 #define SIL_LICENSE_IDENTIFIER "Apache-2.0"
 #endif
 
-constexpr int kExitOk = 0;
-constexpr int kExitRunFailure = 1;
-constexpr int kExitConfigError = 2;
+using sil::kExitConfigError;
+using sil::kExitOk;
+using sil::kExitRunFailure;
 
 void usage() {
   std::cerr << "usage: sil-run <manifest.json> "
@@ -43,7 +45,8 @@ void usage() {
                "[--max-protocol-line-bytes <N>] "
                "[--max-step-output-messages <N>] "
                "[--max-step-inline-payload-bytes <N>] "
-               "[-o <out.mcap> | --no-recording]\n"
+               "[-o <out.mcap> | --no-recording] "
+               "[--provenance <out.provenance.json>]\n"
                "       sil-run --version\n"
                "       sil-run --build-info\n";
 }
@@ -103,15 +106,29 @@ struct SizeLimitOption {
   bool given;
 };
 
-// Fail fast at load if a participant opted into the shim but the shim library
-// is missing next to the runner, so a broken install is a Manifest error rather
-// than a silently wall-clocked run. The shim is injected at spawn (issue #28).
-bool manifest_requests_shim(const sil::Manifest &m) {
-  for (const sil::ParticipantSpec &p : m.participants) {
-    const auto *ps = std::get_if<sil::ProcessSpec>(&p.impl);
-    if (ps && ps->shim) return true;
+// Completes the provenance record once the Run's outcome is known and writes
+// it beside the Recording. The Recording is digested here rather than during
+// the preflight because its bytes do not exist until the sink has closed.
+void write_side_car(sil::Provenance &provenance, int exit_code, bool recording,
+                    const char *out_path, const char *requested_path) {
+  provenance.run_exit_code = exit_code;
+  if (recording) {
+    try {
+      provenance.recording_sha256 = sil::sha256_file(out_path);
+    } catch (const std::exception &e) {
+      provenance.errors.push_back({"Recording", out_path, e.what()});
+    }
   }
-  return false;
+  const std::filesystem::path path =
+      requested_path ? std::filesystem::path(requested_path)
+                     : sil::default_provenance_path(out_path);
+  try {
+    sil::write_provenance(path, provenance);
+  } catch (const std::exception &e) {
+    // The Run's exit code and its first diagnostic remain authoritative. A
+    // side-car write problem is reported without rewriting either.
+    std::cerr << "sil-run: " << e.what() << "\n";
+  }
 }
 
 int run(int argc, char **argv) {
@@ -128,6 +145,7 @@ int run(int argc, char **argv) {
 
   const char *manifest_path = nullptr;
   const char *out_path = "out.mcap";
+  const char *provenance_path_arg = nullptr;
   // Running without a Recording is what separates the cost of routing to
   // subscribers from the cost of Recording I/O (issue #61). The engine already
   // treats a null sink as "do not record"; this is the switch that reaches it.
@@ -150,6 +168,12 @@ int run(int argc, char **argv) {
     if (std::strcmp(argv[i], "-o") == 0 && i + 1 < argc) {
       out_path = argv[++i];
       out_given = true;
+    } else if (std::strcmp(argv[i], "--provenance") == 0 && i + 1 < argc) {
+      if (provenance_path_arg) {
+        usage();
+        return kExitConfigError;
+      }
+      provenance_path_arg = argv[++i];
     } else if (std::strcmp(argv[i], "--participant-timeout-ms") == 0) {
       if (participant_timeout || i + 1 >= argc) {
         usage();
@@ -197,43 +221,76 @@ int run(int argc, char **argv) {
     return kExitConfigError;
   }
 
+  std::optional<sil::Provenance> provenance;
+  std::unique_ptr<sil::RecordingSink> recorder;
+  std::optional<sil::Manifest> manifest;
+  int exit_code = kExitConfigError;
+
   try {
-    sil::Manifest manifest = sil::load_manifest(manifest_path);
-    if (manifest_requests_shim(manifest)) {
-      std::filesystem::path shim = sil::clock_shim_library_path();
-      if (shim.empty() || !std::filesystem::exists(shim)) {
-        std::cerr << "sil-run: clock shim requested but shim library not found "
-                     "in the runner installation layout: "
-                  << shim.string() << "\n";
-        return kExitConfigError;
-      }
-    }
+    manifest.emplace(sil::load_manifest(manifest_path));
+    provenance.emplace(
+        sil::initialize_provenance(manifest.value(), SIL_VERSION,
+                                   SIL_SOURCE_REPOSITORY, SIL_SOURCE_REVISION));
+
+    // Engine::setup rejects a second publisher before it loads or spawns
+    // anything. Run the same check first so the artifact preflight, which now
+    // precedes setup, cannot change which diagnostic a bad Manifest reports.
+    sil::validate_one_publisher_per_channel(manifest.value());
+
+    // Resolve and digest all artifacts before Engine::setup can load a Native
+    // library or spawn a Process participant. The preflight also writes the
+    // resolved paths back into the in-memory Manifest, never its source bytes.
+    sil::preflight_run_artifacts(manifest.value(), *provenance);
+
     // Selecting the recording format is a manifest/config concern: an
     // unrecognized output extension is a Manifest error (exit 2) and must reject
     // before any participant is created.
-    std::unique_ptr<sil::RecordingSink> recorder;
-    if (recording) recorder = sil::make_recording_sink(out_path, manifest);
+    if (recording) recorder = sil::make_recording_sink(out_path, manifest.value());
     try {
       if (sil::run_interrupted())
         throw sil::RunError(sil::run_interrupt_message());
-      sil::Engine engine(manifest, recorder.get(), participant_timeout, limits);
+      sil::Engine engine(manifest.value(), recorder.get(), participant_timeout,
+                         limits);
       engine.setup();
       engine.run();
-      if (recorder) recorder->close();
+      // A signal that arrived during the Run is a Run failure. Raising it here
+      // rather than after the Recording is closed keeps that close, and the
+      // provenance record that follows it, on the interrupted path too.
       if (sil::run_interrupted())
         throw sil::RunError(sil::run_interrupt_message());
+      exit_code = kExitOk;
     } catch (const sil::ManifestError &) {
       throw;
     } catch (const std::exception &e) {
       std::cerr << "sil-run: " << e.what() << "\n";
-      return kExitRunFailure;
+      exit_code = kExitRunFailure;
     }
-    std::cout << "manifest_hash " << manifest.hash_hex << "\n";
   } catch (const sil::ManifestError &e) {
     std::cerr << "sil-run: " << e.what() << "\n";
-    return kExitConfigError;
+    exit_code = kExitConfigError;
+  } catch (const std::exception &e) {
+    std::cerr << "sil-run: " << e.what() << "\n";
+    exit_code = kExitRunFailure;
   }
-  return kExitOk;
+
+  // Close before hashing so a failed Run's partial Recording is still an
+  // auditable artifact. McapRecorder's destructor is a second safety net.
+  if (recorder) {
+    try {
+      recorder->close();
+    } catch (const std::exception &e) {
+      std::cerr << "sil-run: " << e.what() << "\n";
+      if (exit_code == kExitOk) exit_code = kExitRunFailure;
+    }
+  }
+
+  if (provenance)
+    write_side_car(*provenance, exit_code, recording, out_path,
+                   provenance_path_arg);
+
+  if (exit_code == kExitOk && manifest)
+    std::cout << "manifest_hash " << manifest->hash_hex << "\n";
+  return exit_code;
 }
 
 }  // namespace

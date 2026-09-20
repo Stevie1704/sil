@@ -38,6 +38,10 @@ def _run(sil_run: Path, manifest: Path, *args: str) -> subprocess.CompletedProce
         [str(sil_run), str(manifest), *args],
         capture_output=True,
         text=True,
+        # With --no-recording the runner still writes a provenance side-car
+        # beside its default output path. Run beside the manifest so it
+        # cannot land in whatever directory pytest was started from.
+        cwd=manifest.parent,
     )
 
 

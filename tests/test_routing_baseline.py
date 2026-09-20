@@ -97,6 +97,9 @@ def run_report(runner, manifest_path, tmp_path, *, recording: bool):
     proc = subprocess.run(
         args, capture_output=True, text=True,
         env={"SIL_COPY_COUNTERS_OUT": str(out), "PATH": "/usr/bin:/bin"},
+        # --no-recording still writes a provenance side-car beside the
+        # default output path; keep it out of the repository root.
+        cwd=tmp_path,
     )
     assert proc.returncode == 0, proc.stderr
     return json.loads(out.read_text())
