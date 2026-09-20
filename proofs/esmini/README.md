@@ -18,7 +18,7 @@ a domain KPI, and reproducing the upstream project's own expected trajectory.
 | --- | --- |
 | Does a third-party simulator fit the Step protocol? | Yes, through one ctypes adapter and no change to SiL |
 | Does an opaque C++ simulator need the Clock shim? | Not this one: withdraw it and 0 of 16 000 recorded field readings change |
-| Is the Run deterministic? | Yes, bit-identical Recordings |
+| Is the Run deterministic? | Yes, bit-identical Recordings — and byte-identical again on a second machine |
 | Does the Run reproduce the vendor's expected values? | Yes, worst deviation 4.5e-4 against a 1e-2 tolerance |
 | Does a KPI failure reach the caller? | Yes, exit 1 with the value, the floor, and the Virtual time |
 
@@ -192,18 +192,26 @@ are machine-dependent and are recorded rather than asserted.
 
 | Observation | Value |
 | --- | --- |
-| Wall-clock time, 800 Slots | 7.05 s |
-| Peak resident set, largest child | 152.5 MB |
+| Wall-clock time, 800 Slots | 0.66 s |
+| Peak resident set, largest child | 62.0 MB |
 | Declared payload footprint | 2 routes × 2 × 72 B; no Arena, no unbounded route |
 | Recording size | 191 911 B for 1 600 Messages, retained at [`evidence/run-1.mcap`](evidence/run-1.mcap) |
 | Deterministic routing counters | not applicable: the instrumented runner is a development fixture and is deliberately absent from the production image |
 
-**Machine class.** The committed numbers come from the published `linux/amd64`
-image run under emulation on a `Darwin arm64` host. The two Recordings are
-bit-identical to each other, which is the determinism claim within one machine
-class, but this is not the native Linux x86-64 the release supports, and the
-wall-clock figure is an emulated one. `.github/workflows/proof-esmini.yml`
-re-runs the identical script on a native `ubuntu-latest` runner on dispatch.
+**Machine class.** The committed evidence comes from a native `linux/amd64`
+run of `run-proof.sh` on an `ubuntu-latest` runner — the machine class this
+release supports. `.github/workflows/proof-esmini.yml` executes it on any pull
+request that touches this directory, so the evidence a reviewer reads is
+produced by the supported class rather than by whatever machine wrote the
+proof.
+
+The proof was developed on an arm64 host running the same `linux/amd64` image
+under emulation, and that turned out to be a free cross-check: the emulated
+Run produced a Recording **byte-identical** to the native one, SHA-256
+`4ff77017…16c4`. Only the cost differed, and by a lot — 7.10 s and 152.7 MB
+emulated against 0.66 s and 62.0 MB native. Which is the argument for keeping
+timing out of the pass criteria: the same Run, the same bytes, an order of
+magnitude apart in wall clock.
 
 ## Reproduce it
 

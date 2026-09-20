@@ -1,8 +1,8 @@
 platform                 linux/amd64
-host                     Darwin arm64
+host                     Linux x86_64
 sil runner image         ghcr.io/stevie1704/sil@sha256:d67a254125fbe44467bf1354a04d19955815098d86a4c94c74f73ead6a943c0b
 sil version              0.1.0
-derived image id         sha256:2852552fbd5da87132abdfaeeba3eb30d1965153296672da4925808f6f9037e2
+derived image id         sha256:8fa6a3540f54cb38ac985f4fb9b3e39554344ae449fc954d63abe5dfee93f34f
 esmini version           ESMINI_GIT_REV="v3.8.1-0-19d26b68" ESMINI_GIT_TAG="v3.8.1" ESMINI_GIT_BRANCH="tags/v3.8.1^0" ESMINI_BUILD_VERSION="6383"
 esmini_version           v3.8.1
 esmini_bin_sha256        05e6c9bb0f3156cef6f193c126b5ae340d42256da9c4a9eb7436d3b99dee9654
