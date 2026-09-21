@@ -514,17 +514,60 @@ timestamp.
 | Propagation | bounded at 100 activations per instant, like the discrete-state iteration of one event |
 | Channel source | a terminal takes its frames from a connected peer **or** from an in-direction Channel, never from both |
 
+### Replaying one source at the boundary
+
 An unconnected terminal fed by an in-direction Channel is the replay-input
 boundary: a Recording of the observation Channel can stand in for the FMU that
-produced it. The activation is raised at the communication point the group
-stands on, not at the instant the Message states — by the time a Message
-arrives, one Latency after the Slot it was published in, that instant is behind
-the group, and no FMU of this profile can be taken back to it. The Message
-carries the instant so a replayer can be built around it; landing on it is a
-question about a Channel's delivery time as much as about the Importer.
+produced it. A Replay participant is what re-publishes it — it becomes the
+Publisher of every Channel it replays, and the Recording's content hash goes
+into the Manifest, so the Manifest hash covers the Run's stimulus. Take the
+group above, drop `node1`, and hand `bus.Node1` the Channel it published:
 
-The boundary decision and the evidence behind it are in
-[docs/adr/0001-connected-fmus-in-one-process-participant.md](docs/adr/0001-connected-fmus-in-one-process-participant.md).
+```python
+m.add_channel("can.node1.Tx", schema="can.Frame", latency_ns=0)
+m.add_replay("node1", recording="live.mcap", channels=["can.node1.Tx"])
+m.add_process(
+    "importer",
+    command=[
+        sys.executable, "-m", "sil.fmi",
+        "--instance", "node2", "models/CanNode.fmu",
+        "--instance", "bus", "models/CanBusSimulation.fmu",
+        "--bus-profile", "application/org.fmi-standard.fmi-ls-bus.can",
+        "--connect", "node2.CanChannel=bus.Node2",
+        "--bind", "can.node1.Tx:data=bus.Node1.Rx_Data",
+        "--bind", "can.bus.Node2:data=bus.Node2.Tx_Data",
+    ],
+    step_period_ns=100 * MS,
+    subscribes=[SubscriberRoute("can.node1.Tx", capacity=4)],
+    publishes=["can.bus.Node2"],
+)
+```
+
+The activation is raised **at the instant the Message states**, not at the
+communication point the group happens to stand on, which is what makes the
+replayed source equivalent to the live one: the receiving FMU is handed the
+same operation at the same instant, so what it computes next is the same.
+
+`latency_ns=0` is what makes that instant reachable, and it is not optional.
+An activation is published in the Slot the Step that observed it began in, so
+the instant it states lies inside that Step:
+
+    publication Slot  ≤  stated instant  ≤  publication Slot + Step period
+
+Delivered in the Slot it was published in, a Message therefore arrives in the
+Step its own instant belongs to. Under the default next-activation delivery it
+arrives one Step later, where that instant is behind the group — and the
+Importer reports that, naming the Channel, the terminal, the stated instant and
+the Step's own bounds, rather than raising the activation somewhere else. An
+instant beyond the Step's end is refused for the mirror reason.
+
+Several Messages in one Step are each raised at their own instant; several at
+one instant are raised in the order they arrived, which is the Publish order
+the Recording holds them in.
+
+The boundary decisions and the evidence behind them are in
+[docs/adr/0001-connected-fmus-in-one-process-participant.md](docs/adr/0001-connected-fmus-in-one-process-participant.md)
+and [docs/adr/0002-a-replayed-terminal-lands-on-its-own-instant.md](docs/adr/0002-a-replayed-terminal-lands-on-its-own-instant.md).
 
 ## Large-Message routing baseline
 

@@ -138,7 +138,9 @@ _Avoid_: type definition, IDL, message format, struct
 **Latency**:
 The declared delay, per channel, between publishing a message and it becoming
 visible to a subscriber. The default is the subscriber's next activation, which
-is what makes results independent of execution order within a slot.
+is what makes results independent of execution order within a slot. A declared
+zero is the one value that delivers inside the publishing slot, which a
+subscriber that has to act on a message before the instant it names depends on.
 _Avoid_: delay, lag, deadline
 
 **Publish order**:

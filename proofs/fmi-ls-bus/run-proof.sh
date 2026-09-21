@@ -15,7 +15,10 @@
 #      Recording is compared with the same expectation, on both step grids;
 #   5. the same Importer connects two instances of that node through the bus
 #      simulation FMU, and the Recording of that Run is compared with an
-#      expectation written from both FMUs' sources.
+#      expectation written from both FMUs' sources;
+#   6. one of those two nodes is removed and its Recording replayed into the
+#      terminal it fed, and the Channels of everything that stayed are
+#      compared with the live Run's.
 #
 # The rejected revision's exchange and step 3 are both expected to fail. Steps
 # 1 to 3 are the evidence gate of issue #137: the fixture is what the
@@ -25,9 +28,9 @@
 # the pin, a reference exchange that does not match its expectation, or a
 # rejected revision that turns out to work after all.
 #
-# Steps 4 and 5 are the other way round: they are the measurements of issues
-# #139 and #140, and both are expected to pass. They are the only steps that
-# read the checkout.
+# Steps 4 to 6 are the other way round: they are the measurements of issues
+# #139, #140 and #141, and all of them are expected to pass. They are the
+# only steps that read the checkout.
 #
 # The evidence directory defaults to ./evidence and holds what is committed;
 # the workspace defaults to a temporary directory and holds the Manifests.
@@ -359,13 +362,180 @@ for case in aligned quantised; do
         | tee -a "$EVIDENCE_DIR/connected-$case.txt"
 done
 
-step "Check the connected Run for determinism"
+step "Check the connected Runs for determinism"
 # Three FMUs coordinated inside one participant, with event times taken from
 # the group's own communication points: they have to reproduce like every
-# other recorded byte.
-measured_tool python3 -m sil.check /workspace/connected-aligned.json \
-    --runner sil-run --participant-timeout-ms "$PARTICIPANT_TIMEOUT_MS" \
-    | tee "$EVIDENCE_DIR/connected-identity.txt"
+# other recorded byte. One check per Manifest — a Manifest is what a
+# determinism check is about, and two of them are two questions.
+: > "$EVIDENCE_DIR/connected-identity.txt"
+for case in aligned quantised; do
+    # Named per case: two hashes in one file say nothing about which
+    # Manifest each of them reproduced.
+    identity="$(measured_tool python3 -m sil.check \
+        "/workspace/connected-$case.json" --runner sil-run \
+        --participant-timeout-ms "$PARTICIPANT_TIMEOUT_MS")"
+    printf '%-10s %s\n' "$case" "$identity" \
+        | tee -a "$EVIDENCE_DIR/connected-identity.txt"
+done
+
+step "Replace one live source with its own Recording at the boundary"
+# The measurement of issue #141. The live Runs above recorded what both nodes
+# published; these Manifests declare the same composition with `node1` gone
+# and a Replay participant handing `bus.Node1` the Messages the removed node
+# published, at the instants those Messages state.
+#
+# The boundary Channel declares a Latency of zero, which is what puts a
+# recorded Message back in the Step its own instant belongs to. See
+# docs/adr/0002-a-replayed-terminal-lands-on-its-own-instant.md.
+
+# One more live composition, on a step grid coarser than the node's own 300 ms
+# transmit period. It is the only grid where one activation carries several CAN
+# operations, one Slot carries several activations of the boundary Channel, and
+# four frames of one CAN ID are offered at a single instant. It states no
+# expected exchange — it was not written before a Run — so what judges its
+# replay is the live Run itself.
+measured_tool python3 /opt/measured/replay_manifest.py live \
+    "/workspace/$(basename "$NODE_FMU")" \
+    "/workspace/$(basename "$BUS_FMU")" \
+    /workspace \
+    | tee "$EVIDENCE_DIR/replay-manifest-hashes.txt"
+set +e
+measured_run /workspace/live-coarse.json -o /workspace/live-coarse.mcap \
+    --participant-timeout-ms "$PARTICIPANT_TIMEOUT_MS" \
+    > "$WORKSPACE/live-coarse.out" 2>&1
+status=$?
+set -e
+if [ "$status" -ne 0 ]; then
+    cat "$WORKSPACE/live-coarse.out" >&2
+    echo "the live Run of case coarse exited $status" >&2
+    exit 1
+fi
+
+# Every replay Manifest, built once the Recording each one replays exists.
+measured_tool python3 /opt/measured/replay_manifest.py replay \
+    "/workspace/$(basename "$NODE_FMU")" \
+    "/workspace/$(basename "$BUS_FMU")" \
+    /workspace /workspace \
+    | tee -a "$EVIDENCE_DIR/replay-manifest-hashes.txt"
+
+# One Run per step grid, each compared with the live Run of the same grid:
+# the replayed boundary against the stimulus it stands in for, and every
+# retained participant's own Channel against what it published live. The live
+# Run is named rather than derived, because the two stated grids replay the
+# connected Runs above and the coarse one replays the Run this step added.
+replay_case() {
+    local case="$1" live="$2" status
+    set +e
+    measured_run "/workspace/replay-$case.json" \
+        -o "/workspace/replay-$case.mcap" \
+        --participant-timeout-ms "$PARTICIPANT_TIMEOUT_MS" \
+        > "$WORKSPACE/replay-$case.out" 2>&1
+    status=$?
+    set -e
+    {
+        echo "manifest    replay-$case.json"
+        echo "live Run    $live.mcap"
+        echo "exit status $status"
+        echo "--- output ---"
+        cat "$WORKSPACE/replay-$case.out"
+        echo "--- replay Recording against the live Recording ---"
+    } > "$EVIDENCE_DIR/replay-$case.txt"
+    if [ "$status" -ne 0 ]; then
+        cat "$EVIDENCE_DIR/replay-$case.txt" >&2
+        echo "the replay Run of case $case exited $status" >&2
+        exit 1
+    fi
+    measured_tool python3 /opt/measured/replay_equivalence.py \
+        "$case" "/workspace/$live.mcap" "/workspace/replay-$case.mcap" \
+        | tee -a "$EVIDENCE_DIR/replay-$case.txt"
+}
+
+replay_case aligned   connected-aligned
+replay_case quantised connected-quantised
+replay_case coarse    live-coarse
+
+step "Check that the equivalence check fails on an altered stimulus"
+# A check that only ever passes is not evidence. Two more Manifests declare
+# the same replay with one Interceptor on the boundary Channel: one drops the
+# first CanTransmit the removed node published, the other moves it to another
+# instant. Each declares that as an Interceptor rather than carrying an edited
+# artifact, so each of these Runs reproduces like every other.
+#
+# The Runs themselves are expected to succeed — the altered stimulus is still
+# a stimulus the Importer accepts — and the equivalence check is expected to
+# report the difference and exit 1. A variant that stopped failing would mean
+# the check had stopped comparing.
+for variant in dropped retimed; do
+    set +e
+    measured_run "/workspace/replay-aligned-$variant.json" \
+        -o "/workspace/replay-aligned-$variant.mcap" \
+        --participant-timeout-ms "$PARTICIPANT_TIMEOUT_MS" \
+        > "$WORKSPACE/replay-aligned-$variant.out" 2>&1
+    status=$?
+    set -e
+    if [ "$status" -ne 0 ]; then
+        cat "$WORKSPACE/replay-aligned-$variant.out" >&2
+        echo "the $variant variant exited $status; an altered stimulus is" \
+             "still a stimulus the Importer accepts, and what this step" \
+             "measures is the equivalence check rather than the Run" >&2
+        exit 1
+    fi
+    set +e
+    measured_tool python3 /opt/measured/replay_equivalence.py \
+        "aligned-$variant" "/workspace/connected-aligned.mcap" \
+        "/workspace/replay-aligned-$variant.mcap" \
+        > "$WORKSPACE/replay-aligned-$variant.verdict" 2>&1
+    verdict=$?
+    set -e
+    {
+        echo "manifest    replay-aligned-$variant.json"
+        echo "--- run output ---"
+        cat "$WORKSPACE/replay-aligned-$variant.out"
+        echo "--- equivalence check exit $verdict ---"
+        cat "$WORKSPACE/replay-aligned-$variant.verdict"
+    } | tee "$EVIDENCE_DIR/replay-aligned-$variant.txt"
+    if [ "$verdict" -eq 0 ]; then
+        echo "the $variant variant altered the stimulus and the equivalence" \
+             "check still passed" >&2
+        exit 1
+    fi
+done
+
+step "Check the replay Runs for determinism"
+# One check per Manifest, like the live pair above. A replay Run's stimulus is
+# a file the Manifest names and hashes, so it reproduces on the same terms as
+# a Run that computes its own.
+: > "$EVIDENCE_DIR/replay-identity.txt"
+for case in coarse aligned quantised aligned-dropped aligned-retimed; do
+    identity="$(measured_tool python3 -m sil.check \
+        "/workspace/replay-$case.json" --runner sil-run \
+        --participant-timeout-ms "$PARTICIPANT_TIMEOUT_MS")"
+    printf '%-16s %s\n' "$case" "$identity" \
+        | tee -a "$EVIDENCE_DIR/replay-identity.txt"
+done
+# The live Run the coarse grid replays is a Manifest of this step too.
+identity="$(measured_tool python3 -m sil.check /workspace/live-coarse.json \
+    --runner sil-run --participant-timeout-ms "$PARTICIPANT_TIMEOUT_MS")"
+printf '%-16s %s\n' "live-coarse" "$identity" \
+    | tee -a "$EVIDENCE_DIR/replay-identity.txt"
+
+step "Retain the Recordings and the provenance of every Run compared"
+# What the comparison was made on, kept beside the report of it: every
+# Recording either side of it read, and a provenance record stating, per
+# Manifest, its own hash, the Recording it produced, the FMU archives its
+# command names, the configuration it declares, and — for a replay Manifest —
+# the Recording it replays and the hash it committed to.
+COMPARED="connected-aligned connected-quantised live-coarse \
+replay-aligned replay-quantised replay-coarse \
+replay-aligned-dropped replay-aligned-retimed"
+# shellcheck disable=SC2086
+measured_tool python3 /opt/measured/replay_provenance.py /workspace $COMPARED \
+    | tee "$EVIDENCE_DIR/replay-provenance.txt"
+# Every Recording the comparison read, so it can be re-made on the artifacts
+# rather than on a rebuild of them.
+for run in $COMPARED; do
+    cp "$WORKSPACE/$run.mcap" "$EVIDENCE_DIR/"
+done
 
 step "Done"
 echo "evidence  $EVIDENCE_DIR"

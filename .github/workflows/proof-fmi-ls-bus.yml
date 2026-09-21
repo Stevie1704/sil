@@ -6,12 +6,13 @@ name: proof-fmi-ls-bus
 # It builds third-party FMUs from pinned upstream sources and executes them
 # against the published SiL runner image by digest. The evidence gate itself
 # therefore tests the release rather than the checkout, and is unaffected by
-# the commit that triggers it. Its last two steps are the exception, and the
+# the commit that triggers it. Its last three steps are the exception, and the
 # reason this also runs on a pull request that touches the Importer: the same
 # released runner, with the checkout's `sil` package ahead of it, driving the
-# pinned CAN node, and then connecting two instances of it through the pinned
-# bus simulation FMU — both judged against expected exchanges written from
-# upstream's sources.
+# pinned CAN node, connecting two instances of it through the pinned bus
+# simulation FMU, and then replacing one of those two with its own Recording —
+# the first two judged against expected exchanges written from upstream's
+# sources, the third against the live Run it replays.
 #
 # That is why it is not part of the push gate — but it does run on any pull
 # request that touches the fixture or the Importer, because the evidence a
@@ -31,6 +32,13 @@ jobs:
     # Native linux/amd64 — the machine class the release supports, and the one
     # the fixture's compiled binaries are built for.
     runs-on: ubuntu-latest
+    # Bounded, because an acceptance job that hangs is a job nobody trusts.
+    # The whole script — two upstream builds, both reference exchanges and
+    # every Run below them — takes a few minutes on this runner; this is the
+    # ceiling above which something is wrong rather than slow. Each Process
+    # participant response inside the Runs is bounded separately, by
+    # `--participant-timeout-ms`.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -64,3 +72,13 @@ jobs:
         with:
           name: fmi-ls-bus-fixture-manifests
           path: ${{ runner.temp }}/workspace/*.json
+
+      # Every Recording the compared Runs produced, so a reviewer can re-run
+      # the equivalence check on the artifacts CI executed rather than on a
+      # rebuild of them.
+      - name: Keep the Recordings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fmi-ls-bus-fixture-recordings
+          path: ${{ runner.temp }}/workspace/*.mcap

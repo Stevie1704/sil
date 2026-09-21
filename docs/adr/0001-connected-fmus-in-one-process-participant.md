@@ -110,7 +110,11 @@ behind it.
   it. Making a replayed terminal land on its own instants is as much a
   question about a Channel's delivery time as about the Importer, and issue
   #141 is where it is answered. What this issue owes it is the information,
-  and the Message carries it.
+  and the Message carries it. **Answered by
+  [ADR 0002](0002-a-replayed-terminal-lands-on-its-own-instant.md): the group
+  raises the activation at the instant the Message states, and a boundary
+  Channel declaring `latency_ns` 0 is what puts that instant ahead of the
+  group rather than behind it.**
 - A terminal takes its frames from a connected peer **or** from a Channel,
   never from both — one source per input.
 - One process now holds several FMU instances, so a failure has to close all of

@@ -76,8 +76,15 @@ SOURCES = {
 ROUTE_CAPACITY = 4
 
 
-def connected(node: Path, bus: Path, case: dict) -> Manifest:
-    """One case of the expected exchange, as a Manifest."""
+def connected(node: Path, bus: Path, case: dict,
+              capacity: int = ROUTE_CAPACITY) -> Manifest:
+    """One case of the expected exchange, as a Manifest.
+
+    `capacity` is the observer's route capacity. It is an argument because a
+    Step grid coarser than the fixture's own puts more activations of one
+    terminal in one Slot; every case stated in `connected_expected.json`
+    takes the default, so their Manifest hashes do not move.
+    """
     archives = {"node": node, "bus": bus}
     manifest = Manifest(duration_ns=case["duration_ns"])
     manifest.add_schemas(SCHEMAS)
@@ -113,7 +120,7 @@ def connected(node: Path, bus: Path, case: dict) -> Manifest:
         command=["python3", "/opt/measured/clocked_observer.py"],
         step_period_ns=case["step_size_ns"],
         subscribes=[
-            SubscriberRoute(channel, capacity=ROUTE_CAPACITY)
+            SubscriberRoute(channel, capacity=capacity)
             for channel in SOURCES
         ],
         priority=1,
