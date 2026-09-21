@@ -253,9 +253,10 @@ target platform. SiL imports an FMU as an ordinary process participant. The
 importer extracts it into the participant's kernel-owned working directory
 during initialization and drives its FMI 3.0 co-simulation interface. The
 extraction is dropped at shutdown and, either way, goes with the tree the
-kernel removes after the Run. Channel schema field names map directly to the FMU's Float64 input and
-output variables; Channel direction decides whether a field is written before
-the FMU Step or published after it.
+kernel removes after the Run. Channel schema field names map directly to the
+FMU's Float64 input and output variables; Channel direction decides whether a
+field is written before the FMU Step or published after it. Every other
+variable type is bound by name on the command line, below.
 
 The FMU path is just a command argument, so it is part of the hashed Manifest:
 
@@ -301,9 +302,66 @@ status. `Warning` aborts too: a Run that steps past a status the FMU raised is
 not evidence of anything. An FMU that answers `Fatal` is abandoned rather than
 terminated, which is what FMI 3.0 requires of its importer.
 
-This milestone deliberately supports FMI 3.0 co-simulation only and Float64
-variables only. It does not implement the bus layered standard because the
-repository has no demo FMU against which to write a conformance test.
+### Binding the other variable types
+
+A Float64 mapping is *derived*: the schema field names are the variable names,
+and the match has to be total in both directions, because a name on one side
+and not the other is a typo rather than an intention.
+
+Every other type is *declared*, one binding per Channel field:
+
+```sh
+python -m sil.fmi model.fmu \
+    --bind can.Rx:data=CanChannel.Rx_Data \
+    --bind can.Tx:data=CanChannel.Tx_Data \
+    --start BusErrorProbability=0.0
+```
+
+A binding names the Channel as well as the field because one schema is
+typically carried by more than one Channel — an Rx and a Tx of the same frame
+layout, say — so a field name alone names no single end of the mapping.
+Declaring one binding declares them all: the bindings are then the whole
+mapping, and a Channel field that none of them names is rejected rather than
+left as a variable the FMU never sees. `--start` writes a variable once,
+before the FMU leaves initialization mode.
+
+Both travel as command arguments, which the Manifest already hashes, so the
+whole mapping is inside the hashed Manifest. Pointing at a file instead would
+be covered by the Run's provenance side-car, which digests every file a
+participant's command names.
+
+The mapped types are `Float32`, `Float64`, `Int8` … `Int64`, `UInt8` …
+`UInt64`, `Boolean` (carried as a `u8` of 0 or 1) and `Binary`. A binding that
+names a `String`, an `Enumeration`, a `Clock` or a variable with dimensions is
+reported before the FMU is stepped, as is one whose field type is not the one
+its variable's type maps to.
+
+### Bounded Binary payloads
+
+A Binary variable is variable-length and a Message is not, so a Channel
+carries one in an explicit bounded representation: a `u8` array field holding
+the payload, and the `<field>_length` field beside it holding how much of it
+is the payload.
+
+```python
+m.add_schemas({"can.Frame": {"fields": [
+    {"name": "data_length", "type": "u16"},
+    {"name": "data", "type": "u8", "count": 2048},
+]}})
+```
+
+The bound is the array's `count`, and it is the Run's own declaration rather
+than the FMU's. Arbitrary bytes survive, embedded zeros included; the bytes
+above the length are zero on every Message, so two Runs of one Manifest record
+the same bytes. Nothing is truncated to fit: a payload above the bound, in
+either direction, aborts the Run with exit 1. A Channel bound above the
+`maxSize` an input variable declares is refused before stepping, with exit 2 —
+the FMU would refuse every payload above it.
+
+This milestone supports FMI 3.0 co-simulation only. It drives neither Clocks
+nor Event Mode, so an FMU that requires them — the FMI-LS-BUS CAN demo nodes
+among them — is not yet drivable; the bus layered standard itself is
+unimplemented.
 
 ## Large-Message routing baseline
 
