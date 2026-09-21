@@ -118,7 +118,7 @@ class SubscriberRoute {
 
 class Engine {
  public:
-  Engine(const Manifest &manifest, RecordingSink *recorder,
+  Engine(PreparedRun &&prepared, RecordingSink *recorder,
          std::optional<std::chrono::milliseconds> participant_timeout =
              std::nullopt,
          RunBoundaryLimits limits = {});
@@ -173,6 +173,7 @@ class Engine {
   ChannelState &channel_or_fail(const std::string &name,
                                 const std::string &ctx);
 
+  PreparedRun prepared_;
   const Manifest &manifest_;
   RecordingSink *recorder_;
   std::optional<std::chrono::milliseconds> participant_timeout_;

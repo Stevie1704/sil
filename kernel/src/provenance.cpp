@@ -271,12 +271,26 @@ Provenance initialize_provenance(const Manifest &manifest,
   return provenance;
 }
 
-void preflight_run_artifacts(Manifest &manifest, Provenance &provenance) {
+PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
+  // The loader compiles these plans, and preparation is the only path to an
+  // Engine. Keep the check here as well so a hand-built Manifest cannot forge
+  // a ready Run by omitting a plan.
+  for (const ChannelSpec &channel : manifest.channels)
+    if (!channel.interceptor_plan)
+      throw ManifestError("manifest error: channel '" + channel.name +
+                          "': missing compiled interceptor plan");
+
+  // Preserve the established precedence: a topology defect is reported before
+  // artifact collection, and therefore before any participant can be loaded.
+  validate_one_publisher_per_channel(manifest);
+
   // Every Manifest-named path resolves against the Manifest directory, so the
   // record describes the same artifacts from any working directory. Anchoring
   // to the invocation directory instead would put it in the record, and two
   // Runs of one Manifest from different directories would not be byte-identical.
   const fs::path &base = manifest.base_dir;
+  std::vector<PreparedParticipantSpec> prepared_participants;
+  prepared_participants.reserve(manifest.participants.size());
 
   if (const auto file = collect_file(
           provenance, "runner", "/proc/self/exe", [] {
@@ -298,7 +312,7 @@ void preflight_run_artifacts(Manifest &manifest, Provenance &provenance) {
       provenance.clock_shim = artifact(*file);
   }
 
-  for (ParticipantSpec &participant : manifest.participants) {
+  for (const ParticipantSpec &participant : manifest.participants) {
     if (auto *native = std::get_if<NativeSpec>(&participant.impl)) {
       ProvenanceNativeParticipant record{participant.name, std::nullopt};
       const fs::path requested = native->library;
@@ -306,16 +320,21 @@ void preflight_run_artifacts(Manifest &manifest, Provenance &provenance) {
           requested.is_absolute()
               ? requested
               : (manifest.base_dir / requested).lexically_normal();
+      std::optional<fs::path> resolved_library;
       if (const auto file = collect_file(
               provenance, "Native participant '" + participant.name +
                               "' library",
               requested.string(), [&requested, &manifest] {
                 return resolve_and_digest(requested, manifest.base_dir);
               })) {
-        native->resolved_library = launch_path;
+        resolved_library = launch_path;
         record.library = artifact(*file);
       }
       provenance.native_participants.push_back(std::move(record));
+      if (resolved_library)
+        prepared_participants.push_back(
+            {participant.name,
+             PreparedNativeSpec{*native, std::move(*resolved_library)}});
       continue;
     }
 
@@ -323,6 +342,7 @@ void preflight_run_artifacts(Manifest &manifest, Provenance &provenance) {
       ProvenanceProcessParticipant record{participant.name, process->command,
                                           std::nullopt};
       std::optional<ResolvedExecutable> executable;
+      std::optional<std::vector<std::string>> resolved_command;
       try {
         executable = resolve_executable(process->command.at(0), base);
       } catch (const std::exception &error) {
@@ -335,7 +355,7 @@ void preflight_run_artifacts(Manifest &manifest, Provenance &provenance) {
       if (executable) {
         try {
           record.command = resolve_command(process->command, base, *executable);
-          process->resolved_command = record.command;
+          resolved_command = record.command;
         } catch (const std::exception &error) {
           add_error(provenance,
                     "Process participant '" + participant.name +
@@ -367,10 +387,19 @@ void preflight_run_artifacts(Manifest &manifest, Provenance &provenance) {
           named.file = artifact(*file);
         provenance.command_files.push_back(std::move(named));
       }
+      if (resolved_command)
+        prepared_participants.push_back(
+            {participant.name,
+             PreparedProcessSpec{*process, std::move(*resolved_command)}});
+      continue;
     }
+
+    const auto *replay = std::get_if<ReplaySpec>(&participant.impl);
+    prepared_participants.push_back({participant.name, *replay});
   }
 
   if (!provenance.errors.empty()) throw ManifestError(preflight_error(provenance));
+  return PreparedRun(manifest, std::move(prepared_participants));
 }
 
 std::string sha256_file(const fs::path &path) {

@@ -35,7 +35,7 @@ class OwnedDirectory;
 class ProcessParticipant {
  public:
   ProcessParticipant(Engine &engine, const std::string &name,
-                     const ProcessSpec &spec,
+                     const PreparedProcessSpec &spec,
                      std::optional<std::chrono::milliseconds>
                          participant_timeout,
                      RunBoundaryLimits limits = {});

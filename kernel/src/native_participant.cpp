@@ -166,13 +166,13 @@ const SubscriberRouteSpec *NativeParticipant::subscriber_route(
 }
 
 NativeParticipant::NativeParticipant(Engine &engine, const std::string &name,
-                                     const NativeSpec &spec)
+                                     const PreparedNativeSpec &spec)
     : engine_(engine),
       name_(name),
-      subscribes_(spec.subscribes),
-      publishes_(spec.publishes) {
-  // The provenance preflight resolved and digested this path before setup ran,
-  // so the bytes dlopen loads are the bytes the record names.
+      subscribes_(spec.authored.subscribes),
+      publishes_(spec.authored.publishes) {
+  // Preparation resolved and digested this path before setup ran, so the bytes
+  // dlopen loads are the bytes the provenance record names.
   handle_ = dlopen(spec.resolved_library.c_str(), RTLD_NOW | RTLD_LOCAL);
   if (!handle_)
     throw ManifestError("manifest error: participant '" + name +
@@ -202,7 +202,7 @@ NativeParticipant::NativeParticipant(Engine &engine, const std::string &name,
   // in the engine, so its destructor still closes the library.
   int rc = SIL_ERR;
   try {
-    rc = init(&api_, name_.c_str(), spec.config_json.c_str());
+    rc = init(&api_, name_.c_str(), spec.authored.config_json.c_str());
   } catch (const std::exception &e) {
     fail("init threw: ", e.what());
     return;

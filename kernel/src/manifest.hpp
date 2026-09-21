@@ -7,12 +7,14 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
 namespace sil {
 
 class InterceptorPlan;
+struct Provenance;
 
 // A manifest that can never be a valid kernel input. Runner exits 2.
 struct ManifestError : std::runtime_error {
@@ -89,10 +91,6 @@ struct ChannelSpec {
 
 struct NativeSpec {
   std::string library;      // resolved relative to the manifest directory
-  // Filled by the Run-boundary provenance preflight. It is deliberately not
-  // serialized: the Manifest hash remains the hash of the caller's bytes.
-  // Engine::setup runs after the preflight and treats it as a precondition.
-  std::filesystem::path resolved_library;
   std::string config_json;
   // The declared Channel contract. The manifest is authoritative: the C ABI
   // has no registration call, so runtime subscribe/publish only prove
@@ -106,10 +104,6 @@ struct ProcessSpec {
   // replay recording. The anchor is the Manifest rather than the invocation
   // directory so a Run describes the same artifacts from anywhere.
   std::vector<std::string> command;
-  // Filled by the Run-boundary provenance preflight. The child is launched
-  // with this resolved vector so the bytes digested are the bytes exec loads.
-  // Engine::setup runs after the preflight and treats it as a precondition.
-  std::vector<std::string> resolved_command;
   uint64_t step_period_ns = 0;
   std::vector<SubscriberRouteSpec> subscribes;
   std::vector<std::string> publishes;
@@ -129,6 +123,25 @@ struct ParticipantSpec {
   std::variant<NativeSpec, ProcessSpec, ReplaySpec> impl;
 };
 
+// The authored declarations in a Manifest never carry launch-time paths. A
+// successful preparation pairs each Native and Process declaration with the
+// resolved execution data that provenance covered. A PreparedRun's private
+// constructor is the only way to make that pair acceptable to Engine.
+struct PreparedNativeSpec {
+  NativeSpec authored;
+  std::filesystem::path resolved_library;
+};
+
+struct PreparedProcessSpec {
+  ProcessSpec authored;
+  std::vector<std::string> resolved_command;
+};
+
+struct PreparedParticipantSpec {
+  std::string name;
+  std::variant<PreparedNativeSpec, PreparedProcessSpec, ReplaySpec> impl;
+};
+
 struct Manifest {
   uint64_t duration_ns = 0;
   uint64_t epoch_ns = 0;  // realtime epoch for shimmed participants (issue #27)
@@ -141,6 +154,30 @@ struct Manifest {
   const ChannelSpec *find_channel(const std::string &name) const;
 };
 
+class PreparedRun {
+ public:
+  PreparedRun(const PreparedRun &) = delete;
+  PreparedRun &operator=(const PreparedRun &) = delete;
+  PreparedRun(PreparedRun &&) noexcept = default;
+  PreparedRun &operator=(PreparedRun &&) noexcept = default;
+
+  const Manifest &manifest() const { return manifest_; }
+  const std::vector<PreparedParticipantSpec> &participants() const {
+    return participants_;
+  }
+
+ private:
+  friend PreparedRun prepare_run(const Manifest &, Provenance &);
+
+  PreparedRun(Manifest manifest,
+              std::vector<PreparedParticipantSpec> participants)
+      : manifest_(std::move(manifest)),
+        participants_(std::move(participants)) {}
+
+  Manifest manifest_;
+  std::vector<PreparedParticipantSpec> participants_;
+};
+
 Manifest load_manifest(const std::filesystem::path &path);
 
 // A Channel has at most one publisher (#64). Native, Process, and Replay
@@ -150,8 +187,8 @@ Manifest load_manifest(const std::filesystem::path &path);
 // than a separate check; only the diagnostic still names the two kinds, because
 // the two are repaired differently.
 //
-// Both the Run-boundary provenance preflight and Engine::setup run it, so the
-// diagnostic is identical whichever reaches the Manifest first.
+// Both Run preparation and Engine::setup run it, so the diagnostic is identical
+// whichever reaches the Manifest first.
 void validate_one_publisher_per_channel(const Manifest &manifest);
 
 }  // namespace sil

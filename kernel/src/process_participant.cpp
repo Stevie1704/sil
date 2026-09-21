@@ -433,18 +433,18 @@ void ProcessParticipant::setup_arenas(const ProcessSpec &spec) {
 }
 
 ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
-                                       const ProcessSpec &spec,
+                                       const PreparedProcessSpec &spec,
                                        std::optional<std::chrono::milliseconds>
                                            participant_timeout,
                                        RunBoundaryLimits limits)
-    : engine_(engine), name_(name), period_ns_(spec.step_period_ns),
-      publishes_(spec.publishes), epoch_ns_(engine.manifest().epoch_ns),
-      sleep_policy_(spec.sleep), arenas_(name),
+    : engine_(engine), name_(name), period_ns_(spec.authored.step_period_ns),
+      publishes_(spec.authored.publishes), epoch_ns_(engine.manifest().epoch_ns),
+      sleep_policy_(spec.authored.sleep), arenas_(name),
       participant_timeout_(participant_timeout), limits_(limits) {
   try {
-    // The provenance preflight resolved this vector against the Manifest
-    // directory and digested its executable, so the bytes exec loads are the
-    // bytes the record names.
+    // Preparation resolved this vector against the Manifest directory and
+    // digested its executable, so the bytes exec loads are the bytes the record
+    // names.
     const std::vector<std::string> &command = spec.resolved_command;
     std::string directory_error;
     OwnedDirectory directory = OwnedDirectory::create_child(
@@ -457,21 +457,21 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     working_directory_ =
         std::make_unique<OwnedDirectory>(std::move(directory));
 
-    for (const SubscriberRouteSpec &route : spec.subscribes)
+    for (const SubscriberRouteSpec &route : spec.authored.subscribes)
       inputs_.emplace_back(route.channel, engine.subscribe(name, route));
 
     // Shimmed participants get a shared time region mapped before fork, so the
     // child can map it read-only at load and the kernel can write virtual time
     // into it before each step. The region path and shim preload are injected
     // into the child's environment below.
-    const bool shimmed = spec.shim;
+    const bool shimmed = spec.authored.shim;
     if (shimmed) setup_clock_region();
 
     // Create the Arenas before fork so the child inherits nothing but a path it
     // can re-open. Failures anywhere below leave no region behind: a throwing
     // constructor skips this class's destructor but still destroys the members
     // built so far, and each Mapped region releases its own file.
-    setup_arenas(spec);
+    setup_arenas(spec.authored);
     // A Manifest that declares more than one slot on any Channel needs the
     // indexed-slot level to address the rest of them.
     if (arenas_.max_slots() > 1) protocol_ = kIndexedSlotsProtocol;
@@ -545,9 +545,10 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
       channels[ch] = entry;
       schemas[c->schema] = json::parse(m.schemas.at(c->schema).canonical_json);
     };
-    for (const SubscriberRouteSpec &route : spec.subscribes)
+    for (const SubscriberRouteSpec &route : spec.authored.subscribes)
       add_channel(route.channel, "in");
-    for (const std::string &ch : spec.publishes) add_channel(ch, "out");
+    for (const std::string &ch : spec.authored.publishes)
+      add_channel(ch, "out");
 
     json init = {{"op", "init"},
                  {"name", name},

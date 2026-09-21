@@ -16,7 +16,7 @@ namespace sil {
 class NativeParticipant {
  public:
   NativeParticipant(Engine &engine, const std::string &name,
-                    const NativeSpec &spec);
+                    const PreparedNativeSpec &spec);
   ~NativeParticipant();
 
   NativeParticipant(const NativeParticipant &) = delete;

@@ -109,6 +109,12 @@ add_executable(sil_virtual_time_test tests/virtual_time_test.cpp)
 target_include_directories(sil_virtual_time_test PRIVATE kernel/src)
 add_test(NAME sil_virtual_time COMMAND sil_virtual_time_test)
 
+# Engine construction is deliberately gated on a successful Run preparation;
+# the authored Manifest is not an executable input by itself.
+add_executable(sil_engine_interface_test tests/engine_interface_test.cpp)
+target_include_directories(sil_engine_interface_test PRIVATE kernel/src)
+add_test(NAME sil_engine_interface COMMAND sil_engine_interface_test)
+
 # The Arena layout — slot stride, seq freshness, capacity bounds — is the
 # binary contract a Process participant maps, and it holds without a child
 # process, so it gets a focused C++ test target.

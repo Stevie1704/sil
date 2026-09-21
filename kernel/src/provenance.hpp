@@ -74,12 +74,12 @@ Provenance initialize_provenance(const Manifest &manifest,
                                  const std::string &source_repository,
                                  const std::string &source_revision);
 
-// Resolves and hashes every artifact the Manifest names, before a Participant
-// is loaded or spawned, and writes the resolved paths back into the Manifest
-// for the Native and Process adapters to use. Records every artifact error it
-// finds, then throws ManifestError once the whole preflight has run, so one
-// diagnostic names every unreadable artifact rather than only the first.
-void preflight_run_artifacts(Manifest &manifest, Provenance &provenance);
+// Preparation resolves and hashes every artifact the Manifest names before a
+// Participant is loaded or spawned. It returns the only value Engine accepts;
+// the authored Manifest is not modified. Records every artifact error it finds,
+// then throws ManifestError once the whole preflight has run, so one diagnostic
+// names every unreadable artifact rather than only the first.
+PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance);
 
 // Computes the SHA-256 of an already-resolved file. Used for the Recording
 // after its sink has closed.
