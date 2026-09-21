@@ -47,7 +47,7 @@ from conftest import ROOT
 from sil.fmi import CoSimulation, FmuGroupParticipant, library_suffix, platform_directory
 from sil.manifest import Manifest, SubscriberRoute
 from sil.participant import Input, ManifestError, ParticipantFailure
-from sil.testing import run_simulation
+from sil.testing import RunFailure, run_simulation
 
 PROOF = ROOT / "proofs" / "fmi-ls-bus"
 EXPECTED = json.loads((PROOF / "connected_expected.json").read_text())
@@ -67,7 +67,9 @@ def _load(name: str, path: Path):
 
 # The fixture's own decoder, so an operation is named here the way the
 # acceptance fixture names it rather than by a second reading of the headers.
-decode = _load("can_operations", PROOF / "can_operations.py").decode
+_can_operations = _load("can_operations", PROOF / "can_operations.py")
+decode = _can_operations.decode
+HEADER_SIZE = _can_operations.HEADER_SIZE
 
 BUFFER_SCHEMA = "can.Buffer"
 SCHEMAS = {
@@ -389,23 +391,43 @@ class TestCoordination:
 
 
 class TestTheReplayBoundary:
-    """The observation and replay-input boundary the next issue replaces a
-    live source through."""
+    """One live source replaced by the Channel its frames were recorded on.
 
-    def test_a_channel_can_be_handed_to_an_unconnected_terminal(
-        self, group, tmp_path, build_dir
-    ):
-        """One node replaced by the Channel its frames were recorded on.
+    A Message on an in-direction Channel is an activation of the terminal's
+    input Clock, and it is raised at the instant the Message states rather than
+    wherever the group happens to stand. That is what makes a replayed source
+    equivalent to the live one it stands in for: the receiver is handed the
+    same operation at the same instant, so what it does next is the same too.
 
-        The bus's second terminal is connected to nothing, and what a Message
-        on its Channel carries is exactly what the recorded node published:
-        the same bounded payload, on the same terminal, at the communication
-        point the group stands on.
+    The instant has to be reachable, and a Channel is what decides that. A
+    Message published in the Slot the observing activation ran in states an
+    instant inside the Step that observed it, so a zero Latency — delivery in
+    the Slot it was published in — puts the Message in the Step its instant
+    belongs to. Anything else arrives after the instant it names, and no FMU of
+    this profile can be taken back to it.
+    """
+
+    # What the fixture's node publishes in the event initialization ends in,
+    # and what it transmits every 300 ms, read from the same expectation the
+    # connected exchange is judged against.
+    CONFIGURATION = bytes.fromhex(
+        EXPECTED["cases"][0]["events"][0]["payload_hex"]
+    )
+    FRAME = bytes.fromhex(EXPECTED["cases"][0]["events"][2]["payload_hex"])
+
+    @pytest.fixture
+    def replayed(self, group, tmp_path, build_dir):
+        """The connected group with one node replaced by a Channel.
+
+        `node1` is still live and connected to `bus.Node1`. `bus.Node2` is
+        connected to nothing and fed by `can.replay` instead, which is the
+        boundary a Recording of the removed node's Channel stands in at.
         """
-        participant = group(
+        return group(
             instances=("node1", "bus"),
             connects=["node1.CanChannel=bus.Node1"],
-            binds=BINDINGS[:1] + [
+            binds=[
+                "can.node1.Tx:data=node1.CanChannel.Tx_Data",
                 "can.bus.Node1:data=bus.Node1.Tx_Data",
                 "can.bus.Node2:data=bus.Node2.Tx_Data",
                 "can.replay:data=bus.Node2.Rx_Data",
@@ -421,66 +443,154 @@ class TestTheReplayBoundary:
                 "bus": built(build_dir, tmp_path, "bus", "CanBus"),
             },
         )
-        # The configuration the replaced node would have published, replayed
-        # into the terminal it used to be connected to.
-        configuration = bytes.fromhex(
-            EXPECTED["cases"][0]["events"][0]["payload_hex"]
-        )
-        participant.on_step(0, 100 * MS, [Input("can.replay", 0, {
-            "data": configuration.ljust(CAN_BUFFER_BYTES, b"\x00"),
-            "data_length": len(configuration),
-            "data_event_time_ns": 0,
-        })])
-        events = []
-        for t in range(100 * MS, 400 * MS, 100 * MS):
-            events.extend(
-                (channel, fields["data_event_time_ns"],
-                 fields["data"][:fields["data_length"]].hex())
-                for channel, fields in participant.on_step(t, 100 * MS, [])
-            )
-        # One frame is offered, by the one node still in the group, and the bus
-        # transmits it to the terminal the Channel stands in for.
-        assert events == [
-            ("can.node1.Tx", 300 * MS,
-             "1000000014000000010000000000040001020304"),
-            ("can.bus.Node1", 300 * MS + 480 * US,
-             "200000000c00000001000000"),
-            ("can.bus.Node2", 300 * MS + 480 * US,
-             "1000000014000000010000000000040001020304"),
+
+    @staticmethod
+    def message(payload: bytes, event_time_ns: int, publish_ns: int = 0):
+        """One recorded activation, as the kernel delivers it back."""
+        return Input("can.replay", publish_ns, {
+            "data": payload.ljust(CAN_BUFFER_BYTES, b"\x00"),
+            "data_length": len(payload),
+            "data_event_time_ns": event_time_ns,
+        })
+
+    @staticmethod
+    def frame(identifier: int, payload: bytes) -> bytes:
+        """One `CanTransmit` operation, in the layered standard's own bytes.
+
+        `fmi3LsBusCanOperationCanTransmit`: the 8-byte header states the
+        operation's own total length, and the body is the CAN ID, the IDE and
+        RTR flags, the data length, and the data.
+        """
+        body = (identifier.to_bytes(4, "little") + b"\x00\x00"
+                + len(payload).to_bytes(2, "little") + payload)
+        return (int(0x10).to_bytes(4, "little")
+                + (HEADER_SIZE + len(body)).to_bytes(4, "little") + body)
+
+    @staticmethod
+    def stated(published: list) -> list[tuple[str, int, str]]:
+        """Every published Message, as channel, event time and payload."""
+        return [
+            (channel, fields["data_event_time_ns"],
+             fields["data"][:fields["data_length"]].hex())
+            for channel, fields in published
         ]
 
-    def test_an_injected_message_is_an_activation_at_the_point_stood_on(
-        self, group, tmp_path, build_dir
+    def configured(self, participant) -> None:
+        """The first Step: the configuration of the node that was replaced.
+
+        The bus enables communication only once both terminals agreed on one
+        baud rate, so the replayed source has to carry its own configuration
+        for anything after it to be transmitted at all.
+        """
+        participant.on_step(0, 100 * MS, [self.message(self.CONFIGURATION, 0)])
+
+    def test_an_activation_is_raised_at_the_instant_the_message_states(
+        self, replayed
     ):
-        """The Message's own event time is not used: the group activates the
-        Clock at the communication point it stands on."""
-        participant = group(
-            instances=("node1", "bus"),
-            connects=["node1.CanChannel=bus.Node1"],
-            binds=[
-                "can.bus.Node2:data=bus.Node2.Tx_Data",
-                "can.replay:data=bus.Node2.Rx_Data",
-            ],
-            channels={
-                "can.bus.Node2": (BUFFER_SCHEMA, "out"),
-                "can.replay": (BUFFER_SCHEMA, "in"),
-            },
-            paths={
-                "node1": built(build_dir, tmp_path, "node1", "CanNodeOnABus"),
-                "bus": built(build_dir, tmp_path, "bus", "CanBus"),
-            },
+        """The instant the Message names, not the one the group stands on.
+
+        The frame is handed to the terminal at 150 ms, inside a Step that
+        began at 100 ms, and the bus's transmission time is counted from there.
+        """
+        self.configured(replayed)
+        published = replayed.on_step(
+            100 * MS, 100 * MS, [self.message(self.FRAME, 150 * MS)]
         )
-        frame = bytes.fromhex("1000000014000000070000000000040001020304")
-        participant.on_step(0, 100 * MS, [])
-        published = participant.on_step(100 * MS, 100 * MS, [Input(
-            "can.replay", 100 * MS, {
-                "data": frame.ljust(CAN_BUFFER_BYTES, b"\x00"),
-                "data_length": len(frame),
-                "data_event_time_ns": 42,
-            })])
-        # Nothing is transmitted: the bus takes no frame before both terminals
-        # agreed on a baud rate, and only one of them has.
-        assert published == []
+        assert self.stated(published) == [
+            ("can.bus.Node1", 150 * MS + 480 * US, self.FRAME.hex()),
+            ("can.bus.Node2", 150 * MS + 480 * US,
+             "200000000c00000001000000"),
+        ]
+
+    def test_an_activation_at_the_start_of_a_step_is_raised_there(
+        self, replayed
+    ):
+        """The instant a Step begins on is the instant the group stands on."""
+        self.configured(replayed)
+        published = replayed.on_step(
+            100 * MS, 100 * MS, [self.message(self.FRAME, 100 * MS)]
+        )
+        assert self.stated(published) == [
+            ("can.bus.Node1", 100 * MS + 480 * US, self.FRAME.hex()),
+            ("can.bus.Node2", 100 * MS + 480 * US,
+             "200000000c00000001000000"),
+        ]
+
+    def test_an_activation_at_the_end_of_a_step_is_raised_there(
+        self, replayed
+    ):
+        """The Step's own end is reachable, and is where a recorded Message
+        published in the Slot before it states its instant."""
+        self.configured(replayed)
+        assert replayed.on_step(
+            100 * MS, 100 * MS, [self.message(self.FRAME, 200 * MS)]
+        ) == []
+        # The transmission time is counted from the instant the frame arrived,
+        # which lands it in the next Step — where the live node's own transmit
+        # at 300 ms is too.
+        assert self.stated(replayed.on_step(200 * MS, 100 * MS, [])) == [
+            ("can.bus.Node1", 200 * MS + 480 * US, self.FRAME.hex()),
+            ("can.bus.Node2", 200 * MS + 480 * US,
+             "200000000c00000001000000"),
+            ("can.node1.Tx", 300 * MS, self.FRAME.hex()),
+        ]
+
+    def test_two_activations_at_one_instant_keep_the_order_they_arrived_in(
+        self, replayed
+    ):
+        """Same-time ordering is the Recording's publish order.
+
+        Two frames of one CAN ID leave the bus in the order they were offered
+        to it, so the order the Messages arrived in is observable rather than
+        assumed.
+        """
+        self.configured(replayed)
+        first, second = self.frame(1, b"\x0a"), self.frame(1, b"\x0b")
+        published = replayed.on_step(100 * MS, 100 * MS, [
+            self.message(first, 150 * MS), self.message(second, 150 * MS),
+        ])
+        assert [
+            (channel, event, payload)
+            for channel, event, payload in self.stated(published)
+            if channel == "can.bus.Node1"
+        ] == [
+            ("can.bus.Node1", 150 * MS + 450 * US, first.hex()),
+            ("can.bus.Node1", 150 * MS + 900 * US, second.hex()),
+        ]
+
+    def test_two_activations_in_one_step_are_each_raised_at_their_own_instant(
+        self, replayed
+    ):
+        """One Step carries every activation the Step that recorded it did."""
+        self.configured(replayed)
+        early, late = self.frame(1, b"\x0a"), self.frame(1, b"\x0b")
+        published = replayed.on_step(100 * MS, 100 * MS, [
+            self.message(early, 120 * MS), self.message(late, 160 * MS),
+        ])
+        assert [
+            (event, payload)
+            for channel, event, payload in self.stated(published)
+            if channel == "can.bus.Node1"
+        ] == [
+            (120 * MS + 450 * US, early.hex()),
+            (160 * MS + 450 * US, late.hex()),
+        ]
+
+    def test_an_activation_behind_the_group_is_refused(self, replayed):
+        """No FMU of this profile can be taken back to an instant it passed."""
+        self.configured(replayed)
+        with pytest.raises(ParticipantFailure, match="stands at 100000000 ns"):
+            replayed.on_step(
+                100 * MS, 100 * MS, [self.message(self.FRAME, 42)]
+            )
+
+    def test_an_activation_beyond_the_step_is_refused(self, replayed):
+        """A Step is not stepped past to reach an instant after its end."""
+        self.configured(replayed)
+        with pytest.raises(ParticipantFailure, match="ends at 200000000 ns"):
+            replayed.on_step(
+                100 * MS, 100 * MS, [self.message(self.FRAME, 250 * MS)]
+            )
 
 
 class TestCleanup:
@@ -946,3 +1056,184 @@ class TestRunBoundary:
         recorded = first.mcap_path.read_bytes()
         second = run_simulation(manifest, runner=sil_run, workdir=tmp_path)
         assert second.mcap_path.read_bytes() == recorded
+
+
+# The boundary the live source is replaced at: the Channel its activations
+# were observed on, replayed into the terminal it used to be connected to.
+BOUNDARY = "can.node1.Tx"
+RECEIVER_SOURCES = {
+    channel: source for channel, source in SOURCES.items()
+    if channel != BOUNDARY
+}
+
+
+def replay_manifest(bus: Path, node: Path, recording: Path, *,
+                    step_period_ns: int, duration_ns: int,
+                    latency_ns: int | None = 0) -> Manifest:
+    """The same composition with the live source replaced by its Recording.
+
+    `node1` is gone. `bus.Node1` is connected to nothing and handed the
+    Messages the removed node published, by a Replay participant reading the
+    live Run's Recording. Everything else — the receiving node, the bus, the
+    bus configuration, the step grid — is what the live Run declared.
+
+    The boundary Channel declares `latency_ns` 0. An activation observed
+    during a Step is published in the Slot that Step began in, so a Message
+    delivered in the Slot it was published in arrives in the Step its instant
+    belongs to; the default next-activation delivery would put every one of
+    them one Step behind the instant it states.
+    """
+    m = Manifest(duration_ns=duration_ns)
+    m.add_schemas(SCHEMAS)
+    m.add_channel(BOUNDARY, schema=BUFFER_SCHEMA, latency_ns=latency_ns)
+    for channel in RECEIVER_SOURCES:
+        m.add_channel(channel, schema=BUFFER_SCHEMA)
+    m.add_replay("node1", recording=recording, channels=[BOUNDARY])
+    m.add_process(
+        "importer",
+        command=[
+            sys.executable, "-m", "sil.fmi",
+            "--instance", "node2", str(node),
+            "--instance", "bus", str(bus),
+            "--bus-profile", CAN_PROFILE,
+            "--connect", "node2.CanChannel=bus.Node2",
+            "--bind", f"{BOUNDARY}:data=bus.Node1.Rx_Data",
+            *(argument for channel, variable in VARIABLES.items()
+              if channel != BOUNDARY
+              for argument in ("--bind", f"{channel}:data={variable}")),
+            "--start", "bus.BusErrorProbability=0.0",
+        ],
+        step_period_ns=step_period_ns,
+        subscribes=[SubscriberRoute(BOUNDARY, capacity=ROUTE_CAPACITY)],
+        publishes=list(RECEIVER_SOURCES),
+        priority=1,
+    )
+    m.add_process(
+        "observer",
+        command=[sys.executable, str(OBSERVER)],
+        step_period_ns=step_period_ns,
+        subscribes=[
+            SubscriberRoute(channel, capacity=ROUTE_CAPACITY)
+            for channel in SOURCES
+        ],
+        priority=2,
+    )
+    return m
+
+
+def streams(result, channels=SOURCES) -> dict[str, list[tuple[int, str]]]:
+    """Every Message of the named Channels, as event time and payload.
+
+    The publication Slot is left out on purpose: what a replaced source has to
+    reproduce is the operation and the instant it crossed the terminal at, and
+    comparing whole Recordings across two Manifest hashes would compare the
+    Manifests instead.
+    """
+    return {
+        channel: [
+            (fields["data_event_time_ns"],
+             fields["data"][:fields["data_length"]].hex())
+            for _, fields in result.messages(channel)
+        ]
+        for channel in channels
+    }
+
+
+@pytest.fixture(scope="module")
+def runs(sil_run, tmp_path_factory, build_dir):
+    """The live Run, and the replay Run built out of its Recording."""
+    workdir = tmp_path_factory.mktemp("fmi-replay")
+    declared = case("aligned")
+    node = built(build_dir, workdir, "node", "CanNodeOnABus")
+    bus = built(build_dir, workdir, "bus", "CanBus")
+    live = run_simulation(
+        group_manifest(
+            node, bus, step_period_ns=declared["step_size_ns"],
+            duration_ns=declared["duration_ns"],
+        ),
+        runner=sil_run, workdir=workdir,
+    )
+    replayed = tmp_path_factory.mktemp("fmi-replay-run")
+    recording = replayed / "live.mcap"
+    recording.write_bytes(live.mcap_path.read_bytes())
+    replay = run_simulation(
+        replay_manifest(
+            bus, node, recording,
+            step_period_ns=declared["step_size_ns"],
+            duration_ns=declared["duration_ns"],
+        ),
+        runner=sil_run, workdir=replayed,
+    )
+    return live, replay
+
+
+class TestReplayEquivalence:
+    """One live source replaced by its Recording, in a complete Run."""
+
+    def test_the_receiver_sees_the_same_operations_at_the_same_instants(
+        self, runs
+    ):
+        """What the proof compares: the unchanged receiver's own streams.
+
+        The removed node is not in the replay Run at all, so the only thing
+        that could reproduce the receiving node's transmissions and the bus's
+        two arbitrated deliveries is the replayed source landing on the same
+        instants the live one produced.
+        """
+        live, replay = runs
+        assert streams(replay, RECEIVER_SOURCES) == streams(
+            live, RECEIVER_SOURCES
+        )
+
+    def test_the_replayed_boundary_carries_the_recorded_stream(self, runs):
+        """The stimulus is the Recording's, unchanged and complete."""
+        live, replay = runs
+        assert streams(replay, [BOUNDARY]) == streams(live, [BOUNDARY])
+
+    def test_the_replay_run_reproduces(self, sil_run, tmp_path, build_dir,
+                                       runs):
+        """The determinism check, run against the replay Manifest's own hash.
+
+        A replay Run is a Run: its stimulus is a file the Manifest hashes, and
+        two Runs of it record the same bytes.
+        """
+        live, _ = runs
+        declared = case("aligned")
+        recording = tmp_path / "live.mcap"
+        recording.write_bytes(live.mcap_path.read_bytes())
+        manifest = replay_manifest(
+            built(build_dir, tmp_path, "bus", "CanBus"),
+            built(build_dir, tmp_path, "node", "CanNodeOnABus"),
+            recording,
+            step_period_ns=declared["step_size_ns"],
+            duration_ns=declared["duration_ns"],
+        )
+        first = run_simulation(manifest, runner=sil_run, workdir=tmp_path)
+        recorded = first.mcap_path.read_bytes()
+        second = run_simulation(manifest, runner=sil_run, workdir=tmp_path)
+        assert second.mcap_path.read_bytes() == recorded
+
+    def test_the_default_latency_puts_every_message_behind_the_group(
+        self, sil_run, tmp_path, build_dir, runs
+    ):
+        """Why the boundary Channel declares a Latency of zero.
+
+        With the default next-activation delivery a Message arrives one Step
+        after the Slot it was published in, which is one Step after the
+        instant it states. The importer refuses it rather than raising the
+        activation at an instant the FMUs cannot be taken back to.
+        """
+        live, _ = runs
+        declared = case("aligned")
+        recording = tmp_path / "live.mcap"
+        recording.write_bytes(live.mcap_path.read_bytes())
+        manifest = replay_manifest(
+            built(build_dir, tmp_path, "bus", "CanBus"),
+            built(build_dir, tmp_path, "node", "CanNodeOnABus"),
+            recording,
+            step_period_ns=declared["step_size_ns"],
+            duration_ns=declared["duration_ns"],
+            latency_ns=None,
+        )
+        with pytest.raises(RunFailure, match="an activation is raised at the"):
+            run_simulation(manifest, runner=sil_run, workdir=tmp_path)

@@ -11,18 +11,25 @@ milestone. It fixes what the implementation issues (#138 – #141) are aimed at,
 so that each of them is measured against artifacts and expectations that were
 written down before the implementation was.
 
-Two steps are the other way round, and they are the last ones: since [issue
+Three steps are the other way round, and they are the last ones: since [issue
 #139](https://github.com/Stevie1704/sil/issues/139) the proof also drives the
 same pinned node with **the checkout's** FMI Importer and judges the Recording
-against the same expected exchange, and since [issue
+against the same expected exchange; since [issue
 #140](https://github.com/Stevie1704/sil/issues/140) it connects two instances of
 that node through the pinned **bus simulation FMU** and judges that Recording
-too. The gate measures the release; those steps measure the tree, and [say which
+too; and since [issue
+#141](https://github.com/Stevie1704/sil/issues/141) it removes one of those two
+nodes, **replays its Recording** into the terminal it fed, and compares what
+everything that stayed produced with what it produced live. The gate measures
+the release; those steps measure the tree, and [say which
 tree](evidence/identity.txt).
 
-**This is an interoperability fixture, not a conformance claim and not ADAS
-validation.** It covers two CAN demo FMUs of one layered standard, at one
-revision, on one machine class.
+**This is an interoperability and replay proof, not full FMI-LS-BUS
+conformance and not ADAS behavior validation.** It covers two CAN demo FMUs of
+one layered standard, at one revision, on one machine class, over the CAN
+operations and the Clock profile [published below](#the-supported-bus-profile-as-exercised).
+Other buses, general rollback support, and any performance claim these Runs do
+not exercise are outside it.
 
 ## What this gate establishes
 
@@ -35,6 +42,7 @@ revision, on one machine class.
 | What does current SiL do with the same FMU? | It fails, twice and for two different reasons — both recorded, both in the Importer, neither in the kernel contract |
 | What does the checkout do with the same FMU? | It drives it: both step grids of the expected exchange, matched whole, in a Run whose Recording reproduces bit for bit |
 | What does the checkout do with both FMUs connected? | It runs them as one group: two nodes exchanging frames through the bus FMU, every payload, count and event time as stated beforehand, and bit-identical across two Runs |
+| Can one of those nodes be replaced by its own Recording? | Yes. With the live Publisher gone and its Channel replayed into the terminal it fed, every retained participant produces the same operations, in the same order, at the same event times — on both step grids |
 
 ## The artifacts
 
@@ -240,7 +248,8 @@ and every expected event declares it absent.
 
 ### The bus simulation FMU — `DemoCanBusSimulation`
 
-Not driven by the gate itself; the last two steps connect two nodes through it.
+Not driven by the gate itself; the last three steps connect two nodes through
+it, and then replace one of them with its own Recording.
 Its description is published here so that work started from a stated contract
 rather than from a reading of the sources:
 
@@ -279,6 +288,24 @@ tested: the `DiscardAndNotify` arbitration-lost behavior, which nothing in this
 fixture configures, and the `BusError` operation upstream draws from `rand()`,
 which is why every Manifest below sets `BusErrorProbability` to `0.0` rather
 than leaving a Run's result to a pseudo-random sequence.
+
+## The supported BUS profile, as exercised
+
+Everything above, stated once in the vocabulary a consumer needs before
+pointing this at their own FMUs. Every row is a fact the Runs below actually
+exercise, not a capability the standard defines.
+
+| | Exercised |
+| --- | --- |
+| **FMI version** | 3.0, co-simulation, `hasEventMode` true and `eventModeUsed` required |
+| **Layered standard** | `org.fmi-standard.fmi-ls-bus`. The artifacts' `fmi-ls-manifest.xml` and `mimeType` both declare `1.0.0-beta.1`; the CAN operation bytes are v1.0.0's, [checked header by header](#why-this-revision-and-what-bus-100-means-here). The profile is keyed on the media type `application/org.fmi-standard.fmi-ls-bus.can`, not on the version string |
+| **CAN operations** | `Configuration` (`CanBaudrate`, `ArbitrationLostBehavior`), `CanTransmit` (11-bit ID, no IDE, no RTR), `Confirm`. Every other operation the standard defines is [rejected by name](#what-is-outside-the-profile) |
+| **Clock profile** | `Rx_Clock` input `triggered`; `Tx_Clock` either output `triggered` (the node raises it) or input `countdown` (the group raises it at the instant the interval ends). A countdown interval is read as the exact fraction the FMU states and must be a whole number of nanoseconds. No `periodic` Clock |
+| **Topology** | A star with one `isBusSimulationFMU=true` end per connection and one node end; both ends transceiver terminals of the same layered-standard version declaring the identical `mimeType`. Two nodes and one bus here. A terminal takes its frames from a connected peer **or** from an in-direction Channel, never both |
+| **Payload limits** | Every Binary variable of both FMUs declares `maxSize` 2048; every Channel carries 2048 payload bytes beside a `u16` length and a `u64` event time. A payload above a receiving variable's `maxSize` aborts the Run rather than being truncated |
+| **Timing semantics** | Three times, never folded into one another: the **FMI event time** the Message states, the **publication Slot** the Recording stamps, and the **delivery time** one Latency later. The group stops at communication points between Slots — 480 us for a four-byte frame at 100 000 bit/s. A replayed activation is raised at the instant its Message states, which a boundary Channel of `latency_ns` 0 makes reachable |
+| **Determinism** | One Manifest, run twice, bit-compared, per Manifest. Two Runs of two Manifests are compared over their shared Message streams instead |
+| **Not exercised** | CAN FD, CAN XL, FlexRay, `ArbitrationLost`, `BusError`, `Status`, `Wakeup`, `DiscardAndNotify`, rollback (`canGetAndSetFMUState` is false on both FMUs), early return, intermediate update, FMU state serialisation, and any performance claim |
 
 ## The expected exchange
 
@@ -371,7 +398,12 @@ instant would be transmitted 480 us after the Run is over, and never are.
 | A clocked Run reproduces | `deterministic: 6c85facd…2f81`, two Runs of one Manifest bit-compared — [`clocked-identity.txt`](evidence/clocked-identity.txt) |
 | The checkout's Importer connects two nodes through the bus FMU | `aligned: 20 events on 4 terminals, all as expected` / `quantised: 16 events on 4 terminals, all as expected`, judged on the Recording — [`connected-aligned.txt`](evidence/connected-aligned.txt), [`connected-quantised.txt`](evidence/connected-quantised.txt) |
 | A frame reaches its peer a transmission time later, not a Slot later | `bus.Node1 event 300480000 ns published 300000000 ns 12 B Confirm` beside `bus.Node2 … 20 B CanTransmit`, and the losing frame at `300960000 ns` — [`connected-aligned.txt`](evidence/connected-aligned.txt) |
-| A connected Run reproduces | `deterministic: b37f02e7…b24a`, two Runs of one Manifest bit-compared — [`connected-identity.txt`](evidence/connected-identity.txt) |
+| A connected Run reproduces | `aligned deterministic: b37f02e7…b24a` and `quantised deterministic: c71aaa20…e13b`, one Manifest at a time, bit-compared — [`connected-identity.txt`](evidence/connected-identity.txt) |
+| One live source can be replaced by its own Recording | `can.node1.Tx 4, can.node2.Tx 4, can.bus.Node1 6, can.bus.Node2 6 — every Message, order and event time as the live Run recorded them`, on both step grids — [`replay-aligned.txt`](evidence/replay-aligned.txt), [`replay-quantised.txt`](evidence/replay-quantised.txt) |
+| The equivalence check fails on a missing operation | `can.node1.Tx: live recorded 4 Messages and the replay Run 3`, and the bus's arbitration reverses — [`replay-aligned-dropped.txt`](evidence/replay-aligned-dropped.txt) |
+| The equivalence check fails on an altered event time | the frame and the transmission it causes both 50 ms early — [`replay-aligned-retimed.txt`](evidence/replay-aligned-retimed.txt) |
+| A replay Run reproduces | one line per Manifest, bit-compared — [`replay-identity.txt`](evidence/replay-identity.txt) |
+| What every compared Run depended on is retained | Manifest hashes, Recording digests, FMU archive digests, declared configuration, and the replayed Recording's committed hash — [`replay-provenance.txt`](evidence/replay-provenance.txt) |
 
 ## What current SiL does, and where the gap is
 
@@ -389,8 +421,8 @@ Both failures are the Importer's, and they are different capabilities:
 
 - **Event Mode.** `sil.fmi` instantiates with `eventModeUsed` false and
   `earlyReturnAllowed` false, and this FMU requires the first. #139 is where
-  that lifecycle is implemented, and the last step of this proof is where the
-  implementation is measured against the same FMU.
+  that lifecycle is implemented, and the measured steps of this proof are where
+  the implementation is held to the same FMU.
 - **Binary variables and Clocks.** `sil.fmi` reads only `Float64` elements out
   of `modelDescription.xml`, so the node's `Binary` and `Clock` variables are
   not unsupported — they are invisible. The diagnostic names the Channel's
@@ -408,8 +440,8 @@ it with the release in hand rather than by inspection.
 
 ## What this checkout does
 
-The last step of the proof answers the same question about the working tree,
-and it is the only step that reads the checkout at all.
+The last three steps of the proof answer the same question about the working
+tree, and they are the only ones that read the checkout at all.
 [`Dockerfile.measured`](Dockerfile.measured) starts from the same published
 runner image, by the same digest, and puts the tree's `sil` package ahead of
 the installed one on `PYTHONPATH`: the kernel, the loader and the runner are
@@ -492,6 +524,94 @@ of those Messages are published in the Slot at 300 ms, because 300.48 ms and
 what the Recording holds is the instant each activation stood on rather than a
 timestamp rounded onto the grid.
 
+### One node replaced by its own Recording
+
+The last step is the regression workflow the milestone exists for. The live
+Runs above recorded what both nodes published;
+[`replay_manifest.py`](replay_manifest.py) declares the **same composition with
+`node1` gone**, and a Replay participant handing `bus.Node1` the Messages the
+removed node published on `can.node1.Tx`. Nothing else moves: the receiving
+node, the bus simulation FMU, `BusErrorProbability`, the Channels, the schema,
+the route capacities and the step grid are the live Manifest's.
+
+Two things make that Channel the boundary rather than a second composition:
+
+- **`latency_ns` 0.** An activation is published in the Slot the Step that
+  observed it began in, so its instant lies inside that Step. Delivered in the
+  Slot it was published in, a Message therefore arrives in the Step its own
+  instant belongs to. Under the default next-activation delivery every Message
+  would arrive one Step *after* the instant it names, and the Importer refuses
+  that rather than raising the activation somewhere else.
+- **The activation is raised at the instant the Message states.** That is what
+  [ADR 0002](../../docs/adr/0002-a-replayed-terminal-lands-on-its-own-instant.md)
+  settles, and it is the whole reason the receiver behaves identically: the bus
+  computes its transmission time from the instant a frame arrived.
+
+| Manifest | Hash | Step | What happens |
+| --- | --- | --- | --- |
+| `replay-aligned` | `2105764d…771f` | 100 ms | exit 0, every retained stream as the live Run recorded it |
+| `replay-quantised` | `71982bd0…d4c1` | 250 ms | exit 0, the same |
+| `replay-aligned-dropped` | `bd0deac4…89bf` | 100 ms | exit 0, and the equivalence check fails: one `CanTransmit` is missing |
+| `replay-aligned-retimed` | `356aa3a2…6017` | 100 ms | exit 0, and the equivalence check fails: one `CanTransmit` moved to another instant |
+
+[`replay_equivalence.py`](replay_equivalence.py) reads the live Recording and
+the replay Recording and compares four things per Channel — the count of
+Messages, their order, the FMI event time each states, and the payload bytes:
+
+```
+--- case aligned ---
+  boundary can.node1.Tx, replayed into the terminal it fed
+  can.node1.Tx      1  event   300000000 ns   20 B  CanTransmit
+  can.node2.Tx      1  event   300000000 ns   20 B  CanTransmit
+  can.bus.Node1     0  event   300480000 ns   12 B  Confirm
+  can.bus.Node2     0  event   300480000 ns   20 B  CanTransmit
+  can.bus.Node1     1  event   300960000 ns   20 B  CanTransmit
+  can.bus.Node2     1  event   300960000 ns   12 B  Confirm
+aligned: can.node1.Tx 4, can.node2.Tx 4, can.bus.Node1 6, can.bus.Node2 6 — every Message, order and event time as the live Run recorded them
+```
+
+**Whole Recordings are deliberately not compared.** Two Runs of two Manifests
+are two Manifest hashes: the documents differ, the participant set differs, and
+the replay Run carries a Publisher the live one does not. What has to match is
+the Message streams the two Runs share — the replayed boundary, which says the
+stimulus was carried whole and in order, and the three streams of the
+participants the replay did not replace, which is what a replaced source has to
+reproduce.
+
+What the two grids cover between them:
+
+| Case | Covered |
+| --- | --- |
+| Start boundary | the configuration Message states instant 0 and is published in the Slot at 0, so it is replayed at the instant the Step begins on |
+| End boundary | every `CanTransmit` states the instant its Step ends on — 300/600/900 ms aligned, 500/750/1000 ms quantised |
+| Multiple operations in one outer Step | the configuration Message carries two `Configuration` operations in one activation; the quantised grid's last Step carries an operation the Run never transmits, because 480 us past its instant is past the Duration |
+| Same-time ordering | both nodes offer CAN ID 1 at the same instant, and the bus arbitrates between the replayed frame and the live one exactly as it did live |
+| A missing operation | `replay-aligned-dropped`: an Interceptor drops the first `CanTransmit` from the boundary. The check reports `live recorded 4 Messages and the replay Run 3`, then the first Message that differs on each affected Channel — including the arbitration reversing, because node 2's frame now meets no competitor |
+| An altered operation | `replay-aligned-retimed`: an Interceptor rewrites that Message's `data_event_time_ns` to 250 ms. The Run still succeeds — 250 ms is inside the Step the Message arrives in — and the check reports the event time, and the bus's transmission 480 us after it, both 50 ms early |
+
+Both failing variants are **declared faults rather than edited artifacts**: an
+Interceptor is part of the hashed Manifest, so a Run that proves the check can
+fail reproduces like the Run that passes. `run-proof.sh` fails if either of
+them ever stops failing.
+
+The Determinism check is run **per Manifest**, never across two of them:
+[`evidence/connected-identity.txt`](evidence/connected-identity.txt) and
+[`evidence/replay-identity.txt`](evidence/replay-identity.txt) each hold one
+line per step grid. A replay Run's stimulus is a file its Manifest names and
+hashes, so it reproduces on the same terms as a Run that computes its own.
+
+[`evidence/replay-provenance.txt`](evidence/replay-provenance.txt) states, per
+Manifest: its own hash, the Recording it produced, the FMU archives its command
+names, the configuration it declares — bus profile, connection, bindings, start
+values, Channel Latency, Interceptors — and, for a replay Manifest, the
+Recording it replays with the hash the Manifest committed to, checked against
+the file. `sil-run` writes a provenance side-car carrying the same facts, and
+the released runner this proof pins predates it; the record is therefore
+assembled from the Manifests and the artifacts they name.
+[`evidence/connected-aligned.mcap`](evidence/connected-aligned.mcap) and
+[`evidence/replay-aligned.mcap`](evidence/replay-aligned.mcap) are the two
+Recordings the aligned comparison was made on.
+
 ## Reproducing
 
 ```sh
@@ -505,10 +625,10 @@ workspace. [`.github/workflows/proof-fmi-ls-bus.yml`](../../.github/workflows/pr
 runs the same script on `ubuntu-latest`, for a pull request that touches this
 directory or the Importer.
 
-Every step but the last two is made of pinned artifacts, so it answers the same
-on any machine class the fixture supports. Those two are made of the working
-tree as well, and `evidence/identity.txt` names the commit they measured —
-including when that tree carried changes the commit does not.
+Every step but the last three is made of pinned artifacts, so it answers the
+same on any machine class the fixture supports. Those three are made of the
+working tree as well, and `evidence/identity.txt` names the commit they
+measured — including when that tree carried changes the commit does not.
 
 The committed evidence was produced by that script on `linux/amd64` — the
 supported machine class — in an emulated container on a `Darwin arm64` host,
@@ -544,4 +664,7 @@ The decoder has its own tests, which need no fixture and no docker:
 | [`connected_expected.json`](connected_expected.json) | The expected exchange of two nodes through the bus FMU, stated before any Run |
 | [`connected_manifest.py`](connected_manifest.py) | The two Manifests that drive all three FMUs as one group, one per step grid |
 | [`connected_exchange.py`](connected_exchange.py) | Judge one connected Run's Recording, per observed terminal |
+| [`replay_manifest.py`](replay_manifest.py) | The Manifests that replace one live node with its own Recording, faultless and faulted |
+| [`replay_equivalence.py`](replay_equivalence.py) | Compare a replay Run's Message streams with the live Run's |
+| [`replay_provenance.py`](replay_provenance.py) | State what produced each compared Run, by digest |
 | [`run-proof.sh`](run-proof.sh) | All of it, in order, into `evidence/` |

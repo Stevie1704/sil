@@ -2058,6 +2058,11 @@ class _Injection:
     connected peer would otherwise have handed the same terminal, so a
     Recording of the observation Channel can stand in for the FMU that
     produced it.
+
+    The activation is raised at the instant the Message states, which is the
+    instant the peer it stands in for produced it at. That is what makes the
+    replayed source equivalent to the live one: the receiving FMU is handed
+    the same operation at the same instant, so what it does next is the same.
     """
 
     channel: str
@@ -2065,6 +2070,9 @@ class _Injection:
 
     def payload(self, fields: dict) -> bytes:
         return _outgoing_payload(self.binary, fields)
+
+    def instant_ns(self, fields: dict) -> int:
+        return fields[self.binary.event_time_field]
 
 
 class _Transceiver:
@@ -2321,17 +2329,24 @@ class _Group:
         the Slot this activation runs in and states the FMI event time it
         belongs to, which is how the group's finer grid reaches a Recording.
         """
-        published = self._settle(t, self._injected(inputs))
         now, end = t, t + dt
+        injected = self._injected(inputs, now, end)
+        published = self._settle(now, injected.pop(now, []))
         while now < end:
-            boundary = self._boundary(now, end)
+            boundary = self._boundary(now, end, injected)
             for instance in self._instances:
                 instance.step(now, boundary - now)
             now = boundary
-            published.extend(self._settle(now, [
+            # An arrived Message goes ahead of the events this instant caused
+            # by itself: the group was holding it before it took the Step, and
+            # the peer it stands in for would have offered it from the same
+            # place in the group's declaration order.
+            pending = injected.pop(now, [])
+            pending.extend(
                 _Pending(instance) for instance in self._instances
                 if instance.due(now)
-            ]))
+            )
+            published.extend(self._settle(now, pending))
         return published
 
     def close(self) -> None:
@@ -2354,38 +2369,55 @@ class _Group:
         if failure is not None:
             raise failure
 
-    def _injected(self, inputs: list) -> list:
-        """The Messages that arrived, as activations at the point stood on.
+    def _injected(self, inputs: list, t: int, end: int) -> dict[int, list]:
+        """The Messages that arrived, by the instant each one states.
 
-        They are delivered before the interval rather than inside it: the
-        group is standing on this communication point, and an event happens at
-        the point the FMUs stand on.
+        A Message states the communication point its activation was observed
+        at, and that is where the group raises the Clock: the receiving FMU is
+        handed the operation at the instant the peer it stands in for produced
+        it. The group stops there like it stops at any instant an instance
+        asked for.
 
-        The instant a Message *states* is deliberately not used, and cannot be
-        with what a Channel offers today: a Message is published in the Slot
-        the activation that observed it ran in and becomes visible one Latency
-        after that, so by the time it arrives the instant it names is behind
-        the group, and no FMU of this profile can be taken back to it.
-        Reproducing a recorded terminal at its own instants is therefore as
-        much a question about a Channel's delivery time as about this
-        importer, which is why the boundary here carries the information and
-        stops there.
+        Both bounds are refused rather than approximated. An instant behind
+        the group is one no FMU of this profile can be taken back to, and one
+        beyond this Step would have to be reached by stepping past the Step's
+        own end. Which of the two a Run hits is a statement about the
+        Channel's Latency: an activation observed during a Step is published
+        in the Slot that Step began in, so only a Channel delivering in the
+        Slot it was published in — `latency_ns` 0 — puts the Message back in
+        the Step its instant belongs to.
+
+        Messages keep the order they arrived in, which is the order they were
+        published in, so two activations of one instant reach the terminal the
+        way the Recording holds them.
         """
-        pending = []
+        pending: dict[int, list] = {}
         for message in inputs:
             transceiver = self._injections[message.channel]
-            pending.append(_Pending(
+            injection = transceiver.injection
+            instant = injection.instant_ns(message.data)
+            if instant < t or instant > end:
+                raise ParticipantFailure(
+                    f"Channel {message.channel!r} states {instant} ns as the "
+                    f"instant of an activation of {transceiver}, and the Step "
+                    f"it arrived in stands at {t} ns and ends at {end} ns; an "
+                    f"activation is raised at the instant it states, so a "
+                    f"replayed Channel declares the Latency that delivers a "
+                    f"Message in the Step its instant belongs to"
+                )
+            pending.setdefault(instant, []).append(_Pending(
                 transceiver.instance, transceiver,
-                transceiver.injection.payload(message.data),
+                injection.payload(message.data),
             ))
         return pending
 
-    def _boundary(self, now: int, end: int) -> int:
+    def _boundary(self, now: int, end: int, injected: dict[int, list]) -> int:
         """The next instant the whole group stops at, at the latest `end`."""
         asked = [
             instant for instance in self._instances
             for instant in instance.asked_for(now) if instant <= end
         ]
+        asked.extend(instant for instant in injected if instant > now)
         return min(asked) if asked else end
 
     def _settle(self, instant_ns: int, pending: list) -> list:

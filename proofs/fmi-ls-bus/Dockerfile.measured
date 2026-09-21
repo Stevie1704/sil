@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1
 #
 # The image that measures *this checkout's* FMI Importer against the pinned
-# CAN node (issue #139) and against both pinned FMUs connected to each other
-# (issue #140).
+# CAN node (issue #139), against both pinned FMUs connected to each other
+# (issue #140), and against the same composition with one source replaced by
+# its own Recording (issue #141).
 #
 # Everything else in this directory measures the published release, which is
 # what an evidence gate is for. This image is the one exception and says so in
@@ -38,6 +39,9 @@ COPY proofs/fmi-ls-bus/can_operations.py \
      proofs/fmi-ls-bus/connected_manifest.py \
      proofs/fmi-ls-bus/connected_expected.json \
      proofs/fmi-ls-bus/expected.json \
+     proofs/fmi-ls-bus/replay_equivalence.py \
+     proofs/fmi-ls-bus/replay_manifest.py \
+     proofs/fmi-ls-bus/replay_provenance.py \
      /opt/measured/
 
 # A copied file keeps the mode it had in the checkout, and the Runs below are

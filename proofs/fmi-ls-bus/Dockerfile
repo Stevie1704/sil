@@ -79,6 +79,11 @@ RUN build-fixture.sh "${EXAMPLES_ALTERNATIVE_REVISION}" /opt/alternative \
 COPY can_operations.py expected.json inspect_fixture.py \
      reference_exchange.py /opt/harness/
 
+# A copied file keeps the mode it had in the checkout, and these images are
+# run as the invoking user rather than as their owner. Readable by everyone is
+# what makes the layer independent of the umask the checkout was made with.
+RUN chmod -R a+rX /opt/harness
+
 WORKDIR /opt/harness
 
 # The published SiL runner image, pinned by content digest: the release the
@@ -90,5 +95,7 @@ USER root
 
 COPY --from=fixture /opt/fixture/*.fmu /opt/fixture/
 COPY manifest.py observer.py /opt/consumer/
+
+RUN chmod -R a+rX /opt/fixture /opt/consumer
 
 USER 10001:10001
