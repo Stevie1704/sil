@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <limits>
 #include <optional>
+#include <utility>
 
 #include "copy_counters.hpp"
 #include "interceptor.hpp"
@@ -15,22 +16,23 @@
 
 namespace sil {
 
-Engine::Engine(const Manifest &manifest, RecordingSink *recorder,
+Engine::Engine(PreparedRun &&prepared, RecordingSink *recorder,
                std::optional<std::chrono::milliseconds> participant_timeout,
                RunBoundaryLimits limits)
-    : manifest_(manifest), recorder_(recorder),
+    : prepared_(std::move(prepared)), manifest_(prepared_.manifest()),
+      recorder_(recorder),
       participant_timeout_(participant_timeout), limits_(limits) {
-  for (const ChannelSpec &spec : manifest.channels)
+  for (const ChannelSpec &spec : manifest_.channels)
     if (!spec.interceptor_plan)
       throw ManifestError("manifest error: channel '" + spec.name +
                           "': missing compiled interceptor plan");
 
-  channels_.reserve(manifest.channels.size());
-  for (uint32_t i = 0; i < manifest.channels.size(); i++) {
-    const ChannelSpec &spec = manifest.channels[i];
+  channels_.reserve(manifest_.channels.size());
+  for (uint32_t i = 0; i < manifest_.channels.size(); i++) {
+    const ChannelSpec &spec = manifest_.channels[i];
     auto interceptor_plan = std::unique_ptr<InterceptorPlan>(
         new InterceptorPlan(*spec.interceptor_plan));
-    channels_.push_back({&spec, &manifest.schemas.at(spec.schema), i, 0,
+    channels_.push_back({&spec, &manifest_.schemas.at(spec.schema), i, 0,
                          std::move(interceptor_plan), {}});
   }
 }
@@ -66,9 +68,9 @@ void Engine::setup() {
 
   // Manifest order is name-sorted: registration indices, and with them all
   // scheduling tie-breaks, are independent of authoring order.
-  for (const ParticipantSpec &p : manifest_.participants) {
+  for (const PreparedParticipantSpec &p : prepared_.participants()) {
     if (run_interrupted()) throw RunError(run_interrupt_message());
-    if (const auto *native = std::get_if<NativeSpec>(&p.impl)) {
+    if (const auto *native = std::get_if<PreparedNativeSpec>(&p.impl)) {
       natives_.push_back(
           std::make_unique<NativeParticipant>(*this, p.name, *native));
       // A contract violation during init is reported through fail(). A
@@ -79,11 +81,12 @@ void Engine::setup() {
       replayers_.push_back(
           std::make_unique<Replayer>(*this, p.name, *replay, manifest_.base_dir));
     } else {
-      const auto &spec = std::get<ProcessSpec>(p.impl);
+      const auto &spec = std::get<PreparedProcessSpec>(p.impl);
       auto proc = std::make_unique<ProcessParticipant>(
           *this, p.name, spec, participant_timeout_, limits_);
       ProcessParticipant *raw = proc.get();
-      register_task(p.name, "step", spec.step_period_ns, 0, spec.priority,
+      register_task(p.name, "step", spec.authored.step_period_ns, 0,
+                    spec.authored.priority,
                     [raw](uint64_t now) { raw->step(now); });
       processes_.push_back(std::move(proc));
     }

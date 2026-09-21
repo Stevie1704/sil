@@ -9,6 +9,7 @@
 #include <memory>
 #include <optional>
 #include <string_view>
+#include <utility>
 #include <variant>
 
 #include "clock_shim.hpp"
@@ -222,6 +223,7 @@ int run(int argc, char **argv) {
   }
 
   std::optional<sil::Provenance> provenance;
+  std::optional<sil::PreparedRun> prepared;
   std::unique_ptr<sil::RecordingSink> recorder;
   std::optional<sil::Manifest> manifest;
   int exit_code = kExitConfigError;
@@ -232,25 +234,21 @@ int run(int argc, char **argv) {
         sil::initialize_provenance(manifest.value(), SIL_VERSION,
                                    SIL_SOURCE_REPOSITORY, SIL_SOURCE_REVISION));
 
-    // Engine::setup rejects a second publisher before it loads or spawns
-    // anything. Run the same check first so the artifact preflight, which now
-    // precedes setup, cannot change which diagnostic a bad Manifest reports.
-    sil::validate_one_publisher_per_channel(manifest.value());
-
-    // Resolve and digest all artifacts before Engine::setup can load a Native
-    // library or spawn a Process participant. The preflight also writes the
-    // resolved paths back into the in-memory Manifest, never its source bytes.
-    sil::preflight_run_artifacts(manifest.value(), *provenance);
+    // Validate and resolve the Run before Engine can load a Native library or
+    // spawn a Process participant. Preparation keeps the resolved execution
+    // data separate from the authored Manifest.
+    prepared.emplace(sil::prepare_run(manifest.value(), *provenance));
 
     // Selecting the recording format is a manifest/config concern: an
     // unrecognized output extension is a Manifest error (exit 2) and must reject
     // before any participant is created.
-    if (recording) recorder = sil::make_recording_sink(out_path, manifest.value());
+    if (recording)
+      recorder = sil::make_recording_sink(out_path, prepared->manifest());
     try {
       if (sil::run_interrupted())
         throw sil::RunError(sil::run_interrupt_message());
-      sil::Engine engine(manifest.value(), recorder.get(), participant_timeout,
-                         limits);
+      sil::Engine engine(std::move(*prepared), recorder.get(),
+                         participant_timeout, limits);
       engine.setup();
       engine.run();
       // A signal that arrived during the Run is a Run failure. Raising it here
