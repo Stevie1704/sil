@@ -4,6 +4,8 @@ sil runner image         ghcr.io/stevie1704/sil@sha256:d67a254125fbe44467bf1354a
 sil version              0.1.0
 fixture image id         sha256:f80b87d1f772474f0449220745c7ecd2ba97ce6e31d3895c3a01ca266661af4d
 proof image id           sha256:1522bd9b8072ce4105b39b34d72fdf43a252e28b3784b714b5491c6819cc73c1
+measured image id        sha256:0e108163c024b1ccc999b00a52ca6cd3c99e47c717e44e26da88a13a74726f38
+measured checkout        928bb2bd07c679d0b4052788da0e296e6f711f42, with uncommitted changes
 examples_revision        cc42cacd26c7f5edbb20959b0e0c56922c2f0cc2
 examples_alternative_revision de019a6efbad810795835f2fd9bbf9e62eb451b9
 fmpy_version             0.3.32

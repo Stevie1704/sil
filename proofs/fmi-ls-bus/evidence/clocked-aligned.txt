@@ -1,0 +1,52 @@
+manifest    clocked-aligned.json
+exit status 0
+--- output ---
+fmu: Instance DemoCanNodeTriggeredOutput instantiated.
+fmu: Entering initialization mode.
+fmu: Entering event mode.
+fmu: Get TX clock of 1
+fmu: Get TX buffer of 23 bytes
+fmu: Ending super dense time step.
+fmu: Entering step mode.
+fmu: Doing step at 0.000000 of 0.100000 seconds.
+fmu: Doing step at 0.100000 of 0.100000 seconds.
+observer: visible 100000000 ns  event 0 ns  400000000d00000001a0860100400000000a0000000401
+fmu: Doing step at 0.200000 of 0.100000 seconds.
+fmu: Transmitting CAN frame with ID 1 at internal time 0.300000
+fmu: Entering event mode.
+fmu: Get TX clock of 1
+fmu: Get TX buffer of 20 bytes
+fmu: Ending super dense time step.
+fmu: Entering step mode.
+fmu: Doing step at 0.300000 of 0.100000 seconds.
+observer: visible 300000000 ns  event 300000000 ns  1000000014000000010000000000040001020304
+fmu: Doing step at 0.400000 of 0.100000 seconds.
+fmu: Doing step at 0.500000 of 0.100000 seconds.
+fmu: Transmitting CAN frame with ID 1 at internal time 0.600000
+fmu: Entering event mode.
+fmu: Get TX clock of 1
+fmu: Get TX buffer of 20 bytes
+fmu: Ending super dense time step.
+fmu: Entering step mode.
+fmu: Doing step at 0.600000 of 0.100000 seconds.
+observer: visible 600000000 ns  event 600000000 ns  1000000014000000010000000000040001020304
+fmu: Doing step at 0.700000 of 0.100000 seconds.
+fmu: Doing step at 0.800000 of 0.100000 seconds.
+fmu: Transmitting CAN frame with ID 1 at internal time 0.900000
+fmu: Entering event mode.
+fmu: Get TX clock of 1
+fmu: Get TX buffer of 20 bytes
+fmu: Ending super dense time step.
+fmu: Entering step mode.
+fmu: Doing step at 0.900000 of 0.100000 seconds.
+observer: visible 900000000 ns  event 900000000 ns  1000000014000000010000000000040001020304
+fmu: Terminating.
+fmu: Instance DemoCanNodeTriggeredOutput freed.
+manifest_hash 57b2696a48de7693b433cd430bba21f672afa562683603e32e34315891357f83
+--- recording against expected.json ---
+--- case aligned ---
+  event          0 ns  published          0 ns   23 B  Configuration, Configuration
+  event  300000000 ns  published  200000000 ns   20 B  CanTransmit
+  event  600000000 ns  published  500000000 ns   20 B  CanTransmit
+  event  900000000 ns  published  800000000 ns   20 B  CanTransmit
+aligned: 4 events, all as expected

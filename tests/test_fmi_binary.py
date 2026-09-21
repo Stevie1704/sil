@@ -25,9 +25,9 @@ import subprocess
 import sys
 import zipfile
 from pathlib import Path
-from xml.sax.saxutils import quoteattr
 
 import pytest
+from can_node import CAN_BUFFER_BYTES, CAN_NODE, node_fmu
 from conftest import ROOT
 from sil.fmi import CoSimulation, FmuParticipant
 from sil.manifest import Manifest, SubscriberRoute
@@ -586,18 +586,16 @@ class TestBindingsRejectedBeforeStepping:
             importer(binds=["Binary_input"])
 
 
-FIXTURE_PROFILE = (
-    ROOT / "proofs" / "fmi-ls-bus" / "evidence" / "profile.json"
-)
-CAN_NODE = "DemoCanNodeTriggeredOutput.fmu"
 # The node's Binary variables declare `maxSize` 2048, so a Channel that can
 # carry any payload it is allowed to produce carries 2048 bytes and a length
-# field that can still count them.
-CAN_BUFFER_BYTES = 2048
+# field that can still count them. Both are gated by a Clock, so the Channel
+# also carries the FMI event time of the activation — the contract #139 adds
+# and `tests/test_fmi_clocks.py` drives.
 CAN_SCHEMAS = {
     "can.Buffer": {"fields": [
         {"name": "data_length", "type": "u16"},
         {"name": "data", "type": "u8", "count": CAN_BUFFER_BYTES},
+        {"name": "data_event_time_ns", "type": "u64"},
     ]}
 }
 CAN_CHANNELS = {
@@ -609,49 +607,14 @@ CAN_BINDINGS = [
 ]
 
 
-def _variable_element(variable: dict) -> str:
-    """One variable of the fixture's profile, as the description declares it."""
-    kind = variable["type"]
-    attributes = " ".join(
-        f"{name}={quoteattr(value)}"
-        for name, value in variable.items()
-        if name not in ("type", "dimension_start")
-    )
-    dimension = (
-        f'<Dimension start={quoteattr(variable["dimension_start"])}/>'
-        if "dimension_start" in variable else ""
-    )
-    return f"<{kind} {attributes}>{dimension}</{kind}>"
-
-
 def can_node_fmu(tmp_path) -> Path:
     """The fixture's CAN node as an archive carrying its description alone.
 
-    The archive is rebuilt from `proofs/fmi-ls-bus/evidence/profile.json` —
-    the fixture's own record of what it inspected — rather than from a
-    restatement of it here, so a fixture that is rebuilt and changes takes
-    this with it. It carries no binary, because the FMU itself is built by
-    the proof rather than vendored.
+    It carries no binary, because the FMU itself is built by the proof rather
+    than vendored: binding happens before the FMU is loaded, so a mapping that
+    resolves runs into the absent binary and says so.
     """
-    described = json.loads(FIXTURE_PROFILE.read_text())["fmus"][CAN_NODE]
-    description = described["modelDescription"]
-    variables = "".join(
-        _variable_element(variable) for variable in description["variables"]
-    )
-    path = tmp_path / CAN_NODE
-    with zipfile.ZipFile(path, "w") as archive:
-        archive.writestr("modelDescription.xml", (
-            f'<?xml version="1.0" encoding="UTF-8"?>'
-            f'<fmiModelDescription '
-            f'fmiVersion={quoteattr(description["fmiVersion"])} '
-            f'instantiationToken='
-            f'{quoteattr(description["instantiationToken"])}>'
-            f'<CoSimulation '
-            f'modelIdentifier={quoteattr(description["modelIdentifier"])}/>'
-            f'<ModelVariables>{variables}</ModelVariables>'
-            f'</fmiModelDescription>'
-        ))
-    return path
+    return node_fmu(tmp_path / CAN_NODE)
 
 
 class TestAcceptanceFixtureMapping:

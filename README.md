@@ -338,9 +338,12 @@ acceptance fixture declares, and no more; broad type coverage is a later
 slice. A `Boolean` is carried by a `u8` with C's own conversion — zero is
 false, anything else is true — and what the FMU hands back is 0 or 1.
 
-A binding that names any other type — a `String`, an `Enumeration`, a `Clock`,
-an integer — is reported before the FMU is stepped, naming the type, as is one
-whose field type is not the one its variable's type maps to. A variable is
+A binding that names any other type — a `String`, an `Enumeration`, an
+integer — is reported before the FMU is stepped, naming the type, as is one
+whose field type is not the one its variable's type maps to. A `Clock` is
+reported too, and for a different reason: it is driven through the variable it
+gates rather than bound to a field of its own, which is the next section. A
+variable is
 mapped when its declared dimensions amount to one value: `<Dimension
 start="1"/>` is one value written the long way, which is how the fixture's CAN
 node declares its Binary input, while anything above one value, or a dimension
@@ -379,10 +382,71 @@ above it, so no such Run can work. A published Channel narrower than an
 the FMU may never reach — the Run declares what it is prepared to carry, and
 only a payload that actually exceeds it aborts.
 
-This milestone supports FMI 3.0 co-simulation only. It drives neither Clocks
-nor Event Mode, so an FMU that requires them — the FMI-LS-BUS CAN demo nodes
-among them — is not yet drivable; the bus layered standard itself is
-unimplemented.
+### Clocked payloads and Event Mode
+
+A Binary variable that declares a Clock is not a value a Step reads. It is
+defined only while its Clock is active, and a Clock is active only inside an
+event — which is what a bus node's transmit buffer is: the FMI-LS-BUS CAN
+demo node communicates nothing else.
+
+Nothing extra is bound for it. The description already says which Clock gates
+which variable, so the Channel is declared the way any other bounded Binary
+Channel is, with one field more:
+
+```python
+m.add_schemas({"can.Frame": {"fields": [
+    {"name": "data_length", "type": "u16"},
+    {"name": "data", "type": "u8", "count": 2048},
+    {"name": "data_event_time_ns", "type": "u64"},
+]}})
+```
+
+Such a Channel carries **one Message per Clock activation** instead of one per
+Step, and it carries that alone: a Channel that bound a second variable beside
+it would publish a Step's value on an event's Message. Three times are
+involved, and only the first is the FMU's:
+
+| Time | What it is | Where it appears |
+| --- | --- | --- |
+| FMI event time | the communication point the activation was observed at | `<field>_event_time_ns`, in the Message |
+| Publication time | the Slot the importer was activated in | the Recording's timestamp |
+| Delivery time | one Latency later | the subscriber's own activation |
+
+A node that transmits every 300 ms, stepped on a 100 ms grid, produces an
+activation at the communication point 300 ms — published in the Slot at
+200 ms, because the Step from 200 ms to 300 ms is the one it became visible
+in. Nothing is quantised to the Slot and no Latency is folded into the event
+time. On the incoming half the same rule holds in reverse: a Message's
+activation is raised at the communication point the FMU stands on, and the
+event time the sender stated is not used.
+
+The FMU's initial time is virtual time zero. With a Clock in the Manifest the
+FMU is instantiated with `eventModeUsed`, so initialization ends in Event
+Mode; the activations of that first event — a CAN node's bus configuration,
+for instance — belong to time zero and are published in the importer's first
+Slot. After that the FMU is stepped over contiguous intervals, and each Step
+that ends in an event is followed by the event before the next Step begins.
+
+The supported profile is exactly this:
+
+| Declared | Supported |
+| --- | --- |
+| `hasEventMode` | must be `true`; a Clock is refused without it |
+| Clock `intervalVariability` | `triggered` only — `countdown` and `periodic` ask the importer to own a time grid, and the kernel owns it |
+| Clocked variable | one `Binary` variable per Channel, gated by one Clock of its own causality |
+| Discrete-state iteration | until the FMU stops asking, bounded at 100 iterations |
+| Next event time | none. An FMU that declares one is asking to be stepped onto it, which this importer cannot promise, and the Run fails rather than step past it |
+| Early return | none. `earlyReturnAllowed` is declared false, and an FMU that returns early is reported rather than counted as a completed interval |
+
+Everything outside it is reported before the Run steps, or the Run fails
+saying which call answered what. `fmi3UpdateDiscreteStates` asking for another
+update forever ends in a diagnostic naming the bound rather than a Run that
+hangs until its response deadline.
+
+What is still unimplemented is the layered standard itself: SiL carries the
+CAN operation bytes as an opaque bounded payload and neither decodes nor
+validates them, and the bus simulation FMU that connects two nodes needs the
+`countdown` Clocks above.
 
 ## Large-Message routing baseline
 
@@ -578,9 +642,12 @@ what it answers is kept verbatim.
 proofs/fmi-ls-bus/run-proof.sh        # needs docker and network
 ```
 
-It is an evidence gate, not an implementation: the current Importer cannot
-drive this FMU, and the two reasons it cannot are the retained measurement the
-CAN milestone is built against.
+Most of it is an evidence gate rather than an implementation: the *released*
+Importer cannot drive this FMU, and the two reasons it cannot are the retained
+measurement the CAN milestone is built against. The last step is the other way
+round — the same released runner with the checkout's `sil` package ahead of it,
+driving the pinned node on both of the fixture's step grids and judging the
+Recording against the same expected exchange, event times included.
 
 ## Build & test
 
@@ -617,8 +684,8 @@ examples/fmu/      the FMU import example: one Reference FMU driven as a
 proofs/esmini/     consumer-side adoption proof: a third-party scenario
                    engine run on the published release, with its evidence
 proofs/fmi-ls-bus/ acceptance fixture for the FMI-LS-BUS CAN demo FMUs:
-                   pinned artifacts, the supported profile, and what the
-                   released Importer does with them
+                   pinned artifacts, the supported profile, what the released
+                   Importer does with them, and what the checkout's does
 python/src/sil/    manifest builder, step-participant lib, test API,
                    determinism check, declared memory footprint
 tests/             behavior tests at the run boundary

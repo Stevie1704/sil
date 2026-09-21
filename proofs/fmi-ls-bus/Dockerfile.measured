@@ -1,0 +1,48 @@
+# syntax=docker/dockerfile:1
+#
+# The image that measures *this checkout's* FMI Importer against the pinned
+# CAN node (issue #139).
+#
+# Everything else in this directory measures the published release, which is
+# what an evidence gate is for. This image is the one exception and says so in
+# its own file: it starts from the same published runner image, by the same
+# digest, and puts the working tree's `sil` package ahead of the installed one
+# on `PYTHONPATH`. The kernel, the loader and the runner are the release's;
+# the Importer is the checkout's.
+#
+# Built from the repository root, because that is where the package it layers
+# on lives:
+#
+#   docker build -f proofs/fmi-ls-bus/Dockerfile.measured \
+#       --build-arg SIL_IMAGE=<the same digest run-proof.sh reads> .
+#
+# The FMU it drives is not baked in: `run-proof.sh` copies it out of the
+# fixture image into the workspace both images see, so this layer carries no
+# second copy of an artifact that is pinned elsewhere.
+
+ARG SIL_IMAGE
+FROM ${SIL_IMAGE}
+
+USER root
+
+# The checkout's Importer, and the fixture material that judges it: the
+# expected exchange, the operation decoder, the Manifests, and the consumer
+# side of the Channel they declare.
+COPY python/src/sil /opt/measured/sil
+COPY proofs/fmi-ls-bus/can_operations.py \
+     proofs/fmi-ls-bus/clocked_exchange.py \
+     proofs/fmi-ls-bus/clocked_manifest.py \
+     proofs/fmi-ls-bus/clocked_observer.py \
+     proofs/fmi-ls-bus/expected.json \
+     /opt/measured/
+
+# A copied file keeps the mode it had in the checkout, and the Runs below are
+# executed by an unprivileged user that is not its owner. Readable by everyone
+# is what makes the layer independent of the umask the checkout was made with.
+RUN chmod -R a+rX /opt/measured
+
+# Ahead of the installed package, for this process and for every participant
+# the kernel spawns.
+ENV PYTHONPATH=/opt/measured
+
+USER 10001:10001

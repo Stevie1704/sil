@@ -235,6 +235,35 @@ add_failing_fmu(TerminateFatal FMI_TERMINATE_STATUS=4)
 add_failing_fmu(Terminate FMI_TERMINATE_STATUS=3)
 add_failing_fmu(TerminateFlag FMI_TERMINATE_FLAG=1)
 
+# A clocked FMI shared library backs the Event Mode importer tests. It stands
+# in for the FMI-LS-BUS CAN node of proofs/fmi-ls-bus/, which is built inside a
+# pinned container and not vendored here: it drives the same lifecycle and
+# emits the same operation bytes, so the importer can be measured against the
+# fixture's expected exchange without docker. Every variant is the same source
+# built once more, with the behavior under test chosen by the preprocessor.
+function(add_clocked_fmu name)
+  set(target fmi_clock_${name})
+  add_library(${target} SHARED tests/fixtures/fmi_clock.c)
+  target_compile_definitions(${target} PRIVATE ${ARGN})
+  set_target_properties(${target} PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME "Clocked${name}"
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endfunction()
+
+add_clocked_fmu(CanNode)
+# An event iteration that never converges, so the importer's own bound is what
+# ends it.
+add_clocked_fmu(NeverConverges FMI_CLOCK_NEVER_CONVERGES=1)
+# A next event time 50 ms after the event, which no step grid this kernel
+# schedules can land on.
+add_clocked_fmu(NextEvent FMI_CLOCK_NEXT_EVENT_MS=50)
+# An early return the importer never asked for, and a termination request from
+# inside the event.
+add_clocked_fmu(EarlyReturn FMI_CLOCK_EARLY_RETURN=1)
+add_clocked_fmu(TerminateInEvent FMI_CLOCK_TERMINATE_IN_EVENT=1)
+
 # --- bench participants (routing baseline fixtures, issue #61) ---
 # Payload size, publish period, and burst size come from manifest config, so
 # the whole baseline matrix is driven without rebuilding.
