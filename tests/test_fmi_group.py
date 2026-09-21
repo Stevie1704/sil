@@ -653,6 +653,26 @@ class TestGroupsRejectedBeforeStepping:
         with pytest.raises(ManifestError, match="at least one --instance"):
             participant.on_init(init_line({}, SCHEMAS))
 
+    @pytest.mark.parametrize("name", ["absent.fmu", "not-an-archive.fmu"])
+    def test_an_unreadable_archive_names_the_instance_that_declared_it(
+        self, group, tmp_path, build_dir, name
+    ):
+        """A group extracts several archives, so the path is not the whole
+        diagnostic: which instance declared it is what a Manifest is fixed
+        by."""
+        unreadable = tmp_path / name
+        if name != "absent.fmu":
+            unreadable.write_text("this is not a zip archive")
+        with pytest.raises(
+            ManifestError,
+            match=f"cannot read FMU '{unreadable}' of instance 'node2'",
+        ):
+            group(paths={
+                "node1": built(build_dir, tmp_path, "node1", "CanNodeOnABus"),
+                "node2": unreadable,
+                "bus": built(build_dir, tmp_path, "bus", "CanBus"),
+            })
+
     def test_an_unknown_instance_in_a_connection(self, group):
         with pytest.raises(ManifestError, match="names instance 'node3'"):
             group(connects=["node3.CanChannel=bus.Node1"])
