@@ -197,4 +197,4 @@ manifest_hash 71982bd0c90b969bffa6b40b271ba8f0c0cd894f18588dada474d43d34a3d4c1
   can.bus.Node2     1  event   500960000 ns   12 B  Confirm
   can.bus.Node2     2  event   750480000 ns   20 B  CanTransmit
   can.bus.Node2     3  event   750960000 ns   12 B  Confirm
-quantised: stimulus can.node1.Tx 4 Messages carried whole; retained can.node2.Tx 4, can.bus.Node1 4, can.bus.Node2 4 — every Message, order and event time as the live Run recorded them
+quantised: stimulus can.node1.Tx 4 Messages carried whole; retained can.node2.Tx 4, can.bus.Node1 4, can.bus.Node2 4 — every Message, Publish order and event time as the live Run recorded them

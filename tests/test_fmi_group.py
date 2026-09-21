@@ -538,7 +538,7 @@ class TestTheReplayBoundary:
     def test_two_activations_at_one_instant_keep_the_order_they_arrived_in(
         self, replayed
     ):
-        """Same-time ordering is the Recording's publish order.
+        """Same-time ordering at the boundary is the Recording's Publish order.
 
         Two frames of one CAN ID leave the bus in the order they were offered
         to it, so the order the Messages arrived in is observable rather than
@@ -1121,10 +1121,14 @@ def replay_manifest(node: Path, bus: Path, recording: Path, *,
     return m
 
 
-def streams(result, channels=SOURCES) -> dict[str, list[tuple[int, str]]]:
+def messages_by_channel(
+    result, channels=SOURCES
+) -> dict[str, list[tuple[int, str]]]:
     """Every Message of the named Channels, as event time and payload.
 
-    The publication Slot is left out on purpose: what a replaced source has to
+    Held in the Recording's Publish order, so comparing two of these compares
+    the count, that order, the event times and the payloads at once. The
+    publication Slot is left out on purpose: what a replaced source has to
     reproduce is the operation and the instant it crossed the terminal at, and
     comparing whole Recordings across two Manifest hashes would compare the
     Manifests instead.
@@ -1173,7 +1177,7 @@ class TestReplayEquivalence:
     def test_the_receiver_sees_the_same_operations_at_the_same_instants(
         self, runs
     ):
-        """What the proof compares: the unchanged receiver's own streams.
+        """What the proof compares: the unchanged receiver's own Channels.
 
         The removed node is not in the replay Run at all, so the only thing
         that could reproduce the receiving node's transmissions and the bus's
@@ -1181,14 +1185,16 @@ class TestReplayEquivalence:
         instants the live one produced.
         """
         live, replay = runs
-        assert streams(replay, RECEIVER_SOURCES) == streams(
-            live, RECEIVER_SOURCES
-        )
+        assert messages_by_channel(
+            replay, RECEIVER_SOURCES
+        ) == messages_by_channel(live, RECEIVER_SOURCES)
 
     def test_the_replayed_boundary_carries_the_recorded_stream(self, runs):
         """The stimulus is the Recording's, unchanged and complete."""
         live, replay = runs
-        assert streams(replay, [BOUNDARY]) == streams(live, [BOUNDARY])
+        assert messages_by_channel(
+            replay, [BOUNDARY]
+        ) == messages_by_channel(live, [BOUNDARY])
 
     def test_the_replay_run_reproduces(self, sil_run, tmp_path, build_dir,
                                        runs):

@@ -4,30 +4,30 @@
 
 The exit code is the verdict: 0 when the replayed boundary carried the live
 stimulus and every retained participant produced the same operations, in the
-same order, at the same FMI event times; 1 when one of them did not.
+same Publish order, at the same FMI event times; 1 when one of them did not.
 
 **What is compared, and what is not.** Two Runs of two Manifests are two
 Manifest hashes, so their Recordings differ in bytes by construction: the
 Manifests are not the same document, the participants are not the same set,
 and the replay Run carries a Publisher the live one does not. What has to
-match is the Message streams the two Runs share:
+match is the Messages of the Channels the two Runs share:
 
-- the **boundary** — `can.node1.Tx`, published by the removed node in the live
-  Run and by the Replay participant in the replay Run. This is the stimulus,
-  and comparing it says the replay carried every source operation, in order,
-  with the event times the live Run recorded;
-- the **retained streams** — the receiving node's transmissions and both of
-  the bus simulation FMU's. Nothing in the replay Run produces these but the
+- the **boundary Channel** — `can.node1.Tx`, published by the removed node in
+  the live Run and by the Replay participant in the replay Run. This is the
+  stimulus, and comparing it says the replay carried every source operation,
+  in Publish order, with the event times the live Run recorded;
+- the **retained Channels** — the receiving node's transmissions and both of
+  the bus simulation FMU's. Nothing in the replay Run publishes these but the
   participants the replay did not replace, so they are what a replaced source
   has to reproduce.
 
 Per Channel, four things are compared and each is named in the report: the
-count of Messages, their order, the FMI event time each states, and the
-payload bytes. The publication Slot is deliberately left out. It is the Slot
-the publishing activation ran in, and in the replay Run the Replay participant
-publishes the boundary at the Slot the Recording stored rather than at the
-Slot an FMU produced it in; what a replaced source owes the receiver is the
-operation and the instant it crossed the terminal at.
+count of Messages, their Publish order, the FMI event time each states, and
+the payload bytes. The publication Slot is deliberately left out. It is the
+Slot the publishing activation ran in, and in the replay Run the Replay
+participant publishes the boundary at the Slot the Recording stored rather
+than at the Slot an FMU produced it in; what a replaced source owes the
+receiver is the operation and the instant it crossed the terminal at.
 """
 
 from __future__ import annotations
@@ -46,8 +46,8 @@ from connected_manifest import BUFFER_SCHEMA, SCHEMAS, SOURCES  # noqa: E402
 from replay_manifest import BOUNDARY, RETAINED  # noqa: E402
 
 
-def streams(recording: Path) -> dict[str, list[dict]]:
-    """Every Message of every observed Channel, in the Recording's own order."""
+def messages_by_channel(recording: Path) -> dict[str, list[dict]]:
+    """Every Message of every observed Channel, in the Recording's Publish order."""
     message_type = schema.load(SCHEMAS)[BUFFER_SCHEMA]
     observed: dict[str, list[dict]] = {channel: [] for channel in SOURCES}
     for channel, _, data in read_records(recording):
@@ -63,7 +63,7 @@ def streams(recording: Path) -> dict[str, list[dict]]:
     return observed
 
 
-def print_stream(channel: str, messages: list[dict]) -> None:
+def print_channel(channel: str, messages: list[dict]) -> None:
     """One line per Message, so a reader sees what was compared."""
     for index, message in enumerate(messages):
         print(
@@ -76,8 +76,8 @@ def print_stream(channel: str, messages: list[dict]) -> None:
 def differs(channel: str, live: list[dict], replay: list[dict]) -> bool:
     """Report the first Message that differs, and whether any did.
 
-    The count is reported before the contents: a stream that is short by one
-    operation and a stream whose first operation changed are different
+    The count is reported before the contents: a Channel that is short by one
+    operation and a Channel whose first operation changed are different
     failures, and saying which one this is costs one line.
     """
     if len(live) != len(replay):
@@ -94,30 +94,31 @@ def differs(channel: str, live: list[dict], replay: list[dict]) -> bool:
 
 
 def compare(name: str, live_recording: Path, replay_recording: Path) -> bool:
-    live, replay = streams(live_recording), streams(replay_recording)
+    live = messages_by_channel(live_recording)
+    replay = messages_by_channel(replay_recording)
     print(f"--- case {name} ---")
     print(f"  boundary {BOUNDARY}, replayed into the terminal it fed")
-    print_stream(BOUNDARY, replay[BOUNDARY])
+    print_channel(BOUNDARY, replay[BOUNDARY])
     for channel in RETAINED:
-        print_stream(channel, replay[channel])
-    faulted = differs(BOUNDARY, live[BOUNDARY], replay[BOUNDARY])
-    retained = [
+        print_channel(channel, replay[channel])
+    boundary_differs = differs(BOUNDARY, live[BOUNDARY], replay[BOUNDARY])
+    differing_retained = [
         channel for channel in RETAINED
         if differs(channel, live[channel], replay[channel])
     ]
-    if faulted or retained:
+    if boundary_differs or differing_retained:
         print(f"{name}: the replay Run is not equivalent to the live Run")
         return False
-    # The two halves are stated apart. The boundary says the Replay
-    # participant carried the stimulus whole; only the retained streams say
+    # The two halves are stated apart. The boundary Channel says the Replay
+    # participant carried the stimulus whole; only the retained Channels say
     # the receiving participants behaved the same, and folding the two into
     # one count would let the first flatter the second.
     retained_counts = ", ".join(
         f"{channel} {len(replay[channel])}" for channel in RETAINED
     )
     print(f"{name}: stimulus {BOUNDARY} {len(replay[BOUNDARY])} Messages "
-          f"carried whole; retained {retained_counts} — every Message, order "
-          f"and event time as the live Run recorded them")
+          f"carried whole; retained {retained_counts} — every Message, "
+          f"Publish order and event time as the live Run recorded them")
     return True
 
 

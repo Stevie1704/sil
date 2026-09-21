@@ -84,16 +84,16 @@ rather than something the Run can settle.
   Message, per Channel, across two Runs of two Manifests.
 - Several Messages in one Step are each raised at their own instant, and
   several at one instant are raised in the order they arrived, which is the
-  order the Recording holds them in. Ordering at the boundary is the
-  Recording's, not the group's.
+  Publish order the Recording holds them in. What orders the boundary is the
+  Recording, not the group.
 - An arrived Message goes ahead of the events the same instant caused by
   itself. The group was holding it before it took the Step, and the peer it
   stands in for would have offered it from the same place in the group's
   declaration order.
 - Two Runs of two Manifests are two Manifest hashes, so their Recordings differ
-  in bytes by construction. Equivalence is therefore stated over the Message
-  streams the two Runs share, and the Determinism check stays what it is: one
-  Manifest, run twice, bit-compared.
+  in bytes by construction. Equivalence is therefore stated over the Messages
+  of the Channels the two Runs share, and the Determinism check stays what it
+  is: one Manifest, run twice, bit-compared.
 - The Latency is a Manifest decision, which means a Run that gets it wrong
   fails rather than produces a plausible answer.
 - That failure is a **Run failure** (exit 1), not a Manifest error, although

@@ -242,4 +242,4 @@ manifest_hash 57d9df0ba38f5793743f1b4295b51e943fc394d3636f14ab700047922e898c48
   can.bus.Node2     3  event  1000960000 ns   20 B  CanTransmit
   can.bus.Node2     4  event  1001440000 ns   12 B  Confirm
   can.bus.Node2     5  event  1001920000 ns   12 B  Confirm
-coarse: stimulus can.node1.Tx 4 Messages carried whole; retained can.node2.Tx 4, can.bus.Node1 6, can.bus.Node2 6 — every Message, order and event time as the live Run recorded them
+coarse: stimulus can.node1.Tx 4 Messages carried whole; retained can.node2.Tx 4, can.bus.Node1 6, can.bus.Node2 6 — every Message, Publish order and event time as the live Run recorded them

@@ -562,8 +562,8 @@ the Step's own bounds, rather than raising the activation somewhere else. An
 instant beyond the Step's end is refused for the mirror reason.
 
 Several Messages in one Step are each raised at their own instant; several at
-one instant are raised in the order they arrived, which is the order the
-Recording holds them in.
+one instant are raised in the order they arrived, which is the Publish order
+the Recording holds them in.
 
 The boundary decisions and the evidence behind them are in
 [docs/adr/0001-connected-fmus-in-one-process-participant.md](docs/adr/0001-connected-fmus-in-one-process-participant.md)

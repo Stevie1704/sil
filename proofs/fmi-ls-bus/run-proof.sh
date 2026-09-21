@@ -17,8 +17,8 @@
 #      simulation FMU, and the Recording of that Run is compared with an
 #      expectation written from both FMUs' sources;
 #   6. one of those two nodes is removed and its Recording replayed into the
-#      terminal it fed, and the streams of everything that stayed are compared
-#      with the live Run's.
+#      terminal it fed, and the Channels of everything that stayed are
+#      compared with the live Run's.
 #
 # The rejected revision's exchange and step 3 are both expected to fail. Steps
 # 1 to 3 are the evidence gate of issue #137: the fixture is what the
@@ -420,7 +420,7 @@ measured_tool python3 /opt/measured/replay_manifest.py replay \
 
 # One Run per step grid, each compared with the live Run of the same grid:
 # the replayed boundary against the stimulus it stands in for, and every
-# retained participant's own stream against what it produced live. The live
+# retained participant's own Channel against what it published live. The live
 # Run is named rather than derived, because the two stated grids replay the
 # connected Runs above and the coarse one replays the Run this step added.
 replay_case() {
@@ -458,8 +458,8 @@ step "Check that the equivalence check fails on an altered stimulus"
 # A check that only ever passes is not evidence. Two more Manifests declare
 # the same replay with one Interceptor on the boundary Channel: one drops the
 # first CanTransmit the removed node published, the other moves it to another
-# instant. Both are declared faults rather than edited artifacts, so each of
-# these Runs reproduces like every other.
+# instant. Each declares that as an Interceptor rather than carrying an edited
+# artifact, so each of these Runs reproduces like every other.
 #
 # The Runs themselves are expected to succeed — the altered stimulus is still
 # a stimulus the Importer accepts — and the equivalence check is expected to

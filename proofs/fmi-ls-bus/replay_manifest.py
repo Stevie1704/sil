@@ -32,9 +32,9 @@ one Step after the instant it names, and the Importer refuses that rather than
 raising the activation at an instant the FMUs cannot be taken back to.
 
 Two more Manifests are built for the aligned grid, and both are meant to fail.
-They are declared faults rather than edited artifacts: an Interceptor is part
-of the hashed Manifest, so a Run that proves the check can fail is as
-reproducible as the Run that passes.
+Each declares an **Interceptor** on the boundary Channel rather than carrying
+an edited artifact: an Interceptor is part of the hashed Manifest, so a Run
+that proves the check can fail is as reproducible as the Run that passes.
 
 A third grid is added here, coarser than either of the fixture's own, and it
 brings its **own live composition** with it — which is why this script has two
@@ -77,7 +77,7 @@ from connected_manifest import (  # noqa: E402
 BOUNDARY = "can.node1.Tx"
 BOUNDARY_TERMINAL = "bus.Node1"
 
-# Everything the replay did not replace. These are the streams the proof
+# Every Channel the replay did not replace. These are the Channels the proof
 # compares: the receiving node's own transmissions, and both of the bus's.
 RETAINED = {
     channel: source for channel, (source, _) in SOURCES.items()
@@ -89,18 +89,19 @@ CONNECTION = "node2.CanChannel=bus.Node2"
 
 # The Slot the aligned grid publishes the first `CanTransmit` of the boundary
 # in: the node transmits at 300 ms, and the Step from 200 ms to 300 ms is the
-# one that observed it. Both failing variants act on that one Message, so what
-# they alter is a frame the receiver's behavior depends on rather than the
+# one that observed it. Both Interceptors below act on that one Message, so
+# what they alter is a frame the receiver's behavior depends on rather than the
 # configuration every later operation needs.
-FAULT_WINDOW = (200_000_000, 300_000_000)
+INTERCEPTOR_WINDOW = (200_000_000, 300_000_000)
 
-# The instant the retimed variant moves that frame to. Inside the Step it
+# The instant the retimed Interceptor moves that frame to. Inside the Step it
 # arrives in, so the Importer accepts it and the Run completes: what this
 # variant proves is that the *check* fails, not that the Importer refuses.
 RETIMED_NS = 250_000_000
 
-# Every variant of one grid, and what it declares beyond the faultless one.
-FAULTS = {
+# The Interceptor each failing variant declares. The variants that are
+# meant to pass declare none.
+INTERCEPTORS = {
     "dropped": {"kind": "drop"},
     "retimed": {
         "kind": "override",
@@ -110,7 +111,7 @@ FAULTS = {
 }
 # The grid the failing variants are built for. One is enough: what they measure
 # is the equivalence check, and the check does not know which grid it reads.
-FAULTED_CASE = "aligned"
+INTERCEPTED_CASE = "aligned"
 
 # A Step grid coarser than the node's own 300 ms transmit period, which
 # neither grid of the expected exchange is. Two things only this one reaches:
@@ -135,7 +136,7 @@ COARSE_CAPACITY = 8
 
 
 def replay(node: Path, bus: Path, recording: Path, case: dict,
-           fault: dict | None = None,
+           interceptor: dict | None = None,
            capacity: int = ROUTE_CAPACITY) -> Manifest:
     """One case of the live exchange, with its first source replayed."""
     archives = {"node": node, "bus": bus}
@@ -144,10 +145,10 @@ def replay(node: Path, bus: Path, recording: Path, case: dict,
     manifest.add_channel(BOUNDARY, schema=BUFFER_SCHEMA, latency_ns=0)
     for channel in RETAINED:
         manifest.add_channel(channel, schema=BUFFER_SCHEMA)
-    if fault is not None:
-        start_ns, end_ns = FAULT_WINDOW
+    if interceptor is not None:
+        start_ns, end_ns = INTERCEPTOR_WINDOW
         manifest.add_interceptor(
-            BOUNDARY, start_ns=start_ns, end_ns=end_ns, **fault
+            BOUNDARY, start_ns=start_ns, end_ns=end_ns, **interceptor
         )
     # The stimulus is identified by the content hash of the Recording, which
     # the Manifest hash covers: what this Run replays is attributable to the
@@ -193,12 +194,12 @@ def variants(node: Path, bus: Path, recordings: Path):
     for case in json.loads(EXPECTED.read_text())["cases"]:
         recording = recordings / f"connected-{case['name']}.mcap"
         yield f"replay-{case['name']}", replay(node, bus, recording, case)
-        if case["name"] != FAULTED_CASE:
+        if case["name"] != INTERCEPTED_CASE:
             continue
-        for name, fault in FAULTS.items():
+        for name, interceptor in INTERCEPTORS.items():
             yield (
                 f"replay-{case['name']}-{name}",
-                replay(node, bus, recording, case, fault),
+                replay(node, bus, recording, case, interceptor),
             )
     yield "replay-coarse", replay(
         node, bus, recordings / "live-coarse.mcap", COARSE,
