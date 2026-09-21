@@ -69,6 +69,19 @@ from sil.fmi.group import FmuGroupParticipant
 from sil.fmi.runtime import NS_PER_S, CoSimulation
 from sil.fmi.single import FmuParticipant
 
+# Carried for compatibility. One module imported these to use them, which made
+# them importable from `sil.fmi` as well, and SUPPORT.md covers every name a
+# listed module exports that does not lead with an underscore. They are
+# `sil.participant`'s own, and that module is listed too, so that is where they
+# are documented and where new code takes them from. They stay out of `__all__`
+# because what this package exports is the list below.
+from sil.participant import (  # noqa: F401
+    ManifestError,
+    ParticipantFailure,
+    StepParticipant,
+    run,
+)
+
 __all__ = [
     "NS_PER_S",
     "BusProfile",

@@ -31,6 +31,8 @@ from sil.fmi import (
     library_suffix,
     platform_directory,
 )
+from sil import fmi as sil_fmi
+from sil import participant
 from sil.fmi import runtime as fmi_runtime
 from sil.fmi.description import SCALARS
 from sil.fmi.runtime import BinaryBuffer, ScalarBuffer
@@ -532,6 +534,40 @@ class TestDescription:
             "Float64_continuous_output": 8,
             "Float64_discrete_output": 10,
         }
+
+
+class TestTheCompatibilitySurface:
+    """What `sil.fmi` exports, which SUPPORT.md covers by name.
+
+    The policy excludes leading-underscore names and unlisted modules, and
+    nothing else — so every other name this module exported stays exported
+    until a release says otherwise. That includes the four it only ever
+    imported in order to use them: they were importable from here, so they are
+    still importable from here.
+    """
+
+    def test_the_importer_exports_what_it_owns(self):
+        assert set(sil_fmi.__all__) == {
+            "NS_PER_S",
+            "BusProfile",
+            "CoSimulation",
+            "FmuGroupParticipant",
+            "FmuParticipant",
+            "ModelDescription",
+            "Terminal",
+            "Variable",
+            "library_suffix",
+            "main",
+            "platform_directory",
+        }
+
+    @pytest.mark.parametrize(
+        "name", ["ManifestError", "ParticipantFailure", "StepParticipant", "run"]
+    )
+    def test_a_name_this_module_carried_is_still_importable(self, name):
+        """These belong to `sil.participant`, which is where new code takes
+        them from; they stay reachable here because they always were."""
+        assert getattr(sil_fmi, name) is getattr(participant, name)
 
 
 class TestNativeBuffers:
