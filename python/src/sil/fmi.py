@@ -6,18 +6,39 @@ the FMU's co-simulation interface: its input variables are written from the
 subscribed Channels, `fmi3DoStep` advances it, and its output variables are
 published on the Channels it publishes.
 
-Mapping needs no configuration beyond the Manifest. The initialization line
-carries each Channel's schema and its direction, so a Channel's schema field
-names are the FMU variable names and the direction decides which side of the
-step the variable is touched on. The FMU path travels as a command argument,
-which the Manifest already hashes, so nothing that affects the Run lives
-outside the hashed Manifest.
+A Float64 mapping needs no configuration beyond the Manifest. The
+initialization line carries each Channel's schema and its direction, so a
+Channel's schema field names are the FMU variable names and the direction
+decides which side of the step the variable is touched on.
 
-Float64 variables only.
+Every other variable is *declared* rather than derived, because the FMU's
+vocabulary and the Channel's are not the same one and a schema is typically
+carried by more than one Channel:
+
+    python -m sil.fmi <model.fmu> --bind <channel>:<field>=<variable> ...
+                                  --start <variable>=<value> ...
+
+Declaring one binding declares them all: the bindings are then the whole
+mapping, and a Channel field that none of them names is a mapping mistake
+rather than a variable left at zero.
+
+A Binary variable is variable-length and a Message is not, so a Channel
+carries a Binary value in an explicit bounded representation: a `u8` array
+field holding the payload and the `<field>_length` field beside it holding how
+much of it is the payload. On every Message this importer publishes, the bytes
+above that length are zero, so one Manifest records the same bytes twice; on
+an incoming Message they are ignored, because the length is what says where
+the payload ends. Nothing is ever truncated to fit — a payload above the
+bound, in either direction, aborts the Run.
+
+Both the bindings and the start values travel as command arguments, which the
+Manifest already hashes, so nothing that affects the Run lives outside the
+hashed Manifest.
 """
 
 from __future__ import annotations
 
+import argparse
 import ctypes
 import platform
 import sys
@@ -25,9 +46,9 @@ import tempfile
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+from collections.abc import Callable, Sequence
 from xml.etree import ElementTree
 
-from sil import schema
 from sil.participant import (
     ManifestError,
     ParticipantFailure,
@@ -56,11 +77,70 @@ _FMI_FATAL_STATUS = 4
 _MACHINES = {"arm64": "aarch64", "AMD64": "x86_64"}
 _SYSTEMS = {"Darwin": ("darwin", ".dylib"), "Linux": ("linux", ".so")}
 
+
+def _boolean(text: str) -> int:
+    """A start value in the spelling `modelDescription.xml` uses."""
+    if text not in ("true", "false"):
+        raise ValueError(f"{text!r} is not 'true' or 'false'")
+    return int(text == "true")
+
+
+@dataclass(frozen=True)
+class _ScalarType:
+    """One FMI scalar type, as both ends of the mapping see it.
+
+    `field_type` is the one schema field type that carries it — a Channel
+    field of any other type is a binding this importer refuses rather than
+    reinterprets. `element` is the ctypes element the FMI call takes,
+    `to_field` the value as the schema carries it, and `parse` reads a start
+    value out of a command argument.
+    """
+
+    field_type: str
+    element: type
+    to_field: Callable
+    parse: Callable
+
+
+# Every FMI scalar type this importer maps, by the element name
+# `modelDescription.xml` gives it: the two the acceptance fixture declares
+# beside its Binary variables, and no more. Broad type coverage is outside
+# this slice, so every other type — String, Enumeration, Clock, and the
+# integer types — is reported rather than skipped when a binding names one.
+_SCALARS = {
+    "Float64": _ScalarType("f64", ctypes.c_double, float, float),
+    # fmi3Boolean is a C `bool`, so a Channel carries it as a `u8` with C's
+    # own conversion: zero is false and any other value is true. What the FMU
+    # hands back is 0 or 1.
+    "Boolean": _ScalarType("u8", ctypes.c_bool, int, _boolean),
+}
+
+_BINARY = "Binary"
+_FLOAT64 = "Float64"
+
+# A structural parameter is the one causality whose value FMI 3.0 has an
+# importer change inside Configuration Mode rather than in the instantiated
+# state. The CAN node of the acceptance fixture declares one.
+_STRUCTURAL = "structuralParameter"
+
+# A bounded payload's length is a count of bytes, so a signed field would
+# admit a length no payload can have. The ceiling is what each unsigned field
+# can still count to: a length field that cannot reach its own payload
+# field's bound describes a Channel whose payload can never fill it.
+_LENGTH_CEILINGS = {
+    "u8": 0xFF, "u16": 0xFFFF, "u32": 0xFFFF_FFFF,
+    "u64": 0xFFFF_FFFF_FFFF_FFFF,
+}
+
 _LOG_CALLBACK = ctypes.CFUNCTYPE(
     None, ctypes.c_void_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_char_p
 )
 _VALUE_REFERENCES = ctypes.POINTER(ctypes.c_uint32)
-_FLOAT64_VALUES = ctypes.POINTER(ctypes.c_double)
+_SIZES = ctypes.POINTER(ctypes.c_size_t)
+# fmi3Binary is `const fmi3Byte*`: the FMU fills these pointers on a get and
+# reads them on a set, and the buffers they name belong to whoever produced
+# them.
+_BINARIES = ctypes.POINTER(ctypes.c_void_p)
 _FLAG = ctypes.POINTER(ctypes.c_bool)
 
 # The co-simulation entry points this importer drives, with their argument and
@@ -79,24 +159,43 @@ _SIGNATURES = {
          ctypes.c_bool, ctypes.c_double],
     ),
     "fmi3ExitInitializationMode": (ctypes.c_int, [ctypes.c_void_p]),
+    "fmi3EnterConfigurationMode": (ctypes.c_int, [ctypes.c_void_p]),
+    "fmi3ExitConfigurationMode": (ctypes.c_int, [ctypes.c_void_p]),
     "fmi3DoStep": (
         ctypes.c_int,
         [ctypes.c_void_p, ctypes.c_double, ctypes.c_double, ctypes.c_bool,
          _FLAG, _FLAG, _FLAG, ctypes.POINTER(ctypes.c_double)],
     ),
-    "fmi3GetFloat64": (
+    "fmi3GetBinary": (
         ctypes.c_int,
         [ctypes.c_void_p, _VALUE_REFERENCES, ctypes.c_size_t,
-         _FLOAT64_VALUES, ctypes.c_size_t],
+         _SIZES, _BINARIES, ctypes.c_size_t],
     ),
-    "fmi3SetFloat64": (
+    "fmi3SetBinary": (
         ctypes.c_int,
         [ctypes.c_void_p, _VALUE_REFERENCES, ctypes.c_size_t,
-         _FLOAT64_VALUES, ctypes.c_size_t],
+         _SIZES, _BINARIES, ctypes.c_size_t],
     ),
     "fmi3Terminate": (ctypes.c_int, [ctypes.c_void_p]),
     "fmi3FreeInstance": (None, [ctypes.c_void_p]),
 }
+
+
+def _scalar_signatures() -> dict:
+    """Get and Set for every scalar type: one shape, named once per type."""
+    signatures = {}
+    for kind, scalar in _SCALARS.items():
+        accessor = (
+            ctypes.c_int,
+            [ctypes.c_void_p, _VALUE_REFERENCES, ctypes.c_size_t,
+             ctypes.POINTER(scalar.element), ctypes.c_size_t],
+        )
+        signatures[f"fmi3Get{kind}"] = accessor
+        signatures[f"fmi3Set{kind}"] = accessor
+    return signatures
+
+
+_SIGNATURES.update(_scalar_signatures())
 
 
 def platform_directory() -> str:
@@ -113,18 +212,73 @@ def library_suffix() -> str:
     return suffix
 
 
-def _by_causality(variables, causality: str) -> dict[str, int]:
+@dataclass(frozen=True)
+class Variable:
+    """One FMU variable, as `modelDescription.xml` declares it."""
+
+    name: str
+    reference: int
+    # The element name the description uses: 'Float64', 'Binary', 'Clock'…
+    kind: str
+    causality: str
+    # Declared by a Binary variable only, and the most the FMU will accept.
+    max_size: int | None
+    # How many values the declared dimensions amount to: one when the
+    # variable declares none, and None when a dimension is sized by another
+    # variable, which the description does not settle.
+    value_count: int | None
+
+
+def _by_causality(
+    variables: dict[str, Variable], causality: str
+) -> dict[str, int]:
     """The Float64 variables of one causality, by name.
 
-    Only `input` and `output` variables take part in the Channel mapping. A
-    parameter, a local, or the independent variable `time` is the FMU's own
-    business and no Channel names it.
+    These are the variables a mapping is *derived* from. Only `input` and
+    `output` variables take part in it; a parameter, a local, or the
+    independent variable `time` is the FMU's own business and no Channel
+    names it.
     """
     return {
-        variable.get("name"): int(variable.get("valueReference"))
-        for variable in variables
-        if variable.get("causality") == causality
+        variable.name: variable.reference
+        for variable in variables.values()
+        if variable.kind == _FLOAT64 and variable.causality == causality
     }
+
+
+def _value_count(element) -> int | None:
+    """How many values one variable's declared dimensions amount to.
+
+    The acceptance fixture's CAN node declares its Binary input as
+    `<Dimension start="1"/>`, which is one value written the long way — the
+    same variable a description without any Dimension declares.
+    """
+    count = 1
+    for dimension in element.findall("Dimension"):
+        start = dimension.get("start")
+        if start is None:
+            return None
+        count *= int(start)
+    return count
+
+
+def _variables(root) -> dict[str, Variable]:
+    """Every variable the description declares, of every type."""
+    declared: dict[str, Variable] = {}
+    for element in root.find("ModelVariables"):
+        name, reference = element.get("name"), element.get("valueReference")
+        if name is None or reference is None:
+            continue
+        max_size = element.get("maxSize")
+        declared[name] = Variable(
+            name=name,
+            reference=int(reference),
+            kind=element.tag,
+            causality=element.get("causality", "local"),
+            max_size=None if max_size is None else int(max_size),
+            value_count=_value_count(element),
+        )
+    return declared
 
 
 @dataclass(frozen=True)
@@ -133,6 +287,7 @@ class ModelDescription:
 
     model_identifier: str
     instantiation_token: str
+    variables: dict[str, Variable]
     inputs: dict[str, int]
     outputs: dict[str, int]
 
@@ -164,10 +319,11 @@ class ModelDescription:
                 "FMU declares no co-simulation interface; this importer "
                 "drives neither Model Exchange nor Scheduled Execution"
             )
-        variables = root.find("ModelVariables").findall("Float64")
+        variables = _variables(root)
         return ModelDescription(
             model_identifier=co_simulation.get("modelIdentifier"),
             instantiation_token=root.get("instantiationToken"),
+            variables=variables,
             inputs=_by_causality(variables, "input"),
             outputs=_by_causality(variables, "output"),
         )
@@ -188,18 +344,34 @@ class ModelDescription:
         return binary
 
 
-def _load(binary: Path) -> ctypes.CDLL:
-    """Open the FMU's shared library with the signatures ctypes cannot infer.
+class _Library:
+    """The FMU's shared library, with the signatures ctypes cannot infer.
 
-    An instance handle is a pointer: without a declared `c_void_p` restype
+    An entry point is bound on first use rather than at load: FMI 3.0 has an
+    FMU export every function of the interface, but binding all of them up
+    front would turn an accessor a Run never reaches into a load failure. An
+    instance handle is a pointer, so without a declared `c_void_p` restype
     ctypes would truncate it to an int.
     """
-    library = ctypes.CDLL(str(binary))
-    for name, (restype, argtypes) in _SIGNATURES.items():
-        entry_point = getattr(library, name)
-        entry_point.restype = restype
-        entry_point.argtypes = argtypes
-    return library
+
+    def __init__(self, binary: Path):
+        self._library = ctypes.CDLL(str(binary))
+        self._bound: dict[str, Callable] = {}
+
+    def __getitem__(self, name: str) -> Callable:
+        entry_point = self._bound.get(name)
+        if entry_point is None:
+            try:
+                entry_point = getattr(self._library, name)
+            except AttributeError as error:
+                raise ParticipantFailure(
+                    f"FMU exports no {name}"
+                ) from error
+            restype, argtypes = _SIGNATURES[name]
+            entry_point.restype = restype
+            entry_point.argtypes = argtypes
+            self._bound[name] = entry_point
+        return entry_point
 
 
 def _log_to_stderr(environment, status, category, message) -> None:
@@ -214,6 +386,11 @@ def _status_name(status: int) -> str:
     return f"unknown status {status}"
 
 
+def _references(*values: int):
+    """One value-reference array, as every accessor takes it."""
+    return (ctypes.c_uint32 * len(values))(*values)
+
+
 class CoSimulation:
     """One instantiated FMU, driven through its co-simulation entry points.
 
@@ -224,11 +401,11 @@ class CoSimulation:
     """
 
     def __init__(self, binary: Path, description: ModelDescription):
-        self._library = _load(binary)
+        self._library = _Library(binary)
         # The FMU calls this for the life of the instance, so the ctypes
         # trampoline has to outlive this constructor.
         self._logger = _LOG_CALLBACK(_log_to_stderr)
-        self._instance = self._library.fmi3InstantiateCoSimulation(
+        self._instance = self._library["fmi3InstantiateCoSimulation"](
             description.model_identifier.encode(),
             description.instantiation_token.encode(),
             None,
@@ -254,14 +431,63 @@ class CoSimulation:
         self._call("fmi3EnterInitializationMode", False, 0.0, 0.0, False, 0.0)
         self._call("fmi3ExitInitializationMode")
 
-    def set_float64(self, references, values) -> None:
+    def apply_start_values(self, starts: list[tuple[Variable, object]]) -> None:
+        """Write the declared start values, before initialization mode.
+
+        A structural parameter is written inside Configuration Mode, which is
+        where FMI 3.0 has one changed; every other variable is written in the
+        instantiated state, where the standard has an importer override the
+        start values a description declares. An FMU none of whose variables
+        is a structural parameter is never asked to configure.
+
+        Each group keeps the order it was declared in, so a variable declared
+        twice ends at its last value.
+        """
+        structural = [
+            (variable, value) for variable, value in starts
+            if variable.causality == _STRUCTURAL
+        ]
+        if structural:
+            self._call("fmi3EnterConfigurationMode")
+            self._write_start_values(structural)
+            self._call("fmi3ExitConfigurationMode")
+        self._write_start_values([
+            (variable, value) for variable, value in starts
+            if variable.causality != _STRUCTURAL
+        ])
+
+    def _write_start_values(self, starts) -> None:
+        for variable, value in starts:
+            references = _references(variable.reference)
+            if variable.kind == _BINARY:
+                buffer = (ctypes.c_char * len(value)).from_buffer_copy(value)
+                sizes = (ctypes.c_size_t * 1)(len(value))
+                values = (ctypes.c_void_p * 1)(ctypes.addressof(buffer))
+                self.set_binary(references, sizes, values)
+            else:
+                values = (_SCALARS[variable.kind].element * 1)(value)
+                self.set_values(variable.kind, references, values)
+
+    def set_values(self, kind: str, references, values) -> None:
         self._call(
-            "fmi3SetFloat64", references, len(references), values, len(values)
+            f"fmi3Set{kind}", references, len(references), values, len(values)
         )
 
-    def get_float64(self, references, values) -> None:
+    def get_values(self, kind: str, references, values) -> None:
         self._call(
-            "fmi3GetFloat64", references, len(references), values, len(values)
+            f"fmi3Get{kind}", references, len(references), values, len(values)
+        )
+
+    def set_binary(self, references, sizes, values) -> None:
+        self._call(
+            "fmi3SetBinary", references, len(references), sizes, values,
+            len(references),
+        )
+
+    def get_binary(self, references, sizes, values) -> None:
+        self._call(
+            "fmi3GetBinary", references, len(references), sizes, values,
+            len(references),
         )
 
     def do_step(self, communication_point: float, step_size: float) -> None:
@@ -294,7 +520,7 @@ class CoSimulation:
             # `_call` drops the handle when a call answers Fatal, and freeing
             # is itself a call this FMU may no longer take.
             if self._instance is not None:
-                self._library.fmi3FreeInstance(self._instance)
+                self._library["fmi3FreeInstance"](self._instance)
                 self._instance = None
 
     def _call(self, name: str, *arguments) -> None:
@@ -304,7 +530,7 @@ class CoSimulation:
         so naming it once here keeps the name in the diagnostic the same name
         that was called.
         """
-        status = getattr(self._library, name)(self._instance, *arguments)
+        status = self._library[name](self._instance, *arguments)
         if status == _FMI_SUCCESS_STATUS:
             return
         if status == _FMI_FATAL_STATUS:
@@ -316,30 +542,146 @@ class CoSimulation:
         raise ParticipantFailure(f"{name} returned {_status_name(status)}")
 
 
-class _ChannelBinding:
-    """One Channel's schema fields bound to FMU variables of the same names.
+@dataclass(frozen=True)
+class _Binding:
+    """One Channel schema field bound to one FMU variable."""
+
+    channel: str
+    field: str
+    variable: Variable
+
+    def __str__(self) -> str:
+        """How every diagnostic about this binding opens."""
+        return (
+            f"Channel {self.channel!r} field {self.field!r} names FMU "
+            f"variable {self.variable.name!r}"
+        )
+
+
+class _ScalarGroup:
+    """One Channel's fields bound to FMU variables of one scalar type.
 
     The value references and the value buffer are built once, at
-    initialization, because they are the same on every step.
+    initialization, because they are the same on every step, and one group is
+    one FMI call however many fields it carries.
     """
 
-    def __init__(self, field_names: list[str], references: dict[str, int]):
-        self._field_names = field_names
-        self._references = (ctypes.c_uint32 * len(field_names))(
-            *(references[name] for name in field_names)
+    def __init__(self, kind: str, bound: list[_Binding]):
+        self._kind = kind
+        self._scalar = _SCALARS[kind]
+        self._fields = [binding.field for binding in bound]
+        self._references = _references(
+            *(binding.variable.reference for binding in bound)
         )
-        self._values = (ctypes.c_double * len(field_names))()
+        self._values = (self._scalar.element * len(bound))()
 
     def write(self, fmu: CoSimulation, fields: dict) -> None:
-        self._values[:] = [fields[name] for name in self._field_names]
-        fmu.set_float64(self._references, self._values)
+        self._values[:] = [fields[name] for name in self._fields]
+        fmu.set_values(self._kind, self._references, self._values)
+
+    def read(self, fmu: CoSimulation, into: dict) -> None:
+        fmu.get_values(self._kind, self._references, self._values)
+        to_field = self._scalar.to_field
+        into.update(
+            (name, to_field(value))
+            for name, value in zip(self._fields, self._values)
+        )
+
+
+@dataclass(frozen=True)
+class _BinaryField:
+    """One Binary variable and the bounded Channel fields carrying it."""
+
+    variable: Variable
+    field: str
+    length_field: str
+    capacity: int
+
+
+class _BinaryGroup:
+    """One Channel's Binary variables, as bounded payloads with a length.
+
+    A group writes or reads, never both, because the Channel's direction
+    decides which. The buffers a written group hands the FMU are allocated
+    once and live as long as the group: FMI 3.0 has the importer own them for
+    the duration of the call, and reallocating one per step would put their
+    lifetime in the garbage collector's hands. A read group has none — the
+    pointers are the FMU's own, valid until its next call, so each payload is
+    copied out at once and padded to the Channel's bound.
+    """
+
+    def __init__(self, bound: list[_BinaryField], causality: str):
+        self._bound = bound
+        self._references = _references(*(b.variable.reference for b in bound))
+        self._sizes = (ctypes.c_size_t * len(bound))()
+        self._values = (ctypes.c_void_p * len(bound))()
+        self._buffers = (
+            [(ctypes.c_char * b.capacity)() for b in bound]
+            if causality == "input" else []
+        )
+        for index, buffer in enumerate(self._buffers):
+            self._values[index] = ctypes.addressof(buffer)
+
+    def write(self, fmu: CoSimulation, fields: dict) -> None:
+        for index, binary in enumerate(self._bound):
+            length = fields[binary.length_field]
+            if length > binary.capacity:
+                raise ParticipantFailure(
+                    f"field {binary.length_field!r} declares {length} bytes, "
+                    f"above the {binary.capacity} field {binary.field!r} "
+                    f"carries for FMU variable {binary.variable.name!r}"
+                )
+            self._buffers[index][:length] = fields[binary.field][:length]
+            self._sizes[index] = length
+        fmu.set_binary(self._references, self._sizes, self._values)
+
+    def read(self, fmu: CoSimulation, into: dict) -> None:
+        fmu.get_binary(self._references, self._sizes, self._values)
+        for index, binary in enumerate(self._bound):
+            length = self._sizes[index]
+            if length > binary.capacity:
+                raise ParticipantFailure(
+                    f"FMU variable {binary.variable.name!r} produced {length} "
+                    f"bytes; field {binary.field!r} carries {binary.capacity}"
+                )
+            payload = (
+                ctypes.string_at(self._values[index], length) if length else b""
+            )
+            into[binary.field] = payload + bytes(binary.capacity - length)
+            into[binary.length_field] = length
+
+
+class _ChannelBinding:
+    """One Channel's fields, written into or read out of the FMU."""
+
+    def __init__(self, groups: list):
+        self._groups = groups
+
+    def write(self, fmu: CoSimulation, fields: dict) -> None:
+        for group in self._groups:
+            group.write(fmu, fields)
 
     def read(self, fmu: CoSimulation) -> dict:
-        fmu.get_float64(self._references, self._values)
-        return dict(zip(self._field_names, self._values))
+        fields: dict = {}
+        for group in self._groups:
+            group.read(fmu, fields)
+        return fields
 
 
-def _declarations(init: dict, types: dict) -> dict[str, dict[str, str]]:
+def _channel_fields(init: dict) -> dict[str, dict[str, dict]]:
+    """Each Channel's declared schema fields, by name, in declaration order."""
+    return {
+        channel: {
+            field["name"]: field
+            for field in init["schemas"][declaration["schema"]]["fields"]
+        }
+        for channel, declaration in init["channels"].items()
+    }
+
+
+def _declarations(
+    init: dict, fields_by_channel: dict[str, dict[str, dict]]
+) -> dict[str, dict[str, str]]:
     """Each declared schema field name, mapped to the Channel that declared it.
 
     Split by the direction the init line gives, because the direction decides
@@ -348,7 +690,7 @@ def _declarations(init: dict, types: dict) -> dict[str, dict[str, str]]:
     declared: dict[str, dict[str, str]] = {"in": {}, "out": {}}
     for channel, declaration in init["channels"].items():
         declared[declaration["direction"]].update(
-            dict.fromkeys(types[declaration["schema"]].field_names, channel)
+            dict.fromkeys(fields_by_channel[channel], channel)
         )
     return declared
 
@@ -359,7 +701,7 @@ def _require_total_match(
     causality: str,
     model_identifier: str,
 ) -> None:
-    """Require every name on one side of the mapping to be on the other.
+    """Require every name on one side of a derived mapping to be on the other.
 
     `declared` maps each schema field name to the Channel that declared it, so
     both diagnostics can name the Channel and the FMU.
@@ -380,12 +722,295 @@ def _require_total_match(
             )
 
 
+def _derived_bindings(
+    init: dict,
+    fields_by_channel: dict[str, dict[str, dict]],
+    description: ModelDescription,
+) -> dict[str, dict[str, Variable]]:
+    """The Float64 mapping a Manifest needs no configuration for.
+
+    The schema field names are the FMU variable names, and the match is total
+    in both directions — a name on one side and not the other is a mapping
+    mistake, which is worth rejecting rather than carrying as a silently
+    zero-valued variable. A declared mapping states which variables take part;
+    a derived one has to infer it, and totality is that inference.
+    """
+    declared = _declarations(init, fields_by_channel)
+    _require_total_match(
+        declared["in"], description.inputs, "input",
+        description.model_identifier,
+    )
+    _require_total_match(
+        declared["out"], description.outputs, "output",
+        description.model_identifier,
+    )
+    return {
+        channel: {field: description.variables[field] for field in fields}
+        for channel, fields in fields_by_channel.items()
+    }
+
+
+def _declared_bindings(
+    binds: list[str],
+    fields_by_channel: dict[str, dict[str, dict]],
+    description: ModelDescription,
+) -> dict[str, dict[str, Variable]]:
+    """Resolve `--bind <channel>:<field>=<variable>` against both ends.
+
+    The Channel is named because one schema is typically carried by more than
+    one Channel, so a field name alone names no single end of the mapping.
+    """
+    bound: dict[str, dict[str, Variable]] = {
+        channel: {} for channel in fields_by_channel
+    }
+    for bind in binds:
+        target, separator, variable_name = bind.partition("=")
+        channel, colon, field = target.rpartition(":")
+        if not (separator and colon and channel and field and variable_name):
+            raise ManifestError(
+                f"binding {bind!r} is not '<channel>:<field>=<variable>'"
+            )
+        if channel not in fields_by_channel:
+            raise ManifestError(
+                f"binding {bind!r} names Channel {channel!r}, which the "
+                f"initialization line does not declare"
+            )
+        if field not in fields_by_channel[channel]:
+            raise ManifestError(
+                f"binding {bind!r} names schema field {field!r}, which Channel "
+                f"{channel!r} does not carry"
+            )
+        if field in bound[channel]:
+            raise ManifestError(
+                f"binding {bind!r} binds Channel {channel!r} field {field!r} "
+                f"twice; a field carries one FMU variable"
+            )
+        variable = description.variables.get(variable_name)
+        if variable is None:
+            raise ManifestError(
+                f"binding {bind!r} names FMU variable {variable_name!r}, which "
+                f"FMU {description.model_identifier!r} does not declare"
+            )
+        bound[channel][field] = variable
+    return bound
+
+
+def _shape(field: dict) -> str:
+    """How a schema field reads in a diagnostic: its type and its bound."""
+    count = field.get("count")
+    if count is None:
+        return f"a {field['type']!r} scalar"
+    return f"a {field['type']!r} array of {count}"
+
+
+def _dimensions(variable: Variable) -> str:
+    """How a variable's declared dimensions read in a diagnostic."""
+    if variable.value_count is None:
+        return "a dimension sized by another variable"
+    return f"dimensions of {variable.value_count} values"
+
+
+def _require_mappable(binding: _Binding) -> None:
+    """Reject a variable whose type or shape this importer does not map."""
+    variable = binding.variable
+    if variable.value_count != 1:
+        raise ManifestError(
+            f"{binding}, which declares {_dimensions(variable)}; this importer "
+            f"maps variables of one value"
+        )
+    if variable.kind != _BINARY and variable.kind not in _SCALARS:
+        raise ManifestError(
+            f"{binding}, which is a {variable.kind} variable; this importer "
+            f"maps Binary and the scalar types {', '.join(_SCALARS)}"
+        )
+
+
+def _require_causality(binding: _Binding, causality: str) -> None:
+    """Reject a variable bound to a Channel of the other direction."""
+    if binding.variable.causality != causality:
+        raise ManifestError(
+            f"{binding}, whose causality is {binding.variable.causality!r}; "
+            f"this Channel's direction binds {causality} variables"
+        )
+
+
+def _require_field_type(binding: _Binding, spec: dict) -> None:
+    """Reject a field whose type is not the one the variable's type maps to."""
+    scalar = _SCALARS[binding.variable.kind]
+    if spec.get("count") is not None or spec["type"] != scalar.field_type:
+        raise ManifestError(
+            f"Channel {binding.channel!r} declares field {binding.field!r} as "
+            f"{_shape(spec)}; {binding.variable.kind} variable "
+            f"{binding.variable.name!r} is carried by a "
+            f"{scalar.field_type!r} scalar"
+        )
+
+
+def _binary_field(
+    binding: _Binding, fields: dict[str, dict], causality: str
+) -> _BinaryField:
+    """The bounded representation a Channel carries one Binary variable in."""
+    channel, field, variable = binding.channel, binding.field, binding.variable
+    spec = fields[field]
+    capacity = spec.get("count")
+    if capacity is None or spec["type"] != "u8":
+        raise ManifestError(
+            f"Channel {channel!r} declares field {field!r} as {_shape(spec)}; "
+            f"Binary variable {variable.name!r} is carried by a bounded 'u8' "
+            f"array"
+        )
+    length_field = f"{field}_length"
+    length = fields.get(length_field)
+    if length is None:
+        raise ManifestError(
+            f"Channel {channel!r} carries no field {length_field!r}; a bounded "
+            f"Binary payload carries the length it uses beside it"
+        )
+    ceiling = _LENGTH_CEILINGS.get(length["type"])
+    if length.get("count") is not None or ceiling is None:
+        raise ManifestError(
+            f"Channel {channel!r} declares field {length_field!r} as "
+            f"{_shape(length)}; a Binary payload's length is an unsigned "
+            f"scalar ({', '.join(repr(t) for t in _LENGTH_CEILINGS)})"
+        )
+    if capacity > ceiling:
+        raise ManifestError(
+            f"Channel {channel!r} declares field {length_field!r} as "
+            f"{length['type']!r}, which counts no further than {ceiling}; "
+            f"field {field!r} carries {capacity} bytes, so a full payload "
+            f"could not state its own length"
+        )
+    if (
+        causality == "input"
+        and variable.max_size is not None
+        and capacity > variable.max_size
+    ):
+        raise ManifestError(
+            f"Channel {channel!r} field {field!r} carries {capacity} bytes, "
+            f"but input variable {variable.name!r} declares maxSize "
+            f"{variable.max_size}; the FMU would refuse every payload above it"
+        )
+    return _BinaryField(
+        variable=variable, field=field, length_field=length_field,
+        capacity=capacity,
+    )
+
+
+def _require_every_field_carried(
+    channel: str,
+    fields: dict[str, dict],
+    bound: dict[str, Variable],
+    lengths: dict[str, str],
+) -> None:
+    """Require each field of one Channel to carry exactly one thing.
+
+    A field carries a variable it is bound to, or the length of a Binary
+    payload beside it. A field that carries neither is a mapping mistake, and
+    one that carries both is two.
+    """
+    for field in fields:
+        if field in bound and field in lengths:
+            raise ManifestError(
+                f"Channel {channel!r} field {field!r} carries the length of "
+                f"Binary variable {bound[lengths[field]].name!r} and is bound "
+                f"to FMU variable {bound[field].name!r} as well"
+            )
+        if field not in bound and field not in lengths:
+            raise ManifestError(
+                f"Channel {channel!r} declares schema field {field!r}, which "
+                f"no binding names an FMU variable for"
+            )
+
+
+def _bind_channel(
+    channel: str,
+    direction: str,
+    fields: dict[str, dict],
+    bound: dict[str, Variable],
+) -> _ChannelBinding:
+    """One Channel's fields, checked against the variables they name."""
+    causality = "input" if direction == "in" else "output"
+    scalars: dict[str, list[_Binding]] = {}
+    binaries: list[_BinaryField] = []
+    lengths: dict[str, str] = {}
+    for field in fields:
+        if field not in bound:
+            continue
+        binding = _Binding(channel, field, bound[field])
+        _require_mappable(binding)
+        _require_causality(binding, causality)
+        if binding.variable.kind == _BINARY:
+            binary = _binary_field(binding, fields, causality)
+            lengths[binary.length_field] = field
+            binaries.append(binary)
+        else:
+            _require_field_type(binding, fields[field])
+            scalars.setdefault(binding.variable.kind, []).append(binding)
+    _require_every_field_carried(channel, fields, bound, lengths)
+    groups: list = [
+        _ScalarGroup(kind, bindings) for kind, bindings in scalars.items()
+    ]
+    if binaries:
+        groups.append(_BinaryGroup(binaries, causality))
+    return _ChannelBinding(groups)
+
+
+def _start_value(variable: Variable, text: str):
+    """One start value, read out of a command argument by its own type."""
+    if variable.kind == _BINARY:
+        try:
+            return bytes.fromhex(text)
+        except ValueError as error:
+            raise ManifestError(
+                f"start value for FMU variable {variable.name!r}: {text!r} is "
+                f"not hexadecimal"
+            ) from error
+    if variable.kind not in _SCALARS:
+        raise ManifestError(
+            f"start value for FMU variable {variable.name!r}: it is a "
+            f"{variable.kind} variable, which this importer does not set"
+        )
+    scalar = _SCALARS[variable.kind]
+    try:
+        value = scalar.parse(text)
+    except ValueError as error:
+        raise ManifestError(
+            f"start value for FMU variable {variable.name!r}: cannot read "
+            f"{text!r} as {variable.kind} ({error})"
+        ) from error
+    return value
+
+
+def _start_values(
+    starts: list[str], description: ModelDescription
+) -> list[tuple[Variable, object]]:
+    """Resolve `--start <variable>=<value>` against the description."""
+    values = []
+    for start in starts:
+        name, separator, text = start.partition("=")
+        if not separator or not name:
+            raise ManifestError(
+                f"start value {start!r} is not '<variable>=<value>'"
+            )
+        variable = description.variables.get(name)
+        if variable is None:
+            raise ManifestError(
+                f"start value {start!r} names FMU variable {name!r}, which FMU "
+                f"{description.model_identifier!r} does not declare"
+            )
+        values.append((variable, _start_value(variable, text)))
+    return values
+
+
 class FmuParticipant(StepParticipant):
     """A process participant whose behavior is an imported FMU's."""
 
-    def __init__(self, fmu_path: Path):
+    def __init__(self, fmu_path: Path, *, binds: Sequence[str] = (),
+                 starts: Sequence[str] = ()):
         self.name = ""  # the init line's, for the one diagnostic the kernel misses
         self._fmu_path = fmu_path
+        self._binds = list(binds)
+        self._starts = list(starts)
         self._extraction = None
         self._fmu = None
         self._inputs: dict[str, _ChannelBinding] = {}
@@ -409,36 +1034,34 @@ class FmuParticipant(StepParticipant):
                 f"cannot read FMU {str(self._fmu_path)!r}: {error}"
             ) from error
         description = ModelDescription.read(extracted)
+        # Everything the Manifest got wrong is rejected before the FMU is
+        # instantiated: a mapping that cannot hold is a fact about the Run's
+        # configuration, and no FMU has to be loaded to see it.
         self._bind_channels(init, description)
+        starts = _start_values(self._starts, description)
         self._fmu = CoSimulation(description.binary(extracted), description)
+        self._fmu.apply_start_values(starts)
         self._fmu.initialize()
 
     def _bind_channels(self, init: dict, description: ModelDescription) -> None:
-        """Split the declared Channels by the direction the init line gives.
+        """Bind the declared Channels to FMU variables, in both directions.
 
         An input-direction Channel is written into the FMU before its step; an
-        output-direction Channel is published from it after. The schema field
-        names name the FMU variables on both sides, and the match is total in
-        both directions — a name on one side and not the other is a mapping
-        mistake, which is worth rejecting rather than carrying as a silently
-        zero-valued variable.
+        output-direction Channel is published from it after. Declaring one
+        binding declares them all — the bindings are the whole mapping, and a
+        Channel with none derives its own from the Float64 variable names.
         """
-        types = schema.load(init["schemas"])
-        declared = _declarations(init, types)
-        _require_total_match(
-            declared["in"], description.inputs, "input",
-            description.model_identifier,
-        )
-        _require_total_match(
-            declared["out"], description.outputs, "output",
-            description.model_identifier,
+        fields_by_channel = _channel_fields(init)
+        bound = (
+            _declared_bindings(self._binds, fields_by_channel, description)
+            if self._binds
+            else _derived_bindings(init, fields_by_channel, description)
         )
         for channel, declaration in init["channels"].items():
-            incoming = declaration["direction"] == "in"
-            bindings = self._inputs if incoming else self._outputs
-            bindings[channel] = _ChannelBinding(
-                types[declaration["schema"]].field_names,
-                description.inputs if incoming else description.outputs,
+            direction = declaration["direction"]
+            bindings = self._inputs if direction == "in" else self._outputs
+            bindings[channel] = _bind_channel(
+                channel, direction, fields_by_channel[channel], bound[channel]
             )
 
     def on_step(self, t: int, dt: int, inputs: list):
@@ -481,11 +1104,31 @@ def _close_after_failure(participant: FmuParticipant) -> None:
         pass
 
 
+def _arguments(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="python -m sil.fmi",
+        description="Drive an FMI 3.0 co-simulation FMU as a participant.",
+    )
+    parser.add_argument("fmu", help="path to the FMU archive")
+    parser.add_argument(
+        "--bind", action="append", default=[], metavar="CHANNEL:FIELD=VARIABLE",
+        help="bind one Channel schema field to one FMU variable; declaring "
+             "any binding makes the bindings the whole mapping",
+    )
+    parser.add_argument(
+        "--start", action="append", default=[], metavar="VARIABLE=VALUE",
+        help="set one FMU variable before initialization mode is entered; a "
+             "structural parameter goes inside Configuration Mode, and a "
+             "Binary value is hexadecimal",
+    )
+    return parser.parse_args(argv)
+
+
 def main(argv: list[str] | None = None) -> None:
-    args = sys.argv[1:] if argv is None else argv
-    if len(args) != 1:
-        raise SystemExit("usage: python -m sil.fmi <path/to/model.fmu>")
-    participant = FmuParticipant(Path(args[0]))
+    args = _arguments(sys.argv[1:] if argv is None else argv)
+    participant = FmuParticipant(
+        Path(args.fmu), binds=args.bind, starts=args.start
+    )
     try:
         run(participant)
     except BaseException:

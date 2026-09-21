@@ -253,9 +253,10 @@ target platform. SiL imports an FMU as an ordinary process participant. The
 importer extracts it into the participant's kernel-owned working directory
 during initialization and drives its FMI 3.0 co-simulation interface. The
 extraction is dropped at shutdown and, either way, goes with the tree the
-kernel removes after the Run. Channel schema field names map directly to the FMU's Float64 input and
-output variables; Channel direction decides whether a field is written before
-the FMU Step or published after it.
+kernel removes after the Run. Channel schema field names map directly to the
+FMU's Float64 input and output variables; Channel direction decides whether a
+field is written before the FMU Step or published after it. Every other
+variable type is bound by name on the command line, below.
 
 The FMU path is just a command argument, so it is part of the hashed Manifest:
 
@@ -301,9 +302,87 @@ status. `Warning` aborts too: a Run that steps past a status the FMU raised is
 not evidence of anything. An FMU that answers `Fatal` is abandoned rather than
 terminated, which is what FMI 3.0 requires of its importer.
 
-This milestone deliberately supports FMI 3.0 co-simulation only and Float64
-variables only. It does not implement the bus layered standard because the
-repository has no demo FMU against which to write a conformance test.
+### Binding the other variable types
+
+A Float64 mapping is *derived*: the schema field names are the variable names,
+and the match has to be total in both directions, because a name on one side
+and not the other is a typo rather than an intention.
+
+Every other type is *declared*, one binding per Channel field:
+
+```sh
+python -m sil.fmi model.fmu \
+    --bind can.Rx:data=CanChannel.Rx_Data \
+    --bind can.Tx:data=CanChannel.Tx_Data \
+    --start BusErrorProbability=0.0
+```
+
+A binding names the Channel as well as the field because one schema is
+typically carried by more than one Channel — an Rx and a Tx of the same frame
+layout, say — so a field name alone names no single end of the mapping.
+Declaring one binding declares them all: the bindings are then the whole
+mapping, and a Channel field that none of them names is rejected rather than
+left as a variable the FMU never sees. `--start` writes a variable once,
+before initialization mode is entered: a structural parameter inside
+Configuration Mode, where FMI 3.0 has one changed, and every other variable in
+the instantiated state. An FMU that declares no structural parameter is never
+asked to configure.
+
+Both travel as command arguments, which the Manifest already hashes, so the
+whole mapping is inside the hashed Manifest. Pointing at a file instead would
+be covered by the Run's provenance side-car, which digests every file a
+participant's command names.
+
+The mapped types are `Float64`, `Boolean` and `Binary` — the three the CAN
+acceptance fixture declares, and no more; broad type coverage is a later
+slice. A `Boolean` is carried by a `u8` with C's own conversion — zero is
+false, anything else is true — and what the FMU hands back is 0 or 1.
+
+A binding that names any other type — a `String`, an `Enumeration`, a `Clock`,
+an integer — is reported before the FMU is stepped, naming the type, as is one
+whose field type is not the one its variable's type maps to. A variable is
+mapped when its declared dimensions amount to one value: `<Dimension
+start="1"/>` is one value written the long way, which is how the fixture's CAN
+node declares its Binary input, while anything above one value, or a dimension
+sized by another variable, is reported.
+
+### Bounded Binary payloads
+
+A Binary variable is variable-length and a Message is not, so a Channel
+carries one in an explicit bounded representation: a `u8` array field holding
+the payload, and the `<field>_length` field beside it holding how much of it
+is the payload.
+
+```python
+m.add_schemas({"can.Frame": {"fields": [
+    {"name": "data_length", "type": "u16"},
+    {"name": "data", "type": "u8", "count": 2048},
+]}})
+```
+
+The length field is an unsigned scalar that can still count the payload
+field's bound: a `u8` length beside 2048 payload bytes is refused before
+stepping, because a full payload could not state its own length.
+
+The bound is the array's `count`, and it is the Run's own declaration rather
+than the FMU's. Arbitrary bytes survive, embedded zeros included; on every
+published Message the bytes above the length are zero, so two Runs of one
+Manifest record the same bytes. On an incoming Message they are ignored: the
+length is what says where the payload ends.
+
+Nothing is truncated to fit — a payload above the bound, in either direction,
+aborts the Run with exit 1. The two directions are checked differently on
+purpose. A Channel bound *above* the `maxSize` an **input** variable declares
+is refused before stepping, with exit 2: the FMU would refuse every payload
+above it, so no such Run can work. A published Channel narrower than an
+**output** variable's `maxSize` is not refused, because `maxSize` is a ceiling
+the FMU may never reach — the Run declares what it is prepared to carry, and
+only a payload that actually exceeds it aborts.
+
+This milestone supports FMI 3.0 co-simulation only. It drives neither Clocks
+nor Event Mode, so an FMU that requires them — the FMI-LS-BUS CAN demo nodes
+among them — is not yet drivable; the bus layered standard itself is
+unimplemented.
 
 ## Large-Message routing baseline
 

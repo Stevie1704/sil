@@ -37,8 +37,10 @@ clean.
 
 To point this at your own FMU, change three things and nothing else: the path
 below, the schemas to carry your FMU's Float64 input and output variable names,
-and `stimulus.py` to publish what your FMU needs. Float64 `input` and `output`
-variables are what this milestone maps; see the README for the boundaries.
+and `stimulus.py` to publish what your FMU needs. A Float64 mapping is what
+the importer derives from the names alone; a variable of any other type is
+bound on its command line with `--bind`, and a Binary variable is carried by a
+bounded payload field and the length beside it. See the README for both.
 """
 
 import argparse
