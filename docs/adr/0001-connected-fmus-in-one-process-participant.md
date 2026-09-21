@@ -102,7 +102,15 @@ behind it.
   any FMU is instantiated.
 - A terminal that is connected to no peer may be fed by an in-direction
   Channel instead, which is the replay-input boundary: a recorded observation
-  Channel can stand in for the FMU that produced it.
+  Channel can stand in for the FMU that produced it. The Message carries the
+  instant it belongs to, and the group does **not** replay it at that instant:
+  a Message is published in the Slot the observing activation ran in and
+  becomes visible one Latency later, so by arrival the instant it names is
+  already behind the group, and no FMU of this profile can be taken back to
+  it. Making a replayed terminal land on its own instants is as much a
+  question about a Channel's delivery time as about the Importer, and issue
+  #141 is where it is answered. What this issue owes it is the information,
+  and the Message carries it.
 - A terminal takes its frames from a connected peer **or** from a Channel,
   never from both — one source per input.
 - One process now holds several FMU instances, so a failure has to close all of

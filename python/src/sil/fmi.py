@@ -913,8 +913,22 @@ class _BinaryField:
     event_time_field: str | None = None
 
 
-def _outgoing_length(binary: _BinaryField, fields: dict) -> int:
-    """How much of a Message's payload field the FMU is handed."""
+def _causality(direction: str) -> str:
+    """The FMU causality a Channel of this direction binds.
+
+    The two vocabularies meet here and nowhere else: the init line says which
+    way a Channel runs, and `modelDescription.xml` says what a variable is.
+    """
+    return "input" if direction == "in" else "output"
+
+
+def _outgoing_payload(binary: _BinaryField, fields: dict) -> bytes:
+    """The bytes of one Message's payload field, as the FMU is handed them.
+
+    A Message's payload field is the Channel's whole bound; the length field
+    beside it says how much of that is the payload. Nothing is truncated to
+    fit — a length above the bound aborts the Run.
+    """
     length = fields[binary.length_field]
     if length > binary.capacity:
         raise ParticipantFailure(
@@ -922,7 +936,7 @@ def _outgoing_length(binary: _BinaryField, fields: dict) -> int:
             f"above the {binary.capacity} field {binary.field!r} "
             f"carries for FMU variable {binary.variable.name!r}"
         )
-    return length
+    return fields[binary.field][:length]
 
 
 def _incoming_payload(binary: _BinaryField, payload: bytes) -> dict:
@@ -939,6 +953,20 @@ def _incoming_payload(binary: _BinaryField, payload: bytes) -> dict:
     return {
         binary.field: payload + bytes(binary.capacity - len(payload)),
         binary.length_field: len(payload),
+    }
+
+
+def _activation_message(binary: _BinaryField, payload: bytes,
+                        event_time_ns: int) -> dict:
+    """One Clock activation, as the three fields a clocked Channel carries.
+
+    Stated once, because both ends of the boundary state it: the Channel a
+    single clocked FMU publishes and the Channel a group observes a terminal
+    through carry the same Message, and a second spelling of it could drift.
+    """
+    return {
+        **_incoming_payload(binary, payload),
+        binary.event_time_field: event_time_ns,
     }
 
 
@@ -977,9 +1005,9 @@ class _BinaryGroup:
 
     def write(self, fmu: CoSimulation, fields: dict) -> None:
         for index, binary in enumerate(self._bound):
-            length = _outgoing_length(binary, fields)
-            self._buffers[index][:length] = fields[binary.field][:length]
-            self._sizes[index] = length
+            payload = _outgoing_payload(binary, fields)
+            self._buffers[index][:len(payload)] = payload
+            self._sizes[index] = len(payload)
         fmu.set_binary(self._references, self._sizes, self._values)
 
     def read(self, fmu: CoSimulation, into: dict) -> None:
@@ -1164,10 +1192,7 @@ class _ClockedPayload:
         payload = self._buffer.read(fmu)
         if payload is None:
             return None
-        return {
-            **_incoming_payload(self._binary, payload),
-            self._binary.event_time_field: event_time_ns,
-        }
+        return _activation_message(self._binary, payload, event_time_ns)
 
     def activate(self, fmu: CoSimulation, fields: dict) -> None:
         """Hand one Message to the FMU as an activation of its input Clock.
@@ -1177,8 +1202,7 @@ class _ClockedPayload:
         dating the activation as its sender did would claim a time the FMU
         was never driven to.
         """
-        length = _outgoing_length(self._binary, fields)
-        self._buffer.deliver(fmu, fields[self._binary.field][:length])
+        self._buffer.deliver(fmu, _outgoing_payload(self._binary, fields))
 
 
 def _run_event(fmu: CoSimulation, event_time_ns: int,
@@ -1427,13 +1451,15 @@ def _parse_binding(
     return channel, field, variable_name
 
 
-def _declared_bindings(
-    binds: list[str],
-    fields_by_channel: dict[str, dict[str, dict]],
-    description: ModelDescription,
-) -> dict[str, dict[str, Variable]]:
-    """Resolve `--bind <channel>:<field>=<variable>` against both ends."""
-    bound: dict[str, dict[str, Variable]] = {
+def _bound_fields(
+    binds: list[str], fields_by_channel: dict[str, dict[str, dict]]
+) -> dict[str, dict[str, str]]:
+    """Every `--bind` argument, as the variable each Channel field names.
+
+    The variable is still text here: what resolves it is the FMU, and one FMU
+    on its own and a group of them name their variables differently.
+    """
+    bound: dict[str, dict[str, str]] = {
         channel: {} for channel in fields_by_channel
     }
     for bind in binds:
@@ -1443,14 +1469,36 @@ def _declared_bindings(
                 f"binding {bind!r} binds Channel {channel!r} field {field!r} "
                 f"twice; a field carries one FMU variable"
             )
-        variable = description.variables.get(variable_name)
-        if variable is None:
-            raise ManifestError(
-                f"binding {bind!r} names FMU variable {variable_name!r}, which "
-                f"FMU {description.model_identifier!r} does not declare"
-            )
-        bound[channel][field] = variable
+        bound[channel][field] = variable_name
     return bound
+
+
+def _declared_bindings(
+    binds: list[str],
+    fields_by_channel: dict[str, dict[str, dict]],
+    description: ModelDescription,
+) -> dict[str, dict[str, Variable]]:
+    """Resolve `--bind <channel>:<field>=<variable>` against both ends."""
+    return {
+        channel: {
+            field: _declared_variable(channel, field, name, description)
+            for field, name in declared.items()
+        }
+        for channel, declared in _bound_fields(binds, fields_by_channel).items()
+    }
+
+
+def _declared_variable(
+    channel: str, field: str, name: str, description: ModelDescription
+) -> Variable:
+    """The one FMU variable a binding names, or why the FMU has no such name."""
+    variable = description.variables.get(name)
+    if variable is None:
+        raise ManifestError(
+            f"Channel {channel!r} field {field!r} names FMU variable {name!r}, "
+            f"which FMU {description.model_identifier!r} does not declare"
+        )
+    return variable
 
 
 def _shape(field: dict) -> str:
@@ -1660,7 +1708,7 @@ def _clocked_payload(
     clocked = [field for field, variable in bound.items() if variable.clocks]
     if not clocked:
         return None
-    causality = "input" if direction == "in" else "output"
+    causality = _causality(direction)
     field = clocked[0]
     binding = _Binding(channel, field, bound[field])
     if len(bound) > 1:
@@ -1705,7 +1753,7 @@ def _bind_channel(
     bound: dict[str, Variable],
 ) -> _ChannelBinding:
     """One Channel's fields, checked against the variables they name."""
-    causality = "input" if direction == "in" else "output"
+    causality = _causality(direction)
     scalars: dict[str, list[_Binding]] = {}
     binaries: list[_BinaryField] = []
     lengths: dict[str, str] = {}
@@ -1997,10 +2045,9 @@ class _Observation:
     binary: _BinaryField
 
     def message(self, payload: bytes, event_time_ns: int) -> tuple[str, dict]:
-        return self.channel, {
-            **_incoming_payload(self.binary, payload),
-            self.binary.event_time_field: event_time_ns,
-        }
+        return self.channel, _activation_message(
+            self.binary, payload, event_time_ns
+        )
 
 
 @dataclass(frozen=True)
@@ -2017,8 +2064,7 @@ class _Injection:
     binary: _BinaryField
 
     def payload(self, fields: dict) -> bytes:
-        length = _outgoing_length(self.binary, fields)
-        return fields[self.binary.field][:length]
+        return _outgoing_payload(self.binary, fields)
 
 
 class _Transceiver:
@@ -2314,6 +2360,16 @@ class _Group:
         They are delivered before the interval rather than inside it: the
         group is standing on this communication point, and an event happens at
         the point the FMUs stand on.
+
+        The instant a Message *states* is deliberately not used, and cannot be
+        with what a Channel offers today: a Message is published in the Slot
+        the activation that observed it ran in and becomes visible one Latency
+        after that, so by the time it arrives the instant it names is behind
+        the group, and no FMU of this profile can be taken back to it.
+        Reproducing a recorded terminal at its own instants is therefore as
+        much a question about a Channel's delivery time as about this
+        importer, which is why the boundary here carries the information and
+        stops there.
         """
         pending = []
         for message in inputs:
@@ -2624,44 +2680,46 @@ class _Transceivers:
     def carrying(self, text: str, what: str) -> tuple[_Transceiver, str]:
         """The transceiver member the variable `<instance>.<variable>` is.
 
-        Every terminal of every instance is built before this is asked, so a
-        variable that is no member of one is a Channel bound to something a
-        group does not carry.
+        A Channel names a terminal through one of its members rather than by
+        name, so the terminal is looked up by the variable and built here if a
+        connection has not already built it. Only terminals this Run actually
+        uses are built: an FMU may declare a terminal of another profile
+        beside the one it is connected through, and that is its business.
         """
         instance, variable_name = _instance_of(text, self._instances, what)
-        side = self._by_variable.get((instance.name, variable_name))
-        if side is None:
-            if variable_name not in instance.description.variables:
-                raise ManifestError(
-                    f"{what} names FMU variable {variable_name!r}, which FMU "
-                    f"{instance.description.model_identifier!r} of instance "
-                    f"{instance.name!r} does not declare"
-                )
+        if variable_name not in instance.description.variables:
             raise ManifestError(
-                f"{what} names FMU variable {variable_name!r}, which is no "
-                f"{_TX_DATA!r} or {_RX_DATA!r} member of a network terminal of "
-                f"instance {instance.name!r}; a group's Channels carry a "
-                f"terminal's bus operations"
+                f"{what} names FMU variable {variable_name!r}, which FMU "
+                f"{instance.description.model_identifier!r} of instance "
+                f"{instance.name!r} does not declare"
             )
-        return side
+        for terminal in instance.description.terminals.values():
+            for member in (_RX_DATA, _TX_DATA):
+                if terminal.members.get(member) == variable_name:
+                    self.named(f"{instance.name}.{terminal.name}", what)
+                    return self._by_variable[(instance.name, variable_name)]
+        raise ManifestError(
+            f"{what} names FMU variable {variable_name!r}, which is no "
+            f"{_TX_DATA!r} or {_RX_DATA!r} member of a terminal of instance "
+            f"{instance.name!r}; a group's Channels carry a terminal's bus "
+            f"operations"
+        )
 
-    def build_every_terminal(self) -> None:
-        """Build every network terminal every instance declares.
+    def require_every_instance_used(self) -> None:
+        """Refuse an FMU of the group that nothing in the Run reaches.
 
-        A terminal is checked against the profile whether a connection or a
-        Channel names it or not, because an FMU that declares a terminal this
-        importer cannot drive is an FMU it cannot drive.
+        Every instance is stepped on every Step whether it communicates or
+        not, so one no connection and no Channel names is an FMU paying for a
+        Run it takes no part in — a Manifest mistake rather than a choice.
         """
-        for instance in self._instances.values():
-            if not instance.description.terminals:
+        used = {instance for instance, _ in self._built}
+        for name in self._instances:
+            if name not in used:
                 raise ManifestError(
-                    f"instance {instance.name!r} is FMU "
-                    f"{instance.description.model_identifier!r}, which declares "
-                    f"no terminal; every FMU of a group drives a network "
-                    f"terminal, connected to a peer or carried by a Channel"
+                    f"instance {name!r} is named by no --connect and by no "
+                    f"Channel; every FMU of a group drives a network terminal, "
+                    f"connected to a peer or carried by a Channel"
                 )
-            for terminal in instance.description.terminals:
-                self.named(f"{instance.name}.{terminal}", "the group")
 
     def all(self) -> list[_Transceiver]:
         return list(self._built.values())
@@ -2756,18 +2814,7 @@ def _bind_group_channels(
     observation is what a Recording of this Run holds, and the injection is
     what replaces the FMU that used to produce it.
     """
-    declared: dict[str, dict[str, str]] = {
-        channel: {} for channel in fields_by_channel
-    }
-    for bind in binds:
-        channel, field, text = _parse_binding(bind, fields_by_channel)
-        if field in declared[channel]:
-            raise ManifestError(
-                f"binding {bind!r} binds Channel {channel!r} field {field!r} "
-                f"twice; a field carries one FMU variable"
-            )
-        declared[channel][field] = text
-    for channel, bound in declared.items():
+    for channel, bound in _bound_fields(binds, fields_by_channel).items():
         direction = init["channels"][channel]["direction"]
         _bind_group_channel(
             channel, direction, fields_by_channel[channel], bound, transceivers
@@ -2910,11 +2957,11 @@ class FmuGroupParticipant(StepParticipant):
         # instantiated: a group that cannot hold is a fact about the Run's
         # configuration, and no FMU has to be loaded to see it.
         transceivers = _Transceivers(instances, self._profile)
-        transceivers.build_every_terminal()
         _connect(self._connects, transceivers)
         _bind_group_channels(
             self._binds, init, _channel_fields(init), transceivers
         )
+        transceivers.require_every_instance_used()
         starts = _group_start_values(self._starts, instances)
         # The group is held before any FMU is loaded, so an instance that
         # fails to instantiate or to initialize is still one this participant

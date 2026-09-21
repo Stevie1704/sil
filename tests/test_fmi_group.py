@@ -345,6 +345,38 @@ class TestCoordination:
             for t in range(0, 400 * MS, 100 * MS):
                 participant.on_step(t, 100 * MS, [])
 
+    def test_two_fmus_answering_each_other_at_one_instant_fail_at_a_bound(
+        self, group, tmp_path, build_dir
+    ):
+        """A bounded failure rather than an instant that never ends.
+
+        The `CanNode` build echoes a frame handed to its input Clock back out
+        on its output Clock, one discrete-state update later. Two of them
+        connected to each other answer each other forever at one instant, so
+        the group's own bound on propagation is what ends it — the same kind
+        of declaration as the bound on iterating one event.
+        """
+        echoing = built(build_dir, tmp_path, "echo1", "CanNode")
+        # The same FMU, declaring itself the bus simulation end, because a
+        # connection has one of each and what is under test is the loop.
+        as_bus = node_fmu(
+            tmp_path / "echo2.fmu",
+            model_identifier="ClockedCanNode",
+            binary=build_dir / f"ClockedCanNode{library_suffix()}",
+            platform_directory=platform_directory(),
+            rewrite_manifest=lambda text: text.replace(
+                'isBusSimulationFMU="false"', 'isBusSimulationFMU="true"'
+            ),
+        )
+        with pytest.raises(ParticipantFailure, match="bounds the propagation"):
+            group(
+                instances=("node1", "bus"),
+                connects=["node1.CanChannel=bus.CanChannel"],
+                binds=["can.node1.Tx:data=node1.CanChannel.Tx_Data"],
+                channels={"can.node1.Tx": (BUFFER_SCHEMA, "out")},
+                paths={"node1": echoing, "bus": as_bus},
+            )
+
     def test_a_step_that_does_not_continue_where_the_last_one_ended_is_refused(
         self, group
     ):
@@ -602,12 +634,54 @@ class TestGroupsRejectedBeforeStepping:
                 '</fmiTerminalsAndIcons>'
             ),
         )
-        with pytest.raises(ManifestError, match="declares no terminal"):
+        with pytest.raises(ManifestError, match="does not declare \\(declared: none"):
             group(paths={
                 "node1": node,
                 "node2": built(build_dir, tmp_path, "node2", "CanNodeOnABus"),
                 "bus": built(build_dir, tmp_path, "bus", "CanBus"),
             })
+
+    def test_an_instance_no_connection_and_no_channel_names(self, group):
+        """An FMU is stepped on every Step, so an unreached one is a mistake."""
+        with pytest.raises(ManifestError, match="named by no --connect"):
+            group(
+                connects=["node1.CanChannel=bus.Node1"],
+                binds=BINDINGS[:1] + BINDINGS[2:3],
+                channels={
+                    "can.node1.Tx": (BUFFER_SCHEMA, "out"),
+                    "can.bus.Node1": (BUFFER_SCHEMA, "out"),
+                },
+            )
+
+    def test_a_terminal_of_another_profile_the_run_does_not_use_is_left_alone(
+        self, group, tmp_path, build_dir
+    ):
+        """Only what the Run drives is checked against the declared profile.
+
+        An FMU may carry a terminal of another layered standard beside the one
+        it is connected through, and that is its own business.
+        """
+        node = node_fmu(
+            tmp_path / "two-terminals.fmu",
+            model_identifier="ClockedCanNodeOnABus",
+            binary=build_dir / f"ClockedCanNodeOnABus{library_suffix()}",
+            platform_directory=platform_directory(),
+            rewrite_terminals=lambda text: text.replace(
+                "</Terminals>",
+                '<Terminal name="FlexRayChannel" '
+                'terminalKind="org.fmi-ls-bus.network-terminal" '
+                'matchingRule="org.fmi-ls-bus.flexray"/></Terminals>',
+            ),
+        )
+        participant = group(paths={
+            "node1": node,
+            "node2": built(build_dir, tmp_path, "node2", "CanNodeOnABus"),
+            "bus": built(build_dir, tmp_path, "bus", "CanBus"),
+        })
+        assert observed(participant, 100 * MS, 400 * MS) == [
+            event for event in case("aligned")["events"]
+            if event["published_ns"] < 400 * MS
+        ]
 
     def test_an_fmu_without_the_layered_standard_manifest(
         self, group, tmp_path, build_dir
@@ -681,6 +755,16 @@ class TestGroupsRejectedBeforeStepping:
         """A declared parameter is part of the Manifest the Run is hashed by."""
         participant = group(starts=["bus.BusErrorProbability=0.0"])
         assert observed(participant, 100 * MS, 100 * MS)
+
+    def test_a_declared_parameter_reaches_the_instance_that_declared_it(
+        self, group
+    ):
+        """The stand-in refuses a bus error probability above zero, because
+        upstream draws that path from `rand()` and nothing here models it. A
+        Run that reached the FMU with the declared value is what that refusal
+        reports; a parameter quietly dropped would start instead."""
+        with pytest.raises(ParticipantFailure, match="fmi3SetFloat64 returned"):
+            group(starts=["bus.BusErrorProbability=0.5"])
 
 
 OBSERVER = ROOT / "tests" / "participants" / "can_observer.py"

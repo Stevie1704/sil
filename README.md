@@ -504,7 +504,7 @@ timestamp.
 | --- | --- |
 | Terminal | `org.fmi-ls-bus.network-terminal` with matching rule `org.fmi-ls-bus.transceiver`, grouping `Rx_Data`, `Rx_Clock`, `Tx_Data`, `Tx_Clock` |
 | Topology | one connection has exactly one `isBusSimulationFMU=true` end and one node end; arbitration and transmission timing stay in the bus FMU |
-| Profile | every terminal's buffers declare the `--bus-profile` media type, and both ends of one direction declare the identical `mimeType` and the same layered-standard version |
+| Profile | the buffers of every terminal the Run drives declare the `--bus-profile` media type, and both ends of one direction declare the identical `mimeType` and the same layered-standard version. A terminal no `--connect` and no Channel names is left alone — an FMU may carry one of another standard |
 | `Rx_Clock` | input, `triggered` |
 | `Tx_Clock` | output `triggered` — the FMU raises it — or input `countdown`, which the group raises at the instant the interval ends |
 | Countdown interval | read as the exact fraction the FMU states and required to be a whole number of nanoseconds; nothing is rounded onto an instant the FMU did not ask for |
@@ -513,7 +513,14 @@ timestamp.
 
 An unconnected terminal fed by an in-direction Channel is the replay-input
 boundary: a Recording of the observation Channel can stand in for the FMU that
-produced it. The boundary decision and the evidence behind it are in
+produced it. The activation is raised at the communication point the group
+stands on, not at the instant the Message states — by the time a Message
+arrives, one Latency after the Slot it was published in, that instant is behind
+the group, and no FMU of this profile can be taken back to it. The Message
+carries the instant so a replayer can be built around it; landing on it is a
+question about a Channel's delivery time as much as about the Importer.
+
+The boundary decision and the evidence behind it are in
 [docs/adr/0001-connected-fmus-in-one-process-participant.md](docs/adr/0001-connected-fmus-in-one-process-participant.md).
 
 ## Large-Message routing baseline
