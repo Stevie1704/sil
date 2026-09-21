@@ -46,8 +46,8 @@
 #ifndef FMI_CLOCK_NEVER_CONVERGES
 #define FMI_CLOCK_NEVER_CONVERGES 0
 #endif
-// Declare a next event time the importer's step grid cannot land on. Given in
-// milliseconds after the event, so the build says what it declares.
+// Declare a next event time, as an absolute number of milliseconds, so the
+// build says which instant it asks to be stepped onto. Zero declares none.
 #ifndef FMI_CLOCK_NEXT_EVENT_MS
 #define FMI_CLOCK_NEXT_EVENT_MS 0
 #endif
@@ -59,6 +59,12 @@
 // Ask for the simulation to be terminated from inside the event.
 #ifndef FMI_CLOCK_TERMINATE_IN_EVENT
 #define FMI_CLOCK_TERMINATE_IN_EVENT 0
+#endif
+// Raise the output Clock in the discrete-state update that ends the event
+// rather than before it, which is the activation an importer loses if it
+// stops reading the Clock once the FMU says there is nothing more to update.
+#ifndef FMI_CLOCK_ACTIVATE_IN_UPDATE
+#define FMI_CLOCK_ACTIVATE_IN_UPDATE 0
 #endif
 
 // The expected exchange's Configuration payload: CAN baud rate 100 000, then
@@ -83,6 +89,9 @@ typedef struct {
   unsigned char rx[MAX_SIZE];
   size_t rx_length;
   bool rx_pending;
+  // How many transmit operations the last interval produced, when this build
+  // raises the Clock from the discrete-state update instead of the Step.
+  size_t tx_pending;
   double event_time;
 } Node;
 
@@ -179,9 +188,13 @@ int fmi3DoStep(void *instance, double communication_point, double step_size,
   // One operation for every transmit boundary this interval crossed, all of
   // them in the buffer the one Clock activation at its end carries.
   size_t crossed = (size_t)(to / TRANSMIT_INTERVAL_MS - from / TRANSMIT_INTERVAL_MS);
+#if FMI_CLOCK_ACTIVATE_IN_UPDATE
+  node.tx_pending = crossed;
+#else
   raise_tx(TRANSMIT, sizeof(TRANSMIT), crossed);
+#endif
   node.event_time = communication_point + step_size;
-  *event_handling_needed = node.tx_clock;
+  *event_handling_needed = node.tx_clock || crossed > 0;
   *last_successful_time = communication_point + step_size;
 #if FMI_CLOCK_EARLY_RETURN
   *early_return = true;
@@ -271,12 +284,20 @@ int fmi3UpdateDiscreteStates(void *instance, bool *discrete_states_need_update,
     node.rx_pending = false;
     *discrete_states_need_update = true;
   }
+#if FMI_CLOCK_ACTIVATE_IN_UPDATE
+  if (node.tx_pending) {
+    // The event ends with this update, and the Clock goes up in it: an
+    // importer that read the Clock only before the update never sees it.
+    raise_tx(TRANSMIT, sizeof(TRANSMIT), node.tx_pending);
+    node.tx_pending = 0;
+  }
+#endif
 #if FMI_CLOCK_NEVER_CONVERGES
   *discrete_states_need_update = true;
 #endif
 #if FMI_CLOCK_NEXT_EVENT_MS
   *next_event_time_defined = true;
-  *next_event_time = node.event_time + FMI_CLOCK_NEXT_EVENT_MS / 1000.0;
+  *next_event_time = FMI_CLOCK_NEXT_EVENT_MS / 1000.0;
 #endif
 #if FMI_CLOCK_TERMINATE_IN_EVENT
   *terminate_simulation = true;

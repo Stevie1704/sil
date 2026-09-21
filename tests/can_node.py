@@ -6,13 +6,12 @@ container and is not vendored here, so what a test packages is the node's own
 fixture's record of what it inspected — around whichever binary the test wants
 behind them. A fixture that is rebuilt and changes takes these tests with it.
 
-Two things are packaged this way:
+`node_fmu()` packages it either way:
 
-- the description alone (`node_fmu()`), which is all a mapping needs: binding
-  happens before the FMU is loaded, so the absent binary is what a resolved
-  mapping runs into;
-- the description around a built stand-in (`clocked_node_fmu()`), which drives
-  the node's lifecycle without docker.
+- the description alone, which is all a mapping needs — binding happens before
+  the FMU is loaded, so the absent binary is what a resolved mapping runs into;
+- the description around a `binary=` a test built, which drives the node's
+  lifecycle without docker.
 """
 
 from __future__ import annotations

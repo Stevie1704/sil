@@ -14,9 +14,6 @@ from sil.participant import StepParticipant, run
 
 
 class CanObserver(StepParticipant):
-    def __init__(self, channel: str):
-        self.channel = channel
-
     def on_step(self, t, dt, inputs):
         for message in inputs:
             length = message.data["data_length"]
@@ -29,4 +26,4 @@ class CanObserver(StepParticipant):
 
 
 if __name__ == "__main__":
-    run(CanObserver(sys.argv[1]))
+    run(CanObserver())

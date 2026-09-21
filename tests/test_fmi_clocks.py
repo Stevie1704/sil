@@ -172,11 +172,6 @@ def observed(participant, step_size_ns: int, duration_ns: int) -> list[dict]:
                     {"name": operation.name, "fields": operation.fields}
                     for operation in decode(payload)
                 ],
-                # The node declares no next event time, and every expectation
-                # states that; this importer would have failed the Run rather
-                # than step past one, so recording it keeps the comparison
-                # whole.
-                "next_event_time_s": None,
             })
     return events
 
@@ -190,7 +185,25 @@ def case(name: str) -> dict:
 
 
 def expected_events(name: str) -> list[dict]:
-    return case(name)["events"]
+    """The expected events, less the one field a Message does not carry.
+
+    `next_event_time_s` is what `fmi3UpdateDiscreteStates` declared when the
+    event ended, and no Channel carries it. What the importer does with a
+    declared next event time is asserted where it belongs — it refuses to
+    step past one — so the expectation is required to declare none rather
+    than compared against a null these tests wrote themselves.
+    """
+    events = []
+    for event in case(name)["events"]:
+        assert event["next_event_time_s"] is None, (
+            f"the event at {event['time_ns']} ns expects a next event time, "
+            f"which no Channel carries"
+        )
+        events.append({
+            key: value for key, value in event.items()
+            if key != "next_event_time_s"
+        })
+    return events
 
 
 class TestTheExpectedExchange:
@@ -211,7 +224,7 @@ class TestTheExpectedExchange:
         assert [
             {key: value for key, value in event.items() if key != "published_ns"}
             for event in events
-        ] == declared["events"]
+        ] == expected_events(declared["name"])
 
     def test_an_event_is_published_in_the_slot_it_became_visible_in(
         self, importer
@@ -281,6 +294,27 @@ class TestTheExpectedExchange:
             (600 * MS, 900 * MS), (900 * MS, 1200 * MS),
         ]
 
+    def test_an_activation_raised_by_the_last_update_is_not_lost(
+        self, importer
+    ):
+        """The Clock can go up in the discrete-state update that ends the
+        event, and an importer that stops reading there loses it for good —
+        the buffer it gates is defined only while it is up.
+
+        This build raises its transmit Clock exactly there, and the exchange
+        it produces is the one the fixture expects either way.
+        """
+        declared = case("aligned")
+        events = observed(
+            importer(variant="LateActivation", binds=TX_ONLY,
+                     channels={TX: (BUFFER_SCHEMA, "out")}),
+            declared["step_size_ns"], declared["duration_ns"],
+        )
+        assert [
+            {key: value for key, value in event.items() if key != "published_ns"}
+            for event in events
+        ] == expected_events(declared["name"])
+
     def test_two_events_can_share_one_slot(self, importer):
         """The initialization event and the first Step's event are published
         together, at the same publication time and with different event
@@ -309,6 +343,9 @@ class TestTheClockProfile:
             "fmi3GetClock",
             "fmi3GetBinary",
             "fmi3UpdateDiscreteStates",
+            # Once more, because the update that ends an event can raise a
+            # Clock of its own.
+            "fmi3GetClock",
             "fmi3EnterStepMode",
         ]
 
@@ -326,6 +363,7 @@ class TestTheClockProfile:
             # The Step that ends on the node's first transmit.
             "fmi3DoStep", "fmi3EnterEventMode",
             "fmi3GetClock", "fmi3GetBinary", "fmi3UpdateDiscreteStates",
+            "fmi3GetClock",
             "fmi3EnterStepMode",
         ]
 
@@ -428,6 +466,38 @@ class TestUndrivableBehavior:
             ParticipantFailure, match="does not choose communication points"
         ):
             participant.on_step(0, 100 * MS, [])
+
+    def test_a_next_event_time_on_the_communication_point_is_not_refused(
+        self, importer
+    ):
+        """An FMU that declares its next event exactly where the Step ends is
+        asking for nothing the grid does not already do.
+
+        The declared time is a double of seconds and the interval is integer
+        nanoseconds; comparing them in nanoseconds is what keeps the last bit
+        of one representation from aborting a Run the other admits.
+        """
+        participant = importer(
+            variant="NextEventAtBoundary", binds=TX_ONLY,
+            channels={TX: (BUFFER_SCHEMA, "out")},
+        )
+        participant.on_step(0, 100 * MS, [])
+
+    def test_a_next_event_time_in_a_later_step_fails_at_that_step(
+        self, importer
+    ):
+        """It is the Step that would pass the declared event that fails, not
+        the first Step after it was declared."""
+        participant = importer(
+            variant="NextEventLater", binds=TX_ONLY,
+            channels={TX: (BUFFER_SCHEMA, "out")},
+        )
+        for t in range(0, 500 * MS, 100 * MS):
+            participant.on_step(t, 100 * MS, [])
+        with pytest.raises(
+            ParticipantFailure, match="does not choose communication points"
+        ):
+            participant.on_step(500 * MS, 100 * MS, [])
 
     def test_an_early_return_is_not_a_completed_interval(self, importer):
         participant = importer(
@@ -644,7 +714,7 @@ def can_manifest(fmu: Path, *, step_period_ns: int, duration_ns: int,
     # execute; the observer is what a consumer of the node's frames is.
     m.add_process(
         "observer",
-        command=[sys.executable, str(OBSERVER), TX],
+        command=[sys.executable, str(OBSERVER)],
         step_period_ns=step_period_ns,
         subscribes=[SubscriberRoute(TX, capacity=ROUTE_CAPACITY)],
         priority=2,
@@ -682,7 +752,6 @@ class TestRunBoundary:
                         fields["data"][:fields["data_length"]]
                     )
                 ],
-                "next_event_time_s": None,
             }
             for _, fields in published
         ] == expected_events("aligned")

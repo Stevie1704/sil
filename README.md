@@ -342,9 +342,9 @@ A binding that names any other type — a `String`, an `Enumeration`, an
 integer — is reported before the FMU is stepped, naming the type, as is one
 whose field type is not the one its variable's type maps to. A `Clock` is
 reported too, and for a different reason: it is driven through the variable it
-gates rather than bound to a field of its own, which is the next section. A
-variable is
-mapped when its declared dimensions amount to one value: `<Dimension
+gates rather than bound to a field of its own, which is the section after
+next. A variable is mapped when its declared dimensions amount to one value:
+`<Dimension
 start="1"/>` is one value written the long way, which is how the fixture's CAN
 node declares its Binary input, while anything above one value, or a dimension
 sized by another variable, is reported.
@@ -437,6 +437,7 @@ The supported profile is exactly this:
 | Discrete-state iteration | until the FMU stops asking, bounded at 100 iterations |
 | Next event time | none. An FMU that declares one is asking to be stepped onto it, which this importer cannot promise, and the Run fails rather than step past it |
 | Early return | none. `earlyReturnAllowed` is declared false, and an FMU that returns early is reported rather than counted as a completed interval |
+| `canHandleVariableCommunicationStepSize` | not read. A participant's Step period is fixed by its Manifest and the kernel never shortens a Step, so the flag has nothing to decide here |
 
 Everything outside it is reported before the Run steps, or the Run fails
 saying which call answered what. `fmi3UpdateDiscreteStates` asking for another

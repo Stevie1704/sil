@@ -7,6 +7,7 @@ fmu: Entering event mode.
 fmu: Get TX clock of 1
 fmu: Get TX buffer of 23 bytes
 fmu: Ending super dense time step.
+fmu: Get TX clock of 0
 fmu: Entering step mode.
 fmu: Doing step at 0.000000 of 0.250000 seconds.
 fmu: Doing step at 0.250000 of 0.250000 seconds.
@@ -15,6 +16,7 @@ fmu: Entering event mode.
 fmu: Get TX clock of 1
 fmu: Get TX buffer of 20 bytes
 fmu: Ending super dense time step.
+fmu: Get TX clock of 0
 fmu: Entering step mode.
 observer: visible 250000000 ns  event 0 ns  400000000d00000001a0860100400000000a0000000401
 fmu: Doing step at 0.500000 of 0.250000 seconds.
@@ -23,6 +25,7 @@ fmu: Entering event mode.
 fmu: Get TX clock of 1
 fmu: Get TX buffer of 20 bytes
 fmu: Ending super dense time step.
+fmu: Get TX clock of 0
 fmu: Entering step mode.
 observer: visible 500000000 ns  event 500000000 ns  1000000014000000010000000000040001020304
 fmu: Doing step at 0.750000 of 0.250000 seconds.
@@ -31,6 +34,7 @@ fmu: Entering event mode.
 fmu: Get TX clock of 1
 fmu: Get TX buffer of 20 bytes
 fmu: Ending super dense time step.
+fmu: Get TX clock of 0
 fmu: Entering step mode.
 observer: visible 750000000 ns  event 750000000 ns  1000000014000000010000000000040001020304
 fmu: Terminating.

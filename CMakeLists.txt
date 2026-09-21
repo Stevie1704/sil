@@ -256,9 +256,15 @@ add_clocked_fmu(CanNode)
 # An event iteration that never converges, so the importer's own bound is what
 # ends it.
 add_clocked_fmu(NeverConverges FMI_CLOCK_NEVER_CONVERGES=1)
-# A next event time 50 ms after the event, which no step grid this kernel
-# schedules can land on.
+# A next event time at 50 ms, which no step grid this kernel schedules lands
+# on; one at 100 ms, which the first Step of a 100 ms grid ends exactly on;
+# and one at 550 ms, which only a later Step reaches past.
 add_clocked_fmu(NextEvent FMI_CLOCK_NEXT_EVENT_MS=50)
+add_clocked_fmu(NextEventAtBoundary FMI_CLOCK_NEXT_EVENT_MS=100)
+add_clocked_fmu(NextEventLater FMI_CLOCK_NEXT_EVENT_MS=550)
+# The output Clock raised by the discrete-state update that ends the event,
+# which is the activation an importer loses if it stops reading there.
+add_clocked_fmu(LateActivation FMI_CLOCK_ACTIVATE_IN_UPDATE=1)
 # An early return the importer never asked for, and a termination request from
 # inside the event.
 add_clocked_fmu(EarlyReturn FMI_CLOCK_EARLY_RETURN=1)

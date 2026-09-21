@@ -69,16 +69,36 @@ def as_event(fields: dict) -> dict:
             {"name": operation.name, "fields": operation.fields}
             for operation in decode(payload)
         ],
-        # The node declares no next event time, and the importer would have
-        # failed the Run rather than step past one, so a Run that completed is
-        # a Run in which every event carried none.
-        "next_event_time_s": None,
     }
+
+
+def expected_events(declared: dict) -> list[dict]:
+    """The expected events, less the one field a Recording cannot carry.
+
+    `next_event_time_s` is what `fmi3UpdateDiscreteStates` declared when the
+    event ended. No Channel carries it, so this comparison does not observe
+    it and does not pretend to: it requires every expectation to declare
+    none, and an expectation that declared one would stop the comparison
+    rather than be matched against a null this script wrote itself.
+    """
+    events = []
+    for event in declared["events"]:
+        if event["next_event_time_s"] is not None:
+            raise SystemExit(
+                f"the event at {event['time_ns']} ns expects "
+                f"next_event_time_s {event['next_event_time_s']}, which no "
+                f"Channel carries; this comparison cannot judge it"
+            )
+        events.append({
+            key: value for key, value in event.items()
+            if key != "next_event_time_s"
+        })
+    return events
 
 
 def compare(name: str, recording: Path) -> bool:
     """Report the first Message that differs, and whether any did."""
-    expected = case(name)["events"]
+    expected = expected_events(case(name))
     messages = observed(recording)
     print(f"--- case {name} ---")
     for published_ns, fields in messages:

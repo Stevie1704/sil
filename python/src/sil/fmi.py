@@ -53,7 +53,7 @@ import platform
 import sys
 import tempfile
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from collections.abc import Callable, Sequence
 from xml.etree import ElementTree
@@ -355,8 +355,10 @@ class ModelDescription:
     variables: dict[str, Variable]
     inputs: dict[str, int]
     outputs: dict[str, int]
-    # The co-simulation capability flags, as the description spells them.
-    capabilities: dict[str, str]
+    # The co-simulation capability flags, as the description spells them. A
+    # description read by `read` always carries them; the default keeps every
+    # other way of naming an FMU's variables working unchanged.
+    capabilities: dict[str, str] = field(default_factory=dict)
 
     def clock(self, reference: int) -> Variable | None:
         """The Clock one value reference names, if it names a Clock at all."""
@@ -518,13 +520,13 @@ class CoSimulation:
                 f"{description.model_identifier!r}"
             )
 
-    def initialize(self, initial_time: float = 0.0) -> None:
-        """Enter and leave initialization mode.
+    def initialize(self) -> None:
+        """Enter and leave initialization mode at virtual time zero.
 
-        The initial time is virtual time zero — the instant the kernel starts
-        every Run at — and it is stated rather than left to the FMU's own
-        `DefaultExperiment`, which is the experiment the vendor shipped and
-        not the Run the Manifest declares.
+        The start time is the instant the kernel begins every Run at, and it
+        is stated rather than left to the FMU's own `DefaultExperiment`, which
+        is the experiment the vendor shipped and not the Run the Manifest
+        declares.
 
         No stop time is declared: the Manifest's duration is the kernel's, and
         an FMU told a stop time it never reaches would reject the last step.
@@ -534,7 +536,7 @@ class CoSimulation:
         the FMU is steppable when this returns.
         """
         self._call(
-            "fmi3EnterInitializationMode", False, 0.0, initial_time, False, 0.0
+            "fmi3EnterInitializationMode", False, 0.0, 0.0, False, 0.0
         )
         self._call("fmi3ExitInitializationMode")
 
@@ -926,18 +928,19 @@ class _Events:
     def handle(self, fmu: CoSimulation, event_time_ns: int) -> list:
         """One event: every Clock activation it carries, in Publish order.
 
-        Discrete states are updated until the FMU stops asking, and the
-        output Clocks are read again on each iteration because an update is
-        exactly what can raise one. The iteration is bounded: an FMU that
-        never converges fails with a diagnostic rather than holding the Run
-        until its response deadline.
+        Discrete states are updated until the FMU stops asking, and the output
+        Clocks are read around every update rather than before it: an update
+        is exactly what can raise one, the update that ends the event
+        included. Reading a Clock that is not active costs nothing, and not
+        reading it loses the activation for good, because the buffer it gates
+        is defined only while it is up.
+
+        The iteration is bounded: an FMU that never converges fails with a
+        diagnostic rather than holding the Run until its response deadline.
         """
         published = []
-        for iteration in range(_MAX_EVENT_ITERATIONS):
-            for channel, payload in self._outputs:
-                activation = payload.activation(fmu, event_time_ns)
-                if activation is not None:
-                    published.append((channel, activation))
+        for _ in range(_MAX_EVENT_ITERATIONS):
+            published.extend(self._activations(fmu, event_time_ns))
             states = fmu.update_discrete_states()
             self.next_event_time = states.next_event_time
             if states.terminate:
@@ -946,12 +949,22 @@ class _Events:
                     f"terminateSimulation at {event_time_ns} ns"
                 )
             if not states.need_update:
+                published.extend(self._activations(fmu, event_time_ns))
                 return published
         raise ParticipantFailure(
             f"fmi3UpdateDiscreteStates asked for another discrete-state "
             f"update {_MAX_EVENT_ITERATIONS} times at {event_time_ns} ns; "
             f"this importer bounds the iteration of one event"
         )
+
+    def _activations(self, fmu: CoSimulation, event_time_ns: int) -> list:
+        """Every output Clock that reads active, and the buffer it gates."""
+        published = []
+        for channel, payload in self._outputs:
+            activation = payload.activation(fmu, event_time_ns)
+            if activation is not None:
+                published.append((channel, activation))
+        return published
 
     def deliver(self, fmu: CoSimulation, messages: list,
                 event_time_ns: int) -> list:
@@ -970,6 +983,32 @@ class _Events:
     def receives(self, channel: str) -> bool:
         """Whether Messages on this Channel are Clock activations."""
         return channel in self._inputs
+
+    def require_next_event_reachable(self, t: int, dt: int) -> None:
+        """Refuse to step past an event the FMU asked to be stopped at.
+
+        An FMU that declares a next event time is asking its importer to
+        choose the next communication point. This one cannot: the kernel owns
+        the Slot grid, and the Manifest's step period is what decides it. An
+        FMU that declares such a time inside the interval about to be stepped
+        is told so, rather than stepped past it and reported as if the
+        interval had been clean.
+
+        The declared time is a double of seconds and the interval is integer
+        nanoseconds, so the comparison is made in nanoseconds: an event the
+        FMU means to fall on the communication point must not be refused
+        because the two ways of writing that instant differ in the last bit.
+        """
+        if self.next_event_time is None:
+            return
+        declared_ns = round(self.next_event_time * NS_PER_S)
+        if declared_ns < t + dt:
+            raise ParticipantFailure(
+                f"the FMU declared its next event at {self.next_event_time} s "
+                f"({declared_ns} ns), inside the interval [{t}, {t + dt}] ns "
+                f"this Step covers; this importer does not choose "
+                f"communication points, so it cannot stop there"
+            )
 
 
 def _channel_fields(init: dict) -> dict[str, dict[str, dict]]:
@@ -1442,7 +1481,7 @@ class FmuParticipant(StepParticipant):
         self._events: _Events | None = None
         # What the event that ended initialization produced, held until the
         # first activation: the kernel has no Slot before it.
-        self._pending: list = []
+        self._pending_activations: list = []
         # Where the FMU stands, in kernel nanoseconds.
         self._communication_point = 0
 
@@ -1481,7 +1520,7 @@ class FmuParticipant(StepParticipant):
             # Its activations belong to the initial time, and they are
             # published in the first Slot the kernel activates this
             # participant in, which is that same instant.
-            self._pending = self._events.handle(self._fmu, 0)
+            self._pending_activations = self._events.handle(self._fmu, 0)
             self._fmu.enter_step_mode()
 
     def _bind_channels(self, init: dict, description: ModelDescription) -> None:
@@ -1533,8 +1572,8 @@ class FmuParticipant(StepParticipant):
         if self._events is None:
             return self._step(t, dt, inputs)
         self._require_communication_point(t)
-        published, self._pending = self._pending, []
-        events, plain = self._split(inputs)
+        published, self._pending_activations = self._pending_activations, []
+        events, plain = self._split_activations(inputs)
         published.extend(self._deliver(events, t))
         published.extend(self._step(t, dt, plain))
         self._communication_point = t + dt
@@ -1546,7 +1585,8 @@ class FmuParticipant(StepParticipant):
         # newest Message on a Channel as the value the step sees.
         for message in inputs:
             self._inputs[message.channel].write(self._fmu, message.data)
-        self._require_next_event_reachable(t, dt)
+        if self._events is not None:
+            self._events.require_next_event_reachable(t, dt)
         event_needed = self._fmu.do_step(t / NS_PER_S, dt / NS_PER_S)
         published = []
         if event_needed:
@@ -1565,7 +1605,7 @@ class FmuParticipant(StepParticipant):
             for channel, binding in self._outputs.items()
         ]
 
-    def _split(self, inputs: list) -> tuple[list, list]:
+    def _split_activations(self, inputs: list) -> tuple[list, list]:
         """Messages that are Clock activations, and Messages that are values."""
         events: list = []
         plain: list = []
@@ -1603,27 +1643,6 @@ class FmuParticipant(StepParticipant):
                 f"contiguous intervals from virtual time zero"
             )
 
-    def _require_next_event_reachable(self, t: int, dt: int) -> None:
-        """Refuse to step past an event the FMU asked to be stopped at.
-
-        An FMU that declares a next event time is asking its importer to
-        choose the next communication point. This one cannot: the kernel owns
-        the Slot grid, and the Manifest's step period is what decides it. An
-        FMU that declares such a time inside the interval about to be stepped
-        is told so, rather than stepped past it and reported as if the
-        interval had been clean.
-        """
-        if self._events is None:
-            return
-        declared = self._events.next_event_time
-        end = (t + dt) / NS_PER_S
-        if declared is not None and declared < end:
-            raise ParticipantFailure(
-                f"the FMU declared its next event at {declared} s, inside the "
-                f"interval [{t / NS_PER_S}, {end}] s this Step covers; this "
-                f"importer does not choose communication points, so it cannot "
-                f"stop there"
-            )
 
     def close(self) -> None:
         """Terminate and free the instance, and drop the extracted FMU.
