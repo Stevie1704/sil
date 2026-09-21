@@ -242,7 +242,7 @@ fmu: Terminating.
 fmu: Instance DemoCanNodeTriggeredOutput freed.
 fmu: Terminating.
 fmu: Instance DemoCanBusSimulation freed.
-manifest_hash 6d9ebdaf273e8fe6bf88640acc42b60afb175e40cbe52d48282cb7e49cf8e7b2
+manifest_hash f868e70c9b59f42457dfbd3e9db20c057091085312018270f1bdd5e68317c716
 --- recording against connected_expected.json ---
 --- case quantised ---
   node1.CanChannel   event           0 ns  published          0 ns   23 B  Configuration, Configuration

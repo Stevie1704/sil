@@ -87,9 +87,12 @@ def connected(node: Path, bus: Path, case: dict) -> Manifest:
         "importer",
         command=[
             "python3", "-m", "sil.fmi",
+            # The path is its own argument, so the kernel resolves it against
+            # the Manifest's directory and digests it into the Run's
+            # provenance like every other file a command names.
             *(argument
               for name, archive in INSTANCES.items()
-              for argument in ("--instance", f"{name}={archives[archive]}")),
+              for argument in ("--instance", name, str(archives[archive]))),
             "--bus-profile", CAN_PROFILE,
             *(argument for connection in CONNECTIONS
               for argument in ("--connect", connection)),

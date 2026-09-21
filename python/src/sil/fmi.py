@@ -2430,29 +2430,34 @@ class _Group:
             instance.leave_event()
 
 
-def _instance_paths(declared: list[str]) -> dict[str, Path]:
-    """Resolve `--instance <name>=<path>` into the group's declaration order.
+def _instance_paths(declared: Sequence[Sequence[str]]) -> dict[str, Path]:
+    """Resolve `--instance <name> <path>` into the group's declaration order.
 
-    The name is the group's own vocabulary and every other argument spells a
-    variable of it as `<name>.<variable>`, so a name carrying that separator
-    would make the spelling ambiguous.
+    The name and the path are two arguments rather than one joined by a
+    separator, because the kernel resolves and digests a command argument that
+    names a file: an FMU spelled into a larger argument would name no file, so
+    it would neither anchor to the Manifest's directory nor reach the Run's
+    provenance. The name is the group's own vocabulary, and every other
+    argument spells a variable of it as `<name>.<variable>`.
     """
     paths: dict[str, Path] = {}
     for declaration in declared:
-        name, separator, path = declaration.partition("=")
-        if not separator or not name or not path:
+        name, path = declaration
+        if not name or not path:
             raise ManifestError(
-                f"instance {declaration!r} is not '<name>=<path>'"
+                f"instance {list(declaration)!r} names "
+                f"{'no FMU' if name else 'nothing'}; an instance is a name and "
+                f"the path of one FMU"
             )
         if "." in name:
             raise ManifestError(
-                f"instance {declaration!r} names {name!r}, which carries a "
-                f"'.'; an instance name is what qualifies a variable of it"
+                f"instance {name!r} carries a '.'; an instance name is what "
+                f"qualifies a variable of it"
             )
         if name in paths:
             raise ManifestError(
-                f"instance {declaration!r} declares {name!r} twice; an "
-                f"instance name names one FMU of the group"
+                f"instance {name!r} is declared twice; an instance name names "
+                f"one FMU of the group"
             )
         paths[name] = Path(path)
     return paths
@@ -2776,10 +2781,19 @@ def _require_compatible(
             f"{what}: {stated}; one end of a connection is the bus simulation "
             f"FMU and the other is a node attached to it"
         )
-    versions = {
-        end.instance.description.bus.version for end in (left, right)
-    }
-    if len(versions) != 1:
+    # An undeclared version is not a version two ends agree on: comparing two
+    # absent ones would let a manifest that says nothing about the layered
+    # standard pass the check that exists to make it say something.
+    for end in (left, right):
+        if not end.instance.description.bus.version:
+            raise ManifestError(
+                f"{what}: {end} declares no {_BUS_LAYERED_STANDARD} version in "
+                f"{_BUS_MANIFEST_MEMBER}; a connection is compatible at a "
+                f"version both ends state"
+            )
+    if left.instance.description.bus.version != (
+        right.instance.description.bus.version
+    ):
         raise ManifestError(
             f"{what} connects "
             f"{left} at {_BUS_LAYERED_STANDARD} "
@@ -3072,10 +3086,12 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
         help="path to the FMU archive, for a participant that is one FMU",
     )
     parser.add_argument(
-        "--instance", action="append", default=[], metavar="NAME=PATH",
+        "--instance", action="append", default=[], nargs=2,
+        metavar=("NAME", "PATH"),
         help="declare one FMU of a connected group under a name of this "
              "Run's own; every other argument spells a variable of it as "
-             "'<name>.<variable>'",
+             "'<name>.<variable>'. The path is its own argument so the kernel "
+             "resolves it against the Manifest and digests it",
     )
     parser.add_argument(
         "--connect", action="append", default=[],

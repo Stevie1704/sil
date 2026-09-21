@@ -371,7 +371,7 @@ instant would be transmitted 480 us after the Run is over, and never are.
 | A clocked Run reproduces | `deterministic: 6c85facd…2f81`, two Runs of one Manifest bit-compared — [`clocked-identity.txt`](evidence/clocked-identity.txt) |
 | The checkout's Importer connects two nodes through the bus FMU | `aligned: 20 events on 4 terminals, all as expected` / `quantised: 16 events on 4 terminals, all as expected`, judged on the Recording — [`connected-aligned.txt`](evidence/connected-aligned.txt), [`connected-quantised.txt`](evidence/connected-quantised.txt) |
 | A frame reaches its peer a transmission time later, not a Slot later | `bus.Node1 event 300480000 ns published 300000000 ns 12 B Confirm` beside `bus.Node2 … 20 B CanTransmit`, and the losing frame at `300960000 ns` — [`connected-aligned.txt`](evidence/connected-aligned.txt) |
-| A connected Run reproduces | `deterministic: 607dca6b…a836`, two Runs of one Manifest bit-compared — [`connected-identity.txt`](evidence/connected-identity.txt) |
+| A connected Run reproduces | `deterministic: b37f02e7…b24a`, two Runs of one Manifest bit-compared — [`connected-identity.txt`](evidence/connected-identity.txt) |
 
 ## What current SiL does, and where the gap is
 
@@ -465,8 +465,8 @@ three FMUs — `--instance node1=`, `--instance node2=`, `--instance bus=`, two
 
 | Manifest | Hash | Step | What happens |
 | --- | --- | --- | --- |
-| `connected-aligned` | `abbe477b…6a3e` | 100 ms | exit 0, 20 events on 4 terminals, matched whole |
-| `connected-quantised` | `6d9ebdaf…e7b2` | 250 ms | exit 0, 16 events on 4 terminals, matched whole |
+| `connected-aligned` | `b9e955aa…37ef` | 100 ms | exit 0, 20 events on 4 terminals, matched whole |
+| `connected-quantised` | `f868e70c…c716` | 250 ms | exit 0, 16 events on 4 terminals, matched whole |
 
 [`connected_exchange.py`](connected_exchange.py) reads each Recording and
 compares every observed terminal with

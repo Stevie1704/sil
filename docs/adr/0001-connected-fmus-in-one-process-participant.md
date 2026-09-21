@@ -29,8 +29,8 @@ connections between their network terminals, and the Channels that observe or
 feed them:
 
 ```
-python -m sil.fmi --instance node1=CanNode.fmu --instance node2=CanNode.fmu \
-                  --instance bus=CanBusSimulation.fmu \
+python -m sil.fmi --instance node1 CanNode.fmu --instance node2 CanNode.fmu \
+                  --instance bus CanBusSimulation.fmu \
                   --bus-profile application/org.fmi-standard.fmi-ls-bus.can \
                   --connect node1.CanChannel=bus.Node1 \
                   --connect node2.CanChannel=bus.Node2 \
@@ -115,6 +115,10 @@ behind it.
   never from both — one source per input.
 - One process now holds several FMU instances, so a failure has to close all of
   them. It does, on the initialization path and on the Step path alike.
+- Each FMU's path is its own command argument, so the kernel resolves it
+  against the Manifest's directory and digests it into the Run's provenance —
+  the rule that already covers a single FMU's path, and one a `name=path`
+  spelling would have silently lost.
 - The kernel contract is unchanged. Nothing here asked for a new Channel
   capability, a new Latency kind, or a scheduler change.
 

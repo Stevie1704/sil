@@ -465,9 +465,9 @@ m.add_process(
     "importer",
     command=[
         sys.executable, "-m", "sil.fmi",
-        "--instance", "node1=models/CanNode.fmu",
-        "--instance", "node2=models/CanNode.fmu",
-        "--instance", "bus=models/CanBusSimulation.fmu",
+        "--instance", "node1", "models/CanNode.fmu",
+        "--instance", "node2", "models/CanNode.fmu",
+        "--instance", "bus", "models/CanBusSimulation.fmu",
         "--bus-profile", "application/org.fmi-standard.fmi-ls-bus.can",
         "--connect", "node1.CanChannel=bus.Node1",
         "--connect", "node2.CanChannel=bus.Node2",
@@ -480,8 +480,11 @@ m.add_process(
 )
 ```
 
-A group is declared by `--instance <name>=<path>`, and every other argument
-spells a variable of it as `<instance>.<variable>`. `--connect` pairs two
+A group is declared by `--instance <name> <path>`, and every other argument
+spells a variable of it as `<instance>.<variable>`. The path is its own
+argument rather than part of a larger one, because that is what the kernel
+resolves against the Manifest's directory and digests into the Run's
+provenance — the same rule that already covers a single FMU's path. `--connect` pairs two
 network terminals: each end's `Tx_Data` becomes the other end's `Rx_Data`, in
 the same instant. Each Channel carries one terminal member's activations — an
 out-direction Channel observes what a terminal sends, an in-direction Channel is

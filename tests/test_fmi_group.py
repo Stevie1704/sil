@@ -29,8 +29,10 @@ Recording stamps, and the delivery time one Latency later.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -147,7 +149,7 @@ def group(tmp_path, build_dir, monkeypatch):
             "bus": built(build_dir, tmp_path, "bus", bus),
         }
         participant = FmuGroupParticipant(
-            [f"{name}={archives[name]}" for name in instances],
+            [(name, str(archives[name])) for name in instances],
             connects=list(connects), binds=list(binds), starts=list(starts),
             profile=profile,
         )
@@ -532,8 +534,8 @@ class TestGroupsRejectedBeforeStepping:
     """What a group refuses to start, and the diagnostic it refuses with."""
 
     def test_an_instance_declaration_without_a_path(self):
-        participant = FmuGroupParticipant(["node1"], profile=CAN_PROFILE)
-        with pytest.raises(ManifestError, match="is not '<name>=<path>'"):
+        participant = FmuGroupParticipant([("node1", "")], profile=CAN_PROFILE)
+        with pytest.raises(ManifestError, match="names no FMU"):
             participant.on_init(init_line({}, SCHEMAS))
 
     def test_a_group_that_declares_no_instance(self):
@@ -601,6 +603,38 @@ class TestGroupsRejectedBeforeStepping:
                 "node1": node,
                 "node2": built(build_dir, tmp_path, "node2", "CanNodeOnABus"),
                 "bus": built(build_dir, tmp_path, "bus", "CanBus"),
+            })
+
+    def test_two_ends_declaring_no_layered_standard_version(
+        self, group, tmp_path, build_dir
+    ):
+        """An absent version is not a version two ends agree on.
+
+        Comparing two absent ones would let a pair of FMUs that say nothing
+        about the layered standard pass the check that exists to make them say
+        something.
+        """
+        def unversioned(text: str) -> str:
+            return re.sub(r' fmi-ls:fmi-ls-version="[^"]*"', "", text)
+
+        with pytest.raises(ManifestError, match="declares no .* version in"):
+            group(paths={
+                "node1": node_fmu(
+                    tmp_path / "node1.fmu",
+                    model_identifier="ClockedCanNodeOnABus",
+                    binary=build_dir
+                    / f"ClockedCanNodeOnABus{library_suffix()}",
+                    platform_directory=platform_directory(),
+                    rewrite_manifest=unversioned,
+                ),
+                "node2": built(build_dir, tmp_path, "node2", "CanNodeOnABus"),
+                "bus": bus_fmu(
+                    tmp_path / "bus.fmu",
+                    model_identifier="ClockedCanBus",
+                    binary=build_dir / f"ClockedCanBus{library_suffix()}",
+                    platform_directory=platform_directory(),
+                    rewrite_manifest=unversioned,
+                ),
             })
 
     def test_a_terminal_that_is_not_a_network_terminal(
@@ -735,7 +769,7 @@ class TestGroupsRejectedBeforeStepping:
 
     def test_an_instance_name_carrying_the_separator(self, group, tmp_path,
                                                      build_dir):
-        with pytest.raises(ManifestError, match="which carries a '.'"):
+        with pytest.raises(ManifestError, match="carries a '\\.'"):
             group(instances=("node.1",), connects=[], binds=[], channels={},
                   paths={"node.1": built(build_dir, tmp_path, "a",
                                          "CanNodeOnABus")})
@@ -785,9 +819,9 @@ def group_manifest(node: Path, bus: Path, *, step_period_ns: int,
         "importer",
         command=[
             sys.executable, "-m", "sil.fmi",
-            "--instance", f"node1={node}",
-            "--instance", f"node2={node}",
-            "--instance", f"bus={bus}",
+            "--instance", "node1", str(node),
+            "--instance", "node2", str(node),
+            "--instance", "bus", str(bus),
             "--bus-profile", CAN_PROFILE,
             *(argument for connect in CONNECTS
               for argument in ("--connect", connect)),
@@ -861,6 +895,42 @@ class TestRunBoundary:
             ] == [
                 event for event in expected if event["source"] == source
             ], channel
+
+    def test_an_fmu_path_resolves_against_the_manifest_and_is_digested(
+        self, sil_run, tmp_path, build_dir
+    ):
+        """Each FMU is an artifact of the Run, named the way every other is.
+
+        The kernel resolves a command argument that names a file against the
+        Manifest's directory and digests it into the Run's provenance. It does
+        that for arguments, not for text inside one, so a group's FMU paths are
+        arguments of their own: a Manifest may name them relatively, and the
+        Recording is attributable to the archives that produced it.
+        """
+        models = tmp_path / "models"
+        models.mkdir()
+        built(build_dir, models, "node", "CanNodeOnABus")
+        built(build_dir, models, "bus", "CanBus")
+        manifest = group_manifest(
+            Path("models/node.fmu"), Path("models/bus.fmu"),
+            step_period_ns=100 * MS, duration_ns=400 * MS,
+        )
+        result = run_simulation(manifest, runner=sil_run, workdir=tmp_path)
+        provenance = json.loads(
+            result.mcap_path.with_name(
+                result.mcap_path.name + ".provenance.json"
+            ).read_text()
+        )
+        digested = {
+            entry["file"]["path"]: entry["file"]["sha256"]
+            for entry in provenance["artifacts"]["command_files"]
+            if entry["file"]
+        }
+        for archive in (models / "node.fmu", models / "bus.fmu"):
+            assert str(archive.resolve()) in digested, digested
+            assert digested[str(archive.resolve())] == hashlib.sha256(
+                archive.read_bytes()
+            ).hexdigest()
 
     def test_the_determinism_check_passes_for_a_connected_run(
         self, sil_run, tmp_path, build_dir
