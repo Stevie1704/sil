@@ -333,13 +333,18 @@ whole mapping is inside the hashed Manifest. Pointing at a file instead would
 be covered by the Run's provenance side-car, which digests every file a
 participant's command names.
 
-The mapped types are `Float32`, `Float64`, `Int8` … `Int64`, `UInt8` …
-`UInt64`, `Boolean` and `Binary`. A `Boolean` is carried by a `u8` with C's
-own conversion — zero is false, anything else is true — and what the FMU hands
-back is 0 or 1. A binding that
-names a `String`, an `Enumeration`, a `Clock` or a variable with dimensions is
-reported before the FMU is stepped, as is one whose field type is not the one
-its variable's type maps to.
+The mapped types are `Float64`, `Boolean` and `Binary` — the three the CAN
+acceptance fixture declares, and no more; broad type coverage is a later
+slice. A `Boolean` is carried by a `u8` with C's own conversion — zero is
+false, anything else is true — and what the FMU hands back is 0 or 1.
+
+A binding that names any other type — a `String`, an `Enumeration`, a `Clock`,
+an integer — is reported before the FMU is stepped, naming the type, as is one
+whose field type is not the one its variable's type maps to. A variable is
+mapped when its declared dimensions amount to one value: `<Dimension
+start="1"/>` is one value written the long way, which is how the fixture's CAN
+node declares its Binary input, while anything above one value, or a dimension
+sized by another variable, is reported.
 
 ### Bounded Binary payloads
 
@@ -354,6 +359,10 @@ m.add_schemas({"can.Frame": {"fields": [
     {"name": "data", "type": "u8", "count": 2048},
 ]}})
 ```
+
+The length field is an unsigned scalar that can still count the payload
+field's bound: a `u8` length beside 2048 payload bytes is refused before
+stepping, because a full payload could not state its own length.
 
 The bound is the array's `count`, and it is the Run's own declaration rather
 than the FMU's. Arbitrary bytes survive, embedded zeros included; on every

@@ -78,11 +78,6 @@ _MACHINES = {"arm64": "aarch64", "AMD64": "x86_64"}
 _SYSTEMS = {"Darwin": ("darwin", ".dylib"), "Linux": ("linux", ".so")}
 
 
-def _integer(text: str) -> int:
-    """A start value written in any base Python spells, `0x2a` included."""
-    return int(text, 0)
-
-
 def _boolean(text: str) -> int:
     """A start value in the spelling `modelDescription.xml` uses."""
     if text not in ("true", "false"):
@@ -107,20 +102,13 @@ class _ScalarType:
     parse: Callable
 
 
-# Every FMI variable type this importer maps, by the element name
-# `modelDescription.xml` gives it. String, Enumeration and Clock are outside
-# it deliberately: a binding that names one is reported rather than skipped.
+# Every FMI scalar type this importer maps, by the element name
+# `modelDescription.xml` gives it: the two the acceptance fixture declares
+# beside its Binary variables, and no more. Broad type coverage is outside
+# this slice, so every other type — String, Enumeration, Clock, and the
+# integer types — is reported rather than skipped when a binding names one.
 _SCALARS = {
-    "Float32": _ScalarType("f32", ctypes.c_float, float, float),
     "Float64": _ScalarType("f64", ctypes.c_double, float, float),
-    "Int8": _ScalarType("i8", ctypes.c_int8, int, _integer),
-    "UInt8": _ScalarType("u8", ctypes.c_uint8, int, _integer),
-    "Int16": _ScalarType("i16", ctypes.c_int16, int, _integer),
-    "UInt16": _ScalarType("u16", ctypes.c_uint16, int, _integer),
-    "Int32": _ScalarType("i32", ctypes.c_int32, int, _integer),
-    "UInt32": _ScalarType("u32", ctypes.c_uint32, int, _integer),
-    "Int64": _ScalarType("i64", ctypes.c_int64, int, _integer),
-    "UInt64": _ScalarType("u64", ctypes.c_uint64, int, _integer),
     # fmi3Boolean is a C `bool`, so a Channel carries it as a `u8` with C's
     # own conversion: zero is false and any other value is true. What the FMU
     # hands back is 0 or 1.
@@ -136,8 +124,13 @@ _FLOAT64 = "Float64"
 _STRUCTURAL = "structuralParameter"
 
 # A bounded payload's length is a count of bytes, so a signed field would
-# admit a length no payload can have.
-_LENGTH_TYPES = ("u8", "u16", "u32", "u64")
+# admit a length no payload can have. The ceiling is what each unsigned field
+# can still count to: a length field that cannot reach its own payload
+# field's bound describes a Channel whose payload can never fill it.
+_LENGTH_CEILINGS = {
+    "u8": 0xFF, "u16": 0xFFFF, "u32": 0xFFFF_FFFF,
+    "u64": 0xFFFF_FFFF_FFFF_FFFF,
+}
 
 _LOG_CALLBACK = ctypes.CFUNCTYPE(
     None, ctypes.c_void_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_char_p
@@ -230,7 +223,10 @@ class Variable:
     causality: str
     # Declared by a Binary variable only, and the most the FMU will accept.
     max_size: int | None
-    dimensions: int
+    # How many values the declared dimensions amount to: one when the
+    # variable declares none, and None when a dimension is sized by another
+    # variable, which the description does not settle.
+    value_count: int | None
 
 
 def _by_causality(
@@ -250,6 +246,22 @@ def _by_causality(
     }
 
 
+def _value_count(element) -> int | None:
+    """How many values one variable's declared dimensions amount to.
+
+    The acceptance fixture's CAN node declares its Binary input as
+    `<Dimension start="1"/>`, which is one value written the long way — the
+    same variable a description without any Dimension declares.
+    """
+    count = 1
+    for dimension in element.findall("Dimension"):
+        start = dimension.get("start")
+        if start is None:
+            return None
+        count *= int(start)
+    return count
+
+
 def _variables(root) -> dict[str, Variable]:
     """Every variable the description declares, of every type."""
     declared: dict[str, Variable] = {}
@@ -264,7 +276,7 @@ def _variables(root) -> dict[str, Variable]:
             kind=element.tag,
             causality=element.get("causality", "local"),
             max_size=None if max_size is None else int(max_size),
-            dimensions=len(element.findall("Dimension")),
+            value_count=_value_count(element),
         )
     return declared
 
@@ -791,13 +803,20 @@ def _shape(field: dict) -> str:
     return f"a {field['type']!r} array of {count}"
 
 
+def _dimensions(variable: Variable) -> str:
+    """How a variable's declared dimensions read in a diagnostic."""
+    if variable.value_count is None:
+        return "a dimension sized by another variable"
+    return f"dimensions of {variable.value_count} values"
+
+
 def _require_mappable(binding: _Binding) -> None:
     """Reject a variable whose type or shape this importer does not map."""
     variable = binding.variable
-    if variable.dimensions:
+    if variable.value_count != 1:
         raise ManifestError(
-            f"{binding}, which declares dimensions; this importer maps scalar "
-            f"and Binary variables only"
+            f"{binding}, which declares {_dimensions(variable)}; this importer "
+            f"maps variables of one value"
         )
     if variable.kind != _BINARY and variable.kind not in _SCALARS:
         raise ManifestError(
@@ -847,11 +866,19 @@ def _binary_field(
             f"Channel {channel!r} carries no field {length_field!r}; a bounded "
             f"Binary payload carries the length it uses beside it"
         )
-    if length.get("count") is not None or length["type"] not in _LENGTH_TYPES:
+    ceiling = _LENGTH_CEILINGS.get(length["type"])
+    if length.get("count") is not None or ceiling is None:
         raise ManifestError(
             f"Channel {channel!r} declares field {length_field!r} as "
             f"{_shape(length)}; a Binary payload's length is an unsigned "
-            f"scalar ({', '.join(repr(t) for t in _LENGTH_TYPES)})"
+            f"scalar ({', '.join(repr(t) for t in _LENGTH_CEILINGS)})"
+        )
+    if capacity > ceiling:
+        raise ManifestError(
+            f"Channel {channel!r} declares field {length_field!r} as "
+            f"{length['type']!r}, which counts no further than {ceiling}; "
+            f"field {field!r} carries {capacity} bytes, so a full payload "
+            f"could not state its own length"
         )
     if (
         causality == "input"
@@ -951,15 +978,6 @@ def _start_value(variable: Variable, text: str):
             f"start value for FMU variable {variable.name!r}: cannot read "
             f"{text!r} as {variable.kind} ({error})"
         ) from error
-    # ctypes narrows an out-of-range integer silently, which would start the
-    # FMU at a value the Manifest does not state.
-    held = (scalar.element * 1)()
-    held[0] = value
-    if isinstance(value, int) and held[0] != value:
-        raise ManifestError(
-            f"start value for FMU variable {variable.name!r}: {value} is out "
-            f"of range for {variable.kind}"
-        )
     return value
 
 
