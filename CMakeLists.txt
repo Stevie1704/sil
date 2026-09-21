@@ -269,6 +269,32 @@ add_clocked_fmu(LateActivation FMI_CLOCK_ACTIVATE_IN_UPDATE=1)
 # inside the event.
 add_clocked_fmu(EarlyReturn FMI_CLOCK_EARLY_RETURN=1)
 add_clocked_fmu(TerminateInEvent FMI_CLOCK_TERMINATE_IN_EVENT=1)
+# The node as upstream wrote it: a frame handed to the input Clock is read and
+# dropped rather than echoed back out. A node connected to a real peer has to
+# be this one; the echo exists only to drive a lone node from both ends.
+add_clocked_fmu(CanNodeOnABus FMI_CLOCK_ECHO_RX=0)
+
+# --- the CAN bus simulation stand-in (issue #140) ---
+# The other half of the acceptance fixture: the FMU two nodes are connected
+# through. Its send side is a countdown Clock rather than a triggered one, so
+# what it exercises is the group's own communication points — the instant a
+# frame has finished transmitting is not one the kernel's Slot grid contains.
+function(add_bus_fmu name)
+  set(target fmi_bus_${name})
+  add_library(${target} SHARED tests/fixtures/fmi_bus.c)
+  target_compile_definitions(${target} PRIVATE ${ARGN})
+  set_target_properties(${target} PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME "Clocked${name}"
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endfunction()
+
+add_bus_fmu(CanBus)
+# A transmission time of 1/3 s, which is no whole number of nanoseconds, and
+# one of zero, which asks for the instant it was asked in.
+add_bus_fmu(CanBusRaggedInterval FMI_BUS_RAGGED_INTERVAL=1)
+add_bus_fmu(CanBusInstantInterval FMI_BUS_INSTANT_INTERVAL=1)
 
 # --- bench participants (routing baseline fixtures, issue #61) ---
 # Payload size, publish period, and burst size come from manifest config, so

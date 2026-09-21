@@ -435,7 +435,7 @@ The supported profile is exactly this:
 | Declared | Supported |
 | --- | --- |
 | `hasEventMode` | must be `true`; a Clock is refused without it |
-| Clock `intervalVariability` | `triggered` only — `countdown` and `periodic` ask the importer to own a time grid, and the kernel owns it |
+| Clock `intervalVariability` | `triggered` for one FMU on its own. A `countdown` Clock asks the importer to choose the instant it is activated at, which only a connected group can promise — see below. A `periodic` Clock asks it to own a second time grid, and the kernel owns that |
 | Clocked variable | one `Binary` variable per Channel, gated by one Clock of its own causality |
 | Discrete-state iteration | until the FMU stops asking, bounded at 100 iterations |
 | Next event time | an FMU that declares one is asking to be stepped onto it, which this importer cannot promise: when the Slot grid lands on the declared instant the event is taken there, and when a Step would pass it the Run fails rather than step past it |
@@ -449,8 +449,72 @@ hangs until its response deadline.
 
 What is still unimplemented is the layered standard itself: SiL carries the
 CAN operation bytes as an opaque bounded payload and neither decodes nor
-validates them, and the bus simulation FMU that connects two nodes needs the
-`countdown` Clocks above.
+validates them.
+
+### Connected FMUs: one participant, one bus
+
+Two bus nodes exchanging frames need the FMU that models the bus between them,
+and the three cannot be three participants. The bus states when it has finished
+transmitting a frame as a *countdown Clock interval* it computes per frame —
+480 us for a four-byte CAN frame at 100 000 bit/s — and a Channel's Latency is
+declared in the Manifest, not computed by a model. Declaring every connected
+FMU in **one** process participant is what makes that instant reachable:
+
+```python
+m.add_process(
+    "importer",
+    command=[
+        sys.executable, "-m", "sil.fmi",
+        "--instance", "node1=models/CanNode.fmu",
+        "--instance", "node2=models/CanNode.fmu",
+        "--instance", "bus=models/CanBusSimulation.fmu",
+        "--bus-profile", "application/org.fmi-standard.fmi-ls-bus.can",
+        "--connect", "node1.CanChannel=bus.Node1",
+        "--connect", "node2.CanChannel=bus.Node2",
+        "--bind", "can.node1.Tx:data=node1.CanChannel.Tx_Data",
+        "--bind", "can.bus.Node2:data=bus.Node2.Tx_Data",
+        "--start", "bus.BusErrorProbability=0.0",
+    ],
+    step_period_ns=100 * MS,
+    publishes=["can.node1.Tx", "can.bus.Node2"],
+)
+```
+
+A group is declared by `--instance <name>=<path>`, and every other argument
+spells a variable of it as `<instance>.<variable>`. `--connect` pairs two
+network terminals: each end's `Tx_Data` becomes the other end's `Rx_Data`, in
+the same instant. Each Channel carries one terminal member's activations — an
+out-direction Channel observes what a terminal sends, an in-direction Channel is
+handed to what it receives — in the same three-field bounded representation a
+single clocked FMU uses, event time included.
+
+The group owns **communication points between the kernel's Slots**. It advances
+every instance over sub-intervals ending at each instant any instance asked for
+— a declared next event time, or a countdown Clock's interval — and at the
+Step's own end, then propagates each activation to the terminal it is connected
+to and handles the event that arrival causes, until the instant stops producing.
+Every instance therefore stands on the same internal communication point at all
+times, which is why no rollback is needed: an event is never reported at an
+instant a peer has already passed. Messages are still published in the Slot the
+importer's activation runs in, and state the FMI event time they belong to, so
+the group's finer grid reaches the Recording as a stated time rather than as a
+timestamp.
+
+| Declared | Supported |
+| --- | --- |
+| Terminal | `org.fmi-ls-bus.network-terminal` with matching rule `org.fmi-ls-bus.transceiver`, grouping `Rx_Data`, `Rx_Clock`, `Tx_Data`, `Tx_Clock` |
+| Topology | one connection has exactly one `isBusSimulationFMU=true` end and one node end; arbitration and transmission timing stay in the bus FMU |
+| Profile | every terminal's buffers declare the `--bus-profile` media type, and both ends of one direction declare the identical `mimeType` and the same layered-standard version |
+| `Rx_Clock` | input, `triggered` |
+| `Tx_Clock` | output `triggered` — the FMU raises it — or input `countdown`, which the group raises at the instant the interval ends |
+| Countdown interval | read as the exact fraction the FMU states and required to be a whole number of nanoseconds; nothing is rounded onto an instant the FMU did not ask for |
+| Propagation | bounded at 100 activations per instant, like the discrete-state iteration of one event |
+| Channel source | a terminal takes its frames from a connected peer **or** from an in-direction Channel, never from both |
+
+An unconnected terminal fed by an in-direction Channel is the replay-input
+boundary: a Recording of the observation Channel can stand in for the FMU that
+produced it. The boundary decision and the evidence behind it are in
+[docs/adr/0001-connected-fmus-in-one-process-participant.md](docs/adr/0001-connected-fmus-in-one-process-participant.md).
 
 ## Large-Message routing baseline
 
@@ -648,10 +712,14 @@ proofs/fmi-ls-bus/run-proof.sh        # needs docker and network
 
 Most of it is an evidence gate rather than an implementation: the *released*
 Importer cannot drive this FMU, and the two reasons it cannot are the retained
-measurement the CAN milestone is built against. The last step is the other way
-round — the same released runner with the checkout's `sil` package ahead of it,
-driving the pinned node on both of the fixture's step grids and judging the
-Recording against the same expected exchange, event times included.
+measurement the CAN milestone is built against. The last two steps are the other
+way round — the same released runner with the checkout's `sil` package ahead of
+it, driving the pinned node on both of the fixture's step grids, and then
+connecting two instances of that node through the pinned **bus simulation FMU**
+in one Run. Both judge the Recording against an expected exchange written from
+upstream's sources beforehand, event times included: a frame offered at 300 ms
+is confirmed to its sender and delivered to its peer at 300.48 ms, and the
+frame that lost arbitration follows at 300.96 ms.
 
 ## Build & test
 
@@ -680,6 +748,7 @@ tools/silschema.py schema → packed C structs; sil.schema packs the same
                    layout in Python
 tools/bench_*.py   routing-baseline driver and its process participants
 docs/bench/        routing baseline: procedure, raw results, decision inputs
+docs/adr/          architecture decisions and the evidence behind them
 python/src/sil/examples/acc/
                    the packaged ACC reference example: one closed-loop Run
                    in a nominal and a delayed-sensing variant

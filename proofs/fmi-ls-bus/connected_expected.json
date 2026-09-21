@@ -1,0 +1,637 @@
+{
+  "fmus": {
+    "node": "DemoCanNodeTriggeredOutput.fmu",
+    "bus": "DemoCanBusSimulation.fmu"
+  },
+  "topology": "node1.CanChannel = bus.Node1, node2.CanChannel = bus.Node2; two instances of the node FMU attached to the two terminals of one bus simulation FMU",
+  "profile": "application/org.fmi-standard.fmi-ls-bus.can",
+  "why": "Stated from the two upstream FMUs' sources and the FMI-LS-BUS headers, not from a Run. The node's App_Instantiate creates one CAN baudrate and one arbitration-lost-behavior configuration operation and raises the Tx clock; App_DoStep creates one CAN transmit operation, ID 0x1 with payload 01 02 03 04, for every 300 ms boundary the step crosses. The bus's App_EvaluateDiscreteStates queues each frame it is handed, enables communication once both terminals configured one baud rate, and schedules the next transmission by stating a countdown interval on both Tx clocks. When they are activated it transmits the queued frame of lowest CAN ID, answering its originator with a Confirm operation and handing the frame itself to the other terminal, then schedules the next queued frame. Both nodes offer ID 0x1, so node1's frame wins the first arbitration and node2's the second.",
+  "transmission": {
+    "frame_bits": 44,
+    "data_length": 4,
+    "baudrate": 100000,
+    "interval_ns": 480000,
+    "why": "The bus states its Tx clocks' interval as the exact fraction (44 + dataLength) / baudRate seconds, where 44 is the constant length of a CAN frame in bits: 48/100000 s, which is 480 000 whole nanoseconds. No step period a Manifest is likely to declare lands on that instant, so the group is what has to stop there."
+  },
+  "no_next_event_time": "Neither FMU declares a next event time: the node communicates through a triggered output Clock and the bus through countdown input Clocks, so every instant either of them asks for is asked for by a Clock.",
+  "cases": [
+    {
+      "name": "aligned",
+      "step_size_ns": 100000000,
+      "duration_ns": 1000000000,
+      "why": "A 100 ms step divides the node's 300 ms transmit interval, so every frame surfaces at the communication point that carries its own internal transmit time, and the two bus deliveries that follow it are 480 us and 960 us later.",
+      "events": [
+        {
+          "time_ns": 0,
+          "published_ns": 0,
+          "source": "node1.CanChannel",
+          "payload_hex": "400000000d00000001a0860100400000000a0000000401",
+          "operations": [
+            {
+              "name": "Configuration",
+              "fields": {
+                "parameter": "CanBaudrate",
+                "baudrate": 100000
+              }
+            },
+            {
+              "name": "Configuration",
+              "fields": {
+                "parameter": "ArbitrationLostBehavior",
+                "behavior": "BufferAndRetransmit"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 0,
+          "published_ns": 0,
+          "source": "node2.CanChannel",
+          "payload_hex": "400000000d00000001a0860100400000000a0000000401",
+          "operations": [
+            {
+              "name": "Configuration",
+              "fields": {
+                "parameter": "CanBaudrate",
+                "baudrate": 100000
+              }
+            },
+            {
+              "name": "Configuration",
+              "fields": {
+                "parameter": "ArbitrationLostBehavior",
+                "behavior": "BufferAndRetransmit"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 300000000,
+          "published_ns": 200000000,
+          "source": "node1.CanChannel",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 300000000,
+          "published_ns": 200000000,
+          "source": "node2.CanChannel",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 300480000,
+          "published_ns": 300000000,
+          "source": "bus.Node1",
+          "payload_hex": "200000000c00000001000000",
+          "operations": [
+            {
+              "name": "Confirm",
+              "fields": {
+                "id": 1
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 300480000,
+          "published_ns": 300000000,
+          "source": "bus.Node2",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 300960000,
+          "published_ns": 300000000,
+          "source": "bus.Node1",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 300960000,
+          "published_ns": 300000000,
+          "source": "bus.Node2",
+          "payload_hex": "200000000c00000001000000",
+          "operations": [
+            {
+              "name": "Confirm",
+              "fields": {
+                "id": 1
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 600000000,
+          "published_ns": 500000000,
+          "source": "node1.CanChannel",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 600000000,
+          "published_ns": 500000000,
+          "source": "node2.CanChannel",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 600480000,
+          "published_ns": 600000000,
+          "source": "bus.Node1",
+          "payload_hex": "200000000c00000001000000",
+          "operations": [
+            {
+              "name": "Confirm",
+              "fields": {
+                "id": 1
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 600480000,
+          "published_ns": 600000000,
+          "source": "bus.Node2",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 600960000,
+          "published_ns": 600000000,
+          "source": "bus.Node1",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 600960000,
+          "published_ns": 600000000,
+          "source": "bus.Node2",
+          "payload_hex": "200000000c00000001000000",
+          "operations": [
+            {
+              "name": "Confirm",
+              "fields": {
+                "id": 1
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 900000000,
+          "published_ns": 800000000,
+          "source": "node1.CanChannel",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 900000000,
+          "published_ns": 800000000,
+          "source": "node2.CanChannel",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 900480000,
+          "published_ns": 900000000,
+          "source": "bus.Node1",
+          "payload_hex": "200000000c00000001000000",
+          "operations": [
+            {
+              "name": "Confirm",
+              "fields": {
+                "id": 1
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 900480000,
+          "published_ns": 900000000,
+          "source": "bus.Node2",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 900960000,
+          "published_ns": 900000000,
+          "source": "bus.Node1",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 900960000,
+          "published_ns": 900000000,
+          "source": "bus.Node2",
+          "payload_hex": "200000000c00000001000000",
+          "operations": [
+            {
+              "name": "Confirm",
+              "fields": {
+                "id": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "quantised",
+      "step_size_ns": 250000000,
+      "duration_ns": 1000000000,
+      "why": "A 250 ms step divides neither the transmit interval nor its offsets: 300 ms is observed at 500 ms, 600 ms at 750 ms and 900 ms at 1000 ms. The last one is observed at the end of the Run's last Step, so the frames the bus queued at that instant are never transmitted -- their transmission time ends after the duration.",
+      "events": [
+        {
+          "time_ns": 0,
+          "published_ns": 0,
+          "source": "node1.CanChannel",
+          "payload_hex": "400000000d00000001a0860100400000000a0000000401",
+          "operations": [
+            {
+              "name": "Configuration",
+              "fields": {
+                "parameter": "CanBaudrate",
+                "baudrate": 100000
+              }
+            },
+            {
+              "name": "Configuration",
+              "fields": {
+                "parameter": "ArbitrationLostBehavior",
+                "behavior": "BufferAndRetransmit"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 0,
+          "published_ns": 0,
+          "source": "node2.CanChannel",
+          "payload_hex": "400000000d00000001a0860100400000000a0000000401",
+          "operations": [
+            {
+              "name": "Configuration",
+              "fields": {
+                "parameter": "CanBaudrate",
+                "baudrate": 100000
+              }
+            },
+            {
+              "name": "Configuration",
+              "fields": {
+                "parameter": "ArbitrationLostBehavior",
+                "behavior": "BufferAndRetransmit"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 500000000,
+          "published_ns": 250000000,
+          "source": "node1.CanChannel",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 500000000,
+          "published_ns": 250000000,
+          "source": "node2.CanChannel",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 500480000,
+          "published_ns": 500000000,
+          "source": "bus.Node1",
+          "payload_hex": "200000000c00000001000000",
+          "operations": [
+            {
+              "name": "Confirm",
+              "fields": {
+                "id": 1
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 500480000,
+          "published_ns": 500000000,
+          "source": "bus.Node2",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 500960000,
+          "published_ns": 500000000,
+          "source": "bus.Node1",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 500960000,
+          "published_ns": 500000000,
+          "source": "bus.Node2",
+          "payload_hex": "200000000c00000001000000",
+          "operations": [
+            {
+              "name": "Confirm",
+              "fields": {
+                "id": 1
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 750000000,
+          "published_ns": 500000000,
+          "source": "node1.CanChannel",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 750000000,
+          "published_ns": 500000000,
+          "source": "node2.CanChannel",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 750480000,
+          "published_ns": 750000000,
+          "source": "bus.Node1",
+          "payload_hex": "200000000c00000001000000",
+          "operations": [
+            {
+              "name": "Confirm",
+              "fields": {
+                "id": 1
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 750480000,
+          "published_ns": 750000000,
+          "source": "bus.Node2",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 750960000,
+          "published_ns": 750000000,
+          "source": "bus.Node1",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 750960000,
+          "published_ns": 750000000,
+          "source": "bus.Node2",
+          "payload_hex": "200000000c00000001000000",
+          "operations": [
+            {
+              "name": "Confirm",
+              "fields": {
+                "id": 1
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 1000000000,
+          "published_ns": 750000000,
+          "source": "node1.CanChannel",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        },
+        {
+          "time_ns": 1000000000,
+          "published_ns": 750000000,
+          "source": "node2.CanChannel",
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -11,11 +11,14 @@ milestone. It fixes what the implementation issues (#138 – #141) are aimed at,
 so that each of them is measured against artifacts and expectations that were
 written down before the implementation was.
 
-One step is the other way round, and it is the last one: since [issue
+Two steps are the other way round, and they are the last ones: since [issue
 #139](https://github.com/Stevie1704/sil/issues/139) the proof also drives the
 same pinned node with **the checkout's** FMI Importer and judges the Recording
-against the same expected exchange. The gate measures the release; that step
-measures the tree, and [says which tree](evidence/identity.txt).
+against the same expected exchange, and since [issue
+#140](https://github.com/Stevie1704/sil/issues/140) it connects two instances of
+that node through the pinned **bus simulation FMU** and judges that Recording
+too. The gate measures the release; those steps measure the tree, and [say which
+tree](evidence/identity.txt).
 
 **This is an interoperability fixture, not a conformance claim and not ADAS
 validation.** It covers two CAN demo FMUs of one layered standard, at one
@@ -31,6 +34,7 @@ revision, on one machine class.
 | Is there a runnable reference exchange? | Yes — the node FMU driven by an independent FMI 3.0 importer, matching payloads and event times stated from the sources beforehand |
 | What does current SiL do with the same FMU? | It fails, twice and for two different reasons — both recorded, both in the Importer, neither in the kernel contract |
 | What does the checkout do with the same FMU? | It drives it: both step grids of the expected exchange, matched whole, in a Run whose Recording reproduces bit for bit |
+| What does the checkout do with both FMUs connected? | It runs them as one group: two nodes exchanging frames through the bus FMU, every payload, count and event time as stated beforehand, and bit-identical across two Runs |
 
 ## The artifacts
 
@@ -236,9 +240,9 @@ and every expected event declares it absent.
 
 ### The bus simulation FMU — `DemoCanBusSimulation`
 
-Not driven by this gate; #140 connects two nodes through it. Its description
-is published here so that issue starts from a stated contract rather than from
-a reading of the sources:
+Not driven by the gate itself; the last two steps connect two nodes through it.
+Its description is published here so that work started from a stated contract
+rather than from a reading of the sources:
 
 - `isBusSimulationFMU` is `true` in its layered-standard manifest, which is
   also at `1.0.0-beta.1`;
@@ -248,7 +252,9 @@ a reading of the sources:
 - **the bus FMU's `Tx_Clock`s are `input` clocks with `intervalVariability`
   `countdown`**, not the `triggered` output Clocks the node carries. Driving
   it means reading a countdown interval and activating the Clock, which is a
-  larger Clock profile than #139 needs;
+  larger Clock profile than #139 needs — and the interval it states,
+  `(44 + dataLength) / baudRate` seconds, falls between two Slots of any step
+  period a Manifest here declares;
 - one `Float64` `BusErrorProbability` input, discrete, start `0.0` — the only
   scalar either FMU exposes as more than the independent variable;
 - it declares `providesEvaluateDiscreteStates` `true`, which the node does
@@ -258,12 +264,21 @@ Full declaration in [`evidence/profile.txt`](evidence/profile.txt).
 
 ### What is outside the profile
 
-CAN FD and CAN XL transmit operations, `Confirm`, `ArbitrationLost`,
-`BusError`, `Status` and `Wakeup` operations, FlexRay, rollback,
-early return, intermediate update, and any FMU state serialisation. The
-decoder in [`can_operations.py`](can_operations.py) names each of those by its
-standard name and rejects it rather than skipping it, so a payload that leaves
-the profile fails loudly.
+CAN FD and CAN XL transmit operations, `ArbitrationLost`, `BusError`, `Status`
+and `Wakeup` operations, FlexRay, rollback, early return, intermediate update,
+and any FMU state serialisation. The decoder in
+[`can_operations.py`](can_operations.py) names each of those by its standard
+name and rejects it rather than skipping it, so a payload that leaves the
+profile fails loudly.
+
+`Confirm` left that list when the nodes were connected to the bus: the bus
+simulation FMU answers a transmitting node with one, so it is a feature the
+fixture actually exercises rather than a claim about the standard. Two
+behaviors of the bus FMU stay outside it and are recorded here instead of
+tested: the `DiscardAndNotify` arbitration-lost behavior, which nothing in this
+fixture configures, and the `BusError` operation upstream draws from `rand()`,
+which is why every Manifest below sets `BusErrorProbability` to `0.0` rather
+than leaving a Run's result to a pseudo-random sequence.
 
 ## The expected exchange
 
@@ -293,8 +308,52 @@ step they are observable only at the end of the step that crossed those
 instants. **FMI event time and the time an importer can see the event are not
 the same quantity**, and a later Channel publication time is a third. #139
 carries that distinction into the Channel itself — a clocked Message states
-the FMI event time it belongs to beside the payload — and #140 inherits it
-from here.
+the FMI event time it belongs to beside the payload — and the connected
+exchange below inherits it from here.
+
+## The expected connected exchange
+
+[`connected_expected.json`](connected_expected.json) states what **two nodes
+through the bus FMU** produce, written from both FMUs' sources before any Run.
+The topology is the one the bus declares: `node1.CanChannel = bus.Node1` and
+`node2.CanChannel = bus.Node2`, two instances of one node archive attached to
+the two terminals of one bus.
+
+What the bus adds to the node's own behavior is arbitration and a transmission
+time:
+
+- each node's configuration reaches the bus in the initialization event, and
+  the bus enables communication only once **both** terminals configured the
+  same baud rate — so nothing is transmitted at `t = 0`;
+- a frame handed to a terminal is queued, and the bus states its next
+  transmission as a countdown Clock interval of `(44 + dataLength) / baudRate`
+  seconds: 48/100 000 s, which is **480 000 whole nanoseconds**;
+- when that interval ends, the queued frame of lowest CAN ID wins. Its
+  originator is answered with a `Confirm` operation and every other terminal
+  is handed the frame itself. The next queued frame is then scheduled, one
+  transmission time later.
+
+Both nodes offer CAN ID `0x1` at the same instant, so the exchange is:
+
+| Event time | `node1.CanChannel` | `node2.CanChannel` | `bus.Node1` | `bus.Node2` |
+| --- | --- | --- | --- | --- |
+| 0 ms | `Configuration` ×2 | `Configuration` ×2 | — | — |
+| 300 ms | `CanTransmit` | `CanTransmit` | — | — |
+| 300.48 ms | — | — | `Confirm` | `CanTransmit` |
+| 300.96 ms | — | — | `CanTransmit` | `Confirm` |
+
+**480 us is no Slot of either step grid.** That is the point of this case: an
+arrangement of separately stepped participants would deliver both frames at the
+subscriber's next activation — one instant, with nothing left to tell the two
+transmissions apart. The group stops at instants the kernel's Slot grid does
+not contain, and what reaches the Recording is a Message published in the Slot
+the importer was activated in, stating the instant the FMUs stood on. The
+boundary decision and its evidence are in
+[`docs/adr/0001-connected-fmus-in-one-process-participant.md`](../../docs/adr/0001-connected-fmus-in-one-process-participant.md).
+
+The same two grids are run, and the `quantised` one ends on an honest edge: its
+last Step ends at the Run's Duration, so the frames the bus queues at that
+instant would be transmitted 480 us after the Run is over, and never are.
 
 ## Results
 
@@ -310,6 +369,9 @@ from here.
 | The gap is in the Importer, not in the kernel's Channel contract | the same Manifest's bounded CAN frame Channel is accepted and sized: `observer <- can.Tx  cap 2 x 2050 B` — [`footprint.txt`](evidence/footprint.txt) |
 | The checkout's Importer drives the node on both step grids | `aligned: 4 events, all as expected` / `quantised: 4 events, all as expected`, judged on the Recording — [`clocked-aligned.txt`](evidence/clocked-aligned.txt), [`clocked-quantised.txt`](evidence/clocked-quantised.txt) |
 | A clocked Run reproduces | `deterministic: 6c85facd…2f81`, two Runs of one Manifest bit-compared — [`clocked-identity.txt`](evidence/clocked-identity.txt) |
+| The checkout's Importer connects two nodes through the bus FMU | `aligned: 20 events on 4 terminals, all as expected` / `quantised: 16 events on 4 terminals, all as expected`, judged on the Recording — [`connected-aligned.txt`](evidence/connected-aligned.txt), [`connected-quantised.txt`](evidence/connected-quantised.txt) |
+| A frame reaches its peer a transmission time later, not a Slot later | `bus.Node1 event 300480000 ns published 300000000 ns 12 B Confirm` beside `bus.Node2 … 20 B CanTransmit`, and the losing frame at `300960000 ns` — [`connected-aligned.txt`](evidence/connected-aligned.txt) |
+| A connected Run reproduces | `deterministic: 607dca6b…a836`, two Runs of one Manifest bit-compared — [`connected-identity.txt`](evidence/connected-identity.txt) |
 
 ## What current SiL does, and where the gap is
 
@@ -391,6 +453,45 @@ aligned case adds: the same node, the same Manifest but for the Step period,
 and every event at the communication point that carries its own internal
 transmit time.
 
+### Two nodes through the bus FMU
+
+Two more Manifests, built by
+[`connected_manifest.py`](connected_manifest.py), one per step grid of the
+connected expected exchange. Each declares **one** process participant for all
+three FMUs — `--instance node1=`, `--instance node2=`, `--instance bus=`, two
+`--connect` arguments pairing the terminals, one `--bus-profile`, four
+`--bind` arguments naming the terminals to observe, and
+`--start bus.BusErrorProbability=0.0`:
+
+| Manifest | Hash | Step | What happens |
+| --- | --- | --- | --- |
+| `connected-aligned` | `abbe477b…6a3e` | 100 ms | exit 0, 20 events on 4 terminals, matched whole |
+| `connected-quantised` | `6d9ebdaf…e7b2` | 250 ms | exit 0, 16 events on 4 terminals, matched whole |
+
+[`connected_exchange.py`](connected_exchange.py) reads each Recording and
+compares every observed terminal with
+[`connected_expected.json`](connected_expected.json), per Channel and in the
+Recording's own order. The aligned case is where the bus's own time shows:
+
+```
+--- case aligned ---
+  node1.CanChannel   event   300000000 ns  published  200000000 ns   20 B  CanTransmit
+  node2.CanChannel   event   300000000 ns  published  200000000 ns   20 B  CanTransmit
+  bus.Node1          event   300480000 ns  published  300000000 ns   12 B  Confirm
+  bus.Node2          event   300480000 ns  published  300000000 ns   20 B  CanTransmit
+  bus.Node1          event   300960000 ns  published  300000000 ns   20 B  CanTransmit
+  bus.Node2          event   300960000 ns  published  300000000 ns   12 B  Confirm
+aligned: 20 events on 4 terminals, all as expected
+```
+
+Both nodes offer a frame at 300 ms. Node 1's wins arbitration and is
+transmitted 480 us later — a `Confirm` back to its sender, the frame itself to
+node 2 — and node 2's follows 480 us after that, the other way round. All four
+of those Messages are published in the Slot at 300 ms, because 300.48 ms and
+300.96 ms are not Slots: they are the group's own communication points, and
+what the Recording holds is the instant each activation stood on rather than a
+timestamp rounded onto the grid.
+
 ## Reproducing
 
 ```sh
@@ -404,9 +505,9 @@ workspace. [`.github/workflows/proof-fmi-ls-bus.yml`](../../.github/workflows/pr
 runs the same script on `ubuntu-latest`, for a pull request that touches this
 directory or the Importer.
 
-Every step but the last is made of pinned artifacts, so it answers the same on
-any machine class the fixture supports. The last one is made of the working
-tree as well, and `evidence/identity.txt` names the commit it measured —
+Every step but the last two is made of pinned artifacts, so it answers the same
+on any machine class the fixture supports. Those two are made of the working
+tree as well, and `evidence/identity.txt` names the commit they measured —
 including when that tree carried changes the commit does not.
 
 The committed evidence was produced by that script on `linux/amd64` — the
@@ -440,4 +541,7 @@ The decoder has its own tests, which need no fixture and no docker:
 | [`clocked_manifest.py`](clocked_manifest.py) | The two Manifests that put the checkout's clocked Importer in front of the node, one per step grid |
 | [`clocked_observer.py`](clocked_observer.py) | The consumer-side subscriber those Manifests declare |
 | [`clocked_exchange.py`](clocked_exchange.py) | Judge one Run's Recording against the expected exchange |
+| [`connected_expected.json`](connected_expected.json) | The expected exchange of two nodes through the bus FMU, stated before any Run |
+| [`connected_manifest.py`](connected_manifest.py) | The two Manifests that drive all three FMUs as one group, one per step grid |
+| [`connected_exchange.py`](connected_exchange.py) | Judge one connected Run's Recording, per observed terminal |
 | [`run-proof.sh`](run-proof.sh) | All of it, in order, into `evidence/` |

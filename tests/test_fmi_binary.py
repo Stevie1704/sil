@@ -27,7 +27,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
-from can_node import CAN_BUFFER_BYTES, CAN_NODE, node_fmu
+from can_fixture import CAN_BUFFER_BYTES, CAN_NODE, node_fmu
 from conftest import ROOT
 from sil.fmi import CoSimulation, FmuParticipant
 from sil.manifest import Manifest, SubscriberRoute

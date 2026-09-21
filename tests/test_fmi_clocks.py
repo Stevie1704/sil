@@ -36,7 +36,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from can_node import (
+from can_fixture import (
     CAN_BUFFER_BYTES,
     RX_CLOCK,
     RX_DATA,

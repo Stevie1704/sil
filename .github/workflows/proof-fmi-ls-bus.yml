@@ -6,10 +6,12 @@ name: proof-fmi-ls-bus
 # It builds third-party FMUs from pinned upstream sources and executes them
 # against the published SiL runner image by digest. The evidence gate itself
 # therefore tests the release rather than the checkout, and is unaffected by
-# the commit that triggers it. Its last step is the exception, and the reason
-# this also runs on a pull request that touches the Importer: the same
+# the commit that triggers it. Its last two steps are the exception, and the
+# reason this also runs on a pull request that touches the Importer: the same
 # released runner, with the checkout's `sil` package ahead of it, driving the
-# pinned CAN node and judged against the same expected exchange.
+# pinned CAN node, and then connecting two instances of it through the pinned
+# bus simulation FMU — both judged against expected exchanges written from
+# upstream's sources.
 #
 # That is why it is not part of the push gate — but it does run on any pull
 # request that touches the fixture or the Importer, because the evidence a

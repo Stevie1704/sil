@@ -29,6 +29,9 @@ CONFIGURATION_ARBITRATION = bytes.fromhex("400000000a000000" "04" "01")
 CAN_TRANSMIT = bytes.fromhex(
     "1000000014000000" "01000000" "00" "00" "0400" "01020304"
 )
+# The bus simulation FMU's answer to the node whose frame it transmitted:
+# header (opCode 0x20, length 12) and the CAN ID that was confirmed.
+CONFIRM = bytes.fromhex("200000000c000000" "01000000")
 
 
 def test_empty_payload_decodes_to_no_operations():
@@ -55,6 +58,15 @@ def test_can_transmit():
         Operation("CanTransmit", {"id": 1, "ide": False, "rtr": False,
                                   "data": "01020304"})
     ]
+
+
+def test_confirm():
+    assert decode(CONFIRM) == [Operation("Confirm", {"id": 1})]
+
+
+def test_a_confirm_of_another_length_is_rejected():
+    with pytest.raises(OperationError, match="a confirmation is the 4"):
+        decode(bytes.fromhex("200000000d000000" "01000000" "00"))
 
 
 def test_operations_decode_in_buffer_order():

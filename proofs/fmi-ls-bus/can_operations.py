@@ -6,10 +6,12 @@ the operation's total `length` — followed by that operation's own fields. The
 layout is fixed by `fmi3LsBus.h` and `fmi3LsBusCan.h` at the pinned revision
 recorded in README.md, and is byte-identical in FMI-LS-BUS v1.0.0.
 
-Only the two operations the pinned CAN node emits are decoded. Every other
-operation the standard defines is rejected by name rather than skipped: this
-fixture's job is to state what the supported profile covers, and an operation
-silently passed over would widen that claim without evidence.
+Only the three operations the pinned CAN FMUs emit are decoded: the node's
+transmit and configuration operations, and the confirmation the bus simulation
+FMU answers a transmitting node with. Every other operation the standard
+defines is rejected by name rather than skipped: this fixture's job is to state
+what the supported profile covers, and an operation silently passed over would
+widen that claim without evidence.
 
 Nothing here imports SiL. The decoder is what reads the fixture's payloads in
 the reference exchange, so it has to be independent of the importer it judges.
@@ -28,13 +30,14 @@ HEADER_SIZE = _HEADER.size
 # exercises are decoded; the rest are named so a payload outside the supported
 # profile fails with the standard's own word for what it contained.
 _CAN_TRANSMIT = 0x0010
+_CONFIRM = 0x0020
 _CONFIGURATION = 0x0040
 _OPERATION_NAMES = {
     0x0001: "FormatError",
     _CAN_TRANSMIT: "CanTransmit",
     0x0011: "CanFdTransmit",
     0x0012: "CanXlTransmit",
-    0x0020: "Confirm",
+    _CONFIRM: "Confirm",
     0x0030: "ArbitrationLost",
     0x0031: "BusError",
     _CONFIGURATION: "Configuration",
@@ -45,6 +48,10 @@ _OPERATION_NAMES = {
 # `fmi3LsBusCanOperationCanTransmit` after the header: id, ide, rtr, then the
 # data length that the payload bytes follow.
 _TRANSMIT = struct.Struct("<IBBH")
+
+# `fmi3LsBusCanOperationConfirm` after the header: the CAN ID of the frame the
+# bus simulation FMU has transmitted, and nothing else.
+_CONFIRM_BODY = struct.Struct("<I")
 
 # `fmi3LsBusCanOperationConfiguration` after the header: the parameter type,
 # then the one member of the union that parameter selects.
@@ -114,6 +121,8 @@ def _decode_one(payload: bytes, offset: int) -> Operation:
     body = payload[offset + HEADER_SIZE:offset + length]
     if op_code == _CAN_TRANSMIT:
         return Operation("CanTransmit", _transmit_fields(body))
+    if op_code == _CONFIRM:
+        return Operation("Confirm", _confirm_fields(body))
     if op_code == _CONFIGURATION:
         return Operation("Configuration", _configuration_fields(body))
     raise OperationError(
@@ -146,6 +155,20 @@ def _transmit_fields(body: bytes) -> dict[str, object]:
         "rtr": bool(rtr),
         "data": data.hex(),
     }
+
+
+def _confirm_fields(body: bytes) -> dict[str, object]:
+    """The one field a confirmation carries: the frame it confirms.
+
+    The operation is fixed-length, so a body of any other size is a payload
+    that is not this operation rather than one with something extra in it.
+    """
+    if len(body) != _CONFIRM_BODY.size:
+        raise OperationError(
+            f"Confirm operation carries {len(body)} bytes after its header, "
+            f"and a confirmation is the {_CONFIRM_BODY.size} of a CAN ID"
+        )
+    return {"id": _CONFIRM_BODY.unpack(body)[0]}
 
 
 def _configuration_fields(body: bytes) -> dict[str, object]:
