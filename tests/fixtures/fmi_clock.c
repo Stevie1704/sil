@@ -19,7 +19,11 @@
 //     what the stricter upstream revision of this node checks and what decides
 //     the order an importer has to set an input Clock and its buffer in;
 //   - an activated input Clock echoes the buffer it was handed back out on the
-//     output Clock, one discrete-state update later.
+//     output Clock, one discrete-state update later. Upstream's own node does
+//     not: it reads the operations it was handed and drops them. The echo is
+//     what lets one node on its own be driven from both ends, and
+//     FMI_CLOCK_ECHO_RX=0 builds the node as upstream wrote it, which is what
+//     a node connected to a real peer has to be.
 //
 // The operation bytes are the expected exchange's own, and the tests compare
 // what the importer publishes against that same file, so a fixture that is
@@ -31,6 +35,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 // The value references of the fixture's CAN node
@@ -62,6 +67,11 @@
 // Ask for the simulation to be terminated from inside the event.
 #ifndef FMI_CLOCK_TERMINATE_IN_EVENT
 #define FMI_CLOCK_TERMINATE_IN_EVENT 0
+#endif
+// Echo a frame handed to the input Clock back out on the output Clock, so one
+// node can be driven from both ends without a peer FMU.
+#ifndef FMI_CLOCK_ECHO_RX
+#define FMI_CLOCK_ECHO_RX 1
 #endif
 // Raise the output Clock in the discrete-state update that ends the event
 // rather than before it, which is the activation an importer loses if it
@@ -99,8 +109,6 @@ typedef struct {
   double event_time;
 } Node;
 
-static Node node;
-
 typedef void (*fmi3_log_message)(void *, int, const char *, const char *);
 
 static long long milliseconds(double seconds) {
@@ -110,14 +118,14 @@ static long long milliseconds(double seconds) {
   return (long long)(seconds * 1000.0 + 0.5);
 }
 
-static void raise_tx(const unsigned char *operation, size_t length,
+static void raise_tx(Node *self, const unsigned char *operation, size_t length,
                      size_t count) {
-  node.tx_length = 0;
+  self->tx_length = 0;
   for (size_t i = 0; i < count; i++) {
-    memcpy(node.tx + node.tx_length, operation, length);
-    node.tx_length += length;
+    memcpy(self->tx + self->tx_length, operation, length);
+    self->tx_length += length;
   }
-  node.tx_clock = count > 0;
+  self->tx_clock = count > 0;
 }
 
 void *fmi3InstantiateCoSimulation(
@@ -146,27 +154,29 @@ void *fmi3InstantiateCoSimulation(
     }
     return NULL;
   }
-  memset(&node, 0, sizeof(node));
-  return &node;
+  // Every instance owns its state: the description declares
+  // canBeInstantiatedOnlyOncePerProcess false, and a group of two nodes is
+  // two instances of one shared library.
+  return calloc(1, sizeof(Node));
 }
 
 int fmi3EnterInitializationMode(void *instance, bool tolerance_defined,
                                 double tolerance, double start_time,
                                 bool stop_time_defined, double stop_time) {
-  (void)instance;
+  Node *self = instance;
   (void)tolerance_defined;
   (void)tolerance;
   (void)stop_time_defined;
   (void)stop_time;
-  node.event_time = start_time;
+  self->event_time = start_time;
   return 0;
 }
 
 int fmi3ExitInitializationMode(void *instance) {
-  (void)instance;
+  Node *self = instance;
   // With Event Mode in use, initialization ends in Event Mode, and the node's
   // bus configuration is already waiting in it.
-  raise_tx(CONFIGURATION, sizeof(CONFIGURATION), 1);
+  raise_tx(self, CONFIGURATION, sizeof(CONFIGURATION), 1);
   return 0;
 }
 
@@ -184,7 +194,7 @@ int fmi3DoStep(void *instance, double communication_point, double step_size,
                bool no_set_fmu_state_prior_to_current_point,
                bool *event_handling_needed, bool *terminate_simulation,
                bool *early_return, double *last_successful_time) {
-  (void)instance;
+  Node *self = instance;
   (void)no_set_fmu_state_prior_to_current_point;
   (void)terminate_simulation;
   long long from = milliseconds(communication_point);
@@ -193,12 +203,12 @@ int fmi3DoStep(void *instance, double communication_point, double step_size,
   // them in the buffer the one Clock activation at its end carries.
   size_t crossed = (size_t)(to / TRANSMIT_INTERVAL_MS - from / TRANSMIT_INTERVAL_MS);
 #if FMI_CLOCK_ACTIVATE_IN_UPDATE
-  node.tx_pending = crossed;
+  self->tx_pending = crossed;
 #else
-  raise_tx(TRANSMIT, sizeof(TRANSMIT), crossed);
+  raise_tx(self, TRANSMIT, sizeof(TRANSMIT), crossed);
 #endif
-  node.event_time = communication_point + step_size;
-  *event_handling_needed = node.tx_clock || crossed > 0;
+  self->event_time = communication_point + step_size;
+  *event_handling_needed = self->tx_clock || crossed > 0;
   *last_successful_time = communication_point + step_size;
 #if FMI_CLOCK_EARLY_RETURN
   *early_return = true;
@@ -211,28 +221,28 @@ int fmi3DoStep(void *instance, double communication_point, double step_size,
 
 int fmi3GetClock(void *instance, const uint32_t *value_references,
                  size_t n_value_references, bool *values) {
-  (void)instance;
+  Node *self = instance;
   for (size_t i = 0; i < n_value_references; i++) {
     if (value_references[i] != TX_CLOCK) {
       return 3;
     }
-    values[i] = node.tx_clock;
+    values[i] = self->tx_clock;
     // The Clock reads active exactly once per activation.
-    node.tx_clock = false;
+    self->tx_clock = false;
   }
   return 0;
 }
 
 int fmi3SetClock(void *instance, const uint32_t *value_references,
                  size_t n_value_references, const bool *values) {
-  (void)instance;
+  Node *self = instance;
   for (size_t i = 0; i < n_value_references; i++) {
     if (value_references[i] != RX_CLOCK) {
       return 3;
     }
     if (values[i]) {
-      node.rx_clock = true;
-      node.rx_pending = true;
+      self->rx_clock = true;
+      self->rx_pending = true;
     }
   }
   return 0;
@@ -241,14 +251,14 @@ int fmi3SetClock(void *instance, const uint32_t *value_references,
 int fmi3GetBinary(void *instance, const uint32_t *value_references,
                   size_t n_value_references, size_t *value_sizes,
                   const unsigned char **values, size_t n_values) {
-  (void)instance;
+  Node *self = instance;
   (void)n_values;
   for (size_t i = 0; i < n_value_references; i++) {
     if (value_references[i] != TX_DATA) {
       return 3;
     }
-    value_sizes[i] = node.tx_length;
-    values[i] = node.tx;
+    value_sizes[i] = self->tx_length;
+    values[i] = self->tx;
   }
   return 0;
 }
@@ -256,20 +266,20 @@ int fmi3GetBinary(void *instance, const uint32_t *value_references,
 int fmi3SetBinary(void *instance, const uint32_t *value_references,
                   size_t n_value_references, const size_t *value_sizes,
                   const unsigned char **values, size_t n_values) {
-  (void)instance;
+  Node *self = instance;
   (void)n_values;
   for (size_t i = 0; i < n_value_references; i++) {
     if (value_references[i] != RX_DATA || value_sizes[i] > MAX_SIZE) {
       return 3;
     }
-    if (!node.rx_clock) {
+    if (!self->rx_clock) {
       // What the stricter upstream revision answers: a clocked variable is
       // accessible only while the Clock that gates it is active, so a buffer
       // written before the Clock went up is refused rather than kept.
       return 3;
     }
-    node.rx_length = value_sizes[i];
-    memcpy(node.rx, values[i], value_sizes[i]);
+    self->rx_length = value_sizes[i];
+    memcpy(self->rx, values[i], value_sizes[i]);
   }
   return 0;
 }
@@ -279,31 +289,34 @@ int fmi3UpdateDiscreteStates(void *instance, bool *discrete_states_need_update,
                              bool *nominals_changed, bool *values_changed,
                              bool *next_event_time_defined,
                              double *next_event_time) {
-  (void)instance;
+  Node *self = instance;
   *nominals_changed = false;
   *values_changed = false;
   *discrete_states_need_update = false;
   *terminate_simulation = false;
   *next_event_time_defined = false;
   *next_event_time = 0.0;
-  if (node.rx_pending) {
+  if (self->rx_pending) {
+#if FMI_CLOCK_ECHO_RX
     // The frame the input Clock delivered goes back out on the output Clock,
     // which the importer sees on the next iteration of this event.
-    memcpy(node.tx, node.rx, node.rx_length);
-    node.tx_length = node.rx_length;
-    node.tx_clock = true;
-    node.rx_pending = false;
+    memcpy(self->tx, self->rx, self->rx_length);
+    self->tx_length = self->rx_length;
+    self->tx_clock = true;
+    *discrete_states_need_update = true;
+#endif
+    self->rx_pending = false;
     // The activation is consumed with the event: a second frame at the same
     // instant is a second activation of the Clock.
-    node.rx_clock = false;
-    *discrete_states_need_update = true;
+    self->rx_clock = false;
+    self->rx_length = 0;
   }
 #if FMI_CLOCK_ACTIVATE_IN_UPDATE
-  if (node.tx_pending) {
+  if (self->tx_pending) {
     // The event ends with this update, and the Clock goes up in it: an
     // importer that read the Clock only before the update never sees it.
-    raise_tx(TRANSMIT, sizeof(TRANSMIT), node.tx_pending);
-    node.tx_pending = 0;
+    raise_tx(self, TRANSMIT, sizeof(TRANSMIT), self->tx_pending);
+    self->tx_pending = 0;
   }
 #endif
 #if FMI_CLOCK_NEVER_CONVERGES
@@ -312,7 +325,7 @@ int fmi3UpdateDiscreteStates(void *instance, bool *discrete_states_need_update,
 #if FMI_CLOCK_NEXT_EVENT_MS
   // Declared while it is still ahead: an FMU that kept asking for an instant
   // the Run has already reached would be asking to go backwards.
-  if (milliseconds(node.event_time) < FMI_CLOCK_NEXT_EVENT_MS) {
+  if (milliseconds(self->event_time) < FMI_CLOCK_NEXT_EVENT_MS) {
     *next_event_time_defined = true;
     *next_event_time = FMI_CLOCK_NEXT_EVENT_MS / 1000.0;
   }
@@ -328,4 +341,4 @@ int fmi3Terminate(void *instance) {
   return 0;
 }
 
-void fmi3FreeInstance(void *instance) { (void)instance; }
+void fmi3FreeInstance(void *instance) { free(instance); }

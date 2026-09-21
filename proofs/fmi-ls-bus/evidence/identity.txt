@@ -2,10 +2,10 @@ platform                 linux/amd64
 host                     Darwin arm64
 sil runner image         ghcr.io/stevie1704/sil@sha256:d67a254125fbe44467bf1354a04d19955815098d86a4c94c74f73ead6a943c0b
 sil version              0.1.0
-fixture image id         sha256:f80b87d1f772474f0449220745c7ecd2ba97ce6e31d3895c3a01ca266661af4d
+fixture image id         sha256:f699ad6da75132875ded1e567cefe3a402cc17042a2846c1a57f8d7890dff313
 proof image id           sha256:1522bd9b8072ce4105b39b34d72fdf43a252e28b3784b714b5491c6819cc73c1
-measured image id        sha256:630b928023866a6ae82168ce3142089bd651a81275c41ba7f255307d739a43eb
-measured checkout        35afc693d1d34941115a83a1d5417bb6609a1d3e, with uncommitted changes
+measured image id        sha256:afa49120c55ec59cda7349254c0af452da92f2f2166011d5bc3624a28835bb2c
+measured checkout        16dcf05ce412017dd4d2ed5e57c829c356c3c4fb, with uncommitted changes
 examples_revision        cc42cacd26c7f5edbb20959b0e0c56922c2f0cc2
 examples_alternative_revision de019a6efbad810795835f2fd9bbf9e62eb451b9
 fmpy_version             0.3.32

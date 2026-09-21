@@ -86,6 +86,13 @@ ordinary participant, translating that standard's stepping contract to this
 one. It lives at the edge; the kernel never learns the standard exists.
 _Avoid_: wrapper, bridge, master, co-simulation master
 
+**FMU group**:
+Several FMUs one Importer drives inside a single Process participant, connected
+to each other by their own standard's terminals rather than by Channels. It
+exists where the connection carries something a Channel cannot: an instant the
+models compute between two Slots. The kernel sees one participant.
+_Avoid_: co-simulation network, federation, cluster, sub-system
+
 **Step protocol**:
 The line-based contract over a process participant's stdin/stdout by which the
 kernel initializes it, steps it, and shuts it down.

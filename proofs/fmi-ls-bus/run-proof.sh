@@ -12,7 +12,10 @@
 #   3. the released SiL FMI Importer is pointed at the same FMU, and what it
 #      answers is kept verbatim;
 #   4. this checkout's FMI Importer is pointed at the same FMU, and its
-#      Recording is compared with the same expectation, on both step grids.
+#      Recording is compared with the same expectation, on both step grids;
+#   5. the same Importer connects two instances of that node through the bus
+#      simulation FMU, and the Recording of that Run is compared with an
+#      expectation written from both FMUs' sources.
 #
 # The rejected revision's exchange and step 3 are both expected to fail. Steps
 # 1 to 3 are the evidence gate of issue #137: the fixture is what the
@@ -22,8 +25,9 @@
 # the pin, a reference exchange that does not match its expectation, or a
 # rejected revision that turns out to work after all.
 #
-# Step 4 is the other way round: it is the measurement of issue #139, and it
-# is expected to pass. It is the only step that reads the checkout.
+# Steps 4 and 5 are the other way round: they are the measurements of issues
+# #139 and #140, and both are expected to pass. They are the only steps that
+# read the checkout.
 #
 # The evidence directory defaults to ./evidence and holds what is committed;
 # the workspace defaults to a temporary directory and holds the Manifests.
@@ -312,6 +316,56 @@ step "Check the clocked Run for determinism"
 measured_tool python3 -m sil.check /workspace/clocked-aligned.json \
     --runner sil-run --participant-timeout-ms "$PARTICIPANT_TIMEOUT_MS" \
     | tee "$EVIDENCE_DIR/clocked-identity.txt"
+
+step "Connect two CAN nodes through the bus FMU with this checkout's Importer"
+# The other half of the fixture, copied out of the same image by the same rule
+# as the node. Two instances of the node are attached to the two terminals of
+# one bus simulation FMU, and all three are driven by one process participant:
+# the bus states its transmission time as a countdown interval of 480 us,
+# which no Step period here lands on, so the group is what stops there. See
+# docs/adr/0001-connected-fmus-in-one-process-participant.md.
+docker_run --entrypoint cat "$FIXTURE_IMAGE" "$BUS_FMU" \
+    > "$WORKSPACE/$(basename "$BUS_FMU")"
+measured_tool python3 /opt/measured/connected_manifest.py \
+    "/workspace/$(basename "$NODE_FMU")" \
+    "/workspace/$(basename "$BUS_FMU")" /workspace \
+    | tee "$EVIDENCE_DIR/connected-manifest-hashes.txt"
+
+# One Run per step grid of the connected expected exchange, and each Recording
+# judged against the events that file states — written from both FMUs' sources
+# before any Run, like the single-node one beside it.
+for case in aligned quantised; do
+    set +e
+    measured_run "/workspace/connected-$case.json" \
+        -o "/workspace/connected-$case.mcap" \
+        --participant-timeout-ms "$PARTICIPANT_TIMEOUT_MS" \
+        > "$WORKSPACE/connected-$case.out" 2>&1
+    status=$?
+    set -e
+    {
+        echo "manifest    connected-$case.json"
+        echo "exit status $status"
+        echo "--- output ---"
+        cat "$WORKSPACE/connected-$case.out"
+        echo "--- recording against connected_expected.json ---"
+    } > "$EVIDENCE_DIR/connected-$case.txt"
+    if [ "$status" -ne 0 ]; then
+        cat "$EVIDENCE_DIR/connected-$case.txt" >&2
+        echo "the connected Run of case $case exited $status" >&2
+        exit 1
+    fi
+    measured_tool python3 /opt/measured/connected_exchange.py \
+        "$case" "/workspace/connected-$case.mcap" \
+        | tee -a "$EVIDENCE_DIR/connected-$case.txt"
+done
+
+step "Check the connected Run for determinism"
+# Three FMUs coordinated inside one participant, with event times taken from
+# the group's own communication points: they have to reproduce like every
+# other recorded byte.
+measured_tool python3 -m sil.check /workspace/connected-aligned.json \
+    --runner sil-run --participant-timeout-ms "$PARTICIPANT_TIMEOUT_MS" \
+    | tee "$EVIDENCE_DIR/connected-identity.txt"
 
 step "Done"
 echo "evidence  $EVIDENCE_DIR"

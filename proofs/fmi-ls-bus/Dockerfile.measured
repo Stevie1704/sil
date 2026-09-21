@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 #
 # The image that measures *this checkout's* FMI Importer against the pinned
-# CAN node (issue #139).
+# CAN node (issue #139) and against both pinned FMUs connected to each other
+# (issue #140).
 #
 # Everything else in this directory measures the published release, which is
 # what an evidence gate is for. This image is the one exception and says so in
@@ -16,7 +17,7 @@
 #   docker build -f proofs/fmi-ls-bus/Dockerfile.measured \
 #       --build-arg SIL_IMAGE=<the same digest run-proof.sh reads> .
 #
-# The FMU it drives is not baked in: `run-proof.sh` copies it out of the
+# The FMUs it drives are not baked in: `run-proof.sh` copies them out of the
 # fixture image into the workspace both images see, so this layer carries no
 # second copy of an artifact that is pinned elsewhere.
 
@@ -33,6 +34,9 @@ COPY proofs/fmi-ls-bus/can_operations.py \
      proofs/fmi-ls-bus/clocked_exchange.py \
      proofs/fmi-ls-bus/clocked_manifest.py \
      proofs/fmi-ls-bus/clocked_observer.py \
+     proofs/fmi-ls-bus/connected_exchange.py \
+     proofs/fmi-ls-bus/connected_manifest.py \
+     proofs/fmi-ls-bus/connected_expected.json \
      proofs/fmi-ls-bus/expected.json \
      /opt/measured/
 

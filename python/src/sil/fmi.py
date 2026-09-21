@@ -53,6 +53,7 @@ import platform
 import sys
 import tempfile
 import zipfile
+from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 from collections.abc import Callable, Sequence
@@ -128,12 +129,23 @@ _BINARY = "Binary"
 _FLOAT64 = "Float64"
 _CLOCK = "Clock"
 
-# The one Clock this importer drives: a Clock the FMU or the importer raises
-# when something happened, rather than one that carries an interval. A
-# `countdown` Clock asks an importer to read an interval and schedule the next
-# activation, and a `periodic` one asks it to own a second time grid; both are
-# outside the profile the CAN acceptance fixture declares.
+# The two Clock kinds this importer drives. A `triggered` Clock is raised by
+# whoever owns the thing that happened — the FMU on an output Clock, the
+# importer on an input one. A `countdown` Clock is the FMU asking to be
+# activated at an instant it computes itself, which only a group can promise,
+# because only a group owns communication points between the kernel's Slots. A
+# `periodic` Clock asks an importer to own a second time grid and is outside
+# the profile either way.
 _TRIGGERED = "triggered"
+_COUNTDOWN = "countdown"
+
+# fmi3IntervalQualifier. `NotYetKnown` is the FMU saying it has no activation
+# to ask for; `Unchanged` leaves the one already asked for standing;
+# `Changed` states a new interval, counted from the event it was read in.
+_INTERVAL_NOT_YET_KNOWN = 0
+_INTERVAL_UNCHANGED = 1
+_INTERVAL_CHANGED = 2
+_INTERVAL_QUALIFIERS = ("NotYetKnown", "Unchanged", "Changed")
 
 # The capability an FMU has to declare before this importer will use Event
 # Mode, and the Clock profile is the only thing it is used for.
@@ -150,6 +162,28 @@ _EVENT_TIME_TYPE = "u64"
 # without saying why; the bound is declared here so the failure is the same
 # one on every machine.
 _MAX_EVENT_ITERATIONS = 100
+
+# How many times one instant may hand an activation from one connected FMU to
+# another before this importer stops propagating. Two FMUs that answer each
+# other at the same instant would otherwise never let the instant end; the
+# bound is the same kind of declaration as the one above, at the group's own
+# level rather than one FMU's.
+_MAX_PROPAGATIONS = 100
+
+# The FMI-LS-BUS layered standard, as an FMU's own files name it: the archive
+# member that declares it, the terminal kind and matching rule a network
+# terminal carries, and the four members a transceiver terminal groups.
+_BUS_LAYERED_STANDARD = "org.fmi-standard.fmi-ls-bus"
+_BUS_MANIFEST_MEMBER = f"extra/{_BUS_LAYERED_STANDARD}/fmi-ls-manifest.xml"
+_LAYERED_STANDARD_NAMESPACE = "http://fmi-standard.org/fmi-ls-manifest"
+_TERMINALS_MEMBER = "terminalsAndIcons/terminalsAndIcons.xml"
+_NETWORK_TERMINAL = "org.fmi-ls-bus.network-terminal"
+_TRANSCEIVER = "org.fmi-ls-bus.transceiver"
+# The direction is the terminal owner's: `Tx_Data` is what it sends and
+# `Rx_Data` is what it is handed, each gated by the Clock beside it.
+_TX_DATA, _TX_CLOCK = "Tx_Data", "Tx_Clock"
+_RX_DATA, _RX_CLOCK = "Rx_Data", "Rx_Clock"
+_TRANSCEIVER_MEMBERS = (_RX_DATA, _RX_CLOCK, _TX_DATA, _TX_CLOCK)
 
 # A structural parameter is the one causality whose value FMI 3.0 has an
 # importer change inside Configuration Mode rather than in the instantiated
@@ -204,6 +238,15 @@ _SIGNATURES = {
     "fmi3SetClock": (
         ctypes.c_int,
         [ctypes.c_void_p, _VALUE_REFERENCES, ctypes.c_size_t, _FLAG],
+    ),
+    # A countdown Clock's interval, as the exact rational the FMU computed it
+    # as. The decimal form is the same quantity already divided into a double,
+    # and a Slot grid of integer nanoseconds has no use for that rounding.
+    "fmi3GetIntervalFraction": (
+        ctypes.c_int,
+        [ctypes.c_void_p, _VALUE_REFERENCES, ctypes.c_size_t,
+         ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_uint64),
+         ctypes.POINTER(ctypes.c_int32)],
     ),
     "fmi3UpdateDiscreteStates": (
         ctypes.c_int,
@@ -281,6 +324,45 @@ class Variable:
     clocks: tuple[int, ...] = ()
     # Declared by a Clock only: what decides when it is active.
     interval_variability: str | None = None
+    # Declared by a Binary variable only: the media type of what it carries.
+    # A layered standard's profile is stated here, parameters included.
+    mime_type: str | None = None
+
+    @property
+    def media_type(self) -> str | None:
+        """The media type alone, without the parameters that qualify it."""
+        if self.mime_type is None:
+            return None
+        return self.mime_type.partition(";")[0].strip()
+
+
+@dataclass(frozen=True)
+class Terminal:
+    """One terminal of `terminalsAndIcons.xml`, and the variables it groups.
+
+    A terminal is the unit a layered standard connects: it names a role for
+    each variable it holds, so two FMUs of the same matching rule can be wired
+    to each other by terminal rather than variable by variable.
+    """
+
+    name: str
+    kind: str
+    matching_rule: str
+    # Each member's role, mapped to the variable that plays it.
+    members: dict[str, str]
+
+
+@dataclass(frozen=True)
+class BusProfile:
+    """What an FMU's FMI-LS-BUS layered-standard manifest declares.
+
+    `bus_simulation` is the one flag that decides a topology: a bus simulation
+    FMU is what arbitration and transmission modeling belongs in, and the
+    nodes attached to it are ordinary FMUs that only send and receive.
+    """
+
+    version: str | None
+    bus_simulation: bool
 
 
 def _by_causality(
@@ -342,8 +424,65 @@ def _variables(root) -> dict[str, Variable]:
             value_count=_value_count(element),
             clocks=_clock_references(element),
             interval_variability=element.get("intervalVariability"),
+            mime_type=element.get("mimeType"),
         )
     return declared
+
+
+def _terminals(extracted: Path) -> dict[str, Terminal]:
+    """Every terminal the archive declares, by name, in declaration order.
+
+    The file is optional in FMI 3.0, and an FMU without it is not broken — it
+    declares no terminal, which is all a mapping by variable name needs. A
+    file that is present and unreadable is a different thing and is reported.
+    """
+    path = extracted / _TERMINALS_MEMBER
+    if not path.exists():
+        return {}
+    try:
+        root = ElementTree.parse(path).getroot()
+    except (OSError, ElementTree.ParseError) as error:
+        raise ManifestError(
+            f"FMU carries an unreadable {_TERMINALS_MEMBER}: {error}"
+        ) from error
+    declared: dict[str, Terminal] = {}
+    for element in root.iter("Terminal"):
+        name = element.get("name")
+        if name is None:
+            continue
+        declared[name] = Terminal(
+            name=name,
+            kind=element.get("terminalKind", ""),
+            matching_rule=element.get("matchingRule", ""),
+            members={
+                member.get("memberName"): member.get("variableName")
+                for member in element.findall("TerminalMemberVariable")
+                if member.get("memberName") and member.get("variableName")
+            },
+        )
+    return declared
+
+
+def _bus_profile(extracted: Path) -> BusProfile | None:
+    """What the FMI-LS-BUS layered-standard manifest declares, if it is there.
+
+    An FMU that ships no such manifest declares no bus profile; the attribute
+    that matters is `isBusSimulationFMU`, which the standard puts in no
+    namespace while it namespaces its own version.
+    """
+    path = extracted / _BUS_MANIFEST_MEMBER
+    if not path.exists():
+        return None
+    try:
+        root = ElementTree.parse(path).getroot()
+    except (OSError, ElementTree.ParseError) as error:
+        raise ManifestError(
+            f"FMU carries an unreadable {_BUS_MANIFEST_MEMBER}: {error}"
+        ) from error
+    return BusProfile(
+        version=root.get(f"{{{_LAYERED_STANDARD_NAMESPACE}}}fmi-ls-version"),
+        bus_simulation=root.get("isBusSimulationFMU") == "true",
+    )
 
 
 @dataclass(frozen=True)
@@ -359,6 +498,10 @@ class ModelDescription:
     # description read by `read` always carries them; the default keeps every
     # other way of naming an FMU's variables working unchanged.
     capabilities: dict[str, str] = field(default_factory=dict)
+    # What the archive declares beside `modelDescription.xml`: the terminals a
+    # layered standard connects, and the FMI-LS-BUS profile they belong to.
+    terminals: dict[str, Terminal] = field(default_factory=dict)
+    bus: BusProfile | None = None
 
     def clock(self, reference: int) -> Variable | None:
         """The Clock one value reference names, if it names a Clock at all."""
@@ -408,6 +551,8 @@ class ModelDescription:
             inputs=_by_causality(variables, "input"),
             outputs=_by_causality(variables, "output"),
             capabilities=dict(co_simulation.attrib),
+            terminals=_terminals(extracted),
+            bus=_bus_profile(extracted),
         )
 
     def binary(self, extracted: Path) -> Path:
@@ -551,6 +696,14 @@ class CoSimulation:
 
     def set_clock(self, references, values) -> None:
         self._call("fmi3SetClock", references, len(references), values)
+
+    def interval_fraction(self, references, counters, resolutions,
+                          qualifiers) -> None:
+        """Read the countdown intervals the FMU is asking to be activated at."""
+        self._call(
+            "fmi3GetIntervalFraction", references, len(references),
+            counters, resolutions, qualifiers,
+        )
 
     def update_discrete_states(self) -> _DiscreteStates:
         """One discrete-state update, and what the FMU said about the event."""
@@ -760,8 +913,22 @@ class _BinaryField:
     event_time_field: str | None = None
 
 
-def _outgoing_length(binary: _BinaryField, fields: dict) -> int:
-    """How much of a Message's payload field the FMU is handed."""
+def _causality(direction: str) -> str:
+    """The FMU causality a Channel of this direction binds.
+
+    The two vocabularies meet here and nowhere else: the init line says which
+    way a Channel runs, and `modelDescription.xml` says what a variable is.
+    """
+    return "input" if direction == "in" else "output"
+
+
+def _outgoing_payload(binary: _BinaryField, fields: dict) -> bytes:
+    """The bytes of one Message's payload field, as the FMU is handed them.
+
+    A Message's payload field is the Channel's whole bound; the length field
+    beside it says how much of that is the payload. Nothing is truncated to
+    fit — a length above the bound aborts the Run.
+    """
     length = fields[binary.length_field]
     if length > binary.capacity:
         raise ParticipantFailure(
@@ -769,26 +936,47 @@ def _outgoing_length(binary: _BinaryField, fields: dict) -> int:
             f"above the {binary.capacity} field {binary.field!r} "
             f"carries for FMU variable {binary.variable.name!r}"
         )
-    return length
+    return fields[binary.field][:length]
 
 
-def _incoming_payload(binary: _BinaryField, length: int, address) -> dict:
+def _incoming_payload(binary: _BinaryField, payload: bytes) -> dict:
     """One Binary value the FMU produced, as the Channel's bounded fields.
 
-    The pointer is the FMU's own and is valid until its next call, so the
-    payload is copied out at once and padded to the Channel's bound with
-    zeros — one Manifest then records the same bytes on every Run.
+    The payload is padded to the Channel's bound with zeros, so one Manifest
+    records the same bytes on every Run.
     """
-    if length > binary.capacity:
+    if len(payload) > binary.capacity:
         raise ParticipantFailure(
-            f"FMU variable {binary.variable.name!r} produced {length} "
+            f"FMU variable {binary.variable.name!r} produced {len(payload)} "
             f"bytes; field {binary.field!r} carries {binary.capacity}"
         )
-    payload = ctypes.string_at(address, length) if length else b""
     return {
-        binary.field: payload + bytes(binary.capacity - length),
-        binary.length_field: length,
+        binary.field: payload + bytes(binary.capacity - len(payload)),
+        binary.length_field: len(payload),
     }
+
+
+def _activation_message(binary: _BinaryField, payload: bytes,
+                        event_time_ns: int) -> dict:
+    """One Clock activation, as the three fields a clocked Channel carries.
+
+    Stated once, because both ends of the boundary state it: the Channel a
+    single clocked FMU publishes and the Channel a group observes a terminal
+    through carry the same Message, and a second spelling of it could drift.
+    """
+    return {
+        **_incoming_payload(binary, payload),
+        binary.event_time_field: event_time_ns,
+    }
+
+
+def _copied_out(length: int, address) -> bytes:
+    """One Binary value, out of the pointer the FMU answered with.
+
+    The pointer is the FMU's own and valid only until its next call, so the
+    bytes are copied at once rather than held.
+    """
+    return ctypes.string_at(address, length) if length else b""
 
 
 class _BinaryGroup:
@@ -817,17 +1005,17 @@ class _BinaryGroup:
 
     def write(self, fmu: CoSimulation, fields: dict) -> None:
         for index, binary in enumerate(self._bound):
-            length = _outgoing_length(binary, fields)
-            self._buffers[index][:length] = fields[binary.field][:length]
-            self._sizes[index] = length
+            payload = _outgoing_payload(binary, fields)
+            self._buffers[index][:len(payload)] = payload
+            self._sizes[index] = len(payload)
         fmu.set_binary(self._references, self._sizes, self._values)
 
     def read(self, fmu: CoSimulation, into: dict) -> None:
         fmu.get_binary(self._references, self._sizes, self._values)
         for index, binary in enumerate(self._bound):
-            into.update(
-                _incoming_payload(binary, self._sizes[index], self._values[index])
-            )
+            into.update(_incoming_payload(
+                binary, _copied_out(self._sizes[index], self._values[index])
+            ))
 
 
 class _ChannelBinding:
@@ -847,69 +1035,206 @@ class _ChannelBinding:
         return fields
 
 
-class _ClockedPayload:
-    """One Channel whose Messages are activations of one Clock.
+class _ClockedBuffer:
+    """The FMU side of one Binary variable gated by a triggered Clock.
 
     A clocked Binary variable is defined only while its Clock is active, so
     neither end of it belongs to a Step: the Clock is read, or raised, inside
-    an event. One activation is one Message, and the Message states the FMI
-    event time it belongs to rather than being timestamped with it.
+    an event. Reading and raising are the same rule seen from both ends —
+    Clock first, buffer second.
 
-    The buffer an incoming Message is copied into is allocated once and lives
+    The buffer an incoming payload is copied into is allocated once and lives
     as long as this object: FMI 3.0 has the importer own it for the duration
     of the call, and reallocating one per activation would put its lifetime in
     the garbage collector's hands.
     """
 
-    def __init__(self, binary: _BinaryField, causality: str):
-        self._binary = binary
-        self._clock_references = _references(binary.clock.reference)
+    def __init__(self, variable: Variable, clock: Variable, capacity: int,
+                 *, incoming: bool):
+        self.variable = variable
+        self._clock_references = _references(clock.reference)
         self._clock_values = (ctypes.c_bool * 1)()
-        self._data_references = _references(binary.variable.reference)
+        self._data_references = _references(variable.reference)
         self._sizes = (ctypes.c_size_t * 1)()
         self._values = (ctypes.c_void_p * 1)()
-        self._buffer = (
-            (ctypes.c_char * binary.capacity)() if causality == "input" else None
-        )
+        self._buffer = (ctypes.c_char * capacity)() if incoming else None
         if self._buffer is not None:
             self._values[0] = ctypes.addressof(self._buffer)
 
-    def activation(self, fmu: CoSimulation, event_time_ns: int) -> dict | None:
-        """Read the Clock, and the buffer it gates when it reads active.
+    def read(self, fmu: CoSimulation) -> bytes | None:
+        """The Clock, and the buffer it gates when it reads active.
 
         The Clock is read exactly once here, because an FMU clears it on the
         read: reading it twice would lose the activation, and not reading it
-        at all would publish a buffer no activation stands behind.
+        at all would hand on a buffer no activation stands behind.
         """
         fmu.get_clock(self._clock_references, self._clock_values)
         if not self._clock_values[0]:
             return None
         fmu.get_binary(self._data_references, self._sizes, self._values)
-        return {
-            **_incoming_payload(self._binary, self._sizes[0], self._values[0]),
-            self._binary.event_time_field: event_time_ns,
-        }
+        return _copied_out(self._sizes[0], self._values[0])
 
-    def activate(self, fmu: CoSimulation, fields: dict) -> None:
+    def deliver(self, fmu: CoSimulation, payload: bytes) -> None:
         """Raise the Clock, then hand the FMU the payload it gates.
 
         That order is the contract, not a preference: a clocked variable may
         be accessed only while its Clock is active, and an FMU that checks
-        refuses a buffer written before the Clock went up. The read side is
-        the mirror — Clock first, buffer second — and this is the same rule
-        seen from the other end.
+        refuses a buffer written before the Clock went up.
+        """
+        self._clock_values[0] = True
+        fmu.set_clock(self._clock_references, self._clock_values)
+        self._buffer[:len(payload)] = payload
+        self._sizes[0] = len(payload)
+        fmu.set_binary(self._data_references, self._sizes, self._values)
+
+
+class _CountdownBuffer:
+    """The FMU side of one output Binary gated by a countdown input Clock.
+
+    A countdown Clock inverts who decides when: the FMU states an interval
+    after every event, and the activation at the end of it is the importer's
+    to make. The buffer is defined for that activation exactly as a triggered
+    Clock's is, and is read straight after the Clock goes up — before any
+    discrete-state update, which is where an FMU clears it again.
+
+    Only a group of connected FMUs can promise such an activation, because the
+    instant the interval ends is one the kernel's Slot grid has no reason to
+    contain; the group owns the communication points between two Slots.
+    """
+
+    def __init__(self, variable: Variable, clock: Variable):
+        self.variable = variable
+        self.clock = clock
+        self._interval_references = _references(clock.reference)
+        self._counters = (ctypes.c_uint64 * 1)()
+        self._resolutions = (ctypes.c_uint64 * 1)()
+        self._qualifiers = (ctypes.c_int32 * 1)()
+        self._data_references = _references(variable.reference)
+        self._sizes = (ctypes.c_size_t * 1)()
+        self._values = (ctypes.c_void_p * 1)()
+        # The interval last stated, and the instant it ends at. They are kept
+        # apart because an interval outlives the activation it caused: a
+        # Clock the FMU leaves `Unchanged` after an activation is asking for
+        # the same interval again, and one it never stated asks for nothing.
+        self._interval_ns: int | None = None
+        self.due_ns: int | None = None
+
+    def refresh(self, fmu: CoSimulation, now_ns: int) -> None:
+        """Read what the FMU asks for next, at the end of one of its events."""
+        fmu.interval_fraction(
+            self._interval_references, self._counters, self._resolutions,
+            self._qualifiers,
+        )
+        qualifier = self._qualifiers[0]
+        if qualifier == _INTERVAL_NOT_YET_KNOWN:
+            self._interval_ns = None
+            self.due_ns = None
+        elif qualifier == _INTERVAL_CHANGED:
+            self._interval_ns = self._exact_ns()
+            self.due_ns = now_ns + self._interval_ns
+        elif qualifier == _INTERVAL_UNCHANGED:
+            if self.due_ns is None and self._interval_ns is not None:
+                self.due_ns = now_ns + self._interval_ns
+        else:
+            raise ParticipantFailure(
+                f"fmi3GetIntervalFraction answered qualifier {qualifier} for "
+                f"Clock {self.clock.name!r}, which is none of "
+                f"{', '.join(_INTERVAL_QUALIFIERS)}"
+            )
+
+    def _exact_ns(self) -> int:
+        """The stated interval in the kernel's own nanoseconds.
+
+        The fraction the FMU states is exact, and the Slot grid counts whole
+        nanoseconds. An interval that falls between two of them is refused
+        rather than rounded: the activation would happen at an instant the FMU
+        did not ask for, and every event time after it would say so.
+        """
+        counter, resolution = self._counters[0], self._resolutions[0]
+        if resolution == 0:
+            raise ParticipantFailure(
+                f"fmi3GetIntervalFraction stated resolution 0 for Clock "
+                f"{self.clock.name!r}; an interval is counter over resolution"
+            )
+        nanoseconds, remainder = divmod(counter * NS_PER_S, resolution)
+        if remainder:
+            raise ParticipantFailure(
+                f"Clock {self.clock.name!r} asks for an interval of "
+                f"{counter}/{resolution} s, which is no whole number of "
+                f"nanoseconds; this importer does not round an activation "
+                f"onto an instant the FMU did not ask for"
+            )
+        return nanoseconds
+
+    def take(self, fmu: CoSimulation) -> bytes:
+        """The buffer the activation just made carries, and it is spent."""
+        self.due_ns = None
+        fmu.get_binary(self._data_references, self._sizes, self._values)
+        return _copied_out(self._sizes[0], self._values[0])
+
+
+class _ClockedPayload:
+    """One Channel whose Messages are activations of one Clock.
+
+    One activation is one Message, and the Message states the FMI event time
+    it belongs to rather than being timestamped with it.
+    """
+
+    def __init__(self, binary: _BinaryField, causality: str):
+        self._binary = binary
+        self._buffer = _ClockedBuffer(
+            binary.variable, binary.clock, binary.capacity,
+            incoming=causality == "input",
+        )
+
+    def activation(self, fmu: CoSimulation, event_time_ns: int) -> dict | None:
+        """The Message this Clock's activation carries, if it is active."""
+        payload = self._buffer.read(fmu)
+        if payload is None:
+            return None
+        return _activation_message(self._binary, payload, event_time_ns)
+
+    def activate(self, fmu: CoSimulation, fields: dict) -> None:
+        """Hand one Message to the FMU as an activation of its input Clock.
 
         The Message's own event time is not used: this importer activates the
         Clock at the communication point it is standing on, and quietly
         dating the activation as its sender did would claim a time the FMU
         was never driven to.
         """
-        length = _outgoing_length(self._binary, fields)
-        self._clock_values[0] = True
-        fmu.set_clock(self._clock_references, self._clock_values)
-        self._buffer[:length] = fields[self._binary.field][:length]
-        self._sizes[0] = length
-        fmu.set_binary(self._data_references, self._sizes, self._values)
+        self._buffer.deliver(fmu, _outgoing_payload(self._binary, fields))
+
+
+def _run_event(fmu: CoSimulation, event_time_ns: int,
+               collect: Callable[[], list]) -> tuple[list, _DiscreteStates]:
+    """Iterate one event to quiescence, collecting what each update produced.
+
+    `collect` is called before every discrete-state update and once more after
+    the update that ends the event: an update is exactly what can raise an
+    output Clock, the update that ends the event included. Reading a Clock
+    that is not active costs nothing, and not reading it loses the activation
+    for good, because the buffer it gates is defined only while it is up.
+
+    The iteration is bounded: an FMU that never converges fails with a
+    diagnostic rather than holding the Run until its response deadline.
+    """
+    produced: list = []
+    for _ in range(_MAX_EVENT_ITERATIONS):
+        produced.extend(collect())
+        states = fmu.update_discrete_states()
+        if states.terminate:
+            raise ParticipantFailure(
+                f"fmi3UpdateDiscreteStates requested termination via "
+                f"terminateSimulation at {event_time_ns} ns"
+            )
+        if not states.need_update:
+            produced.extend(collect())
+            return produced, states
+    raise ParticipantFailure(
+        f"fmi3UpdateDiscreteStates asked for another discrete-state "
+        f"update {_MAX_EVENT_ITERATIONS} times at {event_time_ns} ns; "
+        f"this importer bounds the iteration of one event"
+    )
 
 
 class _Events:
@@ -932,36 +1257,13 @@ class _Events:
         self.next_event_time: float | None = None
 
     def handle(self, fmu: CoSimulation, event_time_ns: int) -> list:
-        """One event: every Clock activation it carries, in Publish order.
-
-        Discrete states are updated until the FMU stops asking, and the output
-        Clocks are read around every update rather than before it: an update
-        is exactly what can raise one, the update that ends the event
-        included. Reading a Clock that is not active costs nothing, and not
-        reading it loses the activation for good, because the buffer it gates
-        is defined only while it is up.
-
-        The iteration is bounded: an FMU that never converges fails with a
-        diagnostic rather than holding the Run until its response deadline.
-        """
-        published = []
-        for _ in range(_MAX_EVENT_ITERATIONS):
-            published.extend(self._activations(fmu, event_time_ns))
-            states = fmu.update_discrete_states()
-            self.next_event_time = states.next_event_time
-            if states.terminate:
-                raise ParticipantFailure(
-                    f"fmi3UpdateDiscreteStates requested termination via "
-                    f"terminateSimulation at {event_time_ns} ns"
-                )
-            if not states.need_update:
-                published.extend(self._activations(fmu, event_time_ns))
-                return published
-        raise ParticipantFailure(
-            f"fmi3UpdateDiscreteStates asked for another discrete-state "
-            f"update {_MAX_EVENT_ITERATIONS} times at {event_time_ns} ns; "
-            f"this importer bounds the iteration of one event"
+        """One event: every Clock activation it carries, in Publish order."""
+        published, states = _run_event(
+            fmu, event_time_ns,
+            lambda: self._activations(fmu, event_time_ns),
         )
+        self.next_event_time = states.next_event_time
+        return published
 
     def _activations(self, fmu: CoSimulation, event_time_ns: int) -> list:
         """Every output Clock that reads active, and the buffer it gates."""
@@ -1122,49 +1424,81 @@ def _derived_bindings(
     }
 
 
-def _declared_bindings(
-    binds: list[str],
-    fields_by_channel: dict[str, dict[str, dict]],
-    description: ModelDescription,
-) -> dict[str, dict[str, Variable]]:
-    """Resolve `--bind <channel>:<field>=<variable>` against both ends.
+def _parse_binding(
+    bind: str, fields_by_channel: dict[str, dict[str, dict]]
+) -> tuple[str, str, str]:
+    """One `--bind` argument, with its Channel end checked.
 
     The Channel is named because one schema is typically carried by more than
     one Channel, so a field name alone names no single end of the mapping.
     """
-    bound: dict[str, dict[str, Variable]] = {
+    target, separator, variable_name = bind.partition("=")
+    channel, colon, field = target.rpartition(":")
+    if not (separator and colon and channel and field and variable_name):
+        raise ManifestError(
+            f"binding {bind!r} is not '<channel>:<field>=<variable>'"
+        )
+    if channel not in fields_by_channel:
+        raise ManifestError(
+            f"binding {bind!r} names Channel {channel!r}, which the "
+            f"initialization line does not declare"
+        )
+    if field not in fields_by_channel[channel]:
+        raise ManifestError(
+            f"binding {bind!r} names schema field {field!r}, which Channel "
+            f"{channel!r} does not carry"
+        )
+    return channel, field, variable_name
+
+
+def _bound_fields(
+    binds: list[str], fields_by_channel: dict[str, dict[str, dict]]
+) -> dict[str, dict[str, str]]:
+    """Every `--bind` argument, as the variable each Channel field names.
+
+    The variable is still text here: what resolves it is the FMU, and one FMU
+    on its own and a group of them name their variables differently.
+    """
+    bound: dict[str, dict[str, str]] = {
         channel: {} for channel in fields_by_channel
     }
     for bind in binds:
-        target, separator, variable_name = bind.partition("=")
-        channel, colon, field = target.rpartition(":")
-        if not (separator and colon and channel and field and variable_name):
-            raise ManifestError(
-                f"binding {bind!r} is not '<channel>:<field>=<variable>'"
-            )
-        if channel not in fields_by_channel:
-            raise ManifestError(
-                f"binding {bind!r} names Channel {channel!r}, which the "
-                f"initialization line does not declare"
-            )
-        if field not in fields_by_channel[channel]:
-            raise ManifestError(
-                f"binding {bind!r} names schema field {field!r}, which Channel "
-                f"{channel!r} does not carry"
-            )
+        channel, field, variable_name = _parse_binding(bind, fields_by_channel)
         if field in bound[channel]:
             raise ManifestError(
                 f"binding {bind!r} binds Channel {channel!r} field {field!r} "
                 f"twice; a field carries one FMU variable"
             )
-        variable = description.variables.get(variable_name)
-        if variable is None:
-            raise ManifestError(
-                f"binding {bind!r} names FMU variable {variable_name!r}, which "
-                f"FMU {description.model_identifier!r} does not declare"
-            )
-        bound[channel][field] = variable
+        bound[channel][field] = variable_name
     return bound
+
+
+def _declared_bindings(
+    binds: list[str],
+    fields_by_channel: dict[str, dict[str, dict]],
+    description: ModelDescription,
+) -> dict[str, dict[str, Variable]]:
+    """Resolve `--bind <channel>:<field>=<variable>` against both ends."""
+    return {
+        channel: {
+            field: _declared_variable(channel, field, name, description)
+            for field, name in declared.items()
+        }
+        for channel, declared in _bound_fields(binds, fields_by_channel).items()
+    }
+
+
+def _declared_variable(
+    channel: str, field: str, name: str, description: ModelDescription
+) -> Variable:
+    """The one FMU variable a binding names, or why the FMU has no such name."""
+    variable = description.variables.get(name)
+    if variable is None:
+        raise ManifestError(
+            f"Channel {channel!r} field {field!r} names FMU variable {name!r}, "
+            f"which FMU {description.model_identifier!r} does not declare"
+        )
+    return variable
 
 
 def _shape(field: dict) -> str:
@@ -1374,7 +1708,7 @@ def _clocked_payload(
     clocked = [field for field, variable in bound.items() if variable.clocks]
     if not clocked:
         return None
-    causality = "input" if direction == "in" else "output"
+    causality = _causality(direction)
     field = clocked[0]
     binding = _Binding(channel, field, bound[field])
     if len(bound) > 1:
@@ -1419,7 +1753,7 @@ def _bind_channel(
     bound: dict[str, Variable],
 ) -> _ChannelBinding:
     """One Channel's fields, checked against the variables they name."""
-    causality = "input" if direction == "in" else "output"
+    causality = _causality(direction)
     scalars: dict[str, list[_Binding]] = {}
     binaries: list[_BinaryField] = []
     lengths: dict[str, str] = {}
@@ -1490,6 +1824,22 @@ def _start_values(
             )
         values.append((variable, _start_value(variable, text)))
     return values
+
+
+def _require_contiguous(standing_ns: int, t: int) -> None:
+    """Refuse to step a clocked FMU over an interval it never covered.
+
+    The FMU was initialized at virtual time zero and is advanced one
+    contiguous interval at a time. An activation that does not continue where
+    the last one ended would leave an interval unstepped, and every event time
+    after it would name an instant the FMU never reached.
+    """
+    if t != standing_ns:
+        raise ParticipantFailure(
+            f"the FMU stands at {standing_ns} ns and this activation is at "
+            f"{t} ns; a clocked FMU is stepped over contiguous intervals from "
+            f"virtual time zero"
+        )
 
 
 class FmuParticipant(StepParticipant):
@@ -1662,19 +2012,7 @@ class FmuParticipant(StepParticipant):
         return published
 
     def _require_communication_point(self, t: int) -> None:
-        """Refuse to step a clocked FMU over an interval it never covered.
-
-        The FMU was initialized at virtual time zero and is advanced one
-        contiguous interval at a time. An activation that does not continue
-        where the last one ended would leave an interval unstepped, and every
-        event time after it would name an instant the FMU never reached.
-        """
-        if t != self._communication_point:
-            raise ParticipantFailure(
-                f"the FMU stands at {self._communication_point} ns and this "
-                f"activation is at {t} ns; a clocked FMU is stepped over "
-                f"contiguous intervals from virtual time zero"
-            )
+        _require_contiguous(self._communication_point, t)
 
 
     def close(self) -> None:
@@ -1694,8 +2032,1040 @@ class FmuParticipant(StepParticipant):
                 extraction.cleanup()
 
 
-def _close_after_failure(participant: FmuParticipant) -> None:
-    """Drop the FMU on the way out of a failure that is already reported.
+@dataclass(frozen=True)
+class _Observation:
+    """An out-direction Channel carrying one clocked variable's activations.
+
+    It is observation and nothing else: the group reads the variable once,
+    because the Clock that gates it clears on the read, and the Message is a
+    statement of what crossed the terminal rather than a second read of it.
+    """
+
+    channel: str
+    binary: _BinaryField
+
+    def message(self, payload: bytes, event_time_ns: int) -> tuple[str, dict]:
+        return self.channel, _activation_message(
+            self.binary, payload, event_time_ns
+        )
+
+
+@dataclass(frozen=True)
+class _Injection:
+    """An in-direction Channel whose Messages are activations of one Clock.
+
+    This is the replay-input half of the boundary: a Message on it is what a
+    connected peer would otherwise have handed the same terminal, so a
+    Recording of the observation Channel can stand in for the FMU that
+    produced it.
+    """
+
+    channel: str
+    binary: _BinaryField
+
+    def payload(self, fields: dict) -> bytes:
+        return _outgoing_payload(self.binary, fields)
+
+
+class _Transceiver:
+    """One network terminal of one instance, as the group drives it.
+
+    The direction is the terminal owner's: `Tx_Data` is what this FMU sends
+    and `Rx_Data` is what it is handed. A connection pairs one transceiver's
+    send side with its peer's receive side, in both directions, and a Channel
+    may watch the one or feed the other.
+    """
+
+    def __init__(self, instance: _Instance, terminal: Terminal,
+                 receive: _ClockedBuffer, capacity: int):
+        self.instance = instance
+        self.terminal = terminal
+        self.receive = receive
+        self.capacity = capacity
+        self.peer: _Transceiver | None = None
+        self.observation: _Observation | None = None
+        self.injection: _Injection | None = None
+
+    def __str__(self) -> str:
+        """How every diagnostic names one end of a connection."""
+        return f"{self.instance.name}.{self.terminal.name}"
+
+    def accept(self, payload: bytes) -> None:
+        """Refuse a payload above what the receiving variable declared.
+
+        `maxSize` is the FMU's own statement of the most it will take, so a
+        longer buffer is refused here rather than handed over and rejected
+        with a status that names no length.
+        """
+        if len(payload) > self.capacity:
+            raise ParticipantFailure(
+                f"{self} was handed {len(payload)} bytes, above the "
+                f"{self.capacity} its {_RX_DATA!r} variable "
+                f"{self.receive.variable.name!r} declares as maxSize"
+            )
+
+
+@dataclass(frozen=True)
+class _Pending:
+    """One event a group owes an instance at the instant it is settling.
+
+    An activation handed over by a connected peer, or by a Channel, comes with
+    it: the payload is written into the receiving FMU immediately before its
+    event, because that write is what the event is about.
+    """
+
+    instance: _Instance
+    transceiver: _Transceiver | None = None
+    payload: bytes | None = None
+
+
+class _Instance:
+    """One FMU of a group: the instance, and the Clocks the group drives.
+
+    It owns where the FMU stands in its own lifecycle — Step Mode or Event
+    Mode — because a group enters an event on one instance and not on another,
+    and an FMU asked to enter the mode it is already in refuses.
+    """
+
+    def __init__(self, name: str, description: ModelDescription):
+        self.name = name
+        self.description = description
+        self.fmu: CoSimulation | None = None
+        # The send side of every terminal, split by who decides when it
+        # activates: the FMU raises a triggered Clock, and the group raises a
+        # countdown one at the instant the FMU asked for.
+        self.triggered: list[tuple[_Transceiver, _ClockedBuffer]] = []
+        self.countdown: list[tuple[_Transceiver, _CountdownBuffer]] = []
+        self._in_event = False
+        self._event_pending = False
+        self._next_event_time: float | None = None
+
+    def instantiate(self, extracted: Path,
+                    starts: list[tuple[Variable, object]]) -> None:
+        """Load and initialize this FMU, in the group's declaration order.
+
+        Event Mode is always in use: every instance of a group drives a
+        network terminal, and a terminal is Clocks. Initialization therefore
+        ends in Event Mode, and the caller handles that first event.
+        """
+        self.fmu = CoSimulation(
+            self.description.binary(extracted), self.description,
+            event_mode=True,
+        )
+        self.fmu.apply_start_values(starts)
+        self.fmu.initialize()
+        self._in_event = True
+
+    def enter_event(self) -> None:
+        if not self._in_event:
+            self.fmu.enter_event_mode()
+            self._in_event = True
+
+    def leave_event(self) -> None:
+        if self._in_event:
+            self.fmu.enter_step_mode()
+            self._in_event = False
+
+    def step(self, t: int, dt: int) -> None:
+        """Advance over one of the group's own intervals."""
+        self._event_pending = self.fmu.do_step(t / NS_PER_S, dt / NS_PER_S)
+
+    def due(self, instant_ns: int) -> bool:
+        """Whether this FMU asked for an event at the instant just reached."""
+        return (
+            self._event_pending
+            or self._declared_ns() == instant_ns
+            or any(buffer.due_ns == instant_ns for _, buffer in self.countdown)
+        )
+
+    def asked_for(self, after_ns: int) -> list[int]:
+        """Every instant this FMU asked to be stopped at, after `after_ns`.
+
+        Both kinds of request are the same thing to a group: an instant the
+        FMU means to be in Event Mode at. The group stops at the earliest of
+        them across every instance, so no FMU is stepped past its own event
+        and no peer of it is past that instant either.
+        """
+        instants = [
+            buffer.due_ns for _, buffer in self.countdown
+            if buffer.due_ns is not None
+        ]
+        declared = self._declared_ns()
+        if declared is not None:
+            instants.append(declared)
+        return [instant for instant in instants if instant > after_ns]
+
+    def require_nothing_passed(self, instant_ns: int) -> None:
+        """Refuse an FMU that asks to be activated at an instant already gone.
+
+        The group can stop anywhere between two Slots, so an instant it cannot
+        reach is one behind it. Stepping on regardless would take the FMU past
+        an event it asked for, and no FMU of this profile offers the rollback
+        that would take it back.
+        """
+        for transceiver, buffer in self.countdown:
+            if buffer.due_ns is not None and buffer.due_ns <= instant_ns:
+                raise ParticipantFailure(
+                    f"{transceiver} asks for Clock {buffer.clock.name!r} to be "
+                    f"activated at {buffer.due_ns} ns, and the group stands at "
+                    f"{instant_ns} ns; a countdown interval is counted from the "
+                    f"event it was stated in"
+                )
+        declared = self._declared_ns()
+        if declared is not None and declared <= instant_ns:
+            raise ParticipantFailure(
+                f"FMU {self.name!r} declared its next event at "
+                f"{self._next_event_time} s ({declared} ns), and the group "
+                f"stands at {instant_ns} ns; an event is asked for ahead of the "
+                f"instant it is asked in"
+            )
+
+    def handle(self, event_time_ns: int) -> list[tuple[_Transceiver, bytes]]:
+        """One event of this FMU: every activation it hands the group.
+
+        The countdown Clocks due at this instant go up first, together in one
+        call, and the buffers they gate are read before any discrete-state
+        update — an FMU clears them in the update that ends the activation. The
+        triggered Clocks are then read around every update, as they are for one
+        FMU on its own.
+        """
+        self.enter_event()
+        self._event_pending = False
+        due = [
+            (transceiver, buffer) for transceiver, buffer in self.countdown
+            if buffer.due_ns == event_time_ns
+        ]
+        if due:
+            self.fmu.set_clock(
+                _references(*(buffer.clock.reference for _, buffer in due)),
+                (ctypes.c_bool * len(due))(*(True,) * len(due)),
+            )
+        produced = [
+            (transceiver, buffer.take(self.fmu)) for transceiver, buffer in due
+        ]
+        collected, states = _run_event(
+            self.fmu, event_time_ns, self._activations
+        )
+        produced.extend(collected)
+        self._next_event_time = states.next_event_time
+        for _, buffer in self.countdown:
+            buffer.refresh(self.fmu, event_time_ns)
+        return produced
+
+    def deliver(self, transceiver: _Transceiver, payload: bytes) -> None:
+        """Raise one input Clock and hand it the payload, before its event."""
+        transceiver.accept(payload)
+        self.enter_event()
+        transceiver.receive.deliver(self.fmu, payload)
+
+    def _activations(self) -> list[tuple[_Transceiver, bytes]]:
+        """Every triggered output Clock that reads active, and its buffer."""
+        produced = []
+        for transceiver, buffer in self.triggered:
+            payload = buffer.read(self.fmu)
+            if payload is not None:
+                produced.append((transceiver, payload))
+        return produced
+
+    def _declared_ns(self) -> int | None:
+        """The declared next event time, in the kernel's own nanoseconds."""
+        if self._next_event_time is None:
+            return None
+        return round(self._next_event_time * NS_PER_S)
+
+
+class _Group:
+    """Connected FMUs, coordinated at their own communication points.
+
+    Every instance stands on the same internal communication point at all
+    times. That is what makes rollback unnecessary — and no FMU of this
+    profile offers it, because they declare `canGetAndSetFMUState` false: an
+    event reported at the end of an interval is reported at an instant no peer
+    has passed, so no peer has to be taken back to it.
+
+    The group's own grid is finer than the kernel's Slot grid, and it has to
+    be: a bus simulation FMU asks to be activated at the end of a frame's
+    transmission time, which is an instant the Manifest's Step period has no
+    reason to contain. The kernel still owns the Slots the Messages are
+    published in; what the group owns is where the FMUs meet between them.
+
+    Propagation at one instant is bounded, like the iteration of one event:
+    two FMUs answering each other at the same instant would otherwise never
+    let the instant end.
+    """
+
+    def __init__(self, instances: list[_Instance],
+                 transceivers: list[_Transceiver]):
+        self._instances = instances
+        self._injections = {
+            transceiver.injection.channel: transceiver
+            for transceiver in transceivers
+            if transceiver.injection is not None
+        }
+
+    def initialize(self) -> list:
+        """The event initialization ended in, across the whole group.
+
+        A bus node's own configuration is already waiting in it, and the bus
+        simulation FMU is what that configuration is for, so the first instant
+        is propagated exactly like every later one.
+        """
+        return self._settle(0, [_Pending(i) for i in self._instances])
+
+    def advance(self, t: int, dt: int, inputs: list) -> list:
+        """Advance the group over one kernel Step, event by event.
+
+        The interval is covered in sub-intervals ending at every instant any
+        instance asked for, and at the Step's own end. Nothing is published
+        with an internal instant as its timestamp: a Message is published in
+        the Slot this activation runs in and states the FMI event time it
+        belongs to, which is how the group's finer grid reaches a Recording.
+        """
+        published = self._settle(t, self._injected(inputs))
+        now, end = t, t + dt
+        while now < end:
+            boundary = self._boundary(now, end)
+            for instance in self._instances:
+                instance.step(now, boundary - now)
+            now = boundary
+            published.extend(self._settle(now, [
+                _Pending(instance) for instance in self._instances
+                if instance.due(now)
+            ]))
+        return published
+
+    def close(self) -> None:
+        """Terminate and free every instance, whatever any one of them does.
+
+        An FMU that fails to terminate must not leave its peers instantiated:
+        the first failure is the one reported, and every instance is closed
+        either way.
+        """
+        failure = None
+        for instance in self._instances:
+            if instance.fmu is None:
+                continue
+            try:
+                instance.fmu.close()
+            except ParticipantFailure as error:
+                failure = failure or ParticipantFailure(
+                    f"FMU of instance {instance.name!r}: {error}"
+                )
+        if failure is not None:
+            raise failure
+
+    def _injected(self, inputs: list) -> list:
+        """The Messages that arrived, as activations at the point stood on.
+
+        They are delivered before the interval rather than inside it: the
+        group is standing on this communication point, and an event happens at
+        the point the FMUs stand on.
+
+        The instant a Message *states* is deliberately not used, and cannot be
+        with what a Channel offers today: a Message is published in the Slot
+        the activation that observed it ran in and becomes visible one Latency
+        after that, so by the time it arrives the instant it names is behind
+        the group, and no FMU of this profile can be taken back to it.
+        Reproducing a recorded terminal at its own instants is therefore as
+        much a question about a Channel's delivery time as about this
+        importer, which is why the boundary here carries the information and
+        stops there.
+        """
+        pending = []
+        for message in inputs:
+            transceiver = self._injections[message.channel]
+            pending.append(_Pending(
+                transceiver.instance, transceiver,
+                transceiver.injection.payload(message.data),
+            ))
+        return pending
+
+    def _boundary(self, now: int, end: int) -> int:
+        """The next instant the whole group stops at, at the latest `end`."""
+        asked = [
+            instant for instance in self._instances
+            for instant in instance.asked_for(now) if instant <= end
+        ]
+        return min(asked) if asked else end
+
+    def _settle(self, instant_ns: int, pending: list) -> list:
+        """One instant, propagated between the FMUs until it stops producing.
+
+        Each activation is handed over on its own and its event handled before
+        the next one is written: two frames arriving at one terminal in the
+        same instant are two activations of the same Clock, and writing the
+        second before the first was processed would lose it.
+        """
+        if not pending:
+            return []
+        published: list = []
+        work = deque(pending)
+        for _ in range(_MAX_PROPAGATIONS):
+            if not work:
+                self._quiesce(instant_ns)
+                return published
+            owed = work.popleft()
+            if owed.transceiver is not None:
+                owed.instance.deliver(owed.transceiver, owed.payload)
+            for source, payload in owed.instance.handle(instant_ns):
+                if source.observation is not None:
+                    published.append(
+                        source.observation.message(payload, instant_ns)
+                    )
+                if source.peer is not None:
+                    work.append(
+                        _Pending(source.peer.instance, source.peer, payload)
+                    )
+        raise ParticipantFailure(
+            f"the connected FMUs handed each other {_MAX_PROPAGATIONS} "
+            f"activations at {instant_ns} ns without the instant ending; this "
+            f"importer bounds the propagation of one instant"
+        )
+
+    def _quiesce(self, instant_ns: int) -> None:
+        """End the instant: check what was asked for, return to Step Mode."""
+        for instance in self._instances:
+            instance.require_nothing_passed(instant_ns)
+        for instance in self._instances:
+            instance.leave_event()
+
+
+def _instance_paths(declared: Sequence[Sequence[str]]) -> dict[str, Path]:
+    """Resolve `--instance <name> <path>` into the group's declaration order.
+
+    The name and the path are two arguments rather than one joined by a
+    separator, because the kernel resolves and digests a command argument that
+    names a file: an FMU spelled into a larger argument would name no file, so
+    it would neither anchor to the Manifest's directory nor reach the Run's
+    provenance. The name is the group's own vocabulary, and every other
+    argument spells a variable of it as `<name>.<variable>`.
+    """
+    paths: dict[str, Path] = {}
+    for declaration in declared:
+        name, path = declaration
+        if not name or not path:
+            raise ManifestError(
+                f"instance {list(declaration)!r} names "
+                f"{'no FMU' if name else 'nothing'}; an instance is a name and "
+                f"the path of one FMU"
+            )
+        if "." in name:
+            raise ManifestError(
+                f"instance {name!r} carries a '.'; an instance name is what "
+                f"qualifies a variable of it"
+            )
+        if name in paths:
+            raise ManifestError(
+                f"instance {name!r} is declared twice; an instance name names "
+                f"one FMU of the group"
+            )
+        paths[name] = Path(path)
+    return paths
+
+
+def _instance_of(
+    text: str, instances: dict[str, _Instance], what: str
+) -> tuple[_Instance, str]:
+    """Split `<instance>.<rest>` and resolve the instance it names."""
+    name, separator, rest = text.partition(".")
+    if not separator or not rest:
+        raise ManifestError(
+            f"{what} names {text!r}, which is not '<instance>.<name>'; a "
+            f"group's terminals and variables are qualified by their instance"
+        )
+    instance = instances.get(name)
+    if instance is None:
+        raise ManifestError(
+            f"{what} names instance {name!r}, which --instance does not "
+            f"declare (declared: "
+            f"{', '.join(repr(i) for i in instances) or 'none'})"
+        )
+    return instance, rest
+
+
+def _member_variable(
+    where: str, instance: _Instance, terminal: Terminal, member: str
+) -> Variable:
+    """One terminal member's variable, as the description declares it."""
+    name = terminal.members[member]
+    variable = instance.description.variables.get(name)
+    if variable is None:
+        raise ManifestError(
+            f"{where} member {member!r} names variable {name!r}, which FMU "
+            f"{instance.description.model_identifier!r} does not declare"
+        )
+    return variable
+
+
+def _member_pair(
+    where: str, instance: _Instance, terminal: Terminal,
+    data: str, clock: str, causality: str
+) -> tuple[Variable, Variable]:
+    """One data member and the Clock gating it, checked as the pair they are."""
+    variable = _member_variable(where, instance, terminal, data)
+    gate = _member_variable(where, instance, terminal, clock)
+    if variable.kind != _BINARY:
+        raise ManifestError(
+            f"{where} member {data!r} is variable {variable.name!r} of type "
+            f"{variable.kind}; a transceiver carries bus operations as a "
+            f"Binary buffer"
+        )
+    if variable.value_count != 1:
+        raise ManifestError(
+            f"{where} member {data!r} is variable {variable.name!r}, which "
+            f"declares {_dimensions(variable)}; this importer carries "
+            f"variables of one value"
+        )
+    if variable.max_size is None:
+        raise ManifestError(
+            f"{where} member {data!r} is variable {variable.name!r}, which "
+            f"declares no maxSize; a bus buffer states the most it holds"
+        )
+    if variable.causality != causality:
+        raise ManifestError(
+            f"{where} member {data!r} is variable {variable.name!r} of "
+            f"causality {variable.causality!r}; a transceiver's {data!r} is "
+            f"an {causality} variable"
+        )
+    if gate.kind != _CLOCK:
+        raise ManifestError(
+            f"{where} member {clock!r} is variable {gate.name!r} of type "
+            f"{gate.kind}; a transceiver's {clock!r} is a Clock"
+        )
+    if variable.clocks != (gate.reference,):
+        raise ManifestError(
+            f"{where} member {data!r} is variable {variable.name!r}, whose "
+            f"clocks attribute is {list(variable.clocks)}; it is gated by "
+            f"member {clock!r}, value reference {gate.reference}"
+        )
+    return variable, gate
+
+
+def _require_transceiver_terminal(
+    where: str, instance: _Instance, terminal: Terminal, profile: str
+) -> None:
+    """Check one terminal against the BUS profile the Run declares.
+
+    Everything this importer needs from a terminal is checked here, once per
+    terminal: that the FMU declares the layered standard at all, that the
+    terminal is a transceiver of it, that it groups the four members, and that
+    what its buffers carry is the profile the Manifest asked for.
+    """
+    if instance.description.bus is None:
+        raise ManifestError(
+            f"{where} is a network terminal, and FMU "
+            f"{instance.description.model_identifier!r} carries no "
+            f"{_BUS_MANIFEST_MEMBER}; the layered standard a terminal belongs "
+            f"to is declared by the FMU rather than by the connection"
+        )
+    if terminal.kind != _NETWORK_TERMINAL:
+        raise ManifestError(
+            f"{where} declares terminalKind {terminal.kind!r}; this importer "
+            f"connects {_NETWORK_TERMINAL!r} terminals"
+        )
+    if terminal.matching_rule != _TRANSCEIVER:
+        raise ManifestError(
+            f"{where} declares matchingRule {terminal.matching_rule!r}; this "
+            f"importer connects {_TRANSCEIVER!r} terminals"
+        )
+    if not instance.description.has_event_mode:
+        raise ManifestError(
+            f"{where} is a network terminal gated by Clocks, and FMU "
+            f"{instance.description.model_identifier!r} declares "
+            f"{_HAS_EVENT_MODE}=false; a Clock is driven from Event Mode"
+        )
+    for member in _TRANSCEIVER_MEMBERS:
+        if member not in terminal.members:
+            raise ManifestError(
+                f"{where} declares no member {member!r}; a {_TRANSCEIVER!r} "
+                f"terminal groups {', '.join(_TRANSCEIVER_MEMBERS)}"
+            )
+    for member in (_RX_DATA, _TX_DATA):
+        variable = _member_variable(where, instance, terminal, member)
+        if variable.media_type != profile:
+            raise ManifestError(
+                f"{where} member {member!r} is variable {variable.name!r} of "
+                f"mimeType {variable.mime_type!r}; this Run declares the BUS "
+                f"profile {profile!r}"
+            )
+
+
+def _build_transceiver(
+    instance: _Instance, terminal: Terminal, profile: str
+) -> _Transceiver:
+    """Build one terminal's two sides, and say who raises each Clock.
+
+    The receive side is always a triggered input Clock: an arriving frame is
+    something that happened, and whoever hands it over is what raises it. The
+    send side is either the FMU's own triggered output Clock — a node
+    announcing a frame — or a countdown input Clock the FMU asks the group to
+    raise, which is how a bus simulation FMU states a transmission time.
+    """
+    where = f"{instance.name}.{terminal.name}"
+    _require_transceiver_terminal(where, instance, terminal, profile)
+    receive, receive_clock = _member_pair(
+        where, instance, terminal, _RX_DATA, _RX_CLOCK, "input"
+    )
+    if (receive_clock.causality, receive_clock.interval_variability) != (
+        "input", _TRIGGERED
+    ):
+        raise ManifestError(
+            f"{where} member {_RX_CLOCK!r} is Clock {receive_clock.name!r} of "
+            f"causality {receive_clock.causality!r} and intervalVariability "
+            f"{receive_clock.interval_variability!r}; a terminal is handed a "
+            f"frame through an input {_TRIGGERED!r} Clock"
+        )
+    send, send_clock = _member_pair(
+        where, instance, terminal, _TX_DATA, _TX_CLOCK, "output"
+    )
+    built = _Transceiver(
+        instance, terminal,
+        _ClockedBuffer(receive, receive_clock, receive.max_size, incoming=True),
+        receive.max_size,
+    )
+    profile_of_clock = (send_clock.causality, send_clock.interval_variability)
+    if profile_of_clock == ("output", _TRIGGERED):
+        instance.triggered.append((
+            built,
+            _ClockedBuffer(send, send_clock, send.max_size, incoming=False),
+        ))
+    elif profile_of_clock == ("input", _COUNTDOWN):
+        instance.countdown.append((built, _CountdownBuffer(send, send_clock)))
+    else:
+        raise ManifestError(
+            f"{where} member {_TX_CLOCK!r} is Clock {send_clock.name!r} of "
+            f"causality {send_clock.causality!r} and intervalVariability "
+            f"{send_clock.interval_variability!r}; this importer drives an "
+            f"output {_TRIGGERED!r} Clock the FMU raises, or an input "
+            f"{_COUNTDOWN!r} Clock it asks the group to raise"
+        )
+    return built
+
+
+class _Transceivers:
+    """Every terminal this Run drives, built once and named two ways.
+
+    A terminal is named by a connection as `<instance>.<terminal>` and by a
+    Channel through the variable one of its members is, so both spellings
+    resolve to the same object: a terminal connected to a peer and watched by a
+    Channel is one transceiver, not two.
+    """
+
+    def __init__(self, instances: dict[str, _Instance], profile: str):
+        self._instances = instances
+        self._profile = profile
+        self._built: dict[tuple[str, str], _Transceiver] = {}
+        self._by_variable: dict[tuple[str, str], tuple[_Transceiver, str]] = {}
+
+    def named(self, text: str, what: str) -> _Transceiver:
+        """The transceiver `<instance>.<terminal>` names, built on first use."""
+        instance, terminal_name = _instance_of(text, self._instances, what)
+        key = (instance.name, terminal_name)
+        if key in self._built:
+            return self._built[key]
+        terminal = instance.description.terminals.get(terminal_name)
+        if terminal is None:
+            declared = ", ".join(
+                repr(t) for t in instance.description.terminals
+            )
+            raise ManifestError(
+                f"{what} names terminal {terminal_name!r}, which FMU "
+                f"{instance.description.model_identifier!r} of instance "
+                f"{instance.name!r} does not declare (declared: "
+                f"{declared or 'none'})"
+            )
+        built = _build_transceiver(instance, terminal, self._profile)
+        self._built[key] = built
+        for member in (_RX_DATA, _TX_DATA):
+            self._by_variable[(instance.name, terminal.members[member])] = (
+                built, member
+            )
+        return built
+
+    def carrying(self, text: str, what: str) -> tuple[_Transceiver, str]:
+        """The transceiver member the variable `<instance>.<variable>` is.
+
+        A Channel names a terminal through one of its members rather than by
+        name, so the terminal is looked up by the variable and built here if a
+        connection has not already built it. Only terminals this Run actually
+        uses are built: an FMU may declare a terminal of another profile
+        beside the one it is connected through, and that is its business.
+        """
+        instance, variable_name = _instance_of(text, self._instances, what)
+        if variable_name not in instance.description.variables:
+            raise ManifestError(
+                f"{what} names FMU variable {variable_name!r}, which FMU "
+                f"{instance.description.model_identifier!r} of instance "
+                f"{instance.name!r} does not declare"
+            )
+        for terminal in instance.description.terminals.values():
+            for member in (_RX_DATA, _TX_DATA):
+                if terminal.members.get(member) == variable_name:
+                    self.named(f"{instance.name}.{terminal.name}", what)
+                    return self._by_variable[(instance.name, variable_name)]
+        raise ManifestError(
+            f"{what} names FMU variable {variable_name!r}, which is no "
+            f"{_TX_DATA!r} or {_RX_DATA!r} member of a terminal of instance "
+            f"{instance.name!r}; a group's Channels carry a terminal's bus "
+            f"operations"
+        )
+
+    def require_every_instance_used(self) -> None:
+        """Refuse an FMU of the group that nothing in the Run reaches.
+
+        Every instance is stepped on every Step whether it communicates or
+        not, so one no connection and no Channel names is an FMU paying for a
+        Run it takes no part in — a Manifest mistake rather than a choice.
+        """
+        used = {instance for instance, _ in self._built}
+        for name in self._instances:
+            if name not in used:
+                raise ManifestError(
+                    f"instance {name!r} is named by no --connect and by no "
+                    f"Channel; every FMU of a group drives a network terminal, "
+                    f"connected to a peer or carried by a Channel"
+                )
+
+    def all(self) -> list[_Transceiver]:
+        return list(self._built.values())
+
+
+def _connect(declarations: list[str], transceivers: _Transceivers) -> None:
+    """Resolve `--connect <a>.<terminal>=<b>.<terminal>` into peer links."""
+    for declaration in declarations:
+        what = f"connection {declaration!r}"
+        left, separator, right = declaration.partition("=")
+        if not separator or not left or not right:
+            raise ManifestError(
+                f"{what} is not '<instance>.<terminal>=<instance>.<terminal>'"
+            )
+        ends = (transceivers.named(left, what), transceivers.named(right, what))
+        if ends[0] is ends[1]:
+            raise ManifestError(
+                f"{what} connects {ends[0]} to itself; a terminal is connected "
+                f"to a terminal of another instance"
+            )
+        for end in ends:
+            if end.peer is not None:
+                raise ManifestError(
+                    f"{what} connects {end}, which is already connected to "
+                    f"{end.peer}; a terminal carries one connection"
+                )
+        _require_compatible(what, *ends)
+        ends[0].peer, ends[1].peer = ends[1], ends[0]
+
+
+def _require_compatible(
+    what: str, left: _Transceiver, right: _Transceiver
+) -> None:
+    """Check the two ends of one connection against each other.
+
+    Three statements have to agree before a frame may cross: the layered
+    standard's version, the media type of what each buffer carries, and which
+    of the two FMUs models the bus. The last one is the supported topology —
+    arbitration and transmission timing belong in the dedicated bus simulation
+    FMU, and a connection between two nodes, or between two buses, has nobody
+    to model them.
+    """
+    buses = [
+        end for end in (left, right)
+        if end.instance.description.bus.bus_simulation
+    ]
+    if len(buses) != 1:
+        stated = ", ".join(
+            f"{end} declares isBusSimulationFMU="
+            f"{str(end.instance.description.bus.bus_simulation).lower()}"
+            for end in (left, right)
+        )
+        raise ManifestError(
+            f"{what}: {stated}; one end of a connection is the bus simulation "
+            f"FMU and the other is a node attached to it"
+        )
+    # An undeclared version is not a version two ends agree on: comparing two
+    # absent ones would let a manifest that says nothing about the layered
+    # standard pass the check that exists to make it say something.
+    for end in (left, right):
+        if not end.instance.description.bus.version:
+            raise ManifestError(
+                f"{what}: {end} declares no {_BUS_LAYERED_STANDARD} version in "
+                f"{_BUS_MANIFEST_MEMBER}; a connection is compatible at a "
+                f"version both ends state"
+            )
+    if left.instance.description.bus.version != (
+        right.instance.description.bus.version
+    ):
+        raise ManifestError(
+            f"{what} connects "
+            f"{left} at {_BUS_LAYERED_STANDARD} "
+            f"{left.instance.description.bus.version!r} to {right} at "
+            f"{right.instance.description.bus.version!r}; both ends declare "
+            f"one version of the layered standard"
+        )
+    for sender, receiver in ((left, right), (right, left)):
+        sent = _member_variable(
+            str(sender), sender.instance, sender.terminal, _TX_DATA
+        )
+        taken = _member_variable(
+            str(receiver), receiver.instance, receiver.terminal, _RX_DATA
+        )
+        if sent.mime_type != taken.mime_type:
+            raise ManifestError(
+                f"{what}: {sender} sends {sent.mime_type!r} and {receiver} "
+                f"takes {taken.mime_type!r}; the two ends of one direction "
+                f"carry one profile"
+            )
+
+
+def _bind_group_channels(
+    binds: list[str], init: dict, fields_by_channel: dict[str, dict[str, dict]],
+    transceivers: _Transceivers
+) -> None:
+    """Attach every declared Channel to the terminal member it carries.
+
+    A group's Channel carries one terminal's bus operations and nothing else:
+    an out-direction Channel observes what a terminal sends, and an
+    in-direction Channel is an activation handed to what it receives. The
+    observation is what a Recording of this Run holds, and the injection is
+    what replaces the FMU that used to produce it.
+    """
+    for channel, bound in _bound_fields(binds, fields_by_channel).items():
+        direction = init["channels"][channel]["direction"]
+        _bind_group_channel(
+            channel, direction, fields_by_channel[channel], bound, transceivers
+        )
+
+
+def _bind_group_channel(
+    channel: str, direction: str, fields: dict[str, dict],
+    bound: dict[str, str], transceivers: _Transceivers
+) -> None:
+    """Attach one Channel to the one terminal member it carries."""
+    if len(bound) != 1:
+        raise ManifestError(
+            f"Channel {channel!r} binds {len(bound)} FMU variables; a Channel "
+            f"of a group carries the activations of one terminal member, so it "
+            f"binds one"
+        )
+    (field, text), = bound.items()
+    member = _TX_DATA if direction == "out" else _RX_DATA
+    transceiver, side = transceivers.carrying(
+        text, f"Channel {channel!r} field {field!r}"
+    )
+    if side != member:
+        raise ManifestError(
+            f"Channel {channel!r} field {field!r} names the {side!r} member of "
+            f"{transceiver}, and this Channel's direction is {direction!r}; an "
+            f"out-direction Channel observes a terminal's {_TX_DATA!r} and an "
+            f"in-direction Channel is handed to its {_RX_DATA!r}"
+        )
+    variable = _member_variable(
+        str(transceiver), transceiver.instance, transceiver.terminal, member
+    )
+    causality = "input" if direction == "in" else "output"
+    binary = _binary_field(
+        _Binding(channel, field, variable), fields, causality
+    )
+    event_time = _event_time_field(channel, field, fields)
+    carried = {binary.field, binary.length_field, event_time}
+    for name in fields:
+        if name not in carried:
+            raise ManifestError(
+                f"Channel {channel!r} declares schema field {name!r}, which a "
+                f"clocked payload does not carry"
+            )
+    binary = _BinaryField(
+        variable=variable, field=binary.field,
+        length_field=binary.length_field, capacity=binary.capacity,
+        event_time_field=event_time,
+    )
+    if direction == "out":
+        if transceiver.observation is not None:
+            raise ManifestError(
+                f"Channel {channel!r} observes {transceiver}, which Channel "
+                f"{transceiver.observation.channel!r} already observes; one "
+                f"Channel carries a terminal's activations"
+            )
+        transceiver.observation = _Observation(channel, binary)
+        return
+    if transceiver.injection is not None:
+        raise ManifestError(
+            f"Channel {channel!r} is handed to {transceiver}, which Channel "
+            f"{transceiver.injection.channel!r} is already handed to; one "
+            f"Channel is a terminal's source"
+        )
+    if transceiver.peer is not None:
+        raise ManifestError(
+            f"Channel {channel!r} is handed to {transceiver}, which is "
+            f"connected to {transceiver.peer}; a terminal takes its frames "
+            f"from a connected peer or from a Channel, not from both"
+        )
+    transceiver.injection = _Injection(channel, binary)
+
+
+def _group_start_values(
+    starts: list[str], instances: dict[str, _Instance]
+) -> dict[str, list[tuple[Variable, object]]]:
+    """Resolve `--start <instance>.<variable>=<value>` per instance."""
+    values: dict[str, list] = {name: [] for name in instances}
+    for start in starts:
+        target, separator, text = start.partition("=")
+        if not separator or not target:
+            raise ManifestError(
+                f"start value {start!r} is not "
+                f"'<instance>.<variable>=<value>'"
+            )
+        what = f"start value {start!r}"
+        instance, variable_name = _instance_of(target, instances, what)
+        variable = instance.description.variables.get(variable_name)
+        if variable is None:
+            raise ManifestError(
+                f"{what} names FMU variable {variable_name!r}, which FMU "
+                f"{instance.description.model_identifier!r} of instance "
+                f"{instance.name!r} does not declare"
+            )
+        values[instance.name].append((variable, _start_value(variable, text)))
+    return values
+
+
+class FmuGroupParticipant(StepParticipant):
+    """A process participant whose behavior is a group of connected FMUs'.
+
+    The group is one participant because the coordination it does cannot be
+    expressed between participants. A Channel's Latency is by default the
+    subscriber's next activation, which is what makes a Run independent of
+    execution order inside a Slot; a frame crossing a bus reaches its
+    destination at an instant the bus computes, in the same instant its
+    neighbours are standing on. Two separately stepped participants would
+    deliver it a Slot later and lose the instant it happened at, and no
+    Manifest Latency could restore it, because the delay is the bus model's
+    output rather than a declaration.
+
+    So FMI-specific event processing stays where it already was — at the
+    Importer edge — and what the kernel sees is one process participant
+    publishing bounded Messages on Channels it declares. The kernel learns
+    nothing about Clocks, events, or transmission times.
+    """
+
+    def __init__(self, instances: Sequence[str], *, connects: Sequence[str] = (),
+                 binds: Sequence[str] = (), starts: Sequence[str] = (),
+                 profile: str = ""):
+        self.name = ""  # the init line's, for the one diagnostic the kernel misses
+        self._declared = list(instances)
+        self._connects = list(connects)
+        self._binds = list(binds)
+        self._starts = list(starts)
+        self._profile = profile
+        self._extraction = None
+        self._extracted: dict[str, Path] = {}
+        self._group: _Group | None = None
+        # What the event that ended initialization produced, held until the
+        # first activation: the kernel has no Slot before it.
+        self._pending_activations: list = []
+        # Where the FMUs stand, in kernel nanoseconds. They stand together.
+        self._communication_point = 0
+
+    def on_init(self, init: dict) -> None:
+        self.name = init["name"]
+        instances = self._read(init)
+        # Everything the Manifest got wrong is rejected before any FMU is
+        # instantiated: a group that cannot hold is a fact about the Run's
+        # configuration, and no FMU has to be loaded to see it.
+        transceivers = _Transceivers(instances, self._profile)
+        _connect(self._connects, transceivers)
+        _bind_group_channels(
+            self._binds, init, _channel_fields(init), transceivers
+        )
+        transceivers.require_every_instance_used()
+        starts = _group_start_values(self._starts, instances)
+        # The group is held before any FMU is loaded, so an instance that
+        # fails to instantiate or to initialize is still one this participant
+        # closes: the instances already loaded are reachable from `close`.
+        self._group = _Group(list(instances.values()), transceivers.all())
+        for name, instance in instances.items():
+            instance.instantiate(self._extracted[name], starts[name])
+        self._pending_activations = self._group.initialize()
+
+    def _read(self, init: dict) -> dict[str, _Instance]:
+        """Extract every declared FMU and read what driving it depends on.
+
+        Each archive is extracted into its own directory beneath this
+        participant's own, because two instances of one FMU are two extractions
+        of it: they are told apart by where they were extracted, and nothing
+        one of them writes belongs to the other.
+        """
+        paths = _instance_paths(self._declared)
+        if not paths:
+            raise ManifestError(
+                "a group declares at least one --instance <name>=<path>"
+            )
+        if not self._profile:
+            raise ManifestError(
+                "a group declares the BUS profile its terminals carry: "
+                "--bus-profile <media-type>"
+            )
+        self._extraction = tempfile.TemporaryDirectory(
+            prefix="sil-fmu-", dir=Path.cwd()
+        )
+        root = Path(self._extraction.name)
+        self._extracted: dict[str, Path] = {}
+        instances: dict[str, _Instance] = {}
+        for name, path in paths.items():
+            extracted = root / name
+            extracted.mkdir()
+            try:
+                with zipfile.ZipFile(path) as archive:
+                    archive.extractall(extracted)
+            except (OSError, zipfile.BadZipFile) as error:
+                raise ManifestError(
+                    f"cannot read FMU {str(path)!r} of instance {name!r}: "
+                    f"{error}"
+                ) from error
+            self._extracted[name] = extracted
+            instances[name] = _Instance(name, ModelDescription.read(extracted))
+        return instances
+
+    def on_step(self, t: int, dt: int, inputs: list):
+        """One Step of the group, and every Message the interval produced."""
+        _require_contiguous(self._communication_point, t)
+        published, self._pending_activations = self._pending_activations, []
+        published.extend(self._group.advance(t, dt, inputs))
+        self._communication_point = t + dt
+        return published
+
+    def close(self) -> None:
+        """Terminate and free every instance, and drop the extracted FMUs."""
+        group, extraction = self._group, self._extraction
+        self._group = None
+        self._extraction = None
+        try:
+            if group is not None:
+                group.close()
+        finally:
+            if extraction is not None:
+                extraction.cleanup()
+
+
+class _Rejection(StepParticipant):
+    """A participant that rejects the Run its own arguments cannot describe.
+
+    The kernel calls a Manifest error what a participant reports before it is
+    ready, so an argument mistake is reported there rather than by exiting
+    before the handshake and leaving the kernel to guess what went wrong.
+    """
+
+    def __init__(self, reason: str):
+        self.name = ""
+        self._reason = reason
+
+    def on_init(self, init: dict) -> None:
+        raise ManifestError(self._reason)
+
+    def close(self) -> None:
+        pass
+
+
+def _close_after_failure(participant: StepParticipant) -> None:
+    """Drop the FMUs on the way out of a failure that is already reported.
 
     Terminating an FMU that has already failed may fail in turn; that second
     diagnostic must not replace the first one.
@@ -1711,7 +3081,29 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
         prog="python -m sil.fmi",
         description="Drive an FMI 3.0 co-simulation FMU as a participant.",
     )
-    parser.add_argument("fmu", help="path to the FMU archive")
+    parser.add_argument(
+        "fmu", nargs="?",
+        help="path to the FMU archive, for a participant that is one FMU",
+    )
+    parser.add_argument(
+        "--instance", action="append", default=[], nargs=2,
+        metavar=("NAME", "PATH"),
+        help="declare one FMU of a connected group under a name of this "
+             "Run's own; every other argument spells a variable of it as "
+             "'<name>.<variable>'. The path is its own argument so the kernel "
+             "resolves it against the Manifest and digests it",
+    )
+    parser.add_argument(
+        "--connect", action="append", default=[],
+        metavar="NAME.TERMINAL=NAME.TERMINAL",
+        help="connect two network terminals of a group: each end's Tx_Data "
+             "becomes the other end's Rx_Data, in the same instant",
+    )
+    parser.add_argument(
+        "--bus-profile", default="", metavar="MEDIA-TYPE",
+        help="the media type every connected terminal's buffers carry, "
+             "without its parameters; required by --instance",
+    )
     parser.add_argument(
         "--bind", action="append", default=[], metavar="CHANNEL:FIELD=VARIABLE",
         help="bind one Channel schema field to one FMU variable; declaring "
@@ -1726,11 +3118,44 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: list[str] | None = None) -> None:
-    args = _arguments(sys.argv[1:] if argv is None else argv)
-    participant = FmuParticipant(
+def _participant(args: argparse.Namespace) -> StepParticipant:
+    """The participant these arguments describe, or one that rejects the Run.
+
+    An argument mistake is reported through the step protocol rather than by
+    exiting before the handshake, so the kernel calls it the Manifest error it
+    is and names the participant that found it.
+    """
+    if args.instance and args.fmu is not None:
+        return _Rejection(
+            f"this participant is one FMU {str(args.fmu)!r} and a group of "
+            f"{len(args.instance)} --instance declarations at once; it is "
+            f"either"
+        )
+    if args.instance:
+        return FmuGroupParticipant(
+            args.instance, connects=args.connect, binds=args.bind,
+            starts=args.start, profile=args.bus_profile,
+        )
+    for argument, declared in (("--connect", args.connect),
+                               ("--bus-profile", args.bus_profile)):
+        if declared:
+            return _Rejection(
+                f"{argument} describes a group of connected FMUs, and this "
+                f"participant declares no --instance"
+            )
+    if args.fmu is None:
+        return _Rejection(
+            "this participant drives no FMU: name one archive, or declare a "
+            "group with --instance <name>=<path>"
+        )
+    return FmuParticipant(
         Path(args.fmu), binds=args.bind, starts=args.start
     )
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = _arguments(sys.argv[1:] if argv is None else argv)
+    participant = _participant(args)
     try:
         run(participant)
     except BaseException:
