@@ -155,8 +155,11 @@ class BinaryGroup:
         self._bound = bound
         self._buffer = BinaryBuffer(
             [binary.variable.reference for binary in bound],
-            [binary.capacity for binary in bound],
-            incoming=causality == "input",
+            # A read group is given no capacity: what it hands over are the
+            # FMU's own pointers, and the Channel's bound is applied to what
+            # comes back rather than to what is offered.
+            [binary.capacity for binary in bound]
+            if causality == "input" else (),
         )
 
     def write(self, fmu: CoSimulation, fields: dict) -> None:

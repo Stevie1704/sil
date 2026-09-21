@@ -1,8 +1,9 @@
 """What a single FMU and a group of them both obey while being advanced.
 
-The two coordinators schedule differently — one FMU is stepped on the kernel's
-Slot grid, a group meets its peers at communication points between two Slots —
-but three rules are the same on either side, and they are stated here once:
+An Importer of one FMU and an Importer of an FMU group schedule differently —
+one FMU is stepped on the kernel's Slot grid, a group meets its peers at
+communication points between two Slots — but three rules are the same on either
+side, and they are stated here once:
 
 - one event is iterated to quiescence under a declared bound;
 - a declared next event time lands on the kernel's nanosecond grid the same
@@ -10,8 +11,8 @@ but three rules are the same on either side, and they are stated here once:
 - the intervals an FMU is stepped over are contiguous from virtual time zero.
 
 A scheduling *policy* is not here. Which instant to be in Event Mode at, and
-what to do with what an event produced, stays with the coordinator that owns
-the grid.
+what to do with what an event produced, stays with the Importer that owns the
+grid.
 """
 
 from __future__ import annotations
@@ -33,6 +34,10 @@ _MAX_EVENT_ITERATIONS = 100
 def run_event(fmu: CoSimulation, event_time_ns: int,
               collect: Callable[[], list]) -> tuple[list, DiscreteStates]:
     """Iterate one event to quiescence, collecting what each update produced.
+
+    What the list holds is `collect`'s own business and differs by caller — one
+    FMU collects Messages, a group collects a payload and the terminal that
+    produced it — because only the caller knows what an activation belongs to.
 
     `collect` is called before every discrete-state update and once more after
     the update that ends the event: an update is exactly what can raise an

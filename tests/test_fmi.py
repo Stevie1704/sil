@@ -31,6 +31,9 @@ from sil.fmi import (
     library_suffix,
     platform_directory,
 )
+from sil.fmi import runtime as fmi_runtime
+from sil.fmi.description import SCALARS
+from sil.fmi.runtime import BinaryBuffer, ScalarBuffer
 from sil.manifest import Manifest, SubscriberRoute
 from sil.participant import Input, ManifestError, ParticipantFailure
 from sil.testing import run_simulation
@@ -529,6 +532,102 @@ class TestDescription:
             "Float64_continuous_output": 8,
             "Float64_discrete_output": 10,
         }
+
+
+class TestNativeBuffers:
+    """The seam the layers above the native calls hand values across.
+
+    A buffer owns the memory one FMI call reads or writes, and it is allocated
+    before any FMU is loaded — a mapping is resolved, and rejected, without
+    loading one. So what a buffer takes and hands back is Python: value
+    references and numbers or `bytes`, never a ctypes array. These drive one
+    real `Feedthrough` instance through the buffers alone, because the
+    ownership rule is only true if the FMU actually reads what was written.
+    """
+
+    # `Feedthrough` copies each input to the output of the same name. The
+    # value references are its own, out of `modelDescription.xml`.
+    CONTINUOUS_IN, CONTINUOUS_OUT = 7, 8
+    DISCRETE_IN, DISCRETE_OUT = 9, 10
+    BINARY_IN, BINARY_OUT = 31, 32
+
+    @pytest.fixture
+    def instance(self, tmp_path):
+        """One initialized `Feedthrough`, driven through buffers alone."""
+        with zipfile.ZipFile(FEEDTHROUGH) as archive:
+            archive.extractall(tmp_path)
+        description = ModelDescription.read(tmp_path)
+        fmu = CoSimulation(description.binary(tmp_path), description)
+        fmu.initialize()
+        yield fmu
+        fmu.close()
+
+    def test_one_scalar_buffer_carries_several_variables_in_one_call(
+        self, instance
+    ):
+        """`Feedthrough` copies each input to the output of the same name, so
+        what one buffer wrote is what the other reads back after a step."""
+        written = ScalarBuffer(
+            "Float64", [self.CONTINUOUS_IN, self.DISCRETE_IN]
+        )
+        read = ScalarBuffer(
+            "Float64", [self.CONTINUOUS_OUT, self.DISCRETE_OUT]
+        )
+
+        written.write(instance, [2.5, -4.0])
+        instance.do_step(0.0, 1e-3)
+
+        assert read.read(instance) == [2.5, -4.0]
+
+    def test_a_scalar_buffer_is_reused_across_steps(self, instance):
+        """The buffer is allocated once and holds the values of the step it is
+        in; a second step must not see the first one's."""
+        written = ScalarBuffer("Float64", [self.CONTINUOUS_IN])
+        read = ScalarBuffer("Float64", [self.CONTINUOUS_OUT])
+        observed = []
+        for step, value in enumerate([1.0, 2.0, 3.0]):
+            written.write(instance, [value])
+            instance.do_step(step * 1e-3, 1e-3)
+            observed.append(read.read(instance)[0])
+        assert observed == [1.0, 2.0, 3.0]
+
+    def test_a_written_binary_buffer_owns_what_it_hands_the_fmu(
+        self, instance
+    ):
+        """A payload shorter than the capacity is handed over at its own
+        length, and the buffer behind it is the importer's for the whole
+        call."""
+        written = BinaryBuffer([self.BINARY_IN], [1024])
+        read = BinaryBuffer([self.BINARY_OUT])
+
+        written.write(instance, [b"\x01\x02\x03"])
+        instance.do_step(0.0, 1e-3)
+
+        assert read.read(instance) == [b"\x01\x02\x03"]
+
+    def test_a_read_binary_buffer_copies_out_before_the_next_call(
+        self, instance
+    ):
+        """The pointers a read buffer hands over are the FMU's own and valid
+        only until its next call, so what comes back has to survive one."""
+        written = BinaryBuffer([self.BINARY_IN], [1024])
+        read = BinaryBuffer([self.BINARY_OUT])
+
+        written.write(instance, [b"first"])
+        instance.do_step(0.0, 1e-3)
+        first = read.read(instance)[0]
+
+        written.write(instance, [b"second"])
+        instance.do_step(1e-3, 1e-3)
+        second = read.read(instance)[0]
+
+        assert (first, second) == (b"first", b"second")
+
+    def test_every_scalar_type_the_mapping_declares_has_a_native_element(self):
+        """The two halves of one scalar type are keyed alike in two modules; a
+        type declared on one side and not the other would fail on the first Run
+        that bound it rather than here."""
+        assert set(fmi_runtime._ELEMENTS) == set(SCALARS)
 
 
 class TestPlatformDirectory:

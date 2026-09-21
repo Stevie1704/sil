@@ -26,6 +26,7 @@ from sil.participant import ParticipantFailure
 
 from sil.fmi.description import (
     BINARY,
+    SCALARS,
     STRUCTURAL,
     ModelDescription,
     Variable,
@@ -125,16 +126,20 @@ _SIGNATURES = {
 }
 
 
-# The native element each mapped scalar type crosses in, by the same key
-# `description.SCALARS` names the type under. The two tables are the two halves
-# of one type: what a Channel field carries and what the FMI call takes.
+# The native element each mapped scalar type crosses in. It is the other half
+# of `description.SCALARS` — what a Channel field carries is stated there, what
+# the FMI call takes is stated here — and the two are keyed alike. The
+# signatures below are built by walking `SCALARS`, so a type declared there
+# with no element here fails when this module is imported rather than on the
+# first Run that binds one.
 _ELEMENTS = {"Float64": ctypes.c_double, "Boolean": ctypes.c_bool}
 
 
 def _scalar_signatures() -> dict:
     """Get and Set for every scalar type: one shape, named once per type."""
     signatures = {}
-    for kind, element in _ELEMENTS.items():
+    for kind in SCALARS:
+        element = _ELEMENTS[kind]
         accessor = (
             ctypes.c_int,
             [ctypes.c_void_p, _VALUE_REFERENCES, ctypes.c_size_t,
@@ -271,8 +276,8 @@ class CoSimulation:
     def raise_clocks(self, references: Sequence[int]) -> None:
         """Raise several Clocks of this FMU together, in one call.
 
-        Value references are what a caller above states, because that is all a
-        coordinator knows about a Clock it decides the instant of; the array
+        Value references are what a caller above states, because that is all
+        the Importer knows about a Clock it decides the instant of; the array
         the call takes is built and owned here.
         """
         self._set_clock(
@@ -284,6 +289,11 @@ class CoSimulation:
     # and owns. They are the buffer-facing half of the instance rather than
     # part of what the importer drives an FMU through, which is why a layer
     # above never reaches one: it has no array to pass.
+    #
+    # A buffer is handed the instance on every call rather than holding one,
+    # because it outlives no instance — it predates it. A mapping is resolved
+    # and its buffers allocated before any FMU is loaded, so that a Manifest
+    # that cannot hold is rejected without loading one.
 
     def _get_clock(self, references, values) -> None:
         self._call("fmi3GetClock", references, len(references), values)
@@ -480,39 +490,55 @@ class ScalarBuffer:
 
 
 class BinaryBuffer:
-    """The buffers for several Binary variables read or written together.
+    """The arrays several Binary variables are read or written through.
 
     A buffer writes or reads, never both, because the Channel's direction
-    decides which. A written one allocates a buffer per variable, of the
-    capacity that variable's Channel field declares, and owns it for as long
-    as it lives. A read one allocates none — the pointers are the FMU's own,
-    valid until its next call, so each payload is copied out at once.
+    decides which and it is built knowing that. A written one is given each
+    variable's capacity and allocates a buffer of it, owned for as long as
+    this object lives. A read one is given no capacity and allocates nothing —
+    the pointers it hands over are filled by the FMU, are valid only until its
+    next call, and so are copied out at once.
     """
 
-    def __init__(self, references: Sequence[int], capacities: Sequence[int],
-                 *, incoming: bool):
+    def __init__(self, references: Sequence[int],
+                 capacities: Sequence[int] = ()):
         self._references = _references(*references)
         self._sizes = (ctypes.c_size_t * len(references))()
-        self._values = (ctypes.c_void_p * len(references))()
-        self._buffers = (
-            [(ctypes.c_char * capacity)() for capacity in capacities]
-            if incoming else []
-        )
+        self._pointers = (ctypes.c_void_p * len(references))()
+        self._buffers = [
+            (ctypes.c_char * capacity)() for capacity in capacities
+        ]
         for index, buffer in enumerate(self._buffers):
-            self._values[index] = ctypes.addressof(buffer)
+            self._pointers[index] = ctypes.addressof(buffer)
 
     def write(self, fmu: CoSimulation, payloads: Sequence[bytes]) -> None:
         for index, payload in enumerate(payloads):
             self._buffers[index][:len(payload)] = payload
             self._sizes[index] = len(payload)
-        fmu._set_binary(self._references, self._sizes, self._values)
+        fmu._set_binary(self._references, self._sizes, self._pointers)
 
     def read(self, fmu: CoSimulation) -> list[bytes]:
-        fmu._get_binary(self._references, self._sizes, self._values)
+        fmu._get_binary(self._references, self._sizes, self._pointers)
         return [
-            _copied_out(self._sizes[index], self._values[index])
+            _copied_out(self._sizes[index], self._pointers[index])
             for index in range(len(self._sizes))
         ]
+
+
+class _Flag:
+    """One Clock's value reference, and the flag its two accessors take."""
+
+    def __init__(self, clock: Variable):
+        self._references = _references(clock.reference)
+        self._value = (ctypes.c_bool * 1)()
+
+    def read(self, fmu: CoSimulation) -> bool:
+        fmu._get_clock(self._references, self._value)
+        return bool(self._value[0])
+
+    def activate(self, fmu: CoSimulation) -> None:
+        self._value[0] = True
+        fmu._set_clock(self._references, self._value)
 
 
 class ClockedBuffer:
@@ -522,24 +548,15 @@ class ClockedBuffer:
     neither end of it belongs to a Step: the Clock is read, or raised, inside
     an event. Reading and raising are the same rule seen from both ends —
     Clock first, buffer second.
-
-    The buffer an incoming payload is copied into is allocated once and lives
-    as long as this object: FMI 3.0 has the importer own it for the duration
-    of the call, and reallocating one per activation would put its lifetime in
-    the garbage collector's hands.
     """
 
     def __init__(self, variable: Variable, clock: Variable, capacity: int,
                  *, incoming: bool):
         self.variable = variable
-        self._clock_references = _references(clock.reference)
-        self._clock_values = (ctypes.c_bool * 1)()
-        self._data_references = _references(variable.reference)
-        self._sizes = (ctypes.c_size_t * 1)()
-        self._values = (ctypes.c_void_p * 1)()
-        self._buffer = (ctypes.c_char * capacity)() if incoming else None
-        if self._buffer is not None:
-            self._values[0] = ctypes.addressof(self._buffer)
+        self._clock = _Flag(clock)
+        self._payload = BinaryBuffer(
+            [variable.reference], (capacity,) if incoming else ()
+        )
 
     def read(self, fmu: CoSimulation) -> bytes | None:
         """The Clock, and the buffer it gates when it reads active.
@@ -548,11 +565,9 @@ class ClockedBuffer:
         read: reading it twice would lose the activation, and not reading it
         at all would hand on a buffer no activation stands behind.
         """
-        fmu._get_clock(self._clock_references, self._clock_values)
-        if not self._clock_values[0]:
+        if not self._clock.read(fmu):
             return None
-        fmu._get_binary(self._data_references, self._sizes, self._values)
-        return _copied_out(self._sizes[0], self._values[0])
+        return self._payload.read(fmu)[0]
 
     def deliver(self, fmu: CoSimulation, payload: bytes) -> None:
         """Raise the Clock, then hand the FMU the payload it gates.
@@ -561,11 +576,8 @@ class ClockedBuffer:
         be accessed only while its Clock is active, and an FMU that checks
         refuses a buffer written before the Clock went up.
         """
-        self._clock_values[0] = True
-        fmu._set_clock(self._clock_references, self._clock_values)
-        self._buffer[:len(payload)] = payload
-        self._sizes[0] = len(payload)
-        fmu._set_binary(self._data_references, self._sizes, self._values)
+        self._clock.activate(fmu)
+        self._payload.write(fmu, [payload])
 
 
 class CountdownBuffer:
@@ -589,9 +601,7 @@ class CountdownBuffer:
         self._counters = (ctypes.c_uint64 * 1)()
         self._resolutions = (ctypes.c_uint64 * 1)()
         self._qualifiers = (ctypes.c_int32 * 1)()
-        self._data_references = _references(variable.reference)
-        self._sizes = (ctypes.c_size_t * 1)()
-        self._values = (ctypes.c_void_p * 1)()
+        self._payload = BinaryBuffer([variable.reference])
         # The interval last stated, and the instant it ends at. They are kept
         # apart because an interval outlives the activation it caused: a
         # Clock the FMU leaves `Unchanged` after an activation is asking for
@@ -649,5 +659,4 @@ class CountdownBuffer:
     def take(self, fmu: CoSimulation) -> bytes:
         """The buffer the activation just made carries, and it is spent."""
         self.due_ns = None
-        fmu._get_binary(self._data_references, self._sizes, self._values)
-        return _copied_out(self._sizes[0], self._values[0])
+        return self._payload.read(fmu)[0]
