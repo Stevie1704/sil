@@ -11,6 +11,12 @@ milestone. It fixes what the implementation issues (#138 – #141) are aimed at,
 so that each of them is measured against artifacts and expectations that were
 written down before the implementation was.
 
+One step is the other way round, and it is the last one: since [issue
+#139](https://github.com/Stevie1704/sil/issues/139) the proof also drives the
+same pinned node with **the checkout's** FMI Importer and judges the Recording
+against the same expected exchange. The gate measures the release; that step
+measures the tree, and [says which tree](evidence/identity.txt).
+
 **This is an interoperability fixture, not a conformance claim and not ADAS
 validation.** It covers two CAN demo FMUs of one layered standard, at one
 revision, on one machine class.
@@ -24,6 +30,7 @@ revision, on one machine class.
 | Do the artifacts implement the stable BUS 1.0.0 CAN subset? | The CAN operation bytes are v1.0.0's, verified against the header history; the artifacts' own metadata says `1.0.0-beta.1`, and no upstream revision says otherwise |
 | Is there a runnable reference exchange? | Yes — the node FMU driven by an independent FMI 3.0 importer, matching payloads and event times stated from the sources beforehand |
 | What does current SiL do with the same FMU? | It fails, twice and for two different reasons — both recorded, both in the Importer, neither in the kernel contract |
+| What does the checkout do with the same FMU? | It drives it: both step grids of the expected exchange, matched whole, in a Run whose Recording reproduces bit for bit |
 
 ## The artifacts
 
@@ -284,8 +291,10 @@ its own log says so, in
 `Transmitting CAN frame with ID 1 at internal time 0.300000`. With a 250 ms
 step they are observable only at the end of the step that crossed those
 instants. **FMI event time and the time an importer can see the event are not
-the same quantity**, and a later Channel publication time is a third. #139 and
-#140 inherit that distinction from here.
+the same quantity**, and a later Channel publication time is a third. #139
+carries that distinction into the Channel itself — a clocked Message states
+the FMI event time it belongs to beside the payload — and #140 inherits it
+from here.
 
 ## Results
 
@@ -299,6 +308,8 @@ the same quantity**, and a later Channel publication time is a third. #139 and
 | Current SiL cannot drive the FMU, and says why | exit 1, `participant 'importer' failed: … fmi3InstantiateCoSimulation returned no instance for 'DemoCanNodeTriggeredOutput'`, under the FMU's own `Event mode is must be supported by the importer to use this FMU.` — [`sil-no-channels.txt`](evidence/sil-no-channels.txt) |
 | Current SiL cannot map the FMU's Binary variables, and says why | exit 2, `Channel 'can.Tx' declares schema field 'CanChannel.Tx_Data_length', which is no output variable of FMU 'DemoCanNodeTriggeredOutput'` — [`sil-binary-channel.txt`](evidence/sil-binary-channel.txt) |
 | The gap is in the Importer, not in the kernel's Channel contract | the same Manifest's bounded CAN frame Channel is accepted and sized: `observer <- can.Tx  cap 2 x 2050 B` — [`footprint.txt`](evidence/footprint.txt) |
+| The checkout's Importer drives the node on both step grids | `aligned: 4 events, all as expected` / `quantised: 4 events, all as expected`, judged on the Recording — [`clocked-aligned.txt`](evidence/clocked-aligned.txt), [`clocked-quantised.txt`](evidence/clocked-quantised.txt) |
+| A clocked Run reproduces | `deterministic: 6c85facd…2f81`, two Runs of one Manifest bit-compared — [`clocked-identity.txt`](evidence/clocked-identity.txt) |
 
 ## What current SiL does, and where the gap is
 
@@ -316,7 +327,8 @@ Both failures are the Importer's, and they are different capabilities:
 
 - **Event Mode.** `sil.fmi` instantiates with `eventModeUsed` false and
   `earlyReturnAllowed` false, and this FMU requires the first. #139 is where
-  that lifecycle is implemented.
+  that lifecycle is implemented, and the last step of this proof is where the
+  implementation is measured against the same FMU.
 - **Binary variables and Clocks.** `sil.fmi` reads only `Float64` elements out
   of `modelDescription.xml`, so the node's `Binary` and `Clock` variables are
   not unsupported — they are invisible. The diagnostic names the Channel's
@@ -332,6 +344,53 @@ an Importer that can see a Binary variable and drive a Clock is. That is the
 distinction #118 asked every capability proposal to make, and this gate makes
 it with the release in hand rather than by inspection.
 
+## What this checkout does
+
+The last step of the proof answers the same question about the working tree,
+and it is the only step that reads the checkout at all.
+[`Dockerfile.measured`](Dockerfile.measured) starts from the same published
+runner image, by the same digest, and puts the tree's `sil` package ahead of
+the installed one on `PYTHONPATH`: the kernel, the loader and the runner are
+the release's, and the Importer is the checkout's. The FMU is copied out of
+the fixture image rather than built again, so it is the archive whose digest
+was checked above.
+
+Two Manifests, built by [`clocked_manifest.py`](clocked_manifest.py), one per
+step grid of the expected exchange. Both declare `python3 -m sil.fmi` bound to
+the node's clocked `CanChannel.Tx_Data`, publishing one bounded CAN frame
+Channel that carries the activation and the FMI event time it belongs to:
+
+| Manifest | Hash | Step | What happens |
+| --- | --- | --- | --- |
+| `clocked-aligned` | `57b2696a…7f83` | 100 ms | exit 0, four events, matched whole |
+| `clocked-quantised` | `1984c0bd…c629` | 250 ms | exit 0, four events, matched whole |
+
+[`clocked_exchange.py`](clocked_exchange.py) reads the Recording each Run
+produced and compares it with [`expected.json`](expected.json) — the same file
+the independent importer is judged against, in the same event shape. The
+quantised case is where the three times come apart:
+
+```
+--- case quantised ---
+  event          0 ns  published          0 ns   23 B  Configuration, Configuration
+  event  500000000 ns  published  250000000 ns   20 B  CanTransmit
+  event  750000000 ns  published  500000000 ns   20 B  CanTransmit
+  event 1000000000 ns  published  750000000 ns   20 B  CanTransmit
+quantised: 4 events, all as expected
+```
+
+The node's own log in [`clocked-quantised.txt`](evidence/clocked-quantised.txt)
+still says `Transmitting CAN frame with ID 1 at internal time 0.300000`: the
+frame is generated at 300 ms, becomes observable at the communication point
+500 ms, is published in the Slot at 250 ms, and reaches the observer one
+Latency later. Four different instants, none of them quantised into another,
+and the Message states the one the FMU stood on.
+
+That this is the Importer's doing and not a Recording artifact is what the
+aligned case adds: the same node, the same Manifest but for the Step period,
+and every event at the communication point that carries its own internal
+transmit time.
+
 ## Reproducing
 
 ```sh
@@ -342,7 +401,13 @@ The image build fetches the pinned upstream revisions and compiles them; every
 step after that runs with `--network none`. The evidence directory defaults to
 `evidence/` beside this README, and the Manifests land in a temporary
 workspace. [`.github/workflows/proof-fmi-ls-bus.yml`](../../.github/workflows/proof-fmi-ls-bus.yml)
-runs the same script on `ubuntu-latest`.
+runs the same script on `ubuntu-latest`, for a pull request that touches this
+directory or the Importer.
+
+Every step but the last is made of pinned artifacts, so it answers the same on
+any machine class the fixture supports. The last one is made of the working
+tree as well, and `evidence/identity.txt` names the commit it measured —
+including when that tree carried changes the commit does not.
 
 The committed evidence was produced by that script on `linux/amd64` — the
 supported machine class — in an emulated container on a `Darwin arm64` host,
@@ -371,4 +436,8 @@ The decoder has its own tests, which need no fixture and no docker:
 | [`reference_exchange.py`](reference_exchange.py) | Drive the node through an independent FMI 3.0 importer and compare |
 | [`manifest.py`](manifest.py) | The two Manifests that put the released SiL Importer in front of the same FMU |
 | [`observer.py`](observer.py) | The consumer-side subscriber the second Manifest declares |
+| [`Dockerfile.measured`](Dockerfile.measured) | The released runner with the checkout's `sil` package ahead of it — the one image here that is not made of pinned artifacts alone |
+| [`clocked_manifest.py`](clocked_manifest.py) | The two Manifests that put the checkout's clocked Importer in front of the node, one per step grid |
+| [`clocked_observer.py`](clocked_observer.py) | The consumer-side subscriber those Manifests declare |
+| [`clocked_exchange.py`](clocked_exchange.py) | Judge one Run's Recording against the expected exchange |
 | [`run-proof.sh`](run-proof.sh) | All of it, in order, into `evidence/` |

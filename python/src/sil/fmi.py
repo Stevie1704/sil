@@ -31,6 +31,15 @@ an incoming Message they are ignored, because the length is what says where
 the payload ends. Nothing is ever truncated to fit — a payload above the
 bound, in either direction, aborts the Run.
 
+A Binary variable that declares a Clock is not a value the Step reads: it is
+defined only while its Clock is active, which happens in Event Mode. Such a
+Channel carries one Message per Clock activation and a third field,
+`<field>_event_time_ns`, holding the FMI event time that activation belongs
+to. That time is not the Channel's: a Message is published in the Slot the
+importer's activation runs in, becomes visible to a subscriber one Latency
+later, and states the FMI event time it carries rather than being timestamped
+with it.
+
 Both the bindings and the start values travel as command arguments, which the
 Manifest already hashes, so nothing that affects the Run lives outside the
 hashed Manifest.
@@ -44,7 +53,7 @@ import platform
 import sys
 import tempfile
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from collections.abc import Callable, Sequence
 from xml.etree import ElementTree
@@ -117,6 +126,30 @@ _SCALARS = {
 
 _BINARY = "Binary"
 _FLOAT64 = "Float64"
+_CLOCK = "Clock"
+
+# The one Clock this importer drives: a Clock the FMU or the importer raises
+# when something happened, rather than one that carries an interval. A
+# `countdown` Clock asks an importer to read an interval and schedule the next
+# activation, and a `periodic` one asks it to own a second time grid; both are
+# outside the profile the CAN acceptance fixture declares.
+_TRIGGERED = "triggered"
+
+# The capability an FMU has to declare before this importer will use Event
+# Mode, and the Clock profile is the only thing it is used for.
+_HAS_EVENT_MODE = "hasEventMode"
+
+# The field a clocked Channel carries beside the payload and its length: the
+# FMI event time the activation belongs to, in the kernel's own nanoseconds.
+_EVENT_TIME_SUFFIX = "_event_time_ns"
+_EVENT_TIME_TYPE = "u64"
+
+# How many times one event may ask for another discrete-state update before
+# this importer stops asking. FMI 3.0 puts no bound on the iteration, and a
+# Run that never leaves an event would hang until the response deadline
+# without saying why; the bound is declared here so the failure is the same
+# one on every machine.
+_MAX_EVENT_ITERATIONS = 100
 
 # A structural parameter is the one causality whose value FMI 3.0 has an
 # importer change inside Configuration Mode rather than in the instantiated
@@ -161,6 +194,22 @@ _SIGNATURES = {
     "fmi3ExitInitializationMode": (ctypes.c_int, [ctypes.c_void_p]),
     "fmi3EnterConfigurationMode": (ctypes.c_int, [ctypes.c_void_p]),
     "fmi3ExitConfigurationMode": (ctypes.c_int, [ctypes.c_void_p]),
+    "fmi3EnterEventMode": (ctypes.c_int, [ctypes.c_void_p]),
+    "fmi3EnterStepMode": (ctypes.c_int, [ctypes.c_void_p]),
+    # A Clock is a scalar by definition, so its accessors take no value count.
+    "fmi3GetClock": (
+        ctypes.c_int,
+        [ctypes.c_void_p, _VALUE_REFERENCES, ctypes.c_size_t, _FLAG],
+    ),
+    "fmi3SetClock": (
+        ctypes.c_int,
+        [ctypes.c_void_p, _VALUE_REFERENCES, ctypes.c_size_t, _FLAG],
+    ),
+    "fmi3UpdateDiscreteStates": (
+        ctypes.c_int,
+        [ctypes.c_void_p, _FLAG, _FLAG, _FLAG, _FLAG, _FLAG,
+         ctypes.POINTER(ctypes.c_double)],
+    ),
     "fmi3DoStep": (
         ctypes.c_int,
         [ctypes.c_void_p, ctypes.c_double, ctypes.c_double, ctypes.c_bool,
@@ -227,6 +276,11 @@ class Variable:
     # variable declares none, and None when a dimension is sized by another
     # variable, which the description does not settle.
     value_count: int | None
+    # The value references of the Clocks that gate this variable. A variable
+    # that declares one is defined only while that Clock is active.
+    clocks: tuple[int, ...] = ()
+    # Declared by a Clock only: what decides when it is active.
+    interval_variability: str | None = None
 
 
 def _by_causality(
@@ -262,6 +316,15 @@ def _value_count(element) -> int | None:
     return count
 
 
+def _clock_references(element) -> tuple[int, ...]:
+    """The Clocks one variable declares, as FMI 3.0 lists them.
+
+    The attribute is a whitespace-separated list of value references, which is
+    how a variable says it is defined only while those Clocks are active.
+    """
+    return tuple(int(reference) for reference in element.get("clocks", "").split())
+
+
 def _variables(root) -> dict[str, Variable]:
     """Every variable the description declares, of every type."""
     declared: dict[str, Variable] = {}
@@ -277,6 +340,8 @@ def _variables(root) -> dict[str, Variable]:
             causality=element.get("causality", "local"),
             max_size=None if max_size is None else int(max_size),
             value_count=_value_count(element),
+            clocks=_clock_references(element),
+            interval_variability=element.get("intervalVariability"),
         )
     return declared
 
@@ -290,6 +355,22 @@ class ModelDescription:
     variables: dict[str, Variable]
     inputs: dict[str, int]
     outputs: dict[str, int]
+    # The co-simulation capability flags, as the description spells them. A
+    # description read by `read` always carries them; the default keeps every
+    # other way of naming an FMU's variables working unchanged.
+    capabilities: dict[str, str] = field(default_factory=dict)
+
+    def clock(self, reference: int) -> Variable | None:
+        """The Clock one value reference names, if it names a Clock at all."""
+        for variable in self.variables.values():
+            if variable.reference == reference and variable.kind == _CLOCK:
+                return variable
+        return None
+
+    @property
+    def has_event_mode(self) -> bool:
+        """Whether the FMU declares the mode a Clock is driven from."""
+        return self.capabilities.get(_HAS_EVENT_MODE) == "true"
 
     @staticmethod
     def read(extracted: Path) -> ModelDescription:
@@ -326,6 +407,7 @@ class ModelDescription:
             variables=variables,
             inputs=_by_causality(variables, "input"),
             outputs=_by_causality(variables, "output"),
+            capabilities=dict(co_simulation.attrib),
         )
 
     def binary(self, extracted: Path) -> Path:
@@ -391,6 +473,21 @@ def _references(*values: int):
     return (ctypes.c_uint32 * len(values))(*values)
 
 
+@dataclass(frozen=True)
+class _DiscreteStates:
+    """What one `fmi3UpdateDiscreteStates` said about the event it ended.
+
+    `next_event_time` is the time the FMU declared its next event at, in
+    seconds, and None means it declared none. An FMU that declares one is
+    asking to be stepped onto it, which this importer cannot promise: the
+    kernel owns the Slot grid.
+    """
+
+    need_update: bool
+    terminate: bool
+    next_event_time: float | None
+
+
 class CoSimulation:
     """One instantiated FMU, driven through its co-simulation entry points.
 
@@ -400,7 +497,8 @@ class CoSimulation:
     above it deals in ctypes.
     """
 
-    def __init__(self, binary: Path, description: ModelDescription):
+    def __init__(self, binary: Path, description: ModelDescription,
+                 *, event_mode: bool = False):
         self._library = _Library(binary)
         # The FMU calls this for the life of the instance, so the ctypes
         # trampoline has to outlive this constructor.
@@ -409,10 +507,10 @@ class CoSimulation:
             description.model_identifier.encode(),
             description.instantiation_token.encode(),
             None,
-            False,  # visible
-            True,   # loggingOn
-            False,  # eventModeUsed
-            False,  # earlyReturnAllowed
+            False,       # visible
+            True,        # loggingOn
+            event_mode,  # eventModeUsed
+            False,       # earlyReturnAllowed
             None, 0,
             None, self._logger, None,
         )
@@ -423,13 +521,58 @@ class CoSimulation:
             )
 
     def initialize(self) -> None:
-        """Enter and leave initialization mode, leaving the FMU steppable.
+        """Enter and leave initialization mode at virtual time zero.
+
+        The start time is the instant the kernel begins every Run at, and it
+        is stated rather than left to the FMU's own `DefaultExperiment`, which
+        is the experiment the vendor shipped and not the Run the Manifest
+        declares.
 
         No stop time is declared: the Manifest's duration is the kernel's, and
         an FMU told a stop time it never reaches would reject the last step.
+
+        With Event Mode in use the FMU leaves initialization *in Event Mode*,
+        so the caller handles that first event before stepping; without it,
+        the FMU is steppable when this returns.
         """
-        self._call("fmi3EnterInitializationMode", False, 0.0, 0.0, False, 0.0)
+        self._call(
+            "fmi3EnterInitializationMode", False, 0.0, 0.0, False, 0.0
+        )
         self._call("fmi3ExitInitializationMode")
+
+    def enter_event_mode(self) -> None:
+        self._call("fmi3EnterEventMode")
+
+    def enter_step_mode(self) -> None:
+        self._call("fmi3EnterStepMode")
+
+    def get_clock(self, references, values) -> None:
+        self._call("fmi3GetClock", references, len(references), values)
+
+    def set_clock(self, references, values) -> None:
+        self._call("fmi3SetClock", references, len(references), values)
+
+    def update_discrete_states(self) -> _DiscreteStates:
+        """One discrete-state update, and what the FMU said about the event."""
+        need_update = ctypes.c_bool()
+        terminate = ctypes.c_bool()
+        nominals_changed = ctypes.c_bool()
+        values_changed = ctypes.c_bool()
+        next_event_defined = ctypes.c_bool()
+        next_event_time = ctypes.c_double()
+        self._call(
+            "fmi3UpdateDiscreteStates",
+            ctypes.byref(need_update), ctypes.byref(terminate),
+            ctypes.byref(nominals_changed), ctypes.byref(values_changed),
+            ctypes.byref(next_event_defined), ctypes.byref(next_event_time),
+        )
+        return _DiscreteStates(
+            need_update=need_update.value,
+            terminate=terminate.value,
+            next_event_time=(
+                next_event_time.value if next_event_defined.value else None
+            ),
+        )
 
     def apply_start_values(self, starts: list[tuple[Variable, object]]) -> None:
         """Write the declared start values, before initialization mode.
@@ -490,7 +633,14 @@ class CoSimulation:
             len(references),
         )
 
-    def do_step(self, communication_point: float, step_size: float) -> None:
+    def do_step(self, communication_point: float, step_size: float) -> bool:
+        """Advance over one interval, and say whether it ended in an event.
+
+        An early return is refused rather than accepted: this importer
+        declares `earlyReturnAllowed` false, so an FMU that returns before the
+        end of the interval has left part of it unstepped, and treating that
+        as a completed interval would date everything after it wrongly.
+        """
         event_needed = ctypes.c_bool()
         terminate = ctypes.c_bool()
         early_return = ctypes.c_bool()
@@ -504,6 +654,14 @@ class CoSimulation:
             raise ParticipantFailure(
                 "fmi3DoStep requested termination via terminateSimulation"
             )
+        if early_return.value:
+            raise ParticipantFailure(
+                f"fmi3DoStep returned early at {last_successful_time.value} s, "
+                f"leaving the interval [{communication_point}, "
+                f"{communication_point + step_size}] s incomplete; this "
+                f"importer declares earlyReturnAllowed false"
+            )
+        return bool(event_needed.value)
 
     def close(self) -> None:
         """Terminate the instance and free it, even if terminating failed.
@@ -596,6 +754,41 @@ class _BinaryField:
     field: str
     length_field: str
     capacity: int
+    # Set when the variable declares a Clock: the Clock that gates it, and the
+    # field stating the FMI event time of the activation being carried.
+    clock: Variable | None = None
+    event_time_field: str | None = None
+
+
+def _outgoing_length(binary: _BinaryField, fields: dict) -> int:
+    """How much of a Message's payload field the FMU is handed."""
+    length = fields[binary.length_field]
+    if length > binary.capacity:
+        raise ParticipantFailure(
+            f"field {binary.length_field!r} declares {length} bytes, "
+            f"above the {binary.capacity} field {binary.field!r} "
+            f"carries for FMU variable {binary.variable.name!r}"
+        )
+    return length
+
+
+def _incoming_payload(binary: _BinaryField, length: int, address) -> dict:
+    """One Binary value the FMU produced, as the Channel's bounded fields.
+
+    The pointer is the FMU's own and is valid until its next call, so the
+    payload is copied out at once and padded to the Channel's bound with
+    zeros — one Manifest then records the same bytes on every Run.
+    """
+    if length > binary.capacity:
+        raise ParticipantFailure(
+            f"FMU variable {binary.variable.name!r} produced {length} "
+            f"bytes; field {binary.field!r} carries {binary.capacity}"
+        )
+    payload = ctypes.string_at(address, length) if length else b""
+    return {
+        binary.field: payload + bytes(binary.capacity - length),
+        binary.length_field: length,
+    }
 
 
 class _BinaryGroup:
@@ -624,13 +817,7 @@ class _BinaryGroup:
 
     def write(self, fmu: CoSimulation, fields: dict) -> None:
         for index, binary in enumerate(self._bound):
-            length = fields[binary.length_field]
-            if length > binary.capacity:
-                raise ParticipantFailure(
-                    f"field {binary.length_field!r} declares {length} bytes, "
-                    f"above the {binary.capacity} field {binary.field!r} "
-                    f"carries for FMU variable {binary.variable.name!r}"
-                )
+            length = _outgoing_length(binary, fields)
             self._buffers[index][:length] = fields[binary.field][:length]
             self._sizes[index] = length
         fmu.set_binary(self._references, self._sizes, self._values)
@@ -638,17 +825,9 @@ class _BinaryGroup:
     def read(self, fmu: CoSimulation, into: dict) -> None:
         fmu.get_binary(self._references, self._sizes, self._values)
         for index, binary in enumerate(self._bound):
-            length = self._sizes[index]
-            if length > binary.capacity:
-                raise ParticipantFailure(
-                    f"FMU variable {binary.variable.name!r} produced {length} "
-                    f"bytes; field {binary.field!r} carries {binary.capacity}"
-                )
-            payload = (
-                ctypes.string_at(self._values[index], length) if length else b""
+            into.update(
+                _incoming_payload(binary, self._sizes[index], self._values[index])
             )
-            into[binary.field] = payload + bytes(binary.capacity - length)
-            into[binary.length_field] = length
 
 
 class _ChannelBinding:
@@ -666,6 +845,199 @@ class _ChannelBinding:
         for group in self._groups:
             group.read(fmu, fields)
         return fields
+
+
+class _ClockedPayload:
+    """One Channel whose Messages are activations of one Clock.
+
+    A clocked Binary variable is defined only while its Clock is active, so
+    neither end of it belongs to a Step: the Clock is read, or raised, inside
+    an event. One activation is one Message, and the Message states the FMI
+    event time it belongs to rather than being timestamped with it.
+
+    The buffer an incoming Message is copied into is allocated once and lives
+    as long as this object: FMI 3.0 has the importer own it for the duration
+    of the call, and reallocating one per activation would put its lifetime in
+    the garbage collector's hands.
+    """
+
+    def __init__(self, binary: _BinaryField, causality: str):
+        self._binary = binary
+        self._clock_references = _references(binary.clock.reference)
+        self._clock_values = (ctypes.c_bool * 1)()
+        self._data_references = _references(binary.variable.reference)
+        self._sizes = (ctypes.c_size_t * 1)()
+        self._values = (ctypes.c_void_p * 1)()
+        self._buffer = (
+            (ctypes.c_char * binary.capacity)() if causality == "input" else None
+        )
+        if self._buffer is not None:
+            self._values[0] = ctypes.addressof(self._buffer)
+
+    def activation(self, fmu: CoSimulation, event_time_ns: int) -> dict | None:
+        """Read the Clock, and the buffer it gates when it reads active.
+
+        The Clock is read exactly once here, because an FMU clears it on the
+        read: reading it twice would lose the activation, and not reading it
+        at all would publish a buffer no activation stands behind.
+        """
+        fmu.get_clock(self._clock_references, self._clock_values)
+        if not self._clock_values[0]:
+            return None
+        fmu.get_binary(self._data_references, self._sizes, self._values)
+        return {
+            **_incoming_payload(self._binary, self._sizes[0], self._values[0]),
+            self._binary.event_time_field: event_time_ns,
+        }
+
+    def activate(self, fmu: CoSimulation, fields: dict) -> None:
+        """Raise the Clock, then hand the FMU the payload it gates.
+
+        That order is the contract, not a preference: a clocked variable may
+        be accessed only while its Clock is active, and an FMU that checks
+        refuses a buffer written before the Clock went up. The read side is
+        the mirror — Clock first, buffer second — and this is the same rule
+        seen from the other end.
+
+        The Message's own event time is not used: this importer activates the
+        Clock at the communication point it is standing on, and quietly
+        dating the activation as its sender did would claim a time the FMU
+        was never driven to.
+        """
+        length = _outgoing_length(self._binary, fields)
+        self._clock_values[0] = True
+        fmu.set_clock(self._clock_references, self._clock_values)
+        self._buffer[:length] = fields[self._binary.field][:length]
+        self._sizes[0] = length
+        fmu.set_binary(self._data_references, self._sizes, self._values)
+
+
+class _Events:
+    """The FMU's event side: the Clocks an event activates, in both directions.
+
+    Every method here is called with the FMU already in Event Mode, because
+    entering and leaving it is the participant's business — an event that
+    followed a Step and one that ends initialization are the same event, and
+    only the caller knows which it is holding.
+
+    `next_event_time` is what the last discrete-state update declared, in
+    seconds, and it is kept because the *next* Step is where an importer that
+    cannot honour it has to say so.
+    """
+
+    def __init__(self, outputs: dict[str, _ClockedPayload],
+                 inputs: dict[str, _ClockedPayload]):
+        self._outputs = list(outputs.items())
+        self._inputs = inputs
+        self.next_event_time: float | None = None
+
+    def handle(self, fmu: CoSimulation, event_time_ns: int) -> list:
+        """One event: every Clock activation it carries, in Publish order.
+
+        Discrete states are updated until the FMU stops asking, and the output
+        Clocks are read around every update rather than before it: an update
+        is exactly what can raise one, the update that ends the event
+        included. Reading a Clock that is not active costs nothing, and not
+        reading it loses the activation for good, because the buffer it gates
+        is defined only while it is up.
+
+        The iteration is bounded: an FMU that never converges fails with a
+        diagnostic rather than holding the Run until its response deadline.
+        """
+        published = []
+        for _ in range(_MAX_EVENT_ITERATIONS):
+            published.extend(self._activations(fmu, event_time_ns))
+            states = fmu.update_discrete_states()
+            self.next_event_time = states.next_event_time
+            if states.terminate:
+                raise ParticipantFailure(
+                    f"fmi3UpdateDiscreteStates requested termination via "
+                    f"terminateSimulation at {event_time_ns} ns"
+                )
+            if not states.need_update:
+                published.extend(self._activations(fmu, event_time_ns))
+                return published
+        raise ParticipantFailure(
+            f"fmi3UpdateDiscreteStates asked for another discrete-state "
+            f"update {_MAX_EVENT_ITERATIONS} times at {event_time_ns} ns; "
+            f"this importer bounds the iteration of one event"
+        )
+
+    def _activations(self, fmu: CoSimulation, event_time_ns: int) -> list:
+        """Every output Clock that reads active, and the buffer it gates."""
+        published = []
+        for channel, payload in self._outputs:
+            activation = payload.activation(fmu, event_time_ns)
+            if activation is not None:
+                published.append((channel, activation))
+        return published
+
+    def deliver(self, fmu: CoSimulation, messages: list,
+                event_time_ns: int) -> list:
+        """Activate one input Clock per Message, in the order they arrived.
+
+        Each Message is its own activation, so they are handed over one at a
+        time: two frames delivered in one Slot are two activations of the same
+        Clock, and merging them would lose one.
+        """
+        published = []
+        for message in messages:
+            self._inputs[message.channel].activate(fmu, message.data)
+            published.extend(self.handle(fmu, event_time_ns))
+        return published
+
+    def receives(self, channel: str) -> bool:
+        """Whether Messages on this Channel are Clock activations."""
+        return channel in self._inputs
+
+    def require_next_event_reachable(self, t: int, dt: int) -> None:
+        """Refuse to step past an event the FMU asked to be stopped at.
+
+        An FMU that declares a next event time is asking its importer to
+        choose the next communication point. This one cannot: the kernel owns
+        the Slot grid, and the Manifest's step period is what decides it. An
+        FMU that declares such a time inside the interval about to be stepped
+        is told so, rather than stepped past it and reported as if the
+        interval had been clean.
+
+        An event declared *on* the end of this interval is reachable: the
+        Step lands on it, and `due` is what takes it.
+        """
+        if self.next_event_time is None:
+            return
+        declared_ns = self._declared_ns()
+        if declared_ns < t + dt:
+            raise ParticipantFailure(
+                f"the FMU declared its next event at {self.next_event_time} s "
+                f"({declared_ns} ns), inside the interval [{t}, {t + dt}] ns "
+                f"this Step covers; this importer does not choose "
+                f"communication points, so it cannot stop there"
+            )
+
+    def due(self, communication_point_ns: int) -> bool:
+        """Whether the FMU declared an event at the point just reached.
+
+        An FMU that declares a next event time is asking to be in Event Mode
+        when its own clock reaches that instant. `fmi3DoStep` reporting
+        `eventHandlingNeeded` is the FMU saying so a second time, and an
+        importer that waited for the second one would skip the event of an
+        FMU that only said it once.
+        """
+        return (
+            self.next_event_time is not None
+            and self._declared_ns() == communication_point_ns
+        )
+
+    def _declared_ns(self) -> int:
+        """The declared next event time, in the kernel's own nanoseconds.
+
+        The FMU declares a double of seconds and the Slot grid is integer
+        nanoseconds, so the two are compared in nanoseconds: an event the FMU
+        means to fall on a communication point must not be missed, or
+        refused, because the two ways of writing that instant differ in the
+        last bit.
+        """
+        return round(self.next_event_time * NS_PER_S)
 
 
 def _channel_fields(init: dict) -> dict[str, dict[str, dict]]:
@@ -818,6 +1190,11 @@ def _require_mappable(binding: _Binding) -> None:
             f"{binding}, which declares {_dimensions(variable)}; this importer "
             f"maps variables of one value"
         )
+    if variable.kind == _CLOCK:
+        raise ManifestError(
+            f"{binding}, which is a Clock variable; a Clock is driven through "
+            f"the variable it gates rather than bound to a field of its own"
+        )
     if variable.kind != _BINARY and variable.kind not in _SCALARS:
         raise ManifestError(
             f"{binding}, which is a {variable.kind} variable; this importer "
@@ -922,6 +1299,119 @@ def _require_every_field_carried(
             )
 
 
+def _gating_clock(
+    binding: _Binding, description: ModelDescription
+) -> Variable:
+    """The Clock one clocked variable declares, checked against the profile."""
+    variable = binding.variable
+    if len(variable.clocks) != 1:
+        raise ManifestError(
+            f"{binding}, which declares {len(variable.clocks)} Clocks; this "
+            f"importer carries a variable gated by one Clock"
+        )
+    clock = description.clock(variable.clocks[0])
+    if clock is None:
+        raise ManifestError(
+            f"{binding}, whose clocks attribute names value reference "
+            f"{variable.clocks[0]}, which FMU "
+            f"{description.model_identifier!r} declares no Clock for"
+        )
+    if clock.interval_variability != _TRIGGERED:
+        raise ManifestError(
+            f"{binding}, which is gated by Clock {clock.name!r} of "
+            f"intervalVariability {clock.interval_variability!r}; this "
+            f"importer drives {_TRIGGERED!r} Clocks"
+        )
+    if clock.causality != variable.causality:
+        raise ManifestError(
+            f"{binding}, which is gated by Clock {clock.name!r} of causality "
+            f"{clock.causality!r}; a Clock gates a variable of its own "
+            f"causality"
+        )
+    if not description.has_event_mode:
+        raise ManifestError(
+            f"{binding}, which is gated by Clock {clock.name!r}; FMU "
+            f"{description.model_identifier!r} declares "
+            f"{_HAS_EVENT_MODE}=false, and a Clock is driven from Event Mode"
+        )
+    return clock
+
+
+def _event_time_field(
+    channel: str, field: str, fields: dict[str, dict]
+) -> str:
+    """The field a clocked Channel states each activation's event time in."""
+    name = f"{field}{_EVENT_TIME_SUFFIX}"
+    declared = fields.get(name)
+    if declared is None:
+        raise ManifestError(
+            f"Channel {channel!r} carries no field {name!r}; a clocked "
+            f"payload carries the FMI event time of its activation beside "
+            f"it, which is not the time the Message is published at"
+        )
+    if declared.get("count") is not None or declared["type"] != _EVENT_TIME_TYPE:
+        raise ManifestError(
+            f"Channel {channel!r} declares field {name!r} as "
+            f"{_shape(declared)}; an FMI event time is a "
+            f"{_EVENT_TIME_TYPE!r} scalar of nanoseconds"
+        )
+    return name
+
+
+def _clocked_payload(
+    channel: str,
+    direction: str,
+    fields: dict[str, dict],
+    bound: dict[str, Variable],
+    description: ModelDescription,
+) -> _ClockedPayload | None:
+    """The Clock-gated payload this Channel carries, if it carries one.
+
+    A Channel carries one or none: its Messages are activations of a single
+    Clock, and a second variable read beside them would be a Step's value
+    published on an event's Message.
+    """
+    clocked = [field for field, variable in bound.items() if variable.clocks]
+    if not clocked:
+        return None
+    causality = "input" if direction == "in" else "output"
+    field = clocked[0]
+    binding = _Binding(channel, field, bound[field])
+    if len(bound) > 1:
+        others = ", ".join(sorted(repr(name) for name in bound if name != field))
+        raise ManifestError(
+            f"{binding}, which is gated by a Clock; Channel {channel!r} binds "
+            f"{others} as well, and a clocked Channel carries one activation "
+            f"and nothing else"
+        )
+    if binding.variable.kind != _BINARY:
+        raise ManifestError(
+            f"{binding}, which is a clocked {binding.variable.kind} variable; "
+            f"this importer carries a clocked variable as a bounded Binary "
+            f"payload"
+        )
+    _require_mappable(binding)
+    _require_causality(binding, causality)
+    clock = _gating_clock(binding, description)
+    binary = _binary_field(binding, fields, causality)
+    event_time = _event_time_field(channel, field, fields)
+    carried = {binary.field, binary.length_field, event_time}
+    for declared in fields:
+        if declared not in carried:
+            raise ManifestError(
+                f"Channel {channel!r} declares schema field {declared!r}, "
+                f"which a clocked payload does not carry"
+            )
+    return _ClockedPayload(
+        _BinaryField(
+            variable=binary.variable, field=binary.field,
+            length_field=binary.length_field, capacity=binary.capacity,
+            clock=clock, event_time_field=event_time,
+        ),
+        causality,
+    )
+
+
 def _bind_channel(
     channel: str,
     direction: str,
@@ -1015,6 +1505,14 @@ class FmuParticipant(StepParticipant):
         self._fmu = None
         self._inputs: dict[str, _ChannelBinding] = {}
         self._outputs: dict[str, _ChannelBinding] = {}
+        # Set when a Channel carries a Clock-gated payload; None is the
+        # Step-only lifecycle, where the FMU never leaves Step Mode.
+        self._events: _Events | None = None
+        # What the event that ended initialization produced, held until the
+        # first activation: the kernel has no Slot before it.
+        self._pending_activations: list = []
+        # Where the FMU stands, in kernel nanoseconds.
+        self._communication_point = 0
 
     def on_init(self, init: dict) -> None:
         self.name = init["name"]
@@ -1039,9 +1537,20 @@ class FmuParticipant(StepParticipant):
         # configuration, and no FMU has to be loaded to see it.
         self._bind_channels(init, description)
         starts = _start_values(self._starts, description)
-        self._fmu = CoSimulation(description.binary(extracted), description)
+        self._fmu = CoSimulation(
+            description.binary(extracted), description,
+            event_mode=self._events is not None,
+        )
         self._fmu.apply_start_values(starts)
         self._fmu.initialize()
+        if self._events is not None:
+            # With Event Mode in use, initialization ends in Event Mode, and
+            # a bus node has its configuration waiting in that first event.
+            # Its activations belong to the initial time, and they are
+            # published in the first Slot the kernel activates this
+            # participant in, which is that same instant.
+            self._pending_activations = self._events.handle(self._fmu, 0)
+            self._fmu.enter_step_mode()
 
     def _bind_channels(self, init: dict, description: ModelDescription) -> None:
         """Bind the declared Channels to FMU variables, in both directions.
@@ -1050,6 +1559,9 @@ class FmuParticipant(StepParticipant):
         output-direction Channel is published from it after. Declaring one
         binding declares them all — the bindings are the whole mapping, and a
         Channel with none derives its own from the Float64 variable names.
+
+        A Channel whose variable declares a Clock is neither: its Messages are
+        activations of that Clock, handled in Event Mode.
         """
         fields_by_channel = _channel_fields(init)
         bound = (
@@ -1057,23 +1569,113 @@ class FmuParticipant(StepParticipant):
             if self._binds
             else _derived_bindings(init, fields_by_channel, description)
         )
+        clocked: dict[str, dict[str, _ClockedPayload]] = {"in": {}, "out": {}}
         for channel, declaration in init["channels"].items():
             direction = declaration["direction"]
+            fields = fields_by_channel[channel]
+            payload = _clocked_payload(
+                channel, direction, fields, bound[channel], description
+            )
+            if payload is not None:
+                clocked[direction][channel] = payload
+                continue
             bindings = self._inputs if direction == "in" else self._outputs
             bindings[channel] = _bind_channel(
-                channel, direction, fields_by_channel[channel], bound[channel]
+                channel, direction, fields, bound[channel]
             )
+        if clocked["in"] or clocked["out"]:
+            self._events = _Events(clocked["out"], clocked["in"])
 
     def on_step(self, t: int, dt: int, inputs: list):
+        """One Step of the FMU, and every Message the interval produced.
+
+        The kernel's Slot is `t` and the FMU is advanced over `[t, t+dt]`, so
+        what this publishes at `t` is what the FMU reached at `t+dt` — the
+        Step-mapped outputs as the values it holds there, and each Clock
+        activation as its own Message stating the FMI event time it belongs
+        to. The two are different quantities on purpose: an operation
+        observed at a communication point is published in the Slot the
+        importer was activated in, and reaches a subscriber one Latency after
+        that.
+        """
+        if self._events is None:
+            return self._step(t, dt, inputs)
+        self._require_communication_point(t)
+        published, self._pending_activations = self._pending_activations, []
+        events, plain = self._split_activations(inputs)
+        published.extend(self._deliver(events, t))
+        published.extend(self._step(t, dt, plain))
+        self._communication_point = t + dt
+        return published
+
+    def _step(self, t: int, dt: int, inputs: list) -> list:
+        """The Step-mapped half: write, advance, read, and take any event."""
         # Inputs arrive in publish order, so writing each in turn leaves the
         # newest Message on a Channel as the value the step sees.
         for message in inputs:
             self._inputs[message.channel].write(self._fmu, message.data)
-        self._fmu.do_step(t / NS_PER_S, dt / NS_PER_S)
-        return [
+        if self._events is not None:
+            self._events.require_next_event_reachable(t, dt)
+        event_needed = self._fmu.do_step(t / NS_PER_S, dt / NS_PER_S)
+        published = []
+        if event_needed and self._events is None:
+            raise ParticipantFailure(
+                f"fmi3DoStep reported eventHandlingNeeded at "
+                f"{(t + dt) / NS_PER_S} s; no Channel of this Run carries "
+                f"a Clock, so the FMU was instantiated with eventModeUsed "
+                f"false and the event cannot be handled"
+            )
+        # The FMU asks for an event either by reporting one at the end of the
+        # Step or by having declared its time beforehand. A Step that lands
+        # on a declared event time is that event's communication point, and
+        # waiting for the flag as well would skip it.
+        if self._events is not None and (event_needed or self._events.due(t + dt)):
+            self._fmu.enter_event_mode()
+            published = self._events.handle(self._fmu, t + dt)
+            self._fmu.enter_step_mode()
+        return published + [
             (channel, binding.read(self._fmu))
             for channel, binding in self._outputs.items()
         ]
+
+    def _split_activations(self, inputs: list) -> tuple[list, list]:
+        """Messages that are Clock activations, and Messages that are values."""
+        events: list = []
+        plain: list = []
+        for message in inputs:
+            target = events if self._events.receives(message.channel) else plain
+            target.append(message)
+        return events, plain
+
+    def _deliver(self, messages: list, t: int) -> list:
+        """Hand the FMU the activations that arrived, at the time it stands on.
+
+        They are delivered before the Step rather than inside it: the FMU is
+        standing on this communication point, and an event happens at the
+        point the FMU stands on.
+        """
+        if not messages:
+            return []
+        self._fmu.enter_event_mode()
+        published = self._events.deliver(self._fmu, messages, t)
+        self._fmu.enter_step_mode()
+        return published
+
+    def _require_communication_point(self, t: int) -> None:
+        """Refuse to step a clocked FMU over an interval it never covered.
+
+        The FMU was initialized at virtual time zero and is advanced one
+        contiguous interval at a time. An activation that does not continue
+        where the last one ended would leave an interval unstepped, and every
+        event time after it would name an instant the FMU never reached.
+        """
+        if t != self._communication_point:
+            raise ParticipantFailure(
+                f"the FMU stands at {self._communication_point} ns and this "
+                f"activation is at {t} ns; a clocked FMU is stepped over "
+                f"contiguous intervals from virtual time zero"
+            )
+
 
     def close(self) -> None:
         """Terminate and free the instance, and drop the extracted FMU.

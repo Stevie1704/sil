@@ -10,14 +10,20 @@
 #   2. both are inspected, and both are executed by an independent FMI 3.0
 #      importer against expectations written before any Run;
 #   3. the released SiL FMI Importer is pointed at the same FMU, and what it
-#      answers is kept verbatim.
+#      answers is kept verbatim;
+#   4. this checkout's FMI Importer is pointed at the same FMU, and its
+#      Recording is compared with the same expectation, on both step grids.
 #
-# The rejected revision's exchange and step 3 are both expected to fail. This
-# issue is an evidence gate: the fixture is what the implementation issues are
-# measured against, and those failures are the measurement. The script fails
-# only when the fixture itself is wrong — a digest that does not match the
-# pin, a reference exchange that does not match its expectation, or a rejected
-# revision that turns out to work after all.
+# The rejected revision's exchange and step 3 are both expected to fail. Steps
+# 1 to 3 are the evidence gate of issue #137: the fixture is what the
+# implementation issues are measured against, and those failures are the
+# measurement. They say nothing about the working tree, and the script fails
+# there only when the fixture itself is wrong — a digest that does not match
+# the pin, a reference exchange that does not match its expectation, or a
+# rejected revision that turns out to work after all.
+#
+# Step 4 is the other way round: it is the measurement of issue #139, and it
+# is expected to pass. It is the only step that reads the checkout.
 #
 # The evidence directory defaults to ./evidence and holds what is committed;
 # the workspace defaults to a temporary directory and holds the Manifests.
@@ -32,6 +38,9 @@ WORKSPACE="${2:-$(mktemp -d)}"
 
 FIXTURE_IMAGE="${SIL_LSBUS_FIXTURE_IMAGE:-sil-lsbus-fixture:local}"
 PROOF_IMAGE="${SIL_LSBUS_PROOF_IMAGE:-sil-lsbus-proof:local}"
+# The released runner with this checkout's Importer ahead of it — the one
+# image here that is not made of pinned artifacts alone.
+MEASURED_IMAGE="${SIL_LSBUS_MEASURED_IMAGE:-sil-lsbus-measured:local}"
 # The determinism guarantee is scoped to one machine class, so the platform is
 # pinned rather than inherited from the host.
 PLATFORM="${SIL_LSBUS_PLATFORM:-linux/amd64}"
@@ -78,14 +87,39 @@ harness() { docker_run --entrypoint python "$FIXTURE_IMAGE" "$@"; }
 # `sil-run` is the released image's entry point, so a Run needs no override.
 sil_run() { docker_run "$PROOF_IMAGE" "$@"; }
 sil_tool() { local tool="$1"; shift; docker_run --entrypoint "$tool" "$PROOF_IMAGE" "$@"; }
+# The same runner, with the checkout's Importer on PYTHONPATH.
+measured_run() { docker_run "$MEASURED_IMAGE" "$@"; }
+measured_tool() {
+    local tool="$1"; shift
+    docker_run --entrypoint "$tool" "$MEASURED_IMAGE" "$@"
+}
 
 step() { printf '\n=== %s ===\n' "$1"; }
+
+measured_checkout() {
+    local revision
+    revision="$(git -C "$PROOF_DIR" rev-parse HEAD 2>/dev/null)" || {
+        echo "not a git checkout"
+        return
+    }
+    if [ -n "$(git -C "$PROOF_DIR" status --porcelain)" ]; then
+        revision="$revision, with uncommitted changes"
+    fi
+    echo "$revision"
+}
 
 step "Build the fixture image and the proof image"
 docker build --platform "$PLATFORM" --target fixture \
     --tag "$FIXTURE_IMAGE" "$PROOF_DIR"
 docker build --platform "$PLATFORM" --target proof \
     --tag "$PROOF_IMAGE" "$PROOF_DIR"
+# The same released runner with the checkout's `sil` package ahead of it, so
+# the last step measures this tree's Importer rather than the release's. The
+# repository root is its build context, which is where that package lives.
+docker build --platform "$PLATFORM" \
+    --file "$PROOF_DIR/Dockerfile.measured" \
+    --build-arg "SIL_IMAGE=$SIL_IMAGE" \
+    --tag "$MEASURED_IMAGE" "$PROOF_DIR/../.."
 
 step "Keep the upstream build logs"
 # What it took to turn each upstream revision into a loadable FMU on this
@@ -106,6 +140,12 @@ step "Record the artifact identities"
     echo "sil version              $(sil_tool sil-run --version | tr -d '\r')"
     echo "fixture image id         $(docker image inspect --format '{{.Id}}' "$FIXTURE_IMAGE")"
     echo "proof image id           $(docker image inspect --format '{{.Id}}' "$PROOF_IMAGE")"
+    echo "measured image id        $(docker image inspect --format '{{.Id}}' "$MEASURED_IMAGE")"
+    # Which checkout the last step measured. The release above is pinned by
+    # digest; this is the other half of what produced the evidence, and a
+    # working tree that is not exactly that commit says so rather than
+    # borrowing the commit's name.
+    echo "measured checkout        $(measured_checkout)"
     # Two expressions rather than one alternation: BSD sed has no `\|` in a
     # basic regular expression, and this script runs on a developer's Mac as
     # well as in CI.
@@ -226,6 +266,52 @@ step "What the kernel says about the Channel the importer could not fill"
 # what separates a missing Importer capability from a missing Channel one.
 sil_tool sil-footprint /workspace/binary-channel.json \
     | tee "$EVIDENCE_DIR/footprint.txt"
+
+step "Drive the same FMU with this checkout's FMI Importer"
+# The node is copied out of the fixture image rather than baked into the
+# measured one: it is pinned once, above, and a second copy of a pinned
+# artifact is a second thing to keep in step.
+docker_run --entrypoint cat "$FIXTURE_IMAGE" "$NODE_FMU" \
+    > "$WORKSPACE/$(basename "$NODE_FMU")"
+measured_tool python3 /opt/measured/clocked_manifest.py \
+    "/workspace/$(basename "$NODE_FMU")" /workspace \
+    | tee "$EVIDENCE_DIR/clocked-manifest-hashes.txt"
+
+# One Run per step grid of the expected exchange, and each Recording judged
+# against the events that file states. Both are expected to pass: this is the
+# measurement of the implementation, not of the release.
+for case in aligned quantised; do
+    set +e
+    measured_run "/workspace/clocked-$case.json" \
+        -o "/workspace/clocked-$case.mcap" \
+        --participant-timeout-ms "$PARTICIPANT_TIMEOUT_MS" \
+        > "$WORKSPACE/clocked-$case.out" 2>&1
+    status=$?
+    set -e
+    {
+        echo "manifest    clocked-$case.json"
+        echo "exit status $status"
+        echo "--- output ---"
+        cat "$WORKSPACE/clocked-$case.out"
+        echo "--- recording against expected.json ---"
+    } > "$EVIDENCE_DIR/clocked-$case.txt"
+    if [ "$status" -ne 0 ]; then
+        cat "$EVIDENCE_DIR/clocked-$case.txt" >&2
+        echo "the clocked Run of case $case exited $status" >&2
+        exit 1
+    fi
+    measured_tool python3 /opt/measured/clocked_exchange.py \
+        "$case" "/workspace/clocked-$case.mcap" \
+        | tee -a "$EVIDENCE_DIR/clocked-$case.txt"
+done
+
+step "Check the clocked Run for determinism"
+# Two Runs of one Manifest, bit-compared: the event times a clocked Run
+# publishes are derived from the kernel's integers, so they have to reproduce
+# like every other recorded byte.
+measured_tool python3 -m sil.check /workspace/clocked-aligned.json \
+    --runner sil-run --participant-timeout-ms "$PARTICIPANT_TIMEOUT_MS" \
+    | tee "$EVIDENCE_DIR/clocked-identity.txt"
 
 step "Done"
 echo "evidence  $EVIDENCE_DIR"
