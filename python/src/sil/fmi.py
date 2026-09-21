@@ -25,9 +25,11 @@ rather than a variable left at zero.
 A Binary variable is variable-length and a Message is not, so a Channel
 carries a Binary value in an explicit bounded representation: a `u8` array
 field holding the payload and the `<field>_length` field beside it holding how
-much of it is the payload. The bytes above that length are zero, on every
-Message. Nothing is ever truncated to fit — a payload above the bound aborts
-the Run.
+much of it is the payload. On every Message this importer publishes, the bytes
+above that length are zero, so one Manifest records the same bytes twice; on
+an incoming Message they are ignored, because the length is what says where
+the payload ends. Nothing is ever truncated to fit — a payload above the
+bound, in either direction, aborts the Run.
 
 Both the bindings and the start values travel as command arguments, which the
 Manifest already hashes, so nothing that affects the Run lives outside the
@@ -119,12 +121,19 @@ _SCALARS = {
     "UInt32": _ScalarType("u32", ctypes.c_uint32, int, _integer),
     "Int64": _ScalarType("i64", ctypes.c_int64, int, _integer),
     "UInt64": _ScalarType("u64", ctypes.c_uint64, int, _integer),
-    # fmi3Boolean is a C `bool`; a Channel carries it as the byte 0 or 1.
+    # fmi3Boolean is a C `bool`, so a Channel carries it as a `u8` with C's
+    # own conversion: zero is false and any other value is true. What the FMU
+    # hands back is 0 or 1.
     "Boolean": _ScalarType("u8", ctypes.c_bool, int, _boolean),
 }
 
 _BINARY = "Binary"
 _FLOAT64 = "Float64"
+
+# A structural parameter is the one causality whose value FMI 3.0 has an
+# importer change inside Configuration Mode rather than in the instantiated
+# state. The CAN node of the acceptance fixture declares one.
+_STRUCTURAL = "structuralParameter"
 
 # A bounded payload's length is a count of bytes, so a signed field would
 # admit a length no payload can have.
@@ -157,6 +166,8 @@ _SIGNATURES = {
          ctypes.c_bool, ctypes.c_double],
     ),
     "fmi3ExitInitializationMode": (ctypes.c_int, [ctypes.c_void_p]),
+    "fmi3EnterConfigurationMode": (ctypes.c_int, [ctypes.c_void_p]),
+    "fmi3ExitConfigurationMode": (ctypes.c_int, [ctypes.c_void_p]),
     "fmi3DoStep": (
         ctypes.c_int,
         [ctypes.c_void_p, ctypes.c_double, ctypes.c_double, ctypes.c_bool,
@@ -175,6 +186,7 @@ _SIGNATURES = {
     "fmi3Terminate": (ctypes.c_int, [ctypes.c_void_p]),
     "fmi3FreeInstance": (None, [ctypes.c_void_p]),
 }
+
 
 def _scalar_signatures() -> dict:
     """Get and Set for every scalar type: one shape, named once per type."""
@@ -221,7 +233,9 @@ class Variable:
     dimensions: int
 
 
-def _by_causality(variables: dict[str, Variable], causality: str) -> dict[str, int]:
+def _by_causality(
+    variables: dict[str, Variable], causality: str
+) -> dict[str, int]:
     """The Float64 variables of one causality, by name.
 
     These are the variables a mapping is *derived* from. Only `input` and
@@ -406,12 +420,31 @@ class CoSimulation:
         self._call("fmi3ExitInitializationMode")
 
     def apply_start_values(self, starts: list[tuple[Variable, object]]) -> None:
-        """Write the declared start values, in the order they were declared.
+        """Write the declared start values, before initialization mode.
 
-        This runs in the instantiated state, before initialization mode, which
-        is where FMI 3.0 has an importer override the start values a
-        description declares.
+        A structural parameter is written inside Configuration Mode, which is
+        where FMI 3.0 has one changed; every other variable is written in the
+        instantiated state, where the standard has an importer override the
+        start values a description declares. An FMU none of whose variables
+        is a structural parameter is never asked to configure.
+
+        Each group keeps the order it was declared in, so a variable declared
+        twice ends at its last value.
         """
+        structural = [
+            (variable, value) for variable, value in starts
+            if variable.causality == _STRUCTURAL
+        ]
+        if structural:
+            self._call("fmi3EnterConfigurationMode")
+            self._write_start_values(structural)
+            self._call("fmi3ExitConfigurationMode")
+        self._write_start_values([
+            (variable, value) for variable, value in starts
+            if variable.causality != _STRUCTURAL
+        ])
+
+    def _write_start_values(self, starts) -> None:
         for variable, value in starts:
             references = _references(variable.reference)
             if variable.kind == _BINARY:
@@ -497,6 +530,22 @@ class CoSimulation:
         raise ParticipantFailure(f"{name} returned {_status_name(status)}")
 
 
+@dataclass(frozen=True)
+class _Binding:
+    """One Channel schema field bound to one FMU variable."""
+
+    channel: str
+    field: str
+    variable: Variable
+
+    def __str__(self) -> str:
+        """How every diagnostic about this binding opens."""
+        return (
+            f"Channel {self.channel!r} field {self.field!r} names FMU "
+            f"variable {self.variable.name!r}"
+        )
+
+
 class _ScalarGroup:
     """One Channel's fields bound to FMU variables of one scalar type.
 
@@ -505,11 +554,13 @@ class _ScalarGroup:
     one FMI call however many fields it carries.
     """
 
-    def __init__(self, kind: str, bound: list[tuple[str, Variable]]):
+    def __init__(self, kind: str, bound: list[_Binding]):
         self._kind = kind
         self._scalar = _SCALARS[kind]
-        self._fields = [field for field, _ in bound]
-        self._references = _references(*(v.reference for _, v in bound))
+        self._fields = [binding.field for binding in bound]
+        self._references = _references(
+            *(binding.variable.reference for binding in bound)
+        )
         self._values = (self._scalar.element * len(bound))()
 
     def write(self, fmu: CoSimulation, fields: dict) -> None:
@@ -538,20 +589,24 @@ class _BinaryField:
 class _BinaryGroup:
     """One Channel's Binary variables, as bounded payloads with a length.
 
-    The buffers the FMU is handed on a set are allocated once and live as long
-    as this group: FMI 3.0 has the importer own them for the duration of the
-    call, and reallocating one per step would put their lifetime in the
-    garbage collector's hands. What the FMU hands back on a get points into
-    its own memory and is valid until the next call, so it is copied here and
-    then padded out to the Channel's bound.
+    A group writes or reads, never both, because the Channel's direction
+    decides which. The buffers a written group hands the FMU are allocated
+    once and live as long as the group: FMI 3.0 has the importer own them for
+    the duration of the call, and reallocating one per step would put their
+    lifetime in the garbage collector's hands. A read group has none — the
+    pointers are the FMU's own, valid until its next call, so each payload is
+    copied out at once and padded to the Channel's bound.
     """
 
-    def __init__(self, bound: list[_BinaryField]):
+    def __init__(self, bound: list[_BinaryField], causality: str):
         self._bound = bound
         self._references = _references(*(b.variable.reference for b in bound))
         self._sizes = (ctypes.c_size_t * len(bound))()
         self._values = (ctypes.c_void_p * len(bound))()
-        self._buffers = [(ctypes.c_char * b.capacity)() for b in bound]
+        self._buffers = (
+            [(ctypes.c_char * b.capacity)() for b in bound]
+            if causality == "input" else []
+        )
         for index, buffer in enumerate(self._buffers):
             self._values[index] = ctypes.addressof(buffer)
 
@@ -736,56 +791,47 @@ def _shape(field: dict) -> str:
     return f"a {field['type']!r} array of {count}"
 
 
-def _require_mappable(channel: str, field: str, variable: Variable) -> None:
+def _require_mappable(binding: _Binding) -> None:
     """Reject a variable whose type or shape this importer does not map."""
+    variable = binding.variable
     if variable.dimensions:
         raise ManifestError(
-            f"Channel {channel!r} field {field!r} names FMU variable "
-            f"{variable.name!r}, which declares dimensions; this importer maps "
-            f"scalar and Binary variables only"
+            f"{binding}, which declares dimensions; this importer maps scalar "
+            f"and Binary variables only"
         )
     if variable.kind != _BINARY and variable.kind not in _SCALARS:
         raise ManifestError(
-            f"Channel {channel!r} field {field!r} names FMU variable "
-            f"{variable.name!r}, which is a {variable.kind} variable; this "
-            f"importer maps Binary and the scalar types "
-            f"{', '.join(_SCALARS)}"
+            f"{binding}, which is a {variable.kind} variable; this importer "
+            f"maps Binary and the scalar types {', '.join(_SCALARS)}"
         )
 
 
-def _require_causality(
-    channel: str, field: str, variable: Variable, causality: str
-) -> None:
+def _require_causality(binding: _Binding, causality: str) -> None:
     """Reject a variable bound to a Channel of the other direction."""
-    if variable.causality != causality:
+    if binding.variable.causality != causality:
         raise ManifestError(
-            f"Channel {channel!r} field {field!r} names FMU variable "
-            f"{variable.name!r}, whose causality is {variable.causality!r}; "
+            f"{binding}, whose causality is {binding.variable.causality!r}; "
             f"this Channel's direction binds {causality} variables"
         )
 
 
-def _require_field_type(
-    channel: str, field: str, spec: dict, variable: Variable
-) -> None:
+def _require_field_type(binding: _Binding, spec: dict) -> None:
     """Reject a field whose type is not the one the variable's type maps to."""
-    scalar = _SCALARS[variable.kind]
+    scalar = _SCALARS[binding.variable.kind]
     if spec.get("count") is not None or spec["type"] != scalar.field_type:
         raise ManifestError(
-            f"Channel {channel!r} declares field {field!r} as {_shape(spec)}; "
-            f"{variable.kind} variable {variable.name!r} is carried by a "
+            f"Channel {binding.channel!r} declares field {binding.field!r} as "
+            f"{_shape(spec)}; {binding.variable.kind} variable "
+            f"{binding.variable.name!r} is carried by a "
             f"{scalar.field_type!r} scalar"
         )
 
 
 def _binary_field(
-    channel: str,
-    field: str,
-    fields: dict[str, dict],
-    variable: Variable,
-    causality: str,
+    binding: _Binding, fields: dict[str, dict], causality: str
 ) -> _BinaryField:
     """The bounded representation a Channel carries one Binary variable in."""
+    channel, field, variable = binding.channel, binding.field, binding.variable
     spec = fields[field]
     capacity = spec.get("count")
     if capacity is None or spec["type"] != "u8":
@@ -823,30 +869,18 @@ def _binary_field(
     )
 
 
-def _bind_channel(
+def _require_every_field_carried(
     channel: str,
-    direction: str,
     fields: dict[str, dict],
     bound: dict[str, Variable],
-) -> _ChannelBinding:
-    """One Channel's fields, checked against the variables they name."""
-    causality = "input" if direction == "in" else "output"
-    scalars: dict[str, list[tuple[str, Variable]]] = {}
-    binaries: list[_BinaryField] = []
-    lengths: dict[str, str] = {}
-    for field in fields:
-        variable = bound.get(field)
-        if variable is None:
-            continue
-        _require_mappable(channel, field, variable)
-        _require_causality(channel, field, variable, causality)
-        if variable.kind == _BINARY:
-            binary = _binary_field(channel, field, fields, variable, causality)
-            lengths[binary.length_field] = field
-            binaries.append(binary)
-        else:
-            _require_field_type(channel, field, fields[field], variable)
-            scalars.setdefault(variable.kind, []).append((field, variable))
+    lengths: dict[str, str],
+) -> None:
+    """Require each field of one Channel to carry exactly one thing.
+
+    A field carries a variable it is bound to, or the length of a Binary
+    payload beside it. A field that carries neither is a mapping mistake, and
+    one that carries both is two.
+    """
     for field in fields:
         if field in bound and field in lengths:
             raise ManifestError(
@@ -859,11 +893,38 @@ def _bind_channel(
                 f"Channel {channel!r} declares schema field {field!r}, which "
                 f"no binding names an FMU variable for"
             )
+
+
+def _bind_channel(
+    channel: str,
+    direction: str,
+    fields: dict[str, dict],
+    bound: dict[str, Variable],
+) -> _ChannelBinding:
+    """One Channel's fields, checked against the variables they name."""
+    causality = "input" if direction == "in" else "output"
+    scalars: dict[str, list[_Binding]] = {}
+    binaries: list[_BinaryField] = []
+    lengths: dict[str, str] = {}
+    for field in fields:
+        if field not in bound:
+            continue
+        binding = _Binding(channel, field, bound[field])
+        _require_mappable(binding)
+        _require_causality(binding, causality)
+        if binding.variable.kind == _BINARY:
+            binary = _binary_field(binding, fields, causality)
+            lengths[binary.length_field] = field
+            binaries.append(binary)
+        else:
+            _require_field_type(binding, fields[field])
+            scalars.setdefault(binding.variable.kind, []).append(binding)
+    _require_every_field_carried(channel, fields, bound, lengths)
     groups: list = [
-        _ScalarGroup(kind, items) for kind, items in scalars.items()
+        _ScalarGroup(kind, bindings) for kind, bindings in scalars.items()
     ]
     if binaries:
-        groups.append(_BinaryGroup(binaries))
+        groups.append(_BinaryGroup(binaries, causality))
     return _ChannelBinding(groups)
 
 
@@ -1038,7 +1099,8 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--start", action="append", default=[], metavar="VARIABLE=VALUE",
-        help="set one FMU variable before initialization mode is left; a "
+        help="set one FMU variable before initialization mode is entered; a "
+             "structural parameter goes inside Configuration Mode, and a "
              "Binary value is hexadecimal",
     )
     return parser.parse_args(argv)

@@ -1,4 +1,4 @@
-"""Toy process participant: publishes a bounded binary frame each step, as
+"""Toy process participant: publishes a bounded binary payload each Step, as
 stimulus for the FMI importer's Binary mapping.
 
 The payload is a pure function of the step index (t // dt), so the run stays
@@ -18,7 +18,7 @@ from sil.participant import StepParticipant, run
 
 
 def payload(step: int, capacity: int) -> bytes:
-    """The frame published at `step`, as bytes."""
+    """The payload published at `step`, as bytes."""
     length = step % (capacity + 1)
     return bytes(0 if index % 3 == 0 else (step + index) % 255 + 1
                  for index in range(length))
@@ -33,10 +33,10 @@ class BinaryStimulus(StepParticipant):
         self.declared_extra = declared_extra
 
     def on_step(self, t, dt, inputs):
-        frame = payload(t // dt, self.capacity)
+        published = payload(t // dt, self.capacity)
         return [(self.channel, {
-            self.field: frame.ljust(self.capacity, b"\x00"),
-            f"{self.field}_length": len(frame) + self.declared_extra,
+            self.field: published.ljust(self.capacity, b"\x00"),
+            f"{self.field}_length": len(published) + self.declared_extra,
         })]
 
 

@@ -323,7 +323,10 @@ layout, say — so a field name alone names no single end of the mapping.
 Declaring one binding declares them all: the bindings are then the whole
 mapping, and a Channel field that none of them names is rejected rather than
 left as a variable the FMU never sees. `--start` writes a variable once,
-before the FMU leaves initialization mode.
+before initialization mode is entered: a structural parameter inside
+Configuration Mode, where FMI 3.0 has one changed, and every other variable in
+the instantiated state. An FMU that declares no structural parameter is never
+asked to configure.
 
 Both travel as command arguments, which the Manifest already hashes, so the
 whole mapping is inside the hashed Manifest. Pointing at a file instead would
@@ -331,7 +334,9 @@ be covered by the Run's provenance side-car, which digests every file a
 participant's command names.
 
 The mapped types are `Float32`, `Float64`, `Int8` … `Int64`, `UInt8` …
-`UInt64`, `Boolean` (carried as a `u8` of 0 or 1) and `Binary`. A binding that
+`UInt64`, `Boolean` and `Binary`. A `Boolean` is carried by a `u8` with C's
+own conversion — zero is false, anything else is true — and what the FMU hands
+back is 0 or 1. A binding that
 names a `String`, an `Enumeration`, a `Clock` or a variable with dimensions is
 reported before the FMU is stepped, as is one whose field type is not the one
 its variable's type maps to.
@@ -351,12 +356,19 @@ m.add_schemas({"can.Frame": {"fields": [
 ```
 
 The bound is the array's `count`, and it is the Run's own declaration rather
-than the FMU's. Arbitrary bytes survive, embedded zeros included; the bytes
-above the length are zero on every Message, so two Runs of one Manifest record
-the same bytes. Nothing is truncated to fit: a payload above the bound, in
-either direction, aborts the Run with exit 1. A Channel bound above the
-`maxSize` an input variable declares is refused before stepping, with exit 2 —
-the FMU would refuse every payload above it.
+than the FMU's. Arbitrary bytes survive, embedded zeros included; on every
+published Message the bytes above the length are zero, so two Runs of one
+Manifest record the same bytes. On an incoming Message they are ignored: the
+length is what says where the payload ends.
+
+Nothing is truncated to fit — a payload above the bound, in either direction,
+aborts the Run with exit 1. The two directions are checked differently on
+purpose. A Channel bound *above* the `maxSize` an **input** variable declares
+is refused before stepping, with exit 2: the FMU would refuse every payload
+above it, so no such Run can work. A published Channel narrower than an
+**output** variable's `maxSize` is not refused, because `maxSize` is a ceiling
+the FMU may never reach — the Run declares what it is prepared to carry, and
+only a payload that actually exceeds it aborts.
 
 This milestone supports FMI 3.0 co-simulation only. It drives neither Clocks
 nor Event Mode, so an FMU that requires them — the FMI-LS-BUS CAN demo nodes

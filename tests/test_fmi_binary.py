@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pytest
 from conftest import ROOT
-from sil.fmi import FmuParticipant
+from sil.fmi import CoSimulation, FmuParticipant
 from sil.manifest import Manifest, SubscriberRoute
 from sil.participant import Input, ManifestError, ParticipantFailure
 from sil.testing import run_simulation
@@ -58,25 +58,25 @@ FMU_BINARY_BYTES = 128
 
 STEP_PERIOD_NS = 10_000_000
 
-IN = "can.In"
-OUT = "can.Out"
-FRAME = "can.Frame"
+IN = "bin.In"
+OUT = "bin.Out"
+PAYLOAD_SCHEMA = "bin.Payload"
 
 # The bounded representation: the length actually used, then the payload bytes
 # the Channel admits. One schema, carried by both Channels — which is why a
 # binding names the Channel as well as the field.
-FRAME_SCHEMAS = {
-    FRAME: {
+PAYLOAD_SCHEMAS = {
+    PAYLOAD_SCHEMA: {
         "fields": [
-            {"name": "frame_length", "type": "u16"},
-            {"name": "frame", "type": "u8", "count": FMU_BINARY_BYTES},
+            {"name": "payload_length", "type": "u16"},
+            {"name": "payload", "type": "u8", "count": FMU_BINARY_BYTES},
         ]
     }
 }
 
-FRAME_BINDINGS = [
-    f"{IN}:frame=Binary_input",
-    f"{OUT}:frame=Binary_output",
+PAYLOAD_BINDINGS = [
+    f"{IN}:payload=Binary_input",
+    f"{OUT}:payload=Binary_output",
 ]
 
 
@@ -93,7 +93,7 @@ def init_line(channels: dict[str, tuple[str, str]], schemas: dict) -> dict:
     }
 
 
-FRAME_CHANNELS = {IN: (FRAME, "in"), OUT: (FRAME, "out")}
+PAYLOAD_CHANNELS = {IN: (PAYLOAD_SCHEMA, "in"), OUT: (PAYLOAD_SCHEMA, "out")}
 
 
 @pytest.fixture
@@ -101,8 +101,8 @@ def importer():
     """Build an initialized importer, torn down after the test."""
     built = []
 
-    def _build(*, binds=FRAME_BINDINGS, starts=(),
-               channels=FRAME_CHANNELS, schemas=FRAME_SCHEMAS,
+    def _build(*, binds=PAYLOAD_BINDINGS, starts=(),
+               channels=PAYLOAD_CHANNELS, schemas=PAYLOAD_SCHEMAS,
                fmu=FEEDTHROUGH):
         participant = FmuParticipant(fmu, binds=list(binds), starts=list(starts))
         built.append(participant)
@@ -119,11 +119,24 @@ def importer():
             pass
 
 
-def frame(payload_bytes: bytes, capacity: int = FMU_BINARY_BYTES) -> dict:
+def record_calls(monkeypatch) -> list[str]:
+    """Every co-simulation entry point the importer calls, in order."""
+    calls: list[str] = []
+    called = CoSimulation._call
+
+    def record(self, name, *arguments):
+        calls.append(name)
+        return called(self, name, *arguments)
+
+    monkeypatch.setattr(CoSimulation, "_call", record)
+    return calls
+
+
+def message(payload_bytes: bytes, capacity: int = FMU_BINARY_BYTES) -> dict:
     """One Message carrying `payload_bytes` on a Channel of that bound."""
     return {
-        "frame_length": len(payload_bytes),
-        "frame": payload_bytes.ljust(capacity, b"\x00"),
+        "payload_length": len(payload_bytes),
+        "payload": payload_bytes.ljust(capacity, b"\x00"),
     }
 
 
@@ -136,7 +149,7 @@ def round_trip(participant, payload_bytes: bytes, capacity=FMU_BINARY_BYTES,
     """
     (channel, fields), = participant.on_step(
         step * STEP_PERIOD_NS, STEP_PERIOD_NS,
-        [Input(IN, step * STEP_PERIOD_NS, frame(payload_bytes, capacity))],
+        [Input(IN, step * STEP_PERIOD_NS, message(payload_bytes, capacity))],
     )
     assert channel == OUT
     return fields
@@ -149,19 +162,19 @@ class TestBoundedPayloads:
         """Embedded zeros included: the length says what the payload is."""
         payload_bytes = b"\x00\xff\x00\x10\x00\x00\x7f"
         fields = round_trip(importer(), payload_bytes)
-        assert fields["frame_length"] == len(payload_bytes)
-        assert fields["frame"][:len(payload_bytes)] == payload_bytes
+        assert fields["payload_length"] == len(payload_bytes)
+        assert fields["payload"][:len(payload_bytes)] == payload_bytes
 
     def test_an_empty_payload_survives_the_round_trip(self, importer):
         fields = round_trip(importer(), b"")
-        assert fields["frame_length"] == 0
-        assert fields["frame"] == bytes(FMU_BINARY_BYTES)
+        assert fields["payload_length"] == 0
+        assert fields["payload"] == bytes(FMU_BINARY_BYTES)
 
     def test_a_payload_filling_the_bound_survives_the_round_trip(self, importer):
         payload_bytes = bytes((index * 7) % 256 for index in range(FMU_BINARY_BYTES))
         fields = round_trip(importer(), payload_bytes)
-        assert fields["frame_length"] == FMU_BINARY_BYTES
-        assert fields["frame"] == payload_bytes
+        assert fields["payload_length"] == FMU_BINARY_BYTES
+        assert fields["payload"] == payload_bytes
 
     def test_the_bytes_beyond_the_payload_are_zero(self, importer):
         """Unused bytes are deterministic, not whatever the buffer held.
@@ -173,27 +186,27 @@ class TestBoundedPayloads:
         round_trip(participant, bytes(FMU_BINARY_BYTES), step=0)
         round_trip(participant, b"\xaa" * 64, step=1)
         fields = round_trip(participant, b"\x01\x02", step=2)
-        assert fields["frame"] == b"\x01\x02" + bytes(FMU_BINARY_BYTES - 2)
+        assert fields["payload"] == b"\x01\x02" + bytes(FMU_BINARY_BYTES - 2)
 
     def test_the_length_a_message_declares_bounds_what_is_written(self, importer):
         """The payload field is always full-width; the length is the payload."""
-        message = frame(b"\x01\x02\x03")
-        message["frame"] = b"\x01\x02\x03" + b"\xff" * (FMU_BINARY_BYTES - 3)
+        tailed = message(b"\x01\x02\x03")
+        tailed["payload"] = b"\x01\x02\x03" + b"\xff" * (FMU_BINARY_BYTES - 3)
         (_, fields), = importer().on_step(
-            0, STEP_PERIOD_NS, [Input(IN, 0, message)]
+            0, STEP_PERIOD_NS, [Input(IN, 0, tailed)]
         )
-        assert fields["frame_length"] == 3
-        assert fields["frame"] == b"\x01\x02\x03" + bytes(FMU_BINARY_BYTES - 3)
+        assert fields["payload_length"] == 3
+        assert fields["payload"] == b"\x01\x02\x03" + bytes(FMU_BINARY_BYTES - 3)
 
 
 class TestPayloadsThatDoNotFit:
     """An oversize payload aborts the Run; nothing is truncated to fit."""
 
     def test_a_length_above_the_channel_bound_is_refused(self, importer):
-        message = frame(b"\x01" * 8)
-        message["frame_length"] = FMU_BINARY_BYTES + 1
-        with pytest.raises(ParticipantFailure, match="frame_length"):
-            importer().on_step(0, STEP_PERIOD_NS, [Input(IN, 0, message)])
+        over_declared = message(b"\x01" * 8)
+        over_declared["payload_length"] = FMU_BINARY_BYTES + 1
+        with pytest.raises(ParticipantFailure, match="payload_length"):
+            importer().on_step(0, STEP_PERIOD_NS, [Input(IN, 0, over_declared)])
 
     def test_a_payload_above_the_fmus_own_bound_is_refused_by_the_fmu(
         self, importer
@@ -201,9 +214,9 @@ class TestPayloadsThatDoNotFit:
         """A Channel may admit more than the FMU does; the FMU then says so."""
         capacity = FMU_BINARY_BYTES * 2
         schemas = {
-            FRAME: {"fields": [
-                {"name": "frame_length", "type": "u16"},
-                {"name": "frame", "type": "u8", "count": capacity},
+            PAYLOAD_SCHEMA: {"fields": [
+                {"name": "payload_length", "type": "u16"},
+                {"name": "payload", "type": "u8", "count": capacity},
             ]}
         }
         participant = importer(schemas=schemas)
@@ -215,22 +228,22 @@ class TestPayloadsThatDoNotFit:
         the FMU knows about — so what does not fit fails rather than arrives
         cut short."""
         schemas = {
-            FRAME: {"fields": [
-                {"name": "frame_length", "type": "u16"},
-                {"name": "frame", "type": "u8", "count": FMU_BINARY_BYTES},
+            PAYLOAD_SCHEMA: {"fields": [
+                {"name": "payload_length", "type": "u16"},
+                {"name": "payload", "type": "u8", "count": FMU_BINARY_BYTES},
             ]},
-            "can.Small": {"fields": [
-                {"name": "frame_length", "type": "u16"},
-                {"name": "frame", "type": "u8", "count": 8},
+            "bin.Small": {"fields": [
+                {"name": "payload_length", "type": "u16"},
+                {"name": "payload", "type": "u8", "count": 8},
             ]},
         }
         participant = importer(
             schemas=schemas,
-            channels={IN: (FRAME, "in"), OUT: ("can.Small", "out")},
+            channels={IN: (PAYLOAD_SCHEMA, "in"), OUT: ("bin.Small", "out")},
         )
         with pytest.raises(ParticipantFailure, match="produced 16 bytes"):
             participant.on_step(
-                0, STEP_PERIOD_NS, [Input(IN, 0, frame(b"\x01" * 16))]
+                0, STEP_PERIOD_NS, [Input(IN, 0, message(b"\x01" * 16))]
             )
 
 
@@ -282,19 +295,78 @@ class TestScalarTypes:
         )
         assert published == written
 
+    def test_a_boolean_is_carried_by_a_byte_with_cs_own_conversion(
+        self, importer
+    ):
+        """`fmi3Boolean` is a C `bool`: any non-zero byte is true, and what
+        the FMU hands back is 0 or 1. A `u8` field carries both ends of that,
+        so the conversion is stated here rather than left to be discovered."""
+        participant = importer(
+            binds=["s.In:flag=Boolean_input", "s.Out:flag=Boolean_output"],
+            channels={"s.In": ("fmu.Flag", "in"), "s.Out": ("fmu.Flag", "out")},
+            schemas={"fmu.Flag": {"fields": [{"name": "flag", "type": "u8"}]}},
+        )
+        (_, published), = participant.on_step(
+            0, STEP_PERIOD_NS, [Input("s.In", 0, {"flag": 2})]
+        )
+        assert published == {"flag": 1}
+
 
 class TestStartValues:
-    """Initialization values, set before the FMU leaves initialization mode."""
+    """Initialization values, written before initialization mode is entered."""
+
+    def test_a_structural_parameter_is_written_in_configuration_mode(
+        self, importer, monkeypatch, tmp_path
+    ):
+        """FMI 3.0 has a structural parameter changed in Configuration Mode.
+
+        The Reference FMU accepts the write in the instantiated state too, so
+        its own answer cannot tell the two sequences apart; the call seam is
+        where the contract is visible.
+        """
+        calls = record_calls(monkeypatch)
+        structural = with_description(
+            tmp_path, "structural",
+            lambda text: text.replace(
+                'name="Float64_fixed_parameter" valueReference="5" '
+                'causality="parameter"',
+                'name="Float64_fixed_parameter" valueReference="5" '
+                'causality="structuralParameter"',
+            ),
+        )
+        importer(
+            fmu=structural,
+            binds=[f"{OUT}:payload=Binary_output"],
+            starts=["Float64_fixed_parameter=2.5"],
+            channels={OUT: (PAYLOAD_SCHEMA, "out")},
+        )
+        assert calls[:4] == [
+            "fmi3EnterConfigurationMode", "fmi3SetFloat64",
+            "fmi3ExitConfigurationMode", "fmi3EnterInitializationMode",
+        ]
+
+    def test_an_ordinary_variable_is_written_without_configuring(
+        self, importer, monkeypatch
+    ):
+        """An FMU with no structural parameter is never asked to configure."""
+        calls = record_calls(monkeypatch)
+        importer(
+            binds=[f"{OUT}:payload=Binary_output"],
+            starts=["Binary_input=00ff00"],
+            channels={OUT: (PAYLOAD_SCHEMA, "out")},
+        )
+        assert "fmi3EnterConfigurationMode" not in calls
+        assert calls[:2] == ["fmi3SetBinary", "fmi3EnterInitializationMode"]
 
     def test_a_start_value_is_what_an_unfed_step_sees(self, importer):
         participant = importer(
-            binds=[f"{OUT}:frame=Binary_output"],
+            binds=[f"{OUT}:payload=Binary_output"],
             starts=["Binary_input=00ff00"],
-            channels={OUT: (FRAME, "out")},
+            channels={OUT: (PAYLOAD_SCHEMA, "out")},
         )
         (_, fields), = participant.on_step(0, STEP_PERIOD_NS, [])
-        assert fields["frame_length"] == 3
-        assert fields["frame"][:3] == b"\x00\xff\x00"
+        assert fields["payload_length"] == 3
+        assert fields["payload"][:3] == b"\x00\xff\x00"
 
     def test_a_scalar_start_value_is_what_an_unfed_step_sees(self, importer):
         participant = importer(
@@ -312,10 +384,10 @@ class TestStartValues:
     def test_the_fmus_own_start_value_stands_when_none_is_given(self, importer):
         """`Feedthrough` starts its Binary variables at `foo`."""
         participant = importer(
-            binds=[f"{OUT}:frame=Binary_output"], channels={OUT: (FRAME, "out")}
+            binds=[f"{OUT}:payload=Binary_output"], channels={OUT: (PAYLOAD_SCHEMA, "out")}
         )
         (_, fields), = participant.on_step(0, STEP_PERIOD_NS, [])
-        assert fields["frame"][:fields["frame_length"]] == b"foo"
+        assert fields["payload"][:fields["payload_length"]] == b"foo"
 
     @pytest.mark.parametrize(
         ("start", "expected"),
@@ -333,8 +405,8 @@ class TestStartValues:
         self, importer, start, expected
     ):
         with pytest.raises(ManifestError, match=expected):
-            importer(binds=[f"{OUT}:frame=Binary_output"], starts=[start],
-                     channels={OUT: (FRAME, "out")})
+            importer(binds=[f"{OUT}:payload=Binary_output"], starts=[start],
+                     channels={OUT: (PAYLOAD_SCHEMA, "out")})
 
 
 def with_description(tmp_path, name: str, rewrite) -> Path:
@@ -365,7 +437,7 @@ class TestBindingsRejectedBeforeStepping:
 
     def test_a_binding_naming_no_fmu_variable_is_rejected(self, importer):
         with pytest.raises(ManifestError, match="Binary_missing"):
-            importer(binds=[f"{IN}:frame=Binary_missing", *FRAME_BINDINGS[1:]])
+            importer(binds=[f"{IN}:payload=Binary_missing", *PAYLOAD_BINDINGS[1:]])
 
     def test_a_binding_naming_a_variable_of_an_unsupported_type_is_rejected(
         self, importer
@@ -419,29 +491,29 @@ class TestBindingsRejectedBeforeStepping:
     def test_a_binary_variable_bound_to_a_scalar_field_is_rejected(self, importer):
         with pytest.raises(ManifestError, match="u8"):
             importer(
-                binds=[f"{IN}:frame=Binary_input"],
+                binds=[f"{IN}:payload=Binary_input"],
                 channels={IN: ("t.Scalar", "in")},
-                schemas={"t.Scalar": {"fields": [{"name": "frame", "type": "u8"}]}},
+                schemas={"t.Scalar": {"fields": [{"name": "payload", "type": "u8"}]}},
             )
 
     def test_a_binary_variable_without_a_length_field_is_rejected(self, importer):
-        with pytest.raises(ManifestError, match="frame_length"):
+        with pytest.raises(ManifestError, match="payload_length"):
             importer(
-                binds=[f"{IN}:frame=Binary_input"],
+                binds=[f"{IN}:payload=Binary_input"],
                 channels={IN: ("t.NoLength", "in")},
                 schemas={"t.NoLength": {"fields": [
-                    {"name": "frame", "type": "u8", "count": 8}
+                    {"name": "payload", "type": "u8", "count": 8}
                 ]}},
             )
 
     def test_a_signed_length_field_is_rejected(self, importer):
         with pytest.raises(ManifestError, match="unsigned"):
             importer(
-                binds=[f"{IN}:frame=Binary_input"],
+                binds=[f"{IN}:payload=Binary_input"],
                 channels={IN: ("t.Signed", "in")},
                 schemas={"t.Signed": {"fields": [
-                    {"name": "frame_length", "type": "i16"},
-                    {"name": "frame", "type": "u8", "count": 8},
+                    {"name": "payload_length", "type": "i16"},
+                    {"name": "payload", "type": "u8", "count": 8},
                 ]}},
             )
 
@@ -450,18 +522,18 @@ class TestBindingsRejectedBeforeStepping:
         variable the FMU would never see written or read."""
         with pytest.raises(ManifestError, match="spare"):
             importer(
-                binds=[f"{IN}:frame=Binary_input"],
+                binds=[f"{IN}:payload=Binary_input"],
                 channels={IN: ("t.Spare", "in")},
                 schemas={"t.Spare": {"fields": [
-                    {"name": "frame_length", "type": "u16"},
-                    {"name": "frame", "type": "u8", "count": 8},
+                    {"name": "payload_length", "type": "u16"},
+                    {"name": "payload", "type": "u8", "count": 8},
                     {"name": "spare", "type": "u32"},
                 ]}},
             )
 
     def test_a_binding_against_the_channels_direction_is_rejected(self, importer):
         with pytest.raises(ManifestError, match="output"):
-            importer(binds=[f"{IN}:frame=Binary_output", *FRAME_BINDINGS[1:]])
+            importer(binds=[f"{IN}:payload=Binary_output", *PAYLOAD_BINDINGS[1:]])
 
     def test_a_bound_above_the_variables_declared_max_size_is_rejected(
         self, importer, tmp_path
@@ -478,16 +550,16 @@ class TestBindingsRejectedBeforeStepping:
             importer(fmu=bounded)
 
     def test_a_binding_naming_an_undeclared_channel_is_rejected(self, importer):
-        with pytest.raises(ManifestError, match="can.Nope"):
-            importer(binds=["can.Nope:frame=Binary_input", *FRAME_BINDINGS])
+        with pytest.raises(ManifestError, match="bin.Nope"):
+            importer(binds=["bin.Nope:payload=Binary_input", *PAYLOAD_BINDINGS])
 
     def test_a_binding_naming_an_undeclared_field_is_rejected(self, importer):
         with pytest.raises(ManifestError, match="payload"):
-            importer(binds=[f"{IN}:payload=Binary_input", *FRAME_BINDINGS])
+            importer(binds=[f"{IN}:payload=Binary_input", *PAYLOAD_BINDINGS])
 
     def test_a_field_bound_twice_is_rejected(self, importer):
         with pytest.raises(ManifestError, match="twice"):
-            importer(binds=[*FRAME_BINDINGS, f"{IN}:frame=Binary_input"])
+            importer(binds=[*PAYLOAD_BINDINGS, f"{IN}:payload=Binary_input"])
 
     def test_a_malformed_binding_is_rejected(self, importer):
         with pytest.raises(ManifestError, match="<channel>:<field>=<variable>"):
@@ -496,10 +568,10 @@ class TestBindingsRejectedBeforeStepping:
 
 BOUND_BYTES = 32
 RUN_SCHEMAS = {
-    FRAME: {
+    PAYLOAD_SCHEMA: {
         "fields": [
-            {"name": "frame_length", "type": "u16"},
-            {"name": "frame", "type": "u8", "count": BOUND_BYTES},
+            {"name": "payload_length", "type": "u16"},
+            {"name": "payload", "type": "u8", "count": BOUND_BYTES},
         ]
     }
 }
@@ -510,7 +582,7 @@ def binary_manifest(
     *,
     fmu: Path = FEEDTHROUGH,
     schemas: dict = RUN_SCHEMAS,
-    binds: list[str] = FRAME_BINDINGS,
+    binds: list[str] = PAYLOAD_BINDINGS,
     capacity: int = BOUND_BYTES,
     declared_extra: int = 0,
     duration_ns: int = RUN_DURATION_NS,
@@ -518,13 +590,13 @@ def binary_manifest(
     """A binary stimulus feeding the imported FMU, which publishes it back."""
     m = Manifest(duration_ns=duration_ns)
     m.add_schemas(schemas)
-    m.add_channel(IN, schema=FRAME)
-    m.add_channel(OUT, schema=FRAME)
+    m.add_channel(IN, schema=PAYLOAD_SCHEMA)
+    m.add_channel(OUT, schema=PAYLOAD_SCHEMA)
     m.add_process(
         "stimulus",
         command=[
             sys.executable, str(STIMULUS),
-            IN, "frame", str(capacity), str(declared_extra),
+            IN, "payload", str(capacity), str(declared_extra),
         ],
         step_period_ns=STEP_PERIOD_NS,
         publishes=[IN],
@@ -568,7 +640,7 @@ class TestRunBoundary:
         published = binary_result.messages(OUT)
         assert len(published) == RUN_DURATION_NS // STEP_PERIOD_NS
         assert [
-            (fields["frame_length"], fields["frame"])
+            (fields["payload_length"], fields["payload"])
             for _, fields in published[1:]
         ] == [
             (len(payload(step, BOUND_BYTES)),
@@ -579,7 +651,7 @@ class TestRunBoundary:
     def test_the_run_carries_an_empty_and_a_full_payload(self, binary_result):
         """The assertion above is only worth making over the whole range."""
         lengths = {
-            fields["frame_length"] for _, fields in binary_result.messages(OUT)
+            fields["payload_length"] for _, fields in binary_result.messages(OUT)
         }
         assert 0 in lengths
         assert BOUND_BYTES in lengths
@@ -589,9 +661,9 @@ class TestRunBoundary:
         # The first Message is the FMU's own start value, which no stimulus
         # produced: the Channel's Latency holds the first payload back a Step.
         assert all(
-            b"\x00" in fields["frame"][:fields["frame_length"]]
+            b"\x00" in fields["payload"][:fields["payload_length"]]
             for _, fields in binary_result.messages(OUT)[1:]
-            if fields["frame_length"] > 0
+            if fields["payload_length"] > 0
         )
 
     def test_the_determinism_check_passes_for_a_binary_run(self, sil_run, tmp_path):
@@ -612,7 +684,7 @@ class TestRunBoundaryFailures:
     def test_an_invalid_binding_is_a_manifest_error(self, run_sil, tmp_path):
         proc = run_sil(
             binary_manifest(
-                binds=[f"{IN}:frame=Binary_typo", f"{OUT}:frame=Binary_output"]
+                binds=[f"{IN}:payload=Binary_typo", f"{OUT}:payload=Binary_output"]
             ).write(tmp_path / "invalid-binding.json").path
         )
         assert proc.returncode == 2, proc.stderr
@@ -623,9 +695,9 @@ class TestRunBoundaryFailures:
         what refuses the payload — after the Run has started."""
         capacity = FMU_BINARY_BYTES * 2
         schemas = {
-            FRAME: {"fields": [
-                {"name": "frame_length", "type": "u16"},
-                {"name": "frame", "type": "u8", "count": capacity},
+            PAYLOAD_SCHEMA: {"fields": [
+                {"name": "payload_length", "type": "u16"},
+                {"name": "payload", "type": "u8", "count": capacity},
             ]}
         }
         # The stimulus grows its payload by one byte per Step, so the Run has
@@ -645,7 +717,7 @@ class TestRunBoundaryFailures:
         manifest = binary_manifest(declared_extra=1)
         proc = run_sil(manifest.write(tmp_path / "too-long.json").path)
         assert proc.returncode == 1, proc.stderr
-        assert "frame_length" in proc.stderr
+        assert "payload_length" in proc.stderr
 
 
 class TestImporterCommand:
@@ -654,7 +726,7 @@ class TestImporterCommand:
     def test_the_bindings_are_part_of_the_command(self):
         command = binary_manifest().to_doc()["participants"]["importer"]["command"]
         assert command[-4:] == [
-            "--bind", FRAME_BINDINGS[0], "--bind", FRAME_BINDINGS[1]
+            "--bind", PAYLOAD_BINDINGS[0], "--bind", PAYLOAD_BINDINGS[1]
         ]
 
     def test_an_unreadable_binding_is_reported_as_a_manifest_error(
@@ -669,7 +741,7 @@ class TestImporterCommand:
         )
         try:
             importer.stdin.write(
-                json.dumps(init_line(FRAME_CHANNELS, FRAME_SCHEMAS)) + "\n"
+                json.dumps(init_line(PAYLOAD_CHANNELS, PAYLOAD_SCHEMAS)) + "\n"
             )
             importer.stdin.flush()
             answer = json.loads(importer.stdout.readline())
