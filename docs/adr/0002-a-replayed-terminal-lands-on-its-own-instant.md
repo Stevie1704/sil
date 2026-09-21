@@ -1,4 +1,4 @@
-# 2. A replayed terminal lands on the instant its Messages state
+# 2. A replayed terminal lands on its own instant
 
 Date: 2026-09-21
 
@@ -96,6 +96,16 @@ rather than something the Run can settle.
   Manifest, run twice, bit-compared.
 - The Latency is a Manifest decision, which means a Run that gets it wrong
   fails rather than produces a plausible answer.
+- That failure is a **Run failure** (exit 1), not a Manifest error, although
+  the fault is in the Manifest. The Importer cannot see it before it is
+  stepped: a Channel's Latency is not in the init line, and what makes an
+  instant unreachable is the Message that arrives carrying it. Exit 2 is
+  reserved for a Run where nothing was stepped, and something was.
+- A Message whose instant falls exactly on the Step's end is raised there,
+  which is also where the next Step begins. Two recorded activations of one
+  instant therefore stay together only while they arrive in the same Step —
+  which a Recording of an observation Channel guarantees, because both were
+  published in the same Slot.
 
 ## Alternatives rejected
 

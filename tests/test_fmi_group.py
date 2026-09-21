@@ -1067,7 +1067,7 @@ RECEIVER_SOURCES = {
 }
 
 
-def replay_manifest(bus: Path, node: Path, recording: Path, *,
+def replay_manifest(node: Path, bus: Path, recording: Path, *,
                     step_period_ns: int, duration_ns: int,
                     latency_ns: int | None = 0) -> Manifest:
     """The same composition with the live source replaced by its Recording.
@@ -1158,7 +1158,7 @@ def runs(sil_run, tmp_path_factory, build_dir):
     recording.write_bytes(live.mcap_path.read_bytes())
     replay = run_simulation(
         replay_manifest(
-            bus, node, recording,
+            node, bus, recording,
             step_period_ns=declared["step_size_ns"],
             duration_ns=declared["duration_ns"],
         ),
@@ -1202,8 +1202,8 @@ class TestReplayEquivalence:
         recording = tmp_path / "live.mcap"
         recording.write_bytes(live.mcap_path.read_bytes())
         manifest = replay_manifest(
-            built(build_dir, tmp_path, "bus", "CanBus"),
             built(build_dir, tmp_path, "node", "CanNodeOnABus"),
+            built(build_dir, tmp_path, "bus", "CanBus"),
             recording,
             step_period_ns=declared["step_size_ns"],
             duration_ns=declared["duration_ns"],
@@ -1228,8 +1228,8 @@ class TestReplayEquivalence:
         recording = tmp_path / "live.mcap"
         recording.write_bytes(live.mcap_path.read_bytes())
         manifest = replay_manifest(
-            built(build_dir, tmp_path, "bus", "CanBus"),
             built(build_dir, tmp_path, "node", "CanNodeOnABus"),
+            built(build_dir, tmp_path, "bus", "CanBus"),
             recording,
             step_period_ns=declared["step_size_ns"],
             duration_ns=declared["duration_ns"],

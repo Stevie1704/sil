@@ -1,4 +1,5 @@
 manifest    replay-aligned.json
+live Run    connected-aligned.mcap
 exit status 0
 --- output ---
 fmu: Instance DemoCanNodeTriggeredOutput instantiated.
@@ -254,4 +255,4 @@ manifest_hash 2105764dca49c09bdf72278b7007fa1a47d44c3cac6a64f1c27769860ea8771f
   can.bus.Node2     3  event   600960000 ns   12 B  Confirm
   can.bus.Node2     4  event   900480000 ns   20 B  CanTransmit
   can.bus.Node2     5  event   900960000 ns   12 B  Confirm
-aligned: can.node1.Tx 4, can.node2.Tx 4, can.bus.Node1 6, can.bus.Node2 6 — every Message, order and event time as the live Run recorded them
+aligned: stimulus can.node1.Tx 4 Messages carried whole; retained can.node2.Tx 4, can.bus.Node1 6, can.bus.Node2 6 — every Message, order and event time as the live Run recorded them

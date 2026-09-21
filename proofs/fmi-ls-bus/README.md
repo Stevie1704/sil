@@ -295,7 +295,7 @@ Everything above, stated once in the vocabulary a consumer needs before
 pointing this at their own FMUs. Every row is a fact the Runs below actually
 exercise, not a capability the standard defines.
 
-| | Exercised |
+| What | Exercised |
 | --- | --- |
 | **FMI version** | 3.0, co-simulation, `hasEventMode` true and `eventModeUsed` required |
 | **Layered standard** | `org.fmi-standard.fmi-ls-bus`. The artifacts' `fmi-ls-manifest.xml` and `mimeType` both declare `1.0.0-beta.1`; the CAN operation bytes are v1.0.0's, [checked header by header](#why-this-revision-and-what-bus-100-means-here). The profile is keyed on the media type `application/org.fmi-standard.fmi-ls-bus.can`, not on the version string |
@@ -399,10 +399,11 @@ instant would be transmitted 480 us after the Run is over, and never are.
 | The checkout's Importer connects two nodes through the bus FMU | `aligned: 20 events on 4 terminals, all as expected` / `quantised: 16 events on 4 terminals, all as expected`, judged on the Recording — [`connected-aligned.txt`](evidence/connected-aligned.txt), [`connected-quantised.txt`](evidence/connected-quantised.txt) |
 | A frame reaches its peer a transmission time later, not a Slot later | `bus.Node1 event 300480000 ns published 300000000 ns 12 B Confirm` beside `bus.Node2 … 20 B CanTransmit`, and the losing frame at `300960000 ns` — [`connected-aligned.txt`](evidence/connected-aligned.txt) |
 | A connected Run reproduces | `aligned deterministic: b37f02e7…b24a` and `quantised deterministic: c71aaa20…e13b`, one Manifest at a time, bit-compared — [`connected-identity.txt`](evidence/connected-identity.txt) |
-| One live source can be replaced by its own Recording | `can.node1.Tx 4, can.node2.Tx 4, can.bus.Node1 6, can.bus.Node2 6 — every Message, order and event time as the live Run recorded them`, on both step grids — [`replay-aligned.txt`](evidence/replay-aligned.txt), [`replay-quantised.txt`](evidence/replay-quantised.txt) |
+| One live source can be replaced by its own Recording | `stimulus can.node1.Tx 4 Messages carried whole; retained can.node2.Tx 4, can.bus.Node1 6, can.bus.Node2 6 — every Message, order and event time as the live Run recorded them`, on all three step grids — [`replay-aligned.txt`](evidence/replay-aligned.txt), [`replay-quantised.txt`](evidence/replay-quantised.txt), [`replay-coarse.txt`](evidence/replay-coarse.txt) |
+| A replayed activation carrying several operations is arbitrated as the live one was | four frames of one CAN ID at instant 1000 ms, transmitted at 1000.48 / 1000.96 / 1001.44 / 1001.92 ms in the live Run and the replay Run alike — [`replay-coarse.txt`](evidence/replay-coarse.txt) |
 | The equivalence check fails on a missing operation | `can.node1.Tx: live recorded 4 Messages and the replay Run 3`, and the bus's arbitration reverses — [`replay-aligned-dropped.txt`](evidence/replay-aligned-dropped.txt) |
 | The equivalence check fails on an altered event time | the frame and the transmission it causes both 50 ms early — [`replay-aligned-retimed.txt`](evidence/replay-aligned-retimed.txt) |
-| A replay Run reproduces | one line per Manifest, bit-compared — [`replay-identity.txt`](evidence/replay-identity.txt) |
+| Every replay Manifest reproduces, the faulted ones included | six lines, one per Manifest, each bit-compared on its own — [`replay-identity.txt`](evidence/replay-identity.txt) |
 | What every compared Run depended on is retained | Manifest hashes, Recording digests, FMU archive digests, declared configuration, and the replayed Recording's committed hash — [`replay-provenance.txt`](evidence/replay-provenance.txt) |
 
 ## What current SiL does, and where the gap is
@@ -547,28 +548,58 @@ Two things make that Channel the boundary rather than a second composition:
   settles, and it is the whole reason the receiver behaves identically: the bus
   computes its transmission time from the instant a frame arrived.
 
-| Manifest | Hash | Step | What happens |
-| --- | --- | --- | --- |
-| `replay-aligned` | `2105764d…771f` | 100 ms | exit 0, every retained stream as the live Run recorded it |
-| `replay-quantised` | `71982bd0…d4c1` | 250 ms | exit 0, the same |
-| `replay-aligned-dropped` | `bd0deac4…89bf` | 100 ms | exit 0, and the equivalence check fails: one `CanTransmit` is missing |
-| `replay-aligned-retimed` | `356aa3a2…6017` | 100 ms | exit 0, and the equivalence check fails: one `CanTransmit` moved to another instant |
+Three step grids are replayed. Two are the expected exchange's, so they are
+judged twice over — against an expectation written before any Run, and against
+the live Run they replay. The third is added here, at 500 ms, **coarser than
+the node's own 300 ms transmit period**, and it is the only one that reaches
+three things: one activation carrying several CAN operations, several
+activations of the boundary Channel in one Slot, and four frames of one CAN ID
+offered at a single instant. It states no expected exchange — it was not
+written before a Run — so what judges it is the live Run it replays, which is
+the claim this step is about.
+
+| Manifest | Hash | Step | Duration | What happens |
+| --- | --- | --- | --- | --- |
+| `live-coarse` | `1febf8a4…0bf8` | 500 ms | 1500 ms | exit 0, the live composition of the coarse grid |
+| `replay-aligned` | `2105764d…771f` | 100 ms | 1000 ms | exit 0, every retained stream as the live Run recorded it |
+| `replay-quantised` | `71982bd0…d4c1` | 250 ms | 1000 ms | exit 0, the same |
+| `replay-coarse` | `57d9df0b…8c48` | 500 ms | 1500 ms | exit 0, the same |
+| `replay-aligned-dropped` | `bd0deac4…89bf` | 100 ms | 1000 ms | exit 0, and the equivalence check fails: one `CanTransmit` is missing |
+| `replay-aligned-retimed` | `356aa3a2…6017` | 100 ms | 1000 ms | exit 0, and the equivalence check fails: one `CanTransmit` moved to another instant |
 
 [`replay_equivalence.py`](replay_equivalence.py) reads the live Recording and
 the replay Recording and compares four things per Channel — the count of
-Messages, their order, the FMI event time each states, and the payload bytes:
+Messages, their order, the FMI event time each states, and the payload bytes.
+Each Channel is reported whole, because a Channel is one terminal's activations
+and nothing else may appear on it; this is the first Message of each, out of
+[`replay-aligned.txt`](evidence/replay-aligned.txt):
 
 ```
 --- case aligned ---
   boundary can.node1.Tx, replayed into the terminal it fed
+  can.node1.Tx      0  event           0 ns   23 B  Configuration, Configuration
   can.node1.Tx      1  event   300000000 ns   20 B  CanTransmit
+  ...
   can.node2.Tx      1  event   300000000 ns   20 B  CanTransmit
+  ...
   can.bus.Node1     0  event   300480000 ns   12 B  Confirm
-  can.bus.Node2     0  event   300480000 ns   20 B  CanTransmit
   can.bus.Node1     1  event   300960000 ns   20 B  CanTransmit
+  ...
+  can.bus.Node2     0  event   300480000 ns   20 B  CanTransmit
   can.bus.Node2     1  event   300960000 ns   12 B  Confirm
-aligned: can.node1.Tx 4, can.node2.Tx 4, can.bus.Node1 6, can.bus.Node2 6 — every Message, order and event time as the live Run recorded them
+  ...
+aligned: stimulus can.node1.Tx 4 Messages carried whole; retained can.node2.Tx 4, can.bus.Node1 6, can.bus.Node2 6 — every Message, order and event time as the live Run recorded them
 ```
+
+The verdict states the two halves apart on purpose. The boundary says the
+Replay participant carried the stimulus whole and in order; only the retained
+streams say the participants that stayed behaved the same, and one count
+covering both would let the first flatter the second.
+
+The removed node is not in that Run at all. Every event time below `can.node2.Tx`
+and both `can.bus.*` Channels is therefore produced by the participants that
+stayed, out of a stimulus that arrived on a Channel — and it is the live Run's,
+down to the 480 us the bus counts from the instant each frame reached it.
 
 **Whole Recordings are deliberately not compared.** Two Runs of two Manifests
 are two Manifest hashes: the documents differ, the participant set differs, and
@@ -578,16 +609,29 @@ stimulus was carried whole and in order, and the three streams of the
 participants the replay did not replace, which is what a replaced source has to
 reproduce.
 
-What the two grids cover between them:
+What the three grids cover between them, with the grid that reaches each:
 
-| Case | Covered |
-| --- | --- |
-| Start boundary | the configuration Message states instant 0 and is published in the Slot at 0, so it is replayed at the instant the Step begins on |
-| End boundary | every `CanTransmit` states the instant its Step ends on — 300/600/900 ms aligned, 500/750/1000 ms quantised |
-| Multiple operations in one outer Step | the configuration Message carries two `Configuration` operations in one activation; the quantised grid's last Step carries an operation the Run never transmits, because 480 us past its instant is past the Duration |
-| Same-time ordering | both nodes offer CAN ID 1 at the same instant, and the bus arbitrates between the replayed frame and the live one exactly as it did live |
-| A missing operation | `replay-aligned-dropped`: an Interceptor drops the first `CanTransmit` from the boundary. The check reports `live recorded 4 Messages and the replay Run 3`, then the first Message that differs on each affected Channel — including the arbitration reversing, because node 2's frame now meets no competitor |
-| An altered operation | `replay-aligned-retimed`: an Interceptor rewrites that Message's `data_event_time_ns` to 250 ms. The Run still succeeds — 250 ms is inside the Step the Message arrives in — and the check reports the event time, and the bus's transmission 480 us after it, both 50 ms early |
+| Case | Where | Covered |
+| --- | --- | --- |
+| Start boundary | all three | the configuration Message states instant 0 and is published in the Slot at 0, so it is replayed at the instant its Step begins on |
+| End boundary | all three | every `CanTransmit` states the instant its Step ends on — 300/600/900 ms aligned, 500/750/1000 ms quantised, 500/1000/1500 ms coarse |
+| Multiple operations in one outer Step | coarse | the node accumulates into its transmit buffer between communication points, so the Message at 1000 ms is **40 bytes carrying two `CanTransmit` operations**, and the bus queues two frames out of one activation |
+| Several activations in one outer Step | coarse | the Slot at 0 carries two Messages of the boundary Channel — the configuration at instant 0 and the first frame at instant 500 ms — and each is raised at its own instant |
+| Same-time ordering | coarse | four frames of CAN ID 1 are offered at instant 1000 ms, two of them out of one replayed Message. The bus transmits them at 1000.48, 1000.96, 1001.44 and 1001.92 ms, and the replay Run reproduces that sequence — the two replayed frames still winning the first two slots |
+| A missing operation | `replay-aligned-dropped` | an Interceptor drops the first `CanTransmit` from the boundary. The check reports `live recorded 4 Messages and the replay Run 3`, then the first Message that differs on each affected Channel — including the arbitration reversing, because node 2's frame now meets no competitor |
+| An altered operation | `replay-aligned-retimed` | an Interceptor rewrites that Message's `data_event_time_ns` to 250 ms. The Run still succeeds — 250 ms is inside the Step the Message arrives in — and the check reports the event time, and the bus's transmission 480 us after it, both 50 ms early |
+
+The coarse grid's own report, out of
+[`replay-coarse.txt`](evidence/replay-coarse.txt):
+
+```
+  can.node1.Tx      2  event  1000000000 ns   40 B  CanTransmit, CanTransmit
+  ...
+  can.bus.Node1     2  event  1000480000 ns   12 B  Confirm
+  can.bus.Node1     3  event  1000960000 ns   12 B  Confirm
+  can.bus.Node1     4  event  1001440000 ns   20 B  CanTransmit
+  can.bus.Node1     5  event  1001920000 ns   20 B  CanTransmit
+```
 
 Both failing variants are **declared faults rather than edited artifacts**: an
 Interceptor is part of the hashed Manifest, so a Run that proves the check can
@@ -596,8 +640,10 @@ them ever stops failing.
 
 The Determinism check is run **per Manifest**, never across two of them:
 [`evidence/connected-identity.txt`](evidence/connected-identity.txt) and
-[`evidence/replay-identity.txt`](evidence/replay-identity.txt) each hold one
-line per step grid. A replay Run's stimulus is a file its Manifest names and
+[`evidence/replay-identity.txt`](evidence/replay-identity.txt) hold one line per
+Manifest, the faulted ones included — a Run that proves the check can fail has
+to reproduce like the Run that passes, and this is where that is measured
+rather than asserted. A replay Run's stimulus is a file its Manifest names and
 hashes, so it reproduces on the same terms as a Run that computes its own.
 
 [`evidence/replay-provenance.txt`](evidence/replay-provenance.txt) states, per
@@ -607,10 +653,10 @@ values, Channel Latency, Interceptors — and, for a replay Manifest, the
 Recording it replays with the hash the Manifest committed to, checked against
 the file. `sil-run` writes a provenance side-car carrying the same facts, and
 the released runner this proof pins predates it; the record is therefore
-assembled from the Manifests and the artifacts they name.
-[`evidence/connected-aligned.mcap`](evidence/connected-aligned.mcap) and
-[`evidence/replay-aligned.mcap`](evidence/replay-aligned.mcap) are the two
-Recordings the aligned comparison was made on.
+assembled from the Manifests and the artifacts they name. Every Recording
+either side of every comparison is retained beside it — `connected-aligned`,
+`connected-quantised`, `live-coarse` and the five `replay-*` ones — so the
+comparison can be re-made on the artifacts rather than on a rebuild of them.
 
 ## Reproducing
 
@@ -664,7 +710,7 @@ The decoder has its own tests, which need no fixture and no docker:
 | [`connected_expected.json`](connected_expected.json) | The expected exchange of two nodes through the bus FMU, stated before any Run |
 | [`connected_manifest.py`](connected_manifest.py) | The two Manifests that drive all three FMUs as one group, one per step grid |
 | [`connected_exchange.py`](connected_exchange.py) | Judge one connected Run's Recording, per observed terminal |
-| [`replay_manifest.py`](replay_manifest.py) | The Manifests that replace one live node with its own Recording, faultless and faulted |
+| [`replay_manifest.py`](replay_manifest.py) | The Manifests that replace one live node with its own Recording, faultless and faulted, plus the coarse grid's own live composition |
 | [`replay_equivalence.py`](replay_equivalence.py) | Compare a replay Run's Message streams with the live Run's |
 | [`replay_provenance.py`](replay_provenance.py) | State what produced each compared Run, by digest |
 | [`run-proof.sh`](run-proof.sh) | All of it, in order, into `evidence/` |

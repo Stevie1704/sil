@@ -36,8 +36,16 @@ They are declared faults rather than edited artifacts: an Interceptor is part
 of the hashed Manifest, so a Run that proves the check can fail is as
 reproducible as the Run that passes.
 
-    python3 replay_manifest.py <node.fmu> <bus.fmu> <live-recording-directory> \\
-                               <output-directory>
+A third grid is added here, coarser than either of the fixture's own, and it
+brings its **own live composition** with it — which is why this script has two
+stages:
+
+    python3 replay_manifest.py live   <node.fmu> <bus.fmu> <output-directory>
+    python3 replay_manifest.py replay <node.fmu> <bus.fmu> \\
+                                      <live-recording-directory> <output-directory>
+
+The live stage has to run, and its Run has to produce a Recording, before the
+replay stage can hash it into a Manifest.
 
 Like `connected_manifest.py`, this is built with the `sil` package of the
 checkout under measurement — see `Dockerfile.measured`.
@@ -60,6 +68,7 @@ from connected_manifest import (  # noqa: E402
     ROUTE_CAPACITY,
     SCHEMAS,
     SOURCES,
+    connected,
 )
 
 # The Channel the removed node published, and the terminal its Messages are
@@ -103,9 +112,31 @@ FAULTS = {
 # is the equivalence check, and the check does not know which grid it reads.
 FAULTED_CASE = "aligned"
 
+# A Step grid coarser than the node's own 300 ms transmit period, which
+# neither grid of the expected exchange is. Two things only this one reaches:
+#
+#   - one activation carries several CAN operations, because the node
+#     accumulates into its transmit buffer between communication points, and
+#     one Slot carries several activations of the boundary Channel;
+#   - both nodes then offer four frames of one CAN ID at one instant, and the
+#     bus transmits them 480 us apart — same-time ordering with four frames to
+#     order rather than two.
+#
+# It states no expected exchange, because it was not written before a Run: what
+# judges a replay Run of this grid is the live Run it replays, which is the
+# claim this step is about. The two grids that *are* stated beforehand are
+# judged both ways.
+COARSE = {"name": "coarse", "step_size_ns": 500_000_000,
+          "duration_ns": 1_500_000_000}
+
+# Four activations of one terminal land in the Slot at 1000 ms on that grid,
+# and two Messages of the boundary Channel in the Slot at 0.
+COARSE_CAPACITY = 8
+
 
 def replay(node: Path, bus: Path, recording: Path, case: dict,
-           fault: dict | None = None) -> Manifest:
+           fault: dict | None = None,
+           capacity: int = ROUTE_CAPACITY) -> Manifest:
     """One case of the live exchange, with its first source replayed."""
     archives = {"node": node, "bus": bus}
     manifest = Manifest(duration_ns=case["duration_ns"])
@@ -141,7 +172,7 @@ def replay(node: Path, bus: Path, recording: Path, case: dict,
             "--start", "bus.BusErrorProbability=0.0",
         ],
         step_period_ns=case["step_size_ns"],
-        subscribes=[SubscriberRoute(BOUNDARY, capacity=ROUTE_CAPACITY)],
+        subscribes=[SubscriberRoute(BOUNDARY, capacity=capacity)],
         publishes=list(RETAINED),
     )
     manifest.add_process(
@@ -149,7 +180,7 @@ def replay(node: Path, bus: Path, recording: Path, case: dict,
         command=["python3", "/opt/measured/clocked_observer.py"],
         step_period_ns=case["step_size_ns"],
         subscribes=[
-            SubscriberRoute(channel, capacity=ROUTE_CAPACITY)
+            SubscriberRoute(channel, capacity=capacity)
             for channel in SOURCES
         ],
         priority=1,
@@ -158,7 +189,7 @@ def replay(node: Path, bus: Path, recording: Path, case: dict,
 
 
 def variants(node: Path, bus: Path, recordings: Path):
-    """Every Manifest this proof runs, in the order it runs them."""
+    """Every replay Manifest this proof runs, in the order it runs them."""
     for case in json.loads(EXPECTED.read_text())["cases"]:
         recording = recordings / f"connected-{case['name']}.mcap"
         yield f"replay-{case['name']}", replay(node, bus, recording, case)
@@ -169,19 +200,41 @@ def variants(node: Path, bus: Path, recordings: Path):
                 f"replay-{case['name']}-{name}",
                 replay(node, bus, recording, case, fault),
             )
+    yield "replay-coarse", replay(
+        node, bus, recordings / "live-coarse.mcap", COARSE,
+        capacity=COARSE_CAPACITY,
+    )
+
+
+def write_and_report(manifest: Manifest, path: Path, name: str) -> None:
+    """Write one Manifest and state the hash the Run will be attributed to."""
+    reference = manifest.write(path)
+    print(f"{name:<24} {reference.hash}  {reference.path}")
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 4:
-        raise SystemExit(
-            "usage: replay_manifest.py <node.fmu> <bus.fmu> "
-            "<live-recording-directory> <output-directory>"
+    stage, arguments = (argv[0], [Path(a) for a in argv[1:]]) if argv else \
+        ("", [])
+    if stage == "live" and len(arguments) == 3:
+        node, bus, destination = arguments
+        write_and_report(
+            connected(node, bus, COARSE, capacity=COARSE_CAPACITY),
+            destination / "live-coarse.json", "live-coarse",
         )
-    node, bus, recordings, destination = (Path(argument) for argument in argv)
-    for name, manifest in variants(node, bus, recordings):
-        written = manifest.write(destination / f"{name}.json")
-        print(f"{name:<24} {written.hash}  {written.path}")
-    return 0
+        return 0
+    if stage == "replay" and len(arguments) == 4:
+        node, bus, recordings, destination = arguments
+        for name, manifest in variants(node, bus, recordings):
+            write_and_report(
+                manifest, destination / f"{name}.json", name
+            )
+        return 0
+    raise SystemExit(
+        "usage: replay_manifest.py live <node.fmu> <bus.fmu> "
+        "<output-directory>\n"
+        "       replay_manifest.py replay <node.fmu> <bus.fmu> "
+        "<live-recording-directory> <output-directory>"
+    )
 
 
 if __name__ == "__main__":

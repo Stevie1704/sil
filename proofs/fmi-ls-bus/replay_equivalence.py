@@ -63,7 +63,8 @@ def streams(recording: Path) -> dict[str, list[dict]]:
     return observed
 
 
-def report(channel: str, messages: list[dict]) -> None:
+def print_stream(channel: str, messages: list[dict]) -> None:
+    """One line per Message, so a reader sees what was compared."""
     for index, message in enumerate(messages):
         print(
             f"  {channel:<16} {index:>2}  event {message['time_ns']:>11} ns  "
@@ -96,9 +97,9 @@ def compare(name: str, live_recording: Path, replay_recording: Path) -> bool:
     live, replay = streams(live_recording), streams(replay_recording)
     print(f"--- case {name} ---")
     print(f"  boundary {BOUNDARY}, replayed into the terminal it fed")
-    report(BOUNDARY, replay[BOUNDARY])
+    print_stream(BOUNDARY, replay[BOUNDARY])
     for channel in RETAINED:
-        report(channel, replay[channel])
+        print_stream(channel, replay[channel])
     faulted = differs(BOUNDARY, live[BOUNDARY], replay[BOUNDARY])
     retained = [
         channel for channel in RETAINED
@@ -107,12 +108,16 @@ def compare(name: str, live_recording: Path, replay_recording: Path) -> bool:
     if faulted or retained:
         print(f"{name}: the replay Run is not equivalent to the live Run")
         return False
-    counts = ", ".join(
-        f"{channel} {len(replay[channel])}"
-        for channel in (BOUNDARY, *RETAINED)
+    # The two halves are stated apart. The boundary says the Replay
+    # participant carried the stimulus whole; only the retained streams say
+    # the receiving participants behaved the same, and folding the two into
+    # one count would let the first flatter the second.
+    retained_counts = ", ".join(
+        f"{channel} {len(replay[channel])}" for channel in RETAINED
     )
-    print(f"{name}: {counts} — every Message, order and event time as the "
-          f"live Run recorded them")
+    print(f"{name}: stimulus {BOUNDARY} {len(replay[BOUNDARY])} Messages "
+          f"carried whole; retained {retained_counts} — every Message, order "
+          f"and event time as the live Run recorded them")
     return True
 
 

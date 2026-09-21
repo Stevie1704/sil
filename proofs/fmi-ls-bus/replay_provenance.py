@@ -24,8 +24,9 @@ import json
 import sys
 from pathlib import Path
 
-# The command arguments whose value is a file the kernel resolves and digests.
-_FILE_ARGUMENTS = {"--instance"}
+# The argument that names an FMU: `--instance <name> <path>`, the one shape
+# whose value the kernel resolves and digests.
+_INSTANCE = "--instance"
 # The arguments that carry the configuration outside the FMUs themselves.
 _CONFIGURATION = {"--bus-profile": "bus profile", "--connect": "connection",
                   "--start": "start value", "--bind": "binding"}
@@ -35,11 +36,17 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def named_files(command: list[str]) -> list[str]:
-    """Every file the command names, which is every `--instance` path."""
+def named_files(command: list[str]) -> list[tuple[str, str]]:
+    """Every file the command names, with the instance it was named for.
+
+    Two instances of one archive are two lines rather than one: they are two
+    extractions of the same bytes, and a record that collapsed them would not
+    say how many FMUs the Run held.
+    """
     return [
-        command[index + 2] for index, argument in enumerate(command)
-        if argument in _FILE_ARGUMENTS and index + 2 < len(command)
+        (command[index + 1], command[index + 2])
+        for index, argument in enumerate(command)
+        if argument == _INSTANCE and index + 2 < len(command)
     ]
 
 
@@ -73,9 +80,9 @@ def report(workspace: Path, name: str) -> None:
             continue
         if spec["type"] != "process":
             continue
-        for file in named_files(spec["command"]):
+        for instance, file in named_files(spec["command"]):
             path = Path(file)
-            print(f"  fmu                {path.name} sha256 "
+            print(f"  fmu                {instance} {path.name} sha256 "
                   f"{digest(path) if path.exists() else 'unreadable'}")
         for label, value in configuration(spec["command"]):
             print(f"  {label:<18} {value}")

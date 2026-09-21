@@ -1,2 +1,6 @@
-aligned    deterministic: 52f0a3507c643bfa3365516598b3829a1acde67bf432e2611b582f63d0c41879
-quantised  deterministic: 963903ae1ff8a79f466e9a3462dda71c8fb0990b793a18292d2cb779e49f35ed
+coarse           deterministic: 7f9f042249f0f50ba13297d222f1a825d9e91b25a84ebe5b412c798d904f42e7
+aligned          deterministic: 52f0a3507c643bfa3365516598b3829a1acde67bf432e2611b582f63d0c41879
+quantised        deterministic: 963903ae1ff8a79f466e9a3462dda71c8fb0990b793a18292d2cb779e49f35ed
+aligned-dropped  deterministic: 6f2a520e1d465315cf6f1286f25b647d7a7a189f4ea2231a9dc0957a6f8029ca
+aligned-retimed  deterministic: 90c2909e39a6d3fee650e8f970880d0f54e9457b231abaa67096ba3c92e604e2
+live-coarse      deterministic: aae1009550560d956f782fb121bb7a5f9f4c0f4626f4479eb65bdb28f1ccfb0e

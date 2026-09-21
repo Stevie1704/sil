@@ -518,8 +518,10 @@ timestamp.
 
 An unconnected terminal fed by an in-direction Channel is the replay-input
 boundary: a Recording of the observation Channel can stand in for the FMU that
-produced it. Take the group above, drop `node1`, and hand `bus.Node1` the
-Channel it published:
+produced it. A Replay participant is what re-publishes it — it becomes the
+Publisher of every Channel it replays, and the Recording's content hash goes
+into the Manifest, so the Manifest hash covers the Run's stimulus. Take the
+group above, drop `node1`, and hand `bus.Node1` the Channel it published:
 
 ```python
 m.add_channel("can.node1.Tx", schema="can.Frame", latency_ns=0)

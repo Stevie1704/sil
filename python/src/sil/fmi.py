@@ -1842,6 +1842,31 @@ def _require_contiguous(standing_ns: int, t: int) -> None:
         )
 
 
+def _require_reachable(channel: str, transceiver, instant: int,
+                       start: int, end: int) -> None:
+    """Refuse an arrived activation the Step it arrived in cannot reach.
+
+    An instant behind the group is one no FMU of this profile can be taken
+    back to; one beyond the Step's end would have to be reached by stepping
+    past the end the kernel asked for. Which of the two a Run hits is a
+    statement about the Channel's Latency: an activation observed during a
+    Step is published in the Slot that Step began in, so only a Channel
+    delivering in the Slot it was published in — `latency_ns` 0 — puts the
+    Message back in the Step its instant belongs to. Both bounds are in the
+    diagnostic, because the repair is a Manifest change rather than something
+    the Run can settle.
+    """
+    if start <= instant <= end:
+        return
+    raise ParticipantFailure(
+        f"Channel {channel!r} states {instant} ns as the instant of an "
+        f"activation of {transceiver}, and the Step it arrived in stands at "
+        f"{start} ns and ends at {end} ns; an activation is raised at the "
+        f"instant it states, so a replayed Channel declares the Latency that "
+        f"delivers a Message in the Step its instant belongs to"
+    )
+
+
 class FmuParticipant(StepParticipant):
     """A process participant whose behavior is an imported FMU's."""
 
@@ -2324,10 +2349,11 @@ class _Group:
         """Advance the group over one kernel Step, event by event.
 
         The interval is covered in sub-intervals ending at every instant any
-        instance asked for, and at the Step's own end. Nothing is published
-        with an internal instant as its timestamp: a Message is published in
-        the Slot this activation runs in and states the FMI event time it
-        belongs to, which is how the group's finer grid reaches a Recording.
+        instance asked for, at every instant an arrived Message states, and at
+        the Step's own end. Nothing is published with an internal instant as
+        its timestamp: a Message is published in the Slot this activation runs
+        in and states the FMI event time it belongs to, which is how the
+        group's finer grid reaches a Recording.
         """
         now, end = t, t + dt
         injected = self._injected(inputs, now, end)
@@ -2369,7 +2395,7 @@ class _Group:
         if failure is not None:
             raise failure
 
-    def _injected(self, inputs: list, t: int, end: int) -> dict[int, list]:
+    def _injected(self, inputs: list, start: int, end: int) -> dict[int, list]:
         """The Messages that arrived, by the instant each one states.
 
         A Message states the communication point its activation was observed
@@ -2377,15 +2403,6 @@ class _Group:
         handed the operation at the instant the peer it stands in for produced
         it. The group stops there like it stops at any instant an instance
         asked for.
-
-        Both bounds are refused rather than approximated. An instant behind
-        the group is one no FMU of this profile can be taken back to, and one
-        beyond this Step would have to be reached by stepping past the Step's
-        own end. Which of the two a Run hits is a statement about the
-        Channel's Latency: an activation observed during a Step is published
-        in the Slot that Step began in, so only a Channel delivering in the
-        Slot it was published in — `latency_ns` 0 — puts the Message back in
-        the Step its instant belongs to.
 
         Messages keep the order they arrived in, which is the order they were
         published in, so two activations of one instant reach the terminal the
@@ -2396,15 +2413,8 @@ class _Group:
             transceiver = self._injections[message.channel]
             injection = transceiver.injection
             instant = injection.instant_ns(message.data)
-            if instant < t or instant > end:
-                raise ParticipantFailure(
-                    f"Channel {message.channel!r} states {instant} ns as the "
-                    f"instant of an activation of {transceiver}, and the Step "
-                    f"it arrived in stands at {t} ns and ends at {end} ns; an "
-                    f"activation is raised at the instant it states, so a "
-                    f"replayed Channel declares the Latency that delivers a "
-                    f"Message in the Step its instant belongs to"
-                )
+            _require_reachable(message.channel, transceiver, instant,
+                               start, end)
             pending.setdefault(instant, []).append(_Pending(
                 transceiver.instance, transceiver,
                 injection.payload(message.data),
@@ -2412,7 +2422,12 @@ class _Group:
         return pending
 
     def _boundary(self, now: int, end: int, injected: dict[int, list]) -> int:
-        """The next instant the whole group stops at, at the latest `end`."""
+        """The next instant the whole group stops at, at the latest `end`.
+
+        `injected` holds what this Step still owes, keyed by instant; the
+        caller removes each instant as it settles it, so everything left is
+        ahead of `now`.
+        """
         asked = [
             instant for instance in self._instances
             for instant in instance.asked_for(now) if instant <= end
