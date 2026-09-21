@@ -384,7 +384,13 @@ class TestTheClockProfile:
         self, importer, monkeypatch
     ):
         """An input Clock is raised at the communication point the FMU stands
-        on, which is the Slot's own time rather than the end of the Step."""
+        on, which is the Slot's own time rather than the end of the Step.
+
+        The Clock goes up before the buffer it gates is written: a clocked
+        variable may be accessed only while its Clock is active, and the
+        stand-in refuses a buffer written before it — as the stricter
+        upstream revision of the node does.
+        """
         participant = importer()
         participant.on_step(0, 100 * MS, [])
         calls = record_calls(monkeypatch)
@@ -392,7 +398,7 @@ class TestTheClockProfile:
             100 * MS, 100 * MS, [Input(RX, 100 * MS, frame(b"\x01\x02"))]
         )
         assert calls[:6] == [
-            "fmi3EnterEventMode", "fmi3SetBinary", "fmi3SetClock",
+            "fmi3EnterEventMode", "fmi3SetClock", "fmi3SetBinary",
             # The echo the FMU prepares is visible on the next iteration,
             # which is why the Clock is read again rather than once.
             "fmi3GetClock", "fmi3UpdateDiscreteStates", "fmi3GetClock",
@@ -467,21 +473,32 @@ class TestUndrivableBehavior:
         ):
             participant.on_step(0, 100 * MS, [])
 
-    def test_a_next_event_time_on_the_communication_point_is_not_refused(
-        self, importer
+    def test_an_event_declared_on_the_communication_point_is_taken_there(
+        self, importer, monkeypatch
     ):
-        """An FMU that declares its next event exactly where the Step ends is
-        asking for nothing the grid does not already do.
+        """An FMU that declares its next event where the Step ends is asking
+        to be in Event Mode at that instant, and is put there.
 
-        The declared time is a double of seconds and the interval is integer
-        nanoseconds; comparing them in nanoseconds is what keeps the last bit
-        of one representation from aborting a Run the other admits.
+        `fmi3DoStep` reporting `eventHandlingNeeded` is the FMU saying so a
+        second time; an importer that waited for the second one would skip
+        the event of an FMU that only said it once. The declared time is a
+        double of seconds and the interval is integer nanoseconds, so both
+        the refusal and this are decided in nanoseconds — the last bit of one
+        representation must neither abort the Run nor lose the event.
         """
         participant = importer(
             variant="NextEventAtBoundary", binds=TX_ONLY,
             channels={TX: (BUFFER_SCHEMA, "out")},
         )
+        calls = record_calls(monkeypatch)
         participant.on_step(0, 100 * MS, [])
+        assert "fmi3EnterEventMode" in calls
+
+        # And the Step after it, where the FMU declares nothing, is a Step
+        # like any other: the event is taken once, not at every point after.
+        calls.clear()
+        participant.on_step(100 * MS, 100 * MS, [])
+        assert "fmi3EnterEventMode" not in calls
 
     def test_a_next_event_time_in_a_later_step_fails_at_that_step(
         self, importer

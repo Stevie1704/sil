@@ -418,7 +418,10 @@ activation at the communication point 300 ms — published in the Slot at
 in. Nothing is quantised to the Slot and no Latency is folded into the event
 time. On the incoming half the same rule holds in reverse: a Message's
 activation is raised at the communication point the FMU stands on, and the
-event time the sender stated is not used.
+event time the sender stated is not used. The Clock goes up before the buffer
+it gates is written, because a clocked variable may be accessed only while its
+Clock is active — the mirror of reading the Clock before the buffer on the way
+out.
 
 The FMU's initial time is virtual time zero. With a Clock in the Manifest the
 FMU is instantiated with `eventModeUsed`, so initialization ends in Event
@@ -435,7 +438,7 @@ The supported profile is exactly this:
 | Clock `intervalVariability` | `triggered` only — `countdown` and `periodic` ask the importer to own a time grid, and the kernel owns it |
 | Clocked variable | one `Binary` variable per Channel, gated by one Clock of its own causality |
 | Discrete-state iteration | until the FMU stops asking, bounded at 100 iterations |
-| Next event time | none. An FMU that declares one is asking to be stepped onto it, which this importer cannot promise, and the Run fails rather than step past it |
+| Next event time | an FMU that declares one is asking to be stepped onto it, which this importer cannot promise: when the Slot grid lands on the declared instant the event is taken there, and when a Step would pass it the Run fails rather than step past it |
 | Early return | none. `earlyReturnAllowed` is declared false, and an FMU that returns early is reported rather than counted as a completed interval |
 | `canHandleVariableCommunicationStepSize` | not read. A participant's Step period is fixed by its Manifest and the kernel never shortens a Step, so the flag has nothing to decide here |
 

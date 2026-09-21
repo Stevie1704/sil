@@ -54,8 +54,8 @@ def observed(recording: Path) -> list[tuple[int, dict]]:
     message_type = schema.load(SCHEMAS)[BUFFER_SCHEMA]
     return [
         (log_time, message_type.unpack(data))
-        for topic, log_time, data in read_records(recording)
-        if topic == CAN_CHANNEL
+        for channel, log_time, data in read_records(recording)
+        if channel == CAN_CHANNEL
     ]
 
 

@@ -891,7 +891,13 @@ class _ClockedPayload:
         }
 
     def activate(self, fmu: CoSimulation, fields: dict) -> None:
-        """Hand the FMU one payload and raise the Clock that gates it.
+        """Raise the Clock, then hand the FMU the payload it gates.
+
+        That order is the contract, not a preference: a clocked variable may
+        be accessed only while its Clock is active, and an FMU that checks
+        refuses a buffer written before the Clock went up. The read side is
+        the mirror — Clock first, buffer second — and this is the same rule
+        seen from the other end.
 
         The Message's own event time is not used: this importer activates the
         Clock at the communication point it is standing on, and quietly
@@ -899,11 +905,11 @@ class _ClockedPayload:
         was never driven to.
         """
         length = _outgoing_length(self._binary, fields)
+        self._clock_values[0] = True
+        fmu.set_clock(self._clock_references, self._clock_values)
         self._buffer[:length] = fields[self._binary.field][:length]
         self._sizes[0] = length
         fmu.set_binary(self._data_references, self._sizes, self._values)
-        self._clock_values[0] = True
-        fmu.set_clock(self._clock_references, self._clock_values)
 
 
 class _Events:
@@ -994,14 +1000,12 @@ class _Events:
         is told so, rather than stepped past it and reported as if the
         interval had been clean.
 
-        The declared time is a double of seconds and the interval is integer
-        nanoseconds, so the comparison is made in nanoseconds: an event the
-        FMU means to fall on the communication point must not be refused
-        because the two ways of writing that instant differ in the last bit.
+        An event declared *on* the end of this interval is reachable: the
+        Step lands on it, and `due` is what takes it.
         """
         if self.next_event_time is None:
             return
-        declared_ns = round(self.next_event_time * NS_PER_S)
+        declared_ns = self._declared_ns()
         if declared_ns < t + dt:
             raise ParticipantFailure(
                 f"the FMU declared its next event at {self.next_event_time} s "
@@ -1009,6 +1013,31 @@ class _Events:
                 f"this Step covers; this importer does not choose "
                 f"communication points, so it cannot stop there"
             )
+
+    def due(self, communication_point_ns: int) -> bool:
+        """Whether the FMU declared an event at the point just reached.
+
+        An FMU that declares a next event time is asking to be in Event Mode
+        when its own clock reaches that instant. `fmi3DoStep` reporting
+        `eventHandlingNeeded` is the FMU saying so a second time, and an
+        importer that waited for the second one would skip the event of an
+        FMU that only said it once.
+        """
+        return (
+            self.next_event_time is not None
+            and self._declared_ns() == communication_point_ns
+        )
+
+    def _declared_ns(self) -> int:
+        """The declared next event time, in the kernel's own nanoseconds.
+
+        The FMU declares a double of seconds and the Slot grid is integer
+        nanoseconds, so the two are compared in nanoseconds: an event the FMU
+        means to fall on a communication point must not be missed, or
+        refused, because the two ways of writing that instant differ in the
+        last bit.
+        """
+        return round(self.next_event_time * NS_PER_S)
 
 
 def _channel_fields(init: dict) -> dict[str, dict[str, dict]]:
@@ -1589,14 +1618,18 @@ class FmuParticipant(StepParticipant):
             self._events.require_next_event_reachable(t, dt)
         event_needed = self._fmu.do_step(t / NS_PER_S, dt / NS_PER_S)
         published = []
-        if event_needed:
-            if self._events is None:
-                raise ParticipantFailure(
-                    f"fmi3DoStep reported eventHandlingNeeded at "
-                    f"{(t + dt) / NS_PER_S} s; no Channel of this Run carries "
-                    f"a Clock, so the FMU was instantiated with eventModeUsed "
-                    f"false and the event cannot be handled"
-                )
+        if event_needed and self._events is None:
+            raise ParticipantFailure(
+                f"fmi3DoStep reported eventHandlingNeeded at "
+                f"{(t + dt) / NS_PER_S} s; no Channel of this Run carries "
+                f"a Clock, so the FMU was instantiated with eventModeUsed "
+                f"false and the event cannot be handled"
+            )
+        # The FMU asks for an event either by reporting one at the end of the
+        # Step or by having declared its time beforehand. A Step that lands
+        # on a declared event time is that event's communication point, and
+        # waiting for the flag as well would skip it.
+        if self._events is not None and (event_needed or self._events.due(t + dt)):
             self._fmu.enter_event_mode()
             published = self._events.handle(self._fmu, t + dt)
             self._fmu.enter_step_mode()

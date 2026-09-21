@@ -15,6 +15,9 @@
 //     crosses, and the output Clock is raised at the end of that step;
 //   - the Clock reads active exactly once per activation — reading it clears
 //     it, which is what makes a duplicated readout lose an operation;
+//   - a clocked buffer may be written only while its Clock is active, which is
+//     what the stricter upstream revision of this node checks and what decides
+//     the order an importer has to set an input Clock and its buffer in;
 //   - an activated input Clock echoes the buffer it was handed back out on the
 //     output Clock, one discrete-state update later.
 //
@@ -88,6 +91,7 @@ typedef struct {
   // update that echoes it.
   unsigned char rx[MAX_SIZE];
   size_t rx_length;
+  bool rx_clock;
   bool rx_pending;
   // How many transmit operations the last interval produced, when this build
   // raises the Clock from the discrete-state update instead of the Step.
@@ -227,6 +231,7 @@ int fmi3SetClock(void *instance, const uint32_t *value_references,
       return 3;
     }
     if (values[i]) {
+      node.rx_clock = true;
       node.rx_pending = true;
     }
   }
@@ -257,6 +262,12 @@ int fmi3SetBinary(void *instance, const uint32_t *value_references,
     if (value_references[i] != RX_DATA || value_sizes[i] > MAX_SIZE) {
       return 3;
     }
+    if (!node.rx_clock) {
+      // What the stricter upstream revision answers: a clocked variable is
+      // accessible only while the Clock that gates it is active, so a buffer
+      // written before the Clock went up is refused rather than kept.
+      return 3;
+    }
     node.rx_length = value_sizes[i];
     memcpy(node.rx, values[i], value_sizes[i]);
   }
@@ -282,6 +293,9 @@ int fmi3UpdateDiscreteStates(void *instance, bool *discrete_states_need_update,
     node.tx_length = node.rx_length;
     node.tx_clock = true;
     node.rx_pending = false;
+    // The activation is consumed with the event: a second frame at the same
+    // instant is a second activation of the Clock.
+    node.rx_clock = false;
     *discrete_states_need_update = true;
   }
 #if FMI_CLOCK_ACTIVATE_IN_UPDATE
@@ -296,8 +310,12 @@ int fmi3UpdateDiscreteStates(void *instance, bool *discrete_states_need_update,
   *discrete_states_need_update = true;
 #endif
 #if FMI_CLOCK_NEXT_EVENT_MS
-  *next_event_time_defined = true;
-  *next_event_time = FMI_CLOCK_NEXT_EVENT_MS / 1000.0;
+  // Declared while it is still ahead: an FMU that kept asking for an instant
+  // the Run has already reached would be asking to go backwards.
+  if (milliseconds(node.event_time) < FMI_CLOCK_NEXT_EVENT_MS) {
+    *next_event_time_defined = true;
+    *next_event_time = FMI_CLOCK_NEXT_EVENT_MS / 1000.0;
+  }
 #endif
 #if FMI_CLOCK_TERMINATE_IN_EVENT
   *terminate_simulation = true;
