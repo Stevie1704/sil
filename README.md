@@ -484,6 +484,25 @@ Nothing in that directory is part of the framework. Its README is the evidence:
 what worked unchanged, what needed consumer-side adaptation, and what the
 current contracts cannot represent.
 
+## FMI-LS-BUS CAN acceptance fixture
+
+[proofs/fmi-ls-bus/](proofs/fmi-ls-bus/) pins the Modelica Association's
+FMI-LS-BUS CAN demo FMUs, builds them for the supported machine class from
+sources upstream ships no binary for, and publishes the profile an importer
+has to meet to drive them: Event Mode, a triggered output Clock, and a Binary
+buffer of CAN operations. A reference exchange drives the node through an
+independent FMI 3.0 importer and matches payloads and event times written down
+before the Run; the released SiL Importer is then pointed at the same FMU, and
+what it answers is kept verbatim.
+
+```sh
+proofs/fmi-ls-bus/run-proof.sh        # needs docker and network
+```
+
+It is an evidence gate, not an implementation: the current Importer cannot
+drive this FMU, and the two reasons it cannot are the retained measurement the
+CAN milestone is built against.
+
 ## Build & test
 
 ```sh
@@ -518,6 +537,9 @@ examples/fmu/      the FMU import example: one Reference FMU driven as a
                    process participant
 proofs/esmini/     consumer-side adoption proof: a third-party scenario
                    engine run on the published release, with its evidence
+proofs/fmi-ls-bus/ acceptance fixture for the FMI-LS-BUS CAN demo FMUs:
+                   pinned artifacts, the supported profile, and what the
+                   released Importer does with them
 python/src/sil/    manifest builder, step-participant lib, test API,
                    determinism check, declared memory footprint
 tests/             behavior tests at the run boundary

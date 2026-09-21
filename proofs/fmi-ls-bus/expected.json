@@ -1,0 +1,162 @@
+{
+  "fmu": "DemoCanNodeTriggeredOutput.fmu",
+  "clock": "CanChannel.Tx_Clock",
+  "data": "CanChannel.Tx_Data",
+  "why": "Stated from the upstream node's source and the FMI-LS-BUS headers, not from a Run. App_Instantiate creates one CAN baudrate and one arbitration-lost-behavior configuration operation and raises the Tx clock; App_DoStep creates one CAN transmit operation, ID 0x1 with payload 01 02 03 04, for every 300 ms boundary the step crosses, and raises the Tx clock at the end of that step. fmi3UpdateDiscreteStates declares no next event time \u2014 every event below carries next_event_time_s null \u2014 so an operation is observable only at the communication point of the step that produced it, and an importer cannot be told when to step next.",
+  "cases": [
+    {
+      "name": "aligned",
+      "why": "A 100 ms step divides the node's 300 ms transmit interval, so every operation surfaces at the communication point that carries its own internal transmit time.",
+      "step_size_ns": 100000000,
+      "duration_ns": 1000000000,
+      "events": [
+        {
+          "time_ns": 0,
+          "payload_hex": "400000000d00000001a0860100400000000a0000000401",
+          "operations": [
+            {
+              "name": "Configuration",
+              "fields": {
+                "parameter": "CanBaudrate",
+                "baudrate": 100000
+              }
+            },
+            {
+              "name": "Configuration",
+              "fields": {
+                "parameter": "ArbitrationLostBehavior",
+                "behavior": "BufferAndRetransmit"
+              }
+            }
+          ],
+          "next_event_time_s": null
+        },
+        {
+          "time_ns": 300000000,
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ],
+          "next_event_time_s": null
+        },
+        {
+          "time_ns": 600000000,
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ],
+          "next_event_time_s": null
+        },
+        {
+          "time_ns": 900000000,
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ],
+          "next_event_time_s": null
+        }
+      ]
+    },
+    {
+      "name": "quantised",
+      "why": "A 250 ms step divides neither the transmit interval nor its offsets. The same three frames are emitted, and each one is observable only at the end of the step that crossed its internal transmit time: 300 ms is reported at 500 ms, 600 ms at 750 ms, 900 ms at 1000 ms. The delay is the importer's step grid, not the node's.",
+      "step_size_ns": 250000000,
+      "duration_ns": 1000000000,
+      "events": [
+        {
+          "time_ns": 0,
+          "payload_hex": "400000000d00000001a0860100400000000a0000000401",
+          "operations": [
+            {
+              "name": "Configuration",
+              "fields": {
+                "parameter": "CanBaudrate",
+                "baudrate": 100000
+              }
+            },
+            {
+              "name": "Configuration",
+              "fields": {
+                "parameter": "ArbitrationLostBehavior",
+                "behavior": "BufferAndRetransmit"
+              }
+            }
+          ],
+          "next_event_time_s": null
+        },
+        {
+          "time_ns": 500000000,
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ],
+          "next_event_time_s": null
+        },
+        {
+          "time_ns": 750000000,
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ],
+          "next_event_time_s": null
+        },
+        {
+          "time_ns": 1000000000,
+          "payload_hex": "1000000014000000010000000000040001020304",
+          "operations": [
+            {
+              "name": "CanTransmit",
+              "fields": {
+                "id": 1,
+                "ide": false,
+                "rtr": false,
+                "data": "01020304"
+              }
+            }
+          ],
+          "next_event_time_s": null
+        }
+      ]
+    }
+  ]
+}

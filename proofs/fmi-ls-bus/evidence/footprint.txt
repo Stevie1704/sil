@@ -1,0 +1,6 @@
+subscriber routes
+  observer <- can.Tx  cap      2  x       2050 B  =      0.00 MiB
+
+  bounded route queues           0.00 MiB
+  shared-memory arenas           0.00 MiB
+  declared payload total         0.00 MiB

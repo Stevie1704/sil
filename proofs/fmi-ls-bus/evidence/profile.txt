@@ -1,0 +1,48 @@
+fixture digest  9974aa8e4c9e1b50e43d7433bdaef72e14b5d9e23997e1600a9725c92c5148e3
+
+=== DemoCanNodeTriggeredOutput.fmu ===
+model            DemoCanNodeTriggeredOutput (FMI 3.0)
+layered standard org.fmi-standard.fmi-ls-bus 1.0.0-beta.1 (bus simulation FMU: false)
+capabilities     needsExecutionTool=false, canBeInstantiatedOnlyOncePerProcess=false, canGetAndSetFMUState=false, canSerializeFMUState=false, canHandleVariableCommunicationStepSize=true, providesIntermediateUpdate=false, canReturnEarlyAfterIntermediateUpdate=false, hasEventMode=true
+binaries         binaries/x86_64-linux/DemoCanNodeTriggeredOutput.so
+variables
+  Float64  time                                     valueReference=1024 causality=independent variability=continuous description=Simulation time
+  Binary   CanChannel.Rx_Data                       valueReference=0 causality=input variability=discrete initial=exact clocks=2 maxSize=2048 mimeType=application/org.fmi-standard.fmi-ls-bus.can; version="1.0.0-beta.1" start= dimension_start=1
+  Binary   CanChannel.Tx_Data                       valueReference=1 causality=output variability=discrete initial=calculated clocks=3 maxSize=2048 mimeType=application/org.fmi-standard.fmi-ls-bus.can; version="1.0.0-beta.1"
+  Clock    CanChannel.Rx_Clock                      valueReference=2 causality=input intervalVariability=triggered
+  Clock    CanChannel.Tx_Clock                      valueReference=3 causality=output intervalVariability=triggered
+  Boolean  org.fmi_standard.fmi_ls_bus.Can_BusNotifications valueReference=128 causality=structuralParameter variability=fixed start=false
+terminals
+  CanChannel kind=org.fmi-ls-bus.network-terminal rule=org.fmi-ls-bus.transceiver
+    Rx_Clock -> CanChannel.Rx_Clock (signal)
+    Rx_Data -> CanChannel.Rx_Data (signal)
+    Tx_Clock -> CanChannel.Tx_Clock (signal)
+    Tx_Data -> CanChannel.Tx_Data (signal)
+
+=== DemoCanBusSimulation.fmu ===
+model            DemoCanBusSimulation (FMI 3.0)
+layered standard org.fmi-standard.fmi-ls-bus 1.0.0-beta.1 (bus simulation FMU: true)
+capabilities     needsExecutionTool=false, canBeInstantiatedOnlyOncePerProcess=false, canGetAndSetFMUState=false, canSerializeFMUState=false, canHandleVariableCommunicationStepSize=true, providesIntermediateUpdate=false, canReturnEarlyAfterIntermediateUpdate=false, hasEventMode=true, providesEvaluateDiscreteStates=true
+binaries         binaries/x86_64-linux/DemoCanBusSimulation.so
+variables
+  Float64  time                                     valueReference=1024 causality=independent variability=continuous description=Simulation time
+  Binary   Node1.Rx_Data                            valueReference=0 causality=input variability=discrete initial=exact clocks=2 maxSize=2048 mimeType=application/org.fmi-standard.fmi-ls-bus.can; version="1.0.0-beta.1" start=
+  Binary   Node1.Tx_Data                            valueReference=1 causality=output variability=discrete initial=calculated clocks=3 maxSize=2048 mimeType=application/org.fmi-standard.fmi-ls-bus.can; version="1.0.0-beta.1"
+  Clock    Node1.Rx_Clock                           valueReference=2 causality=input intervalVariability=triggered
+  Clock    Node1.Tx_Clock                           valueReference=3 causality=input intervalVariability=countdown
+  Binary   Node2.Rx_Data                            valueReference=4 causality=input variability=discrete initial=exact clocks=6 maxSize=2048 mimeType=application/org.fmi-standard.fmi-ls-bus.can; version="1.0.0-beta.1" start=
+  Binary   Node2.Tx_Data                            valueReference=5 causality=output variability=discrete initial=calculated clocks=7 maxSize=2048 mimeType=application/org.fmi-standard.fmi-ls-bus.can; version="1.0.0-beta.1"
+  Clock    Node2.Rx_Clock                           valueReference=6 causality=input intervalVariability=triggered
+  Clock    Node2.Tx_Clock                           valueReference=7 causality=input intervalVariability=countdown
+  Float64  BusErrorProbability                      valueReference=255 causality=input variability=discrete start=0.0
+terminals
+  Node1 kind=org.fmi-ls-bus.network-terminal rule=org.fmi-ls-bus.transceiver
+    Rx_Clock -> Node1.Rx_Clock (signal)
+    Rx_Data -> Node1.Rx_Data (signal)
+    Tx_Clock -> Node1.Tx_Clock (signal)
+    Tx_Data -> Node1.Tx_Data (signal)
+  Node2 kind=org.fmi-ls-bus.network-terminal rule=org.fmi-ls-bus.transceiver
+    Rx_Clock -> Node2.Rx_Clock (signal)
+    Rx_Data -> Node2.Rx_Data (signal)
+    Tx_Clock -> Node2.Tx_Clock (signal)
+    Tx_Data -> Node2.Tx_Data (signal)

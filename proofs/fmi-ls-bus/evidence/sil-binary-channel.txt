@@ -1,0 +1,4 @@
+manifest    binary-channel.json
+exit status 2
+--- output ---
+sil-run: participant 'importer': sil.participant.ManifestError: Channel 'can.Tx' declares schema field 'CanChannel.Tx_Data_length', which is no output variable of FMU 'DemoCanNodeTriggeredOutput'

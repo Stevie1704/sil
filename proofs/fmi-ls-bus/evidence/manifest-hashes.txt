@@ -1,0 +1,2 @@
+no-channels      180b353aea28f660cea9d3060929ff41b5ed392b59f3ddbe9754ef8dbefbf23b  /workspace/no-channels.json
+binary-channel   2bf32b33d8f8ab9bfd0cb8a108e844eaa0fc06d5febfa8f252c04df904e18ef5  /workspace/binary-channel.json

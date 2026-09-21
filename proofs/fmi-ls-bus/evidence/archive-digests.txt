@@ -1,0 +1,2 @@
+/opt/fixture/DemoCanNodeTriggeredOutput.fmu: OK
+/opt/fixture/DemoCanBusSimulation.fmu: OK
