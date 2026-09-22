@@ -79,6 +79,7 @@ def test_sampling_manifest_keeps_plant_and_channel_latency_fixed():
     assert document["participants"]["controller"]["step_period_ns"] == 5_000_000
     assert document["channels"]["sensing"]["latency_ns"] == 10_000_000
     assert document["channels"]["command"]["latency_ns"] == 10_000_000
+    assert "command:accel_mps2=accel_mps2" in document["participants"]["plant"]["command"]
     assert document["participants"]["controller"]["subscribes"][0]["capacity"] == route_capacity(
         10_000_000, 5_000_000, 10_000_000
     )

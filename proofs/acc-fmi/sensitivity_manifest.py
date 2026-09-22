@@ -30,8 +30,10 @@ def _bindings(channel: str, fields: list[str]) -> list[str]:
 
 
 def _plant_binds() -> list[str]:
-    return _bindings("sensing", CHANNEL_FIELDS["sensing"]) + _bindings(
-        "state", CHANNEL_FIELDS["state"]
+    return (
+        _bindings("command", CHANNEL_FIELDS["command"])
+        + _bindings("sensing", CHANNEL_FIELDS["sensing"])
+        + _bindings("state", CHANNEL_FIELDS["state"])
     )
 
 
