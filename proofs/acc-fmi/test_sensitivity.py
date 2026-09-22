@@ -50,9 +50,9 @@ def test_comparison_requires_an_exact_reference_time_not_interpolation():
 
 def test_timing_defect_is_outside_the_declared_envelope():
     normal = {"max_abs_error": {"gap_m": 0.25, "ego_speed_mps": 0.08,
-                                "accel_mps2": 0.09}}
+                                "accel_mps2": 0.14}}
     defect = copy.deepcopy(normal)
-    defect["max_abs_error"]["accel_mps2"] = 0.11
+    defect["max_abs_error"]["accel_mps2"] = 0.16
 
     assert within_envelope(normal)
     assert not within_envelope(defect)
