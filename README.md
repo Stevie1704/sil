@@ -748,6 +748,31 @@ Nothing in that directory is part of the framework. Its README is the evidence:
 what worked unchanged, what needed consumer-side adaptation, and what the
 current contracts cannot represent.
 
+## ACC acceptance bundle
+
+[proofs/acc-fmi/](proofs/acc-fmi/) also ships the closed-loop FMI 3.0 baseline
+as something a consumer can adopt: two source-available ACC FMUs, the Runs that
+judge them, and the pinned artifacts those Runs are compared against.
+
+```sh
+proofs/acc-fmi/acceptance-bundle.sh prepare     # once; needs docker and network
+proofs/acc-fmi/acceptance-bundle.sh run         # offline, from the installed bundle
+```
+
+Preparation is the only step that needs the exporter, the independent importer
+and a compiler. The acceptance Runs execute in the production runtime image
+plus consumer material: the installed wheel and the installed `sil-run`, no
+source tree on the import path, no network, and no build or comparison tool in
+the image. They re-hash every pinned artifact first, compare a nominal
+trajectory and a timing-sensitivity envelope against independently recorded
+references, require the deliberate KPI failure to fail, and compare two
+Recordings of each Manifest byte-for-byte.
+
+[proofs/acc-fmi/INSTALL.md](proofs/acc-fmi/INSTALL.md) covers units, time
+conventions, the default Channel Latency, the model's limitations, the FMI 3.0
+profile this evidence establishes with the capabilities it rejects, and how to
+read a reference mismatch or an unsupported FMU.
+
 ## FMI-LS-BUS CAN acceptance fixture
 
 [proofs/fmi-ls-bus/](proofs/fmi-ls-bus/) pins the Modelica Association's

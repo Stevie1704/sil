@@ -9,13 +9,8 @@ from loop_compare import compare, first_difference, recording_messages, validate
 from loop_contract import (HERE, MIN_GAP_M, PYTHON_SCHEDULE, STEP_NS, STEPS, VARIANTS,
                            configuration, manifest, validate_archives, validate_manifest)
 from loop_evidence import retain
-from proof_support import (PARTICIPANT_TIMEOUT_MS, compare_files, require,
-                           run_expecting, run_logged, write_json)
-
-
-def runner_args(path, recording):
-    return ["/build/sil-run", path, "-o", recording,
-            "--participant-timeout-ms", str(PARTICIPANT_TIMEOUT_MS)]
+from proof_support import (compare_files, require, run_expecting, run_logged,
+                           sil_runner_args as runner_args, write_json)
 
 
 def execute(factory, name, out):

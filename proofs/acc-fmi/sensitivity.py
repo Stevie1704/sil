@@ -77,9 +77,10 @@ def _reference_identity(path: Path) -> dict:
     return {"file": path.name, "sha256": file_sha256(path)}
 
 
-def _validate_reference_initialization(
+def validate_reference_initialization(
     document: dict, config: dict, row: SensitivityRow,
 ) -> None:
+    """Also used when the acceptance bundle pins these trajectories."""
     def matches(actual: list[float], expected: list[float]) -> bool:
         return len(actual) == len(expected) and all(
             math.isclose(value, wanted, rel_tol=0.0, abs_tol=REFERENCE_ABS_TOL)
@@ -154,7 +155,7 @@ def run(out: Path) -> None:
     for row in _reference_rows():
         path = _run_reference(row, config_path, out)
         document = json.loads(path.read_text())
-        _validate_reference_initialization(document, authored_configuration, row)
+        validate_reference_initialization(document, authored_configuration, row)
         references[row.name] = (row, path, document)
 
     results = []

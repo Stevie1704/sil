@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 from sil.recording import read_records
-from closed_loop import runner_args
-from proof_support import compare_files, file_sha256, require, run_expecting, run_logged, write_json
+from proof_support import (compare_files, file_sha256, require, run_expecting, run_logged,
+                           sil_runner_args as runner_args, write_json)
 from scenario_contract import FIELDS, HERE, NAMES, configuration, manifest
 from scenario_participant import violations
 
@@ -58,7 +58,17 @@ def post_hoc(actual, config):
     return errors
 
 
-def execute(config, out):
+def independent_trajectory(config, config_path, out):
+    """Drive the same scenario through FMPy. Needs the comparison tool."""
+    name = config["name"]
+    reference_path = out / f"{name}.fmpy.json"
+    run_logged([sys.executable, HERE / "scenario_reference.py", config_path, reference_path],
+               out / f"{name}-reference.log")
+    return json.loads(reference_path.read_text())["trajectory"]
+
+
+def execute(config, out, reference=None):
+    """Run one scenario. The acceptance bundle supplies its pinned reference."""
     name = config["name"]
     path = out / f"{name}.json"
     identity = manifest(config).write(path).hash
@@ -67,10 +77,8 @@ def execute(config, out):
     authored = compare_files(path, repeated)
     config_path = out / f"{name}-configuration.json"
     write_json(config_path, config)
-    reference_path = out / f"{name}.fmpy.json"
-    run_logged([sys.executable, HERE / "scenario_reference.py", config_path, reference_path],
-               out / f"{name}-reference.log")
-    reference = json.loads(reference_path.read_text())["trajectory"]
+    if reference is None:
+        reference = independent_trajectory(config, config_path, out)
     recordings, diagnostics, coverage = [], [], []
     for repeat in (1, 2):
         recording = out / f"{name}-{repeat}.mcap"

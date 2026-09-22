@@ -7,6 +7,9 @@ from pathlib import Path
 
 # A wall-clock response deadline, never part of the authored exchange grid.
 PARTICIPANT_TIMEOUT_MS = int(os.environ.get("SIL_ACC_PARTICIPANT_TIMEOUT_MS", "30000"))
+# The checkout proofs run the runner they just built; the acceptance bundle
+# runs the one installed in the example image.
+RUNNER = os.environ.get("SIL_ACC_RUNNER", "/build/sil-run")
 
 
 def require(condition, diagnostic):
@@ -38,7 +41,7 @@ def run_logged(args, log):
 
 def sil_runner_args(manifest, recording):
     return [
-        "/build/sil-run", str(manifest), "-o", str(recording),
+        RUNNER, str(manifest), "-o", str(recording),
         "--participant-timeout-ms", str(PARTICIPANT_TIMEOUT_MS),
     ]
 

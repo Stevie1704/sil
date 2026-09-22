@@ -1,5 +1,60 @@
 # ACC FMI 3.0 interoperability proof
 
+## Consumer acceptance bundle (#151)
+
+```sh
+proofs/acc-fmi/acceptance-bundle.sh prepare      # once; needs Docker and network
+proofs/acc-fmi/acceptance-bundle.sh run          # offline, from the installed bundle
+```
+
+[INSTALL.md](INSTALL.md) is the installation document: units, time conventions,
+default Channel Latency, model limitations, the FMI 3.0 profile this evidence
+establishes with its rejected capabilities, and how to diagnose a reference
+mismatch or an unsupported FMU. [HANDOFF.md](HANDOFF.md) states the baseline
+signals and KPIs a later CAN-connected ADAS regression reuses.
+
+Preparation is the one step that needs the exporter, the independent FMPy
+importer and a compiler. It builds three images, exports and audits both FMUs,
+writes the authored configurations and the independent trajectories, and
+records a digest of every pinned artifact in `bundle.json`.
+
+Acceptance Runs then execute in the **example image**: the unchanged production
+runtime image plus the consumer material in `/opt/acc-example`. SiL is the
+installed wheel and the installed `sil-run`; there is no checkout, no
+`PYTHONPATH` into a source tree, no network, no exporter, no FMPy and no
+toolchain. The Run refuses to start unless all of that holds, unless the
+executing image is the one the bundle records, and unless every bundle digest
+still matches. The model's only runtime dependency, CPython with
+`libpython3.13.so`, comes from the runtime image's own base.
+
+| Check | Source | What it establishes |
+| --- | --- | --- |
+| `nominal` | #150 scenario | the nominal trajectory matches the pinned independent FMPy path |
+| `dropped` | #150 scenario | the deliberate minimum-gap failure still fails, with its diagnostic |
+| `latency-20ms` | #149 row | 20 ms end-to-end Channel Latency stays inside the authored envelope |
+| `timing-defect` | #149 negative control | a 250 ms sensing Latency must exceed that envelope |
+
+Each of the four authors its Manifest twice, executes that Manifest twice, and
+compares both pairs byte-for-byte. The four Manifest identities must differ.
+Recordings from different checks are never compared. FMU archive
+reproducibility is judged separately, during preparation, from two controlled
+exporter builds: archive bytes, every ZIP member timestamp and both
+instantiation tokens must be identical, and no generation timestamp may
+survive.
+
+This is a subset chosen for adoption, not a second copy of the full matrix.
+The complete sensitivity matrix stays in `sensitivity.py`, the complete
+scenario suite in `scenarios.py`, and both still run in their own proofs.
+
+Evidence: `runtime.json` (installed SiL identity, runner digest, image
+identity, both FMU digests, the absent tools), `results.json`,
+`curated/report.json` (bundle index, verdicts, determinism identities, FMI
+profile, archive reproducibility, handoff and every numerical threshold), plus
+the Manifests, Recordings, provenance side-cars and logs. `.github/workflows/
+acceptance-acc-bundle.yml` runs both steps on native Linux x86-64 under
+explicit step and job deadlines, with the Participant response deadline bounded
+separately, and uploads the bundle and the evidence.
+
 ## Behavior regression scenarios (#150)
 
 ```sh

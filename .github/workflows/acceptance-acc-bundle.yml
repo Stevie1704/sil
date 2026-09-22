@@ -1,0 +1,55 @@
+name: acceptance-acc-bundle
+
+# The ACC consumer acceptance bundle (issue #151). One preparation step builds
+# the pinned model and runtime artifacts; the acceptance Runs then execute
+# offline from the installed SiL bundle, with no source tree on the import
+# path. Both steps and the job carry explicit deadlines, and every Participant
+# response is bounded separately.
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/acc-fmi/**'
+      - 'python/src/sil/**'
+      - 'Dockerfile'
+      - 'container/**'
+      - '.github/workflows/acceptance-acc-bundle.yml'
+  workflow_dispatch:
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    # Overall job deadline. A wedged Participant is caught much earlier by the
+    # per-response deadline below; this bounds the whole adoption path.
+    timeout-minutes: 75
+    env:
+      SIL_ACC_PARTICIPANT_TIMEOUT_MS: '30000'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare the pinned acceptance bundle
+        timeout-minutes: 45
+        run: >
+          proofs/acc-fmi/acceptance-bundle.sh prepare
+          "$PWD/build/acc-acceptance-bundle"
+
+      - name: Run the acceptance checks from the installed bundle
+        timeout-minutes: 30
+        run: >
+          proofs/acc-fmi/acceptance-bundle.sh run
+          "$PWD/build/acc-acceptance-bundle"
+          "$PWD/build/acc-acceptance-evidence"
+
+      - name: Keep the pinned bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acc-acceptance-bundle
+          path: build/acc-acceptance-bundle/
+
+      - name: Keep the acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acc-acceptance-evidence
+          path: build/acc-acceptance-evidence/
