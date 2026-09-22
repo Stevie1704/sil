@@ -130,3 +130,13 @@ correction. The full proof exercises the actual Process participant wiring.
 No Manifest/hash, Step protocol, Arena, Native ABI, Recording or exit-code
 contract changes. Existing successful Runs are covered by the full repository
 suite and original reference Manifest determinism gate.
+
+## Retained native result
+
+The [committed evidence](evidence/README.md) comes from
+[Actions run 35703127743](https://github.com/Stevie1704/sil/actions/runs/35703127743)
+on native Linux x86-64. Both archives passed the pinned schema and both call
+paths. All 60 SiL output samples matched the independent expectations, and both
+Recordings for each of the three Manifests are byte-identical. Both FMU builds
+also reproduced their archive bytes. The full identities and original traces
+are retained, including the null-resource-path failure and successful fix.

@@ -1,0 +1,49 @@
+{
+  "machine": [
+    "Linux",
+    "x86_64",
+    "glibc",
+    "2.36"
+  ],
+  "python": "3.13.7 (main, Sep 30 2025, 00:38:53) [GCC 12.2.0]",
+  "packages": {
+    "pip": "25.2",
+    "jsonschema-specifications": "2025.9.1",
+    "referencing": "0.37.0",
+    "fastjsonschema": "2.22.2",
+    "zstandard": "0.25.0",
+    "attrs": "26.1.0",
+    "iniconfig": "2.3.0",
+    "platformdirs": "4.11.12",
+    "lz4": "4.4.5",
+    "pythonfmu3": "0.3.4",
+    "cmake": "4.4.3",
+    "FMPy": "0.3.26",
+    "mcap": "1.4.0",
+    "jsonschema": "4.26.0",
+    "traitlets": "5.16.1",
+    "jupyter_core": "5.9.1",
+    "pluggy": "1.6.0",
+    "Jinja2": "3.1.6",
+    "lxml": "6.1.3",
+    "pytest": "8.4.2",
+    "lark": "1.3.1",
+    "Pygments": "2.21.0",
+    "rpds-py": "2026.6.3",
+    "numpy": "2.5.3",
+    "packaging": "26.3",
+    "nbformat": "5.11.1",
+    "MarkupSafe": "3.0.3",
+    "msgpack": "1.2.2"
+  },
+  "source_revision": "4c1e01f5db68deafb20a44aeed7bc0ba4bfc8ade",
+  "runner_sha256": "b29ba5defb291c01ddd5e58e42f2810ce7a2f301a8d59210e91a893553bd90cb",
+  "libpython": {
+    "path": "/usr/local/lib/libpython3.13.so",
+    "sha256": "27e91436972340b794fddbd25091fd13957fde60546b4f7270bbf1c243aebf75"
+  },
+  "tolerances": {
+    "absolute": 1e-10,
+    "relative": 1e-12
+  }
+}

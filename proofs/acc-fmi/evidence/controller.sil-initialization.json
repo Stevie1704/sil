@@ -1,0 +1,18 @@
+[
+  {
+    "instance": 0,
+    "phase": "initialized",
+    "time": 0.0,
+    "values": [
+      1.5
+    ]
+  },
+  {
+    "instance": 1,
+    "phase": "initialized",
+    "time": 0.0,
+    "values": [
+      -1.2
+    ]
+  }
+]

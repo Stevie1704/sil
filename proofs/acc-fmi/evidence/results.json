@@ -1,0 +1,20 @@
+{
+  "controller": {
+    "manifest_sha256": "a0b2590d3dffa89765c36f0113a2c39b9295c6d47ab0f1cb91145525d93a3314",
+    "recording_sha256": "63a99c188da7ac71900479186e8c83af347251739d3d99cd33e47cd5394eb08e",
+    "byte_deterministic": true,
+    "checked_outputs": 20
+  },
+  "plant-accelerate": {
+    "manifest_sha256": "eb6e5ea17b79815ccfe80da9832374ae4fb80b07398eb55a4b5da225eb7eef6d",
+    "recording_sha256": "dfa2316d318e6671a0ef119e71689e8f3145d2f11f07fa53dea920f169edb9df",
+    "byte_deterministic": true,
+    "checked_outputs": 20
+  },
+  "plant-coast": {
+    "manifest_sha256": "852e0aa534b7938c1fffe0a34943bd9498cf90bbb702396951ed9c5e65289a0e",
+    "recording_sha256": "4e0728fba7965cc77de05bb38685dcec2e1fd5698441f256c91d5b59a1d20524",
+    "byte_deterministic": true,
+    "checked_outputs": 20
+  }
+}
