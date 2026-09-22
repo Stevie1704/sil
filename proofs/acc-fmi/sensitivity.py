@@ -12,6 +12,7 @@ from proof_support import (
     require,
     run_logged,
     run_manifest_twice,
+    single_receipt,
     write_json,
 )
 from qualify import capture_environment, inspect_archives
@@ -22,6 +23,7 @@ from sensitivity_compare import (
     recording_observations,
     reference_observations,
     within_envelope,
+    within_reference_tolerance,
 )
 from sensitivity_contract import (
     REFERENCE_ABS_TOL,
@@ -35,27 +37,7 @@ from sensitivity_manifest import manifest_for
 from sensitivity_report import report_markdown
 
 HERE = Path(__file__).resolve().parent
-
-
-def _reference_tolerance(metrics: dict) -> bool:
-    return (
-        all(
-            error <= REFERENCE_ABS_TOL
-            for error in metrics["max_abs_error"].values()
-        )
-        and abs(metrics["minimum_gap_delta_m"]) <= REFERENCE_ABS_TOL
-    )
-
-
-def _kpi_receipt(log_path: Path) -> dict:
-    receipts = [
-        json.loads(line.split("ACC_SENSITIVITY_KPI ", 1)[1])
-        for line in log_path.read_text().splitlines()
-        if "ACC_SENSITIVITY_KPI " in line
-    ]
-    require(receipts, f"no sensitivity KPI receipt in {log_path}")
-    require(len(receipts) == 1, f"KPI receipt was emitted more than once: {log_path}")
-    return receipts[0]
+KPI_MARKER = "ACC_SENSITIVITY_KPI"
 
 
 def _run_reference(row: SensitivityRow, config_path: Path, out: Path) -> Path:
@@ -77,9 +59,10 @@ def _reference_identity(path: Path) -> dict:
     return {"file": path.name, "sha256": file_sha256(path)}
 
 
-def _validate_reference_initialization(
+def validate_reference_initialization(
     document: dict, config: dict, row: SensitivityRow,
 ) -> None:
+    """Also used when the acceptance bundle pins these trajectories."""
     def matches(actual: list[float], expected: list[float]) -> bool:
         return len(actual) == len(expected) and all(
             math.isclose(value, wanted, rel_tol=0.0, abs_tol=REFERENCE_ABS_TOL)
@@ -154,7 +137,7 @@ def run(out: Path) -> None:
     for row in _reference_rows():
         path = _run_reference(row, config_path, out)
         document = json.loads(path.read_text())
-        _validate_reference_initialization(document, authored_configuration, row)
+        validate_reference_initialization(document, authored_configuration, row)
         references[row.name] = (row, path, document)
 
     results = []
@@ -179,7 +162,7 @@ def run(out: Path) -> None:
             # bit-close to that oracle.
             if row.kind == "constant-acceleration":
                 require(
-                    _reference_tolerance(own_comparison),
+                    within_reference_tolerance(own_comparison),
                     f"{row.name}: constant FMU differs from analytic oracle: {own_comparison}",
                 )
         else:
@@ -187,7 +170,7 @@ def run(out: Path) -> None:
             own = reference_observations(own_document, own_row)
             own_comparison = compare_row(measured, own, row)
             require(
-                _reference_tolerance(own_comparison),
+                within_reference_tolerance(own_comparison),
                 f"{row.name}: SiL differs from its independent reference: {own_comparison}",
             )
 
@@ -244,7 +227,7 @@ def run(out: Path) -> None:
             "sensitivity_comparison": sensitivity_comparison,
             "exceeded_envelope": exceeded,
             "negative_control_detected": bool(exceeded) if row.negative_control else False,
-            "in_run_kpi": _kpi_receipt(out / run_identity["kpi_log"])
+            "in_run_kpi": single_receipt(out / run_identity["kpi_log"], KPI_MARKER)
             if row.closed_loop else None,
         })
 

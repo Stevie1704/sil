@@ -278,3 +278,25 @@ A predeclared bound on observed differences in a sensitivity experiment. It
 states what deviations the experiment accepts; it is not fitted from the
 results and does not imply monotonic convergence.
 _Avoid_: tuned tolerance, convergence bound
+
+**Acceptance bundle**:
+The pinned artifacts one preparation step produces — models, audits, authored
+configurations, independently recorded trajectories — with a digest for each
+one. Every later acceptance Run consumes that bundle offline and adds nothing
+to it, so a Run is attributable to exactly the artifacts it was prepared with.
+_Avoid_: release, package, test data, fixtures
+
+**Example image**:
+The production runtime image plus the consumer material of one adoption
+example. It carries the model's runtime dependencies and no exporter, no
+independent importer and no toolchain, so what an acceptance Run exercises is
+what an adopter installs.
+_Avoid_: test image, dev image, all-in-one image
+
+**Archive reproducibility**:
+Whether one exporter produces the same archive twice — the same bytes, the
+same member timestamps and the same instantiation token. Judged during
+preparation, separately from the determinism check, because an archive that
+changes identity between controlled builds makes every later comparison
+meaningless whether or not the Runs are deterministic.
+_Avoid_: reproducible build, deterministic build, stable artifact

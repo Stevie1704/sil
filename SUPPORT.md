@@ -110,6 +110,9 @@ Do not build on these. They change without notice and without a release note.
   that serve them. They are fixtures for this repository's own checks.
 - The `acceptance` container image target and everything it adds under
   `/opt/sil/reference`.
+- Everything under `proofs/`, the images those proofs derive, and the paths
+  those images create. They are adoption evidence produced against a release
+  or a checkout, not an interface this project keeps stable.
 - The container filesystem layout beyond the entry point and `/workspace`:
   installation paths, the Python virtual environment location, and layer
   structure.
