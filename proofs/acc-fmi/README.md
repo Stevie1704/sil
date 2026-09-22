@@ -279,10 +279,60 @@ python proofs/acc-fmi/loop_evidence.py build/acc-loop-evidence build/acc-loop-re
 ```
 
 The CI workflow uses `SIL_ACC_PROOF=all` to build one pinned image and execute
-both proofs in separate containers. It retains separate `acc-fmi-evidence` and
-`acc-loop-evidence` artifacts plus an additional Manifest/Recording artifact
-covering both proofs. The old open-loop baseline remains unchanged. No kernel,
-Importer, ABI, protocol or original example behavior changes.
+the qualification, closed-loop, and sensitivity proofs in separate containers.
+It retains separate `acc-fmi-evidence`, `acc-loop-evidence`, and
+`acc-sensitivity-evidence` artifacts plus an additional Manifest/Recording
+artifact covering all proofs. The old open-loop baseline remains unchanged. No
+kernel, Importer, ABI, protocol or original example behavior changes.
 
 [Retained closed-loop evidence](closed-loop-evidence/README.md) identifies the
 native execution snapshot; rebuilding produces a new identified snapshot.
+
+## Communication-interval sensitivity (#149)
+
+Run the experiment in the same pinned image with:
+
+```sh
+SIL_ACC_PROOF=sensitivity proofs/acc-fmi/run-proof.sh build/acc-sensitivity-evidence
+```
+
+`sensitivity.py` writes `configuration.json` before starting either the
+independent driver or a SiL Run. It records the equations, exchange algorithm,
+sample/hold rules, initial state, Duration, exact endpoint observation grid,
+every participant period, every Channel Latency, and the zero modeled physical
+delay. The plant is integrated as
+`x(t+h)=x(t)+v(t)h+a*h*h/2`, `v(t+h)=v(t)+a*h`; the controller is the fixed
+clamped law already qualified in this directory. A Message contains the
+post-step output, is timestamped at its activation Slot, and is compared at
+the endpoint time `publication + participant period`.
+
+The authored matrix is deliberately split:
+
+| Family | Rows | What changes | Reference |
+| --- | --- | --- | --- |
+| Integration refinement | constant acceleration at 20/10/5 ms | plant fixed-period integration/exchange only | analytic oracle |
+| Controller sampling | controller at 20/10/5 ms, plant and Latencies fixed at 10 ms | controller sampling/hold | independent 1 ms-controller FMPy Run |
+| Channel Latency | Latency 0/10/20 ms, both participant periods fixed at 10 ms | end-to-end Channel Latency only | independent finer FMPy Run; KPI delta also against the independent 10 ms baseline |
+| Combined sensitivity | closed loop at 20/10/5 ms | plant interval, controller sampling, and both Latencies | independent 1 ms combined FMPy Run |
+| Negative control | 10 ms loop with a deliberately incorrect 100 ms sensing Latency | timing defect | independent finer FMPy Run; envelope check against the 10 ms baseline |
+
+The 20/10/5 closed-loop rows are labelled **combined sensitivity**; they are
+not presented as a convergence proof. The qualified FMUs advertise
+`canHandleVariableCommunicationStepSize=false`, so each row is a separate
+constant-period Run. The finer 1 ms comparisons are independent fixed-period
+FMPy Runs, not a claim of variable-step FMI support. This is also why the
+integration-only refinement uses the standalone constant-acceleration plant:
+there is no qualified physical delay to hold, and no unsupported mixed-period
+closed-loop claim is hidden in the result.
+
+Each measured row authors its Manifest twice and runs that same Manifest twice;
+only those same-row Recordings are compared byte-for-byte. Recordings from
+different step sizes are never compared for byte identity. The report compares
+native endpoint samples to exact reference times and rejects missing samples
+instead of interpolating across them. It reports maximum gap, speed, position,
+and command errors, minimum-gap and other KPI changes, Manifest/Recording and
+FMPy-reference identities, and a readable Markdown table in addition to
+`sensitivity-report.json`. The declared envelope is anchored to one 20 ms hold
+at the initial 25 m/s and the controller's command bound; it is an observation
+bound, not a monotonic-convergence assertion. The negative timing row must
+exceed it.
