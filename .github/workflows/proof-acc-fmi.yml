@@ -20,33 +20,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build and qualify both FMUs on Linux x86-64
+      - name: Build once and execute both proofs on Linux x86-64
+        env:
+          SIL_ACC_PROOF: all
         run: proofs/acc-fmi/run-proof.sh "$PWD/build/acc-fmi-evidence"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: acc-fmi-evidence
-          path: build/acc-fmi-evidence/
-
-      - name: Keep the Manifests and Recordings
+          path: build/acc-fmi-evidence/qualify/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acc-loop-evidence
+          path: build/acc-fmi-evidence/closed_loop/
+      - name: Keep both proofs' Manifests and Recordings separately
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: acc-fmi-workspace
           path: |
-            build/acc-fmi-evidence/*.json
-            build/acc-fmi-evidence/*.mcap
-
-  closed-loop:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Compare closed-loop FMUs and original Python example
-        env:
-          SIL_ACC_PROOF: closed_loop
-        run: proofs/acc-fmi/run-proof.sh "$PWD/build/acc-loop-evidence"
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: acc-loop-evidence
-          path: build/acc-loop-evidence/
+            build/acc-fmi-evidence/qualify/*.json
+            build/acc-fmi-evidence/qualify/*.mcap
+            build/acc-fmi-evidence/closed_loop/*.json
+            build/acc-fmi-evidence/closed_loop/*.mcap

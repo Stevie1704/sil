@@ -1,8 +1,6 @@
 """Executable interoperability gate; checks remain active under python -O."""
-import hashlib
 import importlib.metadata
 import json
-import os
 import platform
 import shutil
 import struct
@@ -20,38 +18,10 @@ from sil.recording import read_records
 from cases import ABS_TOL, REL_TOL, CASES, INPUTS, OUTPUTS, STEPS, STEP_NS
 from expected import check, expected
 
+from proof_support import (PARTICIPANT_TIMEOUT_MS, compare_files, file_sha256,
+                           require, run_logged, write_json)
+
 HERE = Path(__file__).resolve().parent
-# Wall-clock allowance for Python startup and FMU loading; never model time.
-# Override for slower hosts without changing Manifest or Recording bytes.
-PARTICIPANT_TIMEOUT_MS = int(os.environ.get("SIL_ACC_PARTICIPANT_TIMEOUT_MS", "30000"))
-
-
-def require(condition, diagnostic):
-    if not condition:
-        raise RuntimeError(diagnostic)
-
-
-def file_sha256(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def write_json(path, value):
-    path.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
-
-
-def run_logged(args, log):
-    result = subprocess.run([str(a) for a in args], capture_output=True, text=True,
-                            timeout=max(120, PARTICIPANT_TIMEOUT_MS / 1000 * 4))
-    log.write_text(result.stdout + result.stderr)
-    require(result.returncode == 0, f"exit {result.returncode}: {args}; see {log}")
-
-
-def compare_files(first, second):
-    """Retain both identities, and require actual byte equality."""
-    hashes = [file_sha256(first), file_sha256(second)]
-    require(first.read_bytes() == second.read_bytes(),
-            f"byte mismatch: {first} ({hashes[0]}) != {second} ({hashes[1]})")
-    return hashes
 
 
 def case_manifest(name, case):

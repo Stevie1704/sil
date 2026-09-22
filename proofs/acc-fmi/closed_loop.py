@@ -1,187 +1,129 @@
-"""Closed-loop evidence gate; all comparisons use communication-point identity."""
+"""Execute the closed-loop proof and retain its positive and negative evidence."""
 import json
-import math
-import struct
-import subprocess
 import sys
-import zipfile
+from functools import partial
 from pathlib import Path
-from xml.etree import ElementTree as ET
 
-from sil.manifest import Manifest, SubscriberRoute
-from sil.recording import read_records
-
-HERE = Path(__file__).resolve().parent
-
-
-def require(condition, diagnostic):
-    if not condition:
-        raise RuntimeError(diagnostic)
-
-STEP_NS = 10_000_000
-STEPS = 500
-MIN_GAP_M = 5.0
-FIELDS = {
-    "sensing": ["gap_m", "relative_speed_mps", "ego_speed_mps"],
-    "command": ["accel_mps2"],
-    "state": ["ego_position_m", "lead_position_m", "lead_speed_mps"],
-}
-# Predeclared SI tolerances, individually recorded for every signal.
-TOLERANCES = {name: (1e-10, 1e-12) for fields in FIELDS.values() for name in fields}
-UNITS = {name: ("m/s2" if name == "accel_mps2" else
-                "m/s" if "speed" in name else "m") for name in TOLERANCES}
+from sil.examples.acc.manifest import acc_manifest
+from loop_compare import compare, first_difference, recording_messages, validate_reference
+from loop_contract import (HERE, MIN_GAP_M, PYTHON_SCHEDULE, STEP_NS, STEPS, VARIANTS,
+                           configuration, manifest, validate_archives, validate_manifest)
+from loop_evidence import retain
+from proof_support import (PARTICIPANT_TIMEOUT_MS, compare_files, require,
+                           run_expecting, run_logged, write_json)
 
 
-def validate_archives(directory=Path("/fmus")):
-    for model, inputs, outputs, starts in (
-        ("AccController", FIELDS["sensing"], FIELDS["command"], [60, 0, 25]),
-        ("AccPlant", FIELDS["command"], FIELDS["sensing"] + FIELDS["state"], [0]),
-    ):
-        with zipfile.ZipFile(directory / f"{model}.fmu") as archive:
-            root = ET.fromstring(archive.read("modelDescription.xml"))
-        variables = {v.attrib["name"]: v for v in root.find("ModelVariables")}
-        for causality, names in (("input", inputs), ("output", outputs)):
-            actual = {n for n, v in variables.items() if v.get("causality") == causality}
-            require(actual == set(names), f"{model}: invalid {causality} names: {actual}")
-            for name in names:
-                v = variables[name]
-                require(v.tag == "Float64" and v.get("unit") == UNITS[name],
-                        f"{model}/{name}: invalid scalar type/unit")
-        for name, start in zip(inputs, starts):
-            require(float(variables[name].get("start")) == start,
-                    f"{model}/{name}: invalid start")
+def runner_args(path, recording):
+    return ["/build/sil-run", path, "-o", recording,
+            "--participant-timeout-ms", str(PARTICIPANT_TIMEOUT_MS)]
 
 
-def manifest():
-    m = Manifest(duration_ns=STEP_NS * STEPS)
-    for channel, fields in FIELDS.items():
-        m.add_schemas({channel: {"fields": [{"name": n, "type": "f64"} for n in fields]}})
-        m.add_channel(channel, schema=channel, latency_ns=STEP_NS)
-    for model, name, incoming, outgoing in (
-        ("AccPlant", "plant", ["command"], ["sensing", "state"]),
-        ("AccController", "controller", ["sensing"], ["command"]),
-    ):
-        binds = [part for ch in incoming + outgoing for field in FIELDS[ch]
-                 for part in ("--bind", f"{ch}:{field}={field}")]
-        m.add_process(name, command=["python3", "-m", "sil.fmi", f"/fmus/{model}.fmu", *binds],
-                      step_period_ns=STEP_NS, publishes=outgoing,
-                      subscribes=[SubscriberRoute(ch, capacity=2) for ch in incoming])
-    return m
-
-
-def recording_samples(path, original=False):
-    rows = {}
-    channels = {"acc.Sensing": "sensing", "acc.Command": "command"} if original else {
-        n: n for n in FIELDS}
-    for channel, t, payload in read_records(path):
-        require(channel in channels, f"unknown Channel {channel}")
-        name = channels[channel]
-        require(t % STEP_NS == 0 and 0 <= t < STEPS * STEP_NS, f"invalid timestamp {channel}@{t}")
-        row = rows.setdefault(t, {})
-        require(name not in row, f"duplicate {channel}@{t}")
-        row[name] = list(struct.unpack("<" + "d" * len(FIELDS[name]), payload))
-    return rows
-
-
-def compare(rows, reference, original=False):
-    require(set(rows) == {n * STEP_NS for n in range(STEPS)}, "sample count/timestamps differ")
-    require(len(reference) == STEPS, "reference sample count differs")
-    for n, expected in enumerate(reference):
-        t = n * STEP_NS
-        require(expected["slot_ns"] == t and expected["communication_ns"] == t + STEP_NS,
-                f"reference timestamp mismatch @{t}")
-        names = {"sensing", "command"} if original else set(FIELDS)
-        if original and n == 0:
-            names.remove("command")
-        require(set(rows[t]) == names, f"missing/extra signal @{t}: {set(rows[t])}")
-        for channel in sorted(names):
-            require(len(rows[t][channel]) == len(expected[channel]) == len(FIELDS[channel]),
-                    f"width {channel}@{t}")
-            for signal, actual, wanted in zip(FIELDS[channel], rows[t][channel], expected[channel]):
-                absolute, relative = TOLERANCES[signal]
-                require(math.isfinite(actual) and math.isfinite(wanted) and
-                        math.isclose(actual, wanted, abs_tol=absolute, rel_tol=relative),
-                        f"first mismatch {signal} publication={t} "
-                        f"communication={t if original else t + STEP_NS}: "
-                        f"SiL={actual}, reference={wanted}")
-
-
-def execute(m, name, out):
-    from qualify import PARTICIPANT_TIMEOUT_MS, compare_files, run_logged
+def execute(factory, name, out):
+    # Reconstruct independently: serializing the same object twice would miss
+    # mutable defaults or accidental state in a Manifest authoring function.
     path = out / f"{name}.json"
-    identity = m.write(path).hash
+    identity = factory().write(path).hash
+    repeat_path = out / f"{name}-authored-again.json"
+    factory().write(repeat_path)
+    authored_hashes = compare_files(path, repeat_path)
+    validate_manifest(json.loads(path.read_text()))
     recordings = [out / f"{name}-{n}.mcap" for n in (1, 2)]
     for recording in recordings:
-        run_logged(["/build/sil-run", path, "-o", recording, "--participant-timeout-ms",
-                    str(PARTICIPANT_TIMEOUT_MS)], recording.with_suffix(".log"))
-    return recordings[0], dict(manifest_sha256=identity, recording_sha256=compare_files(*recordings))
+        run_logged(runner_args(path, recording), recording.with_suffix(".log"))
+    return recordings[0], dict(manifest_sha256=identity, authored_manifest_sha256=authored_hashes,
+                              recording_sha256=compare_files(*recordings))
 
 
 def reject_invalid_bindings(out):
-    from qualify import PARTICIPANT_TIMEOUT_MS, write_json
     diagnostics = {}
     for label, variable, diagnostic in (
         ("unknown", "unknown", "does not declare"),
         ("causality", "accel_mps2", "causality"),
     ):
         path = out / f"invalid-{label}.json"
-        manifest().write(path)
-        document = json.loads(path.read_text())
+        document = manifest().to_doc()
         command = document["participants"]["controller"]["command"]
         command[command.index("sensing:gap_m=gap_m")] = f"sensing:gap_m={variable}"
         write_json(path, document)
-        result = subprocess.run(["/build/sil-run", str(path), "--participant-timeout-ms",
-                                 str(PARTICIPANT_TIMEOUT_MS)], capture_output=True, text=True,
-                                timeout=max(120, PARTICIPANT_TIMEOUT_MS / 1000 * 4))
-        output = result.stdout + result.stderr
-        path.with_suffix(".log").write_text(output)
-        require(result.returncode == 2 and diagnostic in output,
-                f"invalid {label} binding did not fail clearly with exit 2: {output}")
-        diagnostics[label] = dict(exit_code=result.returncode, diagnostic=diagnostic)
+        output = run_expecting(runner_args(path, path.with_suffix(".mcap")), path.with_suffix(".log"), 2)
+        require(diagnostic in output, f"invalid {label} binding failed for another reason: {output}")
+        diagnostics[label] = dict(exit_code=2, diagnostic=diagnostic)
     return diagnostics
 
 
+def reject_runtime_faults(out):
+    diagnostics = {}
+    for name, factory, diagnostic in (
+        ("overflow", partial(manifest, "shift-sensing", capacity=2), "capacity 2"),
+        ("kpi", partial(manifest, minimum_gap_m=61.0), "minimum-gap KPI"),
+    ):
+        path = out / f"invalid-{name}.json"
+        factory().write(path)
+        output = run_expecting(runner_args(path, path.with_suffix(".mcap")), path.with_suffix(".log"), 1)
+        require(diagnostic in output, f"{name} failed for another reason: {output}")
+        diagnostics[name] = dict(exit_code=1, diagnostic=diagnostic)
+    return diagnostics
+
+
+def check_kpi_coverage(recording):
+    log = recording.with_suffix(".log").read_text()
+    receipts = [json.loads(line.split("ACC_KPI ", 1)[1]) for line in log.splitlines() if "ACC_KPI " in line]
+    expected = dict(checked_messages=STEPS - 1, last_publication_ns=(STEPS - 2) * STEP_NS)
+    require(receipts == [expected], f"in-run KPI coverage differs: {receipts}")
+    return expected
+
+
 def run(out):
-    from qualify import capture_environment, inspect_archives, run_logged, write_json
+    # Archive/environment audits need FMPy only inside the execution image.
+    # Keep ordinary comparator, Manifest and evidence tests FMI-independent.
+    from qualify import capture_environment, inspect_archives
+
     out.mkdir(parents=True, exist_ok=True)
     capture_environment(out)
     inspect_archives(out)
     validate_archives()
     run_logged([sys.executable, "-m", "pytest", HERE / "test_closed_loop.py", "-q"],
                out / "gate-tests.log")
-    write_json(out / "configuration.json", dict(step_ns=STEP_NS, steps=STEPS,
-               tolerances=TOLERANCES, minimum_gap_m=MIN_GAP_M, route_capacity=2,
-               latency_ns=STEP_NS, fields=FIELDS, units=UNITS))
+    config_path = out / "configuration.json"
+    write_json(config_path, configuration())
     references = {}
-    for mode in ("nominal", "shift-command", "shift-sensing", "initial-command", "original"):
+    for mode in (*VARIANTS, "original"):
         path = out / f"{mode}.fmpy.json"
-        run_logged([sys.executable, HERE / "loop_reference.py", mode, path], path.with_suffix(".log"))
-        references[mode] = json.loads(path.read_text())["samples"]
-    recording, results = execute(manifest(), "closed-loop", out)
-    invalid_bindings = reject_invalid_bindings(out)
-    rows = recording_samples(recording)
-    compare(rows, references["nominal"])
-    minimum = min(row["sensing"][0] for row in rows.values())
+        run_logged([sys.executable, HERE / "loop_reference.py", mode, path, config_path], path.with_suffix(".log"))
+        references[mode] = json.loads(path.read_text())
+        validate_reference(references[mode])
+    recordings, results, messages = {}, {}, {}
+    for mode in VARIANTS:
+        name = "closed-loop" if mode == "nominal" else mode
+        recordings[mode], results[mode] = execute(partial(manifest, mode), name, out)
+        messages[mode] = recording_messages(recordings[mode])
+        compare(messages[mode], references[mode])
+    nominal = messages["nominal"]
+    minimum = min(row["sensing"][0] for row in nominal.values())
     require(minimum >= MIN_GAP_M, f"minimum gap {minimum} < {MIN_GAP_M}")
-    # These are newly executed FMU trajectories, not edited copies of the oracle.
+    # The published final state has no in-run delivery. Check every Recording
+    # Message post-hoc and retain the independently counted in-run coverage.
+    coverage = check_kpi_coverage(recordings["nominal"])
     rejected = {}
-    for mode in ("shift-command", "shift-sensing", "initial-command"):
+    for mode in VARIANTS[1:]:
         try:
-            compare(rows, references[mode])
+            compare(messages[mode], references["nominal"])
         except RuntimeError as error:
             rejected[mode] = str(error)
         else:
             raise RuntimeError(f"negative control {mode} was not detected")
-    require(any(a["command"] != b["command"] for a, b in zip(
-        references["nominal"], references["shift-sensing"])), "sensing did not change commands")
-    require(any(a["state"] != b["state"] for a, b in zip(
-        references["nominal"], references["shift-command"])), "commands did not change motion")
-    from sil.examples.acc.manifest import acc_manifest
-    original, original_results = execute(acc_manifest(), "original-python", out)
-    compare(recording_samples(original, original=True), references["original"], original=True)
-    write_json(out / "results.json", dict(closed_loop=results, original_python=original_results,
-               minimum_gap_m=minimum, checked_samples=STEPS, negative_controls=rejected,
-               invalid_bindings=invalid_bindings))
+    necessity = dict(
+        sensing_changes_command=first_difference(nominal, messages["shift-sensing"], "command"),
+        command_changes_motion=first_difference(nominal, messages["shift-command"], "state"))
+    original, original_results = execute(acc_manifest, "original-python", out)
+    compare(recording_messages(original, PYTHON_SCHEDULE), references["original"], PYTHON_SCHEDULE)
+    write_json(out / "results.json", dict(
+        runs=results, original_python=original_results, minimum_gap_m=minimum,
+        checked_communication_points=STEPS, checked_messages=sum(map(len, nominal.values())),
+        in_run_kpi=coverage, post_hoc_final_publication_ns=max(nominal),
+        negative_controls=rejected, sil_behavioral_necessity=necessity,
+        invalid_bindings=reject_invalid_bindings(out), runtime_faults=reject_runtime_faults(out)))
+    retain(out, out / "curated")
 
 
 if __name__ == "__main__":
