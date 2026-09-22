@@ -1,5 +1,5 @@
 {
-  "source_revision": "5939ec4c0c6cd502dee45824e47bf5965279b019",
+  "source_revision": "cdd5595b73b50cb6c1005c094ebf22d37117b9ca",
   "model_sha256": "e9f56f6402652d536bade3ec6ee7fe03b19eac8e309f801d87d879e18fbebfa6",
   "dynamics_sha256": "7d10797f998608d759f5fdfda275dfe0d97370149c48d71ad63d6d296b11cea5",
   "exporter": "PythonFMU3 0.3.4",
@@ -8,5 +8,5 @@
   "machine_class": "Linux x86-64, glibc 2.36",
   "model_license": "Apache-2.0",
   "exporter_license": "MIT",
-  "archive_sha256": "ec797f0f1819c99ee49724b608fde4929203cef3d6e3e27871faad2c19f32239"
+  "archive_sha256": "92f616e9d3add6cedc16bd86509f97f8f25aaf00f3a7ddabd58194ed3fa2ad90"
 }

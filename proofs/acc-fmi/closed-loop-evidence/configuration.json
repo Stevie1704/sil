@@ -32,8 +32,6 @@
     ]
   },
   "minimum_gap_m": 5.0,
-  "route_capacity": 2,
-  "latency_ns": 10000000,
   "fields": {
     "sensing": [
       "gap_m",
@@ -57,5 +55,23 @@
     "ego_position_m": "m",
     "lead_position_m": "m",
     "lead_speed_mps": "m/s"
-  }
+  },
+  "initialization": {
+    "sensing": [
+      60.0,
+      0.0,
+      25.0
+    ],
+    "state": [
+      0.0,
+      60.0,
+      25.0
+    ],
+    "command": [
+      1.5
+    ]
+  },
+  "nominal_route_capacity": 2,
+  "delayed_route_capacity": 3,
+  "nominal_latency_ns": 10000000
 }

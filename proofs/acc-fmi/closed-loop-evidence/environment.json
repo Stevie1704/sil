@@ -36,8 +36,8 @@
     "MarkupSafe": "3.0.3",
     "msgpack": "1.2.2"
   },
-  "source_revision": "5939ec4c0c6cd502dee45824e47bf5965279b019",
-  "runner_sha256": "60687ba59607e9a341fe1976444344a54f97b72f8c2a968e34e711061f86189d",
+  "source_revision": "cdd5595b73b50cb6c1005c094ebf22d37117b9ca",
+  "runner_sha256": "466115e4d787f7ffe006e452a5c3d38eaebbe5e88274c4842382b2a18bdcf3a8",
   "libpython": {
     "path": "/usr/local/lib/libpython3.13.so",
     "sha256": "27e91436972340b794fddbd25091fd13957fde60546b4f7270bbf1c243aebf75"
