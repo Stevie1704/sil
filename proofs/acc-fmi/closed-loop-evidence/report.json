@@ -1,0 +1,315 @@
+{
+  "results": {
+    "runs": {
+      "nominal": {
+        "manifest_sha256": "ba362dc877d1348012c00d43996a9988d050d055df74417becd80e83b245490a",
+        "authored_manifest_sha256": [
+          "ba362dc877d1348012c00d43996a9988d050d055df74417becd80e83b245490a",
+          "ba362dc877d1348012c00d43996a9988d050d055df74417becd80e83b245490a"
+        ],
+        "recording_sha256": [
+          "5ad30f58f6e7683c0fce7a83494e49c55ecb4574d6479f3c65d7c289666f79b2",
+          "5ad30f58f6e7683c0fce7a83494e49c55ecb4574d6479f3c65d7c289666f79b2"
+        ]
+      },
+      "shift-command": {
+        "manifest_sha256": "72613b9f2e188c5defd719aa1b8c3c8733cfba3d401cd1080a8aeadb4793145d",
+        "authored_manifest_sha256": [
+          "72613b9f2e188c5defd719aa1b8c3c8733cfba3d401cd1080a8aeadb4793145d",
+          "72613b9f2e188c5defd719aa1b8c3c8733cfba3d401cd1080a8aeadb4793145d"
+        ],
+        "recording_sha256": [
+          "64923e267a51189d9b6de18c0eacc55177246930ecc52e923e5c7d9cb56b75d6",
+          "64923e267a51189d9b6de18c0eacc55177246930ecc52e923e5c7d9cb56b75d6"
+        ]
+      },
+      "shift-sensing": {
+        "manifest_sha256": "f8ca083ff357aab24131af6f8f14a71b44902841105d04e8ba6ecbf5b8d6a523",
+        "authored_manifest_sha256": [
+          "f8ca083ff357aab24131af6f8f14a71b44902841105d04e8ba6ecbf5b8d6a523",
+          "f8ca083ff357aab24131af6f8f14a71b44902841105d04e8ba6ecbf5b8d6a523"
+        ],
+        "recording_sha256": [
+          "86310e0fedda11d83c48a884745089017905b980edc5c8d270763f277433715f",
+          "86310e0fedda11d83c48a884745089017905b980edc5c8d270763f277433715f"
+        ]
+      },
+      "initial-command": {
+        "manifest_sha256": "cf723c611de66062b10b12592e1ceb54a6afbb51a15349160b799b6fe60d8d51",
+        "authored_manifest_sha256": [
+          "cf723c611de66062b10b12592e1ceb54a6afbb51a15349160b799b6fe60d8d51",
+          "cf723c611de66062b10b12592e1ceb54a6afbb51a15349160b799b6fe60d8d51"
+        ],
+        "recording_sha256": [
+          "b6276874bfd24410f7a700a2ba77703d73ffd6e2433f09fb80b72c10142fd4f2",
+          "b6276874bfd24410f7a700a2ba77703d73ffd6e2433f09fb80b72c10142fd4f2"
+        ]
+      }
+    },
+    "original_python": {
+      "manifest_sha256": "224f7991e555c12418e996f9d48b816e3e35224da61e68876147d8d357073e59",
+      "authored_manifest_sha256": [
+        "224f7991e555c12418e996f9d48b816e3e35224da61e68876147d8d357073e59",
+        "224f7991e555c12418e996f9d48b816e3e35224da61e68876147d8d357073e59"
+      ],
+      "recording_sha256": [
+        "d53b512cef8c8813f6168b36cd966de0cfd802cf2e885a9be2591d11bcdfd9d6",
+        "d53b512cef8c8813f6168b36cd966de0cfd802cf2e885a9be2591d11bcdfd9d6"
+      ]
+    },
+    "minimum_gap_m": 49.96364767075116,
+    "checked_communication_points": 500,
+    "checked_messages": 1500,
+    "in_run_kpi": {
+      "checked_messages": 499,
+      "last_publication_ns": 4980000000
+    },
+    "post_hoc_final_publication_ns": 4990000000,
+    "negative_controls": {
+      "shift-command": "first mismatch gap_m publication=10000000 communication=20000000: SiL=60.0, reference=59.999925",
+      "shift-sensing": "first mismatch accel_mps2 publication=1560000000 communication=1560000000: SiL=1.5, reference=1.4837187499998121",
+      "initial-command": "first mismatch gap_m publication=0 communication=10000000: SiL=59.999975, reference=60.0"
+    },
+    "sil_behavioral_necessity": {
+      "sensing_changes_command": {
+        "publication_ns": 1560000000,
+        "diagnostic": "first mismatch accel_mps2 publication=1560000000: SiL=1.4837187499998121, reference=1.5"
+      },
+      "command_changes_motion": {
+        "publication_ns": 10000000,
+        "diagnostic": "first mismatch ego_position_m publication=10000000: SiL=0.500075, reference=0.5"
+      }
+    },
+    "invalid_bindings": {
+      "unknown": {
+        "exit_code": 2,
+        "diagnostic": "does not declare"
+      },
+      "causality": {
+        "exit_code": 2,
+        "diagnostic": "causality"
+      }
+    },
+    "runtime_faults": {
+      "overflow": {
+        "exit_code": 1,
+        "diagnostic": "capacity 2"
+      },
+      "kpi": {
+        "exit_code": 1,
+        "diagnostic": "minimum-gap KPI"
+      }
+    }
+  },
+  "environment": {
+    "machine": [
+      "Linux",
+      "x86_64",
+      "glibc",
+      "2.36"
+    ],
+    "python": "3.13.7 (main, Sep 30 2025, 00:38:53) [GCC 12.2.0]",
+    "packages": {
+      "pip": "25.2",
+      "jsonschema-specifications": "2025.9.1",
+      "referencing": "0.37.0",
+      "fastjsonschema": "2.22.2",
+      "zstandard": "0.25.0",
+      "attrs": "26.1.0",
+      "iniconfig": "2.3.0",
+      "platformdirs": "4.11.12",
+      "lz4": "4.4.5",
+      "pythonfmu3": "0.3.4",
+      "cmake": "4.4.3",
+      "FMPy": "0.3.26",
+      "mcap": "1.4.0",
+      "jsonschema": "4.26.0",
+      "traitlets": "5.16.1",
+      "jupyter_core": "5.9.1",
+      "pluggy": "1.6.0",
+      "Jinja2": "3.1.6",
+      "lxml": "6.1.3",
+      "pytest": "8.4.2",
+      "lark": "1.3.1",
+      "Pygments": "2.21.0",
+      "rpds-py": "2026.6.3",
+      "numpy": "2.5.3",
+      "packaging": "26.3",
+      "nbformat": "5.11.1",
+      "MarkupSafe": "3.0.3",
+      "msgpack": "1.2.2"
+    },
+    "source_revision": "cdd5595b73b50cb6c1005c094ebf22d37117b9ca",
+    "runner_sha256": "466115e4d787f7ffe006e452a5c3d38eaebbe5e88274c4842382b2a18bdcf3a8",
+    "libpython": {
+      "path": "/usr/local/lib/libpython3.13.so",
+      "sha256": "27e91436972340b794fddbd25091fd13957fde60546b4f7270bbf1c243aebf75"
+    },
+    "tolerances": {
+      "absolute": 1e-10,
+      "relative": 1e-12
+    },
+    "participant_timeout_ms": 30000
+  },
+  "configuration": {
+    "step_ns": 10000000,
+    "steps": 500,
+    "tolerances": {
+      "gap_m": [
+        1e-10,
+        1e-12
+      ],
+      "relative_speed_mps": [
+        1e-10,
+        1e-12
+      ],
+      "ego_speed_mps": [
+        1e-10,
+        1e-12
+      ],
+      "accel_mps2": [
+        1e-10,
+        1e-12
+      ],
+      "ego_position_m": [
+        1e-10,
+        1e-12
+      ],
+      "lead_position_m": [
+        1e-10,
+        1e-12
+      ],
+      "lead_speed_mps": [
+        1e-10,
+        1e-12
+      ]
+    },
+    "minimum_gap_m": 5.0,
+    "fields": {
+      "sensing": [
+        "gap_m",
+        "relative_speed_mps",
+        "ego_speed_mps"
+      ],
+      "command": [
+        "accel_mps2"
+      ],
+      "state": [
+        "ego_position_m",
+        "lead_position_m",
+        "lead_speed_mps"
+      ]
+    },
+    "units": {
+      "gap_m": "m",
+      "relative_speed_mps": "m/s",
+      "ego_speed_mps": "m/s",
+      "accel_mps2": "m/s2",
+      "ego_position_m": "m",
+      "lead_position_m": "m",
+      "lead_speed_mps": "m/s"
+    },
+    "initialization": {
+      "sensing": [
+        60.0,
+        0.0,
+        25.0
+      ],
+      "state": [
+        0.0,
+        60.0,
+        25.0
+      ],
+      "command": [
+        1.5
+      ]
+    },
+    "nominal_route_capacity": 2,
+    "delayed_route_capacity": 3,
+    "nominal_latency_ns": 10000000
+  },
+  "fmus": {
+    "AccController": {
+      "source_revision": "cdd5595b73b50cb6c1005c094ebf22d37117b9ca",
+      "model_sha256": "e9f56f6402652d536bade3ec6ee7fe03b19eac8e309f801d87d879e18fbebfa6",
+      "dynamics_sha256": "7d10797f998608d759f5fdfda275dfe0d97370149c48d71ad63d6d296b11cea5",
+      "exporter": "PythonFMU3 0.3.4",
+      "exporter_revision": "6c4b81cb869447f6c69e3417c495f73f11c40ae0",
+      "python": "CPython 3.13.7 (provided by execution image)",
+      "machine_class": "Linux x86-64, glibc 2.36",
+      "model_license": "Apache-2.0",
+      "exporter_license": "MIT",
+      "archive_sha256": "92f616e9d3add6cedc16bd86509f97f8f25aaf00f3a7ddabd58194ed3fa2ad90"
+    },
+    "AccPlant": {
+      "source_revision": "cdd5595b73b50cb6c1005c094ebf22d37117b9ca",
+      "model_sha256": "d44dd3c7ab8b9c043997d556f21345248439c8bc88e89d710e9ea60f73e548d1",
+      "dynamics_sha256": "7d10797f998608d759f5fdfda275dfe0d97370149c48d71ad63d6d296b11cea5",
+      "exporter": "PythonFMU3 0.3.4",
+      "exporter_revision": "6c4b81cb869447f6c69e3417c495f73f11c40ae0",
+      "python": "CPython 3.13.7 (provided by execution image)",
+      "machine_class": "Linux x86-64, glibc 2.36",
+      "model_license": "Apache-2.0",
+      "exporter_license": "MIT",
+      "archive_sha256": "f3c26ea74bb58542bdb8c4cec56983102c84901b40b109d9999077ecaf775a3e"
+    }
+  },
+  "artifacts_sha256": {
+    "AccController.fmu": "92f616e9d3add6cedc16bd86509f97f8f25aaf00f3a7ddabd58194ed3fa2ad90",
+    "AccController.identity.json": "bb12e35437ac2fcaafc5981dffe6a34c24fb823bf18d31b398d0037b0e75dc45",
+    "AccPlant.fmu": "f3c26ea74bb58542bdb8c4cec56983102c84901b40b109d9999077ecaf775a3e",
+    "AccPlant.identity.json": "75887d8934bc7554b1239ced948e6f650b88322849998713fcb5df98648cdb08",
+    "archives.json": "d03e80f0e6ccc6090f4e17a92b328023e0326a28f39e18809cfb4e194ed0831b",
+    "closed-loop-1.mcap": "5ad30f58f6e7683c0fce7a83494e49c55ecb4574d6479f3c65d7c289666f79b2",
+    "closed-loop-1.mcap.provenance.json": "ccf6d04a4d52f6f01a3c936f3f49b9207cff2c8e3fd6c3ee173cb3b4d4319d86",
+    "closed-loop-2.mcap": "5ad30f58f6e7683c0fce7a83494e49c55ecb4574d6479f3c65d7c289666f79b2",
+    "closed-loop-2.mcap.provenance.json": "ccf6d04a4d52f6f01a3c936f3f49b9207cff2c8e3fd6c3ee173cb3b4d4319d86",
+    "closed-loop-authored-again.json": "ba362dc877d1348012c00d43996a9988d050d055df74417becd80e83b245490a",
+    "closed-loop.json": "ba362dc877d1348012c00d43996a9988d050d055df74417becd80e83b245490a",
+    "configuration.json": "e0f04c1ae5da6912eaf68abbeb081781310192812e3963d28e22a0bd893b24c3",
+    "environment.json": "b6ddb4fa926eda8ceb2e0503ffd568e384379d5c16aa45b0cd3e72061b898b81",
+    "initial-command-1.mcap": "b6276874bfd24410f7a700a2ba77703d73ffd6e2433f09fb80b72c10142fd4f2",
+    "initial-command-1.mcap.provenance.json": "aee46f238d762e4f9943be6b91720bb67a63a2405c8a365c048a288a5918bc31",
+    "initial-command-2.mcap": "b6276874bfd24410f7a700a2ba77703d73ffd6e2433f09fb80b72c10142fd4f2",
+    "initial-command-2.mcap.provenance.json": "aee46f238d762e4f9943be6b91720bb67a63a2405c8a365c048a288a5918bc31",
+    "initial-command-authored-again.json": "cf723c611de66062b10b12592e1ceb54a6afbb51a15349160b799b6fe60d8d51",
+    "initial-command.fmpy.json": "af6b3f601d1bfa0e7ffccde96ce609d0548fe77f62ec456cab1c1a3df4861740",
+    "initial-command.json": "cf723c611de66062b10b12592e1ceb54a6afbb51a15349160b799b6fe60d8d51",
+    "invalid-causality.json": "04112d4da7d31455b496ff3eedd0612d2c3bc615f06d13685133dc8accb733de",
+    "invalid-causality.mcap": "b1000d99cc4283ddfee0a7726327dfb48c6b7b08865b569f6733c57eea4f263a",
+    "invalid-causality.mcap.provenance.json": "6f291c510d4bb2773652f13ff95cb3040f1407beebabfd16dbe4e9ca2fe2f289",
+    "invalid-kpi.json": "9a7a723c9fec812089ff4074daed94cf372d24c7264059f0a5e2f6d0e8ff0f16",
+    "invalid-kpi.mcap": "f1d60b51d10749873ab9eff25d003b98a79bfe8286b4b8810c0fa4b6e3ea2f28",
+    "invalid-kpi.mcap.provenance.json": "cb5ce5a7c81472f662dacaf6b2de32a6003d373a056dcad088464029b7e50a72",
+    "invalid-overflow.json": "ee4e62d54b3b80a3123b9afc9f7476927e451d73917afcef94aa5e5cfe31e6c0",
+    "invalid-overflow.mcap": "2a120de764f6e57bac8f05ba2443989509d4435835ce9bbcfc62d62e417fdaef",
+    "invalid-overflow.mcap.provenance.json": "cc61b899c9b40c27c43f4f090fceca4a6c4144ed746af5f447622fd241e2c924",
+    "invalid-unknown.json": "12b31eee88cec4c04a1e4b2730b24855577bae2efae684a48bf227460b51ffd7",
+    "invalid-unknown.mcap": "b2846f1e00279faffdc100ca99c6560b2ca3acddadf7c924bd5ce7be1390be7a",
+    "invalid-unknown.mcap.provenance.json": "8b3e4698982526e037c1ed6586d3793c49bc87b884f101ca755354f4b4bf9e51",
+    "nominal.fmpy.json": "0c869cd2f25685b46456872ae44ae813f16b702368463a89d9f8c087fd02d5c5",
+    "original-python-1.mcap": "d53b512cef8c8813f6168b36cd966de0cfd802cf2e885a9be2591d11bcdfd9d6",
+    "original-python-1.mcap.provenance.json": "48a6fae0b2c6f6d72051187b26f2fe637c74f055c0bbe79d877b73f5efc53cf5",
+    "original-python-2.mcap": "d53b512cef8c8813f6168b36cd966de0cfd802cf2e885a9be2591d11bcdfd9d6",
+    "original-python-2.mcap.provenance.json": "48a6fae0b2c6f6d72051187b26f2fe637c74f055c0bbe79d877b73f5efc53cf5",
+    "original-python-authored-again.json": "224f7991e555c12418e996f9d48b816e3e35224da61e68876147d8d357073e59",
+    "original-python.json": "224f7991e555c12418e996f9d48b816e3e35224da61e68876147d8d357073e59",
+    "original.fmpy.json": "3d92f0ab20a4234b4634faab8cdc0572836e464dfb8c8f89b9c37f67c31bb54b",
+    "results.json": "3ea6915b310f4207d4ace343b32589aa0041660e316e84d3a530d31ac4b1d851",
+    "schema-identity.json": "1fc42964e8fb4ed1fff8231efbae6628a76a9cbc059b2b2627372eb7440af610",
+    "shift-command-1.mcap": "64923e267a51189d9b6de18c0eacc55177246930ecc52e923e5c7d9cb56b75d6",
+    "shift-command-1.mcap.provenance.json": "9070731ad5da4869ea8f5d9478e87ae3851da99be4cab3f061288bd568eec7b8",
+    "shift-command-2.mcap": "64923e267a51189d9b6de18c0eacc55177246930ecc52e923e5c7d9cb56b75d6",
+    "shift-command-2.mcap.provenance.json": "9070731ad5da4869ea8f5d9478e87ae3851da99be4cab3f061288bd568eec7b8",
+    "shift-command-authored-again.json": "72613b9f2e188c5defd719aa1b8c3c8733cfba3d401cd1080a8aeadb4793145d",
+    "shift-command.fmpy.json": "966d00a1e33daf5c2f02be3d38cc6655432b2d412b9c7bc796f38696a6711a83",
+    "shift-command.json": "72613b9f2e188c5defd719aa1b8c3c8733cfba3d401cd1080a8aeadb4793145d",
+    "shift-sensing-1.mcap": "86310e0fedda11d83c48a884745089017905b980edc5c8d270763f277433715f",
+    "shift-sensing-1.mcap.provenance.json": "9998912ac85f92b1aebed9105598a58bef3fa780afdb4e0ed92882e2ca17da7c",
+    "shift-sensing-2.mcap": "86310e0fedda11d83c48a884745089017905b980edc5c8d270763f277433715f",
+    "shift-sensing-2.mcap.provenance.json": "9998912ac85f92b1aebed9105598a58bef3fa780afdb4e0ed92882e2ca17da7c",
+    "shift-sensing-authored-again.json": "f8ca083ff357aab24131af6f8f14a71b44902841105d04e8ba6ecbf5b8d6a523",
+    "shift-sensing.fmpy.json": "f59ccb5cc89bed9b7c3f83bfa21dc6a1e5807d5ca5fe8c386737003da7ac5f95",
+    "shift-sensing.json": "f8ca083ff357aab24131af6f8f14a71b44902841105d04e8ba6ecbf5b8d6a523"
+  }
+}

@@ -1,6 +1,5 @@
 """Closed-loop contracts, comparison failures and reproducible evidence export."""
 import copy
-import csv
 import json
 import sys
 import zipfile
@@ -156,27 +155,22 @@ def test_kpi_receipt_requires_all_but_final_message(tmp_path):
         check_kpi_coverage(recording)
 
 
-def test_curated_evidence_is_reproducible_and_preserves_missing_command(tmp_path):
+def test_compact_report_is_reproducible_and_identifies_raw_evidence(tmp_path):
     source, first, second = [tmp_path / name for name in ("raw", "first", "second")]
     source.mkdir()
-    for name in ("results.json", "environment.json", "configuration.json", "archives.json",
-                 "AccController.identity.json", "AccPlant.identity.json"):
-        write_json(source / name, {})
-    for name in ("closed-loop", "shift-command", "shift-sensing", "initial-command", "original-python"):
-        for suffix in (".json", "-1.mcap", "-1.mcap.provenance.json"):
-            (source / (name + suffix)).write_bytes(b"retained artifact")
-    _, reference = data()
-    for row in reference["intervals"]:
-        row.update(controller_output=[1.5], sampled=[60, 0, 25], applied=[0])
-    reference["intervals"][0]["command"] = None
-    for mode in ("nominal", "shift-command", "shift-sensing", "initial-command", "original"):
-        write_json(source / (mode + ".fmpy.json"), reference)
+    for name in ("results", "environment", "configuration", "AccController.identity", "AccPlant.identity"):
+        write_json(source / f"{name}.json", {"source": name})
+    (source / "nominal.fmpy.json").write_text('{"command": null, "controller_output": [1.5]}')
+    (source / "closed-loop-1.mcap").write_bytes(b"retained artifact")
     retain(source, first)
     retain(source, second)
-    assert {p.name: p.read_bytes() for p in first.iterdir()} == {p.name: p.read_bytes() for p in second.iterdir()}
-    with (first / "original.fmpy.csv").open() as file:
-        rows = list(csv.DictReader(file))
-    assert len(rows) == STEPS
-    assert rows[0]["published_command_mps2"] == ""
-    assert rows[0]["controller_output_mps2"] == "1.5"
-    assert json.loads((first / "initialization.json").read_text())["nominal"] == INITIAL_OUTPUTS
+    assert (first / "report.json").read_bytes() == (second / "report.json").read_bytes()
+    report = json.loads((first / "report.json").read_text())
+    assert report["fmus"]["AccPlant"] == {"source": "AccPlant.identity"}
+    assert "nominal.fmpy.json" in report["artifacts_sha256"]
+    digest = report["artifacts_sha256"]["closed-loop-1.mcap"]
+    (source / "closed-loop-1.mcap").write_bytes(b"different artifact")
+    retain(source, second)
+    changed = json.loads((second / "report.json").read_text())
+    assert changed["artifacts_sha256"]["closed-loop-1.mcap"] != digest
+    assert not (first / "closed-loop-1.mcap").exists()

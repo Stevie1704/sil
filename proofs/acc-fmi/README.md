@@ -265,16 +265,17 @@ trajectory is shifted to make it match.
 ### Reproducible evidence
 
 `closed_loop.py` calls the committed `loop_evidence.py` producer automatically.
-The clean command above creates raw evidence and a `curated/` directory with
-exact Manifests, one Recording and provenance per successful variant, both
-repeat hashes, both FMU identities, environment/configuration, initialization
-JSON and lossless independent CSV traces. CSV explicitly distinguishes absent
-command publication (empty cell) from the real FMU controller output.
-The complete FMUs, repeat Recordings, failure logs and raw JSON remain alongside
-the curated projection. To regenerate the projection offline:
+The clean command above creates full raw evidence and a compact `curated/`
+report containing both FMU identities, environment/configuration, all verdicts,
+Manifest/Recording determinism hashes, and digests identifying the raw evidence.
+The image identity is added by the host script. Only this report and its index
+are checked in; full FMUs, Manifests, Recordings, initialization and trajectory
+JSON, and failure logs stay in the CI artifact. They remain available to download
+while that artifact is retained; the command rebuilds the proof independently.
+To regenerate the compact report from a downloaded raw artifact:
 
 ```sh
-python proofs/acc-fmi/loop_evidence.py build/acc-loop-evidence build/acc-loop-curated
+python proofs/acc-fmi/loop_evidence.py build/acc-loop-evidence build/acc-loop-report
 ```
 
 The CI workflow uses `SIL_ACC_PROOF=all` to build one pinned image and execute
