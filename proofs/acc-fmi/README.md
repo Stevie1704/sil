@@ -1,5 +1,71 @@
 # ACC FMI 3.0 interoperability proof
 
+## Behavior regression scenarios (#150)
+
+```sh
+SIL_ACC_PROOF=scenarios proofs/acc-fmi/run-proof.sh build/acc-scenario-evidence
+```
+
+`scenario_contract.py` declares four 20 s Runs on a 10 ms grid, starting with
+ego position 0 m, lead position 60 m and both speeds 25 m/s. Sensing, command,
+maneuver and Test participants run at 100 Hz. Plant inputs initially hold zero
+acceleration. The original five-second nominal proof remains unchanged.
+
+| Scenario | Behavior checked | Expected outcome |
+| --- | --- | --- |
+| nominal | Gap closes, command leaves upper saturation | pass |
+| braking | Lead acceleration −4 m/s² on [2,5) s; both command clamps and recovery | pass |
+| delayed | Same braking; sensing Interceptor adds 200 ms on publications [2,4) s | pass |
+| dropped | Same braking; sensing publications dropped on [2,15) s; controller holds its last inputs | deliberate minimum-gap failure after braking starts |
+
+The lead input added by #149 is reused without changing either FMU here.
+Before scenario comparison, FMPy independently checks the plant's initialization
+and every point of a two-second open-loop experiment against analytic motion:
+ego acceleration +1.5 m/s² throughout, lead −4 m/s² for one second then zero.
+Sparse writes exercise input hold and release. Archives pass the existing XML,
+unit, capability and symbol audits and must match a clean repeated build.
+
+Each exact Manifest embeds its configuration in Test participant arguments:
+initial conditions, units, grid, rates, maneuver/fault windows, expectations and
+thresholds. The maneuver Channel uses zero Latency and earlier priority. Sensing
+and command use 10 ms Latency; plant outputs published at t describe t+10 ms.
+The independent FMPy driver implements the same one-interval command hold,
+initialization, half-open Interceptor windows and FIFO delivery. Delayed Messages
+cannot be overtaken at the window's end, even by undelayed Messages. Their
+Recording timestamps include the Interceptor shift. Comparisons preserve
+duplicates at those timestamps and use absolute 1e-10 plus relative 1e-12 SI
+tolerances. FMPy traces retain held sensing values and source publication times.
+
+Thresholds are fixed in the authored configuration: gap ≥5 m, command within
+[−3,+1.5] m/s², nonnegative speeds, and over publications [15,20) s absolute
+spacing error ≤3 m and relative speed ≤1 m/s. Desired spacing is
+`5 + 1.5 * max(ego_speed, 0)` metres, including at zero speed. No headway or TTC
+division is used. This simple kinematic plant has no speed floor; negative speed
+is a failed KPI. These scenarios are an integration benchmark, not a safety claim.
+
+An unaffected truth Channel keeps the physical KPIs observable during sensing
+loss. The Test participant reports the signal, publication time, value and bound
+and aborts with exit 1. Its `freshness.age_ns` output is time since last sensing
+**delivery**, not source sample age; together with the independent sampled-input
+trace and changed commands it exposes input hold without adding a fallback
+controller. The gate requires faults to change actual controller outputs and
+requires both acceleration clamps and subsequent recovery in braking cases.
+
+Both executions of each Manifest must produce identical Recordings. Successful
+Runs check 1,999 truth/command Messages in-run and all 2,000 post-hoc, including
+the final publication. Failed Runs compare their entire available recorded
+prefix with the independent path, and require matching failure instant,
+diagnostic and prefix size across repeats. Delayed timestamps can extend beyond
+an abort Slot, so prefix comparison uses the producing Slot before timestamp
+sorting. Post-hoc checks inspect every recorded Message and retain failures.
+
+CI runs this gate alongside the existing proofs and uploads
+`acc-scenario-evidence`: FMUs/identities, environment, exact Manifests, repeat
+Recordings, configurations, independent trajectories, qualification points,
+failure logs and verdicts. `curated/report.json` contains compact results and
+raw-file digests; the host script adds the image identity. Existing evidence
+is not rewritten. All execution claims are scoped to native Linux x86-64.
+
 [Issue #147](https://github.com/Stevie1704/sil/issues/147): two source-available
 Co-Simulation FMUs from the existing simplified ACC example, built by
 PythonFMU3 0.3.4 and driven through SiL and FMPy 0.3.26. This is an
