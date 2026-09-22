@@ -20,6 +20,7 @@ INT_RANGES = {
     for name, size in SIZES.items() if name[0] in "ui"
 }
 C_TYPES = {
-    name: ("uint" if name[0] == "u" else "int") + str(size * 8) + "_t"
-    for name, size in SIZES.items() if name[0] in "ui"
-} | {"f32": "float", "f64": "double"}
+    "u8": "uint8_t", "u16": "uint16_t", "u32": "uint32_t", "u64": "uint64_t",
+    "i8": "int8_t", "i16": "int16_t", "i32": "int32_t", "i64": "int64_t",
+    "f32": "float", "f64": "double",
+}

@@ -13,38 +13,53 @@ from pathlib import Path
 
 import pytest
 
-from sil._schema_types import FORMATS
+from sil._schema_types import FORMATS, INT_RANGES
 from sil.manifest import Manifest, ManifestError
 from sil.recording import read_records
 from sil.schema import MessageType
 
 ROOT = Path(__file__).resolve().parents[1]
 CORPUS = json.loads((ROOT / "tests/fixtures/schema_conformance.json").read_text())
+SCHEMAS = {c["name"]: {"fields": c["fields"]} for c in CORPUS}
+INTEGER_BOUNDARY_CASES = [
+    c for c in CORPUS if len(c["fields"]) == 1
+    and c["fields"][0]["type"] in INT_RANGES
+    and "count" in c["fields"][0]
+]
+INT64_MIN = -(2**63)
 
 
-def test_corpus_covers_every_supported_type():
-    assert {f["type"] for c in CORPUS for f in c["fields"]} == set(FORMATS)
+def test_corpus_covers_every_supported_type_and_form():
+    assert {(f["type"], "count" in f) for c in CORPUS for f in c["fields"]} == {
+        (name, array) for name in FORMATS for array in (False, True)
+    }
+    assert {c["fields"][0]["type"] for c in INTEGER_BOUNDARY_CASES} == set(INT_RANGES)
 
 
-def values(case):
+def codec_values(case):
+    # JSON has no bytes literal. Independently state the public u8-array
+    # contract here rather than borrowing the codec's conversion logic.
     return {f["name"]: bytes(case["values"][f["name"]])
             if f["type"] == "u8" and "count" in f else case["values"][f["name"]]
             for f in case["fields"]}
 
 
-def literal(value):
+def c_literal(value, field_type):
     if isinstance(value, list):
-        return "{" + ",".join(literal(v) for v in value) + "}"
+        return "{" + ",".join(c_literal(v, field_type) for v in value) + "}"
     if isinstance(value, float):
-        return repr(value)
-    if value == -9223372036854775808:
+        # Match Python's binary64 -> binary32 conversion explicitly, including
+        # values such as 0.1 that are not exactly representable in binary32.
+        return f"static_cast<float>({value!r})" if field_type == "f32" else repr(value)
+    if value == INT64_MIN:
+        # The positive magnitude of INT64_MIN is not a signed C++ literal.
         return "(-9223372036854775807LL - 1)"
     return str(value) + ("ULL" if value >= 0 else "LL")
 
 
-@pytest.mark.parametrize("installed", [False, True], ids=["checkout", "prefix"])
-def test_native_codec_kernel_recording_conformance(installed, build_dir, tmp_path, run_sil):
-    if installed:
+@pytest.fixture(params=[False, True], ids=["checkout", "prefix"])
+def native_tooling(request, build_dir, tmp_path):
+    if request.param:
         prefix = tmp_path / "prefix"
         subprocess.run(["cmake", "--install", str(build_dir), "--prefix", str(prefix)],
                        check=True, capture_output=True)
@@ -55,31 +70,41 @@ def test_native_codec_kernel_recording_conformance(installed, build_dir, tmp_pat
     else:
         generator = ROOT / "tools/silschema.py"
         includes = ROOT / "include"
-    schemas = {c["name"]: {"fields": c["fields"]} for c in CORPUS}
+    return generator, includes
+
+
+def generate_header(generator, tmp_path):
     source_schema = tmp_path / "schemas.json"
-    source_schema.write_text(json.dumps(schemas))
+    source_schema.write_text(json.dumps(SCHEMAS))
     # Isolated Python with site disabled proves no package/runtime dependency.
     subprocess.run([sys.executable, "-I", "-S", str(generator), str(source_schema),
                     str(tmp_path / "messages.h")], cwd=tmp_path, check=True)
+
+
+@pytest.mark.parametrize("case", CORPUS, ids=lambda c: c["name"])
+def test_codec_matches_expected_bytes(case):
+    payload = bytes.fromhex(case["hex"])
+    codec = MessageType(case["name"], SCHEMAS[case["name"]])
+    assert codec.size == len(payload)
+    assert codec.pack(**codec_values(case)) == payload
+    assert codec.pack(**codec.unpack(payload)) == payload
+
+
+def native_source():
     declarations, assertions, writes, publishes = [], [], [], []
-    expected = b""
     for case in CORPUS:
         name = case["name"]
         payload = bytes.fromhex(case["hex"])
-        codec = MessageType(name, schemas[name])
-        assert codec.size == len(payload)
-        assert codec.pack(**values(case)) == payload
-        assert codec.pack(**codec.unpack(payload)) == payload
-        expected += payload
-        initializer = ",".join(literal(case["values"][f["name"]]) for f in case["fields"])
+        initializer = ",".join(
+            c_literal(case["values"][f["name"]], f["type"]) for f in case["fields"]
+        )
         declarations.append(f"static {name} value_{name} = {{{initializer}}};")
         assertions.append(f"static_assert(sizeof({name}) == {len(payload)});")
-        for field, offset in zip(case["fields"], case["offsets"]):
+        for field, offset in zip(case["fields"], case["offsets"], strict=True):
             assertions.append(f"static_assert(offsetof({name}, {field['name']}) == {offset});")
         writes.append(f"fwrite(&value_{name}, 1, sizeof(value_{name}), stdout);")
         publishes.append(f'if (api->publish(api->ctx, "{name}", &value_{name}, sizeof(value_{name})) != SIL_OK) api->fail(api->ctx, "publish failed");')
-    source = tmp_path / "participant.cpp"
-    source.write_text('\n'.join([
+    return '\n'.join([
         '#include "messages.h"', '#include <sil/participant.h>', '#include <cstdio>',
         *declarations, *assertions,
         'static void step(void *user, uint64_t) {',
@@ -87,20 +112,36 @@ def test_native_codec_kernel_recording_conformance(installed, build_dir, tmp_pat
         'extern "C" int sil_participant_init(const sil_api_v1 *api, const char *, const char *) {',
         'return api->register_task(api->ctx, "publish", 1, 0, 0, step, const_cast<sil_api_v1 *>(api));', '}',
         'int main() {', *writes, '}',
-    ]))
+    ])
+
+
+def compile_native_payloads(includes, tmp_path):
+    source = tmp_path / "participant.cpp"
+    source.write_text(native_source())
     executable = tmp_path / "payloads"
     library = tmp_path / "participant.silp"
     for output, flags in [(executable, []), (library, ["-shared", "-fPIC"])]:
         subprocess.run(["c++", "-std=c++20", "-I", str(includes), str(source),
                         *flags, "-o", str(output)], check=True, capture_output=True)
-    assert subprocess.check_output([str(executable)]) == expected
+    return executable, library
+
+
+def publisher_manifest(library, tmp_path):
     manifest = Manifest(duration_ns=1)
-    manifest.add_schemas(schemas)
-    for name in schemas:
+    manifest.add_schemas(SCHEMAS)
+    for name in SCHEMAS:
         manifest.add_channel(name, schema=name)
-    manifest.add_native("publisher", library=str(library), publishes=list(schemas))
-    path = manifest.write(tmp_path / "manifest.json").path
-    result = run_sil(path)
+    manifest.add_native("publisher", library=str(library), publishes=list(SCHEMAS))
+    return manifest.write(tmp_path / "manifest.json").path
+
+
+def test_native_kernel_recording_conformance(native_tooling, tmp_path, run_sil):
+    generator, includes = native_tooling
+    generate_header(generator, tmp_path)
+    executable, library = compile_native_payloads(includes, tmp_path)
+    expected = b"".join(bytes.fromhex(c["hex"]) for c in CORPUS)
+    assert subprocess.check_output([str(executable)]) == expected
+    result = run_sil(publisher_manifest(library, tmp_path))
     assert result.returncode == 0, result.stderr
     records = list(read_records(result.mcap_path))
     assert len(records) == len(CORPUS)
@@ -117,6 +158,20 @@ def test_native_codec_kernel_recording_conformance(installed, build_dir, tmp_pat
 ])
 def test_malformed_schema_rejected_independently(field, tmp_path, run_sil):
     schemas = {"Bad": {"fields": [{"name": "v", **field}]}}
+    assert_schema_rejected(schemas, tmp_path, run_sil)
+
+
+def test_total_layout_overflow_rejected_independently(tmp_path, run_sil):
+    # Each field fits size_t; their sum does not. No payload allocation occurs.
+    schemas = {"Bad": {"fields": [
+        {"name": "a", "type": "u8", "count": sys.maxsize},
+        {"name": "b", "type": "u8", "count": sys.maxsize},
+        {"name": "c", "type": "u16"},
+    ]}}
+    assert_schema_rejected(schemas, tmp_path, run_sil)
+
+
+def assert_schema_rejected(schemas, tmp_path, run_sil):
     with pytest.raises(ManifestError):
         Manifest(duration_ns=1).add_schemas(schemas)
     # Bypass the builder completely, including its current-version defaults.
@@ -128,11 +183,12 @@ def test_malformed_schema_rejected_independently(field, tmp_path, run_sil):
     assert "schema" in result.stderr.lower(), result.stderr
 
 
-@pytest.mark.parametrize("case", CORPUS[:8], ids=lambda c: c["name"])
+@pytest.mark.parametrize("case", INTEGER_BOUNDARY_CASES, ids=lambda c: c["name"])
 def test_integer_boundaries_reject_outside_values(case):
     field_type = case["fields"][0]["type"]
     codec = MessageType("Scalar", {"fields": [{"name": "v", "type": field_type}]})
     low, high = min(case["values"]["v"]), max(case["values"]["v"])
+    assert (low, high) == INT_RANGES[field_type]
     for value in (low, high):
         assert codec.unpack(codec.pack(v=value)) == {"v": value}
     for value in (low - 1, high + 1):

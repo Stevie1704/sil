@@ -821,7 +821,9 @@ Primitive schema metadata lives in `python/src/sil/_schema_types.py`: the
 Manifest builder, Python codec, and C header generator share its formats,
 derived widths and integer bounds. CMake installs that same stdlib-only file
 beside `silschema` as `_sil_schema_types.py`; keep both files when moving the
-installed tool. No generated metadata or regeneration step is needed.
+installed tool. Installation copies the source file verbatim, and the installed
+conformance test checks that copy against the source. No generated metadata or
+regeneration step is needed.
 The kernel retains independent type and numeric validation for hand-written
 Manifests. `tests/fixtures/schema_conformance.json` states expected bytes and
 offsets independently; `tests/test_schema_conformance.py` compiles generated

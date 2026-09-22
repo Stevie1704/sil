@@ -1,4 +1,7 @@
 [
+  {"name":"Scalars","fields":[{"name":"a","type":"u8"},{"name":"b","type":"u16"},{"name":"c","type":"u32"},{"name":"d","type":"u64"},{"name":"e","type":"i8"},{"name":"f","type":"i16"},{"name":"g","type":"i32"},{"name":"h","type":"i64"},{"name":"i","type":"f32"},{"name":"j","type":"f64"}],"values":{"a":1,"b":1,"c":1,"d":1,"e":-1,"f":-1,"g":-1,"h":-1,"i":0.1,"j":0.1},"hex":"010100010000000100000000000000ffffffffffffffffffffffffffffffcdcccc3d9a9999999999b93f","offsets":[0,1,3,7,15,16,18,22,30,34]},
+  {"name":"F32Edges","fields":[{"name":"v","type":"f32","count":4}],"values":{"v":[0.1,1.401298464324817e-45,3.4028234663852886e38,-3.4028234663852886e38]},"hex":"cdcccc3d01000000ffff7f7fffff7fff","offsets":[0]},
+  {"name":"F64Edges","fields":[{"name":"v","type":"f64","count":4}],"values":{"v":[0.1,5e-324,1.7976931348623157e308,-1.7976931348623157e308]},"hex":"9a9999999999b93f0100000000000000ffffffffffffef7fffffffffffffefff","offsets":[0]},
   {"name":"U8","fields":[{"name":"v","type":"u8","count":3}],"values":{"v":[0,1,255]},"hex":"0001ff","offsets":[0]},
   {"name":"U16","fields":[{"name":"v","type":"u16","count":3}],"values":{"v":[0,1,65535]},"hex":"00000100ffff","offsets":[0]},
   {"name":"U32","fields":[{"name":"v","type":"u32","count":3}],"values":{"v":[0,1,4294967295]},"hex":"0000000001000000ffffffff","offsets":[0]},

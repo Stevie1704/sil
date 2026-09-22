@@ -20,7 +20,7 @@ from ._schema_types import FORMATS, INT_RANGES as _INT_RANGES, SIZES as _FIELD_S
 
 MANIFEST_VERSION = 1
 
-_FIELD_TYPES = FORMATS.keys()
+_FIELD_TYPES = frozenset(FORMATS)
 
 _INTERCEPTOR_KINDS = {"drop", "drop_nth", "delay", "override"}
 
@@ -30,6 +30,10 @@ _INTERCEPTOR_KINDS = {"drop", "drop_nth", "delay", "override"}
 _TRANSPORTS = {"inline", "shm"}
 _OVERFLOW_POLICIES = {"fail", "drop_newest"}
 _SIZE_MAX = sys.maxsize * 2 + 1
+# An override-validation limit, independent of integer widths: binary32 has
+# 24 significant bits and maximum exponent 127. Keep it explicit because
+# struct formats expose storage size, not exponent/precision limits. Builder
+# and kernel override tests independently pin acceptance at this boundary.
 _FLOAT32_MAX = 3.4028234663852886e38
 
 

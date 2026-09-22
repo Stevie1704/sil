@@ -13,12 +13,12 @@ from pathlib import Path
 
 # Load the exact same stdlib-only source in a checkout and a development
 # prefix, without importing sil (or depending on PYTHONPATH/site packages).
-_types_path = Path(__file__).resolve().with_name("_sil_schema_types.py")
-if not _types_path.exists():
-    _types_path = Path(__file__).resolve().parents[1] / "python/src/sil/_schema_types.py"
-_types = runpy.run_path(str(_types_path))
-C_TYPES = _types["C_TYPES"]
-SIZES = _types["SIZES"]
+_metadata_path = Path(__file__).resolve().with_name("_sil_schema_types.py")
+if not _metadata_path.exists():
+    _metadata_path = Path(__file__).resolve().parents[1] / "python/src/sil/_schema_types.py"
+_metadata = runpy.run_path(str(_metadata_path))
+C_TYPES = _metadata["C_TYPES"]
+SIZES = _metadata["SIZES"]
 
 
 def c_ident(schema_name: str) -> str:
