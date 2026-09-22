@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build once and execute the qualification, closed-loop, and sensitivity proofs on Linux x86-64
+      - name: Build once and execute all ACC proofs on Linux x86-64
         env:
           SIL_ACC_PROOF: all
         run: proofs/acc-fmi/run-proof.sh "$PWD/build/acc-fmi-evidence"
@@ -39,6 +39,11 @@ jobs:
         with:
           name: acc-sensitivity-evidence
           path: build/acc-fmi-evidence/sensitivity/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acc-scenario-evidence
+          path: build/acc-fmi-evidence/scenarios/
       - name: Keep all proofs' Manifests and Recordings separately
         if: always()
         uses: actions/upload-artifact@v4
@@ -51,3 +56,5 @@ jobs:
             build/acc-fmi-evidence/closed_loop/*.mcap
             build/acc-fmi-evidence/sensitivity/*.json
             build/acc-fmi-evidence/sensitivity/*.mcap
+            build/acc-fmi-evidence/scenarios/*.json
+            build/acc-fmi-evidence/scenarios/*.mcap
