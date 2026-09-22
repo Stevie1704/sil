@@ -134,6 +134,10 @@ class SensitivityRow:
     def has_maneuver(self) -> bool:
         return self.maneuver_period_ns is not None
 
+    @property
+    def observation_grid_ns(self) -> int:
+        return REFERENCE_PERIOD_NS
+
     def to_document(self) -> dict:
         return {
             "name": self.name,
