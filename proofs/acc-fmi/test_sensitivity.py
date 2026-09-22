@@ -66,8 +66,8 @@ def test_constant_acceleration_manifest_has_only_the_plant_exchange():
     assert set(document["participants"]) == {"plant"}
     assert document["participants"]["plant"]["step_period_ns"] == 20_000_000
     assert document["participants"]["plant"]["publishes"] == ["state"]
-    assert document["channels"]["sensing"]["schema"] == "sensing"
     assert document["channels"]["state"]["latency_ns"] == 0
+    assert "state:gap_m=gap_m" in document["participants"]["plant"]["command"]
 
 
 def test_sampling_manifest_keeps_plant_and_channel_latency_fixed():

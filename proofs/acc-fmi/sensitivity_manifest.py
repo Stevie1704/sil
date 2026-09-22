@@ -35,6 +35,10 @@ def _plant_binds() -> list[str]:
     )
 
 
+def _state_binds() -> list[str]:
+    return _bindings("state", CHANNEL_FIELDS["state"])
+
+
 def _validate_row(row: dict) -> None:
     periods = row["periods_ns"]
     duration = row["duration_ns"]
@@ -65,17 +69,13 @@ def manifest_for(row: dict) -> Manifest:
     manifest = Manifest(duration_ns=row["duration_ns"])
 
     if row["scenario"] == "constant-acceleration":
-        manifest.add_schemas({
-            "sensing": _schema(CHANNEL_FIELDS["sensing"]),
-            "state": _schema(CHANNEL_FIELDS["state"]),
-        })
-        manifest.add_channel("sensing", schema="sensing", latency_ns=0)
+        manifest.add_schemas({"state": _schema(CHANNEL_FIELDS["state"])})
         manifest.add_channel("state", schema="state", latency_ns=0)
         manifest.add_process(
             "plant",
             command=[
                 "python3", "-m", "sil.fmi", "/fmus/AccPlant.fmu",
-                *_plant_binds(), "--start",
+                *_state_binds(), "--start",
                 f"accel_mps2={row['initial_command_mps2']}",
             ],
             step_period_ns=periods["plant"],
