@@ -104,7 +104,7 @@ class SensitivityRow:
     maneuver_latency_ns: int | None
     state_latency_ns: int | None
     reference: str
-    sensitivity_baseline: str | None = None
+    sensitivity_reference: str | None = None
     negative_control: bool = False
     initial_command_mps2: float = INITIAL_COMMAND_MPS2
 
@@ -150,7 +150,7 @@ class SensitivityRow:
             "modeled_physical_delay_ns": 0,
             "initial_command_mps2": self.initial_command_mps2,
             "reference": self.reference,
-            "sensitivity_baseline": self.sensitivity_baseline,
+            "sensitivity_reference": self.sensitivity_reference,
             "negative_control": self.negative_control,
         }
 
@@ -169,7 +169,7 @@ def _closed_loop_row(
     sensing_latency_ns: int,
     command_latency_ns: int,
     reference: str,
-    sensitivity_baseline: str | None = None,
+    sensitivity_reference: str | None = None,
     negative_control: bool = False,
 ) -> SensitivityRow:
     return SensitivityRow(
@@ -186,7 +186,7 @@ def _closed_loop_row(
         maneuver_latency_ns=0,
         state_latency_ns=0,
         reference=reference,
-        sensitivity_baseline=sensitivity_baseline,
+        sensitivity_reference=sensitivity_reference,
         negative_control=negative_control,
     )
 
@@ -265,7 +265,7 @@ def measured_rows() -> tuple[SensitivityRow, ...]:
             sensing_latency_ns=latency,
             command_latency_ns=latency,
             reference=f"fine-latency-{latency // MS}ms",
-            sensitivity_baseline="latency-10ms",
+            sensitivity_reference="latency-10ms",
         )
         for latency in (0, BASE_PERIOD_NS, 20 * MS)
     )
@@ -292,7 +292,7 @@ def measured_rows() -> tuple[SensitivityRow, ...]:
             sensing_latency_ns=TIMING_DEFECT_SENSING_LATENCY_NS,
             command_latency_ns=BASE_PERIOD_NS,
             reference="fine-timing-defect",
-            sensitivity_baseline="latency-10ms",
+            sensitivity_reference="latency-10ms",
             negative_control=True,
         )
     )
@@ -369,6 +369,42 @@ def configuration() -> dict:
                 "1.2*relative_speed, -3, 1.5)"
             ),
         },
+        "exchange_algorithm": {
+            "applies_to": "all measured and independent-reference rows",
+            "steps": [
+                "Open the next Slot at the smallest due participant activation.",
+                "Run due activations in Manifest priority order: Maneuver, plant, "
+                "controller, then KPI; skip participants absent from the row.",
+                "Before each activation, drain Messages whose Channel Latency makes "
+                "them visible in that Slot; the newest visible Message supplies its input.",
+                "Execute one fixed FMI communication interval with the held inputs and "
+                "publish post-Step outputs timestamped with the activation Slot.",
+                "Compare a published value only at endpoint_ns equal to its publication "
+                "Slot plus the publishing participant Period.",
+            ],
+        },
+        "sample_hold_rules": {
+            "applies_to": "all measured and independent-reference rows",
+            "maneuver": (
+                "When present, the Maneuver participant publishes the authored left-held "
+                "value every 1 ms; the plant holds the newest visible value between "
+                "plant Steps."
+            ),
+            "command": (
+                "The plant starts with initial_command_mps2 and, when a command Channel "
+                "is present, holds the newest visible controller command until another "
+                "command Message becomes visible."
+            ),
+            "sensing": (
+                "When present, the controller starts with initial_outputs.sensing and "
+                "holds the newest visible plant sensing Message until another becomes "
+                "visible."
+            ),
+            "observation": (
+                "References and Recordings are compared only at exact shared endpoint "
+                "times; missing points fail and are never interpolated."
+            ),
+        },
         "maneuver": {
             "channel": "maneuver",
             "period_ns": MANEUVER_PERIOD_NS,
@@ -406,11 +442,28 @@ def configuration() -> dict:
         "acceptance_envelope_basis": {
             "normal_period_limit_ns": max(PERIODS_NS),
             "normal_latency_limit_ns": 20 * MS,
-            "command_limit_mps2": 1.5,
+            "controller_command_range_mps2": [-3.0, 1.5],
+            "full_command_span_mps2": 4.5,
+            "one_period_full_span_speed_change_mps": 4.5 * max(PERIODS_NS) / SECOND,
+            "speed_budget_mps": ACCEPTANCE_ENVELOPE["ego_speed_mps"],
+            "position_gap_budget_m": ACCEPTANCE_ENVELOPE["gap_m"],
+            "position_budget_fraction_of_minimum_gap_threshold": (
+                ACCEPTANCE_ENVELOPE["gap_m"] / MIN_GAP_M
+            ),
+            "command_budget_mps2": ACCEPTANCE_ENVELOPE["accel_mps2"],
+            "command_budget_fraction_of_full_span": (
+                ACCEPTANCE_ENVELOPE["accel_mps2"] / 4.5
+            ),
             "policy": (
-                "Fixed before any reference or Run: 1 m position/gap, 0.5 m/s "
-                "speed, and 0.5 m/s2 command deviation are the normal-matrix "
-                "observation budget for the declared 20 ms timing contract."
+                "Fixed before any reference or Run: across the 20 ms normal timing "
+                "limit, the controller's full -3 to 1.5 m/s2 range can change speed by "
+                "0.09 m/s in one interval. The 0.5 m/s speed budget leaves more than a "
+                "fivefold allowance for recurring sample/hold shifts while remaining 2% "
+                "of the 25 m/s initial speed. Sustaining that speed difference for the "
+                "2 s Duration gives the 1 m position/gap budget, which is 20% of the "
+                "5 m minimum-gap threshold. The 0.5 m/s2 command budget is one ninth of "
+                "the controller's full output span, so a material command shift is "
+                "detected well before saturation changes by the full range."
             ),
         },
         "timing_contract": {

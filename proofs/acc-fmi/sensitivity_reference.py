@@ -46,11 +46,11 @@ def _values(fmu: FMU3Slave, refs: dict[str, int], names: list[str]) -> list[floa
     return fmu.getFloat64([refs[name] for name in names])
 
 
-def _drain(queue: list[tuple[int, int, list[float]]], now_ns: int):
+def _drain(queue: list[tuple[int, list[float]]], now_ns: int):
     visible = []
     while queue and queue[0][0] <= now_ns:
         visible.append(queue.pop(0))
-    return visible[-1][2] if visible else None
+    return visible[-1][1] if visible else None
 
 
 def run(row: dict, config: dict, segments: list[dict]) -> dict:
@@ -139,7 +139,7 @@ def run(row: dict, config: dict, segments: list[dict]) -> dict:
                     "values": [value],
                 })
                 queues["maneuver"].append(
-                    (now_ns + (latencies["maneuver"] or 0), now_ns, [value])
+                    (now_ns + (latencies["maneuver"] or 0), [value])
                 )
                 next_maneuver += maneuver_period
             if next_plant == now_ns:
@@ -169,7 +169,7 @@ def run(row: dict, config: dict, segments: list[dict]) -> dict:
                         "values": sensing,
                     })
                     queues["sensing"].append(
-                        (now_ns + (latencies["sensing"] or 0), now_ns, sensing)
+                        (now_ns + (latencies["sensing"] or 0), sensing)
                     )
                 next_plant += plant_period
             if closed_loop and next_controller == now_ns:
@@ -189,7 +189,7 @@ def run(row: dict, config: dict, segments: list[dict]) -> dict:
                     "values": command,
                 })
                 queues["command"].append(
-                    (now_ns + (latencies["command"] or 0), now_ns, command)
+                    (now_ns + (latencies["command"] or 0), command)
                 )
                 next_controller += controller_period
         if closed_loop:

@@ -37,11 +37,6 @@ from sensitivity_report import report_markdown
 HERE = Path(__file__).resolve().parent
 
 
-def execute(row: SensitivityRow, out: Path) -> dict:
-    """Author twice and run twice, comparing only the same row's bytes."""
-    return run_manifest_twice(lambda: manifest_for(row), row.name, out)
-
-
 def _reference_tolerance(metrics: dict) -> bool:
     return (
         all(
@@ -164,7 +159,9 @@ def run(out: Path) -> None:
 
     results = []
     for row in measured_rows():
-        run_identity = execute(row, out)
+        run_identity = run_manifest_twice(
+            lambda: manifest_for(row), row.name, out,
+        )
         measured = recording_observations(
             out / run_identity["recording_files"][0], row,
         )
@@ -200,12 +197,16 @@ def run(out: Path) -> None:
             comparison = compare_row(measured, target, row)
 
         sensitivity_comparison = None
-        if row.sensitivity_baseline is not None:
-            baseline_row, _baseline_path, baseline_document = references[
-                row.sensitivity_baseline
+        if row.sensitivity_reference is not None:
+            sensitivity_reference_row, _reference_path, reference_document = references[
+                row.sensitivity_reference
             ]
-            baseline = reference_observations(baseline_document, baseline_row)
-            sensitivity_comparison = compare_row(measured, baseline, row)
+            sensitivity_reference = reference_observations(
+                reference_document, sensitivity_reference_row,
+            )
+            sensitivity_comparison = compare_row(
+                measured, sensitivity_reference, row,
+            )
 
         envelope_comparison = sensitivity_comparison or comparison
         exceeded = exceeded_fields(
@@ -230,7 +231,7 @@ def run(out: Path) -> None:
                         sensitivity_comparison,
                         authored_configuration["acceptance_envelope"],
                     ),
-                    f"{row.name}: baseline sensitivity exceeded the declared envelope: "
+                    f"{row.name}: reference sensitivity exceeded the declared envelope: "
                     f"{sensitivity_comparison}",
                 )
 

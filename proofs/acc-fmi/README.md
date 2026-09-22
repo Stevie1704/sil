@@ -316,9 +316,9 @@ The authored matrix is deliberately split:
 | Plant forcing | piecewise-constant lead acceleration at 20/10/5 ms | held-input plant refinement with a changing Maneuver | continuous piecewise-input analytic oracle |
 | Closed-loop plant refinement | plant at 20/10/5 ms, controller and Latencies fixed at 10 ms | plant Period only | independent 1 ms-plant FMPy Run |
 | Controller sampling | controller at 20/10/5 ms, plant and Latencies fixed at 10 ms | controller sampling/hold | independent 1 ms-controller FMPy Run |
-| Channel Latency | Latency 0/10/20 ms, both participant periods fixed at 10 ms | end-to-end Channel Latency only | independent finer FMPy Run; KPI delta also against the independent 10 ms baseline |
+| Channel Latency | Latency 0/10/20 ms, both participant periods fixed at 10 ms | end-to-end Channel Latency only | independent finer FMPy Run; KPI delta also against the independent 10 ms comparison reference |
 | Combined sensitivity | closed loop at 20/10/5 ms | plant Period, controller sampling, and both Latencies | independent 1 ms combined FMPy Run |
-| Negative control | 10 ms loop with a deliberately incorrect 250 ms sensing Latency | timing defect | independent finer FMPy Run; envelope check against the 10 ms baseline |
+| Negative control | 10 ms loop with a deliberately incorrect 250 ms sensing Latency | timing defect | independent finer FMPy Run; envelope check against the 10 ms comparison reference |
 
 The constant-oracle rows are a sanity check, not the sensitivity signal: exact
 constant-acceleration integration telescopes over every Period. The changing
@@ -338,8 +338,10 @@ native endpoint samples to exact reference times and rejects missing samples
 instead of interpolating across them. It reports maximum gap, speed, position,
 and command errors, minimum-gap and other KPI changes, Manifest/Recording and
 FMPy-reference identities, a readable Markdown table and two SVG plots in
-addition to `sensitivity-report.json`. The declared Sensitivity envelope is
-authored before any reference or Run, and is an observation bound rather than a
-monotonic-convergence assertion. The negative timing row must exceed it.
+addition to `sensitivity-report.json`. The table shows both the independent
+fine/analytic comparison and, where present, the 10 ms comparison that drives
+the Sensitivity-envelope verdict. The envelope and its physical scale rationale
+are authored before any reference or Run; it is an observation bound rather
+than a monotonic-convergence assertion. The negative timing row must exceed it.
 The compact report, plots and plot data are retained under `curated/` so the
 evidence path is directly reviewable.

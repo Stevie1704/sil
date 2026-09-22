@@ -22,6 +22,7 @@ from sensitivity_contract import (
 )
 from sensitivity_evidence import write_plots
 from sensitivity_manifest import manifest_for, route_capacity
+from sensitivity_report import markdown_table
 
 
 def _row(name: str):
@@ -54,6 +55,23 @@ def test_matrix_separates_plant_period_controller_period_and_latency():
     }
     assert document["acceptance_envelope_basis"]["normal_period_limit_ns"] == max(PERIODS_NS)
     assert _row("timing-defect").latencies["sensing"] == 250_000_000
+
+
+def test_configuration_authors_exchange_holds_and_envelope_basis():
+    document = configuration()
+    exchange = document["exchange_algorithm"]
+    holds = document["sample_hold_rules"]
+    basis = document["acceptance_envelope_basis"]
+
+    assert exchange["applies_to"] == "all measured and independent-reference rows"
+    assert "Manifest priority order" in " ".join(exchange["steps"])
+    assert set(holds) == {
+        "applies_to", "maneuver", "command", "sensing", "observation",
+    }
+    assert basis["one_period_full_span_speed_change_mps"] == pytest.approx(0.09)
+    assert basis["position_budget_fraction_of_minimum_gap_threshold"] == 0.2
+    assert basis["command_budget_fraction_of_full_span"] == pytest.approx(1 / 9)
+    assert "fivefold allowance" in basis["policy"]
 
 
 def test_maneuver_has_off_grid_changes_and_is_not_constant():
@@ -155,3 +173,49 @@ def test_evidence_writer_emits_reviewable_plots_and_data(tmp_path):
         "sensitivity-error.svg", "sensitivity-kpi.svg", "sensitivity-plot-data.csv",
     ]
     assert all((tmp_path / path).is_file() for path in paths)
+
+
+def test_readable_table_shows_reference_and_verdict_comparisons():
+    result = {
+        "row": {
+            "name": "timing-defect",
+            "family": "negative-control",
+            "periods_ns": {
+                "plant": 10_000_000,
+                "controller": 10_000_000,
+                "maneuver": 1_000_000,
+                "kpi": 20_000_000,
+            },
+            "latencies_ns": {
+                "sensing": 250_000_000,
+                "command": 10_000_000,
+                "maneuver": 0,
+                "state": 0,
+            },
+            "reference": "fine-timing-defect",
+            "sensitivity_reference": "latency-10ms",
+        },
+        "comparison": {
+            "max_abs_error": {
+                "lead_position_m": 0.01,
+                "ego_speed_mps": 0.02,
+                "accel_mps2": 0.0222354,
+            },
+            "minimum_gap_m": 42.0,
+        },
+        "sensitivity_comparison": {
+            "max_abs_error": {
+                "gap_m": 0.3,
+                "relative_speed_mps": 0.4,
+                "accel_mps2": 0.641677,
+            },
+            "minimum_gap_delta_m": 0.7,
+        },
+        "exceeded_envelope": ["accel_mps2"],
+    }
+
+    table = markdown_table([result])
+
+    assert "0.01 / 0.02 / 0.0222354" in table
+    assert "latency-10ms | 0.3 / 0.4 / 0.641677 | 0.7" in table
+    assert "EXCEEDED: accel_mps2" in table
