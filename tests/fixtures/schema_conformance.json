@@ -1,0 +1,13 @@
+[
+  {"name":"U8","fields":[{"name":"v","type":"u8","count":3}],"values":{"v":[0,1,255]},"hex":"0001ff","offsets":[0]},
+  {"name":"U16","fields":[{"name":"v","type":"u16","count":3}],"values":{"v":[0,1,65535]},"hex":"00000100ffff","offsets":[0]},
+  {"name":"U32","fields":[{"name":"v","type":"u32","count":3}],"values":{"v":[0,1,4294967295]},"hex":"0000000001000000ffffffff","offsets":[0]},
+  {"name":"U64","fields":[{"name":"v","type":"u64","count":3}],"values":{"v":[0,1,18446744073709551615]},"hex":"00000000000000000100000000000000ffffffffffffffff","offsets":[0]},
+  {"name":"I8","fields":[{"name":"v","type":"i8","count":4}],"values":{"v":[-128,-1,0,127]},"hex":"80ff007f","offsets":[0]},
+  {"name":"I16","fields":[{"name":"v","type":"i16","count":4}],"values":{"v":[-32768,-1,0,32767]},"hex":"0080ffff0000ff7f","offsets":[0]},
+  {"name":"I32","fields":[{"name":"v","type":"i32","count":4}],"values":{"v":[-2147483648,-1,0,2147483647]},"hex":"00000080ffffffff00000000ffffff7f","offsets":[0]},
+  {"name":"I64","fields":[{"name":"v","type":"i64","count":4}],"values":{"v":[-9223372036854775808,-1,0,9223372036854775807]},"hex":"0000000000000080ffffffffffffffff0000000000000000ffffffffffffff7f","offsets":[0]},
+  {"name":"F32","fields":[{"name":"v","type":"f32","count":4}],"values":{"v":[0.0,-0.0,1.5,-2.25]},"hex":"00000000000000800000c03f000010c0","offsets":[0]},
+  {"name":"F64","fields":[{"name":"v","type":"f64","count":4}],"values":{"v":[0.0,-0.0,1.5,-2.25]},"hex":"00000000000000000000000000000080000000000000f83f00000000000002c0","offsets":[0]},
+  {"name":"Mixed","fields":[{"name":"tag","type":"u8"},{"name":"wide","type":"u64"},{"name":"small","type":"i16"},{"name":"real","type":"f32"},{"name":"blob","type":"u8","count":3},{"name":"tail","type":"f64"}],"values":{"tag":171,"wide":72623859790382856,"small":-2,"real":1.5,"blob":[0,128,255],"tail":-2.25},"hex":"ab0807060504030201feff0000c03f0080ff00000000000002c0","offsets":[0,1,9,11,15,18]}
+]

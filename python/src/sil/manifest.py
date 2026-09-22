@@ -16,25 +16,11 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from ._schema_types import FORMATS, INT_RANGES as _INT_RANGES, SIZES as _FIELD_SIZES
+
 MANIFEST_VERSION = 1
 
-_FIELD_TYPES = {"u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64", "f32", "f64"}
-
-# Inclusive [min, max] for the integer field types; float override values must
-# be finite. The builder preserves accepted JSON numbers in the Manifest. The
-# loader converts integer JSON numbers to binary64 (which may round beyond 53
-# exact integer bits), retains floating JSON numbers as binary64, and narrows
-# f32 exactly once more during plan compilation.
-_INT_RANGES = {
-    "u8": (0, 2**8 - 1),
-    "u16": (0, 2**16 - 1),
-    "u32": (0, 2**32 - 1),
-    "u64": (0, 2**64 - 1),
-    "i8": (-(2**7), 2**7 - 1),
-    "i16": (-(2**15), 2**15 - 1),
-    "i32": (-(2**31), 2**31 - 1),
-    "i64": (-(2**63), 2**63 - 1),
-}
+_FIELD_TYPES = FORMATS.keys()
 
 _INTERCEPTOR_KINDS = {"drop", "drop_nth", "delay", "override"}
 
@@ -43,18 +29,6 @@ _INTERCEPTOR_KINDS = {"drop", "drop_nth", "delay", "override"}
 # boundary through a per-channel arena, skipping base64/JSON.
 _TRANSPORTS = {"inline", "shm"}
 _OVERFLOW_POLICIES = {"fail", "drop_newest"}
-_FIELD_SIZES = {
-    "u8": 1,
-    "u16": 2,
-    "u32": 4,
-    "u64": 8,
-    "i8": 1,
-    "i16": 2,
-    "i32": 4,
-    "i64": 8,
-    "f32": 4,
-    "f64": 8,
-}
 _SIZE_MAX = sys.maxsize * 2 + 1
 _FLOAT32_MAX = 3.4028234663852886e38
 
@@ -388,6 +362,9 @@ class Manifest:
                 f"only scalar fields can be overridden"
             )
         ftype = spec["type"]
+        # The builder preserves accepted JSON numbers. The loader converts
+        # integer JSON numbers to binary64 (possibly rounding beyond 53 exact
+        # bits), and narrows f32 once more during plan compilation.
         if ftype in _INT_RANGES:
             lo, hi = _INT_RANGES[ftype]
             if not isinstance(value, int) or isinstance(value, bool) or not (

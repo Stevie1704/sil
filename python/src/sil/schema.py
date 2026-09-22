@@ -12,11 +12,7 @@ from __future__ import annotations
 
 import struct
 
-_FMT = {
-    "u8": "B", "u16": "H", "u32": "I", "u64": "Q",
-    "i8": "b", "i16": "h", "i32": "i", "i64": "q",
-    "f32": "f", "f64": "d",
-}
+from ._schema_types import FORMATS as _FMT
 
 
 class MessageType:
