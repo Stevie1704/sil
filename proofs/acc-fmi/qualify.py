@@ -38,8 +38,15 @@ def case_manifest(name, case):
     for i, instance in enumerate(case.instances):
         starts = [part for n, v in zip(INPUTS[model], instance.start)
                   for part in ("--start", f"{n}={v}")]
+        binds = [
+            part
+            for channel, fields in ((f"input{i}", INPUTS[model]),
+                                    (f"output{i}", OUTPUTS[model]))
+            for field in fields
+            for part in ("--bind", f"{channel}:{field}={field}")
+        ]
         manifest.add_process(f"fmu{i}", command=["python3", "-m", "sil.fmi",
-                             f"/fmus/{model}.fmu", *starts], step_period_ns=STEP_NS,
+                             f"/fmus/{model}.fmu", *binds, *starts], step_period_ns=STEP_NS,
                              publishes=[f"output{i}"], priority=1,
                              subscribes=[SubscriberRoute(f"input{i}", capacity=2)])
     return manifest

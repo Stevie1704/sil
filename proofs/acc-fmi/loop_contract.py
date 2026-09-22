@@ -31,6 +31,8 @@ TOLERANCES = {
 }
 UNITS = {name: ("m/s2" if name == "accel_mps2" else
                 "m/s" if "speed" in name else "m") for name in TOLERANCES}
+UNITS.update({"lead_accel_mps2": "m/s2", "initial_lead_position_m": "m"})
+PLANT_INPUTS = ["accel_mps2", "lead_accel_mps2", "initial_lead_position_m"]
 INITIAL_OUTPUTS = {"sensing": [60.0, 0.0, 25.0], "state": [0.0, 60.0, 25.0],
                    "command": [1.5]}
 
@@ -64,10 +66,12 @@ def configuration():
                 delayed_route_capacity=3, nominal_latency_ns=STEP_NS)
 
 
-def validate_archives(directory=Path("/fmus")):
+def validate_archives(directory=Path("/fmus"), *, require_sensitivity_inputs=False):
+    plant_inputs = PLANT_INPUTS if require_sensitivity_inputs else FIELDS["command"]
     for model, inputs, outputs, starts in (
         ("AccController", FIELDS["sensing"], FIELDS["command"], [60, 0, 25]),
-        ("AccPlant", FIELDS["command"], FIELDS["sensing"] + FIELDS["state"], [0]),
+        ("AccPlant", plant_inputs, FIELDS["sensing"] + FIELDS["state"],
+         [0, 0, 60] if require_sensitivity_inputs else [0]),
     ):
         with zipfile.ZipFile(directory / f"{model}.fmu") as archive:
             root = ET.fromstring(archive.read("modelDescription.xml"))
@@ -80,7 +84,12 @@ def validate_archives(directory=Path("/fmus")):
         require(all(v.tag != "Clock" for v in variables.values()), f"{model}: unexpected Clock rate")
         for causality, names in (("input", inputs), ("output", outputs)):
             actual = {n for n, v in variables.items() if v.get("causality") == causality}
-            require(actual == set(names), f"{model}: invalid {causality} names: {actual}")
+            if model == "AccPlant" and not require_sensitivity_inputs and causality == "input":
+                require(set(names) <= actual,
+                        f"{model}: missing base input names: {actual}")
+            else:
+                require(actual == set(names),
+                        f"{model}: invalid {causality} names: {actual}")
             for name in names:
                 v = variables[name]
                 require(v.tag == "Float64" and v.get("unit") == UNITS[name],
