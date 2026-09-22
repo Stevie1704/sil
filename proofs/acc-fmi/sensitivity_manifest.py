@@ -65,7 +65,11 @@ def manifest_for(row: dict) -> Manifest:
     manifest = Manifest(duration_ns=row["duration_ns"])
 
     if row["scenario"] == "constant-acceleration":
-        manifest.add_schemas({"state": _schema(CHANNEL_FIELDS["state"])})
+        manifest.add_schemas({
+            "sensing": _schema(CHANNEL_FIELDS["sensing"]),
+            "state": _schema(CHANNEL_FIELDS["state"]),
+        })
+        manifest.add_channel("sensing", schema="sensing", latency_ns=0)
         manifest.add_channel("state", schema="state", latency_ns=0)
         manifest.add_process(
             "plant",

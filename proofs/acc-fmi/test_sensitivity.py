@@ -66,6 +66,7 @@ def test_constant_acceleration_manifest_has_only_the_plant_exchange():
     assert set(document["participants"]) == {"plant"}
     assert document["participants"]["plant"]["step_period_ns"] == 20_000_000
     assert document["participants"]["plant"]["publishes"] == ["state"]
+    assert document["channels"]["sensing"]["schema"] == "sensing"
     assert document["channels"]["state"]["latency_ns"] == 0
 
 
