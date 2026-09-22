@@ -17,7 +17,7 @@ docker build --platform linux/amd64 -f "$root/proofs/acc-fmi/Dockerfile" \
     --build-arg SOURCE_REVISION="$revision" -t "$image" "$root"
 docker image inspect "$image" --format '{{.Id}}' > "$evidence/image-id.txt"
 container=$(docker create --platform linux/amd64 --network none \
-    -e SIL_ACC_PARTICIPANT_TIMEOUT_MS="${SIL_ACC_PARTICIPANT_TIMEOUT_MS:-30000}" "$image")
+    -e SIL_ACC_PARTICIPANT_TIMEOUT_MS="${SIL_ACC_PARTICIPANT_TIMEOUT_MS:-30000}" "$image" python "/src/proofs/acc-fmi/${SIL_ACC_PROOF:-qualify}.py" /work)
 cleanup() { docker rm -f "$container" >/dev/null; }
 trap cleanup EXIT
 status=0

@@ -162,3 +162,64 @@ bytes; tests cover namespace prefixes, comments and a missing date.
 `SIL_ACC_PARTICIPANT_TIMEOUT_MS` can increase the response deadline for slower
 hosts without changing the Manifest. The workflow uploads the complete raw
 outputs and a separate Manifest/Recording artifact on every qualification Run.
+
+## Closed-loop trajectory gate (#148)
+
+```sh
+SIL_ACC_PROOF=closed_loop proofs/acc-fmi/run-proof.sh build/acc-loop-evidence
+```
+
+This separate evidence directory and CI job preserve the open-loop baseline.
+The same two qualified FMUs run as ordinary Process participants, with explicit
+scalar bindings, 10 ms periods, 10 ms Channel Latency and finite capacity-two
+Subscriber routes. Sensing contains gap, relative speed and ego speed; a second
+plant output Channel records both positions and lead speed. Commands contain
+acceleration. XML names, causalities, scalar types, SI units and input starts
+are checked before execution; the existing Importer validates every binding.
+
+Let x[n] be plant state at FMI communication time n*h, c[n] the controller
+output from call n, h=0.01 s. The complete interval exchange table is:
+
+| Activation / interval | Controller samples | Plant holds | Published sensing | Published command |
+| --- | --- | --- | --- | --- |
+| Initialization (not a Recording Slot) | x[0]=(ego 0 m,25 m/s; lead 60 m,25 m/s) | 0 m/s² | none; getters give x[0] | getter gives 1.5 m/s², not routed |
+| n=0, [0,h] | initialized sensing x[0] | 0 m/s² | x[1] | c[0]=law(x[0]) |
+| n>=1, [n*h,(n+1)*h] | x[n] from publication (n-1)*h | c[n-1] | x[n+1] | c[n]=law(x[n]) |
+
+All inputs remain constant within each interval. Publication time is n*h;
+post-step plant communication time is (n+1)*h. The command is sampled at n*h,
+even though its FMU independent time also advances to (n+1)*h. Initialization
+outputs are retained by the independent driver. The last publication at 4.99 s
+contains plant state at 5 s; the post-hoc minimum-gap KPI includes this final
+sample, with a declared threshold of 5 m. The maneuver closes an initial 60 m
+gap toward the headway target, transitioning out of acceleration saturation.
+
+`loop_reference.py` uses only FMPy's explicit lifecycle and scalar API. It
+snapshots both inputs before stepping either FMU and imports no SiL code,
+production equations or comparison implementation. Comparison is numeric at
+common communication points, with per-signal absolute 1e-10 SI and relative
+1e-12 tolerances declared before execution. Nonfinite values, missing/duplicate
+outputs, wrong timestamps and sample counts fail. The first numeric mismatch
+names the signal, publication instant and communication instant.
+
+Three independently executed negative controls delay commands one Step, delay
+sensing one Step, or change the initial held acceleration to 0.5 m/s². Each must
+fail comparison. Command delay must change motion; sensing delay must change
+subsequent commands. Each successful SiL Manifest runs twice and requires exact
+Recording byte equality; different engines are never compared by MCAP bytes.
+
+The original Python example is also executed unchanged, twice. Its reference
+uses a separately declared schedule: plant publishes x[n] before integration;
+controller publishes nothing at n=0, then c[n]=law(x[n-1]); plant applies zero
+for n=0 and n=1, then c[n-1]. Its publication time equals sensing communication
+time. It therefore does **not** have the same closed-loop trajectory as the
+post-step FMUs. The `original` reference mode matches that causal schedule and
+compares at those common points, without translating or offsetting traces.
+Its command comparison starts at h, exactly where its first command exists.
+
+Evidence includes exact Manifests, both Recordings and provenance, FMU archives
+and identities, schema/symbol/dependency audits, image and machine identities,
+all configuration/tolerances, FMPy initialization and per-interval sampled and
+applied values, final states, numeric verdicts and negative-control diagnostics.
+The `acc-loop-evidence` CI artifact retains this independently of #147 evidence.
+No kernel, Importer, ABI, protocol, or existing example behavior changes.

@@ -36,3 +36,17 @@ jobs:
           path: |
             build/acc-fmi-evidence/*.json
             build/acc-fmi-evidence/*.mcap
+
+  closed-loop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare closed-loop FMUs and original Python example
+        env:
+          SIL_ACC_PROOF: closed_loop
+        run: proofs/acc-fmi/run-proof.sh "$PWD/build/acc-loop-evidence"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acc-loop-evidence
+          path: build/acc-loop-evidence/
