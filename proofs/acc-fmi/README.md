@@ -162,3 +162,127 @@ bytes; tests cover namespace prefixes, comments and a missing date.
 `SIL_ACC_PARTICIPANT_TIMEOUT_MS` can increase the response deadline for slower
 hosts without changing the Manifest. The workflow uploads the complete raw
 outputs and a separate Manifest/Recording artifact on every qualification Run.
+
+## Closed-loop trajectory gate (#148)
+
+```sh
+SIL_ACC_PROOF=closed_loop proofs/acc-fmi/run-proof.sh build/acc-loop-evidence
+```
+
+The two qualified FMUs run as ordinary Process participants. Explicit scalar
+bindings connect sensing (gap, relative speed, ego speed) and command
+(acceleration). A separate plant output Channel carries both positions and lead
+speed. A Test participant checks the minimum-gap KPI during the Run.
+
+The authored grid is 500 intervals of 10 ms. Every Participant's Step period and
+Manifest Duration are checked against it, and every Subscriber route must have a
+positive integer capacity and overflow policy `fail`. The independent driver
+reads only the authored numeric grid from `configuration.json`, uses it for all
+FMI calls, and returns a grid receipt and integer interval boundaries. The gate
+checks that receipt, every boundary and all Recording timestamps/counts. XML
+names, causalities, Float64 types, SI units and input starts are checked too.
+These FMUs declare a fixed communication-step profile, no internal Clock and no
+DefaultExperiment rate; there is no hidden FMU sample rate to infer. The positive
+constant driver interval supplies their rate. Unknown or wrong-causality bindings
+are tested in actual SiL Runs and must fail with exit 2.
+
+### Exchange table
+
+Let x[n] be plant state at FMI communication time n*h, c[n] the controller
+output from call n, h=0.01 s. Nominal finite Subscriber route capacity is two.
+
+| Activation / interval | Controller samples | Plant holds | Sensing publication | Command publication | Channel Latency (sensing / command) |
+| --- | --- | --- | --- | --- | --- |
+| Initialization | x[0]=(ego 0 m,25 m/s; lead 60 m,25 m/s) | 0 m/s² | none; getter x[0] | none; getter 1.5 m/s² | h / h; no initialization Message |
+| n=0, [0,h] | initialized sensing x[0] | 0 m/s² | x[1] | c[0]=law(x[0]) | h / h |
+| n>=1, [n*h,(n+1)*h] | x[n] from publication (n-1)*h | c[n-1] | x[n+1] | c[n]=law(x[n]) | h / h |
+
+Inputs remain held within each interval. Both Messages publish at n*h. Plant
+outputs describe (n+1)*h; the controller samples at n*h even though its FMI
+independent time also advances to (n+1)*h. Initialization getters are retained
+and asserted against explicit initial outputs before trajectory comparison.
+The maneuver closes an initial 60 m gap toward the headway target, transitioning
+out of acceleration saturation.
+
+### Independent comparison and negative controls
+
+`loop_reference.py` uses only FMPy's explicit lifecycle and scalar API. It imports
+no SiL code, production equations, routing or comparison implementation. Its
+coupling variants independently specify state age, command age, initial command
+and publication schedule. Each SiL variant matches its own FMPy trajectory at
+common communication points; comparison across engines is numeric, never by
+MCAP bytes. Per-field tolerances are explicitly declared before execution:
+absolute 1e-10 SI and relative 1e-12. Equal budgets are intentional for identical
+Float64 artifacts in one runtime, allowing rounding far below the observed
+one-Step differences; they do not imply model-fidelity accuracy. Nonfinite
+values, missing/duplicate Messages, wrong timestamps and counts fail. The first
+numeric mismatch names the field, publication time and communication time.
+
+All three perturbations now execute through **SiL as well as FMPy**:
+
+| Variant | Authored change | Required consequence in SiL Recordings |
+| --- | --- | --- |
+| `shift-command` | Command Latency 2h, capacity three | plant trajectory changes; nominal comparison fails |
+| `shift-sensing` | Sensing Latency 2h, capacity three | subsequent commands change; nominal comparison fails |
+| `initial-command` | plant's initial held acceleration 0.5 m/s² | nominal comparison fails |
+
+Capacities of three allow the extra queued Message in delayed variants. A
+separate negative Run uses sensing Latency 2h and capacity two: with the plant
+publishing before the controller drains, the third queued Message must cause
+exit 1 with a capacity diagnostic. This proves the finite bound is enforced.
+
+Saturation masks the sensing delay initially: the first command difference is
+at publication 1.56 s, after 156 identical points. The proof claims detection
+over the full maneuver, not immediate detection while the controller remains
+saturated. First-divergence instants are retained in `results.json`.
+
+Every successful Manifest is constructed independently twice and its exact
+serialized bytes are compared. Every such Manifest is also executed twice and
+its Recordings must match byte-for-byte. These are separate gates.
+
+### KPI coverage and original Python schedule
+
+The in-run KPI has a 5 m threshold, rejects nonfinite gaps, and must report
+499 checked sensing Messages through publication 4.98 s. Its one-Step Latency
+prevents delivery of the final Message before Run completion. The post-hoc KPI
+checks all 500 sensing Messages, including publication 4.99 s describing plant
+state at 5 s. A separate Run raises the in-run threshold to 61 m and must fail
+with exit 1, proving the KPI participates in deciding the Run's result.
+
+The original Python example runs unchanged and is checked separately. It
+publishes x[n] before integration; its controller publishes nothing at n=0,
+then c[n]=law(x[n-1]); the plant holds zero for n=0 and n=1, then c[n-1]. Its
+sensing publication time equals its communication time. This is a different
+causal schedule from the post-step FMUs and therefore a different trajectory.
+
+The independent `original` coupling follows that schedule. It retains the real
+FMU controller output at every call, including 1.5 m/s² at zero. A separate
+published-command field is **null** at zero, representing no publication, so
+the initial plant input remains held. The comparator requires the command
+Message to be absent there. No FMU output is overwritten with zero, and no
+trajectory is shifted to make it match.
+
+### Reproducible evidence
+
+`closed_loop.py` calls the committed `loop_evidence.py` producer automatically.
+The clean command above creates full raw evidence and a compact `curated/`
+report containing both FMU identities, environment/configuration, all verdicts,
+Manifest/Recording determinism hashes, and digests identifying the raw evidence.
+The image identity is added by the host script. Only this report and its index
+are checked in; full FMUs, Manifests, Recordings, initialization and trajectory
+JSON, and failure logs stay in the CI artifact. They remain available to download
+while that artifact is retained; the command rebuilds the proof independently.
+To regenerate the compact report from a downloaded raw artifact:
+
+```sh
+python proofs/acc-fmi/loop_evidence.py build/acc-loop-evidence build/acc-loop-report
+```
+
+The CI workflow uses `SIL_ACC_PROOF=all` to build one pinned image and execute
+both proofs in separate containers. It retains separate `acc-fmi-evidence` and
+`acc-loop-evidence` artifacts plus an additional Manifest/Recording artifact
+covering both proofs. The old open-loop baseline remains unchanged. No kernel,
+Importer, ABI, protocol or original example behavior changes.
+
+[Retained closed-loop evidence](closed-loop-evidence/README.md) identifies the
+native execution snapshot; rebuilding produces a new identified snapshot.
