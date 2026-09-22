@@ -1,0 +1,23 @@
+name: ACC FMI interoperability
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/acc-fmi/**'
+      - 'python/src/sil/fmi/**'
+      - 'python/src/sil/examples/acc/**'
+      - '.github/workflows/proof-acc-fmi.yml'
+  workflow_dispatch:
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and qualify both FMUs on Linux x86-64
+        run: proofs/acc-fmi/run-proof.sh "$PWD/build/acc-fmi-evidence"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acc-fmi-evidence
+          path: build/acc-fmi-evidence/

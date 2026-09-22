@@ -148,6 +148,8 @@ class Instance:
         self.fmu = CoSimulation(
             self.description.binary(extracted), self.description,
             event_mode=True,
+            resource_path=(extracted / "resources")
+            if (extracted / "resources").is_dir() else None,
         )
         self.fmu.apply_start_values(starts)
         self.fmu.initialize()

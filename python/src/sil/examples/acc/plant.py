@@ -12,31 +12,10 @@ controller commands back.
 
 from sil.participant import StepParticipant, run
 
-NS_PER_S = 1e9
-
-# The lead vehicle holds its speed; the ego starts one gap behind it, at the
-# same speed, so every metre the gap moves comes from the commanded
-# acceleration rather than from the initial conditions.
-LEAD_POSITION_M = 60.0
-LEAD_SPEED_MPS = 25.0
-LEAD_ACCEL_MPS2 = 0.0
-EGO_POSITION_M = 0.0
-EGO_SPEED_MPS = 25.0
-
-# What the ego holds until the first command arrives. Under the default
-# Latency that is two Steps: the controller sees the first sensing Message one
-# Step after it is published, and its answer arrives one Step after that.
-INITIAL_COMMAND_MPS2 = 0.0
-
-
-def advance(position_m: float, speed_mps: float, accel_mps2: float,
-            dt_s: float) -> tuple[float, float]:
-    """One vehicle's exact constant-acceleration motion over one step."""
-    return (
-        position_m + speed_mps * dt_s + 0.5 * accel_mps2 * dt_s * dt_s,
-        speed_mps + accel_mps2 * dt_s,
-    )
-
+from sil.examples.acc.dynamics import (
+    EGO_POSITION_M, EGO_SPEED_MPS, INITIAL_COMMAND_MPS2, LEAD_ACCEL_MPS2,
+    LEAD_POSITION_M, LEAD_SPEED_MPS, NS_PER_S, advance,
+)
 
 class Plant(StepParticipant):
     def __init__(self):
