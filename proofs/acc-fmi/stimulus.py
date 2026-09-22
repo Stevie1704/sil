@@ -9,9 +9,9 @@ class Stimulus(StepParticipant):
         self.case = CASES[case]
 
     def on_step(self, t, dt, inputs):
-        return [(f"input{i}", dict(zip(INPUTS[self.case["model"]], values)))
-                for i, instance in enumerate(self.case["instances"])
-                if (values := instance["updates"].get(str(t // STEP_NS))) is not None]
+        return [(f"input{i}", dict(zip(INPUTS[self.case.model], values)))
+                for i, instance in enumerate(self.case.instances)
+                if (values := instance.update_at(t // STEP_NS)) is not None]
 
 
 if __name__ == "__main__":

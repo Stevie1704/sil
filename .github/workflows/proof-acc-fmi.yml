@@ -1,4 +1,10 @@
-name: ACC FMI interoperability
+name: proof-acc-fmi
+
+# This external-exporter qualification builds a pinned image and downloads its
+# Python toolchain, so it sits outside the general push gate. It runs for PRs
+# touching either the proof or its Importer/model dependencies. Unlike the
+# released-runtime consumer proofs, it qualifies the checkout's resourcePath
+# correction before release; the README explains this deliberate scope.
 
 on:
   pull_request:
@@ -21,3 +27,12 @@ jobs:
         with:
           name: acc-fmi-evidence
           path: build/acc-fmi-evidence/
+
+      - name: Keep the Manifests and Recordings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acc-fmi-workspace
+          path: |
+            build/acc-fmi-evidence/*.json
+            build/acc-fmi-evidence/*.mcap

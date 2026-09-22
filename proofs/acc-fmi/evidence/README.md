@@ -20,7 +20,8 @@ FMUs and runner). These are original outputs, not regenerated expectations.
   successful initialization is recorded beside it.
 - `oracle-negative-tests.log`: rejection of wrong, missing, NaN and infinite data.
 
-The two generated FMU archives are in the workflow's `acc-fmi-evidence` artifact;
-their source and clean pinned build live one directory up. They are not vendored
-here. Rebuilding from a different source revision gives new archive identities.
+The two original FMU archives are now retained unchanged in
+[`tests/fixtures/pythonfmu3/`](../../../tests/fixtures/pythonfmu3/), so these
+archive hashes remain verifiable after the workflow artifact expires.
+Their source and clean pinned build live one directory up. Rebuilding from a different source revision gives new archive identities.
 These retained traces are not overwritten by subsequent qualification Runs.

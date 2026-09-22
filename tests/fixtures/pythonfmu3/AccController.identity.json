@@ -1,0 +1,12 @@
+{
+  "source_revision": "4c1e01f5db68deafb20a44aeed7bc0ba4bfc8ade",
+  "model_sha256": "e9f56f6402652d536bade3ec6ee7fe03b19eac8e309f801d87d879e18fbebfa6",
+  "dynamics_sha256": "7d10797f998608d759f5fdfda275dfe0d97370149c48d71ad63d6d296b11cea5",
+  "exporter": "PythonFMU3 0.3.4",
+  "exporter_revision": "6c4b81cb869447f6c69e3417c495f73f11c40ae0",
+  "python": "CPython 3.13.7 (provided by execution image)",
+  "machine_class": "Linux x86-64, glibc 2.36",
+  "model_license": "Apache-2.0",
+  "exporter_license": "MIT",
+  "archive_sha256": "91bbed94e1832e3564fa57e7b8055f3436a5ee6cfc1d2b487abc6a888b9b4ae8"
+}

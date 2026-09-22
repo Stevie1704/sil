@@ -44,13 +44,20 @@ that interval. The independent time variable advances to `t+h`.
 The existing SiL Importer publishes post-step values: Recording Slot `t`
 contains the FMU output reached at `t+0.1 s`. Thus the first Slot, zero, already
 contains the plant state at 0.1 s; the last Slot, 0.9 s, contains the state at
-1.0 s. There is no activation at Duration. Initialization is retained separately
-using the Importer's own lifecycle and scalar accessors. This deliberately does
-not change the existing ACC Process plant's publish-before-integrate contract.
+1.0 s. There is no activation at Duration. A separate trace uses the Importer's own lifecycle and scalar accessors,
+retaining initialization, all steps, and successful termination at 1.0 s. This
+deliberately does not change the existing ACC Process plant's publish-before-integrate contract.
 Stimulus Channels use explicit zero Latency and earlier priority, so updates at
 `t` are used for `[t,t+0.1]`; quiet Slots test input hold.
 
 ## Pinned artifacts and independent path
+
+This proof deliberately builds SiL from the checkout, unlike the esmini and
+FMI-LS-BUS released-runtime proofs. It qualifies the unreleased `resource_path`
+correction, which a published runner image does not contain. `SOURCE_REVISION`
+identifies the checkout in the native runner, FMUs and environment evidence.
+This proves checkout interoperability; it does not claim released-runtime
+adoption. A release-based proof can follow once that correction is published.
 
 The Dockerfile pins the CPython 3.13.7 Debian bookworm image by digest and freezes
 the Debian index to `20260901T000000Z`. The hashed dependency lock pins exporter,
@@ -121,8 +128,10 @@ not valid`. FMPy initialized that same archive successfully. Supplying only
 the absolute extracted `resources/` path made the SiL lifecycle pass too.
 
 The correction adds an optional resource path to `CoSimulation` and supplies it
-from the single and group Importer callers when the directory exists. FMI 3
-requires a filesystem directory with a trailing separator, not an FMI 2 URI.
+from the single and group Importer callers when the directory exists. [FMI 3.0.2 section 2.3.1](https://fmi-standard.org/docs/3.0.2/#resourcePath)
+requires an absolute filesystem directory with a trailing separator. This is a
+normative API requirement, not a claim that this exporter rejects a path without
+the separator; the observed failure concerns a null pointer.
 The minimal reproduction is retained in `initialization.py`: omitting
 `--resources` demonstrates the null-path failure; adding it demonstrates the
 correction. The full proof exercises the actual Process participant wiring.
@@ -140,3 +149,23 @@ paths. All 60 SiL output samples matched the independent expectations, and both
 Recordings for each of the three Manifests are byte-identical. Both FMU builds
 also reproduced their archive bytes. The full identities and original traces
 are retained, including the null-resource-path failure and successful fix.
+
+The original FMUs are retained unchanged under `tests/fixtures/pythonfmu3/` and
+exercised by `tests/test_fmi_resources.py` in the ordinary test suite. They do
+not require an exporter rebuild. Their identities match the original evidence;
+new proof builds receive new identities and evidence directories.
+
+Evidence checks use explicit exceptions and remain active with `python -O`.
+`rebuild.json` records both build hashes per FMU, and `results.json` records both
+Recording filenames, hashes and successful exit codes per Manifest. Lifecycle
+traces retain successful termination after the final interval. Empty log files
+mean a successful command wrote no console output; they are retained in the new
+complete snapshots. The negative resource case records an explicit rejection
+JSON instead of relying on the absence of a success file.
+
+XML normalization splices only the root token value and optional generation-date
+attribute. It preserves all other XML bytes, including namespace prefixes and
+comments; tests cover the missing-date case and quoted values. The script and
+workflow retain both a complete evidence artifact and a separate Manifest and
+Recording artifact. `SIL_ACC_PARTICIPANT_TIMEOUT_MS` can increase the response
+deadline for slower hosts without changing the Manifest.

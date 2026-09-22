@@ -234,8 +234,9 @@ class CoSimulation:
         self._instance = self._library["fmi3InstantiateCoSimulation"](
             description.model_identifier.encode(),
             description.instantiation_token.encode(),
-            # FMI 3 uses an absolute directory path, with a trailing separator,
-            # not the resource URI FMI 2 used. Resource-free callers may omit it.
+            # FMI 3.0.2 section 2.3.1 requires this path and trailing separator:
+            # https://fmi-standard.org/docs/3.0.2/#resourcePath
+            # Resource-free callers may omit it.
             os.fsencode(str(resource_path.resolve()) + os.sep)
             if resource_path is not None else None,
             False,       # visible

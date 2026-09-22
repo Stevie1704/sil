@@ -658,9 +658,9 @@ existing Process-participant response deadline through `sil-check`.
   lives until the process exits, which is the whole lifecycle ABI v1 has and
   #86 declined to extend.
 - **First environment reference adapter (#96):** the internal dynamics model.
-  `python/src/sil/examples/acc/plant.py` carries the longitudinal motion of two
-  vehicles and
-  is stepped over the same step protocol as any other process participant —
+  `python/src/sil/examples/acc/plant.py` is the Process participant for two
+  vehicles; `dynamics.py` now holds the shared longitudinal equations used by
+  that participant and the ACC FMU proof. The participant is stepped over the same step protocol as any other process participant —
   an adapter in exactly the sense #10 means, with nothing simulator-shaped
   added to the kernel to carry it. esmini is deferred, not rejected: the
   question was which comes first, and the internal model came first because it

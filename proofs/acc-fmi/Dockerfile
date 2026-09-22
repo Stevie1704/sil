@@ -9,6 +9,10 @@ RUN rm -f /etc/apt/sources.list.d/*.sources \
     && rm -rf /var/lib/apt/lists/*
 COPY proofs/acc-fmi/requirements.lock /tmp/requirements.lock
 RUN pip install --no-cache-dir --require-hashes -r /tmp/requirements.lock
+# Unlike the released-runtime consumer proofs, this is a checkout qualification:
+# issue #147 introduces the resourcePath correction being tested. A published
+# image cannot prove that unreleased change. SOURCE_REVISION binds this runner
+# and the generated FMUs to the exact checkout; the base/runtime remain pinned.
 WORKDIR /src
 COPY . .
 ARG SOURCE_REVISION

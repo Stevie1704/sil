@@ -1,4 +1,26 @@
 """Authored inputs, communication grid and tolerances, shared by both drivers."""
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class InstanceCase:
+    start: tuple[float, ...]
+    updates: dict[int, tuple[float, ...]]
+
+    def update_at(self, step: int) -> tuple[float, ...] | None:
+        return self.updates.get(step)
+
+    def inputs_at(self, step: int) -> tuple[float, ...]:
+        latest = max((point for point in self.updates if point <= step), default=None)
+        return self.start if latest is None else self.updates[latest]
+
+
+@dataclass(frozen=True)
+class Case:
+    model: str
+    instances: tuple[InstanceCase, ...]
+
+
 STEP_NS = 100_000_000
 STEPS = 10
 # Fixed before execution; SI absolute tolerance plus a small relative allowance.
@@ -15,21 +37,21 @@ OUTPUTS = {
 }
 # Changes at communication points; absent updates deliberately exercise hold.
 CASES = {
-    "controller": {"model": "AccController", "instances": [
-        {"start": [60.0, 0.0, 25.0], "updates": {
-            "0": [60.0, 0.0, 25.0], "2": [10.0, -5.0, 25.0],
-            "4": [43.5, 0.0, 25.0], "6": [42.5, 0.0, 25.0],
-            "8": [42.5, 1.0, 25.0]}},
-        {"start": [42.5, -1.0, 25.0], "updates": {
-            "0": [42.5, -1.0, 25.0], "3": [100.0, 0.0, 25.0],
-            "7": [0.0, 0.0, 25.0]}},
-    ]},
-    "plant-accelerate": {"model": "AccPlant", "instances": [
-        {"start": [1.5], "updates": {"0": [1.5]}},
-        {"start": [-3.0], "updates": {"0": [-3.0]}},
-    ]},
-    "plant-coast": {"model": "AccPlant", "instances": [
-        {"start": [0.0], "updates": {"0": [0.0]}},
-        {"start": [0.5], "updates": {"0": [0.5]}},
-    ]},
+    "controller": Case("AccController", (
+        InstanceCase((60.0, 0.0, 25.0), {
+            0: (60.0, 0.0, 25.0), 2: (10.0, -5.0, 25.0),
+            4: (43.5, 0.0, 25.0), 6: (42.5, 0.0, 25.0),
+            8: (42.5, 1.0, 25.0)}),
+        InstanceCase((42.5, -1.0, 25.0), {
+            0: (42.5, -1.0, 25.0), 3: (100.0, 0.0, 25.0),
+            7: (0.0, 0.0, 25.0)}),
+    )),
+    "plant-accelerate": Case("AccPlant", (
+        InstanceCase((1.5,), {0: (1.5,)}),
+        InstanceCase((-3.0,), {0: (-3.0,)}),
+    )),
+    "plant-coast": Case("AccPlant", (
+        InstanceCase((0.0,), {0: (0.0,)}),
+        InstanceCase((0.5,), {0: (0.5,)}),
+    )),
 }

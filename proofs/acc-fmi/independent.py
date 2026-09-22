@@ -12,7 +12,7 @@ from expected import check, expected
 
 def run(case_name, output):
     case = CASES[case_name]
-    model = case["model"]
+    model = case.model
     archive = Path("/fmus") / f"{model}.fmu"
     description = read_model_description(archive, validate=True)
     refs = {v.name: v.valueReference for v in description.modelVariables}
@@ -25,25 +25,25 @@ def run(case_name, output):
         extract(archive, unzipdir=directory)
         instances = []
         try:
-            for i, spec in enumerate(case["instances"]):
+            for i, spec in enumerate(case.instances):
                 fmu = FMU3Slave(guid=description.guid, unzipDirectory=directory,
                                 modelIdentifier=description.coSimulation.modelIdentifier,
                                 instanceName=f"instance{i}")
                 fmu.instantiate()
                 instances.append(fmu)
-                fmu.setFloat64(ins, spec["start"])
+                fmu.setFloat64(ins, spec.start)
                 fmu.enterInitializationMode(startTime=0.0, stopTime=1.0)
                 fmu.exitInitializationMode()
                 values = fmu.getFloat64(outs)
-                check(values, expected(model, spec["start"], 0.0), "initialization")
+                check(values, expected(model, spec.start, 0.0), "initialization")
                 trace.append(dict(instance=i, phase="initialized", time=0.0, values=values))
-            held = [spec["start"] for spec in case["instances"]]
+            held = [spec.start for spec in case.instances]
             for step in range(STEPS):
                 t = step * STEP_NS / 1e9
                 for i, fmu in enumerate(instances):
                     before = fmu.getFloat64(outs)
                     check(before, expected(model, held[i], t), "before set")
-                    update = case["instances"][i]["updates"].get(str(step))
+                    update = case.instances[i].update_at(step)
                     if update is not None:
                         fmu.setFloat64(ins, update)
                         held[i] = update
