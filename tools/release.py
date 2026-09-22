@@ -199,6 +199,7 @@ def validate_distributions(
 REQUIRED_NATIVE_PATHS = (
     "bin/sil-run",
     "bin/silschema",
+    "bin/_sil_schema_types.py",
     "include/sil/arena.h",
     "include/sil/clock_region.h",
     "include/sil/participant.h",

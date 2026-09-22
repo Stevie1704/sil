@@ -7,18 +7,18 @@ byte layout (little-endian, declared field order, no padding).
 """
 
 import json
+import runpy
 import sys
 from pathlib import Path
 
-C_TYPES = {
-    "u8": "uint8_t", "u16": "uint16_t", "u32": "uint32_t", "u64": "uint64_t",
-    "i8": "int8_t", "i16": "int16_t", "i32": "int32_t", "i64": "int64_t",
-    "f32": "float", "f64": "double",
-}
-SIZES = {
-    "u8": 1, "u16": 2, "u32": 4, "u64": 8,
-    "i8": 1, "i16": 2, "i32": 4, "i64": 8, "f32": 4, "f64": 8,
-}
+# Load the exact same stdlib-only source in a checkout and a development
+# prefix, without importing sil (or depending on PYTHONPATH/site packages).
+_metadata_path = Path(__file__).resolve().with_name("_sil_schema_types.py")
+if not _metadata_path.exists():
+    _metadata_path = Path(__file__).resolve().parents[1] / "python/src/sil/_schema_types.py"
+_metadata = runpy.run_path(str(_metadata_path))
+C_TYPES = _metadata["C_TYPES"]
+SIZES = _metadata["SIZES"]
 
 
 def c_ident(schema_name: str) -> str:

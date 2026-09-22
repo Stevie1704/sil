@@ -817,6 +817,20 @@ python/src/sil/    manifest builder, step-participant lib, test API,
 tests/             behavior tests at the run boundary
 ```
 
+Primitive schema metadata lives in `python/src/sil/_schema_types.py`: the
+Manifest builder, Python codec, and C header generator share its formats,
+derived widths and integer bounds. CMake installs that same stdlib-only file
+beside `silschema` as `_sil_schema_types.py`; keep both files when moving the
+installed tool. Installation copies the source file verbatim, and the installed
+conformance test checks that copy against the source. No generated metadata or
+regeneration step is needed.
+The kernel retains independent type and numeric validation for hand-written
+Manifests. `tests/fixtures/schema_conformance.json` states expected bytes and
+offsets independently; `tests/test_schema_conformance.py` compiles generated
+structs and exercises them through kernel loading and Recording from both the
+checkout and installed prefix. Numeric override tests separately pin the
+builder/loader conversion policies, including finite f32 limits.
+
 ## Notes / deferred (per DESIGN.md)
 
 - Shared-memory zero-copy payloads and bus adapters: later milestones.

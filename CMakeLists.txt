@@ -140,7 +140,7 @@ add_custom_command(
   OUTPUT ${SIL_GEN_DIR}/toy_messages.h
   COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/silschema.py
           ${CMAKE_SOURCE_DIR}/schemas/toy.json ${SIL_GEN_DIR}/toy_messages.h
-  DEPENDS tools/silschema.py schemas/toy.json)
+  DEPENDS tools/silschema.py python/src/sil/_schema_types.py schemas/toy.json)
 add_custom_target(toy_messages DEPENDS ${SIL_GEN_DIR}/toy_messages.h)
 
 # --- virtual clock shim (preload library + probe, issue #26) ---
@@ -187,6 +187,9 @@ install(DIRECTORY include/sil/
 install(PROGRAMS tools/silschema.py
   DESTINATION ${CMAKE_INSTALL_BINDIR}
   RENAME silschema)
+install(FILES python/src/sil/_schema_types.py
+  DESTINATION ${CMAKE_INSTALL_BINDIR}
+  RENAME _sil_schema_types.py)
 
 configure_file(cmake/release.json.in ${CMAKE_CURRENT_BINARY_DIR}/release.json
   @ONLY)
