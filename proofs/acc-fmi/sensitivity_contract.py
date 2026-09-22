@@ -39,6 +39,11 @@ INITIAL_STATE = {
     "lead_position_m": 60.0,
     "lead_speed_mps": 25.0,
 }
+INITIAL_OUTPUT_STATE = {
+    **INITIAL_STATE,
+    "gap_m": 60.0,
+    "relative_speed_mps": 0.0,
+}
 
 # A 20 ms hold at the initial 25 m/s covers 0.5 m.  The speed and command
 # allowances cover one such interval at the plant's ±3 m/s² command envelope.
@@ -265,7 +270,7 @@ def configuration() -> dict:
         "initial_state": INITIAL_STATE,
         "initial_outputs": {
             "sensing": {"gap_m": 60.0, "relative_speed_mps": 0.0, "ego_speed_mps": 25.0},
-            "state": INITIAL_STATE,
+            "state": INITIAL_OUTPUT_STATE,
             "controller_command_mps2": 1.5,
         },
         "initial_command_mps2": 0.0,
