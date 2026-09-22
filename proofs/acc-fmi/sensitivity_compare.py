@@ -8,6 +8,7 @@ from sil.recording import read_records
 
 from sensitivity_contract import (
     ACCEPTANCE_ENVELOPE,
+    REFERENCE_ABS_TOL,
     CHANNEL_FIELDS,
     INITIAL_LEAD_POSITION_M,
     INITIAL_SPEED_MPS,
@@ -271,6 +272,17 @@ def compare_row(
         "reference_maximum_command_mps2": reference_kpi["maximum_command_mps2"],
     })
     return metrics
+
+
+def within_reference_tolerance(metrics: dict) -> bool:
+    """Whether a Run matches the independent path rather than merely resembling it.
+
+    Separate from the acceptance envelope: this is the budget for two engines
+    stepping identical artifacts at identical timing, not for a timing change.
+    """
+    return all(
+        error <= REFERENCE_ABS_TOL for error in metrics["max_abs_error"].values()
+    ) and abs(metrics["minimum_gap_delta_m"]) <= REFERENCE_ABS_TOL
 
 
 def within_envelope(metrics: dict, envelope: dict | None = None) -> bool:

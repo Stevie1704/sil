@@ -33,16 +33,33 @@ def envelope_verdict(row, comparison: dict, envelope: dict) -> dict:
     }
 
 
-def expected_failure_verdict(name: str, exit_code: int, errors: list[str]) -> dict:
-    """A deliberate KPI failure is evidence only when it actually failed."""
+def expected_failure_verdict(
+    name: str, failures: list[dict], complete_messages: int,
+) -> dict:
+    """A deliberate KPI failure is evidence only when the Run really aborted.
+
+    The authored exit code proves nothing about the Run, so it is not what is
+    judged here. What is judged is what only an aborted Run leaves behind: a
+    diagnostic naming the violation, and a Recording that stops short of the
+    complete Run's Message count.
+    """
     require(
-        exit_code == 1,
-        f"{name}: expected the KPI to fail the Run with exit 1, got exit {exit_code}"
-        if exit_code
-        else f"{name}: the Run succeeded although its KPI must fail it",
+        failures,
+        f"{name}: no KPI failure was recorded, so nothing failed as authored",
     )
-    require(errors, f"{name}: failed without a post-hoc diagnostic naming the violation")
-    return {"scenario": name, "expected_exit": 1, "diagnostic": errors[0]}
+    failure = failures[0]
+    require(
+        failure["prefix_messages"] < complete_messages,
+        f"{name}: recorded {failure['prefix_messages']} Messages against the complete "
+        f"Run's {complete_messages}, so the Run did not abort where it must",
+    )
+    return {
+        "scenario": name,
+        "diagnostic": failure["diagnostic"],
+        "failure_publication_ns": failure["publication_ns"],
+        "recorded_prefix_messages": failure["prefix_messages"],
+        "complete_run_messages": complete_messages,
+    }
 
 
 def require_minimal_runtime(present_modules, present_tools) -> dict:
@@ -65,7 +82,8 @@ def determinism_summary(results: dict) -> dict:
     summary = {}
     for group in results.values():
         for name, result in group.items():
-            identity = result.get("artifacts", result)
+            require(name not in summary, f"{name}: two acceptance checks share one name")
+            identity = result["artifacts"]
             summary[name] = {
                 key: identity[key]
                 for key in ("manifest_sha256", "authored_manifest_sha256",

@@ -5,9 +5,10 @@ puts a bus under the same two FMUs. This document states what that milestone
 reuses unchanged, so the first CAN result can be compared against a measured
 number rather than an opinion.
 
-The machine-readable form is `handoff.json` in the prepared bundle. It is
-generated from the same authored contract the Runs enforce, so it cannot drift
-from them.
+`handoff.json` in the prepared bundle is the machine-readable form, generated
+from the same authored contract the Runs enforce. The tables below read that
+document; where the two ever disagree, `handoff.json` is the one bound to the
+evidence.
 
 ## Baseline signals
 

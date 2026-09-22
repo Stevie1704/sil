@@ -28,10 +28,13 @@ COPY proofs/acc-fmi/acceptance.py \
      /opt/acc-example/
 
 # The pinned bundle and its archives are copied in before the Run; the
-# evidence is copied out after it. Both Manifest-visible paths are fixed, so
-# a Manifest authored here is the one preparation was pinned against.
-RUN install -d -o 10001 -g 10001 /bundle /fmus /work
+# evidence is copied out of /workspace after it. Both Manifest-visible paths
+# are fixed and belong to this example image, so a Manifest authored here is
+# the one preparation was pinned against. The supported container surface is
+# the one SUPPORT.md names: the `sil-run` entry point, `/workspace`, and the
+# non-root UID. No installation path inside the runtime image is relied on.
+RUN install -d -o 10001 -g 10001 /bundle /fmus
 
 USER 10001:10001
-ENV SIL_ACC_RUNNER=/usr/local/bin/sil-run
-WORKDIR /work
+ENV SIL_ACC_RUNNER=sil-run
+WORKDIR /workspace

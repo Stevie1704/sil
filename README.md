@@ -768,6 +768,10 @@ trajectory and a timing-sensitivity envelope against independently recorded
 references, require the deliberate KPI failure to fail, and compare two
 Recordings of each Manifest byte-for-byte.
 
+Nothing in that directory is part of the framework either. The example image
+derives from the production image and adds only its own consumer material; the
+supported container surface stays the one [SUPPORT.md](SUPPORT.md) names.
+
 [proofs/acc-fmi/INSTALL.md](proofs/acc-fmi/INSTALL.md) covers units, time
 conventions, the default Channel Latency, the model's limitations, the FMI 3.0
 profile this evidence establishes with the capabilities it rejects, and how to

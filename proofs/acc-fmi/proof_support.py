@@ -39,6 +39,14 @@ def run_logged(args, log):
     return run_expecting(args, log, 0)
 
 
+def single_receipt(log, marker):
+    """The one JSON receipt a Test participant prints on a completed Run."""
+    receipts = [json.loads(line.split(marker + " ", 1)[1])
+                for line in Path(log).read_text().splitlines() if marker + " " in line]
+    require(len(receipts) == 1, f"expected exactly one {marker} receipt in {log}: {receipts}")
+    return receipts[0]
+
+
 def sil_runner_args(manifest, recording):
     return [
         RUNNER, str(manifest), "-o", str(recording),

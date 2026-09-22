@@ -105,13 +105,18 @@ def test_the_negative_control_must_exceed_the_envelope():
 
 
 def test_an_expected_failure_is_asserted_rather_than_swallowed():
-    verdict = expected_failure_verdict("dropped", 1, ["ACC KPI gap_m publication_ns=7 value=4"])
-    assert verdict["expected_exit"] == 1 and verdict["diagnostic"].startswith("ACC KPI gap_m")
+    failure = {"diagnostic": "ACC KPI gap_m publication_ns=7 value=4",
+               "publication_ns": 7, "prefix_messages": 120}
 
-    with pytest.raises(RuntimeError, match="succeeded"):
-        expected_failure_verdict("dropped", 0, [])
-    with pytest.raises(RuntimeError, match="without a post-hoc diagnostic"):
-        expected_failure_verdict("dropped", 1, [])
+    verdict = expected_failure_verdict("dropped", [failure], 2000)
+    assert verdict["diagnostic"].startswith("ACC KPI gap_m")
+    assert verdict["recorded_prefix_messages"] == 120
+
+    with pytest.raises(RuntimeError, match="nothing failed as authored"):
+        expected_failure_verdict("dropped", [], 2000)
+    # A Recording as complete as the passing Run means nothing was aborted.
+    with pytest.raises(RuntimeError, match="did not abort"):
+        expected_failure_verdict("dropped", [dict(failure, prefix_messages=2000)], 2000)
 
 
 def test_a_toolchain_or_comparison_tool_in_the_example_image_fails():
@@ -146,6 +151,11 @@ def test_per_manifest_determinism_is_judged_within_one_check():
                               "dropped": check_result("a", ["r", "r"])}}
     with pytest.raises(RuntimeError, match="share one Manifest identity"):
         determinism_summary(repeated)
+
+    collision = {"scenarios": {"nominal": check_result("a", ["r", "r"])},
+                 "sensitivity": {"nominal": check_result("b", ["s", "s"])}}
+    with pytest.raises(RuntimeError, match="share one name"):
+        determinism_summary(collision)
 
     differing = {"scenarios": {"nominal": check_result("a", ["r", "other"])}}
     with pytest.raises(RuntimeError, match="different Recordings"):

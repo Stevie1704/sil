@@ -96,13 +96,12 @@ execute() {
         --entrypoint python3 \
         -e SIL_ACC_PARTICIPANT_TIMEOUT_MS="$timeout_ms" \
         -e SIL_ACC_EXAMPLE_IMAGE_ID="$(image_id "$image")" \
-        "$image" /opt/acc-example/acceptance.py /bundle /work)
+        "$image" /opt/acc-example/acceptance.py /bundle /workspace)
     docker cp "$bundle/." "$container:/bundle/"
     docker cp "$bundle/fmus/." "$container:/fmus/"
     local status=0
     docker start -a "$container" || status=$?
-    docker cp "$container:/work/." "$evidence/"
-    cp "$bundle/images.json" "$evidence/images.json"
+    docker cp "$container:/workspace/." "$evidence/"
     cleanup
     container=
     return "$status"

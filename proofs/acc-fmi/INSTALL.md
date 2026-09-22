@@ -44,9 +44,14 @@ executes in the example image with `--network none`. It
 - compares each Recording against the pinned independent trajectory,
 - requires the deliberate KPI failure to fail, with its diagnostic.
 
-Nothing is written back into the bundle. The evidence directory receives the
+Nothing is written back into the bundle. The Run works in `/workspace`, the
+image's documented working directory, and the evidence directory receives the
 Manifests, Recordings, provenance side-cars, logs, `runtime.json`,
 `results.json` and `curated/report.json`.
+
+A rebuilt example image is a new execution artifact, and the Run says so
+rather than executing against an image the bundle does not name. Rebuild the
+image and the bundle together, with one `prepare`.
 
 `SIL_ACC_PARTICIPANT_TIMEOUT_MS` bounds each Participant response; the default
 is 30000 ms. It is a wall-clock deadline and never part of the authored

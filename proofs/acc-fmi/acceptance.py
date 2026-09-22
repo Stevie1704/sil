@@ -20,6 +20,8 @@ from pathlib import Path
 import acceptance_bundle
 import scenarios
 from acceptance_contract import (
+    BUILD_TREE_ROOTS,
+    FMU_DIR,
     FORBIDDEN_MODULES,
     FORBIDDEN_TOOLS,
     IMAGES_NAME,
@@ -36,11 +38,14 @@ from acceptance_verdict import (
     require_minimal_runtime,
 )
 from proof_support import (PARTICIPANT_TIMEOUT_MS, RUNNER, file_sha256, require,
-                           run_manifest_twice, write_json)
-from sensitivity_compare import compare_row, recording_observations, reference_observations
+                           run_manifest_twice, single_receipt, write_json)
+from sensitivity_compare import (compare_row, recording_observations,
+                                 reference_observations, within_reference_tolerance)
 from sensitivity_contract import REFERENCE_ABS_TOL
 from sensitivity_contract import configuration as sensitivity_configuration
 from sensitivity_manifest import manifest_for
+
+KPI_MARKER = "ACC_SENSITIVITY_KPI"
 
 def _reference(bundle: Path, kind: str, name: str) -> dict:
     return json.loads((bundle / REFERENCE_DIR / f"{kind}-{name}.json").read_text())
@@ -70,7 +75,7 @@ def _installed_sil() -> dict:
     }
 
 
-def capture_runtime(bundle: Path, out: Path) -> dict:
+def capture_runtime(bundle: Path, index: dict, out: Path) -> dict:
     """Bind this Run to the installed bundle it is executing from."""
     require(
         platform.system() == "Linux" and platform.machine() == "x86_64",
@@ -80,7 +85,7 @@ def capture_runtime(bundle: Path, out: Path) -> dict:
     runner = shutil.which(RUNNER) or RUNNER
     require(Path(runner).is_file(), f"the installed runner {runner} is missing")
     require(
-        not str(runner).startswith(("/build/", "/src/")),
+        not str(runner).startswith(BUILD_TREE_ROOTS),
         f"{runner} comes from a build tree rather than an installation",
     )
     minimal = require_minimal_runtime(
@@ -100,6 +105,14 @@ def capture_runtime(bundle: Path, out: Path) -> dict:
         f"this image ({executing or 'unidentified'}) is not the bundle's example image "
         f"({images['example']['id']})",
     )
+    # The Manifests load the archives from this directory, so they are part of
+    # what the bundle index has to cover.
+    fmus = {model: file_sha256(FMU_DIR / f"{model}.fmu") for model in MODELS}
+    require(
+        fmus == index["fmu_sha256"],
+        f"the archives at {FMU_DIR} are not the ones the bundle pinned: "
+        f"{fmus} against {index['fmu_sha256']}",
+    )
     runtime = {
         "sil": _installed_sil(),
         "runner": {"path": str(runner), "sha256": file_sha256(Path(runner))},
@@ -109,9 +122,7 @@ def capture_runtime(bundle: Path, out: Path) -> dict:
         "minimal_runtime": minimal,
         "libpython": {"path": str(libpython), "sha256": file_sha256(libpython)},
         "participant_timeout_ms": PARTICIPANT_TIMEOUT_MS,
-        "fmus": {
-            model: file_sha256(Path(f"/fmus/{model}.fmu")) for model in MODELS
-        },
+        "fmus": fmus,
     }
     write_json(out / "runtime.json", runtime)
     return runtime
@@ -126,14 +137,19 @@ def require_pinned_configuration(bundle: Path, name: str, authored: dict) -> Non
     )
 
 
-def scenario_check(bundle: Path, name: str, config: dict, out: Path) -> dict:
+def scenario_check(
+    bundle: Path, name: str, config: dict, out: Path, complete_messages: int | None,
+) -> dict:
     require_pinned_configuration(bundle, f"scenario-{name}", config)
     reference = _reference(bundle, "scenario", name)["trajectory"]
     result, actual = scenarios.execute(config, out, reference=reference)
     if config["expected_exit"]:
+        require(
+            complete_messages is not None,
+            f"{name}: no completed Run to measure the aborted Recording against",
+        )
         result["expected_failure"] = expected_failure_verdict(
-            name, config["expected_exit"],
-            [failure["diagnostic"] for failure in result["failure"]],
+            name, result["failure"], complete_messages,
         )
     else:
         require(
@@ -143,23 +159,11 @@ def scenario_check(bundle: Path, name: str, config: dict, out: Path) -> dict:
     result["recorded_messages"] = {
         channel: len(rows) for channel, rows in actual.items()
     }
+    result["artifacts"] = {
+        key: result.pop(key) for key in
+        ("manifest_sha256", "authored_manifest_sha256", "recording_sha256")
+    }
     return result
-
-
-def _matches_independent_path(comparison: dict) -> bool:
-    return all(
-        error <= REFERENCE_ABS_TOL for error in comparison["max_abs_error"].values()
-    ) and abs(comparison["minimum_gap_delta_m"]) <= REFERENCE_ABS_TOL
-
-
-def _kpi_receipt(log: Path) -> dict:
-    receipts = [
-        json.loads(line.split("ACC_SENSITIVITY_KPI ", 1)[1])
-        for line in log.read_text().splitlines()
-        if "ACC_SENSITIVITY_KPI " in line
-    ]
-    require(len(receipts) == 1, f"expected exactly one KPI receipt in {log}: {receipts}")
-    return receipts[0]
 
 
 def _pinned_observations(bundle: Path, name: str) -> dict:
@@ -175,7 +179,7 @@ def sensitivity_check(bundle: Path, name: str, envelope: dict, out: Path) -> dic
 
     own = compare_row(measured, _pinned_observations(bundle, row.name), row)
     require(
-        _matches_independent_path(own),
+        within_reference_tolerance(own),
         f"{name}: this Run differs from its pinned independent trajectory: {own}",
     )
     refined = compare_row(measured, _pinned_observations(bundle, row.reference), row)
@@ -192,24 +196,30 @@ def sensitivity_check(bundle: Path, name: str, envelope: dict, out: Path) -> dic
         "comparison": refined,
         "sensitivity_comparison": against_baseline,
         "verdict": verdict,
-        "in_run_kpi": _kpi_receipt(out / identity["kpi_log"]),
+        "in_run_kpi": single_receipt(out / identity["kpi_log"], KPI_MARKER),
     }
 
 
 def run(bundle: Path, out: Path) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     index = acceptance_bundle.verify(bundle)
-    runtime = capture_runtime(bundle, out)
+    runtime = capture_runtime(bundle, index, out)
 
     configuration = sensitivity_configuration()
     require_pinned_configuration(bundle, "sensitivity", configuration)
     envelope = configuration["acceptance_envelope"]
 
+    # The authored order runs the complete scenario first: its Message count is
+    # what makes the aborted Recording's prefix a measurement.
+    scenario_results, complete_messages = {}, None
+    for name, config in scenario_checks().items():
+        scenario_results[name] = scenario_check(
+            bundle, name, config, out, complete_messages,
+        )
+        if not config["expected_exit"]:
+            complete_messages = scenario_results[name]["post_hoc_messages"]
     results = {
-        "scenarios": {
-            name: scenario_check(bundle, name, config, out)
-            for name, config in scenario_checks().items()
-        },
+        "scenarios": scenario_results,
         "sensitivity": {
             name: sensitivity_check(bundle, name, envelope, out)
             for name in SENSITIVITY_CHECKS

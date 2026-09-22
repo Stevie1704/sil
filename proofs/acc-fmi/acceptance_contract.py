@@ -28,7 +28,6 @@ MODELS = ("AccController", "AccPlant")
 # Both images resolve the pinned archives here, so a Manifest authored during
 # preparation and one authored inside the example image name the same files.
 FMU_DIR = Path("/fmus")
-BUNDLE_DIR = Path("/bundle")
 INDEX_NAME = "bundle.json"
 IMAGES_NAME = "images.json"
 REFERENCE_DIR = "references"
@@ -45,6 +44,20 @@ SENSITIVITY_CHECKS = ("latency-20ms", "timing-defect")
 # toolchain. The example image is the production runtime plus this directory.
 FORBIDDEN_MODULES = ("fmpy", "pythonfmu3", "pytest")
 FORBIDDEN_TOOLS = ("cc", "gcc", "c++", "g++", "cmake", "make", "git")
+# Where the tool image keeps the checkout and the runner it builds. A runner
+# resolved from either is a build tree, not an installation.
+BUILD_TREE_ROOTS = ("/build/", "/src/")
+
+# One row per baseline signal: the Channel, which authored rate carries it,
+# and what produces it. `truth` and `maneuver` deliberately keep their own
+# names; the rates are authored per producer, not per Channel.
+SIGNAL_SOURCES = (
+    ("sensing", "sensing", "AccPlant FMU outputs the controller consumes"),
+    ("truth", "sensing", "AccPlant FMU outputs no fault can hide"),
+    ("command", "command", "AccController FMU output"),
+    ("maneuver", "maneuver", "authored lead-acceleration input"),
+    ("freshness", "kpi", "Test participant; time since the last sensing delivery"),
+)
 
 # Declared by the qualified archives. A changed attribute is a changed model,
 # not a new capability of this bundle.
@@ -187,21 +200,11 @@ def handoff() -> dict:
             {
                 "channel": channel,
                 "fields": SCENARIO_FIELDS[channel],
-                "rate_hz": nominal["rates_hz"].get(
-                    {"truth": "sensing", "command": "command",
-                     "sensing": "sensing", "maneuver": "maneuver",
-                     "freshness": "kpi"}[channel]
-                ),
+                "rate_hz": nominal["rates_hz"][rate_key],
                 "latency_ns": 0 if channel == "maneuver" else nominal["step_ns"],
-                "source": {
-                    "sensing": "AccPlant FMU outputs the controller consumes",
-                    "truth": "AccPlant FMU outputs no fault can hide",
-                    "command": "AccController FMU output",
-                    "maneuver": "authored lead-acceleration input",
-                    "freshness": "Test participant; time since the last sensing delivery",
-                }[channel],
+                "source": source,
             }
-            for channel in SCENARIO_FIELDS
+            for channel, rate_key, source in SIGNAL_SOURCES
         ],
         "units": nominal["units"],
         "kpis": {
