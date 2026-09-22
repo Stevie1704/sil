@@ -79,6 +79,25 @@ what its weak-copyleft grant asks for. The same image build installs five
 Debian X and OpenGL packages esmini links against, under their own terms and
 recorded where Debian records them, in the image's `/usr/share/doc/*/copyright`.
 
+## ACC FMU proof tools
+
+[proofs/acc-fmi/](proofs/acc-fmi/) downloads PythonFMU3 **0.3.4**
+([source](https://github.com/StephenSmith25/PythonFMU3/tree/0.3.4), MIT) and
+FMPy **0.3.26** ([source](https://github.com/CATIA-Systems/FMPy/tree/v0.3.26),
+BSD-2-Clause) into a locally built qualification image. PythonFMU3 supplies the
+FMI implementation and is bundled by its own exporter into the generated FMUs;
+its release license is retained in each FMU as `resources/LICENSE-PythonFMU3`
+and in `proofs/acc-fmi/pythonfmu3-LICENSE`. FMPy supplies an independent call
+path and the FMI schema tree (BSD-2-Clause, with notices in the schema files).
+One qualification FMU pair is retained under `tests/fixtures/pythonfmu3/`,
+shared by regression tests and the proof evidence. The archives include the
+exporter implementation and its upstream notices. Neither tool becomes a SiL runtime dependency or enters the
+published production runtime.
+The proof image pins CPython 3.13.7 (PSF license) and all Python dependencies;
+their installed distribution metadata and Debian copyright files retain their
+respective notices. The ACC model source is covered by this repository’s
+Apache-2.0 license, included in each FMU as `resources/LICENSE-SiL`.
+
 ## Python wheel and source distribution
 
 The wheel and the source distribution contain SiL code only. They declare

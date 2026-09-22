@@ -44,5 +44,11 @@ class Extraction:
             ) from error
         return extracted
 
+    @staticmethod
+    def resource_path(extracted: Path) -> Path | None:
+        """The archive's optional resources directory, for FMI instantiation."""
+        resources = extracted / "resources"
+        return resources if resources.is_dir() else None
+
     def cleanup(self) -> None:
         self._directory.cleanup()

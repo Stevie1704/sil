@@ -20,6 +20,7 @@ from pathlib import Path
 
 from sil.participant import ParticipantFailure
 
+from sil.fmi.archive import Extraction
 from sil.fmi.binding import (
     BinaryField,
     activation_message,
@@ -148,6 +149,7 @@ class Instance:
         self.fmu = CoSimulation(
             self.description.binary(extracted), self.description,
             event_mode=True,
+            resource_path=Extraction.resource_path(extracted),
         )
         self.fmu.apply_start_values(starts)
         self.fmu.initialize()

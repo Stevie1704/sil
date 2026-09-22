@@ -1,0 +1,5 @@
+{
+  "phase": "instantiate_rejected",
+  "exit_code": 1,
+  "diagnostic": "fmi3InstantiateCoSimulation returned no instance"
+}

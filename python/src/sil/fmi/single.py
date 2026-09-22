@@ -159,6 +159,7 @@ class FmuParticipant(StepParticipant):
         self._fmu = CoSimulation(
             description.binary(extracted), description,
             event_mode=self._events is not None,
+            resource_path=Extraction.resource_path(extracted),
         )
         self._fmu.apply_start_values(starts)
         self._fmu.initialize()

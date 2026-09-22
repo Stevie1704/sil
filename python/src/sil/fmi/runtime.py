@@ -17,6 +17,7 @@ what comes out of one is copied at once.
 from __future__ import annotations
 
 import ctypes
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -225,7 +226,7 @@ class CoSimulation:
     """
 
     def __init__(self, binary: Path, description: ModelDescription,
-                 *, event_mode: bool = False):
+                 *, event_mode: bool = False, resource_path: Path | None = None):
         self._library = _Library(binary)
         # The FMU calls this for the life of the instance, so the ctypes
         # trampoline has to outlive this constructor.
@@ -233,7 +234,11 @@ class CoSimulation:
         self._instance = self._library["fmi3InstantiateCoSimulation"](
             description.model_identifier.encode(),
             description.instantiation_token.encode(),
-            None,
+            # FMI 3.0.2 section 2.3.1 requires this path and trailing separator:
+            # https://fmi-standard.org/docs/3.0.2/#resourcePath
+            # Resource-free callers may omit it.
+            os.fsencode(str(resource_path.resolve()) + os.sep)
+            if resource_path is not None else None,
             False,       # visible
             True,        # loggingOn
             event_mode,  # eventModeUsed

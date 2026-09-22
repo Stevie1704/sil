@@ -1,0 +1,4 @@
+pythonfmu3==0.3.4
+fmpy==0.3.26
+mcap==1.4.0
+pytest==8.4.2

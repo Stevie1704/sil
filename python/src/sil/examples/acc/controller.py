@@ -20,34 +20,10 @@ what a real vECU costs rather than what an ideal one costs.
 
 from sil.participant import StepParticipant, run
 
-# The gap the controller holds at speed: a fixed standstill margin plus a time
-# headway. Both are policy, not dynamics — an ACC reader recognizes them.
-STANDSTILL_GAP_M = 5.0
-TIME_HEADWAY_S = 1.5
-
-# Proportional gain on the gap error, damping gain on the relative speed.
-GAP_GAIN_PER_S2 = 0.35
-RELATIVE_SPEED_GAIN_PER_S = 1.2
-
-# The comfort envelope the command is clamped to.
-MAX_ACCEL_MPS2 = 1.5
-MIN_ACCEL_MPS2 = -3.0
-
-
-def command_for(gap_m: float, relative_speed_mps: float,
-                ego_speed_mps: float) -> float:
-    """The control law over one sensing Message, as a pure function.
-
-    Its parameters are the sensing schema's fields, so a test can apply the
-    law to a recorded Message and compare it against the recorded command.
-    """
-    desired_gap_m = STANDSTILL_GAP_M + TIME_HEADWAY_S * ego_speed_mps
-    accel_mps2 = (
-        GAP_GAIN_PER_S2 * (gap_m - desired_gap_m)
-        + RELATIVE_SPEED_GAIN_PER_S * relative_speed_mps
-    )
-    return max(MIN_ACCEL_MPS2, min(MAX_ACCEL_MPS2, accel_mps2))
-
+from sil.examples.acc.dynamics import (
+    GAP_GAIN_PER_S2, MAX_ACCEL_MPS2, MIN_ACCEL_MPS2,
+    RELATIVE_SPEED_GAIN_PER_S, STANDSTILL_GAP_M, TIME_HEADWAY_S, command_for,
+)
 
 class Controller(StepParticipant):
     def on_step(self, t, dt, inputs):

@@ -1,0 +1,38 @@
+name: proof-acc-fmi
+
+# This external-exporter qualification builds a pinned image and downloads its
+# Python toolchain, so it sits outside the general push gate. It runs for PRs
+# touching either the proof or its Importer/model dependencies. Unlike the
+# released-runtime consumer proofs, it qualifies the checkout's resourcePath
+# correction before release; the README explains this deliberate scope.
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/acc-fmi/**'
+      - 'python/src/sil/fmi/**'
+      - 'python/src/sil/examples/acc/**'
+      - '.github/workflows/proof-acc-fmi.yml'
+  workflow_dispatch:
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and qualify both FMUs on Linux x86-64
+        run: proofs/acc-fmi/run-proof.sh "$PWD/build/acc-fmi-evidence"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acc-fmi-evidence
+          path: build/acc-fmi-evidence/
+
+      - name: Keep the Manifests and Recordings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acc-fmi-workspace
+          path: |
+            build/acc-fmi-evidence/*.json
+            build/acc-fmi-evidence/*.mcap
