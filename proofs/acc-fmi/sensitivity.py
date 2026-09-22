@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -84,6 +85,12 @@ def _reference_identity(path: Path) -> dict:
 def _validate_reference_initialization(
     document: dict, config: dict, row: SensitivityRow,
 ) -> None:
+    def matches(actual: list[float], expected: list[float]) -> bool:
+        return len(actual) == len(expected) and all(
+            math.isclose(value, wanted, rel_tol=0.0, abs_tol=REFERENCE_ABS_TOL)
+            for value, wanted in zip(actual, expected)
+        )
+
     expected = config["initial_outputs"]
     actual = document["initialization"]
     expected_state = [
@@ -94,19 +101,19 @@ def _validate_reference_initialization(
         )
     ]
     require(
-        actual["state"] == expected_state,
+        matches(actual["state"], expected_state),
         f"{row.name}: independent reference initial plant state differs from configuration",
     )
     if row.closed_loop:
         require(
-            actual["sensing"] == [
+            matches(actual["sensing"], [
                 expected["sensing"][field]
                 for field in ("gap_m", "relative_speed_mps", "ego_speed_mps")
-            ],
+            ]),
             f"{row.name}: independent reference initial sensing differs from configuration",
         )
         require(
-            actual["command"] == [expected["controller_command_mps2"]],
+            matches(actual["command"], [expected["controller_command_mps2"]]),
             f"{row.name}: independent reference initial command differs from configuration",
         )
     else:
