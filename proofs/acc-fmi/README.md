@@ -142,35 +142,23 @@ suite and original reference Manifest determinism gate.
 
 ## Retained native result
 
-The [committed evidence](evidence/README.md) comes from
-[Actions run 35703127743](https://github.com/Stevie1704/sil/actions/runs/35703127743)
+The [curated evidence](evidence/README.md) comes from
+[Actions run 35705741334](https://github.com/Stevie1704/sil/actions/runs/35705741334)
 on native Linux x86-64. Both archives passed the pinned schema and both call
-paths. All 60 SiL output samples matched the independent expectations, and both
-Recordings for each of the three Manifests are byte-identical. Both FMU builds
-also reproduced their archive bytes. The full identities and original traces
-are retained, including the null-resource-path failure and successful fix.
+paths. All 60 SiL output samples matched the independent expectations; both
+Recordings per Manifest and both clean builds per FMU were byte-identical.
 
-The original FMUs are retained unchanged under `tests/fixtures/pythonfmu3/` and
-exercised by `tests/test_fmi_resources.py` in the ordinary test suite. They do
-not require an exporter rebuild. Their identities match the original evidence;
-new proof builds receive new identities and evidence directories.
+One authoritative FMU pair lives under `tests/fixtures/pythonfmu3/`, shared by
+this evidence and the ordinary-suite resource regression tests. Compact CSV
+traces retain initialization, communication points and final termination.
+Manifests, Recordings, provenance, both build/Run hashes and runtime identities
+remain directly verifiable. Full raw JSON and routine logs stay in CI artifacts;
+older development snapshots remain in Git history. See the evidence index for
+column meanings and the retention policy.
 
-Evidence checks use explicit exceptions and remain active with `python -O`.
-`rebuild.json` records both build hashes per FMU, and `results.json` records both
-Recording filenames, hashes and successful exit codes per Manifest. Lifecycle
-traces retain successful termination after the final interval. Empty log files
-mean a successful command wrote no console output; they are retained in the new
-complete snapshots. The negative resource case records an explicit rejection
-JSON instead of relying on the absence of a success file.
-
-XML normalization splices only the root token value and optional generation-date
-attribute. It preserves all other XML bytes, including namespace prefixes and
-comments; tests cover the missing-date case and quoted values. The script and
-workflow retain both a complete evidence artifact and a separate Manifest and
-Recording artifact. `SIL_ACC_PARTICIPANT_TIMEOUT_MS` can increase the response
-deadline for slower hosts without changing the Manifest.
-
-The [complete post-review native snapshot](evidence-review/README.md) retains
-every generated artifact, including both FMUs, successful empty logs, explicit
-rebuild comparisons and final termination records. The original snapshot is
-preserved separately so improvements to the proof do not rewrite old evidence.
+Evidence gates raise explicitly, including under `python -O`. XML normalization
+splices only the root token and optional generation date, preserving all other
+bytes; tests cover namespace prefixes, comments and a missing date.
+`SIL_ACC_PARTICIPANT_TIMEOUT_MS` can increase the response deadline for slower
+hosts without changing the Manifest. The workflow uploads the complete raw
+outputs and a separate Manifest/Recording artifact on every qualification Run.

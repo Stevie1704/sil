@@ -89,10 +89,9 @@ FMI implementation and is bundled by its own exporter into the generated FMUs;
 its release license is retained in each FMU as `resources/LICENSE-PythonFMU3`
 and in `proofs/acc-fmi/pythonfmu3-LICENSE`. FMPy supplies an independent call
 path and the FMI schema tree (BSD-2-Clause, with notices in the schema files).
-The original qualification FMUs are retained as regression fixtures under
-`tests/fixtures/pythonfmu3/`, and complete qualification snapshots also retain
-their built FMUs. Both include the exporter implementation and its upstream
-notices. Neither tool becomes a SiL runtime dependency or enters the
+One qualification FMU pair is retained under `tests/fixtures/pythonfmu3/`,
+shared by regression tests and the proof evidence. The archives include the
+exporter implementation and its upstream notices. Neither tool becomes a SiL runtime dependency or enters the
 published production runtime.
 The proof image pins CPython 3.13.7 (PSF license) and all Python dependencies;
 their installed distribution metadata and Debian copyright files retain their

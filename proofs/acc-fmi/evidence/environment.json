@@ -36,8 +36,8 @@
     "MarkupSafe": "3.0.3",
     "msgpack": "1.2.2"
   },
-  "source_revision": "4c1e01f5db68deafb20a44aeed7bc0ba4bfc8ade",
-  "runner_sha256": "b29ba5defb291c01ddd5e58e42f2810ce7a2f301a8d59210e91a893553bd90cb",
+  "source_revision": "09fab1eb618c873aa07b0f957f4f4b305c635b84",
+  "runner_sha256": "fb6c7cdf2a939d3d3790ca666c6242b0a920111e2976075afe8ab9abb10f4cd2",
   "libpython": {
     "path": "/usr/local/lib/libpython3.13.so",
     "sha256": "27e91436972340b794fddbd25091fd13957fde60546b4f7270bbf1c243aebf75"
@@ -45,5 +45,6 @@
   "tolerances": {
     "absolute": 1e-10,
     "relative": 1e-12
-  }
+  },
+  "participant_timeout_ms": 30000
 }
