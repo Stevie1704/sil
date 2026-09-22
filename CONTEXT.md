@@ -36,6 +36,17 @@ _Avoid_: tick, update, advance
 The length of virtual time a run covers, after which the kernel stops.
 _Avoid_: runtime, horizon, end time
 
+**Period**:
+The elapsed virtual time between successive periodic activations of a
+participant. It is the reciprocal of frequency; use period when describing the
+time between activations.
+_Avoid_: rate, interval when naming a participant's recurring schedule
+
+**Observation grid**:
+The authored set of virtual times at which a trajectory is compared. It is a
+comparison policy, not a participant's Period and not a resampling operation.
+_Avoid_: sample rate, interpolation grid, timestep
+
 ### Participants
 
 **Participant**:
@@ -68,6 +79,11 @@ _Avoid_: player, source, injector
 A participant whose job is to publish stimuli and evaluate assertions at
 defined virtual times; its failure aborts the run.
 _Avoid_: test harness, checker, monitor
+
+**Maneuver**:
+An authored time-varying input applied by one or more Participants to exercise
+the behavior under test. A Maneuver is part of the reproducible Run contract.
+_Avoid_: scenario, stimulus when naming the authored behavior
 
 **vECU**:
 A piece of vehicle software under test, brought into a run as a participant.
@@ -256,3 +272,9 @@ against it answers what the determinism check cannot: whether the importer is
 correct, not whether the run reproduces. A tolerance check and never a bit
 comparison — the vendor produced it on another machine class.
 _Avoid_: golden file, expected output, baseline, ground truth
+
+**Sensitivity envelope**:
+A predeclared bound on observed differences in a sensitivity experiment. It
+states what deviations the experiment accepts; it is not fitted from the
+results and does not imply monotonic convergence.
+_Avoid_: tuned tolerance, convergence bound

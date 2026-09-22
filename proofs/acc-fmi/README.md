@@ -20,7 +20,7 @@ Float64 scalars. Units are declared in `modelDescription.xml`.
 | FMU | Inputs | Outputs |
 | --- | --- | --- |
 | `AccController` | gap (m), relative speed (m/s), ego speed (m/s) | commanded acceleration (m/s²) |
-| `AccPlant` | commanded ego acceleration (m/s²) | ego and lead positions (m), ego and lead speeds (m/s), gap (m), relative speed (m/s) |
+| `AccPlant` | commanded ego acceleration (m/s²), lead acceleration (m/s²), initial lead position (m) | ego and lead positions (m), ego and lead speeds (m/s), gap (m), relative speed (m/s) |
 
 Controller: desired gap = `5 m + 1.5 s × ego_speed`.
 Raw acceleration = `0.35 s⁻² × (gap − desired_gap) + 1.2 s⁻¹ × relative_speed`.
@@ -30,9 +30,10 @@ Mode leave the previous command held until `doStep` samples the new inputs.
 
 Plant: `x(t+h) = x(t) + v(t)h + a h²/2`, `v(t+h) = v(t) + a h`.
 Initially ego `(x,v)=(0 m,25 m/s)` and lead `(60 m,25 m/s)`; lead acceleration
-is always zero and ego command defaults to zero. The plant applies the supplied
-acceleration without a second clamp, speed floor or collision model. Negative
-speed is mathematically possible; these one-second cases never reach it.
+defaults to zero and ego command defaults to zero. The sensitivity proof can
+author lead acceleration and initial lead position as inputs without changing
+the default qualification behavior. The plant applies supplied accelerations
+without a second clamp, speed floor or collision model.
 
 Inputs are held constant throughout each communication interval and persist
 until explicitly replaced. All Runs use ten fixed 0.1 s intervals covering
@@ -182,8 +183,9 @@ FMI calls, and returns a grid receipt and integer interval boundaries. The gate
 checks that receipt, every boundary and all Recording timestamps/counts. XML
 names, causalities, Float64 types, SI units and input starts are checked too.
 These FMUs declare a fixed communication-step profile, no internal Clock and no
-DefaultExperiment rate; there is no hidden FMU sample rate to infer. The positive
-constant driver interval supplies their rate. Unknown or wrong-causality bindings
+DefaultExperiment rate; there is no hidden FMU sample period to infer. The
+positive constant driver period supplies their period. Unknown or
+wrong-causality bindings
 are tested in actual SiL Runs and must fail with exit 2.
 
 ### Exchange table
@@ -279,10 +281,67 @@ python proofs/acc-fmi/loop_evidence.py build/acc-loop-evidence build/acc-loop-re
 ```
 
 The CI workflow uses `SIL_ACC_PROOF=all` to build one pinned image and execute
-both proofs in separate containers. It retains separate `acc-fmi-evidence` and
-`acc-loop-evidence` artifacts plus an additional Manifest/Recording artifact
-covering both proofs. The old open-loop baseline remains unchanged. No kernel,
-Importer, ABI, protocol or original example behavior changes.
+the qualification, closed-loop, and sensitivity proofs in separate containers.
+It retains separate `acc-fmi-evidence`, `acc-loop-evidence`, and
+`acc-sensitivity-evidence` artifacts plus an additional Manifest/Recording
+artifact covering all proofs. The old open-loop baseline remains unchanged. No
+kernel, Importer, ABI, protocol or original example behavior changes.
 
 [Retained closed-loop evidence](closed-loop-evidence/README.md) identifies the
 native execution snapshot; rebuilding produces a new identified snapshot.
+
+## Communication-period sensitivity (#149)
+
+Run the experiment in the same pinned image with:
+
+```sh
+SIL_ACC_PROOF=sensitivity proofs/acc-fmi/run-proof.sh build/acc-sensitivity-evidence
+```
+
+`sensitivity.py` writes `configuration.json` before starting either the
+independent driver or a SiL Run. It records the equations, exchange algorithm,
+sample/hold rules, initial state, Duration, exact endpoint observation grid,
+every participant Period, every Channel Latency, the Maneuver and the zero
+modeled physical delay. The plant is integrated as
+`x(t+h)=x(t)+v(t)h+a*h*h/2`, `v(t+h)=v(t)+a*h`; the controller is the fixed
+clamped law already qualified in this directory. A Message contains the
+post-step output, is timestamped at its activation Slot, and is compared at
+the endpoint time `publication + participant Period`.
+
+The authored matrix is deliberately split:
+
+| Family | Rows | What changes | Reference |
+| --- | --- | --- | --- |
+| Constant sanity | constant acceleration at 20/10/5 ms | plant fixed-period integration against a closed form | analytic oracle; expected to be exact |
+| Plant forcing | piecewise-constant lead acceleration at 20/10/5 ms | held-input plant refinement with a changing Maneuver | continuous piecewise-input analytic oracle |
+| Closed-loop plant refinement | plant at 20/10/5 ms, controller and Latencies fixed at 10 ms | plant Period only | independent 1 ms-plant FMPy Run |
+| Controller sampling | controller at 20/10/5 ms, plant and Latencies fixed at 10 ms | controller sampling/hold | independent 1 ms-controller FMPy Run |
+| Channel Latency | Latency 0/10/20 ms, both participant periods fixed at 10 ms | end-to-end Channel Latency only | independent finer FMPy Run; KPI delta also against the independent 10 ms comparison reference |
+| Combined sensitivity | closed loop at 20/10/5 ms | plant Period, controller sampling, and both Latencies | independent 1 ms combined FMPy Run |
+| Negative control | 10 ms loop with a deliberately incorrect 250 ms sensing Latency | timing defect | independent finer FMPy Run; envelope check against the 10 ms comparison reference |
+
+The constant-oracle rows are a sanity check, not the sensitivity signal: exact
+constant-acceleration integration telescopes over every Period. The changing
+lead Maneuver has transitions deliberately off the 5/10/20 ms grids, so the
+plant-forcing rows measure held-input discretization against a continuous
+piecewise-input oracle. The closed-loop plant-refinement rows hold controller
+sampling and modeled physical Latencies fixed, which is the separation the
+experiment is intended to establish. The qualified FMUs advertise
+`canHandleVariableCommunicationStepSize=false`, so each row is a separate
+constant-Period Run. The finer 1 ms comparisons are independent fixed-Period
+FMPy Runs, not a claim of variable-step FMI support.
+
+Each measured row authors its Manifest twice and runs that same Manifest twice;
+only those same-row Recordings are compared byte-for-byte. Recordings from
+different step sizes are never compared for byte identity. The report compares
+native endpoint samples to exact reference times and rejects missing samples
+instead of interpolating across them. It reports maximum gap, speed, position,
+and command errors, minimum-gap and other KPI changes, Manifest/Recording and
+FMPy-reference identities, a readable Markdown table and two SVG plots in
+addition to `sensitivity-report.json`. The table shows both the independent
+fine/analytic comparison and, where present, the 10 ms comparison that drives
+the Sensitivity-envelope verdict. The envelope and its physical scale rationale
+are authored before any reference or Run; it is an observation bound rather
+than a monotonic-convergence assertion. The negative timing row must exceed it.
+The compact report, plots and plot data are retained under `curated/` so the
+evidence path is directly reviewable.

@@ -5,16 +5,17 @@
 # Execution itself has no network. All outputs, including failures, are copied
 # from each container; containers are removed and failure status propagated.
 # SIL_ACC_PARTICIPANT_TIMEOUT_MS overrides the 30000 ms response deadline.
-# SIL_ACC_PROOF: qualify (default), closed_loop, or all (one build, two proofs).
-# With all, evidence goes into qualify/ and closed_loop/ below the destination.
+# SIL_ACC_PROOF: qualify (default), closed_loop, sensitivity, or all (one build).
+# With all, evidence goes into qualify/, closed_loop/, and sensitivity/ below
+# the destination.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 evidence=${1:-"$root/build/acc-fmi-evidence"}
 proof=${SIL_ACC_PROOF:-qualify}
 case "$proof" in
-    qualify|closed_loop) modes=("$proof") ;;
-    all) modes=(qualify closed_loop) ;;
-    *) echo "SIL_ACC_PROOF must be qualify, closed_loop or all" >&2; exit 2 ;;
+    qualify|closed_loop|sensitivity) modes=("$proof") ;;
+    all) modes=(qualify closed_loop sensitivity) ;;
+    *) echo "SIL_ACC_PROOF must be qualify, closed_loop, sensitivity or all" >&2; exit 2 ;;
 esac
 mkdir -p "$evidence"
 evidence=$(cd "$evidence" && pwd)
