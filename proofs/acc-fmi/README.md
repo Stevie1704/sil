@@ -223,3 +223,8 @@ all configuration/tolerances, FMPy initialization and per-interval sampled and
 applied values, final states, numeric verdicts and negative-control diagnostics.
 The `acc-loop-evidence` CI artifact retains this independently of #147 evidence.
 No kernel, Importer, ABI, protocol, or existing example behavior changes.
+
+[Retained closed-loop evidence](closed-loop-evidence/README.md) records a native
+Linux pass: 500 matched communication points, minimum gap 49.96364767075116 m,
+byte-identical repeat Runs, all three negative controls detected, and both
+invalid-binding cases rejected with exit 2.

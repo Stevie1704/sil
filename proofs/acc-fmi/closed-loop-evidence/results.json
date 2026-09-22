@@ -1,0 +1,33 @@
+{
+  "closed_loop": {
+    "manifest_sha256": "2bc4f85838fc89d81fc943858f7e147215251a0f16f29353862d7132adf5fcf2",
+    "recording_sha256": [
+      "2a6995c5722c4fcf7865160560b7bba9def4343ad0309d44ca09e85528636979",
+      "2a6995c5722c4fcf7865160560b7bba9def4343ad0309d44ca09e85528636979"
+    ]
+  },
+  "original_python": {
+    "manifest_sha256": "224f7991e555c12418e996f9d48b816e3e35224da61e68876147d8d357073e59",
+    "recording_sha256": [
+      "d53b512cef8c8813f6168b36cd966de0cfd802cf2e885a9be2591d11bcdfd9d6",
+      "d53b512cef8c8813f6168b36cd966de0cfd802cf2e885a9be2591d11bcdfd9d6"
+    ]
+  },
+  "minimum_gap_m": 49.96364767075116,
+  "checked_samples": 500,
+  "negative_controls": {
+    "shift-command": "first mismatch gap_m publication=10000000 communication=20000000: SiL=59.999925, reference=60.0",
+    "shift-sensing": "first mismatch accel_mps2 publication=1560000000 communication=1570000000: SiL=1.4837187499998121, reference=1.5",
+    "initial-command": "first mismatch gap_m publication=0 communication=10000000: SiL=60.0, reference=59.999975"
+  },
+  "invalid_bindings": {
+    "unknown": {
+      "exit_code": 2,
+      "diagnostic": "does not declare"
+    },
+    "causality": {
+      "exit_code": 2,
+      "diagnostic": "causality"
+    }
+  }
+}
