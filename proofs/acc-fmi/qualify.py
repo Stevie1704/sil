@@ -116,6 +116,16 @@ def run(out):
     inspect_archives(out)
     command([sys.executable, "-m", "pytest", HERE / "test_expected.py", "-q"],
             out / "oracle-negative-tests.log")
+    # Same external archive, one changed instantiate argument. Keep the exact
+    # null-path symptom that motivated the Importer correction beside success.
+    rejected = subprocess.run(
+        [sys.executable, str(HERE / "initialization.py"), "controller",
+         str(out / "null-resource-initialization.json")],
+        capture_output=True, text=True, timeout=30,
+    )
+    (out / "null-resource-path.log").write_text(rejected.stdout + rejected.stderr)
+    assert rejected.returncode == 1
+    assert "fmi3InstantiateCoSimulation returned no instance" in rejected.stderr
     results = {}
     for name, case in CASES.items():
         command([sys.executable, HERE / "independent.py", name, out / f"{name}.fmpy.json"],
