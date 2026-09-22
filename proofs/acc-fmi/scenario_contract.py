@@ -36,6 +36,7 @@ def configuration(name):
                 fault=None if fault is None else dict(kind=fault, start_ns=2_000_000_000,
                     end_ns=15_000_000_000 if fault == "drop" else 4_000_000_000,
                     delay_ns=200_000_000 if fault == "delay" else 0),
+                minimum_observable_hold_ns=200_000_000 if fault == "delay" else 1_000_000_000,
                 kpi=dict(minimum_gap_m=5.0, acceleration_min_mps2=-3.0,
                          acceleration_max_mps2=1.5, tracking_start_ns=15_000_000_000,
                          spacing_error_max_m=3.0, relative_speed_max_mps=1.0),

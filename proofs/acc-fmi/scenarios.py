@@ -98,13 +98,15 @@ def execute(config, out):
     hashes = compare_files(*recordings)
     require(not diagnostics or diagnostics[0] == diagnostics[1], "failure instant/diagnostic/prefix differs")
     commands = [v[0] for _, v in actual["command"]]
-    require(1.5 in commands, "upper saturation not exercised")
+    low = config["kpi"]["acceleration_min_mps2"]
+    high = config["kpi"]["acceleration_max_mps2"]
+    require(high in commands, "upper saturation not exercised")
     if name in ("braking", "delayed"):
-        require(-3.0 in commands, "lower saturation not exercised")
-        require(-3 < commands[-1] < 1.5, "controller did not leave saturation")
+        require(low in commands, "lower saturation not exercised")
+        require(low < commands[-1] < high, "controller did not leave saturation")
     if config["fault"]:
         max_age = max(v[0] for _, v in actual["freshness"])
-        require(max_age >= (200_000_000 if name == "delayed" else 1_000_000_000), "sensing hold not observable")
+        require(max_age >= config["minimum_observable_hold_ns"], "sensing hold not observable")
     return dict(manifest_sha256=identity, authored_manifest_sha256=authored,
                 recording_sha256=hashes, expected_exit=config["expected_exit"],
                 behavior=config["behavior"], failure=diagnostics, in_run_coverage=coverage,
