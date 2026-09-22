@@ -169,3 +169,8 @@ comments; tests cover the missing-date case and quoted values. The script and
 workflow retain both a complete evidence artifact and a separate Manifest and
 Recording artifact. `SIL_ACC_PARTICIPANT_TIMEOUT_MS` can increase the response
 deadline for slower hosts without changing the Manifest.
+
+The [complete post-review native snapshot](evidence-review/README.md) retains
+every generated artifact, including both FMUs, successful empty logs, explicit
+rebuild comparisons and final termination records. The original snapshot is
+preserved separately so improvements to the proof do not rewrite old evidence.

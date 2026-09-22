@@ -1,0 +1,16 @@
+{
+  "AccController": {
+    "build_sha256": [
+      "a57e393cffcd68161c8f6fab04bd3a291e337ea429004fda2a9b370a5b3b0711",
+      "a57e393cffcd68161c8f6fab04bd3a291e337ea429004fda2a9b370a5b3b0711"
+    ],
+    "byte_identical": true
+  },
+  "AccPlant": {
+    "build_sha256": [
+      "0f5c682b01f0fe94a1b23e20be048dd844375acbcb863adeed9f5b990645d77e",
+      "0f5c682b01f0fe94a1b23e20be048dd844375acbcb863adeed9f5b990645d77e"
+    ],
+    "byte_identical": true
+  }
+}

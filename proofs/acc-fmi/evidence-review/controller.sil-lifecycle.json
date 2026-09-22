@@ -1,0 +1,188 @@
+[
+  {
+    "instance": 0,
+    "phase": "initialized",
+    "time": 0.0,
+    "values": [
+      1.5
+    ]
+  },
+  {
+    "instance": 0,
+    "phase": "step",
+    "time": 0.1,
+    "values": [
+      1.5
+    ]
+  },
+  {
+    "instance": 0,
+    "phase": "step",
+    "time": 0.2,
+    "values": [
+      1.5
+    ]
+  },
+  {
+    "instance": 0,
+    "phase": "step",
+    "time": 0.3,
+    "values": [
+      -3.0
+    ]
+  },
+  {
+    "instance": 0,
+    "phase": "step",
+    "time": 0.4,
+    "values": [
+      -3.0
+    ]
+  },
+  {
+    "instance": 0,
+    "phase": "step",
+    "time": 0.5,
+    "values": [
+      0.35
+    ]
+  },
+  {
+    "instance": 0,
+    "phase": "step",
+    "time": 0.6,
+    "values": [
+      0.35
+    ]
+  },
+  {
+    "instance": 0,
+    "phase": "step",
+    "time": 0.7,
+    "values": [
+      0.0
+    ]
+  },
+  {
+    "instance": 0,
+    "phase": "step",
+    "time": 0.8,
+    "values": [
+      0.0
+    ]
+  },
+  {
+    "instance": 0,
+    "phase": "step",
+    "time": 0.9,
+    "values": [
+      1.2
+    ]
+  },
+  {
+    "instance": 0,
+    "phase": "step",
+    "time": 1.0,
+    "values": [
+      1.2
+    ]
+  },
+  {
+    "instance": 0,
+    "phase": "terminated",
+    "time": 1.0
+  },
+  {
+    "instance": 1,
+    "phase": "initialized",
+    "time": 0.0,
+    "values": [
+      -1.2
+    ]
+  },
+  {
+    "instance": 1,
+    "phase": "step",
+    "time": 0.1,
+    "values": [
+      -1.2
+    ]
+  },
+  {
+    "instance": 1,
+    "phase": "step",
+    "time": 0.2,
+    "values": [
+      -1.2
+    ]
+  },
+  {
+    "instance": 1,
+    "phase": "step",
+    "time": 0.3,
+    "values": [
+      -1.2
+    ]
+  },
+  {
+    "instance": 1,
+    "phase": "step",
+    "time": 0.4,
+    "values": [
+      1.5
+    ]
+  },
+  {
+    "instance": 1,
+    "phase": "step",
+    "time": 0.5,
+    "values": [
+      1.5
+    ]
+  },
+  {
+    "instance": 1,
+    "phase": "step",
+    "time": 0.6,
+    "values": [
+      1.5
+    ]
+  },
+  {
+    "instance": 1,
+    "phase": "step",
+    "time": 0.7,
+    "values": [
+      1.5
+    ]
+  },
+  {
+    "instance": 1,
+    "phase": "step",
+    "time": 0.8,
+    "values": [
+      -3.0
+    ]
+  },
+  {
+    "instance": 1,
+    "phase": "step",
+    "time": 0.9,
+    "values": [
+      -3.0
+    ]
+  },
+  {
+    "instance": 1,
+    "phase": "step",
+    "time": 1.0,
+    "values": [
+      -3.0
+    ]
+  },
+  {
+    "instance": 1,
+    "phase": "terminated",
+    "time": 1.0
+  }
+]
