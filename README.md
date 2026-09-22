@@ -811,7 +811,7 @@ proofs/esmini/     consumer-side adoption proof: a third-party scenario
                    engine run on the published release, with its evidence
 proofs/acc-fmi/    checkout qualification of source-available ACC FMUs:
                    pinned exporter, independent FMI execution, closed-loop
-                   rate-sensitivity experiment, retained evidence
+                   communication-period sensitivity experiment, retained evidence
 proofs/fmi-ls-bus/ acceptance fixture for the FMI-LS-BUS CAN demo FMUs:
                    pinned artifacts, the supported profile, what the released
                    Importer does with them, and what the checkout's does

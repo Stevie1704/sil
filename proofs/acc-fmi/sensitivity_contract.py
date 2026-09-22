@@ -1,24 +1,22 @@
-"""Authored matrix for the closed-loop communication-interval experiment.
-
-This module is deliberately data-first.  ``configuration()`` is written before
-any independent reference or SiL Run is collected, so the report can never
-silently acquire a period or Latency from an observed artifact.
-"""
+"""Authored contract for the closed-loop communication-period experiment."""
 from __future__ import annotations
 
-from copy import deepcopy
+from dataclasses import dataclass
 
 MS = 1_000_000
 SECOND = 1_000 * MS
-RATES_NS = (20 * MS, 10 * MS, 5 * MS)
-BASE_NS = 10 * MS
-REFERENCE_NS = 1 * MS
+PERIODS_NS = (20 * MS, 10 * MS, 5 * MS)
+BASE_PERIOD_NS = 10 * MS
+MANEUVER_PERIOD_NS = 1 * MS
+REFERENCE_PERIOD_NS = 1 * MS
 DURATION_NS = 2 * SECOND
-CONSTANT_DURATION_NS = SECOND
-OBSERVATION_GRID_NS = REFERENCE_NS
 KPI_PERIOD_NS = 20 * MS
+TIMING_DEFECT_SENSING_LATENCY_NS = 250 * MS
 MIN_GAP_M = 5.0
 CONSTANT_ACCELERATION_MPS2 = 1.5
+INITIAL_LEAD_POSITION_M = 44.0
+INITIAL_EGO_POSITION_M = 0.0
+INITIAL_SPEED_MPS = 25.0
 REFERENCE_ABS_TOL = 1e-9
 
 SENSING_FIELDS = ["gap_m", "relative_speed_mps", "ego_speed_mps"]
@@ -27,227 +25,338 @@ STATE_FIELDS = [
     "gap_m", "relative_speed_mps",
 ]
 COMMAND_FIELDS = ["accel_mps2"]
+MANEUVER_FIELDS = ["lead_accel_mps2"]
 CHANNEL_FIELDS = {
     "sensing": SENSING_FIELDS,
     "state": STATE_FIELDS,
     "command": COMMAND_FIELDS,
+    "maneuver": MANEUVER_FIELDS,
 }
 
 INITIAL_STATE = {
-    "ego_position_m": 0.0,
-    "ego_speed_mps": 25.0,
-    "lead_position_m": 60.0,
-    "lead_speed_mps": 25.0,
+    "ego_position_m": INITIAL_EGO_POSITION_M,
+    "ego_speed_mps": INITIAL_SPEED_MPS,
+    "lead_position_m": INITIAL_LEAD_POSITION_M,
+    "lead_speed_mps": INITIAL_SPEED_MPS,
 }
 INITIAL_OUTPUT_STATE = {
     **INITIAL_STATE,
-    "gap_m": 60.0,
+    "gap_m": INITIAL_LEAD_POSITION_M - INITIAL_EGO_POSITION_M,
     "relative_speed_mps": 0.0,
 }
+INITIAL_SENSING = {
+    "gap_m": INITIAL_OUTPUT_STATE["gap_m"],
+    "relative_speed_mps": 0.0,
+    "ego_speed_mps": INITIAL_SPEED_MPS,
+}
+INITIAL_CONTROLLER_COMMAND_MPS2 = 0.525
+INITIAL_COMMAND_MPS2 = 0.0
 
-# A 20 ms hold at the initial 25 m/s covers 0.5 m.  The speed and command
-# allowances cover one such interval at the plant's ±3 m/s² command envelope.
-# The command budget is 0.15 m/s² so the coarsest declared closed-loop row has
-# room for its observed sampled-law change without turning the bound into an
-# exact-fit assertion.
-# These are an acceptance envelope for the declared rate matrix, not a claim
-# that a sampled nonlinear controller must converge monotonically.
+# Transitions intentionally miss the 5/10/20 ms plant grids. The 1 ms
+# Maneuver participant publishes the left-held value on each 1 ms Slot.
+MANEUVER_SEGMENTS = (
+    (0, 237 * MS, 0.0),
+    (237 * MS, 613 * MS, 1.5),
+    (613 * MS, 1_087 * MS, -1.5),
+    (1_087 * MS, 1_463 * MS, 0.75),
+    (1_463 * MS, DURATION_NS, -0.75),
+)
+
+# Declared before any Run. These are acceptance bounds for the authored normal
+# matrix, not fitted tolerances or a claim of monotonic convergence.
 ACCEPTANCE_ENVELOPE = {
-    "gap_m": 0.5,
-    "ego_position_m": 0.5,
-    "lead_position_m": 0.5,
-    "ego_speed_mps": 0.1,
-    "lead_speed_mps": 0.1,
-    "relative_speed_mps": 0.1,
-    "accel_mps2": 0.15,
-    "minimum_gap_m": 0.5,
+    "gap_m": 1.0,
+    "ego_position_m": 1.0,
+    "lead_position_m": 1.0,
+    "ego_speed_mps": 0.5,
+    "lead_speed_mps": 0.5,
+    "relative_speed_mps": 0.5,
+    "accel_mps2": 0.5,
+    # The authored Maneuver participant is part of the exact-time comparison;
+    # its schedule must not be silently replaced by a resampled input.
+    "lead_accel_mps2": 1e-12,
+    "minimum_gap_m": 1.0,
 }
 
 
-def _row(
-    name: str,
-    family: str,
-    scenario: str,
-    plant_period_ns: int | None,
-    controller_period_ns: int | None,
-    sensing_latency_ns: int | None,
-    command_latency_ns: int | None,
-    *,
-    duration_ns: int = DURATION_NS,
-    reference: str,
-    negative_control: bool = False,
-    sensitivity_baseline: str | None = None,
-    initial_command_mps2: float = 0.0,
-) -> dict:
-    return {
-        "name": name,
-        "family": family,
-        "scenario": scenario,
-        "duration_ns": duration_ns,
-        "observation_grid_ns": OBSERVATION_GRID_NS,
-        "periods_ns": {
-            "plant": plant_period_ns,
-            "controller": controller_period_ns,
-            "kpi": KPI_PERIOD_NS if controller_period_ns is not None else None,
-        },
-        "latencies_ns": {
-            "sensing": sensing_latency_ns,
-            "command": command_latency_ns,
-            "state": 0 if plant_period_ns is not None else None,
-        },
-        "modeled_physical_delay_ns": 0,
-        "initial_command_mps2": initial_command_mps2,
-        "reference": reference,
-        "negative_control": negative_control,
-        "sensitivity_baseline": sensitivity_baseline,
-    }
+def lead_acceleration_at_ns(time_ns: int) -> float:
+    """The authored input value visible on the Maneuver Channel at ``time_ns``."""
+    for start_ns, end_ns, acceleration in MANEUVER_SEGMENTS:
+        if start_ns <= time_ns < end_ns:
+            return acceleration
+    return MANEUVER_SEGMENTS[-1][2]
 
 
-def _rate_name(prefix: str, period_ns: int) -> str:
+@dataclass(frozen=True)
+class SensitivityRow:
+    """One fully declared Run family member."""
+
+    name: str
+    family: str
+    kind: str
+    duration_ns: int
+    plant_period_ns: int
+    controller_period_ns: int | None
+    maneuver_period_ns: int | None
+    kpi_period_ns: int | None
+    sensing_latency_ns: int | None
+    command_latency_ns: int | None
+    maneuver_latency_ns: int | None
+    state_latency_ns: int | None
+    reference: str
+    sensitivity_baseline: str | None = None
+    negative_control: bool = False
+    initial_command_mps2: float = INITIAL_COMMAND_MPS2
+
+    @property
+    def periods(self) -> dict[str, int | None]:
+        return {
+            "plant": self.plant_period_ns,
+            "controller": self.controller_period_ns,
+            "maneuver": self.maneuver_period_ns,
+            "kpi": self.kpi_period_ns,
+        }
+
+    @property
+    def latencies(self) -> dict[str, int | None]:
+        return {
+            "sensing": self.sensing_latency_ns,
+            "command": self.command_latency_ns,
+            "maneuver": self.maneuver_latency_ns,
+            "state": self.state_latency_ns,
+        }
+
+    @property
+    def closed_loop(self) -> bool:
+        return self.controller_period_ns is not None
+
+    @property
+    def has_maneuver(self) -> bool:
+        return self.maneuver_period_ns is not None
+
+    def to_document(self) -> dict:
+        return {
+            "name": self.name,
+            "family": self.family,
+            "kind": self.kind,
+            "duration_ns": self.duration_ns,
+            "observation_grid_ns": REFERENCE_PERIOD_NS,
+            "periods_ns": self.periods,
+            "latencies_ns": self.latencies,
+            "modeled_physical_delay_ns": 0,
+            "initial_command_mps2": self.initial_command_mps2,
+            "reference": self.reference,
+            "sensitivity_baseline": self.sensitivity_baseline,
+            "negative_control": self.negative_control,
+        }
+
+
+def _period_name(prefix: str, period_ns: int) -> str:
     return f"{prefix}-{period_ns // MS}ms"
 
 
-def measured_rows() -> list[dict]:
-    rows = []
-    rows.extend(
-        _row(
-            _rate_name("constant", period),
-            "integration-refinement",
-            "constant-acceleration",
-            period,
-            None,
-            None,
-            None,
-            duration_ns=CONSTANT_DURATION_NS,
-            reference="analytic",
+def _closed_loop_row(
+    name: str,
+    family: str,
+    kind: str,
+    *,
+    plant_period_ns: int,
+    controller_period_ns: int,
+    sensing_latency_ns: int,
+    command_latency_ns: int,
+    reference: str,
+    sensitivity_baseline: str | None = None,
+    negative_control: bool = False,
+) -> SensitivityRow:
+    return SensitivityRow(
+        name=name,
+        family=family,
+        kind=kind,
+        duration_ns=DURATION_NS,
+        plant_period_ns=plant_period_ns,
+        controller_period_ns=controller_period_ns,
+        maneuver_period_ns=MANEUVER_PERIOD_NS,
+        kpi_period_ns=KPI_PERIOD_NS,
+        sensing_latency_ns=sensing_latency_ns,
+        command_latency_ns=command_latency_ns,
+        maneuver_latency_ns=0,
+        state_latency_ns=0,
+        reference=reference,
+        sensitivity_baseline=sensitivity_baseline,
+        negative_control=negative_control,
+    )
+
+
+def measured_rows() -> tuple[SensitivityRow, ...]:
+    rows = [
+        SensitivityRow(
+            name=_period_name("constant", period),
+            family="analytic-oracle",
+            kind="constant-acceleration",
+            duration_ns=DURATION_NS,
+            plant_period_ns=period,
+            controller_period_ns=None,
+            maneuver_period_ns=None,
+            kpi_period_ns=None,
+            sensing_latency_ns=None,
+            command_latency_ns=None,
+            maneuver_latency_ns=None,
+            state_latency_ns=0,
+            reference="analytic-constant",
             initial_command_mps2=CONSTANT_ACCELERATION_MPS2,
         )
-        for period in RATES_NS
-    )
+        for period in PERIODS_NS
+    ]
     rows.extend(
-        _row(
-            _rate_name("combined", period),
-            "combined-sensitivity",
-            "changing-input",
-            period,
-            period,
-            period,
-            period,
-            reference="fine-combined-1ms",
+        SensitivityRow(
+            name=_period_name("forcing", period),
+            family="plant-forcing-oracle",
+            kind="changing-input",
+            duration_ns=DURATION_NS,
+            plant_period_ns=period,
+            controller_period_ns=None,
+            maneuver_period_ns=MANEUVER_PERIOD_NS,
+            kpi_period_ns=None,
+            sensing_latency_ns=None,
+            command_latency_ns=None,
+            maneuver_latency_ns=0,
+            state_latency_ns=0,
+            reference="analytic-forcing",
         )
-        for period in RATES_NS
+        for period in PERIODS_NS
     )
     rows.extend(
-        _row(
-            _rate_name("sampling", period),
+        _closed_loop_row(
+            _period_name("plant", period),
+            "plant-period-sensitivity",
+            "changing-input",
+            plant_period_ns=period,
+            controller_period_ns=BASE_PERIOD_NS,
+            sensing_latency_ns=BASE_PERIOD_NS,
+            command_latency_ns=BASE_PERIOD_NS,
+            reference="fine-plant-1ms",
+        )
+        for period in PERIODS_NS
+    )
+    rows.extend(
+        _closed_loop_row(
+            _period_name("sampling", period),
             "controller-sampling",
             "changing-input",
-            BASE_NS,
-            period,
-            BASE_NS,
-            BASE_NS,
+            plant_period_ns=BASE_PERIOD_NS,
+            controller_period_ns=period,
+            sensing_latency_ns=BASE_PERIOD_NS,
+            command_latency_ns=BASE_PERIOD_NS,
             reference="fine-sampling-1ms",
         )
-        for period in RATES_NS
+        for period in PERIODS_NS
     )
     rows.extend(
-        _row(
+        _closed_loop_row(
             f"latency-{latency // MS}ms",
             "channel-latency",
             "changing-input",
-            BASE_NS,
-            BASE_NS,
-            latency,
-            latency,
+            plant_period_ns=BASE_PERIOD_NS,
+            controller_period_ns=BASE_PERIOD_NS,
+            sensing_latency_ns=latency,
+            command_latency_ns=latency,
             reference=f"fine-latency-{latency // MS}ms",
             sensitivity_baseline="latency-10ms",
         )
-        for latency in (0, BASE_NS, 20 * MS)
+        for latency in (0, BASE_PERIOD_NS, 20 * MS)
+    )
+    rows.extend(
+        _closed_loop_row(
+            _period_name("combined", period),
+            "combined-sensitivity",
+            "changing-input",
+            plant_period_ns=period,
+            controller_period_ns=period,
+            sensing_latency_ns=period,
+            command_latency_ns=period,
+            reference="fine-combined-1ms",
+        )
+        for period in PERIODS_NS
     )
     rows.append(
-        _row(
+        _closed_loop_row(
             "timing-defect",
             "negative-control",
             "changing-input",
-            BASE_NS,
-            BASE_NS,
-            100 * MS,
-            BASE_NS,
+            plant_period_ns=BASE_PERIOD_NS,
+            controller_period_ns=BASE_PERIOD_NS,
+            sensing_latency_ns=TIMING_DEFECT_SENSING_LATENCY_NS,
+            command_latency_ns=BASE_PERIOD_NS,
             reference="fine-timing-defect",
-            negative_control=True,
             sensitivity_baseline="latency-10ms",
+            negative_control=True,
         )
     )
-    return rows
+    return tuple(rows)
 
 
-def reference_rows() -> list[dict]:
-    return [
-        _row(
-            "fine-combined-1ms",
-            "independent-reference",
-            "changing-input",
-            REFERENCE_NS,
-            REFERENCE_NS,
-            REFERENCE_NS,
-            REFERENCE_NS,
+def reference_rows() -> tuple[SensitivityRow, ...]:
+    return (
+        _closed_loop_row(
+            "fine-plant-1ms", "independent-reference", "changing-input",
+            plant_period_ns=REFERENCE_PERIOD_NS,
+            controller_period_ns=BASE_PERIOD_NS,
+            sensing_latency_ns=BASE_PERIOD_NS,
+            command_latency_ns=BASE_PERIOD_NS,
             reference="self",
         ),
-        _row(
-            "fine-sampling-1ms",
-            "independent-reference",
-            "changing-input",
-            BASE_NS,
-            REFERENCE_NS,
-            BASE_NS,
-            BASE_NS,
+        _closed_loop_row(
+            "fine-sampling-1ms", "independent-reference", "changing-input",
+            plant_period_ns=BASE_PERIOD_NS,
+            controller_period_ns=REFERENCE_PERIOD_NS,
+            sensing_latency_ns=BASE_PERIOD_NS,
+            command_latency_ns=BASE_PERIOD_NS,
             reference="self",
         ),
-        *[
-            _row(
+        *(
+            _closed_loop_row(
                 f"fine-latency-{latency // MS}ms",
                 "independent-reference",
                 "changing-input",
-                REFERENCE_NS,
-                REFERENCE_NS,
-                latency,
-                latency,
+                plant_period_ns=REFERENCE_PERIOD_NS,
+                controller_period_ns=REFERENCE_PERIOD_NS,
+                sensing_latency_ns=latency,
+                command_latency_ns=latency,
                 reference="self",
             )
-            for latency in (0, BASE_NS, 20 * MS)
-        ],
-        _row(
-            "fine-timing-defect",
-            "independent-reference",
-            "changing-input",
-            REFERENCE_NS,
-            REFERENCE_NS,
-            100 * MS,
-            BASE_NS,
+            for latency in (0, BASE_PERIOD_NS, 20 * MS)
+        ),
+        _closed_loop_row(
+            "fine-combined-1ms", "independent-reference", "changing-input",
+            plant_period_ns=REFERENCE_PERIOD_NS,
+            controller_period_ns=REFERENCE_PERIOD_NS,
+            sensing_latency_ns=REFERENCE_PERIOD_NS,
+            command_latency_ns=REFERENCE_PERIOD_NS,
             reference="self",
         ),
-    ]
-
-
-def row(name: str) -> dict:
-    for item in measured_rows() + reference_rows():
-        if item["name"] == name:
-            return deepcopy(item)
-    raise KeyError(name)
+        _closed_loop_row(
+            "fine-timing-defect", "independent-reference", "changing-input",
+            plant_period_ns=REFERENCE_PERIOD_NS,
+            controller_period_ns=REFERENCE_PERIOD_NS,
+            sensing_latency_ns=TIMING_DEFECT_SENSING_LATENCY_NS,
+            command_latency_ns=BASE_PERIOD_NS,
+            reference="self",
+        ),
+    )
 
 
 def configuration() -> dict:
     return {
-        "experiment": "closed-loop communication-interval sensitivity",
-        "schema_version": 1,
-        "duration_policy": (
-            "Each row owns its declared Duration; changing-input rows cover "
-            "[0, 2 s), constant-acceleration rows cover [0, 1 s)."
-        ),
+        "experiment": "closed-loop communication-period sensitivity",
+        "duration_policy": "Every row covers [0, 2 s) and ends on its declared participant periods.",
         "equations": {
             "plant": (
-                "x(t+h)=x(t)+v(t)h+0.5*a*h*h; "
-                "v(t+h)=v(t)+a*h"
+                "p_next=p+v*h+0.5*a*h*h; v_next=v+a*h for the held input; "
+                "lead acceleration is the Maneuver Channel value held by the FMU."
+            ),
+            "continuous_maneuver_oracle": (
+                "The independent plant-only oracle integrates each piecewise-constant "
+                "lead acceleration segment over the exact interval."
             ),
             "gap": "lead_position_m-ego_position_m",
             "relative_speed": "lead_speed_mps-ego_speed_mps",
@@ -256,62 +365,71 @@ def configuration() -> dict:
                 "1.2*relative_speed, -3, 1.5)"
             ),
         },
-        "exchange_algorithm": [
-            "Open the next Slot at the smallest due participant activation.",
-            "Run due activations by priority: plant, controller, KPI.",
-            "Drain each visible FIFO in publish order before its participant Step.",
-            "Write the newest held input, execute one fixed FMI communication interval,",
-            "and publish post-step outputs in the activation Slot.",
-        ],
-        "sample_hold_rules": [
-            "Plant holds the newest command until a command Message arrives.",
-            "Controller holds the newest sensing values until a sensing Message arrives.",
-            "FMU outputs are published at the Slot where the post-step values are observed.",
-            "A measured value is compared to a reference only at the exact endpoint time it names.",
-            "No interpolation is performed across missing or discontinuous samples.",
-        ],
+        "maneuver": {
+            "channel": "maneuver",
+            "period_ns": MANEUVER_PERIOD_NS,
+            "latency_ns": 0,
+            "fields": MANEUVER_FIELDS,
+            "segments": [
+                {"start_ns": start, "end_ns": end, "lead_accel_mps2": accel}
+                for start, end, accel in MANEUVER_SEGMENTS
+            ],
+        },
+        "periods_ns": list(PERIODS_NS),
         "initial_state": INITIAL_STATE,
         "initial_outputs": {
-            "sensing": {"gap_m": 60.0, "relative_speed_mps": 0.0, "ego_speed_mps": 25.0},
+            "sensing": INITIAL_SENSING,
             "state": INITIAL_OUTPUT_STATE,
-            "controller_command_mps2": 1.5,
+            "controller_command_mps2": INITIAL_CONTROLLER_COMMAND_MPS2,
         },
-        "initial_command_mps2": 0.0,
+        "initial_command_mps2": INITIAL_COMMAND_MPS2,
         "constant_acceleration_mps2": CONSTANT_ACCELERATION_MPS2,
-        "observation_grid_ns": OBSERVATION_GRID_NS,
+        "observation_grid_ns": REFERENCE_PERIOD_NS,
         "comparison_tolerances": {
             "absolute_si": REFERENCE_ABS_TOL,
             "relative": 0.0,
-            "policy": "independent-reference matching uses the absolute budget; the sensitivity envelope is separate.",
+            "policy": "SiL and independent FMPy use the absolute budget; sensitivity uses the separate envelope.",
         },
         "kpi": {
             "name": "minimum-gap",
             "threshold_m": MIN_GAP_M,
-            "post_hoc_fields": ["minimum_gap_m", "maximum_ego_speed_mps", "maximum_command_mps2"],
+            "period_ns": KPI_PERIOD_NS,
+            "post_hoc_fields": [
+                "minimum_gap_m", "maximum_ego_speed_mps", "maximum_command_mps2",
+            ],
         },
         "acceptance_envelope": ACCEPTANCE_ENVELOPE,
+        "acceptance_envelope_basis": {
+            "normal_period_limit_ns": max(PERIODS_NS),
+            "normal_latency_limit_ns": 20 * MS,
+            "command_limit_mps2": 1.5,
+            "policy": (
+                "Fixed before any reference or Run: 1 m position/gap, 0.5 m/s "
+                "speed, and 0.5 m/s2 command deviation are the normal-matrix "
+                "observation budget for the declared 20 ms timing contract."
+            ),
+        },
         "timing_contract": {
             "can_handle_variable_step_size": False,
             "run_contract": "one constant FMI communication interval per Run",
             "physical_delay_ns": 0,
-            "finer_reference": (
-                "The fixed-period FMUs are exercised in separate 1 ms Runs; "
-                "this is not a variable-step claim."
-            ),
+            "numeric_refinement": {
+                "family": "plant-period-sensitivity",
+                "controller_period_ns": BASE_PERIOD_NS,
+                "sensing_latency_ns": BASE_PERIOD_NS,
+                "command_latency_ns": BASE_PERIOD_NS,
+            },
+            "finer_reference": "Separate fixed-period 1 ms Runs; no variable-step FMI claim.",
         },
         "limitations": {
-            "fixed_controller_sampling_in_numeric_refinement": False,
-            "controller_sampling_in_integration_family": "not applicable: no controller is present",
-            "numeric_refinement_note": (
-                "The qualified FMUs advertise no variable communication-step "
-                "capability. Integration-only refinement is therefore the "
-                "standalone constant-acceleration plant family. Closed-loop "
-                "20/10/5 ms rows that change plant interval, controller sampling, "
-                "and Channel Latency together are explicitly classified as "
-                "combined sensitivity experiments."
-            ),
+            "fixed_controller_sampling_in_numeric_refinement": True,
             "modeled_physical_delays": "The qualified ACC FMUs declare no physical delay; all rows use 0 ns.",
+            "constant_oracle_role": "Constant acceleration is an analytic FMU sanity oracle; nonconstant Maneuver forcing supplies the plant-period sensitivity signal.",
+            "negative_control": (
+                f"The timing-defect row uses {TIMING_DEFECT_SENSING_LATENCY_NS // MS} ms "
+                "sensing Latency and must exceed the predeclared envelope."
+            ),
         },
-        "rows": measured_rows(),
-        "independent_reference_rows": reference_rows(),
+        "rows": [row.to_document() for row in measured_rows()],
+        "independent_reference_rows": [row.to_document() for row in reference_rows()],
     }
