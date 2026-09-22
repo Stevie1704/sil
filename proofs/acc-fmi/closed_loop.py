@@ -2,6 +2,7 @@
 import json
 import math
 import struct
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -31,12 +32,12 @@ UNITS = {name: ("m/s2" if name == "accel_mps2" else
                 "m/s" if "speed" in name else "m") for name in TOLERANCES}
 
 
-def validate_archives():
+def validate_archives(directory=Path("/fmus")):
     for model, inputs, outputs, starts in (
         ("AccController", FIELDS["sensing"], FIELDS["command"], [60, 0, 25]),
         ("AccPlant", FIELDS["command"], FIELDS["sensing"] + FIELDS["state"], [0]),
     ):
-        with zipfile.ZipFile(f"/fmus/{model}.fmu") as archive:
+        with zipfile.ZipFile(directory / f"{model}.fmu") as archive:
             root = ET.fromstring(archive.read("modelDescription.xml"))
         variables = {v.attrib["name"]: v for v in root.find("ModelVariables")}
         for causality, names in (("input", inputs), ("output", outputs)):
@@ -94,12 +95,14 @@ def compare(rows, reference, original=False):
             names.remove("command")
         require(set(rows[t]) == names, f"missing/extra signal @{t}: {set(rows[t])}")
         for channel in sorted(names):
-            require(len(rows[t][channel]) == len(FIELDS[channel]), f"width {channel}@{t}")
+            require(len(rows[t][channel]) == len(expected[channel]) == len(FIELDS[channel]),
+                    f"width {channel}@{t}")
             for signal, actual, wanted in zip(FIELDS[channel], rows[t][channel], expected[channel]):
                 absolute, relative = TOLERANCES[signal]
                 require(math.isfinite(actual) and math.isfinite(wanted) and
                         math.isclose(actual, wanted, abs_tol=absolute, rel_tol=relative),
-                        f"first mismatch {signal} publication={t} communication={t + STEP_NS}: "
+                        f"first mismatch {signal} publication={t} "
+                        f"communication={t if original else t + STEP_NS}: "
                         f"SiL={actual}, reference={wanted}")
 
 
@@ -112,6 +115,30 @@ def execute(m, name, out):
         run_logged(["/build/sil-run", path, "-o", recording, "--participant-timeout-ms",
                     str(PARTICIPANT_TIMEOUT_MS)], recording.with_suffix(".log"))
     return recordings[0], dict(manifest_sha256=identity, recording_sha256=compare_files(*recordings))
+
+
+def reject_invalid_bindings(out):
+    from qualify import PARTICIPANT_TIMEOUT_MS, write_json
+    diagnostics = {}
+    for label, variable, diagnostic in (
+        ("unknown", "unknown", "does not declare"),
+        ("causality", "accel_mps2", "causality"),
+    ):
+        path = out / f"invalid-{label}.json"
+        manifest().write(path)
+        document = json.loads(path.read_text())
+        command = document["participants"]["controller"]["command"]
+        command[command.index("sensing:gap_m=gap_m")] = f"sensing:gap_m={variable}"
+        write_json(path, document)
+        result = subprocess.run(["/build/sil-run", str(path), "--participant-timeout-ms",
+                                 str(PARTICIPANT_TIMEOUT_MS)], capture_output=True, text=True,
+                                timeout=max(120, PARTICIPANT_TIMEOUT_MS / 1000 * 4))
+        output = result.stdout + result.stderr
+        path.with_suffix(".log").write_text(output)
+        require(result.returncode == 2 and diagnostic in output,
+                f"invalid {label} binding did not fail clearly with exit 2: {output}")
+        diagnostics[label] = dict(exit_code=result.returncode, diagnostic=diagnostic)
+    return diagnostics
 
 
 def run(out):
@@ -131,6 +158,7 @@ def run(out):
         run_logged([sys.executable, HERE / "loop_reference.py", mode, path], path.with_suffix(".log"))
         references[mode] = json.loads(path.read_text())["samples"]
     recording, results = execute(manifest(), "closed-loop", out)
+    invalid_bindings = reject_invalid_bindings(out)
     rows = recording_samples(recording)
     compare(rows, references["nominal"])
     minimum = min(row["sensing"][0] for row in rows.values())
@@ -152,7 +180,8 @@ def run(out):
     original, original_results = execute(acc_manifest(), "original-python", out)
     compare(recording_samples(original, original=True), references["original"], original=True)
     write_json(out / "results.json", dict(closed_loop=results, original_python=original_results,
-               minimum_gap_m=minimum, checked_samples=STEPS, negative_controls=rejected))
+               minimum_gap_m=minimum, checked_samples=STEPS, negative_controls=rejected,
+               invalid_bindings=invalid_bindings))
 
 
 if __name__ == "__main__":
