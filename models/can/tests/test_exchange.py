@@ -22,11 +22,15 @@ PROFILE = json.loads((ROOT / "models/can/profile.json").read_text())
 MODEL = PROFILE["model_name"]
 LAYOUT = PROFILE["layout"]
 NS = 1_000_000_000
+BITRATE = 100_000
+BIT_TIME_NS = NS // BITRATE
+MAX_CLASSICAL_IDENTIFIER = 0x7FF
+UPSTREAM_PAYLOAD = bytes((1, 2, 3, 4))
 FRAME = bytes.fromhex("1000000014000000010000000000040001020304")
 CONFIRM = bytes.fromhex("200000000c00000001000000")
 CONFIG = bytes.fromhex("400000000d00000001a0860100400000000a0000000401")
-# The upstream frame (ID 1, 01 02 03 04) is 83 bits at 100 kbit/s.
-UPSTREAM_END_NS = 300_000_000 + 83 * 10_000
+UPSTREAM_REQUEST_NS = 300_000_000
+LATER_REQUEST_NS = 600_000_000
 
 
 def terminal_ref(node, member):
@@ -47,9 +51,122 @@ def confirm(identifier):
     return struct.pack("<III", 0x20, 12, identifier)
 
 
+def bus_error(identifier, error_flag, is_sender):
+    return struct.pack("<IIIBBB", 0x31, 15, identifier, 1, error_flag, is_sender)
+
+
+def frame_end_ns(request_ns, identifier=1, payload=UPSTREAM_PAYLOAD, bitrate=BITRATE):
+    return request_ns + wire.frame_bits(identifier, payload) * (NS // bitrate)
+
+
+UPSTREAM_END_NS = frame_end_ns(UPSTREAM_REQUEST_NS)
+
+
+def successful_frame_trace(request_ns, *, identifier=1, payload=UPSTREAM_PAYLOAD,
+                           senders=(0,), active_nodes=2, suppressed_receiver=None):
+    end = frame_end_ns(request_ns, identifier, payload)
+    operation = frame(identifier, payload)
+    trace = []
+    for node in range(active_nodes):
+        if node == suppressed_receiver:
+            continue
+        output = confirm(identifier) if node in senders else operation
+        trace.append((end, node, output))
+    return trace
+
+
+def bus_error_trace(end_ns, identifier=1, *, primary_sender=0, active_nodes=2):
+    return [
+        (end_ns, node, bus_error(
+            identifier,
+            1 if node == primary_sender else 2,
+            1 if node == primary_sender else 0,
+        ))
+        for node in range(active_nodes)
+    ]
+
+
+def expected_scenario(parameters, expected, observed, **metadata):
+    return {
+        "parameters": parameters,
+        "expected_event_table": trace_rows(expected),
+        "observed_trace": trace_rows(observed),
+        **metadata,
+    }
+
+
+RULE_OFFSETS = {
+    "kind": "fault_rule_kind",
+    "sender_node": "fault_rule_sender",
+    "receiver_node": "fault_rule_receiver",
+    "identifier": "fault_rule_identifier",
+    "request_start_ns": "fault_rule_first_request",
+    "request_end_ns": "fault_rule_last_request",
+    "occurrence": "fault_rule_occurrence",
+    "attempt": "fault_rule_attempt",
+}
+RULE_PARAMETER_NAMES = {
+    "kind": "Kind",
+    "sender_node": "SenderNode",
+    "receiver_node": "ReceiverNode",
+    "identifier": "Identifier",
+    "request_start_ns": "RequestStartNs",
+    "request_end_ns": "RequestEndNs",
+    "occurrence": "Occurrence",
+    "attempt": "Attempt",
+}
+
+
+def fault_parameters(rules=(), retry_limit=1, *, count=None):
+    """Materialize the exact fixed FMI parameters used by one Run."""
+    parameters = [
+        (LAYOUT["fault_retry_limit"], retry_limit),
+        (LAYOUT["fault_rule_count"], len(rules) if count is None else count),
+    ]
+    for index, rule in enumerate(rules):
+        for field, value in rule.items():
+            parameters.append((
+                LAYOUT["fault_rule_base"]
+                + index * LAYOUT["fault_rule_stride"]
+                + LAYOUT[RULE_OFFSETS[field]],
+                value,
+            ))
+    return parameters
+
+
+def fault_start_values(rules, retry_limit=1):
+    starts = [
+        f"bus.faultRetryLimit={retry_limit}",
+        f"bus.faultRuleCount={len(rules)}",
+    ]
+    for index, rule in enumerate(rules):
+        starts.extend(
+            f"bus.faultRule{index + 1}{RULE_PARAMETER_NAMES[field]}={value}"
+            for field, value in rule.items()
+        )
+    return starts
+
+
+def trace_rows(trace):
+    return [(instant, node, payload.hex()) for instant, node, payload in trace]
+
+
+def retain_independent_scenario(name, scenario, *, reset=False):
+    path = ARTIFACTS / "issue155-independent.json"
+    evidence = {"scenarios": {}}
+    if path.exists() and not reset:
+        evidence = json.loads(path.read_text())
+    evidence["fmu_sha256"] = hashlib.sha256(
+        (ARTIFACTS / f"{MODEL}.fmu").read_bytes()
+    ).hexdigest()
+    evidence.setdefault("scenarios", {})[name] = scenario
+    path.write_text(json.dumps(evidence, indent=2) + "\n")
+
+
 @contextmanager
 def initialized_fmu(name=MODEL, logs=None, *, exit_initialization=True,
-                    active_nodes=None, queue_capacity=None):
+                    active_nodes=None, queue_capacity=None, parameters=(),
+                    individual_parameter_calls=False):
     path = ARTIFACTS / f"{name}.fmu"
     description = read_model_description(path, validate=True)
     unpacked = extract(path)
@@ -66,14 +183,19 @@ def initialized_fmu(name=MODEL, logs=None, *, exit_initialization=True,
 
     fmu.instantiate(eventModeUsed=True, loggingOn=True, logMessage=log)
     try:
-        if active_nodes is not None or queue_capacity is not None:
-            refs, values = [], []
-            if active_nodes is not None:
-                refs.append(LAYOUT["active_nodes"])
-                values.append(float(active_nodes))
-            if queue_capacity is not None:
-                refs.append(LAYOUT["queue_capacity"])
-                values.append(float(queue_capacity))
+        assignments = []
+        if active_nodes is not None:
+            assignments.append((LAYOUT["active_nodes"], active_nodes))
+        if queue_capacity is not None:
+            assignments.append((LAYOUT["queue_capacity"], queue_capacity))
+        assignments.extend(parameters)
+        if individual_parameter_calls:
+            for reference, value in assignments:
+                fmu.setFloat64([reference], [float(value)])
+        elif assignments:
+            refs, values = zip(*assignments)
+            refs = list(refs)
+            values = [float(value) for value in values]
             fmu.setFloat64(refs, values)
         fmu.enterInitializationMode(startTime=0)
         if exit_initialization:
@@ -264,6 +386,244 @@ def test_burst_expectation_matches_independent_reference():
 def test_burst_trace_is_independent_of_outer_steps(grid_ns):
     with initialized_fmu() as bus:
         assert drive(bus, BURST, BURST_END_NS, grid_ns) == BURST_TRACE
+
+
+FAULT_RULE = {
+    "kind": 1,
+    "sender_node": 1,
+    "receiver_node": 0,
+    "identifier": 1,
+    "request_start_ns": 300_000_000,
+    "request_end_ns": 300_000_000,
+    "occurrence": 1,
+    "attempt": 1,
+}
+FAULT_REQUESTS = [
+    (0, 0, CONFIG),
+    (0, 1, CONFIG),
+    (UPSTREAM_REQUEST_NS, 0, FRAME),
+    (LATER_REQUEST_NS, 0, FRAME),
+]
+FAULT_UNTIL_NS = 610_000_000
+FIRST_ERROR_END_NS = frame_end_ns(UPSTREAM_REQUEST_NS)
+RETRY_REQUEST_NS = FIRST_ERROR_END_NS + wire.INTERMISSION * BIT_TIME_NS
+RETRY_END_NS = frame_end_ns(RETRY_REQUEST_NS)
+LATER_END_NS = frame_end_ns(LATER_REQUEST_NS)
+BASELINE_FAULT_TRACE = (
+    successful_frame_trace(UPSTREAM_REQUEST_NS)
+    + successful_frame_trace(LATER_REQUEST_NS)
+)
+ONE_ERROR_RECOVERY_TRACE = (
+    bus_error_trace(FIRST_ERROR_END_NS)
+    + successful_frame_trace(RETRY_REQUEST_NS)
+    + successful_frame_trace(LATER_REQUEST_NS)
+)
+
+
+def test_scheduled_transmission_error_recovers_and_stays_deterministic():
+    with initialized_fmu() as bus:
+        baseline = drive(bus, FAULT_REQUESTS, FAULT_UNTIL_NS)
+    assert baseline == BASELINE_FAULT_TRACE
+    retain_independent_scenario(
+        "no_fault_baseline",
+        expected_scenario(
+            {"faultRetryLimit": 1, "faultRuleCount": 0},
+            BASELINE_FAULT_TRACE, baseline,
+        ),
+        reset=True,
+    )
+
+    inputs = fault_parameters([FAULT_RULE])
+    with initialized_fmu(parameters=inputs) as bus:
+        first = drive(bus, FAULT_REQUESTS, FAULT_UNTIL_NS)
+    with initialized_fmu(parameters=inputs) as bus:
+        repeat = drive(bus, FAULT_REQUESTS, FAULT_UNTIL_NS)
+    assert first == repeat == ONE_ERROR_RECOVERY_TRACE
+    assert first != baseline
+    retain_independent_scenario(
+        "single_error_recovery",
+        expected_scenario(
+            {"faultRetryLimit": 1, "faultRuleCount": 1,
+             "faultRule1": FAULT_RULE},
+            ONE_ERROR_RECOVERY_TRACE, first,
+            same_schedule_repeat_equal=first == repeat,
+        ),
+    )
+
+
+def test_complete_fault_rule_is_validated_by_set_float64():
+    invalid = {**FAULT_RULE, "sender_node": 3}
+    with pytest.raises(FMICallException):
+        with initialized_fmu(
+            exit_initialization=False,
+            parameters=fault_parameters([invalid]),
+        ):
+            pass
+
+
+def test_fault_schedule_can_be_set_in_separate_fmi_calls():
+    parameters = fault_parameters([FAULT_RULE])
+    staged = parameters[:1] + parameters[2:] + parameters[1:2]
+    with initialized_fmu(
+        parameters=staged,
+        individual_parameter_calls=True,
+    ) as bus:
+        observed = drive(bus, FAULT_REQUESTS, FAULT_UNTIL_NS)
+    assert observed == ONE_ERROR_RECOVERY_TRACE
+
+
+def test_retry_limit_exhaustion_and_consumed_rule_recovery():
+    retry_error = {**FAULT_RULE, "attempt": 2}
+    with initialized_fmu(
+        parameters=fault_parameters([FAULT_RULE, retry_error], retry_limit=1)
+    ) as bus:
+        trace = drive(bus, FAULT_REQUESTS, FAULT_UNTIL_NS)
+    expected = (
+        bus_error_trace(FIRST_ERROR_END_NS)
+        + bus_error_trace(RETRY_END_NS)
+        + successful_frame_trace(LATER_REQUEST_NS)
+    )
+    assert trace == expected
+    retain_independent_scenario(
+        "retry_exhaustion_then_next_occurrence",
+        expected_scenario(
+            {"faultRetryLimit": 1, "faultRuleCount": 2,
+             "faultRules": [FAULT_RULE, retry_error]},
+            expected, trace,
+        ),
+    )
+
+
+def test_simultaneous_equal_frames_match_node_identity_in_either_input_order():
+    rule = {**FAULT_RULE, "request_start_ns": 1000, "request_end_ns": 1000,
+            "attempt": 1, "sender_node": 2}
+    simultaneous = [
+        (0, 0, CONFIG),
+        (0, 1, CONFIG),
+        (1000, 0, FRAME),
+        (1000, 1, FRAME),
+    ]
+    first_end = frame_end_ns(1000)
+    retry_start = first_end + wire.INTERMISSION * BIT_TIME_NS
+    expected = (
+        bus_error_trace(first_end, primary_sender=1)
+        + successful_frame_trace(retry_start, senders=(0, 1))
+    )
+    for requests in (simultaneous, list(reversed(simultaneous))):
+        with initialized_fmu(parameters=fault_parameters([rule])) as bus:
+            assert drive(bus, requests, 1_800_000) == expected
+    retain_independent_scenario(
+        "identical_timestamp_equal_frame",
+        expected_scenario(
+            {"faultRetryLimit": 1, "faultRuleCount": 1,
+             "faultRule1": rule},
+            expected, expected, input_order_invariant=True,
+        ),
+    )
+
+
+def test_overlapping_rule_precedence_and_receiver_delivery_suppression():
+    suppression = {
+        **FAULT_RULE,
+        "kind": 2,
+        "receiver_node": 2,
+        "request_start_ns": 1000,
+        "request_end_ns": 1000,
+    }
+    overlapping_error = {
+        **suppression,
+        "kind": 1,
+        "receiver_node": 0,
+    }
+    requests = [
+        (0, 0, CONFIG),
+        (0, 1, CONFIG),
+        (1000, 0, FRAME),
+    ]
+    with initialized_fmu(
+        parameters=fault_parameters([suppression, overlapping_error])
+    ) as bus:
+        suppressed = drive(bus, requests, 900_000)
+        expected_suppressed = successful_frame_trace(
+            1000, suppressed_receiver=1,
+        )
+        assert suppressed == expected_suppressed
+
+    # Reversing the same two matching rules selects the transmission error.
+    with initialized_fmu(
+        parameters=fault_parameters([overlapping_error, suppression])
+    ) as bus:
+        error_first = drive(bus, requests, 1_800_000)
+        first_end = frame_end_ns(1000)
+        expected_error_first = (
+            bus_error_trace(first_end)
+            + successful_frame_trace(
+                first_end + wire.INTERMISSION * BIT_TIME_NS,
+            )
+        )
+        assert error_first == expected_error_first
+    retain_independent_scenario(
+        "overlap_precedence_receiver_suppression",
+        {
+            "suppression_first": expected_scenario(
+                {"faultRetryLimit": 1, "faultRuleCount": 2,
+                 "faultRules": [suppression, overlapping_error]},
+                expected_suppressed, suppressed,
+            ),
+            "error_first": expected_scenario(
+                {"faultRetryLimit": 1, "faultRuleCount": 2,
+                 "faultRules": [overlapping_error, suppression]},
+                expected_error_first, error_first,
+            ),
+        },
+    )
+
+
+def test_absent_fault_match_leaves_successful_transmission_unchanged():
+    absent = {**FAULT_RULE, "identifier": 2, "request_start_ns": 1000,
+              "request_end_ns": 1000}
+    empty_payload_frame = frame(1, b"")
+    requests = [(0, 0, CONFIG), (0, 1, CONFIG), (1000, 0, empty_payload_frame)]
+    expected = successful_frame_trace(1000, payload=b"")
+    with initialized_fmu(parameters=fault_parameters([absent])) as bus:
+        trace = drive(bus, requests, 900_000)
+        assert trace == expected
+    retain_independent_scenario(
+        "absent_match",
+        expected_scenario(
+            {"faultRetryLimit": 1, "faultRuleCount": 1,
+             "faultRule1": absent},
+            expected, trace,
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    "rule,retry_limit,count",
+    [
+        ({"kind": 3}, 1, 1),
+        ({**FAULT_RULE, "sender_node": 0}, 1, 1),
+        ({**FAULT_RULE, "sender_node": 3}, 1, 1),
+        ({**FAULT_RULE, "identifier": MAX_CLASSICAL_IDENTIFIER + 1}, 1, 1),
+        ({**FAULT_RULE, "request_start_ns": 300_000_001}, 1, 1),
+        ({**FAULT_RULE, "request_start_ns": 1_125_899_906_842_625}, 1, 1),
+        ({**FAULT_RULE, "occurrence": 0}, 1, 1),
+        ({**FAULT_RULE, "attempt": 2}, 0, 1),
+        ({**FAULT_RULE, "sender_node": 1.5}, 1, 1),
+        ({**FAULT_RULE}, 1, 9),
+        ({**FAULT_RULE, "receiver_node": 2}, 1, 1),
+        ({**FAULT_RULE, "kind": 2, "receiver_node": 1}, 1, 1),
+        ({"kind": 1}, 1, 1),  # incomplete rule
+        ({**FAULT_RULE}, 1, 0),  # fields beyond the declared count
+    ],
+)
+def test_invalid_fault_schedules_fail_before_initialization(rule, retry_limit, count):
+    parameters = fault_parameters([rule], retry_limit=retry_limit, count=count)
+    with pytest.raises(FMICallException):
+        with initialized_fmu(
+            exit_initialization=False, parameters=parameters
+        ) as bus:
+            bus.exitInitializationMode()
 
 
 BAD = [
@@ -614,6 +974,177 @@ def test_sil_group_and_determinism():
     }
 
 
+def faulted_external_manifest(name, rules, *, active_nodes=2, retry_limit=1):
+    from sil.manifest import Manifest
+
+    schemas = {"can.Buffer": {"fields": [
+        {"name": "data_length", "type": "u16"},
+        {"name": "data", "type": "u8", "count": 2048},
+        {"name": "data_event_time_ns", "type": "u64"},
+    ]}}
+    manifest = Manifest(duration_ns=FAULT_UNTIL_NS)
+    manifest.add_schemas(schemas)
+    outputs = {f"node{node}": f"bus.Node{node}"
+               for node in range(1, active_nodes + 1)}
+    channels = [f"bus.{node}" for node in outputs]
+    for channel in channels:
+        manifest.add_channel(channel, schema="can.Buffer")
+    command = ["python", "-m", "sil.fmi"]
+    for node in range(1, active_nodes + 1):
+        fixture = "FaultAwareSender" if node < active_nodes else "FaultAwareReceiver"
+        command += ["--instance", f"node{node}",
+                    str(ARTIFACTS / f"{fixture}.fmu")]
+    command += [
+        "--instance", "bus", str(ARTIFACTS / f"{MODEL}.fmu"),
+        "--bus-profile", "application/org.fmi-standard.fmi-ls-bus.can",
+    ]
+    for node in range(1, active_nodes + 1):
+        command += ["--connect", f"node{node}.CanChannel=bus.Node{node}"]
+    for node, terminal_name in outputs.items():
+        command += ["--bind", f"bus.{node}:data={terminal_name}.Tx_Data"]
+    if active_nodes != 2:
+        command += ["--start", f"bus.activeNodeCount={active_nodes}"]
+    for start in fault_start_values(rules, retry_limit=retry_limit):
+        command += ["--start", start]
+    manifest.add_process(
+        "can",
+        command=command,
+        step_period_ns=1_000_000,
+        publishes=channels,
+    )
+    path = manifest.write(ARTIFACTS / f"issue155-{name}.json").path
+    return schemas, path
+
+
+def sil_bus_trace(recording, schemas):
+    from sil import schema
+    from sil.recording import read_records
+
+    codec = schema.load(schemas)["can.Buffer"]
+    trace = []
+    for channel, _, raw in read_records(recording):
+        fields = codec.unpack(raw)
+        payload = bytes(fields["data"][:fields["data_length"]])
+        trace.append((
+            fields["data_event_time_ns"],
+            int(channel[-1]) - 1,
+            payload,
+        ))
+    return sorted(trace)
+
+
+def test_sil_fault_aware_external_node_receives_errors_and_recovers():
+    scenarios = {}
+
+    def qualify(name, rules, expected, *, retry_limit=1, active_nodes=2,
+                repeat=False, expect_error_count=None):
+        schemas, manifest = faulted_external_manifest(
+            name, rules, retry_limit=retry_limit, active_nodes=active_nodes,
+        )
+        recording = ARTIFACTS / f"issue155-{name}.mcap"
+        sil_run(manifest, recording)
+        observed = sil_bus_trace(recording, schemas)
+        assert observed == expected, name
+        log = recording.with_suffix(".log").read_text()
+        if expect_error_count is not None:
+            assert log.count("Consumed CAN Bus Error") == expect_error_count
+        else:
+            assert "Consumed CAN Bus Error" not in log
+        if repeat:
+            repeated = ARTIFACTS / f"issue155-{name}-repeat.mcap"
+            sil_run(manifest, repeated)
+            assert repeated.read_bytes() == recording.read_bytes()
+        scenarios[name] = {
+            "expected_event_table": trace_rows(expected),
+            "observed_trace": trace_rows(observed),
+            "manifest": manifest.name,
+            "manifest_sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
+        }
+        return log
+
+    fault_log = qualify(
+        "fault-recovery", [FAULT_RULE], ONE_ERROR_RECOVERY_TRACE,
+        repeat=True, expect_error_count=2,
+    )
+    assert "ID 1 code 1 flag 1 sender 1 count 1" in fault_log
+    assert "ID 1 code 1 flag 2 sender 0 count 1" in fault_log
+
+    retry_error = {**FAULT_RULE, "attempt": 2}
+    exhausted_expected = (
+        bus_error_trace(FIRST_ERROR_END_NS)
+        + bus_error_trace(RETRY_END_NS)
+        + successful_frame_trace(LATER_REQUEST_NS)
+    )
+    qualify(
+        "retry-exhaustion", [FAULT_RULE, retry_error], exhausted_expected,
+        expect_error_count=4,
+    )
+
+    simultaneous_rule = {
+        **FAULT_RULE,
+        "sender_node": 2,
+    }
+    co_transmit_expected = (
+        bus_error_trace(FIRST_ERROR_END_NS, primary_sender=1, active_nodes=3)
+        + successful_frame_trace(
+            RETRY_REQUEST_NS, senders=(0, 1), active_nodes=3,
+        )
+        + successful_frame_trace(
+            LATER_REQUEST_NS, senders=(0, 1), active_nodes=3,
+        )
+    )
+    simultaneous_log = qualify(
+        "identical-co-transmit", [simultaneous_rule], co_transmit_expected,
+        active_nodes=3, expect_error_count=3,
+    )
+    assert "ID 1 code 1 flag 1 sender 1 count 1" in simultaneous_log
+    assert "ID 1 code 1 flag 2 sender 0 count 1" in simultaneous_log
+    assert simultaneous_log.count("ID 1 code 1 flag 1 sender 1") == 1
+    assert "ID 1 code 1 flag 2 sender 1" not in simultaneous_log
+
+    suppression = {**FAULT_RULE, "kind": 2, "receiver_node": 2}
+    suppression_expected = (
+        successful_frame_trace(UPSTREAM_REQUEST_NS, suppressed_receiver=1)
+        + successful_frame_trace(LATER_REQUEST_NS)
+    )
+    qualify(
+        "receiver-suppression", [suppression], suppression_expected,
+    )
+
+    overlapping_error = {**FAULT_RULE}
+    suppression_first = qualify(
+        "overlap-suppression-first", [suppression, overlapping_error],
+        suppression_expected,
+    )
+    assert "Consumed CAN Bus Error" not in suppression_first
+    error_first = qualify(
+        "overlap-error-first", [overlapping_error, suppression],
+        ONE_ERROR_RECOVERY_TRACE, expect_error_count=2,
+    )
+    assert error_first.count("Consumed CAN Bus Error") == 2
+
+    absent = {
+        **FAULT_RULE,
+        "request_start_ns": UPSTREAM_REQUEST_NS + 1,
+        "request_end_ns": UPSTREAM_REQUEST_NS + 1,
+    }
+    qualify(
+        "absent-match", [absent], BASELINE_FAULT_TRACE,
+    )
+
+    (ARTIFACTS / "issue155-traces.json").write_text(json.dumps({
+        "scenarios": scenarios,
+        "bus_error_encoding_source": (
+            "FMI-LS-BUS 1.0.0, Network Abstraction, Table 14 (Bus Error), "
+            "Table 15 (Error Code), Table 16 (Error Flag)"
+        ),
+        "notification_fixture_scope": (
+            "first-party test consumer; verifies this profile's bytes and logs, "
+            "not independent implementation compatibility"
+        ),
+    }, indent=2) + "\n")
+
+
 BURST_GRIDS = {"coarse": BURST_END_NS, "boundary": 249000, "bit": 1000}
 
 
@@ -819,10 +1350,18 @@ def test_package_identity_metadata_and_linkage():
     from lxml import etree
     import fmpy
 
-    for name in (MODEL, "ExternalSender", "ExternalReceiver"):
+    retained_identities = {}
+    for name in (
+        MODEL,
+        "ExternalSender",
+        "ExternalReceiver",
+        "FaultAwareSender",
+        "FaultAwareReceiver",
+    ):
         path = ARTIFACTS / f"{name}.fmu"
         with zipfile.ZipFile(path) as archive:
             identity = json.loads(archive.read("resources/identity.json"))
+            retained_identities[name] = identity
             if name == MODEL:
                 assert len(identity["git_revision"]) == 40
                 assert all(c in "0123456789abcdef" for c in identity["git_revision"])
@@ -832,6 +1371,17 @@ def test_package_identity_metadata_and_linkage():
                     hashlib.sha256(archive.read(f"sources/{source}")).hexdigest()
                     == expected
                 )
+            if name.startswith("FaultAware"):
+                patch_path = ROOT / "models/can/qualification/fault-aware-node.patch"
+                assert identity["fault_aware_bus_error"] is True
+                assert identity["fault_node_patch_sha256"] == hashlib.sha256(
+                    patch_path.read_bytes()
+                ).hexdigest()
+                assert archive.read(
+                    "documentation/fault-aware-node.patch"
+                ) == patch_path.read_bytes()
+            else:
+                assert "fault_aware_bus_error" not in identity
             manifest = etree.fromstring(
                 archive.read("extra/org.fmi-standard.fmi-ls-bus/fmi-ls-manifest.xml")
             )
@@ -866,6 +1416,13 @@ def test_package_identity_metadata_and_linkage():
                 or "documentation/licenses/LICENSE.txt" in archive.namelist()
             )
         read_model_description(path, validate=True)
+    (ARTIFACTS / "issue155-identities.json").write_text(json.dumps({
+        "fmu_sha256": {
+            name: hashlib.sha256((ARTIFACTS / f"{name}.fmu").read_bytes()).hexdigest()
+            for name in retained_identities
+        },
+        "identities": retained_identities,
+    }, indent=2, sort_keys=True) + "\n")
     with initialized_fmu() as bus:
         library = Path(bus.unzipDirectory) / f"binaries/x86_64-linux/{MODEL}.so"
         symbols = subprocess.check_output(["nm", "-D", str(library)], text=True)

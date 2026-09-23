@@ -23,6 +23,19 @@
     "time": 1024,
     "active_nodes": 1025,
     "queue_capacity": 1026,
+    "fault_retry_limit": 1027,
+    "fault_rule_count": 1028,
+    "fault_rule_base": 1100,
+    "fault_rule_stride": 8,
+    "fault_rule_capacity": 8,
+    "fault_rule_kind": 0,
+    "fault_rule_sender": 1,
+    "fault_rule_receiver": 2,
+    "fault_rule_identifier": 3,
+    "fault_rule_first_request": 4,
+    "fault_rule_last_request": 5,
+    "fault_rule_occurrence": 6,
+    "fault_rule_attempt": 7,
     "max_binary_size": 2048
   }
 }

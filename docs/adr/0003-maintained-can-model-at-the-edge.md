@@ -32,6 +32,10 @@ profile made no transmission timing or contention claim; issue #153 replaced it
 with the documented wire-timing model in `models/can/README.md` using only the
 existing countdown-Clock Importer capability. Issue #154 added bounded
 contention in the standalone model and same-instant bus-input batching at the
-Importer edge, while preserving this placement decision. The maintained FMU
-must publish its supported profile and qualify both its protocol behavior and
-its packaging independently of the kernel.
+Importer edge, while preserving this placement decision. Issue #155 adds a
+Manifest-covered CAN model fault schedule for deterministic Bus Error
+notifications, bounded retransmission owned by the bus model, and
+receiver-local delivery suppression. These semantics stay in the maintained
+FMU; they do not add a kernel Interceptor or claim electrical CAN error
+confinement. The maintained FMU must publish its supported profile and qualify
+both its protocol behavior and its packaging independently of the kernel.

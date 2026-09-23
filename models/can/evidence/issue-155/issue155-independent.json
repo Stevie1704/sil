@@ -1,0 +1,288 @@
+{
+  "scenarios": {
+    "no_fault_baseline": {
+      "parameters": {
+        "faultRetryLimit": 1,
+        "faultRuleCount": 0
+      },
+      "trace": [
+        [
+          300830000,
+          0,
+          "200000000c00000001000000"
+        ],
+        [
+          300830000,
+          1,
+          "1000000014000000010000000000040001020304"
+        ],
+        [
+          600830000,
+          0,
+          "200000000c00000001000000"
+        ],
+        [
+          600830000,
+          1,
+          "1000000014000000010000000000040001020304"
+        ]
+      ]
+    },
+    "single_error_recovery": {
+      "parameters": {
+        "faultRetryLimit": 1,
+        "faultRuleCount": 1,
+        "faultRule1": {
+          "kind": 1,
+          "sender_node": 1,
+          "receiver_node": 0,
+          "identifier": 1,
+          "request_start_ns": 300000000,
+          "request_end_ns": 300000000,
+          "occurrence": 1,
+          "attempt": 1
+        }
+      },
+      "trace": [
+        [
+          300830000,
+          0,
+          "310000000f00000001000000010101"
+        ],
+        [
+          300830000,
+          1,
+          "310000000f00000001000000010200"
+        ],
+        [
+          301690000,
+          0,
+          "200000000c00000001000000"
+        ],
+        [
+          301690000,
+          1,
+          "1000000014000000010000000000040001020304"
+        ],
+        [
+          600830000,
+          0,
+          "200000000c00000001000000"
+        ],
+        [
+          600830000,
+          1,
+          "1000000014000000010000000000040001020304"
+        ]
+      ],
+      "same_schedule_repeat_equal": true
+    },
+    "retry_exhaustion_then_next_occurrence": {
+      "parameters": {
+        "faultRetryLimit": 1,
+        "faultRuleCount": 2,
+        "faultRules": [
+          {
+            "kind": 1,
+            "sender_node": 1,
+            "receiver_node": 0,
+            "identifier": 1,
+            "request_start_ns": 300000000,
+            "request_end_ns": 300000000,
+            "occurrence": 1,
+            "attempt": 1
+          },
+          {
+            "kind": 1,
+            "sender_node": 1,
+            "receiver_node": 0,
+            "identifier": 1,
+            "request_start_ns": 300000000,
+            "request_end_ns": 300000000,
+            "occurrence": 1,
+            "attempt": 2
+          }
+        ]
+      },
+      "trace": [
+        [
+          300830000,
+          0,
+          "310000000f00000001000000010101"
+        ],
+        [
+          300830000,
+          1,
+          "310000000f00000001000000010200"
+        ],
+        [
+          301690000,
+          0,
+          "310000000f00000001000000010101"
+        ],
+        [
+          301690000,
+          1,
+          "310000000f00000001000000010200"
+        ],
+        [
+          600830000,
+          0,
+          "200000000c00000001000000"
+        ],
+        [
+          600830000,
+          1,
+          "1000000014000000010000000000040001020304"
+        ]
+      ]
+    },
+    "identical_timestamp_equal_frame": {
+      "parameters": {
+        "faultRetryLimit": 1,
+        "faultRuleCount": 1,
+        "faultRule1": {
+          "kind": 1,
+          "sender_node": 2,
+          "receiver_node": 0,
+          "identifier": 1,
+          "request_start_ns": 1000,
+          "request_end_ns": 1000,
+          "occurrence": 1,
+          "attempt": 1
+        }
+      },
+      "trace": [
+        [
+          831000,
+          0,
+          "310000000f00000001000000010201"
+        ],
+        [
+          831000,
+          1,
+          "310000000f00000001000000010101"
+        ],
+        [
+          1691000,
+          0,
+          "200000000c00000001000000"
+        ],
+        [
+          1691000,
+          1,
+          "200000000c00000001000000"
+        ]
+      ],
+      "input_order_invariant": true
+    },
+    "overlap_precedence_receiver_suppression": {
+      "suppression_first": {
+        "faultRules": [
+          {
+            "kind": 2,
+            "sender_node": 1,
+            "receiver_node": 2,
+            "identifier": 1,
+            "request_start_ns": 1000,
+            "request_end_ns": 1000,
+            "occurrence": 1,
+            "attempt": 1
+          },
+          {
+            "kind": 1,
+            "sender_node": 1,
+            "receiver_node": 0,
+            "identifier": 1,
+            "request_start_ns": 1000,
+            "request_end_ns": 1000,
+            "occurrence": 1,
+            "attempt": 1
+          }
+        ],
+        "trace": [
+          [
+            831000,
+            0,
+            "200000000c00000001000000"
+          ]
+        ]
+      },
+      "error_first": {
+        "faultRules": [
+          {
+            "kind": 1,
+            "sender_node": 1,
+            "receiver_node": 0,
+            "identifier": 1,
+            "request_start_ns": 1000,
+            "request_end_ns": 1000,
+            "occurrence": 1,
+            "attempt": 1
+          },
+          {
+            "kind": 2,
+            "sender_node": 1,
+            "receiver_node": 2,
+            "identifier": 1,
+            "request_start_ns": 1000,
+            "request_end_ns": 1000,
+            "occurrence": 1,
+            "attempt": 1
+          }
+        ],
+        "trace": [
+          [
+            831000,
+            0,
+            "310000000f00000001000000010101"
+          ],
+          [
+            831000,
+            1,
+            "310000000f00000001000000010200"
+          ],
+          [
+            1691000,
+            0,
+            "200000000c00000001000000"
+          ],
+          [
+            1691000,
+            1,
+            "1000000014000000010000000000040001020304"
+          ]
+        ]
+      }
+    },
+    "absent_match": {
+      "parameters": {
+        "faultRetryLimit": 1,
+        "faultRuleCount": 1,
+        "faultRule1": {
+          "kind": 1,
+          "sender_node": 1,
+          "receiver_node": 0,
+          "identifier": 2,
+          "request_start_ns": 1000,
+          "request_end_ns": 1000,
+          "occurrence": 1,
+          "attempt": 1
+        }
+      },
+      "trace": [
+        [
+          471000,
+          0,
+          "200000000c00000001000000"
+        ],
+        [
+          471000,
+          1,
+          "10000000100000000100000000000000"
+        ]
+      ]
+    }
+  },
+  "fmu_sha256": "dd2ffdb41fe0bf63e54c1ceda91f59ed7fcfdca916529670a19cbd7d28b6b9f3"
+}

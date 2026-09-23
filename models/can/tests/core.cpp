@@ -19,6 +19,10 @@ can::Bytes bitrate(std::uint32_t rate) {
 can::Bytes confirm(std::uint32_t id) {
   return {0x20, 0, 0, 0, 12, 0, 0, 0, std::uint8_t(id), std::uint8_t(id >> 8), 0, 0};
 }
+can::Bytes bus_error(std::uint32_t id, std::uint8_t flag, bool sender) {
+  return {0x31, 0, 0, 0, 15, 0, 0, 0, std::uint8_t(id),
+          std::uint8_t(id >> 8), 0, 0, 1, flag, std::uint8_t(sender)};
+}
 can::Bytes discard() { return {0x40, 0, 0, 0, 10, 0, 0, 0, 4, 2}; }
 void send(can::Bus& bus, unsigned terminal, const can::Bytes& operations, can::Nanoseconds now) {
   can::Inputs inputs;
@@ -47,13 +51,13 @@ void wire_lengths() {
   assert(can::frame_bits(0, can::Bytes(8)) == 124);
   // Cross-checked against tests/wire.py.
   assert(can::frame_bits(1, can::Bytes{1, 2, 3, 4}) == 83);
-  assert(can::frame_bits(0x7ff, can::Bytes(8, 0xff)) == 123);
+  assert(can::frame_bits(can::max_classical_identifier, can::Bytes(8, 0xff)) == 123);
   assert(can::frame_bits(0x555, can::Bytes{0, 1, 2, 3, 4, 5, 6, 7}) == 117);
 }
 
 void burst_and_mid_transmission_request() {
   auto bus = configured(500000);  // 2000 ns per bit
-  const auto a = frame(0, can::Bytes(8)), b = frame(0x7ff, can::Bytes(8, 0xff)),
+  const auto a = frame(0, can::Bytes(8)), b = frame(can::max_classical_identifier, can::Bytes(8, 0xff)),
              c = frame(1, {1, 2, 3, 4});
   send(bus, 0, a, 1000);
   assert(bus.next_event() == 1000 + 124 * 2000);
@@ -68,7 +72,7 @@ void burst_and_mid_transmission_request() {
   assert(bus.next_event() == b_end);
   send(bus, 1, c, 300000);  // arrives while b is on the wire
   bus.complete(b_end);
-  assert(bus.outputs()[0] == confirm(0x7ff) && bus.outputs()[1] == b);
+  assert(bus.outputs()[0] == confirm(can::max_classical_identifier) && bus.outputs()[1] == b);
   bus.clear_outputs();
   const auto c_end = b_end + 3 * 2000 + 83 * 2000;
   assert(bus.next_event() == 507000);
@@ -236,6 +240,127 @@ void finite_priority_stream() {
   assert(!bus.next_event());
 }
 
+can::FaultRuleInput transmission_error(unsigned sender_node, std::uint32_t id,
+                                       can::Nanoseconds request_time,
+                                       std::uint64_t occurrence, unsigned attempt) {
+  return {std::uint64_t(can::FaultKind::transmission_error), sender_node,
+          0, id, std::uint64_t(request_time), std::uint64_t(request_time),
+          occurrence, attempt};
+}
+
+void scheduled_error_retry_and_exhaustion() {
+  const auto request = frame(1, {1, 2, 3, 4});
+  const can::Nanoseconds first_request = 300000000;
+  const can::Nanoseconds bit_time = 10000;
+  const can::Nanoseconds duration =
+      can::frame_bits(1, std::array<std::uint8_t, 4>{1, 2, 3, 4}) * bit_time;
+  const can::Nanoseconds first_end = first_request + duration;
+  const can::Nanoseconds retry_start = first_end + can::intermission_bits * bit_time;
+  const can::Nanoseconds retry_end = retry_start + duration;
+  const auto first_error = transmission_error(1, 1, first_request, 1, 1);
+  {
+    can::Bus bus;
+    const std::array rules{first_error};
+    bus.configure(2, 4, 1, rules.size(), rules);
+    can::Inputs configuration;
+    const auto rate = bitrate(100000);
+    configuration[0] = configuration[1] = rate;
+    bus.receive(configuration, 0);
+    send(bus, 0, request, first_request);
+    assert(bus.next_event() == first_end);
+    bus.complete(first_end);
+    assert(bus.outputs()[0] == bus_error(1, 1, true));
+    assert(bus.outputs()[1] == bus_error(1, 2, false));
+    bus.clear_outputs();
+    bus.receive({}, retry_start);
+    assert(bus.next_event() == retry_end);
+    bus.complete(retry_end);
+    assert(bus.outputs()[0] == confirm(1));
+    assert(bus.outputs()[1] == request);
+    assert(!bus.next_event());
+  }
+  {
+    can::Bus bus;
+    const std::array rules{
+        first_error,
+        transmission_error(1, 1, first_request, 1, 2),
+    };
+    bus.configure(2, 4, 1, rules.size(), rules);
+    can::Inputs configuration;
+    const auto rate = bitrate(100000);
+    configuration[0] = configuration[1] = rate;
+    bus.receive(configuration, 0);
+    send(bus, 0, request, first_request);
+    bus.complete(first_end);
+    assert(bus.outputs()[0] == bus_error(1, 1, true));
+    bus.clear_outputs();
+    bus.receive({}, retry_start);
+    bus.complete(retry_end);
+    assert(bus.outputs()[0] == bus_error(1, 1, true));
+    assert(bus.outputs()[1] == bus_error(1, 2, false));
+    assert(!bus.next_event());  // the second error exhausts the retry bound
+  }
+}
+
+void receiver_delivery_suppression_is_not_a_bus_error() {
+  can::Bus bus;
+  const can::FaultRuleInput rule{
+      std::uint64_t(can::FaultKind::receiver_delivery_suppression),
+      1, 2, 1, 1000, 1000, 1, 1};
+  const std::array rules{rule};
+  bus.configure(2, 4, 1, rules.size(), rules);
+  can::Inputs configuration;
+  const auto rate = bitrate(100000);
+  configuration[0] = configuration[1] = rate;
+  bus.receive(configuration, 0);
+  send(bus, 0, frame(1, {1, 2, 3, 4}), 1000);
+  bus.complete(1000 + can::frame_bits(1, std::array<std::uint8_t, 4>{1, 2, 3, 4}) * 10000);
+  assert(bus.outputs()[0] == confirm(1));
+  assert(bus.outputs()[1].empty());
+  assert(!bus.next_event());
+}
+
+void discard_policy_applies_when_a_retry_loses_arbitration() {
+  can::Bus bus;
+  const auto request = frame(1, {1, 2, 3, 4});
+  const can::Nanoseconds bit_time = 10000;
+  const can::Nanoseconds request_time = 1000;
+  const can::Nanoseconds first_end = request_time +
+      can::frame_bits(1, std::array<std::uint8_t, 4>{1, 2, 3, 4}) * bit_time;
+  const can::Nanoseconds retry_start =
+      first_end + can::intermission_bits * bit_time;
+  const can::FaultRuleInput rule = transmission_error(1, 1, request_time, 1, 1);
+  const std::array rules{rule};
+  bus.configure(2, 4, 1, rules.size(), rules);
+
+  auto node1_configuration = bitrate(100000);
+  const auto discard_policy = discard();
+  node1_configuration.insert(node1_configuration.end(),
+                             discard_policy.begin(), discard_policy.end());
+  can::Inputs configurations;
+  configurations[0] = node1_configuration;
+  configurations[1] = bitrate(100000);
+  bus.receive(configurations, 0);
+  send(bus, 0, request, request_time);
+  bus.complete(first_end);
+  assert(bus.outputs()[0] == bus_error(1, 1, true));
+  bus.clear_outputs();
+
+  const auto higher_priority_request = frame(0, {});
+  send(bus, 1, higher_priority_request, first_end + 1);
+  assert(bus.next_event() == retry_start);
+  bus.receive({}, retry_start);
+  const can::Nanoseconds winner_end = retry_start +
+      can::frame_bits(0, std::span<const std::uint8_t>{}) * bit_time;
+  bus.complete(winner_end);
+  can::Bytes expected_loser{0x30, 0, 0, 0, 12, 0, 0, 0, 1, 0, 0, 0};
+  expected_loser.insert(expected_loser.end(), higher_priority_request.begin(),
+                        higher_priority_request.end());
+  assert(bus.outputs()[0] == expected_loser);
+  assert(bus.outputs()[1] == confirm(0));
+  assert(!bus.next_event());
+}
+
 void four_declared_terminals() {
   can::Bus bus;
   assert(rejects([&] { bus.configure(0, 1); }));
@@ -316,6 +441,8 @@ int main() {
   contention_and_queues();
   discard_equal_id_and_bounds();
   finite_priority_stream();
+  scheduled_error_retry_and_exhaustion();
+  receiver_delivery_suppression_is_not_a_bus_error();
   four_declared_terminals();
   timing_configuration();
   malformed_operations_do_not_commit();

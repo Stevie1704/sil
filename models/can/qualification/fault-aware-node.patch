@@ -1,0 +1,44 @@
+--- a/App.c
++++ b/App.c
+@@ -41,6 +41,12 @@
+ 
+     fmi3Float64 NextTransmitTime;
+     fmi3Float64 SimulationTime;
++
++    fmi3UInt32 BusErrorCount;
++    fmi3UInt32 LastBusErrorId;
++    fmi3Byte LastBusErrorCode;
++    fmi3Byte LastBusErrorFlag;
++    fmi3Byte LastBusErrorIsSender;
+ };
+ 
+ 
+@@ -142,10 +148,27 @@
+             LogFmuMessage(instance, fmi3OK, "Info", "Received CAN frame with ID %u and length %u", transmitOp->id,
+                           transmitOp->dataLength);
+         }
++        else if (operation->opCode == FMI3_LS_BUS_CAN_OP_BUS_ERROR)
++        {
++            const fmi3Byte* bytes = (const fmi3Byte*)operation;
++            instance->App->BusErrorCount++;
++            instance->App->LastBusErrorId = (fmi3UInt32)bytes[8] |
++                ((fmi3UInt32)bytes[9] << 8) |
++                ((fmi3UInt32)bytes[10] << 16) |
++                ((fmi3UInt32)bytes[11] << 24);
++            instance->App->LastBusErrorCode = bytes[12];
++            instance->App->LastBusErrorFlag = bytes[13];
++            instance->App->LastBusErrorIsSender = bytes[14];
++            LogFmuMessage(instance, fmi3OK, "Info",
++                "Consumed CAN Bus Error ID %u code %u flag %u sender %u count %u",
++                instance->App->LastBusErrorId, instance->App->LastBusErrorCode,
++                instance->App->LastBusErrorFlag,
++                instance->App->LastBusErrorIsSender,
++                instance->App->BusErrorCount);
++        }
+         else if (operation->opCode == FMI3_LS_BUS_CAN_OP_CONFIGURATION ||
+                  operation->opCode == FMI3_LS_BUS_CAN_OP_STATUS ||
+                  operation->opCode == FMI3_LS_BUS_CAN_OP_CONFIRM ||
+-                 operation->opCode == FMI3_LS_BUS_CAN_OP_BUS_ERROR ||
+                  operation->opCode == FMI3_LS_BUS_CAN_OP_ARBITRATION_LOST)
+         {
+             // Ignore

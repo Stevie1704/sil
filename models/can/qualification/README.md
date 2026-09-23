@@ -49,3 +49,32 @@ times; repeat Runs must have identical Recording bytes. No Importer correction
 is involved. Tests additionally exercise malformed traffic, unsupported profile
 features, sequential transfers in both directions, boundary payload sizes,
 per-instance isolation, and FMI lifecycle failures.
+
+## CAN model error-notification fixture
+
+The pinned upstream node deliberately ignores `Bus Error` (0x31), so the
+original `ExternalSender.fmu` and `ExternalReceiver.fmu` stay unchanged and make
+no notification-handling claim. `build_nodes.py` additionally creates
+`FaultAwareSender.fmu` and `FaultAwareReceiver.fmu` as separately named test
+fixtures from the same pinned node and released headers. Their additional
+`fault-aware-node.patch` is first-party test code: it parses the 15-byte
+operation documented by [FMI-LS-BUS 1.0.0, Tables 14–16](https://fmi-standard.org/fmi-ls-bus/1.0.0/),
+records its fields and count, and logs each consumed notification. This
+adapted consumer checks that the SiL path delivers the bus FMU's bytes and
+exercises the retry-ownership contract. It is not an independent external
+implementation or independent confirmation of the operation encoding. The
+fixture leaves bounded retry ownership to the bus FMU; it does not emulate
+error counters or physical error confinement.
+
+Each fault-aware archive embeds the upstream revisions, source hashes, the
+original node patch digest and the additional fault-awareness patch digest in
+`resources/identity.json`. Retained evidence names these as adapted fixtures,
+separately from the first-party bus and independent FMPy master. Full SiL
+Manifests, including every `--start` value, are retained under
+`../evidence/issue-155/`; their expected event tables are stored separately from
+the observed traces. The single-error scenario schedules a Bit Error for the
+first Node1 request with ID 1 at 300000000 ns. Both fixture nodes consume their
+Bus Error notification at the reference frame end; the bus owns the bounded
+retry and Node1 receives Confirm while Node2 receives the frame at the retry's
+completion. A later request outside the consumed occurrence proceeds without
+another fault.
