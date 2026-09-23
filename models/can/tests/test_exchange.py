@@ -335,6 +335,8 @@ def test_sil_group_and_determinism():
             "--participant-timeout-ms",
             "5000",
             "--no-recording",
+            "--provenance",
+            str(ARTIFACTS / "competing.provenance.json"),
         ],
         capture_output=True,
         text=True,
