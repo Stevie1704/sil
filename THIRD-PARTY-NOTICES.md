@@ -103,3 +103,21 @@ Apache-2.0 license, included in each FMU as `resources/LICENSE-SiL`.
 The wheel and the source distribution contain SiL code only. They declare
 `mcap` as a runtime dependency and bundle no third-party code, so they carry no
 third-party notice beyond this file.
+
+## Standalone CAN model and qualification (#152)
+
+`models/can/` builds a first-party Apache-2.0 FMU using the official FMI 3.0
+C headers supplied by FMPy 0.3.32. Those headers are BSD-2-Clause, copyright
+MODELISAR consortium and Modelica Association Project FMI; the complete header
+notice is included in the FMU's `documentation/licenses/` and sources.
+FMPy (BSD-3-Clause) is a build/independent qualification tool, not a model
+runtime dependency. The model links the platform GNU C++ runtime.
+
+Qualification downloads Modelica Association's FMI-LS-BUS examples revision
+`de019a6efbad810795835f2fd9bbf9e62eb451b9` and released FMI-LS-BUS headers at
+`8abdf039bfb994c794e4c15bce575cfc00a1ab6e`. Their code is BSD-2-Clause; the
+specification text is CC-BY-SA-4.0. Only code/metadata is used in the test FMUs;
+no specification text is copied into this repository. The exact adaptation is
+retained in `models/can/qualification/node.patch` and `manifest.patch`; each generated external FMU
+carries its source identity, patch and upstream licenses. They are qualification
+artifacts, not code linked into the first-party model or SiL runtime.

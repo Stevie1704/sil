@@ -1,0 +1,47 @@
+--- a/App.c
++++ b/App.c
+@@ -37,6 +37,7 @@
+     fmi3Byte TxBuffer[2048];
+     fmi3LsBusUtilBufferInfo TxBufferInfo;
+     fmi3Clock TxClock;
++    bool TxClockReported;
+ 
+     fmi3Float64 NextTransmitTime;
+     fmi3Float64 SimulationTime;
+@@ -80,6 +81,7 @@
+     instance->App->SimulationTime = currentTime;
+ 
+     // Send transmit operations with the given interval until we reach the target time
++#ifndef SIL_CAN_RECEIVE_ONLY
+     while (instance->App->NextTransmitTime <= targetTime)
+     {
+         instance->App->SimulationTime = instance->App->NextTransmitTime;
+@@ -105,6 +107,7 @@
+         instance->App->NextTransmitTime = instance->App->NextTransmitTime + TransmitInterval;
+     }
+ 
++#endif
+      instance->App->SimulationTime = targetTime;
+ 
+     // If we create bus transmit operations, we have to enter event mode and set the TX clock after this step
+@@ -170,6 +173,7 @@
+     {
+         // Deactivate TX clock and clear TX buffer since both should have been retrieved by this time
+         instance->App->TxClock = fmi3ClockInactive;
++        instance->App->TxClockReported = false;
+         FMI3_LS_BUS_BUFFER_INFO_RESET(&instance->App->TxBufferInfo);
+     }
+ }
+@@ -278,10 +282,10 @@
+     if (valueReference == FMU_VAR_TX_CLOCK)
+     {
+         LogFmuMessage(instance, fmi3OK, "Trace", "Get TX clock of %d", instance->App->TxClock);
+-        *value = instance->App->TxClock;
++        *value = instance->App->TxClock && !instance->App->TxClockReported;
+ 
+         // Reset clock since GetClock may only return fmi3ClockActive once per activation
+-        instance->App->TxClock = fmi3ClockInactive;
++        instance->App->TxClockReported = instance->App->TxClock;
+ 
+         return true;
+     }
