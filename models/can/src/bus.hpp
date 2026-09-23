@@ -2,17 +2,19 @@
 
 #include <array>
 #include <cstdint>
+#include <deque>
 #include <optional>
 #include <span>
-#include <stdexcept>
 #include <vector>
 
 namespace can {
 using Bytes = std::vector<std::uint8_t>;
 // Bus time in whole nanoseconds from the start of the Run.
 using Nanoseconds = std::int64_t;
+inline constexpr unsigned terminal_capacity = 4;
+inline constexpr unsigned max_queue_capacity = 64;
 // The operation buffers each terminal handed the bus in one event.
-using Inputs = std::array<std::span<const std::uint8_t>, 2>;
+using Inputs = std::array<std::span<const std::uint8_t>, terminal_capacity>;
 
 inline constexpr Nanoseconds ns_per_s = 1000000000;
 // Supported rates divide one second into whole-nanosecond bit times.
@@ -22,37 +24,44 @@ inline constexpr unsigned intermission_bits = 3;
 // the nanosecond, so later instants are rejected rather than rounded.
 inline constexpr Nanoseconds max_time = Nanoseconds(1) << 50;
 
-// SOF through the last EOF bit of an 11-bit data frame, with exact stuffing.
 unsigned frame_bits(std::uint32_t id, std::span<const std::uint8_t> data);
 
-// No FMI or SiL dependencies: the adapter supplies logical event instants.
+// The core owns CAN semantics; the adapter supplies complete FMI event inputs.
 class Bus {
  public:
-  // All inputs of one event commit together: configurations apply before
-  // any Transmit is scheduled, so terminal order decides nothing.
+  void configure(unsigned active_nodes, unsigned queue_capacity);
+  unsigned active_nodes() const { return active_nodes_; }
+  unsigned queue_capacity() const { return queue_capacity_; }
   void receive(const Inputs& inputs, Nanoseconds now);
-  // Delivers the frame whose last EOF bit ends at `now`.
+  // A countdown can mean a frame end or the first instant after intermission.
+  // For the latter, call receive at that instant before selecting a winner.
   void complete(Nanoseconds now);
-  std::optional<Nanoseconds> next_completion() const;
-  const std::array<Bytes, 2>& outputs() const { return outputs_; }
+  bool is_completion(Nanoseconds now) const { return on_wire_ && on_wire_->end == now; }
+  std::optional<Nanoseconds> next_event() const;
+  const std::array<Bytes, terminal_capacity>& outputs() const { return outputs_; }
   void clear_outputs() { outputs_ = {}; }
 
  private:
+  struct Request { Bytes operation; std::uint32_t id; };
   struct Transfer {
     Bytes operation;
-    unsigned sender;
-    Nanoseconds start, end;
+    std::array<bool, terminal_capacity> senders{};
+    Nanoseconds end;
   };
-  void schedule(unsigned sender, std::span<const std::uint8_t> operation, Nanoseconds now);
+  void enqueue(unsigned sender, const Request& request);
+  void arbitrate(Nanoseconds now);
+  bool has_pending() const;
   Nanoseconds bit_time() const { return ns_per_s / *bitrate_; }
 
-  std::array<Bytes, 2> outputs_;
-  // At most two: the frame on the wire and the one waiting for the next
-  // arbitration opportunity. Starts and ends are fixed when scheduled.
-  std::vector<Transfer> transfers_;
+  unsigned active_nodes_ = 2, queue_capacity_ = 4;
+  std::array<Bytes, terminal_capacity> outputs_;
+  std::array<Bytes, terminal_capacity> notifications_;
+  std::array<std::deque<Request>, terminal_capacity> queues_;
+  std::optional<Transfer> on_wire_;
   std::optional<std::uint32_t> bitrate_;
-  // A frame is timed only once both terminals have agreed on the bitrate.
-  std::array<bool, 2> configured_{};
-  Nanoseconds idle_from_ = 0;  // end of the last intermission
+  std::array<bool, terminal_capacity> configured_{};
+  std::array<bool, terminal_capacity> discards_on_loss_{};
+  // First possible SOF after the previous frame's intermission.
+  Nanoseconds idle_from_ = 0;
 };
 }  // namespace can

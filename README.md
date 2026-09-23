@@ -503,6 +503,17 @@ importer's activation runs in, and state the FMI event time they belong to, so
 the group's finer grid reaches the Recording as a stated time rather than as a
 timestamp.
 
+At one instant the Importer handles non-bus FMUs first, then gives each bus
+simulation FMU all offered operations in one event. Operations for the same
+terminal keep their delivery order inside one Binary buffer. This applies to
+every FMU declaring `isBusSimulationFMU=true`: it changes same-instant FMI
+callback order so a bus can arbitrate independent requests, as the three-node
+fixture in `models/can/` requires. Empty Binary output from a bus simulation's
+countdown Clock carries no operation and is consumed at the Importer edge;
+empty countdown outputs from other FMUs retain their previous propagation.
+The older upstream proof files are unchanged, and the kernel and Channel
+contracts are unaffected.
+
 | Declared | Supported |
 | --- | --- |
 | Terminal | `org.fmi-ls-bus.network-terminal` with matching rule `org.fmi-ls-bus.transceiver`, grouping `Rx_Data`, `Rx_Clock`, `Tx_Data`, `Tx_Clock` |
@@ -806,13 +817,12 @@ frame that lost arbitration follows at 300.96 ms.
 ## First-party CAN bus model
 
 [models/can/](models/can/) builds a standalone C++20 FMI 3.0 CAN Bus Simulation
-FMU for a restricted FMI-LS-BUS 1.0.0 profile. It connects two active
-terminals, carries 11-bit Classical CAN data frames, and returns confirmations.
-Frames are serialized on the wire: each one completes after its exact-stuffed
-bit length at the configured bitrate, a request that finds the bus occupied
-waits for the end of intermission, and the completion instant reaches the
-Importer as a countdown Clock interval in whole nanoseconds. Arbitration of
-competing requests is not modeled yet. `models/can/run.sh` builds and qualifies
+FMU for a restricted FMI-LS-BUS 1.0.0 profile. It declares four terminals,
+configures one to four as active, and carries 11-bit Classical CAN data frames.
+Queued requests arbitrate by identifier after each intermission; per-node FIFO
+capacity and buffer or discard behavior are configurable. A transmitting frame
+cannot be preempted. Completion and arbitration instants reach the Importer as
+countdown Clock intervals in whole nanoseconds. `models/can/run.sh` builds and qualifies
 the same Linux x86-64 artifact through independent FMI calls and SiL's existing
 FMU group.
 
