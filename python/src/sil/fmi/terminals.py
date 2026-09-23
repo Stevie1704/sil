@@ -138,6 +138,11 @@ class Instance:
         self._event_pending = False
         self._next_event_time: float | None = None
 
+    @property
+    def bus_simulation(self) -> bool:
+        bus = self.description.bus
+        return bus is not None and bus.bus_simulation
+
     def instantiate(self, extracted: Path,
                     starts: list[tuple[Variable, object]]) -> None:
         """Load and initialize this FMU, in the group's declaration order.
@@ -238,9 +243,13 @@ class Instance:
             self.fmu.raise_clocks(
                 [buffer.clock.reference for _, buffer in due]
             )
-        produced = [
-            (transceiver, buffer.take(self.fmu)) for transceiver, buffer in due
-        ]
+        produced = []
+        for transceiver, buffer in due:
+            payload = buffer.take(self.fmu)
+            # Only a bus simulation uses an empty countdown to mark an
+            # arbitration opportunity; other FMUs retain empty activations.
+            if payload or not self.bus_simulation:
+                produced.append((transceiver, payload))
         collected, states = run_event(
             self.fmu, event_time_ns, self._activations
         )

@@ -49,6 +49,14 @@ def write_descriptions(root):
         causality="independent",
         variability="continuous",
     )
+    for name, reference, default in (
+        ("activeNodeCount", LAYOUT["active_nodes"], "2"),
+        ("perNodeQueueCapacity", LAYOUT["queue_capacity"], "4"),
+    ):
+        ET.SubElement(
+            variables, "Float64", name=name, valueReference=str(reference),
+            causality="parameter", variability="fixed", start=default,
+        )
     terminals = ET.Element("fmiTerminalsAndIcons", fmiVersion="3.0")
     entries = ET.SubElement(terminals, "Terminals")
     for n in range(LAYOUT["terminal_count"]):

@@ -19,8 +19,8 @@ hash and the exact adaptation digest in each FMU.
    keeps Binary available, and clears the buffer/latch in the discrete update.
 2. Compile a receive-only peer with `SIL_CAN_RECEIVE_ONLY`, disabling only the
    periodic transmit loop. Its configuration and received-operation processing
-   remain upstream code. This avoids manufacturing a competing request in a
-   profile that deliberately does not model contention yet.
+   remain upstream code. This retains the original one-sender smoke case;
+   contention has separate three-node and two-sender qualification cases.
 
 The manifest correction is not compatibility evidence by itself: the released
 headers, schema checks, Clock/Binary lifecycle assertions and actual exchanges

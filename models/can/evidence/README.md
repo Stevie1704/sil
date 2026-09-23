@@ -1,5 +1,10 @@
 # Qualification retained for issues #152 and #153
 
+This directory preserves the pre-arbitration qualification. Issue #154's
+model and configuration artifacts are retained separately under
+[`issue-154/`](issue-154/README.md); the earlier upstream proof stays under
+`proofs/fmi-ls-bus/`.
+
 Linux x86-64 (Docker on an ARM development host), Python 3.13.7, FMPy 0.3.32,
 GNU C++ 12.2.0. The image used was
 `sha256:f02c5c1b1e47efe66a066f3a6619983c6c87363980acfabbe56a03de063828e9`,

@@ -215,10 +215,9 @@ class _Group:
     def _settle(self, instant_ns: int, pending: list) -> list:
         """One instant, propagated between the FMUs until it stops producing.
 
-        Each activation is handed over on its own and its event handled before
-        the next one is written: two frames arriving at one terminal in the
-        same instant are two activations of the same Clock, and writing the
-        second before the first was processed would lose it.
+        Non-bus activations are handled one at a time. A bus simulation gets
+        all operations offered at this instant in one event, so physical
+        arbitration is independent of the order its inputs were delivered.
         """
         if not pending:
             return []
@@ -228,10 +227,8 @@ class _Group:
             if not work:
                 self._quiesce(instant_ns)
                 return published
-            owed = work.popleft()
-            if owed.transceiver is not None:
-                owed.instance.deliver(owed.transceiver, owed.payload)
-            for source, payload in owed.instance.handle(instant_ns):
+            instance = self._deliver_same_instant(work)
+            for source, payload in instance.handle(instant_ns):
                 if source.observation is not None:
                     published.append(
                         source.observation.message(payload, instant_ns)
@@ -245,6 +242,33 @@ class _Group:
             f"activations at {instant_ns} ns without the instant ending; this "
             f"importer bounds the propagation of one instant"
         )
+
+    def _deliver_same_instant(self, work: deque[_Pending]) -> Instance:
+        """Give a bus all offered operations before its event is handled."""
+        index = next((n for n, item in enumerate(work)
+                      if not item.instance.bus_simulation), 0)
+        owed = work[index]
+        del work[index]
+        if not owed.instance.bus_simulation:
+            if owed.transceiver is not None:
+                owed.instance.deliver(owed.transceiver, owed.payload)
+            return owed.instance
+
+        # Drain all other work first; several activations of one bus terminal
+        # become consecutive operations in one Clock-gated Binary buffer.
+        combined: dict[Transceiver, bytearray] = {}
+        remaining = deque()
+        for item in (owed, *work):
+            if item.instance is owed.instance:
+                if item.transceiver is not None:
+                    combined.setdefault(item.transceiver, bytearray()).extend(item.payload)
+            else:
+                remaining.append(item)
+        work.clear()
+        work.extend(remaining)
+        for transceiver, payload in combined.items():
+            owed.instance.deliver(transceiver, bytes(payload))
+        return owed.instance
 
     def _quiesce(self, instant_ns: int) -> None:
         """End the instant: check what was asked for, return to Step Mode."""

@@ -1,6 +1,7 @@
 #include "bus.hpp"
 
 #include <algorithm>
+#include <stdexcept>
 
 namespace can {
 namespace {
@@ -13,6 +14,12 @@ void require(bool condition, const char* message) {
 }
 bool supported_bitrate(std::uint32_t rate) {
   return rate >= min_bitrate && rate <= max_bitrate && ns_per_s % rate == 0;
+}
+inline constexpr std::uint8_t confirm_code = 0x20;
+inline constexpr std::uint8_t arbitration_lost_code = 0x30;
+Bytes identifier_operation(std::uint8_t code, std::uint32_t id) {
+  return {code, 0, 0, 0, 12, 0, 0, 0,
+          std::uint8_t(id), std::uint8_t(id >> 8), 0, 0};
 }
 // ISO 11898-1 CRC-15 shift register over SOF through the data field.
 unsigned crc15(const std::vector<bool>& bits) {
@@ -56,14 +63,32 @@ unsigned frame_bits(std::uint32_t id, std::span<const std::uint8_t> data) {
   return unsigned(bits.size()) + stuff_bits(bits) + 1 + 1 + 1 + 7;
 }
 
+void Bus::configure(unsigned active_nodes, unsigned queue_capacity) {
+  require(active_nodes >= 1 && active_nodes <= terminal_capacity,
+          "active node count outside declared terminal capacity");
+  require(queue_capacity >= 1 && queue_capacity <= max_queue_capacity,
+          "per-node queue capacity must be 1..64");
+  require(!has_pending() && !on_wire_, "cannot reconfigure a busy bus");
+  for (const auto& notifications : notifications_)
+    require(notifications.empty(), "cannot reconfigure pending notifications");
+  active_nodes_ = active_nodes;
+  queue_capacity_ = queue_capacity;
+}
+
+bool Bus::has_pending() const {
+  return std::any_of(queues_.begin(), queues_.end(),
+                     [](const auto& queue) { return !queue.empty(); });
+}
+
 void Bus::receive(const Inputs& inputs, Nanoseconds now) {
   require(now >= 0 && now <= max_time, "event time outside the supported range");
-  require(transfers_.empty() || transfers_.front().end >= now, "a frame completion was skipped");
-  // Validate the complete transaction before committing any frame.
+  require(!next_event() || *next_event() >= now, "a bus countdown was skipped");
+  // Validate the complete transaction before committing any operation.
   auto next = *this;
-  std::vector<std::pair<unsigned, std::span<const std::uint8_t>>> requests;
+  std::vector<std::pair<unsigned, Request>> requests;
   for (unsigned terminal = 0; terminal < inputs.size(); ++terminal) {
     auto operations = inputs[terminal];
+    require(terminal < active_nodes_ || operations.empty(), "input to inactive terminal");
     while (!operations.empty()) {
       require(operations.size() >= 8, "truncated operation header");
       const auto code = u32(operations, 0), length = u32(operations, 4);
@@ -80,8 +105,9 @@ void Bus::receive(const Inputs& inputs, Nanoseconds now) {
           next.bitrate_ = rate;
           next.configured_[terminal] = true;
         } else if (op[8] == 4) {
-          require(length == 10 && op[9] == 1,
-                  "only BufferAndRetransmit configuration is supported");
+          require(length == 10 && (op[9] == 1 || op[9] == 2),
+                  "unsupported arbitration-loss behavior");
+          next.discards_on_loss_[terminal] = op[9] == 2;
         } else {
           throw std::runtime_error("unsupported configuration kind");
         }
@@ -91,46 +117,79 @@ void Bus::receive(const Inputs& inputs, Nanoseconds now) {
         require(size <= 8 && length == 16 + size, "invalid Classical CAN payload length");
         require(u32(op, 8) <= 0x7ff && op[12] == 0 && op[13] == 0,
                 "only 11-bit Classical CAN data frames are supported");
-        requests.emplace_back(terminal, op);
+        requests.emplace_back(terminal, Request{Bytes(op.begin(), op.end()), u32(op, 8)});
       } else {
         throw std::runtime_error("unsupported CAN operation");
       }
       operations = operations.subspan(length);
     }
   }
-  for (const auto& [sender, op] : requests) next.schedule(sender, op, now);
+  for (const auto& [sender, request] : requests) next.enqueue(sender, request);
+  if (!next.on_wire_ && next.has_pending() && now >= next.idle_from_)
+    next.arbitrate(now);
   *this = std::move(next);
 }
 
-void Bus::schedule(unsigned sender, std::span<const std::uint8_t> operation, Nanoseconds now) {
-  require(configured_[0] && configured_[1],
-          "every terminal must configure the CAN bitrate before transmitting");
-  // A frame that starts now or later is still eligible at an arbitration
-  // opportunity; a second one there would need arbitration (issue #154).
-  require(std::none_of(transfers_.begin(), transfers_.end(),
-                       [&](const Transfer& t) { return t.start >= now; }),
-          "competing transmission requests need arbitration, which is unsupported");
-  const auto opportunity = transfers_.empty()
-      ? idle_from_ : transfers_.back().end + intermission_bits * bit_time();
-  const auto start = std::max(now, opportunity);
-  const auto end = start + Nanoseconds(frame_bits(u32(operation, 8), operation.subspan(16))) * bit_time();
-  require(end <= max_time, "frame end beyond the supported time range");
-  transfers_.push_back({Bytes(operation.begin(), operation.end()), sender, start, end});
+void Bus::enqueue(unsigned sender, const Request& request) {
+  require(bitrate_.has_value(), "CAN bitrate is not configured");
+  for (unsigned node = 0; node < active_nodes_; ++node)
+    require(configured_[node],
+            "every active terminal must configure the CAN bitrate before transmitting");
+  require(queues_[sender].size() < queue_capacity_, "per-node CAN queue is full");
+  queues_[sender].push_back(request);
+}
+
+void Bus::arbitrate(Nanoseconds now) {
+  unsigned winner = terminal_capacity;
+  for (unsigned node = 0; node < active_nodes_; ++node)
+    if (!queues_[node].empty() &&
+        (winner == terminal_capacity || queues_[node].front().id < queues_[winner].front().id))
+      winner = node;
+  require(winner < terminal_capacity, "arbitration without pending frames");
+  const auto chosen = queues_[winner].front();
+  Transfer transfer{chosen.operation, {}, now + Nanoseconds(frame_bits(chosen.id,
+                                 std::span<const std::uint8_t>(chosen.operation).subspan(16))) * bit_time()};
+  require(transfer.end <= max_time, "frame end beyond the supported time range");
+  for (unsigned node = 0; node < active_nodes_; ++node) {
+    if (queues_[node].empty()) continue;
+    const auto& contender = queues_[node].front();
+    if (contender.id == chosen.id) {
+      require(contender.operation == chosen.operation,
+              "equal CAN identifiers with different payloads cannot be resolved without error modeling");
+      transfer.senders[node] = true;
+      queues_[node].pop_front();
+    } else if (discards_on_loss_[node]) {
+      // The standard ArbitrationLost operation contains the lost identifier.
+      auto& out = notifications_[node];
+      const auto notice = identifier_operation(arbitration_lost_code, contender.id);
+      out.insert(out.end(), notice.begin(), notice.end());
+      queues_[node].pop_front();
+    }
+  }
+  on_wire_ = std::move(transfer);
 }
 
 void Bus::complete(Nanoseconds now) {
-  require(!transfers_.empty() && transfers_.front().end == now,
+  require(on_wire_ && on_wire_->end == now,
           "no frame ends at this instant");
-  const auto& done = transfers_.front();
+  const auto& done = *on_wire_;
   const auto& frame = done.operation;
-  outputs_[1 - done.sender] = frame;
-  outputs_[done.sender] = {0x20, 0, 0, 0, 12, 0, 0, 0, frame[8], frame[9], frame[10], frame[11]};
+  for (unsigned node = 0; node < active_nodes_; ++node) {
+    outputs_[node] = notifications_[node];
+    if (done.senders[node]) {
+      const auto confirmation = identifier_operation(confirm_code, u32(frame, 8));
+      outputs_[node].insert(outputs_[node].end(), confirmation.begin(), confirmation.end());
+    } else
+      outputs_[node].insert(outputs_[node].end(), frame.begin(), frame.end());
+  }
+  notifications_ = {};
   idle_from_ = now + intermission_bits * bit_time();
-  transfers_.erase(transfers_.begin());
+  on_wire_.reset();
 }
 
-std::optional<Nanoseconds> Bus::next_completion() const {
-  if (transfers_.empty()) return std::nullopt;
-  return transfers_.front().end;
+std::optional<Nanoseconds> Bus::next_event() const {
+  if (on_wire_) return on_wire_->end;
+  if (has_pending()) return idle_from_;
+  return std::nullopt;
 }
 }  // namespace can

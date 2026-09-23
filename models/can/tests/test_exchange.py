@@ -18,13 +18,19 @@ import wire
 
 ROOT = Path(__file__).resolve().parents[3]
 ARTIFACTS = ROOT / "build/can"
-MODEL = json.loads((ROOT / "models/can/profile.json").read_text())["model_name"]
+PROFILE = json.loads((ROOT / "models/can/profile.json").read_text())
+MODEL = PROFILE["model_name"]
+LAYOUT = PROFILE["layout"]
 NS = 1_000_000_000
 FRAME = bytes.fromhex("1000000014000000010000000000040001020304")
 CONFIRM = bytes.fromhex("200000000c00000001000000")
 CONFIG = bytes.fromhex("400000000d00000001a0860100400000000a0000000401")
 # The upstream frame (ID 1, 01 02 03 04) is 83 bits at 100 kbit/s.
 UPSTREAM_END_NS = 300_000_000 + 83 * 10_000
+
+
+def terminal_ref(node, member):
+    return LAYOUT["terminal_stride"] * node + LAYOUT[member]
 
 
 def config(rate):
@@ -42,7 +48,8 @@ def confirm(identifier):
 
 
 @contextmanager
-def initialized_fmu(name=MODEL, logs=None, *, exit_initialization=True):
+def initialized_fmu(name=MODEL, logs=None, *, exit_initialization=True,
+                    active_nodes=None, queue_capacity=None):
     path = ARTIFACTS / f"{name}.fmu"
     description = read_model_description(path, validate=True)
     unpacked = extract(path)
@@ -59,6 +66,15 @@ def initialized_fmu(name=MODEL, logs=None, *, exit_initialization=True):
 
     fmu.instantiate(eventModeUsed=True, loggingOn=True, logMessage=log)
     try:
+        if active_nodes is not None or queue_capacity is not None:
+            refs, values = [], []
+            if active_nodes is not None:
+                refs.append(LAYOUT["active_nodes"])
+                values.append(float(active_nodes))
+            if queue_capacity is not None:
+                refs.append(LAYOUT["queue_capacity"])
+                values.append(float(queue_capacity))
+            fmu.setFloat64(refs, values)
         fmu.enterInitializationMode(startTime=0)
         if exit_initialization:
             fmu.exitInitializationMode()
@@ -69,8 +85,8 @@ def initialized_fmu(name=MODEL, logs=None, *, exit_initialization=True):
 
 
 def deliver(fmu, data, node=0):
-    fmu.setClock([4 * node + 2], [True])
-    fmu.setBinary([4 * node], [data])
+    fmu.setClock([terminal_ref(node, "rx_clock")], [True])
+    fmu.setBinary([terminal_ref(node, "rx_data")], [data])
 
 
 def transmit_configured(fmu, data):
@@ -79,13 +95,15 @@ def transmit_configured(fmu, data):
     deliver(fmu, CONFIG + data)
 
 
-def intervals(fmu):
-    refs = (ctypes.c_uint32 * 2)(3, 7)
-    counters = (ctypes.c_uint64 * 2)()
-    resolutions = (ctypes.c_uint64 * 2)()
-    qualifiers = (ctypes.c_int * 2)()
+def intervals(fmu, nodes=2):
+    refs = (ctypes.c_uint32 * nodes)(
+        *(terminal_ref(n, "tx_clock") for n in range(nodes))
+    )
+    counters = (ctypes.c_uint64 * nodes)()
+    resolutions = (ctypes.c_uint64 * nodes)()
+    qualifiers = (ctypes.c_int * nodes)()
     fmu.fmi3GetIntervalFraction(
-        fmu.component, refs, 2, counters, resolutions, qualifiers
+        fmu.component, refs, nodes, counters, resolutions, qualifiers
     )
     return list(counters), list(resolutions), list(qualifiers)
 
@@ -99,7 +117,7 @@ def advance(fmu, start, end):
     fmu.enterEventMode()
 
 
-def drive(bus, requests, until_ns, grid_ns=None):
+def drive(bus, requests, until_ns, grid_ns=None, nodes=2):
     """An independent event-driven FMI master for the bus alone.
 
     It stops at every request instant, at every countdown instant the bus
@@ -111,11 +129,15 @@ def drive(bus, requests, until_ns, grid_ns=None):
         for _, node, data in (r for r in requests if r[0] == now):
             deliver(bus, data, node)
         if due == now:
-            bus.setClock([3, 7], [True, True])
-            trace += [(now, n, data) for n, data in enumerate(bus.getBinary([1, 5]))]
+            bus.setClock([terminal_ref(n, "tx_clock") for n in range(nodes)],
+                         [True] * nodes)
+            outputs = bus.getBinary([
+                terminal_ref(n, "tx_data") for n in range(nodes)
+            ])
+            trace.extend((now, n, data) for n, data in enumerate(outputs) if data)
         bus.updateDiscreteStates()
-        counters, resolutions, qualifiers = intervals(bus)
-        assert qualifiers[0] == qualifiers[1] and counters[0] == counters[1]
+        counters, resolutions, qualifiers = intervals(bus, nodes)
+        assert len(set(qualifiers)) == len(set(counters)) == 1
         if qualifiers[0] == 2:
             assert resolutions[0] == NS
             due = now + counters[0]
@@ -263,8 +285,7 @@ BAD = [
     config(2000000),  # above Classical CAN
     config(500000),  # inconsistent with the already configured 100000
     struct.pack("<IIBI", 0x40, 13, 2, 100000),  # FD bitrate
-    struct.pack("<IIBB", 0x40, 10, 4, 2),  # discard policy
-    FRAME + FRAME,  # competing buffer
+    struct.pack("<IIBB", 0x40, 10, 4, 3),  # invalid policy
     CONFIRM,  # wrong direction
 ]
 
@@ -289,8 +310,118 @@ def test_competing_terminals():
     with initialized_fmu() as bus:
         deliver(bus, CONFIG + FRAME, 0)
         deliver(bus, CONFIG + FRAME, 1)
+        bus.updateDiscreteStates()
+        assert intervals(bus)[0] == [830000, 830000]
+        advance(bus, 0, 0.00083)
+        bus.setClock([3, 7], [True, True])
+        assert bus.getBinary([1, 5]) == [CONFIRM, CONFIRM]
+
+
+def lost(identifier):
+    return struct.pack("<III", 0x30, 12, identifier)
+
+
+THREE_REQUESTS = [
+    (0, 0, config(125000)),
+    (0, 1, config(125000)),
+    (0, 2, config(125000) + struct.pack("<IIBB", 0x40, 10, 4, 2)),
+    (1000, 0, frame(2, b"")),
+    (1000, 1, frame(0, b"")),
+    (1000, 2, frame(1, b"")),
+]
+THREE_TRACE = [
+    (401000, 0, frame(0, b"")),
+    (401000, 1, confirm(0)),
+    (401000, 2, lost(1) + frame(0, b"")),
+    (801000, 0, confirm(2)),
+    (801000, 1, frame(2, b"")),
+    (801000, 2, frame(2, b"")),
+]
+
+
+def test_three_node_arbitration_and_discard_independent_of_input_order():
+    for requests in (THREE_REQUESTS, list(reversed(THREE_REQUESTS))):
+        with initialized_fmu(active_nodes=3, queue_capacity=2) as bus:
+            assert drive(bus, requests, 900000, nodes=3) == THREE_TRACE
+
+
+def test_staggered_contention_reconsiders_pending_heads():
+    requests = [(0, node, config(125000)) for node in range(3)] + [
+        (1000, 0, frame(2, b"")),
+        (100000, 1, frame(3, b"")),
+        (200000, 2, frame(1, b"")),
+        (300000, 0, frame(0, b"")),
+    ]
+    expected = [
+        (377000, 0, confirm(2)), (377000, 1, frame(2, b"")),
+        (377000, 2, frame(2, b"")),
+        (801000, 0, confirm(0)), (801000, 1, frame(0, b"")),
+        (801000, 2, frame(0, b"")),
+        (1201000, 0, frame(1, b"")), (1201000, 1, frame(1, b"")),
+        (1201000, 2, confirm(1)),
+        (1601000, 0, frame(3, b"")), (1601000, 1, confirm(3)),
+        (1601000, 2, frame(3, b"")),
+    ]
+    for grid in (None, 1000, 377000):
+        with initialized_fmu(active_nodes=3, queue_capacity=2) as bus:
+            assert drive(bus, requests, 1800000, grid, nodes=3) == expected
+
+
+def test_multi_operation_fifo_and_completion_boundary():
+    first = frame(1, b"")
+    requests = [
+        (0, n, config(125000)) for n in range(3)
+    ] + [
+        (1000, 0, frame(2, b"") + frame(0, b"")),
+        (1000, 1, first),
+        (1000, 2, frame(3, b"")),
+        (377000, 1, frame(0, b"")),
+    ]
+    expected = [
+        (377000, 0, first), (377000, 1, confirm(1)), (377000, 2, first),
+        (801000, 0, frame(0, b"")), (801000, 1, confirm(0)),
+        (801000, 2, frame(0, b"")),
+        (1201000, 0, confirm(2)), (1201000, 1, frame(2, b"")),
+        (1201000, 2, frame(2, b"")),
+        (1625000, 0, confirm(0)), (1625000, 1, frame(0, b"")),
+        (1625000, 2, frame(0, b"")),
+        (2025000, 0, frame(3, b"")), (2025000, 1, frame(3, b"")),
+        (2025000, 2, confirm(3)),
+    ]
+    for grid in (None, 1000, 377000):
+        with initialized_fmu(active_nodes=3, queue_capacity=2) as bus:
+            assert drive(bus, requests, 2200000, grid, nodes=3) == expected
+
+
+def test_equal_id_difference_and_configured_bounds():
+    with initialized_fmu(active_nodes=3) as bus:
+        for n in range(3):
+            deliver(bus, config(125000), n)
+        bus.updateDiscreteStates()
+        deliver(bus, frame(1, b"a"), 0)
+        deliver(bus, frame(1, b"b"), 1)
         with pytest.raises(FMICallException):
             bus.updateDiscreteStates()
+    with initialized_fmu(active_nodes=1, queue_capacity=1) as bus:
+        assert intervals(bus, 1)[2] == [0]
+        deliver(bus, config(125000) + frame(1, b""))
+        bus.updateDiscreteStates()
+        advance(bus, 0, 0.000001)
+        deliver(bus, frame(2, b""))
+        bus.updateDiscreteStates()
+        advance(bus, 0.000001, 0.000002)
+        deliver(bus, frame(3, b""))
+        with pytest.raises(FMICallException):
+            bus.updateDiscreteStates()
+    with initialized_fmu(active_nodes=1) as bus:
+        with pytest.raises(FMICallException):
+            deliver(bus, frame(1, b""), 1)
+    for settings in ({"active_nodes": 0}, {"active_nodes": 1.5},
+                     {"active_nodes": 5}, {"queue_capacity": 0},
+                     {"queue_capacity": 65}):
+        with pytest.raises(FMICallException):
+            with initialized_fmu(**settings):
+                pass
 
 
 @pytest.mark.parametrize(
@@ -298,8 +429,6 @@ def test_competing_terminals():
     [
         "unconfigured",
         "peer_unconfigured",
-        "second_waiting",
-        "opportunity",
         "beyond_time",
     ],
 )
@@ -315,22 +444,6 @@ def test_timing_rejections(case):
             elif case == "beyond_time":
                 bus.enterStepMode()
                 bus.doStep(currentCommunicationPoint=0, communicationStepSize=2e6)
-            else:
-                transmit_configured(bus, FRAME)
-                bus.updateDiscreteStates()
-                advance(bus, 0, 1e-5)
-                deliver(bus, FRAME, 1)
-                bus.updateDiscreteStates()
-                if case == "opportunity":
-                    # The waiting frame starts at 830 us + 30 us intermission;
-                    # a request at that instant competes with it.
-                    advance(bus, 1e-5, 8.3e-4)
-                    bus.setClock([3, 7], [True, True])
-                    bus.getBinary([1, 5])
-                    bus.updateDiscreteStates()
-                    advance(bus, 8.3e-4, 8.6e-4)
-                deliver(bus, FRAME, 0)
-                bus.updateDiscreteStates()
 
 
 @pytest.mark.parametrize(
@@ -464,32 +577,41 @@ def test_sil_group_and_determinism():
         + "\n"
     )
 
-    # A real second upstream sender exercises rejection through the Run boundary.
-    rejected = json.loads(path.read_text())
-    participant = rejected["participants"]["can"]
+    # Two upstream senders of the same bits co-transmit and both get Confirm.
+    competing = json.loads(path.read_text())
+    participant = competing["participants"]["can"]
     participant["command"] = [
         argument.replace("ExternalReceiver.fmu", "ExternalSender.fmu")
         for argument in participant["command"]
     ]
-    bad_path = ARTIFACTS / "competing.json"
-    bad_path.write_text(json.dumps(rejected) + "\n")
+    competing_path = ARTIFACTS / "competing.json"
+    competing_path.write_text(json.dumps(competing) + "\n")
     result = subprocess.run(
         [
             str(runner),
-            str(bad_path),
+            str(competing_path),
             "--participant-timeout-ms",
             "5000",
-            "--no-recording",
-            "--provenance",
-            str(ARTIFACTS / "competing.provenance.json"),
+            "-o", str(ARTIFACTS / "competing.mcap"),
         ],
         capture_output=True,
         text=True,
         timeout=60,
     )
     (ARTIFACTS / "competing.log").write_text(result.stdout + result.stderr)
-    assert result.returncode == 1, result.stdout + result.stderr
-    assert "fmi3UpdateDiscreteStates" in result.stderr
+    assert result.returncode == 0, result.stdout + result.stderr
+    competing_outputs = {}
+    for channel, _, raw in read_records(ARTIFACTS / "competing.mcap"):
+        if channel in ("confirm", "frame"):
+            fields = codec.unpack(raw)
+            competing_outputs[channel] = (
+                fields["data_event_time_ns"],
+                fields["data"][:fields["data_length"]],
+            )
+    assert competing_outputs == {
+        "confirm": (UPSTREAM_END_NS, CONFIRM),
+        "frame": (UPSTREAM_END_NS, CONFIRM),
+    }
 
 
 BURST_GRIDS = {"coarse": BURST_END_NS, "boundary": 249000, "bit": 1000}
@@ -608,6 +730,90 @@ def test_sil_burst_is_independent_of_step_grid():
     assert repeat.read_bytes() == (ARTIFACTS / "burst-bit.mcap").read_bytes()
 
 
+def test_sil_three_node_arbitration_and_manifest_determinism():
+    from sil import schema
+    from sil.manifest import Manifest, SubscriberRoute
+    from sil.recording import read_records
+
+    schemas = {"can.Buffer": {"fields": [
+        {"name": "data_length", "type": "u16"},
+        {"name": "data", "type": "u8", "count": 2048},
+        {"name": "data_event_time_ns", "type": "u64"},
+    ]}}
+    codec = schema.load(schemas)["can.Buffer"]
+    traces = {}
+    for name, order in (("forward", (0, 1, 2)), ("reverse", (2, 1, 0))):
+        manifest = Manifest(duration_ns=2_000_000)
+        manifest.add_schemas(schemas)
+        for node in order:
+            manifest.add_channel(f"in.node{node + 1}", schema="can.Buffer", latency_ns=0)
+            manifest.add_channel(f"out.node{node + 1}", schema="can.Buffer")
+        schedule = [
+            [f"in.node{node + 1}", instant, data.hex()]
+            for instant, node, data in THREE_REQUESTS
+        ]
+        if name == "reverse":
+            schedule.reverse()
+        manifest.add_process(
+            "source", command=["python", str(ROOT / "models/can/tests/source.py"),
+                               json.dumps(schedule)],
+            step_period_ns=1_000_000,
+            publishes=[f"in.node{node + 1}" for node in order],
+        )
+        command = ["python", "-m", "sil.fmi", "--instance", "bus",
+                   str(ARTIFACTS / f"{MODEL}.fmu"), "--bus-profile",
+                   "application/org.fmi-standard.fmi-ls-bus.can",
+                   "--start", "bus.activeNodeCount=3",
+                   "--start", "bus.perNodeQueueCapacity=2"]
+        for node in order:
+            command += ["--bind", f"in.node{node + 1}:data=bus.Node{node + 1}.Rx_Data"]
+            command += ["--bind", f"out.node{node + 1}:data=bus.Node{node + 1}.Tx_Data"]
+        manifest.add_process(
+            "can", command=command, step_period_ns=1_000_000,
+            subscribes=[SubscriberRoute(f"in.node{node + 1}", capacity=8)
+                        for node in order],
+            publishes=[f"out.node{node + 1}" for node in order], priority=1,
+        )
+        path = manifest.write(ARTIFACTS / f"arbitration-{name}.json").path
+        recordings = [ARTIFACTS / f"arbitration-{name}-{run}.mcap"
+                      for run in ("first", "second")]
+        for recording in recordings:
+            sil_run(path, recording)
+        assert recordings[0].read_bytes() == recordings[1].read_bytes()
+        trace = []
+        for channel, _, raw in read_records(recordings[0]):
+            if not channel.startswith("out."):
+                continue
+            fields = codec.unpack(raw)
+            trace.append((fields["data_event_time_ns"], int(channel[-1]) - 1,
+                          bytes(fields["data"][:fields["data_length"]])))
+        traces[name] = sorted(trace)
+        assert traces[name] == THREE_TRACE
+    (ARTIFACTS / "arbitration.json").write_text(json.dumps({
+        name: [(t, node, payload.hex()) for t, node, payload in trace]
+        for name, trace in traces.items()
+    }, indent=2) + "\n")
+    conflicting = json.loads(path.read_text())
+    conflicting["participants"]["source"]["command"][2] = json.dumps([
+        [f"in.node{node + 1}", 0, config(125000).hex()] for node in range(3)
+    ] + [
+        ["in.node1", 1000, frame(1, b"a").hex()],
+        ["in.node2", 1000, frame(1, b"b").hex()],
+    ])
+    conflict_path = ARTIFACTS / "arbitration-conflict.json"
+    conflict_path.write_text(json.dumps(conflicting) + "\n")
+    failure = subprocess.run(
+        ["/opt/kernel/sil-run", str(conflict_path), "--no-recording",
+         "--provenance", str(ARTIFACTS / "arbitration-conflict.provenance.json")],
+        capture_output=True, text=True, timeout=60,
+    )
+    (ARTIFACTS / "arbitration-conflict.log").write_text(
+        failure.stdout + failure.stderr
+    )
+    assert failure.returncode == 1
+    assert "fmi3UpdateDiscreteStates" in failure.stderr
+
+
 def test_package_identity_metadata_and_linkage():
     import zipfile
     from lxml import etree
@@ -695,12 +901,12 @@ def test_initial_unknowns_are_readable_before_any_clock_activation():
     references = [
         unknown.variable.valueReference for unknown in description.initialUnknowns
     ]
-    assert references == [1, 5]
+    assert references == [1, 5, 9, 13]
     with initialized_fmu(exit_initialization=False) as bus:
-        assert [value or b"" for value in bus.getBinary(references)] == [b"", b""]
+        assert [value or b"" for value in bus.getBinary(references)] == [b""] * 4
         bus.setBinary([0], [FRAME])
         bus.setBinary([0], [b""])
-        assert [value or b"" for value in bus.getBinary(references)] == [b"", b""]
+        assert [value or b"" for value in bus.getBinary(references)] == [b""] * 4
         bus.exitInitializationMode()
         bus.updateDiscreteStates()
         assert intervals(bus)[2] == [0, 0]

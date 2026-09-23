@@ -14,13 +14,15 @@
     }
   },
   "layout": {
-    "terminal_count": 2,
+    "terminal_count": 4,
     "terminal_stride": 4,
     "rx_data": 0,
     "tx_data": 1,
     "rx_clock": 2,
     "tx_clock": 3,
     "time": 1024,
+    "active_nodes": 1025,
+    "queue_capacity": 1026,
     "max_binary_size": 2048
   }
 }

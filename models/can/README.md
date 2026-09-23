@@ -1,6 +1,6 @@
 # Standalone Classical CAN bus FMU
 
-Maintained C++20 model product (issues #152, #153). `src/bus.*` is independent of
+Maintained C++20 model product (issues #152–#154). `src/bus.*` is independent of
 FMI and SiL; `src/fmi.cpp` owns each instance and translates FMI calls. The
 Linux x86-64 shared object requires the C++ runtime, with no SiL symbols,
 wall-clock access, threads, environment configuration, or random state.
@@ -13,17 +13,32 @@ This is a deliberately restricted profile, not full CAN/FMI conformance.
 
 | Surface | Support and rejection |
 | --- | --- |
-| Topology | Two active terminals, `Node1` and `Node2`; each is a `org.fmi-ls-bus.network-terminal` using `org.fmi-ls-bus.transceiver` matching. Both are active receivers throughout the Run. |
+| Topology | Four terminals (`Node1`–`Node4`) are declared; `activeNodeCount` selects the first 1–4, default 2. An inactive terminal accepts no input and receives no operation. Every active terminal receives each successful frame unless it was a sender. |
 | Encoding | Little-endian operation buffers per §§5.2 and 5.5.1. Complete buffers up to 2048 bytes; exact lengths checked before reading fields. |
 | Transmit | `0x10`, 11-bit ID 0–2047, IDE=RTR=0, 0–8 data bytes. FD, XL, extended and remote frames rejected. |
-| Configuration | `0x40`: CAN bitrate from 10000 to 1000000 bit/s that divides 10^9, so one bit time is a whole number of nanoseconds (for example 10k, 20k, 50k, 100k, 125k, 250k, 500k, 800k, 1M). The first bitrate configuration fixes the bus bitrate; every later one, from any terminal, must repeat it. Both terminals must configure it before the first Transmit, so an inconsistent rate is rejected before any frame is timed. Arbitration policy BufferAndRetransmit (1) is accepted and is the only one. Other rates, kinds and policies are rejected. Configuration is consumed, never forwarded. |
-| Confirmation | `0x20` with matching ID goes only to the sender; unchanged Transmit operation goes only to the other active terminal at the same event time (§5.5.1.2.2). No loopback. |
-| Transmission | A Transmit before both terminals configured the bitrate fails. All buffers of one FMI event commit together: configurations apply first, so terminal order decides nothing. Frames are serialized per the timing model below. At most one frame may be eligible at an arbitration opportunity: a request that arrives while another frame waits, two requests at the same instant on an idle bus (also two in one buffer), or a request at the instant a waiting frame starts, fails. Arbitration and retransmission are issue #154. |
+| Configuration | `0x40`: CAN bitrate from 10000 to 1000000 bit/s dividing 10^9. All active terminals must agree before transmission. Each may select BufferAndRetransmit (1, default) or DiscardAndNotify (2); other rates, kinds and policies fail. Configuration is consumed, never forwarded. |
+| FMI parameters | Fixed Float64 parameters `activeNodeCount` (value reference 1025, integer 1–4, default 2) and `perNodeQueueCapacity` (1026, integer 1–64, default 4) are set before Initialization Mode. The existing Importer `--start bus.activeNodeCount=3 --start bus.perNodeQueueCapacity=2` path configures them; no dynamic terminal creation or new Manifest field is needed. Invalid or fractional values fail. |
+| Confirmation and delivery | At frame end, each sender receives `Confirm` (`0x20`) and each other active terminal receives one unchanged `CanTransmit`. No loopback. A discarded loser receives `ArbitrationLost` (`0x30`, its lost ID) followed by the winning frame in the same operation buffer at that frame end. |
+| Arbitration and queue | All same-instant inputs are collected before arbitration. The lowest 11-bit identifier among each node's FIFO head wins. Each node's pending queue has the configured capacity; a frame already on the wire does not count. Full queues fail atomically and put the FMU in Error state, ending the Run. A wire frame cannot be preempted. After each frame and three-bit intermission, the heads compete again, including requests arriving at that boundary. BufferAndRetransmit leaves a loser queued; DiscardAndNotify removes its head and reports the loss. Distinct same-ID payloads fail when that ID wins, because electrical error behavior is outside the model; bit-identical same-ID frames co-transmit and all senders receive Confirm. |
 | Other operations | All other opcodes, including Status, Wakeup and incoming Confirm, fail explicitly. No FD/XL, DBC, faults, electrical fidelity, or bus-off behavior. |
-| Clocks | Triggered input Rx_Clock per terminal; countdown input Tx_Clock per terminal. Both Tx Clocks state the time to the next frame end as `counter / 10^9` s (counter in nanoseconds) and must activate together, exactly at that instant. Qualifier `Changed` when a new frame end is scheduled, `NotYetKnown` when no frame is pending. Fraction and decimal interval queries supported. No output Clocks. |
+| Clocks | Triggered input Rx_Clock per terminal; countdown input Tx_Clock per terminal. Active Tx Clocks state the time to the next frame end or arbitration opportunity as `counter / 10^9` s and activate together. An arbitration countdown with no delivered operation has an empty Binary output, which the Importer consumes without propagating a frame. Qualifier `Changed` when the next bus event changes, `NotYetKnown` when none is pending. Fraction and decimal queries supported. |
 | FMI | FMI 3.0 Co-Simulation, Event Mode mandatory, variable communication steps, multiple instances, reset. Binary access and Clock activation in Event Mode; Binary values may be assigned repeatedly in Initialization Mode; these assignments do not activate Clocks or submit frames and are cleared on exit. Calculated output Binary values are empty and readable during initialization. No ME, SE, rollback, serialization, intermediate updates, derivatives, structural parameters or early return. Unsupported entry points return fmi3Error (unsupported instantiation returns null). |
 | Time | Start time and every communication point must be in [0, 2^50] ns (about 13 days); there a Float64 time converts to whole nanoseconds without loss. A Float64 time is read as the nearest whole nanosecond; the SiL Importer supplies whole nanoseconds. A frame that would end later fails. |
-| Invalid calls | Invalid references, lifecycle/order, missing Clock/Binary pairs, overflow, malformed/unsupported operations, Tx activation away from a frame end and stepping past a pending frame end return fmi3Error. Implemented calls put the instance in Error state, requiring reset/free; no C++ exception crosses the ABI. |
+| Invalid calls | Invalid references, lifecycle/order, missing Clock/Binary pairs, overflow, malformed/unsupported operations, Tx activation away from a pending bus event and stepping past one return fmi3Error. Implemented calls put the instance in Error state, requiring reset/free; no C++ exception crosses the ABI. |
+
+An empty queue schedules no event. One active node sends and confirms normally,
+with no other receiver. Finite offered traffic drains after finitely many frame
+ends unless an invalid buffer or equal-ID conflict fails the instance. CAN
+priority supplies no fairness: an indefinitely renewed lower-ID head can keep
+a higher-ID pending frame waiting indefinitely. The finite per-node capacity
+bounds stored traffic, not waiting time.
+
+FIFO applies within each node before CAN priority compares nodes: if one node
+queues ID `0x300` and then ID `0`, its later ID `0` cannot compete until
+`0x300` has transmitted. Equal-ID payloads are compared only when that ID wins
+arbitration. If a lower ID wins first, those heads have not sent their data;
+they remain queued or are both discarded under DiscardAndNotify, so their
+different payloads cause no modeled error at that opportunity.
 
 ## Timing model
 
@@ -52,13 +67,14 @@ the receive instant below remain.
 | Event | Instant | Meaning |
 | --- | --- | --- |
 | Request | FMI event time of the Rx activation | The Transmit operation reaches the bus. |
-| Start of transmission | request instant if the bus is idle, else the `next` instant of the frame ahead | SOF begins. It is not aligned to a bit grid. A frame on the wire is never preempted. |
+| Start of transmission | request instant if the bus is idle, else an arbitration opportunity after intermission | SOF begins after eligible queue heads compete. It is not aligned to a bit grid. A frame on the wire is never preempted. |
 | Frame end | `start + N(n) * T` | End of the last EOF bit. |
-| Receive and confirmation visibility | frame end | The bus activates both Tx Clocks: Confirm to the sender, the unchanged Transmit to the other terminal. ISO 11898-1 lets a receiver accept a frame one bit earlier, at the last-but-one EOF bit; this model delivers it at most one bit time `T` later than that. |
+| Receive, confirmation and loss visibility | frame end | The bus activates every active Tx Clock: Confirm to senders, unchanged Transmit to other active nodes, and a preceding ArbitrationLost operation for each discarded contender. ISO 11898-1 lets a receiver accept a frame one bit earlier, at the last-but-one EOF bit; this model delivers it at most one bit time `T` later than that. |
 | Intermission | frame end to `next` | Three recessive bits. A request that arrives in this period, or during the frame, starts at `next`. |
 
-The frame end is the only FMI event the bus asks for. After each event that
-changes the next frame end, the countdown interval states it exactly. The
+The bus asks for a frame end or an arbitration opportunity after intermission.
+The latter is needed so newly arrived traffic can compete before SOF. After
+each event that changes the next bus event, the countdown interval states it exactly. The
 Importer rejects an interval that is no whole number of nanoseconds; with the
 supported bitrates that cannot occur.
 
@@ -91,6 +107,26 @@ frame ends are 249000, 501000 and 673000 ns. They are checked against
 `tests/wire.py`, on an independent FMPy master at four outer Step grids, and in
 SiL Recordings at three Step periods.
 
+The three-node fixture offers IDs 2, 0 and 1 at 1000 ns. ID 0 completes at
+401000 ns; with Node3 configured to discard, it receives `ArbitrationLost(1)`
+and that frame, while Node2 receives `Confirm(0)`. ID 2 is retained and
+completes at 801000 ns. Independent FMI calls and SiL Recordings assert every
+node's exact operation bytes and event time. Reversing same-instant input and
+Manifest binding order leaves the trace unchanged; repeated Runs of each
+Manifest produce identical Recording bytes. A second FMI fixture covers two
+operations in one Binary buffer and a new request at a completion boundary.
+
+The Importer change is confined to same-instant coordination: it drains non-bus FMU
+events before handling a bus FMU, combines all operations for each bus terminal
+into one Binary activation, and consumes an empty arbitration countdown
+without forwarding an empty operation buffer. The three-node simultaneous
+fixture requires this because sequential `UpdateDiscreteStates` calls would
+otherwise let the first FMI callback start transmitting before the other
+nodes' requests arrived. This changes only the Importer's ordering of an
+instant; Manifest/hash, Step protocol, Arena, Native ABI, successful Recording
+format and exit codes retain their contracts. The older upstream proof under
+`proofs/fmi-ls-bus/` remains separate and unchanged.
+
 ## Build and qualify
 
 From the repository root:
@@ -117,5 +153,6 @@ with a Linux x86-64 C++20 compiler; Python/FMPy are not needed for that step.
 ## External node qualification
 
 See [qualification/README.md](qualification/README.md). The old
-`proofs/fmi-ls-bus/` beta proof is preserved unchanged. No Importer or kernel
-change is needed. ADRs 0001/0002 still govern event coordination and replay.
+`proofs/fmi-ls-bus/` beta proof is preserved unchanged. The Importer only
+coordinates same-instant bus inputs; no kernel change is needed. ADRs 0001/0002
+still govern event coordination and replay.

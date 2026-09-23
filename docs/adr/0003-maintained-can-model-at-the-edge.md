@@ -30,7 +30,8 @@ no kernel/transport, Manifest/hash, Step, Arena, Native participant ABI,
 successful Recording or exit-code contract. The initial fixed-delay smoke
 profile made no transmission timing or contention claim; issue #153 replaced it
 with the documented wire-timing model in `models/can/README.md` using only the
-existing countdown-Clock Importer capability, and still makes no contention
-claim. The maintained FMU
+existing countdown-Clock Importer capability. Issue #154 added bounded
+contention in the standalone model and same-instant bus-input batching at the
+Importer edge, while preserving this placement decision. The maintained FMU
 must publish its supported profile and qualify both its protocol behavior and
 its packaging independently of the kernel.

@@ -33,7 +33,9 @@ report = {
         "recording_determinism": "byte-identical Runs",
         "independent_exchange": "FMPy initialization, Event Mode, Clocks and Binary",
         "sil_exchange": "same FMU archives, exact operation/event-time assertions",
-        "rejection": "malformed/unsupported traffic; competing upstream nodes exit 1",
+        "arbitration": "three-node exact traces, buffer/discard, equal-ID and FIFO cases",
+        "same_manifest": "repeat Recording bytes with forward/reverse terminal declarations",
+        "rejection": "malformed/unsupported traffic, full queues and conflicting equal IDs",
         "core_sanitizers": "UBSan truncation and single-byte mutations passed",
     },
 }
