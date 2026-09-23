@@ -32,13 +32,13 @@ variant, not claimed as an unmodified external product. The shared-library
 build defines `FMU_IDENTIFIER_H` to export standard unprefixed FMI symbols.
 FMI headers come from FMPy 0.3.32; node/LS-BUS sources use BSD-2-Clause.
 
-Before execution the expected smoke exchange is:
+Before execution the expected exchange is (the 83-bit frame at 100 kbit/s ends 830 us after its request; see ../README.md):
 
 | Event time | Expected behavior |
 | --- | --- |
 | 0 ns | Both nodes emit CAN bitrate 100000 and BufferAndRetransmit configuration; bus consumes these without forwarding. |
 | 300000000 ns | External sender emits `1000000014000000010000000000040001020304`. Receiver emits no frame. |
-| 301000000 ns | Bus Node1 emits only Confirm `200000000c00000001000000`; Node2 emits the unchanged sender operation. Receiver's upstream handler logs receipt of ID 1, length 4. |
+| 300830000 ns | Bus Node1 emits only Confirm `200000000c00000001000000`; Node2 emits the unchanged sender operation. Receiver's upstream handler logs receipt of ID 1, length 4. |
 | Through 310000000 ns | No additional frame or confirmation. |
 
 Independent FMPy execution checks initialization, repeated Clock reads, Binary

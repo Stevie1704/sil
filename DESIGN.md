@@ -676,6 +676,7 @@ The authorized CAN milestone adds a first-party standalone CAN Bus Simulation
 FMU under `models/can/`, expanding the previous core-only product scope.
 [ADR 0003](docs/adr/0003-maintained-can-model-at-the-edge.md) records the boundary:
 CAN semantics in the model, FMI coordination in the Importer, unchanged kernel
-contracts and unchanged upstream proof. The initial sequential Classical CAN
-smoke profile deliberately uses a fixed transfer delay until transmission timing
-is implemented; it makes no arbitration, fault or physical-fidelity claim.
+contracts and unchanged upstream proof. Since #153 the sequential Classical CAN
+profile serializes frames at computed wire instants: exact-stuffed frame length,
+three-bit intermission, integer-nanosecond time and a bitrate domain chosen so
+no instant is rounded. It makes no arbitration, fault or physical-fidelity claim.
