@@ -28,6 +28,9 @@ This is an authorized model product addition, not evidence of a missing kernel
 feature under [issue #118](https://github.com/Stevie1704/sil/issues/118). It changes
 no kernel/transport, Manifest/hash, Step, Arena, Native participant ABI,
 successful Recording or exit-code contract. The initial fixed-delay smoke
-profile makes no transmission timing or contention claim. The maintained FMU
+profile made no transmission timing or contention claim; issue #153 replaced it
+with the documented wire-timing model in `models/can/README.md` using only the
+existing countdown-Clock Importer capability, and still makes no contention
+claim. The maintained FMU
 must publish its supported profile and qualify both its protocol behavior and
 its packaging independently of the kernel.

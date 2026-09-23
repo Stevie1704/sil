@@ -806,11 +806,15 @@ frame that lost arbitration follows at 300.96 ms.
 ## First-party CAN bus model
 
 [models/can/](models/can/) builds a standalone C++20 FMI 3.0 CAN Bus Simulation
-FMU for a restricted FMI-LS-BUS 1.0.0 smoke profile. It connects two active
+FMU for a restricted FMI-LS-BUS 1.0.0 profile. It connects two active
 terminals, carries 11-bit Classical CAN data frames, and returns confirmations.
-Its initial fixed 1 ms transfer delay is an exchange approximation, not a CAN
-timing model. `models/can/run.sh` builds and qualifies the same Linux x86-64
-artifact through independent FMI calls and SiL's existing FMU group.
+Frames are serialized on the wire: each one completes after its exact-stuffed
+bit length at the configured bitrate, a request that finds the bus occupied
+waits for the end of intermission, and the completion instant reaches the
+Importer as a countdown Clock interval in whole nanoseconds. Arbitration of
+competing requests is not modeled yet. `models/can/run.sh` builds and qualifies
+the same Linux x86-64 artifact through independent FMI calls and SiL's existing
+FMU group.
 
 ## Build & test
 

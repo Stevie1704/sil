@@ -25,7 +25,7 @@ struct EventState {
 struct Instance {
   can::Bus bus;
   Mode mode = Mode::instantiated;
-  double time = 0, due = 0;
+  can::Nanoseconds time = 0;
   EventState event;
   std::array<fmi3IntervalQualifier, 2> interval{fmi3IntervalNotYetKnown, fmi3IntervalNotYetKnown};
   fmi3InstanceEnvironment environment = nullptr;
@@ -52,6 +52,17 @@ template<class F> fmi3Status invoke_fmi(fmi3Instance instance, F body) noexcept 
   }
   return fmi3Error;
 }
+// FMI time is Float64 seconds; the bus counts whole nanoseconds. The supported
+// range keeps every instant exact in both, so nothing is silently rounded.
+can::Nanoseconds nanoseconds(double seconds) {
+  require(std::isfinite(seconds) && seconds >= 0 &&
+          seconds * can::ns_per_s <= double(can::max_time), "time outside the supported range");
+  return std::llround(seconds * can::ns_per_s);
+}
+can::Nanoseconds until_next_completion(const Instance& i) {
+  const auto due = i.bus.next_completion();
+  return due ? *due - i.time : 0;
+}
 void require_initialization_or_event(const Instance& i) {
   require(i.mode == Mode::initialization || i.mode == Mode::event,
           "operation requires Initialization or Event Mode");
@@ -60,23 +71,20 @@ void evaluate(Instance& i) {
   if (i.event.evaluated) return;
   require_mode(i, Mode::event);
   auto next = i.bus;
+  const auto before = next.next_completion();
   // Each event commits all inputs together, so a second request cannot hide
-  // behind terminal order. Completion is only legal at the declared instant.
+  // behind terminal order. A frame completes before same-instant requests
+  // are scheduled; completion is only legal at the frame's end.
   require(i.event.tx[0] == i.event.tx[1], "both countdown Clocks must activate together");
-  if (i.event.tx[0]) {
-    require(next.pending() && std::abs(i.time - i.due) < 1e-12,
-            "countdown activated away from its declared instant");
-    next.complete();
-  }
+  if (i.event.tx[0]) next.complete(i.time);
+  can::Inputs inputs;
   for (unsigned n = 0; n < profile::terminal_count; ++n) {
     require(i.event.rx[n] == i.event.written[n], "input Binary and Clock must be supplied together");
-    if (i.event.rx[n]) next.receive(n, i.event.inputs[n]);
+    if (i.event.rx[n]) inputs[n] = i.event.inputs[n];
   }
-  if (i.event.tx[0]) i.interval.fill(fmi3IntervalNotYetKnown);
-  if (next.pending() && (!i.bus.pending() || i.event.tx[0])) {
-    i.due = i.time + can::Bus::transfer_seconds;
-    i.interval.fill(fmi3IntervalChanged);
-  }
+  next.receive(inputs, i.time);
+  const auto after = next.next_completion();
+  if (after != before) i.interval.fill(after ? fmi3IntervalChanged : fmi3IntervalNotYetKnown);
   i.bus = std::move(next);
   i.event.evaluated = true;
 }
@@ -134,9 +142,8 @@ fmi3Status fmi3EnterInitializationMode(fmi3Instance instance, fmi3Boolean,
     fmi3Float64, fmi3Float64 start, fmi3Boolean stopDefined, fmi3Float64 stop) {
   return invoke_fmi(instance, [&](Instance& i) {
     require_mode(i, Mode::instantiated);
-    require(std::isfinite(start) && (!stopDefined || (std::isfinite(stop) && stop > start)),
-            "invalid experiment time");
-    i.time = start;
+    require(!stopDefined || (std::isfinite(stop) && stop > start), "invalid experiment time");
+    i.time = nanoseconds(start);
     i.mode = Mode::initialization;
   });
 }
@@ -169,14 +176,13 @@ fmi3Status fmi3DoStep(fmi3Instance instance, fmi3Float64 current, fmi3Float64 st
   return invoke_fmi(instance, [&](Instance& i) {
     require_mode(i, Mode::step);
     require(event && terminate && early && last, "null DoStep result");
-    require(std::isfinite(current) && std::isfinite(step) && step > 0 &&
-            std::abs(current - i.time) < 1e-12 && std::isfinite(current + step) &&
-            current + step > current, "invalid communication interval");
-    require(!i.bus.pending() || current + step <= i.due + 1e-12,
-            "step passes pending countdown instant");
-    i.time = current + step;
+    const auto end = nanoseconds(current + step);
+    require(nanoseconds(current) == i.time && end > i.time, "invalid communication interval");
+    const auto due = i.bus.next_completion();
+    require(!due || end <= *due, "step passes pending countdown instant");
+    i.time = end;
     *event = *terminate = *early = false;
-    *last = i.time;
+    *last = current + step;
   });
 }
 fmi3Status fmi3SetBinary(fmi3Instance instance, const fmi3ValueReference vr[],
@@ -248,8 +254,8 @@ fmi3Status fmi3GetIntervalFraction(fmi3Instance instance, const fmi3ValueReferen
   return invoke_fmi(instance, [&](Instance& i) {
     require(!n || (counters && resolutions), "null interval result");
     read_intervals(i, vr, n, qualifiers, [&](size_t k) {
-      counters[k] = 1;
-      resolutions[k] = 1000;
+      counters[k] = fmi3UInt64(until_next_completion(i));
+      resolutions[k] = can::ns_per_s;
     });
   });
 }
@@ -258,7 +264,7 @@ fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance, const fmi3ValueReferenc
   return invoke_fmi(instance, [&](Instance& i) {
     require(!n || intervals, "null interval result");
     read_intervals(i, vr, n, qualifiers, [&](size_t k) {
-      intervals[k] = can::Bus::transfer_seconds;
+      intervals[k] = double(until_next_completion(i)) / can::ns_per_s;
     });
   });
 }
@@ -268,7 +274,7 @@ fmi3Status fmi3GetFloat64(fmi3Instance instance, const fmi3ValueReference vr[],
     require(n == count && (!n || (vr && values)), "invalid Float64 output call");
     for (size_t k = 0; k < n; ++k) {
       require(vr[k] == profile::time, "unknown Float64 value reference");
-      values[k] = i.time;
+      values[k] = double(i.time) / can::ns_per_s;
     }
   });
 }
