@@ -32,7 +32,9 @@ def config(rate):
 
 
 def frame(identifier, data):
-    return struct.pack("<IIIBBH", 0x10, 16 + len(data), identifier, 0, 0, len(data)) + data
+    return (
+        struct.pack("<IIIBBH", 0x10, 16 + len(data), identifier, 0, 0, len(data)) + data
+    )
 
 
 def confirm(identifier):
@@ -69,6 +71,12 @@ def initialized_fmu(name=MODEL, logs=None, *, exit_initialization=True):
 def deliver(fmu, data, node=0):
     fmu.setClock([4 * node + 2], [True])
     fmu.setBinary([4 * node], [data])
+
+
+def transmit_configured(fmu, data):
+    """Node2 agrees on 100 kbit/s while Node1 configures it and sends."""
+    deliver(fmu, CONFIG, 1)
+    deliver(fmu, CONFIG + data)
 
 
 def intervals(fmu):
@@ -280,13 +288,20 @@ def test_reject_malformed_and_unsupported(payload):
 def test_competing_terminals():
     with initialized_fmu() as bus:
         deliver(bus, CONFIG + FRAME, 0)
-        deliver(bus, FRAME, 1)
+        deliver(bus, CONFIG + FRAME, 1)
         with pytest.raises(FMICallException):
             bus.updateDiscreteStates()
 
 
 @pytest.mark.parametrize(
-    "case", ["unconfigured", "second_waiting", "opportunity", "beyond_time"]
+    "case",
+    [
+        "unconfigured",
+        "peer_unconfigured",
+        "second_waiting",
+        "opportunity",
+        "beyond_time",
+    ],
 )
 def test_timing_rejections(case):
     with initialized_fmu() as bus:
@@ -294,11 +309,14 @@ def test_timing_rejections(case):
             if case == "unconfigured":
                 deliver(bus, FRAME)
                 bus.updateDiscreteStates()
+            elif case == "peer_unconfigured":
+                deliver(bus, CONFIG + FRAME)
+                bus.updateDiscreteStates()
             elif case == "beyond_time":
                 bus.enterStepMode()
                 bus.doStep(currentCommunicationPoint=0, communicationStepSize=2e6)
             else:
-                deliver(bus, CONFIG + FRAME)
+                transmit_configured(bus, FRAME)
                 bus.updateDiscreteStates()
                 advance(bus, 0, 1e-5)
                 deliver(bus, FRAME, 1)
@@ -343,7 +361,7 @@ def test_abi_rejections(case):
             elif case == "wrong_mode":
                 bus.doStep(currentCommunicationPoint=0, communicationStepSize=0.001)
             else:
-                deliver(bus, CONFIG + FRAME)
+                transmit_configured(bus, FRAME)
                 bus.updateDiscreteStates()
                 if case == "early_clock":
                     bus.setClock([3, 7], [True, True])
@@ -500,11 +518,22 @@ def burst_manifest(name, grid_ns):
     schedule = [[requests[node], t, data.hex()] for t, node, data in BURST]
     manifest.add_process(
         "source",
-        command=["python", str(ROOT / "models/can/tests/source.py"), json.dumps(schedule)],
+        command=[
+            "python",
+            str(ROOT / "models/can/tests/source.py"),
+            json.dumps(schedule),
+        ],
         step_period_ns=grid_ns,
         publishes=requests,
     )
-    command = ["python", "-m", "sil.fmi", "--instance", "bus", str(ARTIFACTS / f"{MODEL}.fmu")]
+    command = [
+        "python",
+        "-m",
+        "sil.fmi",
+        "--instance",
+        "bus",
+        str(ARTIFACTS / f"{MODEL}.fmu"),
+    ]
     command += ["--bus-profile", "application/org.fmi-standard.fmi-ls-bus.can"]
     for node in (1, 2):
         command += ["--bind", f"in.node{node}:data=bus.Node{node}.Rx_Data"]
@@ -523,8 +552,14 @@ def burst_manifest(name, grid_ns):
 
 def sil_run(manifest, recording):
     result = subprocess.run(
-        ["/opt/kernel/sil-run", str(manifest), "--participant-timeout-ms", "5000",
-         "-o", str(recording)],
+        [
+            "/opt/kernel/sil-run",
+            str(manifest),
+            "--participant-timeout-ms",
+            "5000",
+            "-o",
+            str(recording),
+        ],
         capture_output=True,
         text=True,
         timeout=120,
@@ -552,7 +587,9 @@ def test_sil_burst_is_independent_of_step_grid():
             # Publication metadata: the Slot of the Step that held the event.
             assert published <= instant <= published + grid_ns
             node = int(channel[-1]) - 1
-            trace.append((instant, node, bytes(fields["data"][: fields["data_length"]])))
+            trace.append(
+                (instant, node, bytes(fields["data"][: fields["data_length"]]))
+            )
         traces[name] = sorted(trace)
         assert traces[name] == BURST_TRACE, name
     (ARTIFACTS / "burst.json").write_text(
@@ -645,7 +682,7 @@ def test_initial_binary_assignments_are_not_clock_activations(initial):
         bus.updateDiscreteStates()
         assert intervals(bus)[2] == [0, 0]
         advance(bus, 0, 0.1)
-        deliver(bus, CONFIG + FRAME)
+        transmit_configured(bus, FRAME)
         bus.updateDiscreteStates()
         assert intervals(bus)[2] == [2, 2]
         advance(bus, 0.1, 0.10083)

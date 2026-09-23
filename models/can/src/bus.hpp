@@ -11,6 +11,8 @@ namespace can {
 using Bytes = std::vector<std::uint8_t>;
 // Bus time in whole nanoseconds from the start of the Run.
 using Nanoseconds = std::int64_t;
+// The operation buffers each terminal handed the bus in one event.
+using Inputs = std::array<std::span<const std::uint8_t>, 2>;
 
 inline constexpr Nanoseconds ns_per_s = 1000000000;
 // Supported rates divide one second into whole-nanosecond bit times.
@@ -26,7 +28,9 @@ unsigned frame_bits(std::uint32_t id, std::span<const std::uint8_t> data);
 // No FMI or SiL dependencies: the adapter supplies logical event instants.
 class Bus {
  public:
-  void receive(unsigned terminal, std::span<const std::uint8_t> operations, Nanoseconds now);
+  // All inputs of one event commit together: configurations apply before
+  // any Transmit is scheduled, so terminal order decides nothing.
+  void receive(const Inputs& inputs, Nanoseconds now);
   // Delivers the frame whose last EOF bit ends at `now`.
   void complete(Nanoseconds now);
   std::optional<Nanoseconds> next_completion() const;
@@ -47,6 +51,8 @@ class Bus {
   // arbitration opportunity. Starts and ends are fixed when scheduled.
   std::vector<Transfer> transfers_;
   std::optional<std::uint32_t> bitrate_;
+  // A frame is timed only once both terminals have agreed on the bitrate.
+  std::array<bool, 2> configured_{};
   Nanoseconds idle_from_ = 0;  // end of the last intermission
 };
 }  // namespace can

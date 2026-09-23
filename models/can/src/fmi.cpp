@@ -59,7 +59,7 @@ can::Nanoseconds nanoseconds(double seconds) {
           seconds * can::ns_per_s <= double(can::max_time), "time outside the supported range");
   return std::llround(seconds * can::ns_per_s);
 }
-can::Nanoseconds remaining(const Instance& i) {
+can::Nanoseconds until_next_completion(const Instance& i) {
   const auto due = i.bus.next_completion();
   return due ? *due - i.time : 0;
 }
@@ -77,10 +77,12 @@ void evaluate(Instance& i) {
   // are scheduled; completion is only legal at the frame's end.
   require(i.event.tx[0] == i.event.tx[1], "both countdown Clocks must activate together");
   if (i.event.tx[0]) next.complete(i.time);
+  can::Inputs inputs;
   for (unsigned n = 0; n < profile::terminal_count; ++n) {
     require(i.event.rx[n] == i.event.written[n], "input Binary and Clock must be supplied together");
-    if (i.event.rx[n]) next.receive(n, i.event.inputs[n], i.time);
+    if (i.event.rx[n]) inputs[n] = i.event.inputs[n];
   }
+  next.receive(inputs, i.time);
   const auto after = next.next_completion();
   if (after != before) i.interval.fill(after ? fmi3IntervalChanged : fmi3IntervalNotYetKnown);
   i.bus = std::move(next);
@@ -252,7 +254,7 @@ fmi3Status fmi3GetIntervalFraction(fmi3Instance instance, const fmi3ValueReferen
   return invoke_fmi(instance, [&](Instance& i) {
     require(!n || (counters && resolutions), "null interval result");
     read_intervals(i, vr, n, qualifiers, [&](size_t k) {
-      counters[k] = fmi3UInt64(remaining(i));
+      counters[k] = fmi3UInt64(until_next_completion(i));
       resolutions[k] = can::ns_per_s;
     });
   });
@@ -262,7 +264,7 @@ fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance, const fmi3ValueReferenc
   return invoke_fmi(instance, [&](Instance& i) {
     require(!n || intervals, "null interval result");
     read_intervals(i, vr, n, qualifiers, [&](size_t k) {
-      intervals[k] = double(remaining(i)) / can::ns_per_s;
+      intervals[k] = double(until_next_completion(i)) / can::ns_per_s;
     });
   });
 }

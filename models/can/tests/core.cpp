@@ -19,6 +19,11 @@ can::Bytes bitrate(std::uint32_t rate) {
 can::Bytes confirm(std::uint32_t id) {
   return {0x20, 0, 0, 0, 12, 0, 0, 0, std::uint8_t(id), std::uint8_t(id >> 8), 0, 0};
 }
+void send(can::Bus& bus, unsigned terminal, const can::Bytes& operations, can::Nanoseconds now) {
+  can::Inputs inputs;
+  inputs[terminal] = operations;
+  bus.receive(inputs, now);
+}
 template<class F> bool rejects(F body) {
   try {
     body();
@@ -29,7 +34,8 @@ template<class F> bool rejects(F body) {
 }
 can::Bus configured(std::uint32_t rate) {
   can::Bus bus;
-  bus.receive(0, bitrate(rate), 0);
+  send(bus, 0, bitrate(rate), 0);
+  send(bus, 1, bitrate(rate), 0);
   return bus;
 }
 
@@ -48,16 +54,16 @@ void burst_and_mid_transmission_request() {
   auto bus = configured(500000);  // 2000 ns per bit
   const auto a = frame(0, can::Bytes(8)), b = frame(0x7ff, can::Bytes(8, 0xff)),
              c = frame(1, {1, 2, 3, 4});
-  bus.receive(0, a, 1000);
+  send(bus, 0, a, 1000);
   assert(bus.next_completion() == 1000 + 124 * 2000);
-  bus.receive(0, b, 50000);  // waits: an in-progress frame is never preempted
+  send(bus, 0, b, 50000);  // waits: an in-progress frame is never preempted
   assert(bus.next_completion() == 249000);
   bus.complete(249000);
   assert(bus.outputs()[0] == confirm(0) && bus.outputs()[1] == a);
   bus.clear_outputs();
   const auto b_end = 249000 + 3 * 2000 + 123 * 2000;
   assert(bus.next_completion() == b_end);
-  bus.receive(1, c, 300000);  // arrives while b is on the wire
+  send(bus, 1, c, 300000);  // arrives while b is on the wire
   bus.complete(b_end);
   assert(bus.outputs()[0] == confirm(0x7ff) && bus.outputs()[1] == b);
   bus.clear_outputs();
@@ -73,46 +79,65 @@ void arbitration_opportunities() {
   const auto a = frame(0, {}), b = frame(1, {});
   {  // Arrival at a frame end, before its completion: waits for intermission.
     auto bus = configured(125000);  // 8000 ns per bit
-    bus.receive(0, a, 0);
-    bus.receive(1, b, 400000);
+    send(bus, 0, a, 0);
+    send(bus, 1, b, 400000);
     bus.complete(400000);
     assert(bus.next_completion() == 424000 + 47 * 8000);
   }
   {  // Arrival during intermission starts when it ends; later on arrival.
     auto bus = configured(125000);
-    bus.receive(0, a, 0);
+    send(bus, 0, a, 0);
     bus.complete(400000);
-    bus.receive(1, b, 410000);
+    send(bus, 1, b, 410000);
     assert(bus.next_completion() == 424000 + 47 * 8000);
     bus.complete(424000 + 47 * 8000);
-    bus.receive(0, a, 900000);
+    send(bus, 0, a, 900000);
     assert(bus.next_completion() == 1300000);
   }
   {  // Two frames eligible at one opportunity need arbitration (issue #154).
     auto bus = configured(125000);
-    bus.receive(0, a, 0);
-    assert(rejects([&] { bus.receive(1, b, 0); }));
-    bus.receive(1, b, 10);
-    assert(rejects([&] { bus.receive(0, a, 20); }));
+    send(bus, 0, a, 0);
+    assert(rejects([&] { send(bus, 1, b, 0); }));
+    send(bus, 1, b, 10);
+    assert(rejects([&] { send(bus, 0, a, 20); }));
     auto both = a;
     both.insert(both.end(), b.begin(), b.end());
     auto idle = configured(125000);
-    assert(rejects([&] { idle.receive(0, both, 0); }));
+    assert(rejects([&] { send(idle, 0, both, 0); }));
     assert(!idle.next_completion());
   }
 }
 
 void timing_configuration() {
   for (std::uint32_t rate : {0u, 9999u, 83333u, 1000001u, 2000000u})
-    assert(rejects([&] { can::Bus().receive(0, bitrate(rate), 0); }));
+    assert(rejects([&] { can::Bus fresh; send(fresh, 0, bitrate(rate), 0); }));
   for (std::uint32_t rate : {10000u, 125000u, 800000u, 1000000u}) configured(rate);
   auto bus = configured(500000);
-  bus.receive(1, bitrate(500000), 0);
-  assert(rejects([&] { bus.receive(1, bitrate(250000), 0); }));
-  assert(rejects([&] { can::Bus().receive(0, frame(1, {}), 0); }));
-  assert(rejects([&] { bus.receive(0, frame(1, {}), -1); }));
-  assert(rejects([&] { bus.receive(0, frame(1, {}), can::max_time); }));
-  bus.receive(0, frame(1, {}), can::max_time - 1000000);
+  send(bus, 1, bitrate(500000), 0);
+  assert(rejects([&] { send(bus, 1, bitrate(250000), 0); }));
+  assert(rejects([&] { can::Bus fresh; send(fresh, 0, frame(1, {}), 0); }));
+  {  // A terminal that has not agreed on the bitrate blocks transmission.
+    can::Bus half;
+    send(half, 0, bitrate(125000), 0);
+    assert(rejects([&] { send(half, 0, frame(1, {}), 0); }));
+    assert(rejects([&] { send(half, 1, bitrate(500000), 0); }));
+  }
+  // One event commits all inputs: a peer's configuration in the same event
+  // counts, whichever terminal transmits.
+  for (unsigned sender : {0u, 1u}) {
+    can::Bus event;
+    can::Bytes transmit = bitrate(125000), peer = bitrate(125000);
+    const auto op = frame(1, {});
+    transmit.insert(transmit.end(), op.begin(), op.end());
+    can::Inputs inputs;
+    inputs[sender] = transmit;
+    inputs[1 - sender] = peer;
+    event.receive(inputs, 0);
+    assert(event.next_completion() == 47 * 8000);
+  }
+  assert(rejects([&] { send(bus, 0, frame(1, {}), -1); }));
+  assert(rejects([&] { send(bus, 0, frame(1, {}), can::max_time); }));
+  send(bus, 0, frame(1, {}), can::max_time - 1000000);
   assert(rejects([&] { bus.complete(can::max_time); }));
 }
 
@@ -127,7 +152,7 @@ void malformed_operations_do_not_commit() {
         auto input = can::Bytes(op.begin(), op.begin() + size);
         input[at] = static_cast<std::uint8_t>(value);
         try {
-          bus.receive(0, input, 0);
+          send(bus, 0, input, 0);
           if (auto end = bus.next_completion()) bus.complete(*end);
         } catch (const std::exception&) {
           assert(!bus.next_completion());
