@@ -1,6 +1,6 @@
-# Issue #155 deterministic CAN fault qualification
+# Issue #155 deterministic CAN model fault qualification
 
-This evidence records the explicit fault schedule, FMI-LS-BUS notifications,
+This evidence records the explicit CAN model fault schedule, FMI-LS-BUS notifications,
 automatic retry behavior and separate receiver-delivery suppression experiment
 added for issue #155. The schedule and bus implementation are first-party
 model behavior. `FaultAwareSender.fmu` and `FaultAwareReceiver.fmu` are named,
@@ -15,7 +15,7 @@ adapted external nodes and deterministic repeated Recordings. The separate
 UBSan core test also passed.
 The qualification report binds the committed source inputs, FMUs, Manifests,
 Recordings and runner by SHA-256. The bus FMU embeds clean source revision
-`cf1482db4d6c60e878bab2bba9e7fac00126a897` with `source_dirty: false`.
+`12fb789eaab0c448f1b04d6309e95e7198b8942c` with `source_dirty: false`.
 
 `issue155-independent.json` stores an independent expected event table beside
 the observed operation bytes for the no-fault baseline, scheduled errors and
