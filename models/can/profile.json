@@ -1,0 +1,26 @@
+{
+  "model_name": "SilCanSmoke",
+  "token": "sil-can-smoke-1",
+  "specification": "FMI-LS-BUS 1.0.0",
+  "mime_type": "application/org.fmi-standard.fmi-ls-bus.can; version=\"1.0.0\"",
+  "upstream": {
+    "examples": {
+      "repository": "https://github.com/modelica/fmi-ls-bus-examples.git",
+      "revision": "de019a6efbad810795835f2fd9bbf9e62eb451b9"
+    },
+    "spec": {
+      "repository": "https://github.com/modelica/fmi-ls-bus.git",
+      "revision": "8abdf039bfb994c794e4c15bce575cfc00a1ab6e"
+    }
+  },
+  "layout": {
+    "terminal_count": 2,
+    "terminal_stride": 4,
+    "rx_data": 0,
+    "tx_data": 1,
+    "rx_clock": 2,
+    "tx_clock": 3,
+    "time": 1024,
+    "max_binary_size": 2048
+  }
+}

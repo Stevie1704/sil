@@ -11,30 +11,29 @@ from pathlib import Path
 import fmpy
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from build import digest, pack
+from build_support import PROFILE, digest, pack
 
-EXAMPLES = "de019a6efbad810795835f2fd9bbf9e62eb451b9"
-SPEC = "8abdf039bfb994c794e4c15bce575cfc00a1ab6e"
+EXAMPLES = PROFILE["upstream"]["examples"]["revision"]
+SPEC = PROFILE["upstream"]["spec"]["revision"]
 PATCH = Path(__file__).with_name("node.patch")
 
 
 def build(checkout, spec, output):
     for path, revision in ((checkout, EXAMPLES), (spec, SPEC)):
-        assert (
-            subprocess.check_output(
-                [
-                    "git",
-                    "-c",
-                    f"safe.directory={path}",
-                    "-C",
-                    str(path),
-                    "rev-parse",
-                    "HEAD",
-                ],
-                text=True,
-            ).strip()
-            == revision
-        )
+        actual = subprocess.check_output(
+            [
+                "git",
+                "-c",
+                f"safe.directory={path}",
+                "-C",
+                str(path),
+                "rev-parse",
+                "HEAD",
+            ],
+            text=True,
+        ).strip()
+        if actual != revision:
+            raise SystemExit(f"{path}: expected revision {revision}, got {actual}")
     headers = Path(fmpy.__file__).parent / "c-code"
     for receiver in (False, True):
         with tempfile.TemporaryDirectory() as temporary:
@@ -44,9 +43,8 @@ def build(checkout, spec, output):
             subprocess.run(
                 ["patch", "-p1", "-i", str(PATCH.resolve())], cwd=source, check=True
             )
-            for pattern in ("fmi3*.h",):
-                for path in headers.glob(pattern):
-                    shutil.copy(path, source)
+            for path in headers.glob("fmi3*.h"):
+                shutil.copy(path, source)
             for path in (spec / "headers").glob("*.h"):
                 shutil.copy(path, source)
             descriptions = checkout / "can-node-triggered-output/description"
@@ -64,10 +62,13 @@ def build(checkout, spec, output):
                 check=True,
             )
             md = ET.parse(root / "modelDescription.xml").getroot()
-            assert all(
-                v.get("mimeType", "").endswith('version="1.0.0"')
-                for v in md.findall("ModelVariables/Binary")
-            )
+            variables = md.findall("ModelVariables/Binary")
+            if not variables or any(
+                v.get("mimeType") != PROFILE["mime_type"] for v in variables
+            ):
+                raise SystemExit(
+                    f"{descriptions}: Binary variables must declare {PROFILE['mime_type']!r}"
+                )
             library = root / "binaries/x86_64-linux/DemoCanNodeTriggeredOutput.so"
             library.parent.mkdir(parents=True)
             flags = [

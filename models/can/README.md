@@ -21,7 +21,7 @@ This is a deliberately restricted smoke profile, not full CAN/FMI conformance.
 | Concurrency | One outstanding request across the bus. A second request before completion, including a second operation in one buffer, fails. No arbitration or retransmission is implemented yet. |
 | Other operations | All other opcodes, including Status, Wakeup and incoming Confirm, fail explicitly. No FD/XL, DBC, faults, electrical fidelity, or bus-off behavior. |
 | Clocks | Triggered input Rx_Clock per terminal; countdown input Tx_Clock per terminal. Both Tx Clocks request 1/1000 seconds and must activate together. Fraction and decimal interval queries supported. No output Clocks. |
-| FMI | FMI 3.0 Co-Simulation, Event Mode mandatory, variable communication steps, multiple instances, reset. Binary access and Clock activation in Event Mode; Binary start values may be set in Initialization Mode. No ME, SE, rollback, serialization, intermediate updates, derivatives, structural parameters or early return. Unsupported entry points return fmi3Error (unsupported instantiation returns null). |
+| FMI | FMI 3.0 Co-Simulation, Event Mode mandatory, variable communication steps, multiple instances, reset. Binary access and Clock activation in Event Mode; Binary values may be assigned repeatedly in Initialization Mode; these assignments do not activate Clocks or submit frames and are cleared on exit. Calculated output Binary values are empty and readable during initialization. No ME, SE, rollback, serialization, intermediate updates, derivatives, structural parameters or early return. Unsupported entry points return fmi3Error (unsupported instantiation returns null). |
 | Invalid calls | Invalid references, lifecycle/order, missing Clock/Binary pairs, overflow, malformed/unsupported operations and stepping past a pending event return fmi3Error. Implemented calls put the instance in Error state, requiring reset/free; no C++ exception crosses the ABI. |
 
 **Timing approximation:** every accepted frame completes exactly 1 ms after
@@ -46,7 +46,9 @@ FMU builds and two SiL Recordings are separately compared byte for byte.
 The archive contains model/terminal/layered-standard XML, Linux library,
 resources/identity.json, source files and build identity, and licenses. To build
 only the model in the prepared image: `python models/can/build.py OUTPUT.fmu`.
-The compiler command and source digests are recorded in its identity file.
+The compiler command, Git revision, dirty-worktree flag and source digests are
+recorded in its identity file. `profile.json` is the shared source for upstream
+pins, instantiation token and the XML/C++ value-reference layout.
 Inside an extracted archive, `sh sources/build.sh` rebuilds the shared library
 with a Linux x86-64 C++20 compiler; Python/FMPy are not needed for that step.
 

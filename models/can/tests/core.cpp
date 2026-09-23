@@ -6,7 +6,7 @@
 int main() {
   const can::Bytes frame{0x10, 0, 0, 0, 20, 0, 0, 0,
                          1, 0, 0, 0, 0, 0, 4, 0, 1, 2, 3, 4};
-  // Exercise every truncation and every single-byte mutation under ASan/UBSan.
+  // Exercise every truncation and every single-byte mutation under UBSan.
   // A parser failure must leave the core transaction uncommitted.
   for (std::size_t size = 0; size <= frame.size(); ++size) {
     for (std::size_t at = 0; at < size; ++at) {

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+ulimit -c 0
 export PYTHONPATH=/work/python/src
 python models/can/build.py build/can/SilCanSmoke.fmu
 python models/can/build.py build/can/repeat.fmu

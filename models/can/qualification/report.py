@@ -1,31 +1,30 @@
 """Bind retained results to the exact model, test inputs and runner."""
 
-import hashlib
+import sys
 import json
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from build_support import PROFILE, digest
 
 ROOT = Path(__file__).resolve().parents[3]
 OUTPUT = ROOT / "build/can"
 
 
-def sha(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 report = {
-    "specification": "FMI-LS-BUS 1.0.0",
-    "spec_revision": "8abdf039bfb994c794e4c15bce575cfc00a1ab6e",
-    "external_revision": "de019a6efbad810795835f2fd9bbf9e62eb451b9",
-    "runner_sha256": sha(Path("/opt/kernel/sil-run")),
+    "specification": PROFILE["specification"],
+    "spec_revision": PROFILE["upstream"]["spec"]["revision"],
+    "external_revision": PROFILE["upstream"]["examples"]["revision"],
+    "runner_sha256": digest(Path("/opt/kernel/sil-run")),
     "artifacts": {
-        p.name: sha(p)
+        p.name: digest(p)
         for p in sorted(OUTPUT.iterdir())
         if p.is_file()
         and p.name != "qualification.json"
         and p.suffix in {".fmu", ".mcap", ".json", ".txt", ".xml", ".log"}
     },
     "inputs": {
-        p.relative_to(ROOT).as_posix(): sha(p)
+        p.relative_to(ROOT).as_posix(): digest(p)
         for p in sorted((ROOT / "models/can").rglob("*"))
         if p.is_file() and "__pycache__" not in p.parts and "evidence" not in p.parts
     },

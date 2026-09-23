@@ -22,7 +22,7 @@ CONFIG = bytes.fromhex("400000000d00000001a0860100400000000a0000000401")
 
 
 @contextmanager
-def slave(name="SilCanSmoke", logs=None):
+def initialized_fmu(name="SilCanSmoke", logs=None, *, exit_initialization=True):
     path = ARTIFACTS / f"{name}.fmu"
     description = read_model_description(path, validate=True)
     unpacked = extract(path)
@@ -40,7 +40,8 @@ def slave(name="SilCanSmoke", logs=None):
     fmu.instantiate(eventModeUsed=True, loggingOn=True, logMessage=log)
     try:
         fmu.enterInitializationMode(startTime=0)
-        fmu.exitInitializationMode()
+        if exit_initialization:
+            fmu.exitInitializationMode()
         yield fmu
     finally:
         fmu.freeInstance()
@@ -75,9 +76,9 @@ def advance(fmu, start, end):
 def test_independent_external_exchange():
     logs = []
     with (
-        slave("ExternalSender") as sender,
-        slave("ExternalReceiver", logs) as receiver,
-        slave() as bus,
+        initialized_fmu("ExternalSender") as sender,
+        initialized_fmu("ExternalReceiver", logs) as receiver,
+        initialized_fmu() as bus,
     ):
         for node, peer in enumerate((sender, receiver)):
             assert peer.getClock([3]) == [True]
@@ -129,7 +130,7 @@ def test_sequential_both_directions_and_instances(size):
     payload = bytes(range(size))
     frame = struct.pack("<IIIBBH", 0x10, 16 + size, 0x7FF, 0, 0, size) + payload
     confirm = struct.pack("<III", 0x20, 12, 0x7FF)
-    with slave() as bus, slave() as other:
+    with initialized_fmu() as bus, initialized_fmu() as other:
         for node in (0, 1):
             deliver(bus, frame, node)
             bus.updateDiscreteStates()
@@ -167,7 +168,7 @@ BAD = [
 
 @pytest.mark.parametrize("payload", BAD)
 def test_reject_malformed_and_unsupported(payload):
-    with slave() as bus:
+    with initialized_fmu() as bus:
         deliver(bus, payload)
         with pytest.raises(FMICallException, match="fmi3UpdateDiscreteStates.*3"):
             bus.updateDiscreteStates()
@@ -181,7 +182,7 @@ def test_reject_malformed_and_unsupported(payload):
 
 
 def test_competing_terminals():
-    with slave() as bus:
+    with initialized_fmu() as bus:
         deliver(bus, FRAME, 0)
         deliver(bus, FRAME, 1)
         with pytest.raises(FMICallException):
@@ -201,7 +202,7 @@ def test_competing_terminals():
     ],
 )
 def test_abi_rejections(case):
-    with slave() as bus:
+    with initialized_fmu() as bus:
         with pytest.raises(FMICallException):
             if case == "missing_clock":
                 bus.setBinary([0], [FRAME])
@@ -356,6 +357,10 @@ def test_package_identity_metadata_and_linkage():
         path = ARTIFACTS / f"{name}.fmu"
         with zipfile.ZipFile(path) as archive:
             identity = json.loads(archive.read("resources/identity.json"))
+            if name == "SilCanSmoke":
+                assert len(identity["git_revision"]) == 40
+                assert all(c in "0123456789abcdef" for c in identity["git_revision"])
+                assert isinstance(identity["source_dirty"], bool)
             for source, expected in identity["sources"].items():
                 assert (
                     hashlib.sha256(archive.read(f"sources/{source}")).hexdigest()
@@ -395,7 +400,7 @@ def test_package_identity_metadata_and_linkage():
                 or "documentation/licenses/LICENSE.txt" in archive.namelist()
             )
         read_model_description(path, validate=True)
-    with slave() as bus:
+    with initialized_fmu() as bus:
         library = Path(bus.unzipDirectory) / "binaries/x86_64-linux/SilCanSmoke.so"
         symbols = subprocess.check_output(["nm", "-D", str(library)], text=True)
         assert "fmi3InstantiateCoSimulation" in symbols
@@ -404,6 +409,84 @@ def test_package_identity_metadata_and_linkage():
 
 
 def test_unsupported_capability_is_explicit():
-    with slave() as bus:
+    with initialized_fmu() as bus:
         with pytest.raises(FMICallException):
             bus.getFMUState()
+
+
+@pytest.mark.parametrize("initial", [b"", CONFIG, FRAME])
+def test_initial_binary_assignments_are_not_clock_activations(initial):
+    with initialized_fmu(exit_initialization=False) as bus:
+        bus.setBinary([0, 4], [initial, b""])
+        bus.exitInitializationMode()
+        bus.updateDiscreteStates()
+        assert intervals(bus)[2] == [0, 0]
+        advance(bus, 0, 0.1)
+        deliver(bus, FRAME)
+        bus.updateDiscreteStates()
+        assert intervals(bus)[2] == [2, 2]
+        advance(bus, 0.1, 0.101)
+        bus.setClock([3, 7], [True, True])
+        assert bus.getBinary([1, 5]) == [CONFIRM, FRAME]
+
+
+def test_initial_unknowns_are_readable_before_any_clock_activation():
+    description = read_model_description(ARTIFACTS / "SilCanSmoke.fmu")
+    references = [
+        unknown.variable.valueReference for unknown in description.initialUnknowns
+    ]
+    assert references == [1, 5]
+    with initialized_fmu(exit_initialization=False) as bus:
+        assert [value or b"" for value in bus.getBinary(references)] == [b"", b""]
+        bus.setBinary([0], [FRAME])
+        bus.setBinary([0], [b""])
+        assert [value or b"" for value in bus.getBinary(references)] == [b"", b""]
+        bus.exitInitializationMode()
+        bus.updateDiscreteStates()
+        assert intervals(bus)[2] == [0, 0]
+        bus.enterStepMode()
+
+
+def test_upstream_revision_guard_survives_optimized_python(tmp_path):
+    result = subprocess.run(
+        [
+            "python",
+            "-O",
+            str(ROOT / "models/can/qualification/build_nodes.py"),
+            "/opt/spec",
+            "/opt/examples",
+            str(tmp_path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode != 0
+    assert "expected revision" in result.stderr
+    assert "got" in result.stderr
+    assert not list(tmp_path.glob("*.fmu"))
+
+
+def test_upstream_mime_guard_survives_optimized_python(tmp_path):
+    checkout = tmp_path / "examples"
+    shutil.copytree("/opt/examples", checkout)
+    description = (
+        checkout / "can-node-triggered-output/description/modelDescription.xml"
+    )
+    description.write_text(description.read_text().replace("1.0.0", "0.0.0"))
+    result = subprocess.run(
+        [
+            "python",
+            "-O",
+            str(ROOT / "models/can/qualification/build_nodes.py"),
+            str(checkout),
+            "/opt/spec",
+            str(tmp_path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode != 0
+    assert "Binary variables must declare" in result.stderr
+    assert not list(tmp_path.glob("*.fmu"))

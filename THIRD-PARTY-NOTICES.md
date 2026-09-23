@@ -113,9 +113,9 @@ notice is included in the FMU's `documentation/licenses/` and sources.
 FMPy (BSD-3-Clause) is a build/independent qualification tool, not a model
 runtime dependency. The model links the platform GNU C++ runtime.
 
-Qualification downloads Modelica Association's FMI-LS-BUS examples revision
-`de019a6efbad810795835f2fd9bbf9e62eb451b9` and released FMI-LS-BUS headers at
-`8abdf039bfb994c794e4c15bce575cfc00a1ab6e`. Their code is BSD-2-Clause; the
+Qualification downloads Modelica Association's FMI-LS-BUS examples and released
+FMI-LS-BUS headers at the exact revisions in
+[`models/can/profile.json`](models/can/profile.json). Their code is BSD-2-Clause; the
 specification text is CC-BY-SA-4.0. Only code/metadata is used in the test FMUs;
 no specification text is copied into this repository. The exact adaptation is
 retained in `models/can/qualification/node.patch` and `manifest.patch`; each generated external FMU

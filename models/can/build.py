@@ -1,38 +1,22 @@
 """Build the standalone FMU (Linux x86-64, Python + FMPy 0.3.32 + C++20)."""
 
-import hashlib
 import json
 import platform
 import re
+import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
-import zipfile
 from pathlib import Path
 
 import fmpy
 
-ROOT = Path(__file__).resolve().parent
-NAME = "SilCanSmoke"
-MIME = 'application/org.fmi-standard.fmi-ls-bus.can; version="1.0.0"'
+from build_support import ROOT, PROFILE, LAYOUT, digest, pack
 
-
-def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def pack(source, destination):
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED) as archive:
-        for path in sorted(p for p in source.rglob("*") if p.is_file()):
-            info = zipfile.ZipInfo(
-                path.relative_to(source).as_posix(), (1980, 1, 1, 0, 0, 0)
-            )
-            info.compress_type = zipfile.ZIP_DEFLATED
-            info.external_attr = 0o100644 << 16
-            archive.writestr(info, path.read_bytes())
+NAME = PROFILE["model_name"]
+MIME = PROFILE["mime_type"]
 
 
 def write_xml(element, path):
@@ -41,12 +25,12 @@ def write_xml(element, path):
     ET.ElementTree(element).write(path, encoding="utf-8", xml_declaration=True)
 
 
-def descriptions(root):
+def write_descriptions(root):
     md = ET.Element(
         "fmiModelDescription",
         fmiVersion="3.0",
         modelName=NAME,
-        instantiationToken="sil-can-smoke-1",
+        instantiationToken=PROFILE["token"],
         variableNamingConvention="structured",
     )
     ET.SubElement(
@@ -61,13 +45,13 @@ def descriptions(root):
         variables,
         "Float64",
         name="time",
-        valueReference="1024",
+        valueReference=str(LAYOUT["time"]),
         causality="independent",
         variability="continuous",
     )
     terminals = ET.Element("fmiTerminalsAndIcons", fmiVersion="3.0")
     entries = ET.SubElement(terminals, "Terminals")
-    for n in range(2):
+    for n in range(LAYOUT["terminal_count"]):
         prefix = f"Node{n + 1}"
         terminal = ET.SubElement(
             entries,
@@ -76,7 +60,10 @@ def descriptions(root):
             terminalKind="org.fmi-ls-bus.network-terminal",
             matchingRule="org.fmi-ls-bus.transceiver",
         )
-        for offset, member in enumerate(("Rx_Data", "Tx_Data", "Rx_Clock", "Tx_Clock")):
+        for offset, member in (
+            (LAYOUT[name.lower()], name)
+            for name in ("Rx_Data", "Tx_Data", "Rx_Clock", "Tx_Clock")
+        ):
             ET.SubElement(
                 terminal,
                 "TerminalMemberVariable",
@@ -85,21 +72,25 @@ def descriptions(root):
                 memberName=member,
             )
             attributes = dict(
-                name=f"{prefix}.{member}", valueReference=str(4 * n + offset)
+                name=f"{prefix}.{member}",
+                valueReference=str(LAYOUT["terminal_stride"] * n + offset),
             )
-            if offset < 2:
+            if member.endswith("Data"):
                 variable = ET.SubElement(
                     variables,
                     "Binary",
                     **attributes,
-                    causality="input" if offset == 0 else "output",
+                    causality="input" if member == "Rx_Data" else "output",
                     variability="discrete",
-                    initial="exact" if offset == 0 else "calculated",
-                    maxSize="2048",
-                    clocks=str(4 * n + offset + 2),
+                    initial="exact" if member == "Rx_Data" else "calculated",
+                    maxSize=str(LAYOUT["max_binary_size"]),
+                    clocks=str(
+                        LAYOUT["terminal_stride"] * n
+                        + LAYOUT[member.replace("Data", "Clock").lower()]
+                    ),
                     mimeType=MIME,
                 )
-                if offset == 0:
+                if member == "Rx_Data":
                     ET.SubElement(variable, "Start", value="")
             else:
                 ET.SubElement(
@@ -107,13 +98,21 @@ def descriptions(root):
                     "Clock",
                     **attributes,
                     causality="input",
-                    intervalVariability="triggered" if offset == 2 else "countdown",
-                    **({"supportsFraction": "true"} if offset == 3 else {}),
+                    intervalVariability="triggered"
+                    if member == "Rx_Clock"
+                    else "countdown",
+                    **({"supportsFraction": "true"} if member == "Tx_Clock" else {}),
                 )
     structure = ET.SubElement(md, "ModelStructure")
     for element in ("Output", "InitialUnknown"):
-        for reference in (1, 5):
-            ET.SubElement(structure, element, valueReference=str(reference))
+        for n in range(LAYOUT["terminal_count"]):
+            reference = LAYOUT["terminal_stride"] * n + LAYOUT["tx_data"]
+            ET.SubElement(
+                structure,
+                element,
+                valueReference=str(reference),
+                **({"dependencies": ""} if element == "InitialUnknown" else {}),
+            )
     write_xml(md, root / "modelDescription.xml")
     write_xml(terminals, root / "terminalsAndIcons/terminalsAndIcons.xml")
     ns = "http://fmi-standard.org/fmi-ls-manifest"
@@ -140,6 +139,16 @@ def build(destination):
         root = Path(temporary)
         source = root / "sources"
         shutil.copytree(ROOT / "src", source)
+        declarations = [
+            f"inline constexpr char token[] = {json.dumps(PROFILE['token'])};"
+        ]
+        declarations += [
+            f"inline constexpr unsigned {name} = {value};"
+            for name, value in LAYOUT.items()
+        ]
+        (source / "profile.hpp").write_text(
+            "#pragma once\nnamespace profile {\n" + "\n".join(declarations) + "\n}\n"
+        )
         for name in ("fmi3Functions.h", "fmi3FunctionTypes.h", "fmi3PlatformTypes.h"):
             shutil.copy(headers / name, source)
         # Export every official entry point with its exact prototype. Unsupported
@@ -161,19 +170,16 @@ def build(destination):
         library = root / "binaries/x86_64-linux" / f"{NAME}.so"
         library.parent.mkdir(parents=True)
         flags = ["-std=c++20", "-O2", "-fPIC", "-shared", "-Wl,--no-undefined"]
-        subprocess.run(
-            [
-                "c++",
-                *flags,
-                "-I",
-                str(source),
-                *map(str, sorted(source.glob("*.cpp"))),
-                "-o",
-                str(library),
-            ],
-            check=True,
-        )
-        descriptions(root)
+        compile_command = [
+            "c++",
+            *flags,
+            "-I.",
+            *(p.name for p in sorted(source.glob("*.cpp"))),
+            "-o",
+            f"../binaries/x86_64-linux/{NAME}.so",
+        ]
+        subprocess.run(compile_command, cwd=source, check=True)
+        write_descriptions(root)
         licenses = root / "documentation/licenses"
         licenses.mkdir(parents=True)
         for name in ("LICENSE", "NOTICE"):
@@ -181,18 +187,48 @@ def build(destination):
         shutil.copy(source / "fmi3PlatformTypes.h", licenses / "FMI-BSD-2-Clause.txt")
         shutil.copy(ROOT / "README.md", root / "documentation/README.md")
         shutil.copy(Path(__file__), source / "build.py")
+        shutil.copy(ROOT / "profile.json", source)
+        shutil.copy(ROOT / "build_support.py", source)
         (source / "build.sh").write_text(
             '#!/bin/sh\nset -eu\ncd "$(dirname "$0")"\n'
-            "mkdir -p ../binaries/x86_64-linux\n"
-            "c++ -std=c++20 -O2 -fPIC -shared -Wl,--no-undefined -I. "
-            "bus.cpp fmi.cpp unsupported.cpp -o ../binaries/x86_64-linux/SilCanSmoke.so\n"
+            "mkdir -p ../binaries/x86_64-linux\n" + shlex.join(compile_command) + "\n"
         )
         resources = root / "resources"
         resources.mkdir()
         identity = {
-            "profile": "sil-can-smoke-1",
-            "specification": "FMI-LS-BUS 1.0.0",
-            "spec_revision": "8abdf039bfb994c794e4c15bce575cfc00a1ab6e",
+            "profile": PROFILE["token"],
+            "specification": PROFILE["specification"],
+            "spec_revision": PROFILE["upstream"]["spec"]["revision"],
+            "git_revision": subprocess.check_output(
+                [
+                    "git",
+                    "-c",
+                    f"safe.directory={ROOT.parents[1]}",
+                    "-C",
+                    str(ROOT.parents[1]),
+                    "rev-parse",
+                    "HEAD",
+                ],
+                text=True,
+            ).strip(),
+            "source_dirty": bool(
+                subprocess.check_output(
+                    [
+                        "git",
+                        "-c",
+                        f"safe.directory={ROOT.parents[1]}",
+                        "-C",
+                        str(ROOT.parents[1]),
+                        "status",
+                        "--porcelain",
+                        "--",
+                        "models/can",
+                        "LICENSE",
+                        "NOTICE",
+                    ],
+                    text=True,
+                ).strip()
+            ),
             "fmpy": fmpy.__version__,
             "compiler": subprocess.check_output(
                 ["c++", "--version"], text=True
