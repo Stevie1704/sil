@@ -1,0 +1,2 @@
+# Retained upstream patch context includes its original whitespace.
+models/can/qualification/*.patch -whitespace

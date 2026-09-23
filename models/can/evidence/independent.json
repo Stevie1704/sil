@@ -1,0 +1,33 @@
+{
+  "event_time_ns": 301000000,
+  "sender": "200000000c00000001000000",
+  "receiver": "1000000014000000010000000000040001020304",
+  "receiver_log": [
+    "Instance ExternalReceiver instantiated.",
+    "Entering initialization mode.",
+    "Entering event mode.",
+    "Get TX clock of 1",
+    "Get TX clock of 1",
+    "Get TX buffer of 23 bytes",
+    "Ending super dense time step.",
+    "Get TX clock of 0",
+    "Entering step mode.",
+    "Doing step at 0.000000 of 0.300000 seconds.",
+    "Entering event mode.",
+    "Get TX clock of 0",
+    "Ending super dense time step.",
+    "Entering step mode.",
+    "Doing step at 0.300000 of 0.001000 seconds.",
+    "Entering event mode.",
+    "Set RX clock to 1",
+    "Set RX buffer of 20 bytes",
+    "Ending super dense time step.",
+    "Received CAN frame with ID 1 and length 4",
+    "Entering step mode.",
+    "Doing step at 0.301000 of 0.009000 seconds.",
+    "Entering event mode.",
+    "Ending super dense time step.",
+    "Get TX clock of 0"
+  ],
+  "fmu_sha256": "64da69ff0319b3b6e6bade4ca0fb6535e8ff3779f5ba926b10111a84502681e8"
+}

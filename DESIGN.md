@@ -669,3 +669,13 @@ existing Process-participant response deadline through `sil-check`.
   example is also the evidence — its second variant delays the sensing Channel
   by one declared Interceptor and the vehicles drive a different trajectory for
   it, so the environment half is a closed loop and not a playback.
+
+### Maintained edge model product (#152)
+
+The authorized CAN milestone adds a first-party standalone CAN Bus Simulation
+FMU under `models/can/`, expanding the previous core-only product scope.
+[ADR 0003](docs/adr/0003-maintained-can-model-at-the-edge.md) records the boundary:
+CAN semantics in the model, FMI coordination in the Importer, unchanged kernel
+contracts and unchanged upstream proof. The initial sequential Classical CAN
+smoke profile deliberately uses a fixed transfer delay until transmission timing
+is implemented; it makes no arbitration, fault or physical-fidelity claim.
