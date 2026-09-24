@@ -20,6 +20,11 @@ ROOT = Path(__file__).resolve().parents[3]
 ARTIFACTS = ROOT / "build/can"
 PROFILE = json.loads((ROOT / "models/can/profile.json").read_text())
 MODEL = PROFILE["model_name"]
+BUFFER_SCHEMAS = {"can.Buffer": {"fields": [
+    {"name": "data_length", "type": "u16"},
+    {"name": "data", "type": "u8", "count": 2048},
+    {"name": "data_event_time_ns", "type": "u64"},
+]}}
 LAYOUT = PROFILE["layout"]
 NS = 1_000_000_000
 BITRATE = 100_000
@@ -849,15 +854,7 @@ def test_sil_group_and_determinism():
     from sil.manifest import Manifest
     from sil.recording import read_records
 
-    schemas = {
-        "can.Buffer": {
-            "fields": [
-                {"name": "data_length", "type": "u16"},
-                {"name": "data", "type": "u8", "count": 2048},
-                {"name": "data_event_time_ns", "type": "u64"},
-            ]
-        }
-    }
+    schemas = BUFFER_SCHEMAS
     sources = {
         "sender": "sender.CanChannel",
         "receiver": "receiver.CanChannel",
@@ -977,11 +974,7 @@ def test_sil_group_and_determinism():
 def faulted_external_manifest(name, rules, *, active_nodes=2, retry_limit=1):
     from sil.manifest import Manifest
 
-    schemas = {"can.Buffer": {"fields": [
-        {"name": "data_length", "type": "u16"},
-        {"name": "data", "type": "u8", "count": 2048},
-        {"name": "data_event_time_ns", "type": "u64"},
-    ]}}
+    schemas = BUFFER_SCHEMAS
     manifest = Manifest(duration_ns=FAULT_UNTIL_NS)
     manifest.add_schemas(schemas)
     outputs = {f"node{node}": f"bus.Node{node}"
@@ -1151,15 +1144,7 @@ BURST_GRIDS = {"coarse": BURST_END_NS, "boundary": 249000, "bit": 1000}
 def burst_manifest(name, grid_ns):
     from sil.manifest import Manifest, SubscriberRoute
 
-    schemas = {
-        "can.Buffer": {
-            "fields": [
-                {"name": "data_length", "type": "u16"},
-                {"name": "data", "type": "u8", "count": 2048},
-                {"name": "data_event_time_ns", "type": "u64"},
-            ]
-        }
-    }
+    schemas = BUFFER_SCHEMAS
     manifest = Manifest(duration_ns=BURST_END_NS)
     manifest.add_schemas(schemas)
     requests, observed = ["in.node1", "in.node2"], ["out.node1", "out.node2"]
@@ -1266,11 +1251,7 @@ def test_sil_three_node_arbitration_and_manifest_determinism():
     from sil.manifest import Manifest, SubscriberRoute
     from sil.recording import read_records
 
-    schemas = {"can.Buffer": {"fields": [
-        {"name": "data_length", "type": "u16"},
-        {"name": "data", "type": "u8", "count": 2048},
-        {"name": "data_event_time_ns", "type": "u64"},
-    ]}}
+    schemas = BUFFER_SCHEMAS
     codec = schema.load(schemas)["can.Buffer"]
     traces = {}
     for name, order in (("forward", (0, 1, 2)), ("reverse", (2, 1, 0))):
@@ -1357,6 +1338,7 @@ def test_package_identity_metadata_and_linkage():
         "ExternalReceiver",
         "FaultAwareSender",
         "FaultAwareReceiver",
+        "ContendingSender",
     ):
         path = ARTIFACTS / f"{name}.fmu"
         with zipfile.ZipFile(path) as archive:
@@ -1381,7 +1363,16 @@ def test_package_identity_metadata_and_linkage():
                     "documentation/fault-aware-node.patch"
                 ) == patch_path.read_bytes()
             else:
-                assert "fault_aware_bus_error" not in identity
+                if name == "ContendingSender":
+                    patch = ROOT / "models/can/qualification/contending-node.patch"
+                    assert identity["contending_identifier"] == 2
+                    assert identity["contending_patch_sha256"] == hashlib.sha256(
+                        patch.read_bytes()
+                    ).hexdigest()
+                    assert archive.read("documentation/contending-node.patch") == patch.read_bytes()
+                    assert identity["fault_aware_bus_error"] is True
+                else:
+                    assert "fault_aware_bus_error" not in identity
             manifest = etree.fromstring(
                 archive.read("extra/org.fmi-standard.fmi-ls-bus/fmi-ls-manifest.xml")
             )

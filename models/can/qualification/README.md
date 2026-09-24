@@ -78,3 +78,10 @@ Bus Error notification at the reference frame end; the bus owns the bounded
 retry and Node1 receives Confirm while Node2 receives the frame at the retry's
 completion. A later request outside the consumed occurrence proceeds without
 another fault.
+
+For issue #156, `build_nodes.py` also creates `ContendingSender.fmu`, a
+separately named fault-aware sender with `contending-node.patch` changing only
+its periodic CAN identifier from 1 to 2. This gives the replay proof a real
+arbitration loser that stays queued while the lower identifier transmits.
+The archive retains the extra patch and digest; the existing external and
+fault-aware archives retain their bytes.
