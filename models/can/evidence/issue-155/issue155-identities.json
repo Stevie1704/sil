@@ -1,0 +1,171 @@
+{
+  "fmu_sha256": {
+    "ExternalReceiver": "224a246e76a60ec07a55b9f91e12308966c4dd12deb287cf97ff555f4c4eac16",
+    "ExternalSender": "70030580e556607f161d9312abde836feb9458a72878c67aa27eb03649eedb99",
+    "FaultAwareReceiver": "bc4b62d1dd59e92910233e8922895aea760827a0282e41700c82bdecfc8ac6de",
+    "FaultAwareSender": "199aa70322cd921edde307763119019487d9b3ef76694480071384b7561bece5",
+    "SilCanBus": "2a01f6994b805db084e9b451ceb30446dd19dc2ee0e23ea7c0d23f225274b3a6"
+  },
+  "identities": {
+    "ExternalReceiver": {
+      "examples_revision": "de019a6efbad810795835f2fd9bbf9e62eb451b9",
+      "flags": [
+        "-O2",
+        "-fPIC",
+        "-shared",
+        "-DFMU_IDENTIFIER_H",
+        "-Wl,--no-undefined",
+        "-DSIL_CAN_RECEIVE_ONLY"
+      ],
+      "fmpy": "0.3.32",
+      "manifest_patch_sha256": "d1e388df8dd491ef6dea50a327ee4273913b46927a58a7c7e78a0c47fb0d8406",
+      "patch_sha256": "a3f931bd33013210e4ecc6e528e108c77feb1e273305585b2cf160633e918ef0",
+      "receive_only": true,
+      "sources": {
+        "App.c": "25384458c4ed1f56b9eaa376e23b30a1ef962041a2ddad05fd2d21f9f8ef7913",
+        "App.h": "f37d0fd3fad60998132661a8a13618073b18fc142cbc21818806a9ada1ef7452",
+        "Fmu.c": "c139130cc8a4498b4dd01050c82c984adaa6cd4f86c6e6a08b88656b1036a472",
+        "FmuIdentifier.h": "99b852aa8bc16d4a1ae41e548d4fbab7292e1dcd87ea812256b62b63fd3009e6",
+        "Instance.h": "6bfe02b1c4d12acca53e1b79e6116bdc2a78679918174e66982eb5db13465b7d",
+        "Logging.c": "512b8642e669a314172a51418aed88d2be39c8bf7e64d051b3db4f3ab35abbde",
+        "Logging.h": "ae1c9b6bb5661b933f5d0e21c7e30b4f9bd5d9f73d4f44a9dcbcb2f01c15a04f",
+        "fmi3FunctionTypes.h": "77bb086dbf9b9123f75edc2a90a0f27fb5c32f913ab3f9b69fe2e2cbc2448b24",
+        "fmi3Functions.h": "6367e9f7895848ed8d06c8a9b7f77e72d9f3eae102f64c313d51c10049b720ee",
+        "fmi3LsBus.h": "e8398d094b4c1f210dbf506ae4a81f384dac73fa56e7813387c54a32ee91641e",
+        "fmi3LsBusCan.h": "70b2f081ce0b689b6a52cde988b06152f0b6d5879923c19035e24202648d56f6",
+        "fmi3LsBusUtil.h": "4626441d26d43a1dd25617348b83a75bf6a7f58a44e227c8e53dc7fd90b058e4",
+        "fmi3LsBusUtilCan.h": "ecb0973dff6c2c6aa88077bf3b7596f2d1837f3068adc1861dba46e2e9059796",
+        "fmi3PlatformTypes.h": "19ea19ae07cdab582931fc1a545d9aeef3d5066da131ee96a7e393e72164fa30"
+      },
+      "spec_revision": "8abdf039bfb994c794e4c15bce575cfc00a1ab6e"
+    },
+    "ExternalSender": {
+      "examples_revision": "de019a6efbad810795835f2fd9bbf9e62eb451b9",
+      "flags": [
+        "-O2",
+        "-fPIC",
+        "-shared",
+        "-DFMU_IDENTIFIER_H",
+        "-Wl,--no-undefined"
+      ],
+      "fmpy": "0.3.32",
+      "manifest_patch_sha256": "d1e388df8dd491ef6dea50a327ee4273913b46927a58a7c7e78a0c47fb0d8406",
+      "patch_sha256": "a3f931bd33013210e4ecc6e528e108c77feb1e273305585b2cf160633e918ef0",
+      "receive_only": false,
+      "sources": {
+        "App.c": "25384458c4ed1f56b9eaa376e23b30a1ef962041a2ddad05fd2d21f9f8ef7913",
+        "App.h": "f37d0fd3fad60998132661a8a13618073b18fc142cbc21818806a9ada1ef7452",
+        "Fmu.c": "c139130cc8a4498b4dd01050c82c984adaa6cd4f86c6e6a08b88656b1036a472",
+        "FmuIdentifier.h": "99b852aa8bc16d4a1ae41e548d4fbab7292e1dcd87ea812256b62b63fd3009e6",
+        "Instance.h": "6bfe02b1c4d12acca53e1b79e6116bdc2a78679918174e66982eb5db13465b7d",
+        "Logging.c": "512b8642e669a314172a51418aed88d2be39c8bf7e64d051b3db4f3ab35abbde",
+        "Logging.h": "ae1c9b6bb5661b933f5d0e21c7e30b4f9bd5d9f73d4f44a9dcbcb2f01c15a04f",
+        "fmi3FunctionTypes.h": "77bb086dbf9b9123f75edc2a90a0f27fb5c32f913ab3f9b69fe2e2cbc2448b24",
+        "fmi3Functions.h": "6367e9f7895848ed8d06c8a9b7f77e72d9f3eae102f64c313d51c10049b720ee",
+        "fmi3LsBus.h": "e8398d094b4c1f210dbf506ae4a81f384dac73fa56e7813387c54a32ee91641e",
+        "fmi3LsBusCan.h": "70b2f081ce0b689b6a52cde988b06152f0b6d5879923c19035e24202648d56f6",
+        "fmi3LsBusUtil.h": "4626441d26d43a1dd25617348b83a75bf6a7f58a44e227c8e53dc7fd90b058e4",
+        "fmi3LsBusUtilCan.h": "ecb0973dff6c2c6aa88077bf3b7596f2d1837f3068adc1861dba46e2e9059796",
+        "fmi3PlatformTypes.h": "19ea19ae07cdab582931fc1a545d9aeef3d5066da131ee96a7e393e72164fa30"
+      },
+      "spec_revision": "8abdf039bfb994c794e4c15bce575cfc00a1ab6e"
+    },
+    "FaultAwareReceiver": {
+      "examples_revision": "de019a6efbad810795835f2fd9bbf9e62eb451b9",
+      "fault_aware_bus_error": true,
+      "fault_node_patch_sha256": "1a2fb612faa6c016d80628372e9e6b9f3978d5fc17efe06df19be7361eafcee5",
+      "flags": [
+        "-O2",
+        "-fPIC",
+        "-shared",
+        "-DFMU_IDENTIFIER_H",
+        "-Wl,--no-undefined",
+        "-DSIL_CAN_RECEIVE_ONLY"
+      ],
+      "fmpy": "0.3.32",
+      "manifest_patch_sha256": "d1e388df8dd491ef6dea50a327ee4273913b46927a58a7c7e78a0c47fb0d8406",
+      "patch_sha256": "a3f931bd33013210e4ecc6e528e108c77feb1e273305585b2cf160633e918ef0",
+      "receive_only": true,
+      "sources": {
+        "App.c": "7ea02e11c42220c90d5c3a0d60778e42fb95b624f9467e895a7aa71b220ea7c3",
+        "App.h": "f37d0fd3fad60998132661a8a13618073b18fc142cbc21818806a9ada1ef7452",
+        "Fmu.c": "c139130cc8a4498b4dd01050c82c984adaa6cd4f86c6e6a08b88656b1036a472",
+        "FmuIdentifier.h": "99b852aa8bc16d4a1ae41e548d4fbab7292e1dcd87ea812256b62b63fd3009e6",
+        "Instance.h": "6bfe02b1c4d12acca53e1b79e6116bdc2a78679918174e66982eb5db13465b7d",
+        "Logging.c": "512b8642e669a314172a51418aed88d2be39c8bf7e64d051b3db4f3ab35abbde",
+        "Logging.h": "ae1c9b6bb5661b933f5d0e21c7e30b4f9bd5d9f73d4f44a9dcbcb2f01c15a04f",
+        "fmi3FunctionTypes.h": "77bb086dbf9b9123f75edc2a90a0f27fb5c32f913ab3f9b69fe2e2cbc2448b24",
+        "fmi3Functions.h": "6367e9f7895848ed8d06c8a9b7f77e72d9f3eae102f64c313d51c10049b720ee",
+        "fmi3LsBus.h": "e8398d094b4c1f210dbf506ae4a81f384dac73fa56e7813387c54a32ee91641e",
+        "fmi3LsBusCan.h": "70b2f081ce0b689b6a52cde988b06152f0b6d5879923c19035e24202648d56f6",
+        "fmi3LsBusUtil.h": "4626441d26d43a1dd25617348b83a75bf6a7f58a44e227c8e53dc7fd90b058e4",
+        "fmi3LsBusUtilCan.h": "ecb0973dff6c2c6aa88077bf3b7596f2d1837f3068adc1861dba46e2e9059796",
+        "fmi3PlatformTypes.h": "19ea19ae07cdab582931fc1a545d9aeef3d5066da131ee96a7e393e72164fa30"
+      },
+      "spec_revision": "8abdf039bfb994c794e4c15bce575cfc00a1ab6e"
+    },
+    "FaultAwareSender": {
+      "examples_revision": "de019a6efbad810795835f2fd9bbf9e62eb451b9",
+      "fault_aware_bus_error": true,
+      "fault_node_patch_sha256": "1a2fb612faa6c016d80628372e9e6b9f3978d5fc17efe06df19be7361eafcee5",
+      "flags": [
+        "-O2",
+        "-fPIC",
+        "-shared",
+        "-DFMU_IDENTIFIER_H",
+        "-Wl,--no-undefined"
+      ],
+      "fmpy": "0.3.32",
+      "manifest_patch_sha256": "d1e388df8dd491ef6dea50a327ee4273913b46927a58a7c7e78a0c47fb0d8406",
+      "patch_sha256": "a3f931bd33013210e4ecc6e528e108c77feb1e273305585b2cf160633e918ef0",
+      "receive_only": false,
+      "sources": {
+        "App.c": "7ea02e11c42220c90d5c3a0d60778e42fb95b624f9467e895a7aa71b220ea7c3",
+        "App.h": "f37d0fd3fad60998132661a8a13618073b18fc142cbc21818806a9ada1ef7452",
+        "Fmu.c": "c139130cc8a4498b4dd01050c82c984adaa6cd4f86c6e6a08b88656b1036a472",
+        "FmuIdentifier.h": "99b852aa8bc16d4a1ae41e548d4fbab7292e1dcd87ea812256b62b63fd3009e6",
+        "Instance.h": "6bfe02b1c4d12acca53e1b79e6116bdc2a78679918174e66982eb5db13465b7d",
+        "Logging.c": "512b8642e669a314172a51418aed88d2be39c8bf7e64d051b3db4f3ab35abbde",
+        "Logging.h": "ae1c9b6bb5661b933f5d0e21c7e30b4f9bd5d9f73d4f44a9dcbcb2f01c15a04f",
+        "fmi3FunctionTypes.h": "77bb086dbf9b9123f75edc2a90a0f27fb5c32f913ab3f9b69fe2e2cbc2448b24",
+        "fmi3Functions.h": "6367e9f7895848ed8d06c8a9b7f77e72d9f3eae102f64c313d51c10049b720ee",
+        "fmi3LsBus.h": "e8398d094b4c1f210dbf506ae4a81f384dac73fa56e7813387c54a32ee91641e",
+        "fmi3LsBusCan.h": "70b2f081ce0b689b6a52cde988b06152f0b6d5879923c19035e24202648d56f6",
+        "fmi3LsBusUtil.h": "4626441d26d43a1dd25617348b83a75bf6a7f58a44e227c8e53dc7fd90b058e4",
+        "fmi3LsBusUtilCan.h": "ecb0973dff6c2c6aa88077bf3b7596f2d1837f3068adc1861dba46e2e9059796",
+        "fmi3PlatformTypes.h": "19ea19ae07cdab582931fc1a545d9aeef3d5066da131ee96a7e393e72164fa30"
+      },
+      "spec_revision": "8abdf039bfb994c794e4c15bce575cfc00a1ab6e"
+    },
+    "SilCanBus": {
+      "compiler": "c++ (Debian 12.2.0-14+deb12u1) 12.2.0",
+      "flags": [
+        "-std=c++20",
+        "-O2",
+        "-fPIC",
+        "-shared",
+        "-Wl,--no-undefined"
+      ],
+      "fmpy": "0.3.32",
+      "git_revision": "12fb789eaab0c448f1b04d6309e95e7198b8942c",
+      "profile": "sil-can-bus-1",
+      "source_dirty": false,
+      "sources": {
+        "build.py": "80199b3b6fafb7fe010a2f4a42d586ac67d6eea65aca408209d87cb5dd537d55",
+        "build.sh": "7d148ca9e627b24a7e6794015cf7c6d56853d59adb12536fc152d3e8c761932e",
+        "build_support.py": "7e374e1e2fb0b250bc3bd4c7fa46b7cf3a66f24df90d9ec472be517d9491804d",
+        "bus.cpp": "7d7798158f0cd44d2889df5a33765f8b9856a4a9b7fba613f90b39a1b2db22a6",
+        "bus.hpp": "dfb096baba89c8abb8170594f93f3b73b8f5a6ca0924737b6e93f09c2e76db6f",
+        "fmi.cpp": "d09ff70f8f89cafb289964f95f988766f7a5c16e07d21affa47fb9456d05fb15",
+        "fmi3FunctionTypes.h": "77bb086dbf9b9123f75edc2a90a0f27fb5c32f913ab3f9b69fe2e2cbc2448b24",
+        "fmi3Functions.h": "6367e9f7895848ed8d06c8a9b7f77e72d9f3eae102f64c313d51c10049b720ee",
+        "fmi3PlatformTypes.h": "19ea19ae07cdab582931fc1a545d9aeef3d5066da131ee96a7e393e72164fa30",
+        "profile.hpp": "df5ca4bad949f621290b69b7a61e50c3ea1c9d314ec10f49b3357321a4c265db",
+        "profile.json": "77c1bc0e85ff48a765507297b5182d8a4999efca5225c8a7c6a13981508b01f8",
+        "unsupported.cpp": "6618e387295608cff04ff0e47d1a32ea87b5646b1a6315cce10c538b5443138e"
+      },
+      "spec_revision": "8abdf039bfb994c794e4c15bce575cfc00a1ab6e",
+      "specification": "FMI-LS-BUS 1.0.0"
+    }
+  }
+}

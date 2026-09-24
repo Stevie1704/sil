@@ -681,4 +681,9 @@ frames at computed wire instants: exact-stuffed frame length, three-bit
 intermission, integer-nanosecond time and a bitrate domain chosen so no instant
 is rounded. Since #154 it also arbitrates multiple active nodes by identifier,
 with bounded per-node queues and explicit buffer or discard behavior. It makes
-no electrical fault or physical-fidelity claim.
+no electrical fault or physical-fidelity claim. Issue #155 adds the CAN model
+fault schedule: a Manifest-covered FMI input that selects a deterministic Bus
+Error, bounded model-owned retransmission, or receiver-local delivery
+suppression. These remain CAN profile behavior at the edge. The schedule does
+not add a Channel Interceptor, kernel fault-injection behavior, or a claim of
+electrical CAN error confinement.

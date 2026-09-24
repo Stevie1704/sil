@@ -11,7 +11,20 @@
 
 namespace {
 static_assert(profile::terminal_count == can::terminal_capacity, "terminal declaration and core disagree");
+static_assert(profile::fault_rule_capacity == can::max_fault_rules,
+              "fault-rule parameters and core disagree");
 enum class Mode { instantiated, initialization, event, step, terminated, error };
+struct Parameters {
+  unsigned active_nodes = 2;
+  unsigned queue_capacity = 4;
+  std::uint64_t retry_limit = 1;
+  std::uint64_t fault_rule_count = 0;
+  bool fault_rule_count_set = false;
+  std::array<std::array<std::uint64_t, profile::fault_rule_stride>,
+             profile::fault_rule_capacity> fault_rules{};
+  std::array<std::array<bool, profile::fault_rule_stride>,
+             profile::fault_rule_capacity> fault_rule_fields_set{};
+};
 struct EventState {
   std::array<can::Bytes, profile::terminal_count> inputs;
   std::array<bool, profile::terminal_count> written{}, rx{}, tx{};
@@ -26,6 +39,7 @@ struct EventState {
 };
 struct Instance {
   can::Bus bus;
+  Parameters parameters;
   Mode mode = Mode::instantiated;
   can::Nanoseconds time = 0;
   EventState event;
@@ -67,6 +81,64 @@ unsigned whole_count(double value) {
           std::floor(value) == value,
           "CAN configuration counts must be representable nonnegative integers");
   return unsigned(value);
+}
+std::uint64_t whole_integer(double value) {
+  constexpr double max_exact_integer = 9007199254740991.0;
+  require(std::isfinite(value) && value >= 0 && value <= max_exact_integer &&
+              std::floor(value) == value,
+          "CAN parameters must be exactly representable nonnegative integers");
+  return static_cast<std::uint64_t>(value);
+}
+struct FaultParameterLocation {
+  unsigned rule_index;
+  unsigned field_index;
+};
+std::optional<FaultParameterLocation> fault_parameter(fmi3ValueReference vr) {
+  const auto end = profile::fault_rule_base +
+                   profile::fault_rule_stride * profile::fault_rule_capacity;
+  if (vr < profile::fault_rule_base || vr >= end) return std::nullopt;
+  const auto offset = vr - profile::fault_rule_base;
+  return FaultParameterLocation{
+      offset / profile::fault_rule_stride,
+      offset % profile::fault_rule_stride};
+}
+std::array<can::FaultRuleInput, profile::fault_rule_capacity>
+fault_rule_inputs(const Parameters& parameters) {
+  std::array<can::FaultRuleInput, profile::fault_rule_capacity> inputs{};
+  for (unsigned index = 0; index < profile::fault_rule_capacity; ++index) {
+    const auto& fields = parameters.fault_rules[index];
+    inputs[index] = {
+        fields[profile::fault_rule_kind],
+        fields[profile::fault_rule_sender],
+        fields[profile::fault_rule_receiver],
+        fields[profile::fault_rule_identifier],
+        fields[profile::fault_rule_first_request],
+        fields[profile::fault_rule_last_request],
+        fields[profile::fault_rule_occurrence],
+        fields[profile::fault_rule_attempt],
+    };
+  }
+  return inputs;
+}
+bool active_rule_fields_are_set(const Parameters& parameters) {
+  if (!parameters.fault_rule_count_set ||
+      parameters.fault_rule_count == 0)
+    return false;
+  for (unsigned index = 0; index < parameters.fault_rule_count; ++index)
+    if (!std::all_of(parameters.fault_rule_fields_set[index].begin(),
+                     parameters.fault_rule_fields_set[index].end(),
+                     [](bool is_set) { return is_set; }))
+      return false;
+  return true;
+}
+double parameter_value(const Parameters& parameters, fmi3ValueReference vr) {
+  if (vr == profile::active_nodes) return parameters.active_nodes;
+  if (vr == profile::queue_capacity) return parameters.queue_capacity;
+  if (vr == profile::fault_retry_limit) return parameters.retry_limit;
+  if (vr == profile::fault_rule_count) return parameters.fault_rule_count;
+  if (auto fault = fault_parameter(vr))
+    return double(parameters.fault_rules[fault->rule_index][fault->field_index]);
+  throw std::runtime_error("unknown Float64 value reference");
 }
 can::Nanoseconds until_next_event(const Instance& i) {
   const auto due = i.bus.next_event();
@@ -167,6 +239,10 @@ fmi3Status fmi3EnterInitializationMode(fmi3Instance instance, fmi3Boolean,
 }
 fmi3Status fmi3ExitInitializationMode(fmi3Instance instance) {
   return invoke_fmi(instance, [](Instance& i) { require_mode(i, Mode::initialization);
+    const auto schedule = fault_rule_inputs(i.parameters);
+    i.bus.configure(i.parameters.active_nodes, i.parameters.queue_capacity,
+                    i.parameters.retry_limit, i.parameters.fault_rule_count,
+                    schedule);
     // Initial assignments are values, not Clock activations. The first event
     // starts with no outstanding write or transmission request.
     i.event = {};
@@ -295,9 +371,7 @@ fmi3Status fmi3GetFloat64(fmi3Instance instance, const fmi3ValueReference vr[],
     require(n == count && (!n || (vr && values)), "invalid Float64 output call");
     for (size_t k = 0; k < n; ++k) {
       if (vr[k] == profile::time) values[k] = double(i.time) / can::ns_per_s;
-      else if (vr[k] == profile::active_nodes) values[k] = i.bus.active_nodes();
-      else if (vr[k] == profile::queue_capacity) values[k] = i.bus.queue_capacity();
-      else throw std::runtime_error("unknown Float64 value reference");
+      else values[k] = parameter_value(i.parameters, vr[k]);
     }
   });
 }
@@ -306,13 +380,39 @@ fmi3Status fmi3SetFloat64(fmi3Instance instance, const fmi3ValueReference vr[],
   return invoke_fmi(instance, [&](Instance& i) {
     require_mode(i, Mode::instantiated);
     require(n == count && (!n || (vr && values)), "invalid Float64 parameter call");
-    unsigned active = i.bus.active_nodes(), capacity = i.bus.queue_capacity();
+    auto parameters = i.parameters;
     for (size_t k = 0; k < n; ++k) {
-      if (vr[k] == profile::active_nodes) active = whole_count(values[k]);
-      else if (vr[k] == profile::queue_capacity) capacity = whole_count(values[k]);
-      else throw std::runtime_error("unknown Float64 parameter reference");
+      if (vr[k] == profile::active_nodes)
+        parameters.active_nodes = whole_count(values[k]);
+      else if (vr[k] == profile::queue_capacity)
+        parameters.queue_capacity = whole_count(values[k]);
+      else if (vr[k] == profile::fault_retry_limit)
+        parameters.retry_limit = whole_integer(values[k]);
+      else if (vr[k] == profile::fault_rule_count) {
+        parameters.fault_rule_count = whole_integer(values[k]);
+        parameters.fault_rule_count_set = true;
+      } else if (auto fault = fault_parameter(vr[k])) {
+        parameters.fault_rules[fault->rule_index][fault->field_index] =
+            whole_integer(values[k]);
+        parameters.fault_rule_fields_set[fault->rule_index][fault->field_index] =
+            true;
+      } else {
+        throw std::runtime_error("unknown Float64 parameter reference");
+      }
     }
-    i.bus.configure(active, capacity);
+    can::Bus::validate_configuration_limits(
+        parameters.active_nodes, parameters.queue_capacity,
+        parameters.retry_limit, parameters.fault_rule_count);
+    if (active_rule_fields_are_set(parameters)) {
+      const auto schedule = fault_rule_inputs(parameters);
+      can::Bus candidate;
+      candidate.configure(
+          parameters.active_nodes, parameters.queue_capacity,
+          parameters.retry_limit, parameters.fault_rule_count,
+          std::span<const can::FaultRuleInput>(
+              schedule.data(), std::size_t(parameters.fault_rule_count)));
+    }
+    i.parameters = parameters;
   });
 }
 }  // extern "C"

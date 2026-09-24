@@ -192,6 +192,13 @@ window — dropping, delaying, or rewriting messages. How fault injection is
 expressed, so faults stay part of the reproducible configuration.
 _Avoid_: fault, filter, hook, middleware, mutator
 
+**CAN model fault schedule**:
+A fixed input to the maintained CAN bus model that selects a scheduled
+transmission error or receiver-delivery suppression by CAN request identity.
+It belongs to the model's FMI profile; it does not modify a SiL Channel and is
+not an Interceptor.
+_Avoid_: fault schedule when referring to a Channel Interceptor
+
 ### Runs and reproducibility
 
 **Run**:

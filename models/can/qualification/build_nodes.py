@@ -16,6 +16,7 @@ from build_support import PROFILE, digest, pack
 EXAMPLES = PROFILE["upstream"]["examples"]["revision"]
 SPEC = PROFILE["upstream"]["spec"]["revision"]
 PATCH = Path(__file__).with_name("node.patch")
+FAULT_PATCH = Path(__file__).with_name("fault-aware-node.patch")
 
 
 def build(checkout, spec, output):
@@ -35,7 +36,12 @@ def build(checkout, spec, output):
         if actual != revision:
             raise SystemExit(f"{path}: expected revision {revision}, got {actual}")
     headers = Path(fmpy.__file__).parent / "c-code"
-    for receiver in (False, True):
+    for receiver, fault_aware in (
+        (False, False),
+        (True, False),
+        (False, True),
+        (True, True),
+    ):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = root / "sources"
@@ -43,6 +49,12 @@ def build(checkout, spec, output):
             subprocess.run(
                 ["patch", "-p1", "-i", str(PATCH.resolve())], cwd=source, check=True
             )
+            if fault_aware:
+                subprocess.run(
+                    ["patch", "-p1", "-i", str(FAULT_PATCH.resolve())],
+                    cwd=source,
+                    check=True,
+                )
             for path in headers.glob("fmi3*.h"):
                 shutil.copy(path, source)
             for path in (spec / "headers").glob("*.h"):
@@ -108,12 +120,19 @@ def build(checkout, spec, output):
                 "fmpy": fmpy.__version__,
                 "sources": {p.name: digest(p) for p in sorted(source.iterdir())},
             }
+            if fault_aware:
+                shutil.copy(FAULT_PATCH, root / "documentation/fault-aware-node.patch")
+                identity.update(
+                    fault_aware_bus_error=True,
+                    fault_node_patch_sha256=digest(FAULT_PATCH),
+                )
             (root / "resources").mkdir()
             (root / "resources/identity.json").write_text(
                 json.dumps(identity, indent=2, sort_keys=True) + "\n"
             )
+            suffix = "Receiver.fmu" if receiver else "Sender.fmu"
             target = output / (
-                "ExternalReceiver.fmu" if receiver else "ExternalSender.fmu"
+                f"FaultAware{suffix}" if fault_aware else f"External{suffix}"
             )
             pack(root, target)
             print(f"{digest(target)}  {target.name}")

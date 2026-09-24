@@ -52,11 +52,38 @@ def write_descriptions(root):
     for name, reference, default in (
         ("activeNodeCount", LAYOUT["active_nodes"], "2"),
         ("perNodeQueueCapacity", LAYOUT["queue_capacity"], "4"),
+        ("faultRetryLimit", LAYOUT["fault_retry_limit"], "1"),
+        ("faultRuleCount", LAYOUT["fault_rule_count"], "0"),
     ):
         ET.SubElement(
             variables, "Float64", name=name, valueReference=str(reference),
             causality="parameter", variability="fixed", start=default,
         )
+    fault_parameters = (
+        ("Kind", LAYOUT["fault_rule_kind"]),
+        ("SenderNode", LAYOUT["fault_rule_sender"]),
+        ("ReceiverNode", LAYOUT["fault_rule_receiver"]),
+        ("Identifier", LAYOUT["fault_rule_identifier"]),
+        ("RequestStartNs", LAYOUT["fault_rule_first_request"]),
+        ("RequestEndNs", LAYOUT["fault_rule_last_request"]),
+        ("Occurrence", LAYOUT["fault_rule_occurrence"]),
+        ("Attempt", LAYOUT["fault_rule_attempt"]),
+    )
+    for rule in range(LAYOUT["fault_rule_capacity"]):
+        for name, offset in fault_parameters:
+            ET.SubElement(
+                variables,
+                "Float64",
+                name=f"faultRule{rule + 1}{name}",
+                valueReference=str(
+                    LAYOUT["fault_rule_base"]
+                    + rule * LAYOUT["fault_rule_stride"]
+                    + offset
+                ),
+                causality="parameter",
+                variability="fixed",
+                start="0",
+            )
     terminals = ET.Element("fmiTerminalsAndIcons", fmiVersion="3.0")
     entries = ET.SubElement(terminals, "Terminals")
     for n in range(LAYOUT["terminal_count"]):
