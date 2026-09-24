@@ -1,11 +1,13 @@
 # Issue #156: first-party bus live/replay equivalence
 
 `test_replay_equivalence.py` generated these artifacts in the CAN qualification
-image on Linux x86-64. The exact image ID is in `build/can/image.txt` when
-reproduced. The runner revision, digest and command-file digests are in each
+image on Linux x86-64. The exact image ID is in `issue156-report.json` and in
+`build/can/image.txt` when reproduced. The runner revision, digest and
+command-file digests are in each
 `*.provenance.json`; `issue156-report.json` binds the retained Manifests,
 Recordings, provenance files and FMUs by SHA-256. The report also records the
 source revision and the digest of the test that generated the evidence.
+The full CAN qualification completed with 81 passing tests.
 
 Both cases use two CAN terminals and the first-party `SilCanBus.fmu`. Node1 is
 the adapted `FaultAwareSender.fmu`, which emits identifier 1. Node2 is the
