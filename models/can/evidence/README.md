@@ -7,6 +7,10 @@ traces and fixture provenance are under
 [`issue-155/`](issue-155/README.md). The earlier upstream proof stays under
 `proofs/fmi-ls-bus/`.
 
+Issue #156's first-party live/replay comparison is retained separately under
+[`issue-156/`](issue-156/README.md), including source and replay Recordings,
+fault configuration, per-Channel comparisons and provenance.
+
 Linux x86-64 (Docker on an ARM development host), Python 3.13.7, FMPy 0.3.32,
 GNU C++ 12.2.0. The image used was
 `sha256:f02c5c1b1e47efe66a066f3a6619983c6c87363980acfabbe56a03de063828e9`,
