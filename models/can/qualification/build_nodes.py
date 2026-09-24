@@ -17,6 +17,7 @@ EXAMPLES = PROFILE["upstream"]["examples"]["revision"]
 SPEC = PROFILE["upstream"]["spec"]["revision"]
 PATCH = Path(__file__).with_name("node.patch")
 FAULT_PATCH = Path(__file__).with_name("fault-aware-node.patch")
+CONTENDER_PATCH = Path(__file__).with_name("contending-node.patch")
 
 
 def build(checkout, spec, output):
@@ -36,11 +37,12 @@ def build(checkout, spec, output):
         if actual != revision:
             raise SystemExit(f"{path}: expected revision {revision}, got {actual}")
     headers = Path(fmpy.__file__).parent / "c-code"
-    for receiver, fault_aware in (
-        (False, False),
-        (True, False),
-        (False, True),
-        (True, True),
+    for receiver, fault_aware, contender in (
+        (False, False, False),
+        (True, False, False),
+        (False, True, False),
+        (True, True, False),
+        (False, True, True),
     ):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -52,6 +54,12 @@ def build(checkout, spec, output):
             if fault_aware:
                 subprocess.run(
                     ["patch", "-p1", "-i", str(FAULT_PATCH.resolve())],
+                    cwd=source,
+                    check=True,
+                )
+            if contender:
+                subprocess.run(
+                    ["patch", "-p1", "-i", str(CONTENDER_PATCH.resolve())],
                     cwd=source,
                     check=True,
                 )
@@ -126,12 +134,19 @@ def build(checkout, spec, output):
                     fault_aware_bus_error=True,
                     fault_node_patch_sha256=digest(FAULT_PATCH),
                 )
+            if contender:
+                shutil.copy(CONTENDER_PATCH, root / "documentation/contending-node.patch")
+                identity.update(
+                    contending_identifier=2,
+                    contending_patch_sha256=digest(CONTENDER_PATCH),
+                )
             (root / "resources").mkdir()
             (root / "resources/identity.json").write_text(
                 json.dumps(identity, indent=2, sort_keys=True) + "\n"
             )
             suffix = "Receiver.fmu" if receiver else "Sender.fmu"
             target = output / (
+                "ContendingSender.fmu" if contender else
                 f"FaultAware{suffix}" if fault_aware else f"External{suffix}"
             )
             pack(root, target)
