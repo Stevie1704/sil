@@ -108,7 +108,7 @@ def sha256(path):
 
 
 def test_live_replay_equivalence_and_deliberate_failures():
-    report = {"cases": {}, "negative": {}, "sha256": {}}
+    report = {"cases": {}, "negative": {}, "determinism": {}, "sha256": {}}
     for case in CASES:
         live_manifest = manifest(f"{case}-live", case)
         live = run(live_manifest, f"{case}-live")
@@ -143,9 +143,11 @@ def test_live_replay_equivalence_and_deliberate_failures():
                                      ("replay", replay_manifest, replay)):
             repeated = run(path, f"{case}-{label}-repeat")
             assert sha256(repeated) == sha256(source)
-            report["sha256"][source.name] = sha256(source)
-            report["sha256"][repeated.name] = sha256(repeated)
-            report["sha256"][path.name] = sha256(path)
+            report["determinism"][f"{case}-{label}"] = {
+                "manifest": path.name,
+                "first_recording_sha256": sha256(source),
+                "repeat_recording_sha256": sha256(repeated),
+            }
         report["cases"][case] = comparison
         if case != "fault":
             continue
@@ -164,8 +166,6 @@ def test_live_replay_equivalence_and_deliberate_failures():
             assert any(not row["equal"] for channel, row in differences.items()
                        if channel != BOUNDARY)
             report["negative"][variant] = differences
-            report["sha256"][altered_manifest.name] = sha256(altered_manifest)
-            report["sha256"][altered.name] = sha256(altered)
         unreachable = manifest(
             "fault-unreachable", case, recording=live,
             interceptor={"kind": "override", "field": "data_event_time_ns",
@@ -181,15 +181,17 @@ def test_live_replay_equivalence_and_deliberate_failures():
             "stated_instant_ns": 200_000_000,
             "arrival_step_start_ns": 299_000_000,
             "arrival_step_end_ns": 300_000_000,
+            "diagnostic": failure.splitlines()[-1],
         }
-        report["sha256"][unreachable.name] = sha256(unreachable)
     for archive in ("FaultAwareSender", "FaultAwareReceiver", MODEL):
         path = ARTIFACTS / f"{archive}.fmu"
         report["sha256"][path.name] = sha256(path)
     for artifact in ARTIFACTS.glob("issue156-*"):
         if (artifact.is_file() and artifact.name != "issue156-report.json"
-                and (artifact.suffix != ".log"
-                     or artifact.name == "issue156-fault-unreachable.log")):
+                and artifact.suffix != ".log"
+                and "-repeat." not in artifact.name
+                and artifact.name != "issue156-fault-unreachable.mcap"
+                and artifact.name != "issue156-fault-unreachable.mcap.provenance.json"):
             report["sha256"][artifact.name] = sha256(artifact)
     report["fixed_input_boundary"] = (
         "Equivalence holds for identical physical inputs and a fixed source "

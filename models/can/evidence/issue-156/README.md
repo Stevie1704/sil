@@ -3,7 +3,7 @@
 `test_replay_equivalence.py` generated these artifacts with the pinned CAN
 qualification image `sha256:666872fc064ec656ae7b4599396e49c284960d79f39730675045ea96f43d8e01`
 on Linux x86-64. The runner digest and command-file digests are in each
-`*.provenance.json`; `issue156-report.json` binds all successful Manifests,
+`*.provenance.json`; `issue156-report.json` binds the retained Manifests,
 Recordings, provenance files and FMUs by SHA-256. The source tree began at
 `6d64f66b581f6d3f4249fc38a2b368de972d4e74`, the merged issue 155 branch.
 
@@ -35,8 +35,11 @@ Manifest was also run twice and its own Recording bytes compared. The
 successfully run, but their boundary and retained Channels fail equivalence.
 `fault-unreachable` moves a recorded activation behind its arrival Step; the
 Importer reports Run failure (exit 1) with the stated instant and Step bounds.
-Its log, Manifest and provenance are retained. The repeat and negative
-Recordings are retained as well, so all comparisons can be rerun from evidence.
+The Manifest and exact diagnostic are retained; the partial failed Recording
+is not needed. The negative replay Recordings are retained so their comparisons
+can be rerun from evidence. Repeated successful Recordings had the same SHA-256
+as their respective first Runs; the report records both digests without storing
+duplicate copies.
 
 The claim has a fixed-input boundary. Changing a closed-loop receiver could
 change the removed node's future output; this Recording would then no longer
@@ -48,6 +51,6 @@ configuration. The earlier upstream demonstration and its recordings remain
 separate under [`proofs/fmi-ls-bus/`](../../../../proofs/fmi-ls-bus/README.md).
 Issue 155's fault qualification remains under [`issue-155/`](../issue-155/README.md).
 
-To regenerate the retained artifacts, run `models/can/run.sh` and copy the
-`build/can/issue156-*` files into this directory. The CAN CI workflow runs the
+To regenerate, run `models/can/run.sh`. The `build/can/issue156-*` files include
+the omitted repeat Recordings and routine logs. The CAN CI workflow runs the
 same test through `models/can/qualify.sh`.
