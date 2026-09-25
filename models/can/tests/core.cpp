@@ -1,21 +1,11 @@
 #include "bus.hpp"
+#include "operations.hpp"
 
 #include <cassert>
 #include <exception>
 
 namespace {
-can::Bytes frame(std::uint32_t id, can::Bytes data) {
-  const auto length = std::uint8_t(16 + data.size());
-  can::Bytes op{0x10, 0, 0, 0, length, 0, 0, 0,
-                std::uint8_t(id), std::uint8_t(id >> 8), 0, 0,
-                0, 0, std::uint8_t(data.size()), 0};
-  op.insert(op.end(), data.begin(), data.end());
-  return op;
-}
-can::Bytes bitrate(std::uint32_t rate) {
-  return {0x40, 0, 0, 0, 13, 0, 0, 0, 1, std::uint8_t(rate), std::uint8_t(rate >> 8),
-          std::uint8_t(rate >> 16), std::uint8_t(rate >> 24)};
-}
+using namespace operations;
 can::Bytes confirm(std::uint32_t id) {
   return {0x20, 0, 0, 0, 12, 0, 0, 0, std::uint8_t(id), std::uint8_t(id >> 8), 0, 0};
 }
@@ -23,7 +13,13 @@ can::Bytes bus_error(std::uint32_t id, std::uint8_t flag, bool sender) {
   return {0x31, 0, 0, 0, 15, 0, 0, 0, std::uint8_t(id),
           std::uint8_t(id >> 8), 0, 0, 1, flag, std::uint8_t(sender)};
 }
-can::Bytes discard() { return {0x40, 0, 0, 0, 10, 0, 0, 0, 4, 2}; }
+can::Bytes format_error(const can::Bytes& op) {
+  const auto length = std::uint32_t(10 + op.size());
+  can::Bytes report{0x01, 0, 0, 0, std::uint8_t(length), std::uint8_t(length >> 8), 0, 0,
+                    std::uint8_t(op.size()), std::uint8_t(op.size() >> 8)};
+  report.insert(report.end(), op.begin(), op.end());
+  return report;
+}
 void send(can::Bus& bus, unsigned terminal, const can::Bytes& operations, can::Nanoseconds now) {
   can::Inputs inputs;
   inputs[terminal] = operations;
@@ -169,7 +165,8 @@ void discard_equal_id_and_bounds() {
   identical.complete(400000);
   assert(identical.outputs()[0] == confirm(0) && identical.outputs()[1] == confirm(0));
   auto different = configured(125000);
-  inputs[1] = frame(0, {1});
+  const auto conflicting = frame(0, {1});
+  inputs[1] = conflicting;
   assert(rejects([&] { different.receive(inputs, 0); }));
   assert(!different.next_event());
   {  // Different data under an ID that loses to a lower ID is never sent.
@@ -339,7 +336,8 @@ void discard_policy_applies_when_a_retry_loses_arbitration() {
                              discard_policy.begin(), discard_policy.end());
   can::Inputs configurations;
   configurations[0] = node1_configuration;
-  configurations[1] = bitrate(100000);
+  const auto node2_configuration = bitrate(100000);
+  configurations[1] = node2_configuration;
   bus.receive(configurations, 0);
   send(bus, 0, request, request_time);
   bus.complete(first_end);
@@ -411,10 +409,155 @@ void timing_configuration() {
   assert(rejects([&] { bus.complete(can::max_time); }));
 }
 
+// Every bus event the adapter would activate, until the bus is idle.
+void drain(can::Bus& bus) {
+  while (auto due = bus.next_event()) {
+    bus.tick(*due);
+    for (const auto& output : bus.outputs()) assert(output.size() <= can::max_operation_buffer);
+    bus.clear_outputs();
+    bus.receive({}, *due);
+  }
+}
+
+void corrupt_operations_get_format_errors() {
+  const can::Bytes unknown{0xad, 0xde, 0, 0, 8, 0, 0, 0};
+  {  // A corrupt operation with a sound length is reported and skipped.
+    auto bus = configured(125000);
+    send(bus, 0, unknown + frame(1, {}), 1000);
+    assert(bus.next_event() == 1001);
+    bus.tick(1001);
+    assert(bus.outputs()[0] == format_error(unknown) && bus.outputs()[1].empty());
+    bus.clear_outputs();
+    assert(bus.next_event() == 1000 + 47 * 8000);
+  }
+  auto transmit = frame(1, {1});
+  auto id_beyond_standard = transmit, long_payload = frame(1, can::Bytes(9)),
+       ide_not_boolean = transmit, rtr_not_boolean = transmit,
+       length_mismatch = transmit;
+  id_beyond_standard[9] = 0x08;
+  ide_not_boolean[12] = 2;
+  rtr_not_boolean[13] = 2;
+  length_mismatch[14] = 2;
+  const can::Bytes no_kind{0x40, 0, 0, 0, 8, 0, 0, 0},
+      unknown_kind{0x40, 0, 0, 0, 9, 0, 0, 0, 9},
+      short_bitrate{0x40, 0, 0, 0, 12, 0, 0, 0, 1, 0x48, 0xe8, 0x01},
+      undefined_policy{0x40, 0, 0, 0, 10, 0, 0, 0, 4, 3},
+      short_confirm{0x20, 0, 0, 0, 8, 0, 0, 0},
+      long_status{0x41, 0, 0, 0, 10, 0, 0, 0, 0, 0},
+      short_fd_bitrate{0x40, 0, 0, 0, 9, 0, 0, 0, 2},
+      // CAN FD: ID, IDE, BRS, ESI, DL; CAN XL: ID, IDE, SEC, SDT, VCID, AF, DL.
+      fd_ide_not_boolean{0x11, 0, 0, 0, 17, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0},
+      fd_brs_not_boolean{0x11, 0, 0, 0, 17, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0},
+      fd_invalid_length{0x11, 0, 0, 0, 26, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 9, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0},
+      xl_sec_not_boolean{0x12, 0, 0, 0, 23, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0,
+                         0, 0, 0, 0, 1, 0, 7},
+      xl_without_data{0x12, 0, 0, 0, 22, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0, 0};
+  for (const auto& op : {unknown, id_beyond_standard, long_payload, ide_not_boolean,
+                         rtr_not_boolean, length_mismatch, no_kind, unknown_kind,
+                         short_bitrate, undefined_policy, short_confirm, long_status,
+                         short_fd_bitrate, fd_ide_not_boolean, fd_brs_not_boolean,
+                         fd_invalid_length, xl_sec_not_boolean, xl_without_data}) {
+    can::Bus fresh;  // Reporting needs no agreed bitrate.
+    send(fresh, 0, op, 0);
+    assert(fresh.next_event() == 1);
+    fresh.tick(1);
+    assert(fresh.outputs()[0] == format_error(op) && fresh.outputs()[1].empty());
+    assert(!fresh.next_event());
+  }
+  // Without a sound length the rest of the buffer cannot be split, so the
+  // whole remainder is the corrupt operation; earlier operations commit.
+  const can::Bytes truncated_header{0x10, 0, 0},
+      short_length{0x10, 0, 0, 0, 7, 0, 0, 0},
+      beyond_buffer{0x10, 0, 0, 0, 17, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0};
+  for (const auto& rest : {truncated_header, short_length, beyond_buffer,
+                           short_length + frame(1, {})}) {
+    auto bus = configured(125000);
+    send(bus, 0, frame(0, {}) + rest, 0);
+    assert(bus.next_event() == 1);
+    bus.tick(1);
+    assert(bus.outputs()[0] == format_error(rest));
+    bus.clear_outputs();
+    assert(bus.next_event() == 400000);
+  }
+  {  // Reports from several events of one instant are delivered together.
+    can::Bus bus;
+    send(bus, 0, unknown, 5);
+    send(bus, 1, unknown, 5);
+    send(bus, 0, no_kind, 5);
+    bus.tick(6);
+    assert(bus.outputs()[0] == format_error(unknown) + format_error(no_kind));
+    assert(bus.outputs()[1] == format_error(unknown));
+  }
+  {  // A report due at a frame end follows that frame's own operations.
+    auto bus = configured(125000);
+    send(bus, 0, frame(0, {}), 0);
+    send(bus, 1, unknown, 399999);
+    bus.tick(400000);
+    assert(bus.outputs()[0] == confirm(0));
+    assert(bus.outputs()[1] == frame(0, {}) + format_error(unknown));
+  }
+  {  // Reports are bounded so a terminal's output never exceeds its maxSize.
+    can::Bus bus;
+    can::Bytes largest{0xad, 0xde, 0, 0, 0, 0, 0, 0};
+    largest.resize(can::format_error_capacity - 10);
+    largest[4] = std::uint8_t(largest.size());
+    largest[5] = std::uint8_t(largest.size() >> 8);
+    send(bus, 0, largest, 0);
+    bus.tick(1);
+    assert(bus.outputs()[0] == format_error(largest));
+    auto oversized = largest;
+    oversized.push_back(0);
+    oversized[4] = std::uint8_t(oversized.size());
+    oversized[5] = std::uint8_t(oversized.size() >> 8);
+    can::Bus full;
+    assert(rejects([&] { send(full, 0, oversized, 0); }));
+    assert(!full.next_event());
+    send(full, 0, largest, 0);
+    assert(rejects([&] { send(full, 0, unknown, 0); }));
+  }
+  {  // No instant follows the last supported one.
+    can::Bus bus;
+    assert(rejects([&] { send(bus, 0, unknown, can::max_time); }));
+    send(bus, 0, unknown, 7);
+    assert(rejects([&] { bus.tick(8 - 1); }));
+    assert(rejects([&] { bus.receive({}, 9); }));  // the due report was skipped
+  }
+}
+
+void unsupported_operations_fail() {
+  auto extended = frame(1, {}), remote = frame(1, {});
+  extended[12] = 1;
+  remote[13] = 1;
+  // Each at the exact Length of its FMI-LS-BUS layout, with no data.
+  const auto defined = [](std::uint8_t code, std::uint8_t length) {
+    can::Bytes op(length);
+    op[0] = code;
+    op[4] = length;
+    return op;
+  };
+  auto xl_one_byte = defined(0x12, 23);
+  xl_one_byte[20] = 1;  // CAN XL carries 1..2048 data bytes
+  auto fd_twelve_bytes = defined(0x11, 17 + 12);
+  fd_twelve_bytes[15] = 12;  // a CAN FD length above Classical CAN's 8
+  const can::Bytes fd_bitrate{0x40, 0, 0, 0, 13, 0, 0, 0, 2, 0xa0, 0x86, 0x01, 0},
+      xl_bitrate{0x40, 0, 0, 0, 13, 0, 0, 0, 3, 0xa0, 0x86, 0x01, 0};
+  for (const auto& op : {extended, remote, defined(0x01, 10), defined(0x11, 17),
+                         fd_twelve_bytes, xl_one_byte, confirm(1), defined(0x30, 12),
+                         defined(0x31, 15), defined(0x41, 9), defined(0x42, 8), fd_bitrate,
+                         xl_bitrate, bitrate(83333)}) {
+    auto bus = configured(125000);
+    assert(rejects([&] { send(bus, 0, frame(0, {}) + op, 0); }));
+    assert(!bus.next_event());  // the whole event stays uncommitted
+  }
+}
+
 void malformed_operations_do_not_commit() {
   const auto op = frame(1, {1, 2, 3, 4});
-  // Exercise every truncation and every single-byte mutation under UBSan.
-  // A parser failure must leave the core transaction uncommitted.
+  // Exercise every truncation and every single-byte mutation under sanitizers.
+  // A failed event leaves the core transaction uncommitted; a reported one
+  // drains within bounded output.
   for (std::size_t size = 0; size <= op.size(); ++size) {
     for (std::size_t at = 0; at < size; ++at) {
       for (unsigned value = 0; value < 256; ++value) {
@@ -423,11 +566,12 @@ void malformed_operations_do_not_commit() {
         input[at] = static_cast<std::uint8_t>(value);
         try {
           send(bus, 0, input, 0);
-          if (auto end = bus.next_event()) bus.complete(*end);
         } catch (const std::exception&) {
           assert(!bus.next_event());
           assert(bus.outputs()[0].empty() && bus.outputs()[1].empty());
+          continue;
         }
+        drain(bus);
       }
     }
   }
@@ -443,7 +587,10 @@ int main() {
   finite_priority_stream();
   scheduled_error_retry_and_exhaustion();
   receiver_delivery_suppression_is_not_a_bus_error();
+  discard_policy_applies_when_a_retry_loses_arbitration();
   four_declared_terminals();
   timing_configuration();
+  corrupt_operations_get_format_errors();
+  unsupported_operations_fail();
   malformed_operations_do_not_commit();
 }

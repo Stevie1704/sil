@@ -686,4 +686,10 @@ fault schedule: a Manifest-covered FMI input that selects a deterministic Bus
 Error, bounded model-owned retransmission, or receiver-local delivery
 suppression. These remain CAN profile behavior at the edge. The schedule does
 not add a Channel Interceptor, kernel fault-injection behavior, or a claim of
-electrical CAN error confinement.
+electrical CAN error confinement. Issue #157 bounds each instance. The model
+answers a corrupt operation with the standard FMI-LS-BUS Format Error. An
+unsupported operation fails with fmi3Error. Queues, reports, buffers and
+same-instant events are finite. Native checks with sanitizers cover lifecycle,
+reset and isolation of concurrent instances through the C entry points. The
+build reports declared capacity and measured heap separately. Neither is OS
+memory isolation.

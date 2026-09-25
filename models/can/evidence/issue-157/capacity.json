@@ -1,0 +1,21 @@
+{
+  "declared": {
+    "terminals": 4,
+    "pending_frames_per_terminal": 64,
+    "frames_on_wire": 1,
+    "retry_slots_per_terminal": 1,
+    "binary_max_size_bytes": 2048,
+    "format_error_report_bytes_per_terminal": 2012,
+    "fault_rules": 8,
+    "automatic_retries": 4,
+    "events_per_instant": 256
+  },
+  "measured_cxx_heap_bytes": {
+    "method": "replaced operator new/delete; requested bytes, no allocator overhead",
+    "instantiated": 4744,
+    "configured_idle": 4744,
+    "queues_reports_and_inputs_full": 41320,
+    "peak_during_event_at_capacity": 102696,
+    "after_free": 0
+  }
+}

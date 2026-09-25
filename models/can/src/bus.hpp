@@ -16,6 +16,12 @@ inline constexpr unsigned max_queue_capacity = 64;
 inline constexpr unsigned max_fault_rules = 8;
 inline constexpr unsigned max_fault_retries = 4;
 inline constexpr std::uint32_t max_classical_identifier = 0x7ff;
+// Every terminal's Rx and Tx Binary holds at most this many bytes (maxSize).
+inline constexpr std::size_t max_operation_buffer = 2048;
+// A frame end adds at most one ArbitrationLost (12 bytes) and one Transmit
+// with 8 data bytes (24) to a terminal's output; Format Error reports that
+// fall due at the same instant share the rest of maxSize.
+inline constexpr std::size_t format_error_capacity = max_operation_buffer - 12 - 24;
 // The operation buffers each terminal handed the bus in one event.
 using Inputs = std::array<std::span<const std::uint8_t>, terminal_capacity>;
 
@@ -71,8 +77,10 @@ class Bus {
   unsigned active_nodes() const { return active_nodes_; }
   unsigned queue_capacity() const { return queue_capacity_; }
   void receive(const Inputs& inputs, Nanoseconds now);
-  // A countdown can mean a frame end or the first instant after intermission.
-  // For the latter, call receive at that instant before selecting a winner.
+  // A countdown can mean a frame end, due Format Error reports, or the first
+  // instant after intermission. Tick handles the first two; call receive at
+  // that instant before selecting a winner.
+  void tick(Nanoseconds now);
   void complete(Nanoseconds now);
   bool is_completion(Nanoseconds now) const { return on_wire_ && on_wire_->end == now; }
   std::optional<Nanoseconds> next_event() const;
@@ -95,6 +103,13 @@ class Bus {
     std::optional<unsigned> suppressed_receiver;
     Nanoseconds end;
   };
+  using Requests = std::vector<std::pair<unsigned, Request>>;
+  void accept(unsigned terminal, std::span<const std::uint8_t> operations,
+              Nanoseconds now, Requests& requests);
+  void apply(unsigned terminal, std::span<const std::uint8_t> op,
+             Nanoseconds now, Requests& requests);
+  void report_format_error(unsigned terminal, std::span<const std::uint8_t> op,
+                           Nanoseconds now);
   void enqueue(unsigned sender, const Request& request);
   void arbitrate(Nanoseconds now);
   bool has_pending() const;
@@ -105,6 +120,11 @@ class Bus {
   unsigned active_nodes_ = 2, queue_capacity_ = 4, retry_limit_ = 1;
   std::array<Bytes, terminal_capacity> outputs_;
   std::array<Bytes, terminal_capacity> notifications_;
+  // FMI-LS-BUS answers a corrupt operation with Format Error to its sender.
+  // A countdown Clock cannot tick at the instant it is stated in, so reports
+  // fall due one nanosecond later.
+  std::array<Bytes, terminal_capacity> format_errors_;
+  std::optional<Nanoseconds> format_errors_due_;
   std::array<std::deque<Request>, terminal_capacity> queues_;
   // The automatic retransmission slot is separate from the finite FIFO: a
   // frame on the wire and its one reserved retry do not consume that FIFO.

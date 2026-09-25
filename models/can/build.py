@@ -164,44 +164,49 @@ def write_descriptions(root):
     write_xml(manifest, root / "extra/org.fmi-standard.fmi-ls-bus/fmi-ls-manifest.xml")
 
 
-def build(destination):
-    if (platform.system(), platform.machine()) != ("Linux", "x86_64"):
-        raise SystemExit("Build this product in the documented Linux x86-64 container")
+def prepare_sources(source):
+    """Write the compilable source tree: model sources, profile and FMI ABI."""
     if fmpy.__version__ != "0.3.32":
         raise SystemExit("FMPy 0.3.32 supplies the pinned FMI headers")
     headers = Path(fmpy.__file__).parent / "c-code"
+    shutil.copytree(ROOT / "src", source)
+    declarations = [
+        f"inline constexpr char token[] = {json.dumps(PROFILE['token'])};"
+    ]
+    declarations += [
+        f"inline constexpr unsigned {name} = {value};"
+        for name, value in LAYOUT.items()
+    ]
+    (source / "profile.hpp").write_text(
+        "#pragma once\nnamespace profile {\n" + "\n".join(declarations) + "\n}\n"
+    )
+    for name in ("fmi3Functions.h", "fmi3FunctionTypes.h", "fmi3PlatformTypes.h"):
+        shutil.copy(headers / name, source)
+    # Export every official entry point with its exact prototype. Unsupported
+    # capabilities fail explicitly; no variadic or untyped ABI stand-ins.
+    types = (source / "fmi3FunctionTypes.h").read_text()
+    implemented = (source / "fmi.cpp").read_text()
+    stubs = ['#include "fmi3Functions.h"', 'extern "C" {']
+    for result, name, args in re.findall(
+        r"typedef\s+(fmi3Status|fmi3Instance)\s+(fmi3\w+)TYPE\s*\((.*?)\);",
+        types,
+        re.S,
+    ):
+        if re.search(r"\b" + name + r"\s*\(", implemented):
+            continue
+        answer = "fmi3Error" if result == "fmi3Status" else "nullptr"
+        stubs.append(f"{result} {name}({args}) {{ return {answer}; }}")
+    stubs.append("}")
+    (source / "unsupported.cpp").write_text("\n".join(stubs) + "\n")
+
+
+def build(destination):
+    if (platform.system(), platform.machine()) != ("Linux", "x86_64"):
+        raise SystemExit("Build this product in the documented Linux x86-64 container")
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary)
         source = root / "sources"
-        shutil.copytree(ROOT / "src", source)
-        declarations = [
-            f"inline constexpr char token[] = {json.dumps(PROFILE['token'])};"
-        ]
-        declarations += [
-            f"inline constexpr unsigned {name} = {value};"
-            for name, value in LAYOUT.items()
-        ]
-        (source / "profile.hpp").write_text(
-            "#pragma once\nnamespace profile {\n" + "\n".join(declarations) + "\n}\n"
-        )
-        for name in ("fmi3Functions.h", "fmi3FunctionTypes.h", "fmi3PlatformTypes.h"):
-            shutil.copy(headers / name, source)
-        # Export every official entry point with its exact prototype. Unsupported
-        # capabilities fail explicitly; no variadic or untyped ABI stand-ins.
-        types = (source / "fmi3FunctionTypes.h").read_text()
-        implemented = (source / "fmi.cpp").read_text()
-        stubs = ['#include "fmi3Functions.h"', 'extern "C" {']
-        for result, name, args in re.findall(
-            r"typedef\s+(fmi3Status|fmi3Instance)\s+(fmi3\w+)TYPE\s*\((.*?)\);",
-            types,
-            re.S,
-        ):
-            if re.search(r"\b" + name + r"\s*\(", implemented):
-                continue
-            answer = "fmi3Error" if result == "fmi3Status" else "nullptr"
-            stubs.append(f"{result} {name}({args}) {{ return {answer}; }}")
-        stubs.append("}")
-        (source / "unsupported.cpp").write_text("\n".join(stubs) + "\n")
+        prepare_sources(source)
         library = root / "binaries/x86_64-linux" / f"{NAME}.so"
         library.parent.mkdir(parents=True)
         flags = ["-std=c++20", "-O2", "-fPIC", "-shared", "-Wl,--no-undefined"]
@@ -279,4 +284,8 @@ def build(destination):
 
 
 if __name__ == "__main__":
-    build(Path(sys.argv[1]))
+    if sys.argv[1] == "--sources":
+        # The same tree, compiled by the native ABI and capacity checks.
+        prepare_sources(Path(sys.argv[2]))
+    else:
+        build(Path(sys.argv[1]))
