@@ -275,8 +275,8 @@ def test_wheel_installs_acc_entrypoint_without_checkout_imports(
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.strip() == ACC_MANIFEST_HASHES["nominal"]
     assert manifest.is_file()
-    for entrypoint in ("sil-acc", "sil-check", "sil-csv", "sil-fmi-inspect",
-                       "sil-footprint", "sil-participant"):
+    for entrypoint in ("sil-acc", "sil-check", "sil-compare", "sil-csv",
+                       "sil-fmi-inspect", "sil-footprint", "sil-participant"):
         assert (installed_python / "bin" / entrypoint).is_file()
     assert str(ROOT) not in origin.stdout
     assert str(ROOT) not in manifest.read_text()
@@ -452,6 +452,33 @@ def test_installed_fmu_inspection_needs_only_the_wheel(
     assert report["verdict"] == "compatible"
     assert report["mapping"]["accepted"] is True
     assert list(tmp_path.iterdir()) == []
+
+
+def test_installed_comparison_needs_only_the_wheel(
+    installed_python: Path, tmp_path: Path,
+):
+    """Issue #182's command, with only the installed wheel on PATH: the
+    independent ACC trace converted by sil-csv, then compared."""
+    env = installed_environment(installed_python)
+    example = ROOT / "examples" / "compare"
+    converted = subprocess.run(
+        ["sil-csv", str(example / "reference-mapping.json"),
+         str(example / "plant-accelerate.reference.csv"),
+         "-o", "reference.mcap"],
+        cwd=tmp_path, env=env, capture_output=True, text=True,
+    )
+    assert converted.returncode == 0, converted.stderr
+    proc = subprocess.run(
+        ["sil-compare", str(example / "contract.json"),
+         str(ROOT / "proofs" / "acc-fmi" / "evidence" / "plant-accelerate-1.mcap"),
+         "reference.mcap", "--json"],
+        cwd=tmp_path, env=env, capture_output=True, text=True,
+    )
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    report = json.loads(proc.stdout)
+    assert report["verdict"] == "pass"
+    assert report["channels"]["output0"]["checked"] == 10
 
 
 def test_participant_frontend_loads_a_package_module_spec(tmp_path: Path):
