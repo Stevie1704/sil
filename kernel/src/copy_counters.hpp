@@ -1,7 +1,7 @@
 #pragma once
 
-// Routing test instrumentation for the copy baseline (#61) and bounded
-// subscriber routes (#75).
+// Routing test instrumentation for the copy baseline (#61), bounded
+// subscriber routes (#75) and bounded Replay reads (#180).
 //
 // Every function here compiles to nothing unless SIL_COPY_COUNTERS is defined,
 // so the production runner carries no counter, no branch, and no atomic. The
@@ -50,6 +50,8 @@ void route_dropped_newest(const std::string &channel,
                           const std::string &subscriber) noexcept;
 void route_overflow_failure(const std::string &channel,
                             const std::string &subscriber) noexcept;
+// A Replayer's read buffer grew to `bytes`; the report keeps the largest.
+void replay_read_buffer(size_t bytes) noexcept;
 #else
 inline void record_exit_code(int) noexcept {}
 inline void count(Site, size_t) {}
@@ -61,6 +63,7 @@ inline void route_dropped_newest(const std::string &,
                                  const std::string &) noexcept {}
 inline void route_overflow_failure(const std::string &,
                                    const std::string &) noexcept {}
+inline void replay_read_buffer(size_t) noexcept {}
 #endif
 
 }  // namespace sil::counters

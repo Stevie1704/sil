@@ -60,6 +60,7 @@ set(SIL_KERNEL_SOURCES
   kernel/src/provenance.cpp
   kernel/src/run_signal.cpp
   kernel/src/mcap_recording.cpp
+  kernel/src/recording_file.cpp
   kernel/src/replayer.cpp)
 
 add_executable(sil-run ${SIL_KERNEL_SOURCES})

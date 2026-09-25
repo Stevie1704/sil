@@ -163,7 +163,7 @@ class TestReportShape:
 
         assert set(report) == {"run_exit_code", "deterministic", "observational"}
         assert set(report["deterministic"]) == (
-            set(bench_routing.COPY_SITES) | {"routes"}
+            set(bench_routing.COPY_SITES) | {"routes", "replay_read_buffer"}
         )
         assert set(report["observational"]) == {
             "kernel_user_s", "kernel_system_s", "kernel_max_rss_bytes",

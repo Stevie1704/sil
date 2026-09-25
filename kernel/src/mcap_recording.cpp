@@ -4,11 +4,12 @@
 // recording, reader for the replayer); every other TU includes the headers
 // for declarations only.
 #define MCAP_IMPLEMENTATION
-#include <fstream>
+#include <optional>
 
 #include <mcap/reader.hpp>
 #include <mcap/writer.hpp>
 
+#include "copy_counters.hpp"
 #include "engine.hpp"
 #include "recording_reader.hpp"
 
@@ -82,68 +83,124 @@ std::unique_ptr<RecordingSink> make_recording_sink(
 
 namespace {
 
-// Decodes an MCAP recording into the format-neutral views the replayer
-// validates. The bytes are read once, up front, so the reader owns a stable
-// snapshot the caller can iterate without touching the file again.
+// The recording file as MCAP's read interface. Every read goes through the
+// one validated descriptor into a single buffer, which grows to the largest
+// record read and no further: that buffer is a Replayer's resident payload.
+class McapFileInput final : public mcap::IReadable {
+ public:
+  explicit McapFileInput(const RecordingFile &file) : file_(file) {}
+
+  uint64_t size() const override { return file_.size(); }
+
+  uint64_t read(std::byte **output, uint64_t offset, uint64_t size) override {
+    // A record that claims to run past the end of the file is a read failure
+    // for the MCAP reader to report, not an allocation to make.
+    if (offset > file_.size() || size > file_.size() - offset) return 0;
+    if (size > buffer_.size()) {
+      buffer_.resize(size);
+      counters::replay_read_buffer(size);
+    }
+    *output = buffer_.data();
+    return file_.read_at(offset, buffer_.data(), size);
+  }
+
+ private:
+  const RecordingFile &file_;
+  std::vector<std::byte> buffer_;
+};
+
+// One pass over an MCAP recording's messages in FileOrder, which hands them
+// back in the order they were written, i.e. the original run's global publish
+// order; that fixes the tie-break for messages sharing a timestamp.
+//
+// Metadata is held apart from payload: the parsed summary keeps one chunk
+// index per chunk (with one offset per channel in it) and every channel and
+// schema record for the whole pass.
 class McapRecordingReader : public RecordingReader {
  public:
-  McapRecordingReader(const std::filesystem::path &path,
-                      const std::string &ctx) {
-    mcap::McapReader reader;
-    std::ifstream stream(path, std::ios::binary);
-    if (!reader.open(stream).ok())
-      throw ManifestError("manifest error: " + ctx + ": '" + path.string() +
-                          "' is not a valid MCAP file");
+  explicit McapRecordingReader(const RecordingFile &file)
+      : input_(file), name_("'" + file.path().string() + "'") {
+    if (!reader_.open(input_).ok())
+      throw RecordingError(name_ + " is not a valid MCAP file");
+    // A recording whose footer is missing was cut short; its last records
+    // cannot be trusted to be complete.
+    mcap::Footer footer;
+    if (!mcap::McapReader::ReadFooter(
+             input_, file.size() - mcap::internal::FooterLength, &footer)
+             .ok())
+      throw RecordingError(name_ + " is not a complete MCAP recording");
     // Parse the summary (scanning the file if it has no summary section) so
     // channel and schema records are available for validation.
-    if (!reader.readSummary(mcap::ReadSummaryMethod::AllowFallbackScan).ok())
-      throw ManifestError("manifest error: " + ctx + ": '" + path.string() +
-                          "' is not a readable MCAP recording");
+    if (!reader_.readSummary(mcap::ReadSummaryMethod::AllowFallbackScan).ok())
+      throw RecordingError(name_ + " is not a readable MCAP recording");
 
-    for (auto &[cid, channel] : reader.channels()) {
-      mcap::SchemaPtr rs = reader.schema(channel->schemaId);
+    for (auto &[cid, channel] : reader_.channels()) {
+      mcap::SchemaPtr rs = reader_.schema(channel->schemaId);
       if (!rs)
-        throw ManifestError("manifest error: " + ctx + ": channel '" +
-                            channel->topic + "' has no schema in recording");
+        throw RecordingError("channel '" + channel->topic +
+                             "' has no schema in recording");
       schemas_.push_back(
           {channel->topic, rs->name,
            std::string(reinterpret_cast<const char *>(rs->data.data()),
                        rs->data.size())});
     }
 
-    // FileOrder (the default) hands back messages in the order they were
-    // written, i.e. the original run's global publish order; that fixes the
-    // tie-break for messages sharing a timestamp.
-    for (const mcap::MessageView &mv : reader.readMessages()) {
-      const auto *p = reinterpret_cast<const uint8_t *>(mv.message.data);
-      messages_.push_back({mv.message.logTime, mv.channel->topic,
-                           std::vector<uint8_t>(p, p + mv.message.dataSize)});
-    }
-    reader.close();
+    view_.emplace(reader_.readMessages(
+        [this](const mcap::Status &status) {
+          if (problem_.empty()) problem_ = status.message;
+        },
+        mcap::ReadMessageOptions{}));
+    it_.emplace(view_->begin());
+    settle();
   }
 
-  std::vector<ChannelSchema> channel_schemas() const override {
+  const std::vector<ChannelSchema> &channel_schemas() const override {
     return schemas_;
   }
-  std::vector<Message> take_messages() && override {
-    return std::move(messages_);
+
+  const Message *current() const override {
+    return current_ ? &*current_ : nullptr;
+  }
+
+  void advance() override {
+    ++*it_;
+    settle();
   }
 
  private:
+  // Surfaces a decode problem, then exposes the message the pass stands on.
+  void settle() {
+    if (!problem_.empty())
+      throw RecordingError(name_ + " is not a readable MCAP recording: " +
+                           problem_);
+    current_.reset();
+    if (*it_ == view_->end()) return;
+    const mcap::MessageView &mv = **it_;
+    current_.emplace(Message{mv.message.logTime, mv.channel->topic,
+                             reinterpret_cast<const uint8_t *>(mv.message.data),
+                             size_t(mv.message.dataSize)});
+  }
+
+  McapFileInput input_;
+  const std::string name_;  // the quoted path, for diagnostics
+  mcap::McapReader reader_;
   std::vector<ChannelSchema> schemas_;
-  std::vector<Message> messages_;
+  std::string problem_;
+  std::optional<mcap::LinearMessageView> view_;
+  std::optional<mcap::LinearMessageView::Iterator> it_;
+  std::optional<Message> current_;
 };
 
 }  // namespace
 
 std::unique_ptr<RecordingReader> make_recording_reader(
-    const std::filesystem::path &path, const std::string &ctx) {
+    const RecordingFile &file) {
+  const std::filesystem::path &path = file.path();
   if (path.extension() == ".mcap")
-    return std::make_unique<McapRecordingReader>(path, ctx);
-  throw ManifestError("manifest error: " + ctx +
-                      ": unrecognized recording format '" +
-                      path.extension().string() + "' for recording '" +
-                      path.string() + "'");
+    return std::make_unique<McapRecordingReader>(file);
+  throw RecordingError("unrecognized recording format '" +
+                       path.extension().string() + "' for recording '" +
+                       path.string() + "'");
 }
 
 }  // namespace sil

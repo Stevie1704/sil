@@ -57,6 +57,7 @@ struct Totals {
   uint64_t count[size_t(Site::kSiteCount)] = {};
   uint64_t bytes[size_t(Site::kSiteCount)] = {};
   std::map<RouteKey, Route> routes;
+  uint64_t replay_read_buffer_high_water = 0;
   int exit_code = 0;
 
   ~Totals();
@@ -126,7 +127,11 @@ Totals::~Totals() {
                  (unsigned long long)route.overflow_failures);
   }
   if (!routes.empty()) std::fputs("\n    ", out);
-  std::fprintf(out, "]\n  },\n");
+  std::fprintf(out, "],\n");
+  std::fprintf(out,
+               "    \"replay_read_buffer\": {\"high_water_bytes\": %llu}\n"
+               "  },\n",
+               (unsigned long long)replay_read_buffer_high_water);
 
   // The kernel's own resource use, separate from the participant processes it
   // spawns: RUSAGE_CHILDREN in the driver cannot tell the two apart. It varies
@@ -201,6 +206,15 @@ void route_overflow_failure(const std::string &channel,
                             const std::string &subscriber) noexcept {
   update_route(channel, subscriber,
                [](Totals::Route &route) { route.overflow_failures++; });
+}
+
+void replay_read_buffer(size_t bytes) noexcept {
+  try {
+    uint64_t &high = totals().replay_read_buffer_high_water;
+    if (bytes > high) high = bytes;
+  } catch (...) {
+    // Instrumentation must never replace or abort the Run it observes.
+  }
 }
 
 }  // namespace sil::counters
