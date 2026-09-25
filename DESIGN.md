@@ -187,11 +187,12 @@ existing Process-participant response deadline through `sil-check`.
 - **Bounded replay reads (#180):** a Replay participant opens its Recording
   once and reads it through that one descriptor: a block-wise SHA-256 pass and
   a full decode pass before any participant steps, then a streaming pass while
-  the Run advances. Resident payload is one read buffer, bounded by the largest
-  record, not by file length; metadata (the MCAP summary's chunk index) is
-  stated apart from it. Reading twice keeps every file-level failure at load
-  time (exit 2) instead of mid-Run; a Recording without its footer or with an
-  undecodable record is now rejected rather than replayed with Messages
+  the Run advances. Resident payload is one read buffer. The largest MCAP
+  record sets its limit, not the file length. Metadata (the chunk index of the
+  MCAP summary) is a separate cost that grows with the number of chunks.
+  Reading twice keeps every file-level failure at load time (exit 2), not in
+  the middle of the Run. A Recording without its footer or with an MCAP record
+  that does not decode is now rejected. Before, it was replayed with Messages
   missing. The one descriptor makes the validated file the consumed one; an
   in-place write shows as a changed size or modification time and fails the
   Run. Stored order is kept as the tie-break and is not sorted: a non-monotone
