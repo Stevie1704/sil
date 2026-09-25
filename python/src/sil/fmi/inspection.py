@@ -34,7 +34,7 @@ import tempfile
 from pathlib import Path
 from xml.etree import ElementTree
 
-from sil.manifest import Manifest, ManifestError as DocumentError
+import sil.manifest
 from sil.participant import ManifestError
 
 from sil.fmi.archive import Extraction
@@ -43,6 +43,7 @@ from sil.fmi.description import (
     RX_DATA,
     ModelDescription,
     Terminal,
+    Variable,
     library_suffix,
     platform_directory,
 )
@@ -67,6 +68,9 @@ _DESCRIPTION = "modelDescription.xml"
 _INTERFACES = ("CoSimulation", "ModelExchange", "ScheduledExecution")
 _MAPPING_KEYS = {"sil_fmi_mapping", "schemas", "channels", "bind", "start"}
 _DIRECTIONS = ("in", "out")
+# The causalities a Run can touch. A local, a calculated parameter and the
+# independent variable are the FMU's own business.
+_CARRIED = ("input", "output", "parameter", "structuralParameter")
 
 
 class MappingError(ValueError):
@@ -90,6 +94,7 @@ def inspect(archive: Path, mapping: dict | None = None) -> dict:
 def _inspect_extracted(
     archive: Path, extracted: Path, mapping: dict | None
 ) -> dict:
+    """The report on an archive already unpacked into `extracted`."""
     root = _description_root(extracted)
     facts = _facts(extracted, root)
 
@@ -120,8 +125,10 @@ def _inspect_extracted(
 
 
 def _report(archive: Path, facts: dict, *, unusable: list[str],
-            variables=(), terminals=(), bus=None, unverified=(),
-            mapping=None) -> dict:
+            variables: list[dict] = (), terminals: list[dict] = (),
+            bus: dict | None = None, unverified: list[str] = (),
+            mapping: dict | None = None) -> dict:
+    """The report document, with the verdict its findings decide."""
     if unusable:
         verdict = UNUSABLE
     elif mapping is not None and not mapping["accepted"]:
@@ -143,7 +150,7 @@ def _report(archive: Path, facts: dict, *, unusable: list[str],
     }
 
 
-def _description_root(extracted: Path):
+def _description_root(extracted: Path) -> ElementTree.Element | None:
     """The description's XML root, or None where it cannot be parsed.
 
     The facts are read from it whatever version it declares; whether this
@@ -155,7 +162,7 @@ def _description_root(extracted: Path):
         return None
 
 
-def _facts(extracted: Path | None, root) -> dict:
+def _facts(extracted: Path | None, root: ElementTree.Element | None) -> dict:
     """What the archive declares about itself, supported or not."""
     def attribute(name: str) -> str | None:
         return None if root is None else root.get(name)
@@ -186,7 +193,9 @@ def _platforms(extracted: Path) -> list[str]:
     )
 
 
-def _variables(root, description: ModelDescription) -> list[dict]:
+def _variables(
+    root: ElementTree.Element, description: ModelDescription
+) -> list[dict]:
     """Every variable, declared as the description declares it."""
     units = {
         element.get("name"): element.get("unit")
@@ -226,7 +235,7 @@ def _variables(root, description: ModelDescription) -> list[dict]:
     return reports
 
 
-def _start(element) -> str | None:
+def _start(element: ElementTree.Element) -> str | None:
     """A start value as declared: an attribute, or `<Start>` elements."""
     start = element.get("start")
     if start is not None:
@@ -236,6 +245,7 @@ def _start(element) -> str | None:
 
 
 def _clock_name(description: ModelDescription, reference: int) -> str:
+    """A Clock by its name, or by the reference no Clock is declared for."""
     clock = description.clock(reference)
     return clock.name if clock is not None else f"valueReference {reference}"
 
@@ -264,7 +274,10 @@ def _terminal(description: ModelDescription, terminal: Terminal) -> dict:
     }
 
 
-def _media_type(description: ModelDescription, terminal: Terminal):
+def _media_type(
+    description: ModelDescription, terminal: Terminal
+) -> str | None:
+    """The media type the terminal's `Rx_Data` variable carries, if any."""
     variable = description.variables.get(terminal.members.get(RX_DATA, ""))
     return None if variable is None else variable.media_type
 
@@ -310,69 +323,96 @@ def _mapping(mapping: dict, description: ModelDescription) -> dict:
         bind_channels(init, mapping.get("bind", []), description)
         start_values(mapping.get("start", []), description)
     except ManifestError as error:
-        return {"accepted": False, "rejection": str(error)}
-    return {"accepted": True, "rejection": None}
+        return {"accepted": False, "rejection": str(error), "unbound": None}
+    return {"accepted": True, "rejection": None,
+            "unbound": _unbound(mapping, description)}
+
+
+def _unbound(mapping: dict, description: ModelDescription) -> list[str]:
+    """The variables a Run could touch and this accepted mapping leaves alone.
+
+    An unbound input or parameter keeps its start value and an unbound
+    output is not published; neither is a mistake, so they are listed rather
+    than rejected. A declared mapping names its variables in `bind`; a derived
+    one names them as its schema fields.
+    """
+    if mapping.get("bind"):
+        touched = {bind.partition("=")[2] for bind in mapping["bind"]}
+    else:
+        touched = {
+            field["name"]
+            for channel in mapping["channels"].values()
+            for field in mapping["schemas"][channel["schema"]]["fields"]
+        }
+    touched |= {start.partition("=")[0] for start in mapping.get("start", [])}
+    return [
+        name for name, variable in description.variables.items()
+        if _carried(variable) and name not in touched
+    ]
+
+
+def _carried(variable: Variable) -> bool:
+    return variable.causality in _CARRIED
 
 
 def read_mapping(path: Path) -> dict:
     """A proposed mapping document, checked for the shape a Run gives it."""
+    def refuse(problem: str) -> MappingError:
+        return MappingError(f"mapping {str(path)!r} {problem}")
+
     try:
         document = json.loads(path.read_text())
     except OSError as error:
         raise MappingError(f"cannot read mapping {str(path)!r}: {error}")
     except json.JSONDecodeError as error:
-        raise MappingError(f"mapping {str(path)!r} is not JSON: {error}")
+        raise refuse(f"is not JSON: {error}")
     if not isinstance(document, dict):
-        raise MappingError(f"mapping {str(path)!r} is not a JSON object")
+        raise refuse("is not a JSON object")
     if document.get("sil_fmi_mapping") != MAPPING_VERSION:
-        raise MappingError(
-            f"mapping {str(path)!r} declares sil_fmi_mapping "
-            f"{document.get('sil_fmi_mapping')!r}; this command reads "
-            f"version {MAPPING_VERSION}"
+        raise refuse(
+            f"declares sil_fmi_mapping {document.get('sil_fmi_mapping')!r}; "
+            f"this command reads version {MAPPING_VERSION}"
         )
     for key in document:
         if key not in _MAPPING_KEYS:
-            raise MappingError(f"mapping {str(path)!r} has unknown key {key!r}")
+            raise refuse(f"has unknown key {key!r}")
     try:
         # The Manifest's own schema rules, so a schema a Run would refuse
         # is not inspected as if it were one.
-        Manifest(duration_ns=1).add_schemas(document.get("schemas", {}))
-    except DocumentError as error:
-        raise MappingError(f"mapping {str(path)!r}: {error}") from error
-    _require_channels(path, document)
+        sil.manifest.Manifest(duration_ns=1).add_schemas(
+            document.get("schemas", {})
+        )
+    except sil.manifest.ManifestError as error:
+        raise refuse(f"declares a schema a Manifest refuses: {error}") from error
+    schemas = document.setdefault("schemas", {})
+    channels = document.setdefault("channels", {})
+    if not isinstance(channels, dict):
+        raise refuse("key 'channels' is not an object")
+    for name, channel in channels.items():
+        problem = _channel_problem(channel, schemas)
+        if problem is not None:
+            raise refuse(f"channel {name!r} {problem}")
     for key in ("bind", "start"):
         arguments = document.get(key, [])
         if not isinstance(arguments, list) or not all(
             isinstance(argument, str) for argument in arguments
         ):
-            raise MappingError(
-                f"mapping {str(path)!r} key {key!r} is not a list of strings"
-            )
-    document.setdefault("schemas", {})
-    document.setdefault("channels", {})
+            raise refuse(f"key {key!r} is not a list of strings")
     return document
 
 
-def _require_channels(path: Path, document: dict) -> None:
-    channels = document.get("channels", {})
-    if not isinstance(channels, dict):
-        raise MappingError(f"mapping {str(path)!r} key 'channels' is not an object")
-    for name, channel in channels.items():
-        if not isinstance(channel, dict) or set(channel) != {"schema", "direction"}:
-            raise MappingError(
-                f"mapping {str(path)!r} channel {name!r} is not "
-                f'{{"schema": ..., "direction": ...}}'
-            )
-        if channel["schema"] not in document.get("schemas", {}):
-            raise MappingError(
-                f"mapping {str(path)!r} channel {name!r} names unknown schema "
-                f"{channel['schema']!r}"
-            )
-        if channel["direction"] not in _DIRECTIONS:
-            raise MappingError(
-                f"mapping {str(path)!r} channel {name!r} declares direction "
-                f"{channel['direction']!r}; a direction is 'in' or 'out'"
-            )
+def _channel_problem(channel: object, schemas: dict) -> str | None:
+    """What is wrong with one channel declaration, or None."""
+    if not isinstance(channel, dict) or set(channel) != {"schema", "direction"}:
+        return 'is not {"schema": ..., "direction": ...}'
+    if channel["schema"] not in schemas:
+        return f"names unknown schema {channel['schema']!r}"
+    if channel["direction"] not in _DIRECTIONS:
+        return (
+            f"declares direction {channel['direction']!r}; a direction is "
+            f"'in' or 'out'"
+        )
+    return None
 
 
 def render(report: dict) -> str:
@@ -410,19 +450,22 @@ def render(report: dict) -> str:
             )
     mapping = report["mapping"]
     if mapping is not None:
-        lines.append(
-            "mapping: accepted" if mapping["accepted"]
-            else f"mapping: rejected: {mapping['rejection']}"
-        )
+        if mapping["accepted"]:
+            lines.append("mapping: accepted")
+            lines += _section("left unbound by the mapping", mapping["unbound"])
+        else:
+            lines.append(f"mapping: rejected: {mapping['rejection']}")
     lines += _section("not verified statically", report["unverified"])
     return "\n".join(lines) + "\n"
 
 
 def _section(title: str, items: list[str]) -> list[str]:
+    """A titled list, or nothing when the list is empty."""
     return [f"{title}:"] + [f"  - {item}" for item in items] if items else []
 
 
 def _render_variable(variable: dict) -> str:
+    """One variable on one line: its declaration, then the verdict."""
     declared = [variable["type"], variable["causality"]]
     for key in ("variability", "start", "unit", "max_size", "mime_type",
                 "interval_variability"):
@@ -440,6 +483,7 @@ def _render_variable(variable: dict) -> str:
 
 
 def exit_status(report: dict) -> int:
+    """The documented exit code for a report's verdict."""
     return {
         COMPATIBLE: 0,
         UNUSABLE: EXIT_UNUSABLE,

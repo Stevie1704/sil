@@ -450,7 +450,7 @@ def test_installed_fmu_inspection_needs_only_the_wheel(
     assert proc.returncode == 0, proc.stderr
     report = json.loads(proc.stdout)
     assert report["verdict"] == "compatible"
-    assert report["mapping"] == {"accepted": True, "rejection": None}
+    assert report["mapping"]["accepted"] is True
     assert list(tmp_path.iterdir()) == []
 
 

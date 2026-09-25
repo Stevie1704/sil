@@ -231,7 +231,16 @@ UNUSABLE = {
     ),
     "Model Exchange only": lambda tmp_path: rewritten(
         tmp_path, "me.fmu",
-        lambda text: text.replace("<CoSimulation", "<ScheduledExecution"),
+        lambda text: re.sub(r"<CoSimulation[^>]*/>", "", text),
+    ),
+    "Scheduled Execution only": lambda tmp_path: rewritten(
+        tmp_path, "se.fmu",
+        lambda text: re.sub(r"<(ModelExchange|CoSimulation)[^>]*/>", "",
+                            text).replace(
+            "<TypeDefinitions>",
+            '<ScheduledExecution modelIdentifier="Feedthrough"/>'
+            "<TypeDefinitions>",
+        ),
     ),
     "no binary for this platform": lambda tmp_path: rewritten(
         tmp_path, "nobinary.fmu",
@@ -260,11 +269,31 @@ class TestUnusableArchives:
         assert report["facts"]["fmi_version"] == "2.0"
         assert report["variables"] == []
 
-    def test_the_interfaces_an_unsupported_archive_declares(self, tmp_path):
-        report = inspect(UNUSABLE["Model Exchange only"](tmp_path))
-        assert set(report["facts"]["interfaces"]) == {
-            "ModelExchange", "ScheduledExecution"
-        }
+    @pytest.mark.parametrize("case, interface", [
+        ("Model Exchange only", "ModelExchange"),
+        ("Scheduled Execution only", "ScheduledExecution"),
+    ])
+    def test_the_interfaces_an_unsupported_archive_declares(
+        self, tmp_path, case, interface
+    ):
+        report = inspect(UNUSABLE[case](tmp_path))
+        assert list(report["facts"]["interfaces"]) == [interface]
+
+    @pytest.mark.parametrize("rewrite", [
+        lambda text: text.replace('valueReference="7"', 'valueReference="x"'),
+        lambda text: re.sub(r"<ModelVariables>.*</ModelVariables>", "",
+                            text, flags=re.DOTALL),
+        lambda text: with_array_input(text).replace(
+            '<Dimension start="3"/>', '<Dimension start="three"/>'
+        ),
+    ], ids=["valueReference", "no ModelVariables", "Dimension"])
+    def test_a_malformed_description_is_unusable(self, tmp_path, rewrite):
+        """A description the reader cannot make sense of is a verdict, not a
+        traceback: the exit code has to keep meaning what it documents."""
+        report = inspect(rewritten(tmp_path, "malformed.fmu", rewrite))
+        assert report["verdict"] == "unusable"
+        [reason] = report["unusable"]
+        assert reason.startswith("FMU declares a malformed modelDescription.xml")
 
 
 def feedthrough_mapping(**changes) -> dict:
@@ -311,7 +340,8 @@ class TestProposedMappings:
     def test_an_accepted_mapping(self, tmp_path, monkeypatch):
         report = inspect(FEEDTHROUGH, FEEDTHROUGH_MAPPING)
         assert report["verdict"] == "compatible"
-        assert report["mapping"] == {"accepted": True, "rejection": None}
+        assert report["mapping"]["accepted"] is True
+        assert report["mapping"]["rejection"] is None
         # The runtime accepts it too: the first thing it cannot do without
         # the binary is load it.
         monkeypatch.chdir(tmp_path)
@@ -329,12 +359,34 @@ class TestProposedMappings:
         mapping = REJECTED_MAPPINGS[case]
         report = inspect(FEEDTHROUGH, mapping)
         assert report["verdict"] == "mapping-rejected"
-        assert report["mapping"] == {
-            "accepted": False,
-            "rejection": runtime_rejection(
-                FEEDTHROUGH, mapping, monkeypatch, tmp_path
-            ),
-        }
+        assert report["mapping"]["accepted"] is False
+        assert report["mapping"]["rejection"] == runtime_rejection(
+            FEEDTHROUGH, mapping, monkeypatch, tmp_path
+        )
+
+    def test_the_variables_a_mapping_leaves_unbound(self):
+        """An unbound input keeps its start value; an unbound output is not
+        published. Neither is a mistake, but a reader authoring a Run wants
+        to see them."""
+        mapping = feedthrough_mapping(start=["Float64_fixed_parameter=2"])
+        unbound = inspect(FEEDTHROUGH, mapping)["mapping"]["unbound"]
+        assert "Float64_continuous_input" not in unbound
+        assert "Float64_fixed_parameter" not in unbound
+        assert "time" not in unbound
+        assert "Int32_input" in unbound
+        assert "Float64_tunable_parameter" in unbound
+        assert "Binary_output" in unbound
+
+    def test_declared_bindings_name_what_is_bound(self):
+        mapping = feedthrough_mapping(
+            schemas={"fmu.In": {"fields": [{"name": "v", "type": "f64"}]}},
+            channels={"fmu.In": {"schema": "fmu.In", "direction": "in"}},
+            bind=["fmu.In:v=Float64_discrete_input"],
+        )
+        report = inspect(FEEDTHROUGH, mapping)
+        assert report["mapping"]["accepted"] is True
+        assert "Float64_discrete_input" not in report["mapping"]["unbound"]
+        assert "Float64_continuous_input" in report["mapping"]["unbound"]
 
     def test_an_array_binding(self, tmp_path, monkeypatch):
         archive = rewritten(tmp_path, "array.fmu", with_array_input)

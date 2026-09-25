@@ -621,7 +621,12 @@ arguments; [examples/fmu/mapping.json](examples/fmu/mapping.json) is the one
 Every verdict is the verdict of the checks initialization runs, not a second
 policy: the description is read by the same reader, the mapping is bound by the
 same function, and each terminal is built as a group builds it. The diagnostic
-is the one the Run would fail with.
+is the one the Run would fail with. A Run stops at its first failure and checks
+the mapping before it looks for the platform binary; the report states every
+finding, so an archive with both faults shows both.
+
+An accepted mapping also lists the variables it leaves `unbound`: an input or
+parameter that keeps its start value, and an output that is not published.
 
 | Exit | Verdict |
 | --- | --- |
