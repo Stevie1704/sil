@@ -84,17 +84,16 @@ def test_regression(tmp_path):
 The helper forwards the value unchanged as `--participant-timeout-ms`. It
 accepts only an `int` from 1 to 2^63−1 and raises `TypeError` or `ValueError`
 before it starts the run. A missed deadline raises `RunFailure` with
-`exit_code` 1 and the runner diagnostic as its message. The Run shutdown
-stops the participant and its descendants, as for a direct `sil-run`. When you
-omit the keyword, the wait stays unlimited and the Manifest hash, exit codes,
-and Recording bytes do not change.
+`exit_code` 1 and the runner diagnostic as its message. The runner stops the
+participant and its descendants at Run shutdown, as for a direct `sil-run`.
+When you omit the keyword, the wait stays unlimited and the Manifest hash, exit
+codes, and Recording bytes do not change.
 
 The deadline is not a bound on the whole job. It covers only the response wait
 of each Process participant. Native participants run in the runner process, so
 a Native callback that does not return is not bounded by this option. Give the
 CI job its own overall timeout (for example `timeout-minutes` in GitHub
-Actions) to bound that case and every other wait outside a participant
-response.
+Actions). That timeout bounds this case and all other waits.
 
 ### Process participant descendants
 
