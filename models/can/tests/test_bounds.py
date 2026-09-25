@@ -196,10 +196,14 @@ def test_sil_run_reports_corrupt_operations_and_fails_unsupported_ones(tmp_path)
 
 
 def test_run_selects_a_smaller_operation_buffer_below_the_packaged_maxsize():
-    description = read_model_description(ARTIFACTS / f"{MODEL}.fmu")
-    packaged = {v.name: v for v in description.modelVariables}
-    assert packaged["Node1.Rx_Data"].maxSize == 2048
-    assert packaged["perTerminalBufferCapacity"].start == "2048"
+    import xml.etree.ElementTree as ET
+    import zipfile
+
+    with zipfile.ZipFile(ARTIFACTS / f"{MODEL}.fmu") as archive:
+        description = ET.fromstring(archive.read("modelDescription.xml"))
+    packaged = {v.get("name"): v for v in description.find("ModelVariables")}
+    assert packaged["Node1.Rx_Data"].get("maxSize") == "2048"
+    assert packaged["perTerminalBufferCapacity"].get("start") == "2048"
     within = config(RATE) + frame(1, b"") * 3   # 23 + 48 = 71 bytes
     capacity = [(LAYOUT["buffer_capacity"], len(within))]
     with initialized_fmu(parameters=capacity) as bus:
