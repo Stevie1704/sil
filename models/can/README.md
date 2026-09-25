@@ -1,9 +1,12 @@
 # Standalone Classical CAN bus FMU
 
-Maintained C++20 model product (issues #152–#157). `src/bus.*` is independent of
-FMI and SiL; `src/fmi.cpp` owns each instance and translates FMI calls. The
-Linux x86-64 shared object requires the C++ runtime, with no SiL symbols,
-wall-clock access, threads, environment configuration, or random state.
+Maintained C++20 model product (issues #152–#158). [RELEASE.md](RELEASE.md)
+states the released version, supported platform, compatibility policy and
+licensing; [example/](example/README.md) configures a Run without source edits.
+`src/bus.*` is independent of FMI and SiL; `src/fmi.cpp` owns each instance and
+translates FMI calls. The Linux x86-64 shared object requires the C++ runtime,
+with no SiL symbols, wall-clock access, threads, environment configuration, or
+random state.
 
 ## Supported profile
 
@@ -327,7 +330,11 @@ start under qemu, so an emulated host (such as Docker on Apple silicon) runs
 which sanitizers ran, and CI runs both natively.
 
 The archive contains model/terminal/layered-standard XML, Linux library,
-resources/identity.json, source files and build identity, and licenses. To build
+resources/identity.json, source files and build identity, this README,
+RELEASE.md and licenses. `release.py` stages `build/can/release/` with the
+versioned archive, `release.json` and `SHA256SUMS`, and only when the two
+controlled builds are identical. `models/can/bundle.sh` then validates the
+example from a clean installed SiL bundle against an independent FMPy path. To build
 only the model in the prepared image: `python models/can/build.py OUTPUT.fmu`.
 The compiler command, Git revision, dirty-worktree flag and source digests are
 recorded in its identity file. `profile.json` is the shared source for upstream

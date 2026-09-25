@@ -4,7 +4,9 @@ ulimit -c 0
 export PYTHONPATH=/work/python/src
 python models/can/build.py build/can/SilCanBus.fmu
 python models/can/build.py build/can/repeat.fmu
-cmp build/can/SilCanBus.fmu build/can/repeat.fmu
+# Refuses to stage anything if the two controlled builds differ by one byte.
+python models/can/release.py build/can/SilCanBus.fmu build/can/repeat.fmu \
+    build/can/release build/can/image.txt
 python models/can/qualification/build_nodes.py /opt/examples /opt/spec build/can
 # ASan cannot start under qemu emulation; an emulated host may select
 # CAN_SANITIZERS=undefined. CI runs natively on x86-64 with the default.

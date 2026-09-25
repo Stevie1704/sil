@@ -1,5 +1,6 @@
 {
   "model_name": "SilCanBus",
+  "version": "1.0.0",
   "token": "sil-can-bus-1",
   "specification": "FMI-LS-BUS 1.0.0",
   "mime_type": "application/org.fmi-standard.fmi-ls-bus.can; version=\"1.0.0\"",

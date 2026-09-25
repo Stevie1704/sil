@@ -31,6 +31,11 @@ def write_descriptions(root):
         fmiVersion="3.0",
         modelName=NAME,
         instantiationToken=PROFILE["token"],
+        description="Deterministic Classical CAN Bus Simulation FMU "
+        "(FMI-LS-BUS 1.0.0 Network Abstraction, restricted profile)",
+        version=PROFILE["version"],
+        license="Apache-2.0",
+        generationTool="SiL models/can/build.py",
         variableNamingConvention="structured",
     )
     ET.SubElement(
@@ -226,6 +231,7 @@ def build(destination):
             shutil.copy(ROOT.parents[1] / name, licenses / name)
         shutil.copy(source / "fmi3PlatformTypes.h", licenses / "FMI-BSD-2-Clause.txt")
         shutil.copy(ROOT / "README.md", root / "documentation/README.md")
+        shutil.copy(ROOT / "RELEASE.md", root / "documentation/RELEASE.md")
         shutil.copy(Path(__file__), source / "build.py")
         shutil.copy(ROOT / "profile.json", source)
         shutil.copy(ROOT / "build_support.py", source)
@@ -237,6 +243,7 @@ def build(destination):
         resources.mkdir()
         identity = {
             "profile": PROFILE["token"],
+            "version": PROFILE["version"],
             "specification": PROFILE["specification"],
             "spec_revision": PROFILE["upstream"]["spec"]["revision"],
             "git_revision": subprocess.check_output(
