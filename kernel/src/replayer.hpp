@@ -2,10 +2,13 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <memory>
+#include <set>
 #include <string>
-#include <vector>
 
 #include "manifest.hpp"
+#include "recording_file.hpp"
+#include "recording_reader.hpp"
 
 namespace sil {
 
@@ -13,11 +16,15 @@ class Engine;
 
 // Re-publishes recorded channels from a prior run's MCAP as an ordinary
 // scheduled participant. The recording is validated against the manifest at
-// load time (content hash, channel presence, schema layout); each selected
-// message is injected at its recorded virtual timestamp, before task
-// activations in that slot, preserving the recording's global publish order
-// for equal timestamps. Deterministic by construction: it lives inside the
-// same stepped virtual-time world as every other participant.
+// load time (content hash, channel presence, schema layout, every record
+// decodable); each selected message is injected at its recorded virtual
+// timestamp, before task activations in that slot, preserving the recording's
+// global publish order for equal timestamps. Deterministic by construction: it
+// lives inside the same stepped virtual-time world as every other participant.
+//
+// The recording is read twice through one descriptor: once at load time to
+// hash and validate it, and once while the Run advances, one record at a time.
+// Resident payload is bounded by the largest record, not the file length.
 class Replayer {
  public:
   Replayer(Engine &engine, const std::string &name, const ReplaySpec &spec,
@@ -33,16 +40,23 @@ class Replayer {
   void publish_due(uint64_t now_ns);
 
  private:
-  struct Msg {
-    uint64_t publish_ns;
-    std::string channel;
-    std::vector<uint8_t> bytes;
-  };
+  // Rejects a selected channel that is missing from the recording or whose
+  // recorded schema differs from the manifest's.
+  void validate_channels(const RecordingReader &reader, const ReplaySpec &spec,
+                         const std::filesystem::path &path,
+                         const std::string &ctx) const;
+
+  // Moves the pass to the next selected message below the run duration. The
+  // pass continues past a message at or beyond the duration: stored order is
+  // not sorted, so a later message may still fall inside the Run.
+  void skip_unreplayed();
 
   Engine &engine_;
   std::string name_;
-  std::vector<Msg> messages_;  // recording order (== global publish order)
-  size_t next_ = 0;
+  std::set<std::string> channels_;  // selected for replay
+  uint64_t duration_ns_;
+  std::unique_ptr<RecordingFile> file_;  // outlives reader_, which reads it
+  std::unique_ptr<RecordingReader> reader_;
 };
 
 }  // namespace sil
