@@ -26,6 +26,9 @@ FAULT_FIELDS = (
     ("attempt", "Attempt"),
 )
 CLASSICAL_DATA_BYTES = 8
+# FMI-LS-BUS 1.0.0 CAN operations: OP code, Length, and Configuration kind.
+TRANSMIT = 0x10
+CONFIGURATION, BITRATE, ARBITRATION_LOST_BEHAVIOR = 0x40, 1, 4
 
 
 def load(path):
@@ -69,8 +72,8 @@ def requests(config, limits):
     buffers = {}
     for node, settings in enumerate(config["nodes"]):
         buffers[(0, node)] = (
-            struct.pack("<IIBI", 0x40, 13, 1, config["bitrate"])
-            + struct.pack("<IIBB", 0x40, 10, 4,
+            struct.pack("<IIBI", CONFIGURATION, 13, BITRATE, config["bitrate"])
+            + struct.pack("<IIBB", CONFIGURATION, 10, ARBITRATION_LOST_BEHAVIOR,
                           ARBITRATION_LOSS[settings["arbitration_loss"]])
         )
     for frame in config["frames"]:
@@ -88,7 +91,7 @@ def requests(config, limits):
 def transmit(frame):
     data = bytes.fromhex(frame["data"])
     return struct.pack(
-        "<IIIBBH", 0x10, 16 + len(data), frame["identifier"], 0, 0, len(data)
+        "<IIIBBH", TRANSMIT, 16 + len(data), frame["identifier"], 0, 0, len(data)
     ) + data
 
 

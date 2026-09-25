@@ -126,7 +126,10 @@ CI runs these checks on x86-64 Linux for every pull request:
 installed wheel and `sil-run`; the container has no source tree and no
 network. The independent path is FMPy 0.3.32 in the qualification image,
 where `sil` cannot be imported. It does not reuse SiL's Importer. The two
-traces must be equal. Each container has a deadline, and each Run and
+traces must be equal. Both paths read one configuration through
+`example/scenario.py`, so a fault in that encoding would affect both in the
+same way. `tests/test_example.py` therefore also checks both traces against a
+table derived by hand from the independent wire model. Each container has a deadline, and each Run and
 Participant response has its own deadline. The retained evidence is under
 [`evidence/issue-158/`](evidence/issue-158/README.md).
 

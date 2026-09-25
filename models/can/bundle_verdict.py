@@ -18,13 +18,14 @@ def verdict(directory):
     sil = json.loads((directory / "sil/trace.json").read_text())
     independent = json.loads((directory / "independent.json").read_text())
     failures = []
+    equal = sil["trace"] == independent["trace"]
     if not sil["sil_module"].startswith(INSTALLED_PREFIX):
         failures.append(f"sil was imported from {sil['sil_module']}, not the bundle")
     if sil["fmu_sha256"] != independent["fmu_sha256"]:
         failures.append("the two paths ran different archives")
     if not sil["repeat_identical"]:
         failures.append("repeated Runs of one Manifest differ")
-    if sil["trace"] != independent["trace"]:
+    if not equal:
         failures.append("installed SiL and the independent FMI path disagree")
     return {
         "fmu_sha256": sil["fmu_sha256"],
@@ -40,7 +41,7 @@ def verdict(directory):
             "execution_path", "reference_tool",
         )},
         "trace_rows": len(sil["trace"]),
-        "traces_equal": sil["trace"] == independent["trace"],
+        "traces_equal": equal,
         "failures": failures,
     }
 

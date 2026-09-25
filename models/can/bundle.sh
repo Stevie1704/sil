@@ -56,9 +56,18 @@ if [[ $status -ne 0 ]]; then
 fi
 
 sil_absent='import importlib.util, sys; sys.exit(importlib.util.find_spec("sil") is not None)'
-timeout "$deadline" docker run --rm --platform "$platform" --network none \
+# A created container, so the deadline also removes it and not only the client.
+container=$(docker create --platform "$platform" --network none \
     --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/work" "$qualification" \
     sh -c "python -c '$sil_absent' && python models/can/example/independent.py \
-        models/can/example/example.json $fmu $out/independent.json"
+        models/can/example/example.json $fmu $out/independent.json")
+status=0
+timeout "$deadline" docker start -a "$container" || status=$?
+cleanup
+container=
+if [[ $status -ne 0 ]]; then
+    echo "independent FMI path failed or missed its deadline ($status)" >&2
+    exit 1
+fi
 
 python3 models/can/bundle_verdict.py "$out"

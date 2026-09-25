@@ -46,9 +46,9 @@ input gives the same bytes on every supported machine.
 | `accel_mps2` | 0.001 m/s² | −32.768 to 32.767 m/s² | 0.0005 m/s² | 0.5 m/s² |
 
 Each rounding error is at least 100 times smaller than its envelope entry.
-The controller clamp (−3 to +1.5 m/s²) and the scenario speeds (at most about
-25 m/s) are far inside the ranges, so saturation is a fault-injection case,
-not a nominal one.
+The controller clamp (−3 to +1.5 m/s²) is far inside its range. The scenario
+speeds (at most about 25 m/s) are too. Saturation is thus a fault-injection
+case, not a nominal one.
 
 ## Bus load and delay budget
 

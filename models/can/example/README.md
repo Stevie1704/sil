@@ -24,10 +24,11 @@ file drives a SiL Run and an independent FMPy run of `SilCanBus.fmu`.
 | `duration_ns`, `step_period_ns` | Run length and the SiL Step period. The trace does not depend on the Step period. | Manifest |
 
 `scenario.py` reads the packaging-time limits (terminal count and Binary
-`maxSize`) from the archive and refuses a configuration that exceeds them. It
-also refuses a frame with more than 8 data bytes, a frame from an inactive node,
-a request outside the duration and an unknown fault kind. The FMU validates its
-own parameter ranges and the bitrate before the Run starts. See
+`maxSize`) from the archive and refuses a configuration that exceeds them.
+It also refuses these items: a frame with more than 8 data bytes, a frame from
+an inactive node, a request outside the duration and an unknown fault kind.
+The FMU validates its own parameter ranges and the bitrate before the Run
+starts. See
 [RELEASE.md](../RELEASE.md#configuration-without-source-edits) for how
 packaging-time limits differ from Run configuration.
 

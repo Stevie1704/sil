@@ -3,7 +3,7 @@
     python independent.py EXAMPLE.json SilCanBus.fmu OUTPUT.json
 
 This event-driven FMI 3.0 master stops at every request instant and at every
-countdown instant the bus states, then records every Tx activation. It shares
+countdown instant that the bus gives, then records every Tx activation. It shares
 only `scenario.py` with the SiL path: the configuration, not the execution.
 The caller sets the deadline.
 """
@@ -72,6 +72,8 @@ def drive(bus, terminal, inputs, until_ns):
             trace += [[now, n + 1, data.hex()] for n, data in enumerate(outputs) if data]
         bus.updateDiscreteStates()
         due = next_bus_event(bus, terminal, now, due)
+        if due is not None and due <= now:
+            raise RuntimeError(f"the bus stated no future event at {now} ns")
         if now == until_ns:
             return sorted(trace)
         stops = [i[0] for i in inputs if i[0] > now] + [until_ns]
