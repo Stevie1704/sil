@@ -58,8 +58,8 @@ the physical validity of the ACC law or the safety logic.
 **Build.** Preparation calls the upstream build function
 `libsafety_py._build_libsafety(release=True)` and pins its output. The flags
 are the upstream ones (`-O0 -g`, UBSan). The build runs twice and the report
-states whether the bytes are the same. It does not require this: the bundle
-pins the digest of the first build. The offline Run never compiles:
+states whether the bytes are the same. On Linux they are. This is reported,
+not required: the bundle pins the digest of the first build. The offline Run never compiles:
 `libsafety_py.load(path)` loads the pinned file.
 
 **Runtime dependency.** Because of the upstream UBSan flags, the library
@@ -256,6 +256,25 @@ The two conventions a SiL Run most easily gets wrong are these:
   50.1 s.
 - **Library reference time.** `references/libsafety-states.json` keeps the
   recorded `logMonoTime`. Subtract `first_log_mono_ns` to get virtual time.
+
+## Retained results
+
+[`evidence/`](evidence/) is the output of CI run 36140434353 on Linux x86-64
+(glibc 2.36, GCC 12.2.0, CPython 3.13.7). It includes `bundle.json` (every
+bundle digest) and `handoff.json`. The bundle itself, about 7.6 MB, is the
+run's `public-workloads-bundle` artifact. It is not committed, because it
+holds the recorded data.
+
+| Workload | Result |
+| --- | --- |
+| Library build | `libsafety.so` SHA-256 `ad19bdcd…`, rebuild byte-identical, needs `libubsan.so.1` |
+| Library replay | 6000 observations, 149,228 received frames, 0 rejected; upstream `replay_drive` and 600/600 panda samples agree |
+| `timer-in-ns` | first divergence at event 100 (1 s in): `controls_allowed` becomes false |
+| `corrupt-0x260` | first divergence at event 0: `accepted` 38 instead of 39; only `0:0x260` is rejected |
+| Single FMU | 501 observations, 0.1 s to 50.1 s; command range −3.0 to 1.354 m/s² |
+| One-period input shift | first divergence at 21.8 s. Before that the command is held at its −3 m/s² clamp, so no shift can show |
+| Coupled FMUs | 5000 Slots; minimum gap 25.8 m; command −0.99 to 1.5 m/s² |
+| One-sample maneuver shift | first divergence at the first recorded sample after the start (Slot 190 ms) |
 
 ## Resource observations
 

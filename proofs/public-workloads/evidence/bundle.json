@@ -1,0 +1,91 @@
+{
+  "sources": {
+    "opendbc": {
+      "role": "shared-library target: the upstream automotive C safety logic and its libsafety test harness",
+      "kind": "git",
+      "repository": "https://github.com/commaai/opendbc.git",
+      "commit": "c4465696dc2ef0d1340ae188810ac982586999a4",
+      "tree": "760d44fd515774f097504ed958234dab6d0f493d",
+      "license": "MIT",
+      "license_file": "LICENSE"
+    },
+    "can_segment": {
+      "role": "recorded vehicle CAN traffic for the shared library (receive side only)",
+      "kind": "file",
+      "url": "https://huggingface.co/datasets/commaai/commaCarSegments/resolve/edb6480d0e0b5775fde7150c01bcdd5b78d0ad32/segments/df5ad9d9ae9fd6cd/00000470--cb630a6b9d/46/rlog.zst",
+      "dataset": "commaai/commaCarSegments",
+      "dataset_revision": "edb6480d0e0b5775fde7150c01bcdd5b78d0ad32",
+      "segment": "df5ad9d9ae9fd6cd/00000470--cb630a6b9d/46",
+      "platform": "TOYOTA_RAV4_TSS2",
+      "sha256": "b0d19f7ccf67fef1c4afd9cf579e96cecc1d278be2aa4a3adf97b2d64d940a4c",
+      "size": 1266275,
+      "license": "MIT (dataset card)"
+    },
+    "openacc_recording": {
+      "role": "recorded car-following trajectories for the single and coupled FMU workloads",
+      "kind": "file",
+      "url": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/TransportExpData/JRCDBT0001/LATEST/AstaZero/ASta_040719_platoon7.csv",
+      "dataset": "JRC OpenACC, AstaZero campaign (https://data.jrc.ec.europa.eu/dataset/9702c950-c80f-4d2f-982f-44d06ea0009f)",
+      "sha256": "2696ef06a83af7cd8aaea266c0f065b56346666e7c92342f2c76d85a96e3c9fa",
+      "size": 6669670,
+      "license": "CC BY 4.0, (c) European Union 1995-2026"
+    },
+    "openacc_notes": {
+      "role": "column definitions, units and sampling notes for the OpenACC recording",
+      "kind": "file",
+      "url": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/TransportExpData/JRCDBT0001/LATEST/AstaZero/AstaZero_notes.txt",
+      "sha256": "c895411d34af6b8549cdecfed8ce21e13a10b6246a99d44899b88868aacb67f8",
+      "size": 2637,
+      "license": "CC BY 4.0, (c) European Union 1995-2026"
+    },
+    "openacc_copyright": {
+      "role": "the dataset's own licence notice, kept with every derived window",
+      "kind": "file",
+      "url": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/TransportExpData/JRCDBT0001/LATEST/AstaZero/copyright.txt",
+      "sha256": "f20723519a580fb35b3499870f0b1baea54f483195105416e547f0014f1610d2",
+      "size": 540,
+      "license": "CC BY 4.0, (c) European Union 1995-2026"
+    },
+    "reference_fmus": {
+      "role": "independent FMI importer-compatibility fixtures, audited against the qualified profile",
+      "kind": "file",
+      "url": "https://github.com/modelica/Reference-FMUs/releases/download/v0.0.41/Reference-FMUs.zip",
+      "release": "v0.0.41",
+      "commit": "1258711a41e28b1c25e058abd04f6214beefa3cb",
+      "sha256": "62babca76b9c23a51c3096be4bb5930ff8b4388659056be3c0c4ef7a3aeb5403",
+      "size": 3390239,
+      "license": "BSD-2-Clause"
+    }
+  },
+  "tools": {
+    "machine": "x86_64",
+    "libc": "glibc 2.36",
+    "python": "3.13.7",
+    "compiler": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "source_revision": "c83903bfbad90557534f911e999311422fe768f3",
+    "packages": {
+      "fmpy": "0.3.26",
+      "pycapnp": "2.2.1",
+      "zstandard": "0.25.0",
+      "cffi": "2.0.0",
+      "numpy": "2.5.3",
+      "pythonfmu3": "0.3.4"
+    }
+  },
+  "digests": {
+    "fmus/AccController.fmu": "642bfd098ffc37ad2cce5c5e57b78ee42d57be1fdfa97b5678837809d3bf5276",
+    "fmus/AccController.identity.json": "7e2621df18d2efe49e5061143d05b54bc06ebdbcd3f42e8f008c4ac1ec00dcbd",
+    "fmus/AccPlant.fmu": "201b4067a7a9cfaefa1fb7815edda1aa48264026466138cd9de83418faa36cff",
+    "fmus/AccPlant.identity.json": "f8079b48ddccb55edeae5f632f720d3b48e870d443a2dc21f9ff9054b1a5b1c4",
+    "handoff.json": "aa107e56416150d3659b79114b385be2e5504bde11a36d5f24306116f1376435",
+    "libsafety/libsafety.so": "ad19bdcd96f6b9c6daf1f55c1851dfe8dfb1c613ed4747f72b3b5b9b7300dec1",
+    "recordings/openacc-ATTRIBUTION.txt": "602e48661a74f985c43777d96eb2ab2f46d397ceb5ab51cff4d5ec1ad0d4018c",
+    "recordings/openacc-copyright.txt": "f20723519a580fb35b3499870f0b1baea54f483195105416e547f0014f1610d2",
+    "recordings/openacc-notes.txt": "c895411d34af6b8549cdecfed8ce21e13a10b6246a99d44899b88868aacb67f8",
+    "recordings/openacc-window.csv": "968b007a4a775225407e93829cb93a668968797203409188d94505b4d72a96f5",
+    "recordings/rlog.zst": "b0d19f7ccf67fef1c4afd9cf579e96cecc1d278be2aa4a3adf97b2d64d940a4c",
+    "references/controller-open-loop.json": "f8607c9f63a54ff0caa6e636f274d925d556822906a1096ab47fd4d26130bf31",
+    "references/coupled-measured-lead.json": "b9d9ddcb0d93209e087d9a491afdce922915282af74cf0e7b7e4a2d913bbcb0e",
+    "references/libsafety-states.json": "ba8731f785431226e80fbb49cd065e39b76ee5140baf0148837f69735a4a9b21"
+  }
+}
