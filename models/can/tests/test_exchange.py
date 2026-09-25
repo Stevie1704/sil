@@ -56,6 +56,14 @@ def confirm(identifier):
     return struct.pack("<III", 0x20, 12, identifier)
 
 
+def format_error(operation):
+    return struct.pack("<IIH", 0x01, 10 + len(operation), len(operation)) + operation
+
+
+def lost(identifier):
+    return struct.pack("<III", 0x30, 12, identifier)
+
+
 def bus_error(identifier, error_flag, is_sender):
     return struct.pack("<IIIBBB", 0x31, 15, identifier, 1, error_flag, is_sender)
 
@@ -251,7 +259,15 @@ def drive(bus, requests, until_ns, grid_ns=None, nodes=2):
     states and, as an outer Step grid, at every multiple of `grid_ns`.
     Returns every Tx activation as (instant_ns, node, payload).
     """
-    trace, now, due = [], 0, None
+    trace = []
+    for _ in driven(bus, requests, until_ns, trace, grid_ns, nodes):
+        pass
+    return trace
+
+
+def driven(bus, requests, until_ns, trace, grid_ns=None, nodes=2):
+    """`drive`, yielding after each Step so masters can interleave calls."""
+    now, due = 0, None
     while True:
         for _, node, data in (r for r in requests if r[0] == now):
             deliver(bus, data, node)
@@ -275,9 +291,10 @@ def drive(bus, requests, until_ns, grid_ns=None, nodes=2):
         stops += [(now // grid_ns + 1) * grid_ns] if grid_ns else []
         end = min(stops)
         if now == until_ns:
-            return trace
+            return
         advance(bus, now / NS, end / NS)
         now = end
+        yield
 
 
 def test_independent_external_exchange():
@@ -631,32 +648,66 @@ def test_invalid_fault_schedules_fail_before_initialization(rule, retry_limit, c
             bus.exitInitializationMode()
 
 
-BAD = [
-    b"\x10",  # truncated header
-    struct.pack("<II", 0x10, 0),  # invalid length
-    FRAME[:-1],  # truncated operation
-    FRAME + b"\x00",  # trailing junk
-    FRAME[:14] + b"\x05\x00" + FRAME[16:],  # payload mismatch
-    struct.pack("<IIIBBH", 0x10, 25, 1, 0, 0, 9) + bytes(9),
-    FRAME[:8] + struct.pack("<I", 0x800) + FRAME[12:],
+UNKNOWN_OPERATION = struct.pack("<II", 0xDEAD, 8)
+# Corrupt operations in the FMI-LS-BUS sense: an unknown OP code, an invalid
+# length, or content no CAN format allows. The bus answers each with Format
+# Error to its sender one nanosecond later; the second value is the reported
+# operation. Without a sound length the rest of the buffer is reported.
+CORRUPT = [
+    (b"\x10", b"\x10"),  # truncated header
+    (struct.pack("<II", 0x10, 0), struct.pack("<II", 0x10, 0)),  # invalid length
+    (FRAME[:-1], FRAME[:-1]),  # length beyond the buffer
+    (FRAME + b"\x00", b"\x00"),  # trailing junk after a valid frame
+    (FRAME[:14] + b"\x05\x00" + FRAME[16:],) * 2,  # payload length mismatch
+    (struct.pack("<IIIBBH", 0x10, 25, 1, 0, 0, 9) + bytes(9),) * 2,  # 9 data bytes
+    (FRAME[:8] + struct.pack("<I", 0x800) + FRAME[12:],) * 2,  # 12-bit standard ID
+    (FRAME[:12] + b"\x02" + FRAME[13:],) * 2,  # Ide is no boolean
+    (FRAME[:13] + b"\x02" + FRAME[14:],) * 2,  # Rtr is no boolean
+    (UNKNOWN_OPERATION,) * 2,
+    (struct.pack("<II", 0x40, 8),) * 2,  # configuration without a kind
+    (struct.pack("<IIB", 0x40, 9, 9),) * 2,  # unknown configuration kind
+    (struct.pack("<IIBB", 0x40, 10, 4, 3),) * 2,  # undefined loss behavior
+]
+
+
+@pytest.mark.parametrize("payload,reported", CORRUPT)
+def test_corrupt_operation_is_answered_with_format_error(payload, reported):
+    with initialized_fmu() as bus:
+        deliver(bus, CONFIG, 1)
+        deliver(bus, CONFIG + payload)
+        bus.updateDiscreteStates()
+        counters, _, qualifiers = intervals(bus)
+        assert counters == [1, 1] and qualifiers == [2, 2]
+        advance(bus, 0, 1 / NS)
+        bus.setClock([3, 7], [True, True])
+        outputs = [data or b"" for data in bus.getBinary([1, 5])]
+        assert outputs == [format_error(reported), b""]
+        bus.updateDiscreteStates()
+
+
+# Well-formed operations outside the declared profile fail the instance.
+UNSUPPORTED = [
     FRAME[:12] + b"\x01" + FRAME[13:],  # extended
     FRAME[:13] + b"\x01" + FRAME[14:],  # remote
     struct.pack("<II", 0x11, 8),  # CAN FD
     struct.pack("<II", 0x12, 8),  # CAN XL
-    struct.pack("<II", 0xDEAD, 8),  # unknown opcode
+    struct.pack("<II", 0x41, 8),  # Status
+    struct.pack("<II", 0x42, 8),  # Wakeup
+    format_error(FRAME),  # the bus produces Format Error; it accepts none
     config(83333),  # bit time is no whole number of nanoseconds
     config(0),
     config(9999),  # below the supported domain
     config(2000000),  # above Classical CAN
     config(500000),  # inconsistent with the already configured 100000
     struct.pack("<IIBI", 0x40, 13, 2, 100000),  # FD bitrate
-    struct.pack("<IIBB", 0x40, 10, 4, 3),  # invalid policy
     CONFIRM,  # wrong direction
+    lost(1),
+    bus_error(1, 1, 1),
 ]
 
 
-@pytest.mark.parametrize("payload", BAD)
-def test_reject_malformed_and_unsupported(payload):
+@pytest.mark.parametrize("payload", UNSUPPORTED)
+def test_reject_unsupported(payload):
     with initialized_fmu() as bus:
         # One atomic transaction: the valid configuration is not committed.
         deliver(bus, CONFIG + payload)
@@ -680,10 +731,6 @@ def test_competing_terminals():
         advance(bus, 0, 0.00083)
         bus.setClock([3, 7], [True, True])
         assert bus.getBinary([1, 5]) == [CONFIRM, CONFIRM]
-
-
-def lost(identifier):
-    return struct.pack("<III", 0x30, 12, identifier)
 
 
 THREE_REQUESTS = [

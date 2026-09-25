@@ -16,6 +16,10 @@ void require(bool condition, const char* message) {
 bool supported_bitrate(std::uint32_t rate) {
   return rate >= min_bitrate && rate <= max_bitrate && ns_per_s % rate == 0;
 }
+inline constexpr std::uint8_t format_error_code = 0x01;
+inline constexpr std::uint8_t transmit_code = 0x10;
+inline constexpr std::uint8_t configuration_code = 0x40;
+inline constexpr std::uint8_t bitrate_kind = 1, arbitration_lost_behavior_kind = 4;
 inline constexpr std::uint8_t confirm_code = 0x20;
 inline constexpr std::uint8_t arbitration_lost_code = 0x30;
 inline constexpr std::uint8_t bus_error_code = 0x31;
@@ -31,6 +35,45 @@ Bytes bus_error_operation(std::uint32_t id, bool primary, bool sender) {
           std::uint8_t(id), std::uint8_t(id >> 8), 0, 0,
           bit_error, primary ? primary_error_flag : secondary_error_flag,
           std::uint8_t(sender)};
+}
+// Operations the CAN chapter defines but this profile does not support. They
+// are well formed as far as this model can tell, so they fail the instance
+// instead of drawing a Format Error.
+bool defined_but_unsupported(std::uint32_t code) {
+  // Format Error, CAN FD and XL Transmit, Confirm, ArbitrationLost, Bus Error,
+  // Status and Wakeup.
+  switch (code) {
+    case 0x01: case 0x11: case 0x12: case 0x20: case 0x30: case 0x31:
+    case 0x41: case 0x42:
+      return true;
+    default:
+      return false;
+  }
+}
+// Whether an operation with a sound length matches its FMI-LS-BUS format.
+// Unknown OP codes, inconsistent lengths and values no CAN format allows are
+// corrupt; FMI-LS-BUS answers them with Format Error.
+bool well_formed(std::span<const std::uint8_t> op) {
+  const auto code = u32(op, 0);
+  if (code == transmit_code) {
+    if (op.size() < 16) return false;
+    const unsigned size = unsigned(op[14]) | (unsigned(op[15]) << 8);
+    const bool extended = op[12] == 1;
+    const auto id_limit = extended ? 0x1fffffffu : max_classical_identifier;
+    return op.size() == 16 + size && size <= 8 && op[12] <= 1 && op[13] <= 1 &&
+           u32(op, 8) <= id_limit;
+  }
+  if (code == configuration_code) {
+    if (op.size() < 9) return false;
+    switch (op[8]) {
+      case bitrate_kind: return op.size() == 13;
+      case 2: case 3: return true;  // CAN FD and XL rates: unsupported
+      case arbitration_lost_behavior_kind:
+        return op.size() == 10 && (op[9] == 1 || op[9] == 2);
+      default: return false;
+    }
+  }
+  return defined_but_unsupported(code);
 }
 // ISO 11898-1 CRC-15 shift register over SOF through the data field.
 unsigned crc15(const std::vector<bool>& bits) {
@@ -98,6 +141,7 @@ void Bus::configure(unsigned active_nodes, unsigned queue_capacity,
   require(!has_pending() && !on_wire_, "cannot reconfigure a busy bus");
   for (const auto& notifications : notifications_)
     require(notifications.empty(), "cannot reconfigure pending notifications");
+  require(!format_errors_due_, "cannot reconfigure pending Format Error reports");
 
   std::array<FaultRule, max_fault_rules> configured_rules{};
   for (std::size_t index = 0; index < fault_rules.size(); ++index) {
@@ -183,60 +227,82 @@ void Bus::receive(const Inputs& inputs, Nanoseconds now) {
   require(!next_event() || *next_event() >= now, "a bus countdown was skipped");
   // Validate the complete transaction before committing any operation.
   auto next = *this;
-  std::vector<std::pair<unsigned, Request>> requests;
+  Requests requests;
   for (unsigned terminal = 0; terminal < inputs.size(); ++terminal) {
-    auto operations = inputs[terminal];
-    require(terminal < active_nodes_ || operations.empty(), "input to inactive terminal");
-    while (!operations.empty()) {
-      require(operations.size() >= 8, "truncated operation header");
-      const auto code = u32(operations, 0), length = u32(operations, 4);
-      require(length >= 8 && length <= operations.size(), "invalid operation length");
-      const auto op = operations.first(length);
-      if (code == 0x40) {
-        require(length >= 9, "missing configuration kind");
-        if (op[8] == 1) {
-          require(length == 13, "invalid bitrate configuration length");
-          const auto rate = u32(op, 9);
-          require(supported_bitrate(rate),
-                  "unsupported bitrate: need 10000..1000000 bit/s dividing 1e9");
-          require(!next.bitrate_ || *next.bitrate_ == rate, "inconsistent node bitrates");
-          next.bitrate_ = rate;
-          next.configured_[terminal] = true;
-        } else if (op[8] == 4) {
-          require(length == 10 && (op[9] == 1 || op[9] == 2),
-                  "unsupported arbitration-loss behavior");
-          next.discards_on_loss_[terminal] = op[9] == 2;
-        } else {
-          throw std::runtime_error("unsupported configuration kind");
-        }
-      } else if (code == 0x10) {
-        require(length >= 16, "truncated Classical CAN operation");
-        const unsigned size = unsigned(op[14]) | (unsigned(op[15]) << 8);
-        require(size <= 8 && length == 16 + size, "invalid Classical CAN payload length");
-        require(u32(op, 8) <= max_classical_identifier && op[12] == 0 && op[13] == 0,
-                "only 11-bit Classical CAN data frames are supported");
-        const auto id = u32(op, 8);
-        std::uint64_t occurrence = 0;
-        for (unsigned index = 0; index < next.fault_rule_count_; ++index) {
-          const auto& rule = next.fault_rules_[index];
-          if (rule.sender != terminal || rule.id != id) continue;
-          auto& count = next.rule_occurrences_[index];
-          require(count < std::numeric_limits<std::uint64_t>::max(),
-                  "CAN request occurrence counter exhausted");
-          occurrence = ++count;
-        }
-        requests.emplace_back(terminal, Request{
-            Bytes(op.begin(), op.end()), id, now, occurrence, 1});
-      } else {
-        throw std::runtime_error("unsupported CAN operation");
-      }
-      operations = operations.subspan(length);
-    }
+    require(terminal < active_nodes_ || inputs[terminal].empty(), "input to inactive terminal");
+    require(inputs[terminal].size() <= max_operation_buffer, "operation buffer exceeds maxSize");
+    next.accept(terminal, inputs[terminal], now, requests);
   }
   for (const auto& [sender, request] : requests) next.enqueue(sender, request);
   if (!next.on_wire_ && next.has_pending() && now >= next.idle_from_)
     next.arbitrate(now);
   *this = std::move(next);
+}
+
+void Bus::accept(unsigned terminal, std::span<const std::uint8_t> operations,
+                 Nanoseconds now, Requests& requests) {
+  while (!operations.empty()) {
+    const std::uint32_t length = operations.size() >= 8 ? u32(operations, 4) : 0;
+    if (length < 8 || length > operations.size()) {
+      // Without a sound length the rest of the buffer cannot be split.
+      report_format_error(terminal, operations, now);
+      return;
+    }
+    const auto op = operations.first(length);
+    if (well_formed(op))
+      apply(terminal, op, now, requests);
+    else
+      report_format_error(terminal, op, now);
+    operations = operations.subspan(length);
+  }
+}
+
+void Bus::apply(unsigned terminal, std::span<const std::uint8_t> op,
+                Nanoseconds now, Requests& requests) {
+  const auto code = u32(op, 0);
+  if (code == configuration_code && op[8] == bitrate_kind) {
+    const auto rate = u32(op, 9);
+    require(supported_bitrate(rate),
+            "unsupported bitrate: need 10000..1000000 bit/s dividing 1e9");
+    require(!bitrate_ || *bitrate_ == rate, "inconsistent node bitrates");
+    bitrate_ = rate;
+    configured_[terminal] = true;
+  } else if (code == configuration_code && op[8] == arbitration_lost_behavior_kind) {
+    discards_on_loss_[terminal] = op[9] == 2;
+  } else if (code == transmit_code && op[12] == 0 && op[13] == 0) {
+    const auto id = u32(op, 8);
+    std::uint64_t occurrence = 0;
+    for (unsigned index = 0; index < fault_rule_count_; ++index) {
+      const auto& rule = fault_rules_[index];
+      if (rule.sender != terminal || rule.id != id) continue;
+      auto& count = rule_occurrences_[index];
+      require(count < std::numeric_limits<std::uint64_t>::max(),
+              "CAN request occurrence counter exhausted");
+      occurrence = ++count;
+    }
+    requests.emplace_back(terminal, Request{Bytes(op.begin(), op.end()), id, now, occurrence, 1});
+  } else if (code == transmit_code) {
+    throw std::runtime_error("only 11-bit Classical CAN data frames are supported");
+  } else {
+    throw std::runtime_error("unsupported CAN operation");
+  }
+}
+
+void Bus::report_format_error(unsigned terminal, std::span<const std::uint8_t> op,
+                              Nanoseconds now) {
+  require(now < max_time, "no supported instant remains for a Format Error report");
+  require(!format_errors_due_ || *format_errors_due_ == now + 1,
+          "a due Format Error report was not delivered");
+  auto& report = format_errors_[terminal];
+  const auto length = 10 + op.size();
+  require(report.size() + length <= format_error_capacity,
+          "Format Error reports exceed the terminal's output capacity");
+  const Bytes header{format_error_code, 0, 0, 0,
+                     std::uint8_t(length), std::uint8_t(length >> 8), 0, 0,
+                     std::uint8_t(op.size()), std::uint8_t(op.size() >> 8)};
+  report.insert(report.end(), header.begin(), header.end());
+  report.insert(report.end(), op.begin(), op.end());
+  format_errors_due_ = now + 1;
 }
 
 void Bus::enqueue(unsigned sender, const Request& request) {
@@ -303,6 +369,17 @@ void Bus::arbitrate(Nanoseconds now) {
   on_wire_ = std::move(transfer);
 }
 
+void Bus::tick(Nanoseconds now) {
+  require(next_event() == now, "no bus event is due at this instant");
+  if (is_completion(now)) complete(now);
+  if (format_errors_due_ != now) return;
+  for (unsigned node = 0; node < active_nodes_; ++node)
+    outputs_[node].insert(outputs_[node].end(), format_errors_[node].begin(),
+                          format_errors_[node].end());
+  format_errors_ = {};
+  format_errors_due_.reset();
+}
+
 void Bus::complete(Nanoseconds now) {
   require(on_wire_ && on_wire_->end == now,
           "no frame ends at this instant");
@@ -341,8 +418,11 @@ void Bus::complete(Nanoseconds now) {
 }
 
 std::optional<Nanoseconds> Bus::next_event() const {
-  if (on_wire_) return on_wire_->end;
-  if (has_pending()) return idle_from_;
-  return std::nullopt;
+  std::optional<Nanoseconds> bus;
+  if (on_wire_) bus = on_wire_->end;
+  else if (has_pending()) bus = idle_from_;
+  if (!format_errors_due_) return bus;
+  if (!bus) return format_errors_due_;
+  return std::min(*bus, *format_errors_due_);
 }
 }  // namespace can

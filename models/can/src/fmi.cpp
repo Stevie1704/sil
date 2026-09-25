@@ -13,6 +13,12 @@ namespace {
 static_assert(profile::terminal_count == can::terminal_capacity, "terminal declaration and core disagree");
 static_assert(profile::fault_rule_capacity == can::max_fault_rules,
               "fault-rule parameters and core disagree");
+static_assert(profile::max_binary_size == can::max_operation_buffer,
+              "declared Binary maxSize and core disagree");
+// A master may start any number of events at one instant; this bound makes
+// that finite. It is above the SiL Importer's own bound of 100 propagations
+// per instant, so it only stops a master that never ends an instant.
+inline constexpr unsigned max_events_per_instant = 256;
 enum class Mode { instantiated, initialization, event, step, terminated, error };
 struct Parameters {
   unsigned active_nodes = 2;
@@ -43,6 +49,8 @@ struct Instance {
   Mode mode = Mode::instantiated;
   can::Nanoseconds time = 0;
   EventState event;
+  // Events evaluated at `time`; stepping to a later instant restarts it.
+  unsigned events_at_instant = 0;
   std::array<fmi3IntervalQualifier, profile::terminal_count> interval{};
   fmi3InstanceEnvironment environment = nullptr;
   fmi3LogMessageCallback log = nullptr;
@@ -151,6 +159,8 @@ void require_initialization_or_event(const Instance& i) {
 void evaluate(Instance& i) {
   if (i.event.evaluated) return;
   require_mode(i, Mode::event);
+  require(++i.events_at_instant <= max_events_per_instant,
+          "too many events at one instant");
   auto next = i.bus;
   const auto before = next.next_event();
   // Each event commits all inputs together, so a second request cannot hide
@@ -163,7 +173,7 @@ void evaluate(Instance& i) {
           "due countdown Clock was not activated");
   if (i.event.tx[0]) {
     require(before && *before == i.time, "countdown Clock activated away from its due instant");
-    if (next.is_completion(i.time)) next.complete(i.time);
+    next.tick(i.time);
   }
   can::Inputs inputs;
   for (unsigned n = 0; n < profile::terminal_count; ++n) {
@@ -217,12 +227,18 @@ void fmi3FreeInstance(fmi3Instance instance) { delete static_cast<Instance*>(ins
 fmi3Status fmi3Reset(fmi3Instance instance) {
   if (!instance) return fmi3Error;
   auto& i = *static_cast<Instance*>(instance);
-  auto environment = i.environment;
-  auto log = i.log;
-  i = Instance{};
-  i.environment = environment;
-  i.log = log;
-  return fmi3OK;
+  // Reset is also the way out of Error state, so it bypasses invoke_fmi's
+  // Error-state refusal but still keeps exceptions inside the ABI.
+  try {
+    Instance fresh;
+    fresh.environment = i.environment;
+    fresh.log = i.log;
+    i = std::move(fresh);
+    return fmi3OK;
+  } catch (...) {
+    i.mode = Mode::error;
+    return fmi3Error;
+  }
 }
 fmi3Status fmi3SetDebugLogging(fmi3Instance instance, fmi3Boolean, size_t n,
                               const fmi3String[]) {
@@ -275,6 +291,7 @@ fmi3Status fmi3DoStep(fmi3Instance instance, fmi3Float64 current, fmi3Float64 st
     const auto due = i.bus.next_event();
     require(!due || end <= *due, "step passes pending countdown instant");
     i.time = end;
+    i.events_at_instant = 0;
     *event = *terminate = *early = false;
     *last = current + step;
   });

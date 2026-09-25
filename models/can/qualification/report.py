@@ -44,7 +44,10 @@ report = {
         "notification_fixture_scope": "first-party adapted consumer exercises the SiL path; it is not independent implementation compatibility evidence",
         "bus_error_source": "FMI-LS-BUS 1.0.0 Network Abstraction Tables 14-16",
         "error_confinement_scope": "fixed FMI-LS-BUS Bit Error notification; no electrical/error-counter claim",
-        "core_sanitizers": "UBSan truncation and single-byte mutations passed",
+        "core_sanitizers": "ASan+UBSan truncation and single-byte mutations passed",
+        "format_error": "corrupt operations answered with FMI-LS-BUS Format Error to the sender at the next nanosecond; unsupported well-formed operations return fmi3Error",
+        "abi_sanitizers": "ASan+UBSan lifecycle, reset, free, interleaved instances, output/callback lifetime and bounded malformed corpus through the C entry points (abi.json)",
+        "capacity": "declared per-instance limits and measured C++ heap reported separately (capacity.json); not OS memory isolation",
     },
 }
 (OUTPUT / "qualification.json").write_text(

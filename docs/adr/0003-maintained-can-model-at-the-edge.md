@@ -37,5 +37,7 @@ Manifest-covered CAN model fault schedule for deterministic Bus Error
 notifications, bounded retransmission owned by the bus model, and
 receiver-local delivery suppression. These semantics stay in the maintained
 FMU; they do not add a kernel Interceptor or claim electrical CAN error
-confinement. The maintained FMU must publish its supported profile and qualify
+confinement. Issue #157 answers corrupt operations with the standard Format
+Error in the model and bounds each instance's queues, reports and same-instant
+events; it needs no new Importer capability. The maintained FMU must publish its supported profile and qualify
 both its protocol behavior and its packaging independently of the kernel.

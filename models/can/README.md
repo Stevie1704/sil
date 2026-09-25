@@ -1,6 +1,6 @@
 # Standalone Classical CAN bus FMU
 
-Maintained C++20 model product (issues #152–#155). `src/bus.*` is independent of
+Maintained C++20 model product (issues #152–#157). `src/bus.*` is independent of
 FMI and SiL; `src/fmi.cpp` owns each instance and translates FMI calls. The
 Linux x86-64 shared object requires the C++ runtime, with no SiL symbols,
 wall-clock access, threads, environment configuration, or random state.
@@ -14,17 +14,93 @@ This is a deliberately restricted profile, not full CAN/FMI conformance.
 | Surface | Support and rejection |
 | --- | --- |
 | Topology | Four terminals (`Node1`–`Node4`) are declared; `activeNodeCount` selects the first 1–4, default 2. An inactive terminal accepts no input and receives no operation. Every active terminal receives each successful frame unless it was a sender. |
-| Encoding | Little-endian operation buffers per §§5.2 and 5.5.1. Complete buffers up to 2048 bytes; exact lengths checked before reading fields. |
+| Encoding | Little-endian operation buffers per §§5.2 and 5.5.1. Complete buffers up to 2048 bytes; exact lengths checked before reading fields. A corrupt operation is answered with `Format Error`; see [Malformed traffic](#malformed-traffic-and-resource-bounds). |
 | Transmit | `0x10`, 11-bit ID 0–2047, IDE=RTR=0, 0–8 data bytes. FD, XL, extended and remote frames rejected. |
 | Configuration | `0x40`: CAN bitrate from 10000 to 1000000 bit/s dividing 10^9. All active terminals must agree before transmission. Each may select BufferAndRetransmit (1, default) or DiscardAndNotify (2); other rates, kinds and policies fail. Configuration is consumed, never forwarded. |
 | FMI parameters | Fixed Float64 parameters `activeNodeCount` (value reference 1025, integer 1–4, default 2), `perNodeQueueCapacity` (1026, integer 1–64, default 4), `faultRetryLimit` (1027, integer 0–4, default 1), `faultRuleCount` (1028, integer 0–8, default 0), and eight ordered rule slots are set before Initialization Mode. Rule fields are fixed Float64 parameters named `faultRuleNKind`, `faultRuleNSenderNode`, `faultRuleNReceiverNode`, `faultRuleNIdentifier`, `faultRuleNRequestStartNs`, `faultRuleNRequestEndNs`, `faultRuleNOccurrence`, and `faultRuleNAttempt`; unused slots must stay zero. The existing Importer `--start instance.parameter=value` path carries these exact integers in the hashed Manifest. No external schedule file, new Manifest field, or dynamic terminal creation is used. Non-integer values and invalid scalar bounds fail at `SetFloat64`; each complete rule is validated there, and the full schedule is validated again at `ExitInitializationMode` before the Run starts. |
 | Confirmation and delivery | At successful frame end, each sender receives `Confirm` (`0x20`) and each other active terminal receives one unchanged `CanTransmit`. No loopback. A discarded loser receives `ArbitrationLost` (`0x30`, its lost ID) followed by the winning frame in the same operation buffer at that frame end. A scheduled delivery suppression omits the winning `CanTransmit` only for its named receiver; it still confirms the senders and raises no error notification. |
 | Arbitration and queue | All same-instant inputs are collected before arbitration. The lowest 11-bit identifier among each node's FIFO head wins. Each node's pending queue has the configured capacity; a frame already on the wire does not count. Full queues fail atomically and put the FMU in Error state, ending the Run. A wire frame cannot be preempted. After each frame and three-bit intermission, the heads compete again, including requests arriving at that boundary. BufferAndRetransmit leaves a loser queued; DiscardAndNotify removes its head and reports the loss. Distinct same-ID payloads fail when that ID wins, because electrical error behavior is outside the model; bit-identical same-ID frames co-transmit and all senders receive Confirm. |
-| Other operations | All other incoming opcodes, including Status, Wakeup, incoming Confirm, and Bus Error, fail explicitly. Scheduled transmission errors produce the FMI-LS-BUS `Bus Error` operation (`0x31`) to active terminals. The selected sender is the primary error reporter and the sole terminal marked as the sender; other terminals, including other co-transmitters, are secondary reporters and have `Is Sender = false`. The operation uses the standard Bit Error code (`0x01`) but is an abstract, scheduled notification, not an electrical bit-level simulation. Its 15-byte layout, error code and error flags follow the official [FMI-LS-BUS 1.0.0 Network Abstraction specification, Tables 14–16](https://fmi-standard.org/fmi-ls-bus/1.0.0/). |
+| Other operations | All other incoming opcodes the CAN chapter defines, including Status, Wakeup, incoming Format Error, Confirm, ArbitrationLost and Bus Error, fail explicitly. Unknown opcodes are corrupt and draw `Format Error` (`0x01`). Scheduled transmission errors produce the FMI-LS-BUS `Bus Error` operation (`0x31`) to active terminals. The selected sender is the primary error reporter and the sole terminal marked as the sender; other terminals, including other co-transmitters, are secondary reporters and have `Is Sender = false`. The operation uses the standard Bit Error code (`0x01`) but is an abstract, scheduled notification, not an electrical bit-level simulation. Its 15-byte layout, error code and error flags follow the official [FMI-LS-BUS 1.0.0 Network Abstraction specification, Tables 14–16](https://fmi-standard.org/fmi-ls-bus/1.0.0/). |
 | Clocks | Triggered input Rx_Clock per terminal; countdown input Tx_Clock per terminal. Active Tx Clocks state the time to the next frame end or arbitration opportunity as `counter / 10^9` s and activate together. An arbitration countdown with no delivered operation has an empty Binary output, which the Importer consumes without propagating a frame. Qualifier `Changed` when the next bus event changes, `NotYetKnown` when none is pending. Fraction and decimal queries supported. |
 | FMI | FMI 3.0 Co-Simulation, Event Mode mandatory, variable communication steps, multiple instances, reset. Binary access and Clock activation in Event Mode; Binary values may be assigned repeatedly in Initialization Mode; these assignments do not activate Clocks or submit frames and are cleared on exit. Calculated output Binary values are empty and readable during initialization. No ME, SE, rollback, serialization, intermediate updates, derivatives, structural parameters or early return. Unsupported entry points return fmi3Error (unsupported instantiation returns null). |
 | Time | Start time and every communication point must be in [0, 2^50] ns (about 13 days); there a Float64 time converts to whole nanoseconds without loss. A Float64 time is read as the nearest whole nanosecond; the SiL Importer supplies whole nanoseconds. A frame that would end later fails. |
-| Invalid calls | Invalid references, lifecycle/order, missing Clock/Binary pairs, overflow, malformed/unsupported operations, Tx activation away from a pending bus event and stepping past one return fmi3Error. Implemented calls put the instance in Error state, requiring reset/free; no C++ exception crosses the ABI. |
+| Invalid calls | Invalid references, lifecycle/order, missing Clock/Binary pairs, overflow, unsupported operations, more than 256 events at one instant, Tx activation away from a pending bus event and stepping past one return fmi3Error. Implemented calls put the instance in Error state, requiring reset/free; `fmi3Reset` is accepted from every state, including Error. No C++ exception crosses the ABI. |
+
+## Malformed traffic and resource bounds
+
+FMI-LS-BUS 1.0.0 §4 ("Format Error") has a participant answer a corrupt Bus
+Operation with `Format Error`: an operation with an unknown OP code, an
+invalid length, or content its format does not allow. The bus does this and
+continues. A well-formed operation outside this restricted profile is not
+corrupt; it fails the instance with `fmi3Error`, and the SiL Run ends as a Run
+failure (exit 1).
+
+| Input | Response |
+| --- | --- |
+| Fewer than 8 header bytes, a Length below 8, or a Length beyond the buffer | `Format Error` holding the rest of that buffer, which cannot be split further. Earlier operations of the buffer still apply. |
+| Unknown OP code | `Format Error` holding that operation; parsing continues after it. |
+| `CAN Transmit` with Length ≠ 16 + DL, DL > 8, IDE or RTR other than 0/1, or an ID beyond its 11- or 29-bit range | `Format Error` holding that operation. |
+| `Configuration` without a kind, with an unknown kind, a bitrate operation of Length ≠ 13, or an arbitration-loss operation of Length ≠ 10 or a value other than 1/2 | `Format Error` holding that operation. |
+| Well-formed extended or remote frame, CAN FD/XL Transmit, FD/XL bitrate, Status, Wakeup, or an operation only the bus produces | fmi3Error |
+| Unsupported, unrepresentable or inconsistent bitrate; Transmit before every active terminal agreed on one | fmi3Error |
+| A pending queue beyond its capacity; distinct payloads under one winning ID | fmi3Error |
+| Input above 2048 bytes, or to an inactive terminal | fmi3Error at `SetBinary` |
+| More than 256 events at one instant | fmi3Error |
+
+The report goes to the sending terminal only. It follows the official layout
+(OP code `0x01`, Length `10 + n`, 2-byte Data Length, then the `n` bytes of
+the corrupt operation). A countdown Clock cannot tick at the instant it is
+stated in, so reports fall due one nanosecond after the event that received
+the operation; all reports of one instant are concatenated in arrival order.
+When a frame end falls on that instant, the frame's operations come first.
+Reports pending for one terminal hold at most 2012 bytes, so that terminal's
+output stays within its 2048-byte maxSize alongside one frame end's
+ArbitrationLost and Transmit. A report beyond that, or at the last supported
+instant, fails with fmi3Error. The event that raised a failure commits
+nothing.
+
+Repeated activations at one instant are separate FMI events. Transmit
+requests are collected within one event only: the first event with a request
+at an idle bus starts arbitration, and a later event of the same instant
+queues behind it. The SiL Importer combines all operations of one instant for
+a terminal into one event. `UpdateDiscreteStates` never requests another
+iteration or a time event. The FMU accepts at most 256 events at one instant,
+above the Importer's own bound of 100 propagations per instant, so the limit
+only stops a master that never ends an instant.
+
+### Declared capacity and measured memory
+
+Declared per-instance limits, all fixed at compile time or by the parameters
+above:
+
+| Resource | Limit |
+| --- | --- |
+| Terminals | 4, of which `activeNodeCount` are active |
+| Pending frames | `perNodeQueueCapacity` (at most 64) per terminal, plus one frame on the wire and one automatic retry slot per terminal |
+| Rx and Tx Binary | 2048 bytes per terminal |
+| Pending Format Error reports | 2012 bytes per terminal |
+| Fault schedule | 8 rules, at most 4 automatic retries |
+| Events at one instant | 256 |
+
+`tests/capacity.cpp` fills one instance to these limits (four terminals with
+64 pending 8-byte frames each, a frame on the wire, full Format Error reports
+and 2048-byte inputs set) and counts the C++ heap bytes the instance requests.
+The build writes the result to `build/can/capacity.json`. It is a measurement
+of this build, not a declared bound, and excludes allocator overhead. An
+event copies the bus to commit it atomically, which roughly doubles the peak.
+Finite queues bound what the model stores; they are not OS memory isolation.
+Instances share the process and its allocator.
+
+Each instance owns all of its state; the library has no mutable globals.
+`tests/abi.cpp` checks through the exported C entry points, under ASan and
+UBSan: repeated instantiation, initialization failure, termination, reset
+from every state and free with traffic in flight; two differently configured
+instances with interleaved calls, one of them driven into Error state; that
+Binary outputs stay owned by the FMU and valid until the event's
+`UpdateDiscreteStates`; that the logging callback gets its environment and is
+called once per failed call; invalid arguments; and a
+bounded corpus of 1222 truncated and mutated buffers. Its outcome counts are
+in `build/can/abi.json`.
 
 ## Deterministic CAN model fault schedule
 
@@ -240,6 +316,10 @@ headers, Python base and FMPy. The subsequent test container has no network.
 Artifacts and evidence are written to `build/can/`. The same `SilCanBus.fmu`
 is loaded by independent FMPy calls and SiL's existing FMU group. Two controlled
 FMU builds and two SiL Recordings are separately compared byte for byte.
+The native core and C-entry-point checks run under ASan and UBSan. ASan cannot
+start under qemu, so an emulated host (such as Docker on Apple silicon) runs
+`CAN_SANITIZERS=undefined models/can/run.sh`; `build/can/sanitizers.txt` records
+which sanitizers ran, and CI runs both natively.
 
 The archive contains model/terminal/layered-standard XML, Linux library,
 resources/identity.json, source files and build identity, and licenses. To build
