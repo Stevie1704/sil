@@ -669,6 +669,9 @@ CORRUPT = [
     (struct.pack("<IIBB", 0x40, 10, 4, 3),) * 2,  # undefined loss behavior
     (struct.pack("<II", 0x11, 8),) * 2,  # CAN FD Transmit without its fields
     (struct.pack("<II", 0x20, 8),) * 2,  # Confirm without its ID
+    (struct.pack("<IIIBBBH", 0x11, 17, 1, 2, 0, 0, 0),) * 2,  # CAN FD Ide is no boolean
+    (struct.pack("<IIIBBBH", 0x11, 26, 1, 0, 0, 0, 9) + bytes(9),) * 2,  # no FD length
+    (struct.pack("<IIIBBBBIH", 0x12, 23, 1, 0, 2, 0, 0, 0, 1) + b"\x07",) * 2,  # XL Sec
 ]
 
 
@@ -692,7 +695,7 @@ UNSUPPORTED = [
     FRAME[:12] + b"\x01" + FRAME[13:],  # extended
     FRAME[:13] + b"\x01" + FRAME[14:],  # remote
     struct.pack("<IIIBBBH", 0x11, 17, 1, 0, 0, 0, 0),  # CAN FD
-    struct.pack("<IIIBBBBIH", 0x12, 22, 1, 0, 0, 0, 0, 0, 0),  # CAN XL
+    struct.pack("<IIIBBBBIH", 0x12, 23, 1, 0, 0, 0, 0, 0, 1) + b"\x07",  # CAN XL
     struct.pack("<IIB", 0x41, 9, 1),  # Status
     struct.pack("<II", 0x42, 8),  # Wakeup
     format_error(FRAME),  # the bus produces Format Error; it accepts none

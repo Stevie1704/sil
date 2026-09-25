@@ -495,7 +495,10 @@ void require_well_formed_outputs(const std::vector<Bytes>& outputs) {
 
 std::vector<Bytes> corpus() {
   const Bytes unknown{0xad, 0xde, 0, 0, 8, 0, 0, 0};
-  const std::vector<Bytes> seeds{bitrate(125000), discard(), frame(1, {1, 2, 3, 4}),
+  // A valid CAN FD Transmit (unsupported) so mutations reach its fields too.
+  Bytes fd{0x11, 0, 0, 0, 29, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 12, 0};
+  fd.resize(29, 0xa5);
+  const std::vector<Bytes> seeds{bitrate(125000), discard(), frame(1, {1, 2, 3, 4}), fd,
                                  frame(0x7ff, Bytes(8, 0xff)), unknown,
                                  frame(2, {}) + discard() + frame(3, {7})};
   std::vector<Bytes> cases;

@@ -40,8 +40,9 @@ with fmi3Error, and the SiL Run ends as a Run failure (exit 1).
 | Fewer than 8 header bytes, a Length below 8, or a Length beyond the buffer | `Format Error` holding the rest of that buffer, which cannot be split further. Earlier operations of the buffer still apply. |
 | Unknown OP code, or a defined OP code with a Length other than its layout gives | `Format Error` holding that operation; parsing continues after it. |
 | `CAN Transmit` with Length ≠ 16 + DL, DL > 8, IDE or RTR other than 0/1, or an ID beyond its 11- or 29-bit range | `Format Error` holding that operation. |
+| `CAN FD Transmit` with a DL no CAN FD frame has (0–8, 12, 16, 20, 24, 32, 48, 64), or IDE, BRS or ESI other than 0/1; `CAN XL Transmit` with DL 0, or IDE or SEC other than 0/1; either with an ID beyond its 11- or 29-bit range | `Format Error` holding that operation. |
 | `Configuration` without a kind, with an unknown kind, a bitrate operation of Length ≠ 13, or an arbitration-loss operation of Length ≠ 10 or a value other than 1/2 | `Format Error` holding that operation. |
-| At its exact FMI-LS-BUS layout: an extended or remote frame, CAN FD/XL Transmit, FD/XL bitrate, Status, Wakeup, or an operation only the bus produces | fmi3Error |
+| Valid in its FMI-LS-BUS layout and content: an extended or remote frame, CAN FD/XL Transmit, FD/XL bitrate, Status, Wakeup, or an operation only the bus produces | fmi3Error |
 | Unsupported, unrepresentable or inconsistent bitrate; Transmit before every active terminal agreed on one | fmi3Error |
 | A pending queue beyond its capacity; distinct payloads under one winning ID | fmi3Error |
 | Input above 2048 bytes, or to an inactive terminal | fmi3Error at `SetBinary` |

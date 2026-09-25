@@ -43,6 +43,12 @@ Bytes bus_error_operation(std::uint32_t id, bool primary, bool sender) {
           bit_error, primary ? primary_error_flag : secondary_error_flag,
           std::uint8_t(sender)};
 }
+inline constexpr std::uint32_t max_extended_identifier = 0x1fffffff;
+// The data lengths a CAN FD frame can carry, padding included.
+bool fd_data_length(unsigned length) {
+  return length <= 8 || length == 12 || length == 16 || length == 20 || length == 24 ||
+         length == 32 || length == 48 || length == 64;
+}
 unsigned u16(std::span<const std::uint8_t> b, std::size_t at) {
   return unsigned(b[at]) | (unsigned(b[at + 1]) << 8);
 }
@@ -56,15 +62,24 @@ bool well_formed(std::span<const std::uint8_t> op) {
   const auto with_data = [&](std::size_t fixed, std::size_t at) {
     return size >= fixed && size == fixed + u16(op, at);
   };
+  // FMI-LS-BUS booleans are 0 or 1.
+  const auto booleans = [&](std::size_t first, std::size_t last) {
+    return std::all_of(op.begin() + first, op.begin() + last + 1,
+                       [](std::uint8_t value) { return value <= 1; });
+  };
+  // Every Transmit layout has its ID at byte 8 and IDE at byte 12.
+  const auto identifier_fits = [&] {
+    return u32(op, 8) <= (op[12] == 1 ? max_extended_identifier : max_classical_identifier);
+  };
   switch (u32(op, 0)) {
-    case transmit_code: {
-      if (!with_data(16, 14) || u16(op, 14) > 8 || op[12] > 1 || op[13] > 1) return false;
-      const auto id_limit = op[12] == 1 ? 0x1fffffffu : max_classical_identifier;
-      return u32(op, 8) <= id_limit;
-    }
+    case transmit_code:  // ID, IDE, RTR, DL
+      return with_data(16, 14) && u16(op, 14) <= 8 && booleans(12, 13) && identifier_fits();
+    case fd_transmit_code:  // ID, IDE, BRS, ESI, DL
+      return with_data(17, 15) && fd_data_length(u16(op, 15)) && booleans(12, 14) &&
+             identifier_fits();
+    case xl_transmit_code:  // ID, IDE, SEC, SDT, VCID, AF, DL
+      return with_data(22, 20) && u16(op, 20) >= 1 && booleans(12, 13) && identifier_fits();
     case format_error_code: return with_data(10, 8);
-    case fd_transmit_code: return with_data(17, 15);
-    case xl_transmit_code: return with_data(22, 20);
     case confirm_code: case arbitration_lost_code: return size == 12;
     case bus_error_code: return size == 15;
     case status_code: return size == 9;

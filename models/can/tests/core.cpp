@@ -444,11 +444,21 @@ void corrupt_operations_get_format_errors() {
       undefined_policy{0x40, 0, 0, 0, 10, 0, 0, 0, 4, 3},
       short_confirm{0x20, 0, 0, 0, 8, 0, 0, 0},
       long_status{0x41, 0, 0, 0, 10, 0, 0, 0, 0, 0},
-      short_fd_bitrate{0x40, 0, 0, 0, 9, 0, 0, 0, 2};
+      short_fd_bitrate{0x40, 0, 0, 0, 9, 0, 0, 0, 2},
+      // CAN FD: ID, IDE, BRS, ESI, DL; CAN XL: ID, IDE, SEC, SDT, VCID, AF, DL.
+      fd_ide_not_boolean{0x11, 0, 0, 0, 17, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0},
+      fd_brs_not_boolean{0x11, 0, 0, 0, 17, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0},
+      fd_invalid_length{0x11, 0, 0, 0, 26, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 9, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0},
+      xl_sec_not_boolean{0x12, 0, 0, 0, 23, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0,
+                         0, 0, 0, 0, 1, 0, 7},
+      xl_without_data{0x12, 0, 0, 0, 22, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0, 0};
   for (const auto& op : {unknown, id_beyond_standard, long_payload, ide_not_boolean,
                          rtr_not_boolean, length_mismatch, no_kind, unknown_kind,
                          short_bitrate, undefined_policy, short_confirm, long_status,
-                         short_fd_bitrate}) {
+                         short_fd_bitrate, fd_ide_not_boolean, fd_brs_not_boolean,
+                         fd_invalid_length, xl_sec_not_boolean, xl_without_data}) {
     can::Bus fresh;  // Reporting needs no agreed bitrate.
     send(fresh, 0, op, 0);
     assert(fresh.next_event() == 1);
@@ -527,10 +537,14 @@ void unsupported_operations_fail() {
     op[4] = length;
     return op;
   };
+  auto xl_one_byte = defined(0x12, 23);
+  xl_one_byte[20] = 1;  // CAN XL carries 1..2048 data bytes
+  auto fd_twelve_bytes = defined(0x11, 17 + 12);
+  fd_twelve_bytes[15] = 12;  // a CAN FD length above Classical CAN's 8
   const can::Bytes fd_bitrate{0x40, 0, 0, 0, 13, 0, 0, 0, 2, 0xa0, 0x86, 0x01, 0},
       xl_bitrate{0x40, 0, 0, 0, 13, 0, 0, 0, 3, 0xa0, 0x86, 0x01, 0};
   for (const auto& op : {extended, remote, defined(0x01, 10), defined(0x11, 17),
-                         defined(0x12, 22), confirm(1), defined(0x30, 12),
+                         fd_twelve_bytes, xl_one_byte, confirm(1), defined(0x30, 12),
                          defined(0x31, 15), defined(0x41, 9), defined(0x42, 8), fd_bitrate,
                          xl_bitrate, bitrate(83333)}) {
     auto bus = configured(125000);
