@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[3]
 EXAMPLE = ROOT / "models/can/example"
 sys.path.insert(0, str(EXAMPLE))
 import independent  # noqa: E402
-import scenario  # noqa: E402
+import configuration  # noqa: E402
 
 ARTIFACTS = ROOT / "build/can"
 BUS = ARTIFACTS / "SilCanBus.fmu"
@@ -86,7 +86,7 @@ def test_sil_run_matches_the_independent_master():
 def test_other_step_period_and_node_count_need_no_source_edit(tmp_path):
     import sil_run
 
-    config = scenario.load(EXAMPLE / "example.json")
+    config = configuration.load(EXAMPLE / "example.json")
     config["step_period_ns"] = 1000
     config["nodes"] = config["nodes"][:2]
     config["frames"] = [f for f in config["frames"] if f["node"] != 3]

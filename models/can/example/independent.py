@@ -4,7 +4,7 @@
 
 This event-driven FMI 3.0 master stops at every request instant and at every
 countdown instant that the bus gives, then records every Tx activation. It shares
-only `scenario.py` with the SiL path: the configuration, not the execution.
+only `configuration.py` with the SiL path: the configuration, not the execution.
 The caller sets the deadline.
 """
 
@@ -20,15 +20,15 @@ import fmpy
 from fmpy import extract, read_model_description
 from fmpy.fmi3 import FMU3Slave
 
-import scenario
+import configuration
 
 NS = 1_000_000_000
 CHANGED, NOT_YET_KNOWN = 2, 0
 
 
 def run(config, archive):
-    limits = scenario.packaged_limits(archive)
-    inputs = scenario.requests(config, limits)
+    limits = configuration.packaged_limits(archive)
+    inputs = configuration.requests(config, limits)
     description = read_model_description(archive, validate=True)
     references = {v.name: v.valueReference for v in description.modelVariables}
     unpacked = extract(archive)
@@ -42,7 +42,7 @@ def run(config, archive):
     try:
         assignments = [
             start.removeprefix("bus.").split("=")
-            for start in scenario.start_values(config)
+            for start in configuration.start_values(config)
         ]
         bus.setFloat64([references[name] for name, _ in assignments],
                        [float(value) for _, value in assignments])
@@ -105,7 +105,7 @@ def next_bus_event(bus, terminal, now, due):
 
 def main(config_path, archive_path, output_path):
     archive = Path(archive_path)
-    trace = run(scenario.load(config_path), archive)
+    trace = run(configuration.load(config_path), archive)
     Path(output_path).write_text(json.dumps({
         "execution_path": "FMPy FMI 3.0 calls, no SiL Importer or runner",
         "reference_tool": {"fmpy": fmpy.__version__,

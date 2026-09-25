@@ -3,6 +3,7 @@
   "step_period_ns": 250000,
   "bitrate": 500000,
   "per_node_queue_capacity": 2,
+  "per_terminal_buffer_capacity": 256,
   "fault_retry_limit": 1,
   "nodes": [
     {"arbitration_loss": "BufferAndRetransmit"},

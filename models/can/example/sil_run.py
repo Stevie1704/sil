@@ -5,11 +5,13 @@
 RUNNER defaults to `sil-run` on PATH. Every Run has a deadline and a
 Participant response deadline. The two Recordings of one Manifest must be
 byte-identical. WORKDIR receives the Manifest, both Recordings, their logs
-and `trace.json`, which states the SiL version and where `sil` was imported
-from, so an installed bundle can be told apart from a source tree.
+and `trace.json`. It states the SiL version, where `sil` was imported from,
+and whether that module is a file of the installed `sil` distribution, so an
+installed bundle can be told apart from a source tree.
 """
 
 import hashlib
+import importlib.metadata
 import json
 import subprocess
 import sys
@@ -20,7 +22,7 @@ from sil import schema
 from sil.manifest import Manifest, SubscriberRoute
 from sil.recording import read_records
 
-import scenario
+import configuration
 
 HERE = Path(__file__).resolve().parent
 BUS_PROFILE = "application/org.fmi-standard.fmi-ls-bus.can"
@@ -38,8 +40,8 @@ def buffer_schema(capacity):
 
 def author(config, archive, path):
     """A Manifest whose command lines carry the whole configuration."""
-    limits = scenario.packaged_limits(archive)
-    inputs = scenario.requests(config, limits)
+    limits = configuration.packaged_limits(archive)
+    inputs = configuration.requests(config, limits)
     nodes = range(1, len(config["nodes"]) + 1)
     requests = [f"in.node{n}" for n in nodes]
     observed = [f"out.node{n}" for n in nodes]
@@ -63,7 +65,7 @@ def author(config, archive, path):
     for n in nodes:
         command += ["--bind", f"in.node{n}:data=bus.Node{n}.Rx_Data",
                     "--bind", f"out.node{n}:data=bus.Node{n}.Tx_Data"]
-    for start in scenario.start_values(config):
+    for start in configuration.start_values(config):
         command += ["--start", start]
     manifest.add_process(
         "bus",
@@ -101,12 +103,22 @@ def recorded_trace(recording, capacity):
     return sorted(trace)
 
 
+def imported_from_installed_distribution():
+    """True if `sil` is a file the installed `sil` distribution records."""
+    try:
+        files = importlib.metadata.distribution("sil").files or []
+    except importlib.metadata.PackageNotFoundError:
+        return False
+    module = Path(sil.__file__).resolve()
+    return any(Path(file.locate()).resolve() == module for file in files)
+
+
 def sha256(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def main(config_path, archive_path, workdir, runner="sil-run"):
-    config = scenario.load(config_path)
+    config = configuration.load(config_path)
     archive, workdir = Path(archive_path).resolve(), Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
     manifest = author(config, archive, workdir / "manifest.json")
@@ -117,11 +129,12 @@ def main(config_path, archive_path, workdir, runner="sil-run"):
         raise SystemExit("two Runs of one Manifest produced different Recordings")
     build_info = subprocess.run([runner, "--build-info"], capture_output=True,
                                 text=True, timeout=30, check=True).stdout
-    capacity = scenario.packaged_limits(archive)["max_binary_size"]
+    capacity = configuration.packaged_limits(archive)["max_binary_size"]
     (workdir / "trace.json").write_text(json.dumps({
         "execution_path": "SiL runner and FMU group Importer",
         "sil_version": sil.__version__,
         "sil_module": sil.__file__,
+        "sil_installed": imported_from_installed_distribution(),
         "runner_build_info": build_info,
         "fmu_sha256": sha256(archive),
         "manifest_sha256": manifest.hash,

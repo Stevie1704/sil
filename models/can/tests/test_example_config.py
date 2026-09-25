@@ -9,7 +9,7 @@ import pytest
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "example"
 sys.path.insert(0, str(EXAMPLE))
-import scenario  # noqa: E402
+import configuration  # noqa: E402
 
 LIMITS = {"terminals": 4, "max_binary_size": 2048}
 
@@ -20,6 +20,7 @@ def config(**changes):
         "step_period_ns": 250_000,
         "bitrate": 500_000,
         "per_node_queue_capacity": 2,
+        "per_terminal_buffer_capacity": 2048,
         "fault_retry_limit": 1,
         "nodes": [
             {"arbitration_loss": "BufferAndRetransmit"},
@@ -41,7 +42,7 @@ def policy_operation(policy):
 
 
 def test_nodes_are_configured_at_zero_and_frames_follow_in_node_order():
-    requests = scenario.requests(config(), LIMITS)
+    requests = configuration.requests(config(), LIMITS)
     assert requests == [
         (0, 0, bitrate_operation(500_000) + policy_operation(1)),
         (0, 1, bitrate_operation(500_000) + policy_operation(2)),
@@ -54,7 +55,7 @@ def test_operations_of_one_node_and_instant_share_one_buffer():
         {"node": 1, "at_ns": 0, "identifier": 1, "data": ""},
         {"node": 1, "at_ns": 0, "identifier": 2, "data": "ff"},
     ]
-    (instant, node, buffer), second = scenario.requests(config(frames=frames), LIMITS)
+    (instant, node, buffer), second = configuration.requests(config(frames=frames), LIMITS)
     assert (instant, node) == (0, 0)
     assert buffer == (
         bitrate_operation(500_000) + policy_operation(1)
@@ -70,9 +71,10 @@ def test_start_values_select_nodes_capacity_and_fault_schedule():
         "receiver_node": 0, "identifier": 0x123, "request_start_ns": 1000,
         "request_end_ns": 1000, "occurrence": 1, "attempt": 1,
     }
-    assert scenario.start_values(config(faults=[fault])) == [
+    assert configuration.start_values(config(faults=[fault])) == [
         "bus.activeNodeCount=2",
         "bus.perNodeQueueCapacity=2",
+        "bus.perTerminalBufferCapacity=2048",
         "bus.faultRetryLimit=1",
         "bus.faultRuleCount=1",
         "bus.faultRule1Kind=1",
@@ -92,7 +94,7 @@ def test_suppression_is_named_as_its_own_fault_kind():
         "receiver_node": 2, "identifier": 1, "request_start_ns": 0,
         "request_end_ns": 10, "occurrence": 1, "attempt": 1,
     }
-    assert "bus.faultRule1Kind=2" in scenario.start_values(config(faults=[fault]))
+    assert "bus.faultRule1Kind=2" in configuration.start_values(config(faults=[fault]))
 
 
 def test_packaged_limits_are_read_from_the_archive(tmp_path):
@@ -109,7 +111,7 @@ def test_packaged_limits_are_read_from_the_archive(tmp_path):
     archive = tmp_path / "bus.fmu"
     with zipfile.ZipFile(archive, "w") as fmu:
         fmu.writestr("modelDescription.xml", description)
-    assert scenario.packaged_limits(archive) == {
+    assert configuration.packaged_limits(archive) == {
         "terminals": 2, "max_binary_size": 2048,
     }
 
@@ -123,19 +125,23 @@ def test_packaged_limits_are_read_from_the_archive(tmp_path):
      "8 data bytes"),
     ({"frames": [{"node": 1, "at_ns": 5, "identifier": 1, "data": "00" * 8}] * 90},
      "2048"),
+    ({"per_terminal_buffer_capacity": 64,
+      "frames": [{"node": 1, "at_ns": 0, "identifier": 1, "data": "00" * 8}] * 2},
+     "capacity of 64"),
+    ({"per_terminal_buffer_capacity": 4096}, "packaged"),
     ({"frames": [{"node": 1, "at_ns": 2_000_000, "identifier": 1, "data": ""}]},
      "duration"),
     ({"faults": [{"kind": "BitFlip"}]}, "kind"),
 ])
 def test_invalid_example_is_rejected_before_any_run(changes, message):
     with pytest.raises(ValueError, match=message):
-        scenario.requests(config(**changes), LIMITS)
+        configuration.requests(config(**changes), LIMITS)
 
 
 def test_shipped_example_compiles():
     example = json.loads((EXAMPLE / "example.json").read_text())
-    requests = scenario.requests(example, LIMITS)
+    requests = configuration.requests(example, LIMITS)
     assert len({node for _, node, _ in requests}) == len(example["nodes"])
-    assert scenario.start_values(example)[0] == (
+    assert configuration.start_values(example)[0] == (
         f"bus.activeNodeCount={len(example['nodes'])}"
     )

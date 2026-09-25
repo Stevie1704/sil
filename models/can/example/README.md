@@ -6,7 +6,7 @@ file drives a SiL Run and an independent FMPy run of `SilCanBus.fmu`.
 | File | Purpose | Needs |
 | --- | --- | --- |
 | `example.json` | The shipped configuration | — |
-| `scenario.py` | Validates a configuration against the archive's packaged limits. Compiles it into FMU start values and one operation buffer per node and instant. | Python standard library |
+| `configuration.py` | Validates a configuration against the archive's packaged limits. Compiles it into FMU start values and one operation buffer per node and instant. | Python standard library |
 | `sil_run.py` | Writes the SiL Manifest, Runs it twice with deadlines, checks that the Recordings are identical and writes `trace.json` | installed SiL (`sil` and `sil-run`) |
 | `stimulus.py` | The node Participant: publishes each request in the Step that holds it | installed SiL |
 | `independent.py` | An FMI 3.0 master on FMPy that drives the FMU directly and writes the same trace | FMPy, no SiL |
@@ -18,13 +18,16 @@ file drives a SiL Run and an independent FMPy run of `SilCanBus.fmu`.
 | `nodes` | One entry per active node, in terminal order. Each has `arbitration_loss`: `BufferAndRetransmit` or `DiscardAndNotify`. The length sets `activeNodeCount`. | FMU parameter; each node's Configuration operation at 0 ns |
 | `bitrate` | CAN bitrate in bit/s that all nodes configure at 0 ns (10000–1000000, dividing 10^9) | Configuration operation |
 | `per_node_queue_capacity` | Pending frames per node (1–64) | FMU parameter |
+| `per_terminal_buffer_capacity` | Operation buffer bytes per terminal and event (64 up to the packaged `maxSize`, 2048) | FMU parameter |
 | `fault_retry_limit` | Automatic retries after a scheduled Bus Error (0–4) | FMU parameter |
 | `faults` | Up to 8 rules. `kind` is `ScheduledTransmissionError` or `ReceiverDeliverySuppression`. The fields are those of the [fault schedule](../README.md#deterministic-can-model-fault-schedule), with 1-based nodes. | FMU parameters |
 | `frames` | Requests: `node` (1-based), `at_ns`, 11-bit `identifier`, `data` as hex (0–8 bytes) | Rx operations |
 | `duration_ns`, `step_period_ns` | Run length and the SiL Step period. The trace does not depend on the Step period. | Manifest |
 
-`scenario.py` reads the packaging-time limits (terminal count and Binary
+`configuration.py` reads the packaging-time limits (terminal count and Binary
 `maxSize`) from the archive and refuses a configuration that exceeds them.
+The buffer capacity must not exceed the packaged `maxSize`, and each compiled
+buffer must fit the buffer capacity.
 It also refuses these items: a frame with more than 8 data bytes, a frame from
 an inactive node, a request outside the duration and an unknown fault kind.
 The FMU validates its own parameter ranges and the bitrate before the Run
@@ -34,7 +37,8 @@ packaging-time limits differ from Run configuration.
 
 ## The shipped example
 
-Three nodes at 500 kbit/s (bit time 2000 ns). Node3 discards a request that
+Three nodes at 500 kbit/s (bit time 2000 ns), a queue capacity of 2 and a
+buffer capacity of 256 bytes. Node3 discards a request that
 loses arbitration. Node2 (`0x200`, 1 byte) and Node3 (`0x300`, no data) contend
 at 1000 ns. Node1 requests `0x100` (2 bytes) at 500000 ns, and a scheduled
 Bit Error hits its first attempt. The bus retries once.

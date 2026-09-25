@@ -67,11 +67,15 @@ A Run selects its bus without editing C++. Two kinds of limit exist:
 | Kind | Items | Set by |
 | --- | --- | --- |
 | Packaging-time terminal limits | 4 declared terminals (`Node1`–`Node4`); Binary `maxSize` 2048 bytes per terminal; 8 fault rule slots; queue capacity at most 64; at most 4 automatic retries; 256 events at one instant | `profile.json` and the C++ source, fixed in the archive. A change is a new build. |
-| Run configuration | active node count (1–4); per-node queue capacity; fault retry limit and fault rules | Fixed FMI parameters, set with `--start` in the SiL Manifest (hashed) or `fmi3SetFloat64` before Initialization Mode |
+| Run configuration | active node count (1–4); per-node queue capacity (1–64); per-terminal operation buffer capacity (64 bytes up to the packaged `maxSize`); fault retry limit and fault rules | Fixed FMI parameters, set with `--start` in the SiL Manifest (hashed) or `fmi3SetFloat64` before Initialization Mode |
 | Node configuration | bitrate; arbitration-loss policy (BufferAndRetransmit or DiscardAndNotify) | Each node's FMI-LS-BUS Configuration operation |
 
-The data field of a Classical CAN frame is at most 8 bytes. The 2048-byte
-`maxSize` limits one terminal's operation buffer for one event.
+The data field of a Classical CAN frame is at most 8 bytes. That is fixed by
+the protocol. The payload capacity of a terminal is the size of its operation
+buffer for one event. The archive declares a `maxSize` of 2048 bytes. A Run
+selects a smaller or equal capacity with `perTerminalBufferCapacity`. A larger
+input then fails the instance. Format Error reports get the capacity minus
+36 bytes.
 
 [`example/`](example/README.md) is a documented example. One JSON file selects
 the node count, bitrate, arbitration policy per node, queue capacity, frames
@@ -127,7 +131,7 @@ installed wheel and `sil-run`; the container has no source tree and no
 network. The independent path is FMPy 0.3.32 in the qualification image,
 where `sil` cannot be imported. It does not reuse SiL's Importer. The two
 traces must be equal. Both paths read one configuration through
-`example/scenario.py`, so a fault in that encoding would affect both in the
+`example/configuration.py`, so a fault in that encoding would affect both in the
 same way. `tests/test_example.py` therefore also checks both traces against a
 table derived by hand from the independent wire model. Each container has a deadline, and each Run and
 Participant response has its own deadline. The retained evidence is under

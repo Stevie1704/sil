@@ -2,10 +2,11 @@
 
 Standard library only, so the SiL path and the independent FMI path read one
 configuration without sharing an execution engine. Bitrate and arbitration
-policy are what each node asks for with FMI-LS-BUS Configuration operations;
-node count, queue capacity and the fault schedule are the FMU's fixed
-parameters. The terminal count and Binary maxSize are fixed when the archive
-is packaged and are read from its modelDescription.xml.
+policy are what each node asks for with FMI-LS-BUS Configuration operations.
+Node count, queue capacity, operation buffer capacity and the fault schedule
+are the FMU's fixed parameters. The terminal count and Binary maxSize are
+fixed when the archive is packaged and are read from its modelDescription.xml.
+The configured buffer capacity cannot exceed that maxSize.
 """
 
 import json
@@ -54,6 +55,7 @@ def start_values(config):
     starts = [
         f"bus.activeNodeCount={len(config['nodes'])}",
         f"bus.perNodeQueueCapacity={config['per_node_queue_capacity']}",
+        f"bus.perTerminalBufferCapacity={config['per_terminal_buffer_capacity']}",
         f"bus.faultRetryLimit={config['fault_retry_limit']}",
         f"bus.faultRuleCount={len(config['faults'])}",
     ]
@@ -79,11 +81,12 @@ def requests(config, limits):
     for frame in config["frames"]:
         key = (frame["at_ns"], frame["node"] - 1)
         buffers[key] = buffers.get(key, b"") + transmit(frame)
+    capacity = config["per_terminal_buffer_capacity"]
     for (instant, node), buffer in buffers.items():
-        if len(buffer) > limits["max_binary_size"]:
+        if len(buffer) > capacity:
             raise ValueError(
                 f"node {node + 1} at {instant} ns needs {len(buffer)} bytes; the "
-                f"archive was packaged with {limits['max_binary_size']}"
+                f"Run configured a capacity of {capacity}"
             )
     return [(instant, node, buffers[instant, node]) for instant, node in sorted(buffers)]
 
@@ -109,6 +112,11 @@ def validate(config, limits):
     if len(nodes) > limits["terminals"]:
         raise ValueError(
             f"{len(nodes)} nodes exceed the {limits['terminals']} packaged terminals"
+        )
+    if config["per_terminal_buffer_capacity"] > limits["max_binary_size"]:
+        raise ValueError(
+            f"per_terminal_buffer_capacity exceeds the packaged maxSize of "
+            f"{limits['max_binary_size']} bytes"
         )
     for settings in nodes:
         if settings.get("arbitration_loss") not in ARBITRATION_LOSS:
