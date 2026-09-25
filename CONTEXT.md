@@ -289,6 +289,14 @@ correct, not whether the run reproduces. A tolerance check and never a bit
 comparison — the vendor produced it on another machine class.
 _Avoid_: golden file, expected output, baseline, ground truth
 
+**Comparison contract**:
+The authored statement of how one Recording is compared with a reference:
+the Channels and fields, each side's publication-to-observation offset, the
+Observation grid, the evaluation window, and one exact or tolerance rule per
+field. It is not a determinism check: it judges agreement between two
+trajectories, not whether a Run reproduces.
+_Avoid_: golden test, diff config, tolerance file
+
 **Sensitivity envelope**:
 A predeclared bound on observed differences in a sensitivity experiment. It
 states what deviations the experiment accepts; it is not fitted from the

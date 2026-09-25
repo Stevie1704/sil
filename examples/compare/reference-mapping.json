@@ -1,0 +1,87 @@
+{
+  "sil_csv_mapping": 1,
+  "timestamp": {
+    "column": "time_s",
+    "unit": "s"
+  },
+  "schemas": {
+    "Output": {
+      "fields": [
+        {
+          "name": "ego_position_m",
+          "type": "f64"
+        },
+        {
+          "name": "ego_speed_mps",
+          "type": "f64"
+        },
+        {
+          "name": "lead_position_m",
+          "type": "f64"
+        },
+        {
+          "name": "lead_speed_mps",
+          "type": "f64"
+        },
+        {
+          "name": "gap_m",
+          "type": "f64"
+        },
+        {
+          "name": "relative_speed_mps",
+          "type": "f64"
+        }
+      ]
+    }
+  },
+  "channels": [
+    {
+      "channel": "plant0",
+      "schema": "Output",
+      "fields": {
+        "ego_position_m": {
+          "column": "plant0.ego_position_m"
+        },
+        "ego_speed_mps": {
+          "column": "plant0.ego_speed_mps"
+        },
+        "lead_position_m": {
+          "column": "plant0.lead_position_m"
+        },
+        "lead_speed_mps": {
+          "column": "plant0.lead_speed_mps"
+        },
+        "gap_m": {
+          "column": "plant0.gap_m"
+        },
+        "relative_speed_mps": {
+          "column": "plant0.relative_speed_mps"
+        }
+      }
+    },
+    {
+      "channel": "plant1",
+      "schema": "Output",
+      "fields": {
+        "ego_position_m": {
+          "column": "plant1.ego_position_m"
+        },
+        "ego_speed_mps": {
+          "column": "plant1.ego_speed_mps"
+        },
+        "lead_position_m": {
+          "column": "plant1.lead_position_m"
+        },
+        "lead_speed_mps": {
+          "column": "plant1.lead_speed_mps"
+        },
+        "gap_m": {
+          "column": "plant1.gap_m"
+        },
+        "relative_speed_mps": {
+          "column": "plant1.relative_speed_mps"
+        }
+      }
+    }
+  ]
+}
