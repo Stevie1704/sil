@@ -16,6 +16,7 @@ dev = ["pytest>=8"]
 
 [project.scripts]
 sil-check = "sil.check:main"
+sil-compare = "sil.compare:main"
 sil-csv = "sil.csv_recording:main"
 sil-fmi-inspect = "sil.fmi.inspection:main"
 sil-footprint = "sil.footprint:main"

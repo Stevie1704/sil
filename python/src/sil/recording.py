@@ -8,6 +8,7 @@ file to an MCAP decoder. MCAP is the only format in v1.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Iterator
 
@@ -27,6 +28,27 @@ def read_records(path: str | Path) -> Iterator[tuple[str, int, bytes]]:
         f"unrecognized recording format {path.suffix!r} for recording "
         f"{str(path)!r}"
     )
+
+
+def read_schemas(path: str | Path) -> dict[str, dict]:
+    """The schema declaration of every recorded Channel, by Channel name.
+
+    Dispatches like `read_records`. A Channel with no Messages is still
+    listed, because the Recording declares it."""
+    path = Path(path)
+    if path.suffix != ".mcap":
+        # read_records states the refusal.
+        read_records(path)
+    from mcap.reader import make_reader
+
+    with open(path, "rb") as f:
+        summary = make_reader(f).get_summary()
+    if summary is None:
+        raise ValueError(f"recording {str(path)!r} has no summary section")
+    return {
+        channel.topic: json.loads(summary.schemas[channel.schema_id].data)
+        for channel in summary.channels.values()
+    }
 
 
 def _read_mcap(path: Path) -> Iterator[tuple[str, int, bytes]]:
