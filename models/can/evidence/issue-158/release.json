@@ -6,14 +6,14 @@
   "spec_revision": "8abdf039bfb994c794e4c15bce575cfc00a1ab6e",
   "fmu": {
     "file": "SilCanBus-1.0.0-x86_64-linux.fmu",
-    "sha256": "dc019747485dbb875c5b2c070b2e7caad5129ee0620290ff8a9a2e573682f13c"
+    "sha256": "474828e086e47af5b14316e99b421283f7a8045fd33993bbfa6ffdb49317f427"
   },
   "reproducibility": {
     "controlled_builds": 2,
     "byte_identical": true
   },
   "build": {
-    "git_revision": "ebc1c67a311958828cc8dc1e3b44fc235aeaba6e",
+    "git_revision": "e4f5d05181a327e99d0255015a6f8ab07d9f94fc",
     "source_dirty": false,
     "compiler": "c++ (Debian 12.2.0-14+deb12u1) 12.2.0",
     "flags": [
@@ -24,20 +24,20 @@
       "-Wl,--no-undefined"
     ],
     "fmi_headers": "FMPy 0.3.32",
-    "image": "sha256:5132ce39935541dd7449f8106045aa355a9d37133d904bf08ef60eac4f450742"
+    "image": "sha256:2516c2097f3501cc350f5b73740a2913d4070af8fec9c6245f7b166d70064c00"
   },
   "sources": {
-    "build.py": "b13ef1842642bf409d8ba2a9c5162b6fb0fac2a294d88b5a397786e2479c4b3e",
+    "build.py": "2bf965b728110155f4244556dc644e9d01525d3e44185cf0ff1edde2df18474c",
     "build.sh": "7d148ca9e627b24a7e6794015cf7c6d56853d59adb12536fc152d3e8c761932e",
     "build_support.py": "7e374e1e2fb0b250bc3bd4c7fa46b7cf3a66f24df90d9ec472be517d9491804d",
-    "bus.cpp": "8a0068694dfbf6223ada234ab19308a2365eec1a92f187596a6b3ca0144c00ad",
-    "bus.hpp": "5b7accd37ae7922ea15d22343c71d29931cc220eaf5a5dab0e6279ed42305219",
-    "fmi.cpp": "a8cb9e2eec12b98c228be4122ef1113a178ddcb2fc1741cce41236398c82a7ca",
+    "bus.cpp": "8ac0dce5357d9cea2bf58e451817b2158c0c524312404cf350c0db37eac19d26",
+    "bus.hpp": "20fb9e9fb90ea595a6179ae91be35228b23926647667fc431f6892e554395efd",
+    "fmi.cpp": "0bd9ae736851388f09028bb6b7513b777476541cca13ee9bbee6095148598ac6",
     "fmi3FunctionTypes.h": "77bb086dbf9b9123f75edc2a90a0f27fb5c32f913ab3f9b69fe2e2cbc2448b24",
     "fmi3Functions.h": "6367e9f7895848ed8d06c8a9b7f77e72d9f3eae102f64c313d51c10049b720ee",
     "fmi3PlatformTypes.h": "19ea19ae07cdab582931fc1a545d9aeef3d5066da131ee96a7e393e72164fa30",
-    "profile.hpp": "df5ca4bad949f621290b69b7a61e50c3ea1c9d314ec10f49b3357321a4c265db",
-    "profile.json": "c069f5f36e5f2c9c6324dc968f95fc3ffce6a473ef116482cff4241fe7941d3a",
+    "profile.hpp": "a0a1f021c8feb3d4b906b5a90aec0f6ffe09869e23766c20cf454b457bc5b67d",
+    "profile.json": "aa645ae6f41a7b2388fface5227d8d2645f8f4ac535332b25347c7e42507d91a",
     "unsupported.cpp": "6618e387295608cff04ff0e47d1a32ea87b5646b1a6315cce10c538b5443138e"
   },
   "releasable": true
