@@ -184,6 +184,18 @@ existing Process-participant response deadline through `sil-check`.
   so any format that does not keep write order intact must record an explicit
   sequence. MCAP satisfies this via FileOrder reads of an in-order, uncompressed
   write.
+- **Bounded replay reads (#180):** a Replay participant opens its Recording
+  once and reads it through that one descriptor: a block-wise SHA-256 pass and
+  a full decode pass before any participant steps, then a streaming pass while
+  the Run advances. Resident payload is one read buffer, bounded by the largest
+  record, not by file length; metadata (the MCAP summary's chunk index) is
+  stated apart from it. Reading twice keeps every file-level failure at load
+  time (exit 2) instead of mid-Run; a Recording without its footer or with an
+  undecodable record is now rejected rather than replayed with Messages
+  missing. The one descriptor makes the validated file the consumed one; an
+  in-place write shows as a changed size or modification time and fails the
+  Run. Stored order is kept as the tie-break and is not sorted: a non-monotone
+  Recording publishes each Message at its own time, as before.
 - **POSIX vECU clock shim (#4):** preload interposition, resolving the open
   question in favor of `LD_PRELOAD` (Linux) / `DYLD_INSERT_LIBRARIES` with a
   `__DATA,__interpose` table (macOS). Link-time wrapping is rejected — opaque

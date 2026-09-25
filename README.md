@@ -771,6 +771,39 @@ fields of the existing schema types; one linear scale and offset per field;
 times from 0 to 2^64 − 1 ns after the origin. There is no decoder for MDF,
 ROS bags, BLF or DBC, and no array or payload fields.
 
+## Replay a long Recording
+
+A Replay participant does not keep its Recording in memory. Before any
+participant steps, it reads the Recording twice: once to compare its SHA-256
+with the Manifest, and once to decode every record. While the Run advances, it
+reads the Recording again, one record at a time. Each read is a full or
+partial pass over the file, so a long Recording costs read time, not memory.
+
+- **Payload memory** is one read buffer per Replay participant. It grows to
+  the largest record in the Recording and no further: for MCAP, the largest
+  chunk, or the largest single message if that is larger. It does not grow
+  with the length of the Recording or with the Channels it does not replay.
+  `sil-run-instrumented` reports it as
+  `deterministic.replay_read_buffer.high_water_bytes`.
+- **Metadata memory** is separate and grows with the number of chunks: the
+  MCAP summary holds one chunk index per chunk, with one offset for each
+  Channel in that chunk, plus every Channel and schema record.
+- **A damaged Recording is a Manifest error** (exit 2), also when the Manifest
+  hash matches it: a Recording without its footer (cut short), or with a
+  record that does not decode, is rejected before any participant steps.
+- **The validated file is the file that is replayed.** The Replay participant
+  opens the Recording once and does all its reads through that open file.
+  Renaming, deleting or replacing the path during the Run has no effect on
+  the replay. Writing into the file during the Run changes its size or
+  modification time; the next read sees that and the Run fails (exit 1) with
+  "changed after it was validated". A write that keeps both the size and the
+  modification time is not detected.
+- **Timestamps are replayed as stored, not sorted.** A Message stored after a
+  Message with a later time is published at its own time as soon as the
+  Messages before it are published, in a Slot earlier than the one before it.
+  A Recording whose times start at or after the Duration publishes nothing.
+  `sil-csv` rejects descending timestamps, so its Recordings are in time order.
+
 ## Run one Manifest in a Linux container
 
 Build the production image from its pinned base-image digest and exact Python
