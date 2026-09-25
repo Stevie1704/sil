@@ -216,24 +216,36 @@ def _shape(field: dict) -> str:
     return f"a {field['type']!r} array of {count}"
 
 
-def _require_mappable(binding: Binding) -> None:
-    """Reject a variable whose type or shape this importer does not map."""
-    variable = binding.variable
+def unmappable(variable: Variable) -> str | None:
+    """Why this importer maps no Channel field to a variable, or None.
+
+    The reason completes a sentence that opens by naming the variable, so a
+    rejected binding and an inspection report state the same rule in the same
+    words.
+    """
     if variable.value_count != 1:
-        raise ManifestError(
-            f"{binding}, which declares {dimensions(variable)}; this importer "
-            f"maps variables of one value"
+        return (
+            f"which declares {dimensions(variable)}; this importer maps "
+            f"variables of one value"
         )
     if variable.kind == CLOCK:
-        raise ManifestError(
-            f"{binding}, which is a Clock variable; a Clock is driven through "
-            f"the variable it gates rather than bound to a field of its own"
+        return (
+            "which is a Clock variable; a Clock is driven through the "
+            "variable it gates rather than bound to a field of its own"
         )
     if variable.kind != BINARY and variable.kind not in SCALARS:
-        raise ManifestError(
-            f"{binding}, which is a {variable.kind} variable; this importer "
-            f"maps Binary and the scalar types {', '.join(SCALARS)}"
+        return (
+            f"which is a {variable.kind} variable; this importer maps Binary "
+            f"and the scalar types {', '.join(SCALARS)}"
         )
+    return None
+
+
+def _require_mappable(binding: Binding) -> None:
+    """Reject a variable whose type or shape this importer does not map."""
+    reason = unmappable(binding.variable)
+    if reason is not None:
+        raise ManifestError(f"{binding}, {reason}")
 
 
 def _require_causality(binding: Binding, causality: str) -> None:
@@ -333,42 +345,65 @@ def _require_every_field_carried(
             )
 
 
-def _gating_clock(
-    binding: Binding, description: ModelDescription
-) -> Variable:
-    """The Clock one clocked variable declares, checked against the profile."""
-    variable = binding.variable
+def unclockable(variable: Variable, description: ModelDescription) -> str | None:
+    """Why this importer carries no clocked payload of a variable, or None.
+
+    Worded like `unmappable`: the reason completes a sentence that names the
+    variable first.
+    """
+    if variable.kind != BINARY:
+        return (
+            f"which is a clocked {variable.kind} variable; this importer "
+            f"carries a clocked variable as a bounded Binary payload"
+        )
+    return unmappable(variable) or _unsupported_clock(variable, description)
+
+
+def _unsupported_clock(
+    variable: Variable, description: ModelDescription
+) -> str | None:
+    """Why the Clock gating a variable is outside the profile, or None."""
     if len(variable.clocks) != 1:
-        raise ManifestError(
-            f"{binding}, which declares {len(variable.clocks)} Clocks; this "
-            f"importer carries a variable gated by one Clock"
+        return (
+            f"which declares {len(variable.clocks)} Clocks; this importer "
+            f"carries a variable gated by one Clock"
         )
     clock = description.clock(variable.clocks[0])
     if clock is None:
-        raise ManifestError(
-            f"{binding}, whose clocks attribute names value reference "
+        return (
+            f"whose clocks attribute names value reference "
             f"{variable.clocks[0]}, which FMU "
             f"{description.model_identifier!r} declares no Clock for"
         )
     if clock.interval_variability != TRIGGERED:
-        raise ManifestError(
-            f"{binding}, which is gated by Clock {clock.name!r} of "
-            f"intervalVariability {clock.interval_variability!r}; this "
-            f"importer drives {TRIGGERED!r} Clocks"
+        return (
+            f"which is gated by Clock {clock.name!r} of intervalVariability "
+            f"{clock.interval_variability!r}; this importer drives "
+            f"{TRIGGERED!r} Clocks"
         )
     if clock.causality != variable.causality:
-        raise ManifestError(
-            f"{binding}, which is gated by Clock {clock.name!r} of causality "
+        return (
+            f"which is gated by Clock {clock.name!r} of causality "
             f"{clock.causality!r}; a Clock gates a variable of its own "
             f"causality"
         )
     if not description.has_event_mode:
-        raise ManifestError(
-            f"{binding}, which is gated by Clock {clock.name!r}; FMU "
+        return (
+            f"which is gated by Clock {clock.name!r}; FMU "
             f"{description.model_identifier!r} declares "
             f"{HAS_EVENT_MODE}=false, and a Clock is driven from Event Mode"
         )
-    return clock
+    return None
+
+
+def _gating_clock(
+    binding: Binding, description: ModelDescription
+) -> Variable:
+    """The Clock one clocked variable declares, checked against the profile."""
+    reason = _unsupported_clock(binding.variable, description)
+    if reason is not None:
+        raise ManifestError(f"{binding}, {reason}")
+    return description.clock(binding.variable.clocks[0])
 
 
 def event_time_field(
@@ -419,11 +454,7 @@ def clocked_payload(
             f"and nothing else"
         )
     if binding.variable.kind != BINARY:
-        raise ManifestError(
-            f"{binding}, which is a clocked {binding.variable.kind} variable; "
-            f"this importer carries a clocked variable as a bounded Binary "
-            f"payload"
-        )
+        raise ManifestError(f"{binding}, {unclockable(bound[field], description)}")
     _require_mappable(binding)
     _require_causality(binding, causality)
     clock = _gating_clock(binding, description)

@@ -22,9 +22,11 @@ from sil.participant import ManifestError
 class Extraction:
     """One participant's unpacked archives, dropped together at the end."""
 
-    def __init__(self) -> None:
+    def __init__(self, parent: Path | None = None) -> None:
+        # A participant extracts into its Run working directory, which the
+        # kernel removes; any other caller names where it extracts.
         self._directory = tempfile.TemporaryDirectory(
-            prefix="sil-fmu-", dir=Path.cwd()
+            prefix="sil-fmu-", dir=Path.cwd() if parent is None else parent
         )
         self.root = Path(self._directory.name)
 
