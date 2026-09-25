@@ -5,6 +5,7 @@
 .serena
 .understand-anything
 .venv
+**/.venv
 .sil-run-*
 build
 __pycache__

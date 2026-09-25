@@ -14,6 +14,9 @@ fault configuration, per-Channel comparisons and provenance.
 Issue #157's malformed-traffic, lifecycle-isolation and capacity results are
 retained under [`issue-157/`](issue-157/README.md).
 
+Issue #158's release identity, example traces and installed-bundle
+validation are retained under [`issue-158/`](issue-158/README.md).
+
 Linux x86-64 (Docker on an ARM development host), Python 3.13.7, FMPy 0.3.32,
 GNU C++ 12.2.0. The image used was
 `sha256:f02c5c1b1e47efe66a066f3a6619983c6c87363980acfabbe56a03de063828e9`,

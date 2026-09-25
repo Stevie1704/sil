@@ -1,5 +1,6 @@
 {
   "model_name": "SilCanBus",
+  "version": "1.0.0",
   "token": "sil-can-bus-1",
   "specification": "FMI-LS-BUS 1.0.0",
   "mime_type": "application/org.fmi-standard.fmi-ls-bus.can; version=\"1.0.0\"",
@@ -25,6 +26,7 @@
     "queue_capacity": 1026,
     "fault_retry_limit": 1027,
     "fault_rule_count": 1028,
+    "buffer_capacity": 1029,
     "fault_rule_base": 1100,
     "fault_rule_stride": 8,
     "fault_rule_capacity": 8,

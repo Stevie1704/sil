@@ -1,0 +1,62 @@
+{
+  "execution_path": "SiL runner and FMU group Importer",
+  "sil_version": "0.1.0",
+  "sil_module": "/work/python/src/sil/__init__.py",
+  "sil_installed": false,
+  "runner_build_info": "{\"license\":\"Apache-2.0\",\"source_repository\":\"https://github.com/Stevie1704/sil\",\"source_revision\":\"e4f5d05181a327e99d0255015a6f8ab07d9f94fc\",\"version\":\"0.1.0\"}\n",
+  "fmu_sha256": "474828e086e47af5b14316e99b421283f7a8045fd33993bbfa6ffdb49317f427",
+  "manifest_sha256": "402db7f8d707d0ea6fa5a892a0dfb039e25cbfb1ce9a78a12a956a08a03f9e57",
+  "recording_sha256": "a90b90273acde9b7c73ab6bdb2dd878e9439567ab5793471a861b33268f1ee68",
+  "repeat_identical": true,
+  "deadlines": {
+    "run_s": 120,
+    "participant_response_ms": 5000
+  },
+  "trace": [
+    [
+      111000,
+      1,
+      "10000000110000000002000000000100aa"
+    ],
+    [
+      111000,
+      2,
+      "200000000c00000000020000"
+    ],
+    [
+      111000,
+      3,
+      "300000000c0000000003000010000000110000000002000000000100aa"
+    ],
+    [
+      628000,
+      1,
+      "310000000f00000000010000010101"
+    ],
+    [
+      628000,
+      2,
+      "310000000f00000000010000010200"
+    ],
+    [
+      628000,
+      3,
+      "310000000f00000000010000010200"
+    ],
+    [
+      762000,
+      1,
+      "200000000c00000000010000"
+    ],
+    [
+      762000,
+      2,
+      "100000001200000000010000000002000102"
+    ],
+    [
+      762000,
+      3,
+      "100000001200000000010000000002000102"
+    ]
+  ]
+}

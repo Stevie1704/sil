@@ -42,5 +42,9 @@ Error in the model and bounds each instance's queues, reports and same-instant
 events; it needs no new Importer capability. Compatibility impact: a Run
 whose input held a corrupt operation used to fail. It now continues and
 records the Format Error on the sender's Channel one nanosecond later. Runs
-without corrupt input record the same operations at the same instants. The maintained FMU must publish its supported profile and qualify
+without corrupt input record the same operations at the same instants. Issue #158 releases the model as `SilCanBus` 1.0.0 with its own version,
+digests and compatibility policy (`models/can/RELEASE.md`). The release adds
+descriptive model metadata, a `perTerminalBufferCapacity` parameter (its
+default keeps earlier traces) and a configuration example outside the FMU. It
+needs no new Importer capability and changes no SiL contract. The maintained FMU must publish its supported profile and qualify
 both its protocol behavior and its packaging independently of the kernel.

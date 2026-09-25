@@ -1,0 +1,44 @@
+{
+  "product": "SilCanBus",
+  "version": "1.0.0",
+  "platform": "x86_64-linux",
+  "specification": "FMI-LS-BUS 1.0.0",
+  "spec_revision": "8abdf039bfb994c794e4c15bce575cfc00a1ab6e",
+  "fmu": {
+    "file": "SilCanBus-1.0.0-x86_64-linux.fmu",
+    "sha256": "474828e086e47af5b14316e99b421283f7a8045fd33993bbfa6ffdb49317f427"
+  },
+  "reproducibility": {
+    "controlled_builds": 2,
+    "byte_identical": true
+  },
+  "build": {
+    "git_revision": "e4f5d05181a327e99d0255015a6f8ab07d9f94fc",
+    "source_dirty": false,
+    "compiler": "c++ (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "flags": [
+      "-std=c++20",
+      "-O2",
+      "-fPIC",
+      "-shared",
+      "-Wl,--no-undefined"
+    ],
+    "fmi_headers": "FMPy 0.3.32",
+    "image": "sha256:2516c2097f3501cc350f5b73740a2913d4070af8fec9c6245f7b166d70064c00"
+  },
+  "sources": {
+    "build.py": "2bf965b728110155f4244556dc644e9d01525d3e44185cf0ff1edde2df18474c",
+    "build.sh": "7d148ca9e627b24a7e6794015cf7c6d56853d59adb12536fc152d3e8c761932e",
+    "build_support.py": "7e374e1e2fb0b250bc3bd4c7fa46b7cf3a66f24df90d9ec472be517d9491804d",
+    "bus.cpp": "8ac0dce5357d9cea2bf58e451817b2158c0c524312404cf350c0db37eac19d26",
+    "bus.hpp": "20fb9e9fb90ea595a6179ae91be35228b23926647667fc431f6892e554395efd",
+    "fmi.cpp": "0bd9ae736851388f09028bb6b7513b777476541cca13ee9bbee6095148598ac6",
+    "fmi3FunctionTypes.h": "77bb086dbf9b9123f75edc2a90a0f27fb5c32f913ab3f9b69fe2e2cbc2448b24",
+    "fmi3Functions.h": "6367e9f7895848ed8d06c8a9b7f77e72d9f3eae102f64c313d51c10049b720ee",
+    "fmi3PlatformTypes.h": "19ea19ae07cdab582931fc1a545d9aeef3d5066da131ee96a7e393e72164fa30",
+    "profile.hpp": "a0a1f021c8feb3d4b906b5a90aec0f6ffe09869e23766c20cf454b457bc5b67d",
+    "profile.json": "aa645ae6f41a7b2388fface5227d8d2645f8f4ac535332b25347c7e42507d91a",
+    "unsupported.cpp": "6618e387295608cff04ff0e47d1a32ea87b5646b1a6315cce10c538b5443138e"
+  },
+  "releasable": true
+}

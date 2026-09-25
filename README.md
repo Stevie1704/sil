@@ -827,6 +827,12 @@ operation with the standard Format Error. An unsupported one fails the instance.
 reports and same-instant events are bounded per instance. `models/can/run.sh`
 builds and qualifies the same Linux x86-64 artifact through independent FMI
 calls, sanitized checks of its C entry points and SiL's existing FMU group.
+It is released as `SilCanBus` 1.0.0 with published digests and build
+identities; [models/can/RELEASE.md](models/can/RELEASE.md) states the supported
+platform, compatibility policy, licensing and limits, and
+[models/can/example/](models/can/example/README.md) configures a Run without
+source edits. `models/can/bundle.sh` validates that example from a clean
+installed SiL bundle against an independent FMPy path.
 
 ## Build & test
 

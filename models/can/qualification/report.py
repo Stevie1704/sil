@@ -50,6 +50,9 @@ report = {
         "format_error": "corrupt operations answered with FMI-LS-BUS Format Error to the sender at the next nanosecond; unsupported well-formed operations return fmi3Error",
         "abi_sanitizers": f"{SANITIZERS} sanitizers: lifecycle, reset, free, interleaved instances, output/callback lifetime and bounded malformed corpus through the C entry points (abi.json)",
         "capacity": "declared per-instance limits and measured C++ heap reported separately (capacity.json); not OS memory isolation",
+        "release_staging": "two controlled builds byte-identical before the versioned archive, release.json identities and SHA256SUMS are staged (release/)",
+        "packaged_rebuild": "sources/build.sh rebuilds the identical shared library without Python; NEEDED entries limited to the C and C++ runtime",
+        "example": "documented example configuration reproduced by the independent FMPy master against a hand-derived table and by SiL with repeat-identical Recordings (example/)",
     },
 }
 (OUTPUT / "qualification.json").write_text(

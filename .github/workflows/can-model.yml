@@ -6,13 +6,25 @@ on:
 jobs:
   qualify:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
       - name: Build and qualify standalone CAN FMU
+        timeout-minutes: 25
         run: models/can/run.sh
+      - name: Validate from the installed SiL bundle and an independent FMI path
+        timeout-minutes: 20
+        env:
+          CAN_BUNDLE_DEADLINE_S: '600'
+        run: models/can/bundle.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: can-model-qualification
           path: build/can/
+      - name: Keep the release archive, digests and identities
+        uses: actions/upload-artifact@v4
+        with:
+          name: can-model-release
+          path: build/can/release/
+          if-no-files-found: error
