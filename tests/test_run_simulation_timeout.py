@@ -10,30 +10,16 @@ failure it surfaces.
 
 from __future__ import annotations
 
-import sys
 from types import SimpleNamespace
 
 import pytest
 
-from conftest import ROOT
 from test_check_participant_timeout import calls, deadlines, stub_runner
-from test_process_descendants import _assert_cleanup, _manifest
+from test_participant_timeout import stalling_manifest
+from test_process_descendants import assert_cleanup, descendant_manifest
 from test_pytest_frontend import manifest_with_checker
-from toys import toy_manifest
 
 from sil.testing import RunFailure, run_simulation
-
-TIMEOUT_PARTICIPANT = ROOT / "tests" / "participants" / "timeout.py"
-
-
-def stalling_manifest(mode: str):
-    """One Process participant that answers or stalls as `mode` says."""
-    manifest = toy_manifest(duration_ns=10)
-    manifest.add_process(
-        "hung", command=[sys.executable, str(TIMEOUT_PARTICIPANT), mode],
-        step_period_ns=1,
-    )
-    return manifest
 
 
 class TestForwarding:
@@ -129,14 +115,14 @@ class TestRunBoundary:
         workdir.mkdir()
 
         with pytest.raises(RunFailure) as failure:
-            run_simulation(_manifest("descendant-timeout", observer),
+            run_simulation(descendant_manifest("descendant-timeout", observer),
                            runner=sil_run, workdir=workdir,
                            participant_timeout_ms=100)
 
         assert "timeout" in str(failure.value)
         outcome = SimpleNamespace(returncode=failure.value.exit_code,
                                   stderr=str(failure.value))
-        _assert_cleanup(outcome, observer, regions, expected_code=1)
+        assert_cleanup(outcome, observer, regions, expected_code=1)
 
     def test_a_timely_run_records_the_same_bytes_with_or_without_it(
         self, sil_run, tmp_path
