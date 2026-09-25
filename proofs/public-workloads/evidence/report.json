@@ -1,0 +1,216 @@
+{
+  "bundle_sha256": "be0db032cc6bc35636914ae6de39be080186fa4ae95e6f5213ab8026857de670",
+  "shared_library": {
+    "build": {
+      "library_sha256": "ad19bdcd96f6b9c6daf1f55c1851dfe8dfb1c613ed4747f72b3b5b9b7300dec1",
+      "rebuild_identical": true,
+      "build_function": "opendbc.safety.tests.libsafety.libsafety_py._build_libsafety(release=True)",
+      "harness_sha256": {
+        "libsafety_py.py": "495d673271031d64147d4f9dc16e7b8a4388dd707ffacab3864248ab72fdd41c",
+        "safety.c": "4ad79d5a6eeb2665ef8f37bdc43dcfe8d944fa72838f097a99fa28cee78edd57"
+      },
+      "runtime_libraries": [
+        "\tlinux-vdso.so.1 (0x00007ff185e33000)",
+        "\tlibubsan.so.1 => /lib/x86_64-linux-gnu/libubsan.so.1 (0x00007ff185791000)",
+        "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007ff1855af000)",
+        "\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007ff185395000)",
+        "\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007ff185375000)",
+        "\t/lib64/ld-linux-x86-64.so.2 (0x00007ff185e35000)",
+        "\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007ff185295000)",
+        ""
+      ],
+      "exported_functions": [
+        "GET_BYTES_64_LE",
+        "GET_BYTES_LE",
+        "ROUND",
+        "default_rx_hook",
+        "gen_crc_lookup_table_16",
+        "gen_crc_lookup_table_8",
+        "get_acc_main_on",
+        "get_alternative_experience",
+        "get_angle_meas_max",
+        "get_angle_meas_min",
+        "get_brake_pressed_prev",
+        "get_controls_allowed",
+        "get_cruise_engaged_prev",
+        "get_current_safety_mode",
+        "get_current_safety_param",
+        "get_curvature_meas_max",
+        "get_curvature_meas_min",
+        "get_desired_angle_last",
+        "get_desired_curvature_last",
+        "get_gas_pressed_prev",
+        "get_honda_fwd_brake",
+        "get_honda_hw",
+        "get_ignition_can",
+        "get_longitudinal_allowed",
+        "get_regen_braking_prev",
+        "get_relay_malfunction",
+        "get_steering_disengage_prev",
+        "get_torque_driver_max",
+        "get_torque_driver_min",
+        "get_torque_meas_max",
+        "get_torque_meas_min",
+        "get_vehicle_moving",
+        "get_vehicle_speed_max",
+        "get_vehicle_speed_min",
+        "hyundai_common_canfd_compute_checksum",
+        "hyundai_common_cruise_buttons_check",
+        "hyundai_common_cruise_state_check",
+        "hyundai_common_init",
+        "ignition_can_hook",
+        "init_tests",
+        "longitudinal_accel_checks",
+        "longitudinal_brake_checks",
+        "longitudinal_gas_checks",
+        "longitudinal_speed_checks",
+        "microsecond_timer_get",
+        "pcm_cruise_check",
+        "safety_config_valid",
+        "safety_fwd_hook",
+        "safety_rx_hook",
+        "safety_tick",
+        "safety_tx_hook",
+        "set_alternative_experience",
+        "set_angle_meas",
+        "set_controls_allowed",
+        "set_cruise_engaged_prev",
+        "set_curvature_meas",
+        "set_desired_angle_last",
+        "set_desired_curvature_last",
+        "set_desired_torque_last",
+        "set_gas_pressed_prev",
+        "set_honda_alt_brake_msg",
+        "set_honda_bosch_long",
+        "set_honda_fwd_brake",
+        "set_ignition_can",
+        "set_relay_malfunction",
+        "set_rt_torque_last",
+        "set_safety_hooks",
+        "set_timer",
+        "set_torque_driver",
+        "set_torque_meas",
+        "speed_mismatch_check",
+        "steer_angle_cmd_checks",
+        "steer_angle_cmd_checks_vm",
+        "steer_curvature_cmd_checks",
+        "steer_torque_cmd_checks",
+        "to_signed",
+        "update_sample"
+      ]
+    },
+    "contract": {
+      "platform": "TOYOTA_RAV4_TSS2",
+      "mode": 2,
+      "mode_name": "toyota",
+      "param": 73,
+      "alternative_experience": 0
+    },
+    "observations": 6000,
+    "received_frames": 149228,
+    "final_observation_ns": 18114867092416,
+    "trace_sha256": "ba8731f785431226e80fbb49cd065e39b76ee5140baf0148837f69735a4a9b21",
+    "standalone_repeat_identical": true,
+    "upstream_replay": {
+      "received": 149228,
+      "invalid": 0,
+      "tick_invalid": false,
+      "transmitted": 0,
+      "passed": true
+    },
+    "recorded_panda_controls_allowed": {
+      "samples": 600,
+      "agreeing": 600,
+      "modes": [
+        "toyota"
+      ]
+    },
+    "same_path_dlopen_shares_state": true,
+    "failing_variants": {
+      "timer-in-ns": {
+        "first_divergence": {
+          "index": 100,
+          "t_ns": 18055876827502,
+          "field": "controls_allowed",
+          "expected": true,
+          "actual": false
+        },
+        "config_valid": false,
+        "rejected": {}
+      },
+      "corrupt-0x260": {
+        "first_divergence": {
+          "index": 0,
+          "t_ns": 18054876797669,
+          "field": "accepted",
+          "expected": 39,
+          "actual": 38
+        },
+        "config_valid": false,
+        "rejected": {
+          "0:0x260": 3002
+        }
+      }
+    },
+    "observed": {
+      "nominal_replay_wall_s": 1.382,
+      "received_frames_per_wall_s": 107971
+    }
+  },
+  "single_fmu": {
+    "observations": 501,
+    "first_observation_ns": 100000000,
+    "final_observation_ns": 50100000000,
+    "trace_sha256": "f8607c9f63a54ff0caa6e636f274d925d556822906a1096ab47fd4d26130bf31",
+    "matches_control_law": true,
+    "repeat_identical": true,
+    "command_range_mps2": [
+      -3.0,
+      1.3541808764737484
+    ],
+    "failing_variant": {
+      "one-period-input-shift": {
+        "index": 217,
+        "t_ns": 21800000000,
+        "field": "accel_mps2",
+        "expected": -2.940724869397311,
+        "actual": -3.0
+      }
+    },
+    "observed": {
+      "steps_per_wall_s": 9515
+    }
+  },
+  "coupled_fmus": {
+    "slots": 5000,
+    "final_slot_ns": 49990000000,
+    "trace_sha256": "b9d9ddcb0d93209e087d9a491afdce922915282af74cf0e7b7e4a2d913bbcb0e",
+    "repeat_identical": true,
+    "maneuver_reproduced": true,
+    "minimum_gap_m": 25.79574131318134,
+    "command_range_mps2": [
+      -0.9882775387633395,
+      1.5
+    ],
+    "lead_accel_range_mps2": [
+      -1.0575757000000152,
+      1.481818199999978
+    ],
+    "failing_variant": {
+      "one-sample-maneuver-shift": {
+        "index": 1,
+        "t_ns": 190000000,
+        "field": "lead_speed_mps",
+        "expected": 24.999090910000007,
+        "actual": 24.999797979999983
+      }
+    },
+    "observed": {
+      "loop_steps_per_wall_s": 23870
+    }
+  },
+  "observed_peak_rss_kib": {
+    "fmpy_process": 100048,
+    "library_children": 100048
+  }
+}

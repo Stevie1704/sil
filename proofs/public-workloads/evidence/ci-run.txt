@@ -1,0 +1,2 @@
+run 36161421886 (proof-public-workloads), head 31188a3a8fb1ef4af903f4bc42acdcbb05cf7add
+source_revision in bundle.json is GitHub's pull-request merge commit of that head onto main

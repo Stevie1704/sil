@@ -1,0 +1,80 @@
+{
+  "metadata": {
+    "Date": [
+      "4",
+      "7",
+      "2019"
+    ],
+    "Vehicle_order": [
+      "Audi(A8)",
+      "Tesla(Model3)",
+      "BMW(X5)",
+      "Audi(A6)",
+      "Mercedes(AClass)"
+    ],
+    "Number_of_vehicles": [
+      "5"
+    ],
+    "ACC": [
+      "1"
+    ],
+    "Distance_setting": [
+      "min"
+    ]
+  },
+  "columns": [
+    "Time",
+    "Speed1",
+    "Lat1",
+    "Lon1",
+    "Alt1",
+    "E1",
+    "N1",
+    "U1",
+    "Speed2",
+    "Lat2",
+    "Lon2",
+    "Alt2",
+    "E2",
+    "N2",
+    "U2",
+    "Speed3",
+    "Lat3",
+    "Lon3",
+    "Alt3",
+    "E3",
+    "N3",
+    "U3",
+    "Speed4",
+    "Lat4",
+    "Lon4",
+    "Alt4",
+    "E4",
+    "N4",
+    "U4",
+    "Speed5",
+    "Lat5",
+    "Lon5",
+    "Alt5",
+    "E5",
+    "N5",
+    "U5",
+    "Driver1",
+    "Driver2",
+    "Driver3",
+    "Driver4",
+    "Driver5",
+    "IVS1",
+    "IVS2",
+    "IVS3",
+    "IVS4"
+  ],
+  "samples": 9227,
+  "first_time_s": 1.0,
+  "last_time_s": 923.6,
+  "period_ns": {
+    "100000000": 9226
+  },
+  "gaps": [],
+  "missing": {}
+}

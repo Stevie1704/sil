@@ -1,0 +1,190 @@
+{
+  "AccController": {
+    "archive_sha256": "12df3da57fe71209d01c39985a829ba606260c11e056fa4e83d92f1b1efac662",
+    "fmi_version": "3.0",
+    "model_name": "AccController",
+    "instantiation_token": "2d18bf1a080271771e17c96210471ee567ed4dcbfa50b7666d44bb8137577bd8",
+    "generation_tool": "PythonFMU3 0.3.4",
+    "interfaces": [
+      "CoSimulation"
+    ],
+    "capabilities": {
+      "needsExecutionTool": "true",
+      "canBeInstantiatedOnlyOncePerProcess": "false",
+      "canGetAndSetFMUState": "false",
+      "canSerializeFMUState": "false",
+      "modelIdentifier": "AccController",
+      "canHandleVariableCommunicationStepSize": "false"
+    },
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-windows"
+    ],
+    "variables": [
+      {
+        "name": "time",
+        "type": "Float64",
+        "causality": "independent",
+        "unit": "s",
+        "start": null,
+        "dimensions": 0
+      },
+      {
+        "name": "gap_m",
+        "type": "Float64",
+        "causality": "input",
+        "unit": "m",
+        "start": "60",
+        "dimensions": 0
+      },
+      {
+        "name": "relative_speed_mps",
+        "type": "Float64",
+        "causality": "input",
+        "unit": "m/s",
+        "start": "0",
+        "dimensions": 0
+      },
+      {
+        "name": "ego_speed_mps",
+        "type": "Float64",
+        "causality": "input",
+        "unit": "m/s",
+        "start": "25",
+        "dimensions": 0
+      },
+      {
+        "name": "accel_mps2",
+        "type": "Float64",
+        "causality": "output",
+        "unit": "m/s2",
+        "start": null,
+        "dimensions": 0
+      }
+    ],
+    "runtime_libraries": [
+      "\tlinux-vdso.so.1 (0x00007f1594e0c000)",
+      "\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007f1594ba2000)",
+      "\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f1594ac2000)",
+      "\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f1594aa2000)",
+      "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f15948c0000)",
+      "\t/lib64/ld-linux-x86-64.so.2 (0x00007f1594e0e000)",
+      ""
+    ],
+    "unresolved_libraries": false
+  },
+  "AccPlant": {
+    "archive_sha256": "9c163cfc3f8474f794437f6438e98fe4709f52a86c0c9ee85759948b4b10baf8",
+    "fmi_version": "3.0",
+    "model_name": "AccPlant",
+    "instantiation_token": "3f47bc391284c5b7d0066c1d036e404d977a1c3aee08285f2c74cb3392471977",
+    "generation_tool": "PythonFMU3 0.3.4",
+    "interfaces": [
+      "CoSimulation"
+    ],
+    "capabilities": {
+      "needsExecutionTool": "true",
+      "canBeInstantiatedOnlyOncePerProcess": "false",
+      "canGetAndSetFMUState": "false",
+      "canSerializeFMUState": "false",
+      "modelIdentifier": "AccPlant",
+      "canHandleVariableCommunicationStepSize": "false"
+    },
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-windows"
+    ],
+    "variables": [
+      {
+        "name": "time",
+        "type": "Float64",
+        "causality": "independent",
+        "unit": "s",
+        "start": null,
+        "dimensions": 0
+      },
+      {
+        "name": "accel_mps2",
+        "type": "Float64",
+        "causality": "input",
+        "unit": "m/s2",
+        "start": "0",
+        "dimensions": 0
+      },
+      {
+        "name": "lead_accel_mps2",
+        "type": "Float64",
+        "causality": "input",
+        "unit": "m/s2",
+        "start": "0",
+        "dimensions": 0
+      },
+      {
+        "name": "initial_lead_position_m",
+        "type": "Float64",
+        "causality": "input",
+        "unit": "m",
+        "start": "60",
+        "dimensions": 0
+      },
+      {
+        "name": "ego_position_m",
+        "type": "Float64",
+        "causality": "output",
+        "unit": "m",
+        "start": null,
+        "dimensions": 0
+      },
+      {
+        "name": "ego_speed_mps",
+        "type": "Float64",
+        "causality": "output",
+        "unit": "m/s",
+        "start": null,
+        "dimensions": 0
+      },
+      {
+        "name": "lead_position_m",
+        "type": "Float64",
+        "causality": "output",
+        "unit": "m",
+        "start": null,
+        "dimensions": 0
+      },
+      {
+        "name": "lead_speed_mps",
+        "type": "Float64",
+        "causality": "output",
+        "unit": "m/s",
+        "start": null,
+        "dimensions": 0
+      },
+      {
+        "name": "gap_m",
+        "type": "Float64",
+        "causality": "output",
+        "unit": "m",
+        "start": null,
+        "dimensions": 0
+      },
+      {
+        "name": "relative_speed_mps",
+        "type": "Float64",
+        "causality": "output",
+        "unit": "m/s",
+        "start": null,
+        "dimensions": 0
+      }
+    ],
+    "runtime_libraries": [
+      "\tlinux-vdso.so.1 (0x00007f8f47b7d000)",
+      "\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007f8f47913000)",
+      "\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f8f47833000)",
+      "\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f8f47813000)",
+      "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f8f47631000)",
+      "\t/lib64/ld-linux-x86-64.so.2 (0x00007f8f47b7f000)",
+      ""
+    ],
+    "unresolved_libraries": false
+  }
+}

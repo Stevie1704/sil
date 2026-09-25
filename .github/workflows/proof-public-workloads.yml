@@ -1,0 +1,38 @@
+name: proof-public-workloads
+
+# Public-artifact qualification for adoption acceptance (issue #178). The
+# image build fetches pinned public sources and verifies their digests, so
+# this sits outside the general push gate like the other external proofs.
+# Qualification itself runs with no network on native Linux x86-64.
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/public-workloads/**'
+      - 'proofs/acc-fmi/build.py'
+      - 'proofs/acc-fmi/models/**'
+      - 'python/src/sil/examples/acc/dynamics.py'
+      - '.github/workflows/proof-public-workloads.yml'
+  workflow_dispatch:
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch, build and qualify the public workloads
+        timeout-minutes: 40
+        run: proofs/public-workloads/run-proof.sh "$PWD/build/public-workloads"
+      - name: Keep the offline acceptance bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-workloads-bundle
+          path: build/public-workloads/bundle/
+      - name: Keep the qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-workloads-evidence
+          path: build/public-workloads/evidence/

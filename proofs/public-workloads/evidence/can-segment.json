@@ -1,0 +1,1174 @@
+{
+  "event_kinds": {
+    "can": 6000,
+    "pandaStates": 600,
+    "carParams": 1
+  },
+  "transmit_events": 0,
+  "can_events": 6000,
+  "first_log_mono_ns": 18054876797669,
+  "last_log_mono_ns": 18114867092416,
+  "span_s": 59.990294747,
+  "ordered_as_recorded": true,
+  "event_interval_ns": {
+    "min": 8752929,
+    "median": 9763346,
+    "max": 11029012
+  },
+  "frames_per_event": {
+    "min": 13,
+    "median": 39.0,
+    "max": 69
+  },
+  "received_frames_per_event": {
+    "min": 7,
+    "median": 27.0,
+    "max": 47
+  },
+  "frames_by_source": {
+    "0": 62081,
+    "1": 70769,
+    "2": 16378,
+    "128": 20744,
+    "130": 62080
+  },
+  "payload_bytes": {
+    "1": 598,
+    "2": 3180,
+    "4": 14000,
+    "5": 8540,
+    "6": 8355,
+    "7": 8387,
+    "8": 188992
+  },
+  "received_addresses": [
+    {
+      "bus": 0,
+      "address": "0x24",
+      "frames": 3000,
+      "rate_hz": 50.01
+    },
+    {
+      "bus": 0,
+      "address": "0x25",
+      "frames": 6000,
+      "rate_hz": 100.02
+    },
+    {
+      "bus": 0,
+      "address": "0xaa",
+      "frames": 6000,
+      "rate_hz": 100.02
+    },
+    {
+      "bus": 0,
+      "address": "0xb4",
+      "frames": 3000,
+      "rate_hz": 50.01
+    },
+    {
+      "bus": 0,
+      "address": "0xba",
+      "frames": 2000,
+      "rate_hz": 33.34
+    },
+    {
+      "bus": 0,
+      "address": "0x1aa",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 0,
+      "address": "0x1c4",
+      "frames": 2548,
+      "rate_hz": 42.47
+    },
+    {
+      "bus": 0,
+      "address": "0x1d0",
+      "frames": 1891,
+      "rate_hz": 31.52
+    },
+    {
+      "bus": 0,
+      "address": "0x1d2",
+      "frames": 1890,
+      "rate_hz": 31.51
+    },
+    {
+      "bus": 0,
+      "address": "0x1d3",
+      "frames": 1891,
+      "rate_hz": 31.52
+    },
+    {
+      "bus": 0,
+      "address": "0x220",
+      "frames": 2000,
+      "rate_hz": 33.34
+    },
+    {
+      "bus": 0,
+      "address": "0x226",
+      "frames": 2000,
+      "rate_hz": 33.34
+    },
+    {
+      "bus": 0,
+      "address": "0x228",
+      "frames": 3000,
+      "rate_hz": 50.01
+    },
+    {
+      "bus": 0,
+      "address": "0x232",
+      "frames": 2000,
+      "rate_hz": 33.34
+    },
+    {
+      "bus": 0,
+      "address": "0x235",
+      "frames": 2000,
+      "rate_hz": 33.34
+    },
+    {
+      "bus": 0,
+      "address": "0x260",
+      "frames": 3002,
+      "rate_hz": 50.04
+    },
+    {
+      "bus": 0,
+      "address": "0x262",
+      "frames": 1501,
+      "rate_hz": 25.02
+    },
+    {
+      "bus": 0,
+      "address": "0x292",
+      "frames": 1875,
+      "rate_hz": 31.26
+    },
+    {
+      "bus": 0,
+      "address": "0x2c1",
+      "frames": 1891,
+      "rate_hz": 31.52
+    },
+    {
+      "bus": 0,
+      "address": "0x2d8",
+      "frames": 200,
+      "rate_hz": 3.33
+    },
+    {
+      "bus": 0,
+      "address": "0x2f9",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x2fc",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x320",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 0,
+      "address": "0x32a",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 0,
+      "address": "0x32c",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 0,
+      "address": "0x32e",
+      "frames": 300,
+      "rate_hz": 5.0
+    },
+    {
+      "bus": 0,
+      "address": "0x332",
+      "frames": 601,
+      "rate_hz": 10.02
+    },
+    {
+      "bus": 0,
+      "address": "0x336",
+      "frames": 600,
+      "rate_hz": 10.0
+    },
+    {
+      "bus": 0,
+      "address": "0x338",
+      "frames": 600,
+      "rate_hz": 10.0
+    },
+    {
+      "bus": 0,
+      "address": "0x33d",
+      "frames": 240,
+      "rate_hz": 4.0
+    },
+    {
+      "bus": 0,
+      "address": "0x361",
+      "frames": 930,
+      "rate_hz": 15.5
+    },
+    {
+      "bus": 0,
+      "address": "0x375",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x379",
+      "frames": 59,
+      "rate_hz": 0.98
+    },
+    {
+      "bus": 0,
+      "address": "0x37b",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x380",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x382",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x384",
+      "frames": 20,
+      "rate_hz": 0.33
+    },
+    {
+      "bus": 0,
+      "address": "0x386",
+      "frames": 20,
+      "rate_hz": 0.33
+    },
+    {
+      "bus": 0,
+      "address": "0x389",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x396",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x399",
+      "frames": 62,
+      "rate_hz": 1.03
+    },
+    {
+      "bus": 0,
+      "address": "0x3a5",
+      "frames": 76,
+      "rate_hz": 1.27
+    },
+    {
+      "bus": 0,
+      "address": "0x3a6",
+      "frames": 20,
+      "rate_hz": 0.33
+    },
+    {
+      "bus": 0,
+      "address": "0x3a7",
+      "frames": 20,
+      "rate_hz": 0.33
+    },
+    {
+      "bus": 0,
+      "address": "0x3b0",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x3b1",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x3b7",
+      "frames": 200,
+      "rate_hz": 3.33
+    },
+    {
+      "bus": 0,
+      "address": "0x3bb",
+      "frames": 58,
+      "rate_hz": 0.97
+    },
+    {
+      "bus": 0,
+      "address": "0x3bc",
+      "frames": 58,
+      "rate_hz": 0.97
+    },
+    {
+      "bus": 0,
+      "address": "0x3d0",
+      "frames": 240,
+      "rate_hz": 4.0
+    },
+    {
+      "bus": 0,
+      "address": "0x3db",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x3e6",
+      "frames": 20,
+      "rate_hz": 0.33
+    },
+    {
+      "bus": 0,
+      "address": "0x3e7",
+      "frames": 20,
+      "rate_hz": 0.33
+    },
+    {
+      "bus": 0,
+      "address": "0x3e8",
+      "frames": 20,
+      "rate_hz": 0.33
+    },
+    {
+      "bus": 0,
+      "address": "0x3e9",
+      "frames": 20,
+      "rate_hz": 0.33
+    },
+    {
+      "bus": 0,
+      "address": "0x3ea",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x3f6",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x3f9",
+      "frames": 240,
+      "rate_hz": 4.0
+    },
+    {
+      "bus": 0,
+      "address": "0x3fc",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 0,
+      "address": "0x420",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x423",
+      "frames": 59,
+      "rate_hz": 0.98
+    },
+    {
+      "bus": 0,
+      "address": "0x427",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x434",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x435",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x43a",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x43c",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x43d",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x43e",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x45a",
+      "frames": 315,
+      "rate_hz": 5.25
+    },
+    {
+      "bus": 0,
+      "address": "0x46c",
+      "frames": 315,
+      "rate_hz": 5.25
+    },
+    {
+      "bus": 0,
+      "address": "0x48c",
+      "frames": 120,
+      "rate_hz": 2.0
+    },
+    {
+      "bus": 0,
+      "address": "0x48d",
+      "frames": 120,
+      "rate_hz": 2.0
+    },
+    {
+      "bus": 0,
+      "address": "0x48e",
+      "frames": 120,
+      "rate_hz": 2.0
+    },
+    {
+      "bus": 0,
+      "address": "0x48f",
+      "frames": 120,
+      "rate_hz": 2.0
+    },
+    {
+      "bus": 0,
+      "address": "0x4cc",
+      "frames": 58,
+      "rate_hz": 0.97
+    },
+    {
+      "bus": 0,
+      "address": "0x4d5",
+      "frames": 49,
+      "rate_hz": 0.82
+    },
+    {
+      "bus": 0,
+      "address": "0x4ef",
+      "frames": 50,
+      "rate_hz": 0.83
+    },
+    {
+      "bus": 0,
+      "address": "0x4f0",
+      "frames": 58,
+      "rate_hz": 0.97
+    },
+    {
+      "bus": 0,
+      "address": "0x4ff",
+      "frames": 46,
+      "rate_hz": 0.77
+    },
+    {
+      "bus": 0,
+      "address": "0x605",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x610",
+      "frames": 142,
+      "rate_hz": 2.37
+    },
+    {
+      "bus": 0,
+      "address": "0x611",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x614",
+      "frames": 66,
+      "rate_hz": 1.1
+    },
+    {
+      "bus": 0,
+      "address": "0x615",
+      "frames": 10,
+      "rate_hz": 0.17
+    },
+    {
+      "bus": 0,
+      "address": "0x620",
+      "frames": 200,
+      "rate_hz": 3.33
+    },
+    {
+      "bus": 0,
+      "address": "0x622",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x623",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x624",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x638",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x63a",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x63b",
+      "frames": 120,
+      "rate_hz": 2.0
+    },
+    {
+      "bus": 0,
+      "address": "0x671",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x6a0",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x6d1",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x6f3",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 0,
+      "address": "0x6fa",
+      "frames": 20,
+      "rate_hz": 0.33
+    },
+    {
+      "bus": 0,
+      "address": "0x6fb",
+      "frames": 20,
+      "rate_hz": 0.33
+    },
+    {
+      "bus": 0,
+      "address": "0x6fc",
+      "frames": 20,
+      "rate_hz": 0.33
+    },
+    {
+      "bus": 0,
+      "address": "0x6fd",
+      "frames": 20,
+      "rate_hz": 0.33
+    },
+    {
+      "bus": 1,
+      "address": "0x123",
+      "frames": 600,
+      "rate_hz": 10.0
+    },
+    {
+      "bus": 1,
+      "address": "0x128",
+      "frames": 1875,
+      "rate_hz": 31.26
+    },
+    {
+      "bus": 1,
+      "address": "0x130",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 1,
+      "address": "0x160",
+      "frames": 937,
+      "rate_hz": 15.62
+    },
+    {
+      "bus": 1,
+      "address": "0x161",
+      "frames": 937,
+      "rate_hz": 15.62
+    },
+    {
+      "bus": 1,
+      "address": "0x180",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x181",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x182",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x183",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x184",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x185",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x186",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x187",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x188",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x189",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x18a",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x18b",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x18c",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x18d",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x18e",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x18f",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x190",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x191",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x192",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x193",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x194",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x195",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x196",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x197",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x198",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x199",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x19a",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x19b",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x19c",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x19d",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x19e",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x19f",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x1a0",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x1a1",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x1a2",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x1a3",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x1b4",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x1b5",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x1b6",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x1b7",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x1b8",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x1b9",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x1ba",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x1bb",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x240",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x241",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x242",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x243",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x244",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x245",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x246",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x247",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x248",
+      "frames": 1200,
+      "rate_hz": 20.0
+    },
+    {
+      "bus": 1,
+      "address": "0x3d0",
+      "frames": 600,
+      "rate_hz": 10.0
+    },
+    {
+      "bus": 1,
+      "address": "0x3d1",
+      "frames": 600,
+      "rate_hz": 10.0
+    },
+    {
+      "bus": 1,
+      "address": "0x3d2",
+      "frames": 600,
+      "rate_hz": 10.0
+    },
+    {
+      "bus": 1,
+      "address": "0x3d3",
+      "frames": 600,
+      "rate_hz": 10.0
+    },
+    {
+      "bus": 1,
+      "address": "0x440",
+      "frames": 120,
+      "rate_hz": 2.0
+    },
+    {
+      "bus": 1,
+      "address": "0x441",
+      "frames": 120,
+      "rate_hz": 2.0
+    },
+    {
+      "bus": 1,
+      "address": "0x450",
+      "frames": 120,
+      "rate_hz": 2.0
+    },
+    {
+      "bus": 2,
+      "address": "0x191",
+      "frames": 2500,
+      "rate_hz": 41.67
+    },
+    {
+      "bus": 2,
+      "address": "0x283",
+      "frames": 1875,
+      "rate_hz": 31.26
+    },
+    {
+      "bus": 2,
+      "address": "0x2e4",
+      "frames": 2500,
+      "rate_hz": 41.67
+    },
+    {
+      "bus": 2,
+      "address": "0x2e6",
+      "frames": 1875,
+      "rate_hz": 31.26
+    },
+    {
+      "bus": 2,
+      "address": "0x2e7",
+      "frames": 1875,
+      "rate_hz": 31.26
+    },
+    {
+      "bus": 2,
+      "address": "0x2fd",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 2,
+      "address": "0x33e",
+      "frames": 300,
+      "rate_hz": 5.0
+    },
+    {
+      "bus": 2,
+      "address": "0x343",
+      "frames": 1875,
+      "rate_hz": 31.26
+    },
+    {
+      "bus": 2,
+      "address": "0x344",
+      "frames": 1250,
+      "rate_hz": 20.84
+    },
+    {
+      "bus": 2,
+      "address": "0x365",
+      "frames": 300,
+      "rate_hz": 5.0
+    },
+    {
+      "bus": 2,
+      "address": "0x366",
+      "frames": 300,
+      "rate_hz": 5.0
+    },
+    {
+      "bus": 2,
+      "address": "0x367",
+      "frames": 150,
+      "rate_hz": 2.5
+    },
+    {
+      "bus": 2,
+      "address": "0x36d",
+      "frames": 61,
+      "rate_hz": 1.02
+    },
+    {
+      "bus": 2,
+      "address": "0x371",
+      "frames": 300,
+      "rate_hz": 5.0
+    },
+    {
+      "bus": 2,
+      "address": "0x372",
+      "frames": 625,
+      "rate_hz": 10.42
+    },
+    {
+      "bus": 2,
+      "address": "0x411",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 2,
+      "address": "0x412",
+      "frames": 59,
+      "rate_hz": 0.98
+    },
+    {
+      "bus": 2,
+      "address": "0x414",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 2,
+      "address": "0x489",
+      "frames": 61,
+      "rate_hz": 1.02
+    },
+    {
+      "bus": 2,
+      "address": "0x48a",
+      "frames": 61,
+      "rate_hz": 1.02
+    },
+    {
+      "bus": 2,
+      "address": "0x48b",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 2,
+      "address": "0x494",
+      "frames": 60,
+      "rate_hz": 1.0
+    },
+    {
+      "bus": 2,
+      "address": "0x4d3",
+      "frames": 50,
+      "rate_hz": 0.83
+    },
+    {
+      "bus": 2,
+      "address": "0x6ef",
+      "frames": 61,
+      "rate_hz": 1.02
+    }
+  ]
+}

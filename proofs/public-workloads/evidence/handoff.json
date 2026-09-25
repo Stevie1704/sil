@@ -1,0 +1,182 @@
+{
+  "claim": "public-artifact adoption acceptance; not production-vehicle validation",
+  "shared_library_193": {
+    "library": {
+      "path": "libsafety/libsafety.so",
+      "sha256": "ad19bdcd96f6b9c6daf1f55c1851dfe8dfb1c613ed4747f72b3b5b9b7300dec1",
+      "runtime_libraries": [
+        "\tlinux-vdso.so.1 (0x00007ff185e33000)",
+        "\tlibubsan.so.1 => /lib/x86_64-linux-gnu/libubsan.so.1 (0x00007ff185791000)",
+        "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007ff1855af000)",
+        "\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007ff185395000)",
+        "\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007ff185375000)",
+        "\t/lib64/ld-linux-x86-64.so.2 (0x00007ff185e35000)",
+        "\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007ff185295000)",
+        ""
+      ]
+    },
+    "api": {
+      "init": [
+        "set_safety_hooks(mode, param) == 0",
+        "set_alternative_experience(alternative_experience)"
+      ],
+      "per_event": [
+        "set_timer(timer_us(log_mono_ns))",
+        "safety_tick() and safety_config_valid() when warm",
+        "per received frame: safety_fwd_hook(bus, address), safety_rx_hook(CANPacket_t) -> accepted"
+      ],
+      "state": [
+        "controls_allowed",
+        "gas_pressed_prev",
+        "brake_pressed_prev",
+        "cruise_engaged_prev",
+        "vehicle_moving",
+        "acc_main_on",
+        "vehicle_speed_min",
+        "vehicle_speed_max"
+      ],
+      "shutdown": "none; unload with the process"
+    },
+    "contract": {
+      "platform": "TOYOTA_RAV4_TSS2",
+      "mode": 2,
+      "mode_name": "toyota",
+      "param": 73,
+      "alternative_experience": 0
+    },
+    "instance_isolation": "one library instance per Process participant: C globals, and a second dlopen of the same file shares them",
+    "recording": {
+      "path": "recordings/rlog.zst",
+      "sha256": "b0d19f7ccf67fef1c4afd9cf579e96cecc1d278be2aa4a3adf97b2d64d940a4c",
+      "first_log_mono_ns": 18054876797669,
+      "can_events": 6000,
+      "event_interval_ns": {
+        "min": 8752929,
+        "median": 9763346,
+        "max": 11029012
+      },
+      "received_frames_per_event": {
+        "min": 7,
+        "median": 27.0,
+        "max": 47
+      },
+      "max_payload_bytes": 8,
+      "transmit_coverage": "none: the segment has no sendcan events"
+    },
+    "channel_conversion": {
+      "virtual_time_ns": "logMonoTime - first_log_mono_ns, not requantized",
+      "burst": "one can event = one Burst of its received frames, recorded order",
+      "frame": "address u32, bus u8 (src % 4, src < 128), length u8, data 8 bytes",
+      "timer": "set_timer(timer_us(first_log_mono_ns + virtual_time_ns))"
+    },
+    "latency": "a Burst is processed at the instant it names (Latency 0 or equivalent); a one-period delay is a timing variant, not the reference",
+    "observation": "after each event's frames: accepted, rejected and every state field",
+    "comparison": "exact equality per field and event; all events including the final one",
+    "warm_up": "safety_tick only when more than 1 s from both the first and the last can event of the segment",
+    "reference": {
+      "path": "references/libsafety-states.json",
+      "sha256": "ba8731f785431226e80fbb49cd065e39b76ee5140baf0148837f69735a4a9b21",
+      "time": "t_ns is the recorded logMonoTime; subtract first_log_mono_ns for virtual time",
+      "observations": 6000
+    },
+    "failing_controls": {
+      "timer-in-ns": {
+        "index": 100,
+        "t_ns": 18055876827502,
+        "field": "controls_allowed",
+        "expected": true,
+        "actual": false
+      },
+      "corrupt-0x260": {
+        "index": 0,
+        "t_ns": 18054876797669,
+        "field": "accepted",
+        "expected": 39,
+        "actual": 38
+      }
+    }
+  },
+  "single_fmu_194": {
+    "fmu": {
+      "path": "fmus/AccController.fmu",
+      "sha256": "12df3da57fe71209d01c39985a829ba606260c11e056fa4e83d92f1b1efac662",
+      "origin": "repository-authored, PythonFMU3 0.3.4 export of proofs/acc-fmi"
+    },
+    "recording": {
+      "path": "recordings/openacc-window.csv",
+      "sha256": "968b007a4a775225407e93829cb93a668968797203409188d94505b4d72a96f5",
+      "window": {
+        "start_s": 300.0,
+        "end_s": 350.0,
+        "lead": 1,
+        "ego": 2
+      },
+      "samples": 501
+    },
+    "period_ns": 100000000,
+    "duration_ns": 50100000000,
+    "start_values": "sample 0, set before initialization",
+    "input_policy": "sample k is set at t_k (input Latency 0) and held for [t_k, t_k+1)",
+    "observation": "the output published in Slot t_k describes t_k + period; compare it with the reference row t_ns = t_k + period. The final sample is held one period past the recording's end, so the last row is at 50.1 s",
+    "comparison": {
+      "absolute": 1e-10,
+      "relative": 1e-12,
+      "coverage": "every sample including the final one"
+    },
+    "parameters": "none: a wrong-parameter control needs a start-value or binding error",
+    "reference": {
+      "path": "references/controller-open-loop.json",
+      "sha256": "f8607c9f63a54ff0caa6e636f274d925d556822906a1096ab47fd4d26130bf31"
+    },
+    "failing_controls": {
+      "one-period-input-shift": {
+        "index": 217,
+        "t_ns": 21800000000,
+        "field": "accel_mps2",
+        "expected": -2.940724869397311,
+        "actual": -3.0
+      }
+    }
+  },
+  "coupled_fmus": {
+    "fmus": {
+      "AccController": "12df3da57fe71209d01c39985a829ba606260c11e056fa4e83d92f1b1efac662",
+      "AccPlant": "9c163cfc3f8474f794437f6438e98fe4709f52a86c0c9ee85759948b4b10baf8"
+    },
+    "period_ns": 10000000,
+    "latency_ns": {
+      "sensing": 10000000,
+      "command": 10000000,
+      "maneuver": 0
+    },
+    "initial": {
+      "ego_position_m": 0.0,
+      "lead_position_m": 60.0,
+      "ego_speed_mps": 25.0,
+      "lead_speed_mps": 25.0,
+      "accel_mps2": 0.0
+    },
+    "maneuver": "recorded lead acceleration, forward difference, held per 100 ms sample",
+    "maneuver_qualification_mps": 1e-09,
+    "ego": "closed loop in the plant; the recorded ego is never replayed",
+    "observation": "each reference row t_ns is its publication Slot and describes Slot + period; recorded sample k is compared at Slot k * 100 ms - 10 ms",
+    "kpi": {
+      "minimum_gap_m": 5.0,
+      "acceleration_min_mps2": -3.0,
+      "acceleration_max_mps2": 1.5
+    },
+    "reference": {
+      "path": "references/coupled-measured-lead.json",
+      "sha256": "b9d9ddcb0d93209e087d9a491afdce922915282af74cf0e7b7e4a2d913bbcb0e"
+    },
+    "failing_controls": {
+      "one-sample-maneuver-shift": {
+        "index": 1,
+        "t_ns": 190000000,
+        "field": "lead_speed_mps",
+        "expected": 24.999090910000007,
+        "actual": 24.999797979999983
+      }
+    }
+  }
+}
