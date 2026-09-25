@@ -578,6 +578,35 @@ void malformed_operations_do_not_commit() {
 }
 }  // namespace
 
+void configured_buffer_capacity() {
+  can::Bus bus;
+  assert(rejects([&] { bus.configure(2, 4, 1, 0, {}, can::min_operation_buffer - 1); }));
+  assert(rejects([&] { bus.configure(2, 4, 1, 0, {}, can::max_operation_buffer + 1); }));
+  // 61 bytes fit a 64-byte capacity; one more 16-byte operation does not.
+  const auto within = bitrate(125000) + frame(1, {}) + frame(2, {}) + frame(3, {});
+  const auto over = within + frame(4, {});
+  for (const auto& [input, accepted] : {std::pair{within, true}, std::pair{over, false}}) {
+    can::Bus sized;
+    sized.configure(2, 8, 1, 0, {}, 64);
+    send(sized, 1, bitrate(125000), 0);
+    assert(rejects([&] { send(sized, 0, input, 0); }) != accepted);
+  }
+  // Format Error reports share what a frame end leaves of the capacity (28).
+  can::Bytes largest{0xad, 0xde, 0, 0, 18, 0, 0, 0};
+  largest.resize(18);
+  can::Bus reports;
+  reports.configure(2, 4, 1, 0, {}, 64);
+  send(reports, 0, largest, 0);
+  reports.tick(1);
+  assert(reports.outputs()[0] == format_error(largest));
+  auto oversized = largest;
+  oversized.push_back(0);
+  oversized[4] = 19;
+  can::Bus full;
+  full.configure(2, 4, 1, 0, {}, 64);
+  assert(rejects([&] { send(full, 0, oversized, 0); }));
+}
+
 int main() {
   wire_lengths();
   burst_and_mid_transmission_request();
@@ -593,4 +622,5 @@ int main() {
   corrupt_operations_get_format_errors();
   unsupported_operations_fail();
   malformed_operations_do_not_commit();
+  configured_buffer_capacity();
 }

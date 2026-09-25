@@ -139,7 +139,8 @@ unsigned frame_bits(std::uint32_t id, std::span<const std::uint8_t> data) {
 
 void Bus::validate_configuration_limits(
     unsigned active_nodes, unsigned queue_capacity,
-    std::uint64_t retry_limit, std::uint64_t fault_rule_count) {
+    std::uint64_t retry_limit, std::uint64_t fault_rule_count,
+    std::size_t buffer_capacity) {
   require(active_nodes >= 1 && active_nodes <= terminal_capacity,
           "active node count outside declared terminal capacity");
   require(queue_capacity >= 1 && queue_capacity <= max_queue_capacity,
@@ -148,13 +149,17 @@ void Bus::validate_configuration_limits(
           "automatic CAN retransmission limit must be 0..4");
   require(fault_rule_count <= max_fault_rules,
           "fault schedule exceeds its finite rule capacity");
+  require(buffer_capacity >= min_operation_buffer &&
+              buffer_capacity <= max_operation_buffer,
+          "per-terminal operation buffer capacity must be 64..2048 bytes");
 }
 
 void Bus::configure(unsigned active_nodes, unsigned queue_capacity,
                     std::uint64_t retry_limit, std::uint64_t fault_rule_count,
-                    std::span<const FaultRuleInput> fault_rules) {
+                    std::span<const FaultRuleInput> fault_rules,
+                    std::size_t buffer_capacity) {
   validate_configuration_limits(active_nodes, queue_capacity, retry_limit,
-                                fault_rule_count);
+                                fault_rule_count, buffer_capacity);
   require(fault_rules.size() <= max_fault_rules &&
               fault_rules.size() >= fault_rule_count,
           "fault schedule parameters do not match the declared rule count");
@@ -212,6 +217,7 @@ void Bus::configure(unsigned active_nodes, unsigned queue_capacity,
   }
   active_nodes_ = active_nodes;
   queue_capacity_ = queue_capacity;
+  buffer_capacity_ = buffer_capacity;
   retry_limit_ = unsigned(retry_limit);
   fault_rule_count_ = unsigned(fault_rule_count);
   fault_rules_ = configured_rules;
@@ -250,7 +256,8 @@ void Bus::receive(const Inputs& inputs, Nanoseconds now) {
   Requests requests;
   for (unsigned terminal = 0; terminal < inputs.size(); ++terminal) {
     require(terminal < active_nodes_ || inputs[terminal].empty(), "input to inactive terminal");
-    require(inputs[terminal].size() <= max_operation_buffer, "operation buffer exceeds maxSize");
+    require(inputs[terminal].size() <= buffer_capacity_,
+            "operation buffer exceeds the configured capacity");
     next.accept(terminal, inputs[terminal], now, requests);
   }
   for (const auto& [sender, request] : requests) next.enqueue(sender, request);
@@ -315,7 +322,7 @@ void Bus::report_format_error(unsigned terminal, std::span<const std::uint8_t> o
           "a due Format Error report was not delivered");
   auto& report = format_errors_[terminal];
   const auto length = 10 + op.size();
-  require(report.size() + length <= format_error_capacity,
+  require(report.size() + length <= buffer_capacity_ - frame_end_output,
           "Format Error reports exceed the terminal's output capacity");
   const Bytes header{format_error_code, 0, 0, 0,
                      std::uint8_t(length), std::uint8_t(length >> 8), 0, 0,

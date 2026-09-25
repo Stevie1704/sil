@@ -8,6 +8,9 @@ one loaded library through FMPy, and malformed traffic across a SiL Run.
 import json
 import subprocess
 
+import pytest
+from fmpy.fmi1 import FMICallException
+
 from fmpy import extract, read_model_description
 from fmpy.fmi3 import FMU3Slave
 
@@ -18,7 +21,7 @@ from sil.recording import read_records
 from test_exchange import (
     ARTIFACTS, BUFFER_SCHEMAS, FRAME, LAYOUT, MODEL, ROOT, THREE_REQUESTS,
     UNKNOWN_OPERATION, config, confirm, drive, drive_steps, fault_parameters,
-    format_error, frame, frame_end_ns, sil_run,
+    format_error, frame, frame_end_ns, sil_run, deliver, initialized_fmu,
 )
 
 RATE = 125_000
@@ -190,3 +193,30 @@ def test_sil_run_reports_corrupt_operations_and_fails_unsupported_ones(tmp_path)
         assert list(invocation.iterdir()) == []
         evidence[name] = {"exit_code": result.returncode, "diagnostic": diagnostic}
     (ARTIFACTS / "issue157-sil.json").write_text(json.dumps(evidence, indent=2) + "\n")
+
+
+def test_run_selects_a_smaller_operation_buffer_below_the_packaged_maxsize():
+    description = read_model_description(ARTIFACTS / f"{MODEL}.fmu")
+    packaged = {v.name: v for v in description.modelVariables}
+    assert packaged["Node1.Rx_Data"].maxSize == 2048
+    assert packaged["perTerminalBufferCapacity"].start == "2048"
+    within = config(RATE) + frame(1, b"") * 3   # 23 + 48 = 71 bytes
+    capacity = [(LAYOUT["buffer_capacity"], len(within))]
+    with initialized_fmu(parameters=capacity) as bus:
+        assert bus.getFloat64([LAYOUT["buffer_capacity"]]) == [len(within)]
+        deliver(bus, config(RATE), 1)
+        deliver(bus, within, 0)
+        bus.updateDiscreteStates()
+    with initialized_fmu(parameters=capacity) as bus:
+        deliver(bus, config(RATE), 1)
+        deliver(bus, within + frame(2, b""), 0)
+        with pytest.raises(FMICallException):
+            bus.updateDiscreteStates()
+
+
+@pytest.mark.parametrize("capacity", [63, 2049, 64.5])
+def test_buffer_capacity_outside_its_range_fails_at_set_float64(capacity):
+    with pytest.raises(FMICallException):
+        with initialized_fmu(parameters=[(LAYOUT["buffer_capacity"], capacity)],
+                             exit_initialization=False):
+            pass

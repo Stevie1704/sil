@@ -17,10 +17,10 @@ This is a deliberately restricted profile, not full CAN/FMI conformance.
 | Surface | Support and rejection |
 | --- | --- |
 | Topology | Four terminals (`Node1`–`Node4`) are declared; `activeNodeCount` selects the first 1–4, default 2. An inactive terminal accepts no input and receives no operation. Every active terminal receives each successful frame unless it was a sender. |
-| Encoding | Little-endian operation buffers per §§5.2 and 5.5.1. Complete buffers up to 2048 bytes; exact lengths checked before reading fields. A corrupt operation is answered with `Format Error`; see [Malformed traffic](#malformed-traffic-and-resource-bounds). |
+| Encoding | Little-endian operation buffers per §§5.2 and 5.5.1. Complete buffers up to the configured `perTerminalBufferCapacity` (at most the packaged 2048-byte maxSize); exact lengths checked before reading fields. A corrupt operation is answered with `Format Error`; see [Malformed traffic](#malformed-traffic-and-resource-bounds). |
 | Transmit | `0x10`, 11-bit ID 0–2047, IDE=RTR=0, 0–8 data bytes. FD, XL, extended and remote frames rejected. |
 | Configuration | `0x40`: CAN bitrate from 10000 to 1000000 bit/s dividing 10^9. All active terminals must agree before transmission. Each may select BufferAndRetransmit (1, default) or DiscardAndNotify (2); other rates, kinds and policies fail. Configuration is consumed, never forwarded. |
-| FMI parameters | Fixed Float64 parameters `activeNodeCount` (value reference 1025, integer 1–4, default 2), `perNodeQueueCapacity` (1026, integer 1–64, default 4), `faultRetryLimit` (1027, integer 0–4, default 1), `faultRuleCount` (1028, integer 0–8, default 0), and eight ordered rule slots are set before Initialization Mode. Rule fields are fixed Float64 parameters named `faultRuleNKind`, `faultRuleNSenderNode`, `faultRuleNReceiverNode`, `faultRuleNIdentifier`, `faultRuleNRequestStartNs`, `faultRuleNRequestEndNs`, `faultRuleNOccurrence`, and `faultRuleNAttempt`; unused slots must stay zero. The existing Importer `--start instance.parameter=value` path carries these exact integers in the hashed Manifest. No external schedule file, new Manifest field, or dynamic terminal creation is used. Non-integer values and invalid scalar bounds fail at `SetFloat64`; each complete rule is validated there, and the full schedule is validated again at `ExitInitializationMode` before the Run starts. |
+| FMI parameters | Fixed Float64 parameters `activeNodeCount` (value reference 1025, integer 1–4, default 2), `perNodeQueueCapacity` (1026, integer 1–64, default 4), `faultRetryLimit` (1027, integer 0–4, default 1), `faultRuleCount` (1028, integer 0–8, default 0), `perTerminalBufferCapacity` (1029, integer 64–2048 bytes, default 2048), and eight ordered rule slots are set before Initialization Mode. Rule fields are fixed Float64 parameters named `faultRuleNKind`, `faultRuleNSenderNode`, `faultRuleNReceiverNode`, `faultRuleNIdentifier`, `faultRuleNRequestStartNs`, `faultRuleNRequestEndNs`, `faultRuleNOccurrence`, and `faultRuleNAttempt`; unused slots must stay zero. The existing Importer `--start instance.parameter=value` path carries these exact integers in the hashed Manifest. No external schedule file, new Manifest field, or dynamic terminal creation is used. Non-integer values and invalid scalar bounds fail at `SetFloat64`; each complete rule is validated there, and the full schedule is validated again at `ExitInitializationMode` before the Run starts. |
 | Confirmation and delivery | At successful frame end, each sender receives `Confirm` (`0x20`) and each other active terminal receives one unchanged `CanTransmit`. No loopback. A discarded loser receives `ArbitrationLost` (`0x30`, its lost ID) followed by the winning frame in the same operation buffer at that frame end. A scheduled delivery suppression omits the winning `CanTransmit` only for its named receiver; it still confirms the senders and raises no error notification. |
 | Arbitration and queue | All same-instant inputs are collected before arbitration. The lowest 11-bit identifier among each node's FIFO head wins. Each node's pending queue has the configured capacity; a frame already on the wire does not count. Full queues fail atomically and put the FMU in Error state, ending the Run. A wire frame cannot be preempted. After each frame and three-bit intermission, the heads compete again, including requests arriving at that boundary. BufferAndRetransmit leaves a loser queued; DiscardAndNotify removes its head and reports the loss. Distinct same-ID payloads fail when that ID wins, because electrical error behavior is outside the model; bit-identical same-ID frames co-transmit and all senders receive Confirm. |
 | Other operations | All other incoming opcodes the CAN chapter defines, including Status, Wakeup, incoming Format Error, Confirm, ArbitrationLost and Bus Error, fail explicitly. Unknown opcodes are corrupt and draw `Format Error` (`0x01`). Scheduled transmission errors produce the FMI-LS-BUS `Bus Error` operation (`0x31`) to active terminals. The selected sender is the primary error reporter and the sole terminal marked as the sender; other terminals, including other co-transmitters, are secondary reporters and have `Is Sender = false`. The operation uses the standard Bit Error code (`0x01`) but is an abstract, scheduled notification, not an electrical bit-level simulation. Its 15-byte layout, error code and error flags follow the official [FMI-LS-BUS 1.0.0 Network Abstraction specification, Tables 14–16](https://fmi-standard.org/fmi-ls-bus/1.0.0/). |
@@ -48,7 +48,8 @@ with fmi3Error, and the SiL Run ends as a Run failure (exit 1).
 | Valid in its FMI-LS-BUS layout and content: an extended or remote frame, CAN FD/XL Transmit, FD/XL bitrate, Status, Wakeup, or an operation only the bus produces | fmi3Error |
 | Unsupported, unrepresentable or inconsistent bitrate; Transmit before every active terminal agreed on one | fmi3Error |
 | A pending queue beyond its capacity; distinct payloads under one winning ID | fmi3Error |
-| Input above 2048 bytes, or to an inactive terminal | fmi3Error at `SetBinary` |
+| Input above the packaged 2048-byte maxSize, or to an inactive terminal | fmi3Error at `SetBinary` |
+| Input above the configured `perTerminalBufferCapacity` | fmi3Error in that event |
 | More than 256 events at one instant | fmi3Error |
 
 The report goes to the sending terminal only. It follows the official layout
@@ -57,8 +58,9 @@ the corrupt operation). A countdown Clock cannot tick at the instant it is
 stated in, so reports fall due one nanosecond after the event that received
 the operation; all reports of one instant are concatenated in arrival order.
 When a frame end falls on that instant, the frame's operations come first.
-Reports pending for one terminal hold at most 2012 bytes, so that terminal's
-output stays within its 2048-byte maxSize alongside one frame end's
+Reports pending for one terminal hold at most the configured capacity minus
+36 bytes (2012 bytes at the default), so that terminal's output stays within
+its capacity alongside one frame end's
 ArbitrationLost and Transmit. A report beyond that, or at the last supported
 instant, fails with fmi3Error. The event that raised a failure commits
 nothing.
@@ -81,8 +83,8 @@ above:
 | --- | --- |
 | Terminals | 4, of which `activeNodeCount` are active |
 | Pending frames | `perNodeQueueCapacity` (at most 64) per terminal, plus one frame on the wire and one automatic retry slot per terminal |
-| Rx and Tx Binary | 2048 bytes per terminal |
-| Pending Format Error reports | 2012 bytes per terminal |
+| Rx and Tx Binary | `perTerminalBufferCapacity` (64–2048 bytes, default 2048) per terminal; the packaged maxSize is 2048 |
+| Pending Format Error reports | the configured capacity minus 36 bytes per terminal (2012 at the default) |
 | Fault schedule | 8 rules, at most 4 automatic retries |
 | Events at one instant | 256 |
 

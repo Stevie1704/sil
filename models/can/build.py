@@ -59,6 +59,8 @@ def write_descriptions(root):
         ("perNodeQueueCapacity", LAYOUT["queue_capacity"], "4"),
         ("faultRetryLimit", LAYOUT["fault_retry_limit"], "1"),
         ("faultRuleCount", LAYOUT["fault_rule_count"], "0"),
+        ("perTerminalBufferCapacity", LAYOUT["buffer_capacity"],
+         str(LAYOUT["max_binary_size"])),
     ):
         ET.SubElement(
             variables, "Float64", name=name, valueReference=str(reference),

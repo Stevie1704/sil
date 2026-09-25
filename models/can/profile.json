@@ -26,6 +26,7 @@
     "queue_capacity": 1026,
     "fault_retry_limit": 1027,
     "fault_rule_count": 1028,
+    "buffer_capacity": 1029,
     "fault_rule_base": 1100,
     "fault_rule_stride": 8,
     "fault_rule_capacity": 8,

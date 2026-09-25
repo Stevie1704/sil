@@ -23,6 +23,7 @@ enum class Mode { instantiated, initialization, event, step, terminated, error }
 struct Parameters {
   unsigned active_nodes = 2;
   unsigned queue_capacity = 4;
+  std::size_t buffer_capacity = can::max_operation_buffer;
   std::uint64_t retry_limit = 1;
   std::uint64_t fault_rule_count = 0;
   bool fault_rule_count_set = false;
@@ -142,6 +143,7 @@ bool active_rule_fields_are_set(const Parameters& parameters) {
 double parameter_value(const Parameters& parameters, fmi3ValueReference vr) {
   if (vr == profile::active_nodes) return parameters.active_nodes;
   if (vr == profile::queue_capacity) return parameters.queue_capacity;
+  if (vr == profile::buffer_capacity) return double(parameters.buffer_capacity);
   if (vr == profile::fault_retry_limit) return parameters.retry_limit;
   if (vr == profile::fault_rule_count) return parameters.fault_rule_count;
   if (auto fault = fault_parameter(vr))
@@ -258,7 +260,7 @@ fmi3Status fmi3ExitInitializationMode(fmi3Instance instance) {
     const auto schedule = fault_rule_inputs(i.parameters);
     i.bus.configure(i.parameters.active_nodes, i.parameters.queue_capacity,
                     i.parameters.retry_limit, i.parameters.fault_rule_count,
-                    schedule);
+                    schedule, i.parameters.buffer_capacity);
     // Initial assignments are values, not Clock activations. The first event
     // starts with no outstanding write or transmission request.
     i.event = {};
@@ -403,6 +405,8 @@ fmi3Status fmi3SetFloat64(fmi3Instance instance, const fmi3ValueReference vr[],
         parameters.active_nodes = whole_count(values[k]);
       else if (vr[k] == profile::queue_capacity)
         parameters.queue_capacity = whole_count(values[k]);
+      else if (vr[k] == profile::buffer_capacity)
+        parameters.buffer_capacity = whole_count(values[k]);
       else if (vr[k] == profile::fault_retry_limit)
         parameters.retry_limit = whole_integer(values[k]);
       else if (vr[k] == profile::fault_rule_count) {
@@ -419,7 +423,8 @@ fmi3Status fmi3SetFloat64(fmi3Instance instance, const fmi3ValueReference vr[],
     }
     can::Bus::validate_configuration_limits(
         parameters.active_nodes, parameters.queue_capacity,
-        parameters.retry_limit, parameters.fault_rule_count);
+        parameters.retry_limit, parameters.fault_rule_count,
+        parameters.buffer_capacity);
     if (active_rule_fields_are_set(parameters)) {
       const auto schedule = fault_rule_inputs(parameters);
       can::Bus candidate;
@@ -427,7 +432,8 @@ fmi3Status fmi3SetFloat64(fmi3Instance instance, const fmi3ValueReference vr[],
           parameters.active_nodes, parameters.queue_capacity,
           parameters.retry_limit, parameters.fault_rule_count,
           std::span<const can::FaultRuleInput>(
-              schedule.data(), std::size_t(parameters.fault_rule_count)));
+              schedule.data(), std::size_t(parameters.fault_rule_count)),
+          parameters.buffer_capacity);
     }
     i.parameters = parameters;
   });

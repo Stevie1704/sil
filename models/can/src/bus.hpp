@@ -16,12 +16,15 @@ inline constexpr unsigned max_queue_capacity = 64;
 inline constexpr unsigned max_fault_rules = 8;
 inline constexpr unsigned max_fault_retries = 4;
 inline constexpr std::uint32_t max_classical_identifier = 0x7ff;
-// Every terminal's Rx and Tx Binary holds at most this many bytes (maxSize).
+// The packaged Binary maxSize of every terminal's Rx and Tx. A Run configures
+// a smaller or equal operation buffer capacity per terminal.
 inline constexpr std::size_t max_operation_buffer = 2048;
+inline constexpr std::size_t min_operation_buffer = 64;
 // A frame end adds at most one ArbitrationLost (12 bytes) and one Transmit
 // with 8 data bytes (24) to a terminal's output; Format Error reports that
-// fall due at the same instant share the rest of maxSize.
-inline constexpr std::size_t format_error_capacity = max_operation_buffer - 12 - 24;
+// fall due at the same instant share the rest of the capacity.
+inline constexpr std::size_t frame_end_output = 12 + 24;
+inline constexpr std::size_t format_error_capacity = max_operation_buffer - frame_end_output;
 // The operation buffers each terminal handed the bus in one event.
 using Inputs = std::array<std::span<const std::uint8_t>, terminal_capacity>;
 
@@ -70,10 +73,12 @@ class Bus {
   void configure(unsigned active_nodes, unsigned queue_capacity,
                  std::uint64_t retry_limit = 1,
                  std::uint64_t fault_rule_count = 0,
-                 std::span<const FaultRuleInput> fault_rules = {});
+                 std::span<const FaultRuleInput> fault_rules = {},
+                 std::size_t buffer_capacity = max_operation_buffer);
   static void validate_configuration_limits(
       unsigned active_nodes, unsigned queue_capacity,
-      std::uint64_t retry_limit, std::uint64_t fault_rule_count);
+      std::uint64_t retry_limit, std::uint64_t fault_rule_count,
+      std::size_t buffer_capacity = max_operation_buffer);
   unsigned active_nodes() const { return active_nodes_; }
   unsigned queue_capacity() const { return queue_capacity_; }
   void receive(const Inputs& inputs, Nanoseconds now);
@@ -118,6 +123,7 @@ class Bus {
   Nanoseconds bit_time() const { return ns_per_s / *bitrate_; }
 
   unsigned active_nodes_ = 2, queue_capacity_ = 4, retry_limit_ = 1;
+  std::size_t buffer_capacity_ = max_operation_buffer;
   std::array<Bytes, terminal_capacity> outputs_;
   std::array<Bytes, terminal_capacity> notifications_;
   // FMI-LS-BUS answers a corrupt operation with Format Error to its sender.
