@@ -10,6 +10,7 @@ owns the instants between two Slots.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from collections.abc import Sequence
 
@@ -124,6 +125,58 @@ class _Events:
         )
 
 
+@dataclass(frozen=True)
+class ChannelMapping:
+    """Every Channel of a Run, bound to the variables of one FMU.
+
+    `clocked` holds the Channels whose Messages are Clock activations, split
+    by direction; `inputs` and `outputs` hold the ones a Step writes and reads.
+    """
+
+    inputs: dict[str, ChannelBinding]
+    outputs: dict[str, ChannelBinding]
+    clocked: dict[str, dict[str, ClockedPayload]]
+
+
+def bind_channels(
+    init: dict, binds: Sequence[str], description: ModelDescription
+) -> ChannelMapping:
+    """Bind the declared Channels to FMU variables, in both directions.
+
+    An input-direction Channel is written into the FMU before its step; an
+    output-direction Channel is published from it after. Declaring one
+    binding declares them all — the bindings are the whole mapping, and a
+    Channel with none derives its own from the Float64 variable names.
+
+    A Channel whose variable declares a Clock is neither: its Messages are
+    activations of that Clock, handled in Event Mode.
+
+    Nothing here loads the FMU, so an inspection of an archive states the
+    same verdict on a proposed mapping as the Run that initializes it.
+    """
+    fields_by_channel = channel_fields(init)
+    bound = (
+        declared_bindings(list(binds), fields_by_channel, description)
+        if binds
+        else derived_bindings(init, fields_by_channel, description)
+    )
+    mapping = ChannelMapping({}, {}, {"in": {}, "out": {}})
+    for channel, declaration in init["channels"].items():
+        direction = declaration["direction"]
+        fields = fields_by_channel[channel]
+        payload = clocked_payload(
+            channel, direction, fields, bound[channel], description
+        )
+        if payload is not None:
+            mapping.clocked[direction][channel] = payload
+            continue
+        bindings = mapping.inputs if direction == "in" else mapping.outputs
+        bindings[channel] = bind_channel(
+            channel, direction, fields, bound[channel]
+        )
+    return mapping
+
+
 class FmuParticipant(StepParticipant):
     """A process participant whose behavior is an imported FMU's."""
 
@@ -173,38 +226,11 @@ class FmuParticipant(StepParticipant):
             self._fmu.enter_step_mode()
 
     def _bind_channels(self, init: dict, description: ModelDescription) -> None:
-        """Bind the declared Channels to FMU variables, in both directions.
-
-        An input-direction Channel is written into the FMU before its step; an
-        output-direction Channel is published from it after. Declaring one
-        binding declares them all — the bindings are the whole mapping, and a
-        Channel with none derives its own from the Float64 variable names.
-
-        A Channel whose variable declares a Clock is neither: its Messages are
-        activations of that Clock, handled in Event Mode.
-        """
-        fields_by_channel = channel_fields(init)
-        bound = (
-            declared_bindings(self._binds, fields_by_channel, description)
-            if self._binds
-            else derived_bindings(init, fields_by_channel, description)
-        )
-        clocked: dict[str, dict[str, ClockedPayload]] = {"in": {}, "out": {}}
-        for channel, declaration in init["channels"].items():
-            direction = declaration["direction"]
-            fields = fields_by_channel[channel]
-            payload = clocked_payload(
-                channel, direction, fields, bound[channel], description
-            )
-            if payload is not None:
-                clocked[direction][channel] = payload
-                continue
-            bindings = self._inputs if direction == "in" else self._outputs
-            bindings[channel] = bind_channel(
-                channel, direction, fields, bound[channel]
-            )
-        if clocked["in"] or clocked["out"]:
-            self._events = _Events(clocked["out"], clocked["in"])
+        """Bind the declared Channels to FMU variables, in both directions."""
+        mapping = bind_channels(init, self._binds, description)
+        self._inputs, self._outputs = mapping.inputs, mapping.outputs
+        if mapping.clocked["in"] or mapping.clocked["out"]:
+            self._events = _Events(mapping.clocked["out"], mapping.clocked["in"])
 
     def on_step(self, t: int, dt: int, inputs: list):
         """One Step of the FMU, and every Message the interval produced.

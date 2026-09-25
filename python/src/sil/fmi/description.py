@@ -223,7 +223,10 @@ def _clock_references(element) -> tuple[int, ...]:
 def _variables(root) -> dict[str, Variable]:
     """Every variable the description declares, of every type."""
     declared: dict[str, Variable] = {}
-    for element in root.find("ModelVariables"):
+    elements = root.find("ModelVariables")
+    if elements is None:
+        raise ValueError("it declares no ModelVariables")
+    for element in elements:
         name, reference = element.get("name"), element.get("valueReference")
         if name is None or reference is None:
             continue
@@ -356,7 +359,12 @@ class ModelDescription:
                 "FMU declares no co-simulation interface; this importer "
                 "drives neither Model Exchange nor Scheduled Execution"
             )
-        variables = _variables(root)
+        try:
+            variables = _variables(root)
+        except ValueError as error:
+            raise ManifestError(
+                f"FMU declares a malformed modelDescription.xml: {error}"
+            ) from error
         return ModelDescription(
             model_identifier=co_simulation.get("modelIdentifier"),
             instantiation_token=root.get("instantiationToken"),

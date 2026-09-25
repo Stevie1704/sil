@@ -13,6 +13,7 @@ import io
 import itertools
 import json
 import math
+import re
 import signal
 import subprocess
 import sys
@@ -778,6 +779,23 @@ class TestRejectedAtStartup:
         assert "Float64_discrete_output" in stderr
         assert "Feedthrough" in stderr
         assert "fmu.Out" in stderr
+
+    @pytest.mark.parametrize("rewrite", [
+        lambda text: text.replace('valueReference="7"', 'valueReference="x"'),
+        lambda text: re.sub(r"<ModelVariables>.*</ModelVariables>", "",
+                            text, flags=re.DOTALL),
+    ], ids=["valueReference", "no ModelVariables"])
+    def test_a_malformed_description_is_a_manifest_error(
+        self, run_sil, tmp_path, rewrite
+    ):
+        """A description the reader cannot make sense of names its cause,
+        rather than ending the participant with a traceback."""
+        stderr = self.run_rejection(
+            run_sil, tmp_path,
+            fmu=fmu_variant(tmp_path, "malformed", rewrite=rewrite),
+        )
+        assert "FMU declares a malformed modelDescription.xml" in stderr
+        assert "Traceback" not in stderr
 
     @pytest.mark.parametrize("name", ["absent.fmu", "not-an-archive.fmu"])
     def test_an_unreadable_fmu_path_is_rejected(self, run_sil, tmp_path, name):

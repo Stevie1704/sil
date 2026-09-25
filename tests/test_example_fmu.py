@@ -11,6 +11,7 @@ round-trip — write, Step, read, publish — asserted on the Recording.
 """
 
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -87,3 +88,22 @@ def test_the_stimulus_is_not_constant(fmu_result):
         for _, fields in fmu_result.messages("fmu.Out")
     }
     assert len(published) > 1
+
+
+def test_the_inspection_mapping_is_the_example_run():
+    """`examples/fmu/mapping.json` is what the example Run's importer sees, so
+    the inspection a reader runs on it answers for this Run."""
+    doc = manifest.fmu_manifest().to_doc()
+    importer = doc["participants"]["fmu"]
+    proposed = json.loads(
+        (ROOT / "examples" / "fmu" / "mapping.json").read_text()
+    )
+    assert proposed["schemas"] == manifest.FMU_SCHEMAS
+    assert proposed["channels"] == {
+        **{route["channel"]: {"schema": doc["channels"][route["channel"]]["schema"],
+                              "direction": "in"}
+           for route in importer["subscribes"]},
+        **{channel: {"schema": doc["channels"][channel]["schema"],
+                     "direction": "out"}
+           for channel in importer["publishes"]},
+    }

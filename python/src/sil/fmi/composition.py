@@ -208,7 +208,7 @@ def _require_transceiver_terminal(
             )
 
 
-def _build_transceiver(
+def build_transceiver(
     instance: Instance, terminal: Terminal, profile: str
 ) -> Transceiver:
     """Build one terminal's two sides, and say who raises each Clock.
@@ -292,7 +292,7 @@ class Transceivers:
                 f"{instance.name!r} does not declare (declared: "
                 f"{declared or 'none'})"
             )
-        built = _build_transceiver(instance, terminal, self._profile)
+        built = build_transceiver(instance, terminal, self._profile)
         self._built[key] = built
         for member in (RX_DATA, TX_DATA):
             self._by_variable[(instance.name, terminal.members[member])] = (

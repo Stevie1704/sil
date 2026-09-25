@@ -102,6 +102,12 @@ ordinary participant, translating that standard's stepping contract to this
 one. It lives at the edge; the kernel never learns the standard exists.
 _Avoid_: wrapper, bridge, master, co-simulation master
 
+**Inspection**:
+A static report on one FMU against the Importer's profile, made before a Run
+is authored. It reads the archive's declarations and runs the checks the
+Importer runs before loading; it never loads the FMU's binary.
+_Avoid_: validation, conformance check, certification
+
 **FMU group**:
 Several FMUs one Importer drives inside a single Process participant, connected
 to each other by their own standard's terminals rather than by Channels. It
