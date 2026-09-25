@@ -916,23 +916,25 @@ The rules:
 - Wrong coverage fails: a schema field that the contract does not name, a
   contract field that the schema does not declare, a rule that does not fit
   the field type, a compared field that the reference Channel does not have,
-  and a Channel that a Recording does not declare. Array fields are compared
-  only as `"ignore"`. A Channel that the contract does not name is not
-  compared.
+  a Channel that a Recording does not declare, and a Channel whose every
+  field is `"ignore"`. Array fields are compared only as `"ignore"`. A Channel
+  that the contract does not name is not compared. A contract that repeats a
+  key is refused.
 - The final publication is compared like all other publications. With the
   Step-period offset, the last Step's state lands on the Duration, where no
   participant of the Run can observe it.
 
 The report states the verdict, the digest of the contract and of both
 Recordings, per Channel the count of observations, of checked, failed,
-non-finite, missing and ambiguous samples, and the total count of
+non-finite, missing and ambiguous Messages, and the total count of
 divergences. It also states the first divergence: the earliest observation
 time, then the contract's Channel and field order. That entry gives the kind
 (`value`, `nonfinite`, `missing-actual`, `missing-reference`,
 `ambiguous-actual`, `ambiguous-reference`), the Channel and field, the
-observation time, the recorded time on each side, the actual and expected
+observation time, the recorded time on each side (the MCAP log time; a
+Recording states no other source time), the actual and expected
 values, the tolerance with its allowed error, and the absolute error. For a
-missing or ambiguous sample the field is `null`, and the values are an object
+missing or ambiguous Message the field is `null`, and the values are an object
 of the compared fields; an ambiguous side gives a list of times and values.
 The JSON report is strict JSON: a non-finite value is the string `"nan"`,
 `"inf"` or `"-inf"`.
