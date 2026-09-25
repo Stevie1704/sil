@@ -91,12 +91,14 @@ example-fmu: venv build ## Run the FMU example and record it into the build dire
 	PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/fmu.json -o $(BUILD_DIR)/fmu.mcap
 
 # Convenience over `make run` for the CSV replay example: convert the CSV into
-# a Recording and a receipt, build the Manifest that replays it into the
-# observer, and run it twice. `cmp` fails the target when the two Run
-# Recordings differ.
+# a Recording and a receipt twice, build the Manifest that replays it into the
+# observer, and run it twice. `cmp` fails the target when either the two
+# conversions or the two Run Recordings differ.
 .PHONY: example-csv
 example-csv: venv build ## Convert the example CSV, replay it twice, compare
 	PYTHONPATH=$(SRC) $(PYTHON) -m sil.csv_recording examples/csv/mapping.json examples/csv/signals.csv -o $(BUILD_DIR)/signals.mcap --receipt $(BUILD_DIR)/signals.receipt.json
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.csv_recording examples/csv/mapping.json examples/csv/signals.csv -o $(BUILD_DIR)/signals-2.mcap --receipt $(BUILD_DIR)/signals-2.receipt.json
+	cmp $(BUILD_DIR)/signals.mcap $(BUILD_DIR)/signals-2.mcap
 	PYTHONPATH=$(SRC) $(PYTHON) examples/csv/manifest.py $(BUILD_DIR)/csv-replay.json --recording $(BUILD_DIR)/signals.mcap
 	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/csv-replay.json -o $(BUILD_DIR)/csv-replay-1.mcap
 	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/csv-replay.json -o $(BUILD_DIR)/csv-replay-2.mcap

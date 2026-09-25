@@ -700,6 +700,9 @@ root:
 workdir=$(mktemp -d)
 sil-csv examples/csv/mapping.json examples/csv/signals.csv \
     -o "$workdir/signals.mcap" --receipt "$workdir/signals.receipt.json"
+sil-csv examples/csv/mapping.json examples/csv/signals.csv \
+    -o "$workdir/signals-2.mcap" --receipt "$workdir/signals-2.receipt.json"
+cmp "$workdir/signals.mcap" "$workdir/signals-2.mcap"
 python examples/csv/manifest.py "$workdir/replay.json" \
     --recording "$workdir/signals.mcap"
 sil-run "$workdir/replay.json" -o "$workdir/run-1.mcap"
@@ -707,7 +710,8 @@ sil-run "$workdir/replay.json" -o "$workdir/run-2.mcap"
 cmp "$workdir/run-1.mcap" "$workdir/run-2.mcap"
 ```
 
-`make example-csv` runs the same sequence from the source tree. The same CSV,
+`make example-csv` runs the same sequence from the source tree. The two
+receipts differ only in the Recording file name they record. The same CSV,
 mapping and converter version give a byte-identical Recording, and the
 Manifest over it gives byte-identical Run Recordings.
 
@@ -756,7 +760,9 @@ rows that share a timestamp keep that order when the Replay participant
 publishes them. The receipt records the converter name, version, source
 revision and MCAP library; the SHA-256 of the CSV, the mapping and the
 Recording; each Channel's message count and first and last time; and the time
-bounds of the Recording. Choose the replaying Manifest's Duration after the
+bounds of the Recording. A converted Recording carries the source and mapping digests as MCAP
+metadata instead of a Manifest hash: no Manifest produced it. Choose the
+replaying Manifest's Duration after the
 receipt's `last_ns`: the Replay participant does not publish Messages at or
 after the Duration, and it drops them without an error.
 
