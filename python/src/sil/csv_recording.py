@@ -320,7 +320,7 @@ def _clock(value) -> _Clock:
     value = _object(value, "'timestamp'", {"column", "unit"},
                     frozenset({"origin"}))
     unit = value["unit"]
-    if unit not in _NS_PER_UNIT:
+    if not isinstance(unit, str) or unit not in _NS_PER_UNIT:
         raise ConversionError(
             f"'timestamp' unit must be one of {', '.join(_NS_PER_UNIT)}, "
             f"got {unit!r}"
@@ -427,25 +427,61 @@ def _read_rows(plan: _Mapping, data: bytes, path: Path
     reader = csv.reader(io.StringIO(text, newline=""), strict=True)
     try:
         header = next(reader, None)
-        if header is None:
-            raise ConversionError(f"{path}: the CSV has no header row")
-        index = _column_index(header, plan, path)
-        messages: list[_Message] = []
-        previous_ns: int | None = None
-        rows = 0
-        for rows, cells in enumerate(reader, 1):
-            where = f"{path}: row {rows} (line {reader.line_num})"
-            if len(cells) != len(header):
-                raise ConversionError(
-                    f"{where}: expected {len(header)} cells, got {len(cells)}"
-                )
-            previous_ns = _row_ns(plan.clock, index, cells, where, previous_ns)
-            messages.extend(_row_messages(plan, index, cells, where, previous_ns))
     except csv.Error as e:
-        raise ConversionError(
-            f"{path}: line {reader.line_num}: malformed CSV: {e}"
-        ) from e
-    return rows, messages
+        raise ConversionError(f"{path}: header (line 1): malformed CSV: {e}") from e
+    if header is None:
+        raise ConversionError(f"{path}: the CSV has no header row")
+    index = _column_index(header, plan, path)
+    messages: list[_Message] = []
+    previous_ns: int | None = None
+    rows = 0
+    while True:
+        line = reader.line_num + 1
+        where = f"{path}: row {rows + 1} (line {line})"
+        try:
+            cells = next(reader, None)
+        except csv.Error as e:
+            column = _broken_column(text, line, header)
+            raise ConversionError(
+                f"{where} column {column}: malformed CSV: {e}"
+            ) from e
+        if cells is None:
+            return rows, messages
+        rows += 1
+        if len(cells) != len(header):
+            raise ConversionError(
+                f"{where}: expected {len(header)} cells, got {len(cells)}"
+            )
+        previous_ns = _row_ns(plan.clock, index, cells, where, previous_ns)
+        messages.extend(_row_messages(plan, index, cells, where, previous_ns))
+
+
+def _broken_column(text: str, line: int, header: list[str]) -> str:
+    """The column the csv module was reading when it rejected the row that
+    starts at `line`: an unterminated quoted cell, or text after a closing
+    quote. Quotes are special only at the start of a cell, as in `csv`."""
+    rest = "".join(io.StringIO(text, newline="").readlines()[line - 1:])
+    field, quoted, at_start, i = 0, False, True, 0
+    while i < len(rest):
+        ch = rest[i]
+        if quoted:
+            if ch == '"' and rest[i + 1:i + 2] == '"':
+                i += 1
+            elif ch == '"':
+                quoted = False
+                if rest[i + 1:i + 2] not in ("", ",", "\r", "\n"):
+                    break
+        elif ch == ",":
+            field, at_start = field + 1, True
+            i += 1
+            continue
+        elif ch in "\r\n":
+            break
+        elif ch == '"' and at_start:
+            quoted = True
+        at_start = False
+        i += 1
+    return repr(header[field]) if field < len(header) else f"cell {field + 1}"
 
 
 def _column_index(header: list[str], plan: _Mapping, path: Path) -> dict[str, int]:

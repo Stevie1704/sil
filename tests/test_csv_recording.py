@@ -197,7 +197,7 @@ class TestTimestamps:
         message = rejected(tmp_path, f"t,v\n{cell},1\n")
         assert "row 1" in message and "'t'" in message
 
-    @pytest.mark.parametrize("unit", ["min", "S", "", None])
+    @pytest.mark.parametrize("unit", ["min", "S", "", None, ["s"], {"s": 1}])
     def test_unknown_unit_is_rejected(self, tmp_path, unit):
         doc = mapping(timestamp={"column": "t", "unit": unit})
         assert "unit" in rejected(tmp_path, "t,v\n0,1\n", doc)
@@ -337,6 +337,14 @@ class TestRows:
     def test_wrong_cell_count_is_rejected(self, tmp_path):
         message = rejected(tmp_path, "t,v\n0,1\n1,2,3\n")
         assert "row 2" in message and "line 3" in message
+
+    @pytest.mark.parametrize(("text", "column"), [
+        ('t,v\n0,1\n1,"2\n', "'v'"),        # unterminated quoted cell
+        ('t,v\n0,1\n"1"x,2\n', "'t'"),       # text after a closing quote
+    ])
+    def test_malformed_quoting_names_row_and_column(self, tmp_path, text, column):
+        message = rejected(tmp_path, text)
+        assert "row 2 (line 3)" in message and f"column {column}" in message
 
     def test_blank_line_is_rejected(self, tmp_path):
         assert "row 2" in rejected(tmp_path, "t,v\n0,1\n\n2,3\n")
