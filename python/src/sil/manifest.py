@@ -537,7 +537,9 @@ class Manifest:
                 f"got {recording!r}"
             ) from exc
         try:
-            data = recording.read_bytes()
+            # Hashed in blocks: a long Recording is never held in memory.
+            with open(recording, "rb") as f:
+                recording_hash = hashlib.file_digest(f, "sha256").hexdigest()
         except OSError as e:
             raise ManifestError(
                 f"participant {name!r}: cannot read recording {str(recording)!r}: {e}"
@@ -547,7 +549,7 @@ class Manifest:
             {
                 "type": "replay",
                 "recording": str(recording),
-                "recording_hash": hashlib.sha256(data).hexdigest(),
+                "recording_hash": recording_hash,
                 "channels": list(channels),
             },
         )
