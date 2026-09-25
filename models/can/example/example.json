@@ -1,0 +1,29 @@
+{
+  "duration_ns": 1000000,
+  "step_period_ns": 250000,
+  "bitrate": 500000,
+  "per_node_queue_capacity": 2,
+  "fault_retry_limit": 1,
+  "nodes": [
+    {"arbitration_loss": "BufferAndRetransmit"},
+    {"arbitration_loss": "BufferAndRetransmit"},
+    {"arbitration_loss": "DiscardAndNotify"}
+  ],
+  "frames": [
+    {"node": 2, "at_ns": 1000, "identifier": 512, "data": "aa"},
+    {"node": 3, "at_ns": 1000, "identifier": 768, "data": ""},
+    {"node": 1, "at_ns": 500000, "identifier": 256, "data": "0102"}
+  ],
+  "faults": [
+    {
+      "kind": "ScheduledTransmissionError",
+      "sender_node": 1,
+      "receiver_node": 0,
+      "identifier": 256,
+      "request_start_ns": 500000,
+      "request_end_ns": 500000,
+      "occurrence": 1,
+      "attempt": 1
+    }
+  ]
+}
