@@ -2,8 +2,10 @@
 
     python models/can/bundle_verdict.py build/can/bundle
 
-Fails unless both paths ran the same archive, SiL came from the installed
-runtime image rather than a source tree, and both traces are equal. Writes
+Fails unless both paths ran the same archive, SiL came from an installed
+distribution rather than a source tree, and both traces are equal. The check
+uses the distribution's own file record, not an installation path, because
+the container layout is not a supported interface (SUPPORT.md). Writes
 `evidence.json` next to the inputs. Standard library only.
 """
 
@@ -11,16 +13,16 @@ import json
 import sys
 from pathlib import Path
 
-INSTALLED_PREFIX = "/opt/sil/python/"
-
 
 def verdict(directory):
     sil = json.loads((directory / "sil/trace.json").read_text())
     independent = json.loads((directory / "independent.json").read_text())
     failures = []
     equal = sil["trace"] == independent["trace"]
-    if not sil["sil_module"].startswith(INSTALLED_PREFIX):
-        failures.append(f"sil was imported from {sil['sil_module']}, not the bundle")
+    if not sil["sil_installed"]:
+        failures.append(
+            f"sil was imported from {sil['sil_module']}, not an installed distribution"
+        )
     if sil["fmu_sha256"] != independent["fmu_sha256"]:
         failures.append("the two paths ran different archives")
     if not sil["repeat_identical"]:
@@ -34,7 +36,8 @@ def verdict(directory):
             directory / "qualification-image.txt"
         ).read_text().strip(),
         "installed_sil": {key: sil[key] for key in (
-            "execution_path", "sil_version", "sil_module", "runner_build_info",
+            "execution_path", "sil_version", "sil_module", "sil_installed",
+            "runner_build_info",
             "manifest_sha256", "recording_sha256", "repeat_identical", "deadlines",
         )},
         "independent": {key: independent[key] for key in (

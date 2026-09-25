@@ -12,11 +12,12 @@ import bundle_verdict  # noqa: E402
 TRACE = [[111000, 1, "20000000"]]
 
 
-def prepare(directory, *, module="/opt/sil/python/lib/python3.13/site-packages/sil/__init__.py",
-            sil_trace=TRACE, independent_trace=TRACE, independent_fmu="abc"):
+def prepare(directory, *, installed=True, sil_trace=TRACE, independent_trace=TRACE,
+            independent_fmu="abc"):
     (directory / "sil").mkdir()
     (directory / "sil/trace.json").write_text(json.dumps({
-        "execution_path": "SiL", "sil_version": "0.1.0", "sil_module": module,
+        "execution_path": "SiL", "sil_version": "0.1.0",
+        "sil_module": "/any/layout/sil/__init__.py", "sil_installed": installed,
         "runner_build_info": "sil-run", "fmu_sha256": "abc",
         "manifest_sha256": "m", "recording_sha256": "r", "repeat_identical": True,
         "deadlines": {}, "trace": sil_trace,
@@ -39,7 +40,7 @@ def test_equal_traces_from_the_installed_bundle_pass(tmp_path):
 
 
 @pytest.mark.parametrize("changes, failure", [
-    ({"module": "/work/python/src/sil/__init__.py"}, "not the bundle"),
+    ({"installed": False}, "not an installed distribution"),
     ({"independent_fmu": "other"}, "different archives"),
     ({"independent_trace": []}, "disagree"),
 ])
