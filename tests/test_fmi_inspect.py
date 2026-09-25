@@ -430,6 +430,19 @@ def periodic_tx_clock(text: str) -> str:
     )
 
 
+# The node's send side on one Channel: a clocked Binary payload.
+CAN_TX_MAPPING = {
+    "sil_fmi_mapping": 1,
+    "schemas": {"can.Buffer": {"fields": [
+        {"name": "data_length", "type": "u16"},
+        {"name": "data", "type": "u8", "count": 2048},
+        {"name": "data_event_time_ns", "type": "u64"},
+    ]}},
+    "channels": {"can.Tx": {"schema": "can.Buffer", "direction": "out"}},
+    "bind": ["can.Tx:data=CanChannel.Tx_Data"],
+}
+
+
 class TestClocksAndTerminals:
     """The BUS-group profile, read from the terminals an archive declares."""
 
@@ -466,21 +479,24 @@ class TestClocksAndTerminals:
         assert "member 'Tx_Clock'" in terminal["unsupported"]
         assert "intervalVariability 'constant'" in terminal["unsupported"]
 
-        mapping = {
-            "sil_fmi_mapping": 1,
-            "schemas": {"can.Buffer": {"fields": [
-                {"name": "data_length", "type": "u16"},
-                {"name": "data", "type": "u8", "count": 2048},
-                {"name": "data_event_time_ns", "type": "u64"},
-            ]}},
-            "channels": {"can.Tx": {"schema": "can.Buffer", "direction": "out"}},
-            "bind": ["can.Tx:data=CanChannel.Tx_Data"],
-        }
+        mapping = CAN_TX_MAPPING
         rejected = inspect(archive, mapping)
         assert rejected["mapping"]["rejection"] == runtime_rejection(
             archive, mapping, monkeypatch, tmp_path
         )
         assert rejected["mapping"]["rejection"].endswith(reason)
+
+    def test_the_clock_a_bound_payload_drives_is_not_unbound(self, tmp_path):
+        """Binding a clocked payload drives its Clock too, so an accepted
+        mapping does not list that Clock as left alone."""
+        report = inspect(
+            can_archive(tmp_path, node_fmu, "CanNode"), CAN_TX_MAPPING
+        )
+        assert report["mapping"]["accepted"] is True
+        unbound = report["mapping"]["unbound"]
+        assert "CanChannel.Tx_Data" not in unbound
+        assert "CanChannel.Tx_Clock" not in unbound
+        assert "CanChannel.Rx_Clock" in unbound
 
     def test_an_fmu_without_the_layered_standard(self, tmp_path):
         report = inspect(can_archive(
@@ -536,6 +552,13 @@ class TestTheCommand:
          "direction"),
         ('{"sil_fmi_mapping": 1, "schemas": {}, "channels": {}, '
          '"bind": "x"}', "'bind'"),
+        ('{"sil_fmi_mapping": 1, "schemas": {}, '
+         '"channels": {"c": {"schema": [], "direction": "in"}}}',
+         "names unknown schema []"),
+        ('{"sil_fmi_mapping": 1, "schemas": {"s": {"fields": '
+         '[{"name": "a", "type": "f64"}]}}, '
+         '"channels": {"c": {"schema": "s", "direction": []}}}',
+         "direction"),
     ])
     def test_an_unreadable_mapping_document(
         self, tmp_path, capsys, document, message

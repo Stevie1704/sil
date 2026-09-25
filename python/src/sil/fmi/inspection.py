@@ -345,6 +345,13 @@ def _unbound(mapping: dict, description: ModelDescription) -> list[str]:
             for field in mapping["schemas"][channel["schema"]]["fields"]
         }
     touched |= {start.partition("=")[0] for start in mapping.get("start", [])}
+    # A bound clocked payload is carried by activating its Clock, so the
+    # Clock is driven too.
+    touched |= {
+        _clock_name(description, reference)
+        for name in touched if name in description.variables
+        for reference in description.variables[name].clocks
+    }
     return [
         name for name, variable in description.variables.items()
         if _carried(variable) and name not in touched
@@ -405,7 +412,7 @@ def _channel_problem(channel: object, schemas: dict) -> str | None:
     """What is wrong with one channel declaration, or None."""
     if not isinstance(channel, dict) or set(channel) != {"schema", "direction"}:
         return 'is not {"schema": ..., "direction": ...}'
-    if channel["schema"] not in schemas:
+    if not isinstance(channel["schema"], str) or channel["schema"] not in schemas:
         return f"names unknown schema {channel['schema']!r}"
     if channel["direction"] not in _DIRECTIONS:
         return (
