@@ -89,6 +89,109 @@
     ],
     "inside_qualified_profile": true,
     "profile_gaps": [],
+    "audit": {
+      "archive_sha256": "f14f1f46c97c21bc208c139fa30d19ebce5b1d0fa0789f09a1ff1b9a6b9ee8c5",
+      "fmi_version": "3.0",
+      "model_name": "BouncingBall",
+      "instantiation_token": "{1AE5E10D-9521-4DE3-80B9-D0EAAA7D5AF1}",
+      "generation_tool": "Reference FMUs (v0.0.41)",
+      "interfaces": [
+        "ModelExchange",
+        "CoSimulation"
+      ],
+      "capabilities": {
+        "modelIdentifier": "BouncingBall",
+        "canGetAndSetFMUState": "true",
+        "canSerializeFMUState": "true",
+        "canHandleVariableCommunicationStepSize": "true",
+        "providesIntermediateUpdate": "true",
+        "mightReturnEarlyFromDoStep": "true",
+        "canReturnEarlyAfterIntermediateUpdate": "true",
+        "fixedInternalStepSize": "1e-3",
+        "hasEventMode": "true"
+      },
+      "platforms": [
+        "aarch64-darwin",
+        "aarch64-linux",
+        "x86-windows",
+        "x86_64-darwin",
+        "x86_64-linux",
+        "x86_64-windows"
+      ],
+      "variables": [
+        {
+          "name": "time",
+          "type": "Float64",
+          "causality": "independent",
+          "unit": null,
+          "start": null,
+          "dimensions": 0
+        },
+        {
+          "name": "h",
+          "type": "Float64",
+          "causality": "output",
+          "unit": null,
+          "start": "1",
+          "dimensions": 0
+        },
+        {
+          "name": "der(h)",
+          "type": "Float64",
+          "causality": "local",
+          "unit": null,
+          "start": null,
+          "dimensions": 0
+        },
+        {
+          "name": "v",
+          "type": "Float64",
+          "causality": "output",
+          "unit": null,
+          "start": "0",
+          "dimensions": 0
+        },
+        {
+          "name": "der(v)",
+          "type": "Float64",
+          "causality": "local",
+          "unit": null,
+          "start": null,
+          "dimensions": 0
+        },
+        {
+          "name": "g",
+          "type": "Float64",
+          "causality": "parameter",
+          "unit": null,
+          "start": "-9.81",
+          "dimensions": 0
+        },
+        {
+          "name": "e",
+          "type": "Float64",
+          "causality": "parameter",
+          "unit": null,
+          "start": "0.7",
+          "dimensions": 0
+        },
+        {
+          "name": "v_min",
+          "type": "Float64",
+          "causality": "local",
+          "unit": null,
+          "start": "0.1",
+          "dimensions": 0
+        }
+      ],
+      "runtime_libraries": [
+        "\tlinux-vdso.so.1 (0x00007fced564c000)",
+        "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fced544e000)",
+        "\t/lib64/ld-linux-x86-64.so.2 (0x00007fced564e000)",
+        ""
+      ],
+      "unresolved_libraries": false
+    },
     "fmpy_smoke": {
       "start_s": 0.0,
       "stop_s": 3.0,
@@ -140,6 +243,75 @@
     ],
     "inside_qualified_profile": true,
     "profile_gaps": [],
+    "audit": {
+      "archive_sha256": "228feadfa5706dc76746bee3cf2a4bb25b42971708b0d06435f142284215d0c6",
+      "fmi_version": "3.0",
+      "model_name": "Dahlquist",
+      "instantiation_token": "{221063D2-EF4A-45FE-B954-B5BFEEA9A59B}",
+      "generation_tool": "Reference FMUs (v0.0.41)",
+      "interfaces": [
+        "ModelExchange",
+        "CoSimulation"
+      ],
+      "capabilities": {
+        "modelIdentifier": "Dahlquist",
+        "canGetAndSetFMUState": "true",
+        "canSerializeFMUState": "true",
+        "canHandleVariableCommunicationStepSize": "true",
+        "providesIntermediateUpdate": "true",
+        "canReturnEarlyAfterIntermediateUpdate": "true",
+        "fixedInternalStepSize": "0.1"
+      },
+      "platforms": [
+        "aarch64-darwin",
+        "aarch64-linux",
+        "x86-windows",
+        "x86_64-darwin",
+        "x86_64-linux",
+        "x86_64-windows"
+      ],
+      "variables": [
+        {
+          "name": "time",
+          "type": "Float64",
+          "causality": "independent",
+          "unit": null,
+          "start": null,
+          "dimensions": 0
+        },
+        {
+          "name": "x",
+          "type": "Float64",
+          "causality": "output",
+          "unit": null,
+          "start": "1",
+          "dimensions": 0
+        },
+        {
+          "name": "der(x)",
+          "type": "Float64",
+          "causality": "local",
+          "unit": null,
+          "start": null,
+          "dimensions": 0
+        },
+        {
+          "name": "k",
+          "type": "Float64",
+          "causality": "parameter",
+          "unit": null,
+          "start": "1",
+          "dimensions": 0
+        }
+      ],
+      "runtime_libraries": [
+        "\tlinux-vdso.so.1 (0x00007fb96f236000)",
+        "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fb96f039000)",
+        "\t/lib64/ld-linux-x86-64.so.2 (0x00007fb96f238000)",
+        ""
+      ],
+      "unresolved_libraries": false
+    },
     "fmpy_smoke": {
       "start_s": 0.0,
       "stop_s": 10.0,
@@ -221,6 +393,133 @@
     ],
     "inside_qualified_profile": true,
     "profile_gaps": [],
+    "audit": {
+      "archive_sha256": "dd177f02bc85def137d1859431de3bb42a8549ea6e310d77c46b9bd4c167e0c1",
+      "fmi_version": "3.0",
+      "model_name": "Robertson Problem",
+      "instantiation_token": "{1AE5E10D-9521-4DE3-80B9-D0EAAA7D5AF2}",
+      "generation_tool": "Reference FMUs (development build)",
+      "interfaces": [
+        "ModelExchange",
+        "CoSimulation"
+      ],
+      "capabilities": {
+        "modelIdentifier": "Roberts",
+        "canGetAndSetFMUState": "true",
+        "canSerializeFMUState": "true",
+        "canHandleVariableCommunicationStepSize": "true",
+        "providesIntermediateUpdate": "true",
+        "mightReturnEarlyFromDoStep": "true",
+        "canReturnEarlyAfterIntermediateUpdate": "true",
+        "fixedInternalStepSize": "1e-3",
+        "hasEventMode": "true"
+      },
+      "platforms": [
+        "aarch64-darwin",
+        "aarch64-linux",
+        "x86-windows",
+        "x86_64-darwin",
+        "x86_64-linux",
+        "x86_64-windows"
+      ],
+      "variables": [
+        {
+          "name": "time",
+          "type": "Float64",
+          "causality": "independent",
+          "unit": null,
+          "start": null,
+          "dimensions": 0
+        },
+        {
+          "name": "dae",
+          "type": "Boolean",
+          "causality": "structuralParameter",
+          "unit": null,
+          "start": "false",
+          "dimensions": 0
+        },
+        {
+          "name": "y1",
+          "type": "Float64",
+          "causality": "output",
+          "unit": null,
+          "start": "1",
+          "dimensions": 0
+        },
+        {
+          "name": "der(y1)",
+          "type": "Float64",
+          "causality": "local",
+          "unit": null,
+          "start": null,
+          "dimensions": 0
+        },
+        {
+          "name": "y2",
+          "type": "Float64",
+          "causality": "output",
+          "unit": null,
+          "start": "0",
+          "dimensions": 0
+        },
+        {
+          "name": "der(y2)",
+          "type": "Float64",
+          "causality": "local",
+          "unit": null,
+          "start": null,
+          "dimensions": 0
+        },
+        {
+          "name": "y3",
+          "type": "Float64",
+          "causality": "output",
+          "unit": null,
+          "start": "0",
+          "dimensions": 0
+        },
+        {
+          "name": "y3_nominal",
+          "type": "Float64",
+          "causality": "local",
+          "unit": null,
+          "start": "1e-2",
+          "dimensions": 0
+        },
+        {
+          "name": "r",
+          "type": "Float64",
+          "causality": "local",
+          "unit": null,
+          "start": null,
+          "dimensions": 0
+        },
+        {
+          "name": "g1",
+          "type": "Float64",
+          "causality": "local",
+          "unit": null,
+          "start": null,
+          "dimensions": 0
+        },
+        {
+          "name": "g2",
+          "type": "Float64",
+          "causality": "local",
+          "unit": null,
+          "start": null,
+          "dimensions": 0
+        }
+      ],
+      "runtime_libraries": [
+        "\tlinux-vdso.so.1 (0x00007ff4c9587000)",
+        "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007ff4c9389000)",
+        "\t/lib64/ld-linux-x86-64.so.2 (0x00007ff4c9589000)",
+        ""
+      ],
+      "unresolved_libraries": false
+    },
     "fmpy_smoke": {
       "start_s": 1e-05,
       "stop_s": 10.00001,
@@ -278,6 +577,93 @@
     ],
     "inside_qualified_profile": true,
     "profile_gaps": [],
+    "audit": {
+      "archive_sha256": "f4c50e976db5b732809641f91f183abb3488b3e01cbe35f032bfd297da82d3d9",
+      "fmi_version": "3.0",
+      "model_name": "van der Pol oscillator",
+      "instantiation_token": "{BD403596-3166-4232-ABC2-132BDF73E644}",
+      "generation_tool": "Reference FMUs (v0.0.41)",
+      "interfaces": [
+        "ModelExchange",
+        "CoSimulation"
+      ],
+      "capabilities": {
+        "modelIdentifier": "VanDerPol",
+        "canGetAndSetFMUState": "true",
+        "canSerializeFMUState": "true",
+        "canHandleVariableCommunicationStepSize": "true",
+        "providesIntermediateUpdate": "true",
+        "canReturnEarlyAfterIntermediateUpdate": "true",
+        "fixedInternalStepSize": "1e-2",
+        "providesDirectionalDerivatives": "true",
+        "providesAdjointDerivatives": "true"
+      },
+      "platforms": [
+        "aarch64-darwin",
+        "aarch64-linux",
+        "x86-windows",
+        "x86_64-darwin",
+        "x86_64-linux",
+        "x86_64-windows"
+      ],
+      "variables": [
+        {
+          "name": "time",
+          "type": "Float64",
+          "causality": "independent",
+          "unit": null,
+          "start": null,
+          "dimensions": 0
+        },
+        {
+          "name": "x0",
+          "type": "Float64",
+          "causality": "output",
+          "unit": null,
+          "start": "2",
+          "dimensions": 0
+        },
+        {
+          "name": "der(x0)",
+          "type": "Float64",
+          "causality": "local",
+          "unit": null,
+          "start": null,
+          "dimensions": 0
+        },
+        {
+          "name": "x1",
+          "type": "Float64",
+          "causality": "output",
+          "unit": null,
+          "start": "0",
+          "dimensions": 0
+        },
+        {
+          "name": "der(x1)",
+          "type": "Float64",
+          "causality": "local",
+          "unit": null,
+          "start": null,
+          "dimensions": 0
+        },
+        {
+          "name": "mu",
+          "type": "Float64",
+          "causality": "parameter",
+          "unit": null,
+          "start": "1",
+          "dimensions": 0
+        }
+      ],
+      "runtime_libraries": [
+        "\tlinux-vdso.so.1 (0x00007fb6d3326000)",
+        "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fb6d3128000)",
+        "\t/lib64/ld-linux-x86-64.so.2 (0x00007fb6d3328000)",
+        ""
+      ],
+      "unresolved_libraries": false
+    },
     "fmpy_smoke": {
       "start_s": 0.0,
       "stop_s": 10.0,

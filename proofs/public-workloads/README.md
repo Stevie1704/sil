@@ -211,7 +211,10 @@ fail that check. The loop must also:
 in `v0.0.41` against the qualified profile, with every reason when it falls
 outside. Inside the profile: FMI 3.0 `BouncingBall`, `Dahlquist`, `Roberts`
 and `VanDerPol`. Each one gets the same audit as the ACC FMUs (identity,
-exporter, capabilities, platforms, variables, runtime libraries), and runs under FMPy from its default start for at most
+exporter, capabilities, platforms, variables, runtime libraries). Each needs
+only libc. Roberts declares its exporter as `Reference FMUs (development build)`
+even though it ships in the `v0.0.41` archive, so its identity is the archive
+digest, not the version string. Each one runs under FMPy from its default start for at most
 10 s, as an importer smoke test. That is not a SiL result. Roberts' default
 experiment runs to 1e8 s on a 1e-3 s fixed internal step, so it is not run in
 full. Outside the profile:
@@ -260,7 +263,7 @@ The two conventions a SiL Run most easily gets wrong are these:
 
 ## Retained results
 
-[`evidence/`](evidence/) is the output of CI run 36140434353 on Linux x86-64
+[`evidence/`](evidence/) is the output of CI run 36161421886 on Linux x86-64
 (glibc 2.36, GCC 12.2.0, CPython 3.13.7). It includes `bundle.json` (every
 bundle digest) and `handoff.json`. The bundle itself, about 7.6 MB, is the
 run's `public-workloads-bundle` artifact. It is not committed, because it
