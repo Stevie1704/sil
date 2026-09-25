@@ -39,16 +39,16 @@ REPLAYED = [entry["channel"] for entry in MAPPING["channels"]]
 
 SEEN_SCHEMAS = {
     "csv.Seen": {"fields": [
-        {"name": "sample_ns", "type": "u64"},
+        {"name": "published_ns", "type": "u64"},
         {"name": "channel", "type": "u8"},
         {"name": "value", "type": "f64"},
     ]},
 }
 
 STEP_PERIOD_NS = 10_000_000
-# The last CSV sample is at 60 ms; the observer sees it at its 70 ms Step.
+# The last CSV Message is at 60 ms; the observer sees it at its 70 ms Step.
 DURATION_NS = 100_000_000
-# The most one Channel delivers between two observer Steps: two samples of
+# The most one Channel delivers between two observer Steps: two Messages of
 # `ego.speed` share 40 ms.
 ROUTE_CAPACITY = 2
 

@@ -1,7 +1,7 @@
 """The CSV replay example's consumer: it shows what a subscriber receives.
 
-It subscribes to every replayed Channel and republishes each sample it
-receives on `csv.seen`: the sample's own publish time, which Channel it came
+It subscribes to every replayed Channel and republishes each Message it
+receives on `csv.seen`: the Message's own publish time, which Channel it came
 from, and its value. The Run Recording then holds the consumer's view of the
 replay, in the order the consumer received it, so a reader can compare it with
 the CSV rows directly.
@@ -22,10 +22,10 @@ class Observer(StepParticipant):
 
     def on_step(self, t, dt, inputs):
         return [("csv.seen", {
-            "sample_ns": sample.publish_ns,
-            "channel": self._number[sample.channel],
-            "value": float(*sample.data.values()),
-        }) for sample in inputs]
+            "published_ns": message.publish_ns,
+            "channel": self._number[message.channel],
+            "value": float(*message.data.values()),
+        }) for message in inputs]
 
 
 if __name__ == "__main__":

@@ -31,25 +31,25 @@ manifest = _load("csv_manifest", EXAMPLE / "manifest.py")
 GEAR, SPEED, RANGE = 0, 1, 2
 MS = 1_000_000
 
-# (observer Step, (sample time, Channel, value)). A sample is visible at the
+# (observer Step, (publish time, Channel, value)). A Message is visible at the
 # consumer's first Step after it was published, the default Latency.
 CONSUMER_VIEW = [
-    (10 * MS, {"sample_ns": 0, "channel": SPEED, "value": 10.0}),
-    (10 * MS, {"sample_ns": 0, "channel": RANGE, "value": 90.0}),
-    (10 * MS, {"sample_ns": 0, "channel": GEAR, "value": 3.0}),
-    (30 * MS, {"sample_ns": 20 * MS, "channel": SPEED,
+    (10 * MS, {"published_ns": 0, "channel": SPEED, "value": 10.0}),
+    (10 * MS, {"published_ns": 0, "channel": RANGE, "value": 90.0}),
+    (10 * MS, {"published_ns": 0, "channel": GEAR, "value": 3.0}),
+    (30 * MS, {"published_ns": 20 * MS, "channel": SPEED,
                "value": 10.050000190734863}),
-    (30 * MS, {"sample_ns": 20 * MS, "channel": GEAR, "value": 3.0}),
+    (30 * MS, {"published_ns": 20 * MS, "channel": GEAR, "value": 3.0}),
     # Two CSV rows share 40 ms; the consumer receives them in row order.
-    (50 * MS, {"sample_ns": 40 * MS, "channel": SPEED,
+    (50 * MS, {"published_ns": 40 * MS, "channel": SPEED,
                "value": 10.100000381469727}),
-    (50 * MS, {"sample_ns": 40 * MS, "channel": RANGE, "value": 89.5}),
-    (50 * MS, {"sample_ns": 40 * MS, "channel": SPEED,
+    (50 * MS, {"published_ns": 40 * MS, "channel": RANGE, "value": 89.5}),
+    (50 * MS, {"published_ns": 40 * MS, "channel": SPEED,
                "value": 10.149999618530273}),
-    (70 * MS, {"sample_ns": 60 * MS, "channel": SPEED,
+    (70 * MS, {"published_ns": 60 * MS, "channel": SPEED,
                "value": 10.199999809265137}),
-    (70 * MS, {"sample_ns": 60 * MS, "channel": RANGE, "value": 89.0}),
-    (70 * MS, {"sample_ns": 60 * MS, "channel": GEAR, "value": 4.0}),
+    (70 * MS, {"published_ns": 60 * MS, "channel": RANGE, "value": 89.0}),
+    (70 * MS, {"published_ns": 60 * MS, "channel": GEAR, "value": 4.0}),
 ]
 
 
@@ -69,7 +69,7 @@ def replay_result(sil_run, tmp_path_factory):
     )
 
 
-def test_the_consumer_receives_every_sample_exactly(replay_result):
+def test_the_consumer_receives_every_message_exactly(replay_result):
     assert replay_result.messages("csv.seen") == CONSUMER_VIEW
 
 

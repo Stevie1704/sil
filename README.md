@@ -690,7 +690,7 @@ participant accepts, under an explicit mapping document. CSV is the one
 starter format; decoding and unit conversion stay in this converter, and the
 kernel only sees an ordinary Recording. The worked example is in
 [examples/csv/](examples/csv/): `signals.csv`, its `mapping.json`, an
-`observer.py` consumer that republishes every sample it receives, and the
+`observer.py` consumer that republishes every Message it receives, and the
 `manifest.py` that replays the Recording into it.
 
 With the staged installation on `PATH` (previous section), from the checkout
@@ -735,7 +735,8 @@ The mapping document is JSON:
   column, with an optional `scale` (default 1) and `offset` (default 0):
   `value = cell × scale + offset`. Integer fields need integer cells, scale
   and offset. Float fields compute in binary64, then round to f32 for an f32
-  field.
+  field; the scale and offset themselves are rounded to binary64 first. One
+  column may feed several fields, the timestamp column included.
 
 The conversion rejects, with the row, line and column, rather than guess:
 
@@ -744,10 +745,11 @@ The conversion rejects, with the row, line and column, rather than guess:
 - a timestamp that is not a plain decimal, is not a whole number of
   nanoseconds after the origin, is negative after the origin, overflows u64,
   or descends below the previous row's;
-- a value that is not finite or does not fit its field type;
+- a value that is not finite, does not fit its field type, or underflows
+  from nonzero to zero;
 - a row with the wrong number of cells, and a Channel with some but not all
   of its cells empty in one row. All-empty cells mean that row carries no
-  sample of that Channel. Nothing is interpolated or filled in.
+  Message of that Channel. Nothing is interpolated or filled in.
 
 Messages are written in row order and, within one row, in mapping order;
 rows that share a timestamp keep that order when the Replay participant
@@ -755,8 +757,8 @@ publishes them. The receipt records the converter name, version, source
 revision and MCAP library; the SHA-256 of the CSV, the mapping and the
 Recording; each Channel's message count and first and last time; and the time
 bounds of the Recording. Choose the replaying Manifest's Duration after the
-last time: the Replay participant does not publish messages at or after the
-Duration.
+receipt's `last_ns`: the Replay participant does not publish Messages at or
+after the Duration, and it drops them without an error.
 
 Supported limits: one comma-delimited UTF-8 file with a header row; scalar
 fields of the existing schema types; one linear scale and offset per field;
