@@ -98,6 +98,30 @@ their installed distribution metadata and Debian copyright files retain their
 respective notices. The ACC model source is covered by this repository’s
 Apache-2.0 license, included in each FMU as `resources/LICENSE-SiL`.
 
+## Public-workload qualification (#178)
+
+[proofs/public-workloads/](proofs/public-workloads/) downloads these artifacts
+into a locally built qualification image, at the exact identities pinned in
+[`sources.json`](proofs/public-workloads/sources.json). No copy of them is in
+this repository, nothing here links against them, and none of them reaches a
+published SiL artifact. The retained evidence holds only their digests and
+derived statistics. The offline bundle the proof writes as a CI artifact
+carries copies, each with its notice.
+
+| Component | Version | License | Where |
+| --- | --- | --- | --- |
+| [opendbc](https://github.com/commaai/opendbc) | commit `c4465696` | MIT | cloned into the image; the proof builds its safety library, and the bundle keeps the upstream `LICENSE` at `libsafety/LICENSE` next to `libsafety.so` |
+| [commaCarSegments](https://huggingface.co/datasets/commaai/commaCarSegments) | revision `edb6480d`, one segment | MIT (dataset card) | one `rlog.zst` in the image, copied into the bundle as `recordings/rlog.zst` |
+| [JRC OpenACC](https://data.jrc.ec.europa.eu/dataset/9702c950-c80f-4d2f-982f-44d06ea0009f), AstaZero | `ASta_040719_platoon7.csv` | CC BY 4.0, © European Union 1995-2026 | one recording in the image; the bundle keeps a 50 s window with `openacc-copyright.txt` and `openacc-ATTRIBUTION.txt`, which name the source and every change |
+| [Modelica Reference FMUs](https://github.com/modelica/Reference-FMUs) | `v0.0.41` release archive | BSD-2-Clause | audited and smoke-run inside the image; the release archive carries its own `LICENSE.txt` and is not copied into the bundle |
+
+The proof image also installs pycapnp (BSD-2-Clause), zstandard
+(BSD-3-Clause), cffi (MIT), NumPy (BSD-3-Clause), tqdm (MPL-2.0 and MIT),
+FMPy 0.3.26 (BSD-2-Clause) and PythonFMU3 0.3.4 (MIT), pinned by hash in
+[its lock file](proofs/public-workloads/requirements.lock). Their installed
+distribution metadata retains their notices. They are tools of the proof
+only.
+
 ## Python wheel and source distribution
 
 The wheel and the source distribution contain SiL code only. They declare

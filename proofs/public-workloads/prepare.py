@@ -80,6 +80,7 @@ def build_libsafety(bundle):
     target = bundle / "libsafety" / "libsafety.so"
     target.parent.mkdir(parents=True)
     shutil.copy(first, target)
+    shutil.copy(OPENDBC / "LICENSE", target.parent / "LICENSE")
     harness = OPENDBC / "opendbc/safety/tests/libsafety"
     exported = command("nm", "-D", "--defined-only", target).split("\n")
     return target, {
@@ -417,10 +418,11 @@ def main(work):
     write_json(evidence / "fmu-audit.json", audits)
     references = reference_fmus.audit(SOURCES / "reference_fmus")
     write_json(evidence / "reference-fmus.json", references)
-    smoked = [entry["fmpy_smoke"] for entry in references.values()
-              if entry["inside_qualified_profile"]]
-    require(smoked and all(smoke["finite"] for smoke in smoked),
+    executed = [entry for entry in references.values() if entry["inside_qualified_profile"]]
+    require(executed and all(entry["fmpy_smoke"]["finite"] for entry in executed),
             "no Reference FMU smoke test ran, or one is not finite")
+    require(not any(entry["audit"]["unresolved_libraries"] for entry in executed),
+            "an executed Reference FMU has an unresolved runtime library")
     sources = json.loads((HERE / "sources.json").read_text())
     digest = digests(bundle)
     write_json(bundle / "handoff.json", handoff(digest, inspection, library, single, coupled))

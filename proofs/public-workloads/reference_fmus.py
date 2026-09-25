@@ -3,8 +3,9 @@
 The qualified profile is the one the ACC evidence establishes
 (`proofs/acc-fmi/INSTALL.md`): FMI 3.0 Co-Simulation, a Linux x86-64
 binary, and scalar Float64 inputs and outputs. An archive outside it is
-reported with every reason, not adapted. An archive inside it is simulated
-once by FMPy from its default start, for at most `SMOKE_HORIZON_S`, as an
+reported with every reason, not adapted. An archive inside it gets the same
+audit as the ACC FMUs (identity, exporter, capabilities, platforms, variables
+and runtime libraries) and is simulated once by FMPy from its default start, for at most `SMOKE_HORIZON_S`, as an
 importer smoke test; that is not a SiL result.
 """
 import math
@@ -12,6 +13,8 @@ import tempfile
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
+
+import fmu_workloads
 
 
 def profile_gaps(root, platforms):
@@ -68,6 +71,7 @@ def audit(zip_path):
             entry = {"fmi_version": root.get("fmiVersion"), "platforms": platforms,
                      "inside_qualified_profile": not gaps, "profile_gaps": gaps}
             if not gaps:
+                entry["audit"] = fmu_workloads.audit(archive)
                 entry["fmpy_smoke"] = _simulate(archive)
             report[member] = entry
     return report

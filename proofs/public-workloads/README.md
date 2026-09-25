@@ -210,7 +210,8 @@ fail that check. The loop must also:
 **Reference FMUs.** `evidence/reference-fmus.json` classifies every archive
 in `v0.0.41` against the qualified profile, with every reason when it falls
 outside. Inside the profile: FMI 3.0 `BouncingBall`, `Dahlquist`, `Roberts`
-and `VanDerPol`. Each one runs under FMPy from its default start for at most
+and `VanDerPol`. Each one gets the same audit as the ACC FMUs (identity,
+exporter, capabilities, platforms, variables, runtime libraries), and runs under FMPy from its default start for at most
 10 s, as an importer smoke test. That is not a SiL result. Roberts' default
 experiment runs to 1e8 s on a 1e-3 s fixed internal step, so it is not run in
 full. Outside the profile:
