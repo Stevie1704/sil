@@ -18,13 +18,17 @@ The conversion is exact or it is rejected:
   offset, and must land inside the field type's range.
 * A float field is `cell × scale + offset` in binary64, in that order, with
   each step skipped at its identity value; an f32 field is then rounded to the
-  nearest f32. A non-finite cell or result is rejected.
+  nearest f32. The mapping's scale and offset are rounded to binary64 first. A
+  non-finite cell or result is rejected, and so is a nonzero value that
+  underflows to zero.
 
 Rows are emitted in file order and, within one row, in mapping order, so rows
 sharing a timestamp keep their order in the Recording's publish order. A row
-whose cells for one Channel are all empty carries no sample of that Channel;
+whose cells for one Channel are all empty carries no Message of that Channel;
 a Channel with only some of its cells empty is rejected, because completing
-it would invent a value. Nothing is interpolated.
+it would invent a value. Nothing is interpolated. One column may feed several
+fields, the timestamp column included: that reads one cell twice and is not
+ambiguous.
 
 A conversion receipt names the converter, the digests of the source, the
 mapping and the Recording, each Channel's message count, and the time bounds.
@@ -45,6 +49,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from fractions import Fraction
 from pathlib import Path
+from typing import NamedTuple
 
 from mcap.writer import LIBRARY_IDENTIFIER, CompressionType, Writer
 
@@ -75,6 +80,20 @@ class _CellError(ValueError):
     """One cell's reason for rejection; the caller adds where it is."""
 
 
+class _Message(NamedTuple):
+    channel: int  # index into the mapping's Channels
+    ns: int
+    payload: bytes
+
+
+def _exact(parse, cell: str):
+    """`parse(cell)`, with Python's digit limit reported as a cell error."""
+    try:
+        return parse(cell)
+    except ValueError:
+        raise _CellError(f"{cell[:20]!r}... has too many digits") from None
+
+
 @dataclass(frozen=True)
 class _Clock:
     column: str
@@ -84,7 +103,7 @@ class _Clock:
     def ns(self, cell: str) -> int:
         if not _DECIMAL.fullmatch(cell):
             raise _CellError(f"{cell!r} is not a plain decimal timestamp")
-        ns = (Fraction(cell) - self.origin) * _NS_PER_UNIT[self.unit]
+        ns = (_exact(Fraction, cell) - self.origin) * _NS_PER_UNIT[self.unit]
         if ns.denominator != 1:
             raise _CellError(
                 f"{cell} {self.unit} is not a whole number of nanoseconds "
@@ -116,7 +135,7 @@ class _Field:
         if not _INTEGER.fullmatch(cell):
             raise _CellError(f"{cell!r} is not an integer for {self.type} "
                              f"field {self.name!r}")
-        value = int(cell) * self.scale + self.offset
+        value = _exact(int, cell) * self.scale + self.offset
         low, high = INT_RANGES[self.type]
         if not low <= value <= high:
             raise _CellError(f"{value} is outside the {self.type} range "
@@ -128,9 +147,9 @@ class _Field:
             raise _CellError(f"{cell!r} is not a finite number")
         if not _FLOAT.fullmatch(cell):
             raise _CellError(f"{cell!r} is not a decimal number")
-        value = float(cell)
+        value = self._nonzero(float(cell), _exact(Decimal, cell) != 0, cell)
         if self.scale != 1:
-            value *= self.scale
+            value = self._nonzero(value * self.scale, value != 0, cell)
         if self.offset != 0:
             value += self.offset
         if not math.isfinite(value):
@@ -138,10 +157,17 @@ class _Field:
                              f"for field {self.name!r}")
         if self.type == "f32":
             try:
-                value = _F32.unpack(_F32.pack(value))[0]
+                narrowed = _F32.unpack(_F32.pack(value))[0]
             except OverflowError:
                 raise _CellError(f"{value!r} is outside the f32 range of field "
                                  f"{self.name!r}") from None
+            value = self._nonzero(narrowed, value != 0, cell)
+        return value
+
+    def _nonzero(self, value: float, was_nonzero: bool, cell: str) -> float:
+        if value == 0 and was_nonzero:
+            raise _CellError(f"{cell!r} underflows to zero in {self.type} "
+                             f"field {self.name!r}")
         return value
 
 
@@ -179,7 +205,7 @@ def convert(mapping: str | Path, source: str | Path, out: str | Path) -> dict:
     plan = _parse_mapping(mapping_bytes, mapping)
     rows, messages = _read_rows(plan, source_bytes, source)
     if not messages:
-        raise ConversionError(f"{source}: the CSV carries no samples")
+        raise ConversionError(f"{source}: the CSV carries no Messages")
     digests = {"source_sha256": _sha256(source_bytes),
                "mapping_sha256": _sha256(mapping_bytes)}
     recording = _recording(plan, messages, digests)
@@ -218,7 +244,9 @@ def _parse_mapping(data: bytes, path: Path) -> _Mapping:
             parse_constant=_non_finite_literal,
             object_pairs_hook=_unique_keys,
         )
-    except (UnicodeDecodeError, json.JSONDecodeError) as e:
+    except ConversionError as e:
+        raise ConversionError(f"mapping {str(path)!r}: {e}") from None
+    except ValueError as e:  # also a number past Python's digit limit
         raise ConversionError(f"mapping {str(path)!r} is not valid JSON: {e}") from e
     try:
         return _mapping(doc)
@@ -333,15 +361,18 @@ def _channel(entry, context: str, schemas: dict[str, dict]) -> _Channel:
     if not isinstance(specs, dict):
         raise ConversionError(f"{context} 'fields' must be an object")
     names = [f["name"] for f in declared]
-    for extra in sorted(specs.keys() - set(names)):
+    extra = sorted(specs.keys() - set(names))
+    if extra:
         raise ConversionError(
-            f"{context}: {extra!r} is not a field of schema {schema_name!r}"
+            f"{context}: " + ", ".join(map(repr, extra))
+            + f" is not a field of schema {schema_name!r}"
         )
-    for missing in names:
-        if missing not in specs:
-            raise ConversionError(
-                f"{context}: schema field {missing!r} is not mapped to a column"
-            )
+    missing = [name for name in names if name not in specs]
+    if missing:
+        raise ConversionError(
+            f"{context}: schema field(s) " + ", ".join(map(repr, missing))
+            + " not mapped to a column"
+        )
     fields = tuple(
         _field(f["name"], f["type"], specs[f["name"]], f"{context} field {f['name']!r}")
         for f in declared
@@ -373,7 +404,10 @@ def _field(name: str, field_type: str, spec, context: str) -> _Field:
                 )
             factors[key] = number
         else:
-            factors[key] = float(number)
+            try:
+                factors[key] = float(number)
+            except OverflowError:
+                factors[key] = math.inf
             if not math.isfinite(factors[key]):
                 raise ConversionError(f"{context}: {key} {number} is not a "
                                       "finite binary64 number")
@@ -384,8 +418,8 @@ def _field(name: str, field_type: str, spec, context: str) -> _Field:
 
 
 def _read_rows(plan: _Mapping, data: bytes, path: Path
-               ) -> tuple[int, list[tuple[int, int, bytes]]]:
-    """(row count, [(channel index, time ns, payload), ...]) in emit order."""
+               ) -> tuple[int, list[_Message]]:
+    """The row count and the Messages in emit order."""
     try:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError as e:
@@ -396,7 +430,7 @@ def _read_rows(plan: _Mapping, data: bytes, path: Path
         if header is None:
             raise ConversionError(f"{path}: the CSV has no header row")
         index = _column_index(header, plan, path)
-        messages: list[tuple[int, int, bytes]] = []
+        messages: list[_Message] = []
         previous_ns: int | None = None
         rows = 0
         for rows, cells in enumerate(reader, 1):
@@ -405,7 +439,8 @@ def _read_rows(plan: _Mapping, data: bytes, path: Path
                 raise ConversionError(
                     f"{where}: expected {len(header)} cells, got {len(cells)}"
                 )
-            previous_ns = _row(plan, index, cells, where, previous_ns, messages)
+            previous_ns = _row_ns(plan.clock, index, cells, where, previous_ns)
+            messages.extend(_row_messages(plan, index, cells, where, previous_ns))
     except csv.Error as e:
         raise ConversionError(
             f"{path}: line {reader.line_num}: malformed CSV: {e}"
@@ -429,9 +464,8 @@ def _column_index(header: list[str], plan: _Mapping, path: Path) -> dict[str, in
     return index
 
 
-def _row(plan: _Mapping, index: dict[str, int], cells: list[str], where: str,
-         previous_ns: int | None, messages: list[tuple[int, int, bytes]]) -> int:
-    clock = plan.clock
+def _row_ns(clock: _Clock, index: dict[str, int], cells: list[str], where: str,
+            previous_ns: int | None) -> int:
     try:
         ns = clock.ns(cells[index[clock.column]])
     except _CellError as e:
@@ -441,16 +475,22 @@ def _row(plan: _Mapping, index: dict[str, int], cells: list[str], where: str,
             f"{where} column {clock.column!r}: timestamp {ns} ns descends "
             f"below the previous row's {previous_ns} ns"
         )
-    for channel_index, channel in enumerate(plan.channels):
-        payload = _sample(channel, index, cells, where)
-        if payload is not None:
-            messages.append((channel_index, ns, payload))
     return ns
 
 
-def _sample(channel: _Channel, index: dict[str, int], cells: list[str],
-            where: str) -> bytes | None:
-    """The Channel's payload from this row, or None when it has no sample."""
+def _row_messages(plan: _Mapping, index: dict[str, int], cells: list[str],
+                  where: str, ns: int) -> list[_Message]:
+    messages = []
+    for channel_index, channel in enumerate(plan.channels):
+        payload = _payload(channel, index, cells, where)
+        if payload is not None:
+            messages.append(_Message(channel_index, ns, payload))
+    return messages
+
+
+def _payload(channel: _Channel, index: dict[str, int], cells: list[str],
+             where: str) -> bytes | None:
+    """The Channel's payload from this row, or None when it has no Message."""
     raw = [cells[index[f.column]] for f in channel.fields]
     empty = [f.column for f, cell in zip(channel.fields, raw) if cell == ""]
     if len(empty) == len(raw):
@@ -459,7 +499,7 @@ def _sample(channel: _Channel, index: dict[str, int], cells: list[str],
         raise ConversionError(
             f"{where}: channel {channel.name!r} has empty cell(s) in column(s) "
             + ", ".join(map(repr, empty))
-            + " but not in its others; a partial sample is not completed"
+            + " but not in its others; a partial Message is not completed"
         )
     values = []
     for field, cell in zip(channel.fields, raw):
@@ -473,7 +513,7 @@ def _sample(channel: _Channel, index: dict[str, int], cells: list[str],
 # Output ------------------------------------------------------------------------
 
 
-def _recording(plan: _Mapping, messages: list[tuple[int, int, bytes]],
+def _recording(plan: _Mapping, messages: list[_Message],
                digests: dict[str, str]) -> bytes:
     buffer = io.BytesIO()
     writer = Writer(buffer, compression=CompressionType.NONE)
@@ -487,23 +527,23 @@ def _recording(plan: _Mapping, messages: list[tuple[int, int, bytes]],
                 channel.schema, "sil_pod", channel.schema_json)
         channel_ids.append(writer.register_channel(
             channel.name, "sil_pod", schema_ids[channel.schema]))
-    for channel_index, ns, payload in messages:
-        writer.add_message(channel_ids[channel_index], log_time=ns,
-                           data=payload, publish_time=ns)
+    for message in messages:
+        writer.add_message(channel_ids[message.channel], log_time=message.ns,
+                           data=message.payload, publish_time=message.ns)
     writer.finish()
     return buffer.getvalue()
 
 
-def _receipt(plan: _Mapping, messages: list[tuple[int, int, bytes]],
+def _receipt(plan: _Mapping, messages: list[_Message],
              files: dict) -> dict:
     channels = {c.name: {"schema": c.schema, "messages": 0, "first_ns": None,
                          "last_ns": None} for c in plan.channels}
-    for channel_index, ns, _ in messages:
-        entry = channels[plan.channels[channel_index].name]
+    for message in messages:
+        entry = channels[plan.channels[message.channel].name]
         entry["messages"] += 1
         if entry["first_ns"] is None:
-            entry["first_ns"] = ns
-        entry["last_ns"] = ns
+            entry["first_ns"] = message.ns
+        entry["last_ns"] = message.ns
     return {
         "sil_csv_receipt": RECEIPT_VERSION,
         "converter": {"name": CONVERTER, "version": build_info.__version__,
@@ -511,7 +551,7 @@ def _receipt(plan: _Mapping, messages: list[tuple[int, int, bytes]],
                       "mcap": LIBRARY_IDENTIFIER},
         **files,
         "channels": channels,
-        "time_bounds": {"first_ns": messages[0][1], "last_ns": messages[-1][1]},
+        "time_bounds": {"first_ns": messages[0].ns, "last_ns": messages[-1].ns},
     }
 
 

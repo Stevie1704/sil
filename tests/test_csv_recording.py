@@ -246,6 +246,47 @@ class TestValues:
         message = rejected(tmp_path, "t,v\n0,1e39\n", doc)
         assert "row 1" in message and "f32" in message
 
+    @pytest.mark.parametrize(("field_type", "cell", "scale"), [
+        ("f64", "1e-400", None),
+        ("f64", "1e-200", 1e-200),
+        ("f32", "1e-50", None),
+    ])
+    def test_underflow_to_zero_is_rejected(self, tmp_path, field_type, cell, scale):
+        field = {"column": "v"} if scale is None else {"column": "v", "scale": scale}
+        doc = mapping(
+            schemas={"s.V": {"fields": [{"name": "v", "type": field_type}]}},
+            channels=[{"channel": "v", "schema": "s.V", "fields": {"v": field}}],
+        )
+        message = rejected(tmp_path, f"t,v\n0,{cell}\n", doc)
+        assert "row 1" in message and "underflows" in message
+
+    def test_zero_stays_zero(self, tmp_path):
+        doc = mapping(channels=[{"channel": "v", "schema": "s.V",
+                                 "fields": {"v": {"column": "v", "scale": 1e-200}}}])
+        _, out = convert_text(tmp_path, "t,v\n0,0e5\n", doc)
+        assert decoded(out) == [("v", 0, {"v": 0.0})]
+
+    def test_integer_scale_beyond_binary64_is_rejected(self, tmp_path):
+        text = json.dumps(mapping(channels=[{
+            "channel": "v", "schema": "s.V",
+            "fields": {"v": {"column": "v", "scale": 1}}}]))
+        text = text.replace('"scale": 1', '"scale": 1' + "0" * 400)
+        assert "finite" in rejected(tmp_path, "t,v\n0,1\n", text)
+
+    @pytest.mark.parametrize("column", ["t", "v"])
+    def test_very_long_digit_strings_are_rejected(self, tmp_path, column):
+        doc = mapping(schemas={"s.V": {"fields": [{"name": "v", "type": "i64"}]}})
+        long = "1" * 5000
+        cells = {"t": "0", "v": "1", column: long}
+        message = rejected(tmp_path, f"t,v\n{cells['t']},{cells['v']}\n", doc)
+        assert "row 1" in message and repr(column) in message
+
+    def test_very_long_mapping_integer_is_rejected(self, tmp_path):
+        text = json.dumps(mapping(timestamp={"column": "t", "unit": "ns",
+                                             "origin": 1}))
+        text = text.replace('"origin": 1', '"origin": 1' + "0" * 5000)
+        assert "mapping" in rejected(tmp_path, "t,v\n0,1\n", text)
+
     @pytest.mark.parametrize(("field_type", "cell"), [
         ("u8", "256"), ("u8", "-1"), ("i8", "-129"), ("u64", "18446744073709551616"),
     ])
@@ -270,7 +311,7 @@ class TestValues:
 
 
 class TestRows:
-    def test_a_channel_with_all_cells_empty_has_no_sample_in_that_row(self, tmp_path):
+    def test_a_channel_with_all_cells_empty_has_no_message_in_that_row(self, tmp_path):
         doc = mapping(
             schemas={"s.P": {"fields": [{"name": "x", "type": "f64"},
                                         {"name": "y", "type": "f64"}]}},
@@ -283,7 +324,7 @@ class TestRows:
         assert receipt["source"]["rows"] == 3
         assert receipt["channels"]["p"]["messages"] == 2
 
-    def test_a_partial_sample_is_rejected(self, tmp_path):
+    def test_a_partial_message_is_rejected(self, tmp_path):
         doc = mapping(
             schemas={"s.P": {"fields": [{"name": "x", "type": "f64"},
                                         {"name": "y", "type": "f64"}]}},
@@ -309,7 +350,7 @@ class TestRows:
         assert "'v'" in message and "more than once" in message
 
     def test_header_only_is_rejected(self, tmp_path):
-        assert "no samples" in rejected(tmp_path, "t,v\n")
+        assert "no Messages" in rejected(tmp_path, "t,v\n")
 
     def test_empty_file_is_rejected(self, tmp_path):
         assert "header" in rejected(tmp_path, "")
