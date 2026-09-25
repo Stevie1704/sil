@@ -151,11 +151,31 @@ def test_an_ignored_field_is_named_and_never_compared(tmp_path):
     assert report["verdict"] == "pass"
 
 
+def test_an_overflowing_error_is_stated_in_strict_json(tmp_path, capsys):
+    report = run(tmp_path, contract({"c": float_channel()}),
+                 series({0: 1e308, 10: 0.0, 20: 0.0}),
+                 series({0: -1e308, 10: 0.0, 20: 0.0}))
+
+    assert report["first_divergence"]["abs_error"] == "inf"
+    main([str(tmp_path / "contract.json"), str(tmp_path / "actual.mcap"),
+          str(tmp_path / "reference.mcap"), "--json"])
+    assert strict_json(capsys.readouterr().out)["verdict"] == "fail"
+
+
+def test_a_channel_that_compares_no_field_fails_coverage(tmp_path):
+    report = run(tmp_path, contract({"c": float_channel(fields={"v": "ignore"})}),
+                 series({0: 0.0, 10: 1.0, 20: 2.0}),
+                 series({0: 0.0, 10: 1.0, 20: 2.0}))
+
+    assert report["verdict"] == "fail"
+    assert report["coverage"] == ["Channel 'c' compares no field"]
+
+
 # -- observation times --------------------------------------------------------
 
-def test_nothing_is_interpolated_between_samples(tmp_path):
+def test_nothing_is_interpolated_between_messages(tmp_path):
     # The reference has 0 and 20; the actual only 10. A straight line would
-    # match; the comparison states three missing samples instead.
+    # match; the comparison states three missing Messages instead.
     report = run(tmp_path, contract({"c": float_channel()}),
                  series({10: 1.0}), series({0: 0.0, 20: 2.0}))
 
@@ -169,7 +189,7 @@ def test_nothing_is_interpolated_between_samples(tmp_path):
     assert divergence["actual"] is None
 
 
-def test_a_sample_off_the_observation_grid_is_not_observed(tmp_path):
+def test_a_message_off_the_observation_grid_is_not_observed(tmp_path):
     report = run(tmp_path, contract({"c": float_channel()}),
                  series({0: 0.0, 5: 99.0, 10: 1.0, 20: 2.0}),
                  series({0: 0.0, 10: 1.0, 15: -99.0, 20: 2.0}))
@@ -178,7 +198,7 @@ def test_a_sample_off_the_observation_grid_is_not_observed(tmp_path):
     assert report["channels"]["c"]["checked"] == 3
 
 
-def test_duplicate_samples_at_one_observation_are_ambiguous(tmp_path):
+def test_duplicate_messages_at_one_observation_are_ambiguous(tmp_path):
     report = run(tmp_path, contract({"c": float_channel()}),
                  series({0: 0.0, 10: 1.0, 20: 2.0}) + [f64("c", 10, 1.0)],
                  series({0: 0.0, 10: 1.0, 20: 2.0}))
@@ -296,6 +316,15 @@ def test_a_malformed_contract_is_refused(tmp_path, change, problem):
     path.write_text(json.dumps(document))
 
     with pytest.raises(ContractError, match=problem):
+        read_contract(path)
+
+
+def test_a_repeated_key_is_refused(tmp_path):
+    path = tmp_path / "contract.json"
+    text = json.dumps(contract({"c": float_channel()}))
+    path.write_text(text.replace('"fields": {', '"fields": {"v": "ignore", ', 1))
+
+    with pytest.raises(ContractError, match="repeats key 'v'"):
         read_contract(path)
 
 

@@ -44,6 +44,7 @@ from pathlib import Path
 
 from mcap.exceptions import McapError
 
+from sil._schema_types import INT_RANGES
 from sil.recording import UnknownRecordingFormat, read_records, read_schemas
 from sil.schema import MessageType
 
@@ -69,7 +70,6 @@ _CONTRACT_KEYS = {"sil_comparison", "evaluation", "channels"}
 _CHANNEL_REQUIRED = {"actual_offset_ns", "reference_offset_ns", "observations",
                      "fields"}
 _GRID_KEYS = {"start_ns", "stop_ns", "step_ns"}
-_INTEGER_TYPES = {"u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64"}
 
 
 class ContractError(ValueError):
@@ -126,9 +126,11 @@ def read_contract(path: str | Path) -> Contract:
         return ContractError(f"contract {str(path)!r} {problem}")
 
     try:
-        document = json.loads(data)
+        document = json.loads(data, object_pairs_hook=_unique_keys)
     except (json.JSONDecodeError, UnicodeDecodeError) as error:
         raise refuse(f"is not JSON: {error}")
+    except _RepeatedKey as error:
+        raise refuse(f"repeats key {error.args[0]!r}")
     _object(document, "", _CONTRACT_KEYS, set(), refuse)
     if document["sil_comparison"] != CONTRACT_VERSION:
         raise refuse(
@@ -213,6 +215,18 @@ def _rule(rule, context: str, refuse) -> Tolerance | str:
     )
 
 
+class _RepeatedKey(ValueError):
+    """A JSON object that states one key twice; json keeps only the last."""
+
+
+def _unique_keys(pairs: list[tuple[str, object]]) -> dict:
+    keys = [key for key, _ in pairs]
+    for key in keys:
+        if keys.count(key) > 1:
+            raise _RepeatedKey(key)
+    return dict(pairs)
+
+
 def _object(value, context: str, required: set, optional: set, refuse) -> dict:
     if not isinstance(value, dict):
         raise refuse(f"{context}is not a JSON object")
@@ -253,16 +267,19 @@ def compare(contract: Contract, actual: str | Path, reference: str | Path) -> di
         coverage += problems
         if not problems:
             usable.append(channel)
-    actual_samples = _samples(actual, usable, actual_schemas, side="actual")
-    reference_samples = _samples(reference, usable, reference_schemas,
-                                 side="reference")
+    actual_messages = _messages(
+        actual, actual_schemas,
+        [(c, c.name, c.actual_offset_ns) for c in usable])
+    reference_messages = _messages(
+        reference, reference_schemas,
+        [(c, c.reference_channel, c.reference_offset_ns) for c in usable])
     tally = _Tally()
     channels = {}
     for index, channel in enumerate(contract.channels):
         counts = _counts(channel)
         if channel in usable:
-            _compare_channel(channel, index, actual_samples[channel.name],
-                             reference_samples[channel.name], counts, tally)
+            _compare_channel(channel, index, actual_messages[channel.name],
+                             reference_messages[channel.name], counts, tally)
         channels[channel.name] = counts
     return {
         "sil_comparison_report": REPORT_VERSION,
@@ -308,43 +325,69 @@ def _compare_channel(channel: ChannelContract, index: int, actual: dict,
                      reference: dict, counts: dict, tally: _Tally) -> None:
     rules = channel.compared()
     for observation in channel.times_ns:
-        mine, theirs = actual.get(observation, []), reference.get(observation, [])
+        at = _Observation(channel, index, observation, rules,
+                          actual.get(observation, []),
+                          reference.get(observation, []))
+        if at.present(counts, tally):
+            counts["checked"] += 1
+            counts["failed"] += at.compare_fields(counts, tally)
 
-        def diverge(kind: str, field_index: int = -1, **details) -> None:
-            tally.add((observation, index, field_index), {
-                "kind": kind, "channel": channel.name,
-                "reference_channel": channel.reference_channel,
-                "field": None, "observation_ns": observation,
-                "actual_publication_ns": _times_of(mine),
-                "reference_time_ns": _times_of(theirs),
-                "actual": _values_of(mine, rules),
-                "expected": _values_of(theirs, rules),
-                "tolerance": None, "abs_error": None, **details,
-            })
 
-        for side, samples in (("actual", mine), ("reference", theirs)):
-            if not samples:
+@dataclass(frozen=True)
+class _Observation:
+    """One observation time of one Channel, and the Messages each side holds
+    there as (recorded time, values)."""
+
+    channel: ChannelContract
+    index: int
+    observation_ns: int
+    rules: list
+    actual: list
+    reference: list
+
+    def present(self, counts: dict, tally: _Tally) -> bool:
+        """Whether each side holds exactly one Message; each gap is a
+        divergence."""
+        for side, messages in (("actual", self.actual),
+                               ("reference", self.reference)):
+            if not messages:
                 counts[f"missing_{side}"] += 1
-                diverge(f"missing-{side}")
-            elif len(samples) > 1:
+                self._diverge(tally, f"missing-{side}")
+            elif len(messages) > 1:
                 counts[f"ambiguous_{side}"] += 1
-                diverge(f"ambiguous-{side}")
-        if len(mine) != 1 or len(theirs) != 1:
-            continue
-        counts["checked"] += 1
+                self._diverge(tally, f"ambiguous-{side}")
+        return len(self.actual) == 1 and len(self.reference) == 1
+
+    def compare_fields(self, counts: dict, tally: _Tally) -> bool:
+        """Judge every compared field; whether any of them diverged."""
+        (published, actual), (recorded, expected) = self.actual[0], self.reference[0]
         failed = False
-        (published, got), (recorded, wanted) = mine[0], theirs[0]
-        for field_index, (field, rule) in enumerate(rules):
-            kind, details = _judge(got[field], wanted[field], rule)
+        for field_index, (field, rule) in enumerate(self.rules):
+            kind, details = _judge(actual[field], expected[field], rule)
             if kind is not None:
                 failed = True
                 counts["nonfinite"] += kind == "nonfinite"
-                diverge(kind, field_index, field=field,
-                        actual_publication_ns=published,
-                        reference_time_ns=recorded,
-                        actual=_json_value(got[field]),
-                        expected=_json_value(wanted[field]), **details)
-        counts["failed"] += failed
+                self._diverge(tally, kind, field_index, field=field,
+                              actual_publication_ns=published,
+                              reference_time_ns=recorded,
+                              actual=_json_value(actual[field]),
+                              expected=_json_value(expected[field]), **details)
+        return failed
+
+    def _diverge(self, tally: _Tally, kind: str, field_index: int = -1,
+                 **details) -> None:
+        # The earliest observation first, then the contract's Channel and
+        # field order; a missing or ambiguous Message sorts before its fields.
+        tally.add((self.observation_ns, self.index, field_index), {
+            "kind": kind, "channel": self.channel.name,
+            "reference_channel": self.channel.reference_channel,
+            "field": None, "observation_ns": self.observation_ns,
+            "actual_publication_ns": _times_of(self.actual),
+            "reference_time_ns": _times_of(self.reference),
+            "actual": _values_of(self.actual, self.rules),
+            "expected": _values_of(self.reference, self.rules),
+            "tolerance": None, "abs_error": None, **details,
+        })
 
 
 def _judge(actual, expected, rule) -> tuple[str | None, dict]:
@@ -359,20 +402,20 @@ def _judge(actual, expected, rule) -> tuple[str | None, dict]:
     error = abs(actual - expected)
     if error <= allowed:
         return None, {}
-    return "value", {"tolerance": tolerance, "abs_error": error}
+    return "value", {"tolerance": tolerance, "abs_error": _json_value(error)}
 
 
-def _times_of(samples: list):
+def _times_of(messages: list):
     """One recorded time, a list of them where a side is ambiguous, or None."""
-    if not samples:
+    if not messages:
         return None
-    times = [t for t, _ in samples]
+    times = [t for t, _ in messages]
     return times[0] if len(times) == 1 else times
 
 
-def _values_of(samples: list, rules: list):
-    """The compared fields of one sample, a list where ambiguous, or None."""
-    values = [{f: _json_value(v[f]) for f, _ in rules} for _, v in samples]
+def _values_of(messages: list, rules: list):
+    """The compared fields of one Message, a list where ambiguous, or None."""
+    values = [{f: _json_value(v[f]) for f, _ in rules} for _, v in messages]
     if not values:
         return None
     return values[0] if len(values) == 1 else values
@@ -399,7 +442,7 @@ def _coverage(channel: ChannelContract, actual: dict | None,
     if problems:
         return problems
     declared = {f["name"]: f for f in actual["fields"]}
-    theirs = {f["name"]: f for f in reference["fields"]}
+    reference_fields = {f["name"]: f for f in reference["fields"]}
     context = f"Channel {channel.name!r}"
     for name in declared:
         if name not in channel.rules:
@@ -416,7 +459,9 @@ def _coverage(channel: ChannelContract, actual: dict | None,
             )
         elif rule != IGNORE:
             problems += _rule_problems(context, channel.reference_channel,
-                                       field, theirs.get(name), rule)
+                                       field, reference_fields.get(name), rule)
+    if not problems and not channel.compared():
+        problems.append(f"{context} compares no field")
     return problems
 
 
@@ -427,7 +472,7 @@ def _rule_problems(context: str, reference_channel: str, field: dict,
         return [f"{context} field {name!r} is an array; version "
                 f"{CONTRACT_VERSION} compares scalar fields only, so mark it "
                 f"'ignore'"]
-    integer = kind in _INTEGER_TYPES
+    integer = kind in INT_RANGES
     if rule == EXACT and not integer:
         return [f"{context}: 'exact' does not fit {kind} field {name!r}; a "
                 f"float field takes a tolerance"]
@@ -436,7 +481,7 @@ def _rule_problems(context: str, reference_channel: str, field: dict,
                 f"an integer field is 'exact'"]
     if reference is None:
         return [f"reference Channel {reference_channel!r} has no field {name!r}"]
-    if "count" in reference or (reference["type"] in _INTEGER_TYPES) != integer:
+    if "count" in reference or (reference["type"] in INT_RANGES) != integer:
         return [f"reference Channel {reference_channel!r} field {name!r} is "
                 f"not a scalar of the actual field's kind {kind}"]
     return []
@@ -449,30 +494,29 @@ def _schemas(path: Path) -> dict[str, dict]:
         raise RecordingError(f"cannot read Recording {str(path)!r}: {error}")
 
 
-def _samples(path: Path, channels: list[ChannelContract], schemas: dict,
-             *, side: str) -> dict[str, dict[int, list]]:
+def _messages(path: Path, schemas: dict,
+              plans: list[tuple[ChannelContract, str, int]]
+              ) -> dict[str, dict[int, list]]:
     """Per compared Channel: observation time -> [(recorded time, values)].
 
-    Only Messages landing on one of the Channel's observation times are kept."""
-    plans = {}
-    for channel in channels:
-        name = channel.name if side == "actual" else channel.reference_channel
-        offset = (channel.actual_offset_ns if side == "actual"
-                  else channel.reference_offset_ns)
-        plans.setdefault(name, []).append(
+    Each plan names the recorded Channel and its offset on this side. Only
+    Messages landing on one of the Channel's observation times are kept."""
+    by_topic = {}
+    for channel, topic, offset in plans:
+        by_topic.setdefault(topic, []).append(
             (channel.name, offset, set(channel.times_ns)))
-    codecs = {name: MessageType(name, schemas[name]) for name in plans}
-    samples = {channel.name: {} for channel in channels}
+    codecs = {topic: MessageType(topic, schemas[topic]) for topic in by_topic}
+    messages = {channel.name: {} for channel, _, _ in plans}
     try:
         for topic, t, payload in read_records(path):
-            for compared, offset, times in plans.get(topic, ()):
+            for compared, offset, times in by_topic.get(topic, ()):
                 observation = t + offset
                 if observation in times:
-                    samples[compared].setdefault(observation, []).append(
+                    messages[compared].setdefault(observation, []).append(
                         (t, codecs[topic].unpack(payload)))
     except (OSError, McapError, struct.error) as error:
         raise RecordingError(f"cannot read Recording {str(path)!r}: {error}")
-    return samples
+    return messages
 
 
 def _identity(path: Path) -> dict:
@@ -494,14 +538,14 @@ def render(report: dict) -> str:
                      f"(sha256 {report[role]['sha256']})")
     window = report["evaluation"]
     lines.append(f"evaluation: {window['from_ns']} ns to {window['to_ns']} ns")
-    for name, c in report["channels"].items():
+    for name, counts in report["channels"].items():
         lines.append(
-            f"  {name} against {c['reference_channel']}: "
-            f"{c['observations']} observations, {c['checked']} checked, "
-            f"{c['failed']} failed ({c['nonfinite']} non-finite), missing "
-            f"{c['missing_actual']} actual / {c['missing_reference']} reference, "
-            f"ambiguous {c['ambiguous_actual']} actual / "
-            f"{c['ambiguous_reference']} reference"
+            f"  {name} against {counts['reference_channel']}: "
+            f"{counts['observations']} observations, {counts['checked']} checked, "
+            f"{counts['failed']} failed ({counts['nonfinite']} non-finite), missing "
+            f"{counts['missing_actual']} actual / {counts['missing_reference']} reference, "
+            f"ambiguous {counts['ambiguous_actual']} actual / "
+            f"{counts['ambiguous_reference']} reference"
         )
     if report["coverage"]:
         lines.append("coverage:")
