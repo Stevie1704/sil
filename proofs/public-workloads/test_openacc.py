@@ -1,7 +1,6 @@
 """Recording inspection and conversion policies, on small synthetic recordings."""
 import pytest
-from openacc import (Window, controller_inputs, inspect, lead_acceleration,
-                     parse, reconstruct_lead_speed)
+from openacc import Window, controller_inputs, inspect, lead_acceleration, parse
 
 HEADER = """Date,4,7,2019,,
 Vehicle_order,Lead(A),Ego(B),,,
@@ -62,5 +61,7 @@ def test_held_forward_difference_reconstructs_every_recorded_lead_speed():
     assert len(accelerations) == 10
     assert all(a == pytest.approx(1.0) for a in accelerations)
     recorded = [row["Speed1"] for row in STEADY["rows"]]
-    rebuilt = reconstruct_lead_speed(recorded[0], accelerations, 0.1)
+    rebuilt = [recorded[0]]
+    for acceleration in accelerations:
+        rebuilt.append(rebuilt[-1] + acceleration * 0.1)
     assert max(abs(a - b) for a, b in zip(rebuilt, recorded)) < 1e-12

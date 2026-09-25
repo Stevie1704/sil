@@ -34,11 +34,11 @@ that job is in [`evidence/`](evidence/).
 | Recorded CAN | commaCarSegments `df5ad9d9ae9fd6cd/00000470--cb630a6b9d/46`, TOYOTA_RAV4_TSS2 | dataset revision `edb6480d`, SHA-256 `b0d19f7c…` | MIT |
 | Recorded scalar data | JRC OpenACC `ASta_040719_platoon7.csv`, AstaZero | SHA-256 `2696ef06…` | CC BY 4.0 |
 | Single and coupled FMUs | `AccController`, `AccPlant` from `proofs/acc-fmi` | archive digests in `bundle.json` | Apache-2.0 |
-| Importer-compatibility fixtures | Modelica Reference FMUs | `v0.0.41`, SHA-256 `62babca7…` | BSD-2-Clause |
+| Importer-compatibility models | Modelica Reference FMUs | `v0.0.41`, SHA-256 `62babca7…` | BSD-2-Clause |
 
 The ACC FMUs are written in this repository. They are not independent
 supplier models. The recorded vehicles' responses are never used as the
-models' expected output.
+models' reference result.
 
 ## What kind of evidence this is
 
@@ -58,7 +58,8 @@ the physical validity of the ACC law or the safety logic.
 **Build.** Preparation calls the upstream build function
 `libsafety_py._build_libsafety(release=True)` and pins its output. The flags
 are the upstream ones (`-O0 -g`, UBSan). The build runs twice and the report
-states whether the bytes are the same. The offline Run never compiles:
+states whether the bytes are the same. It does not require this: the bundle
+pins the digest of the first build. The offline Run never compiles:
 `libsafety_py.load(path)` loads the pinned file.
 
 **Runtime dependency.** Because of the upstream UBSan flags, the library
@@ -115,7 +116,9 @@ echoes and are skipped.
 
 The panda ran different firmware, so that agreement supports the reference
 but is not the reference. Two variants must diverge from the nominal trace
-and invalidate the configuration. Their first divergence is in `report.json`:
+and invalidate the configuration, each for its own reason. The timing variant
+rejects no frame. The input variant rejects exactly 0x260 on bus 0. Their
+first divergence is in `report.json`:
 
 | Variant | Error |
 | --- | --- |
@@ -171,7 +174,8 @@ step.
 **Single FMU, open loop.** `AccController` runs under FMPy on a 100 ms grid
 with 501 steps. Sample 0 is its start value. Sample *k* is set at *t_k* and
 held for [*t_k*, *t_k+1*). The command it produces is observed at *t_k+1*,
-so the last command is at 50.1 s and the final recorded sample is covered.
+so the last command is at 50.1 s. The final recorded sample is held one
+period past the recording's end, so that its command is observed too.
 The trace must:
 
 - match `command_for` of every sample within 1e-10 absolute and 1e-12
@@ -187,7 +191,9 @@ qualified 10 ms baseline grid:
 - the plant's authored initial state (both vehicles at 25 m/s, 60 m apart);
 - the measured lead acceleration held per recorded sample.
 
-The ego is the plant's, closed through the controller. The recorded ego is
+Each reference row is labelled with its publication Slot and describes the
+end of that Slot's step, as in the ACC baseline. The ego is the plant's,
+closed through the controller. The recorded ego is
 never replayed into the loop, because that would remove the feedback under
 test. The plant's lead speed therefore follows the recorded change from its
 own 25 m/s start.
@@ -248,11 +254,14 @@ The two conventions a SiL Run most easily gets wrong are these:
 - **Single FMU.** An output published in Slot *t_k* describes *t_k* + 100 ms.
   Compare it with the reference row at that time. The Run's Duration is
   50.1 s.
+- **Library reference time.** `references/libsafety-states.json` keeps the
+  recorded `logMonoTime`. Subtract `first_log_mono_ns` to get virtual time.
 
 ## Resource observations
 
 `report.json` records wall-clock throughput for each workload and the peak
-resident memory of the child processes. These are observational, from one CI
+resident memory, both of the FMPy process and of the library's child
+processes. These are observational, from one CI
 runner. The workload is a small public decision-logic library and a
 Python-exported ACC model. It is **not** a representative real-vECU
 measurement and does not satisfy #125.

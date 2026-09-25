@@ -10,6 +10,8 @@ The caller puts the pinned opendbc checkout on `sys.path`.
 import statistics
 from collections import Counter
 
+from libsafety_workload import received as received_frames
+
 
 def _read(segment):
     from opendbc.car.logreader import LogReader
@@ -49,7 +51,7 @@ def inspect(segment):
     log = _read(segment)
     _, events = read_events(segment)
     times = [t for t, _ in events]
-    received = [[f for f in frames if f[1] < 128] for _, frames in events]
+    received = [received_frames(frames) for _, frames in events]
     by_address = Counter((f[1], f[0]) for frames in received for f in frames)
     span_s = (times[-1] - times[0]) / 1e9
     return {

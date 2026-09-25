@@ -120,7 +120,9 @@ def upstream_replay(library, contract):
                          check=True, capture_output=True, text=True).stdout
 
     def field(label):
-        return re.search(rf"^{label}: (.*)$", out, re.MULTILINE).group(1)
+        found = re.search(rf"^{label}: (.*)$", out, re.MULTILINE)
+        require(found is not None, f"upstream replay printed no {label!r}:\n{out}")
+        return found.group(1)
     return {"received": int(field("total rx msgs")), "invalid": int(field("invalid rx msgs")),
             "tick_invalid": field("safety tick rx invalid") == "True",
             "transmitted": int(field("total openpilot msgs")), "passed": field("passed") == "True"}
@@ -134,6 +136,7 @@ def panda_agreement(trace):
         while index + 1 < len(trace) and trace[index + 1]["t_ns"] <= t:
             index += 1
         agree += trace[index]["controls_allowed"] == allowed
+    require(states, "the segment has no recorded panda state")
     return {"samples": len(states), "agreeing": agree,
             "modes": sorted({mode for _, _, mode in states})}
 
@@ -155,21 +158,26 @@ def shared_library(bundle, evidence, work):
             and not upstream["tick_invalid"], f"upstream replay disagrees: {upstream}")
     controls = panda_agreement(trace)
     require(controls["agreeing"] == controls["samples"], f"recorded panda state: {controls}")
+    require(first["same_path_dlopen_shares_state"], "same-path loads no longer share state")
     variants = {}
-    for variant in ("timer-in-ns", "corrupt-0x260"):
+    # Each control must fail for its own reason: a timing fault rejects no
+    # frame and loses validity; the corrupted checksum rejects exactly 0x260.
+    reasons = {"timer-in-ns": {}, "corrupt-0x260": {"0:0x260"}}
+    for variant, rejected in reasons.items():
         result, _ = run_variant(library, variant, work)
         divergence = first_divergence(trace, result["trace"])
-        require(divergence is not None and not result["config_valid"],
-                f"{variant} was not detected")
+        require(divergence is not None and not result["config_valid"]
+                and set(result["rejected"]) == set(rejected), f"{variant} was not detected: "
+                f"divergence {divergence}, rejected {result['rejected']}")
         variants[variant] = {"first_divergence": divergence, "config_valid": False,
                              "rejected": result["rejected"]}
-    reference = bundle / "references" / "libsafety-trace.json"
+    reference = bundle / "references" / "libsafety-states.json"
     write_json(reference, {"contract": CAN_CONTRACT, "trace": trace})
     recording = bundle / "recordings" / "rlog.zst"
     recording.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(SOURCES / "can_segment", recording)
     write_json(evidence / "can-segment.json", inspection)
-    return {
+    return inspection, {
         "build": build,
         "contract": CAN_CONTRACT,
         "observations": len(trace),
@@ -215,10 +223,11 @@ def recorded_window(bundle, evidence):
     return rows, inputs, accelerations
 
 
-def expected_command(sample):
+def control_law():
+    """The repository's own ACC law, the source the controller FMU exports."""
     sys.path.insert(0, str(ROOT / "python" / "src"))
     from sil.examples.acc.dynamics import command_for
-    return command_for(**{n: sample[n] for n in fmu_workloads.CONTROLLER_INPUTS})
+    return command_for
 
 
 def single_fmu(bundle, inputs):
@@ -226,7 +235,9 @@ def single_fmu(bundle, inputs):
     started = time.perf_counter()
     trace = fmu_workloads.single(archive, inputs)
     elapsed = time.perf_counter() - started
-    law = [{"t_ns": row["t_ns"], "accel_mps2": expected_command(sample)}
+    command_for = control_law()
+    law = [{"t_ns": row["t_ns"],
+            "accel_mps2": command_for(**{n: sample[n] for n in fmu_workloads.CONTROLLER_INPUTS})}
            for row, sample in zip(trace, inputs)]
     tol = (fmu_workloads.ABS_TOL, fmu_workloads.REL_TOL)
     require(fmu_workloads.numeric_divergence(law, trace, *tol) is None, "FMU departs from its law")
@@ -299,10 +310,9 @@ def fmus(bundle):
 
 # Bundle ---------------------------------------------------------------------
 
-def handoff(digest, evidence, library, single, coupled):
+def handoff(digest, inspection, library, single, coupled):
     """The identities and contracts #193 and #194 execute against."""
     from libsafety_workload import STATE, VARIANTS
-    inspection = json.loads((evidence / "can-segment.json").read_text())
     return {
         "claim": "public-artifact adoption acceptance; not production-vehicle validation",
         "shared_library_193": {
@@ -334,9 +344,12 @@ def handoff(digest, evidence, library, single, coupled):
                        "a one-period delay is a timing variant, not the reference",
             "observation": "after each event's frames: accepted, rejected and every state field",
             "comparison": "exact equality per field and event; all events including the final one",
-            "warm_up_ns": 1_000_000_000,
-            "reference": {"path": "references/libsafety-trace.json",
-                          "sha256": digest["references/libsafety-trace.json"],
+            "warm_up": "safety_tick only when more than 1 s from both the first and the "
+                       "last can event of the segment",
+            "reference": {"path": "references/libsafety-states.json",
+                          "sha256": digest["references/libsafety-states.json"],
+                          "time": "t_ns is the recorded logMonoTime; subtract "
+                                  "first_log_mono_ns for virtual time",
                           "observations": library["observations"]},
             "failing_controls": {name: library["failing_variants"][name]["first_divergence"]
                                  for name in VARIANTS if name != "nominal"},
@@ -352,7 +365,8 @@ def handoff(digest, evidence, library, single, coupled):
             "start_values": "sample 0, set before initialization",
             "input_policy": "sample k is set at t_k (input Latency 0) and held for [t_k, t_k+1)",
             "observation": "the output published in Slot t_k describes t_k + period; compare it "
-                           "with the reference row t_ns = t_k + period",
+                           "with the reference row t_ns = t_k + period. The final sample is held "
+                           "one period past the recording's end, so the last row is at 50.1 s",
             "comparison": {"absolute": fmu_workloads.ABS_TOL, "relative": fmu_workloads.REL_TOL,
                            "coverage": "every sample including the final one"},
             "parameters": "none: a wrong-parameter control needs a start-value or binding error",
@@ -370,6 +384,8 @@ def handoff(digest, evidence, library, single, coupled):
             "maneuver": "recorded lead acceleration, forward difference, held per 100 ms sample",
             "maneuver_qualification_mps": MANEUVER_TOL_MPS,
             "ego": "closed loop in the plant; the recorded ego is never replayed",
+            "observation": "each reference row t_ns is its publication Slot and describes "
+                           "Slot + period; recorded sample k is compared at Slot k * 100 ms - 10 ms",
             "kpi": KPI,
             "reference": {"path": "references/coupled-measured-lead.json",
                           "sha256": digest["references/coupled-measured-lead.json"]},
@@ -393,7 +409,7 @@ def main(work):
                           text=True, cwd=HERE)
     (evidence / "gate-tests.log").write_text(gate.stdout + gate.stderr)
     require(gate.returncode == 0, "gate tests failed")
-    library = shared_library(bundle, evidence, work)
+    inspection, library = shared_library(bundle, evidence, work)
     rows, inputs, accelerations = recorded_window(bundle, evidence)
     audits = fmus(bundle)
     single = single_fmu(bundle, inputs)
@@ -401,21 +417,25 @@ def main(work):
     write_json(evidence / "fmu-audit.json", audits)
     references = reference_fmus.audit(SOURCES / "reference_fmus")
     write_json(evidence / "reference-fmus.json", references)
-    require(all(entry["fmpy_smoke"]["finite"] for entry in references.values()
-                if entry["inside_qualified_profile"]), "a Reference FMU smoke test is not finite")
+    smoked = [entry["fmpy_smoke"] for entry in references.values()
+              if entry["inside_qualified_profile"]]
+    require(smoked and all(smoke["finite"] for smoke in smoked),
+            "no Reference FMU smoke test ran, or one is not finite")
     sources = json.loads((HERE / "sources.json").read_text())
     digest = digests(bundle)
-    write_json(bundle / "handoff.json", handoff(digest, evidence, library, single, coupled))
+    write_json(bundle / "handoff.json", handoff(digest, inspection, library, single, coupled))
     digest = digests(bundle)
     write_json(bundle / "bundle.json", {"sources": sources, "tools": tool_identity(),
                                         "digests": digest})
-    peak_kib = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
+    # FMPy runs in this process, the library replays in children.
+    peak_kib = {"fmpy_process": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+                "library_children": resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss}
     write_json(evidence / "report.json", {
         "bundle_sha256": sha256(bundle / "bundle.json"),
         "shared_library": library,
         "single_fmu": single,
         "coupled_fmus": coupled,
-        "observed_peak_child_rss_kib": peak_kib,
+        "observed_peak_rss_kib": peak_kib,
     })
 
 

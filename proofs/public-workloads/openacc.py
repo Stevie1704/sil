@@ -104,9 +104,3 @@ def lead_acceleration(recording, window):
     period_s = PERIOD_MS / 1000
     return [(b - a) / period_s for a, b in zip(speeds, speeds[1:])]
 
-
-def reconstruct_lead_speed(initial_mps, accelerations, period_s):
-    speeds = [initial_mps]
-    for acceleration in accelerations:
-        speeds.append(speeds[-1] + acceleration * period_s)
-    return speeds

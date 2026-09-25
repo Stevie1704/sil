@@ -3,17 +3,20 @@
 FMPy is the independent execution these workloads hand to #194: the same
 archives SiL imports, stepped by a different importer. The models are
 repository-authored (`proofs/acc-fmi`), not supplier models, and the recorded
-vehicles' own responses are never used as the models' expected output.
+vehicles' own responses are never used as the models' reference result.
 
 Single FMU, open loop: `AccController` receives one recorded sample per
 100 ms communication interval, held for the whole interval. The sample at
 t_k is set before the step [t_k, t_k+1); the command it produces is observed
 at t_k+1. 501 samples therefore give 501 observed commands, the last at
-50.1 s, so the final recorded sample is covered.
+50.1 s: the final recorded sample is held one period past the recording's
+end so that its command is observed too.
 
 Coupled FMUs, closed loop: `AccPlant` and `AccController` on the qualified
 10 ms baseline grid with its one-period sensing and command delays. Only the
-lead vehicle's measured acceleration comes from the recording. The ego is
+lead vehicle's measured acceleration comes from the recording. Each row is
+labelled with its publication Slot and describes the end of that Slot's step,
+Slot + 10 ms, as in the ACC baseline. The ego is
 the plant's, driven by the controller: the recorded ego trajectory is never
 replayed into the loop, because that would remove the feedback under test.
 """
@@ -75,7 +78,8 @@ def audit(archive):
         platforms = sorted({Path(n).parts[1] for n in opened.namelist()
                             if n.startswith("binaries/") and len(Path(n).parts) > 2})
         binary = Path(directory) / "binaries/x86_64-linux" / f"{identifier}.so"
-        libraries = subprocess.run(["ldd", binary], capture_output=True, text=True).stdout
+        libraries = subprocess.run(["ldd", binary], check=True, capture_output=True,
+                                   text=True).stdout
     variables = [{"name": v.get("name"), "type": v.tag, "causality": v.get("causality", "local"),
                   "unit": v.get("unit"), "start": v.get("start"),
                   "dimensions": len(v.findall("Dimension"))}
