@@ -1,0 +1,28 @@
+{
+  "sil_csv_mapping": 1,
+  "timestamp": {"column": "time_s", "unit": "s", "origin": 1695640000},
+  "schemas": {
+    "csv.Speed": {"fields": [{"name": "speed_mps", "type": "f32"}]},
+    "csv.Range": {"fields": [{"name": "range_m", "type": "f64"}]},
+    "csv.Gear": {"fields": [{"name": "gear", "type": "i8"}]}
+  },
+  "channels": [
+    {
+      "channel": "ego.speed",
+      "schema": "csv.Speed",
+      "fields": {"speed_mps": {"column": "speed_cmps", "scale": 0.01}}
+    },
+    {
+      "channel": "target.range",
+      "schema": "csv.Range",
+      "fields": {
+        "range_m": {"column": "range_raw", "scale": 0.125, "offset": -10}
+      }
+    },
+    {
+      "channel": "ego.gear",
+      "schema": "csv.Gear",
+      "fields": {"gear": {"column": "gear"}}
+    }
+  ]
+}
