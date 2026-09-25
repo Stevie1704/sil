@@ -1,0 +1,4 @@
+fmu: per-node CAN queue is full
+fmu: instance is in Error state; reset or free it
+participant 'can' failed: FMU of instance 'bus': fmi3Terminate returned Error
+sil-run: participant 'can' failed: sil.participant.ParticipantFailure: fmi3UpdateDiscreteStates returned Error

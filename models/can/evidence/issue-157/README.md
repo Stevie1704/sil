@@ -3,7 +3,21 @@
 These files are retained from `models/can/run.sh` on Linux x86-64 in the CAN
 qualification image. `qualification.json` binds the FMU, Manifests, logs,
 native results and the runner by SHA-256; the image ID is in
-`build/can/image.txt` when reproduced. SOURCE_AND_RESULT_SUMMARY
+`build/can/image.txt` when reproduced. The retained run used image
+`sha256:5affb9c41895a477757aa69d48c83d899bdc22973058bcf091ae7db9b7a4ef09`,
+Python 3.13.7, FMPy 0.3.32 and GNU C++ 12.2.0. The bus FMU embeds clean source
+revision `ce8653a92441bbcd824a8257532f0b00271e087b` (`source_dirty: false`).
+All 94 CAN qualification pytest cases passed, and the native core, C-ABI and
+capacity programs passed.
+
+The run was on an ARM development host under qemu, where ASan cannot start.
+So the native checks ran with UBSan only (`sanitizers.txt`), and
+`qualification.json` states this. The CAN CI workflow runs the same checks
+natively on x86-64 with ASan and UBSan. No ASan result is retained here.
+
+The repeated Format Error Run produced identical Recordings, SHA-256
+`4fcc8475ad2d82c033b9c78db67287d475e1621d4e7afc31e9782f34f664b643`. The
+Recordings stay in `build/can/` and are not retained here.
 
 What each file shows:
 

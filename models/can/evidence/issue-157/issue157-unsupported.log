@@ -1,0 +1,4 @@
+fmu: only 11-bit Classical CAN data frames are supported
+fmu: instance is in Error state; reset or free it
+participant 'can' failed: FMU of instance 'bus': fmi3Terminate returned Error
+sil-run: participant 'can' failed: sil.participant.ParticipantFailure: fmi3UpdateDiscreteStates returned Error
