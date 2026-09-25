@@ -104,7 +104,9 @@ class LibraryParticipant(StepParticipant):
         try:
             return Binding(library)
         except BindingError as error:
-            raise ManifestError(str(error)) from error
+            raise ManifestError(
+                f"library {self._library_path!r} {error}"
+            ) from error
 
     @staticmethod
     def _check_names(kind: str, given: dict, expected: tuple) -> None:

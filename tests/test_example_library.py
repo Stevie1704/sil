@@ -1,8 +1,8 @@
 """The shared-library adoption example at the run boundary (issue #184).
 
-A recorded CSV signal is replayed into two Process participants that each
+Recorded CSV speed values are replayed into two Process participants that each
 load `speed_filter`, a library with its own C API and no SiL entry point,
-through `examples/library/adapter.py`. The in-run checker computes every
+through `examples/library/adapter.py`. The in-run Test participant computes every
 output independently; these tests state the first outputs by hand from
 `signals.csv` and the Manifest's parameters, and drive the failing paths with
 the library's fault builds from `tests/fixtures/speed_filter_fault.c`.
@@ -136,7 +136,7 @@ class TestNominal:
 
 
 class TestIncorrectOutput:
-    def test_the_checker_fails_the_run_at_the_first_difference(
+    def test_the_test_participant_fails_the_run_at_the_first_difference(
         self, sil_run, build_dir, tmp_path
     ):
         proc = run_at_boundary(sil_run, build_dir, tmp_path, variant="defect")

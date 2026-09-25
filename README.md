@@ -872,9 +872,9 @@ library as a Process participant without changing it:
 | `speed_filter.h`, `speed_filter.c` | the library under test: its own API, global state, prints to stdout |
 | `binding.py` | the per-library binding: symbols, C types, error codes |
 | `adapter.py` | the Process participant: Step protocol, lifecycle, routes, failures |
-| `checker.py` | the Test participant: computes every output independently |
+| `filter_test.py` | the Test participant: computes every output independently |
 | `signals.csv`, `mapping.json` | the recorded input and its `sil-csv` mapping |
-| `manifest.py` | the Run: Replay, two library instances, checker |
+| `manifest.py` | the Run: Replay, two library instances, Test participant |
 
 With the staged installation on `PATH`, from the checkout root:
 
@@ -892,7 +892,7 @@ cmp "$workdir/run-1.mcap" "$workdir/run-2.mcap"
 
 `make example-library` runs the same sequence from the source tree. For the
 deliberately incorrect case, build the library with `-DSPEED_FILTER_DEFECT`
-and build the Manifest over that library. The checker then fails the Run
+and build the Manifest over that library. The Test participant then fails the Run
 (exit 1) at the first output that differs:
 
 ```text
@@ -933,7 +933,7 @@ with cycle 1. A new Run starts new processes.
 | a cycle returns an error code | Run failure (exit 1) with the virtual time and the error |
 | the library crashes | Run failure (exit 1): `participant '<name>' exited unexpectedly` |
 | the library hangs | Run failure (exit 1) at the `--participant-timeout-ms` response deadline; without the option, the runner waits |
-| the output is incorrect | Run failure (exit 1) from the checker |
+| the output is incorrect | Run failure (exit 1) from the Test participant |
 
 On every path, the runner reaps the adapter process and its cooperative
 descendants, and removes the Run working directory and the mapped regions
@@ -952,7 +952,8 @@ parameters)`, `step(inputs)`, `output()`, `terminate()`, and the
 from your library's header: every argument type, every result type, every
 struct field in header order. ctypes assumes `int` for an undeclared result,
 which silently truncates a `double`. Raise `BindingError` with the library's
-own error code and its meaning.
+own error code and its meaning. Do not `print` from the binding: Python's
+`sys.stdout` is the protocol descriptor. Write diagnostics to `sys.stderr`.
 
 `adapter.py` does not change. It checks that the command line gives exactly
 the binding's parameters and initial inputs, and that the input and output
@@ -987,7 +988,9 @@ The adapter itself needs `python3` with the `sil` wheel on `PATH`.
 ### When the Clock shim applies
 
 Add `shim=True` to the adapter's `add_process` when the library reads the
-wall clock (`clock_gettime`, `gettimeofday`, `time`) or sleeps. The shim is
+wall clock (`clock_gettime`, `gettimeofday`, `time`) or sleeps. For a library
+that sleeps, also choose the `sleep` policy: the default `"reject"` fails
+each sleep with `ENOSYS`, and `"immediate"` returns at once. The shim is
 preloaded into the adapter process, so it also answers the loaded library's
 calls. The example library reads no clock and needs no shim. The shim's
 boundaries apply: a statically linked clock read, a direct syscall, or the

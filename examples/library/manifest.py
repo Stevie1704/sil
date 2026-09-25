@@ -1,10 +1,10 @@
 """The shared-library example's Manifest: recorded input into a C library.
 
-`signals.csv` is a recorded speed signal; `sil-csv` converts it with
+`signals.csv` holds recorded speed values; `sil-csv` converts it with
 `mapping.json` into a Recording. The Replay participant publishes it on
 `ego.speed`. Two instances of `adapter.py` load the same `speed_filter`
 library, each in its own process with its own parameters, and publish its
-output. `checker.py` computes both outputs independently and fails the Run
+output. `filter_test.py`, a Test participant, computes both outputs independently and fails the Run
 at the first difference.
 
 Everything a reviewer needs to reproduce the Run is explicit here: the
@@ -40,7 +40,7 @@ STEP_PERIOD_NS = 10_000_000
 # Explicit, and equal to the default: a Message is visible at the first Step
 # after it was published.
 LATENCY_NS = STEP_PERIOD_NS
-# The last recorded Message is at 80 ms and visible at 90 ms; the checker sees
+# The last recorded Message is at 80 ms and visible at 90 ms; the Test participant sees
 # the 90 ms output at 100 ms.
 DURATION_NS = 110_000_000
 # One Message per Period on every Channel. A Message waits in the route until
@@ -95,9 +95,9 @@ def library_manifest(recording: Path, library: Path,
             publishes=[channel],
         )
     m.add_process(
-        "checker",
+        "filter_test",
         command=[
-            "python3", str(EXAMPLE_DIR / "checker.py"),
+            "python3", str(EXAMPLE_DIR / "filter_test.py"),
             "--input", speed, "--period-ns", str(STEP_PERIOD_NS),
             f"--initial-speed-mps={INITIAL_SPEED_MPS!r}",
             *(f"--expect={channel}={p['time_constant_s']!r},"

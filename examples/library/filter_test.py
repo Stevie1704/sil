@@ -40,7 +40,7 @@ class Expectation:
         self.cycles += 1
 
 
-class Checker(StepParticipant):
+class FilterTest(StepParticipant):
     def __init__(self, *, input_channel: str, period_ns: int,
                  initial_speed_mps: float,
                  instances: dict[str, tuple[float, float]]):
@@ -107,7 +107,7 @@ def main(argv: list[str] | None = None) -> None:
         required=True, metavar="CHANNEL=TIME_CONSTANT_S,INITIAL_SPEED_MPS",
         help="one library instance's output Channel and its parameters")
     args = parser.parse_args(argv)
-    run(Checker(input_channel=args.input, period_ns=args.period_ns,
+    run(FilterTest(input_channel=args.input, period_ns=args.period_ns,
                 initial_speed_mps=args.initial_speed_mps,
                 instances=dict(args.instances)))
 

@@ -116,6 +116,5 @@ def _symbol(library: ctypes.CDLL, name: str):
         return getattr(library, name)
     except AttributeError as error:
         raise BindingError(
-            f"library {library._name!r} does not export {name!r}, "
-            "which this binding calls"
+            f"does not export {name!r}, which this binding calls"
         ) from error

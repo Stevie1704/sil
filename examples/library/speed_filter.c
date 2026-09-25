@@ -7,7 +7,7 @@
  * Add -DSPEED_FILTER_DEFECT for the deliberately incorrect build: it steps
  * the filter with the forward-Euler gain period/time_constant instead of
  * period/(time_constant + period), which is the kind of regression a new
- * library build can carry. The example's checker catches it.
+ * library build can carry. The example's Test participant catches it.
  */
 #include "speed_filter.h"
 
