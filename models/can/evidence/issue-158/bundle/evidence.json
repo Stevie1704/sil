@@ -1,0 +1,28 @@
+{
+  "fmu_sha256": "dc019747485dbb875c5b2c070b2e7caad5129ee0620290ff8a9a2e573682f13c",
+  "runtime_image": "sha256:c4f484538ffcf5b195510385879c66c758c37ab155c1d47292ad1f9eea57512a",
+  "qualification_image": "sha256:5132ce39935541dd7449f8106045aa355a9d37133d904bf08ef60eac4f450742",
+  "installed_sil": {
+    "execution_path": "SiL runner and FMU group Importer",
+    "sil_version": "0.1.0",
+    "sil_module": "/opt/sil/python/lib/python3.13/site-packages/sil/__init__.py",
+    "runner_build_info": "{\"license\":\"Apache-2.0\",\"source_repository\":\"https://github.com/Stevie1704/sil\",\"source_revision\":\"ebc1c67a311958828cc8dc1e3b44fc235aeaba6e\",\"version\":\"0.1.0\"}\n",
+    "manifest_sha256": "79004e443894927d2b5df0b57a484e8c634d648a6277b6bec356fddcbd69734f",
+    "recording_sha256": "ce0d75980392c3d901920719ab8f05f493e3a123fc7afa2d469c1aca2d9dfe4a",
+    "repeat_identical": true,
+    "deadlines": {
+      "run_s": 120,
+      "participant_response_ms": 5000
+    }
+  },
+  "independent": {
+    "execution_path": "FMPy FMI 3.0 calls, no SiL Importer or runner",
+    "reference_tool": {
+      "fmpy": "0.3.32",
+      "python": "3.13.7"
+    }
+  },
+  "trace_rows": 9,
+  "traces_equal": true,
+  "failures": []
+}
