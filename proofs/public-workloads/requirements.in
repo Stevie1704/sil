@@ -1,0 +1,8 @@
+pythonfmu3==0.3.4
+fmpy==0.3.26
+pytest==8.4.2
+pycapnp==2.2.1
+zstandard==0.25.0
+cffi==2.0.0
+numpy==2.5.3
+tqdm==4.67.1
