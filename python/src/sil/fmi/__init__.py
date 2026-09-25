@@ -51,7 +51,8 @@ that seam and `mapping` resolves which fields those are; `stepping` states what
 an Importer of either shape obeys around an event; `single` and `group` are the
 two scheduling policies, `terminals` and `composition` the group's own members
 and how they are declared; `archive` unpacks the FMU and `cli` chooses between
-the two participants. What a Manifest names — `python -m sil.fmi` — and what
+the two participants; `inspection` runs the checks before loading on an
+archive alone, for `sil-fmi-inspect`. What a Manifest names — `python -m sil.fmi` — and what
 another module imports — `sil.fmi.FmuParticipant` and the rest below — is the
 same surface it has always been.
 """
