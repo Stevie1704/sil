@@ -252,6 +252,9 @@ timestamp, plus the schemas and manifest hash needed to interpret it. Whether
 a run writes one, and where, is chosen at the run boundary rather than in the
 manifest, so the same manifest hash covers a run with and without one. What the
 run computes is identical either way; only the artifact differs.
+A Recording converted from another format at the edge is not a Run's output
+and has no Manifest to name: it carries the digests of its source and mapping
+instead of a Manifest hash, and it exists only as a Replay participant's input.
 _Avoid_: log, trace, output file, mcap
 
 **KPI**:

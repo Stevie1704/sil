@@ -683,6 +683,94 @@ conventional library directory. The installed headers are under
 `$prefix/include/sil`; development fixtures and `sil-run-instrumented` are
 not part of the production installation.
 
+## Replay a timestamped CSV recording
+
+`sil-csv` converts one timestamped CSV file into a Recording the Replay
+participant accepts, under an explicit mapping document. CSV is the one
+starter format; decoding and unit conversion stay in this converter, and the
+kernel only sees an ordinary Recording. The worked example is in
+[examples/csv/](examples/csv/): `signals.csv`, its `mapping.json`, an
+`observer.py` consumer that republishes every Message it receives, and the
+`manifest.py` that replays the Recording into it.
+
+With the staged installation on `PATH` (previous section), from the checkout
+root:
+
+```sh
+workdir=$(mktemp -d)
+sil-csv examples/csv/mapping.json examples/csv/signals.csv \
+    -o "$workdir/signals.mcap" --receipt "$workdir/signals.receipt.json"
+sil-csv examples/csv/mapping.json examples/csv/signals.csv \
+    -o "$workdir/signals-2.mcap" --receipt "$workdir/signals-2.receipt.json"
+cmp "$workdir/signals.mcap" "$workdir/signals-2.mcap"
+python examples/csv/manifest.py "$workdir/replay.json" \
+    --recording "$workdir/signals.mcap"
+sil-run "$workdir/replay.json" -o "$workdir/run-1.mcap"
+sil-run "$workdir/replay.json" -o "$workdir/run-2.mcap"
+cmp "$workdir/run-1.mcap" "$workdir/run-2.mcap"
+```
+
+`make example-csv` runs the same sequence from the source tree. The two
+receipts differ only in the Recording file name they record. The same CSV,
+mapping and converter version give a byte-identical Recording, and the
+Manifest over it gives byte-identical Run Recordings.
+
+The mapping document is JSON:
+
+```json
+{
+  "sil_csv_mapping": 1,
+  "timestamp": {"column": "time_s", "unit": "s", "origin": 1695640000},
+  "schemas": {"csv.Range": {"fields": [{"name": "range_m", "type": "f64"}]}},
+  "channels": [
+    {"channel": "target.range", "schema": "csv.Range",
+     "fields": {"range_m": {"column": "range_raw", "scale": 0.125, "offset": -10}}}
+  ]
+}
+```
+
+- `timestamp` names the time column, its `unit` (`s`, `ms`, `us` or `ns`) and
+  an optional `origin` in that unit (default 0). Replay time is
+  `(cell − origin) × unit`, computed exactly in integer nanoseconds.
+- `schemas` uses the Manifest's schema form with scalar fields only. Declare
+  the same schemas in the replaying Manifest: the Replay participant rejects a
+  Channel whose recorded schema differs from the declared one.
+- Each `channels` entry maps every field of its schema, and only those, to a
+  column, with an optional `scale` (default 1) and `offset` (default 0):
+  `value = cell × scale + offset`. Integer fields need integer cells, scale
+  and offset. Float fields compute in binary64, then round to f32 for an f32
+  field; the scale and offset themselves are rounded to binary64 first. One
+  column may feed several fields, the timestamp column included.
+
+The conversion rejects, with the row, line and column, rather than guess:
+
+- a missing, empty or repeated column; a mapping with duplicate keys, an
+  unmapped or unknown schema field, a duplicate Channel, or an unknown key;
+- a timestamp that is not a plain decimal, is not a whole number of
+  nanoseconds after the origin, is negative after the origin, overflows u64,
+  or descends below the previous row's;
+- a value that is not finite, does not fit its field type, or underflows
+  from nonzero to zero;
+- a row with the wrong number of cells, and a Channel with some but not all
+  of its cells empty in one row. All-empty cells mean that row carries no
+  Message of that Channel. Nothing is interpolated or filled in.
+
+Messages are written in row order and, within one row, in mapping order;
+rows that share a timestamp keep that order when the Replay participant
+publishes them. The receipt records the converter name, version, source
+revision and MCAP library; the SHA-256 of the CSV, the mapping and the
+Recording; each Channel's message count and first and last time; and the time
+bounds of the Recording. A converted Recording carries the source and mapping digests as MCAP
+metadata instead of a Manifest hash: no Manifest produced it. Choose the
+replaying Manifest's Duration after the
+receipt's `last_ns`: the Replay participant does not publish Messages at or
+after the Duration, and it drops them without an error.
+
+Supported limits: one comma-delimited UTF-8 file with a header row; scalar
+fields of the existing schema types; one linear scale and offset per field;
+times from 0 to 2^64 − 1 ns after the origin. There is no decoder for MDF,
+ROS bags, BLF or DBC, and no array or payload fields.
+
 ## Run one Manifest in a Linux container
 
 Build the production image from its pinned base-image digest and exact Python
@@ -867,6 +955,8 @@ python/src/sil/examples/acc/
                    in a nominal and a delayed-sensing variant
 examples/fmu/      the FMU import example: one Reference FMU driven as a
                    process participant
+examples/csv/      the CSV replay example: a CSV recording and its mapping,
+                   converted by sil-csv and replayed into a consumer
 proofs/esmini/     consumer-side adoption proof: a third-party scenario
                    engine run on the published release, with its evidence
 proofs/acc-fmi/    checkout qualification of source-available ACC FMUs:
@@ -876,7 +966,8 @@ proofs/fmi-ls-bus/ acceptance fixture for the FMI-LS-BUS CAN demo FMUs:
                    pinned artifacts, the supported profile, what the released
                    Importer does with them, and what the checkout's does
 python/src/sil/    manifest builder, step-participant lib, test API,
-                   determinism check, declared memory footprint
+                   determinism check, declared memory footprint,
+                   CSV-to-Recording converter
 tests/             behavior tests at the run boundary
 ```
 

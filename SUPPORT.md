@@ -84,10 +84,10 @@ carries it.
 | Native participant C ABI | [include/sil/participant.h](include/sil/participant.h), plus `arena.h` and `clock_region.h` | `SIL_ABI_VERSION 1` |
 | Manifest document | the `sil.manifest` builder and the kernel validator | as validated by the shipped release |
 | Step protocol | [docs/step-protocol.md](docs/step-protocol.md) | protocol 2, protocol 1 still accepted |
-| Recording contract | MCAP, uncompressed, virtual timestamps only, Manifest hash embedded | as written by the shipped release |
+| Recording contract | MCAP, uncompressed, virtual timestamps only, Manifest hash embedded; a Recording converted by `sil-csv` embeds the source and mapping digests instead, because no Manifest produced it | as written by the shipped release |
 | Runner command line | `sil-run`, `sil-run --version`, `sil-run --build-info`, and the exit codes `0` ok, `1` run or test failure, `2` Manifest error, `3` determinism violation | as shipped |
 | Native schema-generation tool | installed `silschema` command (`bin/silschema`, shipped together with `bin/_sil_schema_types.py`) and its generated-header contract | as shipped |
-| Python API | `sil.manifest`, `sil.participant`, `sil.testing`, `sil.footprint`, `sil.check`, `sil.recording`, `sil.schema`, `sil.fmi`, and the `sil-*` console entry points | package version |
+| Python API | `sil.manifest`, `sil.participant`, `sil.testing`, `sil.footprint`, `sil.check`, `sil.recording`, `sil.schema`, `sil.fmi`, `sil.csv_recording` with its mapping document (`sil_csv_mapping` 1) and receipt (`sil_csv_receipt` 1), and the `sil-*` console entry points | package version |
 | Container entry point | `sil-run` as `ENTRYPOINT`, `/workspace` as the mount point, non-root UID 10001 | image version and digest |
 
 SiL is below 1.0. A breaking change is possible in any release, but it is named
