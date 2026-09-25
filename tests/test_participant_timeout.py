@@ -14,8 +14,22 @@ from conftest import ROOT
 from test_run_boundary import read_mcap
 from toys import toy_manifest
 
+from sil.manifest import Manifest
+
 
 TIMEOUT_PARTICIPANT = ROOT / "tests" / "participants" / "timeout.py"
+
+
+def stalling_manifest(
+    mode: str, observer: Path | None = None, *, duration_ns: int = 10
+) -> Manifest:
+    """One Process participant that answers or stalls as `mode` says."""
+    manifest = toy_manifest(duration_ns=duration_ns)
+    command = [sys.executable, str(TIMEOUT_PARTICIPANT), mode]
+    if observer is not None:
+        command.append(str(observer))
+    manifest.add_process("hung", command=command, step_period_ns=1)
+    return manifest
 
 
 def timeout_manifest(
@@ -25,11 +39,7 @@ def timeout_manifest(
     *,
     duration_ns: int = 10,
 ):
-    manifest = toy_manifest(duration_ns=duration_ns)
-    command = [sys.executable, str(TIMEOUT_PARTICIPANT), mode]
-    if observer is not None:
-        command.append(str(observer))
-    manifest.add_process("hung", command=command, step_period_ns=1)
+    manifest = stalling_manifest(mode, observer, duration_ns=duration_ns)
     return manifest.write(tmp_path / f"{mode}.json").path
 
 

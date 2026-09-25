@@ -29,7 +29,7 @@ def descendant_case(tmp_path):
     return regions, tmp_path / "observer.json"
 
 
-def _manifest(mode: str, observer: Path) -> Manifest:
+def descendant_manifest(mode: str, observer: Path) -> Manifest:
     manifest = Manifest(duration_ns=10_000_000)
     manifest.add_schemas(DESCENDANT_SCHEMAS)
     # The fixture maps and writes this Arena during a successful Step, so the
@@ -60,7 +60,7 @@ def _wait_for_process_exit(pid: int) -> None:
     raise AssertionError(f"descendant process {pid} survived the Run")
 
 
-def _assert_cleanup(
+def assert_cleanup(
     proc, observer: Path, regions: Path, expected_code: int, stderr: str = ""
 ) -> None:
     assert proc.returncode == expected_code, stderr or proc.stderr
@@ -93,25 +93,27 @@ def _wait_for_observer(observer: Path) -> None:
 
 def _run(run_sil, mode: str, case):
     regions, observer = case
-    manifest = _manifest(mode, observer).write(observer.parent / "run.json").path
+    manifest = descendant_manifest(mode, observer).write(
+        observer.parent / "run.json"
+    ).path
     return run_sil(manifest, env=_scoped_env(regions))
 
 
 def test_successful_run_reaps_process_participant_descendants(run_sil, descendant_case):
     regions, observer = descendant_case
     proc = _run(run_sil, "descendant-success", descendant_case)
-    _assert_cleanup(proc, observer, regions, expected_code=0)
+    assert_cleanup(proc, observer, regions, expected_code=0)
 
 
 def test_failed_run_reaps_process_participant_descendants(run_sil, descendant_case):
     regions, observer = descendant_case
     proc = _run(run_sil, "descendant-failure", descendant_case)
-    _assert_cleanup(proc, observer, regions, expected_code=1)
+    assert_cleanup(proc, observer, regions, expected_code=1)
 
 
 def test_response_deadline_reaps_process_participant_descendants(sil_run, descendant_case):
     regions, observer = descendant_case
-    manifest = _manifest("descendant-timeout", observer).write(
+    manifest = descendant_manifest("descendant-timeout", observer).write(
         observer.parent / "run.json"
     ).path
     # The fixture is deliberately wedged; the response deadline is supplied
@@ -133,13 +135,13 @@ def test_response_deadline_reaps_process_participant_descendants(sil_run, descen
     )
 
     assert "timeout" in proc.stderr
-    _assert_cleanup(proc, observer, regions, expected_code=1)
+    assert_cleanup(proc, observer, regions, expected_code=1)
 
 
 def test_sigterm_ignoring_descendant_is_killed_and_reaped(run_sil, descendant_case):
     regions, observer = descendant_case
     proc = _run(run_sil, "descendant-ignore-term", descendant_case)
-    _assert_cleanup(proc, observer, regions, expected_code=0)
+    assert_cleanup(proc, observer, regions, expected_code=0)
 
 
 @pytest.mark.parametrize("termination_signal", [signal.SIGINT, signal.SIGHUP])
@@ -147,7 +149,7 @@ def test_terminal_signal_reaps_process_participant_descendants(
     sil_run, descendant_case, termination_signal
 ):
     regions, observer = descendant_case
-    manifest = _manifest("descendant-timeout", observer).write(
+    manifest = descendant_manifest("descendant-timeout", observer).write(
         observer.parent / "run.json"
     ).path
     runner = subprocess.Popen(
@@ -165,7 +167,7 @@ def test_terminal_signal_reaps_process_participant_descendants(
     _, stderr = runner.communicate(timeout=5)
 
     assert "run interrupted" in stderr
-    _assert_cleanup(
+    assert_cleanup(
         runner, observer, regions, expected_code=1, stderr=stderr
     )
 

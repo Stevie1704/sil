@@ -481,6 +481,42 @@ def test_installed_comparison_needs_only_the_wheel(
     assert report["channels"]["output0"]["checked"] == 10
 
 
+INSTALLED_BOUNDED_RUN = '''
+import sys
+from sil.manifest import Manifest
+from sil.testing import RunFailure, run_simulation
+
+manifest = Manifest(duration_ns=10)
+manifest.add_process("hung", command=[sys.executable, sys.argv[2], "step"],
+                     step_period_ns=1)
+try:
+    run_simulation(manifest, runner=sys.argv[1], workdir=".",
+                   participant_timeout_ms=100)
+except RunFailure as failure:
+    print(failure.exit_code)
+    print(failure)
+'''
+
+
+def test_installed_pytest_helper_bounds_a_stalled_participant(
+    installed_python: Path, staged_prefix: Path, tmp_path: Path,
+):
+    """Issue #183's helper, with only the installed wheel importable."""
+    proc = subprocess.run(
+        [str(installed_python / "bin" / "python"), "-c", INSTALLED_BOUNDED_RUN,
+         str(staged_prefix / "bin" / "sil-run"),
+         str(ROOT / "tests" / "participants" / "timeout.py")],
+        cwd=tmp_path, env=installed_environment(installed_python),
+        capture_output=True, text=True, timeout=120,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    exit_code, diagnostic = proc.stdout.split("\n", 1)
+    assert exit_code == "1"
+    assert "timeout" in diagnostic
+    assert "virtual time 0 ns" in diagnostic
+
+
 def test_participant_frontend_loads_a_package_module_spec(tmp_path: Path):
     env = dict(os.environ, PYTHONPATH=str(ROOT / "python" / "src"))
     proc = subprocess.run(
