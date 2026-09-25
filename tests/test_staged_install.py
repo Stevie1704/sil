@@ -275,8 +275,8 @@ def test_wheel_installs_acc_entrypoint_without_checkout_imports(
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.strip() == ACC_MANIFEST_HASHES["nominal"]
     assert manifest.is_file()
-    for entrypoint in ("sil-acc", "sil-check", "sil-csv", "sil-footprint",
-                       "sil-participant"):
+    for entrypoint in ("sil-acc", "sil-check", "sil-csv", "sil-fmi-inspect",
+                       "sil-footprint", "sil-participant"):
         assert (installed_python / "bin" / entrypoint).is_file()
     assert str(ROOT) not in origin.stdout
     assert str(ROOT) not in manifest.read_text()
@@ -433,6 +433,25 @@ def test_installed_csv_conversion_drives_the_staged_replay(
     assert [(t, seen.unpack(data))
             for topic, t, data in read_records(tmp_path / "run-1.mcap")
             if topic == "csv.seen"] == CONSUMER_VIEW
+
+
+def test_installed_fmu_inspection_needs_only_the_wheel(
+    installed_python: Path, tmp_path: Path,
+):
+    """Issue #181's command, with only the installed wheel on PATH."""
+    env = installed_environment(installed_python)
+    fmu = ROOT / "tests" / "fixtures" / "reference-fmus" / "3.0" / "Feedthrough.fmu"
+    proc = subprocess.run(
+        ["sil-fmi-inspect", str(fmu), "--json",
+         "--mapping", str(ROOT / "examples" / "fmu" / "mapping.json")],
+        cwd=tmp_path, env=env, capture_output=True, text=True,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    report = json.loads(proc.stdout)
+    assert report["verdict"] == "compatible"
+    assert report["mapping"] == {"accepted": True, "rejection": None}
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_participant_frontend_loads_a_package_module_spec(tmp_path: Path):

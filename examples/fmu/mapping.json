@@ -1,0 +1,21 @@
+{
+  "sil_fmi_mapping": 1,
+  "schemas": {
+    "fmu.In": {
+      "fields": [
+        {"name": "Float64_continuous_input", "type": "f64"},
+        {"name": "Float64_discrete_input", "type": "f64"}
+      ]
+    },
+    "fmu.Out": {
+      "fields": [
+        {"name": "Float64_continuous_output", "type": "f64"},
+        {"name": "Float64_discrete_output", "type": "f64"}
+      ]
+    }
+  },
+  "channels": {
+    "fmu.In": {"schema": "fmu.In", "direction": "in"},
+    "fmu.Out": {"schema": "fmu.Out", "direction": "out"}
+  }
+}

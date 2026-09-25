@@ -580,6 +580,60 @@ The boundary decisions and the evidence behind them are in
 [docs/adr/0001-connected-fmus-in-one-process-participant.md](docs/adr/0001-connected-fmus-in-one-process-participant.md)
 and [docs/adr/0002-a-replayed-terminal-lands-on-its-own-instant.md](docs/adr/0002-a-replayed-terminal-lands-on-its-own-instant.md).
 
+### Inspecting an FMU before a Run
+
+`sil-fmi-inspect` reports whether this importer can drive an archive, before
+any Manifest is written. It unpacks the archive and reads its declarations; it
+never loads or executes the FMU binary, so it needs no exporter, no reference
+importer and no working binary.
+
+```sh
+sil-fmi-inspect model.fmu                       # readable report
+sil-fmi-inspect model.fmu --json                # the same report as JSON
+sil-fmi-inspect model.fmu --mapping mapping.json
+```
+
+The report has four parts:
+
+| Part | What it states |
+| --- | --- |
+| facts | FMI version, interfaces and co-simulation capabilities, platform binaries, and each variable's type, causality, variability, start, unit, dimensions, `maxSize`, `mimeType` and Clocks; the terminals and the FMI-LS-BUS manifest |
+| `unusable` | why no Run can drive the archive: unreadable archive or `modelDescription.xml`, an FMI version other than 3.0, no co-simulation interface, no binary for this platform |
+| `unmappable`, per variable; `unsupported`, per terminal | why no Channel can carry the variable, or no group can connect the terminal: integer, String and Enumeration types, arrays, a Clock outside the triggered profile, a terminal outside the BUS profile |
+| `unverified` | what only a loaded binary can answer: whether the library and its dependencies load, whether initialization succeeds, a required execution tool, the files read from `resources/` |
+
+A variable no Channel names is never touched, so an `unmappable` variable does
+not make the archive unusable. `Feedthrough` declares every FMI type and runs.
+
+`--mapping` checks a proposed single-FMU mapping. The document is the init
+line's `schemas` and `channels` and the importer's `--bind` and `--start`
+arguments; [examples/fmu/mapping.json](examples/fmu/mapping.json) is the one
+`make example-fmu` runs:
+
+```json
+{"sil_fmi_mapping": 1,
+ "schemas": {"fmu.In": {"fields": [{"name": "u", "type": "f64"}]}},
+ "channels": {"fmu.In": {"schema": "fmu.In", "direction": "in"}},
+ "bind": ["fmu.In:u=Float64_continuous_input"],
+ "start": ["Float64_fixed_parameter=1.5"]}
+```
+
+Every verdict is the verdict of the checks initialization runs, not a second
+policy: the description is read by the same reader, the mapping is bound by the
+same function, and each terminal is built as a group builds it. The diagnostic
+is the one the Run would fail with.
+
+| Exit | Verdict |
+| --- | --- |
+| `0` | `compatible`: the archive is usable, and the mapping, if given, is accepted |
+| `1` | `unusable` |
+| `2` | usage error: the command line or the mapping document cannot be read |
+| `3` | `mapping-rejected`: the archive is usable and the mapping is not |
+
+The JSON report carries `"sil_fmi_inspection": 1`; a change to its keys raises
+that number. The inspection is an audit of this importer's profile, not an FMI
+conformance certification, and it does not probe dynamic dependencies.
+
 ## Large-Message routing baseline
 
 The current data path copies a payload once from the publisher into the kernel.
