@@ -275,7 +275,7 @@ def test_wheel_installs_acc_entrypoint_without_checkout_imports(
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.strip() == ACC_MANIFEST_HASHES["nominal"]
     assert manifest.is_file()
-    for entrypoint in ("sil-acc", "sil-check", "sil-footprint",
+    for entrypoint in ("sil-acc", "sil-check", "sil-csv", "sil-footprint",
                        "sil-participant"):
         assert (installed_python / "bin" / entrypoint).is_file()
     assert str(ROOT) not in origin.stdout
@@ -389,6 +389,50 @@ def test_installed_acc_determinism_check_uses_only_staged_inputs(
     assert built.returncode == 0, built.stderr
     assert check.returncode == 0, check.stderr
     assert check.stdout.startswith("deterministic: ")
+
+
+def test_installed_csv_conversion_drives_the_staged_replay(
+    installed_python: Path, staged_prefix: Path, tmp_path: Path,
+):
+    """Issue #179's command sequence, with only installed tools on PATH."""
+    from test_example_csv import CONSUMER_VIEW
+
+    example = ROOT / "examples" / "csv"
+    env = installed_environment(installed_python)
+    env["PATH"] = str(staged_prefix / "bin") + os.pathsep + env["PATH"]
+
+    def run(*command: str) -> subprocess.CompletedProcess:
+        proc = subprocess.run(command, cwd=tmp_path, env=env,
+                              capture_output=True, text=True)
+        assert proc.returncode == 0, proc.stderr
+        return proc
+
+    recordings, runs = [], []
+    for attempt in ("1", "2"):
+        run("sil-csv", str(example / "mapping.json"), str(example / "signals.csv"),
+            "-o", "signals.mcap", "--receipt", f"receipt-{attempt}.json")
+        recordings.append((tmp_path / "signals.mcap").read_bytes())
+        run("python", str(example / "manifest.py"), f"replay-{attempt}.json",
+            "--recording", "signals.mcap")
+        run("sil-run", f"replay-{attempt}.json", "-o", f"run-{attempt}.mcap")
+        runs.append((tmp_path / f"run-{attempt}.mcap").read_bytes())
+
+    assert recordings[0] == recordings[1]
+    assert (tmp_path / "receipt-1.json").read_bytes() == (
+        tmp_path / "receipt-2.json").read_bytes()
+    assert (tmp_path / "replay-1.json").read_bytes() == (
+        tmp_path / "replay-2.json").read_bytes()
+    assert runs[0] == runs[1]
+
+    from sil import schema
+    from sil.recording import read_records
+
+    seen = schema.load(
+        json.loads((tmp_path / "replay-1.json").read_text())["schemas"]
+    )["csv.Seen"]
+    assert [(t, seen.unpack(data))
+            for topic, t, data in read_records(tmp_path / "run-1.mcap")
+            if topic == "csv.seen"] == CONSUMER_VIEW
 
 
 def test_participant_frontend_loads_a_package_module_spec(tmp_path: Path):

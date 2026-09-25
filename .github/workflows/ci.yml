@@ -31,9 +31,9 @@ jobs:
       - name: Run tests
         run: SIL_SKIP_BUILD=1 .venv/bin/python -m pytest tests/ -v
 
-      # The reference pipeline, both variants of the ACC reference example, and
-      # the FMU import example, so every example is proven bit-identical on
-      # each push rather than when someone remembers to run it.
+      # The reference pipeline, both variants of the ACC reference example, the
+      # FMU import example, and the CSV replay example, so every example is
+      # proven bit-identical on each push rather than when someone remembers.
       - name: Determinism gate on reference manifests
         env:
           PYTHONPATH: ${{ github.workspace }}/python/src
