@@ -24,24 +24,24 @@ This is a deliberately restricted profile, not full CAN/FMI conformance.
 | Clocks | Triggered input Rx_Clock per terminal; countdown input Tx_Clock per terminal. Active Tx Clocks state the time to the next frame end or arbitration opportunity as `counter / 10^9` s and activate together. An arbitration countdown with no delivered operation has an empty Binary output, which the Importer consumes without propagating a frame. Qualifier `Changed` when the next bus event changes, `NotYetKnown` when none is pending. Fraction and decimal queries supported. |
 | FMI | FMI 3.0 Co-Simulation, Event Mode mandatory, variable communication steps, multiple instances, reset. Binary access and Clock activation in Event Mode; Binary values may be assigned repeatedly in Initialization Mode; these assignments do not activate Clocks or submit frames and are cleared on exit. Calculated output Binary values are empty and readable during initialization. No ME, SE, rollback, serialization, intermediate updates, derivatives, structural parameters or early return. Unsupported entry points return fmi3Error (unsupported instantiation returns null). |
 | Time | Start time and every communication point must be in [0, 2^50] ns (about 13 days); there a Float64 time converts to whole nanoseconds without loss. A Float64 time is read as the nearest whole nanosecond; the SiL Importer supplies whole nanoseconds. A frame that would end later fails. |
-| Invalid calls | Invalid references, lifecycle/order, missing Clock/Binary pairs, overflow, unsupported operations, more than 256 events at one instant, Tx activation away from a pending bus event and stepping past one return fmi3Error. Implemented calls put the instance in Error state, requiring reset/free; `fmi3Reset` is accepted from every state, including Error. No C++ exception crosses the ABI. |
+| Invalid calls | These calls return fmi3Error: invalid references, lifecycle or order, missing Clock/Binary pairs, overflow, unsupported operations, more than 256 events at one instant, a Tx activation away from a pending bus event, and a step past one. A failed implemented call puts the instance in Error state. Then only reset or free is possible. `fmi3Reset` is accepted from every state, including Error. No C++ exception crosses the ABI. |
 
 ## Malformed traffic and resource bounds
 
-FMI-LS-BUS 1.0.0 §4 ("Format Error") has a participant answer a corrupt Bus
-Operation with `Format Error`: an operation with an unknown OP code, an
-invalid length, or content its format does not allow. The bus does this and
-continues. A well-formed operation outside this restricted profile is not
-corrupt; it fails the instance with `fmi3Error`, and the SiL Run ends as a Run
-failure (exit 1).
+FMI-LS-BUS 1.0.0 §4 ("Format Error") tells a participant to send `Format
+Error` when it receives a corrupt Bus Operation. A corrupt operation has an
+unknown OP code, an invalid length, or content that its format does not allow.
+The bus sends this report and continues. An operation at its exact layout that
+this restricted profile does not support is not corrupt. It fails the instance
+with fmi3Error, and the SiL Run ends as a Run failure (exit 1).
 
 | Input | Response |
 | --- | --- |
 | Fewer than 8 header bytes, a Length below 8, or a Length beyond the buffer | `Format Error` holding the rest of that buffer, which cannot be split further. Earlier operations of the buffer still apply. |
-| Unknown OP code | `Format Error` holding that operation; parsing continues after it. |
+| Unknown OP code, or a defined OP code with a Length other than its layout gives | `Format Error` holding that operation; parsing continues after it. |
 | `CAN Transmit` with Length ≠ 16 + DL, DL > 8, IDE or RTR other than 0/1, or an ID beyond its 11- or 29-bit range | `Format Error` holding that operation. |
 | `Configuration` without a kind, with an unknown kind, a bitrate operation of Length ≠ 13, or an arbitration-loss operation of Length ≠ 10 or a value other than 1/2 | `Format Error` holding that operation. |
-| Well-formed extended or remote frame, CAN FD/XL Transmit, FD/XL bitrate, Status, Wakeup, or an operation only the bus produces | fmi3Error |
+| At its exact FMI-LS-BUS layout: an extended or remote frame, CAN FD/XL Transmit, FD/XL bitrate, Status, Wakeup, or an operation only the bus produces | fmi3Error |
 | Unsupported, unrepresentable or inconsistent bitrate; Transmit before every active terminal agreed on one | fmi3Error |
 | A pending queue beyond its capacity; distinct payloads under one winning ID | fmi3Error |
 | Input above 2048 bytes, or to an inactive terminal | fmi3Error at `SetBinary` |
@@ -88,19 +88,23 @@ and 2048-byte inputs set) and counts the C++ heap bytes the instance requests.
 The build writes the result to `build/can/capacity.json`. It is a measurement
 of this build, not a declared bound, and excludes allocator overhead. An
 event copies the bus to commit it atomically, which roughly doubles the peak.
-Finite queues bound what the model stores; they are not OS memory isolation.
+Finite queues bound what the model stores. They are not OS memory isolation.
 Instances share the process and its allocator.
 
-Each instance owns all of its state; the library has no mutable globals.
-`tests/abi.cpp` checks through the exported C entry points, under ASan and
-UBSan: repeated instantiation, initialization failure, termination, reset
-from every state and free with traffic in flight; two differently configured
-instances with interleaved calls, one of them driven into Error state; that
-Binary outputs stay owned by the FMU and valid until the event's
-`UpdateDiscreteStates`; that the logging callback gets its environment and is
-called once per failed call; invalid arguments; and a
-bounded corpus of 1222 truncated and mutated buffers. Its outcome counts are
-in `build/can/abi.json`.
+Each instance owns all of its state. The library has no mutable globals.
+`tests/abi.cpp` uses the exported C entry points under ASan and UBSan. It
+checks these items:
+
+- Repeated instantiation, initialization failure and termination.
+- Reset from every state, and free with traffic in flight.
+- Two differently configured instances with interleaved calls. One of them
+  goes into Error state.
+- Binary outputs stay owned by the FMU. They stay valid until the
+  `UpdateDiscreteStates` call that ends the event.
+- The logging callback gets its environment, once for each failed call.
+- Invalid arguments.
+- A bounded corpus of truncated and mutated buffers. `build/can/abi.json`
+  gives the outcome counts.
 
 ## Deterministic CAN model fault schedule
 

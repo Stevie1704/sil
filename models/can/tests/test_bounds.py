@@ -17,12 +17,14 @@ from sil.recording import read_records
 
 from test_exchange import (
     ARTIFACTS, BUFFER_SCHEMAS, FRAME, LAYOUT, MODEL, ROOT, THREE_REQUESTS,
-    UNKNOWN_OPERATION, config, confirm, drive, driven, fault_parameters,
+    UNKNOWN_OPERATION, config, confirm, drive, drive_steps, fault_parameters,
     format_error, frame, frame_end_ns, sil_run,
 )
 
 RATE = 125_000
 PAYLOAD_MISMATCH = FRAME[:14] + b"\x05\x00" + FRAME[16:]
+BEYOND_STANDARD_ID = frame(0x800, b"")
+TRUNCATED_HEADER = FRAME[:5]
 EXTENDED = FRAME[:12] + b"\x01" + FRAME[13:]
 SCENARIOS = {
     # A Format Error report and a frame on two nodes.
@@ -84,8 +86,8 @@ def test_instances_sharing_one_library_stay_isolated(tmp_path):
     fmus = {name: instantiate(name) for name in SCENARIOS}
     traces = {name: [] for name in SCENARIOS}
     masters = [
-        driven(fmus[name], scenario["requests"], scenario["until"], traces[name],
-               nodes=scenario["nodes"])
+        drive_steps(fmus[name], scenario["requests"], scenario["until"],
+                    traces[name], nodes=scenario["nodes"])
         for name, scenario in SCENARIOS.items()
     ]
     # Alternate every Step of both instances: queues, fault state, clocks
@@ -131,11 +133,14 @@ def request_manifest(name, schedule):
 
 def test_sil_run_reports_corrupt_operations_and_fails_unsupported_ones(tmp_path):
     configured = [("in.node1", 0, config(RATE)), ("in.node2", 0, config(RATE))]
-    # Two Messages of one terminal at one instant reach the bus as one event.
+    # Two Messages of one terminal at one instant reach the bus as one event;
+    # a truncated header makes the rest of that buffer one corrupt operation.
     path = request_manifest("format-error", configured + [
         ("in.node1", 1000, UNKNOWN_OPERATION),
         ("in.node1", 1000, frame(1, b"")),
         ("in.node2", 1000, PAYLOAD_MISMATCH),
+        ("in.node2", 1000, BEYOND_STANDARD_ID),
+        ("in.node2", 1000, TRUNCATED_HEADER),
     ])
     recordings = [ARTIFACTS / f"issue157-format-error-{run}.mcap"
                   for run in ("first", "second")]
@@ -152,7 +157,8 @@ def test_sil_run_reports_corrupt_operations_and_fails_unsupported_ones(tmp_path)
     end = frame_end_ns(1000, 1, b"", RATE)
     expected = [
         (1001, 0, format_error(UNKNOWN_OPERATION)),
-        (1001, 1, format_error(PAYLOAD_MISMATCH)),
+        (1001, 1, format_error(PAYLOAD_MISMATCH) + format_error(BEYOND_STANDARD_ID)
+         + format_error(TRUNCATED_HEADER)),
         (end, 0, confirm(1)),
         (end, 1, frame(1, b"")),
     ]

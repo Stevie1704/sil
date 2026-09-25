@@ -822,8 +822,8 @@ configures one to four as active, and carries 11-bit Classical CAN data frames.
 Queued requests arbitrate by identifier after each intermission; per-node FIFO
 capacity and buffer or discard behavior are configurable. A transmitting frame
 cannot be preempted. Completion and arbitration instants reach the Importer as
-countdown Clock intervals in whole nanoseconds. A corrupt operation is answered
-with the standard Format Error; an unsupported one fails the instance. Queues,
+countdown Clock intervals in whole nanoseconds. The model answers a corrupt
+operation with the standard Format Error. An unsupported one fails the instance. Queues,
 reports and same-instant events are bounded per instance. `models/can/run.sh`
 builds and qualifies the same Linux x86-64 artifact through independent FMI
 calls, sanitized checks of its C entry points and SiL's existing FMU group.

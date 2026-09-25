@@ -3,6 +3,7 @@
 // logging-callback lifetime, and a bounded malformed-input corpus. Built with
 // sanitizers by qualify.sh; argv[1] receives the corpus summary as JSON.
 #include "fmi3Functions.h"
+#include "operations.hpp"
 #include "profile.hpp"
 
 #include <algorithm>
@@ -21,26 +22,10 @@
 #include <vector>
 
 namespace {
-using Bytes = std::vector<std::uint8_t>;
+using namespace operations;
 using Nanoseconds = std::uint64_t;
 constexpr double ns_per_s = 1e9;
 
-Bytes frame(std::uint32_t id, Bytes data) {
-  const auto length = std::uint8_t(16 + data.size());
-  Bytes op{0x10, 0, 0, 0, length, 0, 0, 0, std::uint8_t(id), std::uint8_t(id >> 8), 0, 0,
-           0, 0, std::uint8_t(data.size()), 0};
-  op.insert(op.end(), data.begin(), data.end());
-  return op;
-}
-Bytes bitrate(std::uint32_t rate) {
-  return {0x40, 0, 0, 0, 13, 0, 0, 0, 1, std::uint8_t(rate), std::uint8_t(rate >> 8),
-          std::uint8_t(rate >> 16), std::uint8_t(rate >> 24)};
-}
-Bytes discard() { return {0x40, 0, 0, 0, 10, 0, 0, 0, 4, 2}; }
-Bytes operator+(Bytes left, const Bytes& right) {
-  left.insert(left.end(), right.begin(), right.end());
-  return left;
-}
 std::uint32_t u32(const Bytes& b, std::size_t at) {
   return std::uint32_t(b[at]) | (std::uint32_t(b[at + 1]) << 8) |
          (std::uint32_t(b[at + 2]) << 16) | (std::uint32_t(b[at + 3]) << 24);

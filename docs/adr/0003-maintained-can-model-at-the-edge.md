@@ -39,5 +39,8 @@ receiver-local delivery suppression. These semantics stay in the maintained
 FMU; they do not add a kernel Interceptor or claim electrical CAN error
 confinement. Issue #157 answers corrupt operations with the standard Format
 Error in the model and bounds each instance's queues, reports and same-instant
-events; it needs no new Importer capability. The maintained FMU must publish its supported profile and qualify
+events; it needs no new Importer capability. Compatibility impact: a Run
+whose input held a corrupt operation used to fail. It now continues and
+records the Format Error on the sender's Channel one nanosecond later. Runs
+without corrupt input record the same operations at the same instants. The maintained FMU must publish its supported profile and qualify
 both its protocol behavior and its packaging independently of the kernel.

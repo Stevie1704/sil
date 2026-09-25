@@ -1,21 +1,11 @@
 #include "bus.hpp"
+#include "operations.hpp"
 
 #include <cassert>
 #include <exception>
 
 namespace {
-can::Bytes frame(std::uint32_t id, can::Bytes data) {
-  const auto length = std::uint8_t(16 + data.size());
-  can::Bytes op{0x10, 0, 0, 0, length, 0, 0, 0,
-                std::uint8_t(id), std::uint8_t(id >> 8), 0, 0,
-                0, 0, std::uint8_t(data.size()), 0};
-  op.insert(op.end(), data.begin(), data.end());
-  return op;
-}
-can::Bytes bitrate(std::uint32_t rate) {
-  return {0x40, 0, 0, 0, 13, 0, 0, 0, 1, std::uint8_t(rate), std::uint8_t(rate >> 8),
-          std::uint8_t(rate >> 16), std::uint8_t(rate >> 24)};
-}
+using namespace operations;
 can::Bytes confirm(std::uint32_t id) {
   return {0x20, 0, 0, 0, 12, 0, 0, 0, std::uint8_t(id), std::uint8_t(id >> 8), 0, 0};
 }
@@ -23,17 +13,12 @@ can::Bytes bus_error(std::uint32_t id, std::uint8_t flag, bool sender) {
   return {0x31, 0, 0, 0, 15, 0, 0, 0, std::uint8_t(id),
           std::uint8_t(id >> 8), 0, 0, 1, flag, std::uint8_t(sender)};
 }
-can::Bytes discard() { return {0x40, 0, 0, 0, 10, 0, 0, 0, 4, 2}; }
 can::Bytes format_error(const can::Bytes& op) {
   const auto length = std::uint32_t(10 + op.size());
   can::Bytes report{0x01, 0, 0, 0, std::uint8_t(length), std::uint8_t(length >> 8), 0, 0,
                     std::uint8_t(op.size()), std::uint8_t(op.size() >> 8)};
   report.insert(report.end(), op.begin(), op.end());
   return report;
-}
-can::Bytes operator+(can::Bytes left, const can::Bytes& right) {
-  left.insert(left.end(), right.begin(), right.end());
-  return left;
 }
 void send(can::Bus& bus, unsigned terminal, const can::Bytes& operations, can::Nanoseconds now) {
   can::Inputs inputs;
@@ -456,10 +441,14 @@ void corrupt_operations_get_format_errors() {
   const can::Bytes no_kind{0x40, 0, 0, 0, 8, 0, 0, 0},
       unknown_kind{0x40, 0, 0, 0, 9, 0, 0, 0, 9},
       short_bitrate{0x40, 0, 0, 0, 12, 0, 0, 0, 1, 0x48, 0xe8, 0x01},
-      undefined_policy{0x40, 0, 0, 0, 10, 0, 0, 0, 4, 3};
+      undefined_policy{0x40, 0, 0, 0, 10, 0, 0, 0, 4, 3},
+      short_confirm{0x20, 0, 0, 0, 8, 0, 0, 0},
+      long_status{0x41, 0, 0, 0, 10, 0, 0, 0, 0, 0},
+      short_fd_bitrate{0x40, 0, 0, 0, 9, 0, 0, 0, 2};
   for (const auto& op : {unknown, id_beyond_standard, long_payload, ide_not_boolean,
                          rtr_not_boolean, length_mismatch, no_kind, unknown_kind,
-                         short_bitrate, undefined_policy}) {
+                         short_bitrate, undefined_policy, short_confirm, long_status,
+                         short_fd_bitrate}) {
     can::Bus fresh;  // Reporting needs no agreed bitrate.
     send(fresh, 0, op, 0);
     assert(fresh.next_event() == 1);
@@ -531,14 +520,19 @@ void unsupported_operations_fail() {
   auto extended = frame(1, {}), remote = frame(1, {});
   extended[12] = 1;
   remote[13] = 1;
-  const auto header = [](std::uint8_t code) {
-    return can::Bytes{code, 0, 0, 0, 8, 0, 0, 0};
+  // Each at the exact Length of its FMI-LS-BUS layout, with no data.
+  const auto defined = [](std::uint8_t code, std::uint8_t length) {
+    can::Bytes op(length);
+    op[0] = code;
+    op[4] = length;
+    return op;
   };
   const can::Bytes fd_bitrate{0x40, 0, 0, 0, 13, 0, 0, 0, 2, 0xa0, 0x86, 0x01, 0},
       xl_bitrate{0x40, 0, 0, 0, 13, 0, 0, 0, 3, 0xa0, 0x86, 0x01, 0};
-  for (const auto& op : {extended, remote, header(0x01), header(0x11), header(0x12),
-                         confirm(1), header(0x30), header(0x31), header(0x41),
-                         header(0x42), fd_bitrate, xl_bitrate, bitrate(83333)}) {
+  for (const auto& op : {extended, remote, defined(0x01, 10), defined(0x11, 17),
+                         defined(0x12, 22), confirm(1), defined(0x30, 12),
+                         defined(0x31, 15), defined(0x41, 9), defined(0x42, 8), fd_bitrate,
+                         xl_bitrate, bitrate(83333)}) {
     auto bus = configured(125000);
     assert(rejects([&] { send(bus, 0, frame(0, {}) + op, 0); }));
     assert(!bus.next_event());  // the whole event stays uncommitted

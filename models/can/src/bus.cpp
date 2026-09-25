@@ -16,13 +16,20 @@ void require(bool condition, const char* message) {
 bool supported_bitrate(std::uint32_t rate) {
   return rate >= min_bitrate && rate <= max_bitrate && ns_per_s % rate == 0;
 }
+// FMI-LS-BUS 1.0.0 CAN OP codes and configuration parameter types.
 inline constexpr std::uint8_t format_error_code = 0x01;
 inline constexpr std::uint8_t transmit_code = 0x10;
-inline constexpr std::uint8_t configuration_code = 0x40;
-inline constexpr std::uint8_t bitrate_kind = 1, arbitration_lost_behavior_kind = 4;
+inline constexpr std::uint8_t fd_transmit_code = 0x11;
+inline constexpr std::uint8_t xl_transmit_code = 0x12;
 inline constexpr std::uint8_t confirm_code = 0x20;
 inline constexpr std::uint8_t arbitration_lost_code = 0x30;
 inline constexpr std::uint8_t bus_error_code = 0x31;
+inline constexpr std::uint8_t configuration_code = 0x40;
+inline constexpr std::uint8_t status_code = 0x41;
+inline constexpr std::uint8_t wakeup_code = 0x42;
+inline constexpr std::uint8_t bitrate_kind = 1, fd_bitrate_kind = 2, xl_bitrate_kind = 3,
+                              arbitration_lost_behavior_kind = 4;
+inline constexpr std::uint8_t buffer_and_retransmit = 1, discard_and_notify = 2;
 inline constexpr std::uint8_t bit_error = 0x01;
 inline constexpr std::uint8_t primary_error_flag = 0x01;
 inline constexpr std::uint8_t secondary_error_flag = 0x02;
@@ -36,44 +43,42 @@ Bytes bus_error_operation(std::uint32_t id, bool primary, bool sender) {
           bit_error, primary ? primary_error_flag : secondary_error_flag,
           std::uint8_t(sender)};
 }
-// Operations the CAN chapter defines but this profile does not support. They
-// are well formed as far as this model can tell, so they fail the instance
-// instead of drawing a Format Error.
-bool defined_but_unsupported(std::uint32_t code) {
-  // Format Error, CAN FD and XL Transmit, Confirm, ArbitrationLost, Bus Error,
-  // Status and Wakeup.
-  switch (code) {
-    case 0x01: case 0x11: case 0x12: case 0x20: case 0x30: case 0x31:
-    case 0x41: case 0x42:
-      return true;
-    default:
-      return false;
-  }
+unsigned u16(std::span<const std::uint8_t> b, std::size_t at) {
+  return unsigned(b[at]) | (unsigned(b[at + 1]) << 8);
 }
-// Whether an operation with a sound length matches its FMI-LS-BUS format.
-// Unknown OP codes, inconsistent lengths and values no CAN format allows are
-// corrupt; FMI-LS-BUS answers them with Format Error.
+// Whether an operation with a sound length matches its FMI-LS-BUS layout.
+// Unknown OP codes, lengths other than the layout gives and values no CAN
+// format allows are corrupt; FMI-LS-BUS answers them with Format Error.
+// Well-formed operations outside this profile fail later, in Bus::apply.
 bool well_formed(std::span<const std::uint8_t> op) {
-  const auto code = u32(op, 0);
-  if (code == transmit_code) {
-    if (op.size() < 16) return false;
-    const unsigned size = unsigned(op[14]) | (unsigned(op[15]) << 8);
-    const bool extended = op[12] == 1;
-    const auto id_limit = extended ? 0x1fffffffu : max_classical_identifier;
-    return op.size() == 16 + size && size <= 8 && op[12] <= 1 && op[13] <= 1 &&
-           u32(op, 8) <= id_limit;
-  }
-  if (code == configuration_code) {
-    if (op.size() < 9) return false;
-    switch (op[8]) {
-      case bitrate_kind: return op.size() == 13;
-      case 2: case 3: return true;  // CAN FD and XL rates: unsupported
-      case arbitration_lost_behavior_kind:
-        return op.size() == 10 && (op[9] == 1 || op[9] == 2);
-      default: return false;
+  const auto size = op.size();
+  // A variable-length layout: fixed part, then data of the length at `at`.
+  const auto with_data = [&](std::size_t fixed, std::size_t at) {
+    return size >= fixed && size == fixed + u16(op, at);
+  };
+  switch (u32(op, 0)) {
+    case transmit_code: {
+      if (!with_data(16, 14) || u16(op, 14) > 8 || op[12] > 1 || op[13] > 1) return false;
+      const auto id_limit = op[12] == 1 ? 0x1fffffffu : max_classical_identifier;
+      return u32(op, 8) <= id_limit;
     }
+    case format_error_code: return with_data(10, 8);
+    case fd_transmit_code: return with_data(17, 15);
+    case xl_transmit_code: return with_data(22, 20);
+    case confirm_code: case arbitration_lost_code: return size == 12;
+    case bus_error_code: return size == 15;
+    case status_code: return size == 9;
+    case wakeup_code: return size == 8;
+    case configuration_code:
+      if (size < 9) return false;
+      switch (op[8]) {
+        case bitrate_kind: case fd_bitrate_kind: case xl_bitrate_kind: return size == 13;
+        case arbitration_lost_behavior_kind:
+          return size == 10 && (op[9] == buffer_and_retransmit || op[9] == discard_and_notify);
+        default: return false;
+      }
+    default: return false;
   }
-  return defined_but_unsupported(code);
 }
 // ISO 11898-1 CRC-15 shift register over SOF through the data field.
 unsigned crc15(const std::vector<bool>& bits) {
@@ -268,7 +273,7 @@ void Bus::apply(unsigned terminal, std::span<const std::uint8_t> op,
     bitrate_ = rate;
     configured_[terminal] = true;
   } else if (code == configuration_code && op[8] == arbitration_lost_behavior_kind) {
-    discards_on_loss_[terminal] = op[9] == 2;
+    discards_on_loss_[terminal] = op[9] == discard_and_notify;
   } else if (code == transmit_code && op[12] == 0 && op[13] == 0) {
     const auto id = u32(op, 8);
     std::uint64_t occurrence = 0;

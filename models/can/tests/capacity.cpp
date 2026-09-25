@@ -5,6 +5,7 @@
 // report as JSON.
 #include "bus.hpp"
 #include "fmi3Functions.h"
+#include "operations.hpp"
 #include "profile.hpp"
 
 #include <algorithm>
@@ -41,7 +42,7 @@ void operator delete(void* pointer, std::size_t) noexcept { release(pointer); }
 void operator delete[](void* pointer, std::size_t) noexcept { release(pointer); }
 
 namespace {
-using Bytes = std::vector<std::uint8_t>;
+using namespace operations;
 
 void require(bool condition, const char* what) {
   if (condition) return;
@@ -49,11 +50,8 @@ void require(bool condition, const char* what) {
   std::abort();
 }
 void ok(fmi3Status status, const char* what) { require(status == fmi3OK, what); }
-void append(Bytes& to, const Bytes& op) { to.insert(to.end(), op.begin(), op.end()); }
-Bytes frame(std::uint32_t id) {
-  return {0x10, 0, 0, 0, 24, 0, 0, 0, std::uint8_t(id), std::uint8_t(id >> 8), 0, 0,
-          0, 0, 8, 0, 1, 2, 3, 4, 5, 6, 7, 8};
-}
+// A frame with the largest Classical CAN payload.
+Bytes full_frame(std::uint32_t id) { return frame(id, {1, 2, 3, 4, 5, 6, 7, 8}); }
 // An unknown operation whose Format Error report fills the terminal's share.
 Bytes largest_corrupt() {
   Bytes op(can::format_error_capacity - 10);
@@ -86,17 +84,15 @@ int main(int argc, char** argv) {
   constexpr unsigned nodes = profile::terminal_count;
   // Every buffer is built before the baseline, so only the instance counts.
   std::vector<Bytes> first(nodes), second(nodes), staged(nodes);
-  const Bytes rate{0x40, 0, 0, 0, 13, 0, 0, 0, 1, 0x48, 0xe8, 0x01, 0};  // 125 kbit/s
-  const Bytes discard{0x40, 0, 0, 0, 10, 0, 0, 0, 4, 2};
   for (unsigned node = 0; node < nodes; ++node) {
-    append(first[node], rate);
+    first[node] = bitrate(125000);
     for (unsigned k = 0; k < can::max_queue_capacity; ++k)
-      append(first[node], frame(1 + node * can::max_queue_capacity + k));
+      first[node] = first[node] + full_frame(1 + node * can::max_queue_capacity + k);
     // The first arbitration puts node 0's head on the wire; refill its queue.
-    if (node == 0) append(second[node], frame(1 + nodes * can::max_queue_capacity));
-    append(second[node], largest_corrupt());
-    while (staged[node].size() + discard.size() <= profile::max_binary_size)
-      append(staged[node], discard);
+    if (node == 0) second[node] = full_frame(1 + nodes * can::max_queue_capacity);
+    second[node] = second[node] + largest_corrupt();
+    while (staged[node].size() + discard().size() <= profile::max_binary_size)
+      staged[node] = staged[node] + discard();
   }
   const std::size_t baseline = live;
 
@@ -140,7 +136,7 @@ int main(int argc, char** argv) {
   update(instance);  // copies the bus to commit the event atomically
   const std::size_t event_peak = peak - baseline;
   {  // The measured state is the declared limit: one more frame fails.
-    const auto beyond = frame(0x7ff);
+    const auto beyond = full_frame(0x7ff);
     deliver(instance, 1, beyond);
     fmi3Boolean flags[5];
     fmi3Float64 next;

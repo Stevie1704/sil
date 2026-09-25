@@ -260,12 +260,12 @@ def drive(bus, requests, until_ns, grid_ns=None, nodes=2):
     Returns every Tx activation as (instant_ns, node, payload).
     """
     trace = []
-    for _ in driven(bus, requests, until_ns, trace, grid_ns, nodes):
+    for _ in drive_steps(bus, requests, until_ns, trace, grid_ns, nodes):
         pass
     return trace
 
 
-def driven(bus, requests, until_ns, trace, grid_ns=None, nodes=2):
+def drive_steps(bus, requests, until_ns, trace, grid_ns=None, nodes=2):
     """`drive`, yielding after each Step so masters can interleave calls."""
     now, due = 0, None
     while True:
@@ -667,6 +667,8 @@ CORRUPT = [
     (struct.pack("<II", 0x40, 8),) * 2,  # configuration without a kind
     (struct.pack("<IIB", 0x40, 9, 9),) * 2,  # unknown configuration kind
     (struct.pack("<IIBB", 0x40, 10, 4, 3),) * 2,  # undefined loss behavior
+    (struct.pack("<II", 0x11, 8),) * 2,  # CAN FD Transmit without its fields
+    (struct.pack("<II", 0x20, 8),) * 2,  # Confirm without its ID
 ]
 
 
@@ -685,13 +687,13 @@ def test_corrupt_operation_is_answered_with_format_error(payload, reported):
         bus.updateDiscreteStates()
 
 
-# Well-formed operations outside the declared profile fail the instance.
+# Operations at their FMI-LS-BUS layout but outside this profile fail the instance.
 UNSUPPORTED = [
     FRAME[:12] + b"\x01" + FRAME[13:],  # extended
     FRAME[:13] + b"\x01" + FRAME[14:],  # remote
-    struct.pack("<II", 0x11, 8),  # CAN FD
-    struct.pack("<II", 0x12, 8),  # CAN XL
-    struct.pack("<II", 0x41, 8),  # Status
+    struct.pack("<IIIBBBH", 0x11, 17, 1, 0, 0, 0, 0),  # CAN FD
+    struct.pack("<IIIBBBBIH", 0x12, 22, 1, 0, 0, 0, 0, 0, 0),  # CAN XL
+    struct.pack("<IIB", 0x41, 9, 1),  # Status
     struct.pack("<II", 0x42, 8),  # Wakeup
     format_error(FRAME),  # the bus produces Format Error; it accepts none
     config(83333),  # bit time is no whole number of nanoseconds
