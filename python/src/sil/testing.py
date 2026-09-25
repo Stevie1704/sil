@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from sil import schema
+from sil.check import MAX_PARTICIPANT_TIMEOUT_MS
 from sil.manifest import Manifest
 
 
@@ -53,15 +54,46 @@ class RunResult:
         ]
 
 
+def _deadline_argument(participant_timeout_ms: int | None) -> list[str]:
+    """The runner's option for the deadline; the runner's rule for its value."""
+    if participant_timeout_ms is None:
+        return []
+    if isinstance(participant_timeout_ms, bool) or not isinstance(
+        participant_timeout_ms, int
+    ):
+        raise TypeError(
+            "participant_timeout_ms must be an int, not "
+            f"{type(participant_timeout_ms).__name__}"
+        )
+    if not 0 < participant_timeout_ms <= MAX_PARTICIPANT_TIMEOUT_MS:
+        raise ValueError(
+            f"participant_timeout_ms must be a positive integer of at most "
+            f"{MAX_PARTICIPANT_TIMEOUT_MS} milliseconds, "
+            f"not {participant_timeout_ms}"
+        )
+    return ["--participant-timeout-ms", str(participant_timeout_ms)]
+
+
 def run_simulation(manifest: Manifest, *, runner: str | Path,
-                   workdir: str | Path) -> RunResult:
+                   workdir: str | Path,
+                   participant_timeout_ms: int | None = None) -> RunResult:
     """Runs a manifest to completion. Raises RunFailure on abort, so a
-    participant assertion surfaces as a normal pytest failure."""
+    participant assertion surfaces as a normal pytest failure.
+
+    `participant_timeout_ms` is the runner's `--participant-timeout-ms`
+    guard, forwarded unchanged: each Process participant response wait gets
+    that many wall-clock milliseconds, and a missed deadline is a RunFailure
+    with exit code 1. Omitted, the wait stays unlimited. It is not Manifest
+    data, so it changes neither the Manifest hash nor a timely Run's
+    Recording.
+    """
+    deadline_argument = _deadline_argument(participant_timeout_ms)
     workdir = Path(workdir)
     ref = manifest.write(workdir / "manifest.json")
     mcap_path = workdir / "out.mcap"
     proc = subprocess.run(
-        [str(runner), str(ref.path), "-o", str(mcap_path)],
+        [str(runner), str(ref.path), "-o", str(mcap_path),
+         *deadline_argument],
         capture_output=True, text=True,
     )
     if proc.returncode != 0:
