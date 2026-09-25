@@ -65,6 +65,37 @@ deadline is a run failure (exit 1), not a determinism violation. The
 recorded bytes of a run that answers in time are the same either way, so a
 bounded check and an unbounded one report the same digest.
 
+The pytest helper takes the same option as a keyword. Install the `sil` wheel
+into the test environment, then give the helper the runner path:
+
+```python
+from sil.testing import run_simulation
+
+def test_regression(tmp_path):
+    result = run_simulation(
+        build_manifest(),               # your sil.manifest.Manifest
+        runner="/opt/sil/bin/sil-run",
+        workdir=tmp_path,
+        participant_timeout_ms=5000,
+    )
+    assert result.messages("ticks")
+```
+
+The helper forwards the value unchanged as `--participant-timeout-ms`. It
+accepts only an `int` from 1 to 2^63−1 and raises `TypeError` or `ValueError`
+before it starts the run. A missed deadline raises `RunFailure` with
+`exit_code` 1 and the runner diagnostic as its message. The Run shutdown
+stops the participant and its descendants, as for a direct `sil-run`. When you
+omit the keyword, the wait stays unlimited and the Manifest hash, exit codes,
+and Recording bytes do not change.
+
+The deadline is not a bound on the whole job. It covers only the response wait
+of each Process participant. Native participants run in the runner process, so
+a Native callback that does not return is not bounded by this option. Give the
+CI job its own overall timeout (for example `timeout-minutes` in GitHub
+Actions) to bound that case and every other wait outside a participant
+response.
+
 ### Process participant descendants
 
 Each Process participant becomes the leader of its own process group before it
