@@ -40,6 +40,12 @@ class Replayer {
   void publish_due(uint64_t now_ns);
 
  private:
+  // Rejects a selected channel that is missing from the recording or whose
+  // recorded schema differs from the manifest's.
+  void validate_channels(const RecordingReader &reader, const ReplaySpec &spec,
+                         const std::filesystem::path &path,
+                         const std::string &ctx) const;
+
   // Moves the pass to the next selected message below the run duration. The
   // pass continues past a message at or beyond the duration: stored order is
   // not sorted, so a later message may still fall inside the Run.

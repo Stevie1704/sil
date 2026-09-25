@@ -21,9 +21,9 @@ struct RecordingError : std::runtime_error {
 // A write into the file itself is detected by its size or modification time
 // at the next read, which then throws RecordingError. The status-change time
 // is not compared: unlinking the path moves it without touching the content.
-// A write that keeps both fields (the same size, and a modification time the
-// file system's clock does not advance or that is reset to its old value) is
-// not detected.
+// A write is not detected when it keeps the same size and the same
+// modification time. This occurs when the clock of the file system does not
+// advance, or when a program resets the old modification time.
 class RecordingFile {
  public:
   explicit RecordingFile(const std::filesystem::path &path);

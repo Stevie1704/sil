@@ -119,20 +119,20 @@ class McapFileInput final : public mcap::IReadable {
 class McapRecordingReader : public RecordingReader {
  public:
   explicit McapRecordingReader(const RecordingFile &file)
-      : input_(file), name_("'" + file.path().string() + "'") {
+      : input_(file), quoted_path_("'" + file.path().string() + "'") {
     if (!reader_.open(input_).ok())
-      throw RecordingError(name_ + " is not a valid MCAP file");
+      throw RecordingError(quoted_path_ + " is not a valid MCAP file");
     // A recording whose footer is missing was cut short; its last records
     // cannot be trusted to be complete.
     mcap::Footer footer;
     if (!mcap::McapReader::ReadFooter(
              input_, file.size() - mcap::internal::FooterLength, &footer)
              .ok())
-      throw RecordingError(name_ + " is not a complete MCAP recording");
+      throw RecordingError(quoted_path_ + " is not a complete MCAP recording");
     // Parse the summary (scanning the file if it has no summary section) so
     // channel and schema records are available for validation.
     if (!reader_.readSummary(mcap::ReadSummaryMethod::AllowFallbackScan).ok())
-      throw RecordingError(name_ + " is not a readable MCAP recording");
+      throw RecordingError(quoted_path_ + " is not a readable MCAP recording");
 
     for (auto &[cid, channel] : reader_.channels()) {
       mcap::SchemaPtr rs = reader_.schema(channel->schemaId);
@@ -171,7 +171,7 @@ class McapRecordingReader : public RecordingReader {
   // Surfaces a decode problem, then exposes the message the pass stands on.
   void settle() {
     if (!problem_.empty())
-      throw RecordingError(name_ + " is not a readable MCAP recording: " +
+      throw RecordingError(quoted_path_ + " is not a readable MCAP recording: " +
                            problem_);
     current_.reset();
     if (*it_ == view_->end()) return;
@@ -182,7 +182,7 @@ class McapRecordingReader : public RecordingReader {
   }
 
   McapFileInput input_;
-  const std::string name_;  // the quoted path, for diagnostics
+  const std::string quoted_path_;
   mcap::McapReader reader_;
   std::vector<ChannelSchema> schemas_;
   std::string problem_;

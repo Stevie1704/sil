@@ -16,7 +16,11 @@ namespace {
 
 constexpr size_t kHashBlockBytes = 64 * 1024;
 
-std::string errno_text() { return std::strerror(errno); }
+RecordingError unreadable(const std::filesystem::path &path,
+                          const std::string &reason) {
+  return RecordingError("cannot read recording '" + path.string() + "': " +
+                        reason);
+}
 
 }  // namespace
 
@@ -24,14 +28,11 @@ RecordingFile::RecordingFile(const std::filesystem::path &path) : path_(path) {
   do {
     fd_ = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
   } while (fd_ < 0 && errno == EINTR);
-  if (fd_ < 0)
-    throw RecordingError("cannot read recording '" + path.string() +
-                         "': " + errno_text());
+  if (fd_ < 0) throw unreadable(path, std::strerror(errno));
   struct stat st;
   if (::fstat(fd_, &st) != 0 || !S_ISREG(st.st_mode)) {
     ::close(fd_);
-    throw RecordingError("cannot read recording '" + path.string() +
-                         "': not a regular file");
+    throw unreadable(path, "not a regular file");
   }
   stamp_ = current_stamp();
 }
@@ -40,9 +41,7 @@ RecordingFile::~RecordingFile() { ::close(fd_); }
 
 RecordingFile::Stamp RecordingFile::current_stamp() const {
   struct stat st;
-  if (::fstat(fd_, &st) != 0)
-    throw RecordingError("cannot read recording '" + path_.string() +
-                         "': " + errno_text());
+  if (::fstat(fd_, &st) != 0) throw unreadable(path_, std::strerror(errno));
 #ifdef __APPLE__
   const timespec &mtime = st.st_mtimespec;
 #else
@@ -57,14 +56,12 @@ size_t RecordingFile::read_at(uint64_t offset, void *out, size_t len) const {
   while (done < len) {
     const ssize_t n = ::pread(fd_, p + done, len - done, off_t(offset + done));
     if (n < 0 && errno == EINTR) continue;
-    if (n < 0)
-      throw RecordingError("cannot read recording '" + path_.string() +
-                           "': " + errno_text());
+    if (n < 0) throw unreadable(path_, std::strerror(errno));
     if (n == 0) break;
     done += size_t(n);
   }
   // Checked after the read, so bytes read from a changed file never pass.
-  if (!(current_stamp() == stamp_))
+  if (current_stamp() != stamp_)
     throw RecordingError("recording '" + path_.string() +
                          "' changed after it was validated");
   return done;

@@ -215,6 +215,20 @@ class TestBoundedReplayMemory:
         ]
 
 
+def test_equal_time_messages_keep_stored_order_across_chunks(run_sil, tmp_path):
+    # Three messages per instant, one small chunk each few messages: the
+    # stored order is the tie-break even where a chunk boundary splits a tie.
+    times = [i // 3 * MS for i in range(30)]
+    rec = write_recording(tmp_path / "r.mcap", ticks_at(*times), chunk_size=100)
+    proc = run_sil(replay_manifest(rec).write(tmp_path / "m.json").path)
+    assert proc.returncode == 0, proc.stderr
+    with open(proc.mcap_path, "rb") as f:
+        stored = [(m.log_time, m.data) for _, c, m in
+                  make_reader(f).iter_messages(log_time_order=False)
+                  if c.topic == "ticks"]
+    assert stored == [(t, tick(i, i + 1)) for i, t in enumerate(times)]
+
+
 class TestReplayStartupValidation:
     """A Recording that cannot be read to its end is rejected before any
     participant is stepped, even when the Manifest hashed it as it is."""
@@ -253,10 +267,23 @@ class TestReplayStartupValidation:
         assert proc.returncode == 2
         assert "damaged.mcap" in proc.stderr
 
-    def test_rejected_recording_leaves_a_closed_output(self, run_sil, tmp_path):
-        data = self.recording(tmp_path)
-        proc = self.run_hashed(run_sil, tmp_path, data[:-100])
+    @pytest.mark.parametrize("damage", ["truncated", "corrupt", "hash-mismatch"])
+    def test_rejected_recording_leaves_a_closed_output(
+        self, run_sil, tmp_path, damage
+    ):
+        data = bytearray(self.recording(tmp_path))
+        if damage == "truncated":
+            data = data[:-100]
+        elif damage == "corrupt":
+            data[data.find(tick(10, 11)) - 30] ^= 0xFF
+        rec = tmp_path / "damaged.mcap"
+        rec.write_bytes(bytes(data))
+        manifest = replay_manifest(rec).write(tmp_path / "m.json").path
+        if damage == "hash-mismatch":
+            rec.write_bytes(bytes(data[:-1]) + bytes([data[-1] ^ 0xFF]))
+        proc = run_sil(manifest)
         assert proc.returncode == 2
+        assert "damaged.mcap" in proc.stderr
         # The Run's own Recording is still a complete, readable file.
         assert read_mcap(proc.mcap_path)[1] == []
 

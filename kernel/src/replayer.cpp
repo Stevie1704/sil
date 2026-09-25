@@ -32,45 +32,52 @@ Replayer::Replayer(Engine &engine, const std::string &name,
 
     // Decode via the format reader; all validation below stays here and is
     // independent of how the recording was stored.
-    std::unique_ptr<RecordingReader> check = make_recording_reader(*file_);
-
-    // A replayed channel must exist in the recording, must be selected from
-    // the recording's own topics, and its recorded schema must match the
-    // schema the new manifest declares for that channel (name and byte
-    // layout, compared via the canonical schema JSON the recorder embedded).
-    const Manifest &m = engine_.manifest();
-    std::set<std::string> found;
-    for (const RecordingReader::ChannelSchema &cs : check->channel_schemas()) {
-      if (!channels_.count(cs.channel)) continue;
-      found.insert(cs.channel);
-
-      // The channel exists in the manifest (load_manifest already rejects a
-      // replay of an undeclared channel).
-      const ChannelSpec *spec_ch = m.find_channel(cs.channel);
-      const SchemaSpec &want_schema = m.schemas.at(spec_ch->schema);
-      if (cs.schema_name != spec_ch->schema ||
-          cs.canonical_json != want_schema.canonical_json)
-        throw ManifestError(
-            "manifest error: " + ctx + ": channel '" + cs.channel +
-            "' schema in recording does not match manifest schema '" +
-            spec_ch->schema + "'");
-    }
-    for (const std::string &want : spec.channels)
-      if (!found.count(want))
-        throw ManifestError("manifest error: " + ctx + ": channel '" + want +
-                            "' not present in recording '" + path.string() +
-                            "'");
+    std::unique_ptr<RecordingReader> validation =
+        make_recording_reader(*file_);
+    validate_channels(*validation, spec, path, ctx);
 
     // Every record must decode before any participant is stepped, so the
     // second pass below cannot fail on the file's own content.
-    while (check->current()) check->advance();
-    check.reset();
+    while (validation->current()) validation->advance();
+    validation.reset();
 
     reader_ = make_recording_reader(*file_);
     skip_unreplayed();
   } catch (const RecordingError &e) {
     throw ManifestError("manifest error: " + ctx + ": " + e.what());
   }
+}
+
+void Replayer::validate_channels(const RecordingReader &reader,
+                                 const ReplaySpec &spec,
+                                 const std::filesystem::path &path,
+                                 const std::string &ctx) const {
+  // A replayed channel must exist in the recording, must be selected from the
+  // recording's own topics, and its recorded schema must match the schema the
+  // new manifest declares for that channel (name and byte layout, compared via
+  // the canonical schema JSON the recorder embedded).
+  const Manifest &m = engine_.manifest();
+  std::set<std::string> found;
+  for (const RecordingReader::ChannelSchema &cs : reader.channel_schemas()) {
+    if (!channels_.count(cs.channel)) continue;
+    found.insert(cs.channel);
+
+    // The channel exists in the manifest (load_manifest already rejects a
+    // replay of an undeclared channel).
+    const ChannelSpec *spec_ch = m.find_channel(cs.channel);
+    const SchemaSpec &want_schema = m.schemas.at(spec_ch->schema);
+    if (cs.schema_name != spec_ch->schema ||
+        cs.canonical_json != want_schema.canonical_json)
+      throw ManifestError(
+          "manifest error: " + ctx + ": channel '" + cs.channel +
+          "' schema in recording does not match manifest schema '" +
+          spec_ch->schema + "'");
+  }
+  for (const std::string &want : spec.channels)
+    if (!found.count(want))
+      throw ManifestError("manifest error: " + ctx + ": channel '" + want +
+                          "' not present in recording '" + path.string() +
+                          "'");
 }
 
 void Replayer::skip_unreplayed() {
