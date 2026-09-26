@@ -68,7 +68,13 @@ container=$(docker create --platform "$platform" --network none \
     -e SIL_LIBSAFETY_PARTICIPANT_TIMEOUT_MS="$timeout_ms" \
     -e SIL_LIBSAFETY_EXAMPLE_IMAGE_ID="$(image_id "$example_image")" \
     "$example_image" /opt/libsafety/acceptance.py /bundle /prepared /workspace)
-docker cp "$bundle/." "$container:/bundle/"
+# The example image runs as a non-root user, and upstream's build leaves the
+# library with mode 0600 (mkstemp). Copy a readable stage of the bundle in.
+stage=$(mktemp -d "$output/bundle-stage.XXXXXX")
+cp -R "$bundle/." "$stage/"
+chmod -R a+rX "$stage" "$output/prepared"
+docker cp "$stage/." "$container:/bundle/"
+rm -rf "$stage"
 docker cp "$output/prepared/." "$container:/prepared/"
 status=0
 docker start -a "$container" || status=$?
