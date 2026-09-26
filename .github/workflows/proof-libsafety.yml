@@ -1,0 +1,53 @@
+name: proof-libsafety
+
+# Public shared-library acceptance (issue #193). It regenerates the #178
+# bundle, whose image build fetches pinned public sources, so this sits
+# outside the general push gate like the other external proofs. The export
+# and the acceptance run with no network on native Linux x86-64.
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/libsafety/**'
+      - 'proofs/public-workloads/**'
+      - 'python/src/sil/**'
+      - 'kernel/**'
+      - 'Dockerfile'
+      - 'container/**'
+      - '.github/workflows/proof-libsafety.yml'
+  workflow_dispatch:
+
+jobs:
+  accept:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Test the adapter, binding and contract
+        run: |
+          uv venv .venv
+          uv pip install -p .venv/bin/python -e "python/[dev]"
+          .venv/bin/python -m pytest proofs/libsafety -v
+
+      - name: Regenerate the public-workload bundle (#178)
+        timeout-minutes: 40
+        run: proofs/public-workloads/run-proof.sh "$PWD/build/public-workloads"
+
+      - name: Export, replay, compare and run the controls
+        timeout-minutes: 30
+        run: proofs/libsafety/run-proof.sh "$PWD/build/public-workloads/bundle" "$PWD/build/libsafety"
+
+      - name: Keep the acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: libsafety-evidence
+          path: |
+            build/libsafety/evidence/
+            build/libsafety/prepared/*.json
+            build/libsafety/runs/*.json
+            build/libsafety/runs/*.log
+            build/libsafety/inputs/*.json
