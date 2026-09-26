@@ -1,0 +1,14 @@
+{
+  "sil_csv_mapping": 1,
+  "timestamp": {"column": "time_ms", "unit": "ms"},
+  "schemas": {
+    "library.Speed": {"fields": [{"name": "speed_mps", "type": "f64"}]}
+  },
+  "channels": [
+    {
+      "channel": "ego.speed",
+      "schema": "library.Speed",
+      "fields": {"speed_mps": {"column": "speed_mps"}}
+    }
+  ]
+}

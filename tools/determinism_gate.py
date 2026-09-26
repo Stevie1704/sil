@@ -4,8 +4,8 @@
 The milestone exit criterion is that a Run recorded twice produces a
 bit-identical MCAP. `sil.check` proves that for one manifest; this proves it
 for the reference pipeline, both variants of the ACC example, the FMU import
-example, and the CSV replay example, so no example is left to be checked when
-someone remembers.
+example, the CSV replay example, and the shared-library example, so no
+example is left to be checked when someone remembers.
 
 Run from the repository root with `python/src` on PYTHONPATH.
 """
@@ -38,12 +38,19 @@ def main() -> int:
     csv_replay = load("csv_manifest", "examples/csv/manifest.py")
     signals = build / "signals.mcap"
     convert("examples/csv/mapping.json", "examples/csv/signals.csv", signals)
+    library = load("library_manifest", "examples/library/manifest.py")
+    library_signals = build / "library-signals.mcap"
+    convert("examples/library/mapping.json", "examples/library/signals.csv",
+            library_signals)
     references = [
         full_pipeline_manifest(build),
         acc.acc_manifest().write(build / "acc.json"),
         acc.acc_manifest(delayed_sensing=True).write(build / "acc-delayed.json"),
         fmu.fmu_manifest().write(build / "fmu.json"),
         csv_replay.csv_replay_manifest(signals).write(build / "csv-replay.json"),
+        library.library_manifest(
+            library_signals, build / "speed_filter.so",
+        ).write(build / "library.json"),
     ]
     for reference in references:
         code = check(build / "sil-run", reference.path)
