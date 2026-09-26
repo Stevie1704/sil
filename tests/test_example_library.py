@@ -146,6 +146,15 @@ class TestIncorrectOutput:
                 "the independently computed 2.666666666666667") in proc.stderr
         assert_cleaned_up(proc, tmp_path, library(build_dir, "defect"))
 
+    def test_an_output_of_the_last_step_is_checked_too(
+        self, sil_run, build_dir, tmp_path
+    ):
+        proc = run_at_boundary(sil_run, build_dir, tmp_path,
+                               variant="wrong_last")
+        assert proc.returncode == 1, proc.stderr
+        assert "filter.fast at t=100000000 ns: filtered_speed_mps" in (
+            proc.stderr)
+
 
 class TestStartup:
     def test_a_missing_symbol_is_a_manifest_error_naming_it(

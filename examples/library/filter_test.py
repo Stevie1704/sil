@@ -8,9 +8,10 @@ and the cycle count proves the instance started from a fresh lifecycle. The
 first difference fails the Run with the time, the field, and both values.
 
 It sees the replayed input with the same Latency and Period as the library
-instances, so at each Step it has exactly the input they had. An output
-published at `t` is visible here one Period later, so the output of the
-last Step before the Duration is not checked.
+instances, so at each Step it has exactly the input they had. The output
+Channels have zero Latency and this participant runs after the instances in
+each Slot, so an output published at `t` is checked at `t`. The output of
+the last Step is checked too.
 """
 
 from __future__ import annotations
@@ -51,9 +52,6 @@ class FilterTest(StepParticipant):
             channel: Expectation(period_ns / NANOS_PER_SECOND, *parameters)
             for channel, parameters in instances.items()
         }
-        self._expected: dict[str, dict[int, tuple[float, int]]] = {
-            channel: {} for channel in instances
-        }
 
     def on_step(self, t, dt, inputs):
         seen = {channel: [] for channel in self._models}
@@ -64,31 +62,29 @@ class FilterTest(StepParticipant):
                 seen[message.channel].append(message)
         for channel, model in self._models.items():
             model.step(self._speed_mps)
-            self._expected[channel][t] = (model.filtered_speed_mps,
-                                          model.cycles)
-            self._check(channel, t, seen[channel])
+            self._check(channel, t, model, seen[channel])
 
-    def _check(self, channel: str, t: int, messages: list) -> None:
-        if t > 0 and [m.publish_ns for m in messages] != [t - self._period_ns]:
+    @staticmethod
+    def _check(channel: str, t: int, model: Expectation,
+               messages: list) -> None:
+        if [m.publish_ns for m in messages] != [t]:
             raise ParticipantFailure(
-                f"{channel}: expected one output published at "
-                f"{t - self._period_ns} ns by t={t} ns, got "
-                f"{[m.publish_ns for m in messages]}"
+                f"{channel}: expected one output published at t={t} ns, "
+                f"got {[m.publish_ns for m in messages]}"
             )
-        for message in messages:
-            speed, cycles = self._expected[channel].pop(message.publish_ns)
-            got = message.data
-            if got["cycles"] != cycles:
-                raise ParticipantFailure(
-                    f"{channel} at t={message.publish_ns} ns: cycles "
-                    f"{got['cycles']} differs from the expected {cycles}"
-                )
-            if abs(got["filtered_speed_mps"] - speed) > TOLERANCE:
-                raise ParticipantFailure(
-                    f"{channel} at t={message.publish_ns} ns: "
-                    f"filtered_speed_mps {got['filtered_speed_mps']!r} "
-                    f"differs from the independently computed {speed!r}"
-                )
+        got = messages[0].data
+        if got["cycles"] != model.cycles:
+            raise ParticipantFailure(
+                f"{channel} at t={t} ns: cycles {got['cycles']} differs "
+                f"from the expected {model.cycles}"
+            )
+        speed = model.filtered_speed_mps
+        if abs(got["filtered_speed_mps"] - speed) > TOLERANCE:
+            raise ParticipantFailure(
+                f"{channel} at t={t} ns: filtered_speed_mps "
+                f"{got['filtered_speed_mps']!r} differs from the "
+                f"independently computed {speed!r}"
+            )
 
 
 def _instance(value: str) -> tuple[str, tuple[float, float]]:

@@ -4,8 +4,8 @@
 `mapping.json` into a Recording. The Replay participant publishes it on
 `ego.speed`. Two instances of `adapter.py` load the same `speed_filter`
 library, each in its own process with its own parameters, and publish its
-output. `filter_test.py`, a Test participant, computes both outputs independently and fails the Run
-at the first difference.
+output. `filter_test.py`, a Test participant, computes both outputs
+independently and fails the Run at the first difference.
 
 Everything a reviewer needs to reproduce the Run is explicit here: the
 Period, the Latency of every Channel, finite route capacities, the library
@@ -24,7 +24,10 @@ or, with the staged installation on PATH:
         -o signals.mcap --receipt signals.receipt.json
     python examples/library/manifest.py library.json \\
         --recording signals.mcap --library speed_filter.so
-    sil-run library.json -o run.mcap
+    sil-run library.json -o run.mcap --participant-timeout-ms 10000
+
+`--participant-timeout-ms` makes a hung library fail the Run instead of
+stopping it; it is not Manifest data and does not change the Recording.
 """
 
 import argparse
@@ -37,16 +40,24 @@ EXAMPLE_DIR = Path(__file__).resolve().parent
 MAPPING = json.loads((EXAMPLE_DIR / "mapping.json").read_text())
 
 STEP_PERIOD_NS = 10_000_000
-# Explicit, and equal to the default: a Message is visible at the first Step
-# after it was published.
-LATENCY_NS = STEP_PERIOD_NS
-# The last recorded Message is at 80 ms and visible at 90 ms; the Test participant sees
-# the 90 ms output at 100 ms.
+# Explicit, and equal to the default: a recorded Message is visible at the
+# first Step after it was published.
+INPUT_LATENCY_NS = STEP_PERIOD_NS
+# An output is visible in the Slot that publishes it. The Test participant
+# runs after the library instances in each Slot, so it checks every output,
+# the last Step's included.
+OUTPUT_LATENCY_NS = 0
+LIBRARY_PRIORITY = 0
+TEST_PRIORITY = 1
+# The last recorded Message is at 80 ms and visible at 90 ms; the Step at
+# 100 ms runs once more on the held input.
 DURATION_NS = 110_000_000
-# One Message per Period on every Channel. A Message waits in the route until
-# the subscriber's Step one Period later, and the next one can be published
-# in that Slot before the subscriber takes it.
-ROUTE_CAPACITY = 2
+# One input Message per Period. It waits in the route until the subscriber's
+# Step one Period later, and the next one can be published in that Slot
+# before the subscriber takes it.
+INPUT_ROUTE_CAPACITY = 2
+# One output per Step, taken in the Slot that publishes it.
+OUTPUT_ROUTE_CAPACITY = 1
 # The input before the first recorded Message, at 20 ms, is visible.
 INITIAL_SPEED_MPS = 8.0
 
@@ -72,10 +83,10 @@ def library_manifest(recording: Path, library: Path,
     m.add_schemas(OUTPUT_SCHEMAS)
     (entry,) = MAPPING["channels"]
     speed = entry["channel"]
-    m.add_channel(speed, schema=entry["schema"], latency_ns=LATENCY_NS)
+    m.add_channel(speed, schema=entry["schema"], latency_ns=INPUT_LATENCY_NS)
     for channel in instances:
         m.add_channel(channel, schema="library.Filtered",
-                      latency_ns=LATENCY_NS)
+                      latency_ns=OUTPUT_LATENCY_NS)
     m.add_replay("replay", recording=Path(recording).resolve(),
                  channels=[speed])
     for channel, parameters in instances.items():
@@ -91,8 +102,9 @@ def library_manifest(recording: Path, library: Path,
                 f"--initial=speed_mps={INITIAL_SPEED_MPS!r}",
             ],
             step_period_ns=STEP_PERIOD_NS,
-            subscribes=[SubscriberRoute(speed, capacity=ROUTE_CAPACITY)],
+            subscribes=[SubscriberRoute(speed, capacity=INPUT_ROUTE_CAPACITY)],
             publishes=[channel],
+            priority=LIBRARY_PRIORITY,
         )
     m.add_process(
         "filter_test",
@@ -105,8 +117,12 @@ def library_manifest(recording: Path, library: Path,
               for channel, p in instances.items()),
         ],
         step_period_ns=STEP_PERIOD_NS,
-        subscribes=[SubscriberRoute(channel, capacity=ROUTE_CAPACITY)
-                    for channel in (speed, *instances)],
+        subscribes=[
+            SubscriberRoute(speed, capacity=INPUT_ROUTE_CAPACITY),
+            *(SubscriberRoute(channel, capacity=OUTPUT_ROUTE_CAPACITY)
+              for channel in instances),
+        ],
+        priority=TEST_PRIORITY,
     )
     return m
 

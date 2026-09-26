@@ -360,4 +360,7 @@ if(EXISTS ${CMAKE_SOURCE_DIR}/examples/library/speed_filter.c)
     SPEED_FILTER_HANG_AT_CYCLE=3)
   add_speed_filter(speed_filter_no_terminate tests/fixtures/speed_filter_fault.c
     SPEED_FILTER_OMIT_TERMINATE)
+  # Wrong only in the cycle of the Run's last Step, at 100 ms.
+  add_speed_filter(speed_filter_wrong_last tests/fixtures/speed_filter_fault.c
+    SPEED_FILTER_WRONG_AT_CYCLE=11)
 endif()

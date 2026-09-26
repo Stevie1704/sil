@@ -5,6 +5,7 @@
  *
  * SPEED_FILTER_CRASH_AT_CYCLE=n  dereferences NULL in cycle n
  * SPEED_FILTER_HANG_AT_CYCLE=n   never returns from cycle n
+ * SPEED_FILTER_WRONG_AT_CYCLE=n  adds 1 m/s to the result of cycle n only
  * SPEED_FILTER_OMIT_TERMINATE    does not export speed_filter_terminate
  */
 #include <unistd.h>
@@ -24,5 +25,10 @@ int speed_filter_step(double speed_mps) {
   if (state.cycles + 1 == SPEED_FILTER_HANG_AT_CYCLE)
     for (;;) pause();
 #endif
-  return speed_filter_step_nominal(speed_mps);
+  int status = speed_filter_step_nominal(speed_mps);
+#ifdef SPEED_FILTER_WRONG_AT_CYCLE
+  if (state.cycles == SPEED_FILTER_WRONG_AT_CYCLE)
+    state.filtered_speed_mps += 1.0;
+#endif
+  return status;
 }
