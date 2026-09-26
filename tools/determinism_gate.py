@@ -4,8 +4,8 @@
 The milestone exit criterion is that a Run recorded twice produces a
 bit-identical MCAP. `sil.check` proves that for one manifest; this proves it
 for the reference pipeline, both variants of the ACC example, the FMU import
-example, the CSV replay example, and the shared-library example, so no
-example is left to be checked when someone remembers.
+example, the CSV replay example, the shared-library example, and its replay
+window, so no example is left to be checked when someone remembers.
 
 Run from the repository root with `python/src` on PYTHONPATH.
 """
@@ -20,6 +20,7 @@ from test_determinism import full_pipeline_manifest  # noqa: E402
 
 from sil.check import check  # noqa: E402
 from sil.csv_recording import convert  # noqa: E402
+from sil.replay_window import prepare  # noqa: E402
 
 
 def load(name: str, path: str):
@@ -42,6 +43,12 @@ def main() -> int:
     library_signals = build / "library-signals.mcap"
     convert("examples/library/mapping.json", "examples/library/signals.csv",
             library_signals)
+    library_history = build / "library-history.mcap"
+    convert("examples/library/mapping.json", "examples/library/history.csv",
+            library_history)
+    library_window = build / "library-window.mcap"
+    window = prepare("examples/library/window.json", library_history,
+                     library_window)
     references = [
         full_pipeline_manifest(build),
         acc.acc_manifest().write(build / "acc.json"),
@@ -51,6 +58,10 @@ def main() -> int:
         library.library_manifest(
             library_signals, build / "speed_filter.so",
         ).write(build / "library.json"),
+        library.library_manifest(
+            library_window, build / "speed_filter.so",
+            duration_ns=window["duration_ns"],
+        ).write(build / "library-window.json"),
     ]
     for reference in references:
         code = check(build / "sil-run", reference.path)

@@ -32,8 +32,9 @@ jobs:
         run: SIL_SKIP_BUILD=1 .venv/bin/python -m pytest tests/ -v
 
       # The reference pipeline, both variants of the ACC reference example, the
-      # FMU import example, and the CSV replay example, so every example is
-      # proven bit-identical on each push rather than when someone remembers.
+      # FMU import example, the CSV replay example, the shared-library example
+      # and its replay window, so every example is proven bit-identical on
+      # each push rather than when someone remembers.
       - name: Determinism gate on reference manifests
         env:
           PYTHONPATH: ${{ github.workspace }}/python/src

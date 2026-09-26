@@ -76,9 +76,13 @@ OUTPUT_SCHEMAS = {
 
 
 def library_manifest(recording: Path, library: Path,
-                     instances: dict[str, dict] = INSTANCES) -> Manifest:
-    """The example Run over the converted `recording` and a `library` build."""
-    m = Manifest(duration_ns=DURATION_NS)
+                     instances: dict[str, dict] = INSTANCES,
+                     duration_ns: int = DURATION_NS) -> Manifest:
+    """The example Run over the converted `recording` and a `library` build.
+
+    A Recording other than `signals.csv`'s, such as a selected replay window,
+    needs its own `duration_ns`."""
+    m = Manifest(duration_ns=duration_ns)
     m.add_schemas(MAPPING["schemas"])
     m.add_schemas(OUTPUT_SCHEMAS)
     (entry,) = MAPPING["channels"]
@@ -134,5 +138,9 @@ if __name__ == "__main__":
                         help="the Recording sil-csv wrote")
     parser.add_argument("--library", type=Path, required=True,
                         help="the speed_filter shared library build")
+    parser.add_argument("--duration-ns", type=int, default=DURATION_NS,
+                        help="the Run's Duration; the default fits "
+                             "signals.csv")
     args = parser.parse_args()
-    print(library_manifest(args.recording, args.library).write(args.out).hash)
+    print(library_manifest(args.recording, args.library,
+                           duration_ns=args.duration_ns).write(args.out).hash)

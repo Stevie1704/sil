@@ -118,6 +118,24 @@ example-library: venv build ## Replay recorded input into the example C library 
 	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/library.json -o $(BUILD_DIR)/library-2.mcap --participant-timeout-ms 10000
 	cmp $(BUILD_DIR)/library-1.mcap $(BUILD_DIR)/library-2.mcap
 
+# The shared-library example over a selected replay window: run the library
+# over the full history and over the window after its warm-up, then compare
+# the two over the evaluation interval. The Durations are the window's end_ns
+# and the receipt's duration_ns.
+.PHONY: example-window
+example-window: venv build ## Replay a window of the library history after a warm-up, compare with the full history
+	cc -shared -fPIC -O2 -o $(BUILD_DIR)/example-speed_filter.so examples/library/speed_filter.c
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.csv_recording examples/library/mapping.json examples/library/history.csv -o $(BUILD_DIR)/library-history.mcap --receipt $(BUILD_DIR)/library-history.receipt.json
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.replay_window examples/library/window.json $(BUILD_DIR)/library-history.mcap -o $(BUILD_DIR)/library-window.mcap --receipt $(BUILD_DIR)/library-window.receipt.json
+	PYTHONPATH=$(SRC) $(PYTHON) examples/library/manifest.py $(BUILD_DIR)/library-full.json --recording $(BUILD_DIR)/library-history.mcap --library $(BUILD_DIR)/example-speed_filter.so --duration-ns 2500000000
+	PYTHONPATH=$(SRC) $(PYTHON) examples/library/manifest.py $(BUILD_DIR)/library-windowed.json --recording $(BUILD_DIR)/library-window.mcap --library $(BUILD_DIR)/example-speed_filter.so --duration-ns 2000000000
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/library-full.json -o $(BUILD_DIR)/library-full.mcap --participant-timeout-ms 10000
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/library-windowed.json -o $(BUILD_DIR)/library-windowed-1.mcap --participant-timeout-ms 10000
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/library-windowed.json -o $(BUILD_DIR)/library-windowed-2.mcap --participant-timeout-ms 10000
+	cmp $(BUILD_DIR)/library-windowed-1.mcap $(BUILD_DIR)/library-windowed-2.mcap
+	PYTHONPATH=$(SRC) $(PYTHON) examples/library/window_contract.py $(BUILD_DIR)/library-window.receipt.json -o $(BUILD_DIR)/library-window.contract.json
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.compare $(BUILD_DIR)/library-window.contract.json $(BUILD_DIR)/library-windowed-1.mcap $(BUILD_DIR)/library-full.mcap
+
 # Benchmark --------------------------------------------------------------------
 # Regenerates the routing baseline in docs/bench/ (issue #61). Long-running:
 # every row is run once instrumented for copy counts and several times
