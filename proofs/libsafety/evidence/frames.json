@@ -1,0 +1,19 @@
+{
+  "recording": {
+    "path": "recordings/rlog.zst",
+    "sha256": "b0d19f7ccf67fef1c4afd9cf579e96cecc1d278be2aa4a3adf97b2d64d940a4c"
+  },
+  "frames_csv_sha256": "41041ccc195c700fdcded64d15ec924fbc0245cb106c672b775b93d470c9cd4d",
+  "exporter_sha256": "a1c0197eebfa99863851676b0f320e68fc83f91a5fd0aa4ab0fa787153b8955c",
+  "contract": {
+    "platform": "TOYOTA_RAV4_TSS2",
+    "mode": 2,
+    "mode_name": "toyota",
+    "param": 73,
+    "alternative_experience": 0
+  },
+  "can_events": 6000,
+  "received_frames": 149228,
+  "first_log_mono_ns": 18054876797669,
+  "last_log_mono_ns": 18114867092416
+}

@@ -261,6 +261,8 @@ The two conventions a SiL Run most easily gets wrong are these:
 - **Library reference time.** `references/libsafety-states.json` keeps the
   recorded `logMonoTime`. Subtract `first_log_mono_ns` to get virtual time.
 
+[`../libsafety`](../libsafety/README.md) consumes the library handoff (#193).
+
 ## Retained results
 
 [`evidence/`](evidence/) is the output of CI run 36161421886 on Linux x86-64
