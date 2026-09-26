@@ -348,12 +348,16 @@ function(add_speed_filter name source)
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 endfunction()
 
-add_speed_filter(speed_filter examples/library/speed_filter.c)
-add_speed_filter(speed_filter_defect examples/library/speed_filter.c
-  SPEED_FILTER_DEFECT)
-add_speed_filter(speed_filter_crash tests/fixtures/speed_filter_fault.c
-  SPEED_FILTER_CRASH_AT_CYCLE=3)
-add_speed_filter(speed_filter_hang tests/fixtures/speed_filter_fault.c
-  SPEED_FILTER_HANG_AT_CYCLE=3)
-add_speed_filter(speed_filter_no_terminate tests/fixtures/speed_filter_fault.c
-  SPEED_FILTER_OMIT_TERMINATE)
+# The runtime image builds from a source tree without examples/, so these
+# targets exist only where the example does.
+if(EXISTS ${CMAKE_SOURCE_DIR}/examples/library/speed_filter.c)
+  add_speed_filter(speed_filter examples/library/speed_filter.c)
+  add_speed_filter(speed_filter_defect examples/library/speed_filter.c
+    SPEED_FILTER_DEFECT)
+  add_speed_filter(speed_filter_crash tests/fixtures/speed_filter_fault.c
+    SPEED_FILTER_CRASH_AT_CYCLE=3)
+  add_speed_filter(speed_filter_hang tests/fixtures/speed_filter_fault.c
+    SPEED_FILTER_HANG_AT_CYCLE=3)
+  add_speed_filter(speed_filter_no_terminate tests/fixtures/speed_filter_fault.c
+    SPEED_FILTER_OMIT_TERMINATE)
+endif()
