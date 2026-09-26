@@ -1121,7 +1121,8 @@ What the window does, and what it does not do:
   (`end_ns` − 1) is insufficient coverage. With `max_gap_ns`, a last Message
   up to `max_gap_ns` before `end_ns` covers the end, so a periodic source
   can end one Period early. A selected Channel with no Message in the
-  window is an empty selection. All three are rejected. A Channel with
+  window is an empty selection, also when it is in `hold_initial`: a held
+  value does not fill it. All three are rejected. A Channel with
   Messages only in the warm-up is accepted; the receipt reports its
   evaluation coverage as 0 Messages.
 - **Gaps.** A gap stays a gap. The receipt states each Channel's longest

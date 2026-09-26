@@ -200,7 +200,7 @@ def _window(doc) -> _Window:
                 raise WindowError(
                     f"{key} channel {name!r} is not a selected channel")
     max_gap = doc.get("max_gap_ns")
-    if max_gap is not None and (isinstance(max_gap, bool)
+    if "max_gap_ns" in doc and (isinstance(max_gap, bool)
                                 or not isinstance(max_gap, int)
                                 or not 1 <= max_gap <= _U64_MAX):
         raise WindowError("'max_gap_ns' must be an integer from 1 to 2^64 - 1, "
@@ -321,16 +321,17 @@ def _select(plan: _Window, messages: list[_Message]
     for channel in plan.channels:
         _check_span(plan, channel, _times(messages, channel))
     inside = [m for m in messages if plan.replay_start <= m.ns < plan.end]
-    held_messages, held = _held(plan, messages, inside)
-    selected = held_messages + inside
     for channel in plan.channels:
-        times = _times(selected, channel)
-        if not times:
+        # Checked before holding: a held value does not fill a selection.
+        if not _times(inside, channel):
             raise WindowError(
                 f"channel {channel!r} has no Message in the window "
                 f"[{plan.replay_start}, {plan.end}) ns; an empty selection is "
                 "not replayed")
-        start, stop = _largest_gap(plan, times)
+    held_messages, held = _held(plan, messages, inside)
+    selected = held_messages + inside
+    for channel in plan.channels:
+        start, stop = _largest_gap(plan, _times(selected, channel))
         if plan.max_gap is not None and stop - start > plan.max_gap:
             raise WindowError(
                 f"channel {channel!r} has no Message from {start} ns to "

@@ -252,6 +252,11 @@ class TestRanges:
     ):
         assert reason in rejected(tmp_path, source, window(**overrides))
 
+    def test_a_null_gap_limit_is_rejected(self, tmp_path, source):
+        text = json.dumps(window())[:-1] + ', "max_gap_ns": null}'
+        assert "'max_gap_ns' must be an integer from 1" in rejected(
+            tmp_path, source, text)
+
     def test_a_duplicate_key_is_rejected(self, tmp_path, source):
         text = json.dumps(window())[:-1] + ', "end_ns": 40000000}'
         assert "duplicate key 'end_ns'" in rejected(tmp_path, source, text)
@@ -356,6 +361,16 @@ class TestHeldInitialValue:
             evaluation_start_ns=5 * MS, hold_initial=["b"]))
         assert ("missing history: channel 'b' starts at 10000000 ns, after "
                 "replay_start_ns 5000000") in message
+
+    def test_a_held_value_does_not_fill_an_empty_selection(
+        self, tmp_path, source
+    ):
+        # `b` has Messages at 10 ms, before the window, and at 30 ms, its
+        # exclusive end: none inside [20, 30) ms.
+        message = rejected(tmp_path, source, window(
+            source_origin_ns=20 * MS, replay_start_ns=20 * MS,
+            evaluation_start_ns=20 * MS, end_ns=30 * MS, hold_initial=["b"]))
+        assert "channel 'b' has no Message in the window" in message
 
     def test_nothing_is_held_unless_declared(self, tmp_path, source):
         _, out = select(tmp_path, source, window(
