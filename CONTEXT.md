@@ -263,6 +263,20 @@ and has no Manifest to name: it carries the digests of its source and mapping
 instead of a Manifest hash, and it exists only as a Replay participant's input.
 _Avoid_: log, trace, output file, mcap
 
+**Replay window**:
+A selected interval of a Recording, rebased so that a Run over it starts at
+Virtual time zero. It has a warm-up and an evaluation interval, and it is
+declared in a window document that is part of the replayed Recording's
+identity. It selects and rebases Messages; it does not seek a target or
+restore its state.
+_Avoid_: clip, slice, seek, time range
+
+**Warm-up**:
+The first part of a Replay window, in which the target runs on recorded
+input so that its state no longer depends on where the Run started. It is
+executed, not skipped, and no KPI or comparison evaluates it.
+_Avoid_: settling time, pre-roll, initialization phase
+
 **KPI**:
 A property of a Run's behavior that decides whether it passed. It is evaluated
 in-run by a test participant at defined virtual times, post-hoc over a
