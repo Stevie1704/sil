@@ -1029,10 +1029,10 @@ crash or hang. Use this adapter for an existing library with its own API.
 ## Replay a selected window after a warm-up
 
 A Run starts at Virtual time zero. To evaluate a part of a long recording,
-do not seek a stateful target into it: its state would be wrong. Select the
+do not seek a stateful vECU into it: its state would be wrong. Select the
 window with `sil-window`, which writes a new Recording that starts at the
-window. The target runs through a warm-up first, and only the rest is
-evaluated. There is no state snapshot and no seek into a running target.
+window. The vECU runs through a warm-up first, and only the rest is
+evaluated. There is no state snapshot and no seek into a running vECU.
 
 The worked example is in [examples/library/](examples/library/):
 `history.csv` is 3 s of recorded speed, `window.json` selects 0.5 s to 2.5 s
@@ -1112,34 +1112,45 @@ What the window does, and what it does not do:
   the schemas are copied from the source.
 - **Source-time fields.** A payload field that holds a source time is not
   changed unless `source_time_fields` names it. A named field is rebased like
-  the log time. A result outside the field type's range is rejected.
-- **Coverage.** The window must lie inside the span of the selected Channels
-  in the source. A replay start before their first Message is missing
-  history. A last instant (`end_ns` − 1) after their last Message is
-  insufficient coverage. A selected Channel with no Message in the window is
-  an empty selection. All three are rejected.
+  the log time. A result outside the field type's range is rejected. A held
+  Message keeps the source time in its payload, so its rebased field is
+  earlier than its log time.
+- **Coverage.** Each selected Channel must cover the window on its own. A
+  Channel whose first Message is after the replay start is missing history.
+  A Channel whose last Message is before the window's last instant
+  (`end_ns` − 1) is insufficient coverage. With `max_gap_ns`, a last Message
+  up to `max_gap_ns` before `end_ns` covers the end, so a periodic source
+  can end one Period early. A selected Channel with no Message in the
+  window is an empty selection. All three are rejected. A Channel with
+  Messages only in the warm-up is accepted; the receipt reports its
+  evaluation coverage as 0 Messages.
 - **Gaps.** A gap stays a gap. The receipt states each Channel's longest
   interval without a Message, counted from the replay start to `end_ns`.
   With `max_gap_ns`, a longer interval is rejected.
 - **Held initial value.** A Channel in `hold_initial` with no Message at the
   replay start gets its latest earlier Message, published at the replay
-  start before the window's own Messages. A Channel without an earlier
-  Message is rejected as missing history. The receipt names the source time
+  start before the window's own Messages, also before other Channels'
+  Messages at that instant. A Channel without an earlier Message is
+  rejected as missing history. The receipt names the source time
   of each held Message. Nothing else is held and nothing is interpolated.
-- **Warm-up.** The window does not initialize the target. The target runs
+- **Warm-up.** The window does not initialize the vECU. The vECU runs
   through the warm-up like any other part of the Run. Choose the warm-up
-  from the target's memory: the example's slower filter keeps 5/6 of its
+  from the vECU's memory: the example's slower filter keeps 5/6 of its
   state difference per Step. Choose `source_origin_ns` so that the Steps
   land on the source Steps you compare with.
 
 The receipt names the preparer, the SHA-256 of the source Recording, the
-window document and the output; the source span; the warm-up and evaluation
-intervals in source and Virtual time; per Channel the message count and the
-first and last Virtual time in each interval, the held Message and the
-longest gap; the `duration_ns` for the replaying Manifest; and the
+window document and the output; the warm-up and evaluation intervals in
+source and Virtual time; per Channel its span in the source, the message
+count and the first and last Virtual time in each interval, the held Message
+and the longest gap; the `duration_ns` for the replaying Manifest; and the
 `evaluation_window` in Virtual time, both ends included, for a comparison
 contract. Exclude the warm-up from every metric: use that evaluation window
-in the contract, as `window_contract.py` does. The output Recording carries
+in the contract, as `window_contract.py` does. An in-run KPI of a Test
+participant must also start at the evaluation window; the window document
+does not reach the participants. The example's Test participant checks
+every output against its own model, from Virtual time zero, which is
+correct in the warm-up too; it is not a comparison with the full history. The output Recording carries
 the source and window digests as MCAP metadata. The same inputs give a
 byte-identical Recording, and a changed window gives a different Recording
 and so a different Manifest hash.

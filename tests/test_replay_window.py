@@ -191,6 +191,24 @@ class TestSourceTimeFields:
         assert "channel 'stamp' field 'stamp_ns'" in message
         assert "10000000 ns is before the source origin 15000000 ns" in message
 
+    def test_a_schema_that_is_not_a_declaration_is_rejected(self, tmp_path):
+        from mcap.writer import Writer
+
+        src = tmp_path / "foreign.mcap"
+        with open(src, "wb") as f:
+            writer = Writer(f)
+            writer.start()
+            schema = writer.register_schema("s.X", "sil_pod", b"not json")
+            channel = writer.register_channel("x", "sil_pod", schema)
+            writer.add_message(channel, log_time=0, data=b"\0" * 8,
+                               publish_time=0)
+            writer.finish()
+        message = rejected(tmp_path, src, window(
+            source_origin_ns=0, replay_start_ns=0, evaluation_start_ns=0,
+            end_ns=1, channels=["x"], source_time_fields={"x": ["t"]}))
+        assert "schema 's.X' in the source is not a SiL schema declaration" \
+            in message
+
     @pytest.mark.parametrize("fields, reason", [
         ({"stamp": ["v"]}, "must be a u64 or i64 field"),
         ({"stamp": ["nope"]}, "is not a field of schema 's.Stamp'"),
@@ -227,6 +245,7 @@ class TestRanges:
         ({"hold_initial": ["stamp"]},
          "hold_initial channel 'stamp' is not a selected channel"),
         ({"max_gap_ns": 0}, "'max_gap_ns' must be an integer from 1"),
+        ({"max_gap_ns": -5}, "'max_gap_ns' must be an integer from 1"),
     ])
     def test_an_inconsistent_window_is_rejected(
         self, tmp_path, source, overrides, reason
@@ -249,16 +268,37 @@ class TestCoverage:
         src = tmp_path / "late.mcap"
         convert(mapping_path, late, src)
         message = rejected(tmp_path, src, window(end_ns=31 * MS))
-        assert "missing history" in message
-        assert "the selected channels start at 20000000 ns" in message
-        assert "replay_start_ns 10000000" in message
+        assert ("missing history: channel 'a' starts at 20000000 ns, after "
+                "replay_start_ns 10000000") in message
+
+    def test_each_channel_must_cover_the_window_on_its_own(self, tmp_path):
+        # `a` covers the window from 0 ms; `b` starts only at 20 ms.
+        late = tmp_path / "late.csv"
+        late.write_text("t,a,b\n0,1,\n10,2,\n20,3,3\n30,4,4\n")
+        mapping_path = tmp_path / "mapping.json"
+        mapping_path.write_text(json.dumps(MAPPING))
+        src = tmp_path / "late.mcap"
+        convert(mapping_path, late, src)
+        message = rejected(tmp_path, src, window(end_ns=30 * MS))
+        assert ("missing history: channel 'b' starts at 20000000 ns, after "
+                "replay_start_ns 10000000") in message
 
     def test_an_end_past_the_source_is_insufficient_coverage(
         self, tmp_path, source
     ):
         message = rejected(tmp_path, source, window(end_ns=52 * MS))
-        assert "the selected channels end at 50000000 ns" in message
-        assert "the window's last instant 51999999 ns" in message
+        assert ("insufficient coverage: channel 'a' ends at 50000000 ns, "
+                "before the window's last instant 51999999 ns") in message
+
+    def test_a_declared_gap_limit_also_bounds_the_end(self, tmp_path, source):
+        # Both Channels end at 50 ms: 5 ms before 55 ms is within 20 ms.
+        receipt, _ = select(tmp_path, source,
+                            window(end_ns=55 * MS, max_gap_ns=20 * MS), "near")
+        assert receipt["duration_ns"] == 45 * MS
+        message = rejected(tmp_path, source,
+                           window(end_ns=71 * MS, max_gap_ns=20 * MS))
+        assert ("insufficient coverage: channel 'a' ends at 50000000 ns, more "
+                "than max_gap_ns 20000000 before end_ns 71000000") in message
 
     def test_the_end_may_be_one_past_the_last_message(self, tmp_path, source):
         _, out = select(tmp_path, source, window(end_ns=50 * MS + 1))
@@ -314,9 +354,8 @@ class TestHeldInitialValue:
         message = rejected(tmp_path, source, window(
             source_origin_ns=5 * MS, replay_start_ns=5 * MS,
             evaluation_start_ns=5 * MS, hold_initial=["b"]))
-        assert "channel 'b' has no Message before replay_start_ns 5000000" \
-            in message
-        assert "missing history" in message
+        assert ("missing history: channel 'b' starts at 10000000 ns, after "
+                "replay_start_ns 5000000") in message
 
     def test_nothing_is_held_unless_declared(self, tmp_path, source):
         _, out = select(tmp_path, source, window(
@@ -344,7 +383,6 @@ class TestReceipt:
             "file": "window.mcap",
             "sha256": hashlib.sha256(out.read_bytes()).hexdigest()}
         assert receipt["source_origin_ns"] == 10 * MS
-        assert receipt["source_span"] == {"first_ns": 0, "last_ns": 50 * MS}
         assert receipt["intervals"] == {
             "warm_up": {"source": {"start_ns": 10 * MS, "end_ns": 20 * MS},
                         "virtual": {"start_ns": 0, "end_ns": 10 * MS}},
@@ -357,10 +395,12 @@ class TestReceipt:
                                                 "to_ns": 40 * MS - 1}
         assert receipt["channels"] == {
             "a": {"schema": "s.A", "held": None, "largest_gap_ns": 10 * MS,
+                  "source_span": {"first_ns": 0, "last_ns": 50 * MS},
                   "warm_up": {"messages": 1, "first_ns": 0, "last_ns": 0},
                   "evaluation": {"messages": 4, "first_ns": 10 * MS,
                                  "last_ns": 30 * MS}},
             "b": {"schema": "s.B", "held": None, "largest_gap_ns": 20 * MS,
+                  "source_span": {"first_ns": 10 * MS, "last_ns": 50 * MS},
                   "warm_up": {"messages": 1, "first_ns": 0, "last_ns": 0},
                   "evaluation": {"messages": 1, "first_ns": 20 * MS,
                                  "last_ns": 20 * MS}},

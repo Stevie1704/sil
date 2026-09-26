@@ -267,12 +267,12 @@ _Avoid_: log, trace, output file, mcap
 A selected interval of a Recording, rebased so that a Run over it starts at
 Virtual time zero. It has a warm-up and an evaluation interval, and it is
 declared in a window document that is part of the replayed Recording's
-identity. It selects and rebases Messages; it does not seek a target or
+identity. It selects and rebases Messages; it does not seek a vECU or
 restore its state.
 _Avoid_: clip, slice, seek, time range
 
 **Warm-up**:
-The first part of a Replay window, in which the target runs on recorded
+The first part of a Replay window, in which the vECU runs on recorded
 input so that its state no longer depends on where the Run started. It is
 executed, not skipped, and no KPI or comparison evaluates it.
 _Avoid_: settling time, pre-roll, initialization phase

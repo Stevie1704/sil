@@ -1,9 +1,9 @@
 """Select a replay window from a Recording and rebase it to Virtual time zero.
 
-A Run always starts at Virtual time zero, and a stateful target cannot be
+A Run always starts at Virtual time zero, and a stateful vECU cannot be
 seeked into the middle of a recording (issue #185). This preparation step
 takes a source Recording and a window document and writes a new Recording
-that starts where the window starts. The target is then warmed up by actual
+that starts where the window starts. The vECU is then warmed up by actual
 execution over the first part of the window, and only the rest is evaluated.
 
 The window document declares four instants in the source Recording's own
@@ -20,9 +20,11 @@ evaluation interval. The window is a selection and a rebase, nothing more:
   Publish order. Payload bytes are copied unchanged, except the integer
   source-time fields that `source_time_fields` names: those are rebased like
   the log time, and only those.
-* The window must lie inside the span of the selected Channels in the source.
-  A replay start before it is missing history; an end past it is insufficient
-  coverage. A selected Channel with no Message in the window is rejected.
+* Each selected Channel must cover the window in the source: a Channel
+  that starts after the replay start is missing history, and one that ends
+  before the window's last instant (or, with `max_gap_ns`, more than that
+  before the end) is insufficient coverage. A selected Channel with no
+  Message in the window is rejected.
 * A gap is kept as it is; the receipt reports each Channel's longest one, and
   `max_gap_ns`, when declared, rejects a longer one.
 * A Channel in `hold_initial` without a Message at the replay start gets its
@@ -54,14 +56,14 @@ from mcap.reader import make_reader
 from mcap.writer import LIBRARY_IDENTIFIER, CompressionType, Writer
 
 from sil import build_info
-from sil._schema_types import FORMATS, SIZES
+from sil._schema_types import FORMATS, INT_RANGES, SIZES
 
 WINDOW_VERSION = 1
 RECEIPT_VERSION = 1
 PREPARER = "sil-window"
 
-_U64_MAX = 2**64 - 1
-_TIME_FIELD_TYPES = {"u64": (0, _U64_MAX), "i64": (-(2**63), 2**63 - 1)}
+_U64_MAX = INT_RANGES["u64"][1]
+_TIME_FIELD_TYPES = {name: INT_RANGES[name] for name in ("u64", "i64")}
 _INSTANTS = ("source_origin_ns", "replay_start_ns", "evaluation_start_ns",
              "end_ns")
 _REQUIRED = {"sil_replay_window", *_INSTANTS, "channels"}
@@ -198,8 +200,11 @@ def _window(doc) -> _Window:
                 raise WindowError(
                     f"{key} channel {name!r} is not a selected channel")
     max_gap = doc.get("max_gap_ns")
-    if max_gap is not None and _instant(max_gap, "max_gap_ns") < 1:
-        raise WindowError("'max_gap_ns' must be an integer from 1 to 2^64 - 1")
+    if max_gap is not None and (isinstance(max_gap, bool)
+                                or not isinstance(max_gap, int)
+                                or not 1 <= max_gap <= _U64_MAX):
+        raise WindowError("'max_gap_ns' must be an integer from 1 to 2^64 - 1, "
+                          f"got {max_gap!r}")
     return _Window(origin, replay_start, evaluation_start, end, channels,
                    hold_initial, source_time_fields, max_gap)
 
@@ -299,7 +304,11 @@ def _check_source_time_fields(plan: _Window,
 
 
 def _fields(schema: _SourceChannel) -> list[dict]:
-    return json.loads(schema.schema_data)["fields"]
+    try:
+        return json.loads(schema.schema_data)["fields"]
+    except (ValueError, KeyError, TypeError):
+        raise WindowError(f"schema {schema.schema_name!r} in the source is not "
+                          "a SiL schema declaration") from None
 
 
 # Selection ---------------------------------------------------------------------
@@ -309,38 +318,50 @@ def _select(plan: _Window, messages: list[_Message]
             ) -> tuple[list[_Message], dict[str, int]]:
     """The window's Messages in publish order, held values first, and the
     source time of each held Message by Channel."""
-    _check_span(plan, messages)
+    for channel in plan.channels:
+        _check_span(plan, channel, _times(messages, channel))
     inside = [m for m in messages if plan.replay_start <= m.ns < plan.end]
     held_messages, held = _held(plan, messages, inside)
     selected = held_messages + inside
     for channel in plan.channels:
-        times = [m.ns if m.ns >= plan.replay_start else plan.replay_start
-                 for m in selected if m.channel == channel]
+        times = _times(selected, channel)
         if not times:
             raise WindowError(
                 f"channel {channel!r} has no Message in the window "
                 f"[{plan.replay_start}, {plan.end}) ns; an empty selection is "
                 "not replayed")
-        if plan.max_gap is not None:
-            _check_gaps(plan, channel, times)
+        start, stop = _largest_gap(plan, times)
+        if plan.max_gap is not None and stop - start > plan.max_gap:
+            raise WindowError(
+                f"channel {channel!r} has no Message from {start} ns to "
+                f"{stop} ns, longer than max_gap_ns {plan.max_gap}")
     return selected, held
 
 
-def _check_span(plan: _Window, messages: list[_Message]) -> None:
-    if not messages:
-        raise WindowError("the selected channels have no Messages in the "
-                          "source")
-    first = min(m.ns for m in messages)
-    last = max(m.ns for m in messages)
+def _times(messages: list[_Message], channel: str) -> list[int]:
+    return [m.ns for m in messages if m.channel == channel]
+
+
+def _check_span(plan: _Window, channel: str, times: list[int]) -> None:
+    """The Channel's own Messages must cover the window: one at or before
+    the replay start, and one close enough to the end. Close enough is
+    `max_gap_ns` when declared, and the window's last instant otherwise."""
+    if not times:
+        raise WindowError(f"channel {channel!r} has no Messages in the source")
+    first, last = min(times), max(times)
     if plan.replay_start < first:
         raise WindowError(
-            f"missing history: the selected channels start at {first} ns, "
+            f"missing history: channel {channel!r} starts at {first} ns, "
             f"after replay_start_ns {plan.replay_start}")
-    if plan.end - 1 > last:
+    if plan.max_gap is None and last < plan.end - 1:
         raise WindowError(
-            f"insufficient coverage: the selected channels end at {last} ns, "
+            f"insufficient coverage: channel {channel!r} ends at {last} ns, "
             f"before the window's last instant {plan.end - 1} ns "
             f"(end_ns {plan.end} is exclusive)")
+    if plan.max_gap is not None and plan.end - last > plan.max_gap:
+        raise WindowError(
+            f"insufficient coverage: channel {channel!r} ends at {last} ns, "
+            f"more than max_gap_ns {plan.max_gap} before end_ns {plan.end}")
 
 
 def _held(plan: _Window, messages: list[_Message], inside: list[_Message]
@@ -350,31 +371,20 @@ def _held(plan: _Window, messages: list[_Message], inside: list[_Message]
         if any(m.channel == channel and m.ns == plan.replay_start
                for m in inside):
             continue
+        # The span check guarantees an earlier Message. Take the latest
+        # time; among equal times, the last one published.
         before = [m for m in messages
                   if m.channel == channel and m.ns < plan.replay_start]
-        if not before:
-            raise WindowError(
-                f"missing history: channel {channel!r} has no Message before "
-                f"replay_start_ns {plan.replay_start} to hold")
-        # The latest time; among equal times, the last one published.
         latest = max(reversed(before), key=lambda m: m.ns)
         held[channel] = latest.ns
         held_messages.append(latest._replace(ns=plan.replay_start))
     return held_messages, held
 
 
-def _check_gaps(plan: _Window, channel: str, times: list[int]) -> None:
+def _largest_gap(plan: _Window, times: list[int]) -> tuple[int, int]:
+    """The earliest longest interval of the window without a Message."""
     instants = [plan.replay_start, *sorted(times), plan.end]
-    for start, stop in zip(instants, instants[1:]):
-        if stop - start > plan.max_gap:
-            raise WindowError(
-                f"channel {channel!r} has no Message from {start} ns to "
-                f"{stop} ns, longer than max_gap_ns {plan.max_gap}")
-
-
-def _largest_gap(plan: _Window, times: list[int]) -> int:
-    instants = [plan.replay_start, *sorted(times), plan.end]
-    return max(stop - start for start, stop in zip(instants, instants[1:]))
+    return max(zip(instants, instants[1:]), key=lambda gap: gap[1] - gap[0])
 
 
 # Rebasing ----------------------------------------------------------------------
@@ -390,13 +400,13 @@ def _rebased(plan: _Window, channels: dict[str, _SourceChannel],
         for name, offset, fmt, (low, high) in patches.get(message.channel, ()):
             (value,) = fmt.unpack_from(data, offset)
             rebased = plan.virtual(value)
-            if not low <= rebased <= high:
-                raise WindowError(
-                    f"channel {message.channel!r} field {name!r}: {value} ns "
-                    f"is before the source origin {plan.origin} ns"
-                    if rebased < low else
-                    f"channel {message.channel!r} field {name!r}: {value} ns "
-                    f"rebased to {rebased} ns does not fit its type")
+            where = f"channel {message.channel!r} field {name!r}"
+            if rebased < low:
+                raise WindowError(f"{where}: {value} ns is before the source "
+                                  f"origin {plan.origin} ns")
+            if rebased > high:
+                raise WindowError(f"{where}: {value} ns rebased to {rebased} "
+                                  "ns does not fit its type")
             data = data[:offset] + fmt.pack(rebased) + data[offset + fmt.size:]
         out.append(_Message(message.channel, plan.virtual(message.ns), data))
     return out
@@ -455,13 +465,14 @@ def _receipt(plan: _Window, channels: dict[str, _SourceChannel],
 
     report = {}
     for name in plan.channels:
-        # A held Message is published at the replay start.
-        times = [max(m.ns, plan.replay_start)
-                 for m in selected if m.channel == name]
+        times = _times(selected, name)
+        source = _times(source_messages, name)
+        start, stop = _largest_gap(plan, times)
         report[name] = {
             "schema": channels[name].schema_name,
+            "source_span": {"first_ns": min(source), "last_ns": max(source)},
             "held": {"source_ns": held[name]} if name in held else None,
-            "largest_gap_ns": _largest_gap(plan, times),
+            "largest_gap_ns": stop - start,
             "warm_up": coverage([t for t in times
                                  if t < plan.evaluation_start]),
             "evaluation": coverage([t for t in times
@@ -474,8 +485,6 @@ def _receipt(plan: _Window, channels: dict[str, _SourceChannel],
                      "mcap": LIBRARY_IDENTIFIER},
         **files,
         "source_origin_ns": plan.origin,
-        "source_span": {"first_ns": min(m.ns for m in source_messages),
-                        "last_ns": max(m.ns for m in source_messages)},
         "intervals": {
             "warm_up": interval(plan.replay_start, plan.evaluation_start),
             "evaluation": interval(plan.evaluation_start, plan.end),
