@@ -106,15 +106,16 @@ example-csv: venv build ## Convert the example CSV, replay it twice, compare
 
 # Convenience over `make run` for the shared-library example: build the
 # example library the way an adopter would, convert its recorded input, and
-# run the Manifest that replays it into two adapter instances twice. `cmp`
-# fails the target when the two Run Recordings differ.
+# run the Manifest that replays it into two adapter instances twice. The
+# response deadline makes a hung library fail the Run instead of stopping it.
+# `cmp` fails the target when the two Run Recordings differ.
 .PHONY: example-library
 example-library: venv build ## Replay recorded input into the example C library twice, compare
 	cc -shared -fPIC -O2 -o $(BUILD_DIR)/example-speed_filter.so examples/library/speed_filter.c
 	PYTHONPATH=$(SRC) $(PYTHON) -m sil.csv_recording examples/library/mapping.json examples/library/signals.csv -o $(BUILD_DIR)/library-signals.mcap --receipt $(BUILD_DIR)/library-signals.receipt.json
 	PYTHONPATH=$(SRC) $(PYTHON) examples/library/manifest.py $(BUILD_DIR)/library.json --recording $(BUILD_DIR)/library-signals.mcap --library $(BUILD_DIR)/example-speed_filter.so
-	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/library.json -o $(BUILD_DIR)/library-1.mcap
-	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/library.json -o $(BUILD_DIR)/library-2.mcap
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/library.json -o $(BUILD_DIR)/library-1.mcap --participant-timeout-ms 10000
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/library.json -o $(BUILD_DIR)/library-2.mcap --participant-timeout-ms 10000
 	cmp $(BUILD_DIR)/library-1.mcap $(BUILD_DIR)/library-2.mcap
 
 # Benchmark --------------------------------------------------------------------

@@ -441,6 +441,8 @@ def test_installed_library_example_replays_into_an_adopter_build(
     """Issue #184's command sequence: the library built by the adopter's own
     compiler, SiL only from the installed wheel and prefix."""
     example = ROOT / "examples" / "library"
+    # As the published commands run it: a hung library fails the Run.
+    deadline = ("--participant-timeout-ms", "10000")
     env = installed_environment(installed_python)
     env["PATH"] = str(staged_prefix / "bin") + os.pathsep + env["PATH"]
 
@@ -461,7 +463,8 @@ def test_installed_library_example_replays_into_an_adopter_build(
     for attempt in ("1", "2"):
         run("python", str(example / "manifest.py"), f"library-{attempt}.json",
             "--recording", "signals.mcap", "--library", "speed_filter.so")
-        run("sil-run", f"library-{attempt}.json", "-o", f"run-{attempt}.mcap")
+        run("sil-run", f"library-{attempt}.json", "-o", f"run-{attempt}.mcap",
+            *deadline)
         runs.append((tmp_path / f"run-{attempt}.mcap").read_bytes())
     assert (tmp_path / "library-1.json").read_bytes() == (
         tmp_path / "library-2.json").read_bytes()
@@ -469,7 +472,8 @@ def test_installed_library_example_replays_into_an_adopter_build(
 
     run("python", str(example / "manifest.py"), "defect.json",
         "--recording", "signals.mcap", "--library", "speed_filter_defect.so")
-    failed = run("sil-run", "defect.json", "-o", "defect.mcap", code=1)
+    failed = run("sil-run", "defect.json", "-o", "defect.mcap", *deadline,
+                 code=1)
     assert "filter.fast at t=0 ns: filtered_speed_mps 4.0 differs" in (
         failed.stderr)
     assert not list(tmp_path.glob(".sil-run-*"))

@@ -885,15 +885,20 @@ sil-csv examples/library/mapping.json examples/library/signals.csv \
     -o "$workdir/signals.mcap" --receipt "$workdir/signals.receipt.json"
 python examples/library/manifest.py "$workdir/library.json" \
     --recording "$workdir/signals.mcap" --library "$workdir/speed_filter.so"
-sil-run "$workdir/library.json" -o "$workdir/run-1.mcap"
-sil-run "$workdir/library.json" -o "$workdir/run-2.mcap"
+sil-run "$workdir/library.json" -o "$workdir/run-1.mcap" \
+    --participant-timeout-ms 10000
+sil-run "$workdir/library.json" -o "$workdir/run-2.mcap" \
+    --participant-timeout-ms 10000
 cmp "$workdir/run-1.mcap" "$workdir/run-2.mcap"
 ```
 
-`make example-library` runs the same sequence from the source tree. For the
+`make example-library` runs the same sequence from the source tree.
+`--participant-timeout-ms` gives each library answer 10 s of wall-clock
+time. A library that hangs then fails the Run instead of stopping it. The
+deadline is not Manifest data, so it does not change the Recording. For the
 deliberately incorrect case, build the library with `-DSPEED_FILTER_DEFECT`
-and build the Manifest over that library. The Test participant then fails the Run
-(exit 1) at the first output that differs:
+and build the Manifest over that library. The Test participant then fails
+the Run (exit 1) at the first output that differs:
 
 ```text
 filter.fast at t=0 ns: filtered_speed_mps 4.0 differs from the independently computed 2.666666666666667
@@ -909,10 +914,15 @@ What the Manifest makes explicit:
   state before its first cycle. `--initial speed_mps=…` is the input before
   the first recorded Message is visible. After that, each input is held
   until a newer Message replaces it.
-- **Latency.** Every Channel declares `latency_ns` of one Period, so a
-  Message is visible at the first Step after its publication.
-- **Finite routes.** Every subscriber route has capacity 2 and fails on
-  overflow.
+- **Latency.** `ego.speed` declares `latency_ns` of one Period, so a
+  recorded Message is visible at the first Step after its publication. The
+  output Channels declare `latency_ns=0`, and the Test participant has a
+  higher `priority` value than the library instances, so it runs after them
+  in each Slot. It checks every output in the Slot that publishes it, the
+  output of the last Step included.
+- **Finite routes.** Every subscriber route fails on overflow. `ego.speed`
+  routes have capacity 2: a Message waits one Period, and the next one can
+  arrive before it is taken. Output routes have capacity 1.
 - **Parameters.** `--parameter time_constant_s=…` configures the library.
   The two instances have different parameters and publish on different
   Channels.
@@ -977,8 +987,9 @@ dynamic loader resolves the library's own dependencies:
 - In the Example image, install the dependencies in the image, as the esmini
   proof does.
 
-The runner resolves a relative library path in the command against its
-invocation directory. The library bytes are not in the Manifest hash, but
+The runner resolves a relative library path in the command against the
+Manifest's directory. The example's `manifest.py` writes the absolute
+path. The library bytes are not in the Manifest hash, but
 the Run's provenance side-car records the SHA-256 of the library, because
 the command names it. The side-car does not record the library's
 dependencies or the environment: pin them with the image.
