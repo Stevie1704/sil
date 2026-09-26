@@ -25,7 +25,7 @@ COPY proofs/public-workloads/evidence/handoff.json /opt/libsafety/handoff.json
 COPY proofs/libsafety/acceptance.py \
      proofs/libsafety/adapter.py \
      proofs/libsafety/binding.py \
-     proofs/libsafety/faults.py \
+     proofs/libsafety/library_failures.py \
      proofs/libsafety/manifest.py \
      proofs/libsafety/workload.py \
      /opt/libsafety/

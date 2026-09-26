@@ -1418,13 +1418,13 @@ frame that lost arbitration follows at 300.96 ms.
 ## Public shared-library acceptance
 
 [proofs/libsafety/](proofs/libsafety/) replays a public vehicle CAN recording
-into a public shared library through the supported workflow: `sil-csv`,
+into a public shared library. It uses the supported workflow: `sil-csv`,
 `sil-window`, a Process participant adapter over the library's own C API, and
-`sil-compare` against an independent reference trace. The library is
-opendbc's safety logic and the recording is one commaCarSegments segment,
-both pinned by [proofs/public-workloads/](proofs/public-workloads/). All 6000
-events match exactly, two Runs are byte-identical, and a timing, a
-calibration, a crash and a hang control each fail for their own reason.
+`sil-compare`. The library is opendbc's safety logic. The recording is one
+commaCarSegments segment. [proofs/public-workloads/](proofs/public-workloads/)
+pins both, and an independent reference. All 6000 observations match exactly,
+and two Runs are byte-identical. A timing, a time-unit, a calibration, a crash
+and a hang control each fail for their own reason.
 
 ```sh
 proofs/public-workloads/run-proof.sh   # the pinned bundle; needs docker and network

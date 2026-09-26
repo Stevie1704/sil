@@ -1,4 +1,4 @@
-"""Qualify opendbc's safety library against its recorded baseline (#193).
+"""Qualify opendbc's safety library against its independent reference (#193).
 
 Runs inside the example image with no network and no source tree: SiL comes
 from the installed wheel and runner, the library and recording from the
@@ -23,10 +23,15 @@ import resource
 import subprocess
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import manifest
 import workload
+from adapter import EventPolicy
+
+from sil import schema
+from sil.recording import read_records
 
 HERE = Path(__file__).resolve().parent
 # The #178 handoff as committed: the pins this acceptance consumes.
@@ -34,6 +39,8 @@ HANDOFF = HERE / "handoff.json"
 LIBRARY = Path("libsafety/libsafety.so")
 RECORDING = Path("recordings/rlog.zst")
 REFERENCE = Path("references/libsafety-states.json")
+# The bundle's own source entries for the two public artifacts.
+SOURCES = ("opendbc", "can_segment")
 TIMEOUT_MS = int(os.environ.get("SIL_LIBSAFETY_PARTICIPANT_TIMEOUT_MS", "30000"))
 # The hang control needs only to show that the deadline is what stops it.
 HANG_TIMEOUT_MS = 5000
@@ -71,10 +78,11 @@ def command(*arguments) -> str:
 def pinned_inputs(bundle: Path, prepared: Path) -> dict:
     """The bundle's library, recording and reference, against the pins."""
     pins = read_json(HANDOFF)["shared_library_193"]
+    listed = read_json(bundle / "bundle.json")
     for path, pin in ((LIBRARY, pins["library"]["sha256"]),
                       (RECORDING, pins["recording"]["sha256"]),
                       (REFERENCE, pins["reference"]["sha256"])):
-        require(sha256(bundle / path) == pin,
+        require(sha256(bundle / path) == pin == listed["digests"][str(path)],
                 f"{path} is not the pinned artifact {pin}")
     frames = read_json(prepared / "frames.json")
     require(frames["recording"]["sha256"] == pins["recording"]["sha256"],
@@ -91,6 +99,9 @@ def pinned_inputs(bundle: Path, prepared: Path) -> dict:
     require(layout["identical"] and layout["compared"] == frames["received_frames"],
             "the binding's CANPacket_t was not checked against upstream")
     return {"pins": pins, "frames": frames, "packet_layout": layout,
+            "sources": {name: listed["sources"][name] for name in SOURCES},
+            "bundle_tools": listed["tools"],
+            "bundle_json_sha256": sha256(bundle / "bundle.json"),
             "tool_image": read_json(prepared / "tool-image.json")}
 
 
@@ -113,9 +124,8 @@ def runtime_identity(library: Path) -> dict:
 def convert(tool: str, document: dict, source: Path, output: Path,
             evidence: Path) -> dict:
     """One sil-csv or sil-window step, with its document and receipt kept."""
-    name = output.stem
     document_path = write_json(output.with_suffix(".json"), document)
-    receipt = evidence / f"{name}.receipt.json"
+    receipt = evidence / f"{output.stem}.receipt.json"
     command(tool, str(document_path), str(source), "-o", str(output),
             "--receipt", str(receipt))
     return read_json(receipt)
@@ -130,9 +140,9 @@ def write_reference_csv(rows: list[dict], path: Path) -> None:
 
 
 def prepare_inputs(bundle: Path, prepared: Path, inputs: Path,
-                   evidence: Path, pinned: dict) -> dict:
+                   evidence: Path, pinned: dict) -> tuple[dict, list[int]]:
+    """The converted frames, window and reference, and the observation Slots."""
     frames = pinned["frames"]
-    inputs.mkdir(parents=True, exist_ok=True)
     converted = convert("sil-csv", workload.FRAME_MAPPING,
                         prepared / "frames.csv", inputs / "frames.mcap", evidence)
     count = converted["channels"][workload.FRAME_CHANNEL]["messages"]
@@ -147,50 +157,19 @@ def prepare_inputs(bundle: Path, prepared: Path, inputs: Path,
             and coverage["warm_up"]["messages"] == 0,
             f"the window does not evaluate every frame: {coverage}")
 
-    trace = read_json(bundle / REFERENCE)["trace"]
-    require(len(trace) == frames["can_events"],
+    states = read_json(bundle / REFERENCE)["trace"]
+    require(len(states) == frames["can_events"],
             "the reference does not hold one state per event")
-    rows = workload.reference_rows(trace, frames["first_log_mono_ns"])
+    rows = workload.reference_rows(states, frames["first_log_mono_ns"])
     write_reference_csv(rows, inputs / "reference.csv")
     reference = convert("sil-csv", workload.REFERENCE_MAPPING,
                         inputs / "reference.csv", inputs / "reference.mcap",
                         evidence)
     slots = [row["slot_ns"] for row in rows]
     require(len(set(slots)) == len(slots), "two events share an observation Slot")
-    contract = write_json(inputs / "contract.json",
-                          workload.comparison_contract(slots))
-    return {"frames": converted, "window": window, "reference": reference,
-            "contract": contract, "slots": slots,
-            "last_event_ns": rows[-1]["event_ns"]}
-
-
-# Runs ---------------------------------------------------------------------------
-
-def run(name: str, m, runs: Path, timeout_ms: int = TIMEOUT_MS) -> dict:
-    ref = m.write(runs / f"{name}.json")
-    recording = runs / f"{name}.mcap"
-    start = time.perf_counter()
-    proc = subprocess.run(
-        ["sil-run", str(ref.path), "-o", str(recording),
-         "--participant-timeout-ms", str(timeout_ms)],
-        capture_output=True, text=True)
-    wall_s = time.perf_counter() - start
-    (runs / f"{name}.log").write_text(proc.stdout + proc.stderr)
-    return {"manifest_hash": ref.hash, "exit_code": proc.returncode,
-            "stderr": proc.stderr, "wall_s": wall_s, "recording": recording,
-            "sha256": sha256(recording) if proc.returncode == 0 else None}
-
-
-def compare(name: str, contract: Path, recording: Path, reference: Path,
-            evidence: Path) -> dict:
-    proc = subprocess.run(["sil-compare", str(contract), str(recording),
-                           str(reference), "--json"],
-                          capture_output=True, text=True)
-    require(proc.returncode in (0, 1), f"sil-compare could not judge {name}: "
-            f"{proc.stderr}")
-    report = json.loads(proc.stdout)
-    write_json(evidence / f"compare-{name}.json", report)
-    return report
+    write_json(inputs / "contract.json", workload.comparison_contract(slots))
+    receipts = {"frames": converted, "window": window, "reference": reference}
+    return receipts, slots
 
 
 def segment(pinned: dict, last_event_ns: int) -> manifest.Segment:
@@ -203,34 +182,95 @@ def segment(pinned: dict, last_event_ns: int) -> manifest.Segment:
         largest_burst=pinned["pins"]["recording"]["received_frames_per_event"]["max"])
 
 
-def nominal(library: Path, seg, inputs: dict, paths: dict) -> dict:
+# Runs ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class Setup:
+    """What every Run and comparison of the acceptance share."""
+
+    library: Path
+    segment: manifest.Segment
+    window: Path
+    reference: Path
+    contract: Path
+    slots: list[int]
+    runs: Path
+    evidence: Path
+
+
+def run(setup: Setup, name: str, controls: dict | None = None,
+        timeout_ms: int = TIMEOUT_MS) -> dict:
+    m = manifest.replay_manifest(setup.window, setup.library, setup.segment,
+                                 **(controls or {}))
+    ref = m.write(setup.runs / f"{name}.json")
+    recording = setup.runs / f"{name}.mcap"
+    start = time.perf_counter()
+    proc = subprocess.run(
+        ["sil-run", str(ref.path), "-o", str(recording),
+         "--participant-timeout-ms", str(timeout_ms)],
+        capture_output=True, text=True)
+    wall_s = time.perf_counter() - start
+    (setup.runs / f"{name}.log").write_text(proc.stdout + proc.stderr)
+    return {"manifest_hash": ref.hash, "exit_code": proc.returncode,
+            "stderr": proc.stderr, "wall_s": wall_s, "recording": recording,
+            "sha256": sha256(recording) if proc.returncode == 0 else None}
+
+
+def compare(setup: Setup, name: str, recording: Path) -> dict:
+    proc = subprocess.run(["sil-compare", str(setup.contract), str(recording),
+                           str(setup.reference), "--json"],
+                          capture_output=True, text=True)
+    require(proc.returncode in (0, 1), f"sil-compare could not judge {name}: "
+            f"{proc.stderr}")
+    report = json.loads(proc.stdout)
+    write_json(setup.evidence / f"compare-{name}.json", report)
+    return report
+
+
+def config_valid_when_warm(setup: Setup, recording: Path) -> dict:
+    """Upstream's check: the receive checks are valid at every ticked event.
+
+    Before the first tick the library has not judged them, so an event there
+    is counted, not required."""
+    ticks = EventPolicy(timer_origin_ns=0, timer_unit_ns=1, first_event_ns=0,
+                        last_event_ns=setup.segment.last_event_ns).ticks
+    decode = schema.load(workload.SCHEMAS)[workload.STATE_SCHEMA].unpack
+    observed = [decode(data) for channel, _, data in read_records(recording)
+                if channel == workload.STATE_CHANNEL]
+    warm = [o["config_valid"] for o in observed if ticks(o["event_ns"])]
+    cold = [o["config_valid"] for o in observed if not ticks(o["event_ns"])]
+    require(warm and all(warm), f"{warm.count(0)} ticked events report an "
+            "invalid safety configuration")
+    return {"ticked_events": len(warm), "ticked_invalid": 0,
+            "unticked_events": len(cold), "unticked_invalid": cold.count(0)}
+
+
+def nominal(setup: Setup) -> dict:
     """Two Runs of one Manifest: byte-identical, and equal to the reference."""
-    first, second = (run(f"nominal-{i}", manifest.replay_manifest(
-        paths["window"], library, seg), paths["runs"]) for i in (1, 2))
+    first, second = (run(setup, f"nominal-{i}") for i in (1, 2))
+    peak_rss_kib = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
     for result in (first, second):
         require(result["exit_code"] == 0, f"the nominal Run failed:\n{result['stderr']}")
     require(first["sha256"] == second["sha256"],
             "two Runs of the nominal Manifest recorded different bytes")
-    report = compare("nominal", inputs["contract"], first["recording"],
-                     paths["reference"], paths["evidence"])
+    report = compare(setup, "nominal", first["recording"])
     counts = report["channels"][workload.STATE_CHANNEL]
-    require(report["verdict"] == "pass" and counts["checked"] == len(inputs["slots"]),
+    require(report["verdict"] == "pass" and counts["checked"] == len(setup.slots),
             f"the nominal Run does not match the reference: "
             f"{report['first_divergence'] or report['coverage']}")
     return {"manifest_hash": first["manifest_hash"],
             "recording_sha256": first["sha256"], "byte_identical": True,
             "observations_checked": counts["checked"],
+            "config_valid": config_valid_when_warm(setup, first["recording"]),
             "provenance": read_json(Path(f"{first['recording']}.provenance.json")),
-            "wall_s": [first["wall_s"], second["wall_s"]]}
+            "wall_s": [first["wall_s"], second["wall_s"]],
+            "peak_rss_kib": peak_rss_kib}
 
 
-def comparison_control(name: str, library: Path, seg, inputs: dict,
-                       paths: dict, expect) -> dict:
-    result = run(name, manifest.replay_manifest(
-        paths["window"], library, seg, **manifest.CONTROLS[name]), paths["runs"])
+def comparison_control(setup: Setup, name: str, expect) -> dict:
+    result = run(setup, name, manifest.CONTROLS[name])
     require(result["exit_code"] == 0, f"{name} did not complete:\n{result['stderr']}")
-    report = compare(name, inputs["contract"], result["recording"],
-                     paths["reference"], paths["evidence"])
+    report = compare(setup, name, result["recording"])
     first = report["first_divergence"]
     require(report["verdict"] == "fail", f"{name} passed the comparison")
     expect(report, first)
@@ -238,44 +278,48 @@ def comparison_control(name: str, library: Path, seg, inputs: dict,
             "divergences": report["divergences"], "first_divergence": first}
 
 
-def run_failure_control(name: str, library: Path, seg, paths: dict,
-                        reason: str, timeout_ms: int = TIMEOUT_MS) -> dict:
-    result = run(name, manifest.replay_manifest(
-        paths["window"], library, seg, **manifest.CONTROLS[name]),
-        paths["runs"], timeout_ms)
-    require(result["exit_code"] == 1 and reason in result["stderr"],
-            f"{name} must be a Run failure naming {reason!r}; exit "
+def run_failure_control(setup: Setup, name: str, reasons: tuple[str, ...],
+                        timeout_ms: int = TIMEOUT_MS) -> dict:
+    result = run(setup, name, manifest.CONTROLS[name], timeout_ms)
+    require(result["exit_code"] == 1
+            and all(reason in result["stderr"] for reason in reasons),
+            f"{name} must be a Run failure naming {reasons}; exit "
             f"{result['exit_code']}:\n{result['stderr']}")
     return {"manifest_hash": result["manifest_hash"], "exit_code": 1,
             "diagnostic": result["stderr"].strip().splitlines()[-1]}
 
 
-def controls(library: Path, seg, inputs: dict, paths: dict, pins: dict) -> dict:
-    fault_slot = inputs["slots"][manifest.FAULT_EVENT]
+def controls(setup: Setup, pins: dict) -> dict:
+    failure_slot = setup.slots[manifest.FAILURE_EVENT]
     timer_pin = pins["failing_controls"]["timer-in-ns"]
 
     def one_step_late(report, first):
         counts = report["channels"][workload.STATE_CHANNEL]
         require(first["kind"] == "missing-actual" and first["observation_ns"] == 0
-                and counts["missing_actual"] == len(inputs["slots"]),
+                and counts["missing_actual"] == len(setup.slots),
                 f"input-one-step-late failed for another reason: {first}")
 
     def timer_in_ns(report, first):
         require(first["kind"] == "value" and first["field"] == timer_pin["field"]
-                and first["observation_ns"] == inputs["slots"][timer_pin["index"]]
+                and first["observation_ns"] == setup.slots[timer_pin["index"]]
                 and first["expected"] == int(timer_pin["expected"])
                 and first["actual"] == int(timer_pin["actual"]),
                 f"timer-in-ns diverged elsewhere than #178 found: {first}")
 
+    def wrong_param(report, first):
+        # The observation exists and names its event; a state value differs.
+        require(first["kind"] == "value" and first["field"] != "event_ns",
+                f"wrong-param failed for another reason: {first}")
+
     return {
         "input-one-step-late": comparison_control(
-            "input-one-step-late", library, seg, inputs, paths, one_step_late),
-        "timer-in-ns": comparison_control(
-            "timer-in-ns", library, seg, inputs, paths, timer_in_ns),
+            setup, "input-one-step-late", one_step_late),
+        "timer-in-ns": comparison_control(setup, "timer-in-ns", timer_in_ns),
+        "wrong-param": comparison_control(setup, "wrong-param", wrong_param),
         "crash": run_failure_control(
-            "crash", library, seg, paths, "'libsafety' exited unexpectedly"),
+            setup, "crash", ("'libsafety' exited unexpectedly",)),
         "hang": run_failure_control(
-            "hang", library, seg, paths, f"virtual time {fault_slot} ns",
+            setup, "hang", ("timeout", f"virtual time {failure_slot} ns"),
             HANG_TIMEOUT_MS),
     }
 
@@ -290,32 +334,37 @@ def resources(result: dict, frames: dict) -> dict:
         "frames_per_s": frames["received_frames"] / wall,
         "virtual_to_wall": (frames["last_log_mono_ns"]
                             - frames["first_log_mono_ns"]) / 1e9 / wall,
-        "children_max_rss_kib": resource.getrusage(
-            resource.RUSAGE_CHILDREN).ru_maxrss,
+        "nominal_peak_child_rss_kib": result["peak_rss_kib"],
     }
 
 
 def main(bundle: str, prepared: str, workspace: str) -> None:
     bundle, prepared, workspace = Path(bundle), Path(prepared), Path(workspace)
-    paths = {"runs": workspace / "runs", "evidence": workspace / "evidence",
-             "window": workspace / "inputs" / "window.mcap",
-             "reference": workspace / "inputs" / "reference.mcap"}
-    for directory in ("runs", "evidence"):
-        paths[directory].mkdir(parents=True, exist_ok=True)
+    inputs, runs, evidence = (workspace / name
+                              for name in ("inputs", "runs", "evidence"))
+    for directory in (inputs, runs, evidence):
+        directory.mkdir(parents=True, exist_ok=True)
     library = bundle / LIBRARY
     pinned = pinned_inputs(bundle, prepared)
     runtime = runtime_identity(library)
-    inputs = prepare_inputs(bundle, prepared, workspace / "inputs",
-                            paths["evidence"], pinned)
-    seg = segment(pinned, inputs["last_event_ns"])
-    result = nominal(library, seg, inputs, paths)
+    receipts, slots = prepare_inputs(bundle, prepared, inputs, evidence, pinned)
+    last_event_ns = (pinned["frames"]["last_log_mono_ns"]
+                     - pinned["frames"]["first_log_mono_ns"])
+    setup = Setup(library=library, segment=segment(pinned, last_event_ns),
+                  window=inputs / "window.mcap",
+                  reference=inputs / "reference.mcap",
+                  contract=inputs / "contract.json", slots=slots,
+                  runs=runs, evidence=evidence)
+    result = nominal(setup)
     report = {
         "claim": "public-artifact acceptance of one shared library against "
-                 "its recorded baseline; receive side only; not "
+                 "its independent reference; receive side only; not "
                  "production-vehicle validation",
         "identities": {
-            "library": {"path": str(LIBRARY), "sha256": sha256(library),
-                        "build": "opendbc c4465696, _build_libsafety(release=True)"},
+            "library": {"path": str(LIBRARY), "sha256": sha256(library)},
+            "sources": pinned["sources"],
+            "bundle": {"bundle_json_sha256": pinned["bundle_json_sha256"],
+                       "tools": pinned["bundle_tools"]},
             "calibration": pinned["pins"]["contract"],
             "source_recording": {"path": str(RECORDING),
                                  "sha256": sha256(bundle / RECORDING)},
@@ -324,27 +373,27 @@ def main(bundle: str, prepared: str, workspace: str) -> None:
             "export": pinned["frames"],
             "export_tool_image": pinned["tool_image"],
             "packet_layout": pinned["packet_layout"],
-            "conversion": {"frames": inputs["frames"], "window": inputs["window"],
-                           "reference": inputs["reference"]},
+            "conversion": receipts,
             "runtime": runtime,
         },
         "run": {
             "step_period_ns": workload.STEP_PERIOD_NS,
             "latency_ns": {workload.FRAME_CHANNEL: 0, workload.STATE_CHANNEL: 0},
-            "route_capacity": {workload.FRAME_CHANNEL: seg.largest_burst},
-            "duration_ns": workload.duration_ns(seg.last_event_ns),
+            "route_capacity": {workload.FRAME_CHANNEL: setup.segment.largest_burst},
+            "duration_ns": workload.duration_ns(last_event_ns),
             "initial_state": "set_safety_hooks(mode, param), then "
                              "set_alternative_experience; nothing seeded",
             "timer": "((first_log_mono_ns + event_ns) // 1000) % 0xFFFFFFFF",
             "warm_up": "window warm-up empty; safety_tick only more than 1 s "
                        "from the first and the last event, compared",
         },
-        "nominal": {k: v for k, v in result.items() if k != "wall_s"},
-        "contract_sha256": sha256(inputs["contract"]),
-        "controls": controls(library, seg, inputs, paths, pinned["pins"]),
+        "nominal": {k: v for k, v in result.items()
+                    if k not in ("wall_s", "peak_rss_kib")},
+        "contract_sha256": sha256(setup.contract),
+        "controls": controls(setup, pinned["pins"]),
         "resources": resources(result, pinned["frames"]),
     }
-    write_json(paths["evidence"] / "report.json", report)
+    write_json(evidence / "report.json", report)
     print(json.dumps({"nominal": report["nominal"]["recording_sha256"],
                       "observations": result["observations_checked"],
                       "controls": {k: v.get("first_divergence") or v.get("diagnostic")

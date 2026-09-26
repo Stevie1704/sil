@@ -9,8 +9,8 @@ pinned commit), and maps the library's lifecycle onto these calls:
   anything runs;
 - `init(mode, param, alternative_experience)` selects the safety hooks and
   must be accepted with 0, then sets the alternative experience;
-- `set_timer(us)`, `tick()`, `forward(bus, address)` and
-  `receive(address, bus, data)` are one event's calls;
+- `set_timer(us)`, `tick()`, `forward(bus, address)`,
+  `receive(address, bus, data)` and `config_valid()` are one event's calls;
 - `state()` reads the observed state fields.
 
 There is no shutdown call: the library ends with its process.
@@ -79,6 +79,8 @@ class Libsafety:
             library, "safety_fwd_hook", ctypes.c_int, ctypes.c_int, ctypes.c_int)
         self._safety_rx_hook = _function(
             library, "safety_rx_hook", ctypes.c_bool, ctypes.c_char_p)
+        self._safety_config_valid = _function(
+            library, "safety_config_valid", ctypes.c_bool)
         self._getters = {name: _function(library, f"get_{name}", restype)
                          for name, restype in STATE.items()}
 
@@ -100,6 +102,9 @@ class Libsafety:
 
     def receive(self, address: int, bus: int, data: bytes) -> bool:
         return self._safety_rx_hook(packet(address, bus, data))
+
+    def config_valid(self) -> bool:
+        return self._safety_config_valid()
 
     def state(self) -> dict:
         return {name: getter() for name, getter in self._getters.items()}

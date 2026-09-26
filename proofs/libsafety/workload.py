@@ -17,8 +17,10 @@ disagree:
   in the first Step at or after `e`, and its observation is published in
   that Slot. The reference row of each event is published in the same Slot
   and names `e` in `event_ns`, which is compared exactly.
-- **Comparison.** Every field of every event is compared exactly, from the
-  first observation through the last.
+- **Comparison.** Every field the reference records is compared exactly at
+  every event, from the first observation through the last. The reference
+  does not record `config_valid`; acceptance requires it to be 1 at every
+  nominal event that ran `safety_tick`, as upstream does.
 """
 
 from __future__ import annotations
@@ -28,6 +30,8 @@ FRAME_CHANNEL = "can.rx"
 STATE_CHANNEL = "libsafety.state"
 FRAME_SCHEMA = "can.Frame"
 STATE_SCHEMA = "libsafety.State"
+# The reference records every observed field except config_valid.
+REFERENCE_SCHEMA = "libsafety.ReferenceState"
 # Received frames only: sources 128 and above are transmit echoes.
 TRANSMIT_ECHO_SOURCE = 128
 # A recorded event interval is at least 8.75 ms; 12 ms rejects a lost event.
@@ -50,11 +54,15 @@ SCHEMAS = {
         {"name": "event_ns", "type": "u64"},
         {"name": "accepted", "type": "u32"},
         {"name": "rejected", "type": "u32"},
+        {"name": "config_valid", "type": "u8"},
         *({"name": name, "type": "u8"} for name in BOOL_STATE),
         # The library returns C floats; f32 keeps them bit for bit.
         *({"name": name, "type": "f32"} for name in FLOAT_STATE),
     ]},
 }
+SCHEMAS[REFERENCE_SCHEMA] = {"fields": [
+    field for field in SCHEMAS[STATE_SCHEMA]["fields"]
+    if field["name"] != "config_valid"]}
 STATE_FIELDS = [field["name"] for field in SCHEMAS[STATE_SCHEMA]["fields"]]
 
 
@@ -72,7 +80,7 @@ def _mapping(timestamp_column: str, channel: str, schema: str) -> dict:
 
 
 FRAME_MAPPING = _mapping("log_mono_ns", FRAME_CHANNEL, FRAME_SCHEMA)
-REFERENCE_MAPPING = _mapping("slot_ns", STATE_CHANNEL, STATE_SCHEMA)
+REFERENCE_MAPPING = _mapping("slot_ns", STATE_CHANNEL, REFERENCE_SCHEMA)
 
 
 def window_document(first_log_mono_ns: int, last_log_mono_ns: int) -> dict:
@@ -113,9 +121,16 @@ def reference_rows(trace: list[dict], first_log_mono_ns: int) -> list[dict]:
     return rows
 
 
+def _rule(field: str):
+    if field == "config_valid":
+        # The reference does not record it; acceptance checks it separately.
+        return "ignore"
+    return {"atol": 0, "rtol": 0} if field in FLOAT_STATE else "exact"
+
+
 def comparison_contract(slots: list[int]) -> dict:
-    """Every field exact at every observation Slot, the last one included."""
-    exact_float = {"atol": 0, "rtol": 0}
+    """Every recorded field exact at every observation Slot, the last one
+    included."""
     return {
         "sil_comparison": 1,
         "evaluation": {"from_ns": slots[0],
@@ -124,7 +139,6 @@ def comparison_contract(slots: list[int]) -> dict:
             "actual_offset_ns": 0,
             "reference_offset_ns": 0,
             "observations": {"times_ns": list(slots)},
-            "fields": {name: exact_float if name in FLOAT_STATE else "exact"
-                       for name in STATE_FIELDS},
+            "fields": {name: _rule(name) for name in STATE_FIELDS},
         }},
     }

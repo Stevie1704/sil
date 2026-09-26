@@ -20,8 +20,9 @@ binds that API; this adapter maps the upstream replay policy
 - **Frames.** Per frame, `safety_fwd_hook(src, address)`, then
   `safety_rx_hook` with bus `src % 4`, as upstream does.
 - **Observation.** After a Burst, one output Message: the Burst's instant
-  (`event_ns`), the accepted and rejected frame counts, and every state field
-  the binding reads. A Step without a Burst publishes nothing.
+  (`event_ns`), the accepted and rejected frame counts, `config_valid`
+  (`safety_config_valid()`: every receive check is current), and every state
+  field the binding reads. A Step without a Burst publishes nothing.
 - **Initial state.** `set_safety_hooks(mode, param)` must return 0, then
   `set_alternative_experience`. A refusal is a Manifest error (exit 2).
 
@@ -90,9 +91,6 @@ class LibsafetyParticipant(StepParticipant):
 
     def on_init(self, init: dict) -> None:
         _check_channel(init, self._input_channel, "in", FRAME_FIELDS)
-        self.bind_library()
-
-    def bind_library(self) -> None:
         self._library = self._bind()
 
     def on_step(self, t: int, dt: int, inputs: list[Input]):
@@ -125,7 +123,8 @@ class LibsafetyParticipant(StepParticipant):
             accepted += library.receive(frame["address"], frame["src"] % 4,
                                         payload)
         return {"event_ns": event_ns, "accepted": accepted,
-                "rejected": len(frames) - accepted, **library.state()}
+                "rejected": len(frames) - accepted,
+                "config_valid": library.config_valid(), **library.state()}
 
 
 def _check_channel(init: dict, channel: str, direction: str,
@@ -143,20 +142,21 @@ def _check_channel(init: dict, channel: str, direction: str,
             f"{list(fields)}")
 
 
-def library(args: argparse.Namespace):
-    """Binds and initializes the library, or raises a Manifest error."""
+def binder(args: argparse.Namespace):
+    """A call that binds and initializes the library, or raises a Manifest
+    error."""
     path = args.library
     contract = (args.mode, args.param, args.alternative_experience)
 
     def bind() -> Libsafety:
         try:
-            library = Libsafety(ctypes.CDLL(path))
-            library.init(*contract)
+            bound = Libsafety(ctypes.CDLL(path))
+            bound.init(*contract)
         except OSError as error:
             raise ManifestError(f"cannot load library {path!r}: {error}") from error
         except BindingError as error:
             raise ManifestError(f"library {path!r}: {error}") from error
-        return library
+        return bound
     return bind
 
 
@@ -207,7 +207,7 @@ def serve(participant: LibsafetyParticipant) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     args = parser().parse_args(argv)
-    serve(participant(args, library(args)))
+    serve(participant(args, binder(args)))
 
 
 if __name__ == "__main__":

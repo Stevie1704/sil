@@ -9,6 +9,10 @@ from adapter import EventPolicy, LibsafetyParticipant
 from sil.participant import Input, ParticipantFailure
 
 PERIOD_NS = 1_000_000
+INIT = {"channels": {"can.rx": {"schema": "can.Frame", "direction": "in"}},
+        "schemas": {"can.Frame": {"fields": [
+            {"name": name} for name in
+            ("address", "src", "length", *(f"d{i}" for i in range(8)))]}}}
 ORIGIN_NS = 18_054_876_797_669
 STATE = {"controls_allowed": True, "gas_pressed_prev": False,
          "brake_pressed_prev": False, "cruise_engaged_prev": True,
@@ -34,6 +38,10 @@ class RecordingLibrary:
         self.calls.append(("receive", address, bus, data))
         return address not in self._rejected
 
+    def config_valid(self):
+        self.calls.append(("config_valid",))
+        return True
+
     def state(self):
         return dict(STATE)
 
@@ -44,7 +52,7 @@ def participant(library, timer_unit_ns=1000):
     adapter = LibsafetyParticipant(
         bind=lambda: library, input_channel="can.rx",
         output_channel="libsafety.state", period_ns=PERIOD_NS, policy=policy)
-    adapter.bind_library()
+    adapter.on_init(INIT)
     return adapter
 
 
@@ -66,10 +74,11 @@ def test_a_burst_is_timed_by_its_own_instant_and_observed_once():
         ("set_timer", 875_017_381),
         ("forward", 0, 0x260), ("receive", 0x260, 0, b"\x01\x02"),
         ("forward", 5, 0x2C1), ("receive", 0x2C1, 1, b"\x03"),
+        ("config_valid",),
     ]
     assert out == [("libsafety.state",
                     {"event_ns": 9_763_346, "accepted": 1, "rejected": 1,
-                     **STATE})]
+                     "config_valid": True, **STATE})]
 
 
 def test_a_step_without_a_burst_calls_nothing_and_publishes_nothing():

@@ -25,7 +25,8 @@ RECORDING = Path("recordings/rlog.zst")
 
 
 def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    with open(path, "rb") as file:
+        return hashlib.file_digest(file, "sha256").hexdigest()
 
 
 def received_frames(events):

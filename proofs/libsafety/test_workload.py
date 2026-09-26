@@ -42,4 +42,5 @@ def test_the_contract_observes_every_slot_exactly_through_the_last_one():
     assert channel["fields"]["event_ns"] == "exact"
     assert channel["fields"]["controls_allowed"] == "exact"
     assert channel["fields"]["vehicle_speed_max"] == {"atol": 0, "rtol": 0}
-    assert len(channel["fields"]) == 11
+    assert channel["fields"]["config_valid"] == "ignore"
+    assert len(channel["fields"]) == 12

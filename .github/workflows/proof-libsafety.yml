@@ -10,10 +10,6 @@ on:
     paths:
       - 'proofs/libsafety/**'
       - 'proofs/public-workloads/**'
-      - 'python/src/sil/**'
-      - 'kernel/**'
-      - 'Dockerfile'
-      - 'container/**'
       - '.github/workflows/proof-libsafety.yml'
   workflow_dispatch:
 
