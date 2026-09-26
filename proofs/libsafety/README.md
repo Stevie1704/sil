@@ -115,14 +115,14 @@ representative vECU Step cost for #125.
 
 ## Retained results
 
-[`evidence/`](evidence/) keeps `report.json`, the three conversion
-receipts and the comparison reports of the CI job
-`.github/workflows/proof-libsafety.yml`. The Recordings are not committed,
-because they hold the recorded data; the job keeps the Manifests and runner
-output as the `libsafety-evidence` artifact.
-
-The table below is from a run of the same job under amd64 emulation on an
-arm64 host. `evidence/` replaces it with the native CI run.
+[`evidence/`](evidence/) is the output of CI run 36232866332 on native
+Linux x86-64 (glibc 2.36, CPython 3.13.7, `libubsan1` 12.2.0-14+deb12u1). It
+holds `report.json`, the three conversion receipts, the comparison reports,
+and the export's `frames.json`, `packet-layout.json` and `tool-image.json`.
+The Recordings are not committed, because they hold the recorded data. The
+job keeps the Manifests and runner output as the `libsafety-evidence`
+artifact. A run of the same job under amd64 emulation on an arm64 host gave
+the same Manifest hash and the same Recording bytes.
 
 | Check | Result |
 | --- | --- |
@@ -131,7 +131,7 @@ arm64 host. `evidence/` replaces it with the native CI run.
 | Conversion | 149,228 frames on `can.rx`; window 0 to 59,990,294,747 ns, largest gap 11.03 ms, empty warm-up |
 | Nominal | 6000 of 6000 observations equal, every compared field, final event included |
 | `config_valid` | 1 at all 5800 ticked events; 0 only at event 0, before the first tick |
-| Determinism | two Runs of Manifest `35b94095…`, byte-identical Recordings |
+| Determinism | two Runs of Manifest `35b94095…`, byte-identical Recordings (`40c490f0…`) |
 | `input-one-step-late` | 6000 missing-actual divergences, the first at Slot 0 |
 | `timer-in-ns` | first divergence at Slot 1.001 s (event 100): `controls_allowed` 0, expected 1 |
 | `wrong-param` | first divergence at Slot 1.001 s (event 100, the first tick): `controls_allowed` 0, expected 1 |
@@ -141,6 +141,10 @@ arm64 host. `evidence/` replaces it with the native CI run.
 The runtime identity (glibc, CPython, `sil-run --build-info`, `libubsan1`
 version, resolved `ldd`, image ID) and the export tool image ID are in
 `report.json` → `identities`.
+
+Resource observations from that runner: a nominal Run took 5.6 to 5.8 s of
+wall-clock time for 59.99 s of Virtual time. That is about 1060 events and
+26,400 frames per second. The largest child resident set was 104 MiB.
 
 ## Limits
 
