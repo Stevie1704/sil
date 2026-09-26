@@ -276,7 +276,8 @@ def test_wheel_installs_acc_entrypoint_without_checkout_imports(
     assert proc.stdout.strip() == ACC_MANIFEST_HASHES["nominal"]
     assert manifest.is_file()
     for entrypoint in ("sil-acc", "sil-check", "sil-compare", "sil-csv",
-                       "sil-fmi-inspect", "sil-footprint", "sil-participant"):
+                       "sil-fmi-inspect", "sil-footprint", "sil-participant",
+                       "sil-window"):
         assert (installed_python / "bin" / entrypoint).is_file()
     assert str(ROOT) not in origin.stdout
     assert str(ROOT) not in manifest.read_text()
@@ -477,6 +478,62 @@ def test_installed_library_example_replays_into_an_adopter_build(
     assert "filter.fast at t=0 ns: filtered_speed_mps 4.0 differs" in (
         failed.stderr)
     assert not list(tmp_path.glob(".sil-run-*"))
+
+
+def test_installed_window_replays_into_the_library_after_a_warm_up(
+    installed_python: Path, staged_prefix: Path, tmp_path: Path,
+):
+    """Issue #185's command sequence: a selected window of the history, run
+    after a warm-up, agrees with the full history over the evaluation
+    interval; the same interval without a warm-up does not."""
+    example = ROOT / "examples" / "library"
+    deadline = ("--participant-timeout-ms", "10000")
+    env = installed_environment(installed_python)
+    env["PATH"] = str(staged_prefix / "bin") + os.pathsep + env["PATH"]
+
+    def run(*command: str, code: int = 0) -> subprocess.CompletedProcess:
+        proc = subprocess.run(command, cwd=tmp_path, env=env,
+                              capture_output=True, text=True)
+        assert proc.returncode == code, proc.stdout + proc.stderr
+        return proc
+
+    run("cc", "-shared", "-fPIC", "-O2", "-o", "speed_filter.so",
+        str(example / "speed_filter.c"))
+    run("sil-csv", str(example / "mapping.json"), str(example / "history.csv"),
+        "-o", "history.mcap", "--receipt", "history.receipt.json")
+    run("python", str(example / "manifest.py"), "full.json",
+        "--recording", "history.mcap", "--library", "speed_filter.so",
+        "--duration-ns", "2500000000")
+    run("sil-run", "full.json", "-o", "full.mcap", *deadline)
+
+    recordings, runs = [], []
+    for attempt in ("1", "2"):
+        run("sil-window", str(example / "window.json"), "history.mcap",
+            "-o", "window.mcap", "--receipt", "window.receipt.json")
+        recordings.append((tmp_path / "window.mcap").read_bytes())
+        run("python", str(example / "manifest.py"), "windowed.json",
+            "--recording", "window.mcap", "--library", "speed_filter.so",
+            "--duration-ns", "2000000000")
+        run("sil-run", "windowed.json", "-o", f"window-{attempt}.mcap",
+            *deadline)
+        runs.append((tmp_path / f"window-{attempt}.mcap").read_bytes())
+    assert recordings[0] == recordings[1]
+    assert runs[0] == runs[1]
+    run("python", str(example / "window_contract.py"), "window.receipt.json",
+        "-o", "contract.json")
+    run("sil-compare", "contract.json", "window-1.mcap", "full.mcap")
+
+    run("sil-window", str(example / "window-no-warm-up.json"), "history.mcap",
+        "-o", "cold.mcap", "--receipt", "cold.receipt.json")
+    run("python", str(example / "manifest.py"), "cold.json",
+        "--recording", "cold.mcap", "--library", "speed_filter.so",
+        "--duration-ns", "1000000000")
+    run("sil-run", "cold.json", "-o", "cold-run.mcap", *deadline)
+    run("python", str(example / "window_contract.py"), "cold.receipt.json",
+        "-o", "cold-contract.json")
+    failed = run("sil-compare", "cold-contract.json", "cold-run.mcap",
+                 "full.mcap", code=1)
+    assert "fail" in failed.stdout
 
 
 def test_installed_fmu_inspection_needs_only_the_wheel(

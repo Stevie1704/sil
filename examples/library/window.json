@@ -1,0 +1,9 @@
+{
+  "sil_replay_window": 1,
+  "source_origin_ns": 500000000,
+  "replay_start_ns": 500000000,
+  "evaluation_start_ns": 1500000000,
+  "end_ns": 2500000000,
+  "channels": ["ego.speed"],
+  "max_gap_ns": 10000000
+}

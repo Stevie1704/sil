@@ -21,6 +21,7 @@ sil-csv = "sil.csv_recording:main"
 sil-fmi-inspect = "sil.fmi.inspection:main"
 sil-footprint = "sil.footprint:main"
 sil-participant = "sil.participant:main"
+sil-window = "sil.replay_window:main"
 sil-acc = "sil.examples.acc.manifest:main"
 
 [build-system]
