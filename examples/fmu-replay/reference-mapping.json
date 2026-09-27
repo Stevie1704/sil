@@ -1,0 +1,20 @@
+{
+  "sil_csv_mapping": 1,
+  "timestamp": {"column": "time_s", "unit": "s"},
+  "schemas": {
+    "ego.Motion": {"fields": [
+      {"name": "speed_mps", "type": "f64"},
+      {"name": "position_m", "type": "f64"}
+    ]}
+  },
+  "channels": [
+    {
+      "channel": "reference.motion",
+      "schema": "ego.Motion",
+      "fields": {
+        "speed_mps": {"column": "speed_mps"},
+        "position_m": {"column": "position_m"}
+      }
+    }
+  ]
+}

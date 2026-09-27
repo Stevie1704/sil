@@ -480,6 +480,50 @@ def test_installed_library_example_replays_into_an_adopter_build(
     assert not list(tmp_path.glob(".sil-run-*"))
 
 
+def test_installed_fmu_replay_is_authored_run_and_compared(
+    installed_python: Path, staged_prefix: Path, tmp_path: Path,
+):
+    """Issue #186's command sequence: the example FMU built and packaged,
+    its input converted, the Run authored twice and run twice, and the
+    outputs compared with the independent reference — SiL only from the
+    installed wheel and prefix."""
+    example = ROOT / "examples" / "fmu-replay"
+    env = installed_environment(installed_python)
+    env["PATH"] = str(staged_prefix / "bin") + os.pathsep + env["PATH"]
+
+    def run(*command: str) -> subprocess.CompletedProcess:
+        proc = subprocess.run(command, cwd=tmp_path, env=env,
+                              capture_output=True, text=True)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        return proc
+
+    run("cc", "-shared", "-fPIC", "-O2", "-o", "EgoMotion.so",
+        str(example / "ego_motion.c"))
+    run("python", str(example / "package.py"), "EgoMotion.so",
+        "-o", "EgoMotion.fmu")
+    run("sil-csv", str(example / "mapping.json"), str(example / "recorded.csv"),
+        "-o", "recorded.mcap", "--receipt", "recorded.receipt.json")
+    run("sil-csv", str(example / "reference-mapping.json"),
+        str(example / "reference.csv"), "-o", "reference.mcap")
+
+    runs = []
+    for attempt in ("1", "2"):
+        run("sil-fmu-replay", str(example / "authoring.json"), "EgoMotion.fmu",
+            "--recording", "recorded.mcap", "-o", f"fmu-replay-{attempt}.json",
+            "--receipt", f"authoring-{attempt}.json")
+        run("sil-run", f"fmu-replay-{attempt}.json", "-o", f"run-{attempt}.mcap")
+        runs.append((tmp_path / f"run-{attempt}.mcap").read_bytes())
+    assert (tmp_path / "fmu-replay-1.json").read_bytes() == (
+        tmp_path / "fmu-replay-2.json").read_bytes()
+    assert runs[0] == runs[1]
+    report = json.loads(run(
+        "sil-compare", str(example / "contract.json"), "run-1.mcap",
+        "reference.mcap", "--json").stdout)
+    assert report["verdict"] == "pass"
+    assert report["channels"]["ego.motion"]["checked"] == 10
+    assert not list(tmp_path.glob(".sil-run-*"))
+
+
 def test_installed_window_replays_into_the_library_after_a_warm_up(
     installed_python: Path, staged_prefix: Path, tmp_path: Path,
 ):

@@ -104,6 +104,24 @@ example-csv: venv build ## Convert the example CSV, replay it twice, compare
 	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/csv-replay.json -o $(BUILD_DIR)/csv-replay-2.mcap
 	cmp $(BUILD_DIR)/csv-replay-1.mcap $(BUILD_DIR)/csv-replay-2.mcap
 
+# Convenience over `make run` for the recorded-data FMU example: build and
+# package the example FMU, convert the recorded input and the independent
+# reference, author the Manifest twice, run it twice and compare the Run with
+# the reference. `cmp` fails the target when the two Manifests or the two Run
+# Recordings differ, and `sil.compare` when the outputs leave the contract.
+.PHONY: example-fmu-replay
+example-fmu-replay: venv build ## Author and replay the recorded-data FMU example twice, compare
+	PYTHONPATH=$(SRC) $(PYTHON) examples/fmu-replay/package.py $(BUILD_DIR)/EgoMotion.so -o $(BUILD_DIR)/EgoMotion.fmu
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.csv_recording examples/fmu-replay/mapping.json examples/fmu-replay/recorded.csv -o $(BUILD_DIR)/fmu-recorded.mcap --receipt $(BUILD_DIR)/fmu-recorded.receipt.json
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.csv_recording examples/fmu-replay/reference-mapping.json examples/fmu-replay/reference.csv -o $(BUILD_DIR)/fmu-reference.mcap --receipt $(BUILD_DIR)/fmu-reference.receipt.json
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.fmi.authoring examples/fmu-replay/authoring.json $(BUILD_DIR)/EgoMotion.fmu --recording $(BUILD_DIR)/fmu-recorded.mcap -o $(BUILD_DIR)/fmu-replay.json --receipt $(BUILD_DIR)/fmu-replay.receipt.json
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.fmi.authoring examples/fmu-replay/authoring.json $(BUILD_DIR)/EgoMotion.fmu --recording $(BUILD_DIR)/fmu-recorded.mcap -o $(BUILD_DIR)/fmu-replay-2.json --receipt $(BUILD_DIR)/fmu-replay-2.receipt.json
+	cmp $(BUILD_DIR)/fmu-replay.json $(BUILD_DIR)/fmu-replay-2.json
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/fmu-replay.json -o $(BUILD_DIR)/fmu-replay-1.mcap
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/fmu-replay.json -o $(BUILD_DIR)/fmu-replay-2.mcap
+	cmp $(BUILD_DIR)/fmu-replay-1.mcap $(BUILD_DIR)/fmu-replay-2.mcap
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.compare examples/fmu-replay/contract.json $(BUILD_DIR)/fmu-replay-1.mcap $(BUILD_DIR)/fmu-reference.mcap
+
 # Convenience over `make run` for the shared-library example: build the
 # example library the way an adopter would, convert its recorded input, and
 # run the Manifest that replays it into two adapter instances twice. The

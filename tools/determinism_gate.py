@@ -4,8 +4,9 @@
 The milestone exit criterion is that a Run recorded twice produces a
 bit-identical MCAP. `sil.check` proves that for one manifest; this proves it
 for the reference pipeline, both variants of the ACC example, the FMU import
-example, the CSV replay example, the shared-library example, and its replay
-window, so no example is left to be checked when someone remembers.
+example, the CSV replay example, the recorded-data FMU example, the
+shared-library example, and its replay window, so no example is left to be
+checked when someone remembers.
 
 Run from the repository root with `python/src` on PYTHONPATH.
 """
@@ -20,6 +21,8 @@ from test_determinism import full_pipeline_manifest  # noqa: E402
 
 from sil.check import check  # noqa: E402
 from sil.csv_recording import convert  # noqa: E402
+from sil.fmi.authoring import author  # noqa: E402
+from sil.manifest import ManifestRef  # noqa: E402
 from sil.replay_window import prepare  # noqa: E402
 
 
@@ -39,6 +42,16 @@ def main() -> int:
     csv_replay = load("csv_manifest", "examples/csv/manifest.py")
     signals = build / "signals.mcap"
     convert("examples/csv/mapping.json", "examples/csv/signals.csv", signals)
+    packaging = load("fmu_replay_package", "examples/fmu-replay/package.py")
+    fmu_replay = build / "fmu-replay.json"
+    fmu_recorded = build / "fmu-recorded.mcap"
+    convert("examples/fmu-replay/mapping.json",
+            "examples/fmu-replay/recorded.csv", fmu_recorded)
+    receipt = author(
+        "examples/fmu-replay/authoring.json",
+        packaging.package(build / "EgoMotion.so", build / "EgoMotion.fmu"),
+        fmu_recorded, fmu_replay,
+    )
     library = load("library_manifest", "examples/library/manifest.py")
     library_signals = build / "library-signals.mcap"
     convert("examples/library/mapping.json", "examples/library/signals.csv",
@@ -55,6 +68,7 @@ def main() -> int:
         acc.acc_manifest(delayed_sensing=True).write(build / "acc-delayed.json"),
         fmu.fmu_manifest().write(build / "fmu.json"),
         csv_replay.csv_replay_manifest(signals).write(build / "csv-replay.json"),
+        ManifestRef(fmu_replay, receipt["manifest"]["sha256"]),
         library.library_manifest(
             library_signals, build / "speed_filter.so",
         ).write(build / "library.json"),

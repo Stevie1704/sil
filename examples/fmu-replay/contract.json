@@ -1,0 +1,16 @@
+{
+  "sil_comparison": 1,
+  "evaluation": {"from_ns": 100000000, "to_ns": 1000000000},
+  "channels": {
+    "ego.motion": {
+      "reference_channel": "reference.motion",
+      "actual_offset_ns": 10000000,
+      "reference_offset_ns": 0,
+      "observations": {"start_ns": 100000000, "stop_ns": 1000000000, "step_ns": 100000000},
+      "fields": {
+        "speed_mps": {"atol": 1e-9, "rtol": 0},
+        "position_m": {"atol": 1e-9, "rtol": 0}
+      }
+    }
+  }
+}
