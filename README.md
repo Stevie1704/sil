@@ -947,13 +947,14 @@ SHA-256, as `Manifest.add_replay` names it.
 
 Before it writes a Manifest, the command rejects (exit 2) with the reason:
 
-- an FMU the importer cannot drive, and a mapping the importer would reject:
-  an unknown variable, a variable of the other direction, a field type that
-  does not carry the variable's type, a variable type the importer does not
-  map, a start value that does not parse, and a Binary field above an
-  input's `maxSize`. These are the checks of
-  [`sil-fmi-inspect`](#inspecting-an-fmu-before-a-run), and the importer
-  makes the same checks when it initializes. The FMU's binary is not loaded;
+- an FMU the importer cannot drive;
+- a mapping the importer would reject: an unknown variable, a variable of
+  the other direction, a field type that does not carry the variable's type,
+  a variable type the importer does not map, a start value that does not
+  parse, and a Binary field above an input's `maxSize`. These are the checks
+  of [`sil-fmi-inspect`](#inspecting-an-fmu-before-a-run). The importer makes
+  the same checks when it initializes. The command does not load the FMU's
+  binary;
 - a start value for a variable that is not an input or a parameter;
 - a stated unit that is not the unit the FMU variable declares. The
   importer converts no unit. Convert the recorded unit at the edge, with

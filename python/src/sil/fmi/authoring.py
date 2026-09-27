@@ -81,23 +81,20 @@ def author(document: str | Path, fmu: str | Path, recording: str | Path,
     recording, out = Path(recording), Path(out)
     document_bytes = _read(document, "authoring document")
     doc = _parse(document_bytes, document)
+    _check_schemas(doc)
     variables, report = _inspected(fmu, doc)
     _require_startable(doc, variables)
     _require_units(doc, variables)
-    held = _held_inputs(doc, variables)
+    _require_inputs_declared(doc, variables)
     inputs = [name for name, channel in doc["channels"].items()
               if channel["direction"] == "in"]
     _require_recorded(recording, inputs, doc)
-    manifest = _manifest(doc, fmu, recording, inputs)
-    text = manifest.to_json()
+    text = _manifest(doc, fmu, recording, inputs).to_json()
     try:
         out.write_text(text)
     except OSError as e:
         raise AuthoringError(f"cannot write Manifest {str(out)!r}: {e}") from e
-    return {
-        "sil_fmu_replay_receipt": RECEIPT_VERSION,
-        "author": {"name": PROG, "version": build_info.__version__,
-                   "revision": build_info.SOURCE_REVISION},
+    return _receipt(doc, variables, report, {
         "document": {"file": document.name, "sha256": _sha256(document_bytes)},
         "fmu": {"file": fmu.name, "sha256": _file_sha256(fmu),
                 "model_name": report["facts"]["model_name"],
@@ -106,6 +103,18 @@ def author(document: str | Path, fmu: str | Path, recording: str | Path,
         "recording": {"file": recording.name,
                       "sha256": _file_sha256(recording)},
         "manifest": {"file": out.name, "sha256": _sha256(text.encode())},
+    })
+
+
+def _receipt(doc: dict, variables: dict[str, dict], report: dict,
+             files: dict) -> dict:
+    """The record of the authored Run: its files, and every choice with the
+    type, causality and unit the FMU declares for it."""
+    return {
+        "sil_fmu_replay_receipt": RECEIPT_VERSION,
+        "author": {"name": PROG, "version": build_info.__version__,
+                   "revision": build_info.SOURCE_REVISION},
+        **files,
         "bindings": [
             {"channel": b["channel"], "field": b["field"],
              **_declared(variables[b["variable"]])}
@@ -118,7 +127,7 @@ def author(document: str | Path, fmu: str | Path, recording: str | Path,
         "held": [
             {"variable": name, "start": variables[name]["start"],
              "unit": variables[name]["unit"]}
-            for name in held
+            for name in doc["hold"]
         ],
     }
 
@@ -269,7 +278,6 @@ def _inspected(fmu: Path, doc: dict) -> tuple[dict[str, dict], dict]:
     The proposed mapping is the one the Manifest's init line and command
     carry, so the inspection's verdict on it is the Importer's.
     """
-    _check_schemas(doc)
     mapping = {
         "sil_fmi_mapping": MAPPING_VERSION,
         "schemas": doc["schemas"],
@@ -332,12 +340,12 @@ def _require_units(doc: dict, variables: dict[str, dict]) -> None:
             f"Channel {b['channel']!r} field {b['field']!r}", b["unit"],
             variables[b["variable"]],
             "the Importer converts no unit, so convert it at the edge "
-            "(sil-csv's scale and offset) and state",
+            "(sil-csv's scale and offset) and state {unit}",
         )
     for s in doc["start"]:
         _require_unit(
             f"start value for FMU variable {s['variable']!r}", s["unit"],
-            variables[s["variable"]], "state the value in",
+            variables[s["variable"]], "state the value in {unit}",
         )
 
 
@@ -355,12 +363,13 @@ def _require_unit(subject: str, stated: str | None, variable: dict,
         f"is stated in {stated!r}")
     raise AuthoringError(
         f"{subject} {stated_text}, but FMU variable {variable['name']!r} is "
-        f"in {declared!r}; {remedy} {declared!r}"
+        f"in {declared!r}; {remedy.format(unit=repr(declared))}"
     )
 
 
-def _held_inputs(doc: dict, variables: dict[str, dict]) -> list[str]:
-    """The held inputs, once every FMU input is shown to be declared.
+def _require_inputs_declared(doc: dict, variables: dict[str, dict]) -> None:
+    """Every FMU input is bound, started or held, and each held one is an
+    input nothing else declares.
 
     A bound clocked variable drives its Clock, so the Clock is declared too.
     """
@@ -396,7 +405,6 @@ def _held_inputs(doc: dict, variables: dict[str, dict]) -> list[str]:
             f"{subject} neither bound, started nor held; bind it to a Channel "
             f"field, give it a start value, or hold it at its declared start"
         )
-    return list(doc["hold"])
 
 
 # The Recording and the Manifest ------------------------------------------------
@@ -458,6 +466,8 @@ def _manifest(doc: dict, fmu: Path, recording: Path,
             publishes=[name for name, channel in channels.items()
                        if channel["direction"] == "out"],
         )
+        # The builder checks participant routes and Channels only here, and
+        # a rejection must come before anything is written.
         manifest.to_doc()
     except ManifestError as e:
         raise AuthoringError(str(e)) from None

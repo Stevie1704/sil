@@ -448,6 +448,14 @@ class TestRejection:
         assert "Channel 'ego.accel' is recorded with schema" in rejection(
             tmp_path, DOCUMENT, fmu, narrow)
 
+    @pytest.mark.parametrize("key", ["step_period_ns", "duration_ns"])
+    def test_a_period_or_duration_of_zero(self, tmp_path, fmu, recording, key):
+        def zero(document):
+            document[key] = 0
+
+        assert "must be >= 1, got 0" in rejection(
+            tmp_path, edited(zero), fmu, recording)
+
     def test_a_document_of_another_version(self, tmp_path, fmu, recording):
         def version(document):
             document["sil_fmu_replay"] = 2
