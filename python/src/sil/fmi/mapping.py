@@ -514,12 +514,20 @@ def start_value(variable: Variable, text: str):
     """One start value, read out of a command argument by its own type."""
     if variable.kind == BINARY:
         try:
-            return bytes.fromhex(text)
+            value = bytes.fromhex(text)
         except ValueError as error:
             raise ManifestError(
                 f"start value for FMU variable {variable.name!r}: {text!r} is "
                 f"not hexadecimal"
             ) from error
+        if variable.max_size is not None and len(value) > variable.max_size:
+            raise ManifestError(
+                f"start value for FMU variable {variable.name!r} carries "
+                f"{len(value)} bytes, but {variable.causality} variable "
+                f"{variable.name!r} declares maxSize {variable.max_size}; the "
+                f"FMU would refuse it"
+            )
+        return value
     if variable.kind not in SCALARS:
         raise ManifestError(
             f"start value for FMU variable {variable.name!r}: it is a "
