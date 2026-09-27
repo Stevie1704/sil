@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 import pytest
-from workload import (
+from controller_replay import (
     COMMAND_CHANNEL,
     CONTROLS,
     DURATION_NS,

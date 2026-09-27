@@ -33,7 +33,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-import workload
+import controller_replay as replay
 from identity import archive_identity, audited_interface, inspected_interface
 
 from sil.examples.acc import dynamics
@@ -159,7 +159,7 @@ def runtime_identity(fmu: Path) -> dict:
 
 def checked_lifecycle(fmu: Path, first: dict, evidence: Path) -> dict:
     """Initialization needs the resources, and a full lifecycle ends cleanly."""
-    starts = [f"--start={name}={first[name]!r}" for name in workload.INPUTS]
+    starts = [f"--start={name}={first[name]!r}" for name in replay.INPUTS]
 
     def lifecycle(name: str, *flags: str):
         out = evidence / f"lifecycle-{name}.json"
@@ -169,11 +169,11 @@ def checked_lifecycle(fmu: Path, first: dict, evidence: Path) -> dict:
         return proc, read_json(out)
 
     proc, phases = lifecycle("resources")
-    command_0 = law(**{name: first[name] for name in workload.INPUTS})
+    command_0 = law(**{name: first[name] for name in replay.INPUTS})
     require(proc.returncode == 0 and phases == [
         {"phase": "instantiated"},
-        {"phase": "initialized", workload.OUTPUT: command_0},
-        {"phase": "stepped", "t_ns": workload.PERIOD_NS, workload.OUTPUT: command_0},
+        {"phase": "initialized", replay.OUTPUT: command_0},
+        {"phase": "stepped", "t_ns": replay.PERIOD_NS, replay.OUTPUT: command_0},
         {"phase": "terminated"}],
         f"the lifecycle did not complete as the law gives:\n{phases}\n{proc.stderr}")
     rejected, none = lifecycle("no-resources", "--no-resources")
@@ -199,37 +199,37 @@ def convert(document: dict, source: Path, output: Path, evidence: Path) -> dict:
 
 def prepare_inputs(bundle: Path, pins: dict, inputs: Path, evidence: Path):
     """The checked samples, the converted Recordings and the contract."""
-    samples = workload.recorded_inputs((bundle / RECORDING).read_text(),
+    samples = replay.recorded_inputs((bundle / RECORDING).read_text(),
                                        pins["recording"]["window"]["start_s"])
     require(len(samples) == pins["recording"]["samples"],
             f"the window holds {len(samples)} samples")
     receipts = {}
-    for name, variant in (("sensing", workload.NOMINAL),
-                          ("sensing-changed", workload.CONTROLS["changed-input"])):
-        receipts[name] = convert(workload.input_mapping(variant), bundle / RECORDING,
+    for name, variant in (("sensing", replay.NOMINAL),
+                          ("sensing-changed", replay.CONTROLS["changed-input"])):
+        receipts[name] = convert(replay.input_mapping(variant), bundle / RECORDING,
                                  inputs / f"{name}.mcap", evidence)
-        count = receipts[name]["channels"][workload.SENSING_CHANNEL]["messages"]
+        count = receipts[name]["channels"][replay.SENSING_CHANNEL]["messages"]
         require(count == len(samples), f"sil-csv converted {count} samples")
     trace = read_json(bundle / REFERENCE)["trace"]
     require([row["t_ns"] for row in trace]
-            == [(k + 1) * workload.PERIOD_NS for k in range(len(samples))],
+            == [(k + 1) * replay.PERIOD_NS for k in range(len(samples))],
             "the reference is not one command per sample, one period later")
-    rows = workload.reference_rows(trace)
+    rows = replay.reference_rows(trace)
     with (inputs / "reference.csv").open("w", newline="") as out:
         writer = csv.DictWriter(out, fieldnames=list(rows[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
-    receipts["reference"] = convert(workload.REFERENCE_MAPPING, inputs / "reference.csv",
+    receipts["reference"] = convert(replay.REFERENCE_MAPPING, inputs / "reference.csv",
                                     inputs / "reference.mcap", evidence)
-    write_json(inputs / "contract.json", workload.comparison_contract())
+    write_json(inputs / "contract.json", replay.comparison_contract())
     return samples, trace, receipts
 
 
 def expectations(samples: list[dict], trace: list[dict], pins: dict) -> dict:
     """Every Run's expected verdict, from the law, before any Run."""
-    expected = {name: workload.predicted_divergence(variant, samples, trace, law)
-                for name, variant in {"nominal": workload.NOMINAL,
-                                      **workload.CONTROLS}.items()}
+    expected = {name: replay.predicted_divergence(variant, samples, trace, law)
+                for name, variant in {"nominal": replay.NOMINAL,
+                                      **replay.CONTROLS}.items()}
     require(expected["nominal"] is None and expected["declared-starts"] is None,
             f"the law departs from the reference: {expected['nominal']}")
     require(all(expected[name] is not None for name in FAILING),
@@ -255,14 +255,14 @@ class Setup:
     runs: Path
     evidence: Path
 
-    def recording(self, variant: workload.Variant) -> Path:
-        changed = variant == workload.CONTROLS["changed-input"]
+    def recording(self, variant: replay.Variant) -> Path:
+        changed = variant == replay.CONTROLS["changed-input"]
         return self.inputs / ("sensing-changed.mcap" if changed else "sensing.mcap")
 
 
-def authored(setup: Setup, name: str, variant: workload.Variant) -> dict:
+def authored(setup: Setup, name: str, variant: replay.Variant) -> dict:
     document = write_json(setup.inputs / f"{name}.authoring.json",
-                          workload.authoring_document(variant, setup.first))
+                          replay.authoring_document(variant, setup.first))
     manifest = setup.runs / f"{name}.json"
     receipt = setup.evidence / f"{name}.authoring-receipt.json"
     command("sil-fmu-replay", str(document), str(setup.fmu),
@@ -298,15 +298,15 @@ def compare(setup: Setup, name: str, recording: Path) -> dict:
 def nominal(setup: Setup, samples: int) -> dict:
     """One Manifest authored twice and run twice: identical bytes, and in
     agreement with the reference at every command."""
-    first = authored(setup, "nominal", workload.NOMINAL)
-    again = authored(setup, "nominal-again", workload.NOMINAL)
+    first = authored(setup, "nominal", replay.NOMINAL)
+    again = authored(setup, "nominal-again", replay.NOMINAL)
     require(first["manifest"].read_bytes() == again["manifest"].read_bytes(),
             "two authorings of the nominal document differ")
     runs = [run(setup, f"nominal-{i}", first["manifest"]) for i in (1, 2)]
     require(runs[0]["sha256"] == runs[1]["sha256"],
             "two Runs of the nominal Manifest recorded different bytes")
     report = compare(setup, "nominal", runs[0]["recording"])
-    counts = report["channels"][workload.COMMAND_CHANNEL]
+    counts = report["channels"][replay.COMMAND_CHANNEL]
     require(report["verdict"] == "pass" and counts["checked"] == samples,
             f"the nominal Run does not match the reference: "
             f"{report['first_divergence'] or report['coverage']}")
@@ -314,8 +314,8 @@ def nominal(setup: Setup, samples: int) -> dict:
             "manifests_byte_identical": True,
             "recording_sha256": runs[0]["sha256"], "recordings_byte_identical": True,
             "observations_checked": counts["checked"],
-            "first_observation_ns": workload.PERIOD_NS,
-            "final_observation_ns": workload.DURATION_NS,
+            "first_observation_ns": replay.PERIOD_NS,
+            "final_observation_ns": replay.DURATION_NS,
             "shutdown": "sil-run exit 0: the importer exited 0 after "
                         "fmi3Terminate and fmi3FreeInstance",
             "authoring": first["receipt"],
@@ -326,7 +326,7 @@ def nominal(setup: Setup, samples: int) -> dict:
 def control(setup: Setup, name: str, expected: dict | None) -> dict:
     """One changed Run: it must fail where the law said, or pass if it
     changes nothing observable."""
-    result = run(setup, name, authored(setup, name, workload.CONTROLS[name])["manifest"])
+    result = run(setup, name, authored(setup, name, replay.CONTROLS[name])["manifest"])
     report = compare(setup, name, result["recording"])
     if expected is None:
         require(report["verdict"] == "pass", f"{name} changed the commands: "
@@ -334,10 +334,10 @@ def control(setup: Setup, name: str, expected: dict | None) -> dict:
         return {"verdict": "pass", "recording_sha256": result["sha256"]}
     first = report["first_divergence"]
     require(report["verdict"] == "fail", f"{name} passed the comparison")
-    require(first["kind"] == "value" and first["field"] == workload.OUTPUT
+    require(first["kind"] == "value" and first["field"] == replay.OUTPUT
             and first["observation_ns"] == expected["observation_ns"]
             and first["expected"] == expected["expected"]
-            and abs(first["actual"] - expected["actual"]) <= workload.ABS_TOL,
+            and abs(first["actual"] - expected["actual"]) <= replay.ABS_TOL,
             f"{name} diverged elsewhere than expected {expected}: {first}")
     return {"verdict": "fail", "divergences": report["divergences"],
             "first_divergence": first}
@@ -362,7 +362,7 @@ def main(bundle: str, workspace: str) -> None:
                   evidence=evidence)
     result = nominal(setup, len(samples))
     controls = {name: control(setup, name, expected[name])
-                for name in workload.CONTROLS}
+                for name in replay.CONTROLS}
     report = {
         "claim": "public-artifact acceptance of one FMU on recorded data against "
                  "an independent importer; the model is repository-authored; "
@@ -385,14 +385,14 @@ def main(bundle: str, workspace: str) -> None:
         },
         "lifecycle": lifecycle,
         "run": {
-            "period_ns": workload.PERIOD_NS,
-            "duration_ns": workload.DURATION_NS,
+            "period_ns": replay.PERIOD_NS,
+            "duration_ns": replay.DURATION_NS,
             "start_values": "sample 0 of each input",
-            "latency_ns": {workload.SENSING_CHANNEL: 0,
-                           workload.COMMAND_CHANNEL: workload.PERIOD_NS},
+            "latency_ns": {replay.SENSING_CHANNEL: 0,
+                           replay.COMMAND_CHANNEL: replay.PERIOD_NS},
             "observation": "the command published in Slot t_k is compared with "
                            "the reference row t_k + 100 ms",
-            "comparison": {"atol": workload.ABS_TOL, "rtol": workload.REL_TOL,
+            "comparison": {"atol": replay.ABS_TOL, "rtol": replay.REL_TOL,
                            "rule": "abs(actual - reference) <= atol + rtol * "
                                    "abs(reference)"},
         },
@@ -404,7 +404,7 @@ def main(bundle: str, workspace: str) -> None:
             "note": "observational, from one runner; not an acceptance criterion "
                     "and not a representative vECU measurement for #125",
             "run_wall_s": result["wall_s"],
-            "virtual_to_wall": workload.DURATION_NS / 1e9 / min(result["wall_s"]),
+            "virtual_to_wall": replay.DURATION_NS / 1e9 / min(result["wall_s"]),
         },
     }
     write_json(evidence / "report.json", report)

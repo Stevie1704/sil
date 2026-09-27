@@ -20,7 +20,7 @@ import argparse
 import json
 from pathlib import Path
 
-from workload import INPUTS, OUTPUT, PERIOD_NS
+from controller_replay import INPUTS, OUTPUT, PERIOD_NS
 
 from sil.fmi import CoSimulation, ModelDescription
 from sil.fmi.archive import Extraction

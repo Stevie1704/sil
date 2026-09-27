@@ -79,7 +79,7 @@ Every accepted Run exited 0.
 
 ## The workflow
 
-1. **Check the conversion** (`workload.recorded_inputs`). For every row of the
+1. **Check the conversion** (`controller_replay.recorded_inputs`). For every row of the
    window CSV, the acceptance recomputes each derived column from the
    recorded ones and refuses a difference:
    `gap_m` = `IVS1` (bumper to bumper, never the antenna separation),

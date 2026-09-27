@@ -20,7 +20,7 @@ COPY proofs/public-workloads/evidence/handoff.json \
 COPY proofs/openacc-controller/acceptance.py \
      proofs/openacc-controller/identity.py \
      proofs/openacc-controller/lifecycle.py \
-     proofs/openacc-controller/workload.py \
+     proofs/openacc-controller/controller_replay.py \
      /opt/openacc-controller/
 
 RUN install -d -o 10001 -g 10001 /bundle
