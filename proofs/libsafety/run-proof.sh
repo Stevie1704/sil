@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Qualify opendbc's safety library against its recorded baseline (issue #193).
+# Qualify opendbc's safety library against its independent reference (#193).
 #
 #   proofs/libsafety/run-proof.sh <bundle-directory> [output-directory]
 #
@@ -9,8 +9,9 @@
 # receives prepared/ (the exported frames), inputs/, runs/ and evidence/.
 #
 # The frames are exported in the #178 tool image, which carries opendbc's log
-# reader; it is built from proofs/public-workloads/Dockerfile unless it
-# exists. The acceptance then runs in the example image: the production
+# reader. It is always built from proofs/public-workloads/Dockerfile at this
+# revision (a cache hit after that proof's own build), and the revision baked
+# into it must be this checkout's. The acceptance then runs in the example image: the production
 # runtime image plus libubsan1 and this directory's consumer files. Both steps
 # run with no network. PYTHON_IMAGE overrides the base image, e.g. with its
 # amd64 manifest digest on a host without BuildKit.
@@ -40,9 +41,13 @@ rm -rf "$output"
 mkdir -p "$output/prepared"
 output=$(cd "$output" && pwd)
 
-if ! docker image inspect "$tools_image" >/dev/null 2>&1; then
-    docker build --platform "$platform" -f "$root/proofs/public-workloads/Dockerfile" \
-        "${base[@]}" --build-arg SOURCE_REVISION="$revision" -t "$tools_image" "$root"
+docker build --platform "$platform" -f "$root/proofs/public-workloads/Dockerfile" \
+    "${base[@]}" --build-arg SOURCE_REVISION="$revision" -t "$tools_image" "$root"
+tools_revision=$(docker run --rm --platform "$platform" --network none \
+    "$tools_image" cat /src/source-revision.txt)
+if [[ "$tools_revision" != "$revision" ]]; then
+    echo "tool image $tools_image holds revision $tools_revision, not $revision" >&2
+    exit 1
 fi
 docker build --platform "$platform" --target runtime "${base[@]}" \
     --build-arg SIL_VERSION="$version" --build-arg SIL_SOURCE_REVISION="$revision" \
@@ -52,7 +57,7 @@ docker build --platform "$platform" -f "$root/proofs/libsafety/Dockerfile" \
 
 cat > "$output/prepared/tool-image.json" <<JSON
 {"tag": "$tools_image", "id": "$(image_id "$tools_image")", "platform": "$platform",
- "source_revision": "$revision"}
+ "source_revision": "$tools_revision"}
 JSON
 container=$(docker create --platform "$platform" --network none "$tools_image" \
     python /opt/libsafety/prepare_frames.py /bundle /sources/opendbc \
