@@ -79,10 +79,6 @@ def command(*arguments) -> str:
     return proc.stdout
 
 
-def law(gap_m, relative_speed_mps, ego_speed_mps):
-    return dynamics.command_for(gap_m, relative_speed_mps, ego_speed_mps)
-
-
 # Identities ---------------------------------------------------------------------
 
 def without_fmu_digest(pins: dict) -> dict:
@@ -166,10 +162,11 @@ def checked_lifecycle(fmu: Path, first: dict, evidence: Path) -> dict:
         proc = subprocess.run([sys.executable, str(HERE / "lifecycle.py"), str(fmu),
                                str(out), *flags, *starts],
                               capture_output=True, text=True, timeout=60)
-        return proc, read_json(out)
+        # A process that fails before its first phase may write nothing.
+        return proc, read_json(out) if out.is_file() else []
 
     proc, phases = lifecycle("resources")
-    command_0 = law(**{name: first[name] for name in replay.INPUTS})
+    command_0 = dynamics.command_for(**{name: first[name] for name in replay.INPUTS})
     require(proc.returncode == 0 and phases == [
         {"phase": "instantiated"},
         {"phase": "initialized", replay.OUTPUT: command_0},
@@ -204,8 +201,8 @@ def prepare_inputs(bundle: Path, pins: dict, inputs: Path, evidence: Path):
     require(len(samples) == pins["recording"]["samples"],
             f"the window holds {len(samples)} samples")
     receipts = {}
-    for name, variant in (("sensing", replay.NOMINAL),
-                          ("sensing-changed", replay.CONTROLS["changed-input"])):
+    for variant in (replay.NOMINAL, replay.CONTROLS["changed-input"]):
+        name = replay.recording_stem(variant)
         receipts[name] = convert(replay.input_mapping(variant), bundle / RECORDING,
                                  inputs / f"{name}.mcap", evidence)
         count = receipts[name]["channels"][replay.SENSING_CHANNEL]["messages"]
@@ -227,11 +224,13 @@ def prepare_inputs(bundle: Path, pins: dict, inputs: Path, evidence: Path):
 
 def expectations(samples: list[dict], trace: list[dict], pins: dict) -> dict:
     """Every Run's expected verdict, from the law, before any Run."""
-    expected = {name: replay.predicted_divergence(variant, samples, trace, law)
+    expected = {name: replay.predicted_divergence(variant, samples, trace,
+                                                    dynamics.command_for)
                 for name, variant in {"nominal": replay.NOMINAL,
                                       **replay.CONTROLS}.items()}
     require(expected["nominal"] is None and expected["declared-starts"] is None,
-            f"the law departs from the reference: {expected['nominal']}")
+            f"the law departs from the reference: nominal "
+            f"{expected['nominal']}, declared-starts {expected['declared-starts']}")
     require(all(expected[name] is not None for name in FAILING),
             f"a control cannot fail: {expected}")
     shift = pins["failing_controls"]["one-period-input-shift"]
@@ -246,7 +245,7 @@ def expectations(samples: list[dict], trace: list[dict], pins: dict) -> dict:
 # Runs ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
-class Setup:
+class Workspace:
     """What every Run and comparison of the acceptance share."""
 
     fmu: Path
@@ -256,11 +255,10 @@ class Setup:
     evidence: Path
 
     def recording(self, variant: replay.Variant) -> Path:
-        changed = variant == replay.CONTROLS["changed-input"]
-        return self.inputs / ("sensing-changed.mcap" if changed else "sensing.mcap")
+        return self.inputs / f"{replay.recording_stem(variant)}.mcap"
 
 
-def authored(setup: Setup, name: str, variant: replay.Variant) -> dict:
+def authored(setup: Workspace, name: str, variant: replay.Variant) -> dict:
     document = write_json(setup.inputs / f"{name}.authoring.json",
                           replay.authoring_document(variant, setup.first))
     manifest = setup.runs / f"{name}.json"
@@ -271,7 +269,7 @@ def authored(setup: Setup, name: str, variant: replay.Variant) -> dict:
     return {"manifest": manifest, "receipt": read_json(receipt)}
 
 
-def run(setup: Setup, name: str, manifest: Path) -> dict:
+def run(setup: Workspace, name: str, manifest: Path) -> dict:
     recording = setup.runs / f"{name}.mcap"
     start = time.perf_counter()
     proc = subprocess.run(
@@ -284,7 +282,7 @@ def run(setup: Setup, name: str, manifest: Path) -> dict:
     return {"recording": recording, "sha256": sha256(recording), "wall_s": wall_s}
 
 
-def compare(setup: Setup, name: str, recording: Path) -> dict:
+def compare(setup: Workspace, name: str, recording: Path) -> dict:
     proc = subprocess.run(["sil-compare", str(setup.inputs / "contract.json"),
                            str(recording), str(setup.inputs / "reference.mcap"),
                            "--json"], capture_output=True, text=True)
@@ -295,7 +293,7 @@ def compare(setup: Setup, name: str, recording: Path) -> dict:
     return report
 
 
-def nominal(setup: Setup, samples: int) -> dict:
+def nominal(setup: Workspace, samples: int) -> dict:
     """One Manifest authored twice and run twice: identical bytes, and in
     agreement with the reference at every command."""
     first = authored(setup, "nominal", replay.NOMINAL)
@@ -323,7 +321,7 @@ def nominal(setup: Setup, samples: int) -> dict:
             "wall_s": [r["wall_s"] for r in runs]}
 
 
-def control(setup: Setup, name: str, expected: dict | None) -> dict:
+def control(setup: Workspace, name: str, expected: dict | None) -> dict:
     """One changed Run: it must fail where the law said, or pass if it
     changes nothing observable."""
     result = run(setup, name, authored(setup, name, replay.CONTROLS[name])["manifest"])
@@ -337,7 +335,8 @@ def control(setup: Setup, name: str, expected: dict | None) -> dict:
     require(first["kind"] == "value" and first["field"] == replay.OUTPUT
             and first["observation_ns"] == expected["observation_ns"]
             and first["expected"] == expected["expected"]
-            and abs(first["actual"] - expected["actual"]) <= replay.ABS_TOL,
+            and abs(first["actual"] - expected["actual"])
+            <= replay.ABS_TOL + replay.REL_TOL * abs(expected["actual"]),
             f"{name} diverged elsewhere than expected {expected}: {first}")
     return {"verdict": "fail", "divergences": report["divergences"],
             "first_divergence": first}
@@ -358,7 +357,7 @@ def main(bundle: str, workspace: str) -> None:
     expected = expectations(samples, trace, pins)
     write_json(inputs / "expectations.json", expected)
 
-    setup = Setup(fmu=fmu, first=samples[0], inputs=inputs, runs=runs,
+    setup = Workspace(fmu=fmu, first=samples[0], inputs=inputs, runs=runs,
                   evidence=evidence)
     result = nominal(setup, len(samples))
     controls = {name: control(setup, name, expected[name])

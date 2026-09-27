@@ -56,7 +56,9 @@ token from it. A bundle regenerated at another revision is another archive of
 the same model. The acceptance therefore pins what does not change: the model
 source, the control law, the exporter and the declared interface. The FMPy
 reference is pinned exactly, so the model's behavior is pinned too.
-`report.json` states whether the archive is the handoff's archive.
+`report.json` states whether the archive is the handoff's archive. When CI
+regenerates the bundle at a new revision, it is not: the archive
+`12df3da…` itself is then not executed, only the same model exported again.
 
 ## Initialization and shutdown
 
@@ -86,7 +88,7 @@ Every accepted Run exited 0.
    `relative_speed_mps` = `Speed1 − Speed2`, `ego_speed_mps` = `Speed2`, and
    `t_ns` = k × 100 ms from 300.0 s. There are 501 samples.
 2. **Convert** (`sil-csv`). The derived columns become the `acc.sensing`
-   Channel, with `t_ns` as the Message time. The reference trace becomes the
+   Channel, with `t_ns` as the Message time. The reference trajectory becomes the
    `reference.command` Channel, each row at the time it describes.
 3. **Expect** (`inputs/expectations.json`). Before any Run, the control law
    over what the FMU sees in each variant gives the first divergence of each
@@ -121,9 +123,10 @@ the recording's end, so its command, at 50.1 s, is compared too.
 ## Controls
 
 Each control changes one thing in the nominal Run. The expected verdict is
-fixed before any Run: a failing control must fail at the observation, with
-the reference value, that the law predicts, and with the law's value within
-1e-10.
+fixed before any Run. A failing control must first diverge at the
+observation that the law predicts. There, the expected value must be the
+reference value, and the actual value must be the law's value within the
+contract's tolerance.
 
 | Control | Change | Expected |
 | --- | --- | --- |

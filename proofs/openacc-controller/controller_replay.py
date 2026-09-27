@@ -12,8 +12,9 @@ expected control failures cannot disagree. The values are the #178 handoff's
   `t_ns` on the exact 100 ms grid from the window start. `sil-csv` then
   converts the derived columns into `acc.sensing`, with `t_ns` as the Message
   time.
-- **Input.** Sample k is published at t_k and, with Latency 0, is written to
-  the FMU before the Step [t_k, t_k+1). The start values are sample 0.
+- **Input.** The Message of sample k is published at t_k and, with Latency
+  0, is written to the FMU before the Step [t_k, t_k+1). The start values are
+  sample 0.
 - **Observation.** The command published in Slot t_k is the value at
   t_k + 100 ms. The contract compares it with the reference row at that time,
   every row from 100 ms through 50.1 s.
@@ -91,6 +92,11 @@ class Variant:
             return sample
         return {**sample, "relative_speed_mps": sample["ego_speed_mps"],
                 "ego_speed_mps": sample["relative_speed_mps"]}
+
+
+def recording_stem(variant: Variant) -> str:
+    """The converted input a variant replays: only the scale changes it."""
+    return "sensing" if variant.relative_speed_scale == 1 else "sensing-changed"
 
 
 NOMINAL = Variant()

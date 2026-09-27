@@ -17,6 +17,7 @@ from controller_replay import (
     input_mapping,
     predicted_divergence,
     recorded_inputs,
+    recording_stem,
     reference_rows,
 )
 
@@ -178,3 +179,10 @@ def test_the_expected_divergence_is_the_law_over_what_the_fmu_sees():
                                 reference, law) == {
         "index": 1, "observation_ns": 2 * PERIOD_NS,
         "expected": 31.0, "actual": 30.0}
+
+
+def test_only_the_changed_input_replays_another_recording():
+    assert recording_stem(Variant()) == "sensing"
+    assert {name: recording_stem(v) for name, v in CONTROLS.items()} == {
+        "changed-input": "sensing-changed", "wrong-binding": "sensing",
+        "one-period-shift": "sensing", "declared-starts": "sensing"}
