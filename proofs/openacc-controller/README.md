@@ -152,10 +152,12 @@ leaves the clamp at once and diverges at the first observation.
 
 [`evidence/`](evidence/) is the output of CI run 36347528001 on native
 Linux x86-64 (glibc 2.36, CPython 3.13.7, `/usr/local/lib/libpython3.13.so`).
-It holds `report.json`, the inspection, both lifecycles, the conversion and
-authoring receipts, every comparison report, the contract and
-`expectations.json`. The Recordings are not committed. The job keeps the
-Manifests and runner output as the `openacc-controller-evidence` artifact.
+It holds `report.json`, every `sil-compare` report, the contract and
+`expectations.json`. `report.json` includes the inspection result, the
+lifecycle phases, the conversion receipts and the nominal authoring receipt.
+The Recordings are not committed. The job keeps the full output, with every
+receipt, the Manifests and the runner output, as the
+`openacc-controller-evidence` artifact.
 
 | Check | Result |
 | --- | --- |
