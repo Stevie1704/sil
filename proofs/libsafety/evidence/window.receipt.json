@@ -1,0 +1,70 @@
+{
+  "sil_window_receipt": 1,
+  "preparer": {
+    "name": "sil-window",
+    "version": "0.1.0",
+    "revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367",
+    "mcap": "mcap-python/1.4.0"
+  },
+  "source": {
+    "file": "frames.mcap",
+    "sha256": "190f21053dd3544c51e4647cf9746be2c35647321bd53c0aa3f2e2d7c2ba1f38"
+  },
+  "window": {
+    "file": "window.json",
+    "sha256": "12e43c37001d6cde666aaa933147d55194bd6443d26436fa2ad0cacd8d3b03c7"
+  },
+  "recording": {
+    "file": "window.mcap",
+    "sha256": "1a8708da361ead8e9fb75a8966ab6017dc205f0779c8be011b7a60a359ac310b"
+  },
+  "source_origin_ns": 18054876797669,
+  "intervals": {
+    "warm_up": {
+      "source": {
+        "start_ns": 18054876797669,
+        "end_ns": 18054876797669
+      },
+      "virtual": {
+        "start_ns": 0,
+        "end_ns": 0
+      }
+    },
+    "evaluation": {
+      "source": {
+        "start_ns": 18054876797669,
+        "end_ns": 18114867092417
+      },
+      "virtual": {
+        "start_ns": 0,
+        "end_ns": 59990294748
+      }
+    }
+  },
+  "duration_ns": 59990294748,
+  "evaluation_window": {
+    "from_ns": 0,
+    "to_ns": 59990294747
+  },
+  "channels": {
+    "can.rx": {
+      "schema": "can.Frame",
+      "source_span": {
+        "first_ns": 18054876797669,
+        "last_ns": 18114867092416
+      },
+      "held": null,
+      "largest_gap_ns": 11029012,
+      "warm_up": {
+        "messages": 0,
+        "first_ns": null,
+        "last_ns": null
+      },
+      "evaluation": {
+        "messages": 149228,
+        "first_ns": 0,
+        "last_ns": 59990294747
+      }
+    }
+  }
+}

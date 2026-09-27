@@ -1,0 +1,451 @@
+{
+  "claim": "public-artifact acceptance of one shared library against its independent reference; receive side only; not production-vehicle validation",
+  "identities": {
+    "library": {
+      "path": "libsafety/libsafety.so",
+      "sha256": "ad19bdcd96f6b9c6daf1f55c1851dfe8dfb1c613ed4747f72b3b5b9b7300dec1"
+    },
+    "sources": {
+      "opendbc": {
+        "role": "shared-library target: the upstream automotive C safety logic and its libsafety test harness",
+        "kind": "git",
+        "repository": "https://github.com/commaai/opendbc.git",
+        "commit": "c4465696dc2ef0d1340ae188810ac982586999a4",
+        "tree": "760d44fd515774f097504ed958234dab6d0f493d",
+        "license": "MIT",
+        "license_file": "LICENSE"
+      },
+      "can_segment": {
+        "role": "recorded vehicle CAN traffic for the shared library (receive side only)",
+        "kind": "file",
+        "url": "https://huggingface.co/datasets/commaai/commaCarSegments/resolve/edb6480d0e0b5775fde7150c01bcdd5b78d0ad32/segments/df5ad9d9ae9fd6cd/00000470--cb630a6b9d/46/rlog.zst",
+        "dataset": "commaai/commaCarSegments",
+        "dataset_revision": "edb6480d0e0b5775fde7150c01bcdd5b78d0ad32",
+        "segment": "df5ad9d9ae9fd6cd/00000470--cb630a6b9d/46",
+        "platform": "TOYOTA_RAV4_TSS2",
+        "sha256": "b0d19f7ccf67fef1c4afd9cf579e96cecc1d278be2aa4a3adf97b2d64d940a4c",
+        "size": 1266275,
+        "license": "MIT (dataset card)"
+      }
+    },
+    "bundle": {
+      "bundle_json_sha256": "613a785b2d2c52e3bea1b2c84472df23e9b97c50b9a2c47e0caa545231c6ba32",
+      "tools": {
+        "machine": "x86_64",
+        "libc": "glibc 2.36",
+        "python": "3.13.7",
+        "compiler": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+        "source_revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367",
+        "packages": {
+          "fmpy": "0.3.26",
+          "pycapnp": "2.2.1",
+          "zstandard": "0.25.0",
+          "cffi": "2.0.0",
+          "numpy": "2.5.3",
+          "pythonfmu3": "0.3.4"
+        }
+      }
+    },
+    "calibration": {
+      "platform": "TOYOTA_RAV4_TSS2",
+      "mode": 2,
+      "mode_name": "toyota",
+      "param": 73,
+      "alternative_experience": 0
+    },
+    "source_recording": {
+      "path": "recordings/rlog.zst",
+      "sha256": "b0d19f7ccf67fef1c4afd9cf579e96cecc1d278be2aa4a3adf97b2d64d940a4c"
+    },
+    "reference": {
+      "path": "references/libsafety-states.json",
+      "sha256": "ba8731f785431226e80fbb49cd065e39b76ee5140baf0148837f69735a4a9b21"
+    },
+    "export": {
+      "recording": {
+        "path": "recordings/rlog.zst",
+        "sha256": "b0d19f7ccf67fef1c4afd9cf579e96cecc1d278be2aa4a3adf97b2d64d940a4c"
+      },
+      "frames_csv_sha256": "41041ccc195c700fdcded64d15ec924fbc0245cb106c672b775b93d470c9cd4d",
+      "exporter_sha256": "a1c0197eebfa99863851676b0f320e68fc83f91a5fd0aa4ab0fa787153b8955c",
+      "contract": {
+        "platform": "TOYOTA_RAV4_TSS2",
+        "mode": 2,
+        "mode_name": "toyota",
+        "param": 73,
+        "alternative_experience": 0
+      },
+      "can_events": 6000,
+      "received_frames": 149228,
+      "first_log_mono_ns": 18054876797669,
+      "last_log_mono_ns": 18114867092416
+    },
+    "export_tool_image": {
+      "tag": "sil-public-workloads:qualification",
+      "id": "sha256:20727bd71c4d56965575996705e97cf34d54e4bf8741396f454c6ec6dcddb8f0",
+      "platform": "linux/amd64",
+      "source_revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367"
+    },
+    "packet_layout": {
+      "compared": 149228,
+      "differing": [],
+      "identical": true
+    },
+    "conversion": {
+      "frames": {
+        "sil_csv_receipt": 1,
+        "converter": {
+          "name": "sil-csv",
+          "version": "0.1.0",
+          "revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367",
+          "mcap": "mcap-python/1.4.0"
+        },
+        "source": {
+          "file": "frames.csv",
+          "sha256": "41041ccc195c700fdcded64d15ec924fbc0245cb106c672b775b93d470c9cd4d",
+          "rows": 149228
+        },
+        "mapping": {
+          "file": "frames.json",
+          "sha256": "019ac7af42bbd6fc445f8162bafe5b8ceb6d59faf9e25fb2bc3a72330be44cec"
+        },
+        "recording": {
+          "file": "frames.mcap",
+          "sha256": "190f21053dd3544c51e4647cf9746be2c35647321bd53c0aa3f2e2d7c2ba1f38"
+        },
+        "channels": {
+          "can.rx": {
+            "schema": "can.Frame",
+            "messages": 149228,
+            "first_ns": 18054876797669,
+            "last_ns": 18114867092416
+          }
+        },
+        "time_bounds": {
+          "first_ns": 18054876797669,
+          "last_ns": 18114867092416
+        }
+      },
+      "window": {
+        "sil_window_receipt": 1,
+        "preparer": {
+          "name": "sil-window",
+          "version": "0.1.0",
+          "revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367",
+          "mcap": "mcap-python/1.4.0"
+        },
+        "source": {
+          "file": "frames.mcap",
+          "sha256": "190f21053dd3544c51e4647cf9746be2c35647321bd53c0aa3f2e2d7c2ba1f38"
+        },
+        "window": {
+          "file": "window.json",
+          "sha256": "12e43c37001d6cde666aaa933147d55194bd6443d26436fa2ad0cacd8d3b03c7"
+        },
+        "recording": {
+          "file": "window.mcap",
+          "sha256": "1a8708da361ead8e9fb75a8966ab6017dc205f0779c8be011b7a60a359ac310b"
+        },
+        "source_origin_ns": 18054876797669,
+        "intervals": {
+          "warm_up": {
+            "source": {
+              "start_ns": 18054876797669,
+              "end_ns": 18054876797669
+            },
+            "virtual": {
+              "start_ns": 0,
+              "end_ns": 0
+            }
+          },
+          "evaluation": {
+            "source": {
+              "start_ns": 18054876797669,
+              "end_ns": 18114867092417
+            },
+            "virtual": {
+              "start_ns": 0,
+              "end_ns": 59990294748
+            }
+          }
+        },
+        "duration_ns": 59990294748,
+        "evaluation_window": {
+          "from_ns": 0,
+          "to_ns": 59990294747
+        },
+        "channels": {
+          "can.rx": {
+            "schema": "can.Frame",
+            "source_span": {
+              "first_ns": 18054876797669,
+              "last_ns": 18114867092416
+            },
+            "held": null,
+            "largest_gap_ns": 11029012,
+            "warm_up": {
+              "messages": 0,
+              "first_ns": null,
+              "last_ns": null
+            },
+            "evaluation": {
+              "messages": 149228,
+              "first_ns": 0,
+              "last_ns": 59990294747
+            }
+          }
+        }
+      },
+      "reference": {
+        "sil_csv_receipt": 1,
+        "converter": {
+          "name": "sil-csv",
+          "version": "0.1.0",
+          "revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367",
+          "mcap": "mcap-python/1.4.0"
+        },
+        "source": {
+          "file": "reference.csv",
+          "sha256": "105dc4881a9590d75be3252fc5209cb140a9f36fc944104af8e220abaea29ee5",
+          "rows": 6000
+        },
+        "mapping": {
+          "file": "reference.json",
+          "sha256": "26911508dccab11caabf5642b9ef1c5ef8dddc0748520c8ef11539ba76169cef"
+        },
+        "recording": {
+          "file": "reference.mcap",
+          "sha256": "f8cf004d78d03644d7f7c37c6679eb411b62766b90c24e3ec13a233d623a3cc5"
+        },
+        "channels": {
+          "libsafety.state": {
+            "schema": "libsafety.ReferenceState",
+            "messages": 6000,
+            "first_ns": 0,
+            "last_ns": 59991000000
+          }
+        },
+        "time_bounds": {
+          "first_ns": 0,
+          "last_ns": 59991000000
+        }
+      }
+    },
+    "runtime": {
+      "machine": "x86_64",
+      "libc": "glibc 2.36",
+      "python": "3.13.7",
+      "runner": {
+        "license": "Apache-2.0",
+        "source_repository": "https://github.com/Stevie1704/sil",
+        "source_revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367",
+        "version": "0.1.0"
+      },
+      "libubsan1": "12.2.0-14+deb12u1",
+      "library_ldd": [
+        "linux-vdso.so.1",
+        "libubsan.so.1 => /lib/x86_64-linux-gnu/libubsan.so.1",
+        "libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6",
+        "libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6",
+        "libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1",
+        "/lib64/ld-linux-x86-64.so.2",
+        "libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6"
+      ],
+      "example_image_id": "sha256:ed2b43e7f7bbb356d13db210ecda11825f044f627eb4cc47721519d72ce7ea97"
+    }
+  },
+  "run": {
+    "step_period_ns": 1000000,
+    "latency_ns": {
+      "can.rx": 0,
+      "libsafety.state": 0
+    },
+    "route_capacity": {
+      "can.rx": 47
+    },
+    "duration_ns": 59992000000,
+    "initial_state": "set_safety_hooks(mode, param), then set_alternative_experience; nothing seeded",
+    "timer": "((first_log_mono_ns + event_ns) // 1000) % 0xFFFFFFFF",
+    "warm_up": "window warm-up empty; safety_tick only more than 1 s from the first and the last event, compared"
+  },
+  "nominal": {
+    "manifest_hash": "35b9409536ff7431fa3eae603cba271a01ce5d8209b86a4ec6d87be283e92a61",
+    "recording_sha256": "40c490f0533afabaaddbbdcf52a8259d14a07c2496e07621a016c488d9f5b93d",
+    "byte_identical": true,
+    "observations_checked": 6000,
+    "config_valid": {
+      "ticked_events": 5800,
+      "ticked_invalid": 0,
+      "unticked_events": 200,
+      "unticked_invalid": 1
+    },
+    "provenance": {
+      "artifacts": {
+        "clock_shim": null,
+        "command_files": [
+          {
+            "file": {
+              "path": "/bundle/libsafety/libsafety.so",
+              "sha256": "ad19bdcd96f6b9c6daf1f55c1851dfe8dfb1c613ed4747f72b3b5b9b7300dec1"
+            },
+            "participant": "libsafety"
+          },
+          {
+            "file": {
+              "path": "/opt/libsafety/adapter.py",
+              "sha256": "34af0c55136b6bcea8b39d1b9f658cdcdaf05793d3078616cb8c83679bc6c134"
+            },
+            "participant": "libsafety"
+          }
+        ],
+        "native_participants": [],
+        "process_participants": [
+          {
+            "command": [
+              "/opt/sil/python/bin/python3",
+              "/opt/libsafety/adapter.py",
+              "/bundle/libsafety/libsafety.so",
+              "--input",
+              "can.rx",
+              "--output",
+              "libsafety.state",
+              "--period-ns",
+              "1000000",
+              "--mode",
+              "2",
+              "--param",
+              "73",
+              "--alternative-experience",
+              "0",
+              "--timer-origin-ns",
+              "18054876797669",
+              "--timer-unit-ns",
+              "1000",
+              "--first-event-ns",
+              "0",
+              "--last-event-ns",
+              "59990294747"
+            ],
+            "executable": {
+              "path": "/usr/local/bin/python3.13",
+              "sha256": "73b68fc2dac176af16098180a2c98a03ee9f1f1b02db25d42d44d782e79e2330"
+            },
+            "name": "libsafety"
+          }
+        ],
+        "runner": {
+          "path": "/usr/local/bin/sil-run",
+          "sha256": "abaf98ab3b93bc5c5731800d9c294c76a2c313945862aec773ed89d1d1264a43"
+        }
+      },
+      "errors": [],
+      "machine_class": {
+        "architecture": "x86-64",
+        "id": "Linux/x86-64/glibc-2.36",
+        "libc": "glibc-2.36",
+        "os": "Linux"
+      },
+      "manifest_hash": "35b9409536ff7431fa3eae603cba271a01ce5d8209b86a4ec6d87be283e92a61",
+      "recording": {
+        "sha256": "40c490f0533afabaaddbbdcf52a8259d14a07c2496e07621a016c488d9f5b93d"
+      },
+      "run_exit_code": 0,
+      "schema_version": 1,
+      "sil": {
+        "source_repository": "https://github.com/Stevie1704/sil",
+        "source_revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367",
+        "version": "0.1.0"
+      }
+    }
+  },
+  "contract_sha256": "c13fe33a87d0c90c3769aaf8d955e94d23a27bc9a1da64ee770b3d444e881fef",
+  "controls": {
+    "input-one-step-late": {
+      "manifest_hash": "643d87af268c2295e320cc8f9358733decb8c7f93aaed1641bda0e38444d8b5d",
+      "verdict": "fail",
+      "divergences": 6000,
+      "first_divergence": {
+        "kind": "missing-actual",
+        "channel": "libsafety.state",
+        "reference_channel": "libsafety.state",
+        "field": null,
+        "observation_ns": 0,
+        "actual_publication_ns": null,
+        "reference_time_ns": 0,
+        "actual": null,
+        "expected": {
+          "event_ns": 0,
+          "accepted": 39,
+          "rejected": 0,
+          "controls_allowed": 0,
+          "gas_pressed_prev": 0,
+          "brake_pressed_prev": 0,
+          "cruise_engaged_prev": 0,
+          "vehicle_moving": 1,
+          "acc_main_on": 0,
+          "vehicle_speed_min": 0.0,
+          "vehicle_speed_max": 25.740999221801758
+        },
+        "tolerance": null,
+        "abs_error": null
+      }
+    },
+    "timer-in-ns": {
+      "manifest_hash": "a374d29de9973e6aac8d0f54da3a523547e75ae48fa5fa7eda23b7ccce83bda6",
+      "verdict": "fail",
+      "divergences": 5900,
+      "first_divergence": {
+        "kind": "value",
+        "channel": "libsafety.state",
+        "reference_channel": "libsafety.state",
+        "field": "controls_allowed",
+        "observation_ns": 1001000000,
+        "actual_publication_ns": 1001000000,
+        "reference_time_ns": 1001000000,
+        "actual": 0,
+        "expected": 1,
+        "tolerance": "exact",
+        "abs_error": null
+      }
+    },
+    "wrong-param": {
+      "manifest_hash": "09f0b810176f359e6ef8e31af56173776160bbd25eec86c6ddc318e5fdbaf24e",
+      "verdict": "fail",
+      "divergences": 5900,
+      "first_divergence": {
+        "kind": "value",
+        "channel": "libsafety.state",
+        "reference_channel": "libsafety.state",
+        "field": "controls_allowed",
+        "observation_ns": 1001000000,
+        "actual_publication_ns": 1001000000,
+        "reference_time_ns": 1001000000,
+        "actual": 0,
+        "expected": 1,
+        "tolerance": "exact",
+        "abs_error": null
+      }
+    },
+    "crash": {
+      "manifest_hash": "6ed14c2951f6c3af1446a8bbe03968b9399743af94287eb725bc38cba3857f75",
+      "exit_code": 1,
+      "diagnostic": "sil-run: participant 'libsafety' exited unexpectedly"
+    },
+    "hang": {
+      "manifest_hash": "9191d30ad1040f64cb5ca035e676a778ae0a60257260b1e5fdcd678603f723d0",
+      "exit_code": 1,
+      "diagnostic": "sil-run: participant 'libsafety': timeout waiting for step_done response during Step at virtual time 1001000000 ns"
+    }
+  },
+  "resources": {
+    "note": "observational, from one runner; not an acceptance criterion and not a representative vECU measurement for #125",
+    "run_wall_s": [
+      5.787962424,
+      5.642521504999991
+    ],
+    "events_per_s": 1063.35438769409,
+    "frames_per_s": 26447.041427802276,
+    "virtual_to_wall": 10.631823856380695,
+    "nominal_peak_child_rss_kib": 106400
+  }
+}

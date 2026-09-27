@@ -1415,6 +1415,22 @@ upstream's sources beforehand, event times included: a frame offered at 300 ms
 is confirmed to its sender and delivered to its peer at 300.48 ms, and the
 frame that lost arbitration follows at 300.96 ms.
 
+## Public shared-library acceptance
+
+[proofs/libsafety/](proofs/libsafety/) replays a public vehicle CAN recording
+into a public shared library. It uses the supported workflow: `sil-csv`,
+`sil-window`, a Process participant adapter over the library's own C API, and
+`sil-compare`. The library is opendbc's safety logic. The recording is one
+commaCarSegments segment. [proofs/public-workloads/](proofs/public-workloads/)
+pins both, and an independent reference. All 6000 observations match exactly,
+and two Runs are byte-identical. A timing, a time-unit, a calibration, a crash
+and a hang control each fail for their own reason.
+
+```sh
+proofs/public-workloads/run-proof.sh   # the pinned bundle; needs docker and network
+proofs/libsafety/run-proof.sh build/public-workloads/bundle
+```
+
 ## First-party CAN bus model
 
 [models/can/](models/can/) builds a standalone C++20 FMI 3.0 CAN Bus Simulation
@@ -1482,6 +1498,9 @@ proofs/acc-fmi/    checkout qualification of source-available ACC FMUs:
 proofs/fmi-ls-bus/ acceptance fixture for the FMI-LS-BUS CAN demo FMUs:
                    pinned artifacts, the supported profile, what the released
                    Importer does with them, and what the checkout's does
+proofs/libsafety/  public shared-library acceptance: a recorded CAN segment
+                   replayed into opendbc's safety library and compared
+                   with its independent reference
 python/src/sil/    manifest builder, step-participant lib, test API,
                    determinism check, declared memory footprint,
                    CSV-to-Recording converter

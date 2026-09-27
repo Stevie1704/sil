@@ -1,0 +1,34 @@
+{
+  "sil_csv_receipt": 1,
+  "converter": {
+    "name": "sil-csv",
+    "version": "0.1.0",
+    "revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367",
+    "mcap": "mcap-python/1.4.0"
+  },
+  "source": {
+    "file": "frames.csv",
+    "sha256": "41041ccc195c700fdcded64d15ec924fbc0245cb106c672b775b93d470c9cd4d",
+    "rows": 149228
+  },
+  "mapping": {
+    "file": "frames.json",
+    "sha256": "019ac7af42bbd6fc445f8162bafe5b8ceb6d59faf9e25fb2bc3a72330be44cec"
+  },
+  "recording": {
+    "file": "frames.mcap",
+    "sha256": "190f21053dd3544c51e4647cf9746be2c35647321bd53c0aa3f2e2d7c2ba1f38"
+  },
+  "channels": {
+    "can.rx": {
+      "schema": "can.Frame",
+      "messages": 149228,
+      "first_ns": 18054876797669,
+      "last_ns": 18114867092416
+    }
+  },
+  "time_bounds": {
+    "first_ns": 18054876797669,
+    "last_ns": 18114867092416
+  }
+}

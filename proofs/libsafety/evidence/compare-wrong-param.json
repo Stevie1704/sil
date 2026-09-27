@@ -1,0 +1,50 @@
+{
+  "sil_comparison_report": 1,
+  "comparison": "reference",
+  "determinism": "not judged: a reference comparison says whether two trajectories agree within the contract, not whether either Run reproduces; a determinism check (sil-check) bit-compares two Recordings of one Manifest",
+  "verdict": "fail",
+  "contract": {
+    "path": "/workspace/inputs/contract.json",
+    "sha256": "c13fe33a87d0c90c3769aaf8d955e94d23a27bc9a1da64ee770b3d444e881fef"
+  },
+  "actual": {
+    "path": "/workspace/runs/wrong-param.mcap",
+    "sha256": "1ac74d3f19e953672feb94fc3e87243e6f28dbc3bce8251d18524d91f938766f"
+  },
+  "reference": {
+    "path": "/workspace/inputs/reference.mcap",
+    "sha256": "f8cf004d78d03644d7f7c37c6679eb411b62766b90c24e3ec13a233d623a3cc5"
+  },
+  "evaluation": {
+    "from_ns": 0,
+    "to_ns": 59991999999
+  },
+  "coverage": [],
+  "channels": {
+    "libsafety.state": {
+      "reference_channel": "libsafety.state",
+      "observations": 6000,
+      "checked": 6000,
+      "failed": 5900,
+      "nonfinite": 0,
+      "missing_actual": 0,
+      "missing_reference": 0,
+      "ambiguous_actual": 0,
+      "ambiguous_reference": 0
+    }
+  },
+  "divergences": 5900,
+  "first_divergence": {
+    "kind": "value",
+    "channel": "libsafety.state",
+    "reference_channel": "libsafety.state",
+    "field": "controls_allowed",
+    "observation_ns": 1001000000,
+    "actual_publication_ns": 1001000000,
+    "reference_time_ns": 1001000000,
+    "actual": 0,
+    "expected": 1,
+    "tolerance": "exact",
+    "abs_error": null
+  }
+}
