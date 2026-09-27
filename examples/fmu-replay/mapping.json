@@ -1,0 +1,14 @@
+{
+  "sil_csv_mapping": 1,
+  "timestamp": {"column": "time_s", "unit": "s"},
+  "schemas": {
+    "ego.Acceleration": {"fields": [{"name": "accel_mps2", "type": "f64"}]}
+  },
+  "channels": [
+    {
+      "channel": "ego.accel",
+      "schema": "ego.Acceleration",
+      "fields": {"accel_mps2": {"column": "accel_cmps2", "scale": 0.01}}
+    }
+  ]
+}
