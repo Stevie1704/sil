@@ -569,6 +569,22 @@ class TestBindingsRejectedBeforeStepping:
         with pytest.raises(ManifestError, match="maxSize 16"):
             importer(fmu=bounded)
 
+    def test_a_start_value_above_the_declared_max_size_is_rejected(
+        self, importer, tmp_path
+    ):
+        """The FMU would refuse the value, so it is a Manifest error named
+        before the FMU is loaded, not a failure inside it."""
+        bounded = with_description(
+            tmp_path, "bounded",
+            lambda text: text.replace(
+                BINARY_INPUT,
+                BINARY_INPUT.replace(">", f' maxSize="{FMU_BINARY_BYTES}">'),
+            ),
+        )
+        with pytest.raises(ManifestError, match="maxSize 128"):
+            importer(fmu=bounded, starts=[
+                "Binary_input=" + "00" * (FMU_BINARY_BYTES + 1)])
+
     def test_a_binding_naming_an_undeclared_channel_is_rejected(self, importer):
         with pytest.raises(ManifestError, match="bin.Nope"):
             importer(binds=["bin.Nope:payload=Binary_input", *PAYLOAD_BINDINGS])

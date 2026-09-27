@@ -1,0 +1,34 @@
+{
+  "sil_fmu_replay": 1,
+  "step_period_ns": 10000000,
+  "duration_ns": 1000000000,
+  "schemas": {
+    "ego.Acceleration": {"fields": [{"name": "accel_mps2", "type": "f64"}]},
+    "ego.Motion": {"fields": [
+      {"name": "speed_mps", "type": "f64"},
+      {"name": "position_m", "type": "f64"}
+    ]}
+  },
+  "channels": {
+    "ego.accel": {
+      "schema": "ego.Acceleration", "direction": "in", "latency_ns": 0,
+      "route": {"capacity": 1, "overflow": "fail"}
+    },
+    "ego.motion": {
+      "schema": "ego.Motion", "direction": "out", "latency_ns": 10000000
+    }
+  },
+  "bind": [
+    {"channel": "ego.accel", "field": "accel_mps2",
+     "variable": "acceleration", "unit": "m/s2"},
+    {"channel": "ego.motion", "field": "speed_mps",
+     "variable": "speed", "unit": "m/s"},
+    {"channel": "ego.motion", "field": "position_m",
+     "variable": "position", "unit": "m"}
+  ],
+  "start": [
+    {"variable": "initial_speed", "value": "20", "unit": "m/s"},
+    {"variable": "initial_position", "value": "5", "unit": "m"}
+  ],
+  "hold": []
+}

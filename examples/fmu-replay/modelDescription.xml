@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fmiModelDescription
+  fmiVersion="3.0"
+  modelName="EgoMotion"
+  description="Ego vehicle speed and position under a held acceleration"
+  generationTool="SiL example (hand-written)"
+  instantiationToken="{6f1c2c55-3c1e-4c55-9d0e-186e90a10186}">
+
+  <CoSimulation
+    modelIdentifier="EgoMotion"
+    canHandleVariableCommunicationStepSize="true"
+    hasEventMode="false"/>
+
+  <UnitDefinitions>
+    <Unit name="s"><BaseUnit s="1"/></Unit>
+    <Unit name="m"><BaseUnit m="1"/></Unit>
+    <Unit name="m/s"><BaseUnit m="1" s="-1"/></Unit>
+    <Unit name="m/s2"><BaseUnit m="1" s="-2"/></Unit>
+  </UnitDefinitions>
+
+  <ModelVariables>
+    <Float64 name="time" valueReference="0" causality="independent" variability="continuous" unit="s"/>
+    <Float64 name="acceleration" valueReference="1" causality="input" variability="continuous" start="0" unit="m/s2"/>
+    <Float64 name="initial_speed" valueReference="2" causality="parameter" variability="fixed" start="0" unit="m/s"/>
+    <Float64 name="initial_position" valueReference="3" causality="parameter" variability="fixed" start="0" unit="m"/>
+    <Float64 name="speed" valueReference="4" causality="output" variability="continuous" initial="calculated" unit="m/s"/>
+    <Float64 name="position" valueReference="5" causality="output" variability="continuous" initial="calculated" unit="m"/>
+  </ModelVariables>
+
+  <ModelStructure>
+    <Output valueReference="4"/>
+    <Output valueReference="5"/>
+    <InitialUnknown valueReference="4"/>
+    <InitialUnknown valueReference="5"/>
+  </ModelStructure>
+
+</fmiModelDescription>

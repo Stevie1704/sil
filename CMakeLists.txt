@@ -364,3 +364,17 @@ if(EXISTS ${CMAKE_SOURCE_DIR}/examples/library/speed_filter.c)
   add_speed_filter(speed_filter_wrong_last tests/fixtures/speed_filter_fault.c
     SPEED_FILTER_WRONG_AT_CYCLE=11)
 endif()
+
+# --- recorded-data FMU example (issue #186) ---
+# The shared library of examples/fmu-replay/, which the tests package into an
+# FMU with that example's package.py. Like the library example, it exists only
+# where the example does.
+if(EXISTS ${CMAKE_SOURCE_DIR}/examples/fmu-replay/ego_motion.c)
+  add_library(ego_motion SHARED examples/fmu-replay/ego_motion.c)
+  set_target_properties(ego_motion PROPERTIES
+    PREFIX ""
+    SUFFIX ".so"
+    OUTPUT_NAME "EgoMotion"
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
