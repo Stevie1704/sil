@@ -112,7 +112,10 @@ def test_the_nominal_document_states_sample_zero_as_the_start_values():
 def test_each_control_changes_one_thing_in_the_document():
     nominal = authoring_document(Variant(), SAMPLES[0])
     shift = authoring_document(CONTROLS["one-period-shift"], SAMPLES[0])
-    assert shift["channels"][SENSING_CHANNEL]["latency_ns"] == PERIOD_NS
+    assert shift["channels"][SENSING_CHANNEL] == {
+        **nominal["channels"][SENSING_CHANNEL], "latency_ns": PERIOD_NS,
+        # The Message published while the one before is in flight waits.
+        "route": {"capacity": 2, "overflow": "fail"}}
     assert {**shift, "channels": nominal["channels"]} == nominal
     swapped = authoring_document(CONTROLS["wrong-binding"], SAMPLES[0])
     assert {(b["field"], b["variable"]) for b in swapped["bind"]} >= {

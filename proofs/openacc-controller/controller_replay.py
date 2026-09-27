@@ -29,7 +29,7 @@ is computed before any Run:
 | --- | --- | --- |
 | `changed-input` | `relative_speed_mps` converted with scale -1 | `Speed2 - Speed1` |
 | `wrong-binding` | the two speed fields bound to each other's variable | ego and relative speed swapped |
-| `one-period-shift` | `acc.sensing` Latency one period | sample k-1 in Step k; sample 0 in Step 0 |
+| `one-period-shift` | `acc.sensing` Latency one period (route capacity 2) | sample k-1 in Step k; sample 0 in Step 0 |
 
 `declared-starts` is not a failing control. It replaces the start values with
 the FMU's declared ones and must pass: at Latency 0 sample 0 overwrites every
@@ -170,6 +170,13 @@ def reference_rows(trace: list[dict]) -> list[dict]:
 
 # Authoring ----------------------------------------------------------------------
 
+def route_capacity(variant: Variant) -> int:
+    """One Message per period, and each one in flight for its Latency: a
+    Message published while the one before it is still in flight waits
+    behind it."""
+    return 1 + variant.input_latency_ns // PERIOD_NS
+
+
 def authoring_document(variant: Variant, first: dict) -> dict:
     """The `sil-fmu-replay` document of one Run; `first` is sample 0."""
     variable = {name: name for name in INPUTS}
@@ -187,7 +194,8 @@ def authoring_document(variant: Variant, first: dict) -> dict:
         "channels": {
             SENSING_CHANNEL: {"schema": SENSING_SCHEMA, "direction": "in",
                               "latency_ns": variant.input_latency_ns,
-                              "route": {"capacity": 1, "overflow": "fail"}},
+                              "route": {"capacity": route_capacity(variant),
+                                        "overflow": "fail"}},
             # Nothing subscribes; the command is recorded only.
             COMMAND_CHANNEL: {"schema": COMMAND_SCHEMA, "direction": "out",
                               "latency_ns": PERIOD_NS},

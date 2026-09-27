@@ -111,7 +111,7 @@ Every accepted Run exited 0.
 | Period | 100 ms, the recording's grid |
 | Duration | 50.1 s: Slots 0 to 50.0 s |
 | `acc.sensing` Latency | 0: sample k is written before the Step [t_k, t_k+1) and held for it |
-| `acc.sensing` route | capacity 1, overflow fails the Run |
+| `acc.sensing` route | capacity 1 + Latency ÷ period: 1 in the nominal Run; overflow fails the Run |
 | `acc.command` Latency | 100 ms; recorded only |
 | Observation | the command published in Slot t_k is the value at t_k + 100 ms (`actual_offset_ns` 100 ms) |
 | Coverage | every reference row from 100 ms through 50.1 s: 501 observations, the final one included |
@@ -132,7 +132,7 @@ contract's tolerance.
 | --- | --- | --- |
 | `changed-input` | `sil-csv` converts `relative_speed_mps` with scale −1: `Speed2 − Speed1` | fail, first divergence from the law |
 | `wrong-binding` | the two speed fields bound to each other's input variable | fail, first divergence from the law |
-| `one-period-shift` | `acc.sensing` Latency 100 ms: Step k sees sample k−1, Step 0 the start values | fail at 21.8 s, as #178 found |
+| `one-period-shift` | `acc.sensing` Latency 100 ms: Step k sees sample k−1, Step 0 the start values. The route holds the one Message in flight, so its capacity is 2 | fail at 21.8 s, as #178 found |
 | `declared-starts` | no start values: the FMU's declared starts (60 m, 0 m/s, 25 m/s) | pass |
 
 **The wrong-parameter control is a binding.** The controller has no
