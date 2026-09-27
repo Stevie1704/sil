@@ -951,7 +951,8 @@ Before it writes a Manifest, the command rejects (exit 2) with the reason:
 - a mapping the importer would reject: an unknown variable, a variable of
   the other direction, a field type that does not carry the variable's type,
   a variable type the importer does not map, a start value that does not
-  parse, and a Binary field above an input's `maxSize`. These are the checks
+  parse, and a Binary field or Binary start value above the variable's
+  `maxSize`. These are the checks
   of [`sil-fmi-inspect`](#inspecting-an-fmu-before-a-run). The importer makes
   the same checks when it initializes. The command does not load the FMU's
   binary;
@@ -965,6 +966,9 @@ Before it writes a Manifest, the command rejects (exit 2) with the reason:
   different schema;
 - a missing Latency or route, a route on an `out` Channel, an unknown or
   duplicate key, and every value the Manifest builder refuses.
+- a Manifest or receipt path that is the document, the FMU or the
+  Recording, and a receipt path that is the Manifest path. The command
+  compares the resolved paths.
 
 The receipt (on standard output, or at `--receipt`) records the command's
 version, the SHA-256 of the document, the FMU, the Recording and the

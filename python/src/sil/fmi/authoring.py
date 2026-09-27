@@ -79,6 +79,8 @@ def author(document: str | Path, fmu: str | Path, recording: str | Path,
     return the receipt. Nothing is written when the Run is rejected."""
     document, fmu = Path(document), Path(fmu)
     recording, out = Path(recording), Path(out)
+    require_distinct(out, "Manifest", {"document": document, "fmu": fmu,
+                                       "recording": recording})
     document_bytes = _read(document, "authoring document")
     doc = _parse(document_bytes, document)
     _check_schemas(doc)
@@ -130,6 +132,21 @@ def _receipt(doc: dict, variables: dict[str, dict], report: dict,
             for name in doc["hold"]
         ],
     }
+
+
+def require_distinct(path: Path, written: str,
+                     others: dict[str, Path]) -> None:
+    """Refuse to write `path` over a file the Run reads or another output.
+
+    Paths are compared resolved, so a relative spelling or a symbolic link
+    of the same file is the same file.
+    """
+    for role, other in others.items():
+        if path.resolve() == Path(other).resolve():
+            raise AuthoringError(
+                f"{written} path {str(path)!r} is the {role}; writing the "
+                f"{written} would replace it"
+            )
 
 
 def _declared(variable: dict) -> dict:
@@ -493,6 +510,11 @@ def main(argv: list[str] | None = None) -> int:
                              "output")
     args = parser.parse_args(argv)
     try:
+        if args.receipt is not None:
+            require_distinct(args.receipt, "receipt", {
+                "manifest": args.output, "document": args.document,
+                "fmu": args.fmu, "recording": args.recording,
+            })
         receipt = author(args.document, args.fmu, args.recording, args.output)
     except AuthoringError as e:
         sys.stderr.write(f"{PROG}: error: {e}\n")

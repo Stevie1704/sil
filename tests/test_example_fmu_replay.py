@@ -9,12 +9,11 @@ and was computed without running the FMU.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 from pathlib import Path
 
 import pytest
-from conftest import ROOT, run_manifest
+from conftest import ROOT, load_module, run_manifest
 
 from sil import schema
 from sil.compare import compare, read_contract
@@ -26,14 +25,7 @@ EXAMPLE = ROOT / "examples" / "fmu-replay"
 MS = 1_000_000
 
 
-def _load(name: str, path: Path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-packaging = _load("fmu_replay_package", EXAMPLE / "package.py")
+packaging = load_module("fmu_replay_package", EXAMPLE / "package.py")
 
 
 @pytest.fixture(scope="module")

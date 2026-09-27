@@ -1,3 +1,4 @@
+import importlib.util
 import os
 import subprocess
 import sys
@@ -21,6 +22,14 @@ _SRC = ROOT / "python" / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 os.environ["PYTHONPATH"] = str(_SRC) + os.pathsep + os.environ.get("PYTHONPATH", "")
+
+
+def load_module(name: str, path: Path):
+    """Load a Python file that is not in a package, such as an example's."""
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 @pytest.fixture(scope="session")

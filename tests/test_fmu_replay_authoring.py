@@ -10,13 +10,12 @@ from __future__ import annotations
 
 import copy
 import ctypes
-import importlib.util
 import json
 import zipfile
 from pathlib import Path
 
 import pytest
-from conftest import ROOT
+from conftest import ROOT, load_module
 
 from sil.csv_recording import convert
 from sil.fmi.authoring import AuthoringError, author, main
@@ -44,14 +43,7 @@ FEEDTHROUGH_DOCUMENT = {
 }
 
 
-def _load(name: str, path: Path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-packaging = _load("fmu_replay_package", EXAMPLE / "package.py")
+packaging = load_module("fmu_replay_package", EXAMPLE / "package.py")
 
 
 def refuse_to_load(*args, **kwargs):
@@ -76,6 +68,24 @@ def recording(tmp_path: Path) -> Path:
     out = tmp_path / "recorded.mcap"
     convert(EXAMPLE / "mapping.json", EXAMPLE / "recorded.csv", out)
     return out
+
+
+def bounded_feedthrough(tmp_path: Path) -> Path:
+    """Feedthrough with a Binary input that declares maxSize 4."""
+    bounded = tmp_path / "Bounded.fmu"
+    with zipfile.ZipFile(FEEDTHROUGH) as source, \
+            zipfile.ZipFile(bounded, "w") as target:
+        for member in source.infolist():
+            data = source.read(member)
+            if member.filename == "modelDescription.xml":
+                data = data.replace(
+                    b'name="Binary_input" valueReference="31" '
+                    b'causality="input"',
+                    b'name="Binary_input" valueReference="31" '
+                    b'causality="input" maxSize="4"',
+                )
+            target.writestr(member, data)
+    return bounded
 
 
 def write(tmp_path: Path, document: dict, name: str = "authoring.json") -> Path:
@@ -341,19 +351,7 @@ class TestRejection:
     def test_a_binary_payload_above_the_declared_bound(
         self, tmp_path, recording
     ):
-        bounded = tmp_path / "Bounded.fmu"
-        with zipfile.ZipFile(FEEDTHROUGH) as source, \
-                zipfile.ZipFile(bounded, "w") as target:
-            for member in source.infolist():
-                data = source.read(member)
-                if member.filename == "modelDescription.xml":
-                    data = data.replace(
-                        b'name="Binary_input" valueReference="31" '
-                        b'causality="input"',
-                        b'name="Binary_input" valueReference="31" '
-                        b'causality="input" maxSize="4"',
-                    )
-                target.writestr(member, data)
+        bounded = bounded_feedthrough(tmp_path)
         document = {
             **DOCUMENT,
             "schemas": {
@@ -379,6 +377,20 @@ class TestRejection:
         }
         assert "carries 8 bytes, but input variable 'Binary_input' declares " \
             "maxSize 4" in rejection(tmp_path, document, bounded, recording)
+
+    def test_a_binary_start_above_the_declared_bound(
+        self, tmp_path, recording
+    ):
+        bounded = bounded_feedthrough(tmp_path)
+        held = [name for name in FEEDTHROUGH_INPUTS
+                if name not in ("Float64_continuous_input", "Binary_input")]
+        document = {
+            **FEEDTHROUGH_DOCUMENT, "hold": held,
+            "start": [{"variable": "Binary_input", "value": "0102030405",
+                       "unit": None}],
+        }
+        assert "5 bytes, but input variable 'Binary_input' declares maxSize " \
+            "4" in rejection(tmp_path, document, bounded, recording)
 
     def test_an_fmu_the_importer_cannot_drive(self, tmp_path, recording):
         fmi2 = tmp_path / "Fmi2.fmu"
@@ -468,6 +480,44 @@ class TestRejection:
         path.write_text('{"sil_fmu_replay": 1, "sil_fmu_replay": 1}')
         with pytest.raises(AuthoringError, match="duplicate key"):
             author(path, fmu, recording, tmp_path / "manifest.json")
+
+
+class TestPaths:
+    """The Manifest never replaces a file the Run reads, or the receipt."""
+
+    @pytest.mark.parametrize("role", ["document", "fmu", "recording"])
+    def test_the_manifest_does_not_replace_an_input(
+        self, tmp_path, fmu, recording, role
+    ):
+        document = write(tmp_path, DOCUMENT)
+        inputs = {"document": document, "fmu": fmu, "recording": recording}
+        before = inputs[role].read_bytes()
+        with pytest.raises(AuthoringError, match=f"is the {role}"):
+            author(document, fmu, recording, inputs[role])
+        assert inputs[role].read_bytes() == before
+
+    @pytest.mark.parametrize("role", ["manifest", "recording"])
+    def test_the_receipt_does_not_replace_the_manifest_or_an_input(
+        self, tmp_path, fmu, recording, role, capsys
+    ):
+        out = tmp_path / "manifest.json"
+        target = {"manifest": out, "recording": recording}[role]
+        before = recording.read_bytes()
+        code = main([str(EXAMPLE / "authoring.json"), str(fmu),
+                     "--recording", str(recording), "-o", str(out),
+                     "--receipt", str(target)])
+        assert code == 2
+        assert f"is the {role}" in capsys.readouterr().err
+        assert not out.exists()
+        assert recording.read_bytes() == before
+
+    def test_a_path_is_compared_after_it_is_resolved(
+        self, tmp_path, fmu, recording, monkeypatch
+    ):
+        monkeypatch.chdir(tmp_path)
+        with pytest.raises(AuthoringError, match="is the recording"):
+            author(EXAMPLE / "authoring.json", fmu, recording,
+                   Path("sub") / ".." / recording.name)
 
 
 class TestCommand:
