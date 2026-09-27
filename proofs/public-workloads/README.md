@@ -262,6 +262,8 @@ The two conventions a SiL Run most easily gets wrong are these:
   recorded `logMonoTime`. Subtract `first_log_mono_ns` to get virtual time.
 
 [`../libsafety`](../libsafety/README.md) consumes the library handoff (#193).
+[`../openacc-controller`](../openacc-controller/README.md) consumes the
+single-FMU handoff (#194).
 
 ## Retained results
 

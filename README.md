@@ -1574,6 +1574,24 @@ proofs/public-workloads/run-proof.sh   # the pinned bundle; needs docker and net
 proofs/libsafety/run-proof.sh build/public-workloads/bundle
 ```
 
+## Public single-FMU acceptance
+
+[proofs/openacc-controller/](proofs/openacc-controller/) replays a public
+recorded car-following window into one FMU with the supported workflow:
+`sil-csv`, `sil-fmu-replay` and `sil-compare` against an independent FMPy
+execution. The recording is a 50 s JRC OpenACC window. The FMU is
+`AccController`, a PythonFMU3 export written in this repository, not a
+third-party model. [proofs/public-workloads/](proofs/public-workloads/) pins
+both, and the reference. All 501 commands agree within 1e-10, the final one
+at 50.1 s included, and two Runs are byte-identical. A changed-input, a
+wrong-binding and a one-period-shift control each fail where the control law
+predicts before the Run.
+
+```sh
+proofs/public-workloads/run-proof.sh   # the pinned bundle; needs docker and network
+proofs/openacc-controller/run-proof.sh build/public-workloads/bundle
+```
+
 ## First-party CAN bus model
 
 [models/can/](models/can/) builds a standalone C++20 FMI 3.0 CAN Bus Simulation
@@ -1647,6 +1665,9 @@ proofs/fmi-ls-bus/ acceptance fixture for the FMI-LS-BUS CAN demo FMUs:
 proofs/libsafety/  public shared-library acceptance: a recorded CAN segment
                    replayed into opendbc's safety library and compared
                    with its independent reference
+proofs/openacc-controller/
+                   public single-FMU acceptance: a recorded OpenACC window
+                   replayed into the ACC controller FMU and compared with FMPy
 python/src/sil/    manifest builder, step-participant lib, test API,
                    determinism check, declared memory footprint,
                    CSV-to-Recording converter
