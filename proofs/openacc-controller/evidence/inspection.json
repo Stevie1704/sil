@@ -1,0 +1,119 @@
+{
+  "sil_fmi_inspection": 1,
+  "archive": "/bundle/fmus/AccController.fmu",
+  "platform": "x86_64-linux",
+  "verdict": "compatible",
+  "unusable": [],
+  "facts": {
+    "fmi_version": "3.0",
+    "model_name": "AccController",
+    "generation_tool": "PythonFMU3 0.3.4",
+    "instantiation_token": "013897857484d861ee2a218bb340aa36a5d3b664b386c1c2915c5f8be8f37d7d",
+    "interfaces": {
+      "CoSimulation": {
+        "needsExecutionTool": "true",
+        "canBeInstantiatedOnlyOncePerProcess": "false",
+        "canGetAndSetFMUState": "false",
+        "canSerializeFMUState": "false",
+        "modelIdentifier": "AccController",
+        "canHandleVariableCommunicationStepSize": "false"
+      }
+    },
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-windows"
+    ],
+    "resources": true
+  },
+  "variables": [
+    {
+      "name": "time",
+      "type": "Float64",
+      "value_reference": 0,
+      "causality": "independent",
+      "variability": null,
+      "start": null,
+      "unit": "s",
+      "declared_type": null,
+      "dimensions": [],
+      "max_size": null,
+      "mime_type": null,
+      "clocks": [],
+      "interval_variability": null,
+      "unmappable": null
+    },
+    {
+      "name": "gap_m",
+      "type": "Float64",
+      "value_reference": 1,
+      "causality": "input",
+      "variability": null,
+      "start": "60",
+      "unit": "m",
+      "declared_type": null,
+      "dimensions": [],
+      "max_size": null,
+      "mime_type": null,
+      "clocks": [],
+      "interval_variability": null,
+      "unmappable": null
+    },
+    {
+      "name": "relative_speed_mps",
+      "type": "Float64",
+      "value_reference": 2,
+      "causality": "input",
+      "variability": null,
+      "start": "0",
+      "unit": "m/s",
+      "declared_type": null,
+      "dimensions": [],
+      "max_size": null,
+      "mime_type": null,
+      "clocks": [],
+      "interval_variability": null,
+      "unmappable": null
+    },
+    {
+      "name": "ego_speed_mps",
+      "type": "Float64",
+      "value_reference": 3,
+      "causality": "input",
+      "variability": null,
+      "start": "25",
+      "unit": "m/s",
+      "declared_type": null,
+      "dimensions": [],
+      "max_size": null,
+      "mime_type": null,
+      "clocks": [],
+      "interval_variability": null,
+      "unmappable": null
+    },
+    {
+      "name": "accel_mps2",
+      "type": "Float64",
+      "value_reference": 4,
+      "causality": "output",
+      "variability": null,
+      "start": null,
+      "unit": "m/s2",
+      "declared_type": null,
+      "dimensions": [],
+      "max_size": null,
+      "mime_type": null,
+      "clocks": [],
+      "interval_variability": null,
+      "unmappable": null
+    }
+  ],
+  "terminals": [],
+  "bus": null,
+  "mapping": null,
+  "unverified": [
+    "whether binaries/x86_64-linux/AccController.so loads on this host and the libraries it depends on resolve",
+    "whether the FMU accepts its start values and completes initialization",
+    "the FMU declares needsExecutionTool=true; the tool it needs is outside the archive",
+    "the FMU reads resources/ at run time; which files it needs is not declared"
+  ]
+}

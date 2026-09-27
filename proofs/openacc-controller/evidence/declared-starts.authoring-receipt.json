@@ -1,0 +1,62 @@
+{
+  "sil_fmu_replay_receipt": 1,
+  "author": {
+    "name": "sil-fmu-replay",
+    "version": "0.1.0",
+    "revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd"
+  },
+  "document": {
+    "file": "declared-starts.authoring.json",
+    "sha256": "7588dd43122e0427ba7cd8b16e84c7ceab092dc22cab0e4853f0e86ba57debe5"
+  },
+  "fmu": {
+    "file": "AccController.fmu",
+    "sha256": "ea0db65a88bf181186d150de8dbe27f7d2c13ac6fec9e8ed4622c3d2e7c8632c",
+    "model_name": "AccController",
+    "instantiation_token": "013897857484d861ee2a218bb340aa36a5d3b664b386c1c2915c5f8be8f37d7d"
+  },
+  "recording": {
+    "file": "sensing.mcap",
+    "sha256": "3e559ed07e397f1e82549aeab3188a80b511c0a778aae7a8b32b1b27be313c5f"
+  },
+  "manifest": {
+    "file": "declared-starts.json",
+    "sha256": "47e7bc06b233b2fe3e5b875cbcdf813e50375015796f8e1c4bb0faa8132f739a"
+  },
+  "bindings": [
+    {
+      "channel": "acc.sensing",
+      "field": "gap_m",
+      "variable": "gap_m",
+      "type": "Float64",
+      "causality": "input",
+      "unit": "m"
+    },
+    {
+      "channel": "acc.sensing",
+      "field": "relative_speed_mps",
+      "variable": "relative_speed_mps",
+      "type": "Float64",
+      "causality": "input",
+      "unit": "m/s"
+    },
+    {
+      "channel": "acc.sensing",
+      "field": "ego_speed_mps",
+      "variable": "ego_speed_mps",
+      "type": "Float64",
+      "causality": "input",
+      "unit": "m/s"
+    },
+    {
+      "channel": "acc.command",
+      "field": "accel_mps2",
+      "variable": "accel_mps2",
+      "type": "Float64",
+      "causality": "output",
+      "unit": "m/s2"
+    }
+  ],
+  "starts": [],
+  "held": []
+}

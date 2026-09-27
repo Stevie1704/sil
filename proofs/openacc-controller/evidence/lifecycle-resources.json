@@ -1,0 +1,17 @@
+[
+  {
+    "phase": "instantiated"
+  },
+  {
+    "phase": "initialized",
+    "accel_mps2": -3.0
+  },
+  {
+    "phase": "stepped",
+    "t_ns": 100000000,
+    "accel_mps2": -3.0
+  },
+  {
+    "phase": "terminated"
+  }
+]

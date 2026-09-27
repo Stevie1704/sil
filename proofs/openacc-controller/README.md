@@ -148,6 +148,35 @@ so no change that keeps it clamped can show there. `one-period-shift` and
 `changed-input` both first diverge at 21.8 s for that reason. `wrong-binding`
 leaves the clamp at once and diverges at the first observation.
 
+## Retained results
+
+[`evidence/`](evidence/) is the output of CI run 36347528001 on native
+Linux x86-64 (glibc 2.36, CPython 3.13.7, `/usr/local/lib/libpython3.13.so`).
+It holds `report.json`, the inspection, both lifecycles, the conversion and
+authoring receipts, every comparison report, the contract and
+`expectations.json`. The Recordings are not committed. The job keeps the
+Manifests and runner output as the `openacc-controller-evidence` artifact.
+
+| Check | Result |
+| --- | --- |
+| Pins | recording `968b007a…` and reference `f8607c9f…` as handed off; the FMU is the bundle's re-export `ea0db65a…` at revision `4eaa340`, not `12df3da…`, with the committed model source and the installed control law |
+| Interface | `sil-fmi-inspect` verdict `compatible`; equal to the #178 audit |
+| Runtime | every library of the Linux binary resolves: libstdc++, libm, libgcc_s, libc |
+| Lifecycle | with `resources/`: instantiated, initialized, stepped, terminated, command −3.0 m/s² as the law gives; without: `fmi3InstantiateCoSimulation returned no instance` |
+| Conversion | 501 samples on `acc.sensing`, 0 to 50.0 s; 501 reference rows, 0.1 to 50.1 s |
+| Nominal | 501 of 501 commands within tolerance, the final one at 50.1 s included |
+| Determinism | two authorings: byte-identical Manifest `e8d342e7…`; two Runs: byte-identical Recordings `891b1cdf…` |
+| `changed-input` | 251 divergences, the first at 21.8 s: −3.0, expected −2.9407 |
+| `wrong-binding` | 501 divergences, the first at 0.1 s: 1.5, expected −3.0 |
+| `one-period-shift` | 216 divergences, the first at 21.8 s: −3.0, expected −2.9407, as #178 found |
+| `declared-starts` | pass: the start values are not observable |
+
+Every first divergence is the one `expectations.json` fixed before the Runs.
+
+Resource observations from that runner: a nominal Run took 0.45 s of
+wall-clock time for 50.1 s of Virtual time. This is observational. It is not
+an acceptance criterion and not a representative vECU Step cost for #125.
+
 ## Limits
 
 - **Repository-authored model.** The FMU is not a third-party artifact. This

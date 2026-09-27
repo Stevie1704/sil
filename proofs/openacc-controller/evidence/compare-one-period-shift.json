@@ -1,0 +1,54 @@
+{
+  "sil_comparison_report": 1,
+  "comparison": "reference",
+  "determinism": "not judged: a reference comparison says whether two trajectories agree within the contract, not whether either Run reproduces; a determinism check (sil-check) bit-compares two Recordings of one Manifest",
+  "verdict": "fail",
+  "contract": {
+    "path": "/workspace/inputs/contract.json",
+    "sha256": "a523e61be6f3ef690a0488c6e0e668f227e93c58a1159952d979611032582fdf"
+  },
+  "actual": {
+    "path": "/workspace/runs/one-period-shift.mcap",
+    "sha256": "396ca63c296804ca98374372ac2b9b51d78db9bde6335141953bb7961f277607"
+  },
+  "reference": {
+    "path": "/workspace/inputs/reference.mcap",
+    "sha256": "bb4e1bb9196559bcbdd6ae1b881e45af2f9be6b0a2f63af2347ee708f88b3859"
+  },
+  "evaluation": {
+    "from_ns": 100000000,
+    "to_ns": 50100000000
+  },
+  "coverage": [],
+  "channels": {
+    "acc.command": {
+      "reference_channel": "reference.command",
+      "observations": 501,
+      "checked": 501,
+      "failed": 216,
+      "nonfinite": 0,
+      "missing_actual": 0,
+      "missing_reference": 0,
+      "ambiguous_actual": 0,
+      "ambiguous_reference": 0
+    }
+  },
+  "divergences": 216,
+  "first_divergence": {
+    "kind": "value",
+    "channel": "acc.command",
+    "reference_channel": "reference.command",
+    "field": "accel_mps2",
+    "observation_ns": 21800000000,
+    "actual_publication_ns": 21700000000,
+    "reference_time_ns": 21800000000,
+    "actual": -3.0,
+    "expected": -2.940724869397311,
+    "tolerance": {
+      "atol": 1e-10,
+      "rtol": 1e-12,
+      "allowed": 1.0294072486939731e-10
+    },
+    "abs_error": 0.059275130602689075
+  }
+}

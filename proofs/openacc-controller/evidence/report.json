@@ -1,0 +1,528 @@
+{
+  "claim": "public-artifact acceptance of one FMU on recorded data against an independent importer; the model is repository-authored; not production-vehicle validation",
+  "identities": {
+    "fmu": {
+      "path": "fmus/AccController.fmu",
+      "archive_sha256": "ea0db65a88bf181186d150de8dbe27f7d2c13ac6fec9e8ed4622c3d2e7c8632c",
+      "embedded": {
+        "source_revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd",
+        "model_sha256": "e9f56f6402652d536bade3ec6ee7fe03b19eac8e309f801d87d879e18fbebfa6",
+        "dynamics_sha256": "7d10797f998608d759f5fdfda275dfe0d97370149c48d71ad63d6d296b11cea5",
+        "exporter": "PythonFMU3 0.3.4",
+        "exporter_revision": "6c4b81cb869447f6c69e3417c495f73f11c40ae0",
+        "python": "CPython 3.13.7 (provided by execution image)",
+        "machine_class": "Linux x86-64, glibc 2.36",
+        "model_license": "Apache-2.0",
+        "exporter_license": "MIT"
+      },
+      "model_sha256": "e9f56f6402652d536bade3ec6ee7fe03b19eac8e309f801d87d879e18fbebfa6",
+      "dynamics_sha256": "7d10797f998608d759f5fdfda275dfe0d97370149c48d71ad63d6d296b11cea5",
+      "same_archive_as_handoff": false,
+      "handoff_archive_sha256": "12df3da57fe71209d01c39985a829ba606260c11e056fa4e83d92f1b1efac662",
+      "origin": "repository-authored, PythonFMU3 0.3.4 export of proofs/acc-fmi"
+    },
+    "inspection": {
+      "verdict": "compatible",
+      "interface": {
+        "fmi_version": "3.0",
+        "model_name": "AccController",
+        "generation_tool": "PythonFMU3 0.3.4",
+        "interfaces": [
+          "CoSimulation"
+        ],
+        "co_simulation": {
+          "needsExecutionTool": "true",
+          "canBeInstantiatedOnlyOncePerProcess": "false",
+          "canGetAndSetFMUState": "false",
+          "canSerializeFMUState": "false",
+          "modelIdentifier": "AccController",
+          "canHandleVariableCommunicationStepSize": "false"
+        },
+        "platforms": [
+          "x86_64-linux",
+          "x86_64-windows"
+        ],
+        "variables": [
+          {
+            "name": "time",
+            "type": "Float64",
+            "causality": "independent",
+            "unit": "s",
+            "start": null,
+            "dimensions": 0
+          },
+          {
+            "name": "gap_m",
+            "type": "Float64",
+            "causality": "input",
+            "unit": "m",
+            "start": "60",
+            "dimensions": 0
+          },
+          {
+            "name": "relative_speed_mps",
+            "type": "Float64",
+            "causality": "input",
+            "unit": "m/s",
+            "start": "0",
+            "dimensions": 0
+          },
+          {
+            "name": "ego_speed_mps",
+            "type": "Float64",
+            "causality": "input",
+            "unit": "m/s",
+            "start": "25",
+            "dimensions": 0
+          },
+          {
+            "name": "accel_mps2",
+            "type": "Float64",
+            "causality": "output",
+            "unit": "m/s2",
+            "start": null,
+            "dimensions": 0
+          }
+        ]
+      },
+      "instantiation_token": "013897857484d861ee2a218bb340aa36a5d3b664b386c1c2915c5f8be8f37d7d",
+      "not_verified_statically": [
+        "whether binaries/x86_64-linux/AccController.so loads on this host and the libraries it depends on resolve",
+        "whether the FMU accepts its start values and completes initialization",
+        "the FMU declares needsExecutionTool=true; the tool it needs is outside the archive",
+        "the FMU reads resources/ at run time; which files it needs is not declared"
+      ]
+    },
+    "recording": {
+      "path": "recordings/openacc-window.csv",
+      "sha256": "968b007a4a775225407e93829cb93a668968797203409188d94505b4d72a96f5",
+      "window": {
+        "start_s": 300.0,
+        "end_s": 350.0,
+        "lead": 1,
+        "ego": 2
+      },
+      "source": {
+        "role": "recorded car-following trajectories for the single and coupled FMU workloads",
+        "kind": "file",
+        "url": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/TransportExpData/JRCDBT0001/LATEST/AstaZero/ASta_040719_platoon7.csv",
+        "dataset": "JRC OpenACC, AstaZero campaign (https://data.jrc.ec.europa.eu/dataset/9702c950-c80f-4d2f-982f-44d06ea0009f)",
+        "sha256": "2696ef06a83af7cd8aaea266c0f065b56346666e7c92342f2c76d85a96e3c9fa",
+        "size": 6669670,
+        "license": "CC BY 4.0, (c) European Union 1995-2026"
+      }
+    },
+    "reference": {
+      "path": "references/controller-open-loop.json",
+      "sha256": "f8607c9f63a54ff0caa6e636f274d925d556822906a1096ab47fd4d26130bf31",
+      "importer": "FMPy, in the #178 tool image"
+    },
+    "bundle": {
+      "bundle_json_sha256": "881eb8d19e8dd3b387fee97f1a03e279f38efe0c8852d80c53a9b698ea8e267e",
+      "tools": {
+        "machine": "x86_64",
+        "libc": "glibc 2.36",
+        "python": "3.13.7",
+        "compiler": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+        "source_revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd",
+        "packages": {
+          "fmpy": "0.3.26",
+          "pycapnp": "2.2.1",
+          "zstandard": "0.25.0",
+          "cffi": "2.0.0",
+          "numpy": "2.5.3",
+          "pythonfmu3": "0.3.4"
+        }
+      }
+    },
+    "conversion": {
+      "sensing": {
+        "sil_csv_receipt": 1,
+        "converter": {
+          "name": "sil-csv",
+          "version": "0.1.0",
+          "revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd",
+          "mcap": "mcap-python/1.4.0"
+        },
+        "source": {
+          "file": "openacc-window.csv",
+          "sha256": "968b007a4a775225407e93829cb93a668968797203409188d94505b4d72a96f5",
+          "rows": 501
+        },
+        "mapping": {
+          "file": "sensing.mapping.json",
+          "sha256": "70666d979d078f7636ce4e9dc7617c0a9892453f608cfaebd7f60a7ac0945e46"
+        },
+        "recording": {
+          "file": "sensing.mcap",
+          "sha256": "3e559ed07e397f1e82549aeab3188a80b511c0a778aae7a8b32b1b27be313c5f"
+        },
+        "channels": {
+          "acc.sensing": {
+            "schema": "acc.Sensing",
+            "messages": 501,
+            "first_ns": 0,
+            "last_ns": 50000000000
+          }
+        },
+        "time_bounds": {
+          "first_ns": 0,
+          "last_ns": 50000000000
+        }
+      },
+      "sensing-changed": {
+        "sil_csv_receipt": 1,
+        "converter": {
+          "name": "sil-csv",
+          "version": "0.1.0",
+          "revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd",
+          "mcap": "mcap-python/1.4.0"
+        },
+        "source": {
+          "file": "openacc-window.csv",
+          "sha256": "968b007a4a775225407e93829cb93a668968797203409188d94505b4d72a96f5",
+          "rows": 501
+        },
+        "mapping": {
+          "file": "sensing-changed.mapping.json",
+          "sha256": "8b9de03edfbad9714201a82d15ce322517d4e99f39946c51e4631ea9e748e173"
+        },
+        "recording": {
+          "file": "sensing-changed.mcap",
+          "sha256": "6e3b27c546e93959546e83901c6e0003634a041e1a65c0e0a0662f337b9be86f"
+        },
+        "channels": {
+          "acc.sensing": {
+            "schema": "acc.Sensing",
+            "messages": 501,
+            "first_ns": 0,
+            "last_ns": 50000000000
+          }
+        },
+        "time_bounds": {
+          "first_ns": 0,
+          "last_ns": 50000000000
+        }
+      },
+      "reference": {
+        "sil_csv_receipt": 1,
+        "converter": {
+          "name": "sil-csv",
+          "version": "0.1.0",
+          "revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd",
+          "mcap": "mcap-python/1.4.0"
+        },
+        "source": {
+          "file": "reference.csv",
+          "sha256": "66bd13652de7ba4f51d15527f49cb17831d4b623b7d6218bbfca9e6946eef0b1",
+          "rows": 501
+        },
+        "mapping": {
+          "file": "reference.mapping.json",
+          "sha256": "0fda1ef153ad666e65638b1d651f491420a7e78f5f29f25a94574c6f1d92d46a"
+        },
+        "recording": {
+          "file": "reference.mcap",
+          "sha256": "bb4e1bb9196559bcbdd6ae1b881e45af2f9be6b0a2f63af2347ee708f88b3859"
+        },
+        "channels": {
+          "reference.command": {
+            "schema": "acc.Command",
+            "messages": 501,
+            "first_ns": 100000000,
+            "last_ns": 50100000000
+          }
+        },
+        "time_bounds": {
+          "first_ns": 100000000,
+          "last_ns": 50100000000
+        }
+      }
+    },
+    "runtime": {
+      "machine": "x86_64",
+      "libc": "glibc 2.36",
+      "python": "3.13.7",
+      "libpython": "/usr/local/lib/libpython3.13.so",
+      "runner": {
+        "license": "Apache-2.0",
+        "source_repository": "https://github.com/Stevie1704/sil",
+        "source_revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd",
+        "version": "0.1.0"
+      },
+      "binary_ldd": [
+        "linux-vdso.so.1",
+        "libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6",
+        "libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6",
+        "libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1",
+        "libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6",
+        "/lib64/ld-linux-x86-64.so.2"
+      ],
+      "example_image_id": "sha256:5b424d61f9c328695979b8fdb6e1ad7587eeac32e62561c65b2d860179158566"
+    }
+  },
+  "lifecycle": {
+    "with_resources": [
+      "instantiated",
+      "initialized",
+      "stepped",
+      "terminated"
+    ],
+    "initialized_command_mps2": -3.0,
+    "without_resources": "fmi3InstantiateCoSimulation returned no instance"
+  },
+  "run": {
+    "period_ns": 100000000,
+    "duration_ns": 50100000000,
+    "start_values": "sample 0 of each input",
+    "latency_ns": {
+      "acc.sensing": 0,
+      "acc.command": 100000000
+    },
+    "observation": "the command published in Slot t_k is compared with the reference row t_k + 100 ms",
+    "comparison": {
+      "atol": 1e-10,
+      "rtol": 1e-12,
+      "rule": "abs(actual - reference) <= atol + rtol * abs(reference)"
+    }
+  },
+  "expectations_sha256": "47de25a0a153fccefed2ebb9b75824b89cca6975d02ae85f7c53a84b97a18829",
+  "contract_sha256": "a523e61be6f3ef690a0488c6e0e668f227e93c58a1159952d979611032582fdf",
+  "nominal": {
+    "manifest_sha256": "e8d342e7a2e5132b133f88e3740f9b289f391f5ddec5797171a09d6b9c82ee8d",
+    "manifests_byte_identical": true,
+    "recording_sha256": "891b1cdfea1acb690642e47f1b563a323647b090095f28ed350747ac58c22f5c",
+    "recordings_byte_identical": true,
+    "observations_checked": 501,
+    "first_observation_ns": 100000000,
+    "final_observation_ns": 50100000000,
+    "shutdown": "sil-run exit 0: the importer exited 0 after fmi3Terminate and fmi3FreeInstance",
+    "authoring": {
+      "sil_fmu_replay_receipt": 1,
+      "author": {
+        "name": "sil-fmu-replay",
+        "version": "0.1.0",
+        "revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd"
+      },
+      "document": {
+        "file": "nominal.authoring.json",
+        "sha256": "5443e6559e672e098db8259ce0c66802a1b1b22bc62c0acc38047e9ea8e593f7"
+      },
+      "fmu": {
+        "file": "AccController.fmu",
+        "sha256": "ea0db65a88bf181186d150de8dbe27f7d2c13ac6fec9e8ed4622c3d2e7c8632c",
+        "model_name": "AccController",
+        "instantiation_token": "013897857484d861ee2a218bb340aa36a5d3b664b386c1c2915c5f8be8f37d7d"
+      },
+      "recording": {
+        "file": "sensing.mcap",
+        "sha256": "3e559ed07e397f1e82549aeab3188a80b511c0a778aae7a8b32b1b27be313c5f"
+      },
+      "manifest": {
+        "file": "nominal.json",
+        "sha256": "e8d342e7a2e5132b133f88e3740f9b289f391f5ddec5797171a09d6b9c82ee8d"
+      },
+      "bindings": [
+        {
+          "channel": "acc.sensing",
+          "field": "gap_m",
+          "variable": "gap_m",
+          "type": "Float64",
+          "causality": "input",
+          "unit": "m"
+        },
+        {
+          "channel": "acc.sensing",
+          "field": "relative_speed_mps",
+          "variable": "relative_speed_mps",
+          "type": "Float64",
+          "causality": "input",
+          "unit": "m/s"
+        },
+        {
+          "channel": "acc.sensing",
+          "field": "ego_speed_mps",
+          "variable": "ego_speed_mps",
+          "type": "Float64",
+          "causality": "input",
+          "unit": "m/s"
+        },
+        {
+          "channel": "acc.command",
+          "field": "accel_mps2",
+          "variable": "accel_mps2",
+          "type": "Float64",
+          "causality": "output",
+          "unit": "m/s2"
+        }
+      ],
+      "starts": [
+        {
+          "variable": "gap_m",
+          "type": "Float64",
+          "causality": "input",
+          "unit": "m",
+          "value": "28.421965857341817"
+        },
+        {
+          "variable": "relative_speed_mps",
+          "type": "Float64",
+          "causality": "input",
+          "unit": "m/s",
+          "value": "-0.029090910000000747"
+        },
+        {
+          "variable": "ego_speed_mps",
+          "type": "Float64",
+          "causality": "input",
+          "unit": "m/s",
+          "value": "27.62363636"
+        }
+      ],
+      "held": []
+    },
+    "provenance": {
+      "artifacts": {
+        "clock_shim": null,
+        "command_files": [
+          {
+            "file": {
+              "path": "/bundle/fmus/AccController.fmu",
+              "sha256": "ea0db65a88bf181186d150de8dbe27f7d2c13ac6fec9e8ed4622c3d2e7c8632c"
+            },
+            "participant": "fmu"
+          }
+        ],
+        "native_participants": [],
+        "process_participants": [
+          {
+            "command": [
+              "/opt/sil/python/bin/python3",
+              "-m",
+              "sil.fmi",
+              "/bundle/fmus/AccController.fmu",
+              "--bind",
+              "acc.sensing:gap_m=gap_m",
+              "--bind",
+              "acc.sensing:relative_speed_mps=relative_speed_mps",
+              "--bind",
+              "acc.sensing:ego_speed_mps=ego_speed_mps",
+              "--bind",
+              "acc.command:accel_mps2=accel_mps2",
+              "--start",
+              "gap_m=28.421965857341817",
+              "--start",
+              "relative_speed_mps=-0.029090910000000747",
+              "--start",
+              "ego_speed_mps=27.62363636"
+            ],
+            "executable": {
+              "path": "/usr/local/bin/python3.13",
+              "sha256": "73b68fc2dac176af16098180a2c98a03ee9f1f1b02db25d42d44d782e79e2330"
+            },
+            "name": "fmu"
+          }
+        ],
+        "runner": {
+          "path": "/usr/local/bin/sil-run",
+          "sha256": "a28f97b4f5e51ad75e99270461b8ead4fc1777ca72ed8d8bffa49894c56e351f"
+        }
+      },
+      "errors": [],
+      "machine_class": {
+        "architecture": "x86-64",
+        "id": "Linux/x86-64/glibc-2.36",
+        "libc": "glibc-2.36",
+        "os": "Linux"
+      },
+      "manifest_hash": "e8d342e7a2e5132b133f88e3740f9b289f391f5ddec5797171a09d6b9c82ee8d",
+      "recording": {
+        "sha256": "891b1cdfea1acb690642e47f1b563a323647b090095f28ed350747ac58c22f5c"
+      },
+      "run_exit_code": 0,
+      "schema_version": 1,
+      "sil": {
+        "source_repository": "https://github.com/Stevie1704/sil",
+        "source_revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd",
+        "version": "0.1.0"
+      }
+    }
+  },
+  "controls": {
+    "changed-input": {
+      "verdict": "fail",
+      "divergences": 251,
+      "first_divergence": {
+        "kind": "value",
+        "channel": "acc.command",
+        "reference_channel": "reference.command",
+        "field": "accel_mps2",
+        "observation_ns": 21800000000,
+        "actual_publication_ns": 21700000000,
+        "reference_time_ns": 21800000000,
+        "actual": -3.0,
+        "expected": -2.940724869397311,
+        "tolerance": {
+          "atol": 1e-10,
+          "rtol": 1e-12,
+          "allowed": 1.0294072486939731e-10
+        },
+        "abs_error": 0.059275130602689075
+      }
+    },
+    "wrong-binding": {
+      "verdict": "fail",
+      "divergences": 501,
+      "first_divergence": {
+        "kind": "value",
+        "channel": "acc.command",
+        "reference_channel": "reference.command",
+        "field": "accel_mps2",
+        "observation_ns": 100000000,
+        "actual_publication_ns": 0,
+        "reference_time_ns": 100000000,
+        "actual": 1.5,
+        "expected": -3.0,
+        "tolerance": {
+          "atol": 1e-10,
+          "rtol": 1e-12,
+          "allowed": 1.03e-10
+        },
+        "abs_error": 4.5
+      }
+    },
+    "one-period-shift": {
+      "verdict": "fail",
+      "divergences": 216,
+      "first_divergence": {
+        "kind": "value",
+        "channel": "acc.command",
+        "reference_channel": "reference.command",
+        "field": "accel_mps2",
+        "observation_ns": 21800000000,
+        "actual_publication_ns": 21700000000,
+        "reference_time_ns": 21800000000,
+        "actual": -3.0,
+        "expected": -2.940724869397311,
+        "tolerance": {
+          "atol": 1e-10,
+          "rtol": 1e-12,
+          "allowed": 1.0294072486939731e-10
+        },
+        "abs_error": 0.059275130602689075
+      }
+    },
+    "declared-starts": {
+      "verdict": "pass",
+      "recording_sha256": "252a6837560a68bb766253030023bd33f222c0e94d4bb3a9db8edce4f7f44a18"
+    }
+  },
+  "resources": {
+    "note": "observational, from one runner; not an acceptance criterion and not a representative vECU measurement for #125",
+    "run_wall_s": [
+      0.4518521519999865,
+      0.44872203700001023
+    ],
+    "virtual_to_wall": 111.65041132133847
+  }
+}

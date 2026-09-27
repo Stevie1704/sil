@@ -1,0 +1,25 @@
+{
+  "sil_comparison": 1,
+  "evaluation": {
+    "from_ns": 100000000,
+    "to_ns": 50100000000
+  },
+  "channels": {
+    "acc.command": {
+      "reference_channel": "reference.command",
+      "actual_offset_ns": 100000000,
+      "reference_offset_ns": 0,
+      "observations": {
+        "start_ns": 100000000,
+        "stop_ns": 50100000000,
+        "step_ns": 100000000
+      },
+      "fields": {
+        "accel_mps2": {
+          "atol": 1e-10,
+          "rtol": 1e-12
+        }
+      }
+    }
+  }
+}
