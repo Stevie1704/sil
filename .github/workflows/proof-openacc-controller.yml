@@ -1,0 +1,50 @@
+name: proof-openacc-controller
+
+# Public single-FMU acceptance (issue #194). It regenerates the #178 bundle,
+# whose image build fetches pinned public sources, so this sits outside the
+# general push gate like the other external proofs. The acceptance runs with
+# no network on native Linux x86-64.
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/openacc-controller/**'
+      - 'proofs/public-workloads/**'
+      - 'proofs/acc-fmi/models/**'
+      - 'python/src/sil/examples/acc/dynamics.py'
+      - '.github/workflows/proof-openacc-controller.yml'
+  workflow_dispatch:
+
+jobs:
+  accept:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Test the conversion, authoring and identity policy
+        run: |
+          uv venv .venv
+          uv pip install -p .venv/bin/python -e "python/[dev]"
+          .venv/bin/python -m pytest proofs/openacc-controller -v
+
+      - name: Regenerate the public-workload bundle (#178)
+        timeout-minutes: 40
+        run: proofs/public-workloads/run-proof.sh "$PWD/build/public-workloads"
+
+      - name: Inspect, replay, compare and run the controls
+        timeout-minutes: 20
+        run: proofs/openacc-controller/run-proof.sh "$PWD/build/public-workloads/bundle" "$PWD/build/openacc-controller"
+
+      - name: Keep the acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openacc-controller-evidence
+          path: |
+            build/openacc-controller/evidence/
+            build/openacc-controller/inputs/*.json
+            build/openacc-controller/runs/*.json
+            build/openacc-controller/runs/*.log
