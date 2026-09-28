@@ -116,6 +116,10 @@ struct ReplaySpec {
   std::string recording;       // resolved relative to the manifest directory
   std::string recording_hash;  // sha256 the recording bytes must match
   std::vector<std::string> channels;
+  // Absent: the Messages of a Slot are published before every activation of
+  // that Slot. Present: at this place among the Slot's activations, ordered
+  // like a task priority, so the replay takes a live publisher's place.
+  std::optional<int32_t> priority;
 };
 
 struct ParticipantSpec {

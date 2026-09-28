@@ -51,6 +51,24 @@ def read_schemas(path: str | Path) -> dict[str, dict]:
     }
 
 
+def read_manifest_hash(path: str | Path) -> str | None:
+    """The hash of the Manifest whose Run wrote the Recording, or None for a
+    Recording no Run wrote, such as one converted at the edge.
+
+    Dispatches like `read_records`."""
+    path = Path(path)
+    if path.suffix != ".mcap":
+        # read_records states the refusal.
+        read_records(path)
+    from mcap.reader import make_reader
+
+    with open(path, "rb") as f:
+        for metadata in make_reader(f).iter_metadata():
+            if metadata.name == "sil" and "manifest_hash" in metadata.metadata:
+                return metadata.metadata["manifest_hash"]
+    return None
+
+
 def _read_mcap(path: Path) -> Iterator[tuple[str, int, bytes]]:
     from mcap.reader import make_reader
 

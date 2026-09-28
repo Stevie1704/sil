@@ -55,7 +55,9 @@ the two participants; `inspection` runs the checks before loading on an
 archive alone, for `sil-fmi-inspect`; `authoring` writes a Manifest that
 replays a Recording into one FMU from those same checks, for `sil-fmu-replay`,
 and `coupling` one that connects several FMUs through Channels, for
-`sil-fmu-couple`; `documents` holds what the two authoring commands share.
+`sil-fmu-couple`; `substitution` replaces one coupled FMU with a replay of
+its recorded Channels, for `sil-fmu-substitute`; `documents` holds what the
+authoring commands share.
 What a Manifest names — `python -m sil.fmi` — and what
 another module imports — `sil.fmi.FmuParticipant` and the rest below — is the
 same surface it has always been.

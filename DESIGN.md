@@ -114,6 +114,8 @@ deterministic by construction: the recorder as a direct sink at the publish
 choke point (equivalent to a latency-0 subscriber running last in every
 slot), the replayer driven by the kernel loop, which folds its recorded
 timestamps into slot selection and publishes them before task activations.
+A replayer that declares a `priority` publishes at that place among the
+slot's task activations instead, as the live publisher it replaces did.
 MCAP as the container: self-describing, schema-embedded, indexed, free
 tooling (Foxglove). Bit-diff of two runs = compare channel streams. Replaying
 recorded channels as stimulus covers open-loop re-simulation with no new

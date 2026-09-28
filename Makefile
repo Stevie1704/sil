@@ -134,6 +134,18 @@ example-fmu-coupling: venv build ## Author the coupled-FMU example twice and run
 	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/fmu-coupling.json -o $(BUILD_DIR)/fmu-coupling-2.mcap
 	cmp $(BUILD_DIR)/fmu-coupling-1.mcap $(BUILD_DIR)/fmu-coupling-2.mcap
 
+# Convenience over `make run` for replacing one coupled FMU with replay: run
+# the feedback loop, replace `left` by its recorded Channel, run the
+# replacement twice, `cmp` its Recordings and compare the retained outputs
+# with the original Run's Messages.
+.PHONY: example-fmu-substitution
+example-fmu-substitution: example-fmu-coupling ## Replace one coupled FMU with replay and compare the retained outputs
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.fmi.substitution examples/fmu-coupling/feedback.json --fmu left tests/fixtures/reference-fmus/3.0/Feedthrough.fmu --fmu right tests/fixtures/reference-fmus/3.0/Feedthrough.fmu --replace left --recording $(BUILD_DIR)/fmu-coupling-1.mcap -o $(BUILD_DIR)/fmu-substitution.json --contract $(BUILD_DIR)/fmu-substitution.contract.json --receipt $(BUILD_DIR)/fmu-substitution.receipt.json
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/fmu-substitution.json -o $(BUILD_DIR)/fmu-substitution-1.mcap
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/fmu-substitution.json -o $(BUILD_DIR)/fmu-substitution-2.mcap
+	cmp $(BUILD_DIR)/fmu-substitution-1.mcap $(BUILD_DIR)/fmu-substitution-2.mcap
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.compare $(BUILD_DIR)/fmu-substitution.contract.json $(BUILD_DIR)/fmu-substitution-1.mcap $(BUILD_DIR)/fmu-coupling-1.mcap
+
 # Convenience over `make run` for the shared-library example: build the
 # example library the way an adopter would, convert its recorded input, and
 # run the Manifest that replays it into two adapter instances twice. The

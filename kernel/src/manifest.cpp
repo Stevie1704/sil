@@ -514,7 +514,7 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
   } else if (type == "replay") {
     reject_unknown_keys(participant, ctx,
                         {"type", "recording", "recording_hash", "channels",
-                         "shim"});
+                         "priority", "shim"});
     ReplaySpec rs;
     rs.recording = required<std::string>(participant, "recording", ctx);
     rs.recording_hash =
@@ -525,6 +525,8 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
     if (chans.empty())
       fail(ctx + ": channels must be a non-empty array");
     rs.channels = check_channels(chans, "channels");
+    if (const json *priority = find_value(participant, "priority", ctx))
+      rs.priority = extract<int32_t>(*priority, ctx + " key 'priority'");
     p.impl = std::move(rs);
   } else {
     fail(ctx + ": unknown type '" + type + "'");

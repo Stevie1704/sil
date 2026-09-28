@@ -82,6 +82,18 @@ A participant that publishes messages from an existing recording as stimulus,
 at their recorded virtual times.
 _Avoid_: player, source, injector
 
+**Replacement boundary**:
+The Channels of one FMU removed from a recorded coupled Run that another FMU
+of the Run takes. A Replay participant publishes them from the Recording in
+the FMU's place, with their schemas, Latencies and publication times.
+_Avoid_: cut, interface, replay input
+
+**Retained subsystem**:
+The FMUs of a coupled Run that stay live when one FMU is replaced by its
+Recording. Its outputs equal the original Run's only while its experiment is
+unchanged, because the recorded boundary does not respond to it.
+_Avoid_: remaining model, system under test, rest
+
 **Test participant**:
 A participant whose job is to publish stimuli and evaluate assertions at
 defined virtual times; its failure aborts the run.

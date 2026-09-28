@@ -507,12 +507,19 @@ class Manifest:
         *,
         recording: str | Path,
         channels: list[str],
+        priority: int | None = None,
     ) -> None:
         """Re-publish recorded channels from a prior run's MCAP.
 
         The recording is identified by its SHA-256 content hash, computed here
         from the file bytes and embedded in the manifest, so the manifest hash
         fully covers the run's stimulus. The file must exist at build time.
+
+        Without a priority, the replayed Messages of a Slot are published
+        before every activation of that Slot. With one, they are published at
+        that place among the Slot's activations, as a live publisher of that
+        priority would publish them. None omits the key, so a Manifest built
+        without it keeps its bytes.
         """
         name = _string(name, "participant name")
         if not channels:
@@ -544,15 +551,17 @@ class Manifest:
             raise ManifestError(
                 f"participant {name!r}: cannot read recording {str(recording)!r}: {e}"
             ) from e
-        self._add_participant(
-            name,
-            {
-                "type": "replay",
-                "recording": str(recording),
-                "recording_hash": recording_hash,
-                "channels": list(channels),
-            },
-        )
+        entry = {
+            "type": "replay",
+            "recording": str(recording),
+            "recording_hash": recording_hash,
+            "channels": list(channels),
+        }
+        if priority is not None:
+            entry["priority"] = _integer(
+                priority, f"participant {name!r} priority",
+                minimum=-(2**31), maximum=2**31 - 1)
+        self._add_participant(name, entry)
 
     def _add_participant(self, name: str, entry: dict) -> None:
         name = _string(name, "participant name")

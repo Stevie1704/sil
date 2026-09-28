@@ -1286,6 +1286,118 @@ reference computed from the hand-written consumption tables. The same
 comparison with a wrong final sample of `slow` fails, and the first
 divergence is at 120 ms.
 
+### Replace one FMU with its Recording
+
+`sil-fmu-substitute` removes one live FMU from a recorded coupled Run and
+replays the Channels it fed the other FMUs. The other FMUs are the retained
+subsystem. The Channels of the removed FMU that a retained FMU takes are the
+replacement boundary. The command writes the replacement Manifest and a
+[comparison contract](#compare-a-trajectory-against-a-reference). The
+contract says whether the retained outputs of the replacement Run are those
+of the original Run. From the checkout root, with the staged installation on
+`PATH`:
+
+```sh
+workdir=$(mktemp -d "$HOME/sil-fmu-substitute.XXXXXX")
+fmu=tests/fixtures/reference-fmus/3.0/Feedthrough.fmu
+# 1. Record the coupled Run.
+sil-fmu-couple examples/fmu-coupling/feedback.json \
+    --fmu left "$fmu" --fmu right "$fmu" -o "$workdir/original.json"
+sil-run "$workdir/original.json" -o "$workdir/original.mcap"
+# 2. Replace `left` by its recorded Channel `left.value`.
+sil-fmu-substitute examples/fmu-coupling/feedback.json \
+    --fmu left "$fmu" --fmu right "$fmu" --replace left \
+    --recording "$workdir/original.mcap" -o "$workdir/replacement.json" \
+    --contract "$workdir/contract.json" --receipt "$workdir/receipt.json"
+# 3. Run the replacement twice; one Manifest gives one Recording.
+sil-run "$workdir/replacement.json" -o "$workdir/replacement-1.mcap"
+sil-run "$workdir/replacement.json" -o "$workdir/replacement-2.mcap"
+cmp "$workdir/replacement-1.mcap" "$workdir/replacement-2.mcap"
+# 4. Compare the Messages with the original Run's.
+sil-compare "$workdir/contract.json" "$workdir/replacement-1.mcap" \
+    "$workdir/original.mcap"
+```
+
+`make example-fmu-substitution` runs the same sequence from the source tree.
+
+Give the command the document and the archives that the original Run was
+authored from. It makes every check of `sil-fmu-couple` again, and it then
+checks that they author the Manifest whose hash the Recording carries. The
+Manifest names each archive by its absolute path, so the archives must be at
+the paths the Run named. The command refuses a Recording that no Run
+wrote, and a Recording that does not hold one Message of each compared
+Channel at each Slot of its publisher, such as that of a failed Run.
+
+**What the replacement preserves.**
+
+| Property | How |
+| --- | --- |
+| Schema and Latency | Each boundary Channel and each retained Channel is declared as in the original Manifest. |
+| Retained models, initialization and parameters | Each retained FMU's participant declaration is the original one: its command, with every start value and binding, its Period, priority and routes. Only a route to the removed FMU is dropped. |
+| Publication times | The Replay participant publishes each recorded Message at its publication Slot. The Sample time stays one Period of the removed FMU later. |
+| Total same-time order | The Replay participant has the removed FMU's priority. It publishes the Messages of one Slot in the recorded Publish order, at the removed FMU's place among the Slot's activations. Each Slot's Publish order, and the Messages each route holds, are those of the original Run. A zero-Latency boundary route delivers inside the Slot, as it did. |
+| One publisher per Channel | The Replay participant takes the removed FMU's name and is the one publisher of each boundary Channel. The Manifest holds the digest of the Recording it replays. |
+
+The Replay participant's place is its Manifest key `priority`
+(`Manifest.add_replay(..., priority=...)`). It orders the Replay participant
+among a Slot's activations as it orders a Process participant. A Replay
+participant without the key publishes before every activation of a Slot, as
+before, so an existing Manifest keeps its bytes and its Run.
+
+A Channel of the removed FMU that no retained FMU takes is not in the
+replacement Run. The receipt (`"sil_fmu_substitution_receipt": 1`) states
+the boundary, the number of Messages replayed on each boundary Channel and
+when each retained FMU first takes one. Until then, a retained input holds
+its start value. The receipt also holds the digests of the document, the
+archives, the Recording, the original Manifest, the replacement Manifest and
+the contract.
+
+**What is compared.** The contract compares each retained output and each
+boundary Channel at each Sample time of its publisher, from the end of the
+first Step through the Duration. It compares integer fields exactly and
+float fields with zero tolerance. It leaves out no warm-up: the replacement
+starts from the same initialization, so it compares the first Sample times,
+where a retained input still holds its start value, and the final one at the
+Duration. The two Runs have different Manifests, so their Recordings differ
+in bytes, and `sil-compare` compares their Messages. A byte comparison
+(`cmp`, `sil-check`) is only for two Runs of the same Manifest.
+
+The tests (`tests/test_fmu_substitution.py`) do this for two compositions:
+
+| Composition | Replaced | Retained | Compared |
+| --- | --- | --- | --- |
+| `feedback.json`, equal Periods of 10 ms | `left` | `right` | 5 Sample times each of `left.value` and `right.value`, 10 to 50 ms |
+| the Run of [Timing across several periods](#timing-across-several-periods) | `ball` (20 ms) | `fast` (10 ms), `slow` (30 ms) | `ball` 6, `fast` 12, `slow` 4 Sample times, through 120 ms |
+
+Two negative controls edit the replacement Manifest. The comparison has to
+fail each one and name the first divergence:
+
+| Control | Feedback loop | Several Periods |
+| --- | --- | --- |
+| Wrong Latency: the boundary Channel at 20 ms instead of 10 ms | `right.value` at 20 ms: 0 (the start value) instead of 1.5 | `fast` at 20 ms: 1.25 (the start value) instead of the height of 0 ms |
+| Omitted initial input: the replayed Message of 0 ms dropped | `left.value` missing at 10 ms; `right.value` then holds its start value | `ball` missing at 20 ms; `fast` holds its start value at 20 and 30 ms, and `slow` steps on it |
+
+**When the replay is equivalent.** A recorded boundary is the removed FMU's
+response to the original Run. It does not respond to anything else. In a
+closed loop, such as `feedback.json`, the replacement is equivalent to the
+original Run only for the unchanged retained experiment. A changed retained
+model, start value, parameter, Period or Latency changes what the removed FMU
+would have computed. Such a change needs a live Run of the removed FMU, not a
+replay. The command refuses such a change, because the Recording is not a Run
+of the changed experiment. The tests show the reason. Start `right` at 0.75
+instead of 0: live, `left` sends 0.75 back at 10 ms. The recorded `left`
+still sends the original 0, so `left.value` diverges at 20 ms.
+
+This workflow is for signal-coupled FMUs. It does not change the replay of a
+bus terminal. In [Replaying one source at the boundary](#replaying-one-source-at-the-boundary),
+a replayed operation is raised at the event time its Message states, through
+a zero-Latency boundary Channel
+([ADR 0002](docs/adr/0002-a-replayed-terminal-lands-on-its-own-instant.md)).
+The CAN proof in [proofs/fmi-ls-bus](proofs/fmi-ls-bus/README.md#one-node-replaced-by-its-own-recording)
+shows that for the CAN demo FMUs. A signal-coupled Message states no event
+time. Its Sample time is one Period after its publication Slot, and replay
+keeps both of these times.
+
 ## Replay recorded input into a shared library
 
 An existing library often has its own C interface: an init, a cyclic step,

@@ -571,6 +571,56 @@ class TestReplayDeterminism:
         assert a.mcap_path.read_bytes() == b.mcap_path.read_bytes()
 
 
+class TestReplayPriority:
+    """Where a Replay participant publishes among the activations of a
+    Slot. The Recording stores Messages in Publish order."""
+
+    def slot_order(self, run_sil, tmp_path, priority):
+        rec, _ = record_producer_run(run_sil, tmp_path)
+        m = toy_manifest(duration_ns=50_000_000)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_channel("echo", schema="toy.Counter")
+        m.add_replay("rep", recording=str(rec), channels=["ticks"],
+                     priority=priority)
+        m.add_process(
+            "pyecho",
+            command=[sys.executable,
+                     str(ROOT / "tests" / "participants" / "echo.py")],
+            step_period_ns=10_000_000,
+            subscribes=[SubscriberRoute("ticks", capacity=COMPAT_ROUTE_CAPACITY)],
+            publishes=["echo"],
+            priority=0,
+        )
+        proc = run_sil(m.write(tmp_path / "priority.json").path,
+                       out=tmp_path / "priority.mcap")
+        assert proc.returncode == 0, proc.stderr
+        _, msgs = read_mcap(proc.mcap_path)
+        return [(t, topic) for topic, t, _ in msgs if t == 10_000_000]
+
+    def test_without_a_priority_it_publishes_before_every_activation(
+        self, run_sil, tmp_path
+    ):
+        assert self.slot_order(run_sil, tmp_path, None) == [
+            (10_000_000, "ticks"), (10_000_000, "echo")]
+
+    def test_with_a_priority_it_publishes_at_its_place_in_the_slot(
+        self, run_sil, tmp_path
+    ):
+        assert self.slot_order(run_sil, tmp_path, 1) == [
+            (10_000_000, "echo"), (10_000_000, "ticks")]
+
+    def test_without_a_priority_the_manifest_has_no_priority_key(
+        self, tmp_path
+    ):
+        """A Manifest written before the key keeps its bytes."""
+        rec = tmp_path / "r.mcap"
+        rec.write_bytes(b"")
+        m = toy_manifest(duration_ns=10)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_replay("rep", recording=str(rec), channels=["ticks"])
+        assert "priority" not in m.to_doc()["participants"]["rep"]
+
+
 class TestReplayRejection:
     def test_missing_recording_is_config_error(self, sil_run, run_sil, tmp_path):
         # Reference a recording that never existed: the manifest can still be
