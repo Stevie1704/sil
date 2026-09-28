@@ -35,7 +35,7 @@ def recording(path, row):
 
 
 def endpoints(values, row, channel):
-    period = row.periods()['controller' if channel == 'command' else 'plant']
+    period = row.publication_period(channel)
     return {publication + period: fields for publication, fields in values[channel].items()}
 
 
@@ -48,7 +48,7 @@ def first_difference(actual, expected, row, *, channels=FIELDS):
         times = observation_times(row, channel)
         if set(actual_at) != set(times) or set(expected_at) != set(times):
             raise Difference(f"{channel} endpoint coverage differs from declared grid")
-        period = row.periods()['controller' if channel == 'command' else 'plant']
+        period = row.publication_period(channel)
         for time in times:
             if len(actual_at[time]) != len(FIELDS[channel]) or len(expected_at[time]) != len(FIELDS[channel]):
                 raise Difference(f"{channel} width at observation {time}")

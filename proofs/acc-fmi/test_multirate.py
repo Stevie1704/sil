@@ -3,6 +3,7 @@ from dataclasses import replace
 
 import pytest
 
+from multirate_acceptance import check_plan_schedule
 from multirate_compare import Difference, compare_reference, first_difference, sensitivity
 from multirate_contract import (DURATION_NS, GRID_NS, ROWS, CONTROLS,
                                 delivery_schedule, observation_times)
@@ -60,3 +61,17 @@ def test_first_difference_names_signal_and_endpoint():
     judged = sensitivity(outside, row, values, row)
     assert not judged['inside_envelope']
     assert judged['maxima']['gap_m']['absolute_difference'] == 10.0
+
+
+def test_independent_schedule_rejects_wrong_same_slot_plan():
+    zero = ROWS[3]
+    receipt = {'plan': {'routes': [
+        {'channel': 'sensing', 'activations': [
+            {'at_ns': 0, 'input': {'published_ns': 0}}]},
+        {'channel': 'command', 'activations': [
+            {'at_ns': 0, 'input': 'start'}]},
+    ]}}
+    assert check_plan_schedule(receipt, zero) == {'sensing': 1, 'command': 1}
+    receipt['plan']['routes'][0]['activations'][0]['input'] = 'start'
+    with pytest.raises(RuntimeError, match='sensing at 0'):
+        check_plan_schedule(receipt, zero)

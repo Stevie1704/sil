@@ -29,9 +29,9 @@ def prepare(out: Path):
         if (co_simulation is None or variables is None or
                 co_simulation.get('canHandleVariableCommunicationStepSize') != 'false' or
                 any(variable.tag == 'Clock' for variable in variables)):
-            raise RuntimeError(f'{model}: not the pinned fixed-interval scalar profile')
-        # Each Run uses one constant interval for each FMU. These source models
-        # impose no separate fixed interval in their descriptions; FMPy executes
+            raise RuntimeError(f'{model}: not the pinned fixed-Period scalar profile')
+        # Each Run uses one constant Period for each FMU. These source models
+        # impose no separate fixed Period in their descriptions; FMPy executes
         # every tested 10/20 ms combination before the bundle is pinned.
         shutil.copyfile(source, target)
         metadata = json.loads((Path('/fmus') / f'{model}.identity.json').read_text())

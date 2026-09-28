@@ -47,6 +47,10 @@ class Row:
     def latencies(self) -> dict[str, int]:
         return {"sensing": self.sensing_ms * MS, "command": self.command_ms * MS}
 
+    def publication_period(self, channel: str) -> int:
+        publisher = "controller" if channel == "command" else "plant"
+        return self.periods()[publisher]
+
 
 ROWS = (
     Row("equal-10", 10, 10, 10, 10),
@@ -83,14 +87,12 @@ def coupling(row: Row) -> dict:
 
 
 def publication_slots(row: Row, channel: str) -> range:
-    publisher = "controller" if channel == "command" else "plant"
-    return range(0, DURATION_NS, row.periods()[publisher])
+    return range(0, DURATION_NS, row.publication_period(channel))
 
 
 def observation_times(row: Row, channel: str) -> range:
     """Every native FMU endpoint, including Duration. No interpolation."""
-    publisher = "controller" if channel == "command" else "plant"
-    period = row.periods()[publisher]
+    period = row.publication_period(channel)
     return range(period, DURATION_NS + 1, period)
 
 

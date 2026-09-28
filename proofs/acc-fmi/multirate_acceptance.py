@@ -43,6 +43,26 @@ def verify(bundle: Path):
     return index
 
 
+def check_plan_schedule(receipt, row):
+    """Cross-check independently authored delivery against the public plan."""
+    checked = {}
+    for route in receipt['plan']['routes']:
+        channel = route['channel']
+        expected = delivery_schedule(row, channel)
+        for activation in route['activations']:
+            at = activation['at_ns']
+            publication = expected[at]
+            taken = activation['input']
+            actual = None if taken == 'start' else taken['published_ns']
+            require(actual == publication,
+                    f"{row.name} {channel} at {at}: plan takes {actual}, "
+                    f"independent schedule expects {publication}")
+        checked[channel] = len(route['activations'])
+    require(set(checked) == {'sensing', 'command'},
+            f'{row.name}: plan route coverage differs')
+    return checked
+
+
 def _reference(bundle, name):
     return json.loads((bundle / 'references' / f'{name}.json').read_text())
 
@@ -55,9 +75,9 @@ def run(bundle: Path, out: Path):
             'SiL must be imported from an installed distribution')
     for module in ('fmpy', 'pythonfmu3', 'pytest'):
         require(__import__('importlib.util', fromlist=['find_spec']).find_spec(module) is None,
-                f'{module} must not be installed in the run image')
+                f'{module} must not be installed in the example image')
     for tool in ('cmake', 'gcc', 'git'):
-        require(shutil.which(tool) is None, f'{tool} must not be in the run image')
+        require(shutil.which(tool) is None, f'{tool} must not be in the example image')
     index = verify(bundle)
     out.mkdir(parents=True, exist_ok=True)
     results, measured = {}, {}
@@ -74,6 +94,7 @@ def run(bundle: Path, out: Path):
                 f'{name}: independently authored input schedule differs')
         manifest = out / f'{name}.json'
         receipt = couple(authored, archives, manifest)
+        schedule_checked = check_plan_schedule(receipt, row)
         again = out / f'{name}-again.json'
         couple(authored, archives, again)
         manifest_sha = compare_files(manifest, again)
@@ -89,10 +110,10 @@ def run(bundle: Path, out: Path):
                          'fmu_sha256': {model: receipt['fmus'][model]['sha256']
                                         for model in archives},
                          'independent_comparison': comparison,
+                         'plan_schedule_checked_activations': schedule_checked,
                          'observation_offsets_ns': {
-                             'sensing': row.plant_ms * 1_000_000,
-                             'state': row.plant_ms * 1_000_000,
-                             'command': row.controller_ms * 1_000_000},
+                             channel: row.publication_period(channel)
+                             for channel in FIELDS},
                          'schedule_first_activations': {
                              ch: list(schedule[ch].items())[:5]
                              for ch in ('sensing', 'command')}}

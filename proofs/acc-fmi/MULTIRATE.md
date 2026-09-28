@@ -34,7 +34,9 @@ Under zero sensing Latency, the controller publishes equal commands in each
 pair of 10 ms Slots between plant samples, so changing command Latency from
 10 to 20 ms leaves the plant input unchanged. A change to 30 ms crosses a
 plant activation and changes behavior. Under 10 ms sensing Latency, the
-`command-20` row does change behavior. The `wrong-zero-order` control uses the `zero-sensing` Periods and Latencies
+`command-20` row does change behavior.
+
+The `wrong-zero-order` control uses the `zero-sensing` Periods and Latencies
 but an independently stepped FMPy schedule that wrongly takes the prior plant
 publication in a shared Slot. The authored SiL topology requires the plant
 to run first and the controller to take the same-Slot publication.
@@ -75,11 +77,11 @@ proofs/acc-fmi/multirate-bundle.sh run build/acc-multirate-bundle build/acc-mult
 
 Preparation builds pinned tool and production runtime images, exports the two
 FMUs, executes the independent FMPy references, and hashes every bundle file.
-The run image extends the installed production runtime with only this proof's
+The example image extends the installed production runtime with only this proof's
 authoring and comparison code. It checks bundle and archive hashes, authors
 and runs each Manifest twice, byte-compares each pair of Recordings, compares
 every row with its independent reference, and writes `report.json` plus raw
 Manifests and Recordings to the evidence directory. FMPy and PythonFMU3 are
-absent from the run image. The report names the first differing signal,
+absent from the example image. The report names the first differing signal,
 publication Slot and observation time for each negative control and records
 both inside and outside envelope values.
