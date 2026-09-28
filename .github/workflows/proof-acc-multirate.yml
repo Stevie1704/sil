@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - 'proofs/acc-fmi/multirate*'
-      - 'proofs/acc-fmi/Dockerfile.multirate'
-      - 'proofs/acc-fmi/models/**'
+      - 'proofs/acc-fmi/**'
+      - 'Dockerfile'
+      - 'python/src/sil/recording.py'
       - 'python/src/sil/fmi/**'
       - 'python/src/sil/compare.py'
       - 'examples/fmu-coupling/**'
@@ -22,7 +22,7 @@ jobs:
         run: |
           python -m pip install -e 'python/[dev]'
           PYTHONPATH=proofs/acc-fmi python -m pytest proofs/acc-fmi/test_multirate.py -q
-      - name: Prepare pinned FMPy references and installed runtime
+      - name: Prepare pinned independent FMPy runs and installed runtime
         run: proofs/acc-fmi/multirate-bundle.sh prepare "$PWD/build/acc-multirate-bundle"
       - name: Execute the installed Linux coupling proof
         run: proofs/acc-fmi/multirate-bundle.sh run "$PWD/build/acc-multirate-bundle" "$PWD/build/acc-multirate-evidence"
