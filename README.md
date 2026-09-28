@@ -1003,6 +1003,165 @@ Supported limits:
 - **Types.** The importer's mapped types: `Float64`, `Boolean` and
   `Binary`. Other types can be held at their declared start.
 
+## Couple FMUs through Channels
+
+`sil-fmu-couple` writes the Manifest of a Run of FMUs that are coupled by
+ordinary signals. Each FMU is its own Process participant, and each
+connection is a field of an ordinary Channel. A coupling document states
+every choice. The command checks the document against the FMUs before
+anything runs, then writes an ordinary canonical Manifest in which each FMU's
+command is the [FMI importer](#fmi-30-co-simulation-importer)'s. The kernel
+and the importer do not change. A hand-written Manifest with the same bytes
+is the same Run. A connection that carries an instant between two Slots, such
+as a bus model's transmission time, is not an ordinary signal. For that, use
+a [group](#connected-fmus-one-participant-one-bus) (ADR 0001).
+
+[examples/fmu-coupling/](examples/fmu-coupling/) holds two documents:
+
+| File | Run |
+| --- | --- |
+| `acc.json` | the ACC controller/plant loop of `proofs/acc-fmi` (#148): one Period of Latency in each direction |
+| `feedback.json` | a delayed feedback loop between two `Feedthrough` instances |
+
+From the checkout root, with the staged installation on `PATH`:
+
+```sh
+workdir=$(mktemp -d "$HOME/sil-fmu-couple.XXXXXX")
+fmu=tests/fixtures/reference-fmus/3.0/Feedthrough.fmu
+sil-fmu-couple examples/fmu-coupling/feedback.json \
+    --fmu left "$fmu" --fmu right "$fmu" \
+    -o "$workdir/feedback.json" --receipt "$workdir/feedback.receipt.json"
+sil-run "$workdir/feedback.json" -o "$workdir/run-1.mcap"
+sil-run "$workdir/feedback.json" -o "$workdir/run-2.mcap"
+cmp "$workdir/run-1.mcap" "$workdir/run-2.mcap"
+```
+
+`make example-fmu-coupling` runs the same sequence from the source tree.
+
+The coupling document is JSON. Every key is required, and nothing has a
+default:
+
+```json
+{
+  "sil_fmu_coupling": 1,
+  "duration_ns": 5000000000,
+  "fmus": {
+    "plant": {"step_period_ns": 10000000, "priority": 0, "start": [],
+              "hold": ["lead_accel_mps2", "initial_lead_position_m"]},
+    "controller": {"step_period_ns": 10000000, "priority": 1, "start": [],
+                   "hold": []}
+  },
+  "channels": {
+    "sensing": {
+      "publisher": "plant", "latency_ns": 10000000,
+      "fields": [{"name": "gap_m", "type": "f64", "variable": "gap_m",
+                  "unit": "m"}, "..."],
+      "subscribers": {
+        "controller": {"capacity": 2, "overflow": "fail",
+                       "bind": {"gap_m": "gap_m", "...": "..."}}
+      }
+    },
+    "...": {}
+  }
+}
+```
+
+- `--fmu <name> <path>` gives the archive of each FMU the document names.
+  The command writes the path as an argument of its own, resolved to an
+  absolute path, so `sil-run` records its SHA-256 in the Run's provenance.
+- Each FMU states its `step_period_ns` and its `priority`. Each FMU has its
+  own priority, so a lower priority runs first in a Slot, and a name never
+  decides the order. To change the order, change a priority.
+- Each Channel has one `publisher` and states its `latency_ns`. Its schema has
+  the Channel's name and its `fields`. Each field names the publisher's output
+  `variable` and states its `unit`, or `null` for no unit.
+- Each subscriber states its bounded route and `bind`s fields of the Channel
+  to its inputs. One bound field is one connection.
+- `start` gives an input or a parameter a start value, with its unit. A
+  connected input holds its start value until its first delivery. `hold`
+  names the inputs that keep the start value the FMU declares for the whole
+  Run.
+
+The Manifest is canonical: the command sorts FMUs, Channels, routes and start
+values, so a document that declares them in another order gives the same
+bytes.
+
+Before it writes a Manifest, the command rejects (exit 2) with the reason:
+
+- an FMU the importer cannot drive, or a mapping the importer would reject.
+  These are the checks of
+  [`sil-fmi-inspect`](#inspecting-an-fmu-before-a-run). The command does not
+  load an FMU's binary;
+- an FMU with no `--fmu` archive, and an archive for no declared FMU;
+- a publisher or subscriber that is not a declared FMU, and a bound field
+  that the Channel does not carry;
+- a connection that does not start at an output of its publisher or end at
+  an input of its subscriber, or whose two ends declare different types or
+  dimensions;
+- a stated unit that is not the publisher's unit, and a connection between
+  two different units. The importer converts no unit. Author the conversion
+  explicitly, as its own participant between the two FMUs;
+- an input with two sources, an input that is not connected, not given a
+  start value and not held, and a connected input that has no start value;
+- a missing or `null` `latency_ns`;
+- two FMUs with the same priority;
+- a cycle of zero-Latency connections. The diagnostic names the cycle, for
+  example `left -[left.value]-> right -[right.value]-> left`;
+- a zero-Latency connection whose publisher does not run before its
+  subscriber. The diagnostic names an order that the connections allow;
+- a route that holds more Messages than its `capacity` under the `fail`
+  policy (see the plan below);
+- an unknown or duplicate key, and every value the Manifest builder refuses.
+
+**The zero-Latency check is a conservative authoring profile.** It reads the
+declared connections only. It does not find or solve an algebraic loop in the
+models' equations, and it refuses a structural cycle even where the models
+would not form an algebraic loop. A loop with a Latency above zero on at
+least one of its Channels is an ordinary delayed loop, and it stays
+supported: `feedback.json` is one.
+
+The command prints the plan of the Run on standard output. The receipt (at
+`--receipt`, `"sil_fmu_coupling_receipt": 1`) holds the same plan, each
+connection with its type and unit, and the SHA-256 of the document, each FMU
+and the Manifest. For `feedback.json`, the plan starts:
+
+```text
+execution order in each Slot (lowest priority first):
+  1. left  priority 0, period 10 ms
+  2. right  priority 1, period 10 ms
+same-Slot connections: none
+Channels (a Message published at t holds its publisher's outputs at t + the publisher's period):
+  left.value, published by left with Latency 10 ms: value = Float64_continuous_output
+    to right: route capacity 2 (fail), at most 2 Messages queued
+      right.Float64_continuous_input holds 0 until the first delivery
+      published at 0 ms (values at 10 ms) -> delivered at 10 ms
+      published at 10 ms (values at 20 ms) -> delivered at 20 ms
+      published at 20 ms (values at 30 ms) -> delivered at 30 ms
+```
+
+- **Publication.** The importer publishes at the start of a Step the values
+  at its end. A Message published at `t` holds the publisher's outputs at `t`
+  plus the publisher's period.
+- **Delivery.** A Message is visible one Latency after its publication. The
+  subscriber takes it at its first activation at or after that time, and
+  writes it before its Step. A zero-Latency Message reaches a subscriber in
+  the same Slot, because its publisher runs first.
+- **Route bound.** A route holds a Message from its publication to its
+  delivery. When the publisher runs first in a Slot, its new Message is in
+  the route before the subscriber takes the previous one. The plan states
+  the most Messages each route holds in the Run. In `acc.json`, the sensing
+  route holds two, and a sensing Latency of two Periods would make it three.
+
+Supported limits:
+
+- **Ordinary signals only.** A connection carries a `Float64`, `Boolean` or
+  `Binary` value of one output, as the single-FMU importer maps it. Clocks,
+  network terminals and FMI-LS-BUS stay in a group.
+- **Fixed periods.** Each FMU steps on its own fixed Period, from 0.
+- **FMUs only.** The Run holds the coupled FMUs. The proof in
+  [proofs/acc-fmi/](proofs/acc-fmi/README.md#authored-coupling-187) runs the
+  rendered ACC Manifest and compares it with the independent FMPy trajectory.
+
 ## Replay recorded input into a shared library
 
 An existing library often has its own C interface: an init, a cyclic step,
