@@ -22,9 +22,9 @@ declares (`runs[].participant_timeout_ms`).
 A case that exceeds its guard, or a matrix that receives SIGINT, SIGHUP or
 SIGTERM, has its process group sent SIGTERM. `sil-run` then ends its Run and
 terminates the process groups of its Process participants. `sil-bundle` then
-writes the Runs that finished. When the case group is still alive after the
-grace period, it is killed; a Process participant group that `sil-run` did
-not end by then is outside that group and is not reached.
+writes the Runs that finished. The Process participant groups stay in the
+session of the case, so after the grace period, and after every case, each
+process still in that session is killed.
 
 Each case gets one status: `pass`, `behavioral-failure`, `manifest-error`,
 `determinism-violation`, `timeout` or `skipped`. The summary keeps the
@@ -44,6 +44,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import signal
 import subprocess
@@ -71,7 +72,7 @@ SKIPPED = "skipped"
 _SEVERITY = (MANIFEST_ERROR, DETERMINISM_VIOLATION, BEHAVIORAL_FAILURE, PASS)
 _JUNIT_ELEMENT = {BEHAVIORAL_FAILURE: "failure", DETERMINISM_VIOLATION: "failure",
                   MANIFEST_ERROR: "error", TIMEOUT: "error", SKIPPED: "skipped"}
-# How long `sil-run` has to end its Run after SIGTERM before its group is killed.
+# How long `sil-run` has to end its Run after SIGTERM before its session is killed.
 TERMINATION_GRACE_S = 10.0
 _POLL_S = 0.05
 # How a case process ended, beside TIMEOUT.
@@ -127,8 +128,8 @@ def _case(value, index: int, base: Path) -> Case:
     if not isinstance(lock, str) or len(lock) != 64:
         raise Refusal(f"{context}.expect_lock must be the lock sha256 seal printed")
     timeout = value["timeout_s"]
-    if type(timeout) not in (int, float) or not timeout > 0:
-        raise Refusal(f"{context}.timeout_s must be a positive number of seconds")
+    if type(timeout) not in (int, float) or not 0 < timeout < math.inf:
+        raise Refusal(f"{context}.timeout_s must be a positive, finite number of seconds")
     is_required = value.get("required", True)
     if not isinstance(is_required, bool):
         raise Refusal(f"{context}.required must be true or false")
@@ -195,7 +196,10 @@ class Matrix:
         self.jobs = jobs
         self.fail_fast = fail_fast
         self.interrupted = threading.Event()
-        self._stop_starting = threading.Event()
+        # Held to decide whether a case starts, and to stop the starts, so no
+        # case starts after a required case failed (fail-fast).
+        self._starting = threading.Lock()
+        self._stop_starting = False
 
     def run(self) -> list[dict]:
         (self.out / "cases").mkdir(parents=True)
@@ -205,19 +209,27 @@ class Matrix:
             return [future.result() for future in futures]
 
     def _run_case(self, case: Case) -> dict:
-        if self.interrupted.is_set():
-            return _skipped(case, "interrupted")
-        if self._stop_starting.is_set():
-            return _skipped(case, "fail-fast")
-        result = self._execute(case)
+        evidence = self.out / "cases" / case.name
+        with self._starting:
+            if self.interrupted.is_set():
+                return _skipped(case, "interrupted")
+            if self._stop_starting:
+                return _skipped(case, "fail-fast")
+            started = time.monotonic()
+            try:
+                proc = _start(case, evidence, self.out / "logs" / f"{case.name}.log")
+            except OSError as error:
+                proc = None
+                result = _unstarted(case, f"cannot start sil-bundle: {error}")
+        if proc is not None:
+            result = self._finish(case, proc, evidence, started)
         if self.fail_fast and case.required and result["status"] != PASS:
-            self._stop_starting.set()
+            with self._starting:
+                self._stop_starting = True
         return result
 
-    def _execute(self, case: Case) -> dict:
-        evidence = self.out / "cases" / case.name
-        started = time.monotonic()
-        proc = _start(case, evidence, self.out / "logs" / f"{case.name}.log")
+    def _finish(self, case: Case, proc: subprocess.Popen, evidence: Path,
+                started: float) -> dict:
         code, usage, ended = _wait(proc, started + case.timeout_s, self.interrupted)
         observations = {"duration_s": round(time.monotonic() - started, 3),
                         "max_rss_kib": _kib(usage.ru_maxrss) if usage else None}
@@ -269,6 +281,7 @@ def _wait(proc: subprocess.Popen, deadline: float, interrupted: threading.Event)
         pid, status, usage = os.wait4(proc.pid, os.WNOHANG)
         if pid:
             proc.returncode = os.waitstatus_to_exitcode(status)
+            _kill_session(proc.pid)
             return proc.returncode, usage, _EXITED
         if interrupted.is_set() or time.monotonic() >= deadline:
             ended = _INTERRUPTED if interrupted.is_set() else TIMEOUT
@@ -278,32 +291,33 @@ def _wait(proc: subprocess.Popen, deadline: float, interrupted: threading.Event)
 
 
 def _terminate(proc: subprocess.Popen):
-    """SIGTERM the group, wait until it is empty, and kill it after the grace."""
-    group = proc.pid
-    _signal_group(group, signal.SIGTERM)
+    """SIGTERM the case group, wait for its session to empty, then kill the rest.
+
+    `start_new_session` makes the case the leader of a session. Process
+    participants lead their own groups, but they stay in that session."""
+    session = proc.pid
+    _signal_group(session, signal.SIGTERM)
     usage = None
     deadline = time.monotonic() + TERMINATION_GRACE_S
-    killed = False
-    while True:
-        if proc.returncode is None:
-            pid, status, reaped = os.wait4(proc.pid, os.WNOHANG)
-            if pid:
-                proc.returncode = os.waitstatus_to_exitcode(status)
-                usage = reaped
-        if not _group_alive(group):
+    while time.monotonic() < deadline:
+        usage = _reap(proc) or usage
+        if proc.returncode is not None and not _session_members(session):
             break
-        if time.monotonic() >= deadline:
-            # An orphan nobody reaps stays a zombie in the group, so the
-            # wait after SIGKILL is bounded too.
-            if killed:
-                break
-            _signal_group(group, signal.SIGKILL)
-            killed = True
-            deadline = time.monotonic() + 1.0
         time.sleep(_POLL_S)
+    _kill_session(session)
     if proc.returncode is None:
         _, status, usage = os.wait4(proc.pid, 0)
         proc.returncode = os.waitstatus_to_exitcode(status)
+    return usage
+
+
+def _reap(proc: subprocess.Popen):
+    if proc.returncode is not None:
+        return None
+    pid, status, usage = os.wait4(proc.pid, os.WNOHANG)
+    if not pid:
+        return None
+    proc.returncode = os.waitstatus_to_exitcode(status)
     return usage
 
 
@@ -314,12 +328,39 @@ def _signal_group(group: int, signal_number: int) -> None:
         pass
 
 
-def _group_alive(group: int) -> bool:
-    try:
-        os.killpg(group, 0)
-    except ProcessLookupError:
-        return False
-    return True
+def _kill_session(session: int) -> None:
+    """SIGKILL every process left in the session, and wait until they are gone.
+
+    The wait is bounded: an orphan nobody reaps stays in it as a zombie."""
+    deadline = time.monotonic() + 1.0
+    while (members := _session_members(session)) and time.monotonic() < deadline:
+        for pid in members:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        time.sleep(_POLL_S)
+
+
+def _session_members(session: int) -> list[int]:
+    members = []
+    for pid in _process_ids():
+        try:
+            if os.getsid(pid) == session:
+                members.append(pid)
+        except (ProcessLookupError, PermissionError):
+            pass
+    return members
+
+
+def _process_ids() -> list[int]:
+    proc = Path("/proc")
+    if proc.is_dir():
+        return [int(entry.name) for entry in proc.iterdir() if entry.name.isdigit()]
+    # No /proc on macOS, where the suite also runs; the runtime image has no ps.
+    listing = subprocess.run(["/bin/ps", "-A", "-o", "pid="], capture_output=True,
+                             text=True).stdout
+    return [int(pid) for pid in listing.split()]
 
 
 def _kib(maxrss: int) -> int:
@@ -341,8 +382,17 @@ def _run_entry(run: dict) -> dict:
 
 
 def _skipped(case: Case, reason: str) -> dict:
-    identity = {"status": SKIPPED, "bundle_exit_code": None, "summary_sha256": None}
-    return _result(case, False, SKIPPED, reason, None, None, identity,
+    return _not_run(case, SKIPPED, reason)
+
+
+def _unstarted(case: Case, reason: str) -> dict:
+    """A case whose sil-bundle could not start: an environment problem."""
+    return _not_run(case, MANIFEST_ERROR, reason)
+
+
+def _not_run(case: Case, status: str, reason: str) -> dict:
+    identity = {"status": status, "bundle_exit_code": None, "summary_sha256": None}
+    return _result(case, False, status, reason, None, None, identity,
                    {"duration_s": None, "max_rss_kib": None})
 
 

@@ -9,8 +9,11 @@ whole-case wall-clock guard, and JSON, JUnit and readable summaries.
 from __future__ import annotations
 
 import json
+import os
 import signal
 import subprocess
+import sys
+import threading
 import time
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
@@ -265,6 +268,7 @@ def test_an_interrupted_matrix_terminates_its_run_process_trees(
     ("no guard", [{"name": "a", "timeout_s": None}], "timeout_s"),
     ("no lock", [{"name": "a", "expect_lock": None}], "expect_lock"),
     ("bad name", [{"name": "../a"}], "must be letters"),
+    ("infinite guard", [{"name": "a", "timeout_s": 1e999}], "timeout_s"),
 ])
 def test_a_malformed_case_list_is_refused(bundles, runtime, tmp_path,
                                           problem, cases, expected):
@@ -339,3 +343,79 @@ def test_a_changed_bundle_fails_a_passing_case():
     result = _bundle_summary()
     result["bundle_unchanged"] = False
     assert matrix.classify(1, result)[0] == "behavioral-failure"
+
+
+def test_a_case_that_cannot_start_is_reported_with_the_others(
+        tmp_path, monkeypatch):
+    def refuse(*args, **kwargs):
+        raise OSError(8, "Exec format error")
+
+    monkeypatch.setattr(matrix.subprocess, "Popen", refuse)
+    monkeypatch.setattr(matrix.signal, "signal", lambda *args: None)
+    listing = write_cases(tmp_path / "cases.json", [
+        {"name": n, "bundle": str(tmp_path / n), "expect_lock": "0" * 64,
+         "timeout_s": 5} for n in ("a", "b")])
+    out = tmp_path / "out"
+
+    assert matrix.main([str(listing), "-o", str(out)]) == 1
+
+    for entry in summary(out)["cases"]:
+        assert entry["status"] == "manifest-error"
+        assert "cannot start sil-bundle" in entry["reason"]
+    assert (out / "junit.xml").is_file()
+
+
+# A case process tree whose Process participant leads its own group, as
+# sil-run's participants do, and ignores SIGTERM.
+_TREE = """
+import os, signal, subprocess, sys, time
+signal.signal(signal.SIGTERM, signal.SIG_IGN)
+child = subprocess.Popen([sys.executable, "-c",
+    "import os, signal, time; os.setpgid(0, 0); "
+    "signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(60)"])
+open(sys.argv[1], "w").write(str(child.pid))
+if sys.argv[2] == "stay":
+    time.sleep(60)
+"""
+
+
+def _tree(tmp_path, mode: str) -> tuple[subprocess.Popen, int]:
+    marker = tmp_path / "participant.pid"
+    proc = subprocess.Popen([sys.executable, "-c", _TREE, str(marker), mode],
+                            start_new_session=True)
+    deadline = time.monotonic() + 10
+    while not (marker.exists() and marker.read_text()) and time.monotonic() < deadline:
+        time.sleep(0.02)
+    return proc, int(marker.read_text())
+
+
+def _gone(pid: int) -> bool:
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return True
+        time.sleep(0.02)
+    return False
+
+
+def test_termination_reaches_participant_groups_the_runner_left(
+        tmp_path, monkeypatch):
+    monkeypatch.setattr(matrix, "TERMINATION_GRACE_S", 0.5)
+    proc, participant = _tree(tmp_path, "stay")
+
+    code, _, ended = matrix._wait(proc, time.monotonic(), threading.Event())
+
+    assert ended == "timeout"
+    assert code is not None
+    assert _gone(participant)
+
+
+def test_a_finished_case_leaves_no_process_behind(tmp_path):
+    proc, participant = _tree(tmp_path, "exit")
+
+    code, _, ended = matrix._wait(proc, time.monotonic() + 30, threading.Event())
+
+    assert (code, ended) == (0, "exited")
+    assert _gone(participant)

@@ -221,7 +221,8 @@ The case list names every case explicitly:
 - `expect_lock` is required. It pins the bundle with its Manifests,
   references and comparison contracts, so it also pins the comparison
   policy of the case.
-- `timeout_s` is the whole-case wall-clock guard. It is required.
+- `timeout_s` is the whole-case wall-clock guard, in seconds. It is
+  required, and it must be positive and finite.
 - `required` is `true` by default. A case that is not required is
   reported, but does not fail the matrix.
 
@@ -240,15 +241,15 @@ When a case exceeds its guard, or the matrix receives SIGINT, SIGHUP or
 SIGTERM, the matrix sends SIGTERM to the process group of the case.
 `sil-run` then ends its Run and terminates the process groups of its
 Process participants, and `sil-bundle` writes the Runs that finished. The
-case keeps their exit codes. When the process group of the case is still
-alive after 10 s, it is killed. A Process participant group that `sil-run`
-did not end by then is outside that group, and the matrix does not reach
-it.
+case keeps their exit codes. Each case runs in its own session, and its
+Process participant groups stay in that session. After 10 s, and after every
+case that ends, the matrix kills each process that is still in the session.
+A process that starts a new session of its own is not reached.
 
 | Mode | Behavior |
 |---|---|
 | complete matrix (default) | Every case runs. |
-| `--fail-fast` | No case starts after a required case does not pass. The cases that already run finish. The others are `skipped` with reason `fail-fast`. |
+| `--fail-fast` | No case starts after a required case does not pass, also with several `--jobs`. The cases that already run finish. The others are `skipped` with reason `fail-fast`. |
 | interrupted | The running cases are terminated, and they and the cases not started are `skipped` with reason `interrupted`. Exit 130. |
 
 ### Statuses
@@ -257,7 +258,7 @@ it.
 |---|---|
 | `pass` | Every Run exited 0, every determinism check and comparison passed, and the bundle stayed unchanged. |
 | `behavioral-failure` | A Run failure (exit 1), such as a failed KPI, a participant that exited unexpectedly or a missed response deadline, a comparison failed, or the bundle changed during its Runs. |
-| `manifest-error` | The bundle was refused (exit 2 of `sil-bundle`), a Run exited 2, the runner did not start, or `sil-bundle` wrote no summary. |
+| `manifest-error` | The bundle was refused (exit 2 of `sil-bundle`), a Run exited 2, the runner or `sil-bundle` did not start, or `sil-bundle` wrote no summary. |
 | `determinism-violation` | Two Runs of the same Manifest exited 0 with different Recordings. |
 | `timeout` | The case exceeded `timeout_s`. |
 | `skipped` | The case did not complete; see `reason`. |
