@@ -1,7 +1,7 @@
-"""`sil-fmu-couple`: author a Run of FMUs coupled by ordinary signals.
+"""`sil-fmu-couple`: author a Run of FMUs coupled through Channels.
 
 A coupling document names each FMU as its own Process participant and each
-signal connection as a field of an ordinary Channel. This command turns it and
+connection as a field of an ordinary Channel. This command turns it and
 the FMU archives into an ordinary canonical Manifest. It adds no contract of
 its own: each FMU's command is the Importer's, `python -m sil.fmi`, with the
 FMU path as an argument of its own and one `--bind` and `--start` per choice.
@@ -32,7 +32,7 @@ Everything is checked before a Manifest is written, and nothing is loaded:
   of its subscriber, and both ends declare one type, one dimension and one
   unit. The Importer converts no unit, so a unit mismatch needs an explicit
   conversion between the two FMUs;
-* each input has one source: it is connected, given a start value or held at
+* each input is fed once: it is connected, given a start value or held at
   the start the FMU declares. A connected input holds its start value until
   its first delivery, so it has one;
 * each Channel states its Latency and each route states its bound. A route
@@ -47,7 +47,7 @@ The zero-Latency check is a conservative authoring profile. It reads the
 declared connections only. It does not find or solve an algebraic loop in the
 models' equations, and it refuses a structural cycle even where the models
 would not form one. A feedback loop with a Latency above zero on at least one
-Channel is an ordinary delayed loop and stays supported.
+Channel is an ordinary feedback loop and stays supported.
 
 The plan states, for each FMU, its place in a Slot and its period, and, for
 each route, what a Message holds and when it is delivered. The receipt holds
@@ -179,7 +179,7 @@ def _receipt(connections: list[Connection], variables: dict, plan: dict,
 
 
 def _parse(data: bytes, path: Path) -> dict:
-    doc = load(data, path)
+    doc = load(data, path, "coupling document")
     try:
         return _document(doc)
     except AuthoringError as e:
@@ -410,8 +410,10 @@ def _require_mapping_accepted(name: str, fmu: Path, report: dict) -> None:
         )
 
 
-def _variable(variables: dict, fmu: str, name: str, what: str) -> dict:
-    variable = variables[fmu].get(name)
+def _variable(variables: dict[str, dict], fmu: str, name: str,
+              what: str) -> dict:
+    """One variable of one FMU, which `what` names."""
+    variable = variables.get(name)
     if variable is None:
         raise AuthoringError(
             f"{what} names variable {name!r}, which FMU {fmu!r} does not "
@@ -422,9 +424,10 @@ def _variable(variables: dict, fmu: str, name: str, what: str) -> dict:
 
 def _require_compatible(connection: Connection, variables: dict) -> None:
     """Both ends of one connection: an output and an input that agree."""
-    output = _variable(variables, connection.publisher, connection.output,
-                       str(connection))
-    taken = _variable(variables, connection.subscriber, connection.input,
+    output = _variable(variables[connection.publisher], connection.publisher,
+                       connection.output, str(connection))
+    taken = _variable(variables[connection.subscriber],
+                      connection.subscriber, connection.input,
                       str(connection))
     if output["causality"] != "output":
         raise AuthoringError(
@@ -459,13 +462,14 @@ def _require_compatible(connection: Connection, variables: dict) -> None:
             f"{connection} connects {output['unit']!r} to "
             f"{taken['unit']!r}. The Importer converts no unit, so a "
             f"connection joins variables of one unit: author the conversion "
-            f"explicitly, as its own participant between the two FMUs"
+            f"explicitly, as a converting FMU of this document between the "
+            f"two"
         )
 
 
 def _require_sources(name: str, doc: dict, connections: list[Connection],
                      variables: dict[str, dict]) -> None:
-    """Each input of one FMU has exactly one source, and each connected one a
+    """Each input of one FMU is fed once, and each connected one has a
     start value to hold until its first delivery."""
     what = f"FMU {name!r}"
     fed: dict[str, Connection] = {}
@@ -476,11 +480,11 @@ def _require_sources(name: str, doc: dict, connections: list[Connection],
         if first is not None:
             raise AuthoringError(
                 f"{what} input {connection.input!r} is fed by {first} and by "
-                f"{connection}; an input has one source"
+                f"{connection}; an input is fed by one connection"
             )
         fed[connection.input] = connection
-    started = _require_starts(what, doc["fmus"][name]["start"], variables)
-    _require_holds(what, doc["fmus"][name]["hold"], variables, fed, started)
+    started = _require_starts(name, doc["fmus"][name]["start"], variables)
+    _require_holds(name, doc["fmus"][name]["hold"], variables, fed, started)
     for variable in fed:
         if variables[variable]["start"] is None and variable not in started:
             raise AuthoringError(
@@ -500,17 +504,13 @@ def _require_sources(name: str, doc: dict, connections: list[Connection],
         )
 
 
-def _require_starts(what: str, starts: list[dict],
+def _require_starts(fmu: str, starts: list[dict],
                     variables: dict[str, dict]) -> set[str]:
+    what = f"FMU {fmu!r}"
     started = set()
     for start in starts:
         name = start["variable"]
-        variable = variables.get(name)
-        if variable is None:
-            raise AuthoringError(
-                f"{what} start value names variable {name!r}, which the FMU "
-                f"does not declare"
-            )
+        variable = _variable(variables, fmu, name, f"{what} start value")
         if variable["causality"] not in _STARTABLE:
             raise AuthoringError(
                 f"{what} start value for {name!r}: its causality is "
@@ -529,15 +529,11 @@ def _require_starts(what: str, starts: list[dict],
     return started
 
 
-def _require_holds(what: str, hold: list[str], variables: dict[str, dict],
+def _require_holds(fmu: str, hold: list[str], variables: dict[str, dict],
                    fed: dict, started: set[str]) -> None:
+    what = f"FMU {fmu!r}"
     for name in hold:
-        variable = variables.get(name)
-        if variable is None:
-            raise AuthoringError(
-                f"{what} holds variable {name!r}, which the FMU does not "
-                f"declare"
-            )
+        variable = _variable(variables, fmu, name, f"{what} 'hold'")
         if variable["causality"] != "input":
             raise AuthoringError(
                 f"{what} holds {name!r}, whose causality is "
@@ -782,7 +778,7 @@ def _render_route(route: dict) -> list[str]:
     lines = [
         f"    to {route['subscriber']}: route capacity {route['capacity']} "
         f"({route['overflow']}), at most {peak} "
-        f"Message{'' if peak == 1 else 's'} queued"
+        f"Message{'' if peak == 1 else 's'} in the route"
     ]
     lines += [f"      {route['subscriber']}.{variable} holds {value} until "
               f"the first delivery"
@@ -795,6 +791,9 @@ def _render_route(route: dict) -> list[str]:
     ]
     if not route["deliveries"]:
         lines.append("      no Message is delivered within the Run")
+    if peak > route["capacity"]:
+        lines.append("      the route drops the Messages above its capacity; "
+                     "the deliveries above do not show the drops")
     return lines
 
 

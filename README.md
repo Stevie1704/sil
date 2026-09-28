@@ -1005,15 +1005,15 @@ Supported limits:
 
 ## Couple FMUs through Channels
 
-`sil-fmu-couple` writes the Manifest of a Run of FMUs that are coupled by
-ordinary signals. Each FMU is its own Process participant, and each
+`sil-fmu-couple` writes the Manifest of a Run of FMUs that are coupled
+through Channels. Each FMU is its own Process participant, and each
 connection is a field of an ordinary Channel. A coupling document states
 every choice. The command checks the document against the FMUs before
 anything runs, then writes an ordinary canonical Manifest in which each FMU's
 command is the [FMI importer](#fmi-30-co-simulation-importer)'s. The kernel
 and the importer do not change. A hand-written Manifest with the same bytes
 is the same Run. A connection that carries an instant between two Slots, such
-as a bus model's transmission time, is not an ordinary signal. For that, use
+as a bus model's transmission time, is not a Channel field. For that, use
 a [group](#connected-fmus-one-participant-one-bus) (ADR 0001).
 
 [examples/fmu-coupling/](examples/fmu-coupling/) holds two documents:
@@ -1100,8 +1100,8 @@ Before it writes a Manifest, the command rejects (exit 2) with the reason:
   dimensions;
 - a stated unit that is not the publisher's unit, and a connection between
   two different units. The importer converts no unit. Author the conversion
-  explicitly, as its own participant between the two FMUs;
-- an input with two sources, an input that is not connected, not given a
+  explicitly: add a converting FMU to the document, between the two;
+- an input that two connections feed, an input that is not connected, not given a
   start value and not held, and a connected input that has no start value;
 - a missing or `null` `latency_ns`;
 - two FMUs with the same priority;
@@ -1117,7 +1117,7 @@ Before it writes a Manifest, the command rejects (exit 2) with the reason:
 declared connections only. It does not find or solve an algebraic loop in the
 models' equations, and it refuses a structural cycle even where the models
 would not form an algebraic loop. A loop with a Latency above zero on at
-least one of its Channels is an ordinary delayed loop, and it stays
+least one of its Channels is an ordinary feedback loop, and it stays
 supported: `feedback.json` is one.
 
 The command prints the plan of the Run on standard output. The receipt (at
@@ -1132,7 +1132,7 @@ execution order in each Slot (lowest priority first):
 same-Slot connections: none
 Channels (a Message published at t holds its publisher's outputs at t + the publisher's period):
   left.value, published by left with Latency 10 ms: value = Float64_continuous_output
-    to right: route capacity 2 (fail), at most 2 Messages queued
+    to right: route capacity 2 (fail), at most 2 Messages in the route
       right.Float64_continuous_input holds 0 until the first delivery
       published at 0 ms (values at 10 ms) -> delivered at 10 ms
       published at 10 ms (values at 20 ms) -> delivered at 20 ms
@@ -1154,7 +1154,7 @@ Channels (a Message published at t holds its publisher's outputs at t + the publ
 
 Supported limits:
 
-- **Ordinary signals only.** A connection carries a `Float64`, `Boolean` or
+- **Channel fields only.** A connection carries a `Float64`, `Boolean` or
   `Binary` value of one output, as the single-FMU importer maps it. Clocks,
   network terminals and FMI-LS-BUS stay in a group.
 - **Fixed periods.** Each FMU steps on its own fixed Period, from 0.

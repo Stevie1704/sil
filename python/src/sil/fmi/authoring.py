@@ -151,7 +151,7 @@ def _declared(variable: dict) -> dict:
 
 
 def _parse(data: bytes, path: Path) -> dict:
-    doc = load(data, path)
+    doc = load(data, path, "authoring document")
     try:
         return _document(doc)
     except AuthoringError as e:

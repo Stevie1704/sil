@@ -48,17 +48,18 @@ def file_sha256(path: Path) -> str:
         return hashlib.file_digest(f, "sha256").hexdigest()
 
 
-def load(data: bytes, path: Path):
-    """The JSON value `data` holds, with no duplicate key and no NaN."""
+def load(data: bytes, path: Path, role: str):
+    """The JSON value the `role` document at `path` holds, with no duplicate
+    key and no NaN."""
     try:
         return json.loads(data.decode("utf-8"),
                           parse_constant=_non_finite_literal,
                           object_pairs_hook=_unique_keys)
     except AuthoringError as e:
-        raise AuthoringError(f"authoring document {str(path)!r}: {e}") from None
+        raise AuthoringError(f"{role} {str(path)!r}: {e}") from None
     except ValueError as e:
         raise AuthoringError(
-            f"authoring document {str(path)!r} is not valid JSON: {e}"
+            f"{role} {str(path)!r} is not valid JSON: {e}"
         ) from e
 
 

@@ -1,4 +1,4 @@
-"""`sil-fmu-couple`: author a Run of signal-coupled FMUs (issue #187).
+"""`sil-fmu-couple`: author a Run of FMUs coupled through Channels (#187).
 
 A coupling document names FMUs as separate Process participants and the
 Channels that connect them. Every check is made before anything runs, and the
@@ -301,14 +301,14 @@ class TestDeclarations:
 
 
 class TestSources:
-    def test_an_input_with_no_source_is_refused(self, tmp_path):
+    def test_an_input_nothing_feeds_is_refused(self, tmp_path):
         document = edited(FEEDBACK, lambda d: d["fmus"]["right"]["hold"]
                           .remove("Boolean_input"))
         message = rejection(tmp_path, document)
         assert "'right'" in message and "'Boolean_input'" in message
         assert "neither connected, started nor held" in message
 
-    def test_an_input_with_two_sources_is_refused(self, tmp_path):
+    def test_an_input_fed_twice_is_refused(self, tmp_path):
         def edit(document):
             document["channels"]["extra"] = copy.deepcopy(
                 document["channels"]["left.value"])
@@ -317,7 +317,7 @@ class TestSources:
                          "bind": {"value": "Float64_continuous_input"}}}
         message = rejection(tmp_path, edited(FEEDBACK, edit))
         assert "'left'" in message and "'Float64_continuous_input'" in message
-        assert "one source" in message
+        assert "fed by one connection" in message
 
     def test_a_connected_input_that_is_also_held_is_refused(self, tmp_path):
         document = edited(FEEDBACK, lambda d: d["fmus"]["right"]["hold"]
@@ -462,13 +462,24 @@ def test_the_plan_reads_as_periods_order_and_delivery_points(tmp_path):
     assert ("left.value, published by left with Latency 10 ms: "
             "value = Float64_continuous_output") in text
     assert ("    to right: route capacity 2 (fail), at most 2 Messages "
-            "queued") in text
-    assert "    to left: route capacity 1 (fail), at most 1 Message queued" in text
+            "in the route") in text
+    assert "    to left: route capacity 1 (fail), at most 1 Message in the route" in text
     assert ("right.Float64_continuous_input holds 0 until the first "
             "delivery") in text
     assert "left.Float64_continuous_input holds 1.5 until" in text
     assert "published at 0 ms (values at 10 ms) -> delivered at 10 ms" in text
     assert "same-Slot connections: none" in text
+
+
+def test_a_route_that_drops_says_so_in_the_plan(tmp_path):
+    """Under drop_newest a route may hold fewer Messages than the Run
+    publishes; the plan accepts it and says what its listing omits."""
+    document = edited(FEEDBACK, lambda d: d["channels"]["left.value"][
+        "subscribers"]["right"].update(capacity=1, overflow="drop_newest"))
+    receipt = couple(write(tmp_path, document), feedthroughs(tmp_path),
+                     tmp_path / "manifest.json")
+    assert "the route drops the Messages above its capacity" in render_plan(
+        receipt["plan"])
 
 
 class TestCommand:
