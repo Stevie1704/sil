@@ -4,6 +4,10 @@ Outcome of a design grilling session, 2026-07-02. Greenfield project for an
 automotive ADAS/AD company. Requirements: (1) determinism, (2) lightweight
 (scheduling + data routing kernel), (3) usable across vECU levels.
 
+Later decisions in `docs/decisions/` and `docs/adr/` amend this record; see
+[docs/README.md](docs/README.md#architecture-and-contracts) for how the three
+relate.
+
 ## Decision record
 
 ### 1. Primary use case: CI regression testing

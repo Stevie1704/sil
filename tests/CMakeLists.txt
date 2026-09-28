@@ -5,20 +5,23 @@ add_executable(sil_interceptor_test
   ${PROJECT_SOURCE_DIR}/kernel/src/manifest.cpp)
 target_include_directories(sil_interceptor_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src)
 target_link_libraries(sil_interceptor_test PRIVATE nlohmann_json::nlohmann_json)
-add_test(NAME sil_interceptor_plan COMMAND sil_interceptor_test)
+add_test(NAME sil_interceptor_plan COMMAND sil_interceptor_test
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # Unsigned virtual-time addition is the one arithmetic boundary every
 # scheduling and delivery decision rests on, so its table of edge cases is a
 # focused C++ test rather than an end-to-end one.
 add_executable(sil_virtual_time_test virtual_time_test.cpp)
 target_include_directories(sil_virtual_time_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src)
-add_test(NAME sil_virtual_time COMMAND sil_virtual_time_test)
+add_test(NAME sil_virtual_time COMMAND sil_virtual_time_test
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # Engine construction is deliberately gated on a successful Run preparation;
 # the authored Manifest is not an executable input by itself.
 add_executable(sil_engine_interface_test engine_interface_test.cpp)
 target_include_directories(sil_engine_interface_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src)
-add_test(NAME sil_engine_interface COMMAND sil_engine_interface_test)
+add_test(NAME sil_engine_interface COMMAND sil_engine_interface_test
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # The Arena layout — slot stride, seq freshness, capacity bounds — is the
 # binary contract a Process participant maps, and it holds without a child
@@ -28,7 +31,8 @@ add_executable(sil_channel_arenas_test
   ${PROJECT_SOURCE_DIR}/kernel/src/channel_arenas.cpp
   ${PROJECT_SOURCE_DIR}/kernel/src/mapped_region.cpp)
 target_include_directories(sil_channel_arenas_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src ${PROJECT_SOURCE_DIR}/include)
-add_test(NAME sil_channel_arenas COMMAND sil_channel_arenas_test)
+add_test(NAME sil_channel_arenas COMMAND sil_channel_arenas_test
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # The mapped region owns a temp file's mapping, descriptor, and directory entry.
 # Its release-on-destruction and move semantics are invisible at the run
@@ -37,13 +41,14 @@ add_executable(sil_mapped_region_test
   mapped_region_test.cpp
   ${PROJECT_SOURCE_DIR}/kernel/src/mapped_region.cpp)
 target_include_directories(sil_mapped_region_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src)
-add_test(NAME sil_mapped_region COMMAND sil_mapped_region_test)
+add_test(NAME sil_mapped_region COMMAND sil_mapped_region_test
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # --- generated message headers (single typed contract per DESIGN #9) ---
 set(SIL_GEN_DIR ${CMAKE_BINARY_DIR}/generated)
 add_custom_command(
   OUTPUT ${SIL_GEN_DIR}/toy_messages.h
-  COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/silschema.py
+  COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/silschema.py
           ${PROJECT_SOURCE_DIR}/tests/fixtures/schemas/toy.json ${SIL_GEN_DIR}/toy_messages.h
   DEPENDS ${PROJECT_SOURCE_DIR}/tools/silschema.py
           ${PROJECT_SOURCE_DIR}/python/src/sil/_schema_types.py fixtures/schemas/toy.json)
@@ -64,9 +69,7 @@ function(add_failing_fmu name)
   target_compile_definitions(${target} PRIVATE ${ARGN})
   set_target_properties(${target} PROPERTIES
     PREFIX ""
-    OUTPUT_NAME "Failing${name}"
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+    OUTPUT_NAME "Failing${name}")
 endfunction()
 
 # The fmi3Status enum, so a variant is named by the status it answers rather
@@ -98,9 +101,7 @@ function(add_clocked_fmu name)
   target_compile_definitions(${target} PRIVATE ${ARGN})
   set_target_properties(${target} PROPERTIES
     PREFIX ""
-    OUTPUT_NAME "Clocked${name}"
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+    OUTPUT_NAME "Clocked${name}")
 endfunction()
 
 add_clocked_fmu(CanNode)
@@ -136,9 +137,7 @@ function(add_bus_fmu name)
   target_compile_definitions(${target} PRIVATE ${ARGN})
   set_target_properties(${target} PROPERTIES
     PREFIX ""
-    OUTPUT_NAME "Clocked${name}"
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+    OUTPUT_NAME "Clocked${name}")
 endfunction()
 
 add_bus_fmu(CanBus)

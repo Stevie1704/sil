@@ -1,5 +1,5 @@
 # SiL Framework — build / test / run entry points.
-# Mirrors the commands in README.md and .github/workflows/ci.yml.
+# Mirrors the commands in CONTRIBUTING.md and .github/workflows/ci.yml.
 
 # Config -----------------------------------------------------------------------
 BUILD_DIR    ?= build

@@ -6,10 +6,8 @@
 # requires a real dylib; LD_PRELOAD accepts a shared object on Linux.
 add_library(sil_clock_shim SHARED clock_shim.c)
 target_include_directories(sil_clock_shim PRIVATE ${PROJECT_SOURCE_DIR}/include)
-# Located next to sil-run so the runner can find it relative to itself.
-set_target_properties(sil_clock_shim PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+# The root output directories place it next to sil-run, so the runner can find
+# it relative to itself.
 if(NOT APPLE)
   # Linux: the region-absent fallback resolves the real libc symbol via
   # dlsym(RTLD_NEXT, ...), which needs libdl.

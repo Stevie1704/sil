@@ -49,12 +49,11 @@ target_compile_definitions(sil-run-instrumented PRIVATE ${SIL_RELEASE_DEFINITION
 # shim in the conventional library directory.  The runner carries the
 # relative library directory as a configure-time value so its runtime lookup
 # follows custom GNUInstallDirs settings as well as the default layout.
-target_compile_definitions(sil-run PRIVATE
+set(SIL_INSTALL_DEFINITIONS
   SIL_INSTALL_BINDIR="${CMAKE_INSTALL_BINDIR}"
   SIL_INSTALL_LIBDIR="${CMAKE_INSTALL_LIBDIR}")
-target_compile_definitions(sil-run-instrumented PRIVATE
-  SIL_INSTALL_BINDIR="${CMAKE_INSTALL_BINDIR}"
-  SIL_INSTALL_LIBDIR="${CMAKE_INSTALL_LIBDIR}")
+target_compile_definitions(sil-run PRIVATE ${SIL_INSTALL_DEFINITIONS})
+target_compile_definitions(sil-run-instrumented PRIVATE ${SIL_INSTALL_DEFINITIONS})
 
 install(TARGETS sil-run
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
