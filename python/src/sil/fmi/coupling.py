@@ -43,6 +43,9 @@ Everything is checked before a Manifest is written, and nothing is loaded:
   Slot. A zero-Latency connection delivers inside the publishing Slot, so its
   publisher runs first. The zero-Latency connections have to be acyclic, and a
   cycle is refused with the path it takes.
+* the Duration is a multiple of each FMU's period, so each FMU's last Step
+  ends on the Duration. `sil-run` advances every Step by one full period and
+  does not clip the last one.
 
 The zero-Latency check is a conservative authoring profile. It reads the
 declared connections only. It does not find or solve an algebraic loop in the
@@ -50,15 +53,24 @@ models' equations, and it refuses a structural cycle even where the models
 would not form one. A feedback loop with a Latency above zero on at least one
 Channel is an ordinary feedback loop and stays supported.
 
-The plan states, for each FMU, its place in a Slot and its period, and, for
-each route, what a Message holds and when it is delivered. The receipt holds
-the plan and the digests of the document, each FMU and the Manifest.
+Each FMU initializes alone, from its start values, before the first Slot.
+Nothing is delivered during initialization and no initial value is solved
+jointly, so a connected input holds its start value until its first
+delivery.
+
+The plan states, for each FMU, its place in a Slot, its period and its Steps,
+and, for each route, what a Message holds, when it is delivered, where the
+start value comes from and which input each activation steps on. For each
+Channel it states who takes the last Message, which holds the values at the
+Duration; one that no activation takes is only in the Recording. The receipt
+holds the plan and the digests of the document, each FMU and the Manifest.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from collections import deque
 from dataclasses import dataclass
@@ -93,6 +105,8 @@ _ROUTE_KEYS = {"capacity", "overflow", "bind"}
 _STARTABLE = ("input", "parameter", "structuralParameter")
 # How many deliveries of each route the plan lists.
 _SHOWN_DELIVERIES = 3
+# The most activations of each route the plan lists.
+_SHOWN_ACTIVATIONS = 12
 
 
 @dataclass(frozen=True)
@@ -127,6 +141,7 @@ def couple(document: str | Path, fmus: dict[str, str | Path],
     doc = _parse(document_bytes, document)
     _require_archives(doc, fmus)
     manifest = _manifest(doc, fmus)
+    _require_whole_steps(doc)
     connections = _connections(doc)
     reports = {name: _inspected(name, fmus[name], doc) for name in doc["fmus"]}
     variables = {name: {v["name"]: v for v in report["variables"]}
@@ -377,6 +392,37 @@ def _manifest(doc: dict, fmus: dict[str, Path]) -> Manifest:
     except ManifestError as e:
         raise AuthoringError(str(e)) from None
     return manifest
+
+
+def _require_whole_steps(doc: dict) -> None:
+    """Each FMU's last Step ends on the Duration.
+
+    The kernel starts a Step at each Slot below the Duration and always
+    advances it by one full period; it does not clip the last Step. A
+    Duration that is not a multiple of a period would step that FMU past
+    the Duration, so this profile refuses it.
+    """
+    duration = doc["duration_ns"]
+    periods = {name: doc["fmus"][name]["step_period_ns"]
+               for name in sorted(doc["fmus"])}
+    split = [name for name, period in periods.items() if duration % period]
+    if not split:
+        return
+    first, period = split[0], periods[split[0]]
+    last = duration - duration % period
+    common = math.lcm(*periods.values())
+    below = duration - duration % common
+    such_as = " or ".join(_time(ns) for ns in (below, below + common) if ns)
+    raise AuthoringError(
+        f"Duration {_time(duration)} is not a multiple of the period of "
+        + ", ".join(f"FMU {name!r} (period {_time(periods[name])})"
+                    for name in split)
+        + f". The last Step of {first!r} would start at {_time(last)} and end "
+        f"at {_time(last + period)}, after the Duration. sil-run advances "
+        f"every Step by one full period and does not clip the last one, so "
+        f"this profile requires a Duration that is a multiple of every "
+        f"period ({_time(common)}), such as {such_as}"
+    )
 
 
 # The FMUs ----------------------------------------------------------------------
@@ -648,10 +694,16 @@ def _topological(fmus: dict, edges: list[tuple[str, str, str]]) -> list[str]:
 
 def _plan(doc: dict, order: list[str], variables: dict) -> dict:
     fmus = doc["fmus"]
+    routes = [
+        _route(doc, channel, subscriber, variables[subscriber])
+        for channel in sorted(doc["channels"])
+        for subscriber in sorted(doc["channels"][channel]["subscribers"])
+    ]
     return {
         "duration_ns": doc["duration_ns"],
         "order": [{"fmu": name, "priority": fmus[name]["priority"],
-                   "step_period_ns": fmus[name]["step_period_ns"]}
+                   "step_period_ns": fmus[name]["step_period_ns"],
+                   "steps": doc["duration_ns"] // fmus[name]["step_period_ns"]}
                   for name in order],
         "same_slot": [{"channel": c, "publisher": p, "subscriber": s}
                       for p, s, c in _same_slot(doc)],
@@ -661,20 +713,32 @@ def _plan(doc: dict, order: list[str], variables: dict) -> dict:
              "latency_ns": doc["channels"][channel]["latency_ns"],
              "fields": [{"name": f["name"], "output": f["variable"],
                          "unit": f["unit"]}
-                        for f in doc["channels"][channel]["fields"]]}
+                        for f in doc["channels"][channel]["fields"]],
+             "final": _final(doc, channel, routes)}
             for channel in sorted(doc["channels"])
         ],
-        "routes": [
-            _route(doc, channel, subscriber, variables[subscriber])
-            for channel in sorted(doc["channels"])
-            for subscriber in sorted(doc["channels"][channel]["subscribers"])
-        ],
+        "routes": routes,
+    }
+
+
+def _final(doc: dict, channel: str, routes: list[dict]) -> dict:
+    """The last Message of one Channel: the one that holds the values its
+    publisher reaches at the Duration, and who takes it within the Run."""
+    period = doc["fmus"][doc["channels"][channel]["publisher"]][
+        "step_period_ns"]
+    return {
+        "published_ns": doc["duration_ns"] - period,
+        "values_at_ns": doc["duration_ns"],
+        "taken_by": {r["subscriber"]: r["final_taken_ns"] for r in routes
+                     if r["channel"] == channel
+                     and r["final_taken_ns"] is not None},
     }
 
 
 def _route(doc: dict, channel: str, subscriber: str,
            variables: dict[str, dict]) -> dict:
-    """One route: its bound, its deliveries, and what it holds before them."""
+    """One route: its bound, its deliveries, what it holds before them, and
+    the input each activation steps on."""
     declaration = doc["channels"][channel]
     publisher = declaration["publisher"]
     route = declaration["subscribers"][subscriber]
@@ -687,14 +751,16 @@ def _route(doc: dict, channel: str, subscriber: str,
         drop_above=route["capacity"] if route["overflow"] == "drop_newest"
         else None,
     )
-    starts = {s["variable"]: s["value"] for s in fmus[subscriber]["start"]}
+    starts = {s["variable"]: {"value": s["value"], "from": "document"}
+              for s in fmus[subscriber]["start"]}
     return {
         "channel": channel, "publisher": publisher, "subscriber": subscriber,
         "latency_ns": declaration["latency_ns"],
         "capacity": route["capacity"], "overflow": route["overflow"],
         **timeline,
         "until_first_delivery": {
-            variable: starts.get(variable, variables[variable]["start"])
+            variable: starts.get(variable, {
+                "value": variables[variable]["start"], "from": "FMU"})
             for variable in route["bind"].values()
         },
     }
@@ -703,8 +769,8 @@ def _route(doc: dict, channel: str, subscriber: str,
 def _timeline(publisher_period: int, subscriber_period: int, latency: int,
               duration: int, *, publisher_first: bool,
               drop_above: int | None) -> dict:
-    """The first deliveries and drops of one route, and the most Messages it
-    holds.
+    """The deliveries and drops of one route, the most Messages it holds, and
+    the input each activation of the subscriber steps on.
 
     A Message is published in each of the publisher's Slots, holding the
     values the publisher reaches one Period later. It enters the route when
@@ -713,12 +779,25 @@ def _timeline(publisher_period: int, subscriber_period: int, latency: int,
     subscriber drains before a later publisher publishes. Under `drop_newest`
     the route refuses a Message that finds it holding `drop_above`; under
     `fail` it takes every Message, and the peak says whether the Run fails.
+
+    An activation writes each Message it takes in Publish order, so it steps
+    on the newest one. An activation that takes none holds the last Message
+    taken, or the start value before the first. The activations are listed
+    until their pattern repeats: one common period of the two FMUs after the
+    first Message can be visible. A common period can be long, so at most
+    `_SHOWN_ACTIVATIONS` are listed, and the rest are counted.
     """
     publications = iter(range(0, duration, publisher_period))
+    final = duration - publisher_period
     pending: deque[int] = deque()
     deliveries: list[dict] = []
+    activations: list[dict] = []
+    not_listed = 0
     dropped: list[int] = []
     peak = 0
+    held: dict | str = "start"
+    final_taken = None
+    shown_until = latency + math.lcm(publisher_period, subscriber_period)
     publication = next(publications, None)
 
     def publish(published_ns: int) -> None:
@@ -735,20 +814,30 @@ def _timeline(publisher_period: int, subscriber_period: int, latency: int,
         ):
             publish(publication)
             publication = next(publications, None)
+        taken = 0
         while pending and pending[0] + latency <= drain:
             published_ns = pending.popleft()
+            taken += 1
+            held = {"published_ns": published_ns,
+                    "values_at_ns": published_ns + publisher_period}
+            if published_ns == final:
+                final_taken = drain
             if len(deliveries) < _SHOWN_DELIVERIES:
-                deliveries.append({
-                    "published_ns": published_ns,
-                    "values_at_ns": published_ns + publisher_period,
-                    "delivered_ns": drain,
-                })
+                deliveries.append({**held, "delivered_ns": drain})
+        if drain < shown_until:
+            if len(activations) < _SHOWN_ACTIVATIONS:
+                activations.append({"at_ns": drain, "delivered": taken,
+                                    "input": held})
+            else:
+                not_listed += 1
     while publication is not None:
         publish(publication)
         publication = next(publications, None)
     return {"peak_messages": peak, "deliveries": deliveries,
             "dropped_messages": len(dropped),
-            "first_dropped_ns": dropped[:_SHOWN_DELIVERIES]}
+            "first_dropped_ns": dropped[:_SHOWN_DELIVERIES],
+            "activations": activations, "activations_not_listed": not_listed,
+            "final_taken_ns": final_taken}
 
 
 def _require_route_bounds(plan: dict) -> None:
@@ -774,9 +863,12 @@ def _time(ns: int) -> str:
 
 def render_plan(plan: dict) -> str:
     """The plan as a person reads it."""
-    lines = ["execution order in each Slot (lowest priority first):"]
+    duration = _time(plan["duration_ns"])
+    lines = [f"Duration {duration}: Slots at 0 <= t < {duration}; the last "
+             f"Step of each FMU ends on the Duration",
+             "execution order in each Slot (lowest priority first):"]
     lines += [f"  {index}. {fmu['fmu']}  priority {fmu['priority']}, "
-              f"period {_time(fmu['step_period_ns'])}"
+              f"period {_time(fmu['step_period_ns'])}, {fmu['steps']} Steps"
               for index, fmu in enumerate(plan["order"], 1)]
     same_slot = [f"{s['channel']} ({s['publisher']} before {s['subscriber']})"
                  for s in plan["same_slot"]]
@@ -796,7 +888,16 @@ def render_plan(plan: dict) -> str:
         lines += [line for route in routes for line in _render_route(route)]
         if not routes:
             lines.append("    no subscriber; the Recording holds it")
+        lines.append(_render_final(channel["final"]))
     return "\n".join(lines) + "\n"
+
+
+def _render_final(final: dict) -> str:
+    taken = ", ".join(f"{subscriber} takes it at {_time(ns)}"
+                      for subscriber, ns in final["taken_by"].items())
+    return (f"    last Message published at {_time(final['published_ns'])} "
+            f"(values at {_time(final['values_at_ns'])}): "
+            + (taken or "no activation takes it; only the Recording holds it"))
 
 
 def _render_route(route: dict) -> list[str]:
@@ -806,15 +907,15 @@ def _render_route(route: dict) -> list[str]:
         f"({route['overflow']}), at most {peak} "
         f"Message{'' if peak == 1 else 's'} in the route"
     ]
-    lines += [f"      {route['subscriber']}.{variable} holds {value} until "
-              f"the first delivery"
-              for variable, value in route["until_first_delivery"].items()]
-    lines += [
-        f"      published at {_time(d['published_ns'])} "
-        f"(values at {_time(d['values_at_ns'])}) -> delivered at "
-        f"{_time(d['delivered_ns'])}"
-        for d in route["deliveries"]
-    ]
+    lines += [f"      {route['subscriber']}.{variable} holds {start['value']} "
+              f"({start['from']} start) until the first delivery"
+              for variable, start in route["until_first_delivery"].items()]
+    lines += [f"      {_render_activation(a)}" for a in route["activations"]]
+    if route["activations_not_listed"]:
+        count = route["activations_not_listed"]
+        lines.append(f"      {count} more activation{'' if count == 1 else 's'} "
+                     f"before the pattern repeats "
+                     f"{'is' if count == 1 else 'are'} not listed")
     if not route["deliveries"]:
         lines.append("      no Message is delivered within the Run")
     if route["dropped_messages"]:
@@ -822,6 +923,20 @@ def _render_route(route: dict) -> list[str]:
         lines.append(f"      {route['dropped_messages']} Messages dropped, "
                      f"the first published at {first}")
     return lines
+
+
+def _render_activation(activation: dict) -> str:
+    at, held = _time(activation["at_ns"]), activation["input"]
+    if held == "start":
+        return f"at {at}: no Message yet, holds the start value"
+    message = (f"published at {_time(held['published_ns'])} "
+               f"(values at {_time(held['values_at_ns'])})")
+    taken = activation["delivered"]
+    if taken == 0:
+        return f"at {at}: no new Message, holds the one {message}"
+    if taken == 1:
+        return f"at {at}: takes the Message {message}"
+    return f"at {at}: takes {taken} Messages and steps on the newest, {message}"
 
 
 def main(argv: list[str] | None = None) -> int:

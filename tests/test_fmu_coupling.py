@@ -189,8 +189,10 @@ class TestControllerPlant:
         plan = couple(EXAMPLE / "acc.json", acc_fmus,
                       tmp_path / "acc.json")["plan"]
         assert plan["order"] == [
-            {"fmu": "plant", "priority": 0, "step_period_ns": 10 * MS},
-            {"fmu": "controller", "priority": 1, "step_period_ns": 10 * MS},
+            {"fmu": "plant", "priority": 0, "step_period_ns": 10 * MS,
+             "steps": 500},
+            {"fmu": "controller", "priority": 1, "step_period_ns": 10 * MS,
+             "steps": 500},
         ]
         assert plan["same_slot"] == []
         sensing = route(plan, "sensing", "controller")
@@ -483,10 +485,11 @@ def test_the_plan_reads_as_periods_order_and_delivery_points(tmp_path):
     assert ("    to right: route capacity 2 (fail), at most 2 Messages "
             "in the route") in text
     assert "    to left: route capacity 1 (fail), at most 1 Message in the route" in text
-    assert ("right.Float64_continuous_input holds 0 until the first "
-            "delivery") in text
-    assert "left.Float64_continuous_input holds 1.5 until" in text
-    assert "published at 0 ms (values at 10 ms) -> delivered at 10 ms" in text
+    assert ("right.Float64_continuous_input holds 0 (FMU start) until the "
+            "first delivery") in text
+    assert "left.Float64_continuous_input holds 1.5 (document start)" in text
+    assert ("at 10 ms: takes the Message published at 0 ms (values at 10 ms)"
+            in text)
     assert "same-Slot connections: none" in text
 
 
@@ -586,3 +589,312 @@ class TestRun:
             1.5, 0.0, 1.5]
         assert [v for _, v in values(proc.mcap_path, "right.value")] == [
             0.0, 1.5, 1.5, 1.5, 1.5]
+
+
+# Several Periods (#195) ----------------------------------------------------------
+#
+# `ball` (BouncingBall, 20 ms) publishes its height. `fast` (10 ms) and `slow`
+# (30 ms) are `Feedthrough` instances that declare the height's unit: each one
+# publishes at `a` the input it stepped on at `a`. All three share the Slots
+# 0, 60 ms and 120 ms, and the Duration is a multiple of every Period.
+
+FEEDTHROUGH_INPUTS = [
+    "Float32_continuous_input", "Float32_discrete_input",
+    "Float64_continuous_input", "Float64_discrete_input", "Int8_input",
+    "UInt8_input", "Int16_input", "UInt16_input", "Int32_input",
+    "UInt32_input", "Int64_input", "UInt64_input", "Boolean_input",
+    "String_input", "Binary_input", "Enumeration_input",
+]
+BOUNCING_BALL = FEEDTHROUGH.parent / "BouncingBall.fmu"
+HEIGHT = {"name": "h", "type": "f64", "unit": "m"}
+
+
+def probe(period_ms: int, priority: int, start: str) -> dict:
+    return {
+        "step_period_ns": period_ms * MS, "priority": priority,
+        "start": [{"variable": "Float64_continuous_input", "value": start,
+                   "unit": "m"}],
+        "hold": [v for v in FEEDTHROUGH_INPUTS
+                 if v != "Float64_continuous_input"],
+    }
+
+
+def feeds(publisher: str, variable: str, subscriber: str,
+          capacity: int) -> dict:
+    return {
+        "publisher": publisher, "latency_ns": 10 * MS,
+        "fields": [{**HEIGHT, "variable": variable}],
+        "subscribers": {subscriber: {
+            "capacity": capacity, "overflow": "fail",
+            "bind": {"h": "Float64_continuous_input"}}},
+    }
+
+
+MULTIRATE = {
+    "sil_fmu_coupling": 1,
+    "duration_ns": 120 * MS,
+    "fmus": {
+        "ball": {"step_period_ns": 20 * MS, "priority": 0, "start": [],
+                 "hold": []},
+        "fast": probe(10, 1, "1.25"),
+        "slow": probe(30, 2, "2.5"),
+    },
+    "channels": {
+        "ball": feeds("ball", "h", "fast", 1),
+        "fast": feeds("fast", "Float64_continuous_output", "slow", 4),
+        "slow": {"publisher": "slow", "latency_ns": 10 * MS,
+                 "fields": [{**HEIGHT, "variable": "Float64_continuous_output"}],
+                 "subscribers": {}},
+    },
+}
+
+# Which input each activation steps on, stated by hand from the Periods and
+# the Latencies: "start", or the publication Slot of the Message it holds.
+# `fast` takes a new height every second activation and holds it in between.
+FAST_TAKES = {0: "start", 10: 0, 20: 0, 30: 20, 40: 20, 50: 40, 60: 40,
+              70: 60, 80: 60, 90: 80, 100: 80, 110: 100}
+# `slow` takes three Messages of `fast` at once and steps on the newest.
+SLOW_TAKES = {0: "start", 30: 20, 60: 50, 90: 80}
+
+
+@pytest.fixture
+def multirate_fmus(tmp_path: Path) -> dict[str, Path]:
+    tagged = {"Float64_continuous_input": "m", "Float64_continuous_output": "m"}
+    return {"ball": BOUNCING_BALL,
+            "fast": with_units(tmp_path, "Fast", tagged),
+            "slow": with_units(tmp_path, "Slow", tagged)}
+
+
+def taken(published_ms: int, period_ms: int) -> dict:
+    return {"published_ns": published_ms * MS,
+            "values_at_ns": (published_ms + period_ms) * MS}
+
+
+class TestSeveralPeriods:
+    def plan(self, tmp_path, fmus, document=MULTIRATE) -> dict:
+        return couple(write(tmp_path, document), fmus,
+                      tmp_path / "multirate.json")["plan"]
+
+    def test_each_activation_states_the_input_it_steps_on(
+        self, tmp_path, multirate_fmus
+    ):
+        """The first activation holds the start value, an activation with no
+        new Message holds the last one, and an activation that takes several
+        steps on the newest."""
+        plan = self.plan(tmp_path, multirate_fmus)
+        assert route(plan, "ball", "fast")["activations"] == [
+            {"at_ns": 0, "delivered": 0, "input": "start"},
+            {"at_ns": 10 * MS, "delivered": 1, "input": taken(0, 20)},
+            {"at_ns": 20 * MS, "delivered": 0, "input": taken(0, 20)},
+        ]
+        assert route(plan, "fast", "slow")["activations"] == [
+            {"at_ns": 0, "delivered": 0, "input": "start"},
+            {"at_ns": 30 * MS, "delivered": 3, "input": taken(20, 10)},
+        ]
+
+    def test_in_a_shared_slot_a_zero_latency_input_is_the_new_sample(
+        self, tmp_path, multirate_fmus
+    ):
+        """`ball` runs before `fast` in the Slots they share, so with Latency
+        0 `fast` steps on the height published in the same Slot, and holds it
+        in the Slot `ball` does not have."""
+        document = edited(MULTIRATE, lambda d: d["channels"]["ball"].update(
+            latency_ns=0))
+        assert route(self.plan(tmp_path, multirate_fmus, document), "ball",
+                     "fast")["activations"] == [
+            {"at_ns": 0, "delivered": 1, "input": taken(0, 20)},
+            {"at_ns": 10 * MS, "delivered": 0, "input": taken(0, 20)},
+        ]
+
+    def test_a_plan_that_stops_before_the_pattern_repeats_says_so(
+        self, tmp_path
+    ):
+        """`right` has 13 activations before the pattern of a 130 ms
+        publisher repeats; the plan lists 12 and states the one it omits."""
+        def edit(document):
+            document["duration_ns"] = 130 * MS
+            document["fmus"]["left"]["step_period_ns"] = 130 * MS
+            document["channels"]["right.value"]["subscribers"]["left"][
+                "capacity"] = 13
+        receipt = couple(write(tmp_path, edited(FEEDBACK, edit)),
+                         feedthroughs(tmp_path), tmp_path / "manifest.json")
+        slow_to_fast = route(receipt["plan"], "left.value", "right")
+        assert [a["at_ns"] for a in slow_to_fast["activations"]] == [
+            t * MS for t in range(0, 120, 10)]
+        assert slow_to_fast["activations_not_listed"] == 1
+        assert route(receipt["plan"], "right.value", "left")[
+            "activations_not_listed"] == 0
+        assert ("1 more activation before the pattern repeats is not listed"
+                in render_plan(receipt["plan"]))
+
+    def test_the_start_values_state_where_they_come_from(
+        self, tmp_path, multirate_fmus
+    ):
+        plan = self.plan(tmp_path, multirate_fmus)
+        assert route(plan, "ball", "fast")["until_first_delivery"] == {
+            "Float64_continuous_input": {"value": "1.25", "from": "document"}}
+        assert route(plan, "fast", "slow")["until_first_delivery"] == {
+            "Float64_continuous_input": {"value": "2.5", "from": "document"}}
+
+    def test_a_start_the_fmu_declares_is_named_as_the_fmus(self, tmp_path):
+        plan = couple(EXAMPLE / "feedback.json", feedthroughs(tmp_path),
+                      tmp_path / "manifest.json")["plan"]
+        assert route(plan, "left.value", "right")["until_first_delivery"] == {
+            "Float64_continuous_input": {"value": "0", "from": "FMU"}}
+
+    def test_the_plan_states_the_periods_and_latencies(
+        self, tmp_path, multirate_fmus
+    ):
+        text = render_plan(self.plan(tmp_path, multirate_fmus))
+        assert "Duration 120 ms: Slots at 0 <= t < 120 ms" in text
+        assert "1. ball  priority 0, period 20 ms, 6 Steps" in text
+        assert "3. slow  priority 2, period 30 ms, 4 Steps" in text
+        assert "at 0 ms: no Message yet, holds the start value" in text
+        assert ("at 20 ms: no new Message, holds the one published at 0 ms "
+                "(values at 20 ms)") in text
+        assert ("at 30 ms: takes 3 Messages and steps on the newest, "
+                "published at 20 ms (values at 30 ms)") in text
+        assert ("fast.Float64_continuous_input holds 1.25 (document start) "
+                "until the first delivery") in text
+
+    def test_the_final_publication_of_each_channel(
+        self, tmp_path, multirate_fmus
+    ):
+        """Each FMU's last Step ends on the Duration. `fast` still takes the
+        last height in-run; the last Messages of `fast` and `slow` become
+        visible at or after the Duration, so only the Recording holds them."""
+        plan = self.plan(tmp_path, multirate_fmus)
+        finals = {c["channel"]: c["final"] for c in plan["channels"]}
+        assert finals == {
+            "ball": {"published_ns": 100 * MS, "values_at_ns": 120 * MS,
+                     "taken_by": {"fast": 110 * MS}},
+            "fast": {"published_ns": 110 * MS, "values_at_ns": 120 * MS,
+                     "taken_by": {}},
+            "slow": {"published_ns": 90 * MS, "values_at_ns": 120 * MS,
+                     "taken_by": {}},
+        }
+        text = render_plan(plan)
+        assert ("last Message published at 110 ms (values at 120 ms): no "
+                "activation takes it; only the Recording holds it") in text
+        assert ("last Message published at 100 ms (values at 120 ms): fast "
+                "takes it at 110 ms") in text
+
+    @pytest.mark.parametrize("duration_ms", [100, 125])
+    def test_a_duration_that_splits_a_step_is_refused(
+        self, tmp_path, multirate_fmus, duration_ms
+    ):
+        document = edited(MULTIRATE, lambda d: d.update(
+            duration_ns=duration_ms * MS))
+        message = rejection(tmp_path, document, multirate_fmus)
+        assert f"Duration {duration_ms} ms" in message
+        assert "'slow'" in message and "period 30 ms" in message
+        assert "does not clip" in message
+        assert "120 ms" in message
+
+    def test_a_duration_that_splits_a_step_of_the_feedback_loop_is_refused(
+        self, tmp_path
+    ):
+        document = edited(FEEDBACK, lambda d: d.update(duration_ns=55 * MS))
+        message = rejection(tmp_path, document)
+        assert "Duration 55 ms" in message and "'left'" in message
+        assert "50 ms or 60 ms" in message
+
+
+def expected_heights(recording: Path) -> dict[str, dict[int, float]]:
+    """What `fast` and `slow` must publish, by sample time, from the heights
+    `ball` published and the tables above. Nothing here reads the plan."""
+    heights = dict(values(recording, "ball"))
+    fast = {published * MS: 1.25 if source == "start" else heights[source * MS]
+            for published, source in FAST_TAKES.items()}
+    slow = {published * MS: 2.5 if source == "start" else fast[source * MS]
+            for published, source in SLOW_TAKES.items()}
+    return {"fast": {t + 10 * MS: v for t, v in fast.items()},
+            "slow": {t + 30 * MS: v for t, v in slow.items()}}
+
+
+def final_coverage_contract() -> dict:
+    """Each probe's output, observed at the time it describes: the end of
+    the Step, one Period after its publication, up to the Duration."""
+    def observed(period_ms: int) -> dict:
+        return {"actual_offset_ns": period_ms * MS, "reference_offset_ns": 0,
+                "observations": {"start_ns": period_ms * MS,
+                                 "stop_ns": 120 * MS,
+                                 "step_ns": period_ms * MS},
+                # Nothing is computed between the two sides: equal bits.
+                "fields": {"h": {"atol": 0, "rtol": 0}}}
+    return {"sil_comparison": 1,
+            "evaluation": {"from_ns": 0, "to_ns": 120 * MS},
+            "channels": {"fast": observed(10), "slow": observed(30)}}
+
+
+def write_reference(path: Path, expected: dict[str, dict[int, float]]) -> Path:
+    from mcap.writer import CompressionType, Writer
+    schema = json.dumps({"fields": [{"name": "h", "type": "f64"}]},
+                        sort_keys=True).encode()
+    with open(path, "wb") as f:
+        writer = Writer(f, compression=CompressionType.NONE)
+        writer.start(profile="sil", library="test")
+        for channel, samples in expected.items():
+            schema_id = writer.register_schema(channel, "sil_pod", schema)
+            channel_id = writer.register_channel(channel, "sil_pod", schema_id)
+            for t, value in sorted(samples.items()):
+                writer.add_message(channel_id, log_time=t, publish_time=t,
+                                   data=struct.pack("<d", value))
+        writer.finish()
+    return path
+
+
+class TestSeveralPeriodsRun:
+    @pytest.fixture
+    def recording(self, tmp_path, multirate_fmus, sil_run) -> Path:
+        manifest = tmp_path / "multirate.json"
+        couple(write(tmp_path, MULTIRATE, "document.json"), multirate_fmus,
+               manifest)
+        first = run_manifest(sil_run, manifest, tmp_path / "run-1.mcap")
+        second = run_manifest(sil_run, manifest, tmp_path / "run-2.mcap")
+        assert first.returncode == 0, first.stderr
+        assert second.returncode == 0, second.stderr
+        assert first.mcap_path.read_bytes() == second.mcap_path.read_bytes()
+        return first.mcap_path
+
+    def test_each_fmu_publishes_one_message_per_step_up_to_the_duration(
+        self, recording
+    ):
+        for channel, period_ms in (("ball", 20), ("fast", 10), ("slow", 30)):
+            assert [t for t, _ in values(recording, channel)] == [
+                t * MS for t in range(0, 120, period_ms)]
+
+    def test_each_activation_steps_on_the_input_the_tables_state(
+        self, recording
+    ):
+        expected = expected_heights(recording)
+        for channel, period_ms in (("fast", 10), ("slow", 30)):
+            assert {t + period_ms * MS: v
+                    for t, v in values(recording, channel)} == expected[channel]
+        # The heights differ, so a wrong table could not pass by chance.
+        assert len(set(expected["fast"].values())) == 7
+
+    def test_a_post_hoc_check_covers_the_final_sample(
+        self, tmp_path, recording
+    ):
+        from sil.compare import compare, read_contract
+        contract_path = tmp_path / "contract.json"
+        contract_path.write_text(json.dumps(final_coverage_contract()))
+        contract = read_contract(contract_path)
+        expected = expected_heights(recording)
+        good = write_reference(tmp_path / "good.mcap", expected)
+        report = compare(contract, recording, good)
+        assert report["verdict"] == "pass", report
+        assert {name: counts["checked"]
+                for name, counts in report["channels"].items()} == {
+            "fast": 12, "slow": 4}
+
+        wrong = copy.deepcopy(expected)
+        wrong["slow"][120 * MS] += 0.5
+        report = compare(contract, recording,
+                         write_reference(tmp_path / "wrong.mcap", wrong))
+        assert report["verdict"] == "fail"
+        first = report["first_divergence"]
+        assert (first["kind"], first["channel"], first["observation_ns"],
+                first["actual_publication_ns"]) == (
+            "value", "slow", 120 * MS, 90 * MS)
