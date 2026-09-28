@@ -1112,6 +1112,8 @@ Before it writes a Manifest, the command rejects (exit 2) with the reason:
   subscriber. The diagnostic names an order that the connections allow;
 - a route that holds more Messages than its `capacity` under the `fail`
   policy (see the plan below);
+- a `duration_ns` that is not a multiple of the `step_period_ns` of each FMU
+  (see [Timing across several periods](#timing-across-several-periods));
 - an unknown or duplicate key, and every value the Manifest builder refuses.
 
 **The zero-Latency check is a conservative authoring profile.** It reads the
@@ -1127,17 +1129,18 @@ connection with its type and unit, and the SHA-256 of the document, each FMU
 and the Manifest. For `feedback.json`, the plan starts:
 
 ```text
+Duration 50 ms: Slots at 0 <= t < 50 ms; the last Step of each FMU ends on the Duration
 execution order in each Slot (lowest priority first):
-  1. left  priority 0, period 10 ms
-  2. right  priority 1, period 10 ms
+  1. left  priority 0, period 10 ms, 5 Steps
+  2. right  priority 1, period 10 ms, 5 Steps
 same-Slot connections: none
 Channels (a Message published at t holds its publisher's outputs at t + the publisher's period):
   left.value, published by left with Latency 10 ms: value = Float64_continuous_output
     to right: route capacity 2 (fail), at most 2 Messages in the route
-      right.Float64_continuous_input holds 0 until the first delivery
-      published at 0 ms (values at 10 ms) -> delivered at 10 ms
-      published at 10 ms (values at 20 ms) -> delivered at 20 ms
-      published at 20 ms (values at 30 ms) -> delivered at 30 ms
+      right.Float64_continuous_input holds 0 (FMU start) until the first delivery
+      at 0 ms: no Message yet, holds the start value
+      at 10 ms: takes the Message published at 0 ms (values at 10 ms)
+    last Message published at 40 ms (values at 50 ms): no activation takes it; only the Recording holds it
 ```
 
 - **Publication.** The importer publishes at the start of a Step the values
@@ -1147,6 +1150,12 @@ Channels (a Message published at t holds its publisher's outputs at t + the publ
   subscriber takes it at its first activation at or after that time, and
   writes it before its Step. A zero-Latency Message reaches a subscriber in
   the same Slot, because its publisher runs first.
+- **Activations.** For each route, the plan lists the input that each
+  activation of the subscriber steps on, until the pattern repeats. The
+  pattern repeats after one common period of the two FMUs, counted from the
+  first time a Message can be visible. The first activations hold the start
+  value. The plan states whether the start value comes from the document or
+  from the FMU.
 - **Route bound.** A route holds a Message from its publication to its
   delivery. When the publisher runs first in a Slot, its new Message is in
   the route before the subscriber takes the previous one. The plan states
@@ -1160,10 +1169,112 @@ Supported limits:
 - **Channel fields only.** A connection carries a `Float64`, `Boolean` or
   `Binary` value of one output, as the single-FMU importer maps it. Clocks,
   network terminals and FMI-LS-BUS stay in a group.
-- **Fixed periods.** Each FMU steps on its own fixed Period, from 0.
+- **Fixed periods.** Each FMU steps on its own fixed Period, from 0, and
+  the Duration is a multiple of each Period. There is no adaptive step, no
+  rollback and no change of a Period during the Run.
 - **FMUs only.** The Run holds the coupled FMUs. The proof in
   [proofs/acc-fmi/](proofs/acc-fmi/README.md#authored-coupling-187) runs the
   rendered ACC Manifest and compares it with the independent FMPy trajectory.
+
+### Timing across several periods
+
+The FMUs of one document can have different periods. The rules of the plan
+above apply to each route. This section states the timing contract for such
+a Run. The tests (`TestSeveralPeriods` in `tests/test_fmu_coupling.py`) use
+this Run: `ball` (`BouncingBall`) publishes its height, and two `Feedthrough`
+instances, `fast` and `slow`, publish the height they step on. Each FMU
+states its start value in the document.
+
+| FMU | Period | Priority | Steps in 120 ms | Takes | Latency of the route |
+| --- | --- | --- | --- | --- | --- |
+| `ball` | 20 ms | 0 | 6 | nothing | |
+| `fast` | 10 ms | 1 | 12 | `ball` | 10 ms |
+| `slow` | 30 ms | 2 | 4 | `fast` | 10 ms |
+
+All three FMUs have an activation in the Slots at 0 and 60 ms. In such a
+Slot, they run in the order of their priorities.
+
+**Four times of one Message.** The contract keeps them apart:
+
+| Time | What it is | For a Message of `ball` published at 20 ms |
+| --- | --- | --- |
+| Sample time | The virtual time that the values describe. For an FMU output, this is the end of the Step, the FMU endpoint: publication Slot + the publisher's period. | 40 ms |
+| Publication Slot | The Slot of the Step that publishes the Message. The Recording stores this time. | 20 ms |
+| Visible time | Publication Slot + the Channel's Latency. | 30 ms |
+| Delivery time | The first activation of the subscriber at or after the visible time. The subscriber writes the value before its Step over `[delivery, delivery + its period]`. | 30 ms (`fast`) |
+
+A replayed Message has a sample time too. The Replay participant publishes
+it at its recorded time, and a
+[comparison contract](#compare-a-trajectory-against-a-reference) states the
+offset from its publication to its sample time.
+
+**Which input each activation steps on.** Each activation writes the
+Messages it takes in Publish order, so it steps on the newest one. An
+activation that takes no new Message holds the last value. Before the first
+delivery, the input holds its start value. The plan for this Run states:
+
+```text
+  ball, published by ball with Latency 10 ms: h = h [m]
+    to fast: route capacity 1 (fail), at most 1 Message in the route
+      fast.Float64_continuous_input holds 1.25 (document start) until the first delivery
+      at 0 ms: no Message yet, holds the start value
+      at 10 ms: takes the Message published at 0 ms (values at 20 ms)
+      at 20 ms: no new Message, holds the one published at 0 ms (values at 20 ms)
+    last Message published at 100 ms (values at 120 ms): fast takes it at 110 ms
+  fast, published by fast with Latency 10 ms: h = Float64_continuous_output [m]
+    to slow: route capacity 4 (fail), at most 4 Messages in the route
+      slow.Float64_continuous_input holds 2.5 (document start) until the first delivery
+      at 0 ms: no Message yet, holds the start value
+      at 30 ms: takes 3 Messages and steps on the newest, published at 20 ms (values at 30 ms)
+    last Message published at 110 ms (values at 120 ms): no activation takes it; only the Recording holds it
+```
+
+`fast` takes a new height at every second activation and holds it in
+between. `slow` takes three Messages of `fast` at once, and the two older
+ones have no effect.
+
+**Initialization.** Each FMU initializes alone, at virtual time 0, before
+the first Slot. The importer sets the start values, then enters and exits
+the initialization mode of that one FMU. No Message is delivered during
+initialization, and no FMU sees the initial outputs of another FMU. There is
+no joint initialization and no solver for the initial values of the coupled
+FMUs. Thus each connected input needs a start value, from the document or
+declared by the FMU, and the plan states which one. A Recording holds no
+initial output: the first Message of an FMU, published at 0, holds its
+values at the end of its first Step.
+
+**Duration.** A Run has the Slots `0 <= t < Duration`, a half-open interval.
+The kernel steps an FMU at each of its Slots, and each Step covers one full
+period `[t, t + period]`. Thus the last Step of an FMU starts at
+`Duration - period` and ends on the Duration only if the Duration is a
+multiple of the period. `sil-run` does not clip the last Step: for a
+hand-written Manifest whose Duration is not a multiple, the FMU steps past
+the Duration, and that behavior does not change. This authoring profile
+refuses such a Duration before it writes the Manifest. The diagnostic names
+each FMU, the last Step and a Duration that fits, for example:
+
+```text
+sil-fmu-couple: error: Duration 100 ms is not a multiple of the period of FMU 'slow' (period 30 ms). The last Step of 'slow' would start at 90 ms and end at 120 ms, after the Duration. [...] such as 60 ms or 120 ms
+```
+
+**The final samples.** The last Message of each FMU holds its values at the
+Duration. A subscriber takes it only when it is visible before the
+Duration and a later activation of the subscriber exists. For each Channel,
+the plan states who takes the last Message. In this Run, `fast` takes the
+last height of `ball` at 110 ms. The last Messages of `fast` (visible at
+120 ms) and `slow` (no subscriber) reach no participant. The Run has no
+Slot at the Duration, and shutdown does not step a participant. Thus an
+in-run Test participant cannot see the values of an FMU at the Duration,
+and it cannot see a Message that becomes visible at or after the Duration.
+Only the Recording holds them.
+
+Check the final samples post-hoc. `sil-compare` observes each Message at
+its sample time: `actual_offset_ns` is the publisher's period. With an
+observation grid that ends on the Duration, the final sample is compared
+like each other sample. The tests compare the Recording of this Run with a
+reference computed from the hand-written consumption tables. The same
+comparison with a wrong final sample of `slow` fails, and the first
+divergence is at 120 ms.
 
 ## Replay recorded input into a shared library
 

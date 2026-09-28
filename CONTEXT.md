@@ -42,6 +42,13 @@ participant. It is the reciprocal of frequency; use period when describing the
 time between activations.
 _Avoid_: rate, interval when naming a participant's recurring schedule
 
+**Sample time**:
+The Virtual time that a Message's values describe. For an FMU output it is
+the end of the Step that computed them, one Period after the Message's
+publication Slot; the Recording stores the publication Slot, not the sample
+time.
+_Avoid_: timestamp, source time when naming what the values describe
+
 **Observation grid**:
 The authored set of virtual times at which a trajectory is compared. It is a
 comparison policy, not a participant's Period and not a resampling operation.

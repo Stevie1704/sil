@@ -43,6 +43,9 @@ Everything is checked before a Manifest is written, and nothing is loaded:
   Slot. A zero-Latency connection delivers inside the publishing Slot, so its
   publisher runs first. The zero-Latency connections have to be acyclic, and a
   cycle is refused with the path it takes.
+* the Duration is a multiple of each FMU's period, so each FMU's last Step
+  ends on the Duration. `sil-run` advances every Step by one full period and
+  does not clip the last one.
 
 The zero-Latency check is a conservative authoring profile. It reads the
 declared connections only. It does not find or solve an algebraic loop in the
@@ -50,9 +53,17 @@ models' equations, and it refuses a structural cycle even where the models
 would not form one. A feedback loop with a Latency above zero on at least one
 Channel is an ordinary feedback loop and stays supported.
 
-The plan states, for each FMU, its place in a Slot and its period, and, for
-each route, what a Message holds and when it is delivered. The receipt holds
-the plan and the digests of the document, each FMU and the Manifest.
+Each FMU initializes alone, from its start values, before the first Slot.
+Nothing is delivered during initialization and no initial value is solved
+jointly, so a connected input holds its start value until its first
+delivery.
+
+The plan states, for each FMU, its place in a Slot, its period and its Steps,
+and, for each route, what a Message holds, when it is delivered, where the
+start value comes from and which input each activation steps on. For each
+Channel it states who takes the last Message, which holds the values at the
+Duration; one that no activation takes is only in the Recording. The receipt
+holds the plan and the digests of the document, each FMU and the Manifest.
 """
 
 from __future__ import annotations

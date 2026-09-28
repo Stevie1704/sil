@@ -640,7 +640,7 @@ MULTIRATE = {
         "slow": probe(30, 2, "2.5"),
     },
     "channels": {
-        "ball": feeds("ball", "h", "fast", 2),
+        "ball": feeds("ball", "h", "fast", 1),
         "fast": feeds("fast", "Float64_continuous_output", "slow", 4),
         "slow": {"publisher": "slow", "latency_ns": 10 * MS,
                  "fields": [{**HEIGHT, "variable": "Float64_continuous_output"}],
