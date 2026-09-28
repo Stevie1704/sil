@@ -1,0 +1,963 @@
+{
+  "issue": 197,
+  "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.36",
+  "installed_sil": {
+    "version": "0.1.0",
+    "module": "/opt/sil/python/lib/python3.13/site-packages/sil/__init__.py"
+  },
+  "bundle_sha256": "b84884dcc4cfcdbd745a1e0bb2fd94334a87f648007bb6a8a354b7084b65e3f8",
+  "images": {
+    "tools_id": "sha256:b60a0cac1af65c3e87dff510ffa9d31dac0583b048e0bb9cb5e38eb4bc7dc7c9",
+    "runtime_id": "sha256:16e73f284d7212170a51b042634138f82de9aef2055128772080e427aff130bb",
+    "example_id": "sha256:66ca254a518db8a64b26fa5a678b96da808c41fc972b3e399953647efa4bf8ad",
+    "platform": "linux/amd64",
+    "source_revision": "c135a0572ae4e626a598907a63dfc9c85962149a"
+  },
+  "fmus": {
+    "AccPlant": {
+      "sha256": "cd2d52c9c6ce765e92712234a05ef24a3d9dd9e23030f7a9233df403f6617a1f",
+      "exporter_identity": {
+        "source_revision": "c135a0572ae4e626a598907a63dfc9c85962149a",
+        "model_sha256": "514e73717371a9004ab2fd9c1a6758b3f668586b06b56cc2075ec94ad5c7e778",
+        "dynamics_sha256": "7d10797f998608d759f5fdfda275dfe0d97370149c48d71ad63d6d296b11cea5",
+        "exporter": "PythonFMU3 0.3.4",
+        "exporter_revision": "6c4b81cb869447f6c69e3417c495f73f11c40ae0",
+        "python": "CPython 3.13.7 (provided by execution image)",
+        "machine_class": "Linux x86-64, glibc 2.36",
+        "model_license": "Apache-2.0",
+        "exporter_license": "MIT",
+        "archive_sha256": "cd2d52c9c6ce765e92712234a05ef24a3d9dd9e23030f7a9233df403f6617a1f"
+      }
+    },
+    "AccController": {
+      "sha256": "248d1570ebecebbe74ad8ff0cc87f143d43540ca1a8afd6f34eee35f9d941827",
+      "exporter_identity": {
+        "source_revision": "c135a0572ae4e626a598907a63dfc9c85962149a",
+        "model_sha256": "e9f56f6402652d536bade3ec6ee7fe03b19eac8e309f801d87d879e18fbebfa6",
+        "dynamics_sha256": "7d10797f998608d759f5fdfda275dfe0d97370149c48d71ad63d6d296b11cea5",
+        "exporter": "PythonFMU3 0.3.4",
+        "exporter_revision": "6c4b81cb869447f6c69e3417c495f73f11c40ae0",
+        "python": "CPython 3.13.7 (provided by execution image)",
+        "machine_class": "Linux x86-64, glibc 2.36",
+        "model_license": "Apache-2.0",
+        "exporter_license": "MIT",
+        "archive_sha256": "248d1570ebecebbe74ad8ff0cc87f143d43540ca1a8afd6f34eee35f9d941827"
+      }
+    }
+  },
+  "common_observation_grid_ns": 20000000,
+  "sensitivity_envelope": {
+    "gap_m": 0.25,
+    "relative_speed_mps": 0.15,
+    "ego_speed_mps": 0.15,
+    "accel_mps2": 0.25,
+    "ego_position_m": 0.25,
+    "lead_position_m": 0.25,
+    "lead_speed_mps": 0.15
+  },
+  "scope": "AccController and AccPlant PythonFMU3 FMI 3.0 Co-Simulation, fixed 10/20 ms periods, stated Channel Latencies, Linux x86-64",
+  "results": {
+    "equal-10": {
+      "row": {
+        "name": "equal-10",
+        "plant_ms": 10,
+        "controller_ms": 10,
+        "sensing_ms": 10,
+        "command_ms": 10,
+        "baseline": null
+      },
+      "manifest_sha256": [
+        "3d67aeb600fa603f9f3073685bf0d5c816255ac4ebc23002c2782379fb2393fa",
+        "3d67aeb600fa603f9f3073685bf0d5c816255ac4ebc23002c2782379fb2393fa"
+      ],
+      "recording_sha256": [
+        "c562f6f2f09519a7cbe9bdcab9cc5efbad0d7ede203e36a8b61dcfd372973436",
+        "c562f6f2f09519a7cbe9bdcab9cc5efbad0d7ede203e36a8b61dcfd372973436"
+      ],
+      "fmu_sha256": {
+        "plant": "cd2d52c9c6ce765e92712234a05ef24a3d9dd9e23030f7a9233df403f6617a1f",
+        "controller": "248d1570ebecebbe74ad8ff0cc87f143d43540ca1a8afd6f34eee35f9d941827"
+      },
+      "independent_comparison": {
+        "checked": {
+          "sensing": 1500,
+          "command": 500,
+          "state": 1500
+        },
+        "final_sample_time_ns": 5000000000,
+        "atol": 1e-10,
+        "rtol": 1e-12
+      },
+      "plan_schedule_checked_activations": {
+        "command": 2,
+        "sensing": 2
+      },
+      "sample_time_offsets_ns": {
+        "sensing": 10000000,
+        "command": 10000000,
+        "state": 10000000
+      },
+      "schedule_first_activations": {
+        "sensing": [
+          [
+            "0",
+            null
+          ],
+          [
+            "10000000",
+            0
+          ],
+          [
+            "20000000",
+            10000000
+          ],
+          [
+            "30000000",
+            20000000
+          ],
+          [
+            "40000000",
+            30000000
+          ]
+        ],
+        "command": [
+          [
+            "0",
+            null
+          ],
+          [
+            "10000000",
+            0
+          ],
+          [
+            "20000000",
+            10000000
+          ],
+          [
+            "30000000",
+            20000000
+          ],
+          [
+            "40000000",
+            30000000
+          ]
+        ]
+      }
+    },
+    "plant-20": {
+      "row": {
+        "name": "plant-20",
+        "plant_ms": 20,
+        "controller_ms": 10,
+        "sensing_ms": 10,
+        "command_ms": 10,
+        "baseline": "equal-10"
+      },
+      "manifest_sha256": [
+        "27bcfff92d9a1d02dbd5d3f06b61ff20faf57fd25966540dccd17a434e55b9c2",
+        "27bcfff92d9a1d02dbd5d3f06b61ff20faf57fd25966540dccd17a434e55b9c2"
+      ],
+      "recording_sha256": [
+        "3605e1afc4d2aa2dc48ef274db675a90a402a98cfbf7cb198702f2dbd7003982",
+        "3605e1afc4d2aa2dc48ef274db675a90a402a98cfbf7cb198702f2dbd7003982"
+      ],
+      "fmu_sha256": {
+        "plant": "cd2d52c9c6ce765e92712234a05ef24a3d9dd9e23030f7a9233df403f6617a1f",
+        "controller": "248d1570ebecebbe74ad8ff0cc87f143d43540ca1a8afd6f34eee35f9d941827"
+      },
+      "independent_comparison": {
+        "checked": {
+          "sensing": 750,
+          "command": 500,
+          "state": 750
+        },
+        "final_sample_time_ns": 5000000000,
+        "atol": 1e-10,
+        "rtol": 1e-12
+      },
+      "plan_schedule_checked_activations": {
+        "command": 2,
+        "sensing": 3
+      },
+      "sample_time_offsets_ns": {
+        "sensing": 20000000,
+        "command": 10000000,
+        "state": 20000000
+      },
+      "schedule_first_activations": {
+        "sensing": [
+          [
+            "0",
+            null
+          ],
+          [
+            "10000000",
+            0
+          ],
+          [
+            "20000000",
+            0
+          ],
+          [
+            "30000000",
+            20000000
+          ],
+          [
+            "40000000",
+            20000000
+          ]
+        ],
+        "command": [
+          [
+            "0",
+            null
+          ],
+          [
+            "20000000",
+            10000000
+          ],
+          [
+            "40000000",
+            30000000
+          ],
+          [
+            "60000000",
+            50000000
+          ],
+          [
+            "80000000",
+            70000000
+          ]
+        ]
+      },
+      "sensitivity": {
+        "baseline": "equal-10",
+        "varied": "plant_ms",
+        "grid_ns": 20000000,
+        "sample_times": 250,
+        "maxima": {
+          "gap_m": {
+            "absolute_difference": 0.030679718811342127,
+            "sample_time_ns": 2680000000
+          },
+          "relative_speed_mps": {
+            "absolute_difference": 0.015000000000000568,
+            "sample_time_ns": 20000000
+          },
+          "ego_speed_mps": {
+            "absolute_difference": 0.015000000000000568,
+            "sample_time_ns": 20000000
+          },
+          "accel_mps2": {
+            "absolute_difference": 0.007052459313385828,
+            "sample_time_ns": 2200000000
+          },
+          "ego_position_m": {
+            "absolute_difference": 0.030679718811342127,
+            "sample_time_ns": 2680000000
+          },
+          "lead_position_m": {
+            "absolute_difference": 0.0,
+            "sample_time_ns": 20000000
+          },
+          "lead_speed_mps": {
+            "absolute_difference": 0.0,
+            "sample_time_ns": 20000000
+          }
+        },
+        "inside_envelope": true
+      }
+    },
+    "controller-20": {
+      "row": {
+        "name": "controller-20",
+        "plant_ms": 10,
+        "controller_ms": 20,
+        "sensing_ms": 10,
+        "command_ms": 10,
+        "baseline": "equal-10"
+      },
+      "manifest_sha256": [
+        "26fb352a78291046cc2121e4dac0a0e1629957eac3fc3e1a25fa3ce5f9491155",
+        "26fb352a78291046cc2121e4dac0a0e1629957eac3fc3e1a25fa3ce5f9491155"
+      ],
+      "recording_sha256": [
+        "34dd1e214dfb3399890b9b4225485331db6725465cf6d449ec258a52f0a22e39",
+        "34dd1e214dfb3399890b9b4225485331db6725465cf6d449ec258a52f0a22e39"
+      ],
+      "fmu_sha256": {
+        "plant": "cd2d52c9c6ce765e92712234a05ef24a3d9dd9e23030f7a9233df403f6617a1f",
+        "controller": "248d1570ebecebbe74ad8ff0cc87f143d43540ca1a8afd6f34eee35f9d941827"
+      },
+      "independent_comparison": {
+        "checked": {
+          "sensing": 1500,
+          "command": 250,
+          "state": 1500
+        },
+        "final_sample_time_ns": 5000000000,
+        "atol": 1e-10,
+        "rtol": 1e-12
+      },
+      "plan_schedule_checked_activations": {
+        "command": 3,
+        "sensing": 2
+      },
+      "sample_time_offsets_ns": {
+        "sensing": 10000000,
+        "command": 20000000,
+        "state": 10000000
+      },
+      "schedule_first_activations": {
+        "sensing": [
+          [
+            "0",
+            null
+          ],
+          [
+            "20000000",
+            10000000
+          ],
+          [
+            "40000000",
+            30000000
+          ],
+          [
+            "60000000",
+            50000000
+          ],
+          [
+            "80000000",
+            70000000
+          ]
+        ],
+        "command": [
+          [
+            "0",
+            null
+          ],
+          [
+            "10000000",
+            0
+          ],
+          [
+            "20000000",
+            0
+          ],
+          [
+            "30000000",
+            20000000
+          ],
+          [
+            "40000000",
+            20000000
+          ]
+        ]
+      },
+      "sensitivity": {
+        "baseline": "equal-10",
+        "varied": "controller_ms",
+        "grid_ns": 20000000,
+        "sample_times": 250,
+        "maxima": {
+          "gap_m": {
+            "absolute_difference": 0.0045511746156421395,
+            "sample_time_ns": 3700000000
+          },
+          "relative_speed_mps": {
+            "absolute_difference": 0.0037960347685590534,
+            "sample_time_ns": 2120000000
+          },
+          "ego_speed_mps": {
+            "absolute_difference": 0.0037960347685590534,
+            "sample_time_ns": 2120000000
+          },
+          "accel_mps2": {
+            "absolute_difference": 0.03403875000000145,
+            "sample_time_ns": 1580000000
+          },
+          "ego_position_m": {
+            "absolute_difference": 0.0045511746156421395,
+            "sample_time_ns": 3700000000
+          },
+          "lead_position_m": {
+            "absolute_difference": 0.0,
+            "sample_time_ns": 20000000
+          },
+          "lead_speed_mps": {
+            "absolute_difference": 0.0,
+            "sample_time_ns": 20000000
+          }
+        },
+        "inside_envelope": true
+      }
+    },
+    "sensing-20": {
+      "row": {
+        "name": "sensing-20",
+        "plant_ms": 20,
+        "controller_ms": 10,
+        "sensing_ms": 20,
+        "command_ms": 10,
+        "baseline": "plant-20"
+      },
+      "manifest_sha256": [
+        "0fd4de90882d40e9cf701218a5824bc9ad8a06f32dd7c56fc50d0a769d3ab638",
+        "0fd4de90882d40e9cf701218a5824bc9ad8a06f32dd7c56fc50d0a769d3ab638"
+      ],
+      "recording_sha256": [
+        "3b7185208b4153988f7b8c802513e14fabb3dac907ea7e49dca43a938efc40e1",
+        "3b7185208b4153988f7b8c802513e14fabb3dac907ea7e49dca43a938efc40e1"
+      ],
+      "fmu_sha256": {
+        "plant": "cd2d52c9c6ce765e92712234a05ef24a3d9dd9e23030f7a9233df403f6617a1f",
+        "controller": "248d1570ebecebbe74ad8ff0cc87f143d43540ca1a8afd6f34eee35f9d941827"
+      },
+      "independent_comparison": {
+        "checked": {
+          "sensing": 750,
+          "command": 500,
+          "state": 750
+        },
+        "final_sample_time_ns": 5000000000,
+        "atol": 1e-10,
+        "rtol": 1e-12
+      },
+      "plan_schedule_checked_activations": {
+        "command": 2,
+        "sensing": 4
+      },
+      "sample_time_offsets_ns": {
+        "sensing": 20000000,
+        "command": 10000000,
+        "state": 20000000
+      },
+      "schedule_first_activations": {
+        "sensing": [
+          [
+            "0",
+            null
+          ],
+          [
+            "10000000",
+            null
+          ],
+          [
+            "20000000",
+            0
+          ],
+          [
+            "30000000",
+            0
+          ],
+          [
+            "40000000",
+            20000000
+          ]
+        ],
+        "command": [
+          [
+            "0",
+            null
+          ],
+          [
+            "20000000",
+            10000000
+          ],
+          [
+            "40000000",
+            30000000
+          ],
+          [
+            "60000000",
+            50000000
+          ],
+          [
+            "80000000",
+            70000000
+          ]
+        ]
+      },
+      "sensitivity": {
+        "baseline": "plant-20",
+        "varied": "sensing_ms",
+        "grid_ns": 20000000,
+        "sample_times": 250,
+        "maxima": {
+          "gap_m": {
+            "absolute_difference": 0.018067932011845755,
+            "sample_time_ns": 3700000000
+          },
+          "relative_speed_mps": {
+            "absolute_difference": 0.015266643269274738,
+            "sample_time_ns": 2140000000
+          },
+          "ego_speed_mps": {
+            "absolute_difference": 0.015266643269274738,
+            "sample_time_ns": 2140000000
+          },
+          "accel_mps2": {
+            "absolute_difference": 0.06649543759999643,
+            "sample_time_ns": 1600000000
+          },
+          "ego_position_m": {
+            "absolute_difference": 0.018067932011845755,
+            "sample_time_ns": 3700000000
+          },
+          "lead_position_m": {
+            "absolute_difference": 0.0,
+            "sample_time_ns": 20000000
+          },
+          "lead_speed_mps": {
+            "absolute_difference": 0.0,
+            "sample_time_ns": 20000000
+          }
+        },
+        "inside_envelope": true
+      }
+    },
+    "command-20": {
+      "row": {
+        "name": "command-20",
+        "plant_ms": 20,
+        "controller_ms": 10,
+        "sensing_ms": 10,
+        "command_ms": 20,
+        "baseline": "plant-20"
+      },
+      "manifest_sha256": [
+        "98ed6132642aa51b22ce95671cfe368ce4be9da796426da32c8c9a5cd50f3df8",
+        "98ed6132642aa51b22ce95671cfe368ce4be9da796426da32c8c9a5cd50f3df8"
+      ],
+      "recording_sha256": [
+        "bcaf7f06e82a601c27261f92944de84fddeaaf44324fd934546fdb4fd07e75e4",
+        "bcaf7f06e82a601c27261f92944de84fddeaaf44324fd934546fdb4fd07e75e4"
+      ],
+      "fmu_sha256": {
+        "plant": "cd2d52c9c6ce765e92712234a05ef24a3d9dd9e23030f7a9233df403f6617a1f",
+        "controller": "248d1570ebecebbe74ad8ff0cc87f143d43540ca1a8afd6f34eee35f9d941827"
+      },
+      "independent_comparison": {
+        "checked": {
+          "sensing": 750,
+          "command": 500,
+          "state": 750
+        },
+        "final_sample_time_ns": 5000000000,
+        "atol": 1e-10,
+        "rtol": 1e-12
+      },
+      "plan_schedule_checked_activations": {
+        "command": 2,
+        "sensing": 3
+      },
+      "sample_time_offsets_ns": {
+        "sensing": 20000000,
+        "command": 10000000,
+        "state": 20000000
+      },
+      "schedule_first_activations": {
+        "sensing": [
+          [
+            "0",
+            null
+          ],
+          [
+            "10000000",
+            0
+          ],
+          [
+            "20000000",
+            0
+          ],
+          [
+            "30000000",
+            20000000
+          ],
+          [
+            "40000000",
+            20000000
+          ]
+        ],
+        "command": [
+          [
+            "0",
+            null
+          ],
+          [
+            "20000000",
+            0
+          ],
+          [
+            "40000000",
+            20000000
+          ],
+          [
+            "60000000",
+            40000000
+          ],
+          [
+            "80000000",
+            60000000
+          ]
+        ]
+      },
+      "sensitivity": {
+        "baseline": "plant-20",
+        "varied": "command_ms",
+        "grid_ns": 20000000,
+        "sample_times": 250,
+        "maxima": {
+          "gap_m": {
+            "absolute_difference": 0.018067932011845755,
+            "sample_time_ns": 3700000000
+          },
+          "relative_speed_mps": {
+            "absolute_difference": 0.015266643269274738,
+            "sample_time_ns": 2140000000
+          },
+          "ego_speed_mps": {
+            "absolute_difference": 0.015266643269274738,
+            "sample_time_ns": 2140000000
+          },
+          "accel_mps2": {
+            "absolute_difference": 0.028572854684750126,
+            "sample_time_ns": 2200000000
+          },
+          "ego_position_m": {
+            "absolute_difference": 0.018067932011845755,
+            "sample_time_ns": 3700000000
+          },
+          "lead_position_m": {
+            "absolute_difference": 0.0,
+            "sample_time_ns": 20000000
+          },
+          "lead_speed_mps": {
+            "absolute_difference": 0.0,
+            "sample_time_ns": 20000000
+          }
+        },
+        "inside_envelope": true
+      }
+    },
+    "command-30": {
+      "row": {
+        "name": "command-30",
+        "plant_ms": 20,
+        "controller_ms": 10,
+        "sensing_ms": 10,
+        "command_ms": 30,
+        "baseline": "plant-20"
+      },
+      "manifest_sha256": [
+        "984e72d09956af5e140a3f25d19a6ac5cd7174558eb83a51eb38929fd3129e17",
+        "984e72d09956af5e140a3f25d19a6ac5cd7174558eb83a51eb38929fd3129e17"
+      ],
+      "recording_sha256": [
+        "094009cf5131e33f09968af7f700fb32dea6b4e7a9e7649c153fa56443efaf28",
+        "094009cf5131e33f09968af7f700fb32dea6b4e7a9e7649c153fa56443efaf28"
+      ],
+      "fmu_sha256": {
+        "plant": "cd2d52c9c6ce765e92712234a05ef24a3d9dd9e23030f7a9233df403f6617a1f",
+        "controller": "248d1570ebecebbe74ad8ff0cc87f143d43540ca1a8afd6f34eee35f9d941827"
+      },
+      "independent_comparison": {
+        "checked": {
+          "sensing": 750,
+          "command": 500,
+          "state": 750
+        },
+        "final_sample_time_ns": 5000000000,
+        "atol": 1e-10,
+        "rtol": 1e-12
+      },
+      "plan_schedule_checked_activations": {
+        "command": 3,
+        "sensing": 3
+      },
+      "sample_time_offsets_ns": {
+        "sensing": 20000000,
+        "command": 10000000,
+        "state": 20000000
+      },
+      "schedule_first_activations": {
+        "sensing": [
+          [
+            "0",
+            null
+          ],
+          [
+            "10000000",
+            0
+          ],
+          [
+            "20000000",
+            0
+          ],
+          [
+            "30000000",
+            20000000
+          ],
+          [
+            "40000000",
+            20000000
+          ]
+        ],
+        "command": [
+          [
+            "0",
+            null
+          ],
+          [
+            "20000000",
+            null
+          ],
+          [
+            "40000000",
+            10000000
+          ],
+          [
+            "60000000",
+            30000000
+          ],
+          [
+            "80000000",
+            50000000
+          ]
+        ]
+      },
+      "sensitivity": {
+        "baseline": "plant-20",
+        "varied": "command_ms",
+        "grid_ns": 20000000,
+        "sample_times": 250,
+        "maxima": {
+          "gap_m": {
+            "absolute_difference": 0.050914710320306256,
+            "sample_time_ns": 1900000000
+          },
+          "relative_speed_mps": {
+            "absolute_difference": 0.030000000000001137,
+            "sample_time_ns": 40000000
+          },
+          "ego_speed_mps": {
+            "absolute_difference": 0.030000000000001137,
+            "sample_time_ns": 40000000
+          },
+          "accel_mps2": {
+            "absolute_difference": 0.06649543759999643,
+            "sample_time_ns": 1600000000
+          },
+          "ego_position_m": {
+            "absolute_difference": 0.050914710320306256,
+            "sample_time_ns": 1900000000
+          },
+          "lead_position_m": {
+            "absolute_difference": 0.0,
+            "sample_time_ns": 20000000
+          },
+          "lead_speed_mps": {
+            "absolute_difference": 0.0,
+            "sample_time_ns": 20000000
+          }
+        },
+        "inside_envelope": true
+      }
+    },
+    "zero-sensing": {
+      "row": {
+        "name": "zero-sensing",
+        "plant_ms": 20,
+        "controller_ms": 10,
+        "sensing_ms": 0,
+        "command_ms": 20,
+        "baseline": "command-20"
+      },
+      "manifest_sha256": [
+        "951257e177c690276e888069571fa283aadbfc1a53c8f54985413685149aecc3",
+        "951257e177c690276e888069571fa283aadbfc1a53c8f54985413685149aecc3"
+      ],
+      "recording_sha256": [
+        "dbe19f7ef29c883c98e2ccd87fe787ec17a15c909e70eda6804c8d4c1fec30f8",
+        "dbe19f7ef29c883c98e2ccd87fe787ec17a15c909e70eda6804c8d4c1fec30f8"
+      ],
+      "fmu_sha256": {
+        "plant": "cd2d52c9c6ce765e92712234a05ef24a3d9dd9e23030f7a9233df403f6617a1f",
+        "controller": "248d1570ebecebbe74ad8ff0cc87f143d43540ca1a8afd6f34eee35f9d941827"
+      },
+      "independent_comparison": {
+        "checked": {
+          "sensing": 750,
+          "command": 500,
+          "state": 750
+        },
+        "final_sample_time_ns": 5000000000,
+        "atol": 1e-10,
+        "rtol": 1e-12
+      },
+      "plan_schedule_checked_activations": {
+        "command": 2,
+        "sensing": 2
+      },
+      "sample_time_offsets_ns": {
+        "sensing": 20000000,
+        "command": 10000000,
+        "state": 20000000
+      },
+      "schedule_first_activations": {
+        "sensing": [
+          [
+            "0",
+            0
+          ],
+          [
+            "10000000",
+            0
+          ],
+          [
+            "20000000",
+            20000000
+          ],
+          [
+            "30000000",
+            20000000
+          ],
+          [
+            "40000000",
+            40000000
+          ]
+        ],
+        "command": [
+          [
+            "0",
+            null
+          ],
+          [
+            "20000000",
+            0
+          ],
+          [
+            "40000000",
+            20000000
+          ],
+          [
+            "60000000",
+            40000000
+          ],
+          [
+            "80000000",
+            60000000
+          ]
+        ]
+      },
+      "sensitivity": {
+        "baseline": "command-20",
+        "varied": "sensing_ms",
+        "grid_ns": 20000000,
+        "sample_times": 250,
+        "maxima": {
+          "gap_m": {
+            "absolute_difference": 0.018067932011845755,
+            "sample_time_ns": 3700000000
+          },
+          "relative_speed_mps": {
+            "absolute_difference": 0.015266643269274738,
+            "sample_time_ns": 2140000000
+          },
+          "ego_speed_mps": {
+            "absolute_difference": 0.015266643269274738,
+            "sample_time_ns": 2140000000
+          },
+          "accel_mps2": {
+            "absolute_difference": 0.028572854684750126,
+            "sample_time_ns": 2200000000
+          },
+          "ego_position_m": {
+            "absolute_difference": 0.018067932011845755,
+            "sample_time_ns": 3700000000
+          },
+          "lead_position_m": {
+            "absolute_difference": 0.0,
+            "sample_time_ns": 20000000
+          },
+          "lead_speed_mps": {
+            "absolute_difference": 0.0,
+            "sample_time_ns": 20000000
+          }
+        },
+        "inside_envelope": true
+      }
+    }
+  },
+  "negative_controls": {
+    "wrong-initialization": {
+      "row": "zero-sensing",
+      "first_difference": {
+        "signal": "sensing.gap_m",
+        "sample_time_ns": 20000000,
+        "publication_ns": 0,
+        "actual": 60.0,
+        "expected": 70.0,
+        "tolerance": 1.7e-10
+      },
+      "sensitivity": {
+        "grid_ns": 20000000,
+        "sample_times": 250,
+        "maxima": {
+          "gap_m": {
+            "absolute_difference": 10.000000000000007,
+            "sample_time_ns": 40000000
+          },
+          "relative_speed_mps": {
+            "absolute_difference": 1.6463935442910014,
+            "sample_time_ns": 3580000000
+          },
+          "ego_speed_mps": {
+            "absolute_difference": 1.6463935442910014,
+            "sample_time_ns": 3580000000
+          },
+          "accel_mps2": {
+            "absolute_difference": 1.6681613723204949,
+            "sample_time_ns": 2520000000
+          },
+          "ego_position_m": {
+            "absolute_difference": 4.07017985733421,
+            "sample_time_ns": 5000000000
+          },
+          "lead_position_m": {
+            "absolute_difference": 10.0,
+            "sample_time_ns": 20000000
+          },
+          "lead_speed_mps": {
+            "absolute_difference": 0.0,
+            "sample_time_ns": 20000000
+          }
+        },
+        "inside_envelope": false
+      }
+    },
+    "wrong-zero-order": {
+      "row": "zero-sensing",
+      "first_difference": {
+        "signal": "command.accel_mps2",
+        "sample_time_ns": 1570000000,
+        "publication_ns": 1560000000,
+        "actual": 1.449679999999816,
+        "expected": 1.5,
+        "tolerance": 1.015e-10
+      }
+    },
+    "one-period-shift": {
+      "row": "zero-sensing",
+      "first_difference": {
+        "signal": "sensing.gap_m",
+        "sample_time_ns": 40000000,
+        "publication_ns": 20000000,
+        "actual": 59.9997,
+        "expected": 60.0,
+        "tolerance": 1.6000000000000002e-10
+      }
+    }
+  },
+  "determinism_policy": "byte identity only for repeated Runs of each exact Manifest; independent FMPy comparison uses tolerances"
+}

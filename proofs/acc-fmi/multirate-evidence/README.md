@@ -1,7 +1,7 @@
 # Retained ACC multi-rate evidence
 
 `report.json` is the unedited machine-readable report from the installed
-Linux x86-64 proof in GitHub Actions. It records the exact source revision,
+Linux x86-64 proof in [GitHub Actions run 36404579936](https://github.com/Stevie1704/sil/actions/runs/36404579936). It records the exact source revision,
 image and FMU identities, the declared envelope, native Sample time
 comparisons, repeated Recording hashes, and the first differing signal and
 time for each negative control.
@@ -15,5 +15,5 @@ model and profile combinations named in its `scope` and `results` fields.
 
 The report from the first run
 ([36399755835](https://github.com/Stevie1704/sil/actions/runs/36399755835))
-used the earlier Row set and envelope. It is removed here because it does not
+used the earlier Row set and envelope. It was replaced because it does not
 match the current contract. It remains in the Git history.
