@@ -1930,12 +1930,13 @@ read a reference mismatch or an unsupported FMU.
 
 ## Regression bundles
 
-`sil-bundle` packages an adopter's own regression the same way: a shared
-library, one FMU or several coupled FMUs, with the authored Manifests, the
-targets, the Recordings and their conversion inputs, the prepared references
-and the comparison contracts. A declaration, `bundle.json`, names every file
-and every executable, Python module and file the Runs need outside the
-bundle, their whole environment, and the tools that must be absent.
+`sil-bundle` packages an adopter's own regression in the same way. The
+target is a shared library, one FMU or several coupled FMUs. The bundle
+holds the authored Manifests, the targets, the Recordings and their
+conversion inputs, the prepared references and the comparison contracts.
+A declaration, `bundle.json`, names every bundle file. It also names each
+executable, Python module and file that the Runs need outside the bundle,
+their whole environment, and the tools that must be absent.
 
 ```sh
 sil-bundle seal /bundles/library                        # in the runtime, once

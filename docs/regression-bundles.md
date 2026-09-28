@@ -1,18 +1,24 @@
 # Regression bundles
 
-A regression bundle packages one adopter regression — a shared library, one
-FMU, or several coupled FMUs — so that it runs offline from the installed
-SiL runtime and every Run is attributable to exactly the artifacts it was
-prepared with. It generalizes the preparation and verification mechanics of
-the ACC acceptance bundle (`proofs/acc-fmi/acceptance-bundle.sh`).
+A regression bundle packages one adopter regression. The target is a shared
+library, one FMU, or several coupled FMUs. The bundle runs offline from the
+installed SiL runtime. Each Run is attributable to exactly the artifacts
+that it was prepared with. The bundle uses the preparation and verification
+mechanics of the ACC acceptance bundle (`proofs/acc-fmi/acceptance-bundle.sh`)
+for any target.
 
 `sil-bundle` has three commands:
 
 | Command | Where it runs | What it does |
 |---|---|---|
-| `sil-bundle seal <bundle>` | the runtime, once | Digests every bundle file, the runner and its build identity, and every declared dependency; writes `bundle.lock.json`. |
-| `sil-bundle verify <bundle>` | the runtime | Re-derives every sealed identity. Exit 2 at the first difference. |
-| `sil-bundle run <bundle> -o <evidence>` | the runtime, offline | Verifies, then executes each declared Run into a separate evidence directory. Exit 1 when a verdict fails, 2 when the bundle is refused. |
+| `sil-bundle seal <bundle>` | the runtime, once | Digests every bundle file, the runner and its build identity, and every declared dependency. Writes `bundle.lock.json` and prints its digest. |
+| `sil-bundle verify <bundle> [--expect-lock <sha256>]` | the runtime | Re-derives every sealed identity. Exit 2 when one differs; the diagnostic names every difference. |
+| `sil-bundle run <bundle> -o <evidence> [--expect-lock <sha256>]` | the runtime, offline | Verifies, then executes each declared Run into a separate evidence directory. Exit 1 when a verdict fails, 2 when the bundle is refused. |
+
+The lock is inside the bundle. It shows an accidental change, but a person
+who changes the bundle can also seal it again. Keep the lock digest that
+`seal` prints apart from the bundle, and give it to `--expect-lock`. Then a
+bundle that was changed and sealed again is refused.
 
 ## Prepare
 
@@ -107,7 +113,9 @@ python examples/bundle/prepare.py coupling /bundles/coupling \
   which includes native extension modules such as `_ctypes`.
 - `dependencies.files` names files outside the bundle by absolute path,
   such as a vendor library installed on the runtime, or a transitive
-  native library a target loads.
+  native library a target loads. On Linux, `examples/bundle/prepare.py`
+  declares the libraries that `ldd` resolves for the library target and
+  for the FMU binary.
 - `excluded` names what must not be reachable. `seal` and `run` refuse the
   bundle when one is found.
 - `runs[].comparisons` names a contract and a reference, which must be
@@ -154,7 +162,8 @@ A Run that fails is not repeated and not compared.
 
 `summary.json` holds the verdicts, the digests of the Manifests and the
 Recordings, the digest of the lock and the runner's build identity. It
-holds no artifact content. A consumer can keep the bundle and the evidence
+holds no artifact content and no absolute path, except in the refusal
+text of a refused bundle. A consumer can keep the bundle and the evidence
 private and share only the summary. The verification contract is the same
 for a private bundle.
 
@@ -163,6 +172,8 @@ for a private bundle.
 | Case | Result |
 |---|---|
 | A bundle file altered, removed or added after sealing | `run` exit 2, no Run started, `summary.json` verdict `refused` |
+| A bundle changed and sealed again | with `--expect-lock`, `run` exit 2 |
+| A lock that is not a valid lock | exit 2 |
 | A declared dependency missing or changed | `run` exit 2, no Run started |
 | A compiler, exporter or independent importer reachable | `seal` and `run` exit 2 |
 | The bundle moved from its sealed location | exit 2 |
