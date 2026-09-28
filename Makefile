@@ -122,6 +122,18 @@ example-fmu-replay: venv build ## Author and replay the recorded-data FMU exampl
 	cmp $(BUILD_DIR)/fmu-replay-1.mcap $(BUILD_DIR)/fmu-replay-2.mcap
 	PYTHONPATH=$(SRC) $(PYTHON) -m sil.compare examples/fmu-replay/contract.json $(BUILD_DIR)/fmu-replay-1.mcap $(BUILD_DIR)/fmu-reference.mcap
 
+# Convenience over `make run` for the coupled-FMU example: author the delayed
+# feedback loop between two Feedthrough instances twice, run it twice, and
+# `cmp` both pairs. The authoring command prints the plan of the Run.
+.PHONY: example-fmu-coupling
+example-fmu-coupling: venv build ## Author the coupled-FMU example twice and run it twice, compare
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.fmi.coupling examples/fmu-coupling/feedback.json --fmu left tests/fixtures/reference-fmus/3.0/Feedthrough.fmu --fmu right tests/fixtures/reference-fmus/3.0/Feedthrough.fmu -o $(BUILD_DIR)/fmu-coupling.json --receipt $(BUILD_DIR)/fmu-coupling.receipt.json
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.fmi.coupling examples/fmu-coupling/feedback.json --fmu left tests/fixtures/reference-fmus/3.0/Feedthrough.fmu --fmu right tests/fixtures/reference-fmus/3.0/Feedthrough.fmu -o $(BUILD_DIR)/fmu-coupling-2.json > /dev/null
+	cmp $(BUILD_DIR)/fmu-coupling.json $(BUILD_DIR)/fmu-coupling-2.json
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/fmu-coupling.json -o $(BUILD_DIR)/fmu-coupling-1.mcap
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/fmu-coupling.json -o $(BUILD_DIR)/fmu-coupling-2.mcap
+	cmp $(BUILD_DIR)/fmu-coupling-1.mcap $(BUILD_DIR)/fmu-coupling-2.mcap
+
 # Convenience over `make run` for the shared-library example: build the
 # example library the way an adopter would, convert its recorded input, and
 # run the Manifest that replays it into two adapter instances twice. The

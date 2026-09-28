@@ -5,12 +5,15 @@ from functools import partial
 from pathlib import Path
 
 from sil.examples.acc.manifest import acc_manifest
+from sil.fmi.coupling import couple
 from loop_compare import compare, first_difference, recording_messages, validate_reference
 from loop_contract import (HERE, MIN_GAP_M, PYTHON_SCHEDULE, STEP_NS, STEPS, VARIANTS,
                            configuration, manifest, validate_archives, validate_manifest)
 from loop_evidence import retain
 from proof_support import (compare_files, require, run_expecting, run_logged,
                            sil_runner_args as runner_args, write_json)
+
+COUPLING = HERE.parents[1] / "examples" / "fmu-coupling" / "acc.json"
 
 
 def execute(factory, name, out):
@@ -58,6 +61,28 @@ def reject_runtime_faults(out):
         require(diagnostic in output, f"{name} failed for another reason: {output}")
         diagnostics[name] = dict(exit_code=1, diagnostic=diagnostic)
     return diagnostics
+
+
+def authored_coupling(out, reference):
+    """The coupling document of issue #187 renders this Run's FMU participants
+    and Channels, and its Manifest alone reproduces the FMPy reference."""
+    path = out / "coupling.json"
+    receipt = couple(COUPLING, {"plant": "/fmus/AccPlant.fmu",
+                                "controller": "/fmus/AccController.fmu"}, path)
+    expected = manifest().to_doc()
+    # The in-run KPI participant is no FMU of the coupling.
+    del expected["participants"]["kpi"]
+    require(json.loads(path.read_text()) == expected,
+            "the authored coupling differs from the closed-loop Manifest")
+    recordings = [out / f"coupling-{n}.mcap" for n in (1, 2)]
+    for recording in recordings:
+        run_logged(runner_args(path, recording), recording.with_suffix(".log"))
+    compare(recording_messages(recordings[0]), reference)
+    return dict(manifest_sha256=receipt["manifest"]["sha256"],
+                recording_sha256=compare_files(*recordings),
+                order=receipt["plan"]["order"],
+                peak_messages={f"{r['channel']}->{r['subscriber']}": r["peak_messages"]
+                               for r in receipt["plan"]["routes"]})
 
 
 def check_kpi_coverage(recording):
@@ -117,6 +142,7 @@ def run(out):
         checked_communication_points=STEPS, checked_messages=sum(map(len, nominal.values())),
         in_run_kpi=coverage, post_hoc_final_publication_ns=max(nominal),
         negative_controls=rejected, sil_behavioral_necessity=necessity,
+        authored_coupling=authored_coupling(out, references["nominal"]),
         invalid_bindings=reject_invalid_bindings(out), runtime_faults=reject_runtime_faults(out)))
     retain(out, out / "curated")
 

@@ -1,0 +1,55 @@
+{
+  "sil_fmu_coupling": 1,
+  "duration_ns": 5000000000,
+  "fmus": {
+    "plant": {
+      "step_period_ns": 10000000, "priority": 0, "start": [],
+      "hold": ["lead_accel_mps2", "initial_lead_position_m"]
+    },
+    "controller": {
+      "step_period_ns": 10000000, "priority": 1, "start": [], "hold": []
+    }
+  },
+  "channels": {
+    "sensing": {
+      "publisher": "plant", "latency_ns": 10000000,
+      "fields": [
+        {"name": "gap_m", "type": "f64", "variable": "gap_m", "unit": "m"},
+        {"name": "relative_speed_mps", "type": "f64",
+         "variable": "relative_speed_mps", "unit": "m/s"},
+        {"name": "ego_speed_mps", "type": "f64",
+         "variable": "ego_speed_mps", "unit": "m/s"}
+      ],
+      "subscribers": {
+        "controller": {
+          "capacity": 2, "overflow": "fail",
+          "bind": {"gap_m": "gap_m", "relative_speed_mps": "relative_speed_mps",
+                   "ego_speed_mps": "ego_speed_mps"}
+        }
+      }
+    },
+    "command": {
+      "publisher": "controller", "latency_ns": 10000000,
+      "fields": [
+        {"name": "accel_mps2", "type": "f64", "variable": "accel_mps2",
+         "unit": "m/s2"}
+      ],
+      "subscribers": {
+        "plant": {"capacity": 2, "overflow": "fail",
+                  "bind": {"accel_mps2": "accel_mps2"}}
+      }
+    },
+    "state": {
+      "publisher": "plant", "latency_ns": 10000000,
+      "fields": [
+        {"name": "ego_position_m", "type": "f64", "variable": "ego_position_m",
+         "unit": "m"},
+        {"name": "lead_position_m", "type": "f64",
+         "variable": "lead_position_m", "unit": "m"},
+        {"name": "lead_speed_mps", "type": "f64", "variable": "lead_speed_mps",
+         "unit": "m/s"}
+      ],
+      "subscribers": {}
+    }
+  }
+}

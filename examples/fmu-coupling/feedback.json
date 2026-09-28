@@ -1,0 +1,44 @@
+{
+  "sil_fmu_coupling": 1,
+  "duration_ns": 50000000,
+  "fmus": {
+    "left": {
+      "step_period_ns": 10000000, "priority": 0,
+      "start": [{"variable": "Float64_continuous_input", "value": "1.5",
+                 "unit": null}],
+      "hold": ["Float32_continuous_input", "Float32_discrete_input",
+               "Float64_discrete_input", "Int8_input", "UInt8_input",
+               "Int16_input", "UInt16_input", "Int32_input", "UInt32_input",
+               "Int64_input", "UInt64_input", "Boolean_input", "String_input",
+               "Binary_input", "Enumeration_input"]
+    },
+    "right": {
+      "step_period_ns": 10000000, "priority": 1, "start": [],
+      "hold": ["Float32_continuous_input", "Float32_discrete_input",
+               "Float64_discrete_input", "Int8_input", "UInt8_input",
+               "Int16_input", "UInt16_input", "Int32_input", "UInt32_input",
+               "Int64_input", "UInt64_input", "Boolean_input", "String_input",
+               "Binary_input", "Enumeration_input"]
+    }
+  },
+  "channels": {
+    "left.value": {
+      "publisher": "left", "latency_ns": 10000000,
+      "fields": [{"name": "value", "type": "f64",
+                  "variable": "Float64_continuous_output", "unit": null}],
+      "subscribers": {
+        "right": {"capacity": 2, "overflow": "fail",
+                  "bind": {"value": "Float64_continuous_input"}}
+      }
+    },
+    "right.value": {
+      "publisher": "right", "latency_ns": 10000000,
+      "fields": [{"name": "value", "type": "f64",
+                  "variable": "Float64_continuous_output", "unit": null}],
+      "subscribers": {
+        "left": {"capacity": 1, "overflow": "fail",
+                 "bind": {"value": "Float64_continuous_input"}}
+      }
+    }
+  }
+}
