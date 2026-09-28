@@ -1530,7 +1530,8 @@ Manifest's directory. The example's `manifest.py` writes the absolute
 path. The library bytes are not in the Manifest hash, but
 the Run's provenance side-car records the SHA-256 of the library, because
 the command names it. The side-car does not record the library's
-dependencies or the environment: pin them with the image.
+dependencies or the environment: pin them with the image, or declare them
+in a [regression bundle](docs/regression-bundles.md).
 
 The adapter itself needs `python3` with the `sil` wheel on `PATH`.
 
@@ -1927,6 +1928,30 @@ conventions, the default Channel Latency, the model's limitations, the FMI 3.0
 profile this evidence establishes with the capabilities it rejects, and how to
 read a reference mismatch or an unsupported FMU.
 
+## Regression bundles
+
+`sil-bundle` packages an adopter's own regression the same way: a shared
+library, one FMU or several coupled FMUs, with the authored Manifests, the
+targets, the Recordings and their conversion inputs, the prepared references
+and the comparison contracts. A declaration, `bundle.json`, names every file
+and every executable, Python module and file the Runs need outside the
+bundle, their whole environment, and the tools that must be absent.
+
+```sh
+sil-bundle seal /bundles/library                        # in the runtime, once
+sil-bundle run /bundles/library -o evidence/library     # offline
+```
+
+`run` verifies every sealed identity before the first Run, then writes the
+Recordings, provenance, logs, determinism checks, comparison reports and a
+shareable `summary.json` into the evidence directory. The bundle stays
+unchanged. A Manifest hash alone does not close a Run's dependencies; the
+lock closes what the declaration names, and nothing more.
+[docs/regression-bundles.md](docs/regression-bundles.md) covers the
+declaration, the three examples in
+[examples/bundle/prepare.py](examples/bundle/prepare.py) and the failure
+cases.
+
 ## FMI-LS-BUS CAN acceptance fixture
 
 [proofs/fmi-ls-bus/](proofs/fmi-ls-bus/) pins the Modelica Association's
@@ -2049,6 +2074,8 @@ examples/library/  the shared-library example: an adopter's C library with
                    its own API, bound through a Process participant adapter
 examples/compare/  the comparison example: a contract, and the independent
                    ACC trace a SiL Recording is compared against
+examples/bundle/   prepares the library, single-FMU and coupled-FMU
+                   regression bundles that sil-bundle seals and runs
 proofs/esmini/     consumer-side adoption proof: a third-party scenario
                    engine run on the published release, with its evidence
 proofs/acc-fmi/    checkout qualification of source-available ACC FMUs:
@@ -2065,7 +2092,7 @@ proofs/openacc-controller/
                    replayed into the ACC controller FMU and compared with FMPy
 python/src/sil/    manifest builder, step-participant lib, test API,
                    determinism check, declared memory footprint,
-                   CSV-to-Recording converter
+                   CSV-to-Recording converter, regression bundles
 tests/             behavior tests at the run boundary
 ```
 
