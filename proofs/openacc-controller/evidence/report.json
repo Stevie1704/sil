@@ -3,9 +3,9 @@
   "identities": {
     "fmu": {
       "path": "fmus/AccController.fmu",
-      "archive_sha256": "ea0db65a88bf181186d150de8dbe27f7d2c13ac6fec9e8ed4622c3d2e7c8632c",
+      "archive_sha256": "3f8a22e9bad667061ceabfe12cb10274610092ff7280f90c43530a7fe8396962",
       "embedded": {
-        "source_revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd",
+        "source_revision": "65206676dfedcb3e1c4c6af04997fa7b0ff8ff36",
         "model_sha256": "e9f56f6402652d536bade3ec6ee7fe03b19eac8e309f801d87d879e18fbebfa6",
         "dynamics_sha256": "7d10797f998608d759f5fdfda275dfe0d97370149c48d71ad63d6d296b11cea5",
         "exporter": "PythonFMU3 0.3.4",
@@ -85,7 +85,7 @@
           }
         ]
       },
-      "instantiation_token": "013897857484d861ee2a218bb340aa36a5d3b664b386c1c2915c5f8be8f37d7d",
+      "instantiation_token": "4739b17382d44e97366795a87c57db5de5d6ad3fad85bf316e200327862c9ecc",
       "not_verified_statically": [
         "whether binaries/x86_64-linux/AccController.so loads on this host and the libraries it depends on resolve",
         "whether the FMU accepts its start values and completes initialization",
@@ -118,13 +118,13 @@
       "importer": "FMPy, in the #178 tool image"
     },
     "bundle": {
-      "bundle_json_sha256": "881eb8d19e8dd3b387fee97f1a03e279f38efe0c8852d80c53a9b698ea8e267e",
+      "bundle_json_sha256": "abc244a19aae3865eb3d4bb0c9bfc7484b65176ec48056bafd159ceeb863904e",
       "tools": {
         "machine": "x86_64",
         "libc": "glibc 2.36",
         "python": "3.13.7",
         "compiler": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
-        "source_revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd",
+        "source_revision": "65206676dfedcb3e1c4c6af04997fa7b0ff8ff36",
         "packages": {
           "fmpy": "0.3.26",
           "pycapnp": "2.2.1",
@@ -141,7 +141,7 @@
         "converter": {
           "name": "sil-csv",
           "version": "0.1.0",
-          "revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd",
+          "revision": "65206676dfedcb3e1c4c6af04997fa7b0ff8ff36",
           "mcap": "mcap-python/1.4.0"
         },
         "source": {
@@ -175,7 +175,7 @@
         "converter": {
           "name": "sil-csv",
           "version": "0.1.0",
-          "revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd",
+          "revision": "65206676dfedcb3e1c4c6af04997fa7b0ff8ff36",
           "mcap": "mcap-python/1.4.0"
         },
         "source": {
@@ -209,7 +209,7 @@
         "converter": {
           "name": "sil-csv",
           "version": "0.1.0",
-          "revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd",
+          "revision": "65206676dfedcb3e1c4c6af04997fa7b0ff8ff36",
           "mcap": "mcap-python/1.4.0"
         },
         "source": {
@@ -247,7 +247,7 @@
       "runner": {
         "license": "Apache-2.0",
         "source_repository": "https://github.com/Stevie1704/sil",
-        "source_revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd",
+        "source_revision": "65206676dfedcb3e1c4c6af04997fa7b0ff8ff36",
         "version": "0.1.0"
       },
       "binary_ldd": [
@@ -258,18 +258,21 @@
         "libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6",
         "/lib64/ld-linux-x86-64.so.2"
       ],
-      "example_image_id": "sha256:5b424d61f9c328695979b8fdb6e1ad7587eeac32e62561c65b2d860179158566"
+      "example_image_id": "sha256:cbd1fa52b1b82c66768c303dcea27b82793626120e250e77728d00ca01987fb1"
     }
   },
   "lifecycle": {
     "with_resources": [
+      "described",
       "instantiated",
       "initialized",
       "stepped",
       "terminated"
     ],
     "initialized_command_mps2": -3.0,
-    "without_resources": "fmi3InstantiateCoSimulation returned no instance"
+    "without_resources": [
+      "described"
+    ]
   },
   "run": {
     "period_ns": 100000000,
@@ -302,7 +305,7 @@
       "author": {
         "name": "sil-fmu-replay",
         "version": "0.1.0",
-        "revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd"
+        "revision": "65206676dfedcb3e1c4c6af04997fa7b0ff8ff36"
       },
       "document": {
         "file": "nominal.authoring.json",
@@ -310,9 +313,9 @@
       },
       "fmu": {
         "file": "AccController.fmu",
-        "sha256": "ea0db65a88bf181186d150de8dbe27f7d2c13ac6fec9e8ed4622c3d2e7c8632c",
+        "sha256": "3f8a22e9bad667061ceabfe12cb10274610092ff7280f90c43530a7fe8396962",
         "model_name": "AccController",
-        "instantiation_token": "013897857484d861ee2a218bb340aa36a5d3b664b386c1c2915c5f8be8f37d7d"
+        "instantiation_token": "4739b17382d44e97366795a87c57db5de5d6ad3fad85bf316e200327862c9ecc"
       },
       "recording": {
         "file": "sensing.mcap",
@@ -388,7 +391,7 @@
           {
             "file": {
               "path": "/bundle/fmus/AccController.fmu",
-              "sha256": "ea0db65a88bf181186d150de8dbe27f7d2c13ac6fec9e8ed4622c3d2e7c8632c"
+              "sha256": "3f8a22e9bad667061ceabfe12cb10274610092ff7280f90c43530a7fe8396962"
             },
             "participant": "fmu"
           }
@@ -425,7 +428,7 @@
         ],
         "runner": {
           "path": "/usr/local/bin/sil-run",
-          "sha256": "a28f97b4f5e51ad75e99270461b8ead4fc1777ca72ed8d8bffa49894c56e351f"
+          "sha256": "9556897b7c66fa2451923dedbc9718bb836da78f5c2712aa8bae547e75ef885b"
         }
       },
       "errors": [],
@@ -443,7 +446,7 @@
       "schema_version": 1,
       "sil": {
         "source_repository": "https://github.com/Stevie1704/sil",
-        "source_revision": "4eaa340f1ace3304c7d8e060bcf2f76668e6fbfd",
+        "source_revision": "65206676dfedcb3e1c4c6af04997fa7b0ff8ff36",
         "version": "0.1.0"
       }
     }
@@ -520,9 +523,9 @@
   "resources": {
     "note": "observational, from one runner; not an acceptance criterion and not a representative vECU measurement for #125",
     "run_wall_s": [
-      0.4518521519999865,
-      0.44872203700001023
+      0.4639337269999828,
+      0.4670770589999904
     ],
-    "virtual_to_wall": 111.65041132133847
+    "virtual_to_wall": 107.98956205225808
   }
 }

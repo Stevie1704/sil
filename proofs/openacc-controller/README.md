@@ -158,7 +158,7 @@ leaves the clamp at once and diverges at the first observation.
 
 ## Retained results
 
-[`evidence/`](evidence/) is the output of CI run 36347528001 on native
+[`evidence/`](evidence/) is the output of CI run 36386108635 on native
 Linux x86-64 (glibc 2.36, CPython 3.13.7, `/usr/local/lib/libpython3.13.so`).
 It holds `report.json`, every `sil-compare` report, the contract and
 `expectations.json`. `report.json` includes the inspection result, the
@@ -171,10 +171,10 @@ independently.
 
 | Check | Result |
 | --- | --- |
-| Pins | recording `968b007a…` and reference `f8607c9f…` as handed off; the FMU is the bundle's re-export `ea0db65a…` at revision `4eaa340`, not `12df3da…`, with the committed model source and the installed control law |
+| Pins | recording `968b007a…` and reference `f8607c9f…` as handed off; the FMU is the bundle's re-export `3f8a22e9…` at revision `6520667`, not `12df3da…`, with the committed model source and the installed control law |
 | Interface | `sil-fmi-inspect` verdict `compatible`; equal to the #178 audit |
 | Runtime | every library of the Linux binary resolves: libstdc++, libm, libgcc_s, libc |
-| Lifecycle | with `resources/`: instantiated, initialized, stepped, terminated, command −3.0 m/s² as the law gives; without: `fmi3InstantiateCoSimulation returned no instance` |
+| Lifecycle | with `resources/`: described, instantiated, initialized, stepped, terminated, command −3.0 m/s² as the law gives; without: exit nonzero, stopped after described |
 | Conversion | 501 samples on `acc.sensing`, 0 to 50.0 s; 501 reference rows, 0.1 to 50.1 s |
 | Nominal | 501 of 501 commands within tolerance, the final one at 50.1 s included |
 | Determinism | two authorings: byte-identical Manifest `e8d342e7…`; two Runs: byte-identical Recordings `891b1cdf…` |
@@ -185,7 +185,7 @@ independently.
 
 Every first divergence is the one `expectations.json` fixed before the Runs.
 
-Resource observations from that runner: a nominal Run took 0.45 s of
+Resource observations from that runner: a nominal Run took 0.46 s of
 wall-clock time for 50.1 s of Virtual time. This is observational. It is not
 an acceptance criterion and not a representative vECU Step cost for #125.
 
