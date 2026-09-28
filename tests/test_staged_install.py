@@ -27,49 +27,6 @@ def participant_operations(stdout: str) -> list[str]:
     return [json.loads(line)["op"] for line in stdout.splitlines()]
 
 
-def uv_environment() -> dict[str, str]:
-    env = dict(os.environ)
-    env.setdefault("UV_CACHE_DIR", str(ROOT / "build" / "uv-cache"))
-    return env
-
-
-@pytest.fixture(scope="session")
-def wheel_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    wheel_dir = tmp_path_factory.mktemp("sil-wheel")
-    subprocess.run(
-        ["uv", "build", "--wheel", "--out-dir", str(wheel_dir),
-         str(ROOT / "python")],
-        check=True, env=uv_environment(),
-        capture_output=True,
-        text=True,
-    )
-    wheels = list(wheel_dir.glob("sil-*.whl"))
-    assert len(wheels) == 1
-    return wheels[0]
-
-
-@pytest.fixture(scope="session")
-def installed_python(
-    wheel_path: Path, tmp_path_factory: pytest.TempPathFactory,
-) -> Path:
-    venv = tmp_path_factory.mktemp("sil-venv")
-    env = uv_environment()
-    subprocess.run(
-        ["uv", "venv", "-p", sys.executable, str(venv)],
-        check=True, env=env,
-        capture_output=True,
-        text=True,
-    )
-    subprocess.run(
-        ["uv", "pip", "install", "-p", str(venv / "bin" / "python"),
-         str(wheel_path)],
-        check=True, env=env,
-        capture_output=True,
-        text=True,
-    )
-    return venv
-
-
 def installed_environment(venv: Path) -> dict[str, str]:
     env = dict(os.environ)
     env.pop("PYTHONPATH", None)
@@ -78,18 +35,6 @@ def installed_environment(venv: Path) -> dict[str, str]:
     env["PYTHONNOUSERSITE"] = "1"
     env["PATH"] = str(venv / "bin") + os.pathsep + env.get("PATH", "")
     return env
-
-
-@pytest.fixture(scope="session")
-def staged_prefix(build_dir: Path, tmp_path_factory: pytest.TempPathFactory) -> Path:
-    prefix = tmp_path_factory.mktemp("sil-prefix")
-    subprocess.run(
-        ["cmake", "--install", str(build_dir), "--prefix", str(prefix)],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return prefix
 
 
 @pytest.fixture(scope="session")

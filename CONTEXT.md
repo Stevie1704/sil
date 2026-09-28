@@ -343,6 +343,14 @@ one. Every later acceptance Run consumes that bundle offline and adds nothing
 to it, so a Run is attributable to exactly the artifacts it was prepared with.
 _Avoid_: release, package, test data, fixtures
 
+**Regression bundle**:
+An Acceptance bundle an adopter prepares for their own targets, with a
+declaration that names every bundle file and every executable, Python
+module, file and environment variable its Runs need outside it. Sealing it
+records their identities; a Run verifies them all before it starts, and
+writes its evidence outside the bundle. It closes only what it declares.
+_Avoid_: test package, regression suite, golden bundle
+
 **Example image**:
 The production runtime image plus the consumer material of one adoption
 example. It carries the model's runtime dependencies and no exporter, no
