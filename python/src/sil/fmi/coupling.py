@@ -127,6 +127,19 @@ class Connection:
                 f"{self.subscriber}.{self.input})")
 
 
+@dataclass(frozen=True)
+class Coupled:
+    """A coupling document that passed every check, and what it authors."""
+
+    doc: dict
+    document_bytes: bytes
+    manifest: Manifest
+    connections: list[Connection]
+    variables: dict[str, dict[str, dict]]
+    reports: dict[str, dict]
+    plan: dict
+
+
 def couple(document: str | Path, fmus: dict[str, str | Path],
            out: str | Path) -> dict:
     """Write the Manifest for `document` over the `fmus` archives to `out`;
@@ -137,10 +150,32 @@ def couple(document: str | Path, fmus: dict[str, str | Path],
         "document": document,
         **{f"FMU {name!r}": path for name, path in fmus.items()},
     })
+    coupled = check(document, fmus)
+    text = coupled.manifest.to_json()
+    try:
+        out.write_text(text)
+    except OSError as e:
+        raise AuthoringError(f"cannot write Manifest {str(out)!r}: {e}") from e
+    return _receipt(coupled.connections, coupled.variables, coupled.plan, {
+        "document": {"file": document.name,
+                     "sha256": sha256(coupled.document_bytes)},
+        "fmus": {
+            name: {"file": fmus[name].name, "sha256": file_sha256(fmus[name]),
+                   "model_name": report["facts"]["model_name"],
+                   "instantiation_token":
+                       report["facts"]["instantiation_token"]}
+            for name, report in sorted(coupled.reports.items())
+        },
+        "manifest": {"file": out.name, "sha256": sha256(text.encode())},
+    })
+
+
+def check(document: Path, fmus: dict[str, Path]) -> Coupled:
+    """Every check `couple` makes, and the Manifest it would write."""
     document_bytes = read(document, "coupling document")
     doc = _parse(document_bytes, document)
     _require_archives(doc, fmus)
-    manifest = _manifest(doc, fmus)
+    manifest = coupled_manifest(doc, fmus)
     _require_whole_steps(doc)
     connections = _connections(doc)
     reports = {name: _inspected(name, fmus[name], doc) for name in doc["fmus"]}
@@ -155,22 +190,8 @@ def couple(document: str | Path, fmus: dict[str, str | Path],
     order = _execution_order(doc)
     plan = _plan(doc, order, variables)
     _require_route_bounds(plan)
-    text = manifest.to_json()
-    try:
-        out.write_text(text)
-    except OSError as e:
-        raise AuthoringError(f"cannot write Manifest {str(out)!r}: {e}") from e
-    return _receipt(connections, variables, plan, {
-        "document": {"file": document.name, "sha256": sha256(document_bytes)},
-        "fmus": {
-            name: {"file": fmus[name].name, "sha256": file_sha256(fmus[name]),
-                   "model_name": report["facts"]["model_name"],
-                   "instantiation_token":
-                       report["facts"]["instantiation_token"]}
-            for name, report in sorted(reports.items())
-        },
-        "manifest": {"file": out.name, "sha256": sha256(text.encode())},
-    })
+    return Coupled(doc, document_bytes, manifest, connections, variables,
+                   reports, plan)
 
 
 def _receipt(connections: list[Connection], variables: dict, plan: dict,
@@ -355,7 +376,7 @@ def _schemas(doc: dict) -> dict:
             for channel, declaration in doc["channels"].items()}
 
 
-def _manifest(doc: dict, fmus: dict[str, Path]) -> Manifest:
+def coupled_manifest(doc: dict, fmus: dict[str, Path]) -> Manifest:
     """The canonical Manifest of the coupled Run.
 
     Every list in it is sorted, so the order in which the document declares
