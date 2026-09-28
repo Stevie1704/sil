@@ -18,9 +18,10 @@ class Engine;
 // scheduled participant. The recording is validated against the manifest at
 // load time (content hash, channel presence, schema layout, every record
 // decodable); each selected message is injected at its recorded virtual
-// timestamp, before task activations in that slot, preserving the recording's
-// global publish order for equal timestamps. Deterministic by construction: it
-// lives inside the same stepped virtual-time world as every other participant.
+// timestamp, before task activations in that slot or, with a declared
+// priority, at that place among them, preserving the recording's global
+// publish order for equal timestamps. Deterministic by construction: it lives
+// inside the same stepped virtual-time world as every other participant.
 //
 // The recording is read twice through one descriptor: once at load time to
 // hash and validate it, and once while the Run advances, one record at a time.
@@ -36,7 +37,8 @@ class Replayer {
   uint64_t next_publish_ns() const;
 
   // Publishes every message recorded at exactly now_ns, in recording order.
-  // Runs before task activations in the slot. May raise via Engine::fail.
+  // Runs before task activations in the slot, or at the replayer's declared
+  // priority among them. May raise via Engine::fail.
   void publish_due(uint64_t now_ns);
 
  private:

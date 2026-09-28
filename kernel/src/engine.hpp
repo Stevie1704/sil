@@ -187,6 +187,15 @@ class Engine {
   std::unique_ptr<OwnedDirectory> run_working_directory_;
   std::vector<std::unique_ptr<ProcessParticipant>> processes_;
   std::vector<std::unique_ptr<Replayer>> replayers_;
+  // Where each replayer publishes in a Slot, parallel to replayers_.
+  struct ReplayPlace {
+    std::optional<int32_t> priority;
+    size_t registration_index;
+  };
+  std::vector<ReplayPlace> replay_places_;
+  // Shared by tasks and prioritised replayers, so an equal priority is
+  // ordered by the name-sorted Manifest order across both.
+  size_t next_registration_index_ = 0;
   uint64_t now_ns_ = 0;
   uint64_t global_seq_ = 0;
   bool in_setup_ = false;

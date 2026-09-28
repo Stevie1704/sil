@@ -80,6 +80,7 @@ void Engine::setup() {
     } else if (const auto *replay = std::get_if<ReplaySpec>(&p.impl)) {
       replayers_.push_back(
           std::make_unique<Replayer>(*this, p.name, *replay, manifest_.base_dir));
+      replay_places_.push_back({replay->priority, next_registration_index_++});
     } else {
       const auto &spec = std::get<PreparedProcessSpec>(p.impl);
       auto proc = std::make_unique<ProcessParticipant>(
@@ -105,7 +106,7 @@ void Engine::register_task(const std::string &owner, const std::string &task,
   t.period_ns = period_ns;
   t.next_ns = offset_ns;
   t.priority = priority;
-  t.registration_index = tasks_.size();
+  t.registration_index = next_registration_index_++;
   t.fn = std::move(fn);
   t.done = t.next_ns >= manifest_.duration_ns;
   tasks_.push_back(std::move(t));
@@ -190,20 +191,40 @@ void Engine::run() {
       slot = std::min(slot, r->next_publish_ns());
     if (slot == std::numeric_limits<uint64_t>::max()) break;
 
-    std::vector<Task *> due;
+    // A replayer with a priority takes its place among the due tasks.
+    struct Due {
+      int32_t priority;
+      size_t registration_index;
+      Task *task;
+      Replayer *replayer;
+    };
+    std::vector<Due> due;
     for (Task &t : tasks_)
-      if (!t.done && t.next_ns == slot) due.push_back(&t);
-    std::sort(due.begin(), due.end(), [](const Task *a, const Task *b) {
-      if (a->priority != b->priority) return a->priority < b->priority;
-      return a->registration_index < b->registration_index;
+      if (!t.done && t.next_ns == slot)
+        due.push_back({t.priority, t.registration_index, &t, nullptr});
+    for (size_t i = 0; i < replayers_.size(); i++)
+      if (replay_places_[i].priority)
+        due.push_back({*replay_places_[i].priority,
+                       replay_places_[i].registration_index, nullptr,
+                       replayers_[i].get()});
+    std::sort(due.begin(), due.end(), [](const Due &a, const Due &b) {
+      if (a.priority != b.priority) return a.priority < b.priority;
+      return a.registration_index < b.registration_index;
     });
 
     now_ns_ = slot;
-    // Replayed messages enter the router before any task activation in the
-    // slot, so a consumer stepped in this slot sees them exactly as it saw
-    // the original live production.
-    for (const auto &r : replayers_) r->publish_due(slot);
-    for (Task *t : due) {
+    // A replayer without a priority publishes before any task activation in
+    // the slot, so a consumer stepped in this slot sees its messages as it
+    // saw a live publisher that ran first.
+    for (size_t i = 0; i < replayers_.size(); i++)
+      if (!replay_places_[i].priority) replayers_[i]->publish_due(slot);
+    for (const Due &d : due) {
+      if (d.replayer) {
+        d.replayer->publish_due(slot);
+        if (!failure_.empty()) throw RunError(failure_);
+        continue;
+      }
+      Task *t = d.task;
       in_task_ = true;
       t->fn(slot);
       in_task_ = false;
