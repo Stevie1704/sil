@@ -77,11 +77,13 @@ OUTPUT_SCHEMAS = {
 
 def library_manifest(recording: Path, library: Path,
                      instances: dict[str, dict] = INSTANCES,
-                     duration_ns: int = DURATION_NS) -> Manifest:
+                     duration_ns: int = DURATION_NS,
+                     participants: Path = EXAMPLE_DIR) -> Manifest:
     """The example Run over the converted `recording` and a `library` build.
 
     A Recording other than `signals.csv`'s, such as a selected replay window,
-    needs its own `duration_ns`."""
+    needs its own `duration_ns`. `participants` is the directory holding
+    `adapter.py`, `binding.py` and `filter_test.py`, such as a bundle's copy."""
     m = Manifest(duration_ns=duration_ns)
     m.add_schemas(MAPPING["schemas"])
     m.add_schemas(OUTPUT_SCHEMAS)
@@ -97,7 +99,7 @@ def library_manifest(recording: Path, library: Path,
         m.add_process(
             channel.replace(".", "_"),
             command=[
-                "python3", str(EXAMPLE_DIR / "adapter.py"),
+                "python3", str(Path(participants).resolve() / "adapter.py"),
                 str(Path(library).resolve()),
                 "--input", speed, "--output", channel,
                 "--period-ns", str(STEP_PERIOD_NS),
@@ -113,7 +115,7 @@ def library_manifest(recording: Path, library: Path,
     m.add_process(
         "filter_test",
         command=[
-            "python3", str(EXAMPLE_DIR / "filter_test.py"),
+            "python3", str(Path(participants).resolve() / "filter_test.py"),
             "--input", speed, "--period-ns", str(STEP_PERIOD_NS),
             f"--initial-speed-mps={INITIAL_SPEED_MPS!r}",
             *(f"--expect={channel}={p['time_constant_s']!r},"
