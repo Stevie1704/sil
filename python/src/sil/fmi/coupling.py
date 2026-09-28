@@ -737,7 +737,8 @@ def _final(doc: dict, channel: str, routes: list[dict]) -> dict:
 
 def _route(doc: dict, channel: str, subscriber: str,
            variables: dict[str, dict]) -> dict:
-    """One route: its bound, its deliveries, and what it holds before them."""
+    """One route: its bound, its deliveries, what it holds before them, and
+    the input each activation steps on."""
     declaration = doc["channels"][channel]
     publisher = declaration["publisher"]
     route = declaration["subscribers"][subscriber]

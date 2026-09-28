@@ -692,6 +692,20 @@ class TestSeveralPeriods:
             {"at_ns": 30 * MS, "delivered": 3, "input": taken(20, 10)},
         ]
 
+    def test_in_a_shared_slot_a_zero_latency_input_is_the_new_sample(
+        self, tmp_path, multirate_fmus
+    ):
+        """`ball` runs before `fast` in the Slots they share, so with Latency
+        0 `fast` steps on the height published in the same Slot, and holds it
+        in the Slot `ball` does not have."""
+        document = edited(MULTIRATE, lambda d: d["channels"]["ball"].update(
+            latency_ns=0))
+        assert route(self.plan(tmp_path, multirate_fmus, document), "ball",
+                     "fast")["activations"] == [
+            {"at_ns": 0, "delivered": 1, "input": taken(0, 20)},
+            {"at_ns": 10 * MS, "delivered": 0, "input": taken(0, 20)},
+        ]
+
     def test_the_start_values_state_where_they_come_from(
         self, tmp_path, multirate_fmus
     ):
