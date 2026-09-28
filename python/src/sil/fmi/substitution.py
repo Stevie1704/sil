@@ -35,11 +35,12 @@ and routes, except a route to the removed FMU. Each boundary Channel keeps
 its schema and Latency. The Replay participant is its one publisher, and
 the Manifest holds the digest of the Recording it replays. It publishes each
 Message at its recorded publication Slot, in the recorded Publish order,
-before any activation of that Slot. A retained FMU therefore takes each
-Message at the activation it took it at in the original Run. A zero-Latency
-boundary route delivers inside the publishing Slot as before, because
-`sil-fmu-couple` made its publisher run first. A Channel of the removed FMU
-that no retained FMU takes is not in the replacement Run.
+and it has the removed FMU's priority, so it publishes at the removed FMU's
+place among the activations of that Slot. The Publish order of each Slot,
+and with it the Messages each route holds, is the one of the original Run.
+A retained FMU therefore takes each Message at the activation it took it at
+in the original Run. A Channel of the removed FMU that no retained FMU takes
+is not in the replacement Run.
 
 The contract compares each retained output and each boundary Channel at each
 Sample time, from the end of its publisher's first Step through the
@@ -241,9 +242,9 @@ def _require_publications(recording: Path, doc: dict,
     publisher; the count of each."""
     times: dict[str, list[int]] = {channel: [] for channel in compared}
     try:
-        for topic, t, _ in read_records(recording):
-            if topic in times:
-                times[topic].append(t)
+        for channel, t, _ in read_records(recording):
+            if channel in times:
+                times[channel].append(t)
     except (OSError, ValueError, McapError) as e:
         raise AuthoringError(
             f"cannot read recording {str(recording)!r}: {e}") from e
@@ -296,7 +297,8 @@ def _replacement(doc: dict, fmus: dict[str, Path], replaced: str,
         {name: fmus[name] for name in retained})
     try:
         manifest.add_replay(replaced, recording=recording.resolve(),
-                            channels=boundary)
+                            channels=boundary,
+                            priority=doc["fmus"][replaced]["priority"])
         manifest.to_doc()
     except ManifestError as e:
         raise AuthoringError(str(e)) from None

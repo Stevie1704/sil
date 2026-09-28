@@ -23,6 +23,7 @@ from test_fmu_coupling import (BOUNCING_BALL, EXAMPLE, FEEDBACK, MS, MULTIRATE,
 from sil.compare import compare, read_contract
 from sil.fmi.coupling import couple
 from sil.fmi.substitution import AuthoringError, main, substitute
+from sil.recording import read_records
 
 
 def recorded(tmp_path: Path, sil_run, document: Path, fmus: dict) -> Path:
@@ -450,3 +451,22 @@ class TestCommand:
         assert main(arguments) == 2
         assert "sil-fmu-substitute: error:" in capsys.readouterr().err
         assert not any(path.exists() for path in paths.values())
+
+
+def test_a_replaced_fmu_that_ran_last_publishes_at_its_own_place(
+    tmp_path, sil_run
+):
+    """`right` runs after `left` in each Slot. Replayed first, its Message
+    of a Slot would wait in `left`'s route of capacity 1 beside the one
+    `left` has yet to take, and the route would overflow. The Replay
+    participant publishes at `right`'s priority instead, so the Slot's
+    Publish order is the live one."""
+    replaced = Replaced(tmp_path, sil_run, EXAMPLE / "feedback.json",
+                        feedthroughs(tmp_path), "right")
+    replay = json.loads(replaced.manifest.read_text())["participants"]["right"]
+    assert (replay["type"], replay["priority"]) == ("replay", 1)
+    report = replaced.compared(replaced.recording)
+    assert report["verdict"] == "pass", report["first_divergence"]
+    assert [(t, channel) for channel, t, _ in read_records(replaced.recording)
+            ] == [(t, channel) for channel, t, _ in
+                  read_records(replaced.original)]

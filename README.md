@@ -1335,8 +1335,14 @@ Channel at each Slot of its publisher, such as that of a failed Run.
 | Schema and Latency | Each boundary Channel and each retained Channel is declared as in the original Manifest. |
 | Retained models, initialization and parameters | Each retained FMU's participant declaration is the original one: its command, with every start value and binding, its Period, priority and routes. Only a route to the removed FMU is dropped. |
 | Publication times | The Replay participant publishes each recorded Message at its publication Slot. The Sample time stays one Period of the removed FMU later. |
-| Total same-time order | The Replay participant publishes the Messages of one Slot in the recorded Publish order, before any activation of that Slot. A zero-Latency boundary route therefore delivers inside the Slot, as it did: `sil-fmu-couple` made its publisher run first. |
+| Total same-time order | The Replay participant has the removed FMU's priority. It publishes the Messages of one Slot in the recorded Publish order, at the removed FMU's place among the Slot's activations. Each Slot's Publish order, and the Messages each route holds, are those of the original Run. A zero-Latency boundary route delivers inside the Slot, as it did. |
 | One publisher per Channel | The Replay participant takes the removed FMU's name and is the one publisher of each boundary Channel. The Manifest holds the digest of the Recording it replays. |
+
+The Replay participant's place is its Manifest key `priority`
+(`Manifest.add_replay(..., priority=...)`). It orders the Replay participant
+among a Slot's activations as it orders a Process participant. A Replay
+participant without the key publishes before every activation of a Slot, as
+before, so an existing Manifest keeps its bytes and its Run.
 
 A Channel of the removed FMU that no retained FMU takes is not in the
 replacement Run. The receipt (`"sil_fmu_substitution_receipt": 1`) states
