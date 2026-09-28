@@ -15,6 +15,7 @@ Source = "https://github.com/Stevie1704/sil"
 dev = ["pytest>=8"]
 
 [project.scripts]
+sil-bundle = "sil.bundle:main"
 sil-check = "sil.check:main"
 sil-compare = "sil.compare:main"
 sil-csv = "sil.csv_recording:main"
