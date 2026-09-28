@@ -351,6 +351,13 @@ records their identities; a Run verifies them all before it starts, and
 writes its evidence outside the bundle. It closes only what it declares.
 _Avoid_: test package, regression suite, golden bundle
 
+**Regression matrix**:
+A named list of cases, each one sealed Regression bundle with its pinned
+lock digest and a whole-case wall-clock guard, run as independent Runs into
+separate evidence directories with one status per case and one aggregate
+result. It orchestrates Runs; it never parallelizes the Steps of one Run.
+_Avoid_: test farm, scheduler, benchmark suite
+
 **Example image**:
 The production runtime image plus the consumer material of one adoption
 example. It carries the model's runtime dependencies and no exporter, no

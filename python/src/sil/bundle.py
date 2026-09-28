@@ -33,6 +33,10 @@ the Recordings, provenance, logs, determinism checks, comparison reports and
 a shareable `summary.json` into a separate evidence directory. It exits 1
 when a verdict fails. The bundle is re-hashed after the Runs, so a Run that
 wrote into it fails too.
+
+SIGINT, SIGHUP and SIGTERM stop `run` after the current Run, which gets the
+same signal from its process group and ends itself. No later Run starts,
+and `summary.json` records the Runs that finished and `interrupted`.
 """
 
 from __future__ import annotations
@@ -42,9 +46,11 @@ import hashlib
 import json
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -113,6 +119,10 @@ print(json.dumps({"version": sys.version,
 
 class Refusal(Exception):
     """The bundle cannot be sealed or run as declared. No Run started."""
+
+
+# Set by a termination signal; `run` starts no Run after it.
+_interrupted = threading.Event()
 
 
 @dataclass(frozen=True)
@@ -555,10 +565,15 @@ def run(root: Path, evidence: Path, expected_lock: str | None = None) -> dict:
         raise
     runner = Path(lock["dependencies"]["runner"]["path"])
     environment = {**declaration.environment, **_RUN_ENVIRONMENT}
-    results = [_execute(root, spec, runner, environment, evidence / "runs" / spec.name)
-               for spec in declaration.runs]
+    results = []
+    for spec in declaration.runs:
+        if _interrupted.is_set():
+            break
+        results.append(_execute(root, spec, runner, environment,
+                                evidence / "runs" / spec.name))
     unchanged = not _content_problems(lock["contents_sha256"], _contents(root))
-    passed = unchanged and all(r["verdict"] == PASS for r in results)
+    passed = (unchanged and not _interrupted.is_set()
+              and all(r["verdict"] == PASS for r in results))
     summary.update(
         name=declaration.name,
         lock_sha256=file_sha256(root / LOCK),
@@ -566,6 +581,7 @@ def run(root: Path, evidence: Path, expected_lock: str | None = None) -> dict:
         verdict=PASS if passed else FAIL,
         dependency_closure=CLOSURE,
         bundle_unchanged=unchanged,
+        interrupted=_interrupted.is_set(),
         runs=results,
     )
     _write_json(evidence / SUMMARY, summary)
@@ -593,7 +609,7 @@ def _execute(root: Path, spec: RunSpec, runner: Path, environment: dict,
     }
     first = _run_once(runner, manifest, spec, environment, directory, 1)
     result.update(exit_code=first["exit_code"], recording_sha256=first["recording_sha256"])
-    if first["exit_code"] != 0:
+    if first["exit_code"] != 0 or _interrupted.is_set():
         result.update(verdict=FAIL, determinism=None, comparisons={})
         return result
     passed = True
@@ -669,6 +685,8 @@ def render(summary: dict) -> str:
         lines.append(f"  run {result['name']}: {result['verdict']} ({', '.join(parts)})")
     if summary.get("bundle_unchanged") is False:
         lines.append("  the bundle changed during the Runs")
+    if summary.get("interrupted"):
+        lines.append("  interrupted; no later Run started")
     return "\n".join(lines) + "\n"
 
 
@@ -691,6 +709,9 @@ def main(argv: list[str] | None = None) -> int:
     run_parser.add_argument("-o", "--evidence", type=Path, required=True,
                             help="a new or empty directory outside the bundle")
     args = parser.parse_args(argv)
+    if args.command == "run":
+        for signal_number in (signal.SIGINT, signal.SIGHUP, signal.SIGTERM):
+            signal.signal(signal_number, lambda *_: _interrupted.set())
     try:
         if args.command == "seal":
             lock = seal(args.bundle)
