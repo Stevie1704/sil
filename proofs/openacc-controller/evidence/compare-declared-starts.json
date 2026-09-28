@@ -1,0 +1,38 @@
+{
+  "sil_comparison_report": 1,
+  "comparison": "reference",
+  "determinism": "not judged: a reference comparison says whether two trajectories agree within the contract, not whether either Run reproduces; a determinism check (sil-check) bit-compares two Recordings of one Manifest",
+  "verdict": "pass",
+  "contract": {
+    "path": "/workspace/inputs/contract.json",
+    "sha256": "a523e61be6f3ef690a0488c6e0e668f227e93c58a1159952d979611032582fdf"
+  },
+  "actual": {
+    "path": "/workspace/runs/declared-starts.mcap",
+    "sha256": "252a6837560a68bb766253030023bd33f222c0e94d4bb3a9db8edce4f7f44a18"
+  },
+  "reference": {
+    "path": "/workspace/inputs/reference.mcap",
+    "sha256": "bb4e1bb9196559bcbdd6ae1b881e45af2f9be6b0a2f63af2347ee708f88b3859"
+  },
+  "evaluation": {
+    "from_ns": 100000000,
+    "to_ns": 50100000000
+  },
+  "coverage": [],
+  "channels": {
+    "acc.command": {
+      "reference_channel": "reference.command",
+      "observations": 501,
+      "checked": 501,
+      "failed": 0,
+      "nonfinite": 0,
+      "missing_actual": 0,
+      "missing_reference": 0,
+      "ambiguous_actual": 0,
+      "ambiguous_reference": 0
+    }
+  },
+  "divergences": 0,
+  "first_divergence": null
+}

@@ -1,0 +1,22 @@
+{
+  "nominal": null,
+  "changed-input": {
+    "index": 217,
+    "observation_ns": 21800000000,
+    "expected": -2.940724869397311,
+    "actual": -3.0
+  },
+  "wrong-binding": {
+    "index": 0,
+    "observation_ns": 100000000,
+    "expected": -3.0,
+    "actual": 1.5
+  },
+  "one-period-shift": {
+    "index": 217,
+    "observation_ns": 21800000000,
+    "expected": -2.940724869397311,
+    "actual": -3.0
+  },
+  "declared-starts": null
+}
