@@ -32,10 +32,5 @@ jobs:
         with:
           name: acc-multirate-evidence
           path: |
-            build/acc-multirate-bundle/bundle.json
-            build/acc-multirate-bundle/contract.json
-            build/acc-multirate-bundle/references/*.schedule.json
-            build/acc-multirate-evidence/report.json
-            build/acc-multirate-evidence/*.json
-            build/acc-multirate-evidence/*.mcap
-            build/acc-multirate-evidence/*.log
+            build/acc-multirate-bundle/
+            build/acc-multirate-evidence/
