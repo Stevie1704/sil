@@ -160,6 +160,11 @@ created there. A Run passes when it exits 0, its two Recordings are
 bit-identical (when `determinism` is true), and every comparison passes.
 A Run that fails is not repeated and not compared.
 
+SIGINT, SIGHUP and SIGTERM stop `run` after the current Run. When the
+signal goes to the process group, the Run gets it too and ends itself. No
+later Run starts, and `summary.json` records the Runs that finished,
+`interrupted: true` and the verdict `fail`.
+
 `summary.json` holds the verdicts, the digests of the Manifests and the
 Recordings, the digest of the lock and the runner's build identity. It
 holds no artifact content and no absolute path, except in the refusal
@@ -234,7 +239,11 @@ runs in its own process group. At most `--jobs` cases run at the same time
 When a case exceeds its guard, or the matrix receives SIGINT, SIGHUP or
 SIGTERM, the matrix sends SIGTERM to the process group of the case.
 `sil-run` then ends its Run and terminates the process groups of its
-Process participants. A group that is still alive after 10 s is killed.
+Process participants, and `sil-bundle` writes the Runs that finished. The
+case keeps their exit codes. When the process group of the case is still
+alive after 10 s, it is killed. A Process participant group that `sil-run`
+did not end by then is outside that group, and the matrix does not reach
+it.
 
 | Mode | Behavior |
 |---|---|
@@ -247,7 +256,7 @@ Process participants. A group that is still alive after 10 s is killed.
 | Status | Cause |
 |---|---|
 | `pass` | Every Run exited 0, every determinism check and comparison passed, and the bundle stayed unchanged. |
-| `behavioral-failure` | A Run exited 1 (a failed KPI, a crash, a missed response deadline), a comparison failed, or the bundle changed during its Runs. |
+| `behavioral-failure` | A Run failure (exit 1), such as a failed KPI, a participant that exited unexpectedly or a missed response deadline, a comparison failed, or the bundle changed during its Runs. |
 | `manifest-error` | The bundle was refused (exit 2 of `sil-bundle`), a Run exited 2, the runner did not start, or `sil-bundle` wrote no summary. |
 | `determinism-violation` | Two Runs of the same Manifest exited 0 with different Recordings. |
 | `timeout` | The case exceeded `timeout_s`. |

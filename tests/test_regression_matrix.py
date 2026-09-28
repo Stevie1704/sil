@@ -154,14 +154,17 @@ def test_a_mixed_matrix_reports_every_case_and_fails_on_required_cases(
     assert cases["invalid"]["bundle_exit_code"] == 2
     assert "altered artifact signals.csv" in cases["invalid"]["reason"]
     assert cases["stalled"]["runs"][0]["exit_code"] == 1
-    assert cases["wedged"]["bundle_exit_code"] is None
+    # The terminated sil-bundle keeps the runner code of the interrupted Run.
+    assert cases["wedged"]["bundle_exit_code"] == 1
+    assert cases["wedged"]["runs"][0]["exit_code"] == 1
     assert "3 s" in cases["wedged"]["reason"]
+    assert "run interrupted" in (
+        out / "cases" / "wedged" / "runs" / "library" / "run-1.log").read_text()
     assert cases["optional-kpi"]["required"] is False
     for name, entry in cases.items():
         assert entry["evidence"] == f"cases/{name}"
         assert (out / entry["log"]).is_file()
-        if name != "wedged":
-            assert (out / entry["evidence"] / "summary.json").is_file()
+        assert (out / entry["evidence"] / "summary.json").is_file()
     assert (out / "cases" / "coupling" / "runs" / "substituted" / "run-1.mcap").is_file()
     assert survivors(bundles["wedged"][0]) == []
     assert str(tmp_path) not in json.dumps(result)
@@ -251,6 +254,8 @@ def test_an_interrupted_matrix_terminates_its_run_process_trees(
     cases = by_name(result)
     assert cases["wedged"]["status"] == "skipped"
     assert cases["wedged"]["reason"].startswith("interrupted")
+    assert cases["wedged"]["runs"][0]["exit_code"] == 1
+    assert cases["library"]["evidence"] is None
     assert cases["library"]["status"] == "skipped"
     assert _wait_until_gone(bundles["wedged"][0]) == []
 

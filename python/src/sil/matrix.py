@@ -19,10 +19,12 @@ system. At most `--jobs` cases run at the same time; a Run itself is never
 parallelized. The Process response deadlines are the ones each bundle
 declares (`runs[].participant_timeout_ms`).
 
-A case that passes its guard, or a matrix that receives SIGINT, SIGHUP or
+A case that exceeds its guard, or a matrix that receives SIGINT, SIGHUP or
 SIGTERM, has its process group sent SIGTERM. `sil-run` then ends its Run and
-terminates the process groups of its Process participants. A group that is
-still alive after the grace period is killed.
+terminates the process groups of its Process participants. `sil-bundle` then
+writes the Runs that finished. When the case group is still alive after the
+grace period, it is killed; a Process participant group that `sil-run` did
+not end by then is outside that group and is not reached.
 
 Each case gets one status: `pass`, `behavioral-failure`, `manifest-error`,
 `determinism-violation`, `timeout` or `skipped`. The summary keeps the
@@ -53,7 +55,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
-from sil.bundle import EXIT_FAIL, EXIT_REFUSED, SUMMARY, _NAME, Refusal
+from sil.bundle import EXIT_FAIL, EXIT_REFUSED, SUMMARY, _NAME, Refusal, file_sha256
 
 PROG = "sil-matrix"
 FORMAT = 1
@@ -72,6 +74,8 @@ _JUNIT_ELEMENT = {BEHAVIORAL_FAILURE: "failure", DETERMINISM_VIOLATION: "failure
 # How long `sil-run` has to end its Run after SIGTERM before its group is killed.
 TERMINATION_GRACE_S = 10.0
 _POLL_S = 0.05
+# How a case process ended, beside TIMEOUT.
+_EXITED, _INTERRUPTED = "exited", "interrupted"
 
 
 @dataclass(frozen=True)
@@ -212,41 +216,51 @@ class Matrix:
 
     def _execute(self, case: Case) -> dict:
         evidence = self.out / "cases" / case.name
-        log = self.out / "logs" / f"{case.name}.log"
-        command = [sys.executable, "-m", "sil.bundle", "run", str(case.bundle),
-                   "-o", str(evidence), "--expect-lock", case.expect_lock]
         started = time.monotonic()
-        with log.open("wb") as output:
-            # Its own session: the group holds sil-bundle and sil-run, and
-            # sil-run leads the groups of its Process participants.
-            proc = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=output,
-                                    stderr=subprocess.STDOUT, start_new_session=True)
+        proc = _start(case, evidence, self.out / "logs" / f"{case.name}.log")
         code, usage, ended = _wait(proc, started + case.timeout_s, self.interrupted)
         observations = {"duration_s": round(time.monotonic() - started, 3),
                         "max_rss_kib": _kib(usage.ru_maxrss) if usage else None}
-        result = {"name": case.name, "required": case.required,
-                  "evidence": f"cases/{case.name}", "log": f"logs/{case.name}.log"}
-        if ended == "interrupted":
-            status, reason, bundle_summary = (
-                SKIPPED, "interrupted after it started; its Run processes were "
-                         "terminated", None)
-        elif ended == "timeout":
-            status, reason, bundle_summary = (
-                TIMEOUT, f"exceeded its {case.timeout_s:g} s guard; its Run processes "
-                         "were terminated", None)
+        # A terminated sil-bundle still writes the Runs that finished.
+        bundle_summary = _read_summary(evidence / SUMMARY)
+        if ended == _INTERRUPTED:
+            status, reason = SKIPPED, ("interrupted after it started; its Run "
+                                       "processes were terminated")
+        elif ended == TIMEOUT:
+            status, reason = TIMEOUT, (f"exceeded its {case.timeout_s:g} s guard; "
+                                       "its Run processes were terminated")
         else:
-            bundle_summary = _read_summary(evidence / SUMMARY)
             status, reason = classify(code, bundle_summary)
-        result.update(status=status, bundle_exit_code=code)
-        if status != PASS:
-            result["reason"] = reason
-        result["runs"] = [_run_entry(run) for run in (bundle_summary or {}).get("runs", [])]
         identity = {"status": status, "bundle_exit_code": code,
-                    "summary_sha256": _digest_file(evidence / SUMMARY)
+                    "summary_sha256": file_sha256(evidence / SUMMARY)
                     if bundle_summary is not None else None}
-        result.update(identity=identity, identity_sha256=_digest(identity),
-                      observations=observations)
-        return result
+        return _result(case, True, status, reason, code, bundle_summary, identity,
+                       observations)
+
+
+def _start(case: Case, evidence: Path, log: Path) -> subprocess.Popen:
+    command = [sys.executable, "-m", "sil.bundle", "run", str(case.bundle),
+               "-o", str(evidence), "--expect-lock", case.expect_lock]
+    with log.open("wb") as output:
+        # Its own session: the group holds sil-bundle and sil-run, and
+        # sil-run leads the groups of its Process participants.
+        return subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=output,
+                                stderr=subprocess.STDOUT, start_new_session=True)
+
+
+def _result(case: Case, started: bool, status: str, reason: str, code: int | None,
+            bundle_summary: dict | None, identity: dict, observations: dict) -> dict:
+    """One case entry of the summary; the skipped and the executed cases share it."""
+    result = {"name": case.name, "required": case.required,
+              "evidence": f"cases/{case.name}" if started else None,
+              "log": f"logs/{case.name}.log" if started else None,
+              "status": status, "bundle_exit_code": code}
+    if status != PASS:
+        result["reason"] = reason
+    result["runs"] = [_run_entry(run) for run in (bundle_summary or {}).get("runs", [])]
+    result.update(identity=identity, identity_sha256=_digest(identity),
+                  observations=observations)
+    return result
 
 
 def _wait(proc: subprocess.Popen, deadline: float, interrupted: threading.Event):
@@ -255,11 +269,11 @@ def _wait(proc: subprocess.Popen, deadline: float, interrupted: threading.Event)
         pid, status, usage = os.wait4(proc.pid, os.WNOHANG)
         if pid:
             proc.returncode = os.waitstatus_to_exitcode(status)
-            return proc.returncode, usage, "exited"
+            return proc.returncode, usage, _EXITED
         if interrupted.is_set() or time.monotonic() >= deadline:
-            ended = "interrupted" if interrupted.is_set() else "timeout"
+            ended = _INTERRUPTED if interrupted.is_set() else TIMEOUT
             usage = _terminate(proc)
-            return None, usage, ended
+            return proc.returncode, usage, ended
         time.sleep(_POLL_S)
 
 
@@ -305,8 +319,6 @@ def _group_alive(group: int) -> bool:
         os.killpg(group, 0)
     except ProcessLookupError:
         return False
-    except PermissionError:
-        return True
     return True
 
 
@@ -330,24 +342,17 @@ def _run_entry(run: dict) -> dict:
 
 def _skipped(case: Case, reason: str) -> dict:
     identity = {"status": SKIPPED, "bundle_exit_code": None, "summary_sha256": None}
-    return {"name": case.name, "required": case.required,
-            "evidence": None, "log": None, "status": SKIPPED,
-            "bundle_exit_code": None, "reason": reason, "runs": [],
-            "identity": identity, "identity_sha256": _digest(identity),
-            "observations": {"duration_s": None, "max_rss_kib": None}}
+    return _result(case, False, SKIPPED, reason, None, None, identity,
+                   {"duration_s": None, "max_rss_kib": None})
 
 
 def _digest(value) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
 
 
-def _digest_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def verdict(results: list[dict], interrupted: bool) -> str:
     if interrupted:
-        return "interrupted"
+        return _INTERRUPTED
     return PASS if all(r["status"] == PASS for r in results if r["required"]) else "fail"
 
 
