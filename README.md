@@ -1953,6 +1953,21 @@ declaration, the three examples in
 [examples/bundle/prepare.py](examples/bundle/prepare.py) and the failure
 cases.
 
+`sil-matrix` runs a list of sealed bundles as one CI job. Each case names a
+bundle, the lock digest `seal` printed, and a whole-case wall-clock guard:
+
+```sh
+sil-matrix cases.json -o matrix --jobs 4        # complete matrix
+sil-matrix cases.json -o matrix --fail-fast     # stop starting cases at a failure
+```
+
+Every case gets its own evidence directory and one status: `pass`,
+`behavioral-failure`, `manifest-error`, `determinism-violation`, `timeout` or
+`skipped`. The command writes `summary.json`, a JUnit `junit.xml` and a
+readable summary, and exits 1 when a required case does not pass.
+[docs/regression-bundles.md](docs/regression-bundles.md#regression-matrix)
+covers the case list and the cleanup of timed-out cases.
+
 ## FMI-LS-BUS CAN acceptance fixture
 
 [proofs/fmi-ls-bus/](proofs/fmi-ls-bus/) pins the Modelica Association's
@@ -2094,6 +2109,7 @@ proofs/openacc-controller/
 python/src/sil/    manifest builder, step-participant lib, test API,
                    determinism check, declared memory footprint,
                    CSV-to-Recording converter, regression bundles
+                   and the regression matrix
 tests/             behavior tests at the run boundary
 ```
 

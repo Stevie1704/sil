@@ -183,3 +183,110 @@ for a private bundle.
 
 `tests/test_regression_bundle.py` demonstrates each case from a staged
 installation. The supported acceptance platform is Linux x86-64.
+
+## Regression matrix
+
+`sil-matrix` runs several sealed bundles as one CI job. It orchestrates
+independent Runs on one host. It does not step one Run in parallel, and it
+is not a distributed farm or a benchmark.
+
+```sh
+sil-matrix cases.json -o matrix [--jobs N] [--fail-fast]
+```
+
+The case list names every case explicitly:
+
+```json
+{
+  "sil_matrix": 1,
+  "cases": [
+    {"name": "library", "bundle": "/bundles/library",
+     "expect_lock": "<sha256 that seal printed>", "timeout_s": 300},
+    {"name": "coupling", "bundle": "/bundles/coupling",
+     "expect_lock": "<sha256>", "timeout_s": 600, "required": false}
+  ]
+}
+```
+
+- `name` is the stable case name. It must be unique without regard to
+  case, so that no two cases share an evidence directory on any file
+  system.
+- `bundle` is a sealed bundle. A relative path is relative to the case
+  list. Two cases can run the same bundle; the bundle is read-only.
+- `expect_lock` is required. It pins the bundle with its Manifests,
+  references and comparison contracts, so it also pins the comparison
+  policy of the case.
+- `timeout_s` is the whole-case wall-clock guard. It is required.
+- `required` is `true` by default. A case that is not required is
+  reported, but does not fail the matrix.
+
+The Process response deadlines are the ones the bundle declares in
+`runs[].participant_timeout_ms`. A participant that stalls with a deadline
+is a Run failure. Without a deadline, only the whole-case guard ends it.
+
+### Execution
+
+Each case is one `sil-bundle run --expect-lock` into
+`matrix/cases/<name>/`, with its output in `matrix/logs/<name>.log`. It
+runs in its own process group. At most `--jobs` cases run at the same time
+(default 1).
+
+When a case exceeds its guard, or the matrix receives SIGINT, SIGHUP or
+SIGTERM, the matrix sends SIGTERM to the process group of the case.
+`sil-run` then ends its Run and terminates the process groups of its
+Process participants. A group that is still alive after 10 s is killed.
+
+| Mode | Behavior |
+|---|---|
+| complete matrix (default) | Every case runs. |
+| `--fail-fast` | No case starts after a required case does not pass. The cases that already run finish. The others are `skipped` with reason `fail-fast`. |
+| interrupted | The running cases are terminated, and they and the cases not started are `skipped` with reason `interrupted`. Exit 130. |
+
+### Statuses
+
+| Status | Cause |
+|---|---|
+| `pass` | Every Run exited 0, every determinism check and comparison passed, and the bundle stayed unchanged. |
+| `behavioral-failure` | A Run exited 1 (a failed KPI, a crash, a missed response deadline), a comparison failed, or the bundle changed during its Runs. |
+| `manifest-error` | The bundle was refused (exit 2 of `sil-bundle`), a Run exited 2, the runner did not start, or `sil-bundle` wrote no summary. |
+| `determinism-violation` | Two Runs of the same Manifest exited 0 with different Recordings. |
+| `timeout` | The case exceeded `timeout_s`. |
+| `skipped` | The case did not complete; see `reason`. |
+
+When a bundle has several Runs, the most severe status decides the case,
+in the order `manifest-error`, `determinism-violation`,
+`behavioral-failure`.
+
+### Output
+
+```text
+matrix/
+  summary.json
+  junit.xml
+  cases/<name>/            (the evidence directory of sil-bundle run)
+  logs/<name>.log
+```
+
+`summary.json` lists the cases in the order of the case list. Each case
+holds its status and reason, the `sil-bundle` exit code, each Run's
+`sil-run` exit code and Recording digest, and the evidence and log paths,
+relative to the output directory. `identity` holds only deterministic
+values: the status, the `sil-bundle` exit code and the digest of the
+case's `summary.json`. `identity_sha256` is its digest. The duration and
+the peak resident set size of the largest process are in `observations`.
+They are not part of `identity`.
+
+`junit.xml` reports a `behavioral-failure` or `determinism-violation` as a
+failure, a `manifest-error` or `timeout` as an error, and `skipped` as
+skipped. A case that is not required is marked `(optional case)` in its
+message.
+
+`sil-matrix` exits 0 when every required case passes, 1 when a required
+case does not pass, 2 when the case list or the output directory is
+refused, and 130 when it is interrupted. The output directory must be new
+or empty and outside every bundle.
+
+`tests/test_regression_matrix.py` runs a mixed matrix: the three example
+bundles, a failed KPI, a tampered bundle, a stalled participant with a
+response deadline and one without. It also shows that the case order and
+`--jobs` do not change the Recording of a case.
