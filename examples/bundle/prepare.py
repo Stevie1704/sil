@@ -35,10 +35,12 @@ import importlib.util
 import json
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import NamedTuple
 
+from sil.bundle import DECLARATION, FORMAT
 from sil.csv_recording import convert
 from sil.fmi.authoring import author
 from sil.fmi.coupling import couple
@@ -55,6 +57,24 @@ EXCLUDED = {
 LIBRARY_TIMEOUT_MS = 10_000
 
 
+def _write_json(path: Path, value) -> None:
+    path.write_text(json.dumps(value, indent=2) + "\n")
+
+
+def native_libraries(binary: Path) -> list[str]:
+    """The shared libraries the Linux loader resolves for `binary`.
+
+    A provenance side-car digests the target a command names, never what the
+    target loads, so these are declared as file dependencies. Other hosts
+    declare none: the supported acceptance platform is Linux x86-64."""
+    if not sys.platform.startswith("linux"):
+        return []
+    listing = subprocess.run(["ldd", str(binary)], check=True,
+                             capture_output=True, text=True).stdout
+    return sorted({word for line in listing.splitlines()
+                   for word in line.split() if word.startswith("/")})
+
+
 def _load(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
@@ -69,9 +89,9 @@ class Runtime(NamedTuple):
     sil_bin: Path
 
     def declaration(self, name: str, artifacts: dict[str, str], runs: list[dict],
-                    files: list[str] = ()) -> dict:
+                    files: tuple[str, ...] = ()) -> dict:
         return {
-            "sil_bundle": 1,
+            "sil_bundle": FORMAT,
             "name": name,
             "artifacts": artifacts,
             "runtime": {
@@ -114,18 +134,16 @@ class Bundle:
     def converted(self, mapping: Path, csv: Path, role: str, name: str) -> Path:
         """The conversion inputs, the Recording and its receipt."""
         mapping = self.copy(mapping, "conversion-input")
-        csv = self.copy(csv, "conversion-input", csv.name)
+        csv = self.copy(csv, "conversion-input")
         recording = self.path(f"{name}.mcap", role)
         receipt = convert(mapping, csv, recording)
-        (self.path(f"{name}.receipt.json", "receipt")
-         .write_text(json.dumps(receipt, indent=2) + "\n"))
+        _write_json(self.path(f"{name}.receipt.json", "receipt"), receipt)
         return recording
 
     def declare(self, runtime: Runtime, name: str, runs: list[dict],
-                files: list[str] = ()) -> Path:
-        path = self.root / "bundle.json"
-        document = runtime.declaration(name, self.artifacts, runs, files)
-        path.write_text(json.dumps(document, indent=2) + "\n")
+                files: tuple[str, ...] = ()) -> Path:
+        path = self.root / DECLARATION
+        _write_json(path, runtime.declaration(name, self.artifacts, runs, files))
         return path
 
 
@@ -147,8 +165,9 @@ def library(root: Path, runtime: Runtime, library_binary: Path, *,
         bundle.path("library.json", "manifest"))
     runs = [{"name": "library", "manifest": "library.json",
              "participant_timeout_ms": LIBRARY_TIMEOUT_MS}]
+    installed = () if bundled else (str(target),)
     return bundle.declare(runtime, "library", runs,
-                          files=[] if bundled else [str(target)])
+                          files=(*installed, *native_libraries(target)))
 
 
 def fmu_replay(root: Path, runtime: Runtime, fmu_binary: Path, *,
@@ -166,12 +185,12 @@ def fmu_replay(root: Path, runtime: Runtime, fmu_binary: Path, *,
     bundle.copy(example / "contract.json", "contract")
     authoring = bundle.copy(example / "authoring.json", "resource")
     receipt = author(authoring, fmu, recording, bundle.path("fmu-replay.json", "manifest"))
-    (bundle.path("fmu-replay.receipt.json", "receipt")
-     .write_text(json.dumps(receipt, indent=2) + "\n"))
+    _write_json(bundle.path("fmu-replay.receipt.json", "receipt"), receipt)
     runs = [{"name": "fmu-replay", "manifest": "fmu-replay.json",
              "comparisons": [{"name": "reference", "contract": "contract.json",
                               "reference": "reference.mcap"}]}]
-    return bundle.declare(runtime, "fmu-replay", runs)
+    return bundle.declare(runtime, "fmu-replay", runs,
+                          files=tuple(native_libraries(fmu_binary)))
 
 
 def coupling(root: Path, runtime: Runtime, fmu: Path, runner: Path) -> Path:
@@ -220,6 +239,10 @@ def main() -> None:
     parser.add_argument("--runner", type=Path,
                         help="the runner that records the coupled reference")
     args = parser.parse_args()
+    needed = {"library": "library", "fmu-replay": "fmu_binary", "coupling": "fmu"}[args.kind]
+    if getattr(args, needed) is None or (args.kind == "coupling" and args.runner is None):
+        parser.error(f"{args.kind} needs --{needed.replace('_', '-')}"
+                     + (" and --runner" if args.kind == "coupling" else ""))
     runtime = Runtime(args.python_bin.resolve(), args.sil_bin.resolve())
     if args.kind == "library":
         library(args.bundle, runtime, args.library)

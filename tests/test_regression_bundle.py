@@ -71,7 +71,9 @@ def test_library_bundle_runs_offline_and_keeps_its_inputs(
     result = summary(evidence)
     assert result["verdict"] == "pass"
     assert result["bundle_unchanged"] is True
-    assert result["runtime"]["version"] == "0.1.0"
+    lock = json.loads((library_bundle / "bundle.lock.json").read_text())
+    assert result["runtime"] == lock["dependencies"]["runner"]["build_info"]
+    assert result["bundle"] == "library"
     assert "does not close" in result["dependency_closure"]
     (run,) = result["runs"]
     assert run["exit_code"] == 0
@@ -93,7 +95,7 @@ def test_seal_records_the_dependencies_a_manifest_hash_does_not_cover(
     assert set(python["modules"]) == set(prepare.MODULES)
     assert python["modules"]["sil"]["sha256"]
     assert str(ROOT) not in json.dumps(python["modules"]["sil"]["origin"])
-    assert lock["dependencies"]["runner"]["build_info"]["version"] == "0.1.0"
+    assert lock["dependencies"]["runner"]["build_info"]["version"]
     assert set(lock["contents_sha256"]) >= {
         "bundle.json", "library.json", "speed_filter.so", "adapter.py",
         "binding.py", "signals.csv", "signals.mcap"}
@@ -144,6 +146,35 @@ def test_a_tampered_artifact_refuses_the_bundle_before_any_run(
     assert result["verdict"] == "refused"
     assert result["runs"] == []
     assert not (tmp_path / "evidence" / "runs").exists()
+
+
+def test_a_resealed_bundle_is_refused_against_the_kept_lock_digest(
+        tmp_path, runtime, library_binary):
+    root = tmp_path / "library"
+    prepare.library(root, runtime, library_binary)
+    proc = sil_bundle(runtime, "seal", root)
+    kept = proc.stdout.split("lock sha256 ")[1].strip()
+    assert sil_bundle(runtime, "verify", root, "--expect-lock", kept).returncode == 0
+    csv = root / "signals.csv"
+    csv.write_text(csv.read_text().replace("8", "9", 1))
+    (root / "bundle.lock.json").unlink()
+    sealed(runtime, root)
+
+    proc = sil_bundle(runtime, "run", root, "--expect-lock", kept,
+                      "-o", tmp_path / "evidence")
+
+    assert proc.returncode == 2
+    assert f"not the expected {kept}" in proc.stderr
+    assert summary(tmp_path / "evidence")["verdict"] == "refused"
+
+
+def test_a_malformed_lock_refuses_the_bundle(library_bundle, runtime):
+    (library_bundle / "bundle.lock.json").write_text('{"sil_bundle_lock": 1}')
+
+    proc = sil_bundle(runtime, "verify", library_bundle)
+
+    assert proc.returncode == 2
+    assert "is not a sil_bundle_lock 1" in proc.stderr
 
 
 def test_an_unsealed_file_in_the_bundle_refuses_it(library_bundle, runtime):

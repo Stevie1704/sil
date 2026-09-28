@@ -19,18 +19,20 @@ explicitly, and `seal` records their identities:
     sil-bundle run <bundle> -o <evidence>
 
 `seal` runs in the runtime that will execute the bundle. It digests every
-bundle file, the runner and its build identity, every declared executable,
-Python module and file, and writes `bundle.lock.json`. Nothing is prepared
-here: the targets, the Manifests and the references are made beforehand,
-with whatever toolchain, exporter or independent importer that needs.
+bundle file, the runner and its build identity, and every declared
+executable, Python module and file. It writes `bundle.lock.json` and prints
+the digest of that lock. Nothing is prepared here: the targets, the
+Manifests and the references are made beforehand.
 
-`run` verifies every recorded identity before the first Run and refuses the
-bundle (exit 2) at the first difference. It then executes each declared Run
-in the declared environment only, from the bundle's sealed location, and
-writes the Recordings, provenance, logs, determinism checks, comparison
-reports and a shareable `summary.json` into a separate evidence directory.
-It exits 1 when a verdict fails. The bundle is re-hashed after the Runs, so a
-Run that wrote into it fails too.
+`run` verifies every recorded identity before the first Run. When one
+differs, it refuses the bundle (exit 2) and names every difference. With
+`--expect-lock`, it also refuses a lock whose digest is not the one `seal`
+printed, so a bundle that was changed and sealed again is refused too. `run`
+then executes each declared Run in the declared environment only. It writes
+the Recordings, provenance, logs, determinism checks, comparison reports and
+a shareable `summary.json` into a separate evidence directory. It exits 1
+when a verdict fails. The bundle is re-hashed after the Runs, so a Run that
+wrote into it fails too.
 """
 
 from __future__ import annotations
@@ -333,13 +335,12 @@ def _executable(name: str, environment: dict[str, str]) -> dict | None:
 
 
 def _build_info(runner: Path, environment: dict[str, str]) -> dict:
-    proc = subprocess.run([str(runner), "--build-info"], env=environment,
-                          capture_output=True, text=True)
     try:
+        proc = subprocess.run([str(runner), "--build-info"], env=environment,
+                              capture_output=True, text=True)
         return json.loads(proc.stdout)
-    except ValueError:
-        raise Refusal(f"runner {runner} did not report its build identity: "
-                      f"{proc.stderr.strip()}")
+    except (OSError, ValueError) as error:
+        raise Refusal(f"runner {runner} did not report its build identity: {error}")
 
 
 def _python(interpreter: str, modules, environment: dict[str, str]) -> dict:
@@ -347,14 +348,18 @@ def _python(interpreter: str, modules, environment: dict[str, str]) -> dict:
     if path is None:
         return {"interpreter": None, "version": None,
                 "modules": {name: None for name in modules}}
-    with tempfile.TemporaryDirectory() as empty:
-        proc = subprocess.run([str(path), "-P", "-c", _PROBE, *modules],
-                              env=environment, cwd=empty,
-                              capture_output=True, text=True)
-    if proc.returncode != 0:
+    try:
+        with tempfile.TemporaryDirectory() as empty:
+            proc = subprocess.run([str(path), "-P", "-c", _PROBE, *modules],
+                                  env=environment, cwd=empty,
+                                  capture_output=True, text=True)
+    except OSError as error:
+        raise Refusal(f"interpreter {path} cannot start: {error}")
+    try:
+        probe = json.loads(proc.stdout)
+    except ValueError:
         raise Refusal(f"interpreter {path} could not report its modules: "
                       f"{proc.stderr.strip()}")
-    probe = json.loads(proc.stdout)
     return {"interpreter": {"path": str(path), "sha256": file_sha256(path)},
             "version": probe["version"], "modules": probe["modules"]}
 
@@ -464,17 +469,14 @@ def seal(root: Path) -> dict:
     return lock
 
 
-def verify(root: Path) -> tuple[Declaration, dict]:
-    """Re-derive every sealed identity; any difference refuses the bundle."""
+def verify(root: Path, expected_lock: str | None = None) -> tuple[Declaration, dict]:
+    """Re-derive every sealed identity; any difference refuses the bundle.
+
+    The lock is inside the bundle, so it can show an accidental change but
+    not a bundle that was changed and sealed again. `expected_lock`, the
+    digest `seal` printed and kept apart from the bundle, closes that."""
     root = root.resolve()
-    try:
-        lock = json.loads((root / LOCK).read_bytes())
-    except OSError:
-        raise Refusal(f"{root} is not sealed: {LOCK} is missing; run `{PROG} seal`")
-    except ValueError as error:
-        raise Refusal(f"{LOCK} is not JSON: {error}")
-    if lock.get("sil_bundle_lock") != FORMAT:
-        raise Refusal(f"{LOCK} is not a sil_bundle_lock {FORMAT}")
+    lock = _read_lock(root, expected_lock)
     if lock["root"] != str(root):
         raise Refusal(f"the bundle was sealed at {lock['root']}, and its Manifests "
                       f"name their artifacts there; it is at {root}")
@@ -487,6 +489,25 @@ def verify(root: Path) -> tuple[Declaration, dict]:
     if problems:
         raise Refusal("the runtime differs from the seal:\n  " + "\n  ".join(problems))
     return declaration, lock
+
+
+def _read_lock(root: Path, expected: str | None) -> dict:
+    path = root / LOCK
+    try:
+        data = path.read_bytes()
+        lock = json.loads(data)
+    except OSError:
+        raise Refusal(f"{root} is not sealed: {LOCK} is missing; run `{PROG} seal`")
+    except ValueError as error:
+        raise Refusal(f"{LOCK} is not JSON: {error}")
+    if expected is not None and hashlib.sha256(data).hexdigest() != expected:
+        raise Refusal(f"{LOCK} has digest {hashlib.sha256(data).hexdigest()}, "
+                      f"not the expected {expected}")
+    if not isinstance(lock, dict) or lock.get("sil_bundle_lock") != FORMAT or not (
+        {"root", "contents_sha256", "dependencies"} <= lock.keys()
+    ):
+        raise Refusal(f"{LOCK} is not a sil_bundle_lock {FORMAT}")
+    return lock
 
 
 def _content_problems(sealed: dict, actual: dict) -> list[str]:
@@ -520,13 +541,14 @@ def _entries(sealed: dict, actual: dict):
         yield "file", name, identity, actual["files"].get(name)
 
 
-def run(root: Path, evidence: Path) -> dict:
+def run(root: Path, evidence: Path, expected_lock: str | None = None) -> dict:
     """Verify, execute every declared Run, and write the evidence."""
     root = root.resolve()
     evidence = _evidence_directory(root, evidence)
-    summary = {"sil_bundle_evidence": FORMAT, "bundle": str(root)}
+    # No absolute path: a consumer with a private bundle shares this file.
+    summary = {"sil_bundle_evidence": FORMAT, "bundle": root.name}
     try:
-        declaration, lock = verify(root)
+        declaration, lock = verify(root, expected_lock)
     except Refusal as refusal:
         summary.update(verdict=REFUSED, refusal=str(refusal), runs=[])
         _write_json(evidence / SUMMARY, summary)
@@ -603,9 +625,14 @@ def _run_once(runner: Path, manifest: Path, spec: RunSpec, environment: dict,
         command += ["--participant-timeout-ms", str(spec.participant_timeout_ms)]
     # The Run working directory is created beneath the invocation directory,
     # so it lives in the evidence directory and never in the bundle.
-    proc = subprocess.run(command, cwd=directory, env=environment,
-                          capture_output=True, text=True)
-    (directory / f"run-{repeat}.log").write_text(proc.stdout + proc.stderr)
+    log = directory / f"run-{repeat}.log"
+    try:
+        proc = subprocess.run(command, cwd=directory, env=environment,
+                              capture_output=True, text=True, errors="replace")
+    except OSError as error:
+        log.write_text(f"{PROG}: cannot start {runner}: {error}\n")
+        return {"exit_code": None, "recording": recording, "recording_sha256": None}
+    log.write_text(proc.stdout + proc.stderr)
     return {
         "exit_code": proc.returncode,
         "recording": recording,
@@ -652,11 +679,15 @@ def main(argv: list[str] | None = None) -> int:
         allow_abbrev=False,
     )
     commands = parser.add_subparsers(dest="command", required=True)
-    for name, text in (("seal", "record the identity of the bundle and its runtime"),
-                       ("verify", "check every sealed identity without running")):
-        commands.add_parser(name, help=text).add_argument("bundle", type=Path)
+    commands.add_parser("seal", help="record the identity of the bundle and its "
+                                     "runtime").add_argument("bundle", type=Path)
+    verify_parser = commands.add_parser("verify", help="check every sealed identity "
+                                                       "without running")
     run_parser = commands.add_parser("run", help="verify, then execute every declared Run")
-    run_parser.add_argument("bundle", type=Path)
+    for checking in (verify_parser, run_parser):
+        checking.add_argument("bundle", type=Path)
+        checking.add_argument("--expect-lock", metavar="SHA256",
+                              help="the lock digest seal printed; refuse any other")
     run_parser.add_argument("-o", "--evidence", type=Path, required=True,
                             help="a new or empty directory outside the bundle")
     args = parser.parse_args(argv)
@@ -664,12 +695,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "seal":
             lock = seal(args.bundle)
             sys.stdout.write(f"sealed {lock['name']}: {len(lock['contents_sha256'])} "
-                             f"artifacts at {lock['root']}\n")
+                             f"artifacts at {lock['root']}\n"
+                             f"lock sha256 {file_sha256(Path(lock['root']) / LOCK)}\n")
         elif args.command == "verify":
-            declaration, _ = verify(args.bundle)
+            declaration, _ = verify(args.bundle, args.expect_lock)
             sys.stdout.write(f"verified {declaration.name}\n")
         else:
-            summary = run(args.bundle, args.evidence)
+            summary = run(args.bundle, args.evidence, args.expect_lock)
             sys.stdout.write(render(summary))
             return 0 if summary["verdict"] == PASS else EXIT_FAIL
     except Refusal as refusal:
