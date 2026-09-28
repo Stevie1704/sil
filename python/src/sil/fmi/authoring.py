@@ -42,7 +42,6 @@ the Manifest, and each binding, start value and held input with its unit.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -50,6 +49,18 @@ from pathlib import Path
 from mcap.exceptions import McapError
 
 from sil import build_info
+from sil.fmi.documents import (
+    AuthoringError,
+    array as _array,
+    exact_object as _object,
+    file_sha256 as _file_sha256,
+    load,
+    read as _read,
+    require_distinct,
+    sha256 as _sha256,
+    string as _string,
+    unit as _unit,
+)
 from sil.fmi.inspection import COMPATIBLE, MAPPING_VERSION, inspect
 from sil.manifest import Manifest, ManifestError, SubscriberRoute
 from sil.recording import UnknownRecordingFormat, read_schemas
@@ -67,10 +78,6 @@ _CHANNEL_KEYS = {"in": {"schema", "direction", "latency_ns", "route"},
                  "out": {"schema", "direction", "latency_ns"}}
 # The causalities FMI 3.0 lets an importer set before initialization.
 _STARTABLE = ("input", "parameter", "structuralParameter")
-
-
-class AuthoringError(ValueError):
-    """A Run this command refuses to write a Manifest for."""
 
 
 def author(document: str | Path, fmu: str | Path, recording: str | Path,
@@ -134,104 +141,21 @@ def _receipt(doc: dict, variables: dict[str, dict], report: dict,
     }
 
 
-def require_distinct(path: Path, written: str,
-                     others: dict[str, Path]) -> None:
-    """Refuse to write `path` over a file the Run reads or another output.
-
-    Paths are compared resolved, so a relative spelling or a symbolic link
-    of the same file is the same file.
-    """
-    for role, other in others.items():
-        if path.resolve() == Path(other).resolve():
-            raise AuthoringError(
-                f"{written} path {str(path)!r} is the {role}; writing the "
-                f"{written} would replace it"
-            )
-
-
 def _declared(variable: dict) -> dict:
     """What the FMU declares about one variable, as the receipt records it."""
     return {"variable": variable["name"], "type": variable["type"],
             "causality": variable["causality"], "unit": variable["unit"]}
 
 
-def _read(path: Path, role: str) -> bytes:
-    try:
-        return path.read_bytes()
-    except OSError as e:
-        raise AuthoringError(f"cannot read {role} {str(path)!r}: {e}") from e
-
-
-def _sha256(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def _file_sha256(path: Path) -> str:
-    with open(path, "rb") as f:
-        return hashlib.file_digest(f, "sha256").hexdigest()
-
-
 # Document ----------------------------------------------------------------------
 
 
 def _parse(data: bytes, path: Path) -> dict:
-    try:
-        doc = json.loads(data.decode("utf-8"),
-                         parse_constant=_non_finite_literal,
-                         object_pairs_hook=_unique_keys)
-    except AuthoringError as e:
-        raise AuthoringError(f"authoring document {str(path)!r}: {e}") from None
-    except ValueError as e:
-        raise AuthoringError(
-            f"authoring document {str(path)!r} is not valid JSON: {e}"
-        ) from e
+    doc = load(data, path)
     try:
         return _document(doc)
     except AuthoringError as e:
         raise AuthoringError(f"authoring document {str(path)!r}: {e}") from None
-
-
-def _non_finite_literal(literal: str):
-    raise AuthoringError(f"{literal} is not a finite number")
-
-
-def _unique_keys(pairs: list[tuple[str, object]]) -> dict:
-    doc: dict = {}
-    for key, value in pairs:
-        if key in doc:
-            raise AuthoringError(f"duplicate key {key!r}")
-        doc[key] = value
-    return doc
-
-
-def _object(value, context: str, keys: set[str]) -> dict:
-    if not isinstance(value, dict):
-        raise AuthoringError(f"{context} must be an object")
-    unknown = sorted(set(value) - keys)
-    if unknown:
-        raise AuthoringError(f"{context} has unknown key(s) "
-                             + ", ".join(map(repr, unknown)))
-    missing = sorted(keys - set(value))
-    if missing:
-        raise AuthoringError(f"{context} is missing key(s) "
-                             + ", ".join(map(repr, missing)))
-    return value
-
-
-def _array(value, context: str) -> list:
-    if not isinstance(value, list):
-        raise AuthoringError(f"{context} must be an array")
-    return value
-
-
-def _string(value, context: str) -> str:
-    if not isinstance(value, str) or not value:
-        raise AuthoringError(f"{context} must be a non-empty string")
-    return value
-
-
-def _unit(value, context: str) -> str | None:
-    return None if value is None else _string(value, context)
 
 
 def _document(doc) -> dict:
