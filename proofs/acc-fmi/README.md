@@ -385,6 +385,16 @@ the initial plant input remains held. The comparator requires the command
 Message to be absent there. No FMU output is overwritten with zero, and no
 trajectory is shifted to make it match.
 
+### Authored coupling (#187)
+
+[`examples/fmu-coupling/acc.json`](../../examples/fmu-coupling/acc.json)
+states the same Run as a `sil-fmu-couple` document. The proof renders it over
+the two archives and requires that the Manifest is the nominal Manifest without
+its in-run KPI participant. Then it runs that Manifest twice, requires
+byte-identical Recordings, and compares the first with the independent FMPy
+nominal trajectory. `results.json` keeps its hashes under `authored_coupling`,
+with the plan's execution order and the most Messages each route holds.
+
 ### Reproducible evidence
 
 `closed_loop.py` calls the committed `loop_evidence.py` producer automatically.
