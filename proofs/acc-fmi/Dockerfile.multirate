@@ -1,0 +1,14 @@
+# syntax=docker/dockerfile:1
+ARG SIL_RUNTIME_IMAGE
+FROM ${SIL_RUNTIME_IMAGE}
+USER root
+COPY proofs/acc-fmi/multirate_acceptance.py \
+     proofs/acc-fmi/multirate_compare.py \
+     proofs/acc-fmi/multirate_contract.py \
+     proofs/acc-fmi/proof_support.py \
+     /opt/acc-multirate/
+COPY examples/fmu-coupling/acc.json /examples/fmu-coupling/acc.json
+RUN install -d -o 10001 -g 10001 /bundle /fmus
+USER 10001:10001
+ENV SIL_ACC_RUNNER=sil-run
+WORKDIR /workspace
