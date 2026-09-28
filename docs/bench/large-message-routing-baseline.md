@@ -32,7 +32,8 @@ bytes crossing the Recording seam, not a second kernel-owned payload.
 
 ## Payloads
 
-Declared in [`schemas/bench.json`](../../schemas/bench.json), so the byte
+Declared in
+[`tests/fixtures/schemas/bench.json`](../../tests/fixtures/schemas/bench.json), so the byte
 layout is the same fixed, packed contract every other Channel uses.
 
 | Payload | Schema | Layout | Bytes | Rate in the matrix |

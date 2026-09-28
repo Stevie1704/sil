@@ -621,8 +621,8 @@ existing Process-participant response deadline through `sil-check`.
   Participant. A Participant that keeps its state behind the `user` pointer it
   registers therefore gets two independent instances today, and the handle #51
   wanted to add is `ctx`. What is missing is a fixture and a documented rule,
-  not an ABI: every toy in `participants/` held one global instance, so two
-  entries on one library would run without any diagnostic while the second
+  not an ABI: every toy in `tests/fixtures/participants/` held one global
+  instance, so two entries on one library would run without any diagnostic while the second
   `init` overwrote the first one's state and both Tasks published through the
   second context. That fixture defect is closed by #88. **Repeated lifecycles
   in one process are a much larger job than the ABI part, and one this design

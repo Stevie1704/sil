@@ -38,7 +38,9 @@ sys.path.insert(0, str(ROOT / "python" / "src"))
 from sil import schema as sil_schema  # noqa: E402
 from sil.manifest import Manifest, SubscriberRoute  # noqa: E402
 
-BENCH_SCHEMAS = json.loads((ROOT / "schemas" / "bench.json").read_text())
+BENCH_SCHEMAS = json.loads(
+    (ROOT / "tests" / "fixtures" / "schemas" / "bench.json").read_text()
+)
 _TYPES = sil_schema.load(BENCH_SCHEMAS)
 
 # One activation period for every participant in the matrix, so a row's cost
@@ -50,7 +52,8 @@ PERIOD_NS = 10_000_000
 BENCH_ROUTE_CAPACITY = 1024
 
 # The two payloads the baseline is stated over: a small control message and one
-# representative sensor frame. Their byte layout comes from schemas/bench.json.
+# representative sensor frame. Their byte layout comes from
+# tests/fixtures/schemas/bench.json.
 PAYLOADS = {
     "small": "bench.Small",
     "camera": "bench.CameraFrame",

@@ -6,7 +6,9 @@ from conftest import BUILD_DIR, COMPAT_ROUTE_CAPACITY, ROOT
 
 from sil.manifest import Manifest, SubscriberRoute
 
-TOY_SCHEMAS = json.loads((ROOT / "schemas" / "toy.json").read_text())
+TOY_SCHEMAS = json.loads(
+    (ROOT / "tests" / "fixtures" / "schemas" / "toy.json").read_text()
+)
 
 
 def toy_manifest(duration_ns: int = 100_000_000, *, epoch_ns: int = 0) -> Manifest:

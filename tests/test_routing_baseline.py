@@ -19,7 +19,9 @@ from conftest import BUILD_DIR, COMPAT_ROUTE_CAPACITY, ROOT
 from sil.manifest import Manifest, SubscriberRoute
 from tools import bench_routing
 
-BENCH_SCHEMAS = json.loads((ROOT / "schemas" / "bench.json").read_text())
+BENCH_SCHEMAS = json.loads(
+    (ROOT / "tests" / "fixtures" / "schemas" / "bench.json").read_text()
+)
 
 PERIOD_NS = 10_000_000
 DURATION_NS = 100_000_000

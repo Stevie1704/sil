@@ -33,8 +33,6 @@ WORKDIR /src
 COPY CMakeLists.txt LICENSE NOTICE THIRD-PARTY-NOTICES.md ./
 COPY include include
 COPY kernel kernel
-COPY participants participants
-COPY schemas schemas
 COPY shim shim
 COPY tests tests
 COPY tools tools
@@ -113,7 +111,7 @@ FROM runtime AS acceptance
 
 USER root
 COPY --chown=10001:10001 examples/fmu /opt/sil/reference/examples/fmu
-COPY --chown=10001:10001 schemas/fmu.json /opt/sil/reference/schemas/fmu.json
+COPY --chown=10001:10001 tests/fixtures/schemas/fmu.json /opt/sil/reference/tests/fixtures/schemas/fmu.json
 COPY --chown=10001:10001 tests/fixtures/reference-fmus/3.0/Feedthrough.fmu /opt/sil/reference/tests/fixtures/reference-fmus/3.0/Feedthrough.fmu
 COPY --chown=10001:10001 tests/fixtures/reference-fmus/LICENSE.txt /opt/sil/reference/tests/fixtures/reference-fmus/LICENSE.txt
 USER 10001:10001

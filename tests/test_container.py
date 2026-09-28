@@ -272,7 +272,9 @@ def test_fmi_reference_run_validates_behavior_and_matches_native(tmp_path: Path)
     )
 
     schemas = load_schemas(
-        json.loads((tmp_path / "reference" / "schemas" / "fmu.json").read_text())
+        json.loads(
+            (tmp_path / "reference" / "tests" / "fixtures" / "schemas" / "fmu.json").read_text()
+        )
     )
     messages: dict[str, list[tuple[int, dict]]] = {"fmu.In": [], "fmu.Out": []}
     for channel, timestamp, payload in read_records(tmp_path / "container-1.mcap"):

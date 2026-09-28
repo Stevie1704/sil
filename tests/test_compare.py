@@ -512,8 +512,8 @@ def test_the_command_refuses_unreadable_inputs(acc_reference, tmp_path, capsys):
                  str(acc_reference)]) == 2
 
 
-def test_the_readme_documents_the_example():
-    readme = (ROOT / "README.md").read_text()
+def test_the_comparison_guide_documents_the_example():
+    guide = (ROOT / "docs" / "comparison.md").read_text()
     for name in ("contract.json", "reference-mapping.json",
                  "plant-accelerate.reference.csv"):
-        assert f"examples/compare/{name}" in readme
+        assert f"examples/compare/{name}" in guide
