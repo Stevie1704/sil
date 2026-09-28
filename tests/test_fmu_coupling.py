@@ -706,6 +706,27 @@ class TestSeveralPeriods:
             {"at_ns": 10 * MS, "delivered": 0, "input": taken(0, 20)},
         ]
 
+    def test_a_plan_that_stops_before_the_pattern_repeats_says_so(
+        self, tmp_path
+    ):
+        """`right` has 13 activations before the pattern of a 130 ms
+        publisher repeats; the plan lists 12 and states the one it omits."""
+        def edit(document):
+            document["duration_ns"] = 130 * MS
+            document["fmus"]["left"]["step_period_ns"] = 130 * MS
+            document["channels"]["right.value"]["subscribers"]["left"][
+                "capacity"] = 13
+        receipt = couple(write(tmp_path, edited(FEEDBACK, edit)),
+                         feedthroughs(tmp_path), tmp_path / "manifest.json")
+        slow_to_fast = route(receipt["plan"], "left.value", "right")
+        assert [a["at_ns"] for a in slow_to_fast["activations"]] == [
+            t * MS for t in range(0, 120, 10)]
+        assert slow_to_fast["activations_not_listed"] == 1
+        assert route(receipt["plan"], "right.value", "left")[
+            "activations_not_listed"] == 0
+        assert ("1 more activation before the pattern repeats is not listed"
+                in render_plan(receipt["plan"]))
+
     def test_the_start_values_state_where_they_come_from(
         self, tmp_path, multirate_fmus
     ):

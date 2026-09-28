@@ -784,13 +784,15 @@ def _timeline(publisher_period: int, subscriber_period: int, latency: int,
     on the newest one. An activation that takes none holds the last Message
     taken, or the start value before the first. The activations are listed
     until their pattern repeats: one common period of the two FMUs after the
-    first Message can be visible.
+    first Message can be visible. A common period can be long, so at most
+    `_SHOWN_ACTIVATIONS` are listed, and the rest are counted.
     """
     publications = iter(range(0, duration, publisher_period))
     final = duration - publisher_period
     pending: deque[int] = deque()
     deliveries: list[dict] = []
     activations: list[dict] = []
+    not_listed = 0
     dropped: list[int] = []
     peak = 0
     held: dict | str = "start"
@@ -822,16 +824,20 @@ def _timeline(publisher_period: int, subscriber_period: int, latency: int,
                 final_taken = drain
             if len(deliveries) < _SHOWN_DELIVERIES:
                 deliveries.append({**held, "delivered_ns": drain})
-        if drain < shown_until and len(activations) < _SHOWN_ACTIVATIONS:
-            activations.append({"at_ns": drain, "delivered": taken,
-                                "input": held})
+        if drain < shown_until:
+            if len(activations) < _SHOWN_ACTIVATIONS:
+                activations.append({"at_ns": drain, "delivered": taken,
+                                    "input": held})
+            else:
+                not_listed += 1
     while publication is not None:
         publish(publication)
         publication = next(publications, None)
     return {"peak_messages": peak, "deliveries": deliveries,
             "dropped_messages": len(dropped),
             "first_dropped_ns": dropped[:_SHOWN_DELIVERIES],
-            "activations": activations, "final_taken_ns": final_taken}
+            "activations": activations, "activations_not_listed": not_listed,
+            "final_taken_ns": final_taken}
 
 
 def _require_route_bounds(plan: dict) -> None:
@@ -905,6 +911,11 @@ def _render_route(route: dict) -> list[str]:
               f"({start['from']} start) until the first delivery"
               for variable, start in route["until_first_delivery"].items()]
     lines += [f"      {_render_activation(a)}" for a in route["activations"]]
+    if route["activations_not_listed"]:
+        count = route["activations_not_listed"]
+        lines.append(f"      {count} more activation{'' if count == 1 else 's'} "
+                     f"before the pattern repeats "
+                     f"{'is' if count == 1 else 'are'} not listed")
     if not route["deliveries"]:
         lines.append("      no Message is delivered within the Run")
     if route["dropped_messages"]:

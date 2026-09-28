@@ -1153,8 +1153,9 @@ Channels (a Message published at t holds its publisher's outputs at t + the publ
 - **Activations.** For each route, the plan lists the input that each
   activation of the subscriber steps on, until the pattern repeats. The
   pattern repeats after one common period of the two FMUs, counted from the
-  first time a Message can be visible. The first activations hold the start
-  value. The plan states whether the start value comes from the document or
+  first time a Message can be visible. The plan lists at most 12
+  activations of a route and states how many more come before the pattern
+  repeats. The first activations hold the start value. The plan states whether the start value comes from the document or
   from the FMU.
 - **Route bound.** A route holds a Message from its publication to its
   delivery. When the publisher runs first in a Slot, its new Message is in
@@ -1262,11 +1263,20 @@ Duration. A subscriber takes it only when it is visible before the
 Duration and a later activation of the subscriber exists. For each Channel,
 the plan states who takes the last Message. In this Run, `fast` takes the
 last height of `ball` at 110 ms. The last Messages of `fast` (visible at
-120 ms) and `slow` (no subscriber) reach no participant. The Run has no
-Slot at the Duration, and shutdown does not step a participant. Thus an
-in-run Test participant cannot see the values of an FMU at the Duration,
-and it cannot see a Message that becomes visible at or after the Duration.
-Only the Recording holds them.
+120 ms) and `slow` (no subscriber) reach no participant.
+
+An in-run check, such as a Test participant, sees only what it takes in a
+Slot before the Duration. It can see a final sample: a Test participant
+scheduled like `fast` takes the last height of `ball` at 110 ms. The Run
+has no Slot at the Duration, and shutdown does not step a participant.
+Thus an in-run check cannot see:
+
+- a Message that becomes visible at or after the Duration, such as the last
+  Message of `fast`;
+- a Message published in the checker's own last Slot or after it, with a
+  Latency above zero.
+
+Only the Recording holds these Messages.
 
 Check the final samples post-hoc. `sil-compare` observes each Message at
 its sample time: `actual_offset_ns` is the publisher's period. With an
