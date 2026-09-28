@@ -23,7 +23,7 @@ Everything is checked before a file is written:
   Recording is a Run of this experiment, and a retained FMU's start values,
   parameters, Period, priority and routes, and each Latency, are the ones
   the Recording was made with. The Manifest names each archive by its
-  absolute path, so the archives have to be at the paths the Run named;
+  absolute path, so the archives must be at the paths the Run named;
 * the Recording holds one Message of each compared Channel at each Slot of
   its publisher below the Duration. A Run that failed leaves an incomplete
   Recording;
@@ -116,7 +116,8 @@ def substitute(document: str | Path, fmus: dict[str, str | Path],
     _require_experiment(recording, coupled.manifest.hash())
     compared = sorted(_kept(doc, replaced, boundary))
     publications = _require_publications(recording, doc, compared)
-    manifest = _replacement(doc, fmus, replaced, boundary, recording)
+    manifest = _replacement(doc, fmus, replaced, compared, boundary,
+                            recording)
     contract_doc = _contract(doc, compared)
     manifest_text = manifest.to_json()
     contract_text = json.dumps(contract_doc, indent=2) + "\n"
@@ -277,7 +278,7 @@ def _slots(doc: dict, channel: str) -> list[int]:
 
 
 def _replacement(doc: dict, fmus: dict[str, Path], replaced: str,
-                 boundary: list[str], recording: Path):
+                 kept: list[str], boundary: list[str], recording: Path):
     """The coupled Manifest without the removed FMU and the Channels only it
     needs, and with a Replay participant publishing the boundary."""
     retained = {name: fmu for name, fmu in doc["fmus"].items()
@@ -288,7 +289,7 @@ def _replacement(doc: dict, fmus: dict[str, Path], replaced: str,
             for subscriber, route in declaration["subscribers"].items()
             if subscriber != replaced}}
         for channel, declaration in doc["channels"].items()
-        if channel in _kept(doc, replaced, boundary)
+        if channel in kept
     }
     manifest = coupled_manifest(
         {**doc, "fmus": retained, "channels": channels},

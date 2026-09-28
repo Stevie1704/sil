@@ -16,8 +16,9 @@ from pathlib import Path
 
 import pytest
 from conftest import run_manifest
-from test_fmu_coupling import (EXAMPLE, FEEDBACK, MS, MULTIRATE, feedthroughs,
-                               values, with_units, write, BOUNCING_BALL)
+from test_fmu_coupling import (BOUNCING_BALL, EXAMPLE, FEEDBACK, MS, MULTIRATE,
+                               feedthroughs, values, with_units, write,
+                               zero_latency)
 
 from sil.compare import compare, read_contract
 from sil.fmi.coupling import couple
@@ -229,6 +230,23 @@ class TestEqualPeriodControls:
         assert report["verdict"] == "fail"
         assert first_divergence(report) == (
             "value", "left.value", 20 * MS, 0.0, 0.75)
+
+
+def test_a_zero_latency_boundary_delivers_inside_the_slot_as_before(
+    tmp_path, sil_run
+):
+    """The Replay participant publishes before any activation of a Slot, so
+    `right` takes `left`'s Message in its publishing Slot, as it did live."""
+    replaced = Replaced(
+        tmp_path, sil_run,
+        write(tmp_path, zero_latency(FEEDBACK, "left.value"), "same-slot.json"),
+        feedthroughs(tmp_path), "left")
+    [boundary] = replaced.receipt["boundary"]
+    assert (boundary["same_slot"], boundary["first_delivery_ns"]) == (
+        True, {"right": 0})
+    assert values(replaced.recording, "right.value")[0] == (0, 1.5)
+    report = replaced.compared(replaced.recording)
+    assert report["verdict"] == "pass", report["first_divergence"]
 
 
 @pytest.fixture

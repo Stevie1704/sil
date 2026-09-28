@@ -1323,8 +1323,8 @@ sil-compare "$workdir/contract.json" "$workdir/replacement-1.mcap" \
 Give the command the document and the archives that the original Run was
 authored from. It makes every check of `sil-fmu-couple` again, and it then
 checks that they author the Manifest whose hash the Recording carries. The
-Manifest names each archive by its absolute path, so the archives have to be
-at the paths the Run named. The command refuses a Recording that no Run
+Manifest names each archive by its absolute path, so the archives must be at
+the paths the Run named. The command refuses a Recording that no Run
 wrote, and a Recording that does not hold one Message of each compared
 Channel at each Slot of its publisher, such as that of a failed Run.
 
