@@ -1102,7 +1102,8 @@ Before it writes a Manifest, the command rejects (exit 2) with the reason:
   two different units. The importer converts no unit. Author the conversion
   explicitly: add a converting FMU to the document, between the two;
 - an input that two connections feed, an input that is not connected, not given a
-  start value and not held, and a connected input that has no start value;
+  start value and not held, a connected input that has no start value, and a
+  held input whose FMU declares no start value;
 - a missing or `null` `latency_ns`;
 - two FMUs with the same priority;
 - a cycle of zero-Latency connections. The diagnostic names the cycle, for
@@ -1151,6 +1152,8 @@ Channels (a Message published at t holds its publisher's outputs at t + the publ
   the route before the subscriber takes the previous one. The plan states
   the most Messages each route holds in the Run. In `acc.json`, the sensing
   route holds two, and a sensing Latency of two Periods would make it three.
+  Under `drop_newest`, a route refuses a Message that finds it full. The plan
+  lists the deliveries that the kernel makes and the dropped publications.
 
 Supported limits:
 

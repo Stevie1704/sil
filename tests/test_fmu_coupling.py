@@ -331,6 +331,25 @@ class TestSources:
         message = rejection(tmp_path, edited(FEEDBACK, edit))
         assert "field 'other'" in message and "'left.value'" in message
 
+    def test_a_held_input_without_a_start_is_refused(self, tmp_path):
+        """A held input keeps the start its FMU declares, so it declares one."""
+        archive = tmp_path / "NoStart.fmu"
+        with zipfile.ZipFile(FEEDTHROUGH) as source, \
+                zipfile.ZipFile(archive, "w") as target:
+            for member in source.infolist():
+                data = source.read(member)
+                if member.filename == "modelDescription.xml":
+                    data = data.replace(
+                        b'name="Boolean_input" valueReference="27" '
+                        b'causality="input" start="false"',
+                        b'name="Boolean_input" valueReference="27" '
+                        b'causality="input"')
+                target.writestr(member, data)
+        message = rejection(tmp_path, FEEDBACK,
+                            {"left": FEEDTHROUGH, "right": archive})
+        assert "'right'" in message and "'Boolean_input'" in message
+        assert "declares no start value" in message
+
     def test_a_connected_input_without_a_start_is_refused(self, tmp_path):
         """Until the first delivery the input holds its start, so one has to
         exist: declared by the FMU or given by the document."""
@@ -471,15 +490,25 @@ def test_the_plan_reads_as_periods_order_and_delivery_points(tmp_path):
     assert "same-Slot connections: none" in text
 
 
-def test_a_route_that_drops_says_so_in_the_plan(tmp_path):
-    """Under drop_newest a route may hold fewer Messages than the Run
-    publishes; the plan accepts it and says what its listing omits."""
+def test_a_route_that_drops_lists_what_it_delivers(tmp_path):
+    """Under drop_newest the route refuses a Message that finds it full, so
+    the plan lists the deliveries the kernel makes and the drops."""
     document = edited(FEEDBACK, lambda d: d["channels"]["left.value"][
         "subscribers"]["right"].update(capacity=1, overflow="drop_newest"))
     receipt = couple(write(tmp_path, document), feedthroughs(tmp_path),
                      tmp_path / "manifest.json")
-    assert "the route drops the Messages above its capacity" in render_plan(
-        receipt["plan"])
+    dropping = route(receipt["plan"], "left.value", "right")
+    # `left` publishes at 10 ms before `right` drains the Message of 0 ms,
+    # so the route is full and every second Message is refused.
+    assert dropping["deliveries"] == [
+        {"published_ns": 0, "values_at_ns": 10 * MS, "delivered_ns": 10 * MS},
+        {"published_ns": 20 * MS, "values_at_ns": 30 * MS,
+         "delivered_ns": 30 * MS},
+    ]
+    assert dropping["first_dropped_ns"] == [10 * MS, 30 * MS]
+    assert dropping["dropped_messages"] == 2
+    assert "2 Messages dropped, the first published at 10 ms, 30 ms" in (
+        render_plan(receipt["plan"]))
 
 
 class TestCommand:
@@ -540,3 +569,20 @@ class TestRun:
         proc = run_manifest(sil_run, manifest, tmp_path / "run.mcap")
         assert proc.returncode == 0, proc.stderr
         assert values(proc.mcap_path, "right.value")[0] == (0, 1.5)
+
+    def test_a_dropping_route_delivers_what_its_plan_lists(
+        self, tmp_path, sil_run
+    ):
+        """The plan drops `left`'s 0 of 10 ms, so `right` takes nothing at
+        20 ms and keeps the 1.5 it took at 10 ms. Delivered, the 0 would
+        have reached `right` at 20 ms."""
+        document = edited(FEEDBACK, lambda d: d["channels"]["left.value"][
+            "subscribers"]["right"].update(capacity=1, overflow="drop_newest"))
+        manifest = tmp_path / "dropping.json"
+        couple(write(tmp_path, document), feedthroughs(tmp_path), manifest)
+        proc = run_manifest(sil_run, manifest, tmp_path / "run.mcap")
+        assert proc.returncode == 0, proc.stderr
+        assert [v for _, v in values(proc.mcap_path, "left.value")][:3] == [
+            1.5, 0.0, 1.5]
+        assert [v for _, v in values(proc.mcap_path, "right.value")] == [
+            0.0, 1.5, 1.5, 1.5, 1.5]

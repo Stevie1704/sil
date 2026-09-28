@@ -33,8 +33,9 @@ Everything is checked before a Manifest is written, and nothing is loaded:
   unit. The Importer converts no unit, so a unit mismatch needs an explicit
   conversion between the two FMUs;
 * each input is fed once: it is connected, given a start value or held at
-  the start the FMU declares. A connected input holds its start value until
-  its first delivery, so it has one;
+  the start the FMU declares. A held input and a connected input both have
+  a start value, because a connected input holds it until its first
+  delivery;
 * each Channel states its Latency and each route states its bound. A route
   that must hold more Messages than its capacity under the `fail` policy is
   refused;
@@ -59,6 +60,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -543,6 +545,11 @@ def _require_holds(fmu: str, hold: list[str], variables: dict[str, dict],
         if name in fed or name in started:
             also = "connected" if name in fed else "given a start value"
             raise AuthoringError(f"{what} holds {name!r}, which is also {also}")
+        if variable["start"] is None:
+            raise AuthoringError(
+                f"{what} holds {name!r}, which declares no start value; give "
+                f"it one in 'start'"
+            )
 
 
 # Execution order ---------------------------------------------------------------
@@ -672,19 +679,20 @@ def _route(doc: dict, channel: str, subscriber: str,
     publisher = declaration["publisher"]
     route = declaration["subscribers"][subscriber]
     fmus = doc["fmus"]
-    deliveries, peak = _timeline(
+    timeline = _timeline(
         fmus[publisher]["step_period_ns"], fmus[subscriber]["step_period_ns"],
         declaration["latency_ns"], doc["duration_ns"],
         publisher_first=fmus[publisher]["priority"]
         < fmus[subscriber]["priority"],
+        drop_above=route["capacity"] if route["overflow"] == "drop_newest"
+        else None,
     )
     starts = {s["variable"]: s["value"] for s in fmus[subscriber]["start"]}
     return {
         "channel": channel, "publisher": publisher, "subscriber": subscriber,
         "latency_ns": declaration["latency_ns"],
         "capacity": route["capacity"], "overflow": route["overflow"],
-        "peak_messages": peak,
-        "deliveries": deliveries,
+        **timeline,
         "until_first_delivery": {
             variable: starts.get(variable, variables[variable]["start"])
             for variable in route["bind"].values()
@@ -693,36 +701,54 @@ def _route(doc: dict, channel: str, subscriber: str,
 
 
 def _timeline(publisher_period: int, subscriber_period: int, latency: int,
-              duration: int, *, publisher_first: bool) -> tuple[list, int]:
-    """The first deliveries of one route, and the most Messages it holds.
+              duration: int, *, publisher_first: bool,
+              drop_above: int | None) -> dict:
+    """The first deliveries and drops of one route, and the most Messages it
+    holds.
 
     A Message is published in each of the publisher's Slots, holding the
     values the publisher reaches one Period later. It enters the route when
     it is published and leaves it at the first activation of the subscriber
     at or after its visible time, in Publish order. In a Slot both share, the
-    subscriber drains before a later publisher publishes, so the route holds
-    the most just before a drain, and at the end of the Run.
+    subscriber drains before a later publisher publishes. Under `drop_newest`
+    the route refuses a Message that finds it holding `drop_above`; under
+    `fail` it takes every Message, and the peak says whether the Run fails.
     """
-    publications = range(0, duration, publisher_period)
-    published = delivered = peak = 0
-    deliveries = []
+    publications = iter(range(0, duration, publisher_period))
+    pending: deque[int] = deque()
+    deliveries: list[dict] = []
+    dropped: list[int] = []
+    peak = 0
+    publication = next(publications, None)
+
+    def publish(published_ns: int) -> None:
+        nonlocal peak
+        if drop_above is not None and len(pending) >= drop_above:
+            dropped.append(published_ns)
+            return
+        pending.append(published_ns)
+        peak = max(peak, len(pending))
+
     for drain in range(0, duration, subscriber_period):
-        while published < len(publications) and (
-            publications[published] < drain
-            or (publications[published] == drain and publisher_first)
+        while publication is not None and (
+            publication < drain or (publication == drain and publisher_first)
         ):
-            published += 1
-        peak = max(peak, published - delivered)
-        while (delivered < published
-               and publications[delivered] + latency <= drain):
+            publish(publication)
+            publication = next(publications, None)
+        while pending and pending[0] + latency <= drain:
+            published_ns = pending.popleft()
             if len(deliveries) < _SHOWN_DELIVERIES:
                 deliveries.append({
-                    "published_ns": publications[delivered],
-                    "values_at_ns": publications[delivered] + publisher_period,
+                    "published_ns": published_ns,
+                    "values_at_ns": published_ns + publisher_period,
                     "delivered_ns": drain,
                 })
-            delivered += 1
-    return deliveries, max(peak, len(publications) - delivered)
+    while publication is not None:
+        publish(publication)
+        publication = next(publications, None)
+    return {"peak_messages": peak, "deliveries": deliveries,
+            "dropped_messages": len(dropped),
+            "first_dropped_ns": dropped[:_SHOWN_DELIVERIES]}
 
 
 def _require_route_bounds(plan: dict) -> None:
@@ -791,9 +817,10 @@ def _render_route(route: dict) -> list[str]:
     ]
     if not route["deliveries"]:
         lines.append("      no Message is delivered within the Run")
-    if peak > route["capacity"]:
-        lines.append("      the route drops the Messages above its capacity; "
-                     "the deliveries above do not show the drops")
+    if route["dropped_messages"]:
+        first = ", ".join(_time(ns) for ns in route["first_dropped_ns"])
+        lines.append(f"      {route['dropped_messages']} Messages dropped, "
+                     f"the first published at {first}")
     return lines
 
 
