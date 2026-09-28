@@ -106,7 +106,7 @@ Do not build on these. They change without notice and without a release note.
   router internals, and every C++ header under `kernel/`.
 - `sil-run-instrumented` and every other development or diagnostic build
   target. They are not part of a production installation.
-- Anything under `participants/`, `tests/`, `tools/bench_*`, and the schemas
+- Anything under `tests/`, `tools/bench_*`, and the schemas
   that serve them. They are fixtures for this repository's own checks.
 - The `acceptance` container image target and everything it adds under
   `/opt/sil/reference`.

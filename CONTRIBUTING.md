@@ -53,7 +53,7 @@ change to one of them belongs in the pull request description.
 
 ## Before you open a pull request
 
-Build and run the full suite, as [README.md](README.md) describes:
+Build and run the full suite:
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j

@@ -10,7 +10,9 @@ from toys import add_producer, toy_manifest
 from sil import footprint
 from sil.manifest import SubscriberRoute
 
-BENCH_SCHEMAS = json.loads((ROOT / "schemas" / "bench.json").read_text())
+BENCH_SCHEMAS = json.loads(
+    (ROOT / "tests" / "fixtures" / "schemas" / "bench.json").read_text()
+)
 CAMERA_BYTES = 8 + 2_764_800
 
 

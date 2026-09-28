@@ -36,11 +36,11 @@ which the kernel removes after the Run, so a demo leaves the working tree
 clean.
 
 To point this at your own FMU, change three things and nothing else: the path
-below, the schemas to carry your FMU's Float64 input and output variable names,
+below, `schemas.json` to carry your FMU's Float64 input and output variable names,
 and `stimulus.py` to publish what your FMU needs. A Float64 mapping is what
 the importer derives from the names alone; a variable of any other type is
 bound on its command line with `--bind`, and a Binary variable is carried by a
-bounded payload field and the length beside it. See the README for both.
+bounded payload field and the length beside it. See docs/fmi.md for both.
 """
 
 import argparse
@@ -51,7 +51,7 @@ from sil.manifest import Manifest, SubscriberRoute
 
 EXAMPLE_DIR = Path(__file__).resolve().parent
 ROOT = EXAMPLE_DIR.parents[1]
-FMU_SCHEMAS = json.loads((ROOT / "schemas" / "fmu.json").read_text())
+FMU_SCHEMAS = json.loads((EXAMPLE_DIR / "schemas.json").read_text())
 
 FMU_PATH = ROOT / "tests" / "fixtures" / "reference-fmus" / "3.0" / "Feedthrough.fmu"
 
