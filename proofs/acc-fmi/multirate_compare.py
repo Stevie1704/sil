@@ -1,4 +1,4 @@
-"""Endpoint and common-grid judgement for the predeclared multi-rate rows."""
+"""Sample-time and common-grid judgement for the predeclared multi-rate rows."""
 from __future__ import annotations
 
 import math
@@ -6,8 +6,8 @@ import struct
 
 from sil.recording import read_records
 from multirate_contract import (ATOL, DURATION_NS, ENVELOPE, FIELDS, GRID_NS,
-                                RTOL, common_grid, observation_times,
-                                publication_slots)
+                                RTOL, common_grid, publication_slots,
+                                sample_times)
 
 
 class Difference(RuntimeError):
@@ -34,31 +34,37 @@ def recording(path, row):
     return actual
 
 
-def endpoints(values, row, channel):
+def trajectory(independent):
+    """An independent FMPy run's outputs, keyed like a Recording."""
+    return {channel: {int(t): values for t, values in rows.items()}
+            for channel, rows in independent['outputs'].items()}
+
+
+def by_sample_time(values, row, channel):
     period = row.publication_period(channel)
     return {publication + period: fields for publication, fields in values[channel].items()}
 
 
-def first_difference(actual, expected, row, *, channels=FIELDS):
-    """Earliest divergent observation across every checked Channel and field."""
+def first_difference(actual, expected, row):
+    """Earliest divergent Sample time across every Channel and field."""
     candidates = []
-    for channel in channels:
-        actual_at = endpoints(actual, row, channel)
-        expected_at = endpoints(expected, row, channel)
-        times = observation_times(row, channel)
+    for channel in FIELDS:
+        actual_at = by_sample_time(actual, row, channel)
+        expected_at = by_sample_time(expected, row, channel)
+        times = sample_times(row, channel)
         if set(actual_at) != set(times) or set(expected_at) != set(times):
-            raise Difference(f"{channel} endpoint coverage differs from declared grid")
+            raise Difference(f"{channel} Sample time coverage differs from declared grid")
         period = row.publication_period(channel)
         for time in times:
             if len(actual_at[time]) != len(FIELDS[channel]) or len(expected_at[time]) != len(FIELDS[channel]):
-                raise Difference(f"{channel} width at observation {time}")
+                raise Difference(f"{channel} width at Sample time {time}")
             found = False
             for field, value, target in zip(FIELDS[channel], actual_at[time], expected_at[time]):
                 allowed = ATOL + RTOL * abs(target)
                 if (not math.isfinite(value) or not math.isfinite(target) or
                         abs(value - target) > allowed):
                     candidates.append({"signal": f"{channel}.{field}",
-                                       "observation_ns": time,
+                                       "sample_time_ns": time,
                                        "publication_ns": time - period,
                                        "actual": value, "expected": target,
                                        "tolerance": allowed})
@@ -66,39 +72,35 @@ def first_difference(actual, expected, row, *, channels=FIELDS):
                     break
             if found:
                 break
-    return min(candidates, key=lambda item: (item['observation_ns'], item['signal'])) if candidates else None
+    return min(candidates, key=lambda item: (item['sample_time_ns'], item['signal'])) if candidates else None
 
 
-def compare_reference(actual, reference, row):
-    expected = {channel: {int(t): values for t, values in rows.items()}
-                for channel, rows in reference['outputs'].items()}
-    difference = first_difference(actual, expected, row)
+def compare_independent(actual, independent, row):
+    difference = first_difference(actual, trajectory(independent), row)
     if difference:
-        raise Difference(f"first differing {difference['signal']} at {difference['observation_ns']} ns: {difference}")
-    return {"checked": {channel: len(observation_times(row, channel)) * len(fields)
+        raise Difference(f"first differing {difference['signal']} at {difference['sample_time_ns']} ns: {difference}")
+    return {"checked": {channel: len(sample_times(row, channel)) * len(fields)
                         for channel, fields in FIELDS.items()},
-            "final_observation_ns": DURATION_NS, "atol": ATOL, "rtol": RTOL}
+            "final_sample_time_ns": DURATION_NS, "atol": ATOL, "rtol": RTOL}
 
 
 def sensitivity(actual, row, baseline, baseline_row):
-    """Compare at the declared 20 ms endpoints shared by every tested row."""
-    maxima = {field: {"absolute_difference": 0.0, "observation_ns": GRID_NS}
+    """Compare every field at the declared 20 ms grid shared by every Row."""
+    maxima = {field: {"absolute_difference": 0.0, "sample_time_ns": GRID_NS}
               for field in ENVELOPE}
-    for channel in ('sensing', 'command'):
-        current = endpoints(actual, row, channel)
-        original = endpoints(baseline, baseline_row, channel)
+    for channel in FIELDS:
+        current = by_sample_time(actual, row, channel)
+        original = by_sample_time(baseline, baseline_row, channel)
         for time in common_grid():
             if time not in current or time not in original:
-                raise Difference(f"missing {channel} at common observation {time}")
-            for field, value, reference in zip(FIELDS[channel], current[time], original[time]):
-                if field not in maxima:
-                    continue
-                difference = abs(value - reference)
+                raise Difference(f"missing {channel} at common Sample time {time}")
+            for field, value, before in zip(FIELDS[channel], current[time], original[time]):
+                difference = abs(value - before)
                 if not math.isfinite(difference):
                     raise Difference(f"nonfinite {channel}.{field} at {time}")
                 if difference > maxima[field]['absolute_difference']:
-                    maxima[field] = {"absolute_difference": difference, "observation_ns": time}
-    return {"grid_ns": GRID_NS, "observations": len(common_grid()),
+                    maxima[field] = {"absolute_difference": difference, "sample_time_ns": time}
+    return {"grid_ns": GRID_NS, "sample_times": len(common_grid()),
             "maxima": maxima,
             "inside_envelope": all(maxima[f]['absolute_difference'] <= bound
                                    for f, bound in ENVELOPE.items())}

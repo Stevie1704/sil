@@ -480,7 +480,9 @@ evidence path is directly reviewable.
 ## Multi-rate coupled Run
 
 The [multi-rate evidence](MULTIRATE.md) extends the equal-Period ACC coupling
-with separate 10/20 ms participant Periods, independent Channel Latency
-changes, a pinned FMPy execution schedule, common-grid sensitivity values,
-and initialization, zero-Latency order and one-Period-shift negative controls.
+with separate 10/20 ms participant Periods and Channel Latency changes. Each
+Row is measured against a baseline that differs in one Period or Latency
+only. An independent FMPy run with its own Message delivery checks every Row,
+and initialization, zero-Latency order and one-Period-shift faults in that run
+are negative controls.
 Its installed Linux x86-64 proof is run with `multirate-bundle.sh`.
