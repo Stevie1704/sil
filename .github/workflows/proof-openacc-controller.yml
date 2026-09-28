@@ -11,6 +11,7 @@ on:
       - 'proofs/openacc-controller/**'
       - 'proofs/public-workloads/**'
       - 'proofs/acc-fmi/models/**'
+      - 'python/src/sil/fmi/**'
       - 'python/src/sil/examples/acc/dynamics.py'
       - '.github/workflows/proof-openacc-controller.yml'
   workflow_dispatch:
@@ -46,5 +47,7 @@ jobs:
           path: |
             build/openacc-controller/evidence/
             build/openacc-controller/inputs/*.json
+            build/openacc-controller/inputs/*.mcap
             build/openacc-controller/runs/*.json
             build/openacc-controller/runs/*.log
+            build/openacc-controller/runs/*.mcap

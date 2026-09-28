@@ -168,19 +168,21 @@ def checked_lifecycle(fmu: Path, first: dict, evidence: Path) -> dict:
     proc, phases = lifecycle("resources")
     command_0 = dynamics.command_for(**{name: first[name] for name in replay.INPUTS})
     require(proc.returncode == 0 and phases == [
+        {"phase": "described"},
         {"phase": "instantiated"},
         {"phase": "initialized", replay.OUTPUT: command_0},
         {"phase": "stepped", "t_ns": replay.PERIOD_NS, replay.OUTPUT: command_0},
         {"phase": "terminated"}],
         f"the lifecycle did not complete as the law gives:\n{phases}\n{proc.stderr}")
-    rejected, none = lifecycle("no-resources", "--no-resources")
-    reason = "fmi3InstantiateCoSimulation returned no instance"
-    require(rejected.returncode != 0 and none == [] and reason in rejected.stderr,
+    # The same archive, described the same way: only the resource path differs,
+    # so a lifecycle that stops after `described` was refused at instantiation.
+    rejected, reached = lifecycle("no-resources", "--no-resources")
+    require(rejected.returncode != 0 and reached == [{"phase": "described"}],
             f"without resources the FMU was not rejected at instantiation:\n"
-            f"{none}\n{rejected.stderr}")
+            f"{reached}\n{rejected.stderr}")
     return {"with_resources": [p["phase"] for p in phases],
             "initialized_command_mps2": command_0,
-            "without_resources": reason}
+            "without_resources": [p["phase"] for p in reached]}
 
 
 # Conversion ---------------------------------------------------------------------

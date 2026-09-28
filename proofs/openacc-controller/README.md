@@ -72,8 +72,16 @@ per process:
   initialization and after the Step must equal the control law of sample 0
   exactly.
 - **Without the resource path**: PythonFMU3 cannot find its model source, so
-  `fmi3InstantiateCoSimulation` must return no instance. This shows that
+  `fmi3InstantiateCoSimulation` must return no instance. The process exits
+  nonzero and its phases stop at `described`. The archive and its description
+  are the same as above, so the refusal is at instantiation. This shows that
   initialization depends on `resources/` and that the importer supplies it.
+  The check uses exit codes and phases, not diagnostic text.
+
+`CoSimulation` has no public value accessor, so `lifecycle.py` sets and reads
+values through `sil.fmi.runtime.ScalarBuffer`, the importer's own buffer. That
+module is not in the compatibility policy. The workflow therefore runs on
+every change under `python/src/sil/fmi/`.
 
 In a Run, the importer terminates and frees the FMU after the last Step. If
 `fmi3Terminate` fails, the importer exits nonzero and `sil-run` fails the Run.
@@ -155,9 +163,11 @@ Linux x86-64 (glibc 2.36, CPython 3.13.7, `/usr/local/lib/libpython3.13.so`).
 It holds `report.json`, every `sil-compare` report, the contract and
 `expectations.json`. `report.json` includes the inspection result, the
 lifecycle phases, the conversion receipts and the nominal authoring receipt.
-The Recordings are not committed. The job keeps the full output, with every
-receipt, the Manifests and the runner output, as the
-`openacc-controller-evidence` artifact.
+The Recordings are not committed. The job keeps the full output as the
+`openacc-controller-evidence` artifact: every receipt, the Manifests, the
+runner output, the converted input Recordings and every Run's Recording,
+so the two nominal Recordings and the 501 observations can be checked
+independently.
 
 | Check | Result |
 | --- | --- |
