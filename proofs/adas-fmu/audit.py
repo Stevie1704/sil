@@ -244,13 +244,12 @@ def inspection_findings(result: dict) -> list[str]:
     if result["unusable"]:
         findings.append(f"unusable {result['unusable']}")
     for bind, rejection in result["bindings"].items():
+        mapped = _variable_type(bind) in MAPPED_TYPES
         if rejection is None:
-            if _variable_type(bind) not in MAPPED_TYPES:
+            if not mapped:
                 findings.append(f"{bind}: accepted")
-        elif not MISSING.search(rejection):
-            findings.append(f"{bind}: {rejection}")
-        elif (_variable_type(bind) in MAPPED_TYPES
-              and "declares dimensions" not in rejection):
+        elif not MISSING.search(rejection) or (
+                mapped and "declares dimensions" not in rejection):
             findings.append(f"{bind}: {rejection}")
     return findings
 

@@ -16,9 +16,10 @@ test:
 * a start value of an integer type is a plain decimal integer — an optional
   `-` and ASCII digits, nothing else — inside the type's range. An unsigned
   type takes no sign at all;
-* a Float32 start value is a finite decimal, rounded to the nearest Float32
-  (ties to even). A value that rounds to infinity, or a non-zero value that
-  rounds to zero, is refused.
+* a Float32 start value is a finite decimal, read as the nearest binary64
+  and then rounded to the nearest Float32 (ties to even) — the two steps
+  `sil-csv` takes for an `f32` cell. A value that rounds to infinity, or a
+  non-zero value that rounds to zero, is refused.
 """
 
 from __future__ import annotations
@@ -542,19 +543,19 @@ class TestInspection:
 RUN_DURATION_NS = 120_000_000
 
 
-def numeric_manifest(*, out_transport: str = "shm",
+def numeric_manifest(*, transport: str = "shm",
                      binds: list[str] = BINDINGS,
                      schemas: dict = SCHEMAS) -> Manifest:
-    """A stimulus feeding the four types into `Feedthrough` over an inline
-    Channel, and the importer publishing them back over a shared-memory one.
+    """A stimulus feeding the four types into `Feedthrough`, and the importer
+    publishing them back, both over shared memory or both inline.
     """
     m = Manifest(duration_ns=RUN_DURATION_NS)
     m.add_schemas(schemas)
-    m.add_channel(IN, schema="n.Sensor")
-    if out_transport == "shm":
-        m.add_channel(OUT, schema="n.Sensor", transport="shm", slots=2)
-    else:
-        m.add_channel(OUT, schema="n.Sensor")
+    for channel in (IN, OUT):
+        if transport == "shm":
+            m.add_channel(channel, schema="n.Sensor", transport="shm", slots=2)
+        else:
+            m.add_channel(channel, schema="n.Sensor")
     m.add_process(
         "stimulus",
         command=[sys.executable, str(STIMULUS), IN],
@@ -576,7 +577,7 @@ def numeric_manifest(*, out_transport: str = "shm",
 @pytest.fixture(scope="module", params=["shm", "inline"])
 def numeric_result(request, sil_run, tmp_path_factory):
     return request.param, run_simulation(
-        numeric_manifest(out_transport=request.param),
+        numeric_manifest(transport=request.param),
         runner=sil_run,
         workdir=tmp_path_factory.mktemp(f"fmi-numeric-{request.param}"),
     )
@@ -609,7 +610,7 @@ class TestRunBoundary:
 
     @pytest.mark.parametrize("transport", ["shm", "inline"])
     def test_two_runs_record_identical_bytes(self, sil_run, tmp_path, transport):
-        ref = numeric_manifest(out_transport=transport).write(
+        ref = numeric_manifest(transport=transport).write(
             tmp_path / "numeric.json")
         proc = subprocess.run(
             [sys.executable, "-m", "sil.check", str(ref.path),

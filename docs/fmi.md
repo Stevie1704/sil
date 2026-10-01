@@ -128,9 +128,9 @@ Nothing is narrowed or coerced. A `UInt64` bound to a `u32`, `i64` or `f64`
 field, a `Float32` bound to an `f64`, an `Int32` bound to a `u8` and a
 `Boolean` bound to an `i32` are all refused before stepping, with exit 2. So
 an integer never crosses a floating-point field, and a `UInt64` above 2⁵³ —
-which a double cannot hold — reaches the Recording to its last bit. Both
-ends of a Step agree by construction: a Message's field already holds a value
-of the variable's own type, and what the FMU hands back fits the field.
+which a double cannot hold — reaches the Recording to its last bit. A
+Message's field already holds a value of the variable's own type. What the
+FMU hands back fits the field.
 
 A start value is read by the same rule, before anything is loaded:
 
@@ -139,9 +139,9 @@ A start value is read by the same rule, before anything is loaded:
   `true`/`false`. A value outside the type's range is refused; so is any
   `-` for an unsigned type, `-0` included.
 - A `Float32` start value uses the decimal grammar `sil-csv` reads an `f32`
-  cell in. It is read as the nearest binary64, then rounded to the nearest
-  Float32 with ties to even — the same two steps as `sil-csv`, so one
-  decimal is one Float32 on both paths into a Run. `0.1` is
+  cell in. It is read as the nearest binary64. Then it is rounded to the
+  nearest Float32, with ties to even. `sil-csv` uses the same two steps, so
+  one decimal is one Float32 on both paths into a Run. `0.1` is
   `0.100000001490116…`; `16777217` is `16777216`. A value that rounds to
   infinity, a non-zero value that rounds to zero, and `inf` or `nan` are
   refused.

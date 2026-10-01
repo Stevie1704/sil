@@ -46,7 +46,7 @@ def _boolean(text: str) -> int:
 _DECIMAL_INTEGER = re.compile(r"-?[0-9]+")
 # A Float32 start value is the decimal grammar `sil-csv` reads an `f32` cell
 # in, so one decimal is one Float32 on both paths into a Run.
-_DECIMAL = re.compile(r"[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?")
+_FLOAT = re.compile(r"[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?")
 _NON_FINITE = re.compile(r"[+-]?(nan|inf|infinity)", re.IGNORECASE)
 _F32 = struct.Struct("<f")
 
@@ -80,7 +80,7 @@ def _float32(text: str) -> float:
     """
     if _NON_FINITE.fullmatch(text):
         raise ValueError(f"{text!r} is not a finite number")
-    if not _DECIMAL.fullmatch(text):
+    if not _FLOAT.fullmatch(text):
         raise ValueError(f"{text!r} is not a decimal number")
     value = float(text)
     try:

@@ -77,6 +77,11 @@ def test_the_recording_holds_the_values_above_2_53_exactly(prepared, sil_run):
                  if topic == "sensor.out"]
     assert [fields["sample_time_ns"] for fields in published[1:4]] == [
         2**64 - 1, 2**53 + 1, 2**63]
+    # The Float32 values against IEEE 754 constants, not against `sil-csv`,
+    # which converts both the input and the reference.
+    assert [fields["range_m"] for fields in published[:4]] == [
+        13421773 / 2**27, (2 - 2**-23) * 2**127, -(2 - 2**-23) * 2**127,
+        2**-149]
     assert published[7]["range_m"] == 2**24
 
 
