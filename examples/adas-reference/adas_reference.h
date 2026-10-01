@@ -1,20 +1,22 @@
-/* ADAS radar/camera reference controller — reference profile 1.
+/* ADAS radar/camera reference controller — reference profile 2.
  *
- * An intentionally simplified C application: it consumes at most one
- * processed radar object, at most one processed camera object and the ego
- * speed per activation, and commands a longitudinal acceleration. It is test
+ * An intentionally simplified C application: it consumes one bounded list of
+ * processed radar objects, one of processed camera objects and the ego speed
+ * per activation, and commands a longitudinal acceleration. It is test
  * coverage for the SiL Native participant path, not a vehicle function: its
  * constants define test behavior, not vehicle requirements, and it makes no
- * perception-accuracy or safety claim. docs/adas-reference.md is the profile.
+ * perception-accuracy, fusion or safety claim. docs/adas-reference.md is the
+ * profile.
  *
  * The application knows nothing about SiL. The caller owns each instance and
  * passes Virtual time to every advance. The application keeps no global
  * state, starts no thread, opens no file or socket, reads no clock and
- * allocates no memory, so any number of instances run side by side.
+ * allocates no memory, so any number of instances run side by side. It keeps
+ * no object between activations: each list replaces the previous one.
  *
- * Coordinates: one ego frame for every detection, x forward, y left, in
- * metres; relative_vx_mps is the object's longitudinal speed relative to the
- * ego, in m/s, negative when the object comes closer.
+ * Coordinates: one ego frame (frame_id 1) for every detection, x forward,
+ * y left, in metres; relative_vx_mps is the object's longitudinal speed
+ * relative to the ego, in m/s, negative when the object comes closer.
  */
 #ifndef ADAS_REFERENCE_H
 #define ADAS_REFERENCE_H
@@ -26,13 +28,23 @@ extern "C" {
 #endif
 
 #define ADAS_REF_PROFILE "sil.adas-reference.radar-camera"
-#define ADAS_REF_PROFILE_VERSION 1u
+#define ADAS_REF_PROFILE_VERSION 2u
 
 /* The one supported activation Period: 10 ms. */
 #define ADAS_REF_PERIOD_NS 10000000ull
 
-/* An object ID of -1 means "no object"; a present object has an ID >= 0. */
+/* Object IDs are >= 0; -1 is reserved for "no object selected". Radar and
+ * camera IDs are independent: the same number names unrelated objects. */
 #define ADAS_REF_NO_OBJECT (-1)
+
+/* The reference capacity of one list. An example limit for test coverage,
+ * not a sensor recommendation. */
+#define ADAS_REF_MAX_OBJECTS 8u
+
+#define ADAS_REF_RADAR_SENSOR_ID 1u
+#define ADAS_REF_CAMERA_SENSOR_ID 2u
+/* The ego frame. A list in any other frame is rejected, never transformed. */
+#define ADAS_REF_EGO_FRAME_ID 1u
 
 typedef enum adas_ref_mode {
   ADAS_REF_MODE_CLEAR = 0,
@@ -56,38 +68,42 @@ typedef struct adas_ref_config {
   double max_change_mps2;          /* per activation; finite, in (0, 10] */
 } adas_ref_config;
 
-typedef struct adas_ref_radar {
-  uint64_t sample_time_ns;
-  uint32_t sequence;
-  uint32_t sensor_id;
-  int32_t object_id;
+/* One processed object. The camera reports no speed: its relative_vx_mps
+ * is 0. */
+typedef struct adas_ref_object {
+  int32_t id;
   float x_m;
   float y_m;
   float relative_vx_mps;
-  float confidence;
-} adas_ref_radar;
+  float confidence; /* in [0, 1] */
+} adas_ref_object;
 
-typedef struct adas_ref_camera {
+/* One sensor's complete list at one Sample time. Only objects[0, count) are
+ * active; the caller need not set the others. */
+typedef struct adas_ref_object_list {
   uint64_t sample_time_ns;
-  uint32_t sequence;
   uint32_t sensor_id;
-  int32_t object_id;
-  float x_m;
-  float y_m;
-  float confidence;
-} adas_ref_camera;
+  uint32_t frame_id;
+  uint32_t sequence;
+  uint32_t count;   /* at most ADAS_REF_MAX_OBJECTS */
+  uint8_t validity; /* 1 valid, 0 the sensor reports no usable list */
+  adas_ref_object objects[ADAS_REF_MAX_OBJECTS];
+} adas_ref_object_list;
 
 typedef struct adas_ref_ego {
   uint64_t sample_time_ns;
   uint32_t sequence;
+  uint8_t validity; /* 1 valid, 0 invalid */
   float speed_mps;
 } adas_ref_ego;
 
-/* The inputs of one activation. A pointer of NULL means the sensor has no
- * observation for this activation: the required sensing is unavailable. */
+/* The inputs of one activation. A pointer of NULL, like a validity of 0,
+ * means the sensor has no observation for this activation: the required
+ * sensing is unavailable. A valid empty list is an observation of no
+ * objects. */
 typedef struct adas_ref_inputs {
-  const adas_ref_radar *radar;
-  const adas_ref_camera *camera;
+  const adas_ref_object_list *radar;
+  const adas_ref_object_list *camera;
   const adas_ref_ego *ego;
 } adas_ref_inputs;
 
@@ -95,7 +111,7 @@ typedef struct adas_ref_output {
   uint64_t sample_time_ns; /* t + Period: the end of the advanced interval */
   uint32_t sequence;       /* activations completed, from 1 */
   uint32_t mode;           /* adas_ref_mode */
-  int32_t selected_object_id;
+  int32_t selected_object_id; /* radar ID, or ADAS_REF_NO_OBJECT */
   float target_acceleration_mps2;
   float acceleration_mps2;
 } adas_ref_output;

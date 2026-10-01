@@ -111,6 +111,13 @@ application is compared with trajectories enumerated from the profile. It
 states test behavior, not a vehicle requirement or a supplier interface.
 _Avoid_: spec, standard, interface version
 
+**Object list**:
+One sensor's complete set of processed objects at one Sample time: a header
+with an active count, and flat fixed-capacity arrays whose inactive elements
+are zero. Each list replaces the previous one; nothing is kept from one list to
+the next.
+_Avoid_: track list, object vector
+
 **vECU**:
 A piece of vehicle software under test, brought into a run as a participant.
 Opaque when the framework cannot see or change its internals.

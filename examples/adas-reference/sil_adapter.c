@@ -13,6 +13,11 @@
  *
  * Every activation consumes, from each input Channel, the one Message
  * visible at t, and publishes one adas.Command for Sample time t + 10 ms.
+ *
+ * An adas.ObjectList carries its objects as flat arrays of capacity 8 and an
+ * active count. The adapter checks the count before it reads any element,
+ * requires every inactive element to be zero, and assembles the active
+ * elements into the application's object structures. It never truncates.
  */
 #include <sil/participant.h>
 
@@ -27,6 +32,11 @@
 
 #define MAX_TEXT 128
 #define MAX_ENTRIES 16
+
+#define CAPACITY(array) (sizeof(array) / sizeof *(array))
+
+_Static_assert(CAPACITY(((adas_ObjectList *)0)->x_m) == ADAS_REF_MAX_OBJECTS,
+               "the Schema arrays must have the application's capacity");
 
 /* --- configuration ------------------------------------------------------ */
 
@@ -236,39 +246,86 @@ static int take_one(controller *c, uint64_t t, const char *channel,
   return -1;
 }
 
+/* Fails unless elements [count, capacity) of array are all-bits zero. */
+static int inactive_zero(controller *c, uint64_t t, const char *sensor,
+                         const char *field, const void *array, size_t size,
+                         uint32_t count) {
+  static const unsigned char zero[sizeof(double)];
+  const unsigned char *bytes = array;
+  for (uint32_t i = count; i < ADAS_REF_MAX_OBJECTS; i++) {
+    if (memcmp(bytes + i * size, zero, size) == 0) continue;
+    char message[200];
+    snprintf(message, sizeof message,
+             "%s.%s[%" PRIu32 "] is inactive (count %" PRIu32
+             ") but not zero; inactive elements must be zero",
+             sensor, field, i, count);
+    fail_at(c, t, message);
+    return 0;
+  }
+  return 1;
+}
+
+#define INACTIVE_ZERO(field)                                             \
+  inactive_zero(c, t, sensor, #field, m->field, sizeof *m->field, m->count)
+
+/* Assembles the application's list from the Message, or fails. */
+static int to_list(controller *c, uint64_t t, const char *sensor,
+                   const adas_ObjectList *m, adas_ref_object_list *list) {
+  if (m->count > ADAS_REF_MAX_OBJECTS) {
+    char message[200];
+    snprintf(message, sizeof message,
+             "%s.count %" PRIu32 " exceeds the capacity %u", sensor, m->count,
+             ADAS_REF_MAX_OBJECTS);
+    fail_at(c, t, message);
+    return 0;
+  }
+  if (!INACTIVE_ZERO(object_id) || !INACTIVE_ZERO(x_m) ||
+      !INACTIVE_ZERO(y_m) || !INACTIVE_ZERO(relative_vx_mps) ||
+      !INACTIVE_ZERO(confidence))
+    return 0;
+  memset(list, 0, sizeof *list);
+  list->sample_time_ns = m->sample_time_ns;
+  list->sensor_id = m->sensor_id;
+  list->frame_id = m->frame_id;
+  list->sequence = m->sequence;
+  list->count = m->count;
+  list->validity = m->validity;
+  for (uint32_t i = 0; i < m->count; i++)
+    list->objects[i] = (adas_ref_object){m->object_id[i], m->x_m[i],
+                                         m->y_m[i], m->relative_vx_mps[i],
+                                         m->confidence[i]};
+  return 1;
+}
+
+/* Takes the sensor's list visible at t into *list, and points *in at it.
+ * Returns 1 on success (also when there is none), 0 after a failure. */
+static int take_list(controller *c, uint64_t t, const char *sensor,
+                     const char *channel, adas_ref_object_list *list,
+                     const adas_ref_object_list **in) {
+  adas_ObjectList m;
+  int r = take_one(c, t, channel, &m, sizeof m);
+  if (r < 0) return 0;
+  if (r == 0) return 1;
+  if (!to_list(c, t, sensor, &m, list)) return 0;
+  *in = list;
+  return 1;
+}
+
 static void activate(void *user, uint64_t t) {
   controller *c = user;
-  adas_Radar radar_msg;
-  adas_Camera camera_msg;
-  adas_EgoSpeed ego_msg;
-  adas_ref_radar radar;
-  adas_ref_camera camera;
+  adas_ref_object_list radar, camera;
+  adas_EgoMotion ego_msg;
   adas_ref_ego ego;
   adas_ref_inputs in = {NULL, NULL, NULL};
 
-  int r = take_one(c, t, c->radar, &radar_msg, sizeof radar_msg);
-  if (r < 0) return;
-  if (r == 1) {
-    radar = (adas_ref_radar){radar_msg.sample_time_ns, radar_msg.sequence,
-                             radar_msg.sensor_id, radar_msg.object_id,
-                             radar_msg.x_m, radar_msg.y_m,
-                             radar_msg.relative_vx_mps, radar_msg.confidence};
-    in.radar = &radar;
-  }
-  r = take_one(c, t, c->camera, &camera_msg, sizeof camera_msg);
-  if (r < 0) return;
-  if (r == 1) {
-    camera = (adas_ref_camera){camera_msg.sample_time_ns, camera_msg.sequence,
-                               camera_msg.sensor_id, camera_msg.object_id,
-                               camera_msg.x_m, camera_msg.y_m,
-                               camera_msg.confidence};
-    in.camera = &camera;
-  }
-  r = take_one(c, t, c->ego, &ego_msg, sizeof ego_msg);
+  if (!take_list(c, t, "radar", c->radar, &radar, &in.radar) ||
+      !take_list(c, t, "camera", c->camera, &camera, &in.camera))
+    return;
+  int r = take_one(c, t, c->ego, &ego_msg, sizeof ego_msg);
   if (r < 0) return;
   if (r == 1) {
     ego = (adas_ref_ego){ego_msg.sample_time_ns, ego_msg.sequence,
-                         ego_msg.speed_mps};
+                         ego_msg.validity, ego_msg.speed_mps};
     in.ego = &ego;
   }
 

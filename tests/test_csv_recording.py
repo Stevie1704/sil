@@ -398,10 +398,57 @@ class TestMapping:
                                  "fields": {"v": {"column": "v"}}}])
         assert "'s.Missing'" in rejected(tmp_path, "t,v\n0,1\n", doc)
 
-    def test_array_field_is_rejected(self, tmp_path):
+    def test_array_field_takes_one_column_per_element(self, tmp_path):
+        schema = {"fields": [{"name": "n", "type": "u8"},
+                             {"name": "id", "type": "i32", "count": 2},
+                             {"name": "x", "type": "f32", "count": 2},
+                             {"name": "flags", "type": "u8", "count": 2}]}
+        doc = mapping(schemas={"s.L": schema}, channels=[{
+            "channel": "l", "schema": "s.L", "fields": {
+                "n": {"column": "n"},
+                "id": {"columns": ["id0", "id1"]},
+                "x": {"columns": ["x0", "x1"], "scale": 0.5},
+                "flags": {"columns": ["f0", "f1"]}}}])
+        _, out = convert_text(
+            tmp_path, "t,n,id0,id1,x0,x1,f0,f1\n"
+                      "0,1,-7,0,3,0,1,0\n"
+                      "10,2,4,5,1.5,-2,0,255\n", doc)
+
+        assert decoded(out) == [
+            ("l", 0, {"n": 1, "id": [-7, 0], "x": [1.5, 0.0],
+                      "flags": b"\x01\x00"}),
+            ("l", 10, {"n": 2, "id": [4, 5], "x": [0.75, -1.0],
+                       "flags": b"\x00\xff"}),
+        ]
+        assert schema_records(out)["l"][2] == json.dumps(
+            schema, sort_keys=True, separators=(",", ":")).encode()
+
+    @pytest.mark.parametrize("spec, problem", [
+        ({"column": "a"}, "takes 'columns'"),
+        ({"columns": ["a"]}, "2 columns, got 1"),
+        ({"columns": ["a", "b", "a"]}, "2 columns, got 3"),
+        ({"columns": "a"}, "2 columns"),
+        ({"columns": ["a", ""]}, "non-empty string"),
+    ])
+    def test_array_field_needs_one_named_column_per_element(
+            self, tmp_path, spec, problem):
         doc = mapping(schemas={"s.V": {"fields": [
-            {"name": "v", "type": "f64", "count": 2}]}})
-        assert "scalar" in rejected(tmp_path, "t,v\n0,1\n", doc)
+            {"name": "v", "type": "f64", "count": 2}]}},
+            channels=[{"channel": "v", "schema": "s.V", "fields": {"v": spec}}])
+        assert problem in rejected(tmp_path, "t,a,b\n0,1,2\n", doc)
+
+    def test_scalar_field_does_not_take_columns(self, tmp_path):
+        doc = mapping(channels=[{"channel": "v", "schema": "s.V", "fields": {
+            "v": {"columns": ["v"]}}}])
+        assert "takes 'column'" in rejected(tmp_path, "t,v\n0,1\n", doc)
+
+    def test_array_element_cell_is_named_in_a_rejection(self, tmp_path):
+        doc = mapping(schemas={"s.V": {"fields": [
+            {"name": "v", "type": "i8", "count": 2}]}},
+            channels=[{"channel": "v", "schema": "s.V",
+                       "fields": {"v": {"columns": ["a", "b"]}}}])
+        message = rejected(tmp_path, "t,a,b\n0,1,200\n", doc)
+        assert "column 'b'" in message and "field 'v[1]'" in message
 
     def test_unknown_field_type_is_rejected(self, tmp_path):
         doc = mapping(schemas={"s.V": {"fields": [{"name": "v", "type": "f16"}]}})

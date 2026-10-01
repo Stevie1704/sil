@@ -17,7 +17,8 @@ What the Manifest makes explicit:
   publishes, in Slot t, a Command whose `sample_time_ns` is t + 10 ms. The
   Recording stores the publication Slot t, as for an FMU output.
 - **Finite routes.** Each input route holds one Message and fails on
-  overflow. The Command Channels have no in-Run subscriber; they are
+  overflow. A list is one Message, whatever its count. The Command
+  Channels have no in-Run subscriber; they are
   recorded.
 - **Profile.** Each Native config names the profile and its version; the
   library refuses another one.
@@ -35,10 +36,11 @@ from sil.manifest import Manifest, SubscriberRoute
 
 EXAMPLE_DIR = Path(__file__).resolve().parent
 SCHEMAS = json.loads((EXAMPLE_DIR / "schemas.json").read_text())
-MANEUVERS = ("clear", "hazard", "release", "unavailable", "boundaries")
+MANEUVERS = ("clear", "hazard", "release", "unavailable", "boundaries",
+             "occupancy", "turnover", "ordering")
 
 PROFILE = "sil.adas-reference.radar-camera"
-PROFILE_VERSION = 1
+PROFILE_VERSION = 2
 PERIOD_NS = 10_000_000
 INPUT_LATENCY_NS = 0
 # No in-Run subscriber reads a Command; one Period keeps the default unit
@@ -53,8 +55,8 @@ PARAMETERS = {
     "max_change_mps2": 0.5,
 }
 
-INPUTS = {"radar": "adas.Radar", "camera": "adas.Camera",
-          "ego": "adas.EgoSpeed"}
+INPUTS = {"radar": "adas.ObjectList", "camera": "adas.ObjectList",
+          "ego": "adas.EgoMotion"}
 
 
 def controller_config(maneuver: str, **overrides) -> dict:

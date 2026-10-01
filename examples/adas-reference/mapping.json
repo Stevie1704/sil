@@ -5,43 +5,60 @@
     "unit": "ms"
   },
   "schemas": {
-    "adas.Radar": {
+    "adas.ObjectList": {
       "fields": [
         {
           "name": "sample_time_ns",
           "type": "u64"
         },
         {
-          "name": "sequence",
-          "type": "u32"
-        },
-        {
           "name": "sensor_id",
           "type": "u32"
         },
         {
+          "name": "frame_id",
+          "type": "u32"
+        },
+        {
+          "name": "sequence",
+          "type": "u32"
+        },
+        {
+          "name": "count",
+          "type": "u32"
+        },
+        {
+          "name": "validity",
+          "type": "u8"
+        },
+        {
           "name": "object_id",
-          "type": "i32"
+          "type": "i32",
+          "count": 8
         },
         {
           "name": "x_m",
-          "type": "f32"
+          "type": "f32",
+          "count": 8
         },
         {
           "name": "y_m",
-          "type": "f32"
+          "type": "f32",
+          "count": 8
         },
         {
           "name": "relative_vx_mps",
-          "type": "f32"
+          "type": "f32",
+          "count": 8
         },
         {
           "name": "confidence",
-          "type": "f32"
+          "type": "f32",
+          "count": 8
         }
       ]
     },
-    "adas.Camera": {
+    "adas.EgoMotion": {
       "fields": [
         {
           "name": "sample_time_ns",
@@ -52,36 +69,8 @@
           "type": "u32"
         },
         {
-          "name": "sensor_id",
-          "type": "u32"
-        },
-        {
-          "name": "object_id",
-          "type": "i32"
-        },
-        {
-          "name": "x_m",
-          "type": "f32"
-        },
-        {
-          "name": "y_m",
-          "type": "f32"
-        },
-        {
-          "name": "confidence",
-          "type": "f32"
-        }
-      ]
-    },
-    "adas.EgoSpeed": {
-      "fields": [
-        {
-          "name": "sample_time_ns",
-          "type": "u64"
-        },
-        {
-          "name": "sequence",
-          "type": "u32"
+          "name": "validity",
+          "type": "u8"
         },
         {
           "name": "speed_mps",
@@ -93,70 +82,184 @@
   "channels": [
     {
       "channel": "radar",
-      "schema": "adas.Radar",
+      "schema": "adas.ObjectList",
       "fields": {
         "sample_time_ns": {
           "column": "radar_t_ns"
         },
-        "sequence": {
-          "column": "radar_sequence"
-        },
         "sensor_id": {
           "column": "radar_sensor_id"
         },
+        "frame_id": {
+          "column": "radar_frame_id"
+        },
+        "sequence": {
+          "column": "radar_sequence"
+        },
+        "count": {
+          "column": "radar_count"
+        },
+        "validity": {
+          "column": "radar_validity"
+        },
         "object_id": {
-          "column": "radar_object_id"
+          "columns": [
+            "radar_object_id_0",
+            "radar_object_id_1",
+            "radar_object_id_2",
+            "radar_object_id_3",
+            "radar_object_id_4",
+            "radar_object_id_5",
+            "radar_object_id_6",
+            "radar_object_id_7"
+          ]
         },
         "x_m": {
-          "column": "radar_x_m"
+          "columns": [
+            "radar_x_m_0",
+            "radar_x_m_1",
+            "radar_x_m_2",
+            "radar_x_m_3",
+            "radar_x_m_4",
+            "radar_x_m_5",
+            "radar_x_m_6",
+            "radar_x_m_7"
+          ]
         },
         "y_m": {
-          "column": "radar_y_m"
+          "columns": [
+            "radar_y_m_0",
+            "radar_y_m_1",
+            "radar_y_m_2",
+            "radar_y_m_3",
+            "radar_y_m_4",
+            "radar_y_m_5",
+            "radar_y_m_6",
+            "radar_y_m_7"
+          ]
         },
         "relative_vx_mps": {
-          "column": "radar_vx_mps"
+          "columns": [
+            "radar_relative_vx_mps_0",
+            "radar_relative_vx_mps_1",
+            "radar_relative_vx_mps_2",
+            "radar_relative_vx_mps_3",
+            "radar_relative_vx_mps_4",
+            "radar_relative_vx_mps_5",
+            "radar_relative_vx_mps_6",
+            "radar_relative_vx_mps_7"
+          ]
         },
         "confidence": {
-          "column": "radar_confidence"
+          "columns": [
+            "radar_confidence_0",
+            "radar_confidence_1",
+            "radar_confidence_2",
+            "radar_confidence_3",
+            "radar_confidence_4",
+            "radar_confidence_5",
+            "radar_confidence_6",
+            "radar_confidence_7"
+          ]
         }
       }
     },
     {
       "channel": "camera",
-      "schema": "adas.Camera",
+      "schema": "adas.ObjectList",
       "fields": {
         "sample_time_ns": {
           "column": "camera_t_ns"
         },
-        "sequence": {
-          "column": "camera_sequence"
-        },
         "sensor_id": {
           "column": "camera_sensor_id"
         },
+        "frame_id": {
+          "column": "camera_frame_id"
+        },
+        "sequence": {
+          "column": "camera_sequence"
+        },
+        "count": {
+          "column": "camera_count"
+        },
+        "validity": {
+          "column": "camera_validity"
+        },
         "object_id": {
-          "column": "camera_object_id"
+          "columns": [
+            "camera_object_id_0",
+            "camera_object_id_1",
+            "camera_object_id_2",
+            "camera_object_id_3",
+            "camera_object_id_4",
+            "camera_object_id_5",
+            "camera_object_id_6",
+            "camera_object_id_7"
+          ]
         },
         "x_m": {
-          "column": "camera_x_m"
+          "columns": [
+            "camera_x_m_0",
+            "camera_x_m_1",
+            "camera_x_m_2",
+            "camera_x_m_3",
+            "camera_x_m_4",
+            "camera_x_m_5",
+            "camera_x_m_6",
+            "camera_x_m_7"
+          ]
         },
         "y_m": {
-          "column": "camera_y_m"
+          "columns": [
+            "camera_y_m_0",
+            "camera_y_m_1",
+            "camera_y_m_2",
+            "camera_y_m_3",
+            "camera_y_m_4",
+            "camera_y_m_5",
+            "camera_y_m_6",
+            "camera_y_m_7"
+          ]
+        },
+        "relative_vx_mps": {
+          "columns": [
+            "camera_relative_vx_mps_0",
+            "camera_relative_vx_mps_1",
+            "camera_relative_vx_mps_2",
+            "camera_relative_vx_mps_3",
+            "camera_relative_vx_mps_4",
+            "camera_relative_vx_mps_5",
+            "camera_relative_vx_mps_6",
+            "camera_relative_vx_mps_7"
+          ]
         },
         "confidence": {
-          "column": "camera_confidence"
+          "columns": [
+            "camera_confidence_0",
+            "camera_confidence_1",
+            "camera_confidence_2",
+            "camera_confidence_3",
+            "camera_confidence_4",
+            "camera_confidence_5",
+            "camera_confidence_6",
+            "camera_confidence_7"
+          ]
         }
       }
     },
     {
       "channel": "ego",
-      "schema": "adas.EgoSpeed",
+      "schema": "adas.EgoMotion",
       "fields": {
         "sample_time_ns": {
           "column": "ego_t_ns"
         },
         "sequence": {
           "column": "ego_sequence"
+        },
+        "validity": {
+          "column": "ego_validity"
         },
         "speed_mps": {
           "column": "ego_speed_mps"
