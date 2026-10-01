@@ -238,5 +238,8 @@ Supported limits:
 - **Event profile.** One FMU, driven by the importer's single-FMU profile.
   A Clock is carried only as a clocked Binary payload of a `triggered`
   Clock. The command does not author a group of connected FMUs.
-- **Types.** The importer's mapped types: `Float64`, `Boolean` and
-  `Binary`. Other types can be held at their declared start.
+- **Types.** The importer's mapped types: `Float64`, `Boolean`, `Binary`,
+  `Float32`, `Int32`, `UInt32` and `UInt64`, each in the field type of its
+  own width ([FMI importer](fmi.md#numeric-scalars)). Other types can be
+  held at their declared start. `make example-fmu-numeric` replays the four
+  numeric types into `Feedthrough`.
