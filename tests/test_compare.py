@@ -276,6 +276,74 @@ def test_a_tolerance_on_an_integer_field_fails_coverage(tmp_path):
                for entry in report["coverage"]), report["coverage"]
 
 
+# -- array fields (issue #190) --------------------------------------------------
+
+F64_ARRAY = {"fields": [{"name": "v", "type": "f64", "count": 3}]}
+I32_ARRAY = {"fields": [{"name": "n", "type": "i32", "count": 2}]}
+
+
+def f64s(t: int, *values: float) -> tuple[str, int, bytes]:
+    return "c", t, struct.pack(f"<{len(values)}d", *values)
+
+
+def array_run(tmp_path: Path, actual: list, reference: list,
+              reference_schema: dict = F64_ARRAY) -> dict:
+    return run(tmp_path, contract({"c": float_channel()}), actual, reference,
+               actual_schemas={"c": F64_ARRAY},
+               reference_schemas={"c": reference_schema})
+
+
+def test_an_array_takes_its_rule_element_by_element(tmp_path):
+    """atol 0.5 + rtol 0.25 * |reference|: 1.0 is allowed off 2.0, and 1.5
+    is not."""
+    report = array_run(
+        tmp_path,
+        [f64s(0, 1.0, 2.0, 3.0), f64s(10, 1.0, 3.0, 4.5),
+         f64s(20, 1.0, 2.0, 3.0)],
+        [f64s(0, 1.0, 2.0, 3.0), f64s(10, 1.0, 2.0, 3.0),
+         f64s(20, 1.0, 2.0, 3.0)])
+
+    assert report["verdict"] == "fail"
+    assert report["channels"]["c"]["failed"] == 1
+    divergence = report["first_divergence"]
+    assert (divergence["observation_ns"], divergence["field"],
+            divergence["element"]) == (10, "v", 2)
+    assert (divergence["actual"], divergence["expected"]) == (
+        [1.0, 3.0, 4.5], [1.0, 2.0, 3.0])
+    assert divergence["abs_error"] == 1.5
+
+
+def test_equal_arrays_pass(tmp_path):
+    values = [f64s(t, 1.0, -2.0, 0.5) for t in (0, 10, 20)]
+    assert array_run(tmp_path, values, values)["verdict"] == "pass"
+
+
+def test_an_integer_array_is_compared_exactly(tmp_path):
+    document = contract({"c": float_channel(fields={"n": "exact"})})
+    report = run(tmp_path, document,
+                 [("c", 0, struct.pack("<2i", -1, 2**31 - 1))],
+                 [("c", 0, struct.pack("<2i", -1, 2**31 - 2))],
+                 actual_schemas={"c": I32_ARRAY},
+                 reference_schemas={"c": I32_ARRAY})
+
+    assert report["first_divergence"]["element"] == 1
+
+
+@pytest.mark.parametrize("reference_schema", [
+    {"fields": [{"name": "v", "type": "f64", "count": 2}]},
+    {"fields": [{"name": "v", "type": "f64"}]},
+    {"fields": [{"name": "v", "type": "i64", "count": 3}]},
+])
+def test_a_reference_of_another_count_or_kind_fails_coverage(
+        tmp_path, reference_schema):
+    report = array_run(tmp_path, [], [], reference_schema)
+
+    assert report["coverage"] == [
+        "reference Channel 'c' field 'v' is not an array of 3 of the actual "
+        "field's kind f64"
+    ]
+
+
 def test_a_channel_absent_from_a_recording_fails_coverage(tmp_path):
     document = contract({"c": float_channel(reference_channel="r")})
     report = run(tmp_path, document, series({0: 0.0}), series({0: 0.0}))

@@ -13,7 +13,9 @@ inferred from the data:
   included — and one evaluation window common to every Channel, which leaves a
   warm-up unobserved;
 * a rule for every field of the actual schema: `"exact"` for an integer field,
-  `{"atol": a, "rtol": r}` for a float field, or `"ignore"`.
+  `{"atol": a, "rtol": r}` for a float field, or `"ignore"`. An array field
+  takes its rule element by element, and the reference field is an array of
+  the same count; the first element that diverges is the one reported.
 
 A float field passes where `abs(actual - reference) <= atol + rtol *
 abs(reference)`. A NaN or infinity on either side fails; there is no rule that
@@ -363,7 +365,7 @@ class _Observation:
         (published, actual), (recorded, expected) = self.actual[0], self.reference[0]
         failed = False
         for field_index, (field, rule) in enumerate(self.rules):
-            kind, details = _judge(actual[field], expected[field], rule)
+            kind, details = _judge_field(actual[field], expected[field], rule)
             if kind is not None:
                 failed = True
                 counts["nonfinite"] += kind == "nonfinite"
@@ -388,6 +390,21 @@ class _Observation:
             "expected": _values_of(self.reference, self.rules),
             "tolerance": None, "abs_error": None, **details,
         })
+
+
+def _judge_field(actual, expected, rule) -> tuple[str | None, dict]:
+    """The divergence kind of one field, or None when it passes.
+
+    An array is judged element by element in its declared order, and the
+    first element that diverges names the divergence.
+    """
+    if not isinstance(actual, (list, bytes)):
+        return _judge(actual, expected, rule)
+    for element, pair in enumerate(zip(actual, expected)):
+        kind, details = _judge(*pair, rule)
+        if kind is not None:
+            return kind, {**details, "element": element}
+    return None, {}
 
 
 def _judge(actual, expected, rule) -> tuple[str | None, dict]:
@@ -422,7 +439,10 @@ def _values_of(messages: list, rules: list):
 
 
 def _json_value(value):
-    """A value as strict JSON states it: a non-finite float becomes a string."""
+    """A value as strict JSON states it: a non-finite float becomes a string,
+    and an array a list of its elements."""
+    if isinstance(value, (list, bytes)):
+        return [_json_value(element) for element in value]
     if isinstance(value, float) and not math.isfinite(value):
         return "nan" if math.isnan(value) else ("inf" if value > 0 else "-inf")
     return value
@@ -468,10 +488,6 @@ def _coverage(channel: ChannelContract, actual: dict | None,
 def _rule_problems(context: str, reference_channel: str, field: dict,
                    reference: dict | None, rule) -> list[str]:
     name, kind = field["name"], field["type"]
-    if "count" in field:
-        return [f"{context} field {name!r} is an array; version "
-                f"{CONTRACT_VERSION} compares scalar fields only, so mark it "
-                f"'ignore'"]
     integer = kind in INT_RANGES
     if rule == EXACT and not integer:
         return [f"{context}: 'exact' does not fit {kind} field {name!r}; a "
@@ -481,9 +497,12 @@ def _rule_problems(context: str, reference_channel: str, field: dict,
                 f"an integer field is 'exact'"]
     if reference is None:
         return [f"reference Channel {reference_channel!r} has no field {name!r}"]
-    if "count" in reference or (reference["type"] in INT_RANGES) != integer:
+    if (reference.get("count") != field.get("count")
+            or (reference["type"] in INT_RANGES) != integer):
+        shape = ("a scalar" if "count" not in field
+                 else f"an array of {field['count']}")
         return [f"reference Channel {reference_channel!r} field {name!r} is "
-                f"not a scalar of the actual field's kind {kind}"]
+                f"not {shape} of the actual field's kind {kind}"]
     return []
 
 
