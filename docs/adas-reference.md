@@ -23,7 +23,7 @@ why it exists.
 | `sil_adapter.c` | the Native participant: exports `sil_participant_init`, converts Messages to the application's types |
 | `schemas.json` | the SiL Schemas; `silschema` generates `adas_messages.h` from them |
 | `maneuvers/<name>.csv` | the recorded radar, camera and ego-speed input of each maneuver |
-| `maneuvers/<name>.expected.csv` | the expected output of each maneuver, enumerated by hand |
+| `maneuvers/<name>.expected.csv` | the expected trajectory of each maneuver, enumerated by hand |
 | `mapping.json`, `expected-mapping.json`, `contract.json` | the `sil-csv` mappings and the `sil-compare` contract of one maneuver, without a Channel prefix |
 | `prepare.py` | converts every maneuver with its Channel prefix and writes its contract |
 | `manifest.py` | the Run: one Replay participant and one Native participant per maneuver, one library |
@@ -157,14 +157,18 @@ binary64. The two output accelerations are rounded to f32 once, when the
 Command is written. The comparison contract is exact for every field: integer
 fields are `"exact"` and both accelerations are `{"atol": 0, "rtol": 0}`.
 This holds because the reference values are multiples of 0.5, which binary32
-and binary64 represent exactly. Each endpoint case in the maneuvers uses
-values that binary32 represents exactly and that the threshold arithmetic
-does not round; every other case is far from its threshold.
+and binary64 represent exactly. Each endpoint case in the maneuvers (`x = 8`,
+a time to collision of exactly 2 s, the association and eligibility limits)
+uses binary32 values for which the comparison is exact. Where the arithmetic
+rounds, as in a time to collision just below 2 s, the result is far from the
+threshold compared with the rounding error.
 
 Build constraints: IEEE 754 binary64 `double`, round to nearest, and no
 value-changing optimization. The source refuses `-ffast-math` at compile time.
-The CMake targets use ISO C11 (`C_EXTENSIONS OFF`), so GCC does not contract
-floating-point expressions.
+The CMake targets and `run.sh` build with `-ffp-contract=off`, because Clang
+contracts floating-point expressions by default, also in ISO C mode. Profile 1
+has no expression that a contraction could fuse; the flag keeps that true when
+the arithmetic changes.
 
 ### Lifecycle and ownership
 

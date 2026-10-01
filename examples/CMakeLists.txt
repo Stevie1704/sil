@@ -59,8 +59,9 @@ function(add_adas_reference name)
   target_include_directories(${name} PRIVATE
     ${PROJECT_SOURCE_DIR}/include ${ADAS_DIR} ${ADAS_GEN_DIR})
   target_compile_definitions(${name} PRIVATE ${ARGN})
-  # ISO C11, not gnu11: GCC then does not contract floating-point
-  # expressions, which the reference arithmetic is specified without.
+  # The reference arithmetic is specified without contracted floating-point
+  # expressions; Clang contracts by default, also in ISO C mode.
+  target_compile_options(${name} PRIVATE -ffp-contract=off)
   set_target_properties(${name} PROPERTIES PREFIX "" SUFFIX ".so"
     C_STANDARD 11 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF)
 endfunction()

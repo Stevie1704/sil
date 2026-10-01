@@ -137,11 +137,18 @@ class TestInstances:
         self, build_dir, sil_run, prepared, nominal, tmp_path
     ):
         # Two instances of the one loaded library with different inputs:
-        # each must publish exactly what it publishes in the five-instance Run.
-        pair = run_simulation(
-            manifest.reference_manifest(prepared, library(build_dir),
-                                        maneuvers=("hazard", "clear")),
-            runner=sil_run, workdir=tmp_path)
+        # each must publish exactly what it publishes in the five-instance Run,
+        # and the two-instance Run repeats byte-identically.
+        runs = []
+        for attempt in ("first", "second"):
+            workdir = tmp_path / attempt
+            workdir.mkdir()
+            runs.append(run_simulation(
+                manifest.reference_manifest(prepared, library(build_dir),
+                                            maneuvers=("hazard", "clear")),
+                runner=sil_run, workdir=workdir))
+        pair, repeat = runs
+        assert pair.mcap_path.read_bytes() == repeat.mcap_path.read_bytes()
         for maneuver in ("hazard", "clear"):
             channel = f"{maneuver}.command"
             assert pair.messages(channel) == nominal.messages(channel)

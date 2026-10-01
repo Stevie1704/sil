@@ -25,14 +25,13 @@ mkdir -p "$work"
 work=$(cd "$work" && pwd)
 prefix=$(cd "$(dirname "$(command -v sil-run)")/.." && pwd)
 cc=${CC:-cc}
-maneuvers="clear hazard release unavailable boundaries"
 
 silschema "$here/schemas.json" "$work/include/adas_messages.h"
 build() {
     # $1: output library, remaining: extra compiler flags
     out=$1
     shift
-    "$cc" -std=c11 -O2 -Wall -Wextra -shared -fPIC "$@" \
+    "$cc" -std=c11 -O2 -ffp-contract=off -Wall -Wextra -shared -fPIC "$@" \
         -I"$prefix/include" -I"$here" -I"$work/include" \
         -o "$out" "$here/adas_reference.c" "$here/sil_adapter.c" -lm
 }
@@ -45,7 +44,8 @@ python3 "$here/manifest.py" "$work/reference.json" \
 sil-run "$work/reference.json" -o "$work/run-1.mcap"
 sil-run "$work/reference.json" -o "$work/run-2.mcap"
 cmp "$work/run-1.mcap" "$work/run-2.mcap"
-for maneuver in $maneuvers; do
+for expected in "$here"/maneuvers/*.expected.csv; do
+    maneuver=$(basename "$expected" .expected.csv)
     sil-compare "$work/$maneuver.contract.json" "$work/run-1.mcap" \
         "$work/$maneuver.expected.mcap" > "$work/$maneuver.compare.txt"
     echo "$maneuver: pass"

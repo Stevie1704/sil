@@ -182,7 +182,7 @@ example-window: venv build ## Replay a window of the library history after a war
 # build into a prefix, then run examples/adas-reference/run.sh with only that
 # prefix and this venv on PATH. The script builds the library against the
 # staged include/sil and silschema, runs the Manifest twice and `cmp`s the
-# Recordings, compares every scenario with its enumerated trajectory, and
+# Recordings, compares every maneuver with its enumerated trajectory, and
 # requires the wrong-sign build to fail.
 .PHONY: example-adas-reference
 example-adas-reference: venv build ## Build the C ADAS reference against the staged install, run twice, compare
