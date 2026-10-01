@@ -35,7 +35,7 @@ set_target_properties(ego_motion PROPERTIES
   SUFFIX ".so"
   OUTPUT_NAME "EgoMotion")
 
-# --- Native ADAS reference application (issue #222) ---
+# --- Native ADAS reference application (issues #222, #223) ---
 # adas-reference/adas_reference.c is a C application with its own API and no
 # SiL include; sil_adapter.c is the Native participant around it, built
 # against the public ABI header and the layouts silschema generates from

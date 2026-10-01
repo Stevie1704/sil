@@ -39,3 +39,15 @@ contract.
   controller per Participant for the Run's lifetime and documents that;
   it does not add a callback.
 - The CI determinism gate and the test suite run the example on every push.
+
+## Object lists (#223)
+
+Profile 2 replaces one object per sensor with bounded lists: flat Schema
+arrays of capacity 8 and an active count. It reuses the existing fixed-size
+Schema arrays; it adds no nested or variable-length Schema form. To keep
+input preparation on `sil-csv` and its receipts, `sil-csv` converts a
+fixed-size array field from one column per element. This is additive: a
+scalar mapping and its Recording bytes do not change. The Manifest, Native
+ABI, Step protocol, Recording format and `sil-compare` contract do not
+change. The five profile 1 maneuvers keep their expected trajectories as
+lists of at most one object.
