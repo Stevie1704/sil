@@ -1,0 +1,64 @@
+{
+  "sil_csv_mapping": 1,
+  "timestamp": {
+    "column": "time_ms",
+    "unit": "ms"
+  },
+  "schemas": {
+    "adas.Command": {
+      "fields": [
+        {
+          "name": "sample_time_ns",
+          "type": "u64"
+        },
+        {
+          "name": "sequence",
+          "type": "u32"
+        },
+        {
+          "name": "mode",
+          "type": "u32"
+        },
+        {
+          "name": "selected_object_id",
+          "type": "i32"
+        },
+        {
+          "name": "target_acceleration_mps2",
+          "type": "f32"
+        },
+        {
+          "name": "acceleration_mps2",
+          "type": "f32"
+        }
+      ]
+    }
+  },
+  "channels": [
+    {
+      "channel": "command",
+      "schema": "adas.Command",
+      "fields": {
+        "sample_time_ns": {
+          "column": "time_ms",
+          "scale": 1000000
+        },
+        "sequence": {
+          "column": "sequence"
+        },
+        "mode": {
+          "column": "mode"
+        },
+        "selected_object_id": {
+          "column": "selected_object_id"
+        },
+        "target_acceleration_mps2": {
+          "column": "target_acceleration_mps2"
+        },
+        "acceleration_mps2": {
+          "column": "acceleration_mps2"
+        }
+      }
+    }
+  ]
+}
