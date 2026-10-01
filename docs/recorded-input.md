@@ -243,3 +243,8 @@ Supported limits:
   own width ([FMI importer](fmi.md#numeric-scalars)). Other types can be
   held at their declared start. `make example-fmu-numeric` replays the four
   numeric types into `Feedthrough`.
+- **Arrays.** A `Float32`, `Float64`, `Int32`, `UInt32` or `UInt64` array with
+  literal dimensions is one Channel field with `count` equal to its value
+  count, in row-major order ([FMI importer](fmi.md#fixed-size-numeric-arrays)).
+  Its start value lists every value, separated by single spaces.
+  `examples/fmu-array/` replays `[8]` and `[2,3]` arrays.

@@ -170,8 +170,11 @@ Supported limits:
 
 - **Channel fields only.** A connection carries a `Float64`, `Boolean`,
   `Binary`, `Float32`, `Int32`, `UInt32` or `UInt64` value of one output, as
-  the single-FMU importer maps it, in the field type of that FMI type. Clocks,
-  network terminals and FMI-LS-BUS stay in a group.
+  the single-FMU importer maps it, in the field type of that FMI type. A
+  fixed-size numeric array is one field whose `count` is its value count
+  ([FMI importer](fmi.md#fixed-size-numeric-arrays)), and both ends declare
+  the same dimensions. Clocks, network terminals and FMI-LS-BUS stay in a
+  group.
 - **Fixed periods.** Each FMU steps on its own fixed Period, from 0, and
   the Duration is a multiple of each Period. There is no adaptive step, no
   rollback and no change of a Period during the Run.

@@ -394,7 +394,10 @@ class CoSimulation:
             values = (ctypes.c_void_p * 1)(ctypes.addressof(buffer))
             self._set_binary(references, sizes, values)
         else:
-            values = (_ELEMENTS[variable.kind] * 1)(value)
+            # An array's start is its whole flattened value, so the one
+            # reference is given every value it declares.
+            elements = value if variable.is_array else [value]
+            values = (_ELEMENTS[variable.kind] * len(elements))(*elements)
             self._set_values(variable.kind, references, values)
 
     def _set_values(self, kind: str, references, values) -> None:
@@ -501,15 +504,28 @@ class ScalarBuffer:
     One buffer is one FMI call however many variables it carries, and both the
     references and the values are built once because they are the same on
     every step. What crosses is Python numbers in the order the references
-    were given; the FMI element they are held as is this buffer's business.
+    were given, each array flattened in row-major order; the FMI element they
+    are held as is this buffer's business.
+
+    FMI 3.0 counts the references and the values of one call apart:
+    `nValueReferences` is how many variables it names, and `nValues` is how
+    many values those variables hold together. `value_count` is the latter,
+    and one value per reference when it is not given.
     """
 
-    def __init__(self, kind: str, references: Sequence[int]):
+    def __init__(self, kind: str, references: Sequence[int],
+                 value_count: int | None = None):
         self._kind = kind
         self._references = _references(*references)
-        self._values = (_ELEMENTS[kind] * len(references))()
+        self._values = (_ELEMENTS[kind] * (
+            len(references) if value_count is None else value_count))()
 
     def write(self, fmu: CoSimulation, values: Sequence) -> None:
+        if len(values) != len(self._values):
+            raise ParticipantFailure(
+                f"{len(values)} {self._kind} values were given for a buffer "
+                f"of {len(self._values)}"
+            )
         self._values[:] = values
         fmu._set_values(self._kind, self._references, self._values)
 

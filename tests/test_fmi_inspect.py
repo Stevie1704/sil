@@ -25,6 +25,7 @@ from sil.fmi.inspection import (
     EXIT_USAGE,
     inspect,
     main,
+    render,
 )
 from sil.participant import ManifestError
 
@@ -157,7 +158,8 @@ class TestTheArchiveFacts:
             "name": "Float64_continuous_input", "type": "Float64",
             "value_reference": 7, "causality": "input",
             "variability": None, "start": "0", "unit": None,
-            "declared_type": None, "dimensions": [], "max_size": None,
+            "declared_type": None, "dimensions": [], "value_count": 1,
+            "max_size": None,
             "mime_type": None, "clocks": [], "interval_variability": None,
             "unmappable": None,
         }
@@ -183,15 +185,29 @@ class TestTheArchiveFacts:
 
 class TestArraysAndUnits:
 
-    def test_an_array_is_reported_as_unmappable(self, tmp_path):
+    def test_a_literal_array_is_reported_with_its_count(self, tmp_path):
         report = inspect(rewritten(tmp_path, "array.fmu", with_array_input))
         array = variables(report)["Float64_array_input"]
         assert array["dimensions"] == [{"start": 3}]
-        assert array["unmappable"] == (
-            "which declares dimensions of 3 values; this importer maps "
-            "variables of one value"
-        )
+        assert array["value_count"] == 3
+        assert array["unmappable"] is None
         assert report["verdict"] == "compatible"
+
+    def test_an_array_sized_by_another_variable_is_unmappable(
+        self, tmp_path
+    ):
+        def sized(text: str) -> str:
+            return with_array_input(text).replace(
+                '<Dimension start="3"/>', '<Dimension valueReference="25"/>')
+        report = inspect(rewritten(tmp_path, "sized.fmu", sized))
+        array = variables(report)["Float64_array_input"]
+        assert array["dimensions"] == [{"value_reference": 25}]
+        assert array["value_count"] is None
+        assert array["unmappable"] == (
+            "which declares a dimension sized by another variable; this "
+            "importer maps dimensions with a literal start only"
+        )
+        assert "value_count=None" in render(report)
 
     def test_a_unit_from_the_declared_type(self, tmp_path):
         def typed(text: str) -> str:
@@ -388,11 +404,11 @@ class TestProposedMappings:
         assert "Float64_discrete_input" not in report["mapping"]["unbound"]
         assert "Float64_continuous_input" in report["mapping"]["unbound"]
 
-    def test_an_array_binding(self, tmp_path, monkeypatch):
+    def test_an_array_binding_of_another_count(self, tmp_path, monkeypatch):
         archive = rewritten(tmp_path, "array.fmu", with_array_input)
         mapping = feedthrough_mapping(
             schemas={"fmu.In": {"fields": [
-                {"name": "value", "type": "f64", "count": 3}
+                {"name": "value", "type": "f64", "count": 2}
             ]}},
             channels={"fmu.In": {"schema": "fmu.In", "direction": "in"}},
             bind=["fmu.In:value=Float64_array_input"],
@@ -401,7 +417,10 @@ class TestProposedMappings:
         assert report["mapping"]["rejection"] == runtime_rejection(
             archive, mapping, monkeypatch, tmp_path
         )
-        assert "dimensions of 3 values" in report["mapping"]["rejection"]
+        assert "is carried by a 'f64' array of 3" in (
+            report["mapping"]["rejection"])
+        mapping["schemas"]["fmu.In"]["fields"][0]["count"] = 3
+        assert inspect(archive, mapping)["mapping"]["accepted"] is True
 
     def test_an_unusable_archive_is_not_mapped(self, tmp_path):
         report = inspect(UNUSABLE["FMI 2.0"](tmp_path), FEEDTHROUGH_MAPPING)

@@ -526,6 +526,118 @@ def test_installed_numeric_fmu_replay_round_trips_each_type(
     assert not list(tmp_path.glob(".sil-run-*"))
 
 
+def test_installed_array_fmu_replay_and_coupling_round_trip(
+    installed_python: Path, staged_prefix: Path, build_dir: Path,
+    tmp_path: Path,
+):
+    """Issue #190: `[8]`, `[3]` and `[2,3]` arrays recorded into the array
+    fixture FMU and back, inspected, authored, run twice inline and twice
+    over shared memory with identical Recording bytes, compared element by
+    element with the hand-stated reference, refused against a transposed
+    one; and a coupled matrix loop authored, run twice and checked against
+    the fixture's rule — SiL only from the installed wheel and prefix."""
+    import struct
+
+    from array_fixture import (
+        MODEL_IDENTIFIER,
+        array_fmu,
+        expected_matrix,
+        nested,
+        row_major,
+    )
+    from sil.fmi import library_suffix, platform_directory
+    from sil.recording import read_records
+
+    example = ROOT / "examples" / "fmu-array"
+    binary = build_dir / f"{MODEL_IDENTIFIER}{library_suffix()}"
+    fmu = array_fmu(tmp_path / "ArrayEcho.fmu", binary, platform_directory())
+    env = installed_environment(installed_python)
+    env["PATH"] = str(staged_prefix / "bin") + os.pathsep + env["PATH"]
+
+    def run(*command: str, code: int = 0) -> subprocess.CompletedProcess:
+        proc = subprocess.run(command, cwd=tmp_path, env=env,
+                              capture_output=True, text=True)
+        assert proc.returncode == code, proc.stdout + proc.stderr
+        return proc
+
+    authoring = json.loads((example / "authoring.json").read_text())
+    mapping = {
+        "sil_fmi_mapping": 1, "schemas": authoring["schemas"],
+        "channels": {name: {"schema": c["schema"], "direction": c["direction"]}
+                     for name, c in authoring["channels"].items()},
+        "bind": [f"{b['channel']}:{b['field']}={b['variable']}"
+                 for b in authoring["bind"]],
+        "start": [f"{s['variable']}={s['value']}" for s in authoring["start"]],
+    }
+    (tmp_path / "mapping.json").write_text(json.dumps(mapping))
+    report = json.loads(run("sil-fmi-inspect", str(fmu), "--json",
+                            "--mapping", "mapping.json").stdout)
+    assert report["mapping"]["accepted"] is True
+    matrix = next(v for v in report["variables"] if v["name"] == "matrix_in")
+    assert (matrix["dimensions"], matrix["value_count"]) == (
+        [{"start": 2}, {"start": 3}], 6)
+
+    run("sil-csv", str(example / "mapping.json"), str(example / "recorded.csv"),
+        "-o", "recorded.mcap")
+    run("sil-csv", str(example / "reference-mapping.json"),
+        str(example / "reference.csv"), "-o", "reference.mcap")
+    run("sil-fmu-replay", str(example / "authoring.json"), str(fmu),
+        "--recording", "recorded.mcap", "-o", "inline.json",
+        "--receipt", "receipt.json")
+    shm = json.loads((tmp_path / "inline.json").read_text())
+    for channel in shm["channels"].values():
+        channel.update(transport="shm", slots=2)
+    (tmp_path / "shm.json").write_text(json.dumps(shm))
+    for transport in ("inline", "shm"):
+        recordings = []
+        for attempt in ("1", "2"):
+            out = f"{transport}-{attempt}.mcap"
+            run("sil-run", f"{transport}.json", "-o", out)
+            recordings.append((tmp_path / out).read_bytes())
+        assert recordings[0] == recordings[1]
+        compared = json.loads(run(
+            "sil-compare", str(example / "contract.json"),
+            f"{transport}-1.mcap", "reference.mcap", "--json").stdout)
+        assert compared["verdict"] == "pass", compared["first_divergence"]
+        assert compared["channels"]["sensor.out"]["checked"] == 4
+
+    transposed = json.loads((example / "reference-mapping.json").read_text())
+    transposed["channels"][0]["fields"]["matrix"]["columns"] = [
+        f"matrix_{i}_{j}" for j in range(3) for i in range(2)]
+    (tmp_path / "transposed.json").write_text(json.dumps(transposed))
+    run("sil-csv", "transposed.json", str(example / "reference.csv"),
+        "-o", "transposed.mcap")
+    failed = json.loads(run(
+        "sil-compare", str(example / "contract.json"), "inline-1.mcap",
+        "transposed.mcap", "--json", code=1).stdout)
+    assert failed["first_divergence"]["field"] == "matrix"
+
+    coupled = []
+    for attempt in ("1", "2"):
+        run("sil-fmu-couple", str(example / "coupling.json"),
+            "--fmu", "left", str(fmu), "--fmu", "right", str(fmu),
+            "-o", "coupled.json")
+        run("sil-run", "coupled.json", "-o", f"coupled-{attempt}.mcap")
+        coupled.append((tmp_path / f"coupled-{attempt}.mcap").read_bytes())
+    assert coupled[0] == coupled[1]
+    # Each FMU holds its matrix input at 0 until the first delivery, and each
+    # delivery is the other FMU's previous Message.
+    loop = json.loads((example / "coupling.json").read_text())
+    bias = {name: nested([float(v) for v in fmu["start"][0]["value"].split()])
+            for name, fmu in loop["fmus"].items()}
+    values = {"left.matrix": [], "right.matrix": []}
+    for topic, _, data in read_records(tmp_path / "coupled-1.mcap"):
+        values[topic].append(list(struct.unpack("<6d", data)))
+    held = {"left": [[0.0] * 3] * 2, "right": [[0.0] * 3] * 2}
+    for step in range(4):
+        for name in ("left", "right"):
+            assert values[f"{name}.matrix"][step] == row_major(
+                expected_matrix(held[name], bias[name]))
+        held = {"left": nested(values["right.matrix"][step]),
+                "right": nested(values["left.matrix"][step])}
+    assert not list(tmp_path.glob(".sil-run-*"))
+
+
 def test_installed_window_replays_into_the_library_after_a_warm_up(
     installed_python: Path, staged_prefix: Path, tmp_path: Path,
 ):

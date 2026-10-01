@@ -1,0 +1,92 @@
+{
+  "sil_fmu_coupling": 1,
+  "duration_ns": 40000000,
+  "fmus": {
+    "left": {
+      "step_period_ns": 10000000,
+      "priority": 0,
+      "start": [
+        {
+          "variable": "bias",
+          "value": "1 2 3 4 5 6",
+          "unit": null
+        }
+      ],
+      "hold": [
+        "range_in",
+        "trim_in",
+        "gain_in",
+        "id_in",
+        "count_in",
+        "class_in",
+        "sample_in"
+      ]
+    },
+    "right": {
+      "step_period_ns": 10000000,
+      "priority": 1,
+      "start": [
+        {
+          "variable": "bias",
+          "value": "-0.5 -0.25 0 0.25 0.5 0.75",
+          "unit": null
+        }
+      ],
+      "hold": [
+        "range_in",
+        "trim_in",
+        "gain_in",
+        "id_in",
+        "count_in",
+        "class_in",
+        "sample_in"
+      ]
+    }
+  },
+  "channels": {
+    "left.matrix": {
+      "publisher": "left",
+      "latency_ns": 10000000,
+      "fields": [
+        {
+          "name": "matrix",
+          "type": "f64",
+          "count": 6,
+          "variable": "matrix_out",
+          "unit": null
+        }
+      ],
+      "subscribers": {
+        "right": {
+          "capacity": 2,
+          "overflow": "fail",
+          "bind": {
+            "matrix": "matrix_in"
+          }
+        }
+      }
+    },
+    "right.matrix": {
+      "publisher": "right",
+      "latency_ns": 10000000,
+      "fields": [
+        {
+          "name": "matrix",
+          "type": "f64",
+          "count": 6,
+          "variable": "matrix_out",
+          "unit": null
+        }
+      ],
+      "subscribers": {
+        "left": {
+          "capacity": 2,
+          "overflow": "fail",
+          "bind": {
+            "matrix": "matrix_in"
+          }
+        }
+      }
+    }
+  }
+}

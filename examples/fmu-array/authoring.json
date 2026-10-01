@@ -1,0 +1,171 @@
+{
+  "sil_fmu_replay": 1,
+  "step_period_ns": 10000000,
+  "duration_ns": 40000000,
+  "schemas": {
+    "array.Objects": {
+      "fields": [
+        {
+          "name": "range_m",
+          "type": "f32",
+          "count": 8
+        },
+        {
+          "name": "trim",
+          "type": "f32",
+          "count": 3
+        },
+        {
+          "name": "gain",
+          "type": "f32"
+        },
+        {
+          "name": "object_id",
+          "type": "i32",
+          "count": 8
+        },
+        {
+          "name": "object_count",
+          "type": "u32"
+        },
+        {
+          "name": "class_code",
+          "type": "u32",
+          "count": 8
+        },
+        {
+          "name": "sample_time_ns",
+          "type": "u64",
+          "count": 8
+        },
+        {
+          "name": "matrix",
+          "type": "f64",
+          "count": 6
+        }
+      ]
+    }
+  },
+  "channels": {
+    "sensor.in": {
+      "schema": "array.Objects",
+      "direction": "in",
+      "latency_ns": 0,
+      "route": {
+        "capacity": 1,
+        "overflow": "fail"
+      }
+    },
+    "sensor.out": {
+      "schema": "array.Objects",
+      "direction": "out",
+      "latency_ns": 10000000
+    }
+  },
+  "bind": [
+    {
+      "channel": "sensor.in",
+      "field": "range_m",
+      "variable": "range_in",
+      "unit": "m"
+    },
+    {
+      "channel": "sensor.in",
+      "field": "trim",
+      "variable": "trim_in",
+      "unit": null
+    },
+    {
+      "channel": "sensor.in",
+      "field": "gain",
+      "variable": "gain_in",
+      "unit": null
+    },
+    {
+      "channel": "sensor.in",
+      "field": "object_id",
+      "variable": "id_in",
+      "unit": null
+    },
+    {
+      "channel": "sensor.in",
+      "field": "object_count",
+      "variable": "count_in",
+      "unit": null
+    },
+    {
+      "channel": "sensor.in",
+      "field": "class_code",
+      "variable": "class_in",
+      "unit": null
+    },
+    {
+      "channel": "sensor.in",
+      "field": "sample_time_ns",
+      "variable": "sample_in",
+      "unit": null
+    },
+    {
+      "channel": "sensor.in",
+      "field": "matrix",
+      "variable": "matrix_in",
+      "unit": null
+    },
+    {
+      "channel": "sensor.out",
+      "field": "range_m",
+      "variable": "range_out",
+      "unit": "m"
+    },
+    {
+      "channel": "sensor.out",
+      "field": "trim",
+      "variable": "trim_out",
+      "unit": null
+    },
+    {
+      "channel": "sensor.out",
+      "field": "gain",
+      "variable": "gain_out",
+      "unit": null
+    },
+    {
+      "channel": "sensor.out",
+      "field": "object_id",
+      "variable": "id_out",
+      "unit": null
+    },
+    {
+      "channel": "sensor.out",
+      "field": "object_count",
+      "variable": "count_out",
+      "unit": null
+    },
+    {
+      "channel": "sensor.out",
+      "field": "class_code",
+      "variable": "class_out",
+      "unit": null
+    },
+    {
+      "channel": "sensor.out",
+      "field": "sample_time_ns",
+      "variable": "sample_out",
+      "unit": null
+    },
+    {
+      "channel": "sensor.out",
+      "field": "matrix",
+      "variable": "matrix_out",
+      "unit": null
+    }
+  ],
+  "start": [
+    {
+      "variable": "bias",
+      "value": "0.5 -1 2.25 100 -0.125 7",
+      "unit": null
+    }
+  ],
+  "hold": []
+}

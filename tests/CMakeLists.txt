@@ -146,6 +146,13 @@ add_bus_fmu(CanBus)
 add_bus_fmu(CanBusRaggedInterval FMI_BUS_RAGGED_INTERVAL=1)
 add_bus_fmu(CanBusInstantInterval FMI_BUS_INSTANT_INTERVAL=1)
 
+# --- the fixed-size array FMU (issue #190) ---
+# Numeric arrays of each mapped type, a [2,3] matrix whose output depends on
+# each element's indices, and accessors that refuse an nValues the references
+# do not hold together. The Python tests write its description.
+add_library(fmi_array SHARED fixtures/fmi_array.c)
+set_target_properties(fmi_array PROPERTIES PREFIX "" OUTPUT_NAME "ArrayEcho")
+
 # --- bench participants (routing baseline fixtures, issue #61) ---
 # Payload size, publish period, and burst size come from manifest config, so
 # the whole baseline matrix is driven without rebuilding.

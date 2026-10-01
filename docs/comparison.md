@@ -54,9 +54,12 @@ The rules:
   contract field that the schema does not declare, a rule that does not fit
   the field type, a compared field that the reference Channel does not have,
   a Channel that a Recording does not declare, and a Channel whose every
-  field is `"ignore"`. Array fields are compared only as `"ignore"`. A Channel
-  that the contract does not name is not compared. A contract that repeats a
-  key is refused.
+  field is `"ignore"`. A Channel that the contract does not name is not
+  compared. A contract that repeats a key is refused.
+- An array field takes its rule element by element. The reference field must
+  be an array of the same count and kind. The field fails once per
+  observation, and its divergence states the first element that diverges as
+  `element`, with both whole arrays as the values.
 - The final publication is compared like all other publications. With the
   Step-period offset, the last Step's state lands on the Duration, where no
   participant of the Run can observe it.

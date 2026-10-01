@@ -488,7 +488,7 @@ class TestBindingsRejectedBeforeStepping:
     ):
         """An array variable is neither a scalar nor a bounded Binary."""
         array_fmu = dimensioned(tmp_path, "array", '<Dimension start="2"/>')
-        with pytest.raises(ManifestError, match="dimensions of 2 values"):
+        with pytest.raises(ManifestError, match=r"dimensions \[2\] of 2 values; this importer maps Binary"):
             importer(fmu=array_fmu)
 
     def test_a_binding_naming_a_variable_sized_by_another_is_rejected(

@@ -1,0 +1,130 @@
+{
+  "sil_csv_mapping": 1,
+  "timestamp": {
+    "column": "time_s",
+    "unit": "s"
+  },
+  "schemas": {
+    "array.Objects": {
+      "fields": [
+        {
+          "name": "range_m",
+          "type": "f32",
+          "count": 8
+        },
+        {
+          "name": "trim",
+          "type": "f32",
+          "count": 3
+        },
+        {
+          "name": "gain",
+          "type": "f32"
+        },
+        {
+          "name": "object_id",
+          "type": "i32",
+          "count": 8
+        },
+        {
+          "name": "object_count",
+          "type": "u32"
+        },
+        {
+          "name": "class_code",
+          "type": "u32",
+          "count": 8
+        },
+        {
+          "name": "sample_time_ns",
+          "type": "u64",
+          "count": 8
+        },
+        {
+          "name": "matrix",
+          "type": "f64",
+          "count": 6
+        }
+      ]
+    }
+  },
+  "channels": [
+    {
+      "channel": "reference.sensor",
+      "schema": "array.Objects",
+      "fields": {
+        "range_m": {
+          "columns": [
+            "range_0",
+            "range_1",
+            "range_2",
+            "range_3",
+            "range_4",
+            "range_5",
+            "range_6",
+            "range_7"
+          ]
+        },
+        "trim": {
+          "columns": [
+            "trim_0",
+            "trim_1",
+            "trim_2"
+          ]
+        },
+        "gain": {
+          "column": "gain"
+        },
+        "object_id": {
+          "columns": [
+            "id_0",
+            "id_1",
+            "id_2",
+            "id_3",
+            "id_4",
+            "id_5",
+            "id_6",
+            "id_7"
+          ]
+        },
+        "object_count": {
+          "column": "count"
+        },
+        "class_code": {
+          "columns": [
+            "class_0",
+            "class_1",
+            "class_2",
+            "class_3",
+            "class_4",
+            "class_5",
+            "class_6",
+            "class_7"
+          ]
+        },
+        "sample_time_ns": {
+          "columns": [
+            "sample_0",
+            "sample_1",
+            "sample_2",
+            "sample_3",
+            "sample_4",
+            "sample_5",
+            "sample_6",
+            "sample_7"
+          ]
+        },
+        "matrix": {
+          "columns": [
+            "matrix_0_0",
+            "matrix_0_1",
+            "matrix_0_2",
+            "matrix_1_0",
+            "matrix_1_1",
+            "matrix_1_2"
+          ]
+        }
+      }
+    }
+  ]
+}

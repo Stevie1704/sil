@@ -95,12 +95,12 @@ them.
 a Run would declare to replay the maneuvers' input Recordings into this FMU
 and record its Commands. It binds every Schema field to its variable.
 `audit.py` runs `sil-fmi-inspect` with it, and with each binding alone, in a
-Channel of that one field. Since #189 the importer must accept each scalar
-of `Float32`, `Int32`, `UInt32` and `UInt64` (20 bindings). It must refuse
+Channel of that one field. The importer must accept each scalar of
+`Float32`, `Int32`, `UInt32` and `UInt64` (20 bindings, since #189) and each
+`[8]` object array of those types (10 bindings, since #190). It must refuse
 every other binding, and only because the variable is of a type it does not
-map (`Int64`, `UInt8`) or has 8 elements. `inspection.json` keeps each
-verdict. When #190 adds arrays, this mapping is the one it must accept
-further.
+map (`Int64`, `UInt8`). `inspection.json` keeps each verdict. The whole
+mapping stays refused until those two types are mapped.
 
 ## Evidence
 

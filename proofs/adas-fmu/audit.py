@@ -12,10 +12,10 @@ Three static audits of the archive, none of which loads its binary:
 - `inspection`: SiL's `sil-fmi-inspect` on the archive, and on
   `recorded-input.mapping.json`, the mapping a Run that replays the
   maneuvers' Recordings into this FMU would declare. Each binding is also
-  inspected on its own, in a Channel of its one field. A scalar of a type the
-  importer maps (`Float32`, `Int32`, `UInt32`, `UInt64`) must be accepted.
-  Every other binding must be refused for its type or its dimensions, and for
-  nothing else, until the importer maps those types and arrays too.
+  inspected on its own, in a Channel of its one field. A scalar or a [8]
+  array of a type the importer maps (`Float32`, `Int32`, `UInt32`,
+  `UInt64`) must be accepted. Every other binding must be refused for its
+  type, and for nothing else, until the importer maps those types too.
 
     python proofs/adas-fmu/audit.py AdasReference.fmu OUT_DIR
 
@@ -67,12 +67,12 @@ CO_SIMULATION = {
     "canReturnEarlyAfterIntermediateUpdate": "false",
     "providesEvaluateDiscreteStates": "false",
 }
-# The FMI types the importer maps, of those the profile declares (#189).
+# The FMI types the importer maps, of those the profile declares: scalars
+# since #189, and their literal [8] arrays since #190.
 MAPPED_TYPES = {"Float32", "Int32", "UInt32", "UInt64"}
-# What a binding is refused for while the importer lacks the type or shape.
-MISSING = re.compile(r"which (is a (\w+) variable; this importer maps Binary "
-                     r"and the scalar types .*|declares dimensions of 8 "
-                     r"values; this importer maps variables of one value)$")
+# What a binding is refused for while the importer lacks the type.
+MISSING = re.compile(r"which is a (\w+) variable; this importer maps Binary "
+                     r"and the scalar types .*$")
 
 
 def _unit(field: str) -> str | None:
@@ -220,24 +220,21 @@ def inspection(fmu: Path) -> dict:
     """SiL's inspection of the archive and of the recorded-input mapping."""
     report = inspect(fmu, MAPPING)
     probes = {bind: _probe(fmu, bind) for bind in MAPPING["bind"]}
-    missing_types = sorted({m[2] for r in probes.values()
-                            if r and (m := MISSING.search(r)) and m[2]})
+    missing_types = sorted({m[1] for r in probes.values()
+                            if r and (m := MISSING.search(r))})
     return {
         "verdict": report["verdict"],
         "unusable": report["unusable"],
         "mapping": report["mapping"],
         "bindings": probes,
         "missing_types": missing_types,
-        "arrays_refused": sorted(
-            bind for bind, r in probes.items()
-            if r and "declares dimensions" in r),
         "mapped": sorted(bind for bind, r in probes.items() if r is None),
     }
 
 
 def inspection_findings(result: dict) -> list[str]:
-    """Every way the inspection differs from "a scalar of a mapped type is
-    accepted, and the rest is refused only for its type or array"."""
+    """Every way the inspection differs from "a scalar or an array of a
+    mapped type is accepted, and the rest is refused only for its type"."""
     findings = []
     if result["verdict"] != "mapping-rejected":
         findings.append(f"verdict {result['verdict']}")
@@ -248,8 +245,7 @@ def inspection_findings(result: dict) -> list[str]:
         if rejection is None:
             if not mapped:
                 findings.append(f"{bind}: accepted")
-        elif not MISSING.search(rejection) or (
-                mapped and "declares dimensions" not in rejection):
+        elif mapped or not MISSING.search(rejection):
             findings.append(f"{bind}: {rejection}")
     return findings
 

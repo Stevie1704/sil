@@ -15,14 +15,17 @@ FMU path as an argument of its own and one `--bind` and `--start` per choice.
        "<channel>": {
          "publisher": "<fmu>", "latency_ns": 10000000,
          "fields": [{"name": "...", "type": "f64", "variable": "<output>",
-                     "unit": "m"}],
+                     "unit": "m"},
+                    {"name": "...", "type": "f32", "count": 8,
+                     "variable": "<array output>", "unit": null}],
          "subscribers": {
            "<fmu>": {"capacity": 2, "overflow": "fail",
                      "bind": {"<field>": "<input>"}}}}}}
 
 Nothing is inferred and nothing has a default. A Channel's schema has the
 Channel's name. One connection is one field of one Channel: it carries the
-publisher's output to the input each subscriber binds to the field.
+publisher's output to the input each subscriber binds to the field. A field
+that connects arrays states their flattened value count as `count`.
 
 Everything is checked before a Manifest is written, and nothing is loaded:
 
@@ -89,7 +92,12 @@ from sil.fmi.documents import (
     string,
     unit,
 )
-from sil.fmi.inspection import COMPATIBLE, MAPPING_VERSION, inspect
+from sil.fmi.inspection import (
+    COMPATIBLE,
+    MAPPING_VERSION,
+    array_record,
+    inspect,
+)
 from sil.manifest import Manifest, ManifestError, SubscriberRoute
 
 DOCUMENT_VERSION = 1
@@ -100,6 +108,8 @@ _DOCUMENT_KEYS = {"sil_fmu_coupling", "duration_ns", "fmus", "channels"}
 _FMU_KEYS = {"step_period_ns", "priority", "start", "hold"}
 _CHANNEL_KEYS = {"publisher", "latency_ns", "fields", "subscribers"}
 _FIELD_KEYS = {"name", "type", "variable", "unit"}
+# A field that connects arrays states the `count` of its Schema field too.
+_ARRAY_FIELD_KEYS = _FIELD_KEYS | {"count"}
 _ROUTE_KEYS = {"capacity", "overflow", "bind"}
 # The causalities FMI 3.0 lets an importer set before initialization.
 _STARTABLE = ("input", "parameter", "structuralParameter")
@@ -206,7 +216,7 @@ def _receipt(connections: list[Connection], variables: dict, plan: dict,
              "publisher": c.publisher, "output": c.output,
              "subscriber": c.subscriber, "input": c.input,
              "type": variables[c.publisher][c.output]["type"],
-             "unit": c.unit}
+             "unit": c.unit, **array_record(variables[c.publisher][c.output])}
             for c in connections
         ],
         "plan": plan,
@@ -274,7 +284,8 @@ def _channel(name: str, channel, fmus: dict) -> None:
         raise AuthoringError(f"{context} 'fields' must be a non-empty array")
     for index, field in enumerate(fields):
         where = f"{context} field[{index}]"
-        exact_object(field, where, _FIELD_KEYS)
+        exact_object(field, where,
+                     _ARRAY_FIELD_KEYS if "count" in field else _FIELD_KEYS)
         for key in ("name", "type", "variable"):
             string(field[key], f"{where} {key!r}")
         unit(field["unit"], f"{where} 'unit'")
@@ -371,7 +382,8 @@ def _published(doc: dict, name: str) -> list[str]:
 
 
 def _schemas(doc: dict) -> dict:
-    return {channel: {"fields": [{"name": f["name"], "type": f["type"]}
+    return {channel: {"fields": [{key: f[key] for key in
+                                  ("name", "type", "count") if key in f}
                                  for f in declaration["fields"]]}
             for channel, declaration in doc["channels"].items()}
 
