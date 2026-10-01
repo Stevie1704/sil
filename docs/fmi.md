@@ -104,10 +104,11 @@ stepped, naming the type, as is one whose field type is not the one its
 variable's type maps to. A `Clock` is
 reported too, and for a different reason: it is driven through the variable it
 gates rather than bound to a field of its own, which is the section after
-next. A `Binary` variable is mapped when its declared dimensions amount to
-one value: `<Dimension start="1"/>` is one value written the long way, which
-is how the fixture's CAN node declares its Binary input. A numeric variable
-that declares dimensions is an array, which has its own section below.
+next. A variable whose declared dimensions amount to one value is a scalar:
+`<Dimension start="1"/>` is one value written the long way, which is how the
+fixture's CAN node declares its Binary input. A numeric variable of more than
+one value is an array, which has its own section below. A `Binary` variable
+of more than one value is refused.
 
 ### Numeric scalars
 
@@ -170,7 +171,7 @@ Schema field. This is the profile, and nothing outside it is mapped:
 | --- | --- | --- |
 | Element type | `Float32`, `Float64`, `Int32`, `UInt32`, `UInt64` | `Boolean` and `Binary` arrays; every type that is not mapped as a scalar |
 | Dimensions | each `<Dimension start="N"/>` with a literal N ≥ 1, any number of them | a `<Dimension valueReference=…>` (sized by a structural parameter), a start of 0 or below |
-| Value count | the product of the dimensions | a count whose buffer of the element type overflows `size_t` |
+| Value count | the product of the dimensions, above 1 (one value is a scalar) | a count whose buffer of the element type overflows `size_t`, or that the Importer cannot allocate |
 | Field | the scalar's field type (table above), with `count` equal to the value count | another type, another count, or a scalar field |
 
 The field holds the values in the order FMI 3.0 defines for an array: row

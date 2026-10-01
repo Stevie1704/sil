@@ -238,11 +238,11 @@ def _variables(
     return reports
 
 
-def array_shape(variable: dict) -> dict:
-    """A reported array's dimensions and flattened count, or nothing.
+def array_record(variable: dict) -> dict:
+    """What a receipt records about a reported variable's dimensions.
 
-    What a receipt records beside an array variable, so that a scalar's
-    record stays what it was before arrays were mapped.
+    A variable that declares dimensions records them and its flattened
+    value count; a variable that declares none records nothing.
     """
     if not variable["dimensions"]:
         return {}

@@ -65,7 +65,7 @@ from sil.fmi.documents import (
 from sil.fmi.inspection import (
     COMPATIBLE,
     MAPPING_VERSION,
-    array_shape,
+    array_record,
     inspect,
 )
 from sil.manifest import Manifest, ManifestError, SubscriberRoute
@@ -150,13 +150,12 @@ def _receipt(doc: dict, variables: dict[str, dict], report: dict,
 def _declared(variable: dict) -> dict:
     """What the FMU declares about one variable, as the receipt records it.
 
-    An array also records its shape and its flattened count; a scalar's
-    record is what it was before arrays were mapped.
+    A variable that declares dimensions also records them and its
+    flattened value count.
     """
     return {"variable": variable["name"], "type": variable["type"],
             "causality": variable["causality"], "unit": variable["unit"],
-            **array_shape(variable)}
-
+            **array_record(variable)}
 
 
 # Document ----------------------------------------------------------------------

@@ -95,7 +95,7 @@ from sil.fmi.documents import (
 from sil.fmi.inspection import (
     COMPATIBLE,
     MAPPING_VERSION,
-    array_shape,
+    array_record,
     inspect,
 )
 from sil.manifest import Manifest, ManifestError, SubscriberRoute
@@ -216,7 +216,7 @@ def _receipt(connections: list[Connection], variables: dict, plan: dict,
              "publisher": c.publisher, "output": c.output,
              "subscriber": c.subscriber, "input": c.input,
              "type": variables[c.publisher][c.output]["type"],
-             "unit": c.unit, **array_shape(variables[c.publisher][c.output])}
+             "unit": c.unit, **array_record(variables[c.publisher][c.output])}
             for c in connections
         ],
         "plan": plan,

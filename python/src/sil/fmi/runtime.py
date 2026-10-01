@@ -396,7 +396,7 @@ class CoSimulation:
         else:
             # An array's start is its whole flattened value, so the one
             # reference is given every value it declares.
-            elements = value if variable.shape else [value]
+            elements = value if variable.is_array else [value]
             values = (_ELEMENTS[variable.kind] * len(elements))(*elements)
             self._set_values(variable.kind, references, values)
 

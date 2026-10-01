@@ -129,7 +129,8 @@ class ScalarGroup:
         # Each field, and how many values it spans: None for a scalar.
         self._fields = [
             (binding.field,
-             binding.variable.value_count if binding.variable.shape else None)
+             binding.variable.value_count if binding.variable.is_array
+             else None)
             for binding in bound
         ]
         self._buffer = ScalarBuffer(

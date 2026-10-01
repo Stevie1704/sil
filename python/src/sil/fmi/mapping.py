@@ -260,7 +260,7 @@ def _require_causality(binding: Binding, causality: str) -> None:
         )
 
 
-def carrying_field(variable: Variable) -> dict:
+def _carrying_field(variable: Variable) -> dict:
     """The type and count of the one schema field that carries a variable.
 
     A scalar is carried by a scalar field. An array is carried by one field
@@ -268,19 +268,19 @@ def carrying_field(variable: Variable) -> dict:
     FMI-defined row-major order: the last dimension varies fastest.
     """
     field = {"type": SCALARS[variable.kind].field_type}
-    if variable.shape:
+    if variable.is_array:
         field["count"] = variable.value_count
     return field
 
 
 def _require_field_type(binding: Binding, spec: dict) -> None:
     """Reject a field whose type or count is not the one the variable maps to."""
-    expected = carrying_field(binding.variable)
+    expected = _carrying_field(binding.variable)
     if (spec["type"], spec.get("count")) != (
             expected["type"], expected.get("count")):
         declared = (
             f" of {dimensions(binding.variable)}"
-            if binding.variable.shape else ""
+            if binding.variable.is_array else ""
         )
         raise ManifestError(
             f"Channel {binding.channel!r} declares field {binding.field!r} as "
@@ -524,11 +524,29 @@ def bind_channel(
             scalars.setdefault(binding.variable.kind, []).append(binding)
     _require_every_field_carried(channel, fields, bound, lengths)
     groups: list = [
-        ScalarGroup(kind, bindings) for kind, bindings in scalars.items()
+        _scalar_group(channel, kind, bindings)
+        for kind, bindings in scalars.items()
     ]
     if binaries:
         groups.append(BinaryGroup(binaries, causality))
     return ChannelBinding(groups)
+
+
+def _scalar_group(channel: str, kind: str,
+                  bindings: list[Binding]) -> ScalarGroup:
+    """One type group of a Channel, its buffer allocated before any FMU loads.
+
+    A count can fit `size_t` and still be more memory than this process
+    can have, so a buffer that cannot be allocated is the Run's
+    configuration at fault, refused before stepping.
+    """
+    try:
+        return ScalarGroup(kind, bindings)
+    except (MemoryError, OverflowError) as error:
+        raise ManifestError(
+            f"Channel {channel!r} binds {kind} variables whose values cannot "
+            f"be allocated in one buffer"
+        ) from error
 
 
 def start_value(variable: Variable, text: str):
@@ -550,7 +568,7 @@ def start_value(variable: Variable, text: str):
         raise ManifestError(
             f"start value for FMU variable {variable.name!r}, {problem}"
         )
-    if not variable.shape:
+    if not variable.is_array:
         return _scalar_start(variable, text)
     elements = text.split(" ")
     if len(elements) != variable.value_count:

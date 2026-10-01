@@ -534,10 +534,19 @@ def test_installed_array_fmu_replay_and_coupling_round_trip(
     fixture FMU and back, inspected, authored, run twice inline and twice
     over shared memory with identical Recording bytes, compared element by
     element with the hand-stated reference, refused against a transposed
-    one; and a coupled matrix loop authored and run twice — SiL only from the
-    installed wheel and prefix."""
-    from array_fixture import MODEL_IDENTIFIER, array_fmu
+    one; and a coupled matrix loop authored, run twice and checked against
+    the fixture's rule — SiL only from the installed wheel and prefix."""
+    import struct
+
+    from array_fixture import (
+        MODEL_IDENTIFIER,
+        array_fmu,
+        expected_matrix,
+        nested,
+        row_major,
+    )
     from sil.fmi import library_suffix, platform_directory
+    from sil.recording import read_records
 
     example = ROOT / "examples" / "fmu-array"
     binary = build_dir / f"{MODEL_IDENTIFIER}{library_suffix()}"
@@ -611,6 +620,21 @@ def test_installed_array_fmu_replay_and_coupling_round_trip(
         run("sil-run", "coupled.json", "-o", f"coupled-{attempt}.mcap")
         coupled.append((tmp_path / f"coupled-{attempt}.mcap").read_bytes())
     assert coupled[0] == coupled[1]
+    # Each FMU holds its matrix input at 0 until the first delivery, and each
+    # delivery is the other FMU's previous Message.
+    loop = json.loads((example / "coupling.json").read_text())
+    bias = {name: nested([float(v) for v in fmu["start"][0]["value"].split()])
+            for name, fmu in loop["fmus"].items()}
+    values = {"left.matrix": [], "right.matrix": []}
+    for topic, _, data in read_records(tmp_path / "coupled-1.mcap"):
+        values[topic].append(list(struct.unpack("<6d", data)))
+    held = {"left": [[0.0] * 3] * 2, "right": [[0.0] * 3] * 2}
+    for step in range(4):
+        for name in ("left", "right"):
+            assert values[f"{name}.matrix"][step] == row_major(
+                expected_matrix(held[name], bias[name]))
+        held = {"left": nested(values["right.matrix"][step]),
+                "right": nested(values["left.matrix"][step])}
     assert not list(tmp_path.glob(".sil-run-*"))
 
 

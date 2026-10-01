@@ -221,6 +221,37 @@ class TestShape:
     def test_a_literal_array_of_a_mapped_type_is_mappable(self, kind):
         assert unmappable(variable(kind, (2, 3), 6)) is None
 
+    @pytest.mark.parametrize("kind", ["Float32", "Boolean", "UInt64"])
+    def test_dimensions_of_one_value_are_a_scalar(self, kind):
+        """`<Dimension start="1"/>` is one value written the long way, as it
+        was before arrays were mapped."""
+        one = variable(kind, (1, 1), 1)
+        assert not one.is_array and unmappable(one) is None
+        assert start_value(one, "true" if kind == "Boolean" else "1") in (
+            1, 1.0)
+
+    def test_a_dimension_of_one_keeps_its_scalar_field(self, importer,
+                                                        make_fmu):
+        archive = make_fmu(redeclared("gain_in", '<Dimension start="1"/>'),
+                           "one")
+        participant = importer(archive=archive, starts=["gain_in=0.5"])
+        (_, published), = participant.on_step(0, STEP_PERIOD_NS,
+                                              [Input(IN, 0, WRITTEN)])
+        assert published["gain"] == 2.0
+
+    def test_a_buffer_too_large_to_allocate_is_refused_before_loading(
+        self, importer, make_fmu, monkeypatch
+    ):
+        """2^60 Float32 values fit a size_t count, but not this process."""
+        calls = record_calls(monkeypatch)
+        archive = make_fmu(redeclared(
+            "trim_in", f'<Dimension start="{2**60}"/>'), "huge")
+        schemas = with_fields(lambda f: f["trim"].update(count=2**60))
+        with pytest.raises(ManifestError, match="cannot be allocated"):
+            importer(archive=archive, schemas=schemas,
+                     binds=[b for b in BINDINGS if b.startswith(IN)])
+        assert calls == []
+
     def test_a_dimension_sized_by_a_structural_parameter_is_refused(
         self, importer, make_fmu
     ):
@@ -310,7 +341,8 @@ class TestArrayStartValues:
         assert start_value(variable("UInt64", (2,), 2),
                            "18446744073709551615 9007199254740993") == [
             2**64 - 1, 2**53 + 1]
-        assert start_value(variable("Float32", (1,), 1), "0.1") == [F32_TENTH]
+        assert start_value(variable("UInt32", (8,), 8),
+                           "0 1 2 3 4 5 6 4294967295")[-1] == 2**32 - 1
 
     @pytest.mark.parametrize("text", ["1", "1 2 3 4 5", "1 2 3 4 5 6 7",
                                       "1  2 3 4 5 6", " 1 2 3 4 5 6",

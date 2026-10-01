@@ -216,6 +216,16 @@ class Variable:
     shape: tuple[int | None, ...] = ()
 
     @property
+    def is_array(self) -> bool:
+        """Whether a Channel carries this variable as an array field.
+
+        A variable whose dimensions hold one value is the scalar it was
+        before arrays were mapped: `<Dimension start="1"/>` is one value
+        written the long way.
+        """
+        return bool(self.shape) and self.value_count != 1
+
+    @property
     def media_type(self) -> str | None:
         """The media type alone, without the parameters that qualify it."""
         if self.mime_type is None:
@@ -496,9 +506,9 @@ def array_problem(variable: Variable) -> str | None:
     """Why this importer carries no Channel field for an array, or None.
 
     The reason completes a sentence that opens by naming the variable. A
-    variable that declares no dimension is a scalar and has none.
+    variable of one value is a scalar and has none.
     """
-    if not variable.shape:
+    if not variable.is_array:
         return None
     scalar = SCALARS.get(variable.kind)
     if scalar is None or not scalar.array:
