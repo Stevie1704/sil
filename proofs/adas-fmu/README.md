@@ -1,4 +1,4 @@
-# ADAS reference FMU: reproducible FMI 3.0 export, checked independently (#225)
+# ADAS reference FMU: FMI 3.0 export with archive reproducibility, checked independently (#225)
 
 ```sh
 proofs/adas-fmu/run-proof.sh [evidence-directory]   # needs docker and network
@@ -31,7 +31,7 @@ neither: it takes the qualified archive.
 `prove.py` writes each step's result to `summary.json`, and passes only
 when every step passes:
 
-1. **Reproducible build.** `package.py` compiles the application and the
+1. **Archive reproducibility.** `package.py` compiles the application and the
    FMI interface twice, each in its own scratch directory, and writes two
    archives. The bytes must be identical. The archive digest must equal the
    committed pin, [`evidence/AdasReference.identity.json`](evidence/AdasReference.identity.json).
@@ -49,7 +49,7 @@ when every step passes:
    closing object. The expectations detect a sign error that a native/FMU
    comparison could not: both share the application.
 
-## Identity and reproducibility
+## Identity and archive reproducibility
 
 `package.py` controls every input to the archive bytes:
 
@@ -77,6 +77,7 @@ proof and commit its evidence (below).
 | `float32_inputs` | 7.9999999 is 8 in binary32 (no hazard), 7.9999995 stays below 8 (hazard) | inputs are binary32 |
 | `float32_outputs` | `max_change_mps2` 0.1: binary64 steps rounded once to binary32 | outputs are binary32, parameters Float64 |
 | `uint64_sample_times` | start at 10^16 ns, Sample times 1 ns before the activation: age 1 ns | UInt64 above 2^53 is exact |
+| `late_start` | start at 9·10^18 ns, step at the points the FMU reports | valid steps near the 2^63 ns start limit, where a double second is coarser than 1 µs |
 | `held_inputs` | an unchanged header delivers nothing; a new header with an old sequence is ignored and counted | the delivery convention |
 | `parameters` | out-of-range parameters fail initialization; a parameter after initialization, an output, a wrong type or count is refused; reset recovers | parameter rejection |
 | `fixed_step` | a 20 ms step and a skipped point fail | the fixed 10 ms step is enforced |
@@ -118,6 +119,6 @@ The committed evidence was written under linux/amd64 emulation on an arm64
 host. The `proof-adas-fmu` workflow runs the same proof on native Linux
 x86-64 and must reproduce the pinned digest.
 
-The archive itself is not committed: the pin and the reproducible build
+The archive itself is not committed: the pin and its archive reproducibility
 define it. Run the proof to get it, in `AdasReference.fmu` of the evidence
 directory.

@@ -56,8 +56,8 @@ read a reference mismatch or an unsupported FMU.
 
 [proofs/adas-fmu/](../proofs/adas-fmu/README.md) exports the
 [ADAS reference application](adas-reference.md#fmi-30-export) as an FMI 3.0
-Co-Simulation FMU and qualifies it without SiL's importer: a reproducible,
-pinned build on Linux x86-64, an interface audit, and an FMPy run against
+Co-Simulation FMU and qualifies it without SiL's importer: archive
+reproducibility and a pinned digest on Linux x86-64, an interface audit, and an FMPy run against
 independently enumerated trajectories. It is the reference artifact for the
 importer's type and array support, not a supplier FMU.
 

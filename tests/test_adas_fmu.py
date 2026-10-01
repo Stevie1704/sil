@@ -2,7 +2,7 @@
 
 The proof in `proofs/adas-fmu/` builds the archive on Linux x86-64 in a
 pinned image and drives it with FMPy. These tests run what needs neither:
-the packaging is byte-reproducible on this host, the archive declares the
+archive reproducibility of the packaging on this host, the archive declares the
 profile's interface, SiL's current inspection refuses the recorded-input
 mapping only for missing types and arrays, and the committed pin still
 names the sources in this checkout.
