@@ -1,6 +1,6 @@
 {
   "define": "ADAS_REFERENCE_WRONG_SIGN",
-  "archive_sha256": "e1569d4c42e34a00591e2a2409fd5dbbcedad5ac7be6b981321909508ea46367",
+  "archive_sha256": "70ac1c71fde6c385d26914c45910c8b0435bf6fd6d8ca73b741d663706c92a7d",
   "failed": [
     "maneuver_boundaries",
     "maneuver_hazard",

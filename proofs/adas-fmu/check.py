@@ -372,6 +372,27 @@ def uint64_sample_times(archive: Archive) -> dict:
             commands[-1]["sample_time_ns"]}
 
 
+def late_start(archive: Archive) -> dict:
+    """Near the 2^63 ns start limit a double second is coarser than 1 us.
+    Steps at the points the FMU itself reports are still accepted, and the
+    Sample times stay exact."""
+    start = 9_000_000_000_000_000_000
+    instance = Instance(archive, "late-start")
+    instance.initialize(start_ns=start)
+    point = start / 1e9
+    commands = []
+    for _ in range(5):
+        _, _, _, point = instance.slave.doStep(point, PERIOD_NS / 1e9)
+        commands.append(instance.command())
+    instance.free()
+    compare(commands, [
+        command(start + k * PERIOD_NS, k + 1, UNAVAILABLE, NO_OBJECT, -3,
+                max(-0.5 * (k + 1), -3.0), (NO_AGE,) * 3)
+        for k in range(5)])
+    return {"start_ns": start, "final_sample_time_ns":
+            commands[-1]["sample_time_ns"]}
+
+
 def held_inputs(archive: Archive) -> dict:
     """An unchanged header delivers nothing; a changed header with a
     sequence that does not increase is delivered, ignored and counted."""
@@ -590,6 +611,7 @@ def termination(archive: Archive) -> dict:
 
 CASES = [maneuver_case(m) for m in prepare.MANEUVERS] + [
     start_values, float32_inputs, float32_outputs, uint64_sample_times,
+    late_start,
     held_inputs, parameters, fixed_step, malformed_inputs, two_instances,
     instantiation_refused, termination,
 ]

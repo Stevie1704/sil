@@ -464,8 +464,10 @@ after it. A value outside the [parameter ranges](#parameters) fails
 Each `fmi3DoStep` is one activation at its communication point t, over
 [t, t + 10 ms]. The step is fixed: `canHandleVariableCommunicationStepSize`
 is false and `fixedInternalStepSize` is 0.01 s. A step that is not 10 ms to
-the nanosecond, or at another point than the FMU's next one (within 1 µs),
-fails with `fmi3Error`; it is never rescaled. The start time must be below
+the nanosecond, or at another point than the FMU's next one, fails with
+`fmi3Error`; it is never rescaled. A point matches when it is within 1 µs,
+or within 4 units in the last place of a double where seconds are coarser
+than that, near the start limit. The start time must be below
 2^63 ns. The start time is rounded to the nearest
 nanosecond, and the FMU counts Virtual time in integer nanoseconds from it.
 

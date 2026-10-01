@@ -13,7 +13,7 @@
       "version": "3",
       "generationTool": "SiL examples/adas-reference/fmu (hand-written FMI 3.0 interface)",
       "license": "Apache-2.0; documentation/licenses/ holds every license",
-      "instantiationToken": "a9729b2057a5781db2ff33c53f32245d9c317bfb1f539697a9f35d526b8ba17f"
+      "instantiationToken": "875fa22861b19b80613fc91b157614d1320ab403fd2a42123d18fca0ed1ad89d"
     },
     "interfaces": [
       "CoSimulation"

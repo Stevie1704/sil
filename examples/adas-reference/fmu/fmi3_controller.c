@@ -45,10 +45,11 @@
 #define CAPACITY ADAS_REF_MAX_OBJECTS
 #define NO_SAMPLE_TIME UINT64_MAX
 #define NO_SEQUENCE UINT32_MAX
-/* How far a communication point may lie from the FMU's own next point. A
- * double holds seconds: at 1e7 s its resolution is about 2 ns, and it is
- * finer than this tolerance below about 2^62 ns. */
-#define POINT_TOLERANCE_NS 1000.0
+/* How far a communication point may lie from the FMU's own next point: 1 us,
+ * or 4 units in the last place of that point in seconds where a double is
+ * coarser. Near the 2^63 ns start limit one unit is about 1 us. */
+#define POINT_TOLERANCE_S 1e-6
+#define POINT_TOLERANCE_ULPS 4.0
 /* Virtual time starts below 2^63 ns, so llround cannot overflow. */
 #define START_LIMIT_NS 9223372036854775808.0
 
@@ -461,7 +462,10 @@ static int is_fixed_step(instance *self, double point, double step) {
          step, ADAS_REF_PERIOD_NS);
     return 0;
   }
-  if (!(fabs(point * 1e9 - (double)self->next_ns) <= POINT_TOLERANCE_NS)) {
+  double next_s = (double)self->next_ns / 1e9;
+  double ulp = nextafter(next_s, INFINITY) - next_s;
+  if (!(fabs(point - next_s) <=
+        fmax(POINT_TOLERANCE_S, POINT_TOLERANCE_ULPS * ulp))) {
     fail(self,
          "currentCommunicationPoint %.17g s is not the next point %" PRIu64
          " ns",

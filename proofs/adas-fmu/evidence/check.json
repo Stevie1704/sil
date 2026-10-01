@@ -1,7 +1,7 @@
 {
   "fmu": "AdasReference.fmu",
-  "archive_sha256": "ab63ff1390934f1ce15af8e8feba0712c230cd6a660c37871b9e0a4ed6b43cdd",
-  "instantiation_token": "a9729b2057a5781db2ff33c53f32245d9c317bfb1f539697a9f35d526b8ba17f",
+  "archive_sha256": "f99c95f06ac97a7ce0ade263fe191cc8579c1e93355d360680b2ae72c5d503ab",
+  "instantiation_token": "875fa22861b19b80613fc91b157614d1320ab403fd2a42123d18fca0ed1ad89d",
   "importer": "FMPy 0.3.26",
   "platform": "x86_64-linux",
   "passed": true,
@@ -110,6 +110,14 @@
       }
     },
     {
+      "case": "late_start",
+      "passed": true,
+      "detail": {
+        "start_ns": 9000000000000000000,
+        "final_sample_time_ns": 9000000000050000000
+      }
+    },
+    {
       "case": "held_inputs",
       "passed": true,
       "detail": {
@@ -185,7 +193,7 @@
             },
             "importer": "Failed to instantiate FMU",
             "diagnostics": [
-              "the instantiation token another is not this FMU's a9729b2057a5781db2ff33c53f32245d9c317bfb1f539697a9f35d526b8ba17f"
+              "the instantiation token another is not this FMU's 875fa22861b19b80613fc91b157614d1320ab403fd2a42123d18fca0ed1ad89d"
             ]
           },
           {
