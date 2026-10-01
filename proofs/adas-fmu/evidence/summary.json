@@ -1,0 +1,32 @@
+{
+  "archive_sha256": "ab63ff1390934f1ce15af8e8feba0712c230cd6a660c37871b9e0a4ed6b43cdd",
+  "reproducible": {
+    "first_sha256": "ab63ff1390934f1ce15af8e8feba0712c230cd6a660c37871b9e0a4ed6b43cdd",
+    "second_sha256": "ab63ff1390934f1ce15af8e8feba0712c230cd6a660c37871b9e0a4ed6b43cdd",
+    "identical": true,
+    "pinned_sha256": "ab63ff1390934f1ce15af8e8feba0712c230cd6a660c37871b9e0a4ed6b43cdd",
+    "matches_pin": true
+  },
+  "audit_findings": [],
+  "check_passed": true,
+  "control": {
+    "define": "ADAS_REFERENCE_WRONG_SIGN",
+    "archive_sha256": "e1569d4c42e34a00591e2a2409fd5dbbcedad5ac7be6b981321909508ea46367",
+    "failed": [
+      "maneuver_boundaries",
+      "maneuver_hazard",
+      "maneuver_ordering",
+      "maneuver_release",
+      "two_instances"
+    ],
+    "expected_failures": [
+      "maneuver_boundaries",
+      "maneuver_hazard",
+      "maneuver_ordering",
+      "maneuver_release",
+      "two_instances"
+    ],
+    "detected": true
+  },
+  "passed": true
+}

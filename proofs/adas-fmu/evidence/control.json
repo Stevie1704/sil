@@ -1,0 +1,19 @@
+{
+  "define": "ADAS_REFERENCE_WRONG_SIGN",
+  "archive_sha256": "e1569d4c42e34a00591e2a2409fd5dbbcedad5ac7be6b981321909508ea46367",
+  "failed": [
+    "maneuver_boundaries",
+    "maneuver_hazard",
+    "maneuver_ordering",
+    "maneuver_release",
+    "two_instances"
+  ],
+  "expected_failures": [
+    "maneuver_boundaries",
+    "maneuver_hazard",
+    "maneuver_ordering",
+    "maneuver_release",
+    "two_instances"
+  ],
+  "detected": true
+}

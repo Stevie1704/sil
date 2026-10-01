@@ -114,6 +114,10 @@ accept.
 | `control.json` | the wrong-sign control: which cases failed |
 | `image-id.txt` | the preparation image the evidence came from |
 
+The committed evidence was written under linux/amd64 emulation on an arm64
+host. The `proof-adas-fmu` workflow runs the same proof on native Linux
+x86-64 and must reproduce the pinned digest.
+
 The archive itself is not committed: the pin and the reproducible build
 define it. Run the proof to get it, in `AdasReference.fmu` of the evidence
 directory.

@@ -1,0 +1,33 @@
+{
+  "profile": "sil.adas-reference.radar-camera",
+  "profile_version": 3,
+  "model_identifier": "AdasReference",
+  "platform": "x86_64-linux",
+  "compiler": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+  "flags": [
+    "-std=c11",
+    "-O2",
+    "-fPIC",
+    "-shared",
+    "-ffp-contract=off",
+    "-fvisibility=hidden",
+    "-Wall",
+    "-Wextra"
+  ],
+  "defines": [],
+  "sources": {
+    "adas_reference.c": "180781cb20d2ac514d7466dc92ac1d862b8ee5a6ecf21ec80e8237942ebbded2",
+    "adas_reference.h": "53b54f5449bc26efc2670b38ac3c1fef5be98f53376bf29620f6b93d3f50e8ba",
+    "fmi3_controller.c": "6b1daaf15c8245f5d73288530658b61ca11d8650e13520f6fe95c2149064cfdb",
+    "fmi3Functions.h": "038358fb0209c3547fe8c6f03b80582960c93ce0a7d342b0d9348c8ce6137784",
+    "fmi3FunctionTypes.h": "d247d1c5fbf58e32379f1d38e7f73990709e0501fc4a9b3901ce3f9638503a0f",
+    "fmi3PlatformTypes.h": "1aa81efddeb84b0d9425f9226969525bd034cb63848c086b6696655179500616",
+    "modelDescription.xml": "d8d6ae4339aa602c5b3f7b64e1d891d83914b00898ec23640e2ae796fe6b1578"
+  },
+  "licenses": {
+    "documentation/licenses/LICENSE-SiL.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "documentation/licenses/LICENSE-FMI.txt": "87d654ef1602042c46d240872f142c401291ac3da65ef1a9345717208c060939"
+  },
+  "instantiation_token": "a9729b2057a5781db2ff33c53f32245d9c317bfb1f539697a9f35d526b8ba17f",
+  "archive_sha256": "ab63ff1390934f1ce15af8e8feba0712c230cd6a660c37871b9e0a4ed6b43cdd"
+}
