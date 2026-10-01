@@ -114,9 +114,16 @@ _Avoid_: spec, standard, interface version
 **Object list**:
 One sensor's complete set of processed objects at one Sample time: a header
 with an active count, and flat fixed-capacity arrays whose inactive elements
-are zero. Each list replaces the previous one; nothing is kept from one list to
-the next.
+are zero. Each accepted list replaces the sensor's previous one; nothing is
+kept from one list to the next.
 _Avoid_: track list, object vector
+
+**Observation age**:
+The Virtual time of an activation minus the Sample time of the observation a
+consumer holds. It never counts from publication or arrival, so an
+observation delivered late is as old as its Sample time says. A freshness
+limit bounds it; an age equal to the limit is still fresh.
+_Avoid_: latency, staleness, delay when naming the age itself
 
 **vECU**:
 A piece of vehicle software under test, brought into a run as a participant.

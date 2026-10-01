@@ -7,8 +7,9 @@ Commands below run from the repository root unless stated otherwise.
 ## What it is
 
 [examples/adas-reference/](../examples/adas-reference/) is a small C
-application that consumes bounded lists of processed radar and camera objects
-and commands a longitudinal acceleration. It runs through the
+application that receives bounded lists of processed radar and camera objects
+and ego motion, each sensor at its own Period, holds the last accepted
+observation of each sensor, and commands a longitudinal acceleration. It runs through the
 [Native participant ABI](../include/sil/participant.h), and its output is
 compared with hand-enumerated expected trajectories. It is intentionally
 simplified example coverage for the path C application → Native participant
@@ -24,9 +25,10 @@ records why it exists.
 | `schemas.json` | the SiL Schemas; `silschema` generates `adas_messages.h` from them |
 | `maneuvers/<name>.csv` | the authored radar and camera object lists and ego speed of each maneuver |
 | `maneuvers/<name>.expected.csv` | the expected trajectory of each maneuver, enumerated by hand |
+| `maneuvers/cadence.<experiment>.expected.csv` | the expected trajectory of each [experiment](#experiments), enumerated by hand |
 | `mapping.json`, `expected-mapping.json`, `contract.json` | the `sil-csv` mappings and the `sil-compare` contract of one maneuver, without a Channel prefix |
 | `prepare.py` | expands every maneuver to the flat Schema form, converts it with its Channel prefix and writes its contract |
-| `manifest.py` | the Run: one Replay participant and one Native participant per maneuver, one library |
+| `manifest.py` | the Run: one Replay participant and one Native participant per maneuver, one library; the experiments and their authoring checks |
 | `run.sh` | the one-command demonstration over installed SiL interfaces |
 
 ## Run it
@@ -43,21 +45,35 @@ same script. The script:
 
 1. generates `adas_messages.h` with `silschema`;
 2. builds the library, and the same sources with
-   `-DADAS_REFERENCE_WRONG_SIGN`, against the installed `include/sil`;
+   `-DADAS_REFERENCE_WRONG_SIGN` and with `-DADAS_REFERENCE_ARRIVAL_TIME`,
+   against the installed `include/sil`;
 3. expands and converts the maneuvers with `prepare.py`;
-4. runs the Manifest twice and requires identical Recording bytes (`cmp`);
-5. compares each maneuver's Commands with its expected trajectory;
+4. runs the reference Manifest and each experiment Manifest twice and
+   requires identical Recording bytes (`cmp`);
+5. compares each maneuver's and each experiment's Commands with its expected
+   trajectory;
 6. runs the wrong-sign build and requires the `hazard` and `ordering`
-   comparisons to fail (exit 1). This is the control that shows the comparison detects a
-   coordinate sign error.
+   comparisons to fail (exit 1). This is the control that shows the
+   comparison detects a coordinate sign error;
+7. runs the arrival-time build under the `delay` experiment and requires its
+   comparison to fail (exit 1). This is the control that shows the
+   comparison detects an age counted from arrival instead of from the Sample
+   time.
 
 ## Reference profile
 
-The profile is `sil.adas-reference.radar-camera`, version 2. A change to a
+The profile is `sil.adas-reference.radar-camera`, version 3. A change to a
 field, a unit, a constant, the capacity or the time convention below makes a
 new version. Each Native config names the profile and its version, and the
 library refuses any other. Version 1 carried one object per sensor; version
-2 carries bounded lists and replaces it.
+2 carried bounded lists and consumed only observations sampled at the
+activation time. Version 3 holds the last accepted observation of each
+sensor, judges its freshness from its Sample time, and adds the ages and an
+ignored-observation counter to the Command. It replaces version 2.
+
+The freshness limits, the sequence rule and the treatment of future Sample
+times below are reference policies for test coverage. They are not
+production stale-data requirements; a selected target replaces them.
 
 ### Frame and units
 
@@ -69,23 +85,26 @@ other frame is rejected; the profile never transforms coordinates.
 
 ### Inputs
 
-Each maneuver has three input Channels, sampled every 10 ms: `radar` and
-`camera` carry an `adas.ObjectList`, `ego` carries an `adas.EgoMotion`.
+Each maneuver has three input Channels: `radar` and `camera` carry an
+`adas.ObjectList`, `ego` carries an `adas.EgoMotion`. Each sensor publishes
+at its own Period. The `cadence` maneuver uses the reference Periods: radar
+20 ms, camera 40 ms, ego motion 10 ms. The other maneuvers sample every
+sensor every 10 ms, and some omit observations.
 
 An object list is one sensor's complete set of processed objects at one
 Sample time. Its objects are flat arrays of capacity 8 and an active count:
-elements `[0, count)` are the active objects, in any order. Each list
-replaces the previous one; the controller keeps no object between
-activations, so an object that is not listed has disappeared. The capacity
+elements `[0, count)` are the active objects, in any order. An accepted list
+replaces the held list of its sensor; the controller keeps no track, so an
+object that is not listed has disappeared. The capacity
 of 8 is an example limit for test coverage, not a sensor or hardware
 recommendation.
 
 | Schema | Field | Type | Meaning and validity |
 | --- | --- | --- | --- |
-| `adas.ObjectList` | `sample_time_ns` | u64 | the time the list describes; must equal the activation time |
+| `adas.ObjectList` | `sample_time_ns` | u64 | the time the list describes; not after the activation time that receives it |
 | | `sensor_id` | u32 | `1` on the radar Channel, `2` on the camera Channel; any other value is rejected |
 | | `frame_id` | u32 | `1`, the ego frame; any other value is rejected |
-| | `sequence` | u32 | the sensor's message counter; carried, not interpreted |
+| | `sequence` | u32 | the sensor's message counter; increases within a Run, with no wrap |
 | | `count` | u32 | active objects, `0` to `8`; a larger count is rejected, never truncated |
 | | `validity` | u8 | `1` valid, `0` the sensor has no usable list; any other value is rejected |
 | | `object_id` | i32[8] | active IDs `>= 0` and unique within the list; `-1` is reserved for "no selection" |
@@ -94,7 +113,7 @@ recommendation.
 | | `confidence` | f32[8] | detection confidence; finite, in `[0, 1]` |
 | `adas.EgoMotion` | `sample_time_ns`, `sequence` | u64, u32 | as in the list |
 | | `validity` | u8 | as in the list |
-| | `speed_mps` | f32 | ego speed; finite and `>= 0`. Required sensing; profile 2 does not use its value |
+| | `speed_mps` | f32 | ego speed; finite and `>= 0`. Required sensing; profile 3 uses only its validity, Sample time and sequence |
 
 Radar and camera object IDs are independent: the same number on both
 Channels names unrelated objects. Every inactive element is zero, all bits,
@@ -104,15 +123,21 @@ the adapter rejects a list that does not.
 
 The adapter checks `count` against the capacity before it reads an element,
 then checks that every inactive element is zero. The application then checks
-every header field and every active element, also when `validity` is 0. A failed check fails the Run (exit 1). The diagnostic names
-the Participant, the activation time, the sensor, the field and, for an
-array, the element:
+every header field and every active element, also when `validity` is 0. A
+Sample time after the activation time is malformed. A failed check fails the
+Run (exit 1). The diagnostic names the Participant, the activation time, the
+sensor, the field and, for an array, the element:
 
 ```text
 participant 'live' failed: t=20000000 ns: radar.x_m[0] is not finite: nan
 participant 'live' failed: t=0 ns: radar.count 9 exceeds the capacity 8
 participant 'live' failed: t=10000000 ns: radar.object_id[1] 7 repeats radar.object_id[0]
+participant 'cadence' failed: t=40000000 ns: camera.sample_time_ns 50000000 is after the activation time 40000000; a future Sample time is malformed
 ```
+
+A repeated or decreasing `sequence` is not malformed: the observation is
+ignored and counted, and the Run continues. The counter is part of the
+Command, so the comparison checks it.
 
 ### Output
 
@@ -124,15 +149,29 @@ participant 'live' failed: t=10000000 ns: radar.object_id[1] 7 repeats radar.obj
 | | `selected_object_id` | i32 | the selected radar object's ID, or `-1` for none |
 | | `target_acceleration_mps2` | f32 | the acceleration the mode asks for |
 | | `acceleration_mps2` | f32 | the commanded, rate-limited acceleration |
+| | `radar_age_ns`, `camera_age_ns`, `ego_age_ns` | i64 | the age at t of the sensor's held observation, valid or not; `-1` while nothing is held |
+| | `ignored_observations` | u32 | observations ignored for their sequence since the start of the Run |
 
 ### Behavior
 
 At each activation t:
 
-1. **Availability.** When a radar, camera or ego Message for t is absent, or
-   has `validity` 0, the mode is SENSOR_UNAVAILABLE and no object is
-   selected. A valid list with `count` 0 is available: it reports that the
-   sensor sees nothing.
+0. **Receive.** The controller drains each input route, radar, camera, then
+   ego, and receives every delivered Message in Publish order. An
+   observation whose `sequence` does not exceed the sensor's held sequence
+   is a duplicate or a regression: it is ignored, counted, and does not
+   refresh the age. Any other observation, valid or not, becomes the
+   sensor's held observation.
+1. **Availability.** A sensor is available when it holds an observation
+   with `validity` 1 whose age is within the sensor's freshness limit. The
+   age is t minus the observation's `sample_time_ns`; publication and
+   arrival time do not count. The limits are radar 40 ms, camera 80 ms and
+   ego motion 20 ms. An age equal to the limit is fresh, a greater age is
+   stale. Before its first observation a sensor is unavailable; after an
+   observation with `validity` 0 it is unavailable until a later valid one.
+   When any of the three sensors is unavailable, the mode is
+   SENSOR_UNAVAILABLE and no object is selected. A valid list with `count` 0
+   is available: it reports that the sensor sees nothing.
 2. **Eligibility.** An object is eligible when `x > 0`, `|y| <= 1.5 m` and
    `confidence >= 0.5`.
 3. **Confirmation.** A radar object is confirmed when it is eligible and at
@@ -155,15 +194,21 @@ At each activation t:
 7. **Rate limit.** The commanded acceleration starts at 0 and moves toward
    the target by at most `max_change_mps2` per activation.
 
-With at most one object per sensor, steps 1 to 7 give the results of
-profile 1: the five profile 1 maneuvers keep their expected trajectories.
+Steps 2 to 7 use the held radar and camera lists, which can have different
+Sample times: a radar list sampled at 140 ms is combined with the camera
+list sampled at 120 ms until the next camera list arrives.
+
+With every sensor sampled at each activation, the steps give the results of
+profile 2, and with at most one object per sensor those of profile 1. The
+eight earlier maneuvers keep their modes and accelerations; their expected
+trajectories add the ages and the counter.
 
 ### Parameters
 
 | Config key | Type | Range | Reference value |
 | --- | --- | --- | --- |
 | `profile` | string | `sil.adas-reference.radar-camera` | |
-| `profile_version` | integer | `2` | |
+| `profile_version` | integer | `3` | |
 | `radar`, `camera`, `ego`, `command` | string | declared Channels | `<maneuver>.radar`, … |
 | `period_ns` | integer | `10000000` only | `10000000` |
 | `hazard_acceleration_mps2` | number | finite, `[-10, 0)` | `-3` |
@@ -174,15 +219,37 @@ value of the wrong kind, a value outside its range, or another Period fails
 initialization before the first Step, as a Manifest error (exit 2). A
 different Period is rejected, never rescaled.
 
-### Time
+### Time, scheduling and replay order
 
-Inputs sampled at t are consumed by the activation at t. Input Channels have
-`latency_ns` 0, and a Replay participant without a priority publishes before
-every activation of the Slot. The activation advances the state over
-[t, t + 10 ms] and publishes, in Slot t, a Command with `sample_time_ns`
-t + 10 ms. The Recording stores the publication Slot t. This is the
-convention of the [FMU importer](fmi.md): the comparison contract uses an
-`actual_offset_ns` of one Period.
+The controller is one Native Task: Period 10 ms, offset 0, priority 0. Each
+maneuver's Replay participant has no priority, so it publishes the Messages
+of a Slot before every activation of that Slot, in Publish order. Input
+Channels have `latency_ns` 0, so a Message published in Slot t is drained by
+the activation at t. An observation sampled at t is therefore received at t
+with age 0, unless an Interceptor or a Latency delays it.
+
+Each input route holds three Messages and fails the Run on overflow. A
+delayed Message holds its place in the route from its publication until it
+is drained, and a later Message on the same Channel waits behind it: routes
+deliver in Publish order, never by delayed time. The `delay` experiment
+keeps three radar lists in one route.
+
+The activation advances the state over [t, t + 10 ms] and publishes, in
+Slot t, a Command with `sample_time_ns` t + 10 ms. The Recording stores the
+publication Slot t. This is the convention of the [FMU importer](fmi.md):
+the comparison contract uses an `actual_offset_ns` of one Period.
+
+A change to this schedule changes the result. `manifest.py` accepts an
+input Latency of 0 or one Period: one Period delivers every observation one
+activation later, and the `late` experiment compares that predicted
+trajectory. It rejects every other input Latency and every replay priority
+before the Run, with `ExperimentError`, because the profile predicts no
+trajectory for them:
+
+```text
+input latency 20000000 ns: the profile predicts input Latency 0 or one controller Period (10000000 ns) only
+replay priority 1: the replay publishes before every activation of its Slot; the profile does not predict a replay ordered among the activations
+```
 
 ### Arithmetic and tolerance
 
@@ -190,7 +257,9 @@ Each f32 input is converted once to binary64. All reference arithmetic is
 binary64. The two output accelerations are rounded to f32 once, when the
 Command is written. The comparison contract is exact for every field: integer
 fields are `"exact"` and both accelerations are `{"atol": 0, "rtol": 0}`.
-This holds because the reference values are multiples of 0.5, which binary32
+Ages are integer nanoseconds and the freshness comparisons are integer
+comparisons. The accelerations are exact because the reference values are
+multiples of 0.5, which binary32
 and binary64 represent exactly. Each endpoint case in the maneuvers (`x = 8`,
 a time to collision of exactly 2 s, the association and eligibility limits)
 uses binary32 values for which the comparison is exact. Selection compares
@@ -202,14 +271,18 @@ threshold compared with the rounding error.
 Build constraints: IEEE 754 binary64 `double`, round to nearest, and no
 value-changing optimization. The source refuses `-ffast-math` at compile time.
 The CMake targets and `run.sh` build with `-ffp-contract=off`, because Clang
-contracts floating-point expressions by default, also in ISO C mode. Profile 2
+contracts floating-point expressions by default, also in ISO C mode. Profile 3
 has no expression that a contraction could fuse; the flag keeps that true when
 the arithmetic changes.
 
 ### Lifecycle and ownership
 
-The application has `adas_ref_init`, `adas_ref_advance`, `adas_ref_reset`
-and `adas_ref_terminate`. The caller owns each `adas_ref_instance`. The
+The application has `adas_ref_init`, `adas_ref_receive_radar`,
+`adas_ref_receive_camera`, `adas_ref_receive_ego`, `adas_ref_advance`,
+`adas_ref_reset` and `adas_ref_terminate`. The caller passes each delivered
+observation to a receive function, in Publish order, then advances at the
+same t. The caller owns each `adas_ref_instance`, and the held observations
+live in it; reset forgets them. The
 application keeps no global state, starts no thread, opens no file or
 socket, reads no clock, and allocates no memory. All work happens inside
 the registered Task, with the Virtual time the kernel passes.
@@ -225,7 +298,9 @@ ABI.
 ## Maneuvers and the oracle
 
 Each maneuver is 20 activations, from 0 ms to 190 ms. The expected
-trajectories are written row by row from the behavior above. The oracle is
+trajectories are written row by row from the behavior above, and compare
+every output field, ages and counter included, up to the final Sample time
+200 ms. The oracle is
 `sil-compare` against these rows: it does not call the C application, import
 its code, or use the output of an earlier Run.
 
@@ -237,7 +312,8 @@ object `id x_m y_m confidence`. The ego cell is empty, `invalid` or a speed.
 `prepare.py` expands each row to the flat Schema form: the header, the
 active objects first and zero in every inactive element, one CSV column per
 array element. It rejects a list longer than 8 rather than truncate it.
-`sil-csv` then converts the expanded CSV under `mapping.json`. Its receipt
+The sequence of every observation is its row index, so it increases within
+the maneuver. `sil-csv` then converts the expanded CSV under `mapping.json`. Its receipt
 records the digests of the expanded CSV, the prefixed mapping and the
 Recording; `prepare.py` writes identical bytes on every run.
 
@@ -251,13 +327,80 @@ Recording; `prepare.py` writes identical bytes on every run.
 | `occupancy` | empty, single and full (8) lists; a full list whose nearer objects are unconfirmed, ineligible or of low confidence; the same lists with the camera array permuted; validity 0 on each sensor in turn; a full list whose nearest object is a hazard |
 | `turnover` | objects that appear, disappear and reappear, with no retained track; camera IDs that equal or swap with radar IDs; camera detections that match no radar object, also with an equal ID; the association limits |
 | `ordering` | equal distances broken by the smaller radar ID, at IDs `0` and `2147483646`; the same lists permuted, up to eight objects at one distance; a nearer non-hazardous object selected ahead of a farther closing one |
+| `cadence` | radar every 20 ms, camera every 40 ms, ego motion every 10 ms; a near radar object from 140 ms that the held camera list confirms only from 160 ms; the base of the [experiments](#experiments) |
+| `freshness` | radar first at 20 ms and camera first at 40 ms; each sensor at its exact freshness limit (fresh) and one Period past it (stale); recovery with the next observation |
 
 The first five are the profile 1 maneuvers, with each object as a list of
-one and each "no object" as an empty list. Their expected trajectories are
+one and each "no object" as an empty list. Their modes and accelerations are
 unchanged.
 
 The wrong-sign build computes closing speed from `+relative_vx`. The hazard
 comparison then fails at the first observation: mode 0 where 1 is expected.
+
+### Expected deliveries, held values and ages
+
+The rows below are part of the enumerated trajectories. An activation
+receives the listed observations, named by their Sample time in ms; the
+ages are those of the held observations. `U` is SENSOR_UNAVAILABLE, `C`
+CLEAR, `H` HAZARD. The acceleration is the one commanded for the Sample
+time t + 10 ms.
+
+| Case | t (ms) | Delivered | Held radar, camera, ego | Ages (ms) | Mode | Acceleration |
+| --- | --- | --- | --- | --- | --- | --- |
+| `cadence`: first activations | 0 | radar 0, camera 0, ego 0 | 0, 0, 0 | 0, 0, 0 | C | 0 |
+| | 10 | ego 10 | 0, 0, 10 | 10, 10, 0 | C | 0 |
+| | 20 | radar 20, ego 20 | 20, 0, 20 | 0, 20, 0 | C | 0 |
+| | 30 | ego 30 | 20, 0, 30 | 10, 30, 0 | C | 0 |
+| `cadence`: held camera list | 140 | radar 140 (near object 31), ego 140 | 140, 120, 140 | 0, 20, 0 | C, object 30 | 0 |
+| | 160 | radar 160, camera 160, ego 160 | 160, 160, 160 | 0, 0, 0 | H, object 31 | −0.5 |
+| `late`: first activations | 0 | nothing | none | −1, −1, −1 | U | −0.5 |
+| | 10 | radar 0, camera 0, ego 0 | 0, 0, 0 | 10, 10, 10 | C | 0 |
+| `freshness`: missing initial data | 0 | ego 0 | none, none, 0 | −1, −1, 0 | U | −0.5 |
+| | 20 | radar 20, ego 20 | 20, none, 20 | 0, −1, 0 | U | −1.5 |
+| | 40 | all three at 40 | 40, 40, 40 | 0, 0, 0 | C | −1.5 |
+| `freshness`: ego limit 20 ms | 70 | nothing | 60, 40, 50 | 10, 30, 20 | C | 0 |
+| | 80 | radar 80, camera 80 | 80, 80, 50 | 0, 0, 30 | U | −0.5 |
+| | 90 | ego 90 | 80, 80, 90 | 10, 10, 0 | C | 0 |
+| `freshness`: radar limit 40 ms | 140 | ego 140 | 100, 80, 140 | 40, 60, 0 | C | 0 |
+| | 150 | ego 150 | 100, 80, 150 | 50, 70, 0 | U | −0.5 |
+| `freshness`: camera limit 80 ms | 160 | radar 160, ego 160 | 160, 80, 160 | 0, 80, 0 | C | 0 |
+| | 170 | ego 170 | 160, 80, 170 | 10, 90, 0 | U | −0.5 |
+| | 180 | radar 180, camera 180, ego 180 | 180, 180, 180 | 0, 0, 0 | C | 0 |
+| `delay`: delayed old list | 80 | camera 80, ego 80 | 40, 80, 80 | 40, 0, 0 | C | 0 |
+| | 90 | ego 90 | 40, 80, 90 | 50, 10, 0 | U | −0.5 |
+| | 110 | radar 60, ego 110 | 60, 80, 110 | 50, 30, 0 | U | −1.5 |
+| `delay`: simultaneous arrival | 130 | radar 80, 100, 120 in that order, ego 130 | 120, 120, 130 | 10, 10, 0 | C | −1.5 |
+
+At 110 ms of `delay`, the radar list sampled at 60 ms arrives 50 ms after its
+Sample time. It is held, but its age is 50 ms, so it is stale on arrival:
+the controller does not treat it as new sensing. The arrival-time build
+counts its age from 110 ms, reports age 0 and mode CLEAR, and the comparison
+fails at the observation 120 ms on `mode`: 0 where 2 is expected.
+
+## Experiments
+
+An experiment runs the `cadence` maneuver alone, in its own Manifest that
+differs from the nominal `cadence` Manifest only by the declared Interceptors
+or the input Latency. Each is compared with
+`maneuvers/cadence.<experiment>.expected.csv`, and each repeats
+byte-identically. The Interceptors act on the Run's input Channels only: the
+authored input Recording, the expected Recording and the comparison stay
+outside every faulted path.
+
+| Experiment | Declaration | What it shows |
+| --- | --- | --- |
+| `drop` | `drop` on `camera` for publications in [40, 100) ms | lost camera lists: fresh at age 80 ms (t = 80 ms), stale from 90 ms, recovery with the list sampled at 120 ms |
+| `delay` | `delay` of 50 ms on `radar` for publications in [60, 100) ms | a delayed old list is stale on arrival; three lists arrive in one Slot, in Publish order; recovery at 130 ms |
+| `rewrite` | `override` of `radar.validity` to 0 in [100, 120) ms; `override` of `ego.sequence` to 14 in [150, 180) ms | an invalid list makes radar unavailable until the next valid one; three duplicate ego sequences are ignored and counted, and ego motion goes stale at 170 ms |
+| `late` | `latency_ns` of one Period on every input Channel | every observation one activation later: unavailable at 0 ms, then ages one Period greater |
+
+The tests in
+[tests/test_example_adas_reference.py](../tests/test_example_adas_reference.py)
+also show that a delay of 70 ms in the same window fills four places of a
+route that holds three, and fails the Run with the route diagnostic; that
+an Interceptor writing a future Sample time fails the Run as malformed
+input; and that an expectation with one wrong age fails the comparison at
+that age's Sample time.
 
 The tests in
 [tests/test_example_adas_reference.py](../tests/test_example_adas_reference.py)
@@ -266,8 +409,9 @@ each to publish what it publishes beside the others. A live stimulus
 Participant delivers what `prepare.py` and `sil-csv` refuse to write:
 nonfinite values, a count above the capacity, nonzero inactive elements,
 negative and repeated IDs, invalid confidence, a wrong frame or sensor ID,
-impossible Sample times, and a second list in one Slot, which overflows the
-finite Subscriber route of capacity 1.
+future and past Sample times, duplicate and decreasing sequences, a list
+repeated in one Slot, and four lists in one Slot, which overflow the finite
+Subscriber route of capacity 3.
 
 ## Shapes for a future FMU
 
@@ -298,7 +442,10 @@ needs no Protobuf.
 ## Scope
 
 Supported acceptance platform: Linux x86-64. Processed objects only, at most
-8 per sensor list, and one fixed 10 ms Period. There is no raw image or
+8 per sensor list, and one fixed 10 ms controller Period. The freshness and
+sequence rules are reference policies, not production stale-data
+requirements. There is no network transmission model and no change to the
+kernel's Latency semantics. There is no raw image or
 radar data, object tracking, sensor-fusion accuracy claim, CAN or Ethernet
 decoder, sensor rendering, OSI dependency, production controller, Native ABI
 change, variable-length Schema, dynamic Channel creation or FMU. An FMI
