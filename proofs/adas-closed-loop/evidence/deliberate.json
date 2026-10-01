@@ -1,0 +1,88 @@
+{
+  "kpi.native": {
+    "why": "the radar loss brakes, which a no-braking KPI refuses",
+    "kpi": {
+      "minimum_gap_m": 2.0,
+      "accel_min_mps2": 0.0,
+      "accel_max_mps2": 0.0,
+      "minimum_ego_speed_mps": 0.0
+    },
+    "predicted": {
+      "sample_time_ns": 1040000000,
+      "field": "acceleration_mps2",
+      "value": -0.5
+    },
+    "observed": {
+      "sample_time_ns": 1040000000,
+      "field": "acceleration_mps2",
+      "value": -0.5,
+      "bounds": [
+        0.0,
+        0.0
+      ]
+    },
+    "detected": true
+  },
+  "kpi.fmu": {
+    "why": "the radar loss brakes, which a no-braking KPI refuses",
+    "kpi": {
+      "minimum_gap_m": 2.0,
+      "accel_min_mps2": 0.0,
+      "accel_max_mps2": 0.0,
+      "minimum_ego_speed_mps": 0.0
+    },
+    "predicted": {
+      "sample_time_ns": 1040000000,
+      "field": "acceleration_mps2",
+      "value": -0.5
+    },
+    "observed": {
+      "sample_time_ns": 1040000000,
+      "field": "acceleration_mps2",
+      "value": -0.5,
+      "bounds": [
+        0.0,
+        0.0
+      ]
+    },
+    "detected": true
+  },
+  "comparison.native": {
+    "why": "the radar loss against the unfaulted reference",
+    "compare_exit": 1,
+    "predicted": {
+      "observation_ns": 1010000000,
+      "channel": "adas.command",
+      "field": "radar_age_ns",
+      "actual": 20000000,
+      "expected": 0
+    },
+    "observed": {
+      "observation_ns": 1010000000,
+      "channel": "adas.command",
+      "field": "radar_age_ns",
+      "actual": 20000000,
+      "expected": 0
+    },
+    "detected": true
+  },
+  "comparison.fmu": {
+    "why": "the radar loss against the unfaulted reference",
+    "compare_exit": 1,
+    "predicted": {
+      "observation_ns": 1010000000,
+      "channel": "adas.command",
+      "field": "radar_age_ns",
+      "actual": 20000000,
+      "expected": 0
+    },
+    "observed": {
+      "observation_ns": 1010000000,
+      "channel": "adas.command",
+      "field": "radar_age_ns",
+      "actual": 20000000,
+      "expected": 0
+    },
+    "detected": true
+  }
+}

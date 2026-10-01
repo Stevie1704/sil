@@ -1,0 +1,106 @@
+{
+  "clear_road": {
+    "exit": 0,
+    "stderr": "",
+    "initial_truth": {
+      "ego_position_m": 0.0,
+      "ego_speed_mps": 25.0,
+      "lead_position_m": 60.0,
+      "lead_speed_mps": 25.0,
+      "gap_m": 60.0,
+      "relative_speed_mps": 0.0
+    },
+    "passed": true
+  },
+  "approach": {
+    "exit": 0,
+    "stderr": "",
+    "initial_truth": {
+      "ego_position_m": 0.0,
+      "ego_speed_mps": 25.0,
+      "lead_position_m": 30.0,
+      "lead_speed_mps": 25.0,
+      "gap_m": 30.0,
+      "relative_speed_mps": 0.0
+    },
+    "passed": true
+  },
+  "cut_out": {
+    "exit": 0,
+    "stderr": "",
+    "initial_truth": {
+      "ego_position_m": 0.0,
+      "ego_speed_mps": 25.0,
+      "lead_position_m": 30.0,
+      "lead_speed_mps": 25.0,
+      "gap_m": 30.0,
+      "relative_speed_mps": 0.0
+    },
+    "passed": true
+  },
+  "sensor_loss": {
+    "exit": 0,
+    "stderr": "",
+    "initial_truth": {
+      "ego_position_m": 0.0,
+      "ego_speed_mps": 25.0,
+      "lead_position_m": 60.0,
+      "lead_speed_mps": 25.0,
+      "gap_m": 60.0,
+      "relative_speed_mps": 0.0
+    },
+    "passed": true
+  },
+  "near_start": {
+    "exit": 0,
+    "stderr": "",
+    "initial_truth": {
+      "ego_position_m": 0.0,
+      "ego_speed_mps": 25.0,
+      "lead_position_m": 7.0,
+      "lead_speed_mps": 25.0,
+      "gap_m": 7.0,
+      "relative_speed_mps": 0.0
+    },
+    "passed": true
+  },
+  "approach.ideal": {
+    "exit": 0,
+    "stderr": "",
+    "initial_truth": {
+      "ego_position_m": 0.0,
+      "ego_speed_mps": 25.0,
+      "lead_position_m": 30.0,
+      "lead_speed_mps": 25.0,
+      "gap_m": 30.0,
+      "relative_speed_mps": 0.0
+    },
+    "passed": true
+  },
+  "approach.latency": {
+    "exit": 0,
+    "stderr": "",
+    "initial_truth": {
+      "ego_position_m": 0.0,
+      "ego_speed_mps": 25.0,
+      "lead_position_m": 30.0,
+      "lead_speed_mps": 25.0,
+      "gap_m": 30.0,
+      "relative_speed_mps": 0.0
+    },
+    "passed": true
+  },
+  "sensor_loss.unfaulted": {
+    "exit": 0,
+    "stderr": "",
+    "initial_truth": {
+      "ego_position_m": 0.0,
+      "ego_speed_mps": 25.0,
+      "lead_position_m": 60.0,
+      "lead_speed_mps": 25.0,
+      "gap_m": 60.0,
+      "relative_speed_mps": 0.0
+    },
+    "passed": true
+  }
+}

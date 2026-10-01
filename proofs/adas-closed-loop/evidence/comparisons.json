@@ -1,0 +1,796 @@
+{
+  "cases": {
+    "clear_road": {
+      "native-independent": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      },
+      "fmu-independent": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      }
+    },
+    "approach": {
+      "native-independent": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      },
+      "fmu-independent": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      }
+    },
+    "cut_out": {
+      "native-independent": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      },
+      "fmu-independent": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      }
+    },
+    "sensor_loss": {
+      "native-independent": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      },
+      "fmu-independent": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      }
+    },
+    "near_start": {
+      "native-independent": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      },
+      "fmu-independent": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      }
+    },
+    "approach.ideal": {
+      "native-independent": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      },
+      "fmu-independent": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      }
+    },
+    "approach.latency": {
+      "native-independent": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      },
+      "fmu-independent": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "adas.command": {
+            "reference_channel": "adas.command",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          },
+          "loop.truth": {
+            "reference_channel": "loop.truth",
+            "observations": 352,
+            "checked": 352,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "first_divergence": null,
+        "passed": true
+      }
+    }
+  },
+  "contracts": {
+    "independent": {
+      "sil_comparison": 1,
+      "evaluation": {
+        "from_ns": 10000000,
+        "to_ns": 3520000000
+      },
+      "channels": {
+        "adas.command": {
+          "reference_channel": "adas.command",
+          "actual_offset_ns": 10000000,
+          "reference_offset_ns": 0,
+          "observations": {
+            "start_ns": 10000000,
+            "stop_ns": 3520000000,
+            "step_ns": 10000000
+          },
+          "fields": {
+            "sample_time_ns": "exact",
+            "sequence": "exact",
+            "mode": "exact",
+            "selected_object_id": "exact",
+            "target_acceleration_mps2": {
+              "atol": 0,
+              "rtol": 0
+            },
+            "acceleration_mps2": {
+              "atol": 0,
+              "rtol": 0
+            },
+            "radar_age_ns": "exact",
+            "camera_age_ns": "exact",
+            "ego_age_ns": "exact",
+            "ignored_observations": "exact"
+          }
+        },
+        "loop.truth": {
+          "reference_channel": "loop.truth",
+          "actual_offset_ns": 10000000,
+          "reference_offset_ns": 0,
+          "observations": {
+            "start_ns": 10000000,
+            "stop_ns": 3520000000,
+            "step_ns": 10000000
+          },
+          "fields": {
+            "ego_position_m": {
+              "atol": 1e-10,
+              "rtol": 1e-12
+            },
+            "ego_speed_mps": {
+              "atol": 1e-10,
+              "rtol": 1e-12
+            },
+            "lead_position_m": {
+              "atol": 1e-10,
+              "rtol": 1e-12
+            },
+            "lead_speed_mps": {
+              "atol": 1e-10,
+              "rtol": 1e-12
+            },
+            "gap_m": {
+              "atol": 1e-10,
+              "rtol": 1e-12
+            },
+            "relative_speed_mps": {
+              "atol": 1e-10,
+              "rtol": 1e-12
+            }
+          }
+        }
+      }
+    },
+    "cross_form": {
+      "sil_comparison": 1,
+      "evaluation": {
+        "from_ns": 10000000,
+        "to_ns": 3520000000
+      },
+      "channels": {
+        "adas.command": {
+          "reference_channel": "adas.command",
+          "actual_offset_ns": 10000000,
+          "reference_offset_ns": 10000000,
+          "observations": {
+            "start_ns": 10000000,
+            "stop_ns": 3520000000,
+            "step_ns": 10000000
+          },
+          "fields": {
+            "sample_time_ns": "exact",
+            "sequence": "exact",
+            "mode": "exact",
+            "selected_object_id": "exact",
+            "target_acceleration_mps2": {
+              "atol": 0,
+              "rtol": 0
+            },
+            "acceleration_mps2": {
+              "atol": 0,
+              "rtol": 0
+            },
+            "radar_age_ns": "exact",
+            "camera_age_ns": "exact",
+            "ego_age_ns": "exact",
+            "ignored_observations": "exact"
+          }
+        },
+        "loop.truth": {
+          "reference_channel": "loop.truth",
+          "actual_offset_ns": 10000000,
+          "reference_offset_ns": 10000000,
+          "observations": {
+            "start_ns": 10000000,
+            "stop_ns": 3520000000,
+            "step_ns": 10000000
+          },
+          "fields": {
+            "ego_position_m": {
+              "atol": 0,
+              "rtol": 0
+            },
+            "ego_speed_mps": {
+              "atol": 0,
+              "rtol": 0
+            },
+            "lead_position_m": {
+              "atol": 0,
+              "rtol": 0
+            },
+            "lead_speed_mps": {
+              "atol": 0,
+              "rtol": 0
+            },
+            "gap_m": {
+              "atol": 0,
+              "rtol": 0
+            },
+            "relative_speed_mps": {
+              "atol": 0,
+              "rtol": 0
+            }
+          }
+        }
+      }
+    }
+  }
+}

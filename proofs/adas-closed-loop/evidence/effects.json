@@ -1,0 +1,71 @@
+{
+  "envelope": {
+    "hazard_onset_shift_ns": [
+      0,
+      20000000
+    ],
+    "minimum_gap_delta_m": 0.5
+  },
+  "effects": {
+    "approach.native": {
+      "compared_with": "approach.ideal",
+      "isolates": "sampling and hold",
+      "hazard_onset_ns": [
+        2300000000,
+        2310000000
+      ],
+      "minimum_gap_m": [
+        9.455300000000065,
+        9.427100000000081
+      ],
+      "first_differing_command_ns": 20000000,
+      "findings": [],
+      "passed": true
+    },
+    "approach.fmu": {
+      "compared_with": "approach.ideal",
+      "isolates": "sampling and hold",
+      "hazard_onset_ns": [
+        2300000000,
+        2310000000
+      ],
+      "minimum_gap_m": [
+        9.455300000000065,
+        9.427100000000081
+      ],
+      "first_differing_command_ns": 20000000,
+      "findings": [],
+      "passed": true
+    },
+    "approach.latency.native": {
+      "compared_with": "approach",
+      "isolates": "sensor Channel Latency",
+      "hazard_onset_ns": [
+        2310000000,
+        2320000000
+      ],
+      "minimum_gap_m": [
+        9.427100000000081,
+        9.416425000000402
+      ],
+      "first_differing_command_ns": 10000000,
+      "findings": [],
+      "passed": true
+    },
+    "approach.latency.fmu": {
+      "compared_with": "approach",
+      "isolates": "sensor Channel Latency",
+      "hazard_onset_ns": [
+        2310000000,
+        2320000000
+      ],
+      "minimum_gap_m": [
+        9.427100000000081,
+        9.416425000000402
+      ],
+      "first_differing_command_ns": 10000000,
+      "findings": [],
+      "passed": true
+    }
+  }
+}

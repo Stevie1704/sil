@@ -535,6 +535,23 @@ difference and requires the same Commands from both forms.
 proofs/adas-equivalence/run-proof.sh    # needs docker and network
 ```
 
+## Closed loop over a plant FMU
+
+[proofs/adas-closed-loop/](../proofs/adas-closed-loop/README.md) runs the
+controller in a closed loop. The ACC plant FMU of
+[proofs/acc-fmi/](../proofs/acc-fmi/README.md) moves the ego and a lead
+vehicle. Edge Participants derive idealized processed observations from
+plant truth: radar every 20 ms, camera every 40 ms and ego motion every
+10 ms. An edge conversion applies the Command's acceleration to the plant.
+The native and the FMU form come from one declaration and must give the
+same Commands and the same truth. The proof states the whole consumption
+table, so that no Participant consumes a value sampled after its
+activation.
+
+```sh
+proofs/adas-closed-loop/run-proof.sh    # needs docker and network
+```
+
 ## Scope
 
 Supported acceptance platform: Linux x86-64. Processed objects only, at most

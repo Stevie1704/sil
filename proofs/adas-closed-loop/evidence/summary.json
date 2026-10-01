@@ -1,0 +1,24 @@
+{
+  "cases": [
+    "approach",
+    "approach.ideal",
+    "approach.latency",
+    "clear_road",
+    "cut_out",
+    "near_start",
+    "sensor_loss"
+  ],
+  "steps": {
+    "artifacts": true,
+    "manifests": true,
+    "runs": true,
+    "independent": true,
+    "comparisons": true,
+    "effects": true,
+    "deliberate": true,
+    "failures": true
+  },
+  "passed": true,
+  "controller_fmu_sha256": "f99c95f06ac97a7ce0ade263fe191cc8579c1e93355d360680b2ae72c5d503ab",
+  "plant_sha256": "c1e24fafe8ce27de91cb01007b0b31a580fef408677fb99adcbb8a79fe3ff015"
+}
