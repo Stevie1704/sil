@@ -77,6 +77,10 @@ def run(out: Path) -> bool:
             leftovers = sorted(evidence.rglob('.sil-run-*'))
             temporary = Path(f'/work/tmp/{name}')
             leftovers += sorted(temporary.iterdir())
+            if name in ('control-hang', 'control-crash'):
+                marker = temporary / 'native-callback-entered'
+                check['callback_entered'] = marker.is_file() and marker.read_text() == 'native fault callback entered\n'
+                check['passed'] &= check['callback_entered']
             alive = processes()
             check['leftover_processes'] = alive
             check['forced_cleanup'] = []
@@ -115,7 +119,8 @@ def run(out: Path) -> bool:
             if name == 'control-crash':
                 check['passed'] &= any(r.get('exit_code') == -6 for r in entry.get('runs', []))
             if name == 'control-hang':
-                check['passed'] &= '5 s guard' in entry.get('reason', '')
+                check['passed'] &= '30 s guard' in entry.get('reason', '')
+                check['passed'] &= bool(check['forced_cleanup'])
             if name == 'control-tampered':
                 check['passed'] &= 'altered artifact profile.md' in entry.get('reason', '')
             if name == 'control-comparison':

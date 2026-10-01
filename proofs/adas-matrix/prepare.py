@@ -14,6 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'proofs/adas-equivalence'))
 import experiment
+from sil.csv_recording import convert
 
 replay = experiment.load('matrix_replay_proof', ROOT / 'proofs/adas-equivalence/prove.py')
 sys.path.insert(0, str(ROOT / 'proofs/adas-closed-loop'))
@@ -102,6 +103,7 @@ def prepare(out: Path, plant: Path, fmpy_python: str) -> None:
         b.copy(ROOT / 'examples/adas-reference/schemas.json', 'resource')
         b.copy(ROOT / 'docs/adas-reference.md', 'resource', 'profile.md')
         b.copy(work / 'identities.json', 'receipt')
+        b.copy(work / 'independent.json', 'receipt')
         runs = []
         if kind == 'replay':
             for source in sorted(r.inputs.iterdir()):
@@ -114,6 +116,11 @@ def prepare(out: Path, plant: Path, fmpy_python: str) -> None:
                 # Paths inside the replay command name individual Recordings.
                 doc = rewrite(m.to_doc(), paths)
                 ref = b.copy(r.fmpy(case), 'reference')
+                rows = b.copy(r.work / f'{case.name}.fmpy.csv', 'conversion-input')
+                b.copy(r.work / f'{case.name}.case.json', 'conversion-input')
+                b.copy(r.work / f'{case.name}.superseded.json', 'receipt')
+                receipt = convert(b.root / f'{case.maneuver}.expected.mapping.json', rows, ref)
+                write(b.path(f'{case.name}.fmpy.receipt.json', 'receipt'), receipt)
                 name_contract = f'{case.maneuver}.contract.json'
                 runs.append({'name': case.name, 'manifest': f'{case.name}.json',
                              'determinism': True, 'participant_timeout_ms': 30000,
@@ -146,12 +153,18 @@ def prepare(out: Path, plant: Path, fmpy_python: str) -> None:
                 ref = b.copy(c.fmpy(loop.UNFAULTED if control == 'comparison' else case.name),
                              'reference')
                 # Archive the independent input declaration, mapping and source rows.
-                for source in (c.work / f'{case.name}.case.json', c.work / f'{case.name}.fmpy.csv', c.work / 'independent.mapping.json'):
+                reference_name = loop.UNFAULTED if control == 'comparison' else case.name
+                for source in (c.work / f'{reference_name}.case.json',
+                               c.work / f'{reference_name}.fmpy.csv',
+                               c.work / 'independent.mapping.json'):
                     if source.name not in b.artifacts:
                         b.copy(source, 'conversion-input')
+                receipt = convert(b.root / 'independent.mapping.json',
+                                  b.root / f'{reference_name}.fmpy.csv', ref)
+                write(b.path(f'{reference_name}.fmpy.receipt.json', 'receipt'), receipt)
                 runs.append({'name': case.name, 'manifest': f'{case.name}.json',
                              'determinism': True,
-                             'participant_timeout_ms': 2000 if control == 'deadline' else 30000,
+                             'participant_timeout_ms': 30000,
                              'comparisons': [{'name': 'independent', 'contract': contract.name,
                                               'reference': ref.name}]})
         write(b.path('experiment.json', 'resource'), {
@@ -172,14 +185,22 @@ def prepare(out: Path, plant: Path, fmpy_python: str) -> None:
             'manifest': 'manifest-error', 'malformed': 'behavioral-failure',
             'comparison': 'behavioral-failure', 'hang': 'timeout',
             'crash': 'behavioral-failure', 'deadline': 'behavioral-failure'}[control],
-                         'timeout_s': 5 if control == 'hang' else 600}
+                         'timeout_s': 30 if control == 'hang' else 600}
 
     # Fault libraries are separate targets compiled against the installed ABI.
     source = work / 'fault.c'
     source.write_text('''#include <sil/participant.h>
 #include <stdlib.h>
+#include <stdio.h>
 static void fault(void *u, uint64_t t) {
   (void)u; (void)t;
+  char path[4096];
+  snprintf(path, sizeof path, "%s/native-callback-entered", getenv("TMPDIR"));
+  FILE *marker = fopen(path, "w");
+  if (marker) {
+    fputs("native fault callback entered\\n", marker);
+    fclose(marker);
+  }
 #ifdef CRASH
   abort();
 #else

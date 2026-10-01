@@ -37,6 +37,22 @@ def consumer(image, tmp_path, optional_controls=False):
             subprocess.run(['docker', 'cp', str(config),
                             f'{container}:/opt/adas/controls.json'], check=True,
                            capture_output=True)
+            # This test isolates control aggregation: keep one nominal case.
+            for filename in ('nominal.json', 'expected.json'):
+                local = tmp_path / filename
+                subprocess.run(['docker', 'cp', f'{container}:/opt/adas/{filename}',
+                                str(local)], check=True, capture_output=True)
+                content = json.loads(local.read_text())
+                if filename == 'nominal.json':
+                    content['cases'] = [c for c in content['cases']
+                                        if c['name'] == 'replay-native']
+                else:
+                    content = {n: c for n, c in content.items()
+                               if n.startswith('control-') or n == 'replay-native'}
+                local.write_text(json.dumps(content))
+                subprocess.run(['docker', 'cp', str(local),
+                                f'{container}:/opt/adas/{filename}'], check=True,
+                               capture_output=True)
         proc = subprocess.run(['docker', 'start', '-a', container],
                               capture_output=True, text=True, timeout=900)
         subprocess.run(['docker', 'cp', f'{container}:/work/evidence', str(tmp_path)],
@@ -90,6 +106,7 @@ def test_ignored_failure_exit_codes_cannot_make_acceptance_green(image, tmp_path
     proc, report, _ = consumer(image, tmp_path, optional_controls=True)
     assert proc.returncode == 1, proc.stdout + proc.stderr
     assert report['passed'] is False
+    assert report['matrices']['nominal']['passed'] is True
     controls = report['matrices']['controls']
     assert controls['exit_code'] == 0
     assert controls['passed'] is False

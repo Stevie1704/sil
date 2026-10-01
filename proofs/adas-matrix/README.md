@@ -21,9 +21,28 @@ image build, the checkout, a compiler, the installed headers and `silschema`,
 the installed SiL wheel, PythonFMU3 and FMPy. The consumer image carries only
 the installed native prefix, wheel environment, bundles and acceptance driver.
 It has no `/src`, source-tree `PYTHONPATH`, compiler, exporter or FMPy.
+For repeated preparation, `SIL_ADAS_MATRIX_TOOLS_IMAGE` can name a previously
+built tools image from the same runtime/source revision; its immutable ID
+is used for preparation. `SIL_ADAS_MATRIX_PYTHON_IMAGE` selects an equivalent
+platform-specific base digest when an image-index resolver needs it.
 Both matrices execute offline as UID 10001. The plant FMU embeds its PythonFMU3
 runtime support; CPython's shared library is its external runtime dependency.
 No exporter installation is required at execution.
+
+To hand the prepared runtime and its sealed bundles to an offline adopter:
+
+```sh
+docker image save sil-adas-matrix:example -o adas-matrix-runtime.tar
+# On the Linux x86-64 adopter host:
+docker image load -i adas-matrix-runtime.tar
+docker run --platform linux/amd64 --network none --init sil-adas-matrix:example
+```
+
+This transfers the installed runner, wheel, dependencies and already sealed
+bundles together; no repository or preparation tools enter the adopter's
+execution. To retain the adopter's evidence, create a container, start it,
+`docker cp CONTAINER:/work/evidence/. evidence/`, then remove the container,
+as `run-proof.sh` does. Use a new output directory for each execution.
 
 The immutable image ID is archived in `image-id.txt`; use that ID in place of
 the example tag to reproduce this installation. Locks are sealed in the
@@ -67,15 +86,18 @@ The controls are required cases, with these explicitly checked outcomes:
 | radar count 9, capacity 8 | `behavioral-failure`, malformed-list diagnostic |
 | sensor-loss Run against an unfaulted independent reference | `behavioral-failure`; first divergence at observation 1.01 s, `adas.command.radar_age_ns`, 20 ms vs 0 |
 | altered sealed profile document | `manifest-error`, altered artifact refused before a Run |
-| native callback stalls | `timeout`, 5 s whole-case guard |
+| native callback stalls | `timeout`, 30 s whole-case guard |
 | native callback aborts | `behavioral-failure`, process terminates |
-| controller FMU stalls inside `fmi3DoStep` | `behavioral-failure`, 2 s Process response deadline |
+| controller FMU stalls inside `fmi3DoStep` | `behavioral-failure`, 30 s Process response deadline |
 
 The existing matrix terminates case sessions, including participants in their
 own process groups. The driver checks `/proc` for surviving processes that
 name bundle artifacts. It also checks Run working directories (including FMU
 extraction) and per-case `TMPDIR` files. Normal completion, manifest refusal,
-malformed input and FMI deadline paths must clean themselves. Native abort or
+malformed input and FMI deadline paths must clean themselves. A Run-owned marker written and closed by the fault callback proves that the
+native hang/crash controls reached their callbacks rather than expiring during
+startup or verification; the marker is checked before cleanup and its verdict
+is archived. Native abort or
 forced termination cannot execute runner destructors: after checking that
 processes are gone, the external case owner removes those controls' remaining
 Run directories and mapped-region files and records what it removed.
@@ -120,9 +142,10 @@ routes, regenerate mapping/conversion receipts, independently prepare new
 references and author new Comparison contracts. For a calibration change,
 change both the native config and FMI starts, record the calibration identity,
 and regenerate independent references. Freshness is compiled reference policy
-(40/80/20 ms for radar/camera/ego); changing it requires changing the C constants
-and the independent controller policy, bumping the profile version, rebuilding
-both target forms and reevaluating expected modes, references and contracts.
+(40/80/20 ms for radar/camera/ego); changing it requires changing the C constants,
+independently re-enumerating the replay oracle rows, bumping the profile
+version, rebuilding both target forms and regenerating independent FMI
+references, expected modes and contracts.
 Reseal and repin all affected cases; never just relax tolerances to obtain a pass.
 
 External artifacts are deferred to [#230](https://github.com/Stevie1704/sil/issues/230),
