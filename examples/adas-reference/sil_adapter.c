@@ -240,7 +240,7 @@ static int take_next(controller *c, uint64_t t, const char *channel,
 }
 
 /* Fails the Run with the application's fault unless status is OK. */
-static int received(controller *c, uint64_t t, adas_ref_status status,
+static int succeeded(controller *c, uint64_t t, adas_ref_status status,
                     const adas_ref_fault *fault) {
   if (status == ADAS_REF_OK) return 1;
   fail_at(c, t, fault->message);
@@ -312,7 +312,7 @@ static int drain_lists(controller *c, uint64_t t, const char *sensor,
   int r;
   while ((r = take_next(c, t, channel, &m, sizeof m)) == 1)
     if (!to_list(c, t, sensor, &m, &list) ||
-        !received(c, t, receive(&c->app, t, &list, &fault), &fault))
+        !succeeded(c, t, receive(&c->app, t, &list, &fault), &fault))
       return 0;
   return r == 0;
 }
@@ -324,7 +324,7 @@ static int drain_ego(controller *c, uint64_t t) {
   while ((r = take_next(c, t, c->ego, &m, sizeof m)) == 1) {
     adas_ref_ego ego = {m.sample_time_ns, m.sequence, m.validity,
                         m.speed_mps};
-    if (!received(c, t, adas_ref_receive_ego(&c->app, t, &ego, &fault),
+    if (!succeeded(c, t, adas_ref_receive_ego(&c->app, t, &ego, &fault),
                   &fault))
       return 0;
   }
@@ -340,7 +340,7 @@ static void activate(void *user, uint64_t t) {
 
   adas_ref_output out;
   adas_ref_fault fault;
-  if (!received(c, t, adas_ref_advance(&c->app, t, &out, &fault), &fault))
+  if (!succeeded(c, t, adas_ref_advance(&c->app, t, &out, &fault), &fault))
     return;
   adas_Command command = {out.sample_time_ns, out.sequence, out.mode,
                           out.selected_object_id,
