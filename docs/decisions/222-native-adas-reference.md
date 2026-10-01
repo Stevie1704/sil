@@ -119,10 +119,13 @@ installed SiL. The proof is
   a `controller` argument. The Manifests then cannot differ in Channels,
   Latencies, Interceptors, replay or routes, and `form_difference` checks
   that they do not.
-- **`delay` stays native only.** It delivers three radar lists in one Slot.
-  The FMU's inputs hold the last value written, so the FMU form would
-  silently receive one of three. The proof states the exclusion rather than
-  run a case whose deliveries differ.
+- **`delay` runs in both forms, with its difference declared.** It delivers
+  three radar lists in one Slot. The native adapter accepts all three; the
+  FMU's inputs hold the last value written, so the FMU takes the newest.
+  The proof declares which observations are superseded, requires the FMPy
+  execution to report exactly those, and requires the same Commands from
+  both forms. Excluding the case would hide the difference; declaring it
+  makes any other one fail.
 - **Tolerance 0 for the accelerations.** Both forms compute in binary64 from
   one source with `-ffp-contract=off` and round once to binary32. A nonzero
   tolerance would hide a real difference.

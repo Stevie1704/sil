@@ -14,15 +14,21 @@ code:
 - `drop`: an observation published in [start_ns, end_ns) is not delivered;
 - `override`: an observation published in [start_ns, end_ns) is delivered
   with `field` set to `value`;
-- `input_latency_ns`: an observation published at t is delivered at the
-  activation t + latency.
+- `delay`: an observation published in [start_ns, end_ns) is due
+  `delay_ns` later;
+- `input_latency_ns`: an observation published at t is due at t + latency;
+- a route delivers in Publish order: an observation is delivered at the
+  first activation at or after its due time, and not before the observation
+  published ahead of it on the same Channel.
 
 Each activation at t sets the inputs of every observation delivered at t,
-radar, camera, then ego, steps the FMU over [t, t + 10 ms] and reads the
-Command. More than one observation of one sensor at one activation is outside
-the FMU interface and an error here.
+radar, camera, then ego, each sensor's in Publish order, steps the FMU over
+[t, t + 10 ms] and reads the Command. Of several observations of one sensor,
+the last written is the one the FMU takes; the others are superseded and
+listed in the second output.
 
-    python independent.py AdasReference.fmu MANEUVER.inputs.csv CASE.json OUT.csv
+    python independent.py AdasReference.fmu MANEUVER.inputs.csv CASE.json \
+        OUT.csv SUPERSEDED.json
 """
 
 from __future__ import annotations
@@ -51,7 +57,7 @@ OUTPUTS = ("sequence", "mode", "selected_object_id",
 
 
 class OutsideInterface(ValueError):
-    """The case delivers what the FMU interface cannot take."""
+    """The case declares a fault this module does not apply."""
 
 
 def observations(expanded: Path) -> list[tuple[int, str, dict]]:
@@ -77,11 +83,13 @@ def observations(expanded: Path) -> list[tuple[int, str, dict]]:
 
 
 def faulted(found: list, case: dict) -> list[tuple[int, str, dict]]:
-    """The observations as the declared faults deliver them: (delivery time,
-    sensor, values)."""
+    """The observations as the declared faults deliver them, in Publish
+    order: (delivery time, sensor, values)."""
     delivered = []
+    behind = dict.fromkeys(SENSORS, 0)
     for t_ns, sensor, values in found:
         values = dict(values)
+        due = t_ns + case["input_latency_ns"]
         dropped = False
         for fault in case["interceptors"].get(sensor, []):
             if not fault["start_ns"] <= t_ns < fault["end_ns"]:
@@ -90,10 +98,16 @@ def faulted(found: list, case: dict) -> list[tuple[int, str, dict]]:
                 dropped = True
             elif fault["kind"] == "override":
                 values[fault["field"]] = [fault["value"]]
+            elif fault["kind"] == "delay":
+                due += fault["delay_ns"]
             else:
                 raise OutsideInterface(f"fault kind {fault['kind']!r}")
-        arrival = t_ns + case["input_latency_ns"]
-        if not dropped and arrival < DURATION_NS:
+        if dropped:
+            continue
+        activation = -(-due // PERIOD_NS) * PERIOD_NS
+        arrival = max(activation, behind[sensor])
+        behind[sensor] = arrival
+        if arrival < DURATION_NS:
             delivered.append((arrival, sensor, values))
     return delivered
 
@@ -124,8 +138,10 @@ class Fmu:
             [variable.valueReference], count)[0]
 
 
-def run(archive: Path, expanded: Path, case: dict, scratch: Path) -> list:
-    """The Command rows of every activation, 0 ms to 190 ms."""
+def run(archive: Path, expanded: Path, case: dict,
+        scratch: Path) -> tuple[list, list]:
+    """The Command rows of every activation, 0 ms to 190 ms, and each
+    activation where the FMU took the newest of several observations."""
     delivered = faulted(observations(expanded), case)
     fmu = Fmu(archive, scratch)
     for start in case["start"]:
@@ -133,27 +149,28 @@ def run(archive: Path, expanded: Path, case: dict, scratch: Path) -> list:
         fmu.set(name, [value])
     fmu.slave.enterInitializationMode(startTime=0.0)
     fmu.slave.exitInitializationMode()
-    rows = []
+    rows, superseded = [], []
     for t_ns in range(0, DURATION_NS, PERIOD_NS):
         now = [(sensor, values) for arrival, sensor, values in delivered
                if arrival == t_ns]
-        sensors = [sensor for sensor, _ in now]
-        if len(set(sensors)) != len(sensors):
-            raise OutsideInterface(
-                f"t={t_ns} ns delivers {sensors}: at most one observation "
-                f"per sensor per step")
         for sensor in SENSORS:
-            for got, values in now:
-                if got == sensor:
-                    for name, value in values.items():
-                        fmu.set(f"{sensor}.{name}", value)
+            written = [values for got, values in now if got == sensor]
+            for values in written:
+                for name, value in values.items():
+                    fmu.set(f"{sensor}.{name}", value)
+            if len(written) > 1:
+                superseded.append({
+                    "t_ns": t_ns, "sensor": sensor,
+                    "superseded_ns": [v["sample_time_ns"][0]
+                                      for v in written[:-1]],
+                    "taken_ns": written[-1]["sample_time_ns"][0]})
         fmu.slave.doStep(t_ns / 1e9, PERIOD_NS / 1e9)
         sample_ns = fmu.get("command.sample_time_ns")
         rows.append({"time_ms": _ms(sample_ns),
                      **{name: fmu.get(f"command.{name}") for name in OUTPUTS}})
     fmu.slave.terminate()
     fmu.slave.freeInstance()
-    return rows
+    return rows, superseded
 
 
 def _ms(ns: int) -> int:
@@ -177,11 +194,13 @@ if __name__ == "__main__":
     parser.add_argument("expanded", type=Path)
     parser.add_argument("case", type=Path)
     parser.add_argument("out", type=Path)
+    parser.add_argument("superseded", type=Path)
     args = parser.parse_args()
     scratch = args.out.with_suffix(".fmu-extracted")
     try:
-        rows = run(args.archive, args.expanded,
-                   json.loads(args.case.read_text()), scratch)
+        rows, superseded = run(args.archive, args.expanded,
+                               json.loads(args.case.read_text()), scratch)
     except OutsideInterface as error:
         sys.exit(f"independent.py: {error}")
     write(rows, args.out)
+    args.superseded.write_text(json.dumps(superseded, indent=2) + "\n")

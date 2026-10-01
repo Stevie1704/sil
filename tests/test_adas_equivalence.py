@@ -16,6 +16,7 @@ import importlib.util
 import json
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -79,13 +80,11 @@ class TestForms:
             experiment.TARGET_KEYS
         assert record["fmu"]["bind"] == experiment.fmu_bindings(case.maneuver)
 
-    def test_every_degraded_case_of_224_is_covered_or_excluded(self):
-        experiments = set(experiment.manifest.EXPERIMENTS)
-        covered = {name.split(".", 1)[1] for name in experiment.CASES
-                   if "." in name}
-        assert covered | set(experiment.OUTSIDE_FMU) == experiments
-        assert not covered & set(experiment.OUTSIDE_FMU)
-        assert set(experiment.manifest.MANEUVERS) <= set(experiment.CASES)
+    def test_every_case_of_224_runs_in_both_forms(self):
+        assert set(experiment.CASES) == {
+            *experiment.manifest.MANEUVERS,
+            *(f"cadence.{name}" for name in experiment.manifest.EXPERIMENTS)}
+        assert set(experiment.SUPERSEDED) <= set(experiment.CASES)
 
     def test_another_difference_is_refused(self, inputs, artifacts):
         case = experiment.CASES["cadence"]
@@ -225,3 +224,43 @@ class TestBothForms:
                 first["expected"]) == (prediction.observation_ns,
                                        prediction.field, prediction.actual,
                                        prediction.expected)
+
+
+def _prove_module():
+    sys.path.insert(0, str(PROOF_DIR))
+    try:
+        return _registered("adas_equivalence_prove", PROOF_DIR / "prove.py")
+    finally:
+        sys.path.remove(str(PROOF_DIR))
+
+
+def _alive(pid: int) -> bool:
+    state = subprocess.run(["ps", "-o", "stat=", "-p", str(pid)],
+                           capture_output=True, text=True).stdout.strip()
+    return bool(state) and not state.startswith("Z")
+
+
+class TestWholeRunGuard:
+    def test_a_timeout_stops_every_participant_process(
+            self, tmp_path, monkeypatch):
+        """A participant in a process group of its own, as sil-run starts
+        it, is stopped with the runner; it does not outlive the guard."""
+        pid_file = tmp_path / "participant.pid"
+        runner = tmp_path / "sil-run"
+        runner.write_text(f"""#!{sys.executable}
+import subprocess, sys, time
+child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"],
+                         start_new_session=True)
+open({str(pid_file)!r}, "w").write(str(child.pid))
+time.sleep(60)
+""")
+        runner.chmod(0o755)
+        monkeypatch.setenv("PATH", f"{tmp_path}{os.pathsep}{os.environ['PATH']}")
+        prove = _prove_module()
+
+        result = prove.sil_run(tmp_path / "m.json", tmp_path / "r.mcap",
+                               timeout_s=2)
+
+        assert result["exit"] == "timeout"
+        assert result["seconds"] < 30
+        assert not _alive(int(pid_file.read_text()))

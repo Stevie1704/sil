@@ -16,9 +16,10 @@ Duration. Only the controller entry differs:
 
 `form_difference` checks that this is all that differs, and records it.
 
-The FMU form takes the cases whose every activation receives at most one
-observation per sensor (`OUTSIDE_FMU`). The FMU's inputs hold the last value
-written, so a second Message in one Slot would overwrite the first.
+Input consumption differs in one declared place. The native adapter
+receives every Message of an activation in Publish order. The FMU's inputs
+hold the last value written, so of several Messages of one Channel at one
+activation the FMU takes the newest (`SUPERSEDED`).
 
 Nothing here runs the controller or reads a Run's output: the predicted
 divergences of the negative controls come from the authored maneuvers and
@@ -63,11 +64,20 @@ CADENCE_PERIODS_NS = {"radar": 20 * MS, "camera": 40 * MS, "ego": 10 * MS}
 # The FMU's two Float64 parameters, as the native config states them.
 FMU_STARTS = [f"{name}={value!r}" for name, value in manifest.PARAMETERS.items()]
 
-# The experiments of #224 that the FMU interface cannot carry, and why.
-OUTSIDE_FMU = {
-    "delay": "it delivers the radar lists sampled at 80, 100 and 120 ms in "
-             "one Slot (130 ms); the FMU takes at most one observation per "
-             "sensor per step, because its inputs hold the last value written",
+# Where the FMU form takes only the newest of several observations of one
+# sensor at one activation: per case, the activation, the sensor, the Sample
+# times of the superseded observations and of the one taken. In `delay`, the
+# radar list sampled at 80 ms is delayed to 130 ms, and the lists sampled at
+# 100 and 120 ms wait behind it in the route. Natively each of the three is
+# accepted in turn, since each sequence exceeds the held one, and the list
+# sampled at 120 ms is held after the activation. The FMU holds the same list
+# and counts nothing, so both forms must still give the same Commands. A
+# superseded observation that the native form would ignore and count would
+# make the forms differ; the comparisons would show it.
+SUPERSEDED = {
+    "cadence.delay": [{"t_ns": 130 * MS, "sensor": "radar",
+                       "superseded_ns": [80 * MS, 100 * MS],
+                       "taken_ns": 120 * MS}],
 }
 
 # The rule of each Command field when one form is compared with the other.
@@ -96,10 +106,9 @@ class Case:
 def _cases() -> dict[str, Case]:
     cases = {m: Case(m, m) for m in manifest.MANEUVERS}
     for name, spec in manifest.EXPERIMENTS.items():
-        if name not in OUTSIDE_FMU:
-            case = Case(f"{manifest.EXPERIMENT_MANEUVER}.{name}",
-                        manifest.EXPERIMENT_MANEUVER, **spec)
-            cases[case.name] = case
+        case = Case(f"{manifest.EXPERIMENT_MANEUVER}.{name}",
+                    manifest.EXPERIMENT_MANEUVER, **spec)
+        cases[case.name] = case
     return cases
 
 

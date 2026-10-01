@@ -45,10 +45,10 @@ differs, and records what does:
 Initial state: the native controller starts from `adas_ref_init`; the FMU
 from its declared start values (nothing received, sequence 0, mode 2). Neither
 publishes at initialization. Input delivery: a Message published in Slot t is
-drained by the activation at t (Latency 0). The native adapter receives each
-Message in Publish order; the FMU takes a sensor's inputs as a new
-observation when its header changed. Consumption: both hold the last accepted
-observation and judge its age from its Sample time.
+drained by the activation at t (Latency 0), and a route delivers in Publish
+order. The native adapter receives each Message; the FMU takes a sensor's
+inputs as a new observation when its header changed. Consumption: both hold
+the last accepted observation and judge its age from its Sample time.
 
 | Case | Inputs | What both forms must show |
 | --- | --- | --- |
@@ -59,11 +59,25 @@ observation and judge its age from its Sample time.
 | `cadence.drop` | camera lists in [40, 100) ms dropped | lost observations, stale data, recovery |
 | `cadence.rewrite` | radar invalid in [100, 120) ms; ego sequence 14 in [150, 180) ms | invalid data, duplicates ignored and counted |
 | `cadence.late` | one Period of input Latency | every observation one activation later |
+| `cadence.delay` | radar lists published in [60, 100) ms delayed by 50 ms | a stale list on arrival; three lists at one activation |
 
-The `delay` experiment of #224 is outside the FMU form: it delivers three
-radar lists in one Slot, and the FMU's inputs hold only the last value
-written. `experiment.OUTSIDE_FMU` states this, and the native example keeps
-running it.
+### The one consumption difference
+
+At 130 ms of `cadence.delay`, the radar route delivers the lists sampled at
+80, 100 and 120 ms: the list sampled at 80 ms is delayed, and the two later
+ones wait behind it. The native adapter receives all three in Publish order.
+Each sequence exceeds the held one, so each is accepted, and the list sampled
+at 120 ms is held after the activation. The FMU's inputs hold the last value
+written, so the FMU takes only the list sampled at 120 ms. It holds the same
+list, and neither form counts an ignored observation.
+
+`experiment.SUPERSEDED` declares this difference: the activation, the sensor,
+the superseded and the taken Sample times. The FMPy execution reports every
+activation where it wrote more than one observation of a sensor, and the
+report must equal the declaration. The Commands of both forms must still
+equal the oracle and each other. If a superseded observation were one the
+native form ignores and counts, the counters would differ, and the
+comparisons would fail.
 
 ## Observations
 
@@ -96,9 +110,10 @@ Each Manifest runs twice and must write identical Recording bytes.
 
 [`independent.py`](independent.py) drives the archive with FMPy. It reads the
 expanded maneuver that `prepare.py` writes and a JSON of the case, applies
-the drop, override and Latency faults with its own code, and writes the
-Commands in the oracle's CSV form. `sil-csv` converts them. It refuses a case
-that delivers two observations of one sensor at one activation.
+the drop, override, delay and Latency faults with its own code, with routes
+that deliver in Publish order, and writes the Commands in the oracle's CSV
+form. `sil-csv` converts them. It also lists each activation where it wrote
+more than one observation of a sensor.
 
 ## Negative controls
 
@@ -148,7 +163,10 @@ After `fmi3Error` the importer frees the instance without `fmi3Terminate`,
 as FMI 3.0 requires, so the diagnostic names the failed call and not a
 cleanup call. A Process participant's hang is bounded by its response
 deadline. A Native participant runs inside `sil-run`, so its crash or hang
-is bounded only by the whole-Run guard outside the Run.
+is bounded only by the whole-Run guard outside the Run. At the guard,
+`prove.py` reads the process tree of `sil-run` and kills every process in
+it, also the participants that `sil-run` starts in process groups of their
+own. The container runs with `--init`, which reaps them.
 
 ## Evidence
 
@@ -160,11 +178,11 @@ is bounded only by the whole-Run guard outside the Run.
 | `artifacts.json` | the archive, the wrong-sign archive and the library, with digests |
 | `forms.json` | per case, what both Manifests share and what differs |
 | `runs.json` | each Run twice: exit, time, byte identity, observation findings |
-| `independent.json` | each FMPy execution |
+| `independent.json` | each FMPy execution, and its superseded observations against the declared ones |
 | `comparisons.json` | each comparison report, with its counts and first divergence, and every contract document |
 | `controls.json` | each control, its prediction and what was observed |
 | `failures.json` | each failure, its exit, diagnostic, time and leftover processes |
-| `image-id.txt` | the proof image the evidence came from |
+| `image-id.txt` | the ID of the image this build made, as `docker build --iidfile` wrote it |
 
 The committed evidence was written under linux/amd64 emulation on an arm64
 host. The `proof-adas-equivalence` workflow runs the same proof on native

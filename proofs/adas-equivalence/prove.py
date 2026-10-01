@@ -37,6 +37,7 @@ import dataclasses
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -172,16 +173,22 @@ class Proof:
                 "input_latency_ns": case.input_latency_ns,
                 "start": experiment.FMU_STARTS}, indent=2) + "\n")
             rows = self.work / f"{case.name}.fmpy.csv"
+            superseded = self.work / f"{case.name}.superseded.json"
             proc = subprocess.run(
                 [self.fmpy_python, str(INDEPENDENT), str(self.fmu),
                  str(self.inputs / f"{case.maneuver}.inputs.csv"),
-                 str(declaration), str(rows)],
+                 str(declaration), str(rows), str(superseded)],
                 capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
             entry = {"exit": proc.returncode, "stderr": proc.stderr.strip()}
             if proc.returncode == 0:
                 _run(["sil-csv",
                       str(self.inputs / f"{case.maneuver}.expected.mapping.json"),
                       str(rows), "-o", str(self.fmpy(case))])
+                # The consumption difference must be exactly the declared one.
+                entry["superseded"] = json.loads(superseded.read_text())
+                entry["declared"] = experiment.SUPERSEDED.get(case.name, [])
+            entry["passed"] = (proc.returncode == 0
+                               and entry.get("superseded") == entry.get("declared"))
             report[case.name] = entry
         return report
 
@@ -293,7 +300,7 @@ class Proof:
                                and not leftover)}
             entry["passed"] = all(entry[form]["passed"] for form in forms)
             report[name] = entry
-        return {"cases": report, "outside_fmu": experiment.OUTSIDE_FMU}
+        return report
 
 
 # --- helpers -----------------------------------------------------------------
@@ -311,19 +318,51 @@ def with_actual_offset(contract: Path, offset_ns: int) -> dict:
     return document
 
 
-def sil_run(manifest: Path, recording: Path) -> dict:
-    """One Run under the whole-Run guard; its exit, time and stderr."""
+def sil_run(manifest: Path, recording: Path,
+            timeout_s: float = RUN_TIMEOUT_S) -> dict:
+    """One Run under the whole-Run guard; its exit, time and stderr.
+
+    At the guard, every process of the Run is stopped: sil-run and each
+    participant, which sil-run starts in a process group of its own."""
     started = time.monotonic()
+    proc = subprocess.Popen(
+        ["sil-run", str(manifest), "-o", str(recording),
+         "--participant-timeout-ms", str(PARTICIPANT_TIMEOUT_MS)],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
-        proc = subprocess.run(
-            ["sil-run", str(manifest), "-o", str(recording),
-             "--participant-timeout-ms", str(PARTICIPANT_TIMEOUT_MS)],
-            capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
-        status, stderr = proc.returncode, proc.stderr
-    except subprocess.TimeoutExpired as error:
-        status, stderr = "timeout", str(error)
+        _, stderr = proc.communicate(timeout=timeout_s)
+        status = proc.returncode
+    except subprocess.TimeoutExpired:
+        stop_process_tree(proc.pid)
+        _, stderr = proc.communicate()
+        status = "timeout"
     return {"exit": status, "seconds": round(time.monotonic() - started, 3),
             "stderr": stderr.strip()}
+
+
+def descendants(pid: int) -> list[int]:
+    """Every process below `pid`, read from the process table."""
+    table = subprocess.run(["ps", "-eo", "pid=,ppid="], capture_output=True,
+                           text=True, check=True).stdout.split()
+    children: dict[int, list[int]] = {}
+    for child, parent in zip(table[::2], table[1::2]):
+        children.setdefault(int(parent), []).append(int(child))
+    found, pending = [], [pid]
+    while pending:
+        below = children.get(pending.pop(), [])
+        found += below
+        pending += below
+    return found
+
+
+def stop_process_tree(pid: int) -> None:
+    """Kill `pid` and every process below it. The tree is read before any
+    kill: a killed parent's children move to init and leave the tree."""
+    for target in [pid, *descendants(pid)]:
+        try:
+            os.kill(target, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
 
 
 def sil_compare(contract: Path, actual: Path, reference: Path) -> dict:
@@ -416,14 +455,13 @@ def prove(out: Path, fmpy_python: str, cc: str) -> dict:
         "forms": all("error" not in f for f in sections["forms"].values()),
         "runs": all(r["passed"] for r in sections["runs"]["cases"].values())
         and not sections["runs"]["cadence_periods"],
-        "independent": all(r["exit"] == 0
+        "independent": all(r["passed"]
                            for r in sections["independent"].values()),
         "comparisons": all(c["passed"] for case in
                            sections["comparisons"]["cases"].values()
                            for c in case.values()),
         "controls": all(c["detected"] for c in sections["controls"].values()),
-        "failures": all(f["passed"]
-                        for f in sections["failures"]["cases"].values()),
+        "failures": all(f["passed"] for f in sections["failures"].values()),
     }
     result = {"cases": sorted(CASES), "steps": passed,
               "passed": all(passed.values()),

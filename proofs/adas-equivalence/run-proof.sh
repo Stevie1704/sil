@@ -17,12 +17,18 @@ build_args=()
 if [[ -n "${SIL_ADAS_EQUIVALENCE_PYTHON_IMAGE:-}" ]]; then
     build_args=(--build-arg "PYTHON_IMAGE=$SIL_ADAS_EQUIVALENCE_PYTHON_IMAGE")
 fi
+# The immutable image ID, taken from this build: the tag can move under a
+# concurrent build, so the container and the evidence both use the ID.
+iidfile=$(mktemp)
 docker build --platform linux/amd64 -f "$root/proofs/adas-equivalence/Dockerfile" \
-    "${build_args[@]+"${build_args[@]}"}" -t "$image" "$root"
-container=$(docker create --platform linux/amd64 --network none "$image")
+    "${build_args[@]+"${build_args[@]}"}" --iidfile "$iidfile" -t "$image" "$root"
+image_id=$(cat "$iidfile")
+rm -f "$iidfile"
+# --init reaps every process the proof stops, also an orphaned participant.
+container=$(docker create --platform linux/amd64 --network none --init "$image_id")
 trap 'docker rm -f "$container" >/dev/null' EXIT
 status=0
 docker start -a "$container" || status=$?
 docker cp "$container:/work/." "$evidence/"
-docker image inspect "$image" --format '{{.Id}}' > "$evidence/image-id.txt"
+echo "$image_id" > "$evidence/image-id.txt"
 exit "$status"
