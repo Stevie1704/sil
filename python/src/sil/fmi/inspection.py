@@ -223,6 +223,9 @@ def _variables(
                 ) if value is not None}
                 for dimension in element.findall("Dimension")
             ],
+            # The values the dimensions hold together, flattened in
+            # row-major order: what a carrying field's `count` must be.
+            "value_count": variable.value_count,
             "max_size": variable.max_size,
             "mime_type": variable.mime_type,
             "clocks": [_clock_name(description, c) for c in variable.clocks],
@@ -233,6 +236,18 @@ def _variables(
             ),
         })
     return reports
+
+
+def array_shape(variable: dict) -> dict:
+    """A reported array's dimensions and flattened count, or nothing.
+
+    What a receipt records beside an array variable, so that a scalar's
+    record stays what it was before arrays were mapped.
+    """
+    if not variable["dimensions"]:
+        return {}
+    return {"dimensions": [d.get("start") for d in variable["dimensions"]],
+            "value_count": variable["value_count"]}
 
 
 def _start(element: ElementTree.Element) -> str | None:
@@ -480,6 +495,7 @@ def _render_variable(variable: dict) -> str:
             declared.append(f"{key}={variable[key]}")
     if variable["dimensions"]:
         declared.append(f"dimensions={variable['dimensions']}")
+        declared.append(f"value_count={variable['value_count']}")
     if variable["clocks"]:
         declared.append(f"clocks={','.join(variable['clocks'])}")
     state = (

@@ -117,17 +117,24 @@ class ScalarGroup:
     """One Channel's fields bound to FMU variables of one scalar type.
 
     The order the fields were bound in is the order the buffer holds them in,
-    so one group is one FMI call however many fields it carries. What the
-    values are held as between the two calls is the buffer's business; what
-    this knows is which field each one belongs to and how the schema carries
-    it.
+    so one group is one FMI call however many fields it carries. An array
+    field spans as many values of the buffer as its variable holds, in the
+    row-major order FMI defines and the field carries. What the values are
+    held as between the two calls is the buffer's business; what this knows
+    is which values belong to which field and how the schema carries them.
     """
 
     def __init__(self, kind: str, bound: list[Binding]):
         self._scalar = SCALARS[kind]
-        self._fields = [binding.field for binding in bound]
+        # Each field, and how many values it spans: None for a scalar.
+        self._fields = [
+            (binding.field,
+             binding.variable.value_count if binding.variable.shape else None)
+            for binding in bound
+        ]
         self._buffer = ScalarBuffer(
-            kind, [binding.variable.reference for binding in bound]
+            kind, [binding.variable.reference for binding in bound],
+            sum(count or 1 for _, count in self._fields),
         )
         self._channel = bound[0].channel
         self._variables = ", ".join(
@@ -135,8 +142,14 @@ class ScalarGroup:
         )
 
     def write(self, fmu: CoSimulation, fields: dict) -> None:
+        values: list = []
+        for name, count in self._fields:
+            if count is None:
+                values.append(fields[name])
+            else:
+                values.extend(fields[name])
         try:
-            self._buffer.write(fmu, [fields[name] for name in self._fields])
+            self._buffer.write(fmu, values)
         except ParticipantFailure as error:
             raise self._failure("writing", "into", error) from error
 
@@ -146,10 +159,16 @@ class ScalarGroup:
         except ParticipantFailure as error:
             raise self._failure("reading", "out of", error) from error
         to_field = self._scalar.to_field
-        into.update(
-            (name, to_field(value))
-            for name, value in zip(self._fields, values)
-        )
+        offset = 0
+        for name, count in self._fields:
+            if count is None:
+                into[name] = to_field(values[offset])
+                offset += 1
+            else:
+                into[name] = [
+                    to_field(value) for value in values[offset:offset + count]
+                ]
+                offset += count
 
     def _failure(self, action: str, direction: str,
                  error: ParticipantFailure) -> ParticipantFailure:

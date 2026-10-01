@@ -31,6 +31,7 @@ from sil.fmi.description import (
     TRIGGERED,
     ModelDescription,
     Variable,
+    array_problem,
     dimensions,
 )
 
@@ -223,22 +224,24 @@ def unmappable(variable: Variable) -> str | None:
     rejected binding and an inspection report state the same rule in the same
     words.
     """
-    if variable.value_count != 1:
-        return (
-            f"which declares {dimensions(variable)}; this importer maps "
-            f"variables of one value"
-        )
     if variable.kind == CLOCK:
         return (
             "which is a Clock variable; a Clock is driven through the "
             "variable it gates rather than bound to a field of its own"
         )
-    if variable.kind != BINARY and variable.kind not in SCALARS:
+    if variable.kind == BINARY:
+        if variable.value_count != 1:
+            return (
+                f"which declares {dimensions(variable)}; this importer maps "
+                f"Binary variables of one value"
+            )
+        return None
+    if variable.kind not in SCALARS:
         return (
             f"which is a {variable.kind} variable; this importer maps Binary "
             f"and the scalar types {', '.join(SCALARS)}"
         )
-    return None
+    return array_problem(variable)
 
 
 def _require_mappable(binding: Binding) -> None:
@@ -257,15 +260,33 @@ def _require_causality(binding: Binding, causality: str) -> None:
         )
 
 
+def carrying_field(variable: Variable) -> dict:
+    """The type and count of the one schema field that carries a variable.
+
+    A scalar is carried by a scalar field. An array is carried by one field
+    of its element type whose `count` is its flattened value count, in the
+    FMI-defined row-major order: the last dimension varies fastest.
+    """
+    field = {"type": SCALARS[variable.kind].field_type}
+    if variable.shape:
+        field["count"] = variable.value_count
+    return field
+
+
 def _require_field_type(binding: Binding, spec: dict) -> None:
-    """Reject a field whose type is not the one the variable's type maps to."""
-    scalar = SCALARS[binding.variable.kind]
-    if spec.get("count") is not None or spec["type"] != scalar.field_type:
+    """Reject a field whose type or count is not the one the variable maps to."""
+    expected = carrying_field(binding.variable)
+    if (spec["type"], spec.get("count")) != (
+            expected["type"], expected.get("count")):
+        declared = (
+            f" of {dimensions(binding.variable)}"
+            if binding.variable.shape else ""
+        )
         raise ManifestError(
             f"Channel {binding.channel!r} declares field {binding.field!r} as "
             f"{_shape(spec)}; {binding.variable.kind} variable "
-            f"{binding.variable.name!r} is carried by a "
-            f"{scalar.field_type!r} scalar"
+            f"{binding.variable.name!r}{declared} is carried by "
+            f"{_shape(expected)}"
         )
 
 
@@ -513,44 +534,68 @@ def bind_channel(
 def start_value(variable: Variable, text: str):
     """One start value, read out of a command argument by its own type.
 
-    A command argument states one value, so an array variable is refused
-    here rather than written as its first element.
+    An array's start lists every value in the FMI-defined row-major order,
+    separated by single spaces. Nothing is broadcast and nothing is filled
+    in: the count it lists is the count the dimensions declare.
     """
-    if variable.value_count != 1:
-        raise ManifestError(
-            f"start value for FMU variable {variable.name!r}: it declares "
-            f"{dimensions(variable)}; this importer sets variables of one "
-            f"value"
-        )
     if variable.kind == BINARY:
-        try:
-            value = bytes.fromhex(text)
-        except ValueError as error:
-            raise ManifestError(
-                f"start value for FMU variable {variable.name!r}: {text!r} is "
-                f"not hexadecimal"
-            ) from error
-        if variable.max_size is not None and len(value) > variable.max_size:
-            raise ManifestError(
-                f"start value for FMU variable {variable.name!r} carries "
-                f"{len(value)} bytes, but {variable.causality} variable "
-                f"{variable.name!r} declares maxSize {variable.max_size}; the "
-                f"FMU would refuse it"
-            )
-        return value
+        return _binary_start(variable, text)
     if variable.kind not in SCALARS:
         raise ManifestError(
             f"start value for FMU variable {variable.name!r}: it is a "
             f"{variable.kind} variable, which this importer does not set"
         )
-    scalar = SCALARS[variable.kind]
+    problem = array_problem(variable)
+    if problem is not None:
+        raise ManifestError(
+            f"start value for FMU variable {variable.name!r}, {problem}"
+        )
+    if not variable.shape:
+        return _scalar_start(variable, text)
+    elements = text.split(" ")
+    if len(elements) != variable.value_count:
+        raise ManifestError(
+            f"start value for FMU variable {variable.name!r} lists "
+            f"{len(elements)} values separated by single spaces; it declares "
+            f"{dimensions(variable)}, and a start lists each of them in "
+            f"row-major order"
+        )
+    return [_scalar_start(variable, element) for element in elements]
+
+
+def _scalar_start(variable: Variable, text: str):
+    """One value of a scalar type's start, read by that type's grammar."""
     try:
-        value = scalar.parse(text)
+        return SCALARS[variable.kind].parse(text)
     except ValueError as error:
         raise ManifestError(
             f"start value for FMU variable {variable.name!r}: cannot read "
             f"{text!r} as {variable.kind} ({error})"
         ) from error
+
+
+def _binary_start(variable: Variable, text: str) -> bytes:
+    """A Binary start: one hexadecimal payload, within the declared maxSize."""
+    if variable.value_count != 1:
+        raise ManifestError(
+            f"start value for FMU variable {variable.name!r}: it declares "
+            f"{dimensions(variable)}; this importer sets Binary variables of "
+            f"one value"
+        )
+    try:
+        value = bytes.fromhex(text)
+    except ValueError as error:
+        raise ManifestError(
+            f"start value for FMU variable {variable.name!r}: {text!r} is "
+            f"not hexadecimal"
+        ) from error
+    if variable.max_size is not None and len(value) > variable.max_size:
+        raise ManifestError(
+            f"start value for FMU variable {variable.name!r} carries "
+            f"{len(value)} bytes, but {variable.causality} variable "
+            f"{variable.name!r} declares maxSize {variable.max_size}; the "
+            f"FMU would refuse it"
+        )
     return value
 
 

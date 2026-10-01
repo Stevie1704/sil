@@ -28,7 +28,8 @@ Everything is checked before a Manifest is written, and nothing is loaded:
 
 * the FMU and the proposed mapping get the inspection's verdict, which is the
   verdict the Importer reaches when it initializes;
-* a start value is set only on an input or a parameter;
+* a start value is set only on an input or a parameter. An array's start
+  lists every value, separated by single spaces, in row-major order;
 * each binding and each start value states the unit of its FMU variable.
   The Importer converts no unit. When the recorded unit differs, convert it
   at the edge (sil-csv's scale and offset) and state the FMU's unit;
@@ -61,7 +62,12 @@ from sil.fmi.documents import (
     string as _string,
     unit as _unit,
 )
-from sil.fmi.inspection import COMPATIBLE, MAPPING_VERSION, inspect
+from sil.fmi.inspection import (
+    COMPATIBLE,
+    MAPPING_VERSION,
+    array_shape,
+    inspect,
+)
 from sil.manifest import Manifest, ManifestError, SubscriberRoute
 from sil.recording import UnknownRecordingFormat, read_schemas
 
@@ -142,9 +148,15 @@ def _receipt(doc: dict, variables: dict[str, dict], report: dict,
 
 
 def _declared(variable: dict) -> dict:
-    """What the FMU declares about one variable, as the receipt records it."""
+    """What the FMU declares about one variable, as the receipt records it.
+
+    An array also records its shape and its flattened count; a scalar's
+    record is what it was before arrays were mapped.
+    """
     return {"variable": variable["name"], "type": variable["type"],
-            "causality": variable["causality"], "unit": variable["unit"]}
+            "causality": variable["causality"], "unit": variable["unit"],
+            **array_shape(variable)}
+
 
 
 # Document ----------------------------------------------------------------------

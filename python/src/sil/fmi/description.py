@@ -20,7 +20,7 @@ from pathlib import Path
 from collections.abc import Callable
 from xml.etree import ElementTree
 
-from sil._schema_types import INT_RANGES
+from sil._schema_types import INT_RANGES, SIZES
 from sil.participant import ManifestError
 
 # The one FMI version this importer drives. Anything else is rejected rather
@@ -108,6 +108,10 @@ class _ScalarType:
     field_type: str
     to_field: Callable
     parse: Callable
+    # Whether a variable of this type may declare dimensions. An array is
+    # carried by one fixed-count field of `field_type`, flattened in the
+    # FMI-defined row-major order.
+    array: bool = True
 
 
 # Every FMI scalar type this importer maps, by the element name
@@ -124,7 +128,7 @@ SCALARS = {
     # fmi3Boolean is a C `bool`, so a Channel carries it as a `u8` with C's
     # own conversion: zero is false and any other value is true. What the FMU
     # hands back is 0 or 1.
-    "Boolean": _ScalarType("u8", int, _boolean),
+    "Boolean": _ScalarType("u8", int, _boolean, array=False),
     "Float32": _ScalarType("f32", float, _float32),
     "Int32": _ScalarType("i32", int, _integer("Int32", "i32")),
     "UInt32": _ScalarType("u32", int, _integer("UInt32", "u32")),
@@ -197,7 +201,7 @@ class Variable:
     max_size: int | None
     # How many values the declared dimensions amount to: one when the
     # variable declares none, and None when a dimension is sized by another
-    # variable, which the description does not settle.
+    # variable, which the description does not settle, or is not positive.
     value_count: int | None
     # The value references of the Clocks that gate this variable. A variable
     # that declares one is defined only while that Clock is active.
@@ -207,6 +211,9 @@ class Variable:
     # Declared by a Binary variable only: the media type of what it carries.
     # A layered standard's profile is stated here, parameters included.
     mime_type: str | None = None
+    # Each `<Dimension>` in declaration order: its literal `start`, or None
+    # where another variable's value sizes it. Empty for a scalar.
+    shape: tuple[int | None, ...] = ()
 
     @property
     def media_type(self) -> str | None:
@@ -262,20 +269,28 @@ def _by_causality(
     }
 
 
-def _value_count(element) -> int | None:
+def _shape(element) -> tuple[int | None, ...]:
+    """Each declared dimension: its literal start, or None when unresolved.
+
+    A dimension without a `start` is sized by the variable its
+    `valueReference` names, which only the FMU's configuration settles.
+    """
+    return tuple(
+        None if dimension.get("start") is None else int(dimension.get("start"))
+        for dimension in element.findall("Dimension")
+    )
+
+
+def _value_count(shape: tuple[int | None, ...]) -> int | None:
     """How many values one variable's declared dimensions amount to.
 
     The acceptance fixture's CAN node declares its Binary input as
     `<Dimension start="1"/>`, which is one value written the long way — the
     same variable a description without any Dimension declares.
     """
-    count = 1
-    for dimension in element.findall("Dimension"):
-        start = dimension.get("start")
-        if start is None:
-            return None
-        count *= int(start)
-    return count
+    if any(extent is None or extent < 1 for extent in shape):
+        return None
+    return math.prod(shape)
 
 
 def _clock_references(element) -> tuple[int, ...]:
@@ -298,16 +313,18 @@ def _variables(root) -> dict[str, Variable]:
         if name is None or reference is None:
             continue
         max_size = element.get("maxSize")
+        shape = _shape(element)
         declared[name] = Variable(
             name=name,
             reference=int(reference),
             kind=element.tag,
             causality=element.get("causality", "local"),
             max_size=None if max_size is None else int(max_size),
-            value_count=_value_count(element),
+            value_count=_value_count(shape),
             clocks=_clock_references(element),
             interval_variability=element.get("intervalVariability"),
             mime_type=element.get("mimeType"),
+            shape=shape,
         )
     return declared
 
@@ -461,6 +478,48 @@ class ModelDescription:
 
 def dimensions(variable: Variable) -> str:
     """How a variable's declared dimensions read in a diagnostic."""
-    if variable.value_count is None:
+    if None in variable.shape:
         return "a dimension sized by another variable"
-    return f"dimensions of {variable.value_count} values"
+    shape = "x".join(str(extent) for extent in variable.shape)
+    if variable.value_count is None:
+        return f"dimensions [{shape}], which are not all positive"
+    return f"dimensions [{shape}] of {variable.value_count} values"
+
+
+# The most bytes one value buffer may span: what `size_t` counts on the
+# 64-bit platforms this importer supports. An array past it could neither be
+# allocated nor named by the `nValues` of an FMI call.
+_SIZE_MAX = (1 << 64) - 1
+
+
+def array_problem(variable: Variable) -> str | None:
+    """Why this importer carries no Channel field for an array, or None.
+
+    The reason completes a sentence that opens by naming the variable. A
+    variable that declares no dimension is a scalar and has none.
+    """
+    if not variable.shape:
+        return None
+    scalar = SCALARS.get(variable.kind)
+    if scalar is None or not scalar.array:
+        return (
+            f"which declares {dimensions(variable)}; this importer maps "
+            f"arrays of {', '.join(k for k, s in SCALARS.items() if s.array)}"
+            f" only"
+        )
+    if None in variable.shape:
+        return (
+            f"which declares {dimensions(variable)}; this importer maps "
+            f"dimensions with a literal start only"
+        )
+    if variable.value_count is None:
+        return (
+            f"which declares {dimensions(variable)}; a dimension is a "
+            f"positive integer"
+        )
+    if variable.value_count > _SIZE_MAX // SIZES[scalar.field_type]:
+        return (
+            f"which declares {dimensions(variable)}; that many "
+            f"{scalar.field_type!r} values overflow a size_t buffer"
+        )
+    return None
