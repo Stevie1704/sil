@@ -1,0 +1,6377 @@
+{
+  "declaration": {
+    "profile": {
+      "name": "sil.adas-reference.radar-camera",
+      "version": 3
+    },
+    "controller_period_ns": 10000000,
+    "sensor_periods_ns": {
+      "radar": 20000000,
+      "camera": 40000000,
+      "ego": 10000000
+    },
+    "list_capacity": 8,
+    "active_objects": {
+      "radar": 8,
+      "camera": 8
+    },
+    "message_bytes": {
+      "adas.ObjectList": 185,
+      "adas.EgoMotion": 17,
+      "adas.Command": 56
+    },
+    "input_latency_ns": 0,
+    "output_latency_ns": 10000000,
+    "route_capacity": 3,
+    "max_messages_per_route_per_activation": 1,
+    "fan_out": {
+      "input": 1,
+      "command": 0
+    },
+    "parameters": {
+      "hazard_acceleration_mps2": -3.0,
+      "max_change_mps2": 0.5
+    },
+    "forms": [
+      "native",
+      "process",
+      "fmu"
+    ],
+    "workloads": {
+      "startup": {
+        "activations": 1,
+        "simulated_s": 0.01
+      },
+      "ci": {
+        "activations": 20,
+        "simulated_s": 0.2
+      },
+      "long": {
+        "activations": 6000,
+        "simulated_s": 60.0
+      }
+    },
+    "instances": [
+      1,
+      4
+    ],
+    "recording": [
+      "off",
+      "on"
+    ],
+    "policy": {
+      "warmup_runs": 1,
+      "timed_repeats": 5,
+      "statistic": "median of the timed repeats, with min and max; peak RSS is the max"
+    }
+  },
+  "machine": {
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.36",
+    "machine": "x86_64",
+    "cpu": "AMD EPYC 9V45 96-Core Processor",
+    "logical_cpus": 4,
+    "memory_bytes": 16766414848,
+    "participant_python": "3.13.7 (main, Sep 30 2025, 00:38:53) [GCC 12.2.0]",
+    "driver_python": "3.13.7",
+    "sil_run": "0.1.0",
+    "runners": {
+      "production": "/opt/sil/native/bin/sil-run",
+      "instrumented": "/opt/sil/native/bin/sil-run-instrumented"
+    }
+  },
+  "artifacts": {
+    "compiler": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "flags": [
+      "-std=c11",
+      "-O2",
+      "-ffp-contract=off",
+      "-Wall",
+      "-Wextra",
+      "-shared",
+      "-fPIC"
+    ],
+    "library": {
+      "sha256": "b150052c549d5745eab3ac55556ed71f44eb9213a406dce8cb2664d6ccbafbd3",
+      "sources": [
+        "adas_reference.c",
+        "sil_adapter.c"
+      ]
+    },
+    "process_adapter": {
+      "sha256": "f14b3e9a24fb860253069a12c17e7ca6f11a097d747d79121326d86c846b7993"
+    },
+    "fmu": {
+      "sha256": "f99c95f06ac97a7ce0ade263fe191cc8579c1e93355d360680b2ae72c5d503ab",
+      "instantiation_token": "875fa22861b19b80613fc91b157614d1320ab403fd2a42123d18fca0ed1ad89d"
+    },
+    "harness": {
+      "sha256": "43b4a78e5bbda73d2bd4d8f0df34d7f8d8eb0aae35308cdab0e5a821101e10b5",
+      "sources": [
+        "app_cost.c",
+        "adas_reference.c"
+      ]
+    },
+    "launcher": {
+      "sha256": "4d702718a476254e900c4c856195f85fc64b8901ecac2f882a040e4e53eeb3b2",
+      "sources": [
+        "run_measured.c"
+      ]
+    }
+  },
+  "inputs": {
+    "startup": {
+      "authored": {
+        "path": "startup.authored.csv",
+        "sha256": "0eecc2a3eea4477e5885ea16c2b93b3c0f270725739a58e9ff89d9e6859bfbcc"
+      },
+      "recordings": {
+        "load0": "2fa9478bd45387cad9ef5293dbd4eb05841c6149d408b6f6e4b142ac6ad88db7",
+        "load1": "97b24615e10c432e30594f413d668ca7da7d44b67b1d0408d285d2e76e1b98f9",
+        "load2": "b7b63dcf291ca2a90182d141b4885447f55b69c204f92468a4f601ab8766486b",
+        "load3": "fce5f045a693d4bae38138eee8438010cf3ab39397e99e24e9cc37759e906dbb"
+      }
+    },
+    "ci": {
+      "authored": {
+        "path": "ci.authored.csv",
+        "sha256": "94f3bd219d5b6d1baf4cda7854bfd687df4aabd0594fd0d635084c4954e13a99"
+      },
+      "recordings": {
+        "load0": "15671194e1d4ba27fb22b59e976eaaa4546e97ed23363a9f77e226e280041bb2",
+        "load1": "b723a4870fec3ce3b8e1a8fdb83a3ec53c5de1003afc760b15f8d62a83dfa4ee",
+        "load2": "a03a27fa461582f59faf7adb1132d168888a481f00974481c00bf409c5688555",
+        "load3": "c7ad95a1744872e3e928a7332ed005b01aac11d1c4e09804af5e60a9086582df"
+      }
+    },
+    "long": {
+      "authored": {
+        "path": "long.authored.csv",
+        "sha256": "c1c2e7f58ca0cd420e2e73a9aff38c41af4345e4c2395217a0a664c152259691"
+      },
+      "recordings": {
+        "load0": "83b07bae0a0a78c712f6d9bbefcefa3c44064fb3cdae4eb6d52278d89499e555",
+        "load1": "dbe01e6d5cab180c484bdb826771dc63d5831f914327446544cc614adb0f81fb",
+        "load2": "473c2151748071ff73c5f446edbba15ec33168bb6d124bf8fa7ed0fc17268eeb",
+        "load3": "4aba2243ce104e4a163f48a29f64e04ed19aff4200f37e7ff36beef3a3b884bd"
+      }
+    }
+  },
+  "manifest_hashes": {
+    "native-startup-x1-recoff": "9ef8dd76428d1311e36e24217d72f43178bfa2ae2ec9b0c7f56aec4da0ddeb88",
+    "process-startup-x1-recoff": "c9ec8076f0adf3da7f497ae1847efef07de8c66c66b4d805e40ab2c8f8788b45",
+    "fmu-startup-x1-recoff": "97917cf8f422c69a59b31d5da491b62734d42d580556044ebd3bfb0bc5010a8e",
+    "native-startup-x1-recon": "9ef8dd76428d1311e36e24217d72f43178bfa2ae2ec9b0c7f56aec4da0ddeb88",
+    "process-startup-x1-recon": "c9ec8076f0adf3da7f497ae1847efef07de8c66c66b4d805e40ab2c8f8788b45",
+    "fmu-startup-x1-recon": "97917cf8f422c69a59b31d5da491b62734d42d580556044ebd3bfb0bc5010a8e",
+    "native-startup-x4-recoff": "e52dce322b73f8978d818d8b0ca45e116a2526d5540870519385d2073ba91e00",
+    "process-startup-x4-recoff": "56a5121cbead8e9cbb78c802d263a49b46f362acde99cec2640ca994a3edee93",
+    "fmu-startup-x4-recoff": "3af64ad2d4050ce29dcd9531f815d8db74d69e5c2106179f807654f300cb7773",
+    "native-startup-x4-recon": "e52dce322b73f8978d818d8b0ca45e116a2526d5540870519385d2073ba91e00",
+    "process-startup-x4-recon": "56a5121cbead8e9cbb78c802d263a49b46f362acde99cec2640ca994a3edee93",
+    "fmu-startup-x4-recon": "3af64ad2d4050ce29dcd9531f815d8db74d69e5c2106179f807654f300cb7773",
+    "native-ci-x1-recoff": "bc892dfe4349d10d76020d8183988e3ad2845e948e750516b52f1ab9f28e9721",
+    "process-ci-x1-recoff": "c051e2a871411c3700878818e934ef96035c5d972682a63f6da1c4b58f4650dd",
+    "fmu-ci-x1-recoff": "7d918ffed79d602dff89366485e07822f1e68cb72198ff0de456071196ee4741",
+    "native-ci-x1-recon": "bc892dfe4349d10d76020d8183988e3ad2845e948e750516b52f1ab9f28e9721",
+    "process-ci-x1-recon": "c051e2a871411c3700878818e934ef96035c5d972682a63f6da1c4b58f4650dd",
+    "fmu-ci-x1-recon": "7d918ffed79d602dff89366485e07822f1e68cb72198ff0de456071196ee4741",
+    "native-ci-x4-recoff": "49d3f6504f587d13db8204d5f23a1aba13763bea908b09f562d4509ecd61ad30",
+    "process-ci-x4-recoff": "42491d6260bac4cb0e85608fa5170b726edf8dec2b961f5314a6b6778cd3808e",
+    "fmu-ci-x4-recoff": "cc2c80ef249b52ccffd424ecc23215ccb0ebe458b8a5b7dbab83d3049ff31751",
+    "native-ci-x4-recon": "49d3f6504f587d13db8204d5f23a1aba13763bea908b09f562d4509ecd61ad30",
+    "process-ci-x4-recon": "42491d6260bac4cb0e85608fa5170b726edf8dec2b961f5314a6b6778cd3808e",
+    "fmu-ci-x4-recon": "cc2c80ef249b52ccffd424ecc23215ccb0ebe458b8a5b7dbab83d3049ff31751",
+    "native-long-x1-recoff": "a21d9fe6cf0473b152776dfc0e6a3a6a51ec7214ad6cd7092766c113ba153c13",
+    "process-long-x1-recoff": "9d1e8998e2ed81a34c8281bf6fb49c8a990d89223702b4115529f1578a2a3d70",
+    "fmu-long-x1-recoff": "2b76c76d2848be97371da1dd11505bf67ea13c81859ab9d69788034465f39bb2",
+    "native-long-x1-recon": "a21d9fe6cf0473b152776dfc0e6a3a6a51ec7214ad6cd7092766c113ba153c13",
+    "process-long-x1-recon": "9d1e8998e2ed81a34c8281bf6fb49c8a990d89223702b4115529f1578a2a3d70",
+    "fmu-long-x1-recon": "2b76c76d2848be97371da1dd11505bf67ea13c81859ab9d69788034465f39bb2",
+    "native-long-x4-recoff": "75fc4f3e1fa4d0137e6c4336ec985e40c89eca67196687413c2987ec0a98cfd5",
+    "process-long-x4-recoff": "09b3cec8dd8c43c86bbc9ec5570c8fb72f4c4493739107bf4b4571ab2372a93b",
+    "fmu-long-x4-recoff": "ee4cee3d043553dcdb0701a37502dad975d1e2b58beffcd4ed12e66cb2ba0184",
+    "native-long-x4-recon": "75fc4f3e1fa4d0137e6c4336ec985e40c89eca67196687413c2987ec0a98cfd5",
+    "process-long-x4-recon": "09b3cec8dd8c43c86bbc9ec5570c8fb72f4c4493739107bf4b4571ab2372a93b",
+    "fmu-long-x4-recon": "ee4cee3d043553dcdb0701a37502dad975d1e2b58beffcd4ed12e66cb2ba0184"
+  },
+  "rows": [
+    {
+      "name": "native-startup-x1-recoff",
+      "form": "native",
+      "workload": "startup",
+      "instances": 1,
+      "recording": false,
+      "activations": 1,
+      "simulated_s": 0.01,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 4,
+            "bytes": 443
+          },
+          "subscriber_copy": {
+            "count": 3,
+            "bytes": 387
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_decode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1315
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.004846094,
+          "min": 0.004805393,
+          "max": 0.004905534,
+          "samples": [
+            0.004893436,
+            0.004805393,
+            0.004812524,
+            0.004846094,
+            0.004905534
+          ]
+        },
+        "user_s": {
+          "median": 0.003753,
+          "min": 0.00279,
+          "max": 0.004666,
+          "samples": [
+            0.003759,
+            0.003696,
+            0.00279,
+            0.004666,
+            0.003753
+          ]
+        },
+        "system_s": {
+          "median": 0.000938,
+          "min": 0.0,
+          "max": 0.00186,
+          "samples": [
+            0.000939,
+            0.000924,
+            0.00186,
+            0.0,
+            0.000938
+          ]
+        },
+        "tree_max_rss_bytes": 4747264,
+        "real_time_factor": 2.063517546296048,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.003972,
+          "kernel_system_s": 0.000993,
+          "kernel_max_rss_bytes": 4673536
+        }
+      }
+    },
+    {
+      "name": "process-startup-x1-recoff",
+      "form": "process",
+      "workload": "startup",
+      "instances": 1,
+      "recording": false,
+      "activations": 1,
+      "simulated_s": 0.01,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 4,
+            "bytes": 443
+          },
+          "subscriber_copy": {
+            "count": 3,
+            "bytes": 387
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 3,
+            "bytes": 387
+          },
+          "inline_decode": {
+            "count": 1,
+            "bytes": 56
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1315
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.054211139,
+          "min": 0.053573626,
+          "max": 0.058480798,
+          "samples": [
+            0.053837665,
+            0.053573626,
+            0.054211139,
+            0.054445905,
+            0.058480798
+          ]
+        },
+        "user_s": {
+          "median": 0.040367,
+          "min": 0.035215,
+          "max": 0.043874,
+          "samples": [
+            0.035215,
+            0.037457,
+            0.042278,
+            0.043874,
+            0.040367
+          ]
+        },
+        "system_s": {
+          "median": 0.010857,
+          "min": 0.005941,
+          "max": 0.013644,
+          "samples": [
+            0.013644,
+            0.011166,
+            0.007072,
+            0.005941,
+            0.010857
+          ]
+        },
+        "tree_max_rss_bytes": 20979712,
+        "real_time_factor": 0.18446393461683216,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.004183,
+          "kernel_system_s": 0.001045,
+          "kernel_max_rss_bytes": 4718592
+        }
+      }
+    },
+    {
+      "name": "fmu-startup-x1-recoff",
+      "form": "fmu",
+      "workload": "startup",
+      "instances": 1,
+      "recording": false,
+      "activations": 1,
+      "simulated_s": 0.01,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 4,
+            "bytes": 443
+          },
+          "subscriber_copy": {
+            "count": 3,
+            "bytes": 387
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 3,
+            "bytes": 387
+          },
+          "inline_decode": {
+            "count": 1,
+            "bytes": 56
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1315
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.075805929,
+          "min": 0.075478224,
+          "max": 0.07745356,
+          "samples": [
+            0.07745356,
+            0.075805929,
+            0.075612127,
+            0.075832069,
+            0.075478224
+          ]
+        },
+        "user_s": {
+          "median": 0.054685,
+          "min": 0.053117,
+          "max": 0.062856,
+          "samples": [
+            0.062856,
+            0.054685,
+            0.054009,
+            0.053117,
+            0.058579
+          ]
+        },
+        "system_s": {
+          "median": 0.017837,
+          "min": 0.011229,
+          "max": 0.019226,
+          "samples": [
+            0.011229,
+            0.017837,
+            0.018038,
+            0.019226,
+            0.013338
+          ]
+        },
+        "tree_max_rss_bytes": 25980928,
+        "real_time_factor": 0.13191580305018097,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.004024,
+          "kernel_system_s": 0.002012,
+          "kernel_max_rss_bytes": 4644864
+        }
+      }
+    },
+    {
+      "name": "native-startup-x1-recon",
+      "form": "native",
+      "workload": "startup",
+      "instances": 1,
+      "recording": true,
+      "activations": 1,
+      "simulated_s": 0.01,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 4,
+            "bytes": 443
+          },
+          "subscriber_copy": {
+            "count": 3,
+            "bytes": 387
+          },
+          "recorded": {
+            "count": 4,
+            "bytes": 443
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_decode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1315
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.004691341,
+          "min": 0.00465132,
+          "max": 0.004753395,
+          "samples": [
+            0.004691341,
+            0.004753395,
+            0.004719403,
+            0.00465132,
+            0.004660764
+          ]
+        },
+        "user_s": {
+          "median": 0.003484,
+          "min": 0.00277,
+          "max": 0.004606,
+          "samples": [
+            0.003484,
+            0.003766,
+            0.002804,
+            0.004606,
+            0.00277
+          ]
+        },
+        "system_s": {
+          "median": 0.001161,
+          "min": 0.0,
+          "max": 0.001869,
+          "samples": [
+            0.001161,
+            0.000941,
+            0.001869,
+            0.0,
+            0.001846
+          ]
+        },
+        "tree_max_rss_bytes": 4726784,
+        "real_time_factor": 2.131586682784304,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.002933,
+          "kernel_system_s": 0.001955,
+          "kernel_max_rss_bytes": 4657152
+        }
+      }
+    },
+    {
+      "name": "process-startup-x1-recon",
+      "form": "process",
+      "workload": "startup",
+      "instances": 1,
+      "recording": true,
+      "activations": 1,
+      "simulated_s": 0.01,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 4,
+            "bytes": 443
+          },
+          "subscriber_copy": {
+            "count": 3,
+            "bytes": 387
+          },
+          "recorded": {
+            "count": 4,
+            "bytes": 443
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 3,
+            "bytes": 387
+          },
+          "inline_decode": {
+            "count": 1,
+            "bytes": 56
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1315
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.054116056,
+          "min": 0.053791565,
+          "max": 0.054874613,
+          "samples": [
+            0.054116056,
+            0.054874613,
+            0.054228246,
+            0.053791565,
+            0.053858326
+          ]
+        },
+        "user_s": {
+          "median": 0.040144,
+          "min": 0.035362,
+          "max": 0.042163,
+          "samples": [
+            0.041635,
+            0.042163,
+            0.035362,
+            0.039056,
+            0.040144
+          ]
+        },
+        "system_s": {
+          "median": 0.008904,
+          "min": 0.007965,
+          "max": 0.014113,
+          "samples": [
+            0.008257,
+            0.007965,
+            0.014113,
+            0.009936,
+            0.008904
+          ]
+        },
+        "tree_max_rss_bytes": 20938752,
+        "real_time_factor": 0.1847880414640712,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.005066,
+          "kernel_system_s": 0.0,
+          "kernel_max_rss_bytes": 4702208
+        }
+      }
+    },
+    {
+      "name": "fmu-startup-x1-recon",
+      "form": "fmu",
+      "workload": "startup",
+      "instances": 1,
+      "recording": true,
+      "activations": 1,
+      "simulated_s": 0.01,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 4,
+            "bytes": 443
+          },
+          "subscriber_copy": {
+            "count": 3,
+            "bytes": 387
+          },
+          "recorded": {
+            "count": 4,
+            "bytes": 443
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 3,
+            "bytes": 387
+          },
+          "inline_decode": {
+            "count": 1,
+            "bytes": 56
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1315
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.075119352,
+          "min": 0.074988474,
+          "max": 0.076519208,
+          "samples": [
+            0.076519208,
+            0.075119352,
+            0.075433737,
+            0.075099372,
+            0.074988474
+          ]
+        },
+        "user_s": {
+          "median": 0.056642,
+          "min": 0.055243,
+          "max": 0.059281,
+          "samples": [
+            0.059188,
+            0.056642,
+            0.055243,
+            0.055753,
+            0.059281
+          ]
+        },
+        "system_s": {
+          "median": 0.015063,
+          "min": 0.012285,
+          "max": 0.016749,
+          "samples": [
+            0.014053,
+            0.015063,
+            0.016749,
+            0.015904,
+            0.012285
+          ]
+        },
+        "tree_max_rss_bytes": 26169344,
+        "real_time_factor": 0.1331214891204067,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.004766,
+          "kernel_system_s": 0.000953,
+          "kernel_max_rss_bytes": 4608000
+        }
+      }
+    },
+    {
+      "name": "native-startup-x4-recoff",
+      "form": "native",
+      "workload": "startup",
+      "instances": 4,
+      "recording": false,
+      "activations": 1,
+      "simulated_s": 0.01,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 16,
+            "bytes": 1772
+          },
+          "subscriber_copy": {
+            "count": 12,
+            "bytes": 1548
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_decode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1315
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.005612433,
+          "min": 0.005522417,
+          "max": 0.005723051,
+          "samples": [
+            0.005723051,
+            0.005612433,
+            0.005628888,
+            0.005557741,
+            0.005522417
+          ]
+        },
+        "user_s": {
+          "median": 0.003586,
+          "min": 0.003258,
+          "max": 0.005414,
+          "samples": [
+            0.003311,
+            0.003258,
+            0.004557,
+            0.005414,
+            0.003586
+          ]
+        },
+        "system_s": {
+          "median": 0.001793,
+          "min": 0.0,
+          "max": 0.002207,
+          "samples": [
+            0.002207,
+            0.002172,
+            0.000911,
+            0.0,
+            0.001793
+          ]
+        },
+        "tree_max_rss_bytes": 4706304,
+        "real_time_factor": 1.7817584637535986,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.004708,
+          "kernel_system_s": 0.000941,
+          "kernel_max_rss_bytes": 4558848
+        }
+      }
+    },
+    {
+      "name": "process-startup-x4-recoff",
+      "form": "process",
+      "workload": "startup",
+      "instances": 4,
+      "recording": false,
+      "activations": 1,
+      "simulated_s": 0.01,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 16,
+            "bytes": 1772
+          },
+          "subscriber_copy": {
+            "count": 12,
+            "bytes": 1548
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 12,
+            "bytes": 1548
+          },
+          "inline_decode": {
+            "count": 4,
+            "bytes": 224
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1315
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.204445035,
+          "min": 0.202191951,
+          "max": 0.205366388,
+          "samples": [
+            0.205366388,
+            0.202191951,
+            0.20352163,
+            0.205039354,
+            0.204445035
+          ]
+        },
+        "user_s": {
+          "median": 0.155021,
+          "min": 0.149214,
+          "max": 0.161879,
+          "samples": [
+            0.156104,
+            0.149214,
+            0.155021,
+            0.153686,
+            0.161879
+          ]
+        },
+        "system_s": {
+          "median": 0.03951,
+          "min": 0.032118,
+          "max": 0.042331,
+          "samples": [
+            0.03951,
+            0.042331,
+            0.038674,
+            0.040955,
+            0.032118
+          ]
+        },
+        "tree_max_rss_bytes": 21000192,
+        "real_time_factor": 0.0489129021890896,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.007498,
+          "kernel_system_s": 0.0,
+          "kernel_max_rss_bytes": 4554752
+        }
+      }
+    },
+    {
+      "name": "fmu-startup-x4-recoff",
+      "form": "fmu",
+      "workload": "startup",
+      "instances": 4,
+      "recording": false,
+      "activations": 1,
+      "simulated_s": 0.01,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 16,
+            "bytes": 1772
+          },
+          "subscriber_copy": {
+            "count": 12,
+            "bytes": 1548
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 12,
+            "bytes": 1548
+          },
+          "inline_decode": {
+            "count": 4,
+            "bytes": 224
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1315
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.294228622,
+          "min": 0.288858235,
+          "max": 0.333396394,
+          "samples": [
+            0.289621074,
+            0.294228622,
+            0.302861631,
+            0.333396394,
+            0.288858235
+          ]
+        },
+        "user_s": {
+          "median": 0.236834,
+          "min": 0.218966,
+          "max": 0.263715,
+          "samples": [
+            0.218966,
+            0.232455,
+            0.23771,
+            0.263715,
+            0.236834
+          ]
+        },
+        "system_s": {
+          "median": 0.060278,
+          "min": 0.050378,
+          "max": 0.068987,
+          "samples": [
+            0.068987,
+            0.060278,
+            0.054251,
+            0.068349,
+            0.050378
+          ]
+        },
+        "tree_max_rss_bytes": 26058752,
+        "real_time_factor": 0.033987176135433894,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.006705,
+          "kernel_system_s": 0.003352,
+          "kernel_max_rss_bytes": 4759552
+        }
+      }
+    },
+    {
+      "name": "native-startup-x4-recon",
+      "form": "native",
+      "workload": "startup",
+      "instances": 4,
+      "recording": true,
+      "activations": 1,
+      "simulated_s": 0.01,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 16,
+            "bytes": 1772
+          },
+          "subscriber_copy": {
+            "count": 12,
+            "bytes": 1548
+          },
+          "recorded": {
+            "count": 16,
+            "bytes": 1772
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_decode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1315
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.005563689,
+          "min": 0.005470739,
+          "max": 0.005582047,
+          "samples": [
+            0.005563689,
+            0.005582047,
+            0.00557037,
+            0.00551793,
+            0.005470739
+          ]
+        },
+        "user_s": {
+          "median": 0.004331,
+          "min": 0.003649,
+          "max": 0.005533,
+          "samples": [
+            0.004412,
+            0.005533,
+            0.003683,
+            0.003649,
+            0.004331
+          ]
+        },
+        "system_s": {
+          "median": 0.001103,
+          "min": 0.0,
+          "max": 0.001841,
+          "samples": [
+            0.001103,
+            0.0,
+            0.001841,
+            0.001824,
+            0.001082
+          ]
+        },
+        "tree_max_rss_bytes": 4734976,
+        "real_time_factor": 1.7973686163982208,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.002887,
+          "kernel_system_s": 0.002887,
+          "kernel_max_rss_bytes": 4435968
+        }
+      }
+    },
+    {
+      "name": "process-startup-x4-recon",
+      "form": "process",
+      "workload": "startup",
+      "instances": 4,
+      "recording": true,
+      "activations": 1,
+      "simulated_s": 0.01,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 16,
+            "bytes": 1772
+          },
+          "subscriber_copy": {
+            "count": 12,
+            "bytes": 1548
+          },
+          "recorded": {
+            "count": 16,
+            "bytes": 1772
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 12,
+            "bytes": 1548
+          },
+          "inline_decode": {
+            "count": 4,
+            "bytes": 224
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1315
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.207775795,
+          "min": 0.205919288,
+          "max": 0.217171889,
+          "samples": [
+            0.205919288,
+            0.207775795,
+            0.205992048,
+            0.212286062,
+            0.217171889
+          ]
+        },
+        "user_s": {
+          "median": 0.162954,
+          "min": 0.146233,
+          "max": 0.170091,
+          "samples": [
+            0.162675,
+            0.168624,
+            0.146233,
+            0.162954,
+            0.170091
+          ]
+        },
+        "system_s": {
+          "median": 0.037638,
+          "min": 0.030012,
+          "max": 0.05081,
+          "samples": [
+            0.034442,
+            0.030012,
+            0.05081,
+            0.039584,
+            0.037638
+          ]
+        },
+        "tree_max_rss_bytes": 21037056,
+        "real_time_factor": 0.04812880152858998,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.005438,
+          "kernel_system_s": 0.002175,
+          "kernel_max_rss_bytes": 4636672
+        }
+      }
+    },
+    {
+      "name": "fmu-startup-x4-recon",
+      "form": "fmu",
+      "workload": "startup",
+      "instances": 4,
+      "recording": true,
+      "activations": 1,
+      "simulated_s": 0.01,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 16,
+            "bytes": 1772
+          },
+          "subscriber_copy": {
+            "count": 12,
+            "bytes": 1548
+          },
+          "recorded": {
+            "count": 16,
+            "bytes": 1772
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 12,
+            "bytes": 1548
+          },
+          "inline_decode": {
+            "count": 4,
+            "bytes": 224
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1315
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.301720625,
+          "min": 0.288811961,
+          "max": 0.311564216,
+          "samples": [
+            0.29012838,
+            0.305091431,
+            0.311564216,
+            0.288811961,
+            0.301720625
+          ]
+        },
+        "user_s": {
+          "median": 0.229133,
+          "min": 0.222829,
+          "max": 0.238465,
+          "samples": [
+            0.222829,
+            0.229133,
+            0.238465,
+            0.233868,
+            0.225061
+          ]
+        },
+        "system_s": {
+          "median": 0.064813,
+          "min": 0.05321,
+          "max": 0.066142,
+          "samples": [
+            0.064813,
+            0.064816,
+            0.05321,
+            0.05395,
+            0.066142
+          ]
+        },
+        "tree_max_rss_bytes": 26144768,
+        "real_time_factor": 0.03314324302490093,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.004413,
+          "kernel_system_s": 0.005517,
+          "kernel_max_rss_bytes": 4907008
+        }
+      }
+    },
+    {
+      "name": "native-ci-x1-recoff",
+      "form": "native",
+      "workload": "ci",
+      "instances": 1,
+      "recording": false,
+      "activations": 20,
+      "simulated_s": 0.2,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 55,
+            "bytes": 4235
+          },
+          "subscriber_copy": {
+            "count": 35,
+            "bytes": 3115
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_decode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 5035
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.004795289,
+          "min": 0.004714377,
+          "max": 0.005257849,
+          "samples": [
+            0.004774208,
+            0.005063404,
+            0.005257849,
+            0.004795289,
+            0.004714377
+          ]
+        },
+        "user_s": {
+          "median": 0.003817,
+          "min": 0.00278,
+          "max": 0.004603,
+          "samples": [
+            0.004603,
+            0.002837,
+            0.003817,
+            0.00278,
+            0.004544
+          ]
+        },
+        "system_s": {
+          "median": 0.001272,
+          "min": 0.0,
+          "max": 0.001891,
+          "samples": [
+            0.0,
+            0.001891,
+            0.001272,
+            0.001853,
+            0.0
+          ]
+        },
+        "tree_max_rss_bytes": 4669440,
+        "real_time_factor": 41.707600939171755,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.004879,
+          "kernel_system_s": 0.0,
+          "kernel_max_rss_bytes": 4464640
+        }
+      }
+    },
+    {
+      "name": "process-ci-x1-recoff",
+      "form": "process",
+      "workload": "ci",
+      "instances": 1,
+      "recording": false,
+      "activations": 20,
+      "simulated_s": 0.2,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 55,
+            "bytes": 4235
+          },
+          "subscriber_copy": {
+            "count": 35,
+            "bytes": 3115
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 35,
+            "bytes": 3115
+          },
+          "inline_decode": {
+            "count": 20,
+            "bytes": 1120
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 5035
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.055541214,
+          "min": 0.054860906,
+          "max": 0.056584912,
+          "samples": [
+            0.055541214,
+            0.054860906,
+            0.056584912,
+            0.055550678,
+            0.054879704
+          ]
+        },
+        "user_s": {
+          "median": 0.04157,
+          "min": 0.036496,
+          "max": 0.043476,
+          "samples": [
+            0.043476,
+            0.04282,
+            0.037798,
+            0.04157,
+            0.036496
+          ]
+        },
+        "system_s": {
+          "median": 0.009135,
+          "min": 0.007072,
+          "max": 0.01348,
+          "samples": [
+            0.007105,
+            0.007072,
+            0.013364,
+            0.009135,
+            0.01348
+          ]
+        },
+        "tree_max_rss_bytes": 21024768,
+        "real_time_factor": 3.600929572767351,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.004278,
+          "kernel_system_s": 0.001069,
+          "kernel_max_rss_bytes": 4628480
+        }
+      }
+    },
+    {
+      "name": "fmu-ci-x1-recoff",
+      "form": "fmu",
+      "workload": "ci",
+      "instances": 1,
+      "recording": false,
+      "activations": 20,
+      "simulated_s": 0.2,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 55,
+            "bytes": 4235
+          },
+          "subscriber_copy": {
+            "count": 35,
+            "bytes": 3115
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 35,
+            "bytes": 3115
+          },
+          "inline_decode": {
+            "count": 20,
+            "bytes": 1120
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 5035
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.077474652,
+          "min": 0.076870529,
+          "max": 0.080709061,
+          "samples": [
+            0.076870529,
+            0.077474652,
+            0.077102349,
+            0.078602127,
+            0.080709061
+          ]
+        },
+        "user_s": {
+          "median": 0.06035,
+          "min": 0.05551,
+          "max": 0.064298,
+          "samples": [
+            0.059224,
+            0.05551,
+            0.06035,
+            0.064298,
+            0.062123
+          ]
+        },
+        "system_s": {
+          "median": 0.014302,
+          "min": 0.008839,
+          "max": 0.018459,
+          "samples": [
+            0.014302,
+            0.018459,
+            0.013104,
+            0.008839,
+            0.015067
+          ]
+        },
+        "tree_max_rss_bytes": 26066944,
+        "real_time_factor": 2.5814894915565416,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.004824,
+          "kernel_system_s": 0.001206,
+          "kernel_max_rss_bytes": 4743168
+        }
+      }
+    },
+    {
+      "name": "native-ci-x1-recon",
+      "form": "native",
+      "workload": "ci",
+      "instances": 1,
+      "recording": true,
+      "activations": 20,
+      "simulated_s": 0.2,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 55,
+            "bytes": 4235
+          },
+          "subscriber_copy": {
+            "count": 35,
+            "bytes": 3115
+          },
+          "recorded": {
+            "count": 55,
+            "bytes": 4235
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_decode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 5035
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.004818765,
+          "min": 0.004771744,
+          "max": 0.004826978,
+          "samples": [
+            0.004826978,
+            0.004818765,
+            0.004792075,
+            0.004820658,
+            0.004771744
+          ]
+        },
+        "user_s": {
+          "median": 0.003818,
+          "min": 0.003798,
+          "max": 0.004715,
+          "samples": [
+            0.003824,
+            0.003818,
+            0.003798,
+            0.00381,
+            0.004715
+          ]
+        },
+        "system_s": {
+          "median": 0.000952,
+          "min": 0.0,
+          "max": 0.000956,
+          "samples": [
+            0.000956,
+            0.000954,
+            0.000949,
+            0.000952,
+            0.0
+          ]
+        },
+        "tree_max_rss_bytes": 4648960,
+        "real_time_factor": 41.50441036240614,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.002955,
+          "kernel_system_s": 0.00197,
+          "kernel_max_rss_bytes": 4673536
+        }
+      }
+    },
+    {
+      "name": "process-ci-x1-recon",
+      "form": "process",
+      "workload": "ci",
+      "instances": 1,
+      "recording": true,
+      "activations": 20,
+      "simulated_s": 0.2,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 55,
+            "bytes": 4235
+          },
+          "subscriber_copy": {
+            "count": 35,
+            "bytes": 3115
+          },
+          "recorded": {
+            "count": 55,
+            "bytes": 4235
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 35,
+            "bytes": 3115
+          },
+          "inline_decode": {
+            "count": 20,
+            "bytes": 1120
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 5035
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.055225187,
+          "min": 0.054755075,
+          "max": 0.055513392,
+          "samples": [
+            0.05540598,
+            0.055513392,
+            0.055203488,
+            0.055225187,
+            0.054755075
+          ]
+        },
+        "user_s": {
+          "median": 0.042409,
+          "min": 0.038948,
+          "max": 0.043143,
+          "samples": [
+            0.043143,
+            0.042733,
+            0.042409,
+            0.041486,
+            0.038948
+          ]
+        },
+        "system_s": {
+          "median": 0.008075,
+          "min": 0.007623,
+          "max": 0.010971,
+          "samples": [
+            0.007623,
+            0.008005,
+            0.008075,
+            0.009021,
+            0.010971
+          ]
+        },
+        "tree_max_rss_bytes": 21024768,
+        "real_time_factor": 3.6215359488053886,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.003071,
+          "kernel_system_s": 0.002303,
+          "kernel_max_rss_bytes": 4571136
+        }
+      }
+    },
+    {
+      "name": "fmu-ci-x1-recon",
+      "form": "fmu",
+      "workload": "ci",
+      "instances": 1,
+      "recording": true,
+      "activations": 20,
+      "simulated_s": 0.2,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 55,
+            "bytes": 4235
+          },
+          "subscriber_copy": {
+            "count": 35,
+            "bytes": 3115
+          },
+          "recorded": {
+            "count": 55,
+            "bytes": 4235
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 35,
+            "bytes": 3115
+          },
+          "inline_decode": {
+            "count": 20,
+            "bytes": 1120
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 5035
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.07647484,
+          "min": 0.076274689,
+          "max": 0.076639199,
+          "samples": [
+            0.076274689,
+            0.07647484,
+            0.076436954,
+            0.076631117,
+            0.076639199
+          ]
+        },
+        "user_s": {
+          "median": 0.056668,
+          "min": 0.054542,
+          "max": 0.060537,
+          "samples": [
+            0.054542,
+            0.060537,
+            0.060006,
+            0.056668,
+            0.056549
+          ]
+        },
+        "system_s": {
+          "median": 0.016445,
+          "min": 0.012416,
+          "max": 0.018158,
+          "samples": [
+            0.018158,
+            0.012416,
+            0.014002,
+            0.016445,
+            0.016636
+          ]
+        },
+        "tree_max_rss_bytes": 26046464,
+        "real_time_factor": 2.615239208084646,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.004997,
+          "kernel_system_s": 0.000999,
+          "kernel_max_rss_bytes": 4689920
+        }
+      }
+    },
+    {
+      "name": "native-ci-x4-recoff",
+      "form": "native",
+      "workload": "ci",
+      "instances": 4,
+      "recording": false,
+      "activations": 20,
+      "simulated_s": 0.2,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 220,
+            "bytes": 16940
+          },
+          "subscriber_copy": {
+            "count": 140,
+            "bytes": 12460
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_decode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 5035
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.005741399,
+          "min": 0.00573454,
+          "max": 0.005772376,
+          "samples": [
+            0.005772376,
+            0.00573454,
+            0.00573508,
+            0.005765556,
+            0.005741399
+          ]
+        },
+        "user_s": {
+          "median": 0.003736,
+          "min": 0.003727,
+          "max": 0.004673,
+          "samples": [
+            0.004673,
+            0.004459,
+            0.003727,
+            0.003736,
+            0.003735
+          ]
+        },
+        "system_s": {
+          "median": 0.001863,
+          "min": 0.000934,
+          "max": 0.001868,
+          "samples": [
+            0.000934,
+            0.001114,
+            0.001863,
+            0.001868,
+            0.001867
+          ]
+        },
+        "tree_max_rss_bytes": 4718592,
+        "real_time_factor": 34.834715371636776,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.003814,
+          "kernel_system_s": 0.001907,
+          "kernel_max_rss_bytes": 4431872
+        }
+      }
+    },
+    {
+      "name": "process-ci-x4-recoff",
+      "form": "process",
+      "workload": "ci",
+      "instances": 4,
+      "recording": false,
+      "activations": 20,
+      "simulated_s": 0.2,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 220,
+            "bytes": 16940
+          },
+          "subscriber_copy": {
+            "count": 140,
+            "bytes": 12460
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 140,
+            "bytes": 12460
+          },
+          "inline_decode": {
+            "count": 80,
+            "bytes": 4480
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 5035
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.211694408,
+          "min": 0.211115122,
+          "max": 0.214363578,
+          "samples": [
+            0.211115122,
+            0.211694408,
+            0.214363578,
+            0.213446477,
+            0.211236476
+          ]
+        },
+        "user_s": {
+          "median": 0.161721,
+          "min": 0.150039,
+          "max": 0.162897,
+          "samples": [
+            0.161721,
+            0.162897,
+            0.162246,
+            0.15775,
+            0.150039
+          ]
+        },
+        "system_s": {
+          "median": 0.041489,
+          "min": 0.037964,
+          "max": 0.050142,
+          "samples": [
+            0.039631,
+            0.037964,
+            0.041489,
+            0.045067,
+            0.050142
+          ]
+        },
+        "tree_max_rss_bytes": 21000192,
+        "real_time_factor": 0.9447580684323037,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.006389,
+          "kernel_system_s": 0.002129,
+          "kernel_max_rss_bytes": 4661248
+        }
+      }
+    },
+    {
+      "name": "fmu-ci-x4-recoff",
+      "form": "fmu",
+      "workload": "ci",
+      "instances": 4,
+      "recording": false,
+      "activations": 20,
+      "simulated_s": 0.2,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 220,
+            "bytes": 16940
+          },
+          "subscriber_copy": {
+            "count": 140,
+            "bytes": 12460
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 140,
+            "bytes": 12460
+          },
+          "inline_decode": {
+            "count": 80,
+            "bytes": 4480
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 5035
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.313345121,
+          "min": 0.306424589,
+          "max": 0.322659171,
+          "samples": [
+            0.313345121,
+            0.306424589,
+            0.322659171,
+            0.311958765,
+            0.315178433
+          ]
+        },
+        "user_s": {
+          "median": 0.24728,
+          "min": 0.241263,
+          "max": 0.254556,
+          "samples": [
+            0.249257,
+            0.24728,
+            0.242138,
+            0.241263,
+            0.254556
+          ]
+        },
+        "system_s": {
+          "median": 0.057702,
+          "min": 0.049434,
+          "max": 0.060238,
+          "samples": [
+            0.053267,
+            0.057702,
+            0.060238,
+            0.060081,
+            0.049434
+          ]
+        },
+        "tree_max_rss_bytes": 26144768,
+        "real_time_factor": 0.6382738603419965,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.006961,
+          "kernel_system_s": 0.00348,
+          "kernel_max_rss_bytes": 4759552
+        }
+      }
+    },
+    {
+      "name": "native-ci-x4-recon",
+      "form": "native",
+      "workload": "ci",
+      "instances": 4,
+      "recording": true,
+      "activations": 20,
+      "simulated_s": 0.2,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 220,
+            "bytes": 16940
+          },
+          "subscriber_copy": {
+            "count": 140,
+            "bytes": 12460
+          },
+          "recorded": {
+            "count": 220,
+            "bytes": 16940
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_decode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 5035
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.005930334,
+          "min": 0.00589408,
+          "max": 0.005981151,
+          "samples": [
+            0.005930334,
+            0.005914822,
+            0.005959469,
+            0.00589408,
+            0.005981151
+          ]
+        },
+        "user_s": {
+          "median": 0.004679,
+          "min": 0.002939,
+          "max": 0.004944,
+          "samples": [
+            0.002939,
+            0.00489,
+            0.003941,
+            0.004679,
+            0.004944
+          ]
+        },
+        "system_s": {
+          "median": 0.001169,
+          "min": 0.000978,
+          "max": 0.002939,
+          "samples": [
+            0.002939,
+            0.000978,
+            0.00197,
+            0.001169,
+            0.000988
+          ]
+        },
+        "tree_max_rss_bytes": 4767744,
+        "real_time_factor": 33.72491330167913,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.003073,
+          "kernel_system_s": 0.003073,
+          "kernel_max_rss_bytes": 4624384
+        }
+      }
+    },
+    {
+      "name": "process-ci-x4-recon",
+      "form": "process",
+      "workload": "ci",
+      "instances": 4,
+      "recording": true,
+      "activations": 20,
+      "simulated_s": 0.2,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 220,
+            "bytes": 16940
+          },
+          "subscriber_copy": {
+            "count": 140,
+            "bytes": 12460
+          },
+          "recorded": {
+            "count": 220,
+            "bytes": 16940
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 140,
+            "bytes": 12460
+          },
+          "inline_decode": {
+            "count": 80,
+            "bytes": 4480
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 5035
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.21023481,
+          "min": 0.202639168,
+          "max": 0.212533124,
+          "samples": [
+            0.210944553,
+            0.212533124,
+            0.202639168,
+            0.209909368,
+            0.21023481
+          ]
+        },
+        "user_s": {
+          "median": 0.163157,
+          "min": 0.144901,
+          "max": 0.166244,
+          "samples": [
+            0.163424,
+            0.163157,
+            0.144901,
+            0.166244,
+            0.148429
+          ]
+        },
+        "system_s": {
+          "median": 0.038065,
+          "min": 0.032563,
+          "max": 0.051207,
+          "samples": [
+            0.037307,
+            0.038065,
+            0.04647,
+            0.032563,
+            0.051207
+          ]
+        },
+        "tree_max_rss_bytes": 21024768,
+        "real_time_factor": 0.9513172437999208,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.006148,
+          "kernel_system_s": 0.002635,
+          "kernel_max_rss_bytes": 4788224
+        }
+      }
+    },
+    {
+      "name": "fmu-ci-x4-recon",
+      "form": "fmu",
+      "workload": "ci",
+      "instances": 4,
+      "recording": true,
+      "activations": 20,
+      "simulated_s": 0.2,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 220,
+            "bytes": 16940
+          },
+          "subscriber_copy": {
+            "count": 140,
+            "bytes": 12460
+          },
+          "recorded": {
+            "count": 220,
+            "bytes": 16940
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 140,
+            "bytes": 12460
+          },
+          "inline_decode": {
+            "count": 80,
+            "bytes": 4480
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 5035
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.301149055,
+          "min": 0.297426497,
+          "max": 0.335543619,
+          "samples": [
+            0.335543619,
+            0.301149055,
+            0.297426497,
+            0.302596262,
+            0.299633884
+          ]
+        },
+        "user_s": {
+          "median": 0.242661,
+          "min": 0.234338,
+          "max": 0.248219,
+          "samples": [
+            0.248219,
+            0.234338,
+            0.242661,
+            0.243339,
+            0.240115
+          ]
+        },
+        "system_s": {
+          "median": 0.058099,
+          "min": 0.053035,
+          "max": 0.065128,
+          "samples": [
+            0.058255,
+            0.065128,
+            0.053035,
+            0.057592,
+            0.058099
+          ]
+        },
+        "tree_max_rss_bytes": 26148864,
+        "real_time_factor": 0.6641229539969834,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.006987,
+          "kernel_system_s": 0.003992,
+          "kernel_max_rss_bytes": 4808704
+        }
+      }
+    },
+    {
+      "name": "native-long-x1-recoff",
+      "form": "native",
+      "workload": "long",
+      "instances": 1,
+      "recording": false,
+      "activations": 6000,
+      "simulated_s": 60.0,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 16500,
+            "bytes": 1270500
+          },
+          "subscriber_copy": {
+            "count": 10500,
+            "bytes": 934500
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_decode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1048747
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.021992045,
+          "min": 0.021451809,
+          "max": 0.022241182,
+          "samples": [
+            0.021451809,
+            0.021713944,
+            0.0221406,
+            0.021992045,
+            0.022241182
+          ]
+        },
+        "user_s": {
+          "median": 0.020255,
+          "min": 0.018113,
+          "max": 0.021044,
+          "samples": [
+            0.019305,
+            0.020255,
+            0.018113,
+            0.020806,
+            0.021044
+          ]
+        },
+        "system_s": {
+          "median": 0.001012,
+          "min": 0.00099,
+          "max": 0.003813,
+          "samples": [
+            0.00193,
+            0.001012,
+            0.003813,
+            0.00099,
+            0.001002
+          ]
+        },
+        "tree_max_rss_bytes": 5623808,
+        "real_time_factor": 2728.25924101192,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.019197,
+          "kernel_system_s": 0.003031,
+          "kernel_max_rss_bytes": 5480448
+        }
+      }
+    },
+    {
+      "name": "process-long-x1-recoff",
+      "form": "process",
+      "workload": "long",
+      "instances": 1,
+      "recording": false,
+      "activations": 6000,
+      "simulated_s": 60.0,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 16500,
+            "bytes": 1270500
+          },
+          "subscriber_copy": {
+            "count": 10500,
+            "bytes": 934500
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 10500,
+            "bytes": 934500
+          },
+          "inline_decode": {
+            "count": 6000,
+            "bytes": 336000
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1048747
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.339170901,
+          "min": 0.330013589,
+          "max": 0.350144504,
+          "samples": [
+            0.330013589,
+            0.350144504,
+            0.338063822,
+            0.34927265,
+            0.339170901
+          ]
+        },
+        "user_s": {
+          "median": 0.24158,
+          "min": 0.214969,
+          "max": 0.243811,
+          "samples": [
+            0.214969,
+            0.243811,
+            0.24158,
+            0.242042,
+            0.235519
+          ]
+        },
+        "system_s": {
+          "median": 0.095118,
+          "min": 0.0864,
+          "max": 0.097485,
+          "samples": [
+            0.095118,
+            0.097485,
+            0.0864,
+            0.096688,
+            0.087392
+          ]
+        },
+        "tree_max_rss_bytes": 21159936,
+        "real_time_factor": 176.9019683678583,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.046932,
+          "kernel_system_s": 0.03957,
+          "kernel_max_rss_bytes": 5713920
+        }
+      }
+    },
+    {
+      "name": "fmu-long-x1-recoff",
+      "form": "fmu",
+      "workload": "long",
+      "instances": 1,
+      "recording": false,
+      "activations": 6000,
+      "simulated_s": 60.0,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 16500,
+            "bytes": 1270500
+          },
+          "subscriber_copy": {
+            "count": 10500,
+            "bytes": 934500
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 10500,
+            "bytes": 934500
+          },
+          "inline_decode": {
+            "count": 6000,
+            "bytes": 336000
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1048747
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.452028169,
+          "min": 0.441617347,
+          "max": 0.461781182,
+          "samples": [
+            0.441617347,
+            0.452028169,
+            0.457421286,
+            0.461781182,
+            0.441800781
+          ]
+        },
+        "user_s": {
+          "median": 0.353396,
+          "min": 0.328129,
+          "max": 0.377206,
+          "samples": [
+            0.328129,
+            0.347488,
+            0.377206,
+            0.372501,
+            0.353396
+          ]
+        },
+        "system_s": {
+          "median": 0.0847,
+          "min": 0.074442,
+          "max": 0.09776,
+          "samples": [
+            0.09776,
+            0.095199,
+            0.074982,
+            0.0847,
+            0.074442
+          ]
+        },
+        "tree_max_rss_bytes": 26025984,
+        "real_time_factor": 132.7350906752893,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.04877,
+          "kernel_system_s": 0.038794,
+          "kernel_max_rss_bytes": 5541888
+        }
+      }
+    },
+    {
+      "name": "native-long-x1-recon",
+      "form": "native",
+      "workload": "long",
+      "instances": 1,
+      "recording": true,
+      "activations": 6000,
+      "simulated_s": 60.0,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 16500,
+            "bytes": 1270500
+          },
+          "subscriber_copy": {
+            "count": 10500,
+            "bytes": 934500
+          },
+          "recorded": {
+            "count": 16500,
+            "bytes": 1270500
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_decode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1048747
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.031970785,
+          "min": 0.031909542,
+          "max": 0.032246542,
+          "samples": [
+            0.03215247,
+            0.032246542,
+            0.031909542,
+            0.031923834,
+            0.031970785
+          ]
+        },
+        "user_s": {
+          "median": 0.030097,
+          "min": 0.029868,
+          "max": 0.031189,
+          "samples": [
+            0.030097,
+            0.031189,
+            0.029868,
+            0.030878,
+            0.029924
+          ]
+        },
+        "system_s": {
+          "median": 0.001991,
+          "min": 0.000996,
+          "max": 0.002006,
+          "samples": [
+            0.002006,
+            0.001006,
+            0.001991,
+            0.000996,
+            0.001994
+          ]
+        },
+        "tree_max_rss_bytes": 7614464,
+        "real_time_factor": 1876.7133806692577,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.029688,
+          "kernel_system_s": 0.003071,
+          "kernel_max_rss_bytes": 7393280
+        }
+      }
+    },
+    {
+      "name": "process-long-x1-recon",
+      "form": "process",
+      "workload": "long",
+      "instances": 1,
+      "recording": true,
+      "activations": 6000,
+      "simulated_s": 60.0,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 16500,
+            "bytes": 1270500
+          },
+          "subscriber_copy": {
+            "count": 10500,
+            "bytes": 934500
+          },
+          "recorded": {
+            "count": 16500,
+            "bytes": 1270500
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 10500,
+            "bytes": 934500
+          },
+          "inline_decode": {
+            "count": 6000,
+            "bytes": 336000
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1048747
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.345368359,
+          "min": 0.335635402,
+          "max": 0.394371079,
+          "samples": [
+            0.335635402,
+            0.339730782,
+            0.352505387,
+            0.394371079,
+            0.345368359
+          ]
+        },
+        "user_s": {
+          "median": 0.241928,
+          "min": 0.223644,
+          "max": 0.248044,
+          "samples": [
+            0.223644,
+            0.241928,
+            0.248044,
+            0.238328,
+            0.245261
+          ]
+        },
+        "system_s": {
+          "median": 0.095194,
+          "min": 0.082935,
+          "max": 0.112247,
+          "samples": [
+            0.096308,
+            0.082935,
+            0.095194,
+            0.112247,
+            0.086187
+          ]
+        },
+        "tree_max_rss_bytes": 21262336,
+        "real_time_factor": 173.72755331069573,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.061661,
+          "kernel_system_s": 0.044396,
+          "kernel_max_rss_bytes": 7360512
+        }
+      }
+    },
+    {
+      "name": "fmu-long-x1-recon",
+      "form": "fmu",
+      "workload": "long",
+      "instances": 1,
+      "recording": true,
+      "activations": 6000,
+      "simulated_s": 60.0,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 16500,
+            "bytes": 1270500
+          },
+          "subscriber_copy": {
+            "count": 10500,
+            "bytes": 934500
+          },
+          "recorded": {
+            "count": 16500,
+            "bytes": 1270500
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 10500,
+            "bytes": 934500
+          },
+          "inline_decode": {
+            "count": 6000,
+            "bytes": 336000
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1048747
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.460510041,
+          "min": 0.451345671,
+          "max": 0.475471528,
+          "samples": [
+            0.455545977,
+            0.475471528,
+            0.460510041,
+            0.451345671,
+            0.467317281
+          ]
+        },
+        "user_s": {
+          "median": 0.34788,
+          "min": 0.322626,
+          "max": 0.375535,
+          "samples": [
+            0.341959,
+            0.375535,
+            0.359507,
+            0.322626,
+            0.34788
+          ]
+        },
+        "system_s": {
+          "median": 0.098808,
+          "min": 0.090172,
+          "max": 0.113285,
+          "samples": [
+            0.100442,
+            0.09415,
+            0.090172,
+            0.113285,
+            0.098808
+          ]
+        },
+        "tree_max_rss_bytes": 26001408,
+        "real_time_factor": 130.29031868601535,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.048966,
+          "kernel_system_s": 0.053521,
+          "kernel_max_rss_bytes": 7364608
+        }
+      }
+    },
+    {
+      "name": "native-long-x4-recoff",
+      "form": "native",
+      "workload": "long",
+      "instances": 4,
+      "recording": false,
+      "activations": 6000,
+      "simulated_s": 60.0,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 66000,
+            "bytes": 5082000
+          },
+          "subscriber_copy": {
+            "count": 42000,
+            "bytes": 3738000
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_decode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1048747
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.073544335,
+          "min": 0.071142314,
+          "max": 0.123812063,
+          "samples": [
+            0.073544335,
+            0.071142314,
+            0.072481719,
+            0.106666986,
+            0.123812063
+          ]
+        },
+        "user_s": {
+          "median": 0.072289,
+          "min": 0.062379,
+          "max": 0.119222,
+          "samples": [
+            0.072289,
+            0.067952,
+            0.062379,
+            0.100958,
+            0.119222
+          ]
+        },
+        "system_s": {
+          "median": 0.003974,
+          "min": 0.001018,
+          "max": 0.009901,
+          "samples": [
+            0.001018,
+            0.002997,
+            0.009901,
+            0.004997,
+            0.003974
+          ]
+        },
+        "tree_max_rss_bytes": 8970240,
+        "real_time_factor": 815.8344215091481,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.071136,
+          "kernel_system_s": 0.003005,
+          "kernel_max_rss_bytes": 9711616
+        }
+      }
+    },
+    {
+      "name": "process-long-x4-recoff",
+      "form": "process",
+      "workload": "long",
+      "instances": 4,
+      "recording": false,
+      "activations": 6000,
+      "simulated_s": 60.0,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 66000,
+            "bytes": 5082000
+          },
+          "subscriber_copy": {
+            "count": 42000,
+            "bytes": 3738000
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 42000,
+            "bytes": 3738000
+          },
+          "inline_decode": {
+            "count": 24000,
+            "bytes": 1344000
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1048747
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 1.780725994,
+          "min": 1.714186999,
+          "max": 1.825205995,
+          "samples": [
+            1.787459996,
+            1.742157997,
+            1.780725994,
+            1.825205995,
+            1.714186999
+          ]
+        },
+        "user_s": {
+          "median": 1.322864,
+          "min": 1.285316,
+          "max": 1.413245,
+          "samples": [
+            1.364309,
+            1.322864,
+            1.304079,
+            1.413245,
+            1.285316
+          ]
+        },
+        "system_s": {
+          "median": 0.379983,
+          "min": 0.358835,
+          "max": 0.41376,
+          "samples": [
+            0.379983,
+            0.36559,
+            0.41376,
+            0.358835,
+            0.390473
+          ]
+        },
+        "tree_max_rss_bytes": 21037056,
+        "real_time_factor": 33.69412262311256,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.168106,
+          "kernel_system_s": 0.181702,
+          "kernel_max_rss_bytes": 8589312
+        }
+      }
+    },
+    {
+      "name": "fmu-long-x4-recoff",
+      "form": "fmu",
+      "workload": "long",
+      "instances": 4,
+      "recording": false,
+      "activations": 6000,
+      "simulated_s": 60.0,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 66000,
+            "bytes": 5082000
+          },
+          "subscriber_copy": {
+            "count": 42000,
+            "bytes": 3738000
+          },
+          "recorded": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 42000,
+            "bytes": 3738000
+          },
+          "inline_decode": {
+            "count": 24000,
+            "bytes": 1344000
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1048747
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": []
+      },
+      "observational": {
+        "wall_s": {
+          "median": 2.400732097,
+          "min": 2.274956939,
+          "max": 2.425417338,
+          "samples": [
+            2.286480663,
+            2.42322029,
+            2.400732097,
+            2.274956939,
+            2.425417338
+          ]
+        },
+        "user_s": {
+          "median": 1.968935,
+          "min": 1.796863,
+          "max": 1.979731,
+          "samples": [
+            1.838328,
+            1.975339,
+            1.968935,
+            1.796863,
+            1.979731
+          ]
+        },
+        "system_s": {
+          "median": 0.388677,
+          "min": 0.38147,
+          "max": 0.439781,
+          "samples": [
+            0.404155,
+            0.38147,
+            0.387243,
+            0.439781,
+            0.388677
+          ]
+        },
+        "tree_max_rss_bytes": 26075136,
+        "real_time_factor": 24.992376315115347,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.172533,
+          "kernel_system_s": 0.179299,
+          "kernel_max_rss_bytes": 8904704
+        }
+      }
+    },
+    {
+      "name": "native-long-x4-recon",
+      "form": "native",
+      "workload": "long",
+      "instances": 4,
+      "recording": true,
+      "activations": 6000,
+      "simulated_s": 60.0,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 66000,
+            "bytes": 5082000
+          },
+          "subscriber_copy": {
+            "count": 42000,
+            "bytes": 3738000
+          },
+          "recorded": {
+            "count": 66000,
+            "bytes": 5082000
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_decode": {
+            "count": 0,
+            "bytes": 0
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1048747
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 0.10804485,
+          "min": 0.107023747,
+          "max": 0.110179016,
+          "samples": [
+            0.107484112,
+            0.108773241,
+            0.107023747,
+            0.10804485,
+            0.110179016
+          ]
+        },
+        "user_s": {
+          "median": 0.098722,
+          "min": 0.09607,
+          "max": 0.103948,
+          "samples": [
+            0.099392,
+            0.098722,
+            0.096927,
+            0.103948,
+            0.09607
+          ]
+        },
+        "system_s": {
+          "median": 0.009972,
+          "min": 0.003998,
+          "max": 0.01401,
+          "samples": [
+            0.008031,
+            0.009972,
+            0.009992,
+            0.003998,
+            0.01401
+          ]
+        },
+        "tree_max_rss_bytes": 11124736,
+        "real_time_factor": 555.3249414479264,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.106495,
+          "kernel_system_s": 0.003981,
+          "kernel_max_rss_bytes": 10997760
+        }
+      }
+    },
+    {
+      "name": "process-long-x4-recon",
+      "form": "process",
+      "workload": "long",
+      "instances": 4,
+      "recording": true,
+      "activations": 6000,
+      "simulated_s": 60.0,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 66000,
+            "bytes": 5082000
+          },
+          "subscriber_copy": {
+            "count": 42000,
+            "bytes": 3738000
+          },
+          "recorded": {
+            "count": 66000,
+            "bytes": 5082000
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 42000,
+            "bytes": 3738000
+          },
+          "inline_decode": {
+            "count": 24000,
+            "bytes": 1344000
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1048747
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 1.777242156,
+          "min": 1.75366553,
+          "max": 1.910107249,
+          "samples": [
+            1.772372911,
+            1.794219035,
+            1.910107249,
+            1.75366553,
+            1.777242156
+          ]
+        },
+        "user_s": {
+          "median": 1.36625,
+          "min": 1.306565,
+          "max": 1.474819,
+          "samples": [
+            1.36625,
+            1.408657,
+            1.474819,
+            1.306565,
+            1.333379
+          ]
+        },
+        "system_s": {
+          "median": 0.383448,
+          "min": 0.350432,
+          "max": 0.404715,
+          "samples": [
+            0.369095,
+            0.350432,
+            0.404715,
+            0.400424,
+            0.383448
+          ]
+        },
+        "tree_max_rss_bytes": 21262336,
+        "real_time_factor": 33.760171509233544,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.237956,
+          "kernel_system_s": 0.185746,
+          "kernel_max_rss_bytes": 10891264
+        }
+      }
+    },
+    {
+      "name": "fmu-long-x4-recon",
+      "form": "fmu",
+      "workload": "long",
+      "instances": 4,
+      "recording": true,
+      "activations": 6000,
+      "simulated_s": 60.0,
+      "deterministic": {
+        "exit_codes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "counters": {
+          "caller_to_kernel": {
+            "count": 66000,
+            "bytes": 5082000
+          },
+          "subscriber_copy": {
+            "count": 42000,
+            "bytes": 3738000
+          },
+          "recorded": {
+            "count": 66000,
+            "bytes": 5082000
+          },
+          "arena_write": {
+            "count": 0,
+            "bytes": 0
+          },
+          "arena_read": {
+            "count": 0,
+            "bytes": 0
+          },
+          "inline_encode": {
+            "count": 42000,
+            "bytes": 3738000
+          },
+          "inline_decode": {
+            "count": 24000,
+            "bytes": 1344000
+          },
+          "routes": [
+            {
+              "channel": "load0.camera",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.ego",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load0.radar",
+              "subscriber": "load0",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.camera",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.ego",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load1.radar",
+              "subscriber": "load1",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.camera",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.ego",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load2.radar",
+              "subscriber": "load2",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.camera",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.ego",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            },
+            {
+              "channel": "load3.radar",
+              "subscriber": "load3",
+              "current_depth": 0,
+              "high_water_depth": 1,
+              "dropped_newest": 0,
+              "overflow_failures": 0
+            }
+          ],
+          "replay_read_buffer": {
+            "high_water_bytes": 1048747
+          }
+        },
+        "counters_repeat": true,
+        "recording_equals_instrumented": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "observational": {
+        "wall_s": {
+          "median": 2.49925089,
+          "min": 2.375931968,
+          "max": 2.619413729,
+          "samples": [
+            2.619413729,
+            2.616426933,
+            2.49925089,
+            2.375931968,
+            2.437337804
+          ]
+        },
+        "user_s": {
+          "median": 2.085237,
+          "min": 1.936433,
+          "max": 2.184992,
+          "samples": [
+            2.184992,
+            2.161914,
+            2.085237,
+            1.936433,
+            1.991882
+          ]
+        },
+        "system_s": {
+          "median": 0.393446,
+          "min": 0.386837,
+          "max": 0.417354,
+          "samples": [
+            0.399836,
+            0.417354,
+            0.391259,
+            0.393446,
+            0.386837
+          ]
+        },
+        "tree_max_rss_bytes": 26038272,
+        "real_time_factor": 24.00719361152253,
+        "instrumented_kernel": {
+          "kernel_user_s": 0.240949,
+          "kernel_system_s": 0.185436,
+          "kernel_max_rss_bytes": 11096064
+        }
+      }
+    }
+  ],
+  "equivalence": {
+    "startup-x1": {
+      "commands": 1,
+      "modes": {
+        "0": 1
+      },
+      "forms_equal": {
+        "process": true,
+        "fmu": true
+      }
+    },
+    "startup-x4": {
+      "commands": 4,
+      "modes": {
+        "0": 4
+      },
+      "forms_equal": {
+        "process": true,
+        "fmu": true
+      }
+    },
+    "ci-x1": {
+      "commands": 20,
+      "modes": {
+        "0": 20
+      },
+      "forms_equal": {
+        "process": true,
+        "fmu": true
+      }
+    },
+    "ci-x4": {
+      "commands": 80,
+      "modes": {
+        "0": 80
+      },
+      "forms_equal": {
+        "process": true,
+        "fmu": true
+      }
+    },
+    "long-x1": {
+      "commands": 6000,
+      "modes": {
+        "0": 4860,
+        "1": 1140
+      },
+      "forms_equal": {
+        "process": true,
+        "fmu": true
+      }
+    },
+    "long-x4": {
+      "commands": 24000,
+      "modes": {
+        "0": 19440,
+        "1": 4560
+      },
+      "forms_equal": {
+        "process": true,
+        "fmu": true
+      }
+    }
+  },
+  "application": {
+    "startup": {
+      "activations": 1,
+      "us_per_activation": {
+        "median": 3.846,
+        "min": 3.816,
+        "max": 3.945,
+        "samples": [
+          3.945,
+          3.916,
+          3.846,
+          3.826,
+          3.816
+        ]
+      }
+    },
+    "ci": {
+      "activations": 20,
+      "us_per_activation": {
+        "median": 1.3810499999999999,
+        "min": 1.37655,
+        "max": 1.3831,
+        "samples": [
+          1.3816,
+          1.3810499999999999,
+          1.3831,
+          1.3791,
+          1.37655
+        ]
+      }
+    },
+    "long": {
+      "activations": 6000,
+      "us_per_activation": {
+        "median": 1.3905085,
+        "min": 1.3860066666666666,
+        "max": 1.4021745,
+        "samples": [
+          1.3905085,
+          1.4021745,
+          1.3972719999999998,
+          1.3860066666666666,
+          1.3876758333333332
+        ]
+      }
+    }
+  },
+  "estimates": {
+    "native-x1": {
+      "startup_s": 0.004846094,
+      "participant_step": {
+        "us": 2.8757117056856187,
+        "resolved": true
+      },
+      "application_us_per_step": 1.3905085,
+      "adaptation_and_routing": {
+        "us": 1.4852032056856188,
+        "resolved": true
+      },
+      "recording_per_participant_step": {
+        "us": 1.6631233333333333,
+        "resolved": true
+      }
+    },
+    "native-x4": {
+      "startup_s": 0.005612433,
+      "participant_step": {
+        "us": 2.834570903010034,
+        "resolved": true
+      },
+      "application_us_per_step": 1.3905085,
+      "adaptation_and_routing": {
+        "us": 1.4440624030100342,
+        "resolved": true
+      },
+      "recording_per_participant_step": {
+        "us": 1.4375214583333331,
+        "resolved": false
+      }
+    },
+    "process-x1": {
+      "startup_s": 0.054211139,
+      "participant_step": {
+        "us": 47.429713545150506,
+        "resolved": true
+      },
+      "application_us_per_step": 1.3905085,
+      "adaptation_and_routing": {
+        "us": 46.0392050451505,
+        "resolved": true
+      },
+      "recording_per_participant_step": {
+        "us": 1.0329096666666648,
+        "resolved": false
+      }
+    },
+    "process-x4": {
+      "startup_s": 0.204445035,
+      "participant_step": {
+        "us": 65.59496596989966,
+        "resolved": true
+      },
+      "application_us_per_step": 1.3905085,
+      "adaptation_and_routing": {
+        "us": 64.20445746989967,
+        "resolved": true
+      },
+      "recording_per_participant_step": {
+        "us": -0.14515991666666506,
+        "resolved": false
+      }
+    },
+    "fmu-x1": {
+      "startup_s": 0.075805929,
+      "participant_step": {
+        "us": 62.63436739130433,
+        "resolved": true
+      },
+      "application_us_per_step": 1.3905085,
+      "adaptation_and_routing": {
+        "us": 61.24385889130433,
+        "resolved": true
+      },
+      "recording_per_participant_step": {
+        "us": 1.4136453333333336,
+        "resolved": false
+      },
+      "startup_over_process_s": 0.021594789999999996
+    },
+    "fmu-x4": {
+      "startup_s": 0.294228622,
+      "participant_step": {
+        "us": 87.26534180602007,
+        "resolved": true
+      },
+      "application_us_per_step": 1.3905085,
+      "adaptation_and_routing": {
+        "us": 85.87483330602008,
+        "resolved": true
+      },
+      "recording_per_participant_step": {
+        "us": 4.104949708333324,
+        "resolved": false
+      },
+      "startup_over_process_s": 0.089783587
+    }
+  },
+  "checks": {
+    "only_the_controller_differs": {
+      "passed": true,
+      "detail": []
+    },
+    "counters_repeat": {
+      "passed": true,
+      "detail": []
+    },
+    "recording_equals_instrumented": {
+      "passed": true,
+      "detail": []
+    },
+    "recording_changes_only_recorded": {
+      "passed": true,
+      "detail": []
+    },
+    "forms_publish_identical_commands": {
+      "passed": true,
+      "detail": []
+    },
+    "application_computes_the_published_commands": {
+      "passed": true,
+      "detail": []
+    }
+  },
+  "passed": true
+}

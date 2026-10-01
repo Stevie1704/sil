@@ -41,7 +41,8 @@ Commands in the guides run from the repository root unless stated otherwise.
   status when an older design statement differs.
 - [docs/decisions/](decisions/) retains the historical
   [consumer capability gate](decisions/118-consumer-capability-gate.md) and
-  the scoped [Native ADAS reference decision](decisions/222-native-adas-reference.md).
+  the scoped [Native ADAS reference decision](decisions/222-native-adas-reference.md)
+  and the [reference execution-cost baseline](decisions/229-reference-execution-cost.md).
   It is the evidence required for expanding kernel scope, rather than another
   location for new ADRs.
 - [Proposals](proposals/) and [research](research/) describe prospective work
