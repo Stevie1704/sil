@@ -469,6 +469,63 @@ def test_installed_fmu_replay_is_authored_run_and_compared(
     assert not list(tmp_path.glob(".sil-run-*"))
 
 
+def test_installed_numeric_fmu_replay_round_trips_each_type(
+    installed_python: Path, staged_prefix: Path, tmp_path: Path,
+):
+    """Issue #189: Float32, Int32, UInt32 and UInt64 recorded into
+    `Feedthrough` and back, inspected, authored and run twice with identical
+    Recording bytes, and compared with the hand-written reference — SiL only
+    from the installed wheel and prefix."""
+    example = ROOT / "examples" / "fmu-numeric"
+    fmu = ROOT / "tests" / "fixtures" / "reference-fmus" / "3.0" / "Feedthrough.fmu"
+    env = installed_environment(installed_python)
+    env["PATH"] = str(staged_prefix / "bin") + os.pathsep + env["PATH"]
+
+    def run(*command: str, code: int = 0) -> subprocess.CompletedProcess:
+        proc = subprocess.run(command, cwd=tmp_path, env=env,
+                              capture_output=True, text=True)
+        assert proc.returncode == code, proc.stdout + proc.stderr
+        return proc
+
+    authoring = json.loads((example / "authoring.json").read_text())
+    mapping = {
+        "sil_fmi_mapping": 1, "schemas": authoring["schemas"],
+        "channels": {name: {"schema": c["schema"], "direction": c["direction"]}
+                     for name, c in authoring["channels"].items()},
+        "bind": [f"{b['channel']}:{b['field']}={b['variable']}"
+                 for b in authoring["bind"]],
+    }
+    (tmp_path / "mapping.json").write_text(json.dumps(mapping))
+    report = json.loads(run("sil-fmi-inspect", str(fmu), "--json",
+                            "--mapping", "mapping.json").stdout)
+    assert report["mapping"]["accepted"] is True
+    narrow = json.loads(json.dumps(mapping))
+    narrow["schemas"]["numeric.Sensor"]["fields"][3]["type"] = "u32"
+    (tmp_path / "narrow.json").write_text(json.dumps(narrow))
+    rejected = json.loads(run("sil-fmi-inspect", str(fmu), "--json",
+                              "--mapping", "narrow.json", code=3).stdout)
+    assert "'u64' scalar" in rejected["mapping"]["rejection"]
+
+    run("sil-csv", str(example / "mapping.json"), str(example / "recorded.csv"),
+        "-o", "recorded.mcap")
+    run("sil-csv", str(example / "reference-mapping.json"),
+        str(example / "reference.csv"), "-o", "reference.mcap")
+    runs = []
+    for attempt in ("1", "2"):
+        run("sil-fmu-replay", str(example / "authoring.json"), str(fmu),
+            "--recording", "recorded.mcap", "-o", f"numeric-{attempt}.json",
+            "--receipt", f"authoring-{attempt}.json")
+        run("sil-run", f"numeric-{attempt}.json", "-o", f"run-{attempt}.mcap")
+        runs.append((tmp_path / f"run-{attempt}.mcap").read_bytes())
+    assert runs[0] == runs[1]
+    compared = json.loads(run(
+        "sil-compare", str(example / "contract.json"), "run-1.mcap",
+        "reference.mcap", "--json").stdout)
+    assert compared["verdict"] == "pass"
+    assert compared["channels"]["sensor.out"]["checked"] == 10
+    assert not list(tmp_path.glob(".sil-run-*"))
+
+
 def test_installed_window_replays_into_the_library_after_a_warm_up(
     installed_python: Path, staged_prefix: Path, tmp_path: Path,
 ):

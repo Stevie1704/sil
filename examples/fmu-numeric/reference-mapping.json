@@ -1,0 +1,24 @@
+{
+  "sil_csv_mapping": 1,
+  "timestamp": {"column": "time_s", "unit": "s"},
+  "schemas": {
+    "numeric.Sensor": {"fields": [
+      {"name": "range_m", "type": "f32"},
+      {"name": "object_id", "type": "i32"},
+      {"name": "object_count", "type": "u32"},
+      {"name": "sample_time_ns", "type": "u64"}
+    ]}
+  },
+  "channels": [
+    {
+      "channel": "reference.sensor",
+      "schema": "numeric.Sensor",
+      "fields": {
+        "range_m": {"column": "range_m"},
+        "object_id": {"column": "object_id"},
+        "object_count": {"column": "object_count"},
+        "sample_time_ns": {"column": "sample_time_ns"}
+      }
+    }
+  ]
+}
