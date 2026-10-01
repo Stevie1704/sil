@@ -129,15 +129,38 @@ class ScalarGroup:
         self._buffer = ScalarBuffer(
             kind, [binding.variable.reference for binding in bound]
         )
+        self._channel = bound[0].channel
+        self._variables = ", ".join(
+            repr(binding.variable.name) for binding in bound
+        )
 
     def write(self, fmu: CoSimulation, fields: dict) -> None:
-        self._buffer.write(fmu, [fields[name] for name in self._fields])
+        try:
+            self._buffer.write(fmu, [fields[name] for name in self._fields])
+        except ParticipantFailure as error:
+            raise self._failure("writing", "into", error) from error
 
     def read(self, fmu: CoSimulation, into: dict) -> None:
+        try:
+            values = self._buffer.read(fmu)
+        except ParticipantFailure as error:
+            raise self._failure("reading", "out of", error) from error
         to_field = self._scalar.to_field
         into.update(
             (name, to_field(value))
-            for name, value in zip(self._fields, self._buffer.read(fmu))
+            for name, value in zip(self._fields, values)
+        )
+
+    def _failure(self, action: str, direction: str,
+                 error: ParticipantFailure) -> ParticipantFailure:
+        """A failed call, named with the Channel and variables it carried.
+
+        One call carries every variable of this type on the Channel, so the
+        FMI status alone cannot say which Channel or variables failed.
+        """
+        return ParticipantFailure(
+            f"{action} Channel {self._channel!r} {direction} FMU variables "
+            f"{self._variables}: {error}"
         )
 
 

@@ -10,12 +10,17 @@ rejected in one place and for a stated reason.
 
 from __future__ import annotations
 
+import math
 import platform
+import re
+import struct
 from dataclasses import dataclass, field
+from decimal import Decimal
 from pathlib import Path
 from collections.abc import Callable
 from xml.etree import ElementTree
 
+from sil._schema_types import INT_RANGES
 from sil.participant import ManifestError
 
 # The one FMI version this importer drives. Anything else is rejected rather
@@ -35,6 +40,60 @@ def _boolean(text: str) -> int:
     return int(text == "true")
 
 
+# A start value of an integer type is a plain decimal integer: an optional
+# `-` and ASCII digits. Python's `int()` also reads a `+`, whitespace,
+# underscores and non-ASCII digits, so it is not the grammar on its own.
+_DECIMAL_INTEGER = re.compile(r"-?[0-9]+")
+# A Float32 start value is the decimal grammar `sil-csv` reads an `f32` cell
+# in, so one decimal is one Float32 on both paths into a Run.
+_DECIMAL = re.compile(r"[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?")
+_NON_FINITE = re.compile(r"[+-]?(nan|inf|infinity)", re.IGNORECASE)
+_F32 = struct.Struct("<f")
+
+
+def _integer(kind: str, field_type: str) -> Callable[[str], int]:
+    """The start-value reader of one integer type, bounded by its field."""
+    low, high = INT_RANGES[field_type]
+
+    def parse(text: str) -> int:
+        if not _DECIMAL_INTEGER.fullmatch(text):
+            raise ValueError(f"{text!r} is not a decimal integer")
+        if low == 0 and text.startswith("-"):
+            raise ValueError(f"{text!r} is negative, and {kind} is unsigned")
+        value = int(text)
+        if not low <= value <= high:
+            raise ValueError(
+                f"{value} is outside the {kind} range [{low}, {high}]"
+            )
+        return value
+
+    return parse
+
+
+def _float32(text: str) -> float:
+    """A Float32 start value: a finite decimal, rounded to the nearest Float32.
+
+    The decimal is read as the nearest binary64 first, which is how `sil-csv`
+    reads an `f32` cell, then rounded to the nearest Float32 with ties to
+    even. Nothing is clamped: a value that rounds to infinity, or a non-zero
+    one that rounds to zero, is refused rather than carried as another value.
+    """
+    if _NON_FINITE.fullmatch(text):
+        raise ValueError(f"{text!r} is not a finite number")
+    if not _DECIMAL.fullmatch(text):
+        raise ValueError(f"{text!r} is not a decimal number")
+    value = float(text)
+    try:
+        rounded = _F32.unpack(_F32.pack(value))[0]
+    except OverflowError:
+        rounded = math.inf
+    if math.isinf(rounded):
+        raise ValueError(f"{text} is outside the Float32 range")
+    if rounded == 0 and Decimal(text) != 0:
+        raise ValueError(f"{text} underflows to zero in Float32")
+    return rounded
+
+
 @dataclass(frozen=True)
 class _ScalarType:
     """One FMI scalar type, as both ends of the mapping see it.
@@ -52,16 +111,24 @@ class _ScalarType:
 
 
 # Every FMI scalar type this importer maps, by the element name
-# `modelDescription.xml` gives it: the two the acceptance fixture declares
-# beside its Binary variables, and no more. Broad type coverage is outside
-# this slice, so every other type — String, Enumeration, Clock, and the
-# integer types — is reported rather than skipped when a binding names one.
+# `modelDescription.xml` gives it: the two the CAN acceptance fixture declares
+# beside its Binary variables, and the numeric profile of the C reference
+# product — Float32 for sensor and control values, Int32 for signed selected
+# IDs, UInt32 for counts, modes and sequence numbers, and UInt64 for Sample
+# times. Each is carried by the one field type of its own width and kind, so
+# no integer crosses a floating-point field. Every other type — String,
+# Enumeration, Clock, and the other integer widths — is reported rather than
+# skipped when a binding names one.
 SCALARS = {
     "Float64": _ScalarType("f64", float, float),
     # fmi3Boolean is a C `bool`, so a Channel carries it as a `u8` with C's
     # own conversion: zero is false and any other value is true. What the FMU
     # hands back is 0 or 1.
     "Boolean": _ScalarType("u8", int, _boolean),
+    "Float32": _ScalarType("f32", float, _float32),
+    "Int32": _ScalarType("i32", int, _integer("Int32", "i32")),
+    "UInt32": _ScalarType("u32", int, _integer("UInt32", "u32")),
+    "UInt64": _ScalarType("u64", int, _integer("UInt64", "u64")),
 }
 
 BINARY = "Binary"
