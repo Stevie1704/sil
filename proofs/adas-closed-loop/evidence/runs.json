@@ -1,0 +1,908 @@
+{
+  "clear_road.native": {
+    "runs": [
+      {
+        "exit": 0,
+        "seconds": 4.455,
+        "stderr": ""
+      },
+      {
+        "exit": 0,
+        "seconds": 4.425,
+        "stderr": ""
+      }
+    ],
+    "identical_bytes": true,
+    "modes": [
+      [
+        0,
+        10000000
+      ]
+    ],
+    "expected_modes": [
+      [
+        0,
+        10000000
+      ]
+    ],
+    "minimum_gap_m": 60.0,
+    "minimum_ego_speed_mps": 25.0,
+    "final_ego_speed_mps": 25.0,
+    "accel_range_mps2": [
+      0.0,
+      0.0
+    ],
+    "first_violation": null,
+    "commands": 352,
+    "truth": 352,
+    "final_command": {
+      "sample_time_ns": 3520000000,
+      "sequence": 352,
+      "mode": 0,
+      "selected_object_id": -1,
+      "target_acceleration_mps2": 0.0,
+      "acceleration_mps2": 0.0,
+      "radar_age_ns": 10000000,
+      "camera_age_ns": 30000000,
+      "ego_age_ns": 0,
+      "ignored_observations": 0
+    },
+    "findings": [],
+    "passed": true
+  },
+  "clear_road.fmu": {
+    "runs": [
+      {
+        "exit": 0,
+        "seconds": 5.558,
+        "stderr": ""
+      },
+      {
+        "exit": 0,
+        "seconds": 5.543,
+        "stderr": ""
+      }
+    ],
+    "identical_bytes": true,
+    "modes": [
+      [
+        0,
+        10000000
+      ]
+    ],
+    "expected_modes": [
+      [
+        0,
+        10000000
+      ]
+    ],
+    "minimum_gap_m": 60.0,
+    "minimum_ego_speed_mps": 25.0,
+    "final_ego_speed_mps": 25.0,
+    "accel_range_mps2": [
+      0.0,
+      0.0
+    ],
+    "first_violation": null,
+    "commands": 352,
+    "truth": 352,
+    "final_command": {
+      "sample_time_ns": 3520000000,
+      "sequence": 352,
+      "mode": 0,
+      "selected_object_id": -1,
+      "target_acceleration_mps2": 0.0,
+      "acceleration_mps2": 0.0,
+      "radar_age_ns": 10000000,
+      "camera_age_ns": 30000000,
+      "ego_age_ns": 0,
+      "ignored_observations": 0
+    },
+    "findings": [],
+    "passed": true
+  },
+  "approach.native": {
+    "runs": [
+      {
+        "exit": 0,
+        "seconds": 4.464,
+        "stderr": ""
+      },
+      {
+        "exit": 0,
+        "seconds": 4.436,
+        "stderr": ""
+      }
+    ],
+    "identical_bytes": true,
+    "modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        1,
+        2310000000
+      ],
+      [
+        0,
+        3250000000
+      ]
+    ],
+    "expected_modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        1,
+        null
+      ],
+      [
+        0,
+        null
+      ]
+    ],
+    "minimum_gap_m": 9.427100000000081,
+    "minimum_ego_speed_mps": 22.1799999999999,
+    "final_ego_speed_mps": 22.1799999999999,
+    "accel_range_mps2": [
+      -3.0,
+      0.0
+    ],
+    "first_violation": null,
+    "commands": 352,
+    "truth": 352,
+    "final_command": {
+      "sample_time_ns": 3520000000,
+      "sequence": 352,
+      "mode": 0,
+      "selected_object_id": 1,
+      "target_acceleration_mps2": 0.0,
+      "acceleration_mps2": 0.0,
+      "radar_age_ns": 10000000,
+      "camera_age_ns": 30000000,
+      "ego_age_ns": 0,
+      "ignored_observations": 0
+    },
+    "findings": [],
+    "passed": true
+  },
+  "approach.fmu": {
+    "runs": [
+      {
+        "exit": 0,
+        "seconds": 5.49,
+        "stderr": ""
+      },
+      {
+        "exit": 0,
+        "seconds": 5.488,
+        "stderr": ""
+      }
+    ],
+    "identical_bytes": true,
+    "modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        1,
+        2310000000
+      ],
+      [
+        0,
+        3250000000
+      ]
+    ],
+    "expected_modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        1,
+        null
+      ],
+      [
+        0,
+        null
+      ]
+    ],
+    "minimum_gap_m": 9.427100000000081,
+    "minimum_ego_speed_mps": 22.1799999999999,
+    "final_ego_speed_mps": 22.1799999999999,
+    "accel_range_mps2": [
+      -3.0,
+      0.0
+    ],
+    "first_violation": null,
+    "commands": 352,
+    "truth": 352,
+    "final_command": {
+      "sample_time_ns": 3520000000,
+      "sequence": 352,
+      "mode": 0,
+      "selected_object_id": 1,
+      "target_acceleration_mps2": 0.0,
+      "acceleration_mps2": 0.0,
+      "radar_age_ns": 10000000,
+      "camera_age_ns": 30000000,
+      "ego_age_ns": 0,
+      "ignored_observations": 0
+    },
+    "findings": [],
+    "passed": true
+  },
+  "cut_out.native": {
+    "runs": [
+      {
+        "exit": 0,
+        "seconds": 4.504,
+        "stderr": ""
+      },
+      {
+        "exit": 0,
+        "seconds": 5.226,
+        "stderr": ""
+      }
+    ],
+    "identical_bytes": true,
+    "modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        1,
+        2310000000
+      ],
+      [
+        0,
+        2610000000
+      ]
+    ],
+    "expected_modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        1,
+        null
+      ],
+      [
+        0,
+        2610000000
+      ]
+    ],
+    "minimum_gap_m": 9.494300000000237,
+    "minimum_ego_speed_mps": 24.099999999999973,
+    "final_ego_speed_mps": 24.099999999999973,
+    "accel_range_mps2": [
+      -3.0,
+      0.0
+    ],
+    "first_violation": null,
+    "commands": 352,
+    "truth": 352,
+    "final_command": {
+      "sample_time_ns": 3520000000,
+      "sequence": 352,
+      "mode": 0,
+      "selected_object_id": -1,
+      "target_acceleration_mps2": 0.0,
+      "acceleration_mps2": 0.0,
+      "radar_age_ns": 10000000,
+      "camera_age_ns": 30000000,
+      "ego_age_ns": 0,
+      "ignored_observations": 0
+    },
+    "findings": [],
+    "passed": true
+  },
+  "cut_out.fmu": {
+    "runs": [
+      {
+        "exit": 0,
+        "seconds": 6.105,
+        "stderr": ""
+      },
+      {
+        "exit": 0,
+        "seconds": 5.645,
+        "stderr": ""
+      }
+    ],
+    "identical_bytes": true,
+    "modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        1,
+        2310000000
+      ],
+      [
+        0,
+        2610000000
+      ]
+    ],
+    "expected_modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        1,
+        null
+      ],
+      [
+        0,
+        2610000000
+      ]
+    ],
+    "minimum_gap_m": 9.494300000000237,
+    "minimum_ego_speed_mps": 24.099999999999973,
+    "final_ego_speed_mps": 24.099999999999973,
+    "accel_range_mps2": [
+      -3.0,
+      0.0
+    ],
+    "first_violation": null,
+    "commands": 352,
+    "truth": 352,
+    "final_command": {
+      "sample_time_ns": 3520000000,
+      "sequence": 352,
+      "mode": 0,
+      "selected_object_id": -1,
+      "target_acceleration_mps2": 0.0,
+      "acceleration_mps2": 0.0,
+      "radar_age_ns": 10000000,
+      "camera_age_ns": 30000000,
+      "ego_age_ns": 0,
+      "ignored_observations": 0
+    },
+    "findings": [],
+    "passed": true
+  },
+  "sensor_loss.native": {
+    "runs": [
+      {
+        "exit": 0,
+        "seconds": 4.445,
+        "stderr": ""
+      },
+      {
+        "exit": 0,
+        "seconds": 4.399,
+        "stderr": ""
+      }
+    ],
+    "identical_bytes": true,
+    "modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        2,
+        1040000000
+      ],
+      [
+        0,
+        1310000000
+      ]
+    ],
+    "expected_modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        2,
+        1040000000
+      ],
+      [
+        0,
+        1310000000
+      ]
+    ],
+    "minimum_gap_m": 60.0,
+    "minimum_ego_speed_mps": 24.189999999999976,
+    "final_ego_speed_mps": 24.189999999999976,
+    "accel_range_mps2": [
+      -3.0,
+      0.0
+    ],
+    "first_violation": null,
+    "commands": 352,
+    "truth": 352,
+    "final_command": {
+      "sample_time_ns": 3520000000,
+      "sequence": 352,
+      "mode": 0,
+      "selected_object_id": 1,
+      "target_acceleration_mps2": 0.0,
+      "acceleration_mps2": 0.0,
+      "radar_age_ns": 10000000,
+      "camera_age_ns": 30000000,
+      "ego_age_ns": 0,
+      "ignored_observations": 0
+    },
+    "findings": [],
+    "passed": true
+  },
+  "sensor_loss.fmu": {
+    "runs": [
+      {
+        "exit": 0,
+        "seconds": 5.479,
+        "stderr": ""
+      },
+      {
+        "exit": 0,
+        "seconds": 5.482,
+        "stderr": ""
+      }
+    ],
+    "identical_bytes": true,
+    "modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        2,
+        1040000000
+      ],
+      [
+        0,
+        1310000000
+      ]
+    ],
+    "expected_modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        2,
+        1040000000
+      ],
+      [
+        0,
+        1310000000
+      ]
+    ],
+    "minimum_gap_m": 60.0,
+    "minimum_ego_speed_mps": 24.189999999999976,
+    "final_ego_speed_mps": 24.189999999999976,
+    "accel_range_mps2": [
+      -3.0,
+      0.0
+    ],
+    "first_violation": null,
+    "commands": 352,
+    "truth": 352,
+    "final_command": {
+      "sample_time_ns": 3520000000,
+      "sequence": 352,
+      "mode": 0,
+      "selected_object_id": 1,
+      "target_acceleration_mps2": 0.0,
+      "acceleration_mps2": 0.0,
+      "radar_age_ns": 10000000,
+      "camera_age_ns": 30000000,
+      "ego_age_ns": 0,
+      "ignored_observations": 0
+    },
+    "findings": [],
+    "passed": true
+  },
+  "near_start.native": {
+    "runs": [
+      {
+        "exit": 0,
+        "seconds": 4.467,
+        "stderr": ""
+      },
+      {
+        "exit": 0,
+        "seconds": 4.417,
+        "stderr": ""
+      }
+    ],
+    "identical_bytes": true,
+    "modes": [
+      [
+        1,
+        10000000
+      ],
+      [
+        0,
+        870000000
+      ]
+    ],
+    "expected_modes": [
+      [
+        1,
+        10000000
+      ],
+      [
+        0,
+        null
+      ]
+    ],
+    "minimum_gap_m": 7.0,
+    "minimum_ego_speed_mps": 22.41999999999991,
+    "final_ego_speed_mps": 22.41999999999991,
+    "accel_range_mps2": [
+      -3.0,
+      0.0
+    ],
+    "first_violation": null,
+    "commands": 352,
+    "truth": 352,
+    "final_command": {
+      "sample_time_ns": 3520000000,
+      "sequence": 352,
+      "mode": 0,
+      "selected_object_id": 1,
+      "target_acceleration_mps2": 0.0,
+      "acceleration_mps2": 0.0,
+      "radar_age_ns": 10000000,
+      "camera_age_ns": 30000000,
+      "ego_age_ns": 0,
+      "ignored_observations": 0
+    },
+    "findings": [],
+    "passed": true
+  },
+  "near_start.fmu": {
+    "runs": [
+      {
+        "exit": 0,
+        "seconds": 5.485,
+        "stderr": ""
+      },
+      {
+        "exit": 0,
+        "seconds": 5.495,
+        "stderr": ""
+      }
+    ],
+    "identical_bytes": true,
+    "modes": [
+      [
+        1,
+        10000000
+      ],
+      [
+        0,
+        870000000
+      ]
+    ],
+    "expected_modes": [
+      [
+        1,
+        10000000
+      ],
+      [
+        0,
+        null
+      ]
+    ],
+    "minimum_gap_m": 7.0,
+    "minimum_ego_speed_mps": 22.41999999999991,
+    "final_ego_speed_mps": 22.41999999999991,
+    "accel_range_mps2": [
+      -3.0,
+      0.0
+    ],
+    "first_violation": null,
+    "commands": 352,
+    "truth": 352,
+    "final_command": {
+      "sample_time_ns": 3520000000,
+      "sequence": 352,
+      "mode": 0,
+      "selected_object_id": 1,
+      "target_acceleration_mps2": 0.0,
+      "acceleration_mps2": 0.0,
+      "radar_age_ns": 10000000,
+      "camera_age_ns": 30000000,
+      "ego_age_ns": 0,
+      "ignored_observations": 0
+    },
+    "findings": [],
+    "passed": true
+  },
+  "approach.ideal.native": {
+    "runs": [
+      {
+        "exit": 0,
+        "seconds": 4.743,
+        "stderr": ""
+      },
+      {
+        "exit": 0,
+        "seconds": 4.724,
+        "stderr": ""
+      }
+    ],
+    "identical_bytes": true,
+    "modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        1,
+        2300000000
+      ],
+      [
+        0,
+        3240000000
+      ]
+    ],
+    "expected_modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        1,
+        null
+      ],
+      [
+        0,
+        null
+      ]
+    ],
+    "minimum_gap_m": 9.455300000000065,
+    "minimum_ego_speed_mps": 22.1799999999999,
+    "final_ego_speed_mps": 22.1799999999999,
+    "accel_range_mps2": [
+      -3.0,
+      0.0
+    ],
+    "first_violation": null,
+    "commands": 352,
+    "truth": 352,
+    "final_command": {
+      "sample_time_ns": 3520000000,
+      "sequence": 352,
+      "mode": 0,
+      "selected_object_id": 1,
+      "target_acceleration_mps2": 0.0,
+      "acceleration_mps2": 0.0,
+      "radar_age_ns": 0,
+      "camera_age_ns": 0,
+      "ego_age_ns": 0,
+      "ignored_observations": 0
+    },
+    "findings": [],
+    "passed": true
+  },
+  "approach.ideal.fmu": {
+    "runs": [
+      {
+        "exit": 0,
+        "seconds": 6.037,
+        "stderr": ""
+      },
+      {
+        "exit": 0,
+        "seconds": 5.929,
+        "stderr": ""
+      }
+    ],
+    "identical_bytes": true,
+    "modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        1,
+        2300000000
+      ],
+      [
+        0,
+        3240000000
+      ]
+    ],
+    "expected_modes": [
+      [
+        0,
+        10000000
+      ],
+      [
+        1,
+        null
+      ],
+      [
+        0,
+        null
+      ]
+    ],
+    "minimum_gap_m": 9.455300000000065,
+    "minimum_ego_speed_mps": 22.1799999999999,
+    "final_ego_speed_mps": 22.1799999999999,
+    "accel_range_mps2": [
+      -3.0,
+      0.0
+    ],
+    "first_violation": null,
+    "commands": 352,
+    "truth": 352,
+    "final_command": {
+      "sample_time_ns": 3520000000,
+      "sequence": 352,
+      "mode": 0,
+      "selected_object_id": 1,
+      "target_acceleration_mps2": 0.0,
+      "acceleration_mps2": 0.0,
+      "radar_age_ns": 0,
+      "camera_age_ns": 0,
+      "ego_age_ns": 0,
+      "ignored_observations": 0
+    },
+    "findings": [],
+    "passed": true
+  },
+  "approach.latency.native": {
+    "runs": [
+      {
+        "exit": 0,
+        "seconds": 4.413,
+        "stderr": ""
+      },
+      {
+        "exit": 0,
+        "seconds": 4.397,
+        "stderr": ""
+      }
+    ],
+    "identical_bytes": true,
+    "modes": [
+      [
+        2,
+        10000000
+      ],
+      [
+        0,
+        20000000
+      ],
+      [
+        1,
+        2320000000
+      ],
+      [
+        0,
+        3260000000
+      ]
+    ],
+    "expected_modes": [
+      [
+        2,
+        10000000
+      ],
+      [
+        0,
+        20000000
+      ],
+      [
+        1,
+        null
+      ],
+      [
+        0,
+        null
+      ]
+    ],
+    "minimum_gap_m": 9.416425000000402,
+    "minimum_ego_speed_mps": 22.1749999999999,
+    "final_ego_speed_mps": 22.1749999999999,
+    "accel_range_mps2": [
+      -3.0,
+      0.0
+    ],
+    "first_violation": null,
+    "commands": 352,
+    "truth": 352,
+    "final_command": {
+      "sample_time_ns": 3520000000,
+      "sequence": 352,
+      "mode": 0,
+      "selected_object_id": 1,
+      "target_acceleration_mps2": 0.0,
+      "acceleration_mps2": 0.0,
+      "radar_age_ns": 10000000,
+      "camera_age_ns": 30000000,
+      "ego_age_ns": 10000000,
+      "ignored_observations": 0
+    },
+    "findings": [],
+    "passed": true
+  },
+  "approach.latency.fmu": {
+    "runs": [
+      {
+        "exit": 0,
+        "seconds": 5.489,
+        "stderr": ""
+      },
+      {
+        "exit": 0,
+        "seconds": 5.47,
+        "stderr": ""
+      }
+    ],
+    "identical_bytes": true,
+    "modes": [
+      [
+        2,
+        10000000
+      ],
+      [
+        0,
+        20000000
+      ],
+      [
+        1,
+        2320000000
+      ],
+      [
+        0,
+        3260000000
+      ]
+    ],
+    "expected_modes": [
+      [
+        2,
+        10000000
+      ],
+      [
+        0,
+        20000000
+      ],
+      [
+        1,
+        null
+      ],
+      [
+        0,
+        null
+      ]
+    ],
+    "minimum_gap_m": 9.416425000000402,
+    "minimum_ego_speed_mps": 22.1749999999999,
+    "final_ego_speed_mps": 22.1749999999999,
+    "accel_range_mps2": [
+      -3.0,
+      0.0
+    ],
+    "first_violation": null,
+    "commands": 352,
+    "truth": 352,
+    "final_command": {
+      "sample_time_ns": 3520000000,
+      "sequence": 352,
+      "mode": 0,
+      "selected_object_id": 1,
+      "target_acceleration_mps2": 0.0,
+      "acceleration_mps2": 0.0,
+      "radar_age_ns": 10000000,
+      "camera_age_ns": 30000000,
+      "ego_age_ns": 10000000,
+      "ignored_observations": 0
+    },
+    "findings": [],
+    "passed": true
+  }
+}

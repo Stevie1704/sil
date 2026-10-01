@@ -261,9 +261,11 @@ outputs, with their units. The controller archive is held to its
 | `failures.json` | each failure: exit, diagnostic, time and leftover processes |
 | `image-id.txt` | the ID of the image this build made |
 
-The Manifests, Recordings and archives are in `work/`. The
-`proof-adas-closed-loop` workflow runs the proof on native Linux x86-64
-and keeps the evidence directory as an artifact.
+The Manifests, Recordings and archives are in `work/` and are not
+committed. [`evidence/`](evidence/) holds the reports of one passing run,
+written under linux/amd64 emulation on an arm64 host. The
+`proof-adas-closed-loop` workflow runs the same proof on native Linux
+x86-64 and keeps the evidence directory as an artifact.
 
 ## Host tests
 

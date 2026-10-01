@@ -1,0 +1,38 @@
+{
+  "controller_fmu": {
+    "sha256": "f99c95f06ac97a7ce0ade263fe191cc8579c1e93355d360680b2ae72c5d503ab",
+    "compiler": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "platform": "x86_64-linux",
+    "pinned_sha256": "f99c95f06ac97a7ce0ade263fe191cc8579c1e93355d360680b2ae72c5d503ab",
+    "matches_pin": true
+  },
+  "library": {
+    "sha256": "b150052c549d5745eab3ac55556ed71f44eb9213a406dce8cb2664d6ccbafbd3"
+  },
+  "plant": {
+    "identity": {
+      "source_revision": "213711baeeb39369f26197ad1f8f2d4f3c721094-dirty",
+      "model_sha256": "514e73717371a9004ab2fd9c1a6758b3f668586b06b56cc2075ec94ad5c7e778",
+      "dynamics_sha256": "7d10797f998608d759f5fdfda275dfe0d97370149c48d71ad63d6d296b11cea5",
+      "exporter": "PythonFMU3 0.3.4",
+      "exporter_revision": "6c4b81cb869447f6c69e3417c495f73f11c40ae0",
+      "python": "CPython 3.13.7 (provided by execution image)",
+      "machine_class": "Linux x86-64, glibc 2.36",
+      "model_license": "Apache-2.0",
+      "exporter_license": "MIT"
+    },
+    "qualified": {
+      "dynamics_sha256": "7d10797f998608d759f5fdfda275dfe0d97370149c48d71ad63d6d296b11cea5",
+      "exporter": "PythonFMU3 0.3.4",
+      "exporter_license": "MIT",
+      "exporter_revision": "6c4b81cb869447f6c69e3417c495f73f11c40ae0",
+      "machine_class": "Linux x86-64, glibc 2.36",
+      "model_license": "Apache-2.0",
+      "model_sha256": "514e73717371a9004ab2fd9c1a6758b3f668586b06b56cc2075ec94ad5c7e778",
+      "python": "CPython 3.13.7 (provided by execution image)"
+    },
+    "identity_matches": true,
+    "interface_findings": [],
+    "passed": true
+  }
+}

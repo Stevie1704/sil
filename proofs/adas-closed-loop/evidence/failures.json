@@ -1,0 +1,80 @@
+{
+  "route_overflow": {
+    "case": "approach",
+    "why": "radar lists published in [0.5 s, 0.6 s) delayed by 50 ms: three wait in a controller route of two at 0.54 s",
+    "expected_exit": 1,
+    "fmu": {
+      "exit": 1,
+      "seconds": 4.252,
+      "stderr": "sil-run: subscriber route capacity exceeded: Channel 'adas.radar', publisher 'radar', subscriber 'controller', configured capacity 2, current depth 2, policy 'fail'",
+      "leftover_processes": [],
+      "diagnostics": [
+        "subscriber route capacity exceeded: Channel 'adas.radar'",
+        "subscriber 'controller'",
+        "configured capacity 2"
+      ],
+      "passed": true
+    },
+    "passed": true
+  },
+  "malformed_list": {
+    "case": "approach",
+    "why": "an Interceptor writes radar.count 9 into the list published at 0.2 s",
+    "expected_exit": 1,
+    "native": {
+      "exit": 1,
+      "seconds": 3.469,
+      "stderr": "sil-run: participant 'controller' failed: t=200000000 ns: radar.count 9 exceeds the capacity 8",
+      "leftover_processes": [],
+      "diagnostics": [
+        "t=200000000 ns: radar.count 9 exceeds the capacity 8"
+      ],
+      "passed": true
+    },
+    "fmu": {
+      "exit": 1,
+      "seconds": 4.148,
+      "stderr": "fmu: t=200000000 ns: radar.count 9 exceeds the capacity 8\nsil-run: participant 'controller' failed: sil.participant.ParticipantFailure: fmi3DoStep returned Error",
+      "leftover_processes": [],
+      "diagnostics": [
+        "t=200000000 ns: radar.count 9 exceeds the capacity 8"
+      ],
+      "passed": true
+    },
+    "passed": true
+  },
+  "future_truth": {
+    "case": "approach",
+    "why": "the plant first in the Slot and truth at Latency 0: a sensor would describe truth sampled after its activation",
+    "expected_exit": 1,
+    "fmu": {
+      "exit": 1,
+      "seconds": 4.074,
+      "stderr": "sil-run: participant 'camera' failed: sil.participant.ParticipantFailure: t=0 ns: camera holds truth sampled at 10000000 ns, after the activation time; a sensor describes only truth sampled at its activation",
+      "leftover_processes": [],
+      "diagnostics": [
+        "t=0 ns:",
+        "holds truth sampled at 10000000 ns, after the activation time"
+      ],
+      "passed": true
+    },
+    "passed": true
+  },
+  "manifest_error": {
+    "case": "approach",
+    "why": "a sensor config without the initial condition",
+    "expected_exit": 2,
+    "fmu": {
+      "exit": 2,
+      "seconds": 3.96,
+      "stderr": "sil-run: participant 'radar': sil.participant.ManifestError: config keys ['confidence', 'object_id', 'output', 'sensor', 'truth', 'truth_sample_offset_ns', 'visibility'], expected ['confidence', 'initial_truth', 'object_id', 'output', 'sensor', 'truth', 'truth_sample_offset_ns', 'visibility']",
+      "leftover_processes": [],
+      "diagnostics": [
+        "participant 'radar'",
+        "config keys"
+      ],
+      "passed": true
+    },
+    "passed": true
+  }
+}
