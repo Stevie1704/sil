@@ -53,7 +53,7 @@ The mapping document is JSON:
 - `timestamp` names the time column, its `unit` (`s`, `ms`, `us` or `ns`) and
   an optional `origin` in that unit (default 0). Replay time is
   `(cell − origin) × unit`, computed exactly in integer nanoseconds.
-- `schemas` uses the Manifest's schema form with scalar fields only. Declare
+- `schemas` uses the Manifest's schema form. Declare
   the same schemas in the replaying Manifest: the Replay participant rejects a
   Channel whose recorded schema differs from the declared one.
 - Each `channels` entry maps every field of its schema, and only those, to a
@@ -62,6 +62,11 @@ The mapping document is JSON:
   and offset. Float fields compute in binary64, then round to f32 for an f32
   field; the scale and offset themselves are rounded to binary64 first. One
   column may feed several fields, the timestamp column included.
+- An array field (a field with `count`) takes `columns` instead of `column`:
+  exactly `count` columns, element 0 first. Each element converts as a
+  scalar field of the element type, with the field's one `scale` and
+  `offset`. An empty element cell counts like any other empty cell: there is
+  no partial array and no implicit zero.
 
 The conversion rejects, with the row, line and column, rather than guess:
 
@@ -88,9 +93,10 @@ receipt's `last_ns`: the Replay participant does not publish Messages at or
 after the Duration, and it drops them without an error.
 
 Supported limits: one comma-delimited UTF-8 file with a header row; scalar
-fields of the existing schema types; one linear scale and offset per field;
+and fixed-size array fields of the existing schema types, one column per
+element; one linear scale and offset per field;
 times from 0 to 2^64 − 1 ns after the origin. There is no decoder for MDF,
-ROS bags, BLF or DBC, and no array or payload fields.
+ROS bags, BLF or DBC, and no variable-length or payload fields.
 
 ## Replay recorded input into one FMU
 

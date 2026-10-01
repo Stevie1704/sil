@@ -21,6 +21,9 @@ The conversion is exact or it is rejected:
   nearest f32. The mapping's scale and offset are rounded to binary64 first. A
   non-finite cell or result is rejected, and so is a nonzero value that
   underflows to zero.
+* An array field (a schema field with `count`) names one column per element
+  under `columns`; each element converts as a scalar field of the element
+  type, with the field's one scale and offset.
 
 Rows are emitted in file order and, within one row, in mapping order, so rows
 sharing a timestamp keep their order in the Recording's publish order. A row
@@ -339,13 +342,6 @@ def _schemas(value) -> dict[str, dict]:
         Manifest(duration_ns=1).add_schemas(value)
     except ManifestError as e:
         raise ConversionError(str(e)) from None
-    for name, schema in value.items():
-        for field in schema["fields"]:
-            if "count" in field:
-                raise ConversionError(
-                    f"schema {name!r} field {field['name']!r}: only scalar "
-                    "fields are supported"
-                )
     return value
 
 
@@ -373,9 +369,13 @@ def _channel(entry, context: str, schemas: dict[str, dict]) -> _Channel:
             f"{context}: schema field(s) " + ", ".join(map(repr, missing))
             + " not mapped to a column"
         )
+    # An array field contributes one element field per element, in element
+    # order, which is its packed layout.
     fields = tuple(
-        _field(f["name"], f["type"], specs[f["name"]], f"{context} field {f['name']!r}")
+        element
         for f in declared
+        for element in _fields(f, specs[f["name"]],
+                               f"{context} field {f['name']!r}")
     )
     return _Channel(
         name=name,
@@ -390,9 +390,32 @@ def _channel(entry, context: str, schemas: dict[str, dict]) -> _Channel:
     )
 
 
-def _field(name: str, field_type: str, spec, context: str) -> _Field:
-    spec = _object(spec, context, {"column"}, frozenset({"scale", "offset"}))
-    column = _string(spec["column"], f"{context} 'column'")
+def _fields(declared: dict, spec, context: str) -> list[_Field]:
+    """The element fields of one schema field: one for a scalar, `count` for
+    an array, whose spec names one column per element under 'columns'."""
+    count = declared.get("count")
+    key = "column" if count is None else "columns"
+    if isinstance(spec, dict) and key not in spec and (
+            {"column", "columns"} & spec.keys()):
+        kind = "a scalar" if count is None else "an array"
+        raise ConversionError(f"{context} is {kind} field and takes {key!r}")
+    spec = _object(spec, context, {key}, frozenset({"scale", "offset"}))
+    name, field_type = declared["name"], declared["type"]
+    if count is None:
+        return [_field(name, field_type, spec,
+                       _string(spec["column"], f"{context} 'column'"), context)]
+    columns = spec["columns"]
+    if not isinstance(columns, list) or len(columns) != count:
+        got = len(columns) if isinstance(columns, list) else repr(columns)
+        raise ConversionError(f"{context} 'columns' must list {count} columns, "
+                              f"got {got}")
+    return [_field(f"{name}[{i}]", field_type, spec,
+                   _string(column, f"{context} 'columns'[{i}]"), context)
+            for i, column in enumerate(columns)]
+
+
+def _field(name: str, field_type: str, spec: dict, column: str,
+           context: str) -> _Field:
     factors = {}
     for key, identity in (("scale", 1), ("offset", 0)):
         number = _number(spec.get(key, identity), f"{context} {key}")
