@@ -181,10 +181,11 @@ def prepare(out: Path, plant: Path, fmpy_python: str) -> None:
         doc['dependencies']['python']['modules'] += ['lz4', 'zstandard']
         doc['runtime']['environment']['TMPDIR'] = f'/work/tmp/{name}'
         write(declaration, doc)
-        expected[name] = {'status': 'pass' if control is None or control == 'tampered' else {
+        expected[name] = {'status': 'pass' if control is None else {
             'manifest': 'manifest-error', 'malformed': 'behavioral-failure',
             'comparison': 'behavioral-failure', 'hang': 'timeout',
-            'crash': 'behavioral-failure', 'deadline': 'behavioral-failure'}[control],
+            'crash': 'behavioral-failure', 'deadline': 'behavioral-failure',
+            'tampered': 'manifest-error'}[control],
                          'timeout_s': 30 if control == 'hang' else 600}
 
     # Fault libraries are separate targets compiled against the installed ABI.
@@ -232,7 +233,6 @@ int sil_participant_init(const sil_api_v1 *a, const char *n, const char *c) {
     for control in ('manifest', 'malformed', 'comparison', 'hang', 'crash', 'deadline', 'tampered'):
         form = 'native' if control in ('hang', 'crash') else 'fmu'
         build(f'control-{control}', 'closed', form, control)
-    expected['control-tampered']['status'] = 'manifest-error'
     write(out / 'expected.json', expected)
 
 
