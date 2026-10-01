@@ -5,8 +5,8 @@ The milestone exit criterion is that a Run recorded twice produces a
 bit-identical MCAP. `sil.check` proves that for one manifest; this proves it
 for the reference pipeline, both variants of the ACC example, the FMU import
 example, the CSV replay example, the recorded-data FMU example, the
-shared-library example, and its replay window, so no example is left to be
-checked when someone remembers.
+shared-library example, its replay window, and the Native ADAS reference
+application, so no example is left to be checked when someone remembers.
 
 Run from the repository root with `python/src` on PYTHONPATH.
 """
@@ -62,6 +62,10 @@ def main() -> int:
     library_window = build / "library-window.mcap"
     window = prepare("examples/library/window.json", library_history,
                      library_window)
+    adas_prepare = load("adas_prepare", "examples/adas-reference/prepare.py")
+    adas = load("adas_manifest", "examples/adas-reference/manifest.py")
+    adas_inputs = build / "adas-reference-inputs"
+    adas_prepare.prepare(adas_inputs)
     references = [
         full_pipeline_manifest(build),
         acc.acc_manifest().write(build / "acc.json"),
@@ -76,6 +80,9 @@ def main() -> int:
             library_window, build / "speed_filter.so",
             duration_ns=window["duration_ns"],
         ).write(build / "library-window.json"),
+        adas.reference_manifest(
+            adas_inputs, build / "adas_reference.so",
+        ).write(build / "adas-reference.json"),
     ]
     for reference in references:
         code = check(build / "sil-run", reference.path)

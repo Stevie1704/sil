@@ -104,6 +104,13 @@ An authored time-varying input applied by one or more Participants to exercise
 the behavior under test. A Maneuver is part of the reproducible Run contract.
 _Avoid_: scenario, stimulus when naming the authored behavior
 
+**Reference profile**:
+A named, versioned contract for a repository-owned example application: its
+fields, units, frame, constants, Period and time convention. A Run of the
+application is compared with trajectories enumerated from the profile. It
+states test behavior, not a vehicle requirement or a supplier interface.
+_Avoid_: spec, standard, interface version
+
 **vECU**:
 A piece of vehicle software under test, brought into a run as a participant.
 Opaque when the framework cannot see or change its internals.

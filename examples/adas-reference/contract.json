@@ -1,0 +1,20 @@
+{
+  "sil_comparison": 1,
+  "evaluation": {"from_ns": 10000000, "to_ns": 200000000},
+  "channels": {
+    "command": {
+      "reference_channel": "command",
+      "actual_offset_ns": 10000000,
+      "reference_offset_ns": 0,
+      "observations": {"start_ns": 10000000, "stop_ns": 200000000, "step_ns": 10000000},
+      "fields": {
+        "sample_time_ns": "exact",
+        "sequence": "exact",
+        "mode": "exact",
+        "selected_object_id": "exact",
+        "target_acceleration_mps2": {"atol": 0, "rtol": 0},
+        "acceleration_mps2": {"atol": 0, "rtol": 0}
+      }
+    }
+  }
+}

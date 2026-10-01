@@ -178,6 +178,17 @@ example-window: venv build ## Replay a window of the library history after a war
 	PYTHONPATH=$(SRC) $(PYTHON) examples/library/window_contract.py $(BUILD_DIR)/library-window.receipt.json -o $(BUILD_DIR)/library-window.contract.json
 	PYTHONPATH=$(SRC) $(PYTHON) -m sil.compare $(BUILD_DIR)/library-window.contract.json $(BUILD_DIR)/library-windowed-1.mcap $(BUILD_DIR)/library-full.mcap
 
+# The Native ADAS reference application over installed interfaces: stage the
+# build into a prefix, then run examples/adas-reference/run.sh with only that
+# prefix and this venv on PATH. The script builds the library against the
+# staged include/sil and silschema, runs the Manifest twice and `cmp`s the
+# Recordings, compares every maneuver with its enumerated trajectory, and
+# requires the wrong-sign build to fail.
+.PHONY: example-adas-reference
+example-adas-reference: venv build ## Build the C ADAS reference against the staged install, run twice, compare
+	cmake --install $(BUILD_DIR) --prefix $(BUILD_DIR)/adas-reference-prefix
+	PATH=$(CURDIR)/$(BUILD_DIR)/adas-reference-prefix/bin:$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) examples/adas-reference/run.sh $(BUILD_DIR)/adas-reference
+
 # Benchmark --------------------------------------------------------------------
 # Regenerates the routing baseline in docs/bench/ (issue #61). Long-running:
 # every row is run once instrumented for copy counts and several times
