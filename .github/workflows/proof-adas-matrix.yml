@@ -29,7 +29,7 @@ jobs:
         run: proofs/adas-matrix/run-proof.sh "$PWD/build/adas-matrix-evidence"
       - name: Check the installed CLI and ignored-exit control
         run: |
-          python -m pip install pytest
+          python -m pip install --quiet "pytest==9.1.1"
           SIL_ADAS_MATRIX_IMAGE=sil-adas-matrix:example python -m pytest tests/test_adas_matrix.py -q
       - uses: actions/upload-artifact@v4
         if: always()

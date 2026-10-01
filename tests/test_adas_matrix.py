@@ -75,7 +75,12 @@ def test_clean_installed_matrix_checks_passes_and_selected_failures(image, tmp_p
         "'independent_importer':importlib.util.find_spec('fmpy') is not None,"
         "'header':pathlib.Path('/opt/sil/native/include/sil/participant.h').is_file(),"
         "'schema_generator':pathlib.Path('/opt/sil/native/bin/silschema').is_file(),"
-        "'runner':subprocess.run(['sil-run','--version'],capture_output=True).returncode}))"
+        "'runner':subprocess.run(['sil-run','--version'],capture_output=True).returncode,"
+        "'generated':subprocess.run(['silschema','/bundles/replay-native/schemas.json',"
+        "'/tmp/schemas.h'],capture_output=True).returncode == 0 and "
+        "'typedef struct adas_Command' in pathlib.Path('/tmp/schemas.h').read_text(),"
+        "'compilers':[str(d/c) for d in map(pathlib.Path,('/usr/bin','/usr/local/bin'))"
+        " for c in ('cc','gcc','clang','c++','g++') if (d/c).exists()]}))"
     ], check=True, capture_output=True, text=True)
     installation = json.loads(probe.stdout)
     assert installation['uid'] == 10001
@@ -85,6 +90,8 @@ def test_clean_installed_matrix_checks_passes_and_selected_failures(image, tmp_p
     assert installation['independent_importer'] is False
     assert installation['header'] and installation['schema_generator']
     assert installation['runner'] == 0
+    assert installation['generated'] is True
+    assert installation['compilers'] == []
     proc, report, evidence = consumer(image, tmp_path)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert report['passed'] is True
