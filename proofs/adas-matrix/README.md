@@ -100,8 +100,9 @@ startup or verification; the marker is checked before cleanup and its verdict
 is archived. Native abort or
 forced termination cannot execute runner destructors: after checking that
 processes are gone, the external case owner removes those controls' remaining
-Run directories, mapped-region files and core dumps and records what it
-removed.
+Run directories, mapped-region files and any core dumps the host's
+`core_pattern` writes into them, and records what it removed. The callback
+marker is control evidence and is not listed as removed residue.
 This is whole-case containment and file cleanup, not native crash recovery
 inside the runner. The supported processes remain in their case session;
 deliberately escaping via a new session is outside this lifetime contract.

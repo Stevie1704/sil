@@ -36,17 +36,30 @@ def seal() -> None:
         f.write('\nDeliberate tampering control.\n')
 
 
+def parent(pid: int) -> int:
+    # The command name in field 2 may contain spaces; it ends at the last ')'.
+    stat = Path(f'/proc/{pid}/stat').read_text()
+    return int(stat[stat.rindex(')') + 2:].split()[1])
+
+
 def processes() -> list[int]:
-    """Live processes still naming these bundles; Linux acceptance only."""
+    """Live processes other than this driver and its ancestors; Linux only.
+
+    The consumer container holds nothing else, so any other process leaked
+    from a case, whatever its command line names.
+    """
+    own, pid = set(), os.getpid()
+    while pid > 0:
+        own.add(pid)
+        pid = parent(pid)
     found = []
     for entry in Path('/proc').iterdir():
-        if not entry.name.isdigit() or int(entry.name) == os.getpid():
-            continue
-        try:
-            if b'/bundles/' in (entry / 'cmdline').read_bytes():
-                found.append(int(entry.name))
-        except (FileNotFoundError, ProcessLookupError, PermissionError):
-            pass
+        if entry.name.isdigit() and int(entry.name) not in own:
+            try:
+                parent(int(entry.name))
+            except (FileNotFoundError, ProcessLookupError):
+                continue  # exited while listing
+            found.append(int(entry.name))
     return found
 
 
@@ -66,7 +79,9 @@ def run(out: Path) -> bool:
                                str(out / kind), '--jobs', '1'],
                               capture_output=True, text=True)
         (out / f'{kind}.log').write_text(proc.stdout + proc.stderr)
-        result = json.loads((out / kind / 'summary.json').read_text())
+        summary = out / kind / 'summary.json'
+        # A matrix that wrote no summary fails its case-set check below.
+        result = json.loads(summary.read_text()) if summary.is_file() else {'cases': []}
         entries = {c['name']: c for c in result['cases']}
         names = {n for n in expected if n.startswith('control-') == (kind == 'controls')}
         checks[kind] = {'exit_code': proc.returncode,
@@ -77,15 +92,18 @@ def run(out: Path) -> bool:
             check = {'status': entry.get('status'), 'expected': expected[name]['status'],
                      'passed': entry.get('status') == expected[name]['status']}
             evidence = out / kind / 'cases' / name
-            leftovers = sorted(evidence.rglob('.sil-run-*'))
-            leftovers += sorted(evidence.rglob('core'))
-            leftovers += sorted(evidence.rglob('*.core'))
             temporary = Path(f'/work/tmp/{name}')
-            leftovers += sorted(temporary.iterdir())
             if name in ('control-hang', 'control-crash'):
+                # Control evidence, not residue: record it, then remove it so
+                # the forced cleanup below lists only what the Run left behind.
                 marker = temporary / 'native-callback-entered'
                 check['callback_entered'] = marker.is_file() and marker.read_text() == 'native fault callback entered\n'
                 check['passed'] &= check['callback_entered']
+                marker.unlink(missing_ok=True)
+            leftovers = sorted(evidence.rglob('.sil-run-*'))
+            leftovers += sorted(evidence.rglob('core'))
+            leftovers += sorted(evidence.rglob('*.core'))
+            leftovers += sorted(temporary.iterdir())
             alive = processes()
             check['leftover_processes'] = alive
             check['forced_cleanup'] = []
@@ -102,14 +120,15 @@ def run(out: Path) -> bool:
             check['leftover_files'] = [str(p) for p in leftovers]
             check['passed'] &= not alive and not leftovers
             log = '\n'.join(p.read_text() for p in evidence.rglob('run-1.log'))
+            # The same diagnostics that #227 requires for these failures.
             diagnostics = {
-                'control-manifest': 'config keys',
-                'control-malformed': 'radar.count 9 exceeds the capacity 8',
-                'control-deadline': 'timeout waiting for step_done response',
+                'control-manifest': ["participant 'radar'", 'config keys'],
+                'control-malformed': ['radar.count 9 exceeds the capacity 8'],
+                'control-deadline': ['timeout waiting for step_done response'],
             }
             if name in diagnostics:
                 check['diagnostic'] = diagnostics[name]
-                check['passed'] &= diagnostics[name] in log
+                check['passed'] &= all(d in log for d in diagnostics[name])
             bundle_codes = {'control-manifest': 1, 'control-malformed': 1,
                             'control-comparison': 1, 'control-crash': 1,
                             'control-deadline': 1, 'control-tampered': 2}
