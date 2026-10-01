@@ -58,8 +58,10 @@ stimulus — nothing else.
 Any co-simulation call that answers a status other than `fmi3OK` aborts the
 Run with exit 1, and the diagnostic names the call, the participant and the
 status. `Warning` aborts too: a Run that steps past a status the FMU raised is
-not evidence of anything. An FMU that answers `Fatal` is abandoned rather than
-terminated, which is what FMI 3.0 requires of its importer.
+not evidence of anything. An FMU that answers `Error` is freed without
+`fmi3Terminate`, and one that answers `Fatal` is abandoned rather than
+terminated, which is what FMI 3.0 requires of its importer. So the diagnostic
+names the call that failed, not a cleanup call after it.
 
 ### Binding the other variable types
 
