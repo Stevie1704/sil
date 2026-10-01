@@ -98,7 +98,7 @@ def _estimates(estimates: dict) -> list[str]:
         rows.append([
             name, _ms(e["startup_s"]), _difference(e["participant_step"]),
             f"{e['application_us_per_step']:.2f}",
-            f"{e['adaptation_and_routing_us_per_step']:.1f}",
+            _difference(e["adaptation_and_routing"]),
             _difference(e["recording_per_participant_step"]),
             _ms(e["startup_over_process_s"])
             if "startup_over_process_s" in e else "n/a"])

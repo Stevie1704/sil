@@ -140,8 +140,7 @@ class TestEstimates:
         e = measure.estimates(self.results(), application, long_s=60)
         native = e["native-x4"]
         assert native["participant_step"]["us"] == pytest.approx(20.0)
-        assert native["adaptation_and_routing_us_per_step"] == \
-            pytest.approx(15.0)
+        assert native["adaptation_and_routing"]["us"] == pytest.approx(15.0)
         assert native["recording_per_participant_step"]["us"] == \
             pytest.approx(0.004 / (6000 * 4) * 1e6)
         assert native["participant_step"]["resolved"]
@@ -151,6 +150,7 @@ class TestEstimates:
         e = measure.estimates(self.results(spread=1.0), application,
                               long_s=60)
         assert not e["fmu-x1"]["participant_step"]["resolved"]
+        assert not e["fmu-x1"]["adaptation_and_routing"]["resolved"]
         assert not e["fmu-x1"]["recording_per_participant_step"]["resolved"]
 
 
@@ -189,6 +189,8 @@ class TestMeasurement:
         written = json.loads((out / "results.json").read_text())
         assert written["passed"]
         row = written["rows"][0]
+        # The Run's own peak, not the driver's: run_measured forks small.
+        assert row["observational"]["tree_max_rss_bytes"] < 30 * (1 << 20)
         assert set(row["deterministic"]) == {
             "exit_codes", "counters", "counters_repeat",
             "recording_equals_instrumented"}

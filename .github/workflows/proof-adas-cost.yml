@@ -3,8 +3,8 @@ name: proof-adas-cost
 # The reference execution-cost measurement of the ADAS controller (issue
 # #229) on its acceptance platform. It builds a pinned image with network,
 # so it sits outside the general push gate. It runs for PRs touching the
-# application, its forms, the measurement, or the SiL code a Run goes
-# through. Its timings are observational; its checks gate the job.
+# application, its forms or the measurement, and on demand to refresh the
+# retained results. Its timings are observational; its checks gate the job.
 
 on:
   pull_request:
@@ -12,17 +12,14 @@ on:
       - 'examples/adas-reference/**'
       - 'proofs/adas-cost/**'
       - 'proofs/adas-equivalence/experiment.py'
-      - 'python/src/sil/**'
-      - 'kernel/**'
-      - 'include/**'
-      - 'container/**'
       - '.github/workflows/proof-adas-cost.yml'
   workflow_dispatch:
 
 jobs:
   measure:
-    # Native linux/amd64: the supported acceptance platform.
-    runs-on: ubuntu-latest
+    # Native linux/amd64, the supported acceptance platform, on a pinned
+    # runner image: the machine class of the retained results.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4

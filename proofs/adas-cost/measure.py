@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import dataclasses
 import ctypes
 import json
 import os
@@ -45,7 +46,6 @@ import shutil
 import statistics
 import subprocess
 import sys
-import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -104,32 +104,50 @@ class Sample:
     max_rss_bytes: int
 
 
-def _max_rss_bytes(usage) -> int:
+def _max_rss_bytes(max_rss: int) -> int:
     """ru_maxrss is bytes on macOS and kilobytes on Linux; report bytes."""
-    return usage.ru_maxrss if sys.platform == "darwin" else \
-        usage.ru_maxrss * 1024
+    return max_rss if sys.platform == "darwin" else max_rss * 1024
 
 
-def run_once(args: list[str], cwd: Path, log: Path,
+def run_once(launcher: Path, args: list[str], cwd: Path, log: Path,
              env: dict | None = None) -> Sample:
-    """Runs `sil-run` to completion. wait4 attributes CPU and peak RSS to
-    this Run's process tree alone: peak RSS is that of its largest process.
-    stderr goes to `log`, stdout (the Manifest hash) is discarded."""
+    """Runs `sil-run` to completion under `run_measured` (run_measured.c),
+    which reports the wall-clock, CPU and peak RSS of this Run's process
+    tree alone; peak RSS is that of its largest process. stderr goes to
+    `log`, stdout (the Manifest hash) is discarded. A Run that fails raises
+    MeasurementError: its timing would describe another Run."""
+    usage = log.with_suffix(".rusage")
     with log.open("w") as err:
-        start = time.perf_counter()
-        proc = subprocess.Popen(args, cwd=cwd, env=env,
-                                stdout=subprocess.DEVNULL, stderr=err)
-        _, status, usage = os.wait4(proc.pid, 0)
-        wall = time.perf_counter() - start
-    proc.returncode = os.waitstatus_to_exitcode(status)
-    return Sample(proc.returncode, wall, usage.ru_utime, usage.ru_stime,
-                  _max_rss_bytes(usage))
+        proc = subprocess.run([str(launcher), str(usage), *args], cwd=cwd,
+                              env=env, stdout=subprocess.DEVNULL, stderr=err)
+    if proc.returncode != 0:
+        raise MeasurementError(f"run_measured exited {proc.returncode}: "
+                               f"{_tail(log)}")
+    exit_code, wall_ns, user_us, system_us, max_rss = (
+        int(v) for v in usage.read_text().split())
+    if exit_code != 0:
+        raise MeasurementError(f"{' '.join(args)} exited {exit_code}: "
+                               f"{_tail(log)}")
+    return Sample(exit_code, wall_ns / 1e9, user_us / 1e6, system_us / 1e6,
+                  _max_rss_bytes(max_rss))
+
+
+def _tail(log: Path, lines: int = 5) -> str:
+    """The last stderr lines of a Run, with the log that holds the rest."""
+    text = "\n".join(log.read_text(errors="replace").splitlines()[-lines:])
+    return f"{text} (log: {log})"
 
 
 def _runner_args(runner: Path, manifest: Path, recording: Path | None):
     output = ["-o", str(recording)] if recording else ["--no-recording"]
     return [str(runner), str(manifest), *output,
             "--participant-timeout-ms", str(PARTICIPANT_TIMEOUT_MS)]
+
+
+def _key(result: dict) -> tuple:
+    """A row result's identity: form, Run, instances, Recording."""
+    return (result["form"], result["workload"], result["instances"],
+            result["recording"])
 
 
 def _summary(values: list[float]) -> dict:
@@ -170,6 +188,9 @@ class Measurement:
               f"-I{EXAMPLE_DIR}", f"-I{generated}", "-o", str(self.library),
               str(EXAMPLE_DIR / "adas_reference.c"),
               str(EXAMPLE_DIR / "sil_adapter.c"), "-lm"])
+        self.launcher = self.work / "run_measured"
+        _run([self.cc, "-std=c11", "-O2", "-Wall", "-Wextra", "-o",
+              str(self.launcher), str(PROOF_DIR / "run_measured.c")])
         self.harness = self.work / "app_cost.so"
         _run([self.cc, *FLAGS, f"-I{EXAMPLE_DIR}", "-o", str(self.harness),
               str(PROOF_DIR / "app_cost.c"),
@@ -187,6 +208,8 @@ class Measurement:
                     "instantiation_token": identity["instantiation_token"]},
             "harness": {"sha256": workload.sha256(self.harness),
                         "sources": ["app_cost.c", "adas_reference.c"]},
+            "launcher": {"sha256": workload.sha256(self.launcher),
+                         "sources": ["run_measured.c"]},
         }
 
     def inputs(self) -> dict:
@@ -227,42 +250,45 @@ class Measurement:
     def row(self, row: Row) -> dict:
         directory = self.work / "runs" / row.name
         directory.mkdir(parents=True, exist_ok=True)
-        manifest = self.paths[row.name]
-
-        def recording(label: str) -> Path | None:
-            return directory / f"{label}.mcap" if row.recording else None
-
-        reports = []
-        for i in (1, 2):
-            report = directory / f"counters-{i}.json"
-            env = dict(os.environ, SIL_COPY_COUNTERS_OUT=str(report))
-            sample = run_once(_runner_args(self.instrumented, manifest,
-                                           recording(f"instrumented-{i}")),
-                              directory, directory / f"instrumented-{i}.log",
-                              env)
-            reports.append({"exit": sample.exit_code,
-                            **json.loads(report.read_text())})
+        counters = [self._instrumented(row, directory, i) for i in (1, 2)]
         for i in range(self.warmup):
-            run_once(_runner_args(self.runner, manifest,
-                                  recording(f"warmup-{i}")),
-                     directory, directory / f"warmup-{i}.log")
+            self._production(row, directory, f"warmup-{i}")
         samples, identical = [], []
         for i in range(self.repeats):
-            out = recording(f"timed-{i}")
-            samples.append(run_once(_runner_args(self.runner, manifest, out),
-                                    directory, directory / f"timed-{i}.log"))
-            if out is not None:
-                identical.append(out.read_bytes() == recording(
-                    "instrumented-1").read_bytes())
+            sample, recording = self._production(row, directory, f"timed-{i}")
+            samples.append(sample)
+            if recording is not None:
+                identical.append(recording.read_bytes() == (
+                    directory / "instrumented-1.mcap").read_bytes())
                 if i:
-                    out.unlink()
+                    recording.unlink()
         for path in directory.glob("warmup-*.mcap"):
             path.unlink()
-        return self._row_result(row, reports, samples, identical)
+        return self._row_result(row, counters, samples, identical)
 
-    def _row_result(self, row: Row, reports: list[dict],
+    def _recording(self, row: Row, directory: Path, label: str):
+        return directory / f"{label}.mcap" if row.recording else None
+
+    def _instrumented(self, row: Row, directory: Path, i: int) -> dict:
+        """One instrumented Run: its counters and the kernel's own cost."""
+        counters = directory / f"counters-{i}.json"
+        env = dict(os.environ, SIL_COPY_COUNTERS_OUT=str(counters))
+        sample = run_once(self.launcher, _runner_args(
+            self.instrumented, self.paths[row.name],
+            self._recording(row, directory, f"instrumented-{i}")),
+            directory, directory / f"instrumented-{i}.log", env)
+        return {"exit": sample.exit_code, **json.loads(counters.read_text())}
+
+    def _production(self, row: Row, directory: Path, label: str):
+        recording = self._recording(row, directory, label)
+        sample = run_once(self.launcher, _runner_args(
+            self.runner, self.paths[row.name], recording),
+            directory, directory / f"{label}.log")
+        return sample, recording
+
+    def _row_result(self, row: Row, counters: list[dict],
                     samples: list[Sample], identical: list[bool]) -> dict:
-        exits = [r["exit"] for r in reports] + [s.exit_code for s in samples]
+        exits = [c["exit"] for c in counters] + [s.exit_code for s in samples]
         wall = _summary([s.wall_s for s in samples])
         return {
             "name": row.name, "form": row.form,
@@ -272,9 +298,9 @@ class Measurement:
             "simulated_s": row.workload.duration_ns / 1e9,
             "deterministic": {
                 "exit_codes": exits,
-                "counters": reports[0]["deterministic"],
-                "counters_repeat": reports[0]["deterministic"]
-                == reports[1]["deterministic"],
+                "counters": counters[0]["deterministic"],
+                "counters_repeat": counters[0]["deterministic"]
+                == counters[1]["deterministic"],
                 "recording_equals_instrumented": identical,
             },
             "observational": {
@@ -286,16 +312,14 @@ class Measurement:
                 / wall["median"],
                 # One instrumented Run: the kernel process alone, carrying
                 # the counters' own small overhead.
-                "instrumented_kernel": reports[0]["observational"],
+                "instrumented_kernel": counters[0]["observational"],
             },
         }
 
     # --- deterministic checks -------------------------------------------------------
 
     def inertness(self, results: list[dict]) -> None:
-        exits = {r["name"]: r["deterministic"]["exit_codes"] for r in results
-                 if any(r["deterministic"]["exit_codes"])}
-        self.check("every_run_exits_0", not exits, exits)
+        """A failed Run already stopped the measurement (run_once)."""
         unrepeated = [r["name"] for r in results
                       if not r["deterministic"]["counters_repeat"]]
         self.check("counters_repeat", not unrepeated, unrepeated)
@@ -303,12 +327,12 @@ class Measurement:
                      if not all(r["deterministic"][
                          "recording_equals_instrumented"])]
         self.check("recording_equals_instrumented", not differing, differing)
-        by_name = {r["name"]: r for r in results}
+        by_key = {_key(r): r for r in results}
         changed = []
         for r in results:
             if r["recording"]:
                 continue
-            on = by_name[r["name"].replace("-recoff", "-recon")]
+            on = by_key[(*_key(r)[:3], True)]
             off_counters = dict(r["deterministic"]["counters"],
                                 recorded=None)
             on_counters = dict(on["deterministic"]["counters"],
@@ -323,7 +347,7 @@ class Measurement:
                 if c.endswith(".command")]
 
     def equivalence(self, rows: list[Row]) -> dict:
-        report, failures = {}, []
+        runs, failures = {}, []
         for row in rows:
             if row.form != "native" or not row.recording:
                 continue
@@ -339,14 +363,14 @@ class Measurement:
                 failures.append(f"{row.name}: {len(native)} Commands, "
                                 f"expected {expected}")
             for form in FORMS[1:]:
-                other = row.name.replace("native-", f"{form}-", 1)
+                other = dataclasses.replace(row, form=form).name
                 equal = self._commands(other) == native
                 entry["forms_equal"][form] = equal
                 if not equal:
                     failures.append(f"{other} differs from {row.name}")
-            report[row.name.removeprefix("native-")] = entry
+            runs[f"{row.workload.name}-x{row.instances}"] = entry
         self.check("forms_publish_identical_commands", not failures, failures)
-        return report
+        return runs
 
     # --- the application alone ---------------------------------------------------------
 
@@ -359,7 +383,7 @@ class Measurement:
         harness.adas_cost_run.restype = ctypes.c_int
         config = adapter.Config(workload.PERIOD_NS,
                                 *workload.manifest.PARAMETERS.values())
-        report, failures = {}, []
+        timings, failures = {}, []
         for w in workload.workloads(self.long_s).values():
             activations = read_activations(
                 self._inputs(w) / "load0.inputs.csv")
@@ -377,17 +401,18 @@ class Measurement:
                         f"app_cost {w.name}: {fault.message.decode()}")
                 if i >= self.warmup:
                     per_activation.append(elapsed.value / n / 1e3)
-            published = [d for c, _, d in self._commands(
-                f"native-{w.name}-x1-recon") if c == "load0.command"]
+            native = Row("native", w, 1, True)
+            published = [d for c, _, d in self._commands(native.name)
+                         if c == "load0.command"]
             computed = [pack_output(o) for o in outputs]
             if computed != published:
                 failures.append(f"{w.name}: the harness computed other "
                                 "Commands than the Runs published")
-            report[w.name] = {"activations": n,
-                              "us_per_activation": _summary(per_activation)}
+            timings[w.name] = {"activations": n,
+                               "us_per_activation": _summary(per_activation)}
         self.check("application_computes_the_published_commands",
                    not failures, failures)
-        return report
+        return timings
 
 
 # --- the timing harness's inputs ------------------------------------------------------
@@ -450,8 +475,7 @@ def estimates(results: list[dict], application: dict, long_s: int) -> dict:
     summed spread (max - min) of the two rows it comes from; otherwise it is
     within the noise of this machine and policy."""
     w = workload.workloads(long_s)
-    wall = {(r["form"], r["workload"], r["instances"], r["recording"]):
-            r["observational"]["wall_s"] for r in results}
+    wall = {_key(r): r["observational"]["wall_s"] for r in results}
     app_us = application["long"]["us_per_activation"]["median"]
     span = w["long"].activations - w["ci"].activations
 
@@ -460,25 +484,27 @@ def estimates(results: list[dict], application: dict, long_s: int) -> dict:
         spread = sum(wall[k]["max"] - wall[k]["min"] for k in (a, b))
         return {"us": value / per * 1e6, "resolved": abs(value) > spread}
 
-    report = {}
+    costs = {}
     for form in FORMS:
         for n in workload.INSTANCES:
             step = difference((form, "long", n, False), (form, "ci", n, False),
                               span * n)
-            report[f"{form}-x{n}"] = {
+            costs[f"{form}-x{n}"] = {
                 "startup_s": wall[(form, "startup", n, False)]["median"],
                 "participant_step": step,
                 "application_us_per_step": app_us,
-                "adaptation_and_routing_us_per_step": step["us"] - app_us,
+                # Inherits the resolution of the difference it nets.
+                "adaptation_and_routing": {"us": step["us"] - app_us,
+                                           "resolved": step["resolved"]},
                 "recording_per_participant_step": difference(
                     (form, "long", n, True), (form, "long", n, False),
                     w["long"].activations * n),
             }
     for n in workload.INSTANCES:
-        report[f"fmu-x{n}"]["startup_over_process_s"] = (
-            report[f"fmu-x{n}"]["startup_s"]
-            - report[f"process-x{n}"]["startup_s"])
-    return report
+        costs[f"fmu-x{n}"]["startup_over_process_s"] = (
+            costs[f"fmu-x{n}"]["startup_s"]
+            - costs[f"process-x{n}"]["startup_s"])
+    return costs
 
 
 # --- the environment ---------------------------------------------------------------------------

@@ -179,15 +179,13 @@ def write_inputs(workload: Workload, instances: int, out_dir: Path) -> dict:
 class Artifacts:
     library: Path
     fmu: Path
-    python: str = "python3"
 
 
 def controller(form: str, artifacts: Artifacts) -> manifest.Controller:
     if form == "native":
         return manifest.native_controller(artifacts.library)
     if form == "process":
-        return manifest.process_controller(artifacts.library,
-                                           python=artifacts.python)
+        return manifest.process_controller(artifacts.library)
     if form == "fmu":
         return equivalence.fmu_controller(artifacts.fmu)
     raise ValueError(f"unknown form {form!r}")
