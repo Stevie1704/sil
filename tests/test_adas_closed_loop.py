@@ -268,7 +268,7 @@ class TestTable:
     @pytest.mark.parametrize("variant", sorted(loop.EFFECTS))
     def test_a_variant_changes_only_what_it_isolates(self, variant,
                                                      artifacts):
-        baseline = loop.EFFECTS[variant][0]
+        baseline = loop.EFFECTS[variant].compared_with
         found = loop.effect_difference(
             variant, docs(loop.ALL_CASES[baseline], artifacts)[0],
             docs(loop.ALL_CASES[variant], artifacts)[0])
@@ -311,7 +311,7 @@ class TestPredictions:
 
     def test_the_failures_name_the_case_they_change(self):
         assert set(loop.FAILURES) == {"route_overflow", "malformed_list",
-                                      "future_truth", "malformed_setup"}
+                                      "future_truth", "manifest_error"}
         assert all(f.case in loop.CASES for f in loop.FAILURES.values())
 
 
@@ -446,8 +446,8 @@ class TestLoopRuns:
             proc = run(sil_run, doc, tmp_path / f"{name}.json", env)
             assert proc.returncode == 0, proc.stderr
             decoded[name] = decode(proc.mcap_path)
-        for variant, (baseline, _, _) in loop.EFFECTS.items():
-            result = kpi.effect(decoded[baseline], decoded[variant],
+        for variant, effect in loop.EFFECTS.items():
+            result = kpi.effect(decoded[effect.compared_with], decoded[variant],
                                 loop.HAZARD, H, loop.EFFECT_ENVELOPE)
             assert result["findings"] == [], (variant, result)
 

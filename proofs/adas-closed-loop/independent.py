@@ -72,9 +72,12 @@ def observation(case: dict, sensor: str, t: int, sequence: int,
                 truth: dict) -> dict:
     """The variable values of one sensor's observation at t."""
     if sensor == "ego":
+        speed = binary32(truth["ego_speed_mps"])
+        if speed < 0:
+            raise ValueError(f"ego speed {speed!r} is negative; profile 3 "
+                             "has no negative speed")
         return {"sample_time_ns": [t], "sequence": [sequence],
-                "validity": [1],
-                "speed_mps": [binary32(truth["ego_speed_mps"])]}
+                "validity": [1], "speed_mps": [speed]}
     visible = not within(case["hidden"], t)
     obj = case["objects"][sensor]
     active = {"object_id": obj["object_id"],

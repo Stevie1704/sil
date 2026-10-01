@@ -49,6 +49,9 @@ PROOF_DIR = Path(__file__).resolve().parent
 ROOT = PROOF_DIR.parents[1]
 EXAMPLE_DIR = ROOT / "examples" / "adas-reference"
 EDGE = PROOF_DIR / "edge.py"
+# The faulted case of the deliberate comparison, run independently without
+# its Interceptors.
+UNFAULTED = "sensor_loss.unfaulted"
 # The plant identity the ACC multi-rate evidence qualified.
 QUALIFIED_PLANT = (ROOT / "proofs" / "acc-fmi" / "multirate-evidence"
                    / "report.json")
@@ -64,6 +67,7 @@ def load(name: str, path: Path):
 
 
 reference = load("adas_closed_loop_reference", EXAMPLE_DIR / "manifest.py")
+edge = load("adas_closed_loop_edge", EDGE)
 equivalence = load("adas_closed_loop_equivalence",
                    ROOT / "proofs" / "adas-equivalence" / "experiment.py")
 
@@ -75,8 +79,7 @@ CLEAR, HAZARD, UNAVAILABLE = 0, 1, 2
 
 # --- Schemas and Channels ----------------------------------------------------
 
-TRUTH_FIELDS = ("ego_position_m", "ego_speed_mps", "lead_position_m",
-                "lead_speed_mps", "gap_m", "relative_speed_mps")
+TRUTH_FIELDS = edge.TRUTH_FIELDS
 
 
 def _f64(*names: str) -> dict:
@@ -217,14 +220,25 @@ VARIANTS = {
         sensor_latency_ns=STEP_NS),
 }
 ALL_CASES = {**CASES, **VARIANTS}
-# variant: (baseline, what it isolates, the Manifest paths it may change).
+
+
+@dataclass(frozen=True)
+class Effect:
+    """What a variant isolates against the case it differs from, and the
+    Manifest paths it may change."""
+
+    compared_with: str
+    isolates: str
+    paths: tuple[str, ...]
+
+
 # The radar and camera Periods also size their truth and visibility routes.
 EFFECTS = {
-    "approach": ("approach.ideal", "sampling and hold",
-                 ("participants.radar.", "participants.camera.")),
-    "approach.latency": ("approach", "sensor Channel Latency",
-                         tuple(f"channels.adas.{s}.latency_ns"
-                               for s in SENSORS)),
+    "approach": Effect("approach.ideal", "sampling and hold",
+                       ("participants.radar.", "participants.camera.")),
+    "approach.latency": Effect("approach", "sensor Channel Latency",
+                               tuple(f"channels.adas.{s}.latency_ns"
+                                     for s in SENSORS)),
 }
 
 # --- the acceptance envelope, fixed before measuring -------------------------
@@ -237,10 +251,13 @@ KPI = {"minimum_gap_m": 2.0, "accel_min_mps2": -3.0, "accel_max_mps2": 0.0,
 # so the budget is far below one Step of plant motion.
 TRUTH_TOLERANCE = {"atol": 1e-10, "rtol": 1e-12}
 EXACT_FLOAT = {"atol": 0, "rtol": 0}
-# How far a variant may move the behavior from its baseline: an observation
-# up to two Steps older can move the hazard onset by up to two Steps, later
-# only (closing speed grows and the gap shrinks until the onset), and the
-# minimum gap by far less than 0.5 m at the closing speeds of `approach`.
+# How far a variant may move the behavior from the case it is compared
+# with. The hazard comes from the radar x and relative speed; the camera
+# only confirms the radar object within 2 m. A radar observation is held at
+# most one Step, and sensor Latency adds one Step, so each variant moves the
+# hazard onset by at most two Steps, and later only (closing speed grows and
+# the gap shrinks until the onset). The minimum gap moves by far less than
+# 0.5 m at the closing speeds of `approach`.
 EFFECT_ENVELOPE = {"hazard_onset_shift_ns": (0, 2 * STEP_NS),
                    "minimum_gap_delta_m": 0.5}
 
@@ -258,16 +275,15 @@ def native_controller(library: Path) -> Controller:
     return add
 
 
-def fmu_controller(archive: Path, starts: list[str] | None = None,
-                   step_period_ns: int = STEP_NS) -> Controller:
+def fmu_controller(archive: Path) -> Controller:
     def add(m: Manifest, routes: list[SubscriberRoute]) -> None:
         command = ["python3", "-m", "sil.fmi", str(Path(archive).resolve())]
         for bind in equivalence.fmu_bindings("adas"):
             command += ["--bind", bind]
-        for start in equivalence.FMU_STARTS if starts is None else starts:
+        for start in equivalence.FMU_STARTS:
             command += ["--start", start]
         m.add_process("controller", command=command,
-                      step_period_ns=step_period_ns,
+                      step_period_ns=STEP_NS,
                       priority=PRIORITY["controller"], subscribes=routes,
                       publishes=["adas.command"])
     return add
@@ -404,7 +420,9 @@ def consumption_table(doc: dict) -> list[dict]:
             same_slot = latency == 0 and schedule[publisher][1] < priority
             # The least time from publication to the activation that takes
             # the Message.
-            delay = latency if latency else (0 if same_slot else period)
+            # A later publisher in the Slot reaches the subscriber no sooner
+            # than one Step on: the conservative bound.
+            delay = latency if latency else (0 if same_slot else STEP_NS)
             rows.append({
                 "participant": name, "period_ns": period, "offset_ns": 0,
                 "priority": priority, "channel": route["channel"],
@@ -461,11 +479,11 @@ def effect_difference(variant: str, baseline_doc: dict,
                       variant_doc: dict) -> list[str]:
     """The paths at which a variant differs from its baseline; only the
     declaration it isolates may."""
-    paths = EFFECTS[variant][2]
+    effect = EFFECTS[variant]
     found = equivalence.differences(baseline_doc, variant_doc)
-    stray = [d for d in found if not d.startswith(paths)]
+    stray = [d for d in found if not d.startswith(effect.paths)]
     if stray or not found:
-        raise TableError(f"{variant} differs from {EFFECTS[variant][0]} in "
+        raise TableError(f"{variant} differs from {effect.compared_with} in "
                          f"{stray or 'nothing'}")
     return found
 
@@ -623,7 +641,7 @@ FAILURES = {
         "sensor would describe truth sampled after its activation", 1,
         ("t=0 ns:", "holds truth sampled at 10000000 ns, after the "
          "activation time"), patch=_future_truth),
-    "malformed_setup": Failure(
+    "manifest_error": Failure(
         "approach", "a sensor config without the initial condition", 2,
         ("participant 'radar'", "config keys"),
         patch=_missing_initial_truth),

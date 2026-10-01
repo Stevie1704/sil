@@ -4,7 +4,7 @@
 proofs/adas-closed-loop/run-proof.sh [evidence-directory]   # needs docker and network
 ```
 
-This proof closes a signal-level loop around the
+This proof closes an object-level loop around the
 [ADAS reference controller](../../docs/adas-reference.md). The ACC plant FMU
 of [proofs/acc-fmi](../acc-fmi/README.md) moves an ego vehicle and a lead
 vehicle. Edge Participants derive processed radar, camera and ego
@@ -194,9 +194,12 @@ adds the radar and camera hold. `approach.latency` adds 10 ms Latency to
 the sensor Channels. Each variant differs from its baseline only in what
 it isolates (`loop.effect_difference`). Each effect must change the
 Commands, move the hazard onset later by 0 to 20 ms, and move the minimum
-gap by at most 0.5 m. An observation that is up to two Steps older can move
-the onset by two Steps at most, and only later, because the closing speed
-grows and the gap shrinks until the onset.
+gap by at most 0.5 m. The hazard comes from the radar position and relative
+speed; the camera only confirms the radar object within 2 m. A radar
+observation is held for one Step at most, and the sensor Latency adds one
+Step. So each variant can move the onset by two Steps at most, and only
+later, because the closing speed grows and the gap shrinks until the
+onset.
 
 ### Deliberate failures
 
@@ -215,7 +218,7 @@ importer or edge process behind. `malformed_list` runs in both forms.
 | `route_overflow` | `delay` of 50 ms on `adas.radar` for publications in [0.5, 0.6) s: three lists in a route of two | 1 | `subscriber route capacity exceeded: Channel 'adas.radar'` |
 | `malformed_list` | `override` of `adas.radar` `count` to 9 at 0.2 s | 1 | `t=200000000 ns: radar.count 9 exceeds the capacity 8` |
 | `future_truth` | the plant first in the Slot and truth at Latency 0, past the authoring check | 1 | `holds truth sampled at 10000000 ns, after the activation time` |
-| `malformed_setup` | a sensor config without the initial condition | 2 | `participant 'radar'`, `config keys` |
+| `manifest_error` | a sensor config without the initial condition | 2 | `participant 'radar'`, `config keys` |
 
 ## Independent execution
 

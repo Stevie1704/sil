@@ -20,6 +20,10 @@ on:
       - 'python/src/sil/**'
       - 'kernel/**'
       - 'include/**'
+      - 'shim/**'
+      - 'tools/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
       - 'container/**'
       - '.github/workflows/proof-adas-closed-loop.yml'
   workflow_dispatch:

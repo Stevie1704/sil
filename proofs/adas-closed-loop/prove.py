@@ -42,6 +42,7 @@ import signal
 import subprocess
 import sys
 import time
+import traceback
 import xml.etree.ElementTree as ET
 import zipfile
 from dataclasses import asdict
@@ -82,6 +83,10 @@ class Proof:
         self.plant_fmu = plant
         self.fmpy_python = fmpy_python
         self.cc = cc
+        # Set by `artifacts`, the first step.
+        self.fmu: Path | None = None
+        self.fmu_sha256: str | None = None
+        self.library: Path | None = None
         runner = shutil.which("sil-run")
         if runner is None:
             raise SystemExit("prove.py: no sil-run on PATH; install SiL first")
@@ -97,6 +102,7 @@ class Proof:
         same_compiler = (pinned["compiler"] == identity["compiler"]
                          and pinned["platform"] == identity["platform"])
         self.library = self._library()
+        self.fmu_sha256 = identity["archive_sha256"]
         return {
             "controller_fmu": {"sha256": identity["archive_sha256"],
                                "compiler": identity["compiler"],
@@ -147,8 +153,9 @@ class Proof:
                 entry["error"] = str(error)
             report[case.name] = entry
         effects = {}
-        for variant, (baseline, isolates, _) in EFFECTS.items():
-            entry = {"baseline": baseline, "isolates": isolates}
+        for variant, effect in EFFECTS.items():
+            baseline = effect.compared_with
+            entry = {"compared_with": baseline, "isolates": effect.isolates}
             try:
                 entry["differences"] = loop.effect_difference(
                     variant, *(json.loads(self.manifest(name, "native")
@@ -197,7 +204,7 @@ class Proof:
                            + "\n")
         runs = [(case, case.name, True) for case in ALL_CASES.values()]
         # The deliberate comparison: the faulted case without its fault.
-        runs.append((CASES["sensor_loss"], "sensor_loss.unfaulted", False))
+        runs.append((CASES["sensor_loss"], loop.UNFAULTED, False))
         for case, name, faults in runs:
             declaration = self.work / f"{name}.case.json"
             declaration.write_text(json.dumps(
@@ -248,13 +255,15 @@ class Proof:
 
     def effects(self) -> dict:
         report = {}
-        for variant, (baseline, isolates, _) in EFFECTS.items():
+        for variant, effect in EFFECTS.items():
+            baseline = effect.compared_with
             for form in FORMS:
                 result = kpi.effect(self.decoded(baseline, form),
                                     self.decoded(variant, form), loop.HAZARD,
                                     STEP_NS, loop.EFFECT_ENVELOPE)
                 report[f"{variant}.{form}"] = {
-                    "baseline": baseline, "isolates": isolates, **result,
+                    "compared_with": baseline, "isolates": effect.isolates,
+                    **result,
                     "passed": not result["findings"]}
         return {"envelope": loop.EFFECT_ENVELOPE, "effects": report}
 
@@ -278,7 +287,7 @@ class Proof:
         for form in FORMS:
             result = sil_compare(self.work / "independent.contract.json",
                                  self.recording(spec["case"], form),
-                                 self.fmpy("sensor_loss.unfaulted"))
+                                 self.fmpy(loop.UNFAULTED))
             first = result["report"].get("first_divergence") or {}
             observed = {key: first.get(key) for key in predicted}
             report[f"comparison.{form}"] = {
@@ -449,43 +458,48 @@ def summary(result: dict) -> dict:
             "passed": result["exit"] == 0}
 
 
+def _all(entries, key: str = "passed") -> bool:
+    return all(entry[key] for entry in entries)
+
+
+# Each step in order, and whether its report passes. A step needs the
+# artifacts and Recordings of the steps before it.
+STEPS = {
+    "artifacts": lambda r: r["controller_fmu"]["matches_pin"] is not False
+    and r["plant"]["passed"],
+    "manifests": lambda r: all("error" not in m for name, m in r.items()
+                               if name != "effects")
+    and all("error" not in e for e in r["effects"].values()),
+    "runs": lambda r: _all(r.values()),
+    "independent": lambda r: _all(r.values()),
+    "comparisons": lambda r: all(_all(case.values())
+                                 for case in r["cases"].values()),
+    "effects": lambda r: _all(r["effects"].values()),
+    "deliberate": lambda r: _all(r.values(), "detected"),
+    "failures": lambda r: _all(r.values()),
+}
+
+
 def prove(out: Path, plant: Path, fmpy_python: str, cc: str) -> dict:
+    """Each step writes its report as it ends. A step that raises is
+    reported with its traceback, and the steps after it do not run."""
     out.mkdir(parents=True, exist_ok=True)
     proof = Proof(out, plant, fmpy_python, cc)
-    sections = {"artifacts": proof.artifacts(), "manifests": proof.manifests()}
-    sections["runs"] = proof.runs()
-    sections["independent"] = proof.independent()
-    sections["comparisons"] = proof.comparisons()
-    sections["effects"] = proof.effects()
-    sections["deliberate"] = proof.deliberate()
-    sections["failures"] = proof.failures()
-    for name, section in sections.items():
+    passed = {}
+    for name, verdict in STEPS.items():
+        try:
+            report = getattr(proof, name)()
+            passed[name] = verdict(report)
+        except Exception:  # noqa: BLE001 - the evidence keeps any crash
+            report = {"error": traceback.format_exc()}
+            passed[name] = False
         (out / f"{name}.json").write_text(
-            json.dumps(section, indent=2, default=str) + "\n")
-    artifacts = sections["artifacts"]
-    passed = {
-        "controller_pin": artifacts["controller_fmu"]["matches_pin"]
-        is not False,
-        "plant": artifacts["plant"]["passed"],
-        "manifests": all("error" not in m for name, m in
-                         sections["manifests"].items() if name != "effects")
-        and all("error" not in e
-                for e in sections["manifests"]["effects"].values()),
-        "runs": all(r["passed"] for r in sections["runs"].values()),
-        "independent": all(r["passed"]
-                           for r in sections["independent"].values()),
-        "comparisons": all(c["passed"] for case in
-                           sections["comparisons"]["cases"].values()
-                           for c in case.values()),
-        "effects": all(e["passed"]
-                       for e in sections["effects"]["effects"].values()),
-        "deliberate": all(d["detected"]
-                          for d in sections["deliberate"].values()),
-        "failures": all(f["passed"] for f in sections["failures"].values()),
-    }
+            json.dumps(report, indent=2, default=str) + "\n")
+        if "error" in report and len(report) == 1:
+            break
     result = {"cases": sorted(ALL_CASES), "steps": passed,
-              "passed": all(passed.values()),
-              "controller_fmu_sha256": artifacts["controller_fmu"]["sha256"],
+              "passed": len(passed) == len(STEPS) and all(passed.values()),
+              "controller_fmu_sha256": getattr(proof, "fmu_sha256", None),
               "plant_sha256": loop.equivalence.sha256(plant)}
     (out / "summary.json").write_text(json.dumps(result, indent=2) + "\n")
     return result
