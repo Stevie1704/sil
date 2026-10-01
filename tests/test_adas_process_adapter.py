@@ -156,6 +156,11 @@ class TestFailures:
          "config names profile 'sil.adas-reference.radar-camera' version 2; "
          "this library implements 'sil.adas-reference.radar-camera' version 3"),
         ({"unexpected": 1}, "config has unknown key 'unexpected'"),
+        ({"max_change_mps2": None}, "a value is neither a string nor a number"),
+        ({"max_change_mps2": True}, "a value is neither a string nor a number"),
+        ({"radar": 5}, "config key 'radar' must be a string"),
+        ({"period_ns": 1e7},
+         "config key 'period_ns' is not an unsigned 64-bit integer"),
     ])
     def test_an_invalid_configuration_is_a_manifest_error(
             self, build_dir, sil_run, prepared, tmp_path, override,

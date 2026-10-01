@@ -155,11 +155,16 @@ def bind(path: str) -> ctypes.CDLL:
 # --- configuration ------------------------------------------------------------
 
 
+def _no_constant(name: str):
+    """JSON has no NaN or Infinity; Python's parser accepts them."""
+    raise ValueError(f"{name} is not JSON")
+
+
 def read_config(text: str) -> dict:
     """The Native config object, checked as sil_adapter.c checks it."""
     try:
-        config = json.loads(text)
-    except json.JSONDecodeError:
+        config = json.loads(text, parse_constant=_no_constant)
+    except (json.JSONDecodeError, ValueError):
         raise ManifestError("config is not a JSON object") from None
     if not isinstance(config, dict):
         raise ManifestError("config is not a JSON object")
@@ -167,6 +172,9 @@ def read_config(text: str) -> dict:
         if key not in config:
             raise ManifestError(f"config is missing key '{key}'")
         value = config[key]
+        if not isinstance(value, str) and (
+                isinstance(value, bool) or not isinstance(value, int | float)):
+            raise ManifestError("a value is neither a string nor a number")
         if (kind == "string") != isinstance(value, str):
             raise ManifestError(
                 f"config key '{key}' must be a "
@@ -177,6 +185,9 @@ def read_config(text: str) -> dict:
             raise ManifestError(
                 f"config key '{key}' is not an unsigned 64-bit integer: "
                 f"{value}")
+        if kind == "number" and not math.isfinite(value):
+            raise ManifestError(
+                f"config key '{key}' is not a finite number: {value}")
     for key in config:
         if key not in CONFIG_KEYS:
             raise ManifestError(f"config has unknown key '{key}'")
