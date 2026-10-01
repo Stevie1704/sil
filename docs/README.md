@@ -19,7 +19,7 @@ Commands in the guides run from the repository root unless stated otherwise.
 | Seal and run regression cases and matrices | [Regression bundles](regression-bundles.md) |
 | Run one Manifest in a Linux container | [Container deployment](container.md) |
 | Find acceptance evidence and maintained models | [Acceptance proofs](acceptance.md) |
-| Understand routing measurements and memory costs | [Performance](performance.md), [routing baseline](bench/routing-baseline.md), [large-message baseline](bench/large-message-routing-baseline.md) |
+| Understand routing measurements and memory costs | [Performance](performance.md), [routing baseline](bench/routing-baseline.md), [large-message baseline](bench/large-message-routing-baseline.md), [ADAS execution cost](../proofs/adas-cost/README.md) |
 
 ## Architecture and contracts
 

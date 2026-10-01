@@ -1,0 +1,204 @@
+"""Render the cost measurement's results.json as Markdown tables (#229).
+
+The reading and the findings are in README.md; this file only lays out what
+measure.py observed, keeping deterministic counters and checks apart from
+observational timings.
+"""
+
+from __future__ import annotations
+
+MIB = 1 << 20
+
+
+def _ms(seconds: float) -> str:
+    return f"{seconds * 1e3:.1f}"
+
+
+def _table(header: list[str], rows: list[list]) -> list[str]:
+    return ["| " + " | ".join(header) + " |",
+            "|" + "---|" * len(header),
+            *("| " + " | ".join(str(cell) for cell in row) + " |"
+              for row in rows)]
+
+
+def _declaration(d: dict) -> list[str]:
+    workloads = ", ".join(
+        f"`{name}` {w['activations']} activations ({w['simulated_s']:g} s)"
+        for name, w in d["workloads"].items())
+    policy = d["policy"]
+    return [
+        f"- profile: `{d['profile']['name']}` version {d['profile']['version']}",
+        f"- controller Period: {d['controller_period_ns'] / 1e6:g} ms; sensor "
+        "Periods: " + ", ".join(f"{s} {p / 1e6:g} ms"
+                                for s, p in d["sensor_periods_ns"].items()),
+        f"- list capacity {d['list_capacity']}; active objects per list: "
+        + ", ".join(f"{s} {n}" for s, n in d["active_objects"].items()),
+        "- Message bytes: " + ", ".join(f"`{s}` {n}"
+                                        for s, n in d["message_bytes"].items()),
+        f"- route capacity (Burst depth) {d['route_capacity']}, fail on "
+        f"overflow; at most {d['max_messages_per_route_per_activation']} "
+        "Message per route per activation",
+        f"- fan-out: {d['fan_out']['input']} subscriber per input Channel, "
+        f"{d['fan_out']['command']} per Command Channel (recorded only)",
+        f"- input Latency {d['input_latency_ns']} ns, output Latency "
+        f"{d['output_latency_ns'] / 1e6:g} ms",
+        f"- Run lengths: {workloads}",
+        "- forms: " + ", ".join(f"`{f}`" for f in d["forms"])
+        + "; instances: " + ", ".join(str(n) for n in d["instances"])
+        + "; Recording: " + ", ".join(d["recording"]),
+        f"- policy: {policy['warmup_runs']} warm-up Run(s) discarded, then "
+        f"{policy['timed_repeats']} timed Runs; {policy['statistic']}",
+    ]
+
+
+def _rows(results: list[dict]) -> list[str]:
+    rows = []
+    for r in results:
+        o = r["observational"]
+        wall = o["wall_s"]
+        rows.append([
+            r["form"], r["workload"], r["instances"],
+            "on" if r["recording"] else "off", f"{r['simulated_s']:g}",
+            _ms(wall["median"]), _ms(wall["min"]), _ms(wall["max"]),
+            f"{o['real_time_factor']:.1f}", f"{o['user_s']['median']:.3f}",
+            f"{o['system_s']['median']:.3f}",
+            f"{o['tree_max_rss_bytes'] / MIB:.1f}",
+            f"{o['instrumented_kernel']['kernel_max_rss_bytes'] / MIB:.1f}",
+        ])
+    return _table(["form", "Run", "instances", "Recording", "simulated s",
+                   "wall ms (median)", "min", "max", "sim/wall",
+                   "tree user s", "tree system s", "largest RSS MiB",
+                   "kernel RSS MiB*"], rows)
+
+
+def _counters(results: list[dict]) -> list[str]:
+    rows = []
+    for r in results:
+        c = r["deterministic"]["counters"]
+        high_water = max((route["high_water_depth"] for route in c["routes"]),
+                         default=0)
+        rows.append([r["name"]] + [
+            c[site]["count"] for site in (
+                "caller_to_kernel", "subscriber_copy", "recorded",
+                "inline_encode", "inline_decode", "arena_write", "arena_read")
+        ] + [high_water, sum(route["overflow_failures"]
+                             for route in c["routes"])])
+    return _table(["row", "caller", "subscriber", "recorded",
+                   "inline encode", "inline decode", "arena write",
+                   "arena read", "route high water", "overflows"], rows)
+
+
+def _difference(d: dict) -> str:
+    return f"{d['us']:.1f}" + ("" if d["resolved"] else " (within spread)")
+
+
+def _estimates(estimates: dict) -> list[str]:
+    rows = []
+    for name, e in estimates.items():
+        rows.append([
+            name, _ms(e["startup_s"]), _difference(e["participant_step"]),
+            f"{e['application_us_per_step']:.2f}",
+            f"{e['adaptation_and_routing_us_per_step']:.1f}",
+            _difference(e["recording_per_participant_step"]),
+            _ms(e["startup_over_process_s"])
+            if "startup_over_process_s" in e else "n/a"])
+    return _table(["form x instances", "startup ms", "µs per Participant-Step",
+                   "application µs", "adaptation + routing µs",
+                   "Recording µs", "FMU startup over process ms"], rows)
+
+
+def render(result: dict) -> str:
+    m = result["machine"]
+    a = result["artifacts"]
+    checks = result["checks"]
+    lines = [
+        "# ADAS reference execution cost — raw results",
+        "",
+        "Generated by `proofs/adas-cost/measure.py`; do not edit by hand.",
+        "The procedure and the reading are in [README.md](../README.md).",
+        "",
+        "## Machine",
+        "",
+        f"- platform: {m['platform']} ({m['machine']})",
+        f"- CPU: {m['cpu']}, {m['logical_cpus']} logical CPUs"
+        + (f", {m['memory_bytes'] / (1 << 30):.1f} GiB memory"
+           if m["memory_bytes"] else ""),
+        f"- participant Python: {m['participant_python']}",
+        f"- sil-run {m['sil_run']}; compiler: {a['compiler']}",
+        "",
+        "## Declared workload",
+        "",
+        *_declaration(result["declaration"]),
+        "",
+        "## Artifacts",
+        "",
+        *_table(["artifact", "sha256"], [
+            [name, f"`{a[name]['sha256']}`"]
+            for name in ("library", "process_adapter", "fmu", "harness")]),
+        "",
+        f"Flags: `{' '.join(a['flags'])}`.",
+        "",
+        "## Deterministic checks",
+        "",
+        *_table(["check", "result"], [
+            [name, "pass" if c["passed"] else f"FAIL: {c['detail']}"]
+            for name, c in checks.items()]),
+        "",
+        "Commands per Run and per mode (0 clear, 1 hazard, 2 unavailable), "
+        "from the native Recording, which every form equals:",
+        "",
+        *_table(["Run", "Commands", "modes"], [
+            [name, e["commands"], ", ".join(
+                f"{mode}: {count}" for mode, count in sorted(
+                    e["modes"].items()))]
+            for name, e in result["equivalence"].items()]),
+        "",
+        "## Copy, route and replay counters",
+        "",
+        "From `sil-run-instrumented`, twice per row; both Runs agree "
+        "(`counters_repeat`). Counts, never inferred from timing.",
+        "",
+        *_counters(result["rows"]),
+        "",
+        "## Observed timings",
+        "",
+        "Observational: production `sil-run`, wall-clock from start to exit "
+        "of the runner, CPU and peak RSS of the Run's process tree from "
+        "`wait4`. `largest RSS` is the peak of the largest process in the "
+        "tree. Columns marked * come from the first instrumented Run and "
+        "cover the kernel process alone. `sim/wall` is simulated duration "
+        "over median wall-clock.",
+        "",
+        *_rows(result["rows"]),
+        "",
+        "## The application alone",
+        "",
+        "The application's own calls (every receive and one advance per "
+        "activation) over the same inputs, timed in-process by "
+        "`app_cost.c` with no SiL on the path. Observational.",
+        "",
+        *_table(["Run", "activations", "µs per activation (median)", "min",
+                 "max"], [
+            [name, e["activations"],
+             f"{e['us_per_activation']['median']:.3f}",
+             f"{e['us_per_activation']['min']:.3f}",
+             f"{e['us_per_activation']['max']:.3f}"]
+            for name, e in result["application"].items()]),
+        "",
+        "## Estimates",
+        "",
+        "Differences of medians, Recording off unless stated; each is an "
+        "estimate, not a measurement of one mechanism. `startup` is the "
+        "one-activation Run. `µs per Participant-Step` is (long − ci) wall "
+        "over the extra activations and instances. `adaptation + routing` "
+        "is that minus the application alone. `Recording` is long on − long "
+        "off per Participant-Step. `FMU startup over process` is FMI "
+        "Importer import, archive extraction, `modelDescription.xml` and "
+        "instantiation beyond the ctypes adapter's start. A difference "
+        "marked `within spread` does not exceed the summed max − min of the "
+        "two rows it comes from: this machine and policy do not resolve it.",
+        "",
+        *_estimates(result["estimates"]),
+        "",
+    ]
+    return "\n".join(lines)
