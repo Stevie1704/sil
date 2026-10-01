@@ -22,6 +22,7 @@ records why it exists.
 | --- | --- |
 | `adas_reference.h`, `adas_reference.c` | the application: its own API, caller-owned instances, no SiL include |
 | `sil_adapter.c` | the Native participant: exports `sil_participant_init`, checks each list's bounds and converts Messages to the application's types |
+| `process_adapter.py` | the same library as a process-isolated Process participant: loads it with `ctypes`, takes the Native config, checks the same bounds |
 | `schemas.json` | the SiL Schemas; `silschema` generates `adas_messages.h` from them |
 | `maneuvers/<name>.csv` | the authored radar and camera object lists and ego speed of each maneuver |
 | `maneuvers/<name>.expected.csv` | the expected trajectory of each maneuver, enumerated by hand |
@@ -533,6 +534,29 @@ difference and requires the same Commands from both forms.
 
 ```sh
 proofs/adas-equivalence/run-proof.sh    # needs docker and network
+```
+
+## Process-isolated library form and execution cost
+
+`process_adapter.py` runs the same library build as a Process participant.
+It loads the library with `ctypes` in a child process of its own and calls
+the application's C API directly. A crash or hang of the library ends that
+process, not `sil-run`; `--participant-timeout-ms` bounds a hang.
+`process_controller(library)` gives the controller entry, so its Manifest
+comes from the same `reference_manifest` call as the Native and FMU forms.
+It takes the Native config as one JSON argument, applies the same checks,
+and publishes byte-identical Commands
+([tests/test_adas_process_adapter.py](../tests/test_adas_process_adapter.py)).
+
+[proofs/adas-cost/](../proofs/adas-cost/README.md) measures one declared
+workload through the three forms on Linux x86-64: startup, steady-state
+application computation, adaptation/routing and Recording cost, with
+deterministic counters apart from observational timings. It is a reference
+baseline for [#125](https://github.com/Stevie1704/sil/issues/125), not a
+capacity claim, and it changes no framework contract.
+
+```sh
+proofs/adas-cost/run-proof.sh    # needs docker and network
 ```
 
 ## Closed loop over a plant FMU
