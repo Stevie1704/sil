@@ -110,11 +110,19 @@ Sample time, field, actual and expected value.
 
 | Control | Case | Change | Predicted first divergence |
 | --- | --- | --- | --- |
-| `binding` | `hazard` | `radar.x_m` and `radar.y_m` bound to each other's variable | 10 ms, `mode` 0, expected 1 |
+| `binding` | `hazard` | the field `radar.x_m` bound to the variable `radar.y_m`; the variable `radar.x_m` keeps its start value 0 | 10 ms, `mode` 0, expected 1 |
 | `sign` | `hazard` | the archive built with `ADAS_REFERENCE_WRONG_SIGN` | 10 ms, `mode` 0, expected 1 |
 | `parameter` | `hazard` | `max_change_mps2` 1 | 10 ms, `acceleration_mps2` −1, expected −0.5 |
 | `sample_time_offset` | `hazard` | the contract's `actual_offset_ns` 0 | 10 ms, `sample_time_ns` 20 ms, expected 10 ms |
-| `input_latency` | `cadence` | one Period of Latency on every input Channel | 10 ms, `mode` 2, expected 0 |
+| `input_latency` | `cadence` | the experiment's input Latency, one Period instead of 0 | 10 ms, `mode` 2, expected 0 |
+
+The experiment declares one input Latency, and `reference_manifest` gives it
+to every input Channel, as for the native `late` experiment. The Sample-time
+offset control changes the comparison contract: both forms compute the
+Sample time t + 10 ms themselves, and the contract is where an observer can
+mistake the publication Slot for it. The `sign` control covers "unit/sign";
+the profile has no unit conversion, since every value is in its SI unit on
+both paths.
 
 ## Failures
 
@@ -129,6 +137,12 @@ importer process behind.
 | `unsupported_step` | a 20 ms step; the FMU has one fixed 10 ms step | 1 | the FMU's message and `fmi3DoStep returned Error` |
 | `parameter_out_of_range` | `max_change_mps2` 20 | 1 | the FMU's message and `fmi3ExitInitializationMode returned Error` |
 | `malformed_input` | an Interceptor writes `radar.count` 9 in [20, 40) ms | 1, in both forms | `t=20000000 ns: radar.count 9 exceeds the capacity 8` |
+
+The importer gets the step size at the first Step, not at initialization,
+so it cannot refuse a 20 ms step before the Run without a Step protocol
+change. The FMU refuses it, and every failed co-simulation call is exit 1
+with the call and the FMU's message in the diagnostic
+([FMI importer](../../docs/fmi.md)).
 
 After `fmi3Error` the importer frees the instance without `fmi3Terminate`,
 as FMI 3.0 requires, so the diagnostic names the failed call and not a
@@ -147,7 +161,7 @@ is bounded only by the whole-Run guard outside the Run.
 | `forms.json` | per case, what both Manifests share and what differs |
 | `runs.json` | each Run twice: exit, time, byte identity, observation findings |
 | `independent.json` | each FMPy execution |
-| `comparisons.json` | each comparison report, with its counts and first divergence |
+| `comparisons.json` | each comparison report, with its counts and first divergence, and every contract document |
 | `controls.json` | each control, its prediction and what was observed |
 | `failures.json` | each failure, its exit, diagnostic, time and leftover processes |
 | `image-id.txt` | the proof image the evidence came from |

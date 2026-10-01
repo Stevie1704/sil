@@ -92,11 +92,6 @@ class Case:
     interceptors: dict = field(default_factory=dict)
     input_latency_ns: int = manifest.INPUT_LATENCY_NS
 
-    @property
-    def expectation(self) -> str:
-        """The name of its hand-enumerated expected trajectory."""
-        return self.name
-
 
 def _cases() -> dict[str, Case]:
     cases = {m: Case(m, m) for m in manifest.MANEUVERS}
@@ -114,6 +109,11 @@ INITIALLY_UNAVAILABLE = ("freshness", "cadence.late")
 
 
 # --- the two forms ---------------------------------------------------------
+
+
+# Where the archive path stands in the importer command:
+# python3 -m sil.fmi ARCHIVE ...
+ARCHIVE_ARGUMENT = 3
 
 
 def fmu_bindings(maneuver: str) -> list[str]:
@@ -174,15 +174,21 @@ class FormError(AssertionError):
     """The two Manifests differ in more than the execution form."""
 
 
-def _differences(a, b, path: str = "") -> list[str]:
+# The keys of the controller entry that may differ between the forms.
+TARGET_KEYS = {"type", "library", "config", "command", "step_period_ns",
+               "priority"}
+
+
+def differences(a, b, path: str = "") -> list[str]:
+    """The dotted paths at which two JSON documents differ."""
     if isinstance(a, dict) and isinstance(b, dict):
         return [d for key in sorted(a.keys() | b.keys())
-                for d in _differences(a.get(key), b.get(key),
-                                      f"{path}.{key}" if path else key)]
+                for d in differences(a.get(key), b.get(key),
+                                     f"{path}.{key}" if path else key)]
     return [] if a == b else [path]
 
 
-def _sha256(path: Path) -> str:
+def sha256(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
@@ -197,21 +203,20 @@ def form_difference(case: Case, native: dict, fmu: dict) -> dict:
     Raises FormError when anything else differs, or when the adaptation does
     not state the same Period, parameters and Channels in both forms."""
     controller = f"participants.{case.maneuver}"
-    target_keys = {"type", "library", "config", "command", "step_period_ns",
-                   "priority"}
-    stray = [d for d in _differences(native, fmu)
+    stray = [d for d in differences(native, fmu)
              if not (d.startswith(controller + ".")
-                     and d.removeprefix(controller + ".") in target_keys)]
+                     and d.removeprefix(controller + ".") in TARGET_KEYS)]
     if stray:
         raise FormError(f"{case.name}: the forms differ in {stray}")
-    n = native["participants"][case.maneuver]
-    f = fmu["participants"][case.maneuver]
-    config, command = n["config"], f["command"]
+    native_entry = native["participants"][case.maneuver]
+    fmu_entry = fmu["participants"][case.maneuver]
+    config, command = native_entry["config"], fmu_entry["command"]
+    archive = command[ARCHIVE_ARGUMENT]
     starts = dict(s.split("=", 1) for s in _option(command, "--start"))
     binds = _option(command, "--bind")
     adaptation = {
         "period_ns": {"native": config["period_ns"],
-                      "fmu": f["step_period_ns"]},
+                      "fmu": fmu_entry["step_period_ns"]},
         "parameters": {
             name: {"native": config[name], "fmu": starts.get(name)}
             for name in manifest.PARAMETERS},
@@ -226,21 +231,21 @@ def form_difference(case: Case, native: dict, fmu: dict) -> dict:
     return {
         "case": case.name,
         "maneuver": case.maneuver,
-        "differences": _differences(native, fmu),
+        "differences": differences(native, fmu),
         "shared": {
             "duration_ns": native["duration_ns"],
             "channels": native["channels"],
             "replay": native["participants"][f"{case.maneuver}_replay"],
-            "subscribes": n["subscribes"],
-            "publishes": n["publishes"],
+            "subscribes": native_entry["subscribes"],
+            "publishes": native_entry["publishes"],
         },
-        "native": {"library": Path(n["library"]).name,
-                   "library_sha256": _sha256(n["library"]),
+        "native": {"library": Path(native_entry["library"]).name,
+                   "library_sha256": sha256(native_entry["library"]),
                    "config": config},
-        "fmu": {"archive": Path(command[3]).name,
-                "archive_sha256": _sha256(command[3]),
-                "step_period_ns": f["step_period_ns"],
-                "priority": f["priority"],
+        "fmu": {"archive": Path(archive).name,
+                "archive_sha256": sha256(archive),
+                "step_period_ns": fmu_entry["step_period_ns"],
+                "priority": fmu_entry["priority"],
                 "bind": binds, "start": _option(command, "--start")},
         "adaptation": adaptation,
     }
@@ -297,7 +302,9 @@ class Divergence:
 class Control:
     """One change to the nominal FMU form, and where it must diverge.
 
-    Exactly one of the fields below `case` is set."""
+    Exactly one of the change fields, `binds` to `input_latency_ns`, is set.
+    `input_latency_ns` is the experiment's one declared input Latency, which
+    `reference_manifest` gives every input Channel."""
 
     case: str
     why: str
@@ -308,29 +315,37 @@ class Control:
     actual_offset_ns: int | None = None
     input_latency_ns: int | None = None
 
+    CHANGES = ("binds", "starts", "archive_define", "actual_offset_ns",
+               "input_latency_ns")
 
-def _swapped(maneuver: str, a: str, b: str) -> dict:
-    """The bindings of `maneuver` with the variables of fields a and b of
-    the radar Channel swapped."""
-    binds = []
-    for bind in fmu_bindings(maneuver):
-        target, variable = bind.split("=")
-        if variable == f"radar.{a}":
-            variable = f"radar.{b}"
-        elif variable == f"radar.{b}":
-            variable = f"radar.{a}"
-        binds.append(f"{target}={variable}")
-    return {maneuver: binds}
+    def __post_init__(self):
+        changed = [k for k in self.CHANGES if getattr(self, k) is not None]
+        if len(changed) != 1:
+            raise ValueError(f"a control changes one thing, not {changed}")
+
+
+def controller_changes(spec) -> dict:
+    """The `fmu_controller` arguments a Control or a Failure replaces."""
+    return {key: getattr(spec, key) for key in ("binds", "starts")
+            if getattr(spec, key) is not None}
+
+
+def _rebound(maneuver: str, binding: str, variable: str) -> dict:
+    """The bindings of `maneuver`, with one Channel field bound to another
+    variable."""
+    return {maneuver: [f"{bind.split('=')[0]}={variable}"
+                       if bind.split("=")[0] == f"{maneuver}.{binding}"
+                       else bind for bind in fmu_bindings(maneuver)]}
 
 
 CONTROLS = {
     "binding": Control(
         "hazard",
-        "radar x_m and y_m bound to each other's variable: the object 30 m "
-        "ahead on the centre line is at x = 0, which is not eligible (x > 0); "
+        "the radar x_m field bound to the variable radar.y_m: the FMU's "
+        "radar.x_m keeps its start value 0, which is not eligible (x > 0); "
         "no confirmed object, so CLEAR where the oracle has HAZARD",
         Divergence(10 * MS, "mode", CLEAR, HAZARD),
-        binds=_swapped("hazard", "x_m", "y_m")),
+        binds=_rebound("hazard", "radar:x_m", "radar.y_m")),
     "sign": Control(
         "hazard",
         "an archive built with ADAS_REFERENCE_WRONG_SIGN: the object closing "

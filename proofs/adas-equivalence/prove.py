@@ -72,7 +72,10 @@ class Proof:
         self.inputs = self.work / "inputs"
         self.fmpy_python = fmpy_python
         self.cc = cc
-        self.prefix = Path(shutil.which("sil-run")).resolve().parents[1]
+        runner = shutil.which("sil-run")
+        if runner is None:
+            raise SystemExit("prove.py: no sil-run on PATH; install SiL first")
+        self.prefix = Path(runner).resolve().parents[1]
 
     # --- artifacts ---------------------------------------------------------
 
@@ -100,7 +103,7 @@ class Proof:
                             == pinned["archive_sha256"]) if same_compiler
             else None,
             "wrong_sign_fmu": {"sha256": wrong["archive_sha256"]},
-            "library": {"sha256": experiment._sha256(self.library)},
+            "library": {"sha256": experiment.sha256(self.library)},
         }
 
     def _library(self) -> Path:
@@ -155,8 +158,8 @@ class Proof:
                     "runs": results, "identical_bytes": identical,
                     "observation_findings": findings,
                     "passed": identical and not findings}
-        report["cadence_periods"] = cadence_period_findings(self.inputs)
-        return report
+        return {"cases": report,
+                "cadence_periods": cadence_period_findings(self.inputs)}
 
     # --- the independent execution -------------------------------------------
 
@@ -188,7 +191,7 @@ class Proof:
     # --- comparisons ---------------------------------------------------------
 
     def comparisons(self) -> dict:
-        report = {}
+        report, contracts = {}, {}
         for case in CASES.values():
             oracle_contract = self.inputs / f"{case.maneuver}.contract.json"
             cross_contract = self.work / f"{case.maneuver}.cross-form.json"
@@ -199,7 +202,12 @@ class Proof:
             independent_contract = self.work / f"{case.maneuver}.independent.json"
             independent_contract.write_text(json.dumps(
                 with_actual_offset(oracle_contract, 0), indent=2) + "\n")
-            oracle = self.inputs / f"{case.expectation}.expected.mcap"
+            contracts[case.maneuver] = {
+                name: json.loads(path.read_text()) for name, path in (
+                    ("oracle", oracle_contract),
+                    ("independent", independent_contract),
+                    ("cross_form", cross_contract))}
+            oracle = self.inputs / f"{case.name}.expected.mcap"
             native = self.work / f"{case.name}.native-1.mcap"
             fmu = self.work / f"{case.name}.fmu-1.mcap"
             pairs = {
@@ -212,7 +220,7 @@ class Proof:
             }
             report[case.name] = {name: summary(sil_compare(*args))
                                  for name, args in pairs.items()}
-        return report
+        return {"cases": report, "contracts": contracts}
 
     # --- negative controls ---------------------------------------------------
 
@@ -220,15 +228,12 @@ class Proof:
         report = {}
         for name, control in CONTROLS.items():
             case = CASES[control.case]
-            changes = {}
-            if control.binds is not None:
-                changes["binds"] = control.binds
-            if control.starts is not None:
-                changes["starts"] = control.starts
             archive = (self.wrong_sign_fmu if control.archive_define
                        else self.fmu)
             m = experiment.run_manifest(
-                case, self.inputs, experiment.fmu_controller(archive, **changes),
+                case, self.inputs,
+                experiment.fmu_controller(
+                    archive, **experiment.controller_changes(control)),
                 input_latency_ns=control.input_latency_ns)
             path = self.work / f"control-{name}.json"
             m.write(path)
@@ -242,7 +247,7 @@ class Proof:
                 contract.write_text(json.dumps(document, indent=2) + "\n")
             result = sil_compare(
                 contract, recording,
-                self.inputs / f"{case.expectation}.expected.mcap")
+                self.inputs / f"{case.name}.expected.mcap")
             first = result["report"].get("first_divergence") or {}
             predicted = dataclasses.asdict(control.prediction)
             observed = {key: first.get(key) for key in predicted}
@@ -265,11 +270,8 @@ class Proof:
             case = dataclasses.replace(
                 CASES[failure.case],
                 interceptors=failure.interceptors or CASES[failure.case].interceptors)
-            changes = {"step_period_ns": failure.step_period_ns}
-            if failure.binds is not None:
-                changes["binds"] = failure.binds
-            if failure.starts is not None:
-                changes["starts"] = failure.starts
+            changes = {"step_period_ns": failure.step_period_ns,
+                       **experiment.controller_changes(failure)}
             forms = {"fmu": (experiment.fmu_controller(self.fmu, **changes),
                              failure.diagnostics)}
             if failure.native_diagnostics:
@@ -291,8 +293,7 @@ class Proof:
                                and not leftover)}
             entry["passed"] = all(entry[form]["passed"] for form in forms)
             report[name] = entry
-        report["outside_fmu"] = experiment.OUTSIDE_FMU
-        return report
+        return {"cases": report, "outside_fmu": experiment.OUTSIDE_FMU}
 
 
 # --- helpers -----------------------------------------------------------------
@@ -326,9 +327,12 @@ def sil_run(manifest: Path, recording: Path) -> dict:
 
 
 def sil_compare(contract: Path, actual: Path, reference: Path) -> dict:
-    proc = subprocess.run(
-        ["sil-compare", str(contract), str(actual), str(reference), "--json"],
-        capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
+    try:
+        proc = subprocess.run(
+            ["sil-compare", str(contract), str(actual), str(reference),
+             "--json"], capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
+    except subprocess.TimeoutExpired as error:
+        return {"exit": "timeout", "report": {"error": str(error)}}
     try:
         report = json.loads(proc.stdout)
     except json.JSONDecodeError:
@@ -410,17 +414,16 @@ def prove(out: Path, fmpy_python: str, cc: str) -> dict:
     passed = {
         "pin": sections["artifacts"]["matches_pin"] is not False,
         "forms": all("error" not in f for f in sections["forms"].values()),
-        "runs": all(r["passed"] for k, r in sections["runs"].items()
-                    if k != "cadence_periods")
+        "runs": all(r["passed"] for r in sections["runs"]["cases"].values())
         and not sections["runs"]["cadence_periods"],
         "independent": all(r["exit"] == 0
                            for r in sections["independent"].values()),
         "comparisons": all(c["passed"] for case in
-                           sections["comparisons"].values()
+                           sections["comparisons"]["cases"].values()
                            for c in case.values()),
         "controls": all(c["detected"] for c in sections["controls"].values()),
-        "failures": all(f["passed"] for k, f in sections["failures"].items()
-                        if k != "outside_fmu"),
+        "failures": all(f["passed"]
+                        for f in sections["failures"]["cases"].values()),
     }
     result = {"cases": sorted(CASES), "steps": passed,
               "passed": all(passed.values()),
@@ -436,7 +439,6 @@ if __name__ == "__main__":
     parser.add_argument("--fmpy-python", default="python3",
                         help="a Python with FMPy, for independent.py")
     args = parser.parse_args()
-    summary_ = prove(args.out_dir, args.fmpy_python,
-                     os.environ.get("CC", "cc"))
-    print(json.dumps(summary_, indent=2))
-    sys.exit(0 if summary_["passed"] else 1)
+    result = prove(args.out_dir, args.fmpy_python, os.environ.get("CC", "cc"))
+    print(json.dumps(result, indent=2))
+    sys.exit(0 if result["passed"] else 1)

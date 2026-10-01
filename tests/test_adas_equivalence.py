@@ -75,9 +75,8 @@ class TestForms:
         case = experiment.CASES[name]
         record = experiment.form_difference(
             case, *docs(case, inputs, artifacts))
-        assert {d.split(".")[-1] for d in record["differences"]} <= {
-            "type", "library", "config", "command", "step_period_ns",
-            "priority"}
+        assert {d.split(".")[-1] for d in record["differences"]} <= \
+            experiment.TARGET_KEYS
         assert record["fmu"]["bind"] == experiment.fmu_bindings(case.maneuver)
 
     def test_every_degraded_case_of_224_is_covered_or_excluded(self):
@@ -118,13 +117,12 @@ class TestForms:
         assert rule["fields"]["radar_age_ns"] == "exact"
 
 
-def _changes(control) -> dict:
-    return {key: value for key, value in (("binds", control.binds),
-                                          ("starts", control.starts))
-            if value is not None}
-
-
 class TestControls:
+    def test_a_control_of_two_changes_is_refused(self):
+        with pytest.raises(ValueError, match="changes one thing"):
+            experiment.Control("hazard", "two", experiment.Divergence(
+                0, "mode", 0, 1), starts=[], input_latency_ns=0)
+
     @pytest.mark.parametrize("name", sorted(experiment.CONTROLS))
     def test_a_control_changes_one_thing(self, name, inputs, artifacts):
         control = experiment.CONTROLS[name]
@@ -135,13 +133,10 @@ class TestControls:
             if control.archive_define else archive
         changed = experiment.run_manifest(
             case, inputs,
-            experiment.fmu_controller(changed_archive, **_changes(control)),
+            experiment.fmu_controller(
+                changed_archive, **experiment.controller_changes(control)),
             input_latency_ns=control.input_latency_ns).to_doc()
-        differences = experiment._differences(nominal, changed)
-        set_fields = [key for key in ("binds", "starts", "archive_define",
-                                      "actual_offset_ns", "input_latency_ns")
-                      if getattr(control, key) is not None]
-        assert len(set_fields) == 1
+        differences = experiment.differences(nominal, changed)
         if control.input_latency_ns is not None:
             assert differences == [
                 f"channels.{case.maneuver}.{role}.latency_ns"
