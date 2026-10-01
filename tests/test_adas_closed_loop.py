@@ -257,6 +257,18 @@ class TestTable:
             "plant <- loop.actuation: Latency 0 at equal priority states "
             "no within-Slot order"]
 
+    def test_the_plant_binds_every_field_and_starts_the_lead(self):
+        """The importer takes declared bindings as the whole mapping and
+        refuses an unbound Channel field, so every field is bound and the
+        initial lead position is a start value, not a Channel field."""
+        command = loop.fmu_plant(Path("AccPlant.fmu"))(loop.CASES["near_start"])
+        binds = [command[i + 1] for i, a in enumerate(command) if a == "--bind"]
+        assert binds == [
+            "loop.lead:lead_accel_mps2=lead_accel_mps2",
+            "loop.actuation:accel_mps2=accel_mps2",
+            *(f"loop.truth:{n}={n}" for n in loop.TRUTH_FIELDS)]
+        assert command[-2:] == ["--start", "initial_lead_position_m=7.0"]
+
     def test_the_authoring_check_refuses_a_bad_period(self):
         case = replace(loop.CASES["approach"],
                        sensor_periods_ns={"radar": 30 * MS, "camera": 40 * MS,

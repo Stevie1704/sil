@@ -289,11 +289,27 @@ def fmu_controller(archive: Path) -> Controller:
     return add
 
 
+# The plant's Channels. Each field binds the plant variable of its name.
+PLANT_CHANNELS = ("loop.lead", "loop.actuation", "loop.truth")
+
+
+def plant_bindings() -> list[str]:
+    """One declared binding per field of the plant's Channels. Declared
+    bindings are the whole mapping, so the input `initial_lead_position_m`
+    stays unbound and keeps the start value the case gives it."""
+    return [f"{channel}:{f['name']}={f['name']}"
+            for channel in PLANT_CHANNELS
+            for f in SCHEMAS[CHANNELS[channel].schema]["fields"]]
+
+
 def fmu_plant(archive: Path) -> Plant:
-    """The ACC plant FMU through the importer. Its Float64 variables carry
-    the Channel fields by name; the case sets the initial lead position."""
+    """The ACC plant FMU through the importer; the case sets the initial
+    lead position before initialization."""
     def command(case: Case) -> list[str]:
+        binds = [part for bind in plant_bindings()
+                 for part in ("--bind", bind)]
         return ["python3", "-m", "sil.fmi", str(Path(archive).resolve()),
+                *binds,
                 "--start", f"initial_lead_position_m={case.initial_gap_m!r}"]
     return command
 
