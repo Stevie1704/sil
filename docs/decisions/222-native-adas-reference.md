@@ -72,3 +72,34 @@ Manifest format, Native ABI, Step protocol or Recording format.
 `manifest.py` rejects an input Latency or a replay priority for which the
 profile predicts no trajectory, before the Run. An arrival-time build of the
 same sources is the negative control: it must fail the `delay` comparison.
+
+## FMI 3.0 export (#225)
+
+The same application is exported as an FMI 3.0 Co-Simulation FMU,
+`AdasReference.fmu`, with a hand-written FMI interface. It is the reference
+acceptance artifact for the importer type and array slices (#189, #190), not
+a supplier FMU. The importer does not change: today `sil-fmi-inspect`
+refuses every binding of the recorded-input mapping for its type or its
+array shape, and the proof keeps that result as evidence.
+
+- **The variables mirror the Schemas.** Each field is one variable of the
+  matching FMI type, and each `count` a literal dimension. Profile 3 needs
+  `UInt8` (validity) and `Int64` (ages) beside the `Float32`, `Int32`,
+  `UInt32` and `UInt64` the issue lists. A narrower FMI type would make the
+  FMU's interface differ from the Schema that the native example and its
+  Recordings use.
+- **Deliveries are judged by header.** FMI inputs hold their value and have
+  no "new message" signal, so a changed `(sample_time_ns, sequence)` header
+  is a new observation. The start header is "nothing received yet". The
+  consequence: one observation per sensor per step, and a republished
+  identical header is not counted as ignored.
+- **The expectations stay independent.** The FMPy check compares with the
+  hand-enumerated maneuver trajectories and with cases authored in the check
+  from the profile, never with native output. A wrong-sign build of the same
+  sources must fail the check.
+- **The archive is pinned.** The build is reproduced twice in a pinned
+  image, and the archive digest is committed. A source change without a new
+  pin fails the repository tests.
+- **The FMI 3.0.2 headers are vendored** so the compiler checks every
+  function signature. FMI 3.0 requires every function to be exported;
+  unsupported ones return `fmi3Error`.

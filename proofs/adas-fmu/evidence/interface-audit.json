@@ -1,0 +1,474 @@
+{
+  "interface": {
+    "members": [
+      "binaries/x86_64-linux/AdasReference.so",
+      "documentation/identity.json",
+      "documentation/licenses/LICENSE-FMI.txt",
+      "documentation/licenses/LICENSE-SiL.txt",
+      "modelDescription.xml"
+    ],
+    "model": {
+      "fmiVersion": "3.0",
+      "modelName": "AdasReference",
+      "version": "3",
+      "generationTool": "SiL examples/adas-reference/fmu (hand-written FMI 3.0 interface)",
+      "license": "Apache-2.0; documentation/licenses/ holds every license",
+      "instantiationToken": "875fa22861b19b80613fc91b157614d1320ab403fd2a42123d18fca0ed1ad89d"
+    },
+    "interfaces": [
+      "CoSimulation"
+    ],
+    "co_simulation": {
+      "modelIdentifier": "AdasReference",
+      "canHandleVariableCommunicationStepSize": "false",
+      "fixedInternalStepSize": "0.01",
+      "hasEventMode": "false",
+      "canGetAndSetFMUState": "false",
+      "canSerializeFMUState": "false",
+      "providesDirectionalDerivatives": "false",
+      "providesAdjointDerivatives": "false",
+      "providesPerElementDependencies": "false",
+      "needsExecutionTool": "false",
+      "canBeInstantiatedOnlyOncePerProcess": "false",
+      "providesIntermediateUpdate": "false",
+      "canReturnEarlyAfterIntermediateUpdate": "false",
+      "providesEvaluateDiscreteStates": "false"
+    },
+    "default_experiment": {
+      "startTime": "0",
+      "stepSize": "0.01"
+    },
+    "units": [
+      "s",
+      "m",
+      "m/s",
+      "m/s2"
+    ],
+    "variables": {
+      "time": {
+        "type": "Float64",
+        "causality": "independent",
+        "variability": "continuous",
+        "unit": "s",
+        "dimensions": [],
+        "value_reference": 0,
+        "initial": null,
+        "start": null
+      },
+      "hazard_acceleration_mps2": {
+        "type": "Float64",
+        "causality": "parameter",
+        "variability": "fixed",
+        "unit": "m/s2",
+        "dimensions": [],
+        "value_reference": 1,
+        "initial": null,
+        "start": "-3"
+      },
+      "max_change_mps2": {
+        "type": "Float64",
+        "causality": "parameter",
+        "variability": "fixed",
+        "unit": "m/s2",
+        "dimensions": [],
+        "value_reference": 2,
+        "initial": null,
+        "start": "0.5"
+      },
+      "radar.sample_time_ns": {
+        "type": "UInt64",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 100,
+        "initial": null,
+        "start": "18446744073709551615"
+      },
+      "radar.sensor_id": {
+        "type": "UInt32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 101,
+        "initial": null,
+        "start": "1"
+      },
+      "radar.frame_id": {
+        "type": "UInt32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 102,
+        "initial": null,
+        "start": "1"
+      },
+      "radar.sequence": {
+        "type": "UInt32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 103,
+        "initial": null,
+        "start": "4294967295"
+      },
+      "radar.count": {
+        "type": "UInt32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 104,
+        "initial": null,
+        "start": "0"
+      },
+      "radar.validity": {
+        "type": "UInt8",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 105,
+        "initial": null,
+        "start": "0"
+      },
+      "radar.object_id": {
+        "type": "Int32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [
+          8
+        ],
+        "value_reference": 106,
+        "initial": null,
+        "start": "0 0 0 0 0 0 0 0"
+      },
+      "radar.x_m": {
+        "type": "Float32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": "m",
+        "dimensions": [
+          8
+        ],
+        "value_reference": 107,
+        "initial": null,
+        "start": "0 0 0 0 0 0 0 0"
+      },
+      "radar.y_m": {
+        "type": "Float32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": "m",
+        "dimensions": [
+          8
+        ],
+        "value_reference": 108,
+        "initial": null,
+        "start": "0 0 0 0 0 0 0 0"
+      },
+      "radar.relative_vx_mps": {
+        "type": "Float32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": "m/s",
+        "dimensions": [
+          8
+        ],
+        "value_reference": 109,
+        "initial": null,
+        "start": "0 0 0 0 0 0 0 0"
+      },
+      "radar.confidence": {
+        "type": "Float32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [
+          8
+        ],
+        "value_reference": 110,
+        "initial": null,
+        "start": "0 0 0 0 0 0 0 0"
+      },
+      "camera.sample_time_ns": {
+        "type": "UInt64",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 200,
+        "initial": null,
+        "start": "18446744073709551615"
+      },
+      "camera.sensor_id": {
+        "type": "UInt32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 201,
+        "initial": null,
+        "start": "2"
+      },
+      "camera.frame_id": {
+        "type": "UInt32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 202,
+        "initial": null,
+        "start": "1"
+      },
+      "camera.sequence": {
+        "type": "UInt32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 203,
+        "initial": null,
+        "start": "4294967295"
+      },
+      "camera.count": {
+        "type": "UInt32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 204,
+        "initial": null,
+        "start": "0"
+      },
+      "camera.validity": {
+        "type": "UInt8",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 205,
+        "initial": null,
+        "start": "0"
+      },
+      "camera.object_id": {
+        "type": "Int32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [
+          8
+        ],
+        "value_reference": 206,
+        "initial": null,
+        "start": "0 0 0 0 0 0 0 0"
+      },
+      "camera.x_m": {
+        "type": "Float32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": "m",
+        "dimensions": [
+          8
+        ],
+        "value_reference": 207,
+        "initial": null,
+        "start": "0 0 0 0 0 0 0 0"
+      },
+      "camera.y_m": {
+        "type": "Float32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": "m",
+        "dimensions": [
+          8
+        ],
+        "value_reference": 208,
+        "initial": null,
+        "start": "0 0 0 0 0 0 0 0"
+      },
+      "camera.relative_vx_mps": {
+        "type": "Float32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": "m/s",
+        "dimensions": [
+          8
+        ],
+        "value_reference": 209,
+        "initial": null,
+        "start": "0 0 0 0 0 0 0 0"
+      },
+      "camera.confidence": {
+        "type": "Float32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [
+          8
+        ],
+        "value_reference": 210,
+        "initial": null,
+        "start": "0 0 0 0 0 0 0 0"
+      },
+      "ego.sample_time_ns": {
+        "type": "UInt64",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 300,
+        "initial": null,
+        "start": "18446744073709551615"
+      },
+      "ego.sequence": {
+        "type": "UInt32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 301,
+        "initial": null,
+        "start": "4294967295"
+      },
+      "ego.validity": {
+        "type": "UInt8",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 302,
+        "initial": null,
+        "start": "0"
+      },
+      "ego.speed_mps": {
+        "type": "Float32",
+        "causality": "input",
+        "variability": "discrete",
+        "unit": "m/s",
+        "dimensions": [],
+        "value_reference": 303,
+        "initial": null,
+        "start": "0"
+      },
+      "command.sample_time_ns": {
+        "type": "UInt64",
+        "causality": "output",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 400,
+        "initial": "exact",
+        "start": "0"
+      },
+      "command.sequence": {
+        "type": "UInt32",
+        "causality": "output",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 401,
+        "initial": "exact",
+        "start": "0"
+      },
+      "command.mode": {
+        "type": "UInt32",
+        "causality": "output",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 402,
+        "initial": "exact",
+        "start": "2"
+      },
+      "command.selected_object_id": {
+        "type": "Int32",
+        "causality": "output",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 403,
+        "initial": "exact",
+        "start": "-1"
+      },
+      "command.target_acceleration_mps2": {
+        "type": "Float32",
+        "causality": "output",
+        "variability": "discrete",
+        "unit": "m/s2",
+        "dimensions": [],
+        "value_reference": 404,
+        "initial": "exact",
+        "start": "0"
+      },
+      "command.acceleration_mps2": {
+        "type": "Float32",
+        "causality": "output",
+        "variability": "discrete",
+        "unit": "m/s2",
+        "dimensions": [],
+        "value_reference": 405,
+        "initial": "exact",
+        "start": "0"
+      },
+      "command.radar_age_ns": {
+        "type": "Int64",
+        "causality": "output",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 406,
+        "initial": "exact",
+        "start": "-1"
+      },
+      "command.camera_age_ns": {
+        "type": "Int64",
+        "causality": "output",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 407,
+        "initial": "exact",
+        "start": "-1"
+      },
+      "command.ego_age_ns": {
+        "type": "Int64",
+        "causality": "output",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 408,
+        "initial": "exact",
+        "start": "-1"
+      },
+      "command.ignored_observations": {
+        "type": "UInt32",
+        "causality": "output",
+        "variability": "discrete",
+        "unit": null,
+        "dimensions": [],
+        "value_reference": 409,
+        "initial": "exact",
+        "start": "0"
+      }
+    },
+    "outputs": [
+      400,
+      401,
+      402,
+      403,
+      404,
+      405,
+      406,
+      407,
+      408,
+      409
+    ],
+    "initial_unknowns": []
+  },
+  "fmpy_validation": []
+}

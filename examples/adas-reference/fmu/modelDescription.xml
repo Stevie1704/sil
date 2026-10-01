@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fmiModelDescription
+  fmiVersion="3.0"
+  modelName="AdasReference"
+  description="ADAS radar/camera reference controller, profile sil.adas-reference.radar-camera version 3. A reference acceptance artifact for SiL's FMI importer, not a supplier FMU or a vehicle function."
+  version="3"
+  generationTool="SiL examples/adas-reference/fmu (hand-written FMI 3.0 interface)"
+  copyright="Copyright 2026 Steffen Krakau"
+  license="Apache-2.0; documentation/licenses/ holds every license"
+  instantiationToken="@INSTANTIATION_TOKEN@">
+
+  <CoSimulation
+    modelIdentifier="AdasReference"
+    canHandleVariableCommunicationStepSize="false"
+    fixedInternalStepSize="0.01"
+    hasEventMode="false"
+    canGetAndSetFMUState="false"
+    canSerializeFMUState="false"
+    providesDirectionalDerivatives="false"
+    providesAdjointDerivatives="false"
+    providesPerElementDependencies="false"
+    needsExecutionTool="false"
+    canBeInstantiatedOnlyOncePerProcess="false"
+    providesIntermediateUpdate="false"
+    canReturnEarlyAfterIntermediateUpdate="false"
+    providesEvaluateDiscreteStates="false"/>
+
+  <UnitDefinitions>
+    <Unit name="s"><BaseUnit s="1"/></Unit>
+    <Unit name="m"><BaseUnit m="1"/></Unit>
+    <Unit name="m/s"><BaseUnit m="1" s="-1"/></Unit>
+    <Unit name="m/s2"><BaseUnit m="1" s="-2"/></Unit>
+  </UnitDefinitions>
+
+  <LogCategories>
+    <Category name="logStatusError" description="a rejected call and its cause"/>
+  </LogCategories>
+
+  <DefaultExperiment startTime="0" stepSize="0.01"/>
+
+  <ModelVariables>
+    <Float64 name="time" valueReference="0" causality="independent" variability="continuous" unit="s"/>
+    <Float64 name="hazard_acceleration_mps2" valueReference="1" causality="parameter" variability="fixed" start="-3" unit="m/s2" description="target acceleration for HAZARD and SENSOR_UNAVAILABLE; finite, in [-10, 0)"/>
+    <Float64 name="max_change_mps2" valueReference="2" causality="parameter" variability="fixed" start="0.5" unit="m/s2" description="most the commanded acceleration changes per step; finite, in (0, 10]"/>
+    <UInt64 name="radar.sample_time_ns" valueReference="100" causality="input" variability="discrete" start="18446744073709551615" description="ns of Virtual time the list describes; the start value means no list yet"/>
+    <UInt32 name="radar.sensor_id" valueReference="101" causality="input" variability="discrete" start="1" description="1 on the radar inputs"/>
+    <UInt32 name="radar.frame_id" valueReference="102" causality="input" variability="discrete" start="1" description="1, the ego frame"/>
+    <UInt32 name="radar.sequence" valueReference="103" causality="input" variability="discrete" start="4294967295" description="the sensor's message counter; the start value means no list yet"/>
+    <UInt32 name="radar.count" valueReference="104" causality="input" variability="discrete" start="0" description="active objects, 0 to 8"/>
+    <UInt8 name="radar.validity" valueReference="105" causality="input" variability="discrete" start="0" description="1 valid, 0 no usable list"/>
+    <Int32 name="radar.object_id" valueReference="106" causality="input" variability="discrete" start="0 0 0 0 0 0 0 0" description="active IDs >= 0, unique in the list">
+      <Dimension start="8"/>
+    </Int32>
+    <Float32 name="radar.x_m" valueReference="107" causality="input" variability="discrete" start="0 0 0 0 0 0 0 0" unit="m" description="longitudinal position in the ego frame, forward">
+      <Dimension start="8"/>
+    </Float32>
+    <Float32 name="radar.y_m" valueReference="108" causality="input" variability="discrete" start="0 0 0 0 0 0 0 0" unit="m" description="lateral position in the ego frame, left">
+      <Dimension start="8"/>
+    </Float32>
+    <Float32 name="radar.relative_vx_mps" valueReference="109" causality="input" variability="discrete" start="0 0 0 0 0 0 0 0" unit="m/s" description="longitudinal speed relative to the ego, negative when closing; 0 for the camera">
+      <Dimension start="8"/>
+    </Float32>
+    <Float32 name="radar.confidence" valueReference="110" causality="input" variability="discrete" start="0 0 0 0 0 0 0 0" description="detection confidence in [0, 1]">
+      <Dimension start="8"/>
+    </Float32>
+    <UInt64 name="camera.sample_time_ns" valueReference="200" causality="input" variability="discrete" start="18446744073709551615" description="ns of Virtual time the list describes; the start value means no list yet"/>
+    <UInt32 name="camera.sensor_id" valueReference="201" causality="input" variability="discrete" start="2" description="2 on the camera inputs"/>
+    <UInt32 name="camera.frame_id" valueReference="202" causality="input" variability="discrete" start="1" description="1, the ego frame"/>
+    <UInt32 name="camera.sequence" valueReference="203" causality="input" variability="discrete" start="4294967295" description="the sensor's message counter; the start value means no list yet"/>
+    <UInt32 name="camera.count" valueReference="204" causality="input" variability="discrete" start="0" description="active objects, 0 to 8"/>
+    <UInt8 name="camera.validity" valueReference="205" causality="input" variability="discrete" start="0" description="1 valid, 0 no usable list"/>
+    <Int32 name="camera.object_id" valueReference="206" causality="input" variability="discrete" start="0 0 0 0 0 0 0 0" description="active IDs >= 0, unique in the list">
+      <Dimension start="8"/>
+    </Int32>
+    <Float32 name="camera.x_m" valueReference="207" causality="input" variability="discrete" start="0 0 0 0 0 0 0 0" unit="m" description="longitudinal position in the ego frame, forward">
+      <Dimension start="8"/>
+    </Float32>
+    <Float32 name="camera.y_m" valueReference="208" causality="input" variability="discrete" start="0 0 0 0 0 0 0 0" unit="m" description="lateral position in the ego frame, left">
+      <Dimension start="8"/>
+    </Float32>
+    <Float32 name="camera.relative_vx_mps" valueReference="209" causality="input" variability="discrete" start="0 0 0 0 0 0 0 0" unit="m/s" description="longitudinal speed relative to the ego, negative when closing; 0 for the camera">
+      <Dimension start="8"/>
+    </Float32>
+    <Float32 name="camera.confidence" valueReference="210" causality="input" variability="discrete" start="0 0 0 0 0 0 0 0" description="detection confidence in [0, 1]">
+      <Dimension start="8"/>
+    </Float32>
+    <UInt64 name="ego.sample_time_ns" valueReference="300" causality="input" variability="discrete" start="18446744073709551615" description="ns of Virtual time the ego motion describes; the start value means none yet"/>
+    <UInt32 name="ego.sequence" valueReference="301" causality="input" variability="discrete" start="4294967295" description="the ego motion's message counter; the start value means none yet"/>
+    <UInt8 name="ego.validity" valueReference="302" causality="input" variability="discrete" start="0" description="1 valid, 0 invalid"/>
+    <Float32 name="ego.speed_mps" valueReference="303" causality="input" variability="discrete" start="0" unit="m/s" description="ego speed; finite and >= 0"/>
+    <UInt64 name="command.sample_time_ns" valueReference="400" causality="output" variability="discrete" initial="exact" start="0" description="t + 10 ms in ns, the end of the step"/>
+    <UInt32 name="command.sequence" valueReference="401" causality="output" variability="discrete" initial="exact" start="0" description="steps completed, from 1; 0 before the first step"/>
+    <UInt32 name="command.mode" valueReference="402" causality="output" variability="discrete" initial="exact" start="2" description="0 CLEAR, 1 HAZARD, 2 SENSOR_UNAVAILABLE"/>
+    <Int32 name="command.selected_object_id" valueReference="403" causality="output" variability="discrete" initial="exact" start="-1" description="the selected radar object's ID, or -1 for none"/>
+    <Float32 name="command.target_acceleration_mps2" valueReference="404" causality="output" variability="discrete" initial="exact" start="0" unit="m/s2" description="the acceleration the mode asks for"/>
+    <Float32 name="command.acceleration_mps2" valueReference="405" causality="output" variability="discrete" initial="exact" start="0" unit="m/s2" description="the commanded, rate-limited acceleration"/>
+    <Int64 name="command.radar_age_ns" valueReference="406" causality="output" variability="discrete" initial="exact" start="-1" description="ns since the held radar list's Sample time, or -1"/>
+    <Int64 name="command.camera_age_ns" valueReference="407" causality="output" variability="discrete" initial="exact" start="-1" description="ns since the held camera list's Sample time, or -1"/>
+    <Int64 name="command.ego_age_ns" valueReference="408" causality="output" variability="discrete" initial="exact" start="-1" description="ns since the held ego motion's Sample time, or -1"/>
+    <UInt32 name="command.ignored_observations" valueReference="409" causality="output" variability="discrete" initial="exact" start="0" description="observations ignored for their sequence since the start"/>
+  </ModelVariables>
+
+  <ModelStructure>
+    <Output valueReference="400"/>
+    <Output valueReference="401"/>
+    <Output valueReference="402"/>
+    <Output valueReference="403"/>
+    <Output valueReference="404"/>
+    <Output valueReference="405"/>
+    <Output valueReference="406"/>
+    <Output valueReference="407"/>
+    <Output valueReference="408"/>
+    <Output valueReference="409"/>
+  </ModelStructure>
+
+</fmiModelDescription>

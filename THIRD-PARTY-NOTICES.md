@@ -49,6 +49,7 @@ Debian records them.
 | Component | Version | License | Where |
 | --- | --- | --- | --- |
 | [Modelica Reference FMUs](https://github.com/modelica/Reference-FMUs) | 3.0 | BSD-2-Clause | `tests/fixtures/reference-fmus/LICENSE.txt`; copied into the `acceptance` image target only |
+| [FMI 3.0 headers](https://github.com/modelica/fmi-standard/tree/v3.0.2/headers) | v3.0.2 | BSD-2-Clause | `examples/adas-reference/fmu/fmi3/`, unmodified, with `LICENSE.txt`; compiled into the ADAS reference FMU, which carries that license as `documentation/licenses/LICENSE-FMI.txt` |
 
 The `acceptance` image target exists for this repository's own checks. The
 production `runtime` target contains no test fixture and no FMU supplied by
@@ -97,6 +98,11 @@ The proof image pins CPython 3.13.7 (PSF license) and all Python dependencies;
 their installed distribution metadata and Debian copyright files retain their
 respective notices. The ACC model source is covered by this repository’s
 Apache-2.0 license, included in each FMU as `resources/LICENSE-SiL`.
+
+[proofs/adas-fmu/](proofs/adas-fmu/) installs the same pinned FMPy
+0.3.26 into its own preparation image, as the independent importer that
+checks the ADAS reference FMU. FMPy is not in that FMU and not in any
+runtime image.
 
 ## Public-workload qualification (#178)
 

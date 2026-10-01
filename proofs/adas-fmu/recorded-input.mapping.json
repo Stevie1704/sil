@@ -1,0 +1,182 @@
+{
+  "sil_fmi_mapping": 1,
+  "schemas": {
+    "adas.ObjectList": {
+      "fields": [
+        {
+          "name": "sample_time_ns",
+          "type": "u64"
+        },
+        {
+          "name": "sensor_id",
+          "type": "u32"
+        },
+        {
+          "name": "frame_id",
+          "type": "u32"
+        },
+        {
+          "name": "sequence",
+          "type": "u32"
+        },
+        {
+          "name": "count",
+          "type": "u32"
+        },
+        {
+          "name": "validity",
+          "type": "u8"
+        },
+        {
+          "name": "object_id",
+          "type": "i32",
+          "count": 8
+        },
+        {
+          "name": "x_m",
+          "type": "f32",
+          "count": 8
+        },
+        {
+          "name": "y_m",
+          "type": "f32",
+          "count": 8
+        },
+        {
+          "name": "relative_vx_mps",
+          "type": "f32",
+          "count": 8
+        },
+        {
+          "name": "confidence",
+          "type": "f32",
+          "count": 8
+        }
+      ]
+    },
+    "adas.EgoMotion": {
+      "fields": [
+        {
+          "name": "sample_time_ns",
+          "type": "u64"
+        },
+        {
+          "name": "sequence",
+          "type": "u32"
+        },
+        {
+          "name": "validity",
+          "type": "u8"
+        },
+        {
+          "name": "speed_mps",
+          "type": "f32"
+        }
+      ]
+    },
+    "adas.Command": {
+      "fields": [
+        {
+          "name": "sample_time_ns",
+          "type": "u64"
+        },
+        {
+          "name": "sequence",
+          "type": "u32"
+        },
+        {
+          "name": "mode",
+          "type": "u32"
+        },
+        {
+          "name": "selected_object_id",
+          "type": "i32"
+        },
+        {
+          "name": "target_acceleration_mps2",
+          "type": "f32"
+        },
+        {
+          "name": "acceleration_mps2",
+          "type": "f32"
+        },
+        {
+          "name": "radar_age_ns",
+          "type": "i64"
+        },
+        {
+          "name": "camera_age_ns",
+          "type": "i64"
+        },
+        {
+          "name": "ego_age_ns",
+          "type": "i64"
+        },
+        {
+          "name": "ignored_observations",
+          "type": "u32"
+        }
+      ]
+    }
+  },
+  "channels": {
+    "radar": {
+      "schema": "adas.ObjectList",
+      "direction": "in"
+    },
+    "camera": {
+      "schema": "adas.ObjectList",
+      "direction": "in"
+    },
+    "ego": {
+      "schema": "adas.EgoMotion",
+      "direction": "in"
+    },
+    "command": {
+      "schema": "adas.Command",
+      "direction": "out"
+    }
+  },
+  "bind": [
+    "radar:sample_time_ns=radar.sample_time_ns",
+    "radar:sensor_id=radar.sensor_id",
+    "radar:frame_id=radar.frame_id",
+    "radar:sequence=radar.sequence",
+    "radar:count=radar.count",
+    "radar:validity=radar.validity",
+    "radar:object_id=radar.object_id",
+    "radar:x_m=radar.x_m",
+    "radar:y_m=radar.y_m",
+    "radar:relative_vx_mps=radar.relative_vx_mps",
+    "radar:confidence=radar.confidence",
+    "camera:sample_time_ns=camera.sample_time_ns",
+    "camera:sensor_id=camera.sensor_id",
+    "camera:frame_id=camera.frame_id",
+    "camera:sequence=camera.sequence",
+    "camera:count=camera.count",
+    "camera:validity=camera.validity",
+    "camera:object_id=camera.object_id",
+    "camera:x_m=camera.x_m",
+    "camera:y_m=camera.y_m",
+    "camera:relative_vx_mps=camera.relative_vx_mps",
+    "camera:confidence=camera.confidence",
+    "ego:sample_time_ns=ego.sample_time_ns",
+    "ego:sequence=ego.sequence",
+    "ego:validity=ego.validity",
+    "ego:speed_mps=ego.speed_mps",
+    "command:sample_time_ns=command.sample_time_ns",
+    "command:sequence=command.sequence",
+    "command:mode=command.mode",
+    "command:selected_object_id=command.selected_object_id",
+    "command:target_acceleration_mps2=command.target_acceleration_mps2",
+    "command:acceleration_mps2=command.acceleration_mps2",
+    "command:radar_age_ns=command.radar_age_ns",
+    "command:camera_age_ns=command.camera_age_ns",
+    "command:ego_age_ns=command.ego_age_ns",
+    "command:ignored_observations=command.ignored_observations"
+  ],
+  "start": [
+    "hazard_acceleration_mps2=-3",
+    "max_change_mps2=0.5"
+  ]
+}

@@ -1,0 +1,223 @@
+{
+  "fmu": "AdasReference.fmu",
+  "archive_sha256": "f99c95f06ac97a7ce0ade263fe191cc8579c1e93355d360680b2ae72c5d503ab",
+  "instantiation_token": "875fa22861b19b80613fc91b157614d1320ab403fd2a42123d18fca0ed1ad89d",
+  "importer": "FMPy 0.3.26",
+  "platform": "x86_64-linux",
+  "passed": true,
+  "cases": [
+    {
+      "case": "maneuver_clear",
+      "passed": true,
+      "detail": {
+        "commands": 20
+      }
+    },
+    {
+      "case": "maneuver_hazard",
+      "passed": true,
+      "detail": {
+        "commands": 20
+      }
+    },
+    {
+      "case": "maneuver_release",
+      "passed": true,
+      "detail": {
+        "commands": 20
+      }
+    },
+    {
+      "case": "maneuver_unavailable",
+      "passed": true,
+      "detail": {
+        "commands": 20
+      }
+    },
+    {
+      "case": "maneuver_boundaries",
+      "passed": true,
+      "detail": {
+        "commands": 20
+      }
+    },
+    {
+      "case": "maneuver_occupancy",
+      "passed": true,
+      "detail": {
+        "commands": 20
+      }
+    },
+    {
+      "case": "maneuver_turnover",
+      "passed": true,
+      "detail": {
+        "commands": 20
+      }
+    },
+    {
+      "case": "maneuver_ordering",
+      "passed": true,
+      "detail": {
+        "commands": 20
+      }
+    },
+    {
+      "case": "maneuver_cadence",
+      "passed": true,
+      "detail": {
+        "commands": 20
+      }
+    },
+    {
+      "case": "maneuver_freshness",
+      "passed": true,
+      "detail": {
+        "commands": 20
+      }
+    },
+    {
+      "case": "start_values",
+      "passed": true,
+      "detail": {
+        "variables": 38
+      }
+    },
+    {
+      "case": "float32_inputs",
+      "passed": true,
+      "detail": {
+        "binary32_of_7.9999995": 7.999999523162842
+      }
+    },
+    {
+      "case": "float32_outputs",
+      "passed": true,
+      "detail": {
+        "accelerations": [
+          -0.10000000149011612,
+          -0.20000000298023224,
+          -0.30000001192092896
+        ]
+      }
+    },
+    {
+      "case": "uint64_sample_times",
+      "passed": true,
+      "detail": {
+        "start_ns": 10000000000000000,
+        "final_sample_time_ns": 10000000020000000
+      }
+    },
+    {
+      "case": "late_start",
+      "passed": true,
+      "detail": {
+        "start_ns": 9000000000000000000,
+        "final_sample_time_ns": 9000000000050000000
+      }
+    },
+    {
+      "case": "held_inputs",
+      "passed": true,
+      "detail": {
+        "ignored": 1
+      }
+    },
+    {
+      "case": "parameters",
+      "passed": true,
+      "detail": {
+        "diagnostics": {
+          "hazard_acceleration_mps2": [
+            "initialization failed: hazard_acceleration_mps2 0 is outside [-10, 0)",
+            "fmi3DoStep is not allowed in the failed phase"
+          ],
+          "max_change_mps2": [
+            "initialization failed: max_change_mps2 nan is outside (0, 10]",
+            "fmi3DoStep is not allowed in the failed phase"
+          ],
+          "refusals": [
+            "fmi3SetFloat64: max_change_mps2 cannot be set in the Step phase",
+            "fmi3SetUInt32: command.mode cannot be set in the Step phase",
+            "fmi3SetFloat64: radar.x_m is a Float32 variable",
+            "fmi3SetFloat32: the references hold 8 values, not 7",
+            "fmi3GetUInt32: no variable has value reference 999"
+          ]
+        }
+      }
+    },
+    {
+      "case": "fixed_step",
+      "passed": true,
+      "detail": {
+        "diagnostics": [
+          "communicationStepSize 0.02 s is not the fixed step 10000000 ns; the FMU has no variable step",
+          "currentCommunicationPoint 0.01 s is not the next point 0 ns"
+        ]
+      }
+    },
+    {
+      "case": "malformed_inputs",
+      "passed": true,
+      "detail": {
+        "diagnostics": {
+          "count above capacity": "t=0 ns: radar.count 9 exceeds the capacity 8",
+          "inactive element not zero": "t=0 ns: radar.x_m[3] is inactive (count 1) but not zero; inactive elements must be zero",
+          "nonfinite position": "t=0 ns: radar.x_m[0] is not finite: nan",
+          "negative ID": "t=0 ns: radar.object_id[0] -5 is negative; active IDs are >= 0 and -1 is reserved for no selection",
+          "future Sample time": "t=0 ns: radar.sample_time_ns 10000000 is after the activation time 0; a future Sample time is malformed",
+          "wrong sensor": "t=0 ns: camera.sensor_id 1 is not the camera sensor 2",
+          "validity out of range": "t=0 ns: radar.validity 2 is neither 0 (invalid) nor 1 (valid)"
+        }
+      }
+    },
+    {
+      "case": "two_instances",
+      "passed": true,
+      "detail": {
+        "instances": [
+          "hazard",
+          "clear"
+        ]
+      }
+    },
+    {
+      "case": "instantiation_refused",
+      "passed": true,
+      "detail": {
+        "refusals": [
+          {
+            "options": {
+              "token": "another"
+            },
+            "importer": "Failed to instantiate FMU",
+            "diagnostics": [
+              "the instantiation token another is not this FMU's 875fa22861b19b80613fc91b157614d1320ab403fd2a42123d18fca0ed1ad89d"
+            ]
+          },
+          {
+            "options": {
+              "event_mode": true
+            },
+            "importer": "Failed to instantiate FMU",
+            "diagnostics": [
+              "the FMU has no Event Mode (hasEventMode=false)"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case": "termination",
+      "passed": true,
+      "detail": {
+        "diagnostics": [
+          "fmi3Terminate is not allowed in the Instantiated phase",
+          "fmi3DoStep is not allowed in the Terminated phase",
+          "fmi3Terminate is not allowed in the Terminated phase"
+        ]
+      }
+    }
+  ]
+}
