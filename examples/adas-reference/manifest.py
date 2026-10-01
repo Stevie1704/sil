@@ -17,7 +17,8 @@ What the Manifest makes explicit:
   publishes, in Slot t, a Command whose `sample_time_ns` is t + 10 ms. The
   Recording stores the publication Slot t, as for an FMU output.
 - **Finite routes.** Each input route holds one Message and fails on
-  overflow. A list is one Message, whatever its count. The Command Channels have no in-Run subscriber; they are
+  overflow. A list is one Message, whatever its count. The Command
+  Channels have no in-Run subscriber; they are
   recorded.
 - **Profile.** Each Native config names the profile and its version; the
   library refuses another one.

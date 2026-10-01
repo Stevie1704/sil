@@ -114,8 +114,8 @@ _Avoid_: spec, standard, interface version
 **Object list**:
 One sensor's complete set of processed objects at one Sample time: a header
 with an active count, and flat fixed-capacity arrays whose inactive elements
-are zero. Each list replaces the previous one; nothing is retained between
-lists.
+are zero. Each list replaces the previous one; nothing is kept from one list to
+the next.
 _Avoid_: track list, object vector
 
 **vECU**:

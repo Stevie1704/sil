@@ -12,7 +12,7 @@
 # variant, prepares the maneuver Recordings, runs the Manifest twice, requires
 # identical Recording bytes, compares each maneuver with its enumerated
 # expected trajectory, and requires the wrong-sign build to fail the hazard
-# comparison. It exits non-zero on the first step that does not hold.
+# comparison and the ordering comparison over object lists. It exits non-zero on the first step that does not hold.
 set -eu
 
 if [ $# -ne 1 ]; then
@@ -54,12 +54,15 @@ done
 python3 "$here/manifest.py" "$work/wrong-sign.json" \
     --inputs "$work" --library "$work/adas_reference_wrong_sign.so"
 sil-run "$work/wrong-sign.json" -o "$work/wrong-sign.mcap"
-status=0
-sil-compare "$work/hazard.contract.json" "$work/wrong-sign.mcap" \
-    "$work/hazard.expected.mcap" > "$work/wrong-sign.compare.txt" || status=$?
-if [ "$status" -ne 1 ]; then
-    echo "the wrong-sign build did not fail the hazard comparison" \
-         "(exit $status)" >&2
-    exit 1
-fi
+for maneuver in hazard ordering; do
+    status=0
+    sil-compare "$work/$maneuver.contract.json" "$work/wrong-sign.mcap" \
+        "$work/$maneuver.expected.mcap" \
+        > "$work/wrong-sign.$maneuver.compare.txt" || status=$?
+    if [ "$status" -ne 1 ]; then
+        echo "the wrong-sign build did not fail the $maneuver comparison" \
+             "(exit $status)" >&2
+        exit 1
+    fi
+done
 echo "wrong sign: fails as required"

@@ -145,10 +145,20 @@ static field_name element(const char *sensor, const char *field, uint32_t i) {
   return n;
 }
 
-static adas_ref_status check_object(const char *sensor,
+/* What the profile requires of one sensor's lists. */
+typedef struct sensor_rules {
+  const char *name;
+  uint32_t sensor_id;
+  int reports_speed; /* 0: relative_vx_mps must be 0 */
+} sensor_rules;
+
+static const sensor_rules RADAR = {"radar", ADAS_REF_RADAR_SENSOR_ID, 1};
+static const sensor_rules CAMERA = {"camera", ADAS_REF_CAMERA_SENSOR_ID, 0};
+
+static adas_ref_status check_object(const sensor_rules *rules,
                                     const adas_ref_object_list *list,
-                                    uint32_t i, int has_speed,
-                                    adas_ref_fault *fault) {
+                                    uint32_t i, adas_ref_fault *fault) {
+  const char *sensor = rules->name;
   const adas_ref_object *o = &list->objects[i];
   if (o->id < 0) {
     describe(fault, "%s %" PRId32 " is negative; active IDs are >= 0 and "
@@ -173,7 +183,7 @@ static adas_ref_status check_object(const char *sensor,
              element(sensor, "confidence", i).text, (double)o->confidence);
     return ADAS_REF_ERR_INPUT;
   }
-  if (!has_speed && o->relative_vx_mps != 0.0f) {
+  if (!rules->reports_speed && o->relative_vx_mps != 0.0f) {
     describe(fault, "%s %g is not 0; this sensor reports no speed",
              element(sensor, "relative_vx_mps", i).text,
              (double)o->relative_vx_mps);
@@ -183,16 +193,16 @@ static adas_ref_status check_object(const char *sensor,
 }
 
 /* Every header field, then the count before any element is read. */
-static adas_ref_status check_list(const char *sensor, uint32_t sensor_id,
-                                  int has_speed,
+static adas_ref_status check_list(const sensor_rules *rules,
                                   const adas_ref_object_list *list, uint64_t t,
                                   adas_ref_fault *fault) {
+  const char *sensor = rules->name;
   CHECKED(sampled_at(named(sensor, "sample_time_ns").text,
                      list->sample_time_ns, t, fault));
   char what[32];
   snprintf(what, sizeof what, "the %s sensor", sensor);
-  CHECKED(equals(named(sensor, "sensor_id").text, list->sensor_id, sensor_id,
-                 what, "", fault));
+  CHECKED(equals(named(sensor, "sensor_id").text, list->sensor_id,
+                 rules->sensor_id, what, "", fault));
   CHECKED(equals(named(sensor, "frame_id").text, list->frame_id,
                  ADAS_REF_EGO_FRAME_ID, "the ego frame",
                  "; the profile transforms no frame", fault));
@@ -203,7 +213,7 @@ static adas_ref_status check_list(const char *sensor, uint32_t sensor_id,
     return ADAS_REF_ERR_INPUT;
   }
   for (uint32_t i = 0; i < list->count; i++)
-    CHECKED(check_object(sensor, list, i, has_speed, fault));
+    CHECKED(check_object(rules, list, i, fault));
   return ADAS_REF_OK;
 }
 
@@ -222,11 +232,8 @@ static adas_ref_status check_ego(const adas_ref_ego *e, uint64_t t,
 static adas_ref_status check_inputs(const adas_ref_inputs *in, uint64_t t,
                                     adas_ref_fault *fault) {
   if (in->radar)
-    CHECKED(check_list("radar", ADAS_REF_RADAR_SENSOR_ID, 1, in->radar, t,
-                       fault));
-  if (in->camera)
-    CHECKED(check_list("camera", ADAS_REF_CAMERA_SENSOR_ID, 0, in->camera, t,
-                       fault));
+    CHECKED(check_list(&RADAR, in->radar, t, fault));
+  if (in->camera) CHECKED(check_list(&CAMERA, in->camera, t, fault));
   if (in->ego) CHECKED(check_ego(in->ego, t, fault));
   return ADAS_REF_OK;
 }

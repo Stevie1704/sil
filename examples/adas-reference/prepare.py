@@ -45,12 +45,13 @@ MANEUVERS = ("clear", "hazard", "release", "unavailable", "boundaries",
 
 CAPACITY = 8
 EGO_FRAME_ID = 1
-# Per sensor: its ID and the authored fields of one object.
+OBJECT_FIELDS = ("object_id", "x_m", "y_m", "relative_vx_mps", "confidence")
+# Per sensor: its ID and the authored fields of one object. The camera
+# reports no speed; its relative_vx_mps stays 0.
 SENSORS = {
-    "radar": (1, ("object_id", "x_m", "y_m", "relative_vx_mps", "confidence")),
+    "radar": (1, OBJECT_FIELDS),
     "camera": (2, ("object_id", "x_m", "y_m", "confidence")),
 }
-OBJECT_FIELDS = ("object_id", "x_m", "y_m", "relative_vx_mps", "confidence")
 
 
 class PreparationError(ValueError):

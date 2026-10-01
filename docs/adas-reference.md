@@ -47,8 +47,8 @@ same script. The script:
 3. expands and converts the maneuvers with `prepare.py`;
 4. runs the Manifest twice and requires identical Recording bytes (`cmp`);
 5. compares each maneuver's Commands with its expected trajectory;
-6. runs the wrong-sign build and requires the hazard comparison to fail
-   (exit 1). This is the control that shows the comparison detects a
+6. runs the wrong-sign build and requires the `hazard` and `ordering`
+   comparisons to fail (exit 1). This is the control that shows the comparison detects a
    coordinate sign error.
 
 ## Reference profile
@@ -75,7 +75,7 @@ Each maneuver has three input Channels, sampled every 10 ms: `radar` and
 An object list is one sensor's complete set of processed objects at one
 Sample time. Its objects are flat arrays of capacity 8 and an active count:
 elements `[0, count)` are the active objects, in any order. Each list
-replaces the previous one; the controller retains no object between
+replaces the previous one; the controller keeps no object between
 activations, so an object that is not listed has disappeared. The capacity
 of 8 is an example limit for test coverage, not a sensor or hardware
 recommendation.
@@ -102,9 +102,9 @@ in every array. The layout is packed (`silschema`), so there is no padding
 byte to clear. A publisher zeroes the inactive elements before it publishes;
 the adapter rejects a list that does not.
 
-The adapter checks `count` against the capacity before it reads an element.
-Then every header field and every active element is checked, also when
-`validity` is 0. A failed check fails the Run (exit 1). The diagnostic names
+The adapter checks `count` against the capacity before it reads an element,
+then checks that every inactive element is zero. The application then checks
+every header field and every active element, also when `validity` is 0. A failed check fails the Run (exit 1). The diagnostic names
 the Participant, the activation time, the sensor, the field and, for an
 array, the element:
 
@@ -290,9 +290,9 @@ use the `radar.` prefix; the camera uses `camera.` with the same shapes.
 | `command.*` | as `adas.Command` | scalars |
 
 Element `i` of each array is element `i` of the Schema field. The rules
-above on count, inactive elements and IDs apply unchanged. The object fields
-correspond loosely to ASAM OSI detected-object terms (ID, position, relative
-velocity, existence probability). The profile is not OSI-compatible and
+above on count, inactive elements and IDs apply unchanged. The names of the
+object fields follow some ASAM OSI detected-object terms (ID, position,
+relative velocity, existence probability). The profile is not OSI-compatible and
 needs no Protobuf.
 
 ## Scope
