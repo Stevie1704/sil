@@ -1,0 +1,54 @@
+{
+  "clear": {
+    "exit": 0,
+    "stderr": ""
+  },
+  "hazard": {
+    "exit": 0,
+    "stderr": ""
+  },
+  "release": {
+    "exit": 0,
+    "stderr": ""
+  },
+  "unavailable": {
+    "exit": 0,
+    "stderr": ""
+  },
+  "boundaries": {
+    "exit": 0,
+    "stderr": ""
+  },
+  "occupancy": {
+    "exit": 0,
+    "stderr": ""
+  },
+  "turnover": {
+    "exit": 0,
+    "stderr": ""
+  },
+  "ordering": {
+    "exit": 0,
+    "stderr": ""
+  },
+  "cadence": {
+    "exit": 0,
+    "stderr": ""
+  },
+  "freshness": {
+    "exit": 0,
+    "stderr": ""
+  },
+  "cadence.drop": {
+    "exit": 0,
+    "stderr": ""
+  },
+  "cadence.rewrite": {
+    "exit": 0,
+    "stderr": ""
+  },
+  "cadence.late": {
+    "exit": 0,
+    "stderr": ""
+  }
+}

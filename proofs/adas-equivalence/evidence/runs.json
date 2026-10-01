@@ -1,0 +1,447 @@
+{
+  "cases": {
+    "clear.native": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.109,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.109,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "clear.fmu": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.972,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 1.007,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "hazard.native": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.12,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.107,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "hazard.fmu": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.971,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.969,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "release.native": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.106,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.105,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "release.fmu": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.945,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.959,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "unavailable.native": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.106,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.112,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "unavailable.fmu": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.958,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.931,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "boundaries.native": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.111,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.109,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "boundaries.fmu": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.925,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.942,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "occupancy.native": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.11,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.104,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "occupancy.fmu": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.943,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.931,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "turnover.native": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.104,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.105,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "turnover.fmu": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.945,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.956,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "ordering.native": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.106,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.111,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "ordering.fmu": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.938,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.912,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "cadence.native": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.105,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.104,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "cadence.fmu": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.901,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.996,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "freshness.native": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.122,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.11,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "freshness.fmu": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.932,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.94,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "cadence.drop.native": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.116,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.112,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "cadence.drop.fmu": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.931,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.932,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "cadence.rewrite.native": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.111,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.106,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "cadence.rewrite.fmu": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.907,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.906,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "cadence.late.native": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.104,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.103,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    },
+    "cadence.late.fmu": {
+      "runs": [
+        {
+          "exit": 0,
+          "seconds": 0.886,
+          "stderr": ""
+        },
+        {
+          "exit": 0,
+          "seconds": 0.916,
+          "stderr": ""
+        }
+      ],
+      "identical_bytes": true,
+      "observation_findings": [],
+      "passed": true
+    }
+  },
+  "cadence_periods": []
+}
