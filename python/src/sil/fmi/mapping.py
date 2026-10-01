@@ -511,7 +511,17 @@ def bind_channel(
 
 
 def start_value(variable: Variable, text: str):
-    """One start value, read out of a command argument by its own type."""
+    """One start value, read out of a command argument by its own type.
+
+    A command argument states one value, so an array variable is refused
+    here rather than written as its first element.
+    """
+    if variable.value_count != 1:
+        raise ManifestError(
+            f"start value for FMU variable {variable.name!r}: it declares "
+            f"{dimensions(variable)}; this importer sets variables of one "
+            f"value"
+        )
     if variable.kind == BINARY:
         try:
             value = bytes.fromhex(text)

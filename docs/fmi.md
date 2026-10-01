@@ -146,6 +146,9 @@ A start value is read by the same rule, before anything is loaded:
   infinity, a non-zero value that rounds to zero, and `inf` or `nan` are
   refused.
 - A `Boolean` start value is `true` or `false`; `1` and `0` are refused.
+- A start value is one value. A start value for a variable with more than
+  one value, or with a dimension sized by another variable, is refused for
+  every type. Arrays are [#190](https://github.com/Stevie1704/sil/issues/190).
 
 An input or parameter start is written in the instantiated state, before
 initialization mode; a structural parameter inside Configuration Mode. A call
