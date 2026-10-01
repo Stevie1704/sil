@@ -1,4 +1,4 @@
-/* ADAS radar/camera reference controller — reference profile 2.
+/* ADAS radar/camera reference controller — reference profile 3.
  * See adas_reference.h for the interface and docs/adas-reference.md for the
  * profile. Each input is converted once from its Float32 field to binary64;
  * all reference arithmetic is binary64; outputs round to Float32 once, when
@@ -36,6 +36,15 @@
 #define CLOSING_SIGN 1.0
 #else
 #define CLOSING_SIGN (-1.0)
+#endif
+
+/* SiL drives the reference with -DADAS_REFERENCE_ARRIVAL_TIME only to show
+ * that the comparison catches an age counted from arrival instead of from
+ * the Sample time. */
+#ifdef ADAS_REFERENCE_ARRIVAL_TIME
+#define AGE_ORIGIN(sample_time_ns, t_ns) ((void)(sample_time_ns), (t_ns))
+#else
+#define AGE_ORIGIN(sample_time_ns, t_ns) ((void)(t_ns), (sample_time_ns))
 #endif
 
 typedef struct object {
@@ -84,6 +93,10 @@ adas_ref_status adas_ref_init(adas_ref_instance *instance,
 void adas_ref_reset(adas_ref_instance *instance) {
   instance->acceleration_mps2 = 0.0;
   instance->activations = 0;
+  instance->ignored_observations = 0;
+  memset(&instance->radar_held, 0, sizeof instance->radar_held);
+  memset(&instance->camera_held, 0, sizeof instance->camera_held);
+  memset(&instance->ego_held, 0, sizeof instance->ego_held);
 }
 
 void adas_ref_terminate(adas_ref_instance *instance) { instance->ready = 0; }
@@ -95,12 +108,12 @@ static adas_ref_status finite(const char *field, float value,
   return ADAS_REF_ERR_INPUT;
 }
 
-static adas_ref_status sampled_at(const char *field, uint64_t sample_time_ns,
+static adas_ref_status not_future(const char *field, uint64_t sample_time_ns,
                                   uint64_t t_ns, adas_ref_fault *fault) {
-  if (sample_time_ns == t_ns) return ADAS_REF_OK;
+  if (sample_time_ns <= t_ns) return ADAS_REF_OK;
   describe(fault,
-           "%s %" PRIu64 " is not the activation time %" PRIu64
-           "; inputs sampled at t are consumed at t",
+           "%s %" PRIu64 " is after the activation time %" PRIu64
+           "; a future Sample time is malformed",
            field, sample_time_ns, t_ns);
   return ADAS_REF_ERR_SAMPLE_TIME;
 }
@@ -150,10 +163,13 @@ typedef struct sensor_rules {
   const char *name;
   uint32_t sensor_id;
   int reports_speed; /* 0: relative_vx_mps must be 0 */
+  uint64_t max_age_ns;
 } sensor_rules;
 
-static const sensor_rules RADAR = {"radar", ADAS_REF_RADAR_SENSOR_ID, 1};
-static const sensor_rules CAMERA = {"camera", ADAS_REF_CAMERA_SENSOR_ID, 0};
+static const sensor_rules RADAR = {"radar", ADAS_REF_RADAR_SENSOR_ID, 1,
+                                   ADAS_REF_RADAR_MAX_AGE_NS};
+static const sensor_rules CAMERA = {"camera", ADAS_REF_CAMERA_SENSOR_ID, 0,
+                                    ADAS_REF_CAMERA_MAX_AGE_NS};
 
 static adas_ref_status check_object(const sensor_rules *rules,
                                     const adas_ref_object_list *list,
@@ -197,7 +213,7 @@ static adas_ref_status check_list(const sensor_rules *rules,
                                   const adas_ref_object_list *list, uint64_t t,
                                   adas_ref_fault *fault) {
   const char *sensor = rules->name;
-  CHECKED(sampled_at(named(sensor, "sample_time_ns").text,
+  CHECKED(not_future(named(sensor, "sample_time_ns").text,
                      list->sample_time_ns, t, fault));
   char what[32];
   snprintf(what, sizeof what, "the %s sensor", sensor);
@@ -219,7 +235,7 @@ static adas_ref_status check_list(const sensor_rules *rules,
 
 static adas_ref_status check_ego(const adas_ref_ego *e, uint64_t t,
                                  adas_ref_fault *fault) {
-  CHECKED(sampled_at("ego.sample_time_ns", e->sample_time_ns, t, fault));
+  CHECKED(not_future("ego.sample_time_ns", e->sample_time_ns, t, fault));
   CHECKED(validity("ego.validity", e->validity, fault));
   CHECKED(finite("ego.speed_mps", e->speed_mps, fault));
   if (e->speed_mps < 0.0f) {
@@ -229,18 +245,96 @@ static adas_ref_status check_ego(const adas_ref_ego *e, uint64_t t,
   return ADAS_REF_OK;
 }
 
-static adas_ref_status check_inputs(const adas_ref_inputs *in, uint64_t t,
+static adas_ref_status check_ready(const adas_ref_instance *instance,
+                                   uint64_t t_ns, adas_ref_fault *fault) {
+  if (instance->ready) return ADAS_REF_OK;
+  describe(fault, "activation at %" PRIu64 " ns on an instance that is not "
+           "initialized or is terminated", t_ns);
+  return ADAS_REF_ERR_STATE;
+}
+
+/* Holds an observation whose sequence exceeds the held one; ignores and
+ * counts any other. Returns 1 when it is held. */
+static int accept(adas_ref_instance *instance, adas_ref_held *held,
+                  uint32_t sequence, uint64_t sample_time_ns, uint8_t validity,
+                  uint64_t t_ns) {
+  if (held->present && sequence <= held->sequence) {
+    instance->ignored_observations++;
+    return 0;
+  }
+  held->present = 1;
+  held->sequence = sequence;
+  held->origin_ns = AGE_ORIGIN(sample_time_ns, t_ns);
+  held->validity = validity;
+  return 1;
+}
+
+static adas_ref_status receive_list(adas_ref_instance *instance,
+                                    const sensor_rules *rules,
+                                    adas_ref_held *held,
+                                    adas_ref_object_list *slot, uint64_t t_ns,
+                                    const adas_ref_object_list *list,
                                     adas_ref_fault *fault) {
-  if (in->radar)
-    CHECKED(check_list(&RADAR, in->radar, t, fault));
-  if (in->camera) CHECKED(check_list(&CAMERA, in->camera, t, fault));
-  if (in->ego) CHECKED(check_ego(in->ego, t, fault));
+  CHECKED(check_ready(instance, t_ns, fault));
+  CHECKED(check_list(rules, list, t_ns, fault));
+  if (accept(instance, held, list->sequence, list->sample_time_ns,
+             list->validity, t_ns))
+    *slot = *list;
   return ADAS_REF_OK;
 }
 
-static int available(const adas_ref_inputs *in) {
-  return in->radar && in->radar->validity && in->camera &&
-         in->camera->validity && in->ego && in->ego->validity;
+adas_ref_status adas_ref_receive_radar(adas_ref_instance *instance,
+                                       uint64_t t_ns,
+                                       const adas_ref_object_list *list,
+                                       adas_ref_fault *fault) {
+  return receive_list(instance, &RADAR, &instance->radar_held,
+                      &instance->radar, t_ns, list, fault);
+}
+
+adas_ref_status adas_ref_receive_camera(adas_ref_instance *instance,
+                                        uint64_t t_ns,
+                                        const adas_ref_object_list *list,
+                                        adas_ref_fault *fault) {
+  return receive_list(instance, &CAMERA, &instance->camera_held,
+                      &instance->camera, t_ns, list, fault);
+}
+
+adas_ref_status adas_ref_receive_ego(adas_ref_instance *instance,
+                                     uint64_t t_ns, const adas_ref_ego *ego,
+                                     adas_ref_fault *fault) {
+  CHECKED(check_ready(instance, t_ns, fault));
+  CHECKED(check_ego(ego, t_ns, fault));
+  accept(instance, &instance->ego_held, ego->sequence, ego->sample_time_ns,
+         ego->validity, t_ns);
+  return ADAS_REF_OK;
+}
+
+/* The age of the held observation at t, or ADAS_REF_NO_AGE. */
+static int64_t age(const adas_ref_held *held, uint64_t t_ns) {
+  return held->present ? (int64_t)(t_ns - held->origin_ns) : ADAS_REF_NO_AGE;
+}
+
+static int fresh(const adas_ref_held *held, uint64_t t_ns,
+                 uint64_t max_age_ns) {
+  return held->present && held->validity &&
+         t_ns - held->origin_ns <= max_age_ns;
+}
+
+static int available(const adas_ref_instance *instance, uint64_t t_ns) {
+  return fresh(&instance->radar_held, t_ns, RADAR.max_age_ns) &&
+         fresh(&instance->camera_held, t_ns, CAMERA.max_age_ns) &&
+         fresh(&instance->ego_held, t_ns, ADAS_REF_EGO_MAX_AGE_NS);
+}
+
+/* Fails when t precedes the origin of a held observation. */
+static adas_ref_status not_before(const char *sensor, const adas_ref_held *held,
+                                  uint64_t t_ns, adas_ref_fault *fault) {
+  if (!held->present || held->origin_ns <= t_ns) return ADAS_REF_OK;
+  describe(fault,
+           "activation time %" PRIu64 " ns precedes the held %s observation "
+           "from %" PRIu64 " ns",
+           t_ns, sensor, held->origin_ns);
+  return ADAS_REF_ERR_TIME;
 }
 
 static object from(const adas_ref_object *o) {
@@ -300,29 +394,26 @@ static double limited(double from, double to, double max_change) {
 }
 
 adas_ref_status adas_ref_advance(adas_ref_instance *instance, uint64_t t_ns,
-                                 const adas_ref_inputs *inputs,
                                  adas_ref_output *output,
                                  adas_ref_fault *fault) {
-  if (!instance->ready) {
-    describe(fault, "advance at %" PRIu64 " ns on an instance that is not "
-             "initialized or is terminated", t_ns);
-    return ADAS_REF_ERR_STATE;
-  }
+  CHECKED(check_ready(instance, t_ns, fault));
   if (t_ns > UINT64_MAX - instance->config.period_ns) {
     describe(fault, "activation time %" PRIu64 " ns + Period does not fit "
              "uint64", t_ns);
     return ADAS_REF_ERR_TIME;
   }
-  CHECKED(check_inputs(inputs, t_ns, fault));
+  CHECKED(not_before("radar", &instance->radar_held, t_ns, fault));
+  CHECKED(not_before("camera", &instance->camera_held, t_ns, fault));
+  CHECKED(not_before("ego", &instance->ego_held, t_ns, fault));
 
   uint32_t mode;
   int32_t selected = ADAS_REF_NO_OBJECT;
   object lead;
-  if (!available(inputs)) {
+  if (!available(instance, t_ns)) {
     mode = ADAS_REF_MODE_SENSOR_UNAVAILABLE;
   } else {
     mode = ADAS_REF_MODE_CLEAR;
-    if (select_lead(inputs->radar, inputs->camera, &lead)) {
+    if (select_lead(&instance->radar, &instance->camera, &lead)) {
       selected = lead.id;
       if (hazard(&lead)) mode = ADAS_REF_MODE_HAZARD;
     }
@@ -340,5 +431,9 @@ adas_ref_status adas_ref_advance(adas_ref_instance *instance, uint64_t t_ns,
   output->selected_object_id = selected;
   output->target_acceleration_mps2 = (float)target;
   output->acceleration_mps2 = (float)instance->acceleration_mps2;
+  output->radar_age_ns = age(&instance->radar_held, t_ns);
+  output->camera_age_ns = age(&instance->camera_held, t_ns);
+  output->ego_age_ns = age(&instance->ego_held, t_ns);
+  output->ignored_observations = instance->ignored_observations;
   return ADAS_REF_OK;
 }

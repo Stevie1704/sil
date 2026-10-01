@@ -1,12 +1,13 @@
 """The ADAS reference application through the Native participant ABI (#222,
-#223).
+#223, #224).
 
 `examples/adas-reference/` is a C application with its own API, a Native
 adapter around it, and recorded maneuvers of bounded radar and camera object
 lists with hand-enumerated expected trajectories. These tests run it at the
-Run boundary: every maneuver must match its expectation exactly under
-`contract.json`, the Run must repeat byte-identically, instances must keep
-their state apart, a wrong-sign build must fail the comparison, and invalid
+Run boundary: every maneuver and every experiment over it must match its
+expectation exactly under `contract.json`, each Run must repeat
+byte-identically, instances must keep their state apart, a wrong-sign build
+and an arrival-time build must fail the comparison, and invalid
 configuration, malformed lists and invalid input must fail with a diagnostic
 that names the cause.
 """
@@ -15,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -25,6 +27,7 @@ from conftest import ROOT, load_module
 from test_staged_install import installed_environment
 
 from sil.compare import compare, read_contract
+from sil.csv_recording import convert
 from sil.manifest import SubscriberRoute
 from sil.recording import read_records
 from sil.schema import MessageType
@@ -67,6 +70,15 @@ def comparison(prepared: Path, maneuver: str, recording: Path) -> dict:
     contract = read_contract(prepared / f"{maneuver}.contract.json")
     return compare(contract, recording,
                    prepared / f"{maneuver}.expected.mcap")
+
+
+def comparison_with(prepared: Path, expectation: str,
+                    recording: Path) -> dict:
+    """Compares a Recording with a named expectation of its maneuver."""
+    maneuver = expectation.split(".")[0]
+    contract = read_contract(prepared / f"{maneuver}.contract.json")
+    return compare(contract, recording,
+                   prepared / f"{expectation}.expected.mcap")
 
 
 def run_at_boundary(sil_run, tmp_path: Path, m) -> subprocess.CompletedProcess:
@@ -128,13 +140,28 @@ class TestProfile:
                                  "truncated"):
             prepare.expand(source, tmp_path / "long.inputs.csv")
 
-    def test_every_maneuver_is_enumerated_for_every_activation(self):
+    def test_every_expectation_is_enumerated_for_every_activation(self):
         # Twenty activations at 0..190 ms; one expected row per Sample time.
         for maneuver in prepare.MANEUVERS:
-            rows = (EXAMPLE / "maneuvers" / f"{maneuver}.expected.csv"
-                    ).read_text().splitlines()[1:]
-            assert [int(r.split(",")[0]) for r in rows] == list(
-                range(10, 201, 10)), maneuver
+            for name in prepare.expectations(maneuver):
+                rows = (EXAMPLE / "maneuvers" / f"{name}.expected.csv"
+                        ).read_text().splitlines()[1:]
+                assert [int(r.split(",")[0]) for r in rows] == list(
+                    range(10, 201, 10)), name
+
+    def test_every_experiment_has_an_expectation(self):
+        assert prepare.expectations(manifest.EXPERIMENT_MANEUVER) == sorted(
+            [manifest.EXPERIMENT_MANEUVER] + [
+                f"{manifest.EXPERIMENT_MANEUVER}.{name}"
+                for name in manifest.EXPERIMENTS])
+
+    def test_cadence_samples_each_sensor_at_its_own_period(self, prepared):
+        times = {}
+        for channel, t, _ in read_records(prepared / "cadence.inputs.mcap"):
+            times.setdefault(channel.removeprefix("cadence."), []).append(t)
+        assert times == {"radar": list(range(0, 200 * MS, 20 * MS)),
+                         "camera": list(range(0, 200 * MS, 40 * MS)),
+                         "ego": list(range(0, 200 * MS, 10 * MS))}
 
 
 class TestNominal:
@@ -224,7 +251,7 @@ class TestWrongSign:
 class TestConfiguration:
     @pytest.mark.parametrize("override, diagnostic", [
         ({"period_ns": 20_000_000},
-         "period_ns 20000000 is not supported; profile 2 runs only at "
+         "period_ns 20000000 is not supported; profile 3 runs only at "
          "10000000 ns"),
         ({"hazard_acceleration_mps2": 0.0},
          "hazard_acceleration_mps2 0 is outside [-10, 0)"),
@@ -233,9 +260,9 @@ class TestConfiguration:
         ({"max_change_mps2": 0.0}, "max_change_mps2 0 is outside (0, 10]"),
         ({"max_change_mps2": 10.5},
          "max_change_mps2 10.5 is outside (0, 10]"),
-        ({"profile_version": 1},
-         "config names profile 'sil.adas-reference.radar-camera' version 1; "
-         "this library implements 'sil.adas-reference.radar-camera' version 2"),
+        ({"profile_version": 2},
+         "config names profile 'sil.adas-reference.radar-camera' version 2; "
+         "this library implements 'sil.adas-reference.radar-camera' version 3"),
         ({"period_ns": 1e7},
          "config key 'period_ns' is not an unsigned 64-bit integer"),
         ({"unexpected": 1}, "config has unknown key 'unexpected'"),
@@ -283,7 +310,8 @@ def stimulated(library_path: Path, *overrides: str):
     m.add_native(
         "live", library=str(library_path),
         config=manifest.controller_config("live"),
-        subscribes=[SubscriberRoute(f"live.{role}", capacity=1)
+        subscribes=[SubscriberRoute(f"live.{role}",
+                                    capacity=manifest.INPUT_ROUTE_CAPACITY)
                     for role in manifest.INPUTS],
         publishes=["live.command"],
     )
@@ -323,12 +351,12 @@ class TestInputs:
          "t=10000000 ns: radar.relative_vx_mps[1] is not finite: -inf"),
         ("ego.speed_mps=-inf@3",
          "t=30000000 ns: ego.speed_mps is not finite: -inf"),
-        ("radar.sample_time_ns=15000000@2",
-         "t=20000000 ns: radar.sample_time_ns 15000000 is not the activation "
-         "time 20000000; inputs sampled at t are consumed at t"),
-        ("camera.sample_time_ns=0@1",
-         "t=10000000 ns: camera.sample_time_ns 0 is not the activation time "
-         "10000000"),
+        ("radar.sample_time_ns=20000001@2",
+         "t=20000000 ns: radar.sample_time_ns 20000001 is after the "
+         "activation time 20000000; a future Sample time is malformed"),
+        ("ego.sample_time_ns=40000000@1",
+         "t=10000000 ns: ego.sample_time_ns 40000000 is after the activation "
+         "time 10000000"),
         ("radar.count=9@0", "t=0 ns: radar.count 9 exceeds the capacity 8"),
         ("camera.count=4294967295@1",
          "t=10000000 ns: camera.count 4294967295 exceeds the capacity 8"),
@@ -364,15 +392,186 @@ class TestInputs:
         assert proc.returncode == 1, proc.stderr
         assert "participant 'live' failed: " + diagnostic in proc.stderr
 
-    def test_a_second_list_in_one_slot_overflows_the_finite_route(
+    @pytest.mark.parametrize("overrides, step, radar_age_ns", [
+        (("radar.sequence=1@2",), 2, 10 * MS),  # a duplicate of step 1
+        (("radar.sequence=0@2",), 2, 10 * MS),  # a regression to step 0
+        (("radar*2@1",), 1, 0),  # the same list twice in one Slot
+    ])
+    def test_a_repeated_sequence_is_ignored_and_counted(
+        self, build_dir, sil_run, tmp_path, overrides, step, radar_age_ns
+    ):
+        result = run_simulation(stimulated(library(build_dir), *overrides),
+                                runner=sil_run, workdir=tmp_path)
+        commands = [m for _, m in result.messages("live.command")]
+        assert [m["ignored_observations"] for m in commands] == [
+            0] * step + [1] * (5 - step)
+        assert commands[step]["radar_age_ns"] == radar_age_ns
+        assert all(m["mode"] == 0 for m in commands)
+
+    def test_a_past_sample_time_ages_from_the_sample_time(
+        self, build_dir, sil_run, tmp_path
+    ):
+        result = run_simulation(
+            stimulated(library(build_dir), "radar.sample_time_ns=15000000@2"),
+            runner=sil_run, workdir=tmp_path)
+        ages = [m["radar_age_ns"] for _, m in result.messages("live.command")]
+        assert ages == [0, 0, 5 * MS, 0, 0]
+
+    def test_more_lists_in_one_slot_than_the_route_holds_fail_the_run(
         self, build_dir, sil_run, tmp_path
     ):
         proc = run_at_boundary(sil_run, tmp_path,
-                               stimulated(library(build_dir), "radar*2@1"))
+                               stimulated(library(build_dir), "radar*4@1"))
         assert proc.returncode == 1, proc.stderr
         assert ("subscriber route capacity exceeded: Channel 'live.radar', "
                 "publisher 'stimulus', subscriber 'live', configured "
-                "capacity 1") in proc.stderr
+                "capacity 3") in proc.stderr
+
+
+class TestExperiments:
+    """The cadence maneuver under Interceptors and a changed Latency, each
+    in its own Manifest."""
+
+    @pytest.mark.parametrize("experiment", sorted(manifest.EXPERIMENTS))
+    def test_each_experiment_matches_its_enumerated_trajectory_and_repeats(
+        self, build_dir, sil_run, prepared, tmp_path, experiment
+    ):
+        runs = []
+        for attempt in ("first", "second"):
+            workdir = tmp_path / attempt
+            workdir.mkdir()
+            runs.append(run_simulation(
+                manifest.experiment_manifest(prepared, library(build_dir),
+                                             experiment),
+                runner=sil_run, workdir=workdir))
+        first, second = runs
+        assert first.mcap_path.read_bytes() == second.mcap_path.read_bytes()
+        report = comparison_with(prepared, f"cadence.{experiment}",
+                                 first.mcap_path)
+        assert report["verdict"] == "pass", report["first_divergence"]
+        # The experiment changes the result: the nominal expectation fails.
+        assert comparison(prepared, "cadence", first.mcap_path)[
+            "verdict"] == "fail"
+
+    def test_an_experiment_differs_from_the_nominal_run_only_by_its_declaration(
+        self, build_dir, prepared
+    ):
+        nominal_doc = manifest.reference_manifest(
+            prepared, library(build_dir), maneuvers=("cadence",)).to_doc()
+        for experiment, declared in manifest.EXPERIMENTS.items():
+            doc = manifest.experiment_manifest(
+                prepared, library(build_dir), experiment).to_doc()
+            for role in manifest.INPUTS:
+                channel = doc["channels"][f"cadence.{role}"]
+                assert channel.pop("interceptors", []) == declared.get(
+                    "interceptors", {}).get(role, [])
+                channel["latency_ns"] = manifest.INPUT_LATENCY_NS
+            assert doc == nominal_doc, experiment
+
+    def test_a_delayed_list_keeps_its_sample_time(
+        self, build_dir, sil_run, prepared, tmp_path
+    ):
+        result = run_simulation(
+            manifest.experiment_manifest(prepared, library(build_dir), "delay"),
+            runner=sil_run, workdir=tmp_path)
+        recorded = {m["sample_time_ns"]: t
+                    for t, m in result.messages("cadence.radar")}
+        assert recorded[60 * MS] == 110 * MS
+        assert recorded[80 * MS] == 130 * MS
+        assert recorded[100 * MS] == 100 * MS
+
+    def test_an_age_from_arrival_time_fails_the_delay_comparison(
+        self, build_dir, sil_run, prepared, tmp_path
+    ):
+        # The arrival-time build treats the list sampled at 60 ms, which
+        # arrives at 110 ms, as new sensing.
+        for experiment in ("drop", "rewrite"):
+            workdir = tmp_path / experiment
+            workdir.mkdir()
+            result = run_simulation(manifest.experiment_manifest(
+                prepared, library(build_dir, "arrival_time"), experiment),
+                runner=sil_run, workdir=workdir)
+            assert comparison_with(prepared, f"cadence.{experiment}",
+                                   result.mcap_path)["verdict"] == "pass"
+        workdir = tmp_path / "delay"
+        workdir.mkdir()
+        result = run_simulation(manifest.experiment_manifest(
+            prepared, library(build_dir, "arrival_time"), "delay"),
+            runner=sil_run, workdir=workdir)
+        report = comparison_with(prepared, "cadence.delay", result.mcap_path)
+        assert report["verdict"] == "fail"
+        first = report["first_divergence"]
+        assert (first["observation_ns"], first["field"]) == (120 * MS, "mode")
+        assert (first["actual"], first["expected"]) == (0, 2)
+
+    def test_an_incorrect_expected_age_fails_at_its_sample_time(
+        self, nominal, prepared, tmp_path
+    ):
+        rows = (EXAMPLE / "maneuvers" / "cadence.expected.csv"
+                ).read_text().splitlines()
+        assert rows[10].startswith("100,10,0,30,0,0.0,10000000,")
+        rows[10] = rows[10].replace(",10000000,", ",20000000,", 1)
+        source = tmp_path / "wrong.expected.csv"
+        source.write_text("\n".join(rows) + "\n")
+        mapping = tmp_path / "wrong.mapping.json"
+        mapping.write_text(json.dumps(prepare._prefixed_mapping(
+            EXAMPLE / "expected-mapping.json", "cadence")))
+        convert(mapping, source, tmp_path / "wrong.expected.mcap")
+        report = compare(
+            read_contract(prepared / "cadence.contract.json"),
+            nominal.mcap_path, tmp_path / "wrong.expected.mcap")
+        assert report["verdict"] == "fail"
+        first = report["first_divergence"]
+        assert (first["observation_ns"], first["field"]) == (
+            100 * MS, "radar_age_ns")
+        assert (first["actual"], first["expected"]) == (10 * MS, 20 * MS)
+
+    def test_a_longer_delay_overflows_the_finite_route(
+        self, build_dir, sil_run, prepared, tmp_path
+    ):
+        # Delayed by 70 ms, the lists sampled at 60 and 80 ms and the two
+        # behind them fill four places of a route that holds three.
+        proc = run_at_boundary(sil_run, tmp_path, manifest.reference_manifest(
+            prepared, library(build_dir), maneuvers=("cadence",),
+            interceptors={"radar": [{"kind": "delay", "delay_ns": 70 * MS,
+                                     "start_ns": 60 * MS,
+                                     "end_ns": 100 * MS}]}))
+        assert proc.returncode == 1, proc.stderr
+        assert ("subscriber route capacity exceeded: Channel "
+                "'cadence.radar', publisher 'cadence_replay', subscriber "
+                "'cadence', configured capacity 3") in proc.stderr
+
+    def test_a_future_sample_time_from_an_interceptor_fails_the_run(
+        self, build_dir, sil_run, prepared, tmp_path
+    ):
+        proc = run_at_boundary(sil_run, tmp_path, manifest.reference_manifest(
+            prepared, library(build_dir), maneuvers=("cadence",),
+            interceptors={"camera": [{"kind": "override",
+                                      "field": "sample_time_ns",
+                                      "value": 50 * MS,
+                                      "start_ns": 40 * MS,
+                                      "end_ns": 50 * MS}]}))
+        assert proc.returncode == 1, proc.stderr
+        assert ("participant 'cadence' failed: t=40000000 ns: "
+                "camera.sample_time_ns 50000000 is after the activation time "
+                "40000000; a future Sample time is malformed") in proc.stderr
+
+    @pytest.mark.parametrize("change, diagnostic", [
+        ({"replay_priority": 1},
+         "replay priority 1: the replay publishes before every activation"),
+        ({"replay_priority": -1}, "replay priority -1"),
+        ({"input_latency_ns": 20 * MS},
+         "input latency 20000000 ns: the profile predicts input Latency 0 or "
+         "one controller Period (10000000 ns) only"),
+        ({"input_latency_ns": 5 * MS}, "input latency 5000000 ns"),
+    ])
+    def test_an_unpredicted_scheduling_change_is_rejected(
+        self, build_dir, prepared, change, diagnostic
+    ):
+        with pytest.raises(manifest.ExperimentError, match=re.escape(
+                diagnostic)):
+            manifest.reference_manifest(prepared, library(build_dir),
+                                        maneuvers=("cadence",), **change)
 
 
 @pytest.mark.skipif(shutil.which("cc") is None, reason="needs a C compiler")
@@ -389,4 +588,7 @@ def test_the_demonstration_runs_on_installed_interfaces(
     assert proc.returncode == 0, proc.stdout + proc.stderr
     for maneuver in prepare.MANEUVERS:
         assert f"{maneuver}: pass" in proc.stdout
+    for experiment in manifest.EXPERIMENTS:
+        assert f"cadence.{experiment}: pass" in proc.stdout
     assert "wrong sign: fails as required" in proc.stdout
+    assert "arrival time: fails as required" in proc.stdout

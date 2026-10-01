@@ -1,13 +1,16 @@
 """Prepare the ADAS reference maneuvers: input Recordings, expected
 Recordings and comparison contracts.
 
-Each maneuver is two hand-authored CSV files in `maneuvers/`: the processed
+Each maneuver is hand-authored CSV files in `maneuvers/`: the processed
 radar and camera object lists and the ego speed (`<maneuver>.csv`), and the
 expected controller output, enumerated row by row from the profile's
-arithmetic (`<maneuver>.expected.csv`). Nothing here runs the C application.
+arithmetic (`<maneuver>.expected.csv`). A maneuver can also have expected
+outputs for named experiments over the same inputs, such as an Interceptor
+or a changed Latency (`<maneuver>.<experiment>.expected.csv`). Nothing here
+runs the C application.
 
 An authored row is one activation: `time_ms,radar,camera,ego_speed_mps`.
-A list cell is empty for no Message, `invalid` for a list with validity 0,
+A list cell is empty for no Message at that time, `invalid` for a list with validity 0,
 `empty` for a valid list without objects, or up to eight objects separated
 by `;`. A radar object is `id x_m y_m relative_vx_mps confidence`, a camera
 object `id x_m y_m confidence`. The ego cell is empty, `invalid`, or a speed.
@@ -25,8 +28,8 @@ so this script prefixes each Channel with `<maneuver>.` and converts with
     python prepare.py OUTDIR
 
 writes, per maneuver, `<maneuver>.inputs.csv` (the expanded form),
-`<maneuver>.inputs.mcap`, `<maneuver>.expected.mcap`, their receipts and
-`<maneuver>.contract.json` into OUTDIR.
+`<maneuver>.inputs.mcap`, `<maneuver>[.<experiment>].expected.mcap`, their
+receipts and `<maneuver>.contract.json` into OUTDIR.
 """
 
 from __future__ import annotations
@@ -41,7 +44,7 @@ from sil.csv_recording import convert
 EXAMPLE_DIR = Path(__file__).resolve().parent
 MANEUVER_DIR = EXAMPLE_DIR / "maneuvers"
 MANEUVERS = ("clear", "hazard", "release", "unavailable", "boundaries",
-             "occupancy", "turnover", "ordering")
+             "occupancy", "turnover", "ordering", "cadence", "freshness")
 
 CAPACITY = 8
 EGO_FRAME_ID = 1
@@ -155,6 +158,13 @@ def _convert(template: Path, maneuver: str, source: Path, out: Path,
                        + "\n")
 
 
+def expectations(maneuver: str) -> list[str]:
+    """The names of a maneuver's expected outputs: `<maneuver>` and each
+    `<maneuver>.<experiment>`."""
+    return sorted(path.name.removesuffix(".expected.csv")
+                  for path in MANEUVER_DIR.glob(f"{maneuver}.*expected.csv"))
+
+
 def prepare(out_dir: Path, maneuvers: tuple[str, ...] = MANEUVERS) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     for maneuver in maneuvers:
@@ -163,10 +173,11 @@ def prepare(out_dir: Path, maneuvers: tuple[str, ...] = MANEUVERS) -> None:
         _convert(EXAMPLE_DIR / "mapping.json", maneuver, expanded,
                  out_dir / f"{maneuver}.inputs.mcap",
                  out_dir / f"{maneuver}.inputs.receipt.json")
-        _convert(EXAMPLE_DIR / "expected-mapping.json", maneuver,
-                 MANEUVER_DIR / f"{maneuver}.expected.csv",
-                 out_dir / f"{maneuver}.expected.mcap",
-                 out_dir / f"{maneuver}.expected.receipt.json")
+        for name in expectations(maneuver):
+            _convert(EXAMPLE_DIR / "expected-mapping.json", maneuver,
+                     MANEUVER_DIR / f"{name}.expected.csv",
+                     out_dir / f"{name}.expected.mcap",
+                     out_dir / f"{name}.expected.receipt.json")
         (out_dir / f"{maneuver}.contract.json").write_text(
             json.dumps(_prefixed_contract(maneuver), indent=2) + "\n")
 

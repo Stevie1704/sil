@@ -51,3 +51,24 @@ scalar mapping and its Recording bytes do not change. The Manifest, Native
 ABI, Step protocol, Recording format and `sil-compare` contract do not
 change. The five profile 1 maneuvers keep their expected trajectories as
 lists of at most one object.
+
+## Sensor freshness and deterministic faults (#224)
+
+Profile 3 replaces profile 2. Each sensor publishes at its own Period
+(radar 20 ms, camera 40 ms, ego motion 10 ms in `cadence`); the controller
+holds the last accepted observation of each sensor and judges freshness from
+its Sample time, never from arrival. Sequences must increase within a Run;
+duplicates and regressions are ignored and counted in the Command, while a
+future Sample time fails the Run as malformed input. These are reference
+policies for test coverage, not production stale-data requirements.
+
+Faults use the existing mechanisms only: `drop`, `delay` and `override`
+Interceptors, Channel Latency and finite Subscriber routes, each declared in
+its own experiment Manifest and compared with its own enumerated
+trajectory. The input routes hold three Messages, because a delayed Message
+keeps its place in the route and later Messages wait behind it. The kernel's
+Latency, Interceptor and route semantics do not change, and neither do the
+Manifest format, Native ABI, Step protocol or Recording format.
+`manifest.py` rejects an input Latency or a replay priority for which the
+profile predicts no trajectory, before the Run. An arrival-time build of the
+same sources is the negative control: it must fail the `delay` comparison.

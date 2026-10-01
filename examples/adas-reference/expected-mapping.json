@@ -30,6 +30,22 @@
         {
           "name": "acceleration_mps2",
           "type": "f32"
+        },
+        {
+          "name": "radar_age_ns",
+          "type": "i64"
+        },
+        {
+          "name": "camera_age_ns",
+          "type": "i64"
+        },
+        {
+          "name": "ego_age_ns",
+          "type": "i64"
+        },
+        {
+          "name": "ignored_observations",
+          "type": "u32"
         }
       ]
     }
@@ -57,6 +73,18 @@
         },
         "acceleration_mps2": {
           "column": "acceleration_mps2"
+        },
+        "radar_age_ns": {
+          "column": "radar_age_ns"
+        },
+        "camera_age_ns": {
+          "column": "camera_age_ns"
+        },
+        "ego_age_ns": {
+          "column": "ego_age_ns"
+        },
+        "ignored_observations": {
+          "column": "ignored_observations"
         }
       }
     }
