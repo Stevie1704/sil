@@ -43,7 +43,7 @@ docker cp "$container:/work/evidence/." "$evidence/" || status=1
 docker build --platform linux/amd64 -f "$root/proofs/adas-matrix/Dockerfile" \
     --target prepare --build-arg "TOOLS_IMAGE=$tools_ref" "${args[@]}" \
     --iidfile "$prepare_id" "$root"
-preparation=$(docker create --entrypoint /bin/true "$(cat "$prepare_id")")
+preparation=$(docker create --platform linux/amd64 --entrypoint /bin/true "$(cat "$prepare_id")")
 docker cp "$preparation:/prepared/preparation" "$evidence/preparation" || status=1
 docker rm "$preparation" >/dev/null
 preparation=

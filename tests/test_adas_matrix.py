@@ -92,6 +92,8 @@ def test_clean_installed_matrix_checks_passes_and_selected_failures(image, tmp_p
         'replay-native': 'pass', 'replay-fmu': 'pass',
         'closed-native': 'pass', 'closed-fmu': 'pass'}
     assert report['matrices']['controls']['exit_code'] == 1
+    assert not list(evidence.rglob('core'))
+    assert not list(evidence.rglob('*.core'))
     for matrix in ('nominal', 'controls'):
         assert (evidence / matrix / 'junit.xml').is_file()
         assert all(c['passed'] for c in report['matrices'][matrix]['cases'].values())
@@ -112,3 +114,21 @@ def test_ignored_failure_exit_codes_cannot_make_acceptance_green(image, tmp_path
     assert controls['passed'] is False
     # The faults were still detected; ignoring their matrix exit is what fails.
     assert all(c['passed'] for c in controls['cases'].values())
+
+
+def test_stale_run_owned_files_cannot_satisfy_a_later_control(image):
+    proc = subprocess.run([
+        'docker', 'run', '--rm', '--platform', 'linux/amd64', '--network', 'none',
+        '--entrypoint', 'python', image, '-c',
+        "import json,pathlib,subprocess; "
+        "d=json.loads(pathlib.Path('/bundles/control-hang/bundle.json').read_text()); "
+        "p=pathlib.Path(d['runtime']['environment']['TMPDIR']); "
+        "p.mkdir(parents=True); (p/'native-callback-entered').write_text('native fault callback entered\\n'); "
+        "r=subprocess.run(['python','/opt/adas/run.py'],capture_output=True,text=True); "
+        "print(json.dumps({'exit':r.returncode,'diagnostic':r.stderr,"
+        "'matrix_started':pathlib.Path('/work/evidence/nominal').exists()}))"
+    ], check=True, capture_output=True, text=True)
+    report = json.loads(proc.stdout)
+    assert report['exit'] == 1
+    assert 'leftover files from an earlier execution' in report['diagnostic']
+    assert report['matrix_started'] is False

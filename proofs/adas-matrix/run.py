@@ -56,7 +56,10 @@ def run(out: Path) -> bool:
         raise SystemExit('name a new, empty evidence directory')
     expected = json.loads(EXPECTED.read_text())
     for name in expected:
-        Path(f'/work/tmp/{name}').mkdir(parents=True, exist_ok=True)
+        temporary = Path(f'/work/tmp/{name}')
+        temporary.mkdir(parents=True, exist_ok=True)
+        if any(temporary.iterdir()):
+            raise SystemExit(f'{temporary}: leftover files from an earlier execution')
     checks = {}
     for kind, exit_code in (('nominal', 0), ('controls', 1)):
         proc = subprocess.run(['sil-matrix', f'/opt/adas/{kind}.json', '-o',
@@ -75,6 +78,8 @@ def run(out: Path) -> bool:
                      'passed': entry.get('status') == expected[name]['status']}
             evidence = out / kind / 'cases' / name
             leftovers = sorted(evidence.rglob('.sil-run-*'))
+            leftovers += sorted(evidence.rglob('core'))
+            leftovers += sorted(evidence.rglob('*.core'))
             temporary = Path(f'/work/tmp/{name}')
             leftovers += sorted(temporary.iterdir())
             if name in ('control-hang', 'control-crash'):
