@@ -170,3 +170,6 @@ protocol line, but has limits:
 
 Use the Native ABI for a library you build against SiL and trust not to
 crash or hang. Use this adapter for an existing library with its own API.
+[The Native ADAS reference application](adas-reference.md) shows the Native
+path: a C application with its own API, and a small adapter that exports
+`sil_participant_init` and keeps one instance per Participant.
