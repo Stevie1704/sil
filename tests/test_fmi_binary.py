@@ -313,8 +313,9 @@ class TestScalarTypes:
     """The scalar types the fixture declares beside its Binary variables.
 
     Float64 the derived mapping already carried; Boolean is the type the CAN
-    node's structural parameter needs. Every other FMI type stays outside
-    this slice and is reported rather than mapped.
+    node's structural parameter needs. The numeric profile of #189 has its
+    own suite, `test_fmi_numeric.py`; every type outside both is reported
+    rather than mapped.
     """
 
     def test_each_scalar_type_survives_the_round_trip(self, importer):
@@ -345,13 +346,13 @@ class TestScalarTypes:
         )
         assert published == {"flag": 1}
 
-    def test_an_integer_variable_is_outside_this_slice(self, importer):
+    def test_an_unselected_integer_variable_is_reported(self, importer):
         """Reported as the type it is, rather than silently left unmapped."""
-        with pytest.raises(ManifestError, match="Int32 variable"):
+        with pytest.raises(ManifestError, match="Int64 variable"):
             importer(
-                binds=["t.In:value=Int32_input"],
+                binds=["t.In:value=Int64_input"],
                 channels={"t.In": ("t.Value", "in")},
-                schemas={"t.Value": {"fields": [{"name": "value", "type": "i32"}]}},
+                schemas={"t.Value": {"fields": [{"name": "value", "type": "i64"}]}},
             )
 
 
@@ -438,7 +439,7 @@ class TestStartValues:
             ("Boolean_input=yes", "'true'"),
             ("Binary_input=zz", "hexadecimal"),
             ("String_input=x", "String variable"),
-            ("Int32_input=3", "Int32 variable"),
+            ("Int64_input=3", "Int64 variable"),
             ("Binary_input", "'<variable>=<value>'"),
         ],
     )

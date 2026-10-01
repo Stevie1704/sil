@@ -1,0 +1,18 @@
+{
+  "sil_comparison": 1,
+  "evaluation": {"from_ns": 10000000, "to_ns": 100000000},
+  "channels": {
+    "sensor.out": {
+      "reference_channel": "reference.sensor",
+      "actual_offset_ns": 10000000,
+      "reference_offset_ns": 0,
+      "observations": {"start_ns": 10000000, "stop_ns": 100000000, "step_ns": 10000000},
+      "fields": {
+        "range_m": {"atol": 0, "rtol": 0},
+        "object_id": "exact",
+        "object_count": "exact",
+        "sample_time_ns": "exact"
+      }
+    }
+  }
+}

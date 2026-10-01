@@ -168,8 +168,9 @@ Channels (a Message published at t holds its publisher's outputs at t + the publ
 
 Supported limits:
 
-- **Channel fields only.** A connection carries a `Float64`, `Boolean` or
-  `Binary` value of one output, as the single-FMU importer maps it. Clocks,
+- **Channel fields only.** A connection carries a `Float64`, `Boolean`,
+  `Binary`, `Float32`, `Int32`, `UInt32` or `UInt64` value of one output, as
+  the single-FMU importer maps it, in the field type of that FMI type. Clocks,
   network terminals and FMI-LS-BUS stay in a group.
 - **Fixed periods.** Each FMU steps on its own fixed Period, from 0, and
   the Duration is a multiple of each Period. There is no adaptive step, no

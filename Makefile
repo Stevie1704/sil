@@ -122,6 +122,20 @@ example-fmu-replay: venv build ## Author and replay the recorded-data FMU exampl
 	cmp $(BUILD_DIR)/fmu-replay-1.mcap $(BUILD_DIR)/fmu-replay-2.mcap
 	PYTHONPATH=$(SRC) $(PYTHON) -m sil.compare examples/fmu-replay/contract.json $(BUILD_DIR)/fmu-replay-1.mcap $(BUILD_DIR)/fmu-reference.mcap
 
+# The same sequence for the Float32, Int32, UInt32 and UInt64 bindings: the
+# Reference FMU `Feedthrough` takes the recorded values and hands them back,
+# and the comparison is exact against the hand-written reference.
+NUMERIC_FMU := tests/fixtures/reference-fmus/3.0/Feedthrough.fmu
+.PHONY: example-fmu-numeric
+example-fmu-numeric: venv build ## Replay Float32/Int32/UInt32/UInt64 into Feedthrough twice, compare
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.csv_recording examples/fmu-numeric/mapping.json examples/fmu-numeric/recorded.csv -o $(BUILD_DIR)/fmu-numeric-recorded.mcap
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.csv_recording examples/fmu-numeric/reference-mapping.json examples/fmu-numeric/reference.csv -o $(BUILD_DIR)/fmu-numeric-reference.mcap
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.fmi.authoring examples/fmu-numeric/authoring.json $(NUMERIC_FMU) --recording $(BUILD_DIR)/fmu-numeric-recorded.mcap -o $(BUILD_DIR)/fmu-numeric.json --receipt $(BUILD_DIR)/fmu-numeric.receipt.json
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/fmu-numeric.json -o $(BUILD_DIR)/fmu-numeric-1.mcap
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/fmu-numeric.json -o $(BUILD_DIR)/fmu-numeric-2.mcap
+	cmp $(BUILD_DIR)/fmu-numeric-1.mcap $(BUILD_DIR)/fmu-numeric-2.mcap
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.compare examples/fmu-numeric/contract.json $(BUILD_DIR)/fmu-numeric-1.mcap $(BUILD_DIR)/fmu-numeric-reference.mcap
+
 # Convenience over `make run` for the coupled-FMU example: author the delayed
 # feedback loop between two Feedthrough instances twice, run it twice, and
 # `cmp` both pairs. The authoring command prints the plan of the Run.

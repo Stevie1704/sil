@@ -12,9 +12,10 @@ Three static audits of the archive, none of which loads its binary:
 - `inspection`: SiL's `sil-fmi-inspect` on the archive, and on
   `recorded-input.mapping.json`, the mapping a Run that replays the
   maneuvers' Recordings into this FMU would declare. Each binding is also
-  inspected on its own. Until the importer maps these types and arrays,
-  every binding must be refused for its type or its dimensions, and for
-  nothing else.
+  inspected on its own, in a Channel of its one field. A scalar of a type the
+  importer maps (`Float32`, `Int32`, `UInt32`, `UInt64`) must be accepted.
+  Every other binding must be refused for its type or its dimensions, and for
+  nothing else, until the importer maps those types and arrays too.
 
     python proofs/adas-fmu/audit.py AdasReference.fmu OUT_DIR
 
@@ -66,6 +67,8 @@ CO_SIMULATION = {
     "canReturnEarlyAfterIntermediateUpdate": "false",
     "providesEvaluateDiscreteStates": "false",
 }
+# The FMI types the importer maps, of those the profile declares (#189).
+MAPPED_TYPES = {"Float32", "Int32", "UInt32", "UInt64"}
 # What a binding is refused for while the importer lacks the type or shape.
 MISSING = re.compile(r"which (is a (\w+) variable; this importer maps Binary "
                      r"and the scalar types .*|declares dimensions of 8 "
@@ -190,12 +193,27 @@ def interface_findings(interface: dict) -> list[str]:
 
 
 def _probe(fmu: Path, bind: str) -> str | None:
-    """The rejection of one binding, inspected with its own Channel only."""
-    channel = bind.partition(":")[0]
-    mapping = {"sil_fmi_mapping": 1, "schemas": MAPPING["schemas"],
-               "channels": {channel: MAPPING["channels"][channel]},
-               "bind": [bind]}
+    """The rejection of one binding, inspected in a Channel of its one field.
+
+    The Channel carries no other field, so a binding the importer accepts is
+    not refused for the fields no other binding of the probe names.
+    """
+    channel, _, field = bind.partition("=")[0].partition(":")
+    spec = MAPPING["channels"][channel]
+    fields = [f for f in MAPPING["schemas"][spec["schema"]]["fields"]
+              if f["name"] == field]
+    mapping = {"sil_fmi_mapping": 1,
+               "schemas": {spec["schema"]: {"fields": fields}},
+               "channels": {channel: spec}, "bind": [bind]}
     return inspect(fmu, mapping)["mapping"]["rejection"]
+
+
+def _variable_type(bind: str) -> str:
+    """The FMI type of the variable one binding names."""
+    channel, _, field = bind.partition("=")[0].partition(":")
+    schema = SCHEMAS[MAPPING["channels"][channel]["schema"]]
+    spec = next(f for f in schema["fields"] if f["name"] == field)
+    return FMI_TYPES[spec["type"]]
 
 
 def inspection(fmu: Path) -> dict:
@@ -213,19 +231,25 @@ def inspection(fmu: Path) -> dict:
         "arrays_refused": sorted(
             bind for bind, r in probes.items()
             if r and "declares dimensions" in r),
+        "mapped": sorted(bind for bind, r in probes.items() if r is None),
     }
 
 
 def inspection_findings(result: dict) -> list[str]:
-    """Every way the inspection differs from "refused only for types and
-    arrays"."""
+    """Every way the inspection differs from "a scalar of a mapped type is
+    accepted, and the rest is refused only for its type or array"."""
     findings = []
     if result["verdict"] != "mapping-rejected":
         findings.append(f"verdict {result['verdict']}")
     if result["unusable"]:
         findings.append(f"unusable {result['unusable']}")
     for bind, rejection in result["bindings"].items():
-        if rejection is None or not MISSING.search(rejection):
+        mapped = _variable_type(bind) in MAPPED_TYPES
+        if rejection is None:
+            if not mapped:
+                findings.append(f"{bind}: accepted")
+        elif not MISSING.search(rejection) or (
+                mapped and "declares dimensions" not in rejection):
             findings.append(f"{bind}: {rejection}")
     return findings
 

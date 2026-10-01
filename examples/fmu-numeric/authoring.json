@@ -1,0 +1,45 @@
+{
+  "sil_fmu_replay": 1,
+  "step_period_ns": 10000000,
+  "duration_ns": 100000000,
+  "schemas": {
+    "numeric.Sensor": {"fields": [
+      {"name": "range_m", "type": "f32"},
+      {"name": "object_id", "type": "i32"},
+      {"name": "object_count", "type": "u32"},
+      {"name": "sample_time_ns", "type": "u64"}
+    ]}
+  },
+  "channels": {
+    "sensor.in": {
+      "schema": "numeric.Sensor", "direction": "in", "latency_ns": 0,
+      "route": {"capacity": 1, "overflow": "fail"}
+    },
+    "sensor.out": {
+      "schema": "numeric.Sensor", "direction": "out", "latency_ns": 10000000
+    }
+  },
+  "bind": [
+    {"channel": "sensor.in", "field": "range_m",
+     "variable": "Float32_discrete_input", "unit": null},
+    {"channel": "sensor.in", "field": "object_id",
+     "variable": "Int32_input", "unit": null},
+    {"channel": "sensor.in", "field": "object_count",
+     "variable": "UInt32_input", "unit": null},
+    {"channel": "sensor.in", "field": "sample_time_ns",
+     "variable": "UInt64_input", "unit": null},
+    {"channel": "sensor.out", "field": "range_m",
+     "variable": "Float32_discrete_output", "unit": null},
+    {"channel": "sensor.out", "field": "object_id",
+     "variable": "Int32_output", "unit": null},
+    {"channel": "sensor.out", "field": "object_count",
+     "variable": "UInt32_output", "unit": null},
+    {"channel": "sensor.out", "field": "sample_time_ns",
+     "variable": "UInt64_output", "unit": null}
+  ],
+  "start": [],
+  "hold": ["Float32_continuous_input", "Float64_continuous_input",
+           "Float64_discrete_input", "Int8_input", "UInt8_input",
+           "Int16_input", "UInt16_input", "Int64_input", "Boolean_input",
+           "String_input", "Binary_input", "Enumeration_input"]
+}

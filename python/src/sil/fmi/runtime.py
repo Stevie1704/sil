@@ -133,7 +133,14 @@ _SIGNATURES = {
 # signatures below are built by walking `SCALARS`, so a type declared there
 # with no element here fails when this module is imported rather than on the
 # first Run that binds one.
-_ELEMENTS = {"Float64": ctypes.c_double, "Boolean": ctypes.c_bool}
+_ELEMENTS = {
+    "Float64": ctypes.c_double,
+    "Boolean": ctypes.c_bool,
+    "Float32": ctypes.c_float,
+    "Int32": ctypes.c_int32,
+    "UInt32": ctypes.c_uint32,
+    "UInt64": ctypes.c_uint64,
+}
 
 
 def _scalar_signatures() -> dict:
@@ -354,24 +361,41 @@ class CoSimulation:
         ]
         if structural:
             self._call("fmi3EnterConfigurationMode")
-            self._write_start_values(structural)
+            self._write_start_values(
+                structural, "in Configuration Mode, before initialization"
+            )
             self._call("fmi3ExitConfigurationMode")
-        self._write_start_values([
-            (variable, value) for variable, value in starts
-            if variable.causality != STRUCTURAL
-        ])
+        self._write_start_values(
+            [(variable, value) for variable, value in starts
+             if variable.causality != STRUCTURAL],
+            "in the instantiated state, before initialization",
+        )
 
-    def _write_start_values(self, starts) -> None:
+    def _write_start_values(self, starts, state: str) -> None:
+        """Write each start value, naming the variable and state on failure.
+
+        The FMI status alone names only the call, and one call type is shared
+        by every variable of its type.
+        """
         for variable, value in starts:
-            references = _references(variable.reference)
-            if variable.kind == BINARY:
-                buffer = (ctypes.c_char * len(value)).from_buffer_copy(value)
-                sizes = (ctypes.c_size_t * 1)(len(value))
-                values = (ctypes.c_void_p * 1)(ctypes.addressof(buffer))
-                self._set_binary(references, sizes, values)
-            else:
-                values = (_ELEMENTS[variable.kind] * 1)(value)
-                self._set_values(variable.kind, references, values)
+            try:
+                self._write_start_value(variable, value)
+            except ParticipantFailure as error:
+                raise ParticipantFailure(
+                    f"start value for FMU variable {variable.name!r}, "
+                    f"written {state}: {error}"
+                ) from error
+
+    def _write_start_value(self, variable: Variable, value) -> None:
+        references = _references(variable.reference)
+        if variable.kind == BINARY:
+            buffer = (ctypes.c_char * len(value)).from_buffer_copy(value)
+            sizes = (ctypes.c_size_t * 1)(len(value))
+            values = (ctypes.c_void_p * 1)(ctypes.addressof(buffer))
+            self._set_binary(references, sizes, values)
+        else:
+            values = (_ELEMENTS[variable.kind] * 1)(value)
+            self._set_values(variable.kind, references, values)
 
     def _set_values(self, kind: str, references, values) -> None:
         self._call(

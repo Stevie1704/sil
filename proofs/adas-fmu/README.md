@@ -94,12 +94,13 @@ them.
 [`recorded-input.mapping.json`](recorded-input.mapping.json) is the mapping
 a Run would declare to replay the maneuvers' input Recordings into this FMU
 and record its Commands. It binds every Schema field to its variable.
-`audit.py` runs `sil-fmi-inspect` with it, and with each binding alone. The
-current importer must refuse every binding, and only because the variable is
-of a type it does not map (`Float32`, `Int32`, `Int64`, `UInt8`, `UInt32`,
-`UInt64`) or has 8 elements. `inspection.json` keeps each refusal. When #189
-and #190 add those types and arrays, this mapping is the one they must
-accept.
+`audit.py` runs `sil-fmi-inspect` with it, and with each binding alone, in a
+Channel of that one field. Since #189 the importer must accept each scalar
+of `Float32`, `Int32`, `UInt32` and `UInt64` (20 bindings). It must refuse
+every other binding, and only because the variable is of a type it does not
+map (`Int64`, `UInt8`) or has 8 elements. `inspection.json` keeps each
+verdict. When #190 adds arrays, this mapping is the one it must accept
+further.
 
 ## Evidence
 

@@ -93,13 +93,15 @@ be covered by the Run's provenance side-car, which digests every file a
 participant's command names.
 
 The mapped types are `Float64`, `Boolean` and `Binary` — the three the CAN
-acceptance fixture declares, and no more; broad type coverage is a later
-slice. A `Boolean` is carried by a `u8` with C's own conversion — zero is
+acceptance fixture declares — and `Float32`, `Int32`, `UInt32` and `UInt64`,
+the numeric profile of the [C reference product](adas-reference.md) (next
+section). A `Boolean` is carried by a `u8` with C's own conversion — zero is
 false, anything else is true — and what the FMU hands back is 0 or 1.
 
 A binding that names any other type — a `String`, an `Enumeration`, an
-integer — is reported before the FMU is stepped, naming the type, as is one
-whose field type is not the one its variable's type maps to. A `Clock` is
+`Int8`, `UInt8`, `Int16`, `UInt16` or `Int64` — is reported before the FMU is
+stepped, naming the type, as is one whose field type is not the one its
+variable's type maps to. A `Clock` is
 reported too, and for a different reason: it is driven through the variable it
 gates rather than bound to a field of its own, which is the section after
 next. A variable is mapped when its declared dimensions amount to one value:
@@ -107,6 +109,59 @@ next. A variable is mapped when its declared dimensions amount to one value:
 start="1"/>` is one value written the long way, which is how the fixture's CAN
 node declares its Binary input, while anything above one value, or a dimension
 sized by another variable, is reported.
+
+### Numeric scalars
+
+The four numeric types are the ones the C reference product uses: `Float32`
+for sensor and control values, `Int32` for signed selected IDs, `UInt32` for
+counts, modes and sequence numbers, and `UInt64` for Sample times. Each is
+carried by exactly one field type, of its own width and kind:
+
+| FMI type | Field type | Start value (`--start`) |
+| --- | --- | --- |
+| `Float32` | `f32` | a finite decimal, rounded to the nearest Float32 |
+| `Int32` | `i32` | a decimal integer in [−2³¹, 2³¹ − 1] |
+| `UInt32` | `u32` | a decimal integer in [0, 2³² − 1], with no sign |
+| `UInt64` | `u64` | a decimal integer in [0, 2⁶⁴ − 1], with no sign |
+
+Nothing is narrowed or coerced. A `UInt64` bound to a `u32`, `i64` or `f64`
+field, a `Float32` bound to an `f64`, an `Int32` bound to a `u8` and a
+`Boolean` bound to an `i32` are all refused before stepping, with exit 2. So
+an integer never crosses a floating-point field, and a `UInt64` above 2⁵³ —
+which a double cannot hold — reaches the Recording to its last bit. A
+Message's field already holds a value of the variable's own type. What the
+FMU hands back fits the field.
+
+A start value is read by the same rule, before anything is loaded:
+
+- An integer start value is an optional `-` and ASCII digits, and nothing
+  else: no `+`, spaces, underscores, decimal point, exponent, `0x` or
+  `true`/`false`. A value outside the type's range is refused; so is any
+  `-` for an unsigned type, `-0` included.
+- A `Float32` start value uses the decimal grammar `sil-csv` reads an `f32`
+  cell in. It is read as the nearest binary64. Then it is rounded to the
+  nearest Float32, with ties to even. `sil-csv` uses the same two steps, so
+  one decimal is one Float32 on both paths into a Run. `0.1` is
+  `0.100000001490116…`; `16777217` is `16777216`. A value that rounds to
+  infinity, a non-zero value that rounds to zero, and `inf` or `nan` are
+  refused.
+- A `Boolean` start value is `true` or `false`; `1` and `0` are refused.
+- A start value is one value. A start value for a variable with more than
+  one value, or with a dimension sized by another variable, is refused for
+  every type. Arrays are [#190](https://github.com/Stevie1704/sil/issues/190).
+
+An input or parameter start is written in the instantiated state, before
+initialization mode; a structural parameter inside Configuration Mode. A call
+that answers other than `fmi3OK` names more than the call: a start value
+names its variable and the state it was written in, and a Step names the
+Channel and the variables one call carried —
+`writing Channel 'sensor.in' into FMU variables 'UInt64_input': fmi3SetUInt64
+returned Error`.
+
+[examples/fmu-numeric/](../examples/fmu-numeric/) replays a Recording of all
+four types into `Feedthrough` and compares what comes back with a reference
+written by hand. `make example-fmu-numeric` runs it twice and `cmp`s the two
+Recordings.
 
 ### Bounded Binary payloads
 
@@ -358,7 +413,7 @@ The report has four parts:
 | --- | --- |
 | facts | FMI version, interfaces and co-simulation capabilities, platform binaries, and each variable's type, causality, variability, start, unit, dimensions, `maxSize`, `mimeType` and Clocks; the terminals and the FMI-LS-BUS manifest |
 | `unusable` | why no Run can drive the archive: unreadable archive or `modelDescription.xml`, an FMI version other than 3.0, no co-simulation interface, no binary for this platform |
-| `unmappable`, per variable; `unsupported`, per terminal | why no Channel can carry the variable, or no group can connect the terminal: integer, String and Enumeration types, arrays, a Clock outside the triggered profile, a terminal outside the BUS profile |
+| `unmappable`, per variable; `unsupported`, per terminal | why no Channel can carry the variable, or no group can connect the terminal: String, Enumeration and the unselected integer types, arrays, a Clock outside the triggered profile, a terminal outside the BUS profile |
 | `unverified` | what only a loaded binary can answer: whether the library and its dependencies load, whether initialization succeeds, a required execution tool, the files read from `resources/` |
 
 A variable no Channel names is never touched, so an `unmappable` variable does
