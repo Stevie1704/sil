@@ -39,15 +39,18 @@
 #include "fmi3Functions.h"
 
 #ifndef ADAS_FMU_INSTANTIATION_TOKEN
-#error "build.py defines ADAS_FMU_INSTANTIATION_TOKEN"
+#error "package.py defines ADAS_FMU_INSTANTIATION_TOKEN"
 #endif
 
 #define CAPACITY ADAS_REF_MAX_OBJECTS
 #define NO_SAMPLE_TIME UINT64_MAX
 #define NO_SEQUENCE UINT32_MAX
 /* How far a communication point may lie from the FMU's own next point. A
- * double holds seconds; at 1e7 s its resolution is about 2 ns. */
+ * double holds seconds: at 1e7 s its resolution is about 2 ns, and it is
+ * finer than this tolerance below about 2^62 ns. */
 #define POINT_TOLERANCE_NS 1000.0
+/* Virtual time starts below 2^63 ns, so llround cannot overflow. */
+#define START_LIMIT_NS 9223372036854775808.0
 
 /* --- variables ---------------------------------------------------------- */
 
@@ -448,6 +451,26 @@ static int deliver_ego(instance *self, uint64_t t) {
                    &fault);
 }
 
+/* Whether the step is the fixed Period, to the nanosecond, at the FMU's
+ * next point; otherwise the instance fails. The step is never rescaled. */
+static int is_fixed_step(instance *self, double point, double step) {
+  if (!(step > 0.0 && llround(step * 1e9) == (long long)ADAS_REF_PERIOD_NS)) {
+    fail(self,
+         "communicationStepSize %.17g s is not the fixed step %llu ns; the "
+         "FMU has no variable step",
+         step, ADAS_REF_PERIOD_NS);
+    return 0;
+  }
+  if (!(fabs(point * 1e9 - (double)self->next_ns) <= POINT_TOLERANCE_NS)) {
+    fail(self,
+         "currentCommunicationPoint %.17g s is not the next point %" PRIu64
+         " ns",
+         point, self->next_ns);
+    return 0;
+  }
+  return 1;
+}
+
 fmi3Status fmi3DoStep(fmi3Instance instance_,
                       fmi3Float64 currentCommunicationPoint,
                       fmi3Float64 communicationStepSize,
@@ -465,21 +488,9 @@ fmi3Status fmi3DoStep(fmi3Instance instance_,
   if (self->phase != STEP)
     return reject(self, "fmi3DoStep is not allowed in the %s phase",
                   PHASE_NAMES[self->phase]);
-  if (!(communicationStepSize * 1e9 >=
-            (double)ADAS_REF_PERIOD_NS - POINT_TOLERANCE_NS &&
-        communicationStepSize * 1e9 <=
-            (double)ADAS_REF_PERIOD_NS + POINT_TOLERANCE_NS))
-    return fail(self,
-                "communicationStepSize %.17g s is not the fixed step 0.01 s;"
-                " the FMU has no variable step",
-                communicationStepSize);
+  if (!is_fixed_step(self, currentCommunicationPoint, communicationStepSize))
+    return fmi3Error;
   uint64_t t = self->next_ns;
-  if (!(fabs(currentCommunicationPoint * 1e9 - (double)t) <=
-        POINT_TOLERANCE_NS))
-    return fail(self,
-                "currentCommunicationPoint %.17g s is not the next point %"
-                PRIu64 " ns",
-                currentCommunicationPoint, t);
   if (!deliver_list(self, t, "radar", &self->v.radar, &self->radar_seen,
                     adas_ref_receive_radar) ||
       !deliver_list(self, t, "camera", &self->v.camera, &self->camera_seen,
@@ -493,7 +504,7 @@ fmi3Status fmi3DoStep(fmi3Instance instance_,
     return fmi3Error;
   self->next_ns = self->v.command.sample_time_ns;
   self->v.time = (double)self->next_ns / 1e9;
-  *lastSuccessfulTime = currentCommunicationPoint + communicationStepSize;
+  *lastSuccessfulTime = self->v.time;
   return fmi3OK;
 }
 
@@ -575,10 +586,10 @@ fmi3Status fmi3EnterInitializationMode(fmi3Instance instance_,
                   "fmi3EnterInitializationMode is not allowed in the %s "
                   "phase",
                   PHASE_NAMES[self->phase]);
-  /* Virtual time is whole nanoseconds below 2^64; the start time is rounded
-   * to the nearest one. */
-  if (!(startTime >= 0.0 && startTime * 1e9 < 18446744073709551616.0))
-    return fail(self, "the start time %.17g s is not in [0, 2^64 ns)",
+  /* Virtual time is whole nanoseconds; the start time is rounded to the
+   * nearest one. */
+  if (!(startTime >= 0.0 && startTime * 1e9 < START_LIMIT_NS))
+    return fail(self, "the start time %.17g s is not in [0, 2^63 ns)",
                 startTime);
   self->next_ns = (uint64_t)llround(startTime * 1e9);
   self->v.time = startTime;

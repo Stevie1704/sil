@@ -49,6 +49,7 @@ OUTPUTS = ("sample_time_ns", "sequence", "mode", "selected_object_id",
 FLOAT_OUTPUTS = {"target_acceleration_mps2", "acceleration_mps2"}
 OBJECT_FIELDS = ("object_id", "x_m", "y_m", "relative_vx_mps", "confidence")
 CLEAR, HAZARD, UNAVAILABLE = 0, 1, 2
+FMI3_ERROR = 3
 NO_OBJECT = NO_AGE = -1
 
 
@@ -153,7 +154,7 @@ def rejected(call, *args) -> bool:
     try:
         call(*args)
     except FMICallException as error:
-        return error.status == 3
+        return error.status == FMI3_ERROR
     return False
 
 
@@ -455,8 +456,8 @@ def fixed_step(archive: Archive) -> dict:
     diagnostics = []
     for name, point_ns, step_ns, message in (
             ("size", 0, 2 * PERIOD_NS,
-             "communicationStepSize 0.02 s is not the fixed step 0.01 s; the "
-             "FMU has no variable step"),
+             "communicationStepSize 0.02 s is not the fixed step 10000000 ns; "
+             "the FMU has no variable step"),
             ("point", PERIOD_NS, PERIOD_NS,
              "currentCommunicationPoint 0.01 s is not the next point 0 ns")):
         instance = Instance(archive, f"step-{name}")
@@ -530,13 +531,13 @@ def two_instances(archive: Archive) -> dict:
     own maneuver."""
     names = ("hazard", "clear")
     instances = [Instance(archive, name) for name in names]
-    stimuli = [maneuver_inputs(name) for name in names]
+    inputs = [maneuver_inputs(name) for name in names]
     commands = [[], []]
     for instance in instances:
         instance.initialize()
-    for k in range(len(stimuli[0])):
+    for k in range(len(inputs[0])):
         for i, instance in enumerate(instances):
-            instance.apply(stimuli[i][k])
+            instance.apply(inputs[i][k])
             commands[i].append(instance.step(k * PERIOD_NS))
     for i, instance in enumerate(instances):
         instance.slave.terminate()

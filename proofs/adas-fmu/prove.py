@@ -31,7 +31,9 @@ import package  # noqa: E402
 import audit  # noqa: E402
 import check  # noqa: E402
 
-PIN = PROOF_DIR / "evidence" / "AdasReference.identity.json"
+ARCHIVE = f"{package.MODEL_IDENTIFIER}.fmu"
+IDENTITY = f"{package.MODEL_IDENTIFIER}.identity.json"
+PIN = PROOF_DIR / "evidence" / IDENTITY
 CONTROL_DEFINE = "ADAS_REFERENCE_WRONG_SIGN"
 # The maneuvers with a closing object, which a sign error turns into CLEAR.
 CONTROL_FAILURES = {"maneuver_hazard", "maneuver_release",
@@ -42,16 +44,16 @@ CONTROL_FAILURES = {"maneuver_hazard", "maneuver_release",
 def reproduce(out_dir: Path) -> dict:
     first = package.build(out_dir / "first")
     second = package.build(out_dir / "second")
-    fmu = out_dir / "AdasReference.fmu"
-    fmu.write_bytes((out_dir / "first" / "AdasReference.fmu").read_bytes())
-    (out_dir / "AdasReference.identity.json").write_text(
+    fmu = out_dir / ARCHIVE
+    fmu.write_bytes((out_dir / "first" / ARCHIVE).read_bytes())
+    (out_dir / IDENTITY).write_text(
         json.dumps(first, indent=2) + "\n")
     pinned = json.loads(PIN.read_text()) if PIN.exists() else None
     return {
         "first_sha256": first["archive_sha256"],
         "second_sha256": second["archive_sha256"],
-        "identical": (out_dir / "first" / "AdasReference.fmu").read_bytes()
-        == (out_dir / "second" / "AdasReference.fmu").read_bytes(),
+        "identical": (out_dir / "first" / ARCHIVE).read_bytes()
+        == (out_dir / "second" / ARCHIVE).read_bytes(),
         "pinned_sha256": pinned and pinned["archive_sha256"],
         "matches_pin": pinned is None
         or pinned["archive_sha256"] == first["archive_sha256"],
@@ -60,7 +62,7 @@ def reproduce(out_dir: Path) -> dict:
 
 def control(out_dir: Path) -> dict:
     built = package.build(out_dir, defines=(CONTROL_DEFINE,))
-    report = check.check(out_dir / "AdasReference.fmu", out_dir)
+    report = check.check(out_dir / ARCHIVE, out_dir)
     failed = {r["case"] for r in report["cases"] if not r["passed"]}
     return {"define": CONTROL_DEFINE,
             "archive_sha256": built["archive_sha256"],
@@ -72,7 +74,7 @@ def control(out_dir: Path) -> dict:
 def prove(out_dir: Path) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     reproduced = reproduce(out_dir)
-    fmu = out_dir / "AdasReference.fmu"
+    fmu = out_dir / ARCHIVE
     findings = audit.audit(fmu, out_dir)
     checked = check.check(fmu, out_dir)
     controlled = control(out_dir / "control")

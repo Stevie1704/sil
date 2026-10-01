@@ -37,10 +37,12 @@ from sil.fmi.inspection import inspect
 
 PROOF_DIR = Path(__file__).resolve().parent
 ROOT = PROOF_DIR.parents[1]
+sys.path.insert(0, str(ROOT / "examples" / "adas-reference" / "fmu"))
+from package import MODEL_IDENTIFIER  # noqa: E402
+
 SCHEMAS = json.loads(
     (ROOT / "examples" / "adas-reference" / "schemas.json").read_text())
 MAPPING = json.loads((PROOF_DIR / "recorded-input.mapping.json").read_text())
-MODEL_IDENTIFIER = "AdasReference"
 
 # The FMI 3.0 type that carries each Schema field type.
 FMI_TYPES = {"f32": "Float32", "i32": "Int32", "i64": "Int64", "u8": "UInt8",
