@@ -1,0 +1,16 @@
+{
+  "fmu": {
+    "sha256": "f99c95f06ac97a7ce0ade263fe191cc8579c1e93355d360680b2ae72c5d503ab",
+    "instantiation_token": "875fa22861b19b80613fc91b157614d1320ab403fd2a42123d18fca0ed1ad89d",
+    "compiler": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "platform": "x86_64-linux"
+  },
+  "pinned_sha256": "f99c95f06ac97a7ce0ade263fe191cc8579c1e93355d360680b2ae72c5d503ab",
+  "matches_pin": true,
+  "wrong_sign_fmu": {
+    "sha256": "70ac1c71fde6c385d26914c45910c8b0435bf6fd6d8ca73b741d663706c92a7d"
+  },
+  "library": {
+    "sha256": "b150052c549d5745eab3ac55556ed71f44eb9213a406dce8cb2664d6ccbafbd3"
+  }
+}

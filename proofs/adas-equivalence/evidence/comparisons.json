@@ -1,0 +1,2928 @@
+{
+  "cases": {
+    "clear": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "clear.command": {
+            "reference_channel": "clear.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "7824a8bae7b9f2a6e3e664590c31373ba2c291bbbf2cb881898795d7f00656c5",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "clear.command": {
+            "reference_channel": "clear.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "7824a8bae7b9f2a6e3e664590c31373ba2c291bbbf2cb881898795d7f00656c5",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "clear.command": {
+            "reference_channel": "clear.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "f1aebfc6d6a9f61257abaf1d8f7914292d9513e0cb9415c31ae7847afd0b0b4f",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "clear.command": {
+            "reference_channel": "clear.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "7824a8bae7b9f2a6e3e664590c31373ba2c291bbbf2cb881898795d7f00656c5",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "clear.command": {
+            "reference_channel": "clear.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "7824a8bae7b9f2a6e3e664590c31373ba2c291bbbf2cb881898795d7f00656c5",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "clear.command": {
+            "reference_channel": "clear.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "d9051d91c6c000a4e7fee2882f297e67ee4b2ae5765f9339d82ebbfba8e460da",
+        "passed": true
+      }
+    },
+    "hazard": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "hazard.command": {
+            "reference_channel": "hazard.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "fc9ab0671292cf37d952ed048cd41951cc19d6b2b66490ac5d0d11d46cc59901",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "hazard.command": {
+            "reference_channel": "hazard.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "fc9ab0671292cf37d952ed048cd41951cc19d6b2b66490ac5d0d11d46cc59901",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "hazard.command": {
+            "reference_channel": "hazard.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "b0f53544176ede22238a296978b97a43b0d683f525b3813f5f1ad5bb82f4b312",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "hazard.command": {
+            "reference_channel": "hazard.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "fc9ab0671292cf37d952ed048cd41951cc19d6b2b66490ac5d0d11d46cc59901",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "hazard.command": {
+            "reference_channel": "hazard.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "fc9ab0671292cf37d952ed048cd41951cc19d6b2b66490ac5d0d11d46cc59901",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "hazard.command": {
+            "reference_channel": "hazard.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "afabe4b82c8ce588d884bc0533c802619bd11bab3fee80eba4a3801458419402",
+        "passed": true
+      }
+    },
+    "release": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "release.command": {
+            "reference_channel": "release.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "88de9c7944f0cab85996226920e15ab584bdbc09e252fd42255b350c24ed6241",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "release.command": {
+            "reference_channel": "release.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "88de9c7944f0cab85996226920e15ab584bdbc09e252fd42255b350c24ed6241",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "release.command": {
+            "reference_channel": "release.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "f0d7aa37d7bb4d3a2e403c8b8784ba6d8a5e85e164040048ac200179e83217c9",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "release.command": {
+            "reference_channel": "release.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "88de9c7944f0cab85996226920e15ab584bdbc09e252fd42255b350c24ed6241",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "release.command": {
+            "reference_channel": "release.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "88de9c7944f0cab85996226920e15ab584bdbc09e252fd42255b350c24ed6241",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "release.command": {
+            "reference_channel": "release.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "ed05daf28008786e04506f53429e6d142aca357b4644edf114091251d8068bea",
+        "passed": true
+      }
+    },
+    "unavailable": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "unavailable.command": {
+            "reference_channel": "unavailable.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "6c909e00bbc06b42d57e7e8705fb61eef0bfac62a0e59b0cf2f9d4375a31c74b",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "unavailable.command": {
+            "reference_channel": "unavailable.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "6c909e00bbc06b42d57e7e8705fb61eef0bfac62a0e59b0cf2f9d4375a31c74b",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "unavailable.command": {
+            "reference_channel": "unavailable.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "924064883b12c77d8201854d6d046332086474b9d9627eef4b9e6cb2377b85d0",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "unavailable.command": {
+            "reference_channel": "unavailable.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "6c909e00bbc06b42d57e7e8705fb61eef0bfac62a0e59b0cf2f9d4375a31c74b",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "unavailable.command": {
+            "reference_channel": "unavailable.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "6c909e00bbc06b42d57e7e8705fb61eef0bfac62a0e59b0cf2f9d4375a31c74b",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "unavailable.command": {
+            "reference_channel": "unavailable.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "450d5cc57c4e48e5fa6c088eb49c7e04a959476f598334915c368d38f59fbc48",
+        "passed": true
+      }
+    },
+    "boundaries": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "boundaries.command": {
+            "reference_channel": "boundaries.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "99a0541782f2b4742330f05de4ecf850ee3072db8d75377d1c3de97359526bbf",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "boundaries.command": {
+            "reference_channel": "boundaries.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "99a0541782f2b4742330f05de4ecf850ee3072db8d75377d1c3de97359526bbf",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "boundaries.command": {
+            "reference_channel": "boundaries.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "171a61e0ce3295a40fa36c21d8d208276cc88afe62cf8d02bee0c7fa0856ceb0",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "boundaries.command": {
+            "reference_channel": "boundaries.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "99a0541782f2b4742330f05de4ecf850ee3072db8d75377d1c3de97359526bbf",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "boundaries.command": {
+            "reference_channel": "boundaries.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "99a0541782f2b4742330f05de4ecf850ee3072db8d75377d1c3de97359526bbf",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "boundaries.command": {
+            "reference_channel": "boundaries.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "6792cde9910e94269373f2c7f9015fb3189cef5bf6147cbaf86c987baea80f7a",
+        "passed": true
+      }
+    },
+    "occupancy": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "occupancy.command": {
+            "reference_channel": "occupancy.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "67301ae499cbb23c795b860ebc9fcebce58a8ec81a9d672376ebf6b722135af4",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "occupancy.command": {
+            "reference_channel": "occupancy.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "67301ae499cbb23c795b860ebc9fcebce58a8ec81a9d672376ebf6b722135af4",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "occupancy.command": {
+            "reference_channel": "occupancy.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "fa2db0fa6e39aebfc65a63a7a03eb7ff5b0a72cb30ee8dbe602f45ca1c0e87c6",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "occupancy.command": {
+            "reference_channel": "occupancy.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "67301ae499cbb23c795b860ebc9fcebce58a8ec81a9d672376ebf6b722135af4",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "occupancy.command": {
+            "reference_channel": "occupancy.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "67301ae499cbb23c795b860ebc9fcebce58a8ec81a9d672376ebf6b722135af4",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "occupancy.command": {
+            "reference_channel": "occupancy.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "188fc50421ef46bb6d82b75424092f056f4f078e56f48bb49ba487429ec52321",
+        "passed": true
+      }
+    },
+    "turnover": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "turnover.command": {
+            "reference_channel": "turnover.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "c6f06c1f9d1618fb45ae0fc004afadb7b56ea52a3083a699086da6b24e0b138c",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "turnover.command": {
+            "reference_channel": "turnover.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "c6f06c1f9d1618fb45ae0fc004afadb7b56ea52a3083a699086da6b24e0b138c",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "turnover.command": {
+            "reference_channel": "turnover.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "074cd932a743e3b52ac2d8c8c2be042b1d6d565a620dbf783fabf263f63a497f",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "turnover.command": {
+            "reference_channel": "turnover.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "c6f06c1f9d1618fb45ae0fc004afadb7b56ea52a3083a699086da6b24e0b138c",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "turnover.command": {
+            "reference_channel": "turnover.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "c6f06c1f9d1618fb45ae0fc004afadb7b56ea52a3083a699086da6b24e0b138c",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "turnover.command": {
+            "reference_channel": "turnover.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "f2dda4ac239b866af6e4fbf0e90f2c86e027c4e8a17f941915f4298ad016c46c",
+        "passed": true
+      }
+    },
+    "ordering": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "ordering.command": {
+            "reference_channel": "ordering.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "7898f56b46acd90065fcd44fdca2cd6e143c52c15343065e8b76c0d3089f2579",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "ordering.command": {
+            "reference_channel": "ordering.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "7898f56b46acd90065fcd44fdca2cd6e143c52c15343065e8b76c0d3089f2579",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "ordering.command": {
+            "reference_channel": "ordering.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "a5149a9d843db918ceffccbe776993251289410b1d9cc3a437a4d5f0b73a4c04",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "ordering.command": {
+            "reference_channel": "ordering.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "7898f56b46acd90065fcd44fdca2cd6e143c52c15343065e8b76c0d3089f2579",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "ordering.command": {
+            "reference_channel": "ordering.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "7898f56b46acd90065fcd44fdca2cd6e143c52c15343065e8b76c0d3089f2579",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "ordering.command": {
+            "reference_channel": "ordering.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "5d8efabc469ae5d9641fabd685bb997f433f7d167f18ddfbcf61aa15a1bfb9e4",
+        "passed": true
+      }
+    },
+    "cadence": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "703d0c3293d4ecc6dbac6c12dccce47fb0dff5b279b96faafb7f06ef80d74346",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "881637d314f2b7a7bf0827e73bad880dcbc66652e8f0668cbeed17042c2e9788",
+        "passed": true
+      }
+    },
+    "freshness": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "freshness.command": {
+            "reference_channel": "freshness.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "7c54f867aef7f236a5c56dff3f3fe3a06a89f36855c01bb598cedaa085636a0e",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "freshness.command": {
+            "reference_channel": "freshness.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "7c54f867aef7f236a5c56dff3f3fe3a06a89f36855c01bb598cedaa085636a0e",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "freshness.command": {
+            "reference_channel": "freshness.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "01446457d51c24c6025fd09a95f14d46fc28bd9100f83a001b158ae4ec886411",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "freshness.command": {
+            "reference_channel": "freshness.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "7c54f867aef7f236a5c56dff3f3fe3a06a89f36855c01bb598cedaa085636a0e",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "freshness.command": {
+            "reference_channel": "freshness.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "7c54f867aef7f236a5c56dff3f3fe3a06a89f36855c01bb598cedaa085636a0e",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "freshness.command": {
+            "reference_channel": "freshness.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "20c9edb75116936f6b6880cf4eb306bb83c486e2b6f31fef4d0807d282a8b666",
+        "passed": true
+      }
+    },
+    "cadence.drop": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "703d0c3293d4ecc6dbac6c12dccce47fb0dff5b279b96faafb7f06ef80d74346",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "881637d314f2b7a7bf0827e73bad880dcbc66652e8f0668cbeed17042c2e9788",
+        "passed": true
+      }
+    },
+    "cadence.delay": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "703d0c3293d4ecc6dbac6c12dccce47fb0dff5b279b96faafb7f06ef80d74346",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "881637d314f2b7a7bf0827e73bad880dcbc66652e8f0668cbeed17042c2e9788",
+        "passed": true
+      }
+    },
+    "cadence.rewrite": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "703d0c3293d4ecc6dbac6c12dccce47fb0dff5b279b96faafb7f06ef80d74346",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "881637d314f2b7a7bf0827e73bad880dcbc66652e8f0668cbeed17042c2e9788",
+        "passed": true
+      }
+    },
+    "cadence.late": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "703d0c3293d4ecc6dbac6c12dccce47fb0dff5b279b96faafb7f06ef80d74346",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "881637d314f2b7a7bf0827e73bad880dcbc66652e8f0668cbeed17042c2e9788",
+        "passed": true
+      }
+    }
+  },
+  "contracts": {
+    "clear": {
+      "oracle": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "clear.command": {
+            "reference_channel": "clear.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "independent": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "clear.command": {
+            "reference_channel": "clear.command",
+            "actual_offset_ns": 0,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "cross_form": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "clear.command": {
+            "reference_channel": "clear.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 10000000,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      }
+    },
+    "hazard": {
+      "oracle": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "hazard.command": {
+            "reference_channel": "hazard.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "independent": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "hazard.command": {
+            "reference_channel": "hazard.command",
+            "actual_offset_ns": 0,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "cross_form": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "hazard.command": {
+            "reference_channel": "hazard.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 10000000,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      }
+    },
+    "release": {
+      "oracle": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "release.command": {
+            "reference_channel": "release.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "independent": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "release.command": {
+            "reference_channel": "release.command",
+            "actual_offset_ns": 0,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "cross_form": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "release.command": {
+            "reference_channel": "release.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 10000000,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      }
+    },
+    "unavailable": {
+      "oracle": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "unavailable.command": {
+            "reference_channel": "unavailable.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "independent": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "unavailable.command": {
+            "reference_channel": "unavailable.command",
+            "actual_offset_ns": 0,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "cross_form": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "unavailable.command": {
+            "reference_channel": "unavailable.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 10000000,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      }
+    },
+    "boundaries": {
+      "oracle": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "boundaries.command": {
+            "reference_channel": "boundaries.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "independent": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "boundaries.command": {
+            "reference_channel": "boundaries.command",
+            "actual_offset_ns": 0,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "cross_form": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "boundaries.command": {
+            "reference_channel": "boundaries.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 10000000,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      }
+    },
+    "occupancy": {
+      "oracle": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "occupancy.command": {
+            "reference_channel": "occupancy.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "independent": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "occupancy.command": {
+            "reference_channel": "occupancy.command",
+            "actual_offset_ns": 0,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "cross_form": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "occupancy.command": {
+            "reference_channel": "occupancy.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 10000000,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      }
+    },
+    "turnover": {
+      "oracle": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "turnover.command": {
+            "reference_channel": "turnover.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "independent": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "turnover.command": {
+            "reference_channel": "turnover.command",
+            "actual_offset_ns": 0,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "cross_form": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "turnover.command": {
+            "reference_channel": "turnover.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 10000000,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      }
+    },
+    "ordering": {
+      "oracle": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "ordering.command": {
+            "reference_channel": "ordering.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "independent": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "ordering.command": {
+            "reference_channel": "ordering.command",
+            "actual_offset_ns": 0,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "cross_form": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "ordering.command": {
+            "reference_channel": "ordering.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 10000000,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      }
+    },
+    "cadence": {
+      "oracle": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "independent": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "actual_offset_ns": 0,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "cross_form": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 10000000,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      }
+    },
+    "freshness": {
+      "oracle": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "freshness.command": {
+            "reference_channel": "freshness.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "independent": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "freshness.command": {
+            "reference_channel": "freshness.command",
+            "actual_offset_ns": 0,
+            "reference_offset_ns": 0,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      },
+      "cross_form": {
+        "sil_comparison": 1,
+        "evaluation": {
+          "from_ns": 10000000,
+          "to_ns": 200000000
+        },
+        "channels": {
+          "freshness.command": {
+            "reference_channel": "freshness.command",
+            "actual_offset_ns": 10000000,
+            "reference_offset_ns": 10000000,
+            "observations": {
+              "start_ns": 10000000,
+              "stop_ns": 200000000,
+              "step_ns": 10000000
+            },
+            "fields": {
+              "sample_time_ns": "exact",
+              "sequence": "exact",
+              "mode": "exact",
+              "selected_object_id": "exact",
+              "target_acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "acceleration_mps2": {
+                "atol": 0,
+                "rtol": 0
+              },
+              "radar_age_ns": "exact",
+              "camera_age_ns": "exact",
+              "ego_age_ns": "exact",
+              "ignored_observations": "exact"
+            }
+          }
+        }
+      }
+    }
+  }
+}

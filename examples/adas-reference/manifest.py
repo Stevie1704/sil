@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 from sil.manifest import Manifest, SubscriberRoute
@@ -131,20 +132,47 @@ def controller_config(maneuver: str, **overrides) -> dict:
     }
 
 
-def reference_manifest(inputs: Path, library: Path,
+# Adds one maneuver's controller to the Manifest: the maneuver, and the
+# subscriber routes of its three input Channels. It publishes
+# `<maneuver>.command`.
+Controller = Callable[[Manifest, str, list[SubscriberRoute]], None]
+
+
+def native_controller(library: Path,
+                      configs: dict[str, dict] | None = None) -> Controller:
+    """The controller as a Native participant of `library`. `configs`
+    replaces the config of a named maneuver's controller."""
+    configs = configs or {}
+
+    def add(m: Manifest, maneuver: str,
+            routes: list[SubscriberRoute]) -> None:
+        m.add_native(
+            maneuver,
+            library=str(Path(library).resolve()),
+            config=configs.get(maneuver, controller_config(maneuver)),
+            subscribes=routes,
+            publishes=[f"{maneuver}.command"],
+        )
+    return add
+
+
+def reference_manifest(inputs: Path, library: Path | None,
                        maneuvers: tuple[str, ...] = MANEUVERS,
                        configs: dict[str, dict] | None = None,
                        interceptors: dict[str, list[dict]] | None = None,
                        input_latency_ns: int = INPUT_LATENCY_NS,
-                       replay_priority: int | None = None) -> Manifest:
+                       replay_priority: int | None = None,
+                       controller: Controller | None = None) -> Manifest:
     """The Run over the Recordings `prepare.py` wrote into `inputs`.
 
     `configs` replaces the config of a named maneuver's controller.
     `interceptors` declares, per input role, Interceptors on that input
     Channel of every maneuver. `check_experiment` rejects an input Latency or
-    a replay priority the profile does not predict."""
+    a replay priority the profile does not predict. `controller` substitutes
+    the execution form, such as the FMU (proofs/adas-equivalence); the
+    default is the Native participant of `library`."""
     check_experiment(input_latency_ns, replay_priority)
-    configs = configs or {}
+    controller = controller or native_controller(library, configs)
     interceptors = interceptors or {}
     m = Manifest(duration_ns=DURATION_NS)
     m.add_schemas(SCHEMAS)
@@ -162,23 +190,20 @@ def reference_manifest(inputs: Path, library: Path,
             channels=[f"{maneuver}.{role}" for role in INPUTS],
             priority=replay_priority,
         )
-        m.add_native(
-            maneuver,
-            library=str(Path(library).resolve()),
-            config=configs.get(maneuver, controller_config(maneuver)),
-            subscribes=[SubscriberRoute(f"{maneuver}.{role}",
-                                        capacity=INPUT_ROUTE_CAPACITY)
-                        for role in INPUTS],
-            publishes=[f"{maneuver}.command"],
-        )
+        controller(m, maneuver,
+                   [SubscriberRoute(f"{maneuver}.{role}",
+                                    capacity=INPUT_ROUTE_CAPACITY)
+                    for role in INPUTS])
     return m
 
 
-def experiment_manifest(inputs: Path, library: Path,
-                        experiment: str) -> Manifest:
+def experiment_manifest(inputs: Path, library: Path | None,
+                        experiment: str,
+                        controller: Controller | None = None) -> Manifest:
     """The Run of one named experiment over its maneuver."""
     return reference_manifest(inputs, library,
                               maneuvers=(EXPERIMENT_MANEUVER,),
+                              controller=controller,
                               **EXPERIMENTS[experiment])
 
 

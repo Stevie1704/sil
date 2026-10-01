@@ -1,0 +1,122 @@
+{
+  "binding": {
+    "case": "hazard",
+    "why": "the radar x_m field bound to the variable radar.y_m: the FMU's radar.x_m keeps its start value 0, which is not eligible (x > 0); no confirmed object, so CLEAR where the oracle has HAZARD",
+    "run": {
+      "exit": 0,
+      "seconds": 0.875,
+      "stderr": ""
+    },
+    "compare_exit": 1,
+    "predicted": {
+      "observation_ns": 10000000,
+      "field": "mode",
+      "actual": 0,
+      "expected": 1
+    },
+    "observed": {
+      "observation_ns": 10000000,
+      "field": "mode",
+      "actual": 0,
+      "expected": 1
+    },
+    "divergences": 80,
+    "detected": true
+  },
+  "sign": {
+    "case": "hazard",
+    "why": "an archive built with ADAS_REFERENCE_WRONG_SIGN: the object closing at 25 m/s has closing speed 0 and x = 30 m >= 8 m, so CLEAR",
+    "run": {
+      "exit": 0,
+      "seconds": 0.894,
+      "stderr": ""
+    },
+    "compare_exit": 1,
+    "predicted": {
+      "observation_ns": 10000000,
+      "field": "mode",
+      "actual": 0,
+      "expected": 1
+    },
+    "observed": {
+      "observation_ns": 10000000,
+      "field": "mode",
+      "actual": 0,
+      "expected": 1
+    },
+    "divergences": 60,
+    "detected": true
+  },
+  "parameter": {
+    "case": "hazard",
+    "why": "max_change_mps2 1 instead of 0.5: the first HAZARD activation commands -1 m/s2, where the oracle has -0.5",
+    "run": {
+      "exit": 0,
+      "seconds": 1.0,
+      "stderr": ""
+    },
+    "compare_exit": 1,
+    "predicted": {
+      "observation_ns": 10000000,
+      "field": "acceleration_mps2",
+      "actual": -1.0,
+      "expected": -0.5
+    },
+    "observed": {
+      "observation_ns": 10000000,
+      "field": "acceleration_mps2",
+      "actual": -1.0,
+      "expected": -0.5
+    },
+    "divergences": 5,
+    "detected": true
+  },
+  "sample_time_offset": {
+    "case": "hazard",
+    "why": "the contract reads the publication Slot as the Sample time (actual_offset_ns 0): the observation at 10 ms is the Command published at 10 ms, whose Sample time is 20 ms",
+    "run": {
+      "exit": 0,
+      "seconds": 0.917,
+      "stderr": ""
+    },
+    "compare_exit": 1,
+    "predicted": {
+      "observation_ns": 10000000,
+      "field": "sample_time_ns",
+      "actual": 20000000,
+      "expected": 10000000
+    },
+    "observed": {
+      "observation_ns": 10000000,
+      "field": "sample_time_ns",
+      "actual": 20000000,
+      "expected": 10000000
+    },
+    "divergences": 44,
+    "detected": true
+  },
+  "input_latency": {
+    "case": "cadence",
+    "why": "every input Channel with one Period of Latency: the first activation receives nothing, so SENSOR_UNAVAILABLE where the oracle has CLEAR",
+    "run": {
+      "exit": 0,
+      "seconds": 0.865,
+      "stderr": ""
+    },
+    "compare_exit": 1,
+    "predicted": {
+      "observation_ns": 10000000,
+      "field": "mode",
+      "actual": 2,
+      "expected": 0
+    },
+    "observed": {
+      "observation_ns": 10000000,
+      "field": "mode",
+      "actual": 2,
+      "expected": 0
+    },
+    "divergences": 46,
+    "detected": true
+  }
+}

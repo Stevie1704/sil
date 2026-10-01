@@ -118,9 +118,10 @@ class _ScalarType:
 # `modelDescription.xml` gives it: the two the CAN acceptance fixture declares
 # beside its Binary variables, and the numeric profile of the C reference
 # product — Float32 for sensor and control values, Int32 for signed selected
-# IDs, UInt32 for counts, modes and sequence numbers, and UInt64 for Sample
-# times. Each is carried by the one field type of its own width and kind, so
-# no integer crosses a floating-point field. Every other type — String,
+# IDs, UInt32 for counts, modes and sequence numbers, UInt64 for Sample
+# times, UInt8 for validity flags and Int64 for signed ages. Each is carried
+# by the one field type of its own width and kind, so no integer crosses a
+# floating-point field. Every other type — String,
 # Enumeration, Clock, and the other integer widths — is reported rather than
 # skipped when a binding names one.
 SCALARS = {
@@ -133,6 +134,10 @@ SCALARS = {
     "Int32": _ScalarType("i32", int, _integer("Int32", "i32")),
     "UInt32": _ScalarType("u32", int, _integer("UInt32", "u32")),
     "UInt64": _ScalarType("u64", int, _integer("UInt64", "u64")),
+    # A `u8` field carries a Boolean too; the variable's declared type
+    # decides the conversion, so a UInt8 keeps every value in [0, 255].
+    "UInt8": _ScalarType("u8", int, _integer("UInt8", "u8")),
+    "Int64": _ScalarType("i64", int, _integer("Int64", "i64")),
 }
 
 BINARY = "Binary"

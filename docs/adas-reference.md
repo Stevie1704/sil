@@ -28,7 +28,7 @@ records why it exists.
 | `maneuvers/cadence.<experiment>.expected.csv` | the expected trajectory of each [experiment](#experiments), enumerated by hand |
 | `mapping.json`, `expected-mapping.json`, `contract.json` | the `sil-csv` mappings and the `sil-compare` contract of one maneuver, without a Channel prefix |
 | `prepare.py` | expands every maneuver to the flat Schema form, converts it with its Channel prefix and writes its contract |
-| `manifest.py` | the Run: one Replay participant and one Native participant per maneuver, one library; the experiments and their authoring checks |
+| `manifest.py` | the Run: one Replay participant and one controller per maneuver, by default the Native participant of one library; the experiments and their authoring checks |
 | `run.sh` | the one-command demonstration over installed SiL interfaces |
 
 ## Run it
@@ -484,8 +484,9 @@ The start header, `sample_time_ns` 2^64 − 1 and `sequence` 2^32 − 1, means
 "nothing received yet". No accepted observation can carry that Sample time,
 because it is after every activation time. At most one observation per
 sensor is delivered per step, radar, camera, then ego, before the advance.
-A Run that delivers several Messages of one Channel in one Slot, as the
-`delay` experiment does, is outside this interface.
+When a Run delivers several Messages of one Channel in one Slot, as the
+`delay` experiment does, the importer writes each in Publish order and the
+FMU takes the newest. The native adapter receives each of them.
 
 ### Lifecycle and diagnostics
 
@@ -508,6 +509,31 @@ readable. There is no Model Exchange, Scheduled Execution, Event Mode, Clock,
 early return, intermediate update, FMU state, derivative or execution tool.
 Each of those functions is exported, because FMI 3.0 requires every function,
 and each returns `fmi3Error`.
+
+## Native and FMU forms of one experiment
+
+[proofs/adas-equivalence/](../proofs/adas-equivalence/README.md) runs the
+maneuvers and the four experiments through both
+forms with installed SiL: the Native participant, and `AdasReference.fmu`
+through SiL's FMI importer. `reference_manifest` takes a `controller`
+argument, so both Manifests come from one declaration and differ only in the
+controller entry: the artifact, the Period as `period_ns` or
+`step_period_ns`, the parameters as config keys or `--start`, and the
+Channels as config keys or `--bind`.
+
+Each form is compared with the expected trajectory, with an FMPy execution
+of the archive, and with the other form. Every field is exact, the
+accelerations with a tolerance of 0: both forms round once from the same
+binary64 arithmetic. Five negative controls (a binding, the sign, a
+parameter, the output Sample-time offset, the input Latency) must fail at a
+first divergence predicted before the Run. In the `delay` experiment the FMU
+takes only the newest of three radar lists at 130 ms (see
+[Steps and deliveries](#steps-and-deliveries)). The proof declares that
+difference and requires the same Commands from both forms.
+
+```sh
+proofs/adas-equivalence/run-proof.sh    # needs docker and network
+```
 
 ## Scope
 

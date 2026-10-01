@@ -89,18 +89,18 @@ proof and commit its evidence (below).
 Every case checks the exact diagnostics the FMU logs. `check.json` keeps
 them.
 
-## SiL inspection today
+## SiL inspection
 
 [`recorded-input.mapping.json`](recorded-input.mapping.json) is the mapping
 a Run would declare to replay the maneuvers' input Recordings into this FMU
 and record its Commands. It binds every Schema field to its variable.
 `audit.py` runs `sil-fmi-inspect` with it, and with each binding alone, in a
-Channel of that one field. The importer must accept each scalar of
-`Float32`, `Int32`, `UInt32` and `UInt64` (20 bindings, since #189) and each
-`[8]` object array of those types (10 bindings, since #190). It must refuse
-every other binding, and only because the variable is of a type it does not
-map (`Int64`, `UInt8`). `inspection.json` keeps each verdict. The whole
-mapping stays refused until those two types are mapped.
+Channel of that one field. The importer must accept the whole mapping and
+each of its 36 bindings: the scalars of `Float32`, `Int32`, `UInt32` and
+`UInt64` (since #189), the `[8]` object arrays (since #190), and the `UInt8`
+validity flags and `Int64` ages (since #226). `inspection.json` keeps each
+verdict. [proofs/adas-equivalence/](../adas-equivalence/README.md) runs this
+archive through SiL.
 
 ## Evidence
 

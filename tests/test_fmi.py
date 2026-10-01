@@ -384,6 +384,32 @@ class TestExtractionLifetime:
 
         assert list(tmp_path.glob("sil-fmu-*")) == []
 
+    def test_an_error_status_frees_without_terminating(
+        self, monkeypatch, tmp_path, build_dir
+    ):
+        """After fmi3Error, FMI 3.0 allows fmi3Reset, fmi3FreeInstance and
+        the getters only. Terminating would add a second failure that hides
+        the first one."""
+        monkeypatch.chdir(tmp_path)
+        fmu = failing_fmu(tmp_path, build_dir, "Error")
+        calls = []
+        called = CoSimulation._call
+
+        def record(self, name, *arguments):
+            calls.append(name)
+            return called(self, name, *arguments)
+
+        monkeypatch.setattr(CoSimulation, "_call", record)
+        participant = FmuParticipant(fmu)
+        participant.on_init(init_line({"fmu.In": "in", "fmu.Out": "out"}))
+        with pytest.raises(ParticipantFailure, match="fmi3DoStep returned Error"):
+            participant.on_step(0, STEP_PERIOD_NS, [])
+
+        participant.close()
+
+        assert "fmi3Terminate" not in calls
+        assert list(tmp_path.glob("sil-fmu-*")) == []
+
     def test_a_fatal_terminate_still_drops_the_extraction(
         self, monkeypatch, tmp_path, build_dir
     ):

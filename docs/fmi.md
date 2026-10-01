@@ -58,8 +58,10 @@ stimulus — nothing else.
 Any co-simulation call that answers a status other than `fmi3OK` aborts the
 Run with exit 1, and the diagnostic names the call, the participant and the
 status. `Warning` aborts too: a Run that steps past a status the FMU raised is
-not evidence of anything. An FMU that answers `Fatal` is abandoned rather than
-terminated, which is what FMI 3.0 requires of its importer.
+not evidence of anything. An FMU that answers `Error` is freed without
+`fmi3Terminate`, and one that answers `Fatal` is abandoned rather than
+terminated, which is what FMI 3.0 requires of its importer. So the diagnostic
+names the call that failed, not a cleanup call after it.
 
 ### Binding the other variable types
 
@@ -93,13 +95,13 @@ be covered by the Run's provenance side-car, which digests every file a
 participant's command names.
 
 The mapped types are `Float64`, `Boolean` and `Binary` — the three the CAN
-acceptance fixture declares — and `Float32`, `Int32`, `UInt32` and `UInt64`,
-the numeric profile of the [C reference product](adas-reference.md) (next
-section). A `Boolean` is carried by a `u8` with C's own conversion — zero is
+acceptance fixture declares — and `Float32`, `Int32`, `UInt32`, `UInt64`,
+`UInt8` and `Int64`, the numeric profile of the
+[C reference product](adas-reference.md) (next section). A `Boolean` is carried by a `u8` with C's own conversion — zero is
 false, anything else is true — and what the FMU hands back is 0 or 1.
 
 A binding that names any other type — a `String`, an `Enumeration`, an
-`Int8`, `UInt8`, `Int16`, `UInt16` or `Int64` — is reported before the FMU is
+`Int8`, `Int16` or `UInt16` — is reported before the FMU is
 stepped, naming the type, as is one whose field type is not the one its
 variable's type maps to. A `Clock` is
 reported too, and for a different reason: it is driven through the variable it
@@ -112,10 +114,11 @@ of more than one value is refused.
 
 ### Numeric scalars
 
-The four numeric types are the ones the C reference product uses: `Float32`
+The six numeric types are the ones the C reference product uses: `Float32`
 for sensor and control values, `Int32` for signed selected IDs, `UInt32` for
-counts, modes and sequence numbers, and `UInt64` for Sample times. Each is
-carried by exactly one field type, of its own width and kind:
+counts, modes and sequence numbers, `UInt64` for Sample times, `UInt8` for
+validity flags and `Int64` for signed ages. Each is carried by exactly one
+field type, of its own width and kind:
 
 | FMI type | Field type | Start value (`--start`) |
 | --- | --- | --- |
@@ -123,6 +126,12 @@ carried by exactly one field type, of its own width and kind:
 | `Int32` | `i32` | a decimal integer in [−2³¹, 2³¹ − 1] |
 | `UInt32` | `u32` | a decimal integer in [0, 2³² − 1], with no sign |
 | `UInt64` | `u64` | a decimal integer in [0, 2⁶⁴ − 1], with no sign |
+| `UInt8` | `u8` | a decimal integer in [0, 255], with no sign |
+| `Int64` | `i64` | a decimal integer in [−2⁶³, 2⁶³ − 1] |
+
+A `u8` field carries a `Boolean` too. The variable's declared type decides
+the conversion: a `Boolean` reads back as 0 or 1, a `UInt8` keeps every value
+in [0, 255].
 
 Nothing is narrowed or coerced. A `UInt64` bound to a `u32`, `i64` or `f64`
 field, a `Float32` bound to an `f64`, an `Int32` bound to a `u8` and a
@@ -169,7 +178,7 @@ Schema field. This is the profile, and nothing outside it is mapped:
 
 | Property | Supported | Refused before stepping (exit 2) |
 | --- | --- | --- |
-| Element type | `Float32`, `Float64`, `Int32`, `UInt32`, `UInt64` | `Boolean` and `Binary` arrays; every type that is not mapped as a scalar |
+| Element type | `Float32`, `Float64`, `Int32`, `UInt32`, `UInt64`, `UInt8`, `Int64` | `Boolean` and `Binary` arrays; every type that is not mapped as a scalar |
 | Dimensions | each `<Dimension start="N"/>` with a literal N ≥ 1, any number of them | a `<Dimension valueReference=…>` (sized by a structural parameter), a start of 0 or below |
 | Value count | the product of the dimensions, above 1 (one value is a scalar) | a count whose buffer of the element type overflows `size_t`, or that the Importer cannot allocate |
 | Field | the scalar's field type (table above), with `count` equal to the value count | another type, another count, or a scalar field |

@@ -1,0 +1,30 @@
+{
+  "cases": [
+    "boundaries",
+    "cadence",
+    "cadence.delay",
+    "cadence.drop",
+    "cadence.late",
+    "cadence.rewrite",
+    "clear",
+    "freshness",
+    "hazard",
+    "occupancy",
+    "ordering",
+    "release",
+    "turnover",
+    "unavailable"
+  ],
+  "steps": {
+    "pin": true,
+    "forms": true,
+    "runs": true,
+    "independent": true,
+    "comparisons": true,
+    "controls": true,
+    "failures": true
+  },
+  "passed": true,
+  "matches_pin": true,
+  "fmu_sha256": "f99c95f06ac97a7ce0ade263fe191cc8579c1e93355d360680b2ae72c5d503ab"
+}

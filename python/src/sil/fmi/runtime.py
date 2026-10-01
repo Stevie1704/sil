@@ -43,6 +43,7 @@ NS_PER_S = 1_000_000_000
 # Run before the importer can continue with a possibly invalid FMU state.
 _FMI_STATUS_NAMES = ("OK", "Warning", "Discard", "Error", "Fatal")
 _FMI_SUCCESS_STATUS = 0
+_FMI_ERROR_STATUS = 3
 _FMI_FATAL_STATUS = 4
 
 # fmi3IntervalQualifier. `NotYetKnown` is the FMU saying it has no activation
@@ -140,6 +141,8 @@ _ELEMENTS = {
     "Int32": ctypes.c_int32,
     "UInt32": ctypes.c_uint32,
     "UInt64": ctypes.c_uint64,
+    "UInt8": ctypes.c_uint8,
+    "Int64": ctypes.c_int64,
 }
 
 
@@ -238,6 +241,9 @@ class CoSimulation:
         # The FMU calls this for the life of the instance, so the ctypes
         # trampoline has to outlive this constructor.
         self._logger = _LOG_CALLBACK(_log_to_stderr)
+        # Set when a call answers Error: FMI 3.0 then allows only fmi3Reset,
+        # fmi3FreeInstance and the getters, so `close` must not terminate.
+        self._failed = False
         self._instance = self._library["fmi3InstantiateCoSimulation"](
             description.model_identifier.encode(),
             description.instantiation_token.encode(),
@@ -457,12 +463,14 @@ class CoSimulation:
 
         The instance holds the FMU's memory either way, so the free is the
         half the failing path needs most — unless the FMU answered Fatal, which
-        bars the free along with every other call.
+        bars the free along with every other call. After an Error the
+        instance is freed without being terminated.
         """
         if self._instance is None:
             return
         try:
-            self._call("fmi3Terminate")
+            if not self._failed:
+                self._call("fmi3Terminate")
         finally:
             # `_call` drops the handle when a call answers Fatal, and freeing
             # is itself a call this FMU may no longer take.
@@ -480,6 +488,8 @@ class CoSimulation:
         status = self._library[name](self._instance, *arguments)
         if status == _FMI_SUCCESS_STATUS:
             return
+        if status == _FMI_ERROR_STATUS:
+            self._failed = True
         if status == _FMI_FATAL_STATUS:
             # FMI 3.0 allows no further call on an instance that answered
             # Fatal, terminating and freeing it included. Dropping the handle

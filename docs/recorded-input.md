@@ -239,11 +239,11 @@ Supported limits:
   A Clock is carried only as a clocked Binary payload of a `triggered`
   Clock. The command does not author a group of connected FMUs.
 - **Types.** The importer's mapped types: `Float64`, `Boolean`, `Binary`,
-  `Float32`, `Int32`, `UInt32` and `UInt64`, each in the field type of its
+  `Float32`, `Int32`, `UInt32`, `UInt64`, `UInt8` and `Int64`, each in the field type of its
   own width ([FMI importer](fmi.md#numeric-scalars)). Other types can be
   held at their declared start. `make example-fmu-numeric` replays the four
   numeric types into `Feedthrough`.
-- **Arrays.** A `Float32`, `Float64`, `Int32`, `UInt32` or `UInt64` array with
+- **Arrays.** A `Float32`, `Float64`, `Int32`, `UInt32`, `UInt64`, `UInt8` or `Int64` array with
   literal dimensions is one Channel field with `count` equal to its value
   count, in row-major order ([FMI importer](fmi.md#fixed-size-numeric-arrays)).
   Its start value lists every value, separated by single spaces.

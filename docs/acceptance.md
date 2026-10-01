@@ -65,6 +65,16 @@ importer's type and array support, not a supplier FMU.
 proofs/adas-fmu/run-proof.sh            # needs docker and network
 ```
 
+[proofs/adas-equivalence/](../proofs/adas-equivalence/README.md) runs that
+archive and the native library through installed SiL against one declared
+experiment: each form against the enumerated trajectories, an FMPy
+execution and the other form, with negative controls at predicted
+divergences and failures with their exit codes.
+
+```sh
+proofs/adas-equivalence/run-proof.sh    # needs docker and network
+```
+
 ## Regression bundles
 
 `sil-bundle` packages an adopter's own regression in the same way. The
