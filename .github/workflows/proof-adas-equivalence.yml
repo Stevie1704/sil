@@ -1,0 +1,35 @@
+name: proof-adas-equivalence
+
+# The native/FMU equivalence of the ADAS reference controller (issue #226),
+# on its acceptance platform. It builds a pinned image with network, so it
+# sits outside the general push gate. It runs for PRs touching the
+# application, its FMU, the proofs, or the SiL code a Run goes through.
+
+on:
+  pull_request:
+    paths:
+      - 'examples/adas-reference/**'
+      - 'proofs/adas-equivalence/**'
+      - 'proofs/adas-fmu/**'
+      - 'proofs/acc-fmi/requirements.lock'
+      - 'python/src/sil/**'
+      - 'kernel/**'
+      - 'include/**'
+      - 'container/**'
+      - '.github/workflows/proof-adas-equivalence.yml'
+  workflow_dispatch:
+
+jobs:
+  proof:
+    # Native linux/amd64: the platform the archive is built for and pinned on.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run native and FMU forms, compare, run controls and failures
+        run: proofs/adas-equivalence/run-proof.sh "$PWD/build/adas-equivalence-evidence"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: adas-equivalence-evidence
+          path: build/adas-equivalence-evidence/
