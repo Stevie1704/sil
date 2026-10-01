@@ -75,6 +75,17 @@ divergences and failures with their exit codes.
 proofs/adas-equivalence/run-proof.sh    # needs docker and network
 ```
 
+[proofs/adas-closed-loop/](../proofs/adas-closed-loop/README.md) closes a
+loop with the same controller, in both forms, over the qualified ACC plant
+FMU: edge Participants derive processed radar, camera and ego observations
+from plant truth, and an edge conversion applies the Command to the plant.
+Each form is compared with an independent FMPy execution and with the other
+form, against KPIs and an effect envelope declared before the Runs.
+
+```sh
+proofs/adas-closed-loop/run-proof.sh    # needs docker and network
+```
+
 ## Regression bundles
 
 `sil-bundle` packages an adopter's own regression in the same way. The

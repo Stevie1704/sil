@@ -1,0 +1,40 @@
+name: proof-adas-closed-loop
+
+# The ADAS reference controller in a closed loop over the ACC plant FMU
+# (issue #227), on its acceptance platform. It builds a pinned image with
+# network, so it sits outside the general push gate. It runs for PRs
+# touching the application, its FMU, the plant, the proofs, or the SiL code
+# a Run goes through.
+
+on:
+  pull_request:
+    paths:
+      - 'examples/adas-reference/**'
+      - 'proofs/adas-closed-loop/**'
+      - 'proofs/adas-equivalence/experiment.py'
+      - 'proofs/adas-fmu/**'
+      - 'proofs/acc-fmi/build.py'
+      - 'proofs/acc-fmi/models/plant.py'
+      - 'proofs/acc-fmi/requirements.lock'
+      - 'proofs/acc-fmi/multirate-evidence/report.json'
+      - 'python/src/sil/**'
+      - 'kernel/**'
+      - 'include/**'
+      - 'container/**'
+      - '.github/workflows/proof-adas-closed-loop.yml'
+  workflow_dispatch:
+
+jobs:
+  proof:
+    # Native linux/amd64: the platform both archives are built for.
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Close the loop in both forms, compare, run the failures
+        run: proofs/adas-closed-loop/run-proof.sh "$PWD/build/adas-closed-loop-evidence"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: adas-closed-loop-evidence
+          path: build/adas-closed-loop-evidence/
