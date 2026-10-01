@@ -2,6 +2,7 @@
   "cases": [
     "boundaries",
     "cadence",
+    "cadence.delay",
     "cadence.drop",
     "cadence.late",
     "cadence.rewrite",

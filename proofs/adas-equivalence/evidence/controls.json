@@ -4,7 +4,7 @@
     "why": "the radar x_m field bound to the variable radar.y_m: the FMU's radar.x_m keeps its start value 0, which is not eligible (x > 0); no confirmed object, so CLEAR where the oracle has HAZARD",
     "run": {
       "exit": 0,
-      "seconds": 0.906,
+      "seconds": 0.875,
       "stderr": ""
     },
     "compare_exit": 1,
@@ -28,7 +28,7 @@
     "why": "an archive built with ADAS_REFERENCE_WRONG_SIGN: the object closing at 25 m/s has closing speed 0 and x = 30 m >= 8 m, so CLEAR",
     "run": {
       "exit": 0,
-      "seconds": 0.985,
+      "seconds": 0.894,
       "stderr": ""
     },
     "compare_exit": 1,
@@ -76,7 +76,7 @@
     "why": "the contract reads the publication Slot as the Sample time (actual_offset_ns 0): the observation at 10 ms is the Command published at 10 ms, whose Sample time is 20 ms",
     "run": {
       "exit": 0,
-      "seconds": 0.909,
+      "seconds": 0.917,
       "stderr": ""
     },
     "compare_exit": 1,
@@ -100,7 +100,7 @@
     "why": "every input Channel with one Period of Latency: the first activation receives nothing, so SENSOR_UNAVAILABLE where the oracle has CLEAR",
     "run": {
       "exit": 0,
-      "seconds": 0.955,
+      "seconds": 0.865,
       "stderr": ""
     },
     "compare_exit": 1,

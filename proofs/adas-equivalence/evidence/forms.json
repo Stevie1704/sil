@@ -1854,6 +1854,182 @@
       }
     }
   },
+  "cadence.delay": {
+    "case": "cadence.delay",
+    "maneuver": "cadence",
+    "differences": [
+      "participants.cadence.command",
+      "participants.cadence.config",
+      "participants.cadence.library",
+      "participants.cadence.priority",
+      "participants.cadence.step_period_ns",
+      "participants.cadence.type"
+    ],
+    "shared": {
+      "duration_ns": 200000000,
+      "channels": {
+        "cadence.camera": {
+          "latency_ns": 0,
+          "schema": "adas.ObjectList"
+        },
+        "cadence.command": {
+          "latency_ns": 10000000,
+          "schema": "adas.Command"
+        },
+        "cadence.ego": {
+          "latency_ns": 0,
+          "schema": "adas.EgoMotion"
+        },
+        "cadence.radar": {
+          "interceptors": [
+            {
+              "delay_ns": 50000000,
+              "end_ns": 100000000,
+              "kind": "delay",
+              "start_ns": 60000000
+            }
+          ],
+          "latency_ns": 0,
+          "schema": "adas.ObjectList"
+        }
+      },
+      "replay": {
+        "channels": [
+          "cadence.radar",
+          "cadence.camera",
+          "cadence.ego"
+        ],
+        "recording": "/work/work/inputs/cadence.inputs.mcap",
+        "recording_hash": "50cd6a8dbc62782b4d39bbdc918599f688769f89cd3a2a8869e9fa6997fb9d8b",
+        "type": "replay"
+      },
+      "subscribes": [
+        {
+          "capacity": 3,
+          "channel": "cadence.radar",
+          "overflow": "fail"
+        },
+        {
+          "capacity": 3,
+          "channel": "cadence.camera",
+          "overflow": "fail"
+        },
+        {
+          "capacity": 3,
+          "channel": "cadence.ego",
+          "overflow": "fail"
+        }
+      ],
+      "publishes": [
+        "cadence.command"
+      ]
+    },
+    "native": {
+      "library": "adas_reference.so",
+      "library_sha256": "b150052c549d5745eab3ac55556ed71f44eb9213a406dce8cb2664d6ccbafbd3",
+      "config": {
+        "camera": "cadence.camera",
+        "command": "cadence.command",
+        "ego": "cadence.ego",
+        "hazard_acceleration_mps2": -3.0,
+        "max_change_mps2": 0.5,
+        "period_ns": 10000000,
+        "profile": "sil.adas-reference.radar-camera",
+        "profile_version": 3,
+        "radar": "cadence.radar"
+      }
+    },
+    "fmu": {
+      "archive": "AdasReference.fmu",
+      "archive_sha256": "f99c95f06ac97a7ce0ade263fe191cc8579c1e93355d360680b2ae72c5d503ab",
+      "step_period_ns": 10000000,
+      "priority": 0,
+      "bind": [
+        "cadence.radar:sample_time_ns=radar.sample_time_ns",
+        "cadence.radar:sensor_id=radar.sensor_id",
+        "cadence.radar:frame_id=radar.frame_id",
+        "cadence.radar:sequence=radar.sequence",
+        "cadence.radar:count=radar.count",
+        "cadence.radar:validity=radar.validity",
+        "cadence.radar:object_id=radar.object_id",
+        "cadence.radar:x_m=radar.x_m",
+        "cadence.radar:y_m=radar.y_m",
+        "cadence.radar:relative_vx_mps=radar.relative_vx_mps",
+        "cadence.radar:confidence=radar.confidence",
+        "cadence.camera:sample_time_ns=camera.sample_time_ns",
+        "cadence.camera:sensor_id=camera.sensor_id",
+        "cadence.camera:frame_id=camera.frame_id",
+        "cadence.camera:sequence=camera.sequence",
+        "cadence.camera:count=camera.count",
+        "cadence.camera:validity=camera.validity",
+        "cadence.camera:object_id=camera.object_id",
+        "cadence.camera:x_m=camera.x_m",
+        "cadence.camera:y_m=camera.y_m",
+        "cadence.camera:relative_vx_mps=camera.relative_vx_mps",
+        "cadence.camera:confidence=camera.confidence",
+        "cadence.ego:sample_time_ns=ego.sample_time_ns",
+        "cadence.ego:sequence=ego.sequence",
+        "cadence.ego:validity=ego.validity",
+        "cadence.ego:speed_mps=ego.speed_mps",
+        "cadence.command:sample_time_ns=command.sample_time_ns",
+        "cadence.command:sequence=command.sequence",
+        "cadence.command:mode=command.mode",
+        "cadence.command:selected_object_id=command.selected_object_id",
+        "cadence.command:target_acceleration_mps2=command.target_acceleration_mps2",
+        "cadence.command:acceleration_mps2=command.acceleration_mps2",
+        "cadence.command:radar_age_ns=command.radar_age_ns",
+        "cadence.command:camera_age_ns=command.camera_age_ns",
+        "cadence.command:ego_age_ns=command.ego_age_ns",
+        "cadence.command:ignored_observations=command.ignored_observations"
+      ],
+      "start": [
+        "hazard_acceleration_mps2=-3.0",
+        "max_change_mps2=0.5"
+      ]
+    },
+    "adaptation": {
+      "period_ns": {
+        "native": 10000000,
+        "fmu": 10000000
+      },
+      "parameters": {
+        "hazard_acceleration_mps2": {
+          "native": -3.0,
+          "fmu": "-3.0"
+        },
+        "max_change_mps2": {
+          "native": 0.5,
+          "fmu": "0.5"
+        }
+      },
+      "channels": {
+        "radar": {
+          "native": "cadence.radar",
+          "fmu": [
+            "cadence.radar"
+          ]
+        },
+        "camera": {
+          "native": "cadence.camera",
+          "fmu": [
+            "cadence.camera"
+          ]
+        },
+        "ego": {
+          "native": "cadence.ego",
+          "fmu": [
+            "cadence.ego"
+          ]
+        },
+        "command": {
+          "native": "cadence.command",
+          "fmu": [
+            "cadence.command"
+          ]
+        }
+      }
+    }
+  },
   "cadence.rewrite": {
     "case": "cadence.rewrite",
     "maneuver": "cadence",

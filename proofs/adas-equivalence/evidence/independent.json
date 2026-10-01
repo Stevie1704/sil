@@ -1,54 +1,120 @@
 {
   "clear": {
     "exit": 0,
-    "stderr": ""
+    "stderr": "",
+    "superseded": [],
+    "declared": [],
+    "passed": true
   },
   "hazard": {
     "exit": 0,
-    "stderr": ""
+    "stderr": "",
+    "superseded": [],
+    "declared": [],
+    "passed": true
   },
   "release": {
     "exit": 0,
-    "stderr": ""
+    "stderr": "",
+    "superseded": [],
+    "declared": [],
+    "passed": true
   },
   "unavailable": {
     "exit": 0,
-    "stderr": ""
+    "stderr": "",
+    "superseded": [],
+    "declared": [],
+    "passed": true
   },
   "boundaries": {
     "exit": 0,
-    "stderr": ""
+    "stderr": "",
+    "superseded": [],
+    "declared": [],
+    "passed": true
   },
   "occupancy": {
     "exit": 0,
-    "stderr": ""
+    "stderr": "",
+    "superseded": [],
+    "declared": [],
+    "passed": true
   },
   "turnover": {
     "exit": 0,
-    "stderr": ""
+    "stderr": "",
+    "superseded": [],
+    "declared": [],
+    "passed": true
   },
   "ordering": {
     "exit": 0,
-    "stderr": ""
+    "stderr": "",
+    "superseded": [],
+    "declared": [],
+    "passed": true
   },
   "cadence": {
     "exit": 0,
-    "stderr": ""
+    "stderr": "",
+    "superseded": [],
+    "declared": [],
+    "passed": true
   },
   "freshness": {
     "exit": 0,
-    "stderr": ""
+    "stderr": "",
+    "superseded": [],
+    "declared": [],
+    "passed": true
   },
   "cadence.drop": {
     "exit": 0,
-    "stderr": ""
+    "stderr": "",
+    "superseded": [],
+    "declared": [],
+    "passed": true
+  },
+  "cadence.delay": {
+    "exit": 0,
+    "stderr": "",
+    "superseded": [
+      {
+        "t_ns": 130000000,
+        "sensor": "radar",
+        "superseded_ns": [
+          80000000,
+          100000000
+        ],
+        "taken_ns": 120000000
+      }
+    ],
+    "declared": [
+      {
+        "t_ns": 130000000,
+        "sensor": "radar",
+        "superseded_ns": [
+          80000000,
+          100000000
+        ],
+        "taken_ns": 120000000
+      }
+    ],
+    "passed": true
   },
   "cadence.rewrite": {
     "exit": 0,
-    "stderr": ""
+    "stderr": "",
+    "superseded": [],
+    "declared": [],
+    "passed": true
   },
   "cadence.late": {
     "exit": 0,
-    "stderr": ""
+    "stderr": "",
+    "superseded": [],
+    "declared": [],
+    "passed": true
   }
 }

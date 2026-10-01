@@ -1,85 +1,80 @@
 {
-  "cases": {
-    "incompatible_array": {
-      "case": "hazard",
-      "why": "an [8] array variable bound to a scalar field, and back: refused before the FMU is loaded",
-      "expected_exit": 2,
-      "fmu": {
-        "exit": 2,
-        "seconds": 1.007,
-        "stderr": "sil-run: participant 'hazard': sil.participant.ManifestError: Channel 'hazard.ego' declares field 'speed_mps' as a 'f32' scalar; Float32 variable 'radar.x_m' of dimensions [8] of 8 values is carried by a 'f32' array of 8",
-        "leftover_processes": [],
-        "diagnostics": [
-          "Float32 variable 'radar.x_m' of dimensions [8] of 8 values",
-          "'f32' scalar"
-        ],
-        "passed": true
-      },
+  "incompatible_array": {
+    "case": "hazard",
+    "why": "an [8] array variable bound to a scalar field, and back: refused before the FMU is loaded",
+    "expected_exit": 2,
+    "fmu": {
+      "exit": 2,
+      "seconds": 0.844,
+      "stderr": "sil-run: participant 'hazard': sil.participant.ManifestError: Channel 'hazard.ego' declares field 'speed_mps' as a 'f32' scalar; Float32 variable 'radar.x_m' of dimensions [8] of 8 values is carried by a 'f32' array of 8",
+      "leftover_processes": [],
+      "diagnostics": [
+        "Float32 variable 'radar.x_m' of dimensions [8] of 8 values",
+        "'f32' scalar"
+      ],
       "passed": true
     },
-    "unsupported_step": {
-      "case": "hazard",
-      "why": "a 20 ms step: the FMU declares one fixed 10 ms step and no variable communication step size",
-      "expected_exit": 1,
-      "fmu": {
-        "exit": 1,
-        "seconds": 0.909,
-        "stderr": "fmu: communicationStepSize 0.02 s is not the fixed step 10000000 ns; the FMU has no variable step\nsil-run: participant 'hazard' failed: sil.participant.ParticipantFailure: fmi3DoStep returned Error",
-        "leftover_processes": [],
-        "diagnostics": [
-          "not the fixed step 10000000 ns",
-          "fmi3DoStep returned Error"
-        ],
-        "passed": true
-      },
-      "passed": true
-    },
-    "parameter_out_of_range": {
-      "case": "hazard",
-      "why": "max_change_mps2 20 is outside (0, 10]: initialization fails",
-      "expected_exit": 1,
-      "fmu": {
-        "exit": 1,
-        "seconds": 0.947,
-        "stderr": "fmu: initialization failed: max_change_mps2 20 is outside (0, 10]\nsil-run: participant 'hazard' failed: sil.participant.ParticipantFailure: fmi3ExitInitializationMode returned Error",
-        "leftover_processes": [],
-        "diagnostics": [
-          "max_change_mps2 20 is outside (0, 10]",
-          "fmi3ExitInitializationMode returned Error"
-        ],
-        "passed": true
-      },
-      "passed": true
-    },
-    "malformed_input": {
-      "case": "hazard",
-      "why": "an Interceptor writes radar.count 9 into the lists published in [20, 40) ms: both forms fail at 20 ms",
-      "expected_exit": 1,
-      "fmu": {
-        "exit": 1,
-        "seconds": 0.935,
-        "stderr": "fmu: t=20000000 ns: radar.count 9 exceeds the capacity 8\nsil-run: participant 'hazard' failed: sil.participant.ParticipantFailure: fmi3DoStep returned Error",
-        "leftover_processes": [],
-        "diagnostics": [
-          "t=20000000 ns: radar.count 9 exceeds the capacity 8",
-          "fmi3DoStep returned Error"
-        ],
-        "passed": true
-      },
-      "native": {
-        "exit": 1,
-        "seconds": 0.104,
-        "stderr": "sil-run: participant 'hazard' failed: t=20000000 ns: radar.count 9 exceeds the capacity 8",
-        "leftover_processes": [],
-        "diagnostics": [
-          "t=20000000 ns: radar.count 9 exceeds the capacity 8"
-        ],
-        "passed": true
-      },
-      "passed": true
-    }
+    "passed": true
   },
-  "outside_fmu": {
-    "delay": "it delivers the radar lists sampled at 80, 100 and 120 ms in one Slot (130 ms); the FMU takes at most one observation per sensor per step, because its inputs hold the last value written"
+  "unsupported_step": {
+    "case": "hazard",
+    "why": "a 20 ms step: the FMU declares one fixed 10 ms step and no variable communication step size",
+    "expected_exit": 1,
+    "fmu": {
+      "exit": 1,
+      "seconds": 0.886,
+      "stderr": "fmu: communicationStepSize 0.02 s is not the fixed step 10000000 ns; the FMU has no variable step\nsil-run: participant 'hazard' failed: sil.participant.ParticipantFailure: fmi3DoStep returned Error",
+      "leftover_processes": [],
+      "diagnostics": [
+        "not the fixed step 10000000 ns",
+        "fmi3DoStep returned Error"
+      ],
+      "passed": true
+    },
+    "passed": true
+  },
+  "parameter_out_of_range": {
+    "case": "hazard",
+    "why": "max_change_mps2 20 is outside (0, 10]: initialization fails",
+    "expected_exit": 1,
+    "fmu": {
+      "exit": 1,
+      "seconds": 0.844,
+      "stderr": "fmu: initialization failed: max_change_mps2 20 is outside (0, 10]\nsil-run: participant 'hazard' failed: sil.participant.ParticipantFailure: fmi3ExitInitializationMode returned Error",
+      "leftover_processes": [],
+      "diagnostics": [
+        "max_change_mps2 20 is outside (0, 10]",
+        "fmi3ExitInitializationMode returned Error"
+      ],
+      "passed": true
+    },
+    "passed": true
+  },
+  "malformed_input": {
+    "case": "hazard",
+    "why": "an Interceptor writes radar.count 9 into the lists published in [20, 40) ms: both forms fail at 20 ms",
+    "expected_exit": 1,
+    "fmu": {
+      "exit": 1,
+      "seconds": 0.853,
+      "stderr": "fmu: t=20000000 ns: radar.count 9 exceeds the capacity 8\nsil-run: participant 'hazard' failed: sil.participant.ParticipantFailure: fmi3DoStep returned Error",
+      "leftover_processes": [],
+      "diagnostics": [
+        "t=20000000 ns: radar.count 9 exceeds the capacity 8",
+        "fmi3DoStep returned Error"
+      ],
+      "passed": true
+    },
+    "native": {
+      "exit": 1,
+      "seconds": 0.105,
+      "stderr": "sil-run: participant 'hazard' failed: t=20000000 ns: radar.count 9 exceeds the capacity 8",
+      "leftover_processes": [],
+      "diagnostics": [
+        "t=20000000 ns: radar.count 9 exceeds the capacity 8"
+      ],
+      "passed": true
+    },
+    "passed": true
   }
 }

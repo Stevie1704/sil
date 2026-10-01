@@ -1408,6 +1408,134 @@
         "passed": true
       }
     },
+    "cadence.delay": {
+      "native-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmu-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmpy-oracle": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "703d0c3293d4ecc6dbac6c12dccce47fb0dff5b279b96faafb7f06ef80d74346",
+        "passed": true
+      },
+      "native-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "fmu-fmpy": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+        "passed": true
+      },
+      "native-fmu": {
+        "exit": 0,
+        "verdict": "pass",
+        "channels": {
+          "cadence.command": {
+            "reference_channel": "cadence.command",
+            "observations": 20,
+            "checked": 20,
+            "failed": 0,
+            "nonfinite": 0,
+            "missing_actual": 0,
+            "missing_reference": 0,
+            "ambiguous_actual": 0,
+            "ambiguous_reference": 0
+          }
+        },
+        "divergences": 0,
+        "first_divergence": null,
+        "contract_sha256": "881637d314f2b7a7bf0827e73bad880dcbc66652e8f0668cbeed17042c2e9788",
+        "passed": true
+      }
+    },
     "cadence.rewrite": {
       "native-oracle": {
         "exit": 0,
