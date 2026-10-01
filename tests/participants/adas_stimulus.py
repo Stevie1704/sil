@@ -1,49 +1,79 @@
-"""Toy process participant: live radar, camera and ego-speed stimulus for the
-ADAS reference controller, with one field overridden at one Step.
+"""Toy process participant: live radar and camera object lists and ego
+motion for the ADAS reference controller, with fields overridden at one Step.
 
-    adas_stimulus.py <prefix> [<sensor>.<field>=<value>@<step> ...]
+    adas_stimulus.py <prefix> [<override> ...]
 
-Each Step publishes a confirmed, non-hazardous object sampled at t on
-`<prefix>.radar`, `<prefix>.camera` and `<prefix>.ego`. An override replaces
-one field at one Step, which is how the tests deliver values `sil-csv` refuses
-to convert, such as NaN, and impossible Sample times.
+Each Step publishes, sampled at t, a radar list of two objects and a camera
+list of one object that confirms radar object 7 (not a hazard) on
+`<prefix>.radar` and `<prefix>.camera`, and the ego speed on `<prefix>.ego`.
+An override is one of:
+
+- `<sensor>.<field>=<value>@<step>` replaces one header field;
+- `<sensor>.<field>[<i>]=<value>@<step>` replaces one array element;
+- `<sensor>*<n>@<step>` publishes that sensor's Message n times.
+
+This is how the tests deliver what `sil-csv` refuses to convert or
+`prepare.py` refuses to write, such as NaN, a count above the capacity,
+nonzero inactive elements and impossible Sample times.
 """
 
+import re
 import sys
 
 from sil.participant import StepParticipant, run
+
+CAPACITY = 8
+_FIELD = re.compile(r"(\w+)\.(\w+)(?:\[(\d+)\])?=(.+)@(\d+)")
+_REPEAT = re.compile(r"(\w+)\*(\d+)@(\d+)")
 
 
 def _value(text: str):
     return float(text) if any(c in text for c in ".naife") else int(text)
 
 
+def _objects(sensor_id: int, t: int, step: int, objects: list[tuple]) -> dict:
+    """The flat Schema form: active objects first, inactive elements zero."""
+    padded = objects + [(0, 0.0, 0.0, 0.0, 0.0)] * (CAPACITY - len(objects))
+    ids, xs, ys, vxs, confidences = (list(column) for column in zip(*padded))
+    return {"sample_time_ns": t, "sensor_id": sensor_id, "frame_id": 1,
+            "sequence": step, "count": len(objects), "validity": 1,
+            "object_id": ids, "x_m": xs, "y_m": ys, "relative_vx_mps": vxs,
+            "confidence": confidences}
+
+
 class AdasStimulus(StepParticipant):
     def __init__(self, prefix: str, overrides: list[str]):
         self.prefix = prefix
-        self.overrides = {}
+        self.fields = []
+        self.repeats = {}
         for item in overrides:
-            target, step = item.rsplit("@", 1)
-            name, value = target.split("=", 1)
-            sensor, field = name.split(".", 1)
-            self.overrides[(int(step), sensor, field)] = _value(value)
+            if m := _REPEAT.fullmatch(item):
+                self.repeats[(int(m[3]), m[1])] = int(m[2])
+            elif m := _FIELD.fullmatch(item):
+                index = None if m[3] is None else int(m[3])
+                self.fields.append((int(m[5]), m[1], m[2], index, _value(m[4])))
+            else:
+                raise SystemExit(f"adas_stimulus: bad override {item!r}")
 
     def on_step(self, t, dt, inputs):
         step = t // dt
         messages = {
-            "radar": {"sample_time_ns": t, "sequence": step, "sensor_id": 1,
-                      "object_id": 7, "x_m": 40.0, "y_m": 0.0,
-                      "relative_vx_mps": 0.0, "confidence": 0.875},
-            "camera": {"sample_time_ns": t, "sequence": step, "sensor_id": 2,
-                       "object_id": 3, "x_m": 40.5, "y_m": 0.25,
-                       "confidence": 0.75},
-            "ego": {"sample_time_ns": t, "sequence": step, "speed_mps": 20.0},
+            "radar": _objects(1, t, step, [(7, 40.0, 0.0, 0.0, 0.875),
+                                           (8, 60.0, 0.5, 0.0, 0.875)]),
+            "camera": _objects(2, t, step, [(3, 40.5, 0.25, 0.0, 0.75)]),
+            "ego": {"sample_time_ns": t, "sequence": step, "validity": 1,
+                    "speed_mps": 20.0},
         }
-        for (at, sensor, field), value in self.overrides.items():
-            if at == step:
+        for at, sensor, field, index, value in self.fields:
+            if at != step:
+                continue
+            if index is None:
                 messages[sensor][field] = value
+            else:
+                messages[sensor][field][index] = value
         return [(f"{self.prefix}.{sensor}", fields)
-                for sensor, fields in messages.items()]
+                for sensor, fields in messages.items()
+                for _ in range(self.repeats.get((step, sensor), 1))]
 
 
 if __name__ == "__main__":

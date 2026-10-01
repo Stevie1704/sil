@@ -1,4 +1,4 @@
-/* ADAS radar/camera reference controller — reference profile 1.
+/* ADAS radar/camera reference controller — reference profile 2.
  * See adas_reference.h for the interface and docs/adas-reference.md for the
  * profile. Each input is converted once from its Float32 field to binary64;
  * all reference arithmetic is binary64; outputs round to Float32 once, when
@@ -105,11 +105,20 @@ static adas_ref_status sampled_at(const char *field, uint64_t sample_time_ns,
   return ADAS_REF_ERR_SAMPLE_TIME;
 }
 
-static adas_ref_status object_id(const char *field, int32_t id,
-                                 adas_ref_fault *fault) {
-  if (id >= ADAS_REF_NO_OBJECT) return ADAS_REF_OK;
-  describe(fault, "%s %" PRId32 " is neither -1 (no object) nor >= 0", field,
-           id);
+static adas_ref_status equals(const char *field, uint32_t value,
+                              uint32_t required, const char *what,
+                              const char *note, adas_ref_fault *fault) {
+  if (value == required) return ADAS_REF_OK;
+  describe(fault, "%s %" PRIu32 " is not %s %" PRIu32 "%s", field, value,
+           what, required, note);
+  return ADAS_REF_ERR_INPUT;
+}
+
+static adas_ref_status validity(const char *field, uint8_t value,
+                                adas_ref_fault *fault) {
+  if (value <= 1) return ADAS_REF_OK;
+  describe(fault, "%s %u is neither 0 (invalid) nor 1 (valid)", field,
+           (unsigned)value);
   return ADAS_REF_ERR_INPUT;
 }
 
@@ -119,30 +128,89 @@ static adas_ref_status object_id(const char *field, int32_t id,
     if (status_ != ADAS_REF_OK) return status_; \
   } while (0)
 
-static adas_ref_status check_radar(const adas_ref_radar *r, uint64_t t,
-                                   adas_ref_fault *fault) {
-  CHECKED(sampled_at("radar.sample_time_ns", r->sample_time_ns, t, fault));
-  CHECKED(object_id("radar.object_id", r->object_id, fault));
-  CHECKED(finite("radar.x_m", r->x_m, fault));
-  CHECKED(finite("radar.y_m", r->y_m, fault));
-  CHECKED(finite("radar.relative_vx_mps", r->relative_vx_mps, fault));
-  CHECKED(finite("radar.confidence", r->confidence, fault));
+/* Names a list field, "radar.count", or an element, "radar.x_m[3]". */
+typedef struct field_name {
+  char text[48];
+} field_name;
+
+static field_name named(const char *sensor, const char *field) {
+  field_name n;
+  snprintf(n.text, sizeof n.text, "%s.%s", sensor, field);
+  return n;
+}
+
+static field_name element(const char *sensor, const char *field, uint32_t i) {
+  field_name n;
+  snprintf(n.text, sizeof n.text, "%s.%s[%" PRIu32 "]", sensor, field, i);
+  return n;
+}
+
+static adas_ref_status check_object(const char *sensor,
+                                    const adas_ref_object_list *list,
+                                    uint32_t i, int has_speed,
+                                    adas_ref_fault *fault) {
+  const adas_ref_object *o = &list->objects[i];
+  if (o->id < 0) {
+    describe(fault, "%s %" PRId32 " is negative; active IDs are >= 0 and "
+             "-1 is reserved for no selection",
+             element(sensor, "object_id", i).text, o->id);
+    return ADAS_REF_ERR_INPUT;
+  }
+  for (uint32_t j = 0; j < i; j++)
+    if (list->objects[j].id == o->id) {
+      describe(fault, "%s %" PRId32 " repeats %s",
+               element(sensor, "object_id", i).text, o->id,
+               element(sensor, "object_id", j).text);
+      return ADAS_REF_ERR_INPUT;
+    }
+  CHECKED(finite(element(sensor, "x_m", i).text, o->x_m, fault));
+  CHECKED(finite(element(sensor, "y_m", i).text, o->y_m, fault));
+  CHECKED(finite(element(sensor, "relative_vx_mps", i).text,
+                 o->relative_vx_mps, fault));
+  CHECKED(finite(element(sensor, "confidence", i).text, o->confidence, fault));
+  if (!(o->confidence >= 0.0f && o->confidence <= 1.0f)) {
+    describe(fault, "%s %g is outside [0, 1]",
+             element(sensor, "confidence", i).text, (double)o->confidence);
+    return ADAS_REF_ERR_INPUT;
+  }
+  if (!has_speed && o->relative_vx_mps != 0.0f) {
+    describe(fault, "%s %g is not 0; this sensor reports no speed",
+             element(sensor, "relative_vx_mps", i).text,
+             (double)o->relative_vx_mps);
+    return ADAS_REF_ERR_INPUT;
+  }
   return ADAS_REF_OK;
 }
 
-static adas_ref_status check_camera(const adas_ref_camera *c, uint64_t t,
-                                    adas_ref_fault *fault) {
-  CHECKED(sampled_at("camera.sample_time_ns", c->sample_time_ns, t, fault));
-  CHECKED(object_id("camera.object_id", c->object_id, fault));
-  CHECKED(finite("camera.x_m", c->x_m, fault));
-  CHECKED(finite("camera.y_m", c->y_m, fault));
-  CHECKED(finite("camera.confidence", c->confidence, fault));
+/* Every header field, then the count before any element is read. */
+static adas_ref_status check_list(const char *sensor, uint32_t sensor_id,
+                                  int has_speed,
+                                  const adas_ref_object_list *list, uint64_t t,
+                                  adas_ref_fault *fault) {
+  CHECKED(sampled_at(named(sensor, "sample_time_ns").text,
+                     list->sample_time_ns, t, fault));
+  char what[32];
+  snprintf(what, sizeof what, "the %s sensor", sensor);
+  CHECKED(equals(named(sensor, "sensor_id").text, list->sensor_id, sensor_id,
+                 what, "", fault));
+  CHECKED(equals(named(sensor, "frame_id").text, list->frame_id,
+                 ADAS_REF_EGO_FRAME_ID, "the ego frame",
+                 "; the profile transforms no frame", fault));
+  CHECKED(validity(named(sensor, "validity").text, list->validity, fault));
+  if (list->count > ADAS_REF_MAX_OBJECTS) {
+    describe(fault, "%s %" PRIu32 " exceeds the capacity %u",
+             named(sensor, "count").text, list->count, ADAS_REF_MAX_OBJECTS);
+    return ADAS_REF_ERR_INPUT;
+  }
+  for (uint32_t i = 0; i < list->count; i++)
+    CHECKED(check_object(sensor, list, i, has_speed, fault));
   return ADAS_REF_OK;
 }
 
 static adas_ref_status check_ego(const adas_ref_ego *e, uint64_t t,
                                  adas_ref_fault *fault) {
   CHECKED(sampled_at("ego.sample_time_ns", e->sample_time_ns, t, fault));
+  CHECKED(validity("ego.validity", e->validity, fault));
   CHECKED(finite("ego.speed_mps", e->speed_mps, fault));
   if (e->speed_mps < 0.0f) {
     describe(fault, "ego.speed_mps %g is negative", (double)e->speed_mps);
@@ -153,21 +221,64 @@ static adas_ref_status check_ego(const adas_ref_ego *e, uint64_t t,
 
 static adas_ref_status check_inputs(const adas_ref_inputs *in, uint64_t t,
                                     adas_ref_fault *fault) {
-  if (in->radar) CHECKED(check_radar(in->radar, t, fault));
-  if (in->camera) CHECKED(check_camera(in->camera, t, fault));
+  if (in->radar)
+    CHECKED(check_list("radar", ADAS_REF_RADAR_SENSOR_ID, 1, in->radar, t,
+                       fault));
+  if (in->camera)
+    CHECKED(check_list("camera", ADAS_REF_CAMERA_SENSOR_ID, 0, in->camera, t,
+                       fault));
   if (in->ego) CHECKED(check_ego(in->ego, t, fault));
   return ADAS_REF_OK;
 }
 
-static int eligible(const object *o) {
-  return o->id != ADAS_REF_NO_OBJECT && o->x_m > 0.0 &&
-         fabs(o->y_m) <= MAX_ABS_Y_M && o->confidence >= MIN_CONFIDENCE;
+static int available(const adas_ref_inputs *in) {
+  return in->radar && in->radar->validity && in->camera &&
+         in->camera->validity && in->ego && in->ego->validity;
 }
 
+static object from(const adas_ref_object *o) {
+  object converted = {o->x_m, o->y_m, o->relative_vx_mps, o->confidence,
+                      o->id};
+  return converted;
+}
+
+static int eligible(const object *o) {
+  return o->x_m > 0.0 && fabs(o->y_m) <= MAX_ABS_Y_M &&
+         o->confidence >= MIN_CONFIDENCE;
+}
+
+/* Association is geometric: radar and camera IDs are never compared. */
 static int confirms(const object *radar, const object *camera) {
   return eligible(radar) && eligible(camera) &&
          fabs(camera->x_m - radar->x_m) <= MAX_ASSOCIATION_DX_M &&
          fabs(camera->y_m - radar->y_m) <= MAX_ASSOCIATION_DY_M;
+}
+
+static int confirmed(const object *radar, const adas_ref_object_list *camera) {
+  for (uint32_t j = 0; j < camera->count; j++) {
+    object c = from(&camera->objects[j]);
+    if (confirms(radar, &c)) return 1;
+  }
+  return 0;
+}
+
+/* Nearer: smaller x; at equal x, the smaller radar ID. A total order on
+ * distinct IDs, so the selection does not depend on list order. */
+static int nearer(const object *a, const object *b) {
+  return a->x_m < b->x_m || (a->x_m == b->x_m && a->id < b->id);
+}
+
+/* The nearest confirmed radar object; returns 0 when there is none. */
+static int select_lead(const adas_ref_object_list *radar,
+                       const adas_ref_object_list *camera, object *lead) {
+  int found = 0;
+  for (uint32_t i = 0; i < radar->count; i++) {
+    object r = from(&radar->objects[i]);
+    if (!confirmed(&r, camera) || (found && !nearer(&r, lead))) continue;
+    *lead = r;
+    found = 1;
+  }
+  return found;
 }
 
 static int hazard(const object *radar) {
@@ -175,16 +286,6 @@ static int hazard(const object *radar) {
   return radar->x_m < HAZARD_DISTANCE_M ||
          (closing_mps > 0.0 &&
           radar->x_m / closing_mps < HAZARD_TIME_TO_COLLISION_S);
-}
-
-static object from_radar(const adas_ref_radar *r) {
-  object o = {r->x_m, r->y_m, r->relative_vx_mps, r->confidence, r->object_id};
-  return o;
-}
-
-static object from_camera(const adas_ref_camera *c) {
-  object o = {c->x_m, c->y_m, 0.0, c->confidence, c->object_id};
-  return o;
 }
 
 static double limited(double from, double to, double max_change) {
@@ -209,15 +310,14 @@ adas_ref_status adas_ref_advance(adas_ref_instance *instance, uint64_t t_ns,
 
   uint32_t mode;
   int32_t selected = ADAS_REF_NO_OBJECT;
-  if (!inputs->radar || !inputs->camera || !inputs->ego) {
+  object lead;
+  if (!available(inputs)) {
     mode = ADAS_REF_MODE_SENSOR_UNAVAILABLE;
   } else {
-    object radar = from_radar(inputs->radar);
-    object camera = from_camera(inputs->camera);
     mode = ADAS_REF_MODE_CLEAR;
-    if (confirms(&radar, &camera)) {
-      selected = radar.id;
-      if (hazard(&radar)) mode = ADAS_REF_MODE_HAZARD;
+    if (select_lead(inputs->radar, inputs->camera, &lead)) {
+      selected = lead.id;
+      if (hazard(&lead)) mode = ADAS_REF_MODE_HAZARD;
     }
   }
   double target = mode == ADAS_REF_MODE_CLEAR

@@ -1,31 +1,24 @@
 {
-  "adas.Radar": {
+  "adas.ObjectList": {
     "fields": [
       {"name": "sample_time_ns", "type": "u64"},
-      {"name": "sequence", "type": "u32"},
       {"name": "sensor_id", "type": "u32"},
-      {"name": "object_id", "type": "i32"},
-      {"name": "x_m", "type": "f32"},
-      {"name": "y_m", "type": "f32"},
-      {"name": "relative_vx_mps", "type": "f32"},
-      {"name": "confidence", "type": "f32"}
+      {"name": "frame_id", "type": "u32"},
+      {"name": "sequence", "type": "u32"},
+      {"name": "count", "type": "u32"},
+      {"name": "validity", "type": "u8"},
+      {"name": "object_id", "type": "i32", "count": 8},
+      {"name": "x_m", "type": "f32", "count": 8},
+      {"name": "y_m", "type": "f32", "count": 8},
+      {"name": "relative_vx_mps", "type": "f32", "count": 8},
+      {"name": "confidence", "type": "f32", "count": 8}
     ]
   },
-  "adas.Camera": {
+  "adas.EgoMotion": {
     "fields": [
       {"name": "sample_time_ns", "type": "u64"},
       {"name": "sequence", "type": "u32"},
-      {"name": "sensor_id", "type": "u32"},
-      {"name": "object_id", "type": "i32"},
-      {"name": "x_m", "type": "f32"},
-      {"name": "y_m", "type": "f32"},
-      {"name": "confidence", "type": "f32"}
-    ]
-  },
-  "adas.EgoSpeed": {
-    "fields": [
-      {"name": "sample_time_ns", "type": "u64"},
-      {"name": "sequence", "type": "u32"},
+      {"name": "validity", "type": "u8"},
       {"name": "speed_mps", "type": "f32"}
     ]
   },
