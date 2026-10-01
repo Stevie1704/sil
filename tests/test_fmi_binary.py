@@ -348,9 +348,9 @@ class TestScalarTypes:
 
     def test_an_unselected_integer_variable_is_reported(self, importer):
         """Reported as the type it is, rather than silently left unmapped."""
-        with pytest.raises(ManifestError, match="Int64 variable"):
+        with pytest.raises(ManifestError, match="Int16 variable"):
             importer(
-                binds=["t.In:value=Int64_input"],
+                binds=["t.In:value=Int16_input"],
                 channels={"t.In": ("t.Value", "in")},
                 schemas={"t.Value": {"fields": [{"name": "value", "type": "i64"}]}},
             )
@@ -439,7 +439,7 @@ class TestStartValues:
             ("Boolean_input=yes", "'true'"),
             ("Binary_input=zz", "hexadecimal"),
             ("String_input=x", "String variable"),
-            ("Int64_input=3", "Int64 variable"),
+            ("Int16_input=3", "Int16 variable"),
             ("Binary_input", "'<variable>=<value>'"),
         ],
     )

@@ -169,7 +169,7 @@ Channels (a Message published at t holds its publisher's outputs at t + the publ
 Supported limits:
 
 - **Channel fields only.** A connection carries a `Float64`, `Boolean`,
-  `Binary`, `Float32`, `Int32`, `UInt32` or `UInt64` value of one output, as
+  `Binary`, `Float32`, `Int32`, `UInt32`, `UInt64`, `UInt8` or `Int64` value of one output, as
   the single-FMU importer maps it, in the field type of that FMI type. A
   fixed-size numeric array is one field whose `count` is its value count
   ([FMI importer](fmi.md#fixed-size-numeric-arrays)), and both ends declare

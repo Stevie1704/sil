@@ -353,10 +353,8 @@ class TestWrongWidth:
 
     @pytest.mark.parametrize(("variable", "kind"), [
         ("Int8_input", "Int8"),
-        ("UInt8_input", "UInt8"),
         ("Int16_input", "Int16"),
         ("UInt16_input", "UInt16"),
-        ("Int64_input", "Int64"),
         ("Enumeration_input", "Enumeration"),
         ("String_input", "String"),
     ])
@@ -507,14 +505,14 @@ class TestInspection:
         assert declared[name]["unmappable"] is None
 
     @pytest.mark.parametrize("name", [
-        "Int8_input", "UInt8_output", "Int16_input", "UInt16_output",
-        "Int64_input", "String_input", "Enumeration_input",
+        "Int8_input", "Int16_input", "UInt16_output", "String_input",
+        "Enumeration_input",
     ])
     def test_each_unselected_type_is_reported(self, declared, name):
         assert declared[name]["unmappable"] == (
             f"which is a {declared[name]['type']} variable; this importer "
             f"maps Binary and the scalar types Float64, Boolean, Float32, "
-            f"Int32, UInt32, UInt64"
+            f"Int32, UInt32, UInt64, UInt8, Int64"
         )
 
     def test_unused_unsupported_variables_leave_the_archive_usable(self):

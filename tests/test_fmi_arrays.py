@@ -203,7 +203,7 @@ class TestShape:
 
     @pytest.mark.parametrize(("kind", "shape", "count", "reason"), [
         ("Boolean", (4,), 4, "arrays of Float64, Float32, Int32, UInt32, "
-                             "UInt64 only"),
+                             "UInt64, UInt8, Int64 only"),
         ("Binary", (2,), 2, "Binary variables of one value"),
         ("Float64", (None,), None, "dimensions with a literal start only"),
         ("Float64", (2, None), None, "dimensions with a literal start only"),
@@ -217,7 +217,7 @@ class TestShape:
         assert reason in unmappable(variable(kind, shape, count))
 
     @pytest.mark.parametrize("kind", ["Float32", "Float64", "Int32", "UInt32",
-                                      "UInt64"])
+                                      "UInt64", "UInt8", "Int64"])
     def test_a_literal_array_of_a_mapped_type_is_mappable(self, kind):
         assert unmappable(variable(kind, (2, 3), 6)) is None
 

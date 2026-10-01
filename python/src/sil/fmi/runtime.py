@@ -140,6 +140,8 @@ _ELEMENTS = {
     "Int32": ctypes.c_int32,
     "UInt32": ctypes.c_uint32,
     "UInt64": ctypes.c_uint64,
+    "UInt8": ctypes.c_uint8,
+    "Int64": ctypes.c_int64,
 }
 
 

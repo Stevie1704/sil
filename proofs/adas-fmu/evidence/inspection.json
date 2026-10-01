@@ -1,10 +1,10 @@
 {
-  "verdict": "mapping-rejected",
+  "verdict": "compatible",
   "unusable": [],
   "mapping": {
-    "accepted": false,
-    "rejection": "Channel 'radar' field 'validity' names FMU variable 'radar.validity', which is a UInt8 variable; this importer maps Binary and the scalar types Float64, Boolean, Float32, Int32, UInt32, UInt64",
-    "unbound": null
+    "accepted": true,
+    "rejection": null,
+    "unbound": []
   },
   "bindings": {
     "radar:sample_time_ns=radar.sample_time_ns": null,
@@ -12,7 +12,7 @@
     "radar:frame_id=radar.frame_id": null,
     "radar:sequence=radar.sequence": null,
     "radar:count=radar.count": null,
-    "radar:validity=radar.validity": "Channel 'radar' field 'validity' names FMU variable 'radar.validity', which is a UInt8 variable; this importer maps Binary and the scalar types Float64, Boolean, Float32, Int32, UInt32, UInt64",
+    "radar:validity=radar.validity": null,
     "radar:object_id=radar.object_id": null,
     "radar:x_m=radar.x_m": null,
     "radar:y_m=radar.y_m": null,
@@ -23,7 +23,7 @@
     "camera:frame_id=camera.frame_id": null,
     "camera:sequence=camera.sequence": null,
     "camera:count=camera.count": null,
-    "camera:validity=camera.validity": "Channel 'camera' field 'validity' names FMU variable 'camera.validity', which is a UInt8 variable; this importer maps Binary and the scalar types Float64, Boolean, Float32, Int32, UInt32, UInt64",
+    "camera:validity=camera.validity": null,
     "camera:object_id=camera.object_id": null,
     "camera:x_m=camera.x_m": null,
     "camera:y_m=camera.y_m": null,
@@ -31,7 +31,7 @@
     "camera:confidence=camera.confidence": null,
     "ego:sample_time_ns=ego.sample_time_ns": null,
     "ego:sequence=ego.sequence": null,
-    "ego:validity=ego.validity": "Channel 'ego' field 'validity' names FMU variable 'ego.validity', which is a UInt8 variable; this importer maps Binary and the scalar types Float64, Boolean, Float32, Int32, UInt32, UInt64",
+    "ego:validity=ego.validity": null,
     "ego:speed_mps=ego.speed_mps": null,
     "command:sample_time_ns=command.sample_time_ns": null,
     "command:sequence=command.sequence": null,
@@ -39,15 +39,11 @@
     "command:selected_object_id=command.selected_object_id": null,
     "command:target_acceleration_mps2=command.target_acceleration_mps2": null,
     "command:acceleration_mps2=command.acceleration_mps2": null,
-    "command:radar_age_ns=command.radar_age_ns": "Channel 'command' field 'radar_age_ns' names FMU variable 'command.radar_age_ns', which is a Int64 variable; this importer maps Binary and the scalar types Float64, Boolean, Float32, Int32, UInt32, UInt64",
-    "command:camera_age_ns=command.camera_age_ns": "Channel 'command' field 'camera_age_ns' names FMU variable 'command.camera_age_ns', which is a Int64 variable; this importer maps Binary and the scalar types Float64, Boolean, Float32, Int32, UInt32, UInt64",
-    "command:ego_age_ns=command.ego_age_ns": "Channel 'command' field 'ego_age_ns' names FMU variable 'command.ego_age_ns', which is a Int64 variable; this importer maps Binary and the scalar types Float64, Boolean, Float32, Int32, UInt32, UInt64",
+    "command:radar_age_ns=command.radar_age_ns": null,
+    "command:camera_age_ns=command.camera_age_ns": null,
+    "command:ego_age_ns=command.ego_age_ns": null,
     "command:ignored_observations=command.ignored_observations": null
   },
-  "missing_types": [
-    "Int64",
-    "UInt8"
-  ],
   "mapped": [
     "camera:confidence=camera.confidence",
     "camera:count=camera.count",
@@ -57,11 +53,15 @@
     "camera:sample_time_ns=camera.sample_time_ns",
     "camera:sensor_id=camera.sensor_id",
     "camera:sequence=camera.sequence",
+    "camera:validity=camera.validity",
     "camera:x_m=camera.x_m",
     "camera:y_m=camera.y_m",
     "command:acceleration_mps2=command.acceleration_mps2",
+    "command:camera_age_ns=command.camera_age_ns",
+    "command:ego_age_ns=command.ego_age_ns",
     "command:ignored_observations=command.ignored_observations",
     "command:mode=command.mode",
+    "command:radar_age_ns=command.radar_age_ns",
     "command:sample_time_ns=command.sample_time_ns",
     "command:selected_object_id=command.selected_object_id",
     "command:sequence=command.sequence",
@@ -69,6 +69,7 @@
     "ego:sample_time_ns=ego.sample_time_ns",
     "ego:sequence=ego.sequence",
     "ego:speed_mps=ego.speed_mps",
+    "ego:validity=ego.validity",
     "radar:confidence=radar.confidence",
     "radar:count=radar.count",
     "radar:frame_id=radar.frame_id",
@@ -77,6 +78,7 @@
     "radar:sample_time_ns=radar.sample_time_ns",
     "radar:sensor_id=radar.sensor_id",
     "radar:sequence=radar.sequence",
+    "radar:validity=radar.validity",
     "radar:x_m=radar.x_m",
     "radar:y_m=radar.y_m"
   ]

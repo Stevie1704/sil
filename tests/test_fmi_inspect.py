@@ -170,9 +170,10 @@ class TestTheArchiveFacts:
         """Feedthrough declares every type there is and runs all the same:
         a variable no Channel names is never touched."""
         declared = variables(report)
-        assert declared["Int64_input"]["unmappable"] == (
-            "which is a Int64 variable; this importer maps Binary and the "
-            "scalar types Float64, Boolean, Float32, Int32, UInt32, UInt64"
+        assert declared["Int16_input"]["unmappable"] == (
+            "which is a Int16 variable; this importer maps Binary and the "
+            "scalar types Float64, Boolean, Float32, Int32, UInt32, UInt64, "
+            "UInt8, Int64"
         )
         assert declared["Boolean_input"]["unmappable"] is None
         assert declared["Binary_output"]["unmappable"] is None
@@ -329,7 +330,7 @@ REJECTED_MAPPINGS = {
     "unselected integer binding": feedthrough_mapping(
         schemas=BOUND_SCHEMAS,
         channels={"fmu.In": {"schema": "fmu.In", "direction": "in"}},
-        bind=["fmu.In:value=Int64_input"],
+        bind=["fmu.In:value=Int16_input"],
     ),
     "type mismatch": feedthrough_mapping(
         schemas={"fmu.In": {"fields": [{"name": "value", "type": "f32"}]}},
@@ -553,7 +554,7 @@ class TestTheCommand:
         assert main([str(FEEDTHROUGH), "--mapping", str(path)]) == (
             EXIT_MAPPING_REJECTED
         )
-        assert "Int64_input" in capsys.readouterr().out
+        assert "Int16_input" in capsys.readouterr().out
 
     @pytest.mark.parametrize("document, message", [
         ("not json", "is not JSON"),
