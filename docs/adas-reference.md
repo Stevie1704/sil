@@ -413,31 +413,98 @@ future and past Sample times, duplicate and decreasing sequences, a list
 repeated in one Slot, and four lists in one Slot, which overflow the finite
 Subscriber route of capacity 3.
 
-## Shapes for a future FMU
+## FMI 3.0 export
 
-A later FMU that implements this profile exchanges the same values as FMI 3
-variables. Each list field becomes one variable; the sizes are literal
-`Dimension start` values, not structural parameters. Variable names below
-use the `radar.` prefix; the camera uses `camera.` with the same shapes.
+[examples/adas-reference/fmu/](../examples/adas-reference/fmu/) packages the
+same application behind an FMI 3.0 Co-Simulation interface:
+`AdasReference.fmu`. It is the reference acceptance artifact for SiL's FMI
+importer: the FMU [#189](https://github.com/Stevie1704/sil/issues/189) and
+[#190](https://github.com/Stevie1704/sil/issues/190) must be able to drive.
+It is repository-owned. It is not a supplier FMU and makes no supplier
+compatibility claim. [proofs/adas-fmu/](../proofs/adas-fmu/README.md)
+builds, audits and checks it on Linux x86-64 and keeps the evidence.
 
-| Variable | FMI 3 type | Shape |
+| File | Role |
+| --- | --- |
+| `fmi3_controller.c` | the FMI 3.0 functions around `adas_reference.c`; it adds no control behavior |
+| `modelDescription.xml` | the interface; `package.py` writes the instantiation token into it |
+| `package.py` | compiles with fixed flags, writes the archive and its identity |
+| `fmi3/` | the FMI 3.0.2 headers and their BSD-2-Clause license, unmodified |
+
+### Variables
+
+Each Schema field is one variable named `<channel>.<field>`: `radar.`,
+`camera.`, `ego.` (inputs) and `command.` (outputs). A field with a `count`
+is a one-dimensional variable with a literal `<Dimension start="8"/>`, not a
+structural parameter. Element `i` is element `i` of the Schema field.
+The names of the object fields follow some ASAM OSI detected-object terms
+(ID, position, relative velocity, existence probability). The profile is not
+OSI-compatible and needs no Protobuf.
+
+| Schema type | FMI 3 type | Variables |
 | --- | --- | --- |
-| `radar.sample_time_ns` | `UInt64` | scalar |
-| `radar.sensor_id`, `radar.frame_id`, `radar.sequence`, `radar.count` | `UInt32` | scalar |
-| `radar.validity` | `UInt8` | scalar |
-| `radar.object_id` | `Int32` | one dimension, `<Dimension start="8"/>` |
-| `radar.x_m`, `radar.y_m`, `radar.relative_vx_mps`, `radar.confidence` | `Float32` | one dimension, `<Dimension start="8"/>` |
-| `ego.sample_time_ns` | `UInt64` | scalar |
-| `ego.sequence` | `UInt32` | scalar |
-| `ego.validity` | `UInt8` | scalar |
-| `ego.speed_mps` | `Float32` | scalar |
-| `command.*` | as `adas.Command` | scalars |
+| u64 | `UInt64` | `*.sample_time_ns` |
+| u32 | `UInt32` | `sensor_id`, `frame_id`, `sequence`, `count`, `command.mode`, `command.ignored_observations` |
+| u8 | `UInt8` | `*.validity` |
+| i32 | `Int32` | `*.object_id` (8 elements), `command.selected_object_id` |
+| i64 | `Int64` | `command.*_age_ns` |
+| f32 | `Float32` | `x_m`, `y_m`, `relative_vx_mps`, `confidence` (8 elements each), `ego.speed_mps`, both accelerations |
+| | `Float64` | the parameters `hazard_acceleration_mps2` (start −3) and `max_change_mps2` (start 0.5) |
 
-Element `i` of each array is element `i` of the Schema field. The rules
-above on count, inactive elements and IDs apply unchanged. The names of the
-object fields follow some ASAM OSI detected-object terms (ID, position,
-relative velocity, existence probability). The profile is not OSI-compatible and
-needs no Protobuf.
+Float variables carry the units `m`, `m/s` and `m/s2`; FMI 3 integer types
+have no unit attribute. Inputs and outputs are `discrete`. Outputs are
+`initial="exact"`: before the first step they read `sequence` 0, mode 2, no
+selection, accelerations 0, ages −1 and no ignored observation. The
+parameters are `fixed`: they can be set before initialization ends, never
+after it. A value outside the [parameter ranges](#parameters) fails
+`fmi3ExitInitializationMode`.
+
+### Steps and deliveries
+
+Each `fmi3DoStep` is one activation at its communication point t, over
+[t, t + 10 ms]. The step is fixed: `canHandleVariableCommunicationStepSize`
+is false and `fixedInternalStepSize` is 0.01 s. A step of another size, or
+at another point than the FMU's next one (within 1 µs), fails with
+`fmi3Error`; it is never rescaled. The start time is rounded to the nearest
+nanosecond, and the FMU counts Virtual time in integer nanoseconds from it.
+
+FMI inputs hold their last value, and they carry no "new message" signal.
+The FMU therefore takes a sensor's inputs as a new observation when its
+header, `sample_time_ns` and `sequence`, differs from the header at the
+previous step. An unchanged header delivers nothing, and the held
+observation ages. A changed header whose sequence does not increase is
+delivered, ignored and counted, as in the native example. A republished
+observation with an identical header is indistinguishable from a held
+input; the FMU cannot count it.
+
+The start header, `sample_time_ns` 2^64 − 1 and `sequence` 2^32 − 1, means
+"nothing received yet". No accepted observation can carry that Sample time,
+because it is after every activation time. At most one observation per
+sensor is delivered per step, radar, camera, then ego, before the advance.
+A Run that delivers several Messages of one Channel in one Slot, as the
+`delay` experiment does, is outside this interface.
+
+### Lifecycle and diagnostics
+
+The instance is allocated by `fmi3InstantiateCoSimulation` and freed by
+`fmi3FreeInstance`. Two instances in one process are independent. Another
+instantiation token, `eventModeUsed`, or required intermediate variables
+refuse the instance. The FMU reads no resource, so the resource path may be
+anything, also NULL. Every refused call logs one message with category
+`logStatusError` and returns `fmi3Error`. Malformed input fails the step
+with the native diagnostic and the time:
+
+```text
+t=0 ns: radar.count 9 exceeds the capacity 8
+t=0 ns: radar.x_m[0] is not finite: nan
+```
+
+After a failed initialization or step, only `fmi3Reset`, `fmi3FreeInstance`
+and the getters are accepted. `fmi3Terminate` ends stepping; the outputs stay
+readable. There is no Model Exchange, Scheduled Execution, Event Mode, Clock,
+early return, intermediate update, FMU state, derivative or execution tool.
+Each of those functions is exported, because FMI 3.0 requires every function,
+and each returns `fmi3Error`.
 
 ## Scope
 
@@ -448,5 +515,7 @@ requirements. There is no network transmission model and no change to the
 kernel's Latency semantics. There is no raw image or
 radar data, object tracking, sensor-fusion accuracy claim, CAN or Ethernet
 decoder, sensor rendering, OSI dependency, production controller, Native ABI
-change, variable-length Schema, dynamic Channel creation or FMU. An FMI
-equivalent is later work against this profile.
+change, variable-length Schema or dynamic Channel creation. The FMU is a
+reference export of this profile for FMI 3.0 Co-Simulation on Linux x86-64
+only: no FMI 2.0, Model Exchange, Scheduled Execution, dynamic dimension or
+general FMI conformance claim.
