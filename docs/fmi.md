@@ -104,11 +104,10 @@ stepped, naming the type, as is one whose field type is not the one its
 variable's type maps to. A `Clock` is
 reported too, and for a different reason: it is driven through the variable it
 gates rather than bound to a field of its own, which is the section after
-next. A variable is mapped when its declared dimensions amount to one value:
-`<Dimension
-start="1"/>` is one value written the long way, which is how the fixture's CAN
-node declares its Binary input, while anything above one value, or a dimension
-sized by another variable, is reported.
+next. A `Binary` variable is mapped when its declared dimensions amount to
+one value: `<Dimension start="1"/>` is one value written the long way, which
+is how the fixture's CAN node declares its Binary input. A numeric variable
+that declares dimensions is an array, which has its own section below.
 
 ### Numeric scalars
 
@@ -146,9 +145,8 @@ A start value is read by the same rule, before anything is loaded:
   infinity, a non-zero value that rounds to zero, and `inf` or `nan` are
   refused.
 - A `Boolean` start value is `true` or `false`; `1` and `0` are refused.
-- A start value is one value. A start value for a variable with more than
-  one value, or with a dimension sized by another variable, is refused for
-  every type. Arrays are [#190](https://github.com/Stevie1704/sil/issues/190).
+- A start value of a scalar is one value. An array's start lists all its
+  values (next section).
 
 An input or parameter start is written in the instantiated state, before
 initialization mode; a structural parameter inside Configuration Mode. A call
@@ -162,6 +160,58 @@ returned Error`.
 four types into `Feedthrough` and compares what comes back with a reference
 written by hand. `make example-fmu-numeric` runs it twice and `cmp`s the two
 Recordings.
+
+### Fixed-size numeric arrays
+
+An FMI array whose dimensions are all literal is carried by one fixed-count
+Schema field. This is the profile, and nothing outside it is mapped:
+
+| Property | Supported | Refused before stepping (exit 2) |
+| --- | --- | --- |
+| Element type | `Float32`, `Float64`, `Int32`, `UInt32`, `UInt64` | `Boolean` and `Binary` arrays; every type that is not mapped as a scalar |
+| Dimensions | each `<Dimension start="N"/>` with a literal N ≥ 1, any number of them | a `<Dimension valueReference=…>` (sized by a structural parameter), a start of 0 or below |
+| Value count | the product of the dimensions | a count whose buffer of the element type overflows `size_t` |
+| Field | the scalar's field type (table above), with `count` equal to the value count | another type, another count, or a scalar field |
+
+The field holds the values in the order FMI 3.0 defines for an array: row
+major, so the last dimension varies fastest. A `[2,3]` matrix `m` is the field
+`[m[0][0], m[0][1], m[0][2], m[1][0], m[1][1], m[1][2]]`. The Importer does
+not reorder anything: the FMU's flat value buffer is the field. A `[3,2]`
+variable and a `[2,3]` variable both have six values, but they are different
+shapes. Inspection reports each variable's `dimensions` and `value_count`,
+and `sil-fmu-replay` and `sil-fmu-couple` receipts record the dimensions and
+value count of each array they bind or start. A connection between two FMUs
+must join variables with the same dimensions, as it must join one type and
+one unit.
+
+All variables of one type on one Channel are still read or written in one
+FMI call. The call counts the variables and the values separately: an
+`[8]`, a `[3]` and a scalar `Float32` on one Channel are one
+`fmi3SetFloat32` with `nValueReferences` 3 and `nValues` 12. Each buffer is
+allocated once, at initialization, with exactly that many values, and a
+write with a different number of values is refused.
+
+A start value of an array (`--start`, or `value` in an authoring document)
+lists every value in row-major order, separated by single spaces:
+`--start "bias=0.5 -1 2.25 100 -0.125 7"` for a `[2,3]` `Float64`. Each
+value is read by the scalar grammar of its type (table above). The count
+must equal the value count. One value is not broadcast, missing values are
+not filled with zeros, and a start with too many values is refused. Spaces
+other than one between two values are refused too. The start is written in
+the lifecycle state of a scalar start: an input or parameter in the
+instantiated state, before initialization mode.
+
+Out of scope: `Boolean`, `Binary` and the unmapped integer types as arrays;
+dimensions resolved through a structural parameter's value; changing a
+dimension during a Run; variable-length Channels. A Channel field has the same
+count for the whole Run.
+
+[examples/fmu-array/](../examples/fmu-array/) replays a Recording of `[8]`
+sensor arrays, a `[3]`, two scalars and a `[2,3]` matrix into the test FMU
+`tests/fixtures/fmi_array.c` and compares every element with a reference
+written by hand. `tests/test_fmi_arrays.py` also compares every element with
+an independent execution of the FMU through its C interface, runs the inline
+and the shared-memory transports, and runs a coupled matrix feedback loop.
 
 ### Bounded Binary payloads
 
@@ -411,9 +461,9 @@ The report has four parts:
 
 | Part | What it states |
 | --- | --- |
-| facts | FMI version, interfaces and co-simulation capabilities, platform binaries, and each variable's type, causality, variability, start, unit, dimensions, `maxSize`, `mimeType` and Clocks; the terminals and the FMI-LS-BUS manifest |
+| facts | FMI version, interfaces and co-simulation capabilities, platform binaries, and each variable's type, causality, variability, start, unit, dimensions, value count, `maxSize`, `mimeType` and Clocks; the terminals and the FMI-LS-BUS manifest |
 | `unusable` | why no Run can drive the archive: unreadable archive or `modelDescription.xml`, an FMI version other than 3.0, no co-simulation interface, no binary for this platform |
-| `unmappable`, per variable; `unsupported`, per terminal | why no Channel can carry the variable, or no group can connect the terminal: String, Enumeration and the unselected integer types, arrays, a Clock outside the triggered profile, a terminal outside the BUS profile |
+| `unmappable`, per variable; `unsupported`, per terminal | why no Channel can carry the variable, or no group can connect the terminal: String, Enumeration and the unselected integer types, arrays outside the fixed-size numeric profile, a Clock outside the triggered profile, a terminal outside the BUS profile |
 | `unverified` | what only a loaded binary can answer: whether the library and its dependencies load, whether initialization succeeds, a required execution tool, the files read from `resources/` |
 
 A variable no Channel names is never touched, so an `unmappable` variable does
