@@ -18,10 +18,19 @@ RUN rm -f /etc/apt/sources.list.d/*.sources \
 COPY proofs/acc-fmi/requirements.lock /tmp/fmpy.lock
 RUN pip install --no-cache-dir --require-hashes -r /tmp/fmpy.lock
 WORKDIR /src
-COPY . .
 # Installed SiL, as a consumer installs it: the native prefix (sil-run,
-# silschema, include/sil) and the wheel in its own environment. The proof
-# runs with no checkout on any import path.
+# silschema, include/sil) and the wheel in its own environment, from the
+# directories the root Dockerfile builds them from. The proof runs with no
+# checkout on any import path.
+COPY CMakeLists.txt LICENSE NOTICE THIRD-PARTY-NOTICES.md ./
+COPY include include
+COPY kernel kernel
+COPY shim shim
+COPY tests tests
+COPY tools tools
+COPY cmake cmake
+COPY python python
+COPY container container
 RUN cmake -S . -B /build -DCMAKE_BUILD_TYPE=Release \
     && cmake --build /build --target sil-run sil_clock_shim -j2 \
     && cmake --install /build --prefix /opt/sil/native \
@@ -35,6 +44,8 @@ RUN cmake -S . -B /build -DCMAKE_BUILD_TYPE=Release \
     && python -m venv /opt/sil/python \
     && /opt/sil/python/bin/pip install --no-cache-dir --no-index --find-links=/wheels \
       --requirement container/requirements.lock /wheels/sil-*.whl
+# The application, its FMU sources, the proofs and their expectations.
+COPY . .
 ENV PATH=/opt/sil/python/bin:/opt/sil/native/bin:${PATH} \
     PYTHONDONTWRITEBYTECODE=1
 WORKDIR /work

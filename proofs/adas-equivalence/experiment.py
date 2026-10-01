@@ -28,17 +28,27 @@ the profile rules in docs/adas-reference.md.
 from __future__ import annotations
 
 import hashlib
-import sys
+import importlib.util
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from sil.manifest import Manifest, SubscriberRoute
 
 PROOF_DIR = Path(__file__).resolve().parent
 ROOT = PROOF_DIR.parents[1]
 EXAMPLE_DIR = ROOT / "examples" / "adas-reference"
-sys.path.insert(0, str(EXAMPLE_DIR))
-import manifest  # noqa: E402  (the native example's Manifest)
 
-from sil.manifest import Manifest, SubscriberRoute  # noqa: E402
+
+def load(name: str, path: Path):
+    """An example's module, by its file and under a name of its own: other
+    examples also have a `manifest.py` and a `prepare.py`."""
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+manifest = load("adas_reference_manifest", EXAMPLE_DIR / "manifest.py")
 
 MS = manifest.MS
 PERIOD_NS = manifest.PERIOD_NS

@@ -50,9 +50,9 @@ from sil.schema import MessageType
 
 ROOT = experiment.ROOT
 EXAMPLE_DIR = experiment.EXAMPLE_DIR
-sys.path.insert(0, str(EXAMPLE_DIR / "fmu"))
-import package  # noqa: E402
-import prepare  # noqa: E402
+package = experiment.load("adas_reference_package",
+                          EXAMPLE_DIR / "fmu" / "package.py")
+prepare = experiment.load("adas_reference_prepare", EXAMPLE_DIR / "prepare.py")
 
 PIN = ROOT / "proofs" / "adas-fmu" / "evidence" / "AdasReference.identity.json"
 INDEPENDENT = experiment.PROOF_DIR / "independent.py"

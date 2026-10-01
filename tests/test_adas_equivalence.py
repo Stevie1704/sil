@@ -12,6 +12,7 @@ one control diverges where it is predicted to.
 from __future__ import annotations
 
 import csv
+import importlib.util
 import json
 import os
 import shutil
@@ -24,9 +25,19 @@ from conftest import ROOT, load_module, run_manifest
 from sil.compare import compare, read_contract
 
 PROOF_DIR = ROOT / "proofs" / "adas-equivalence"
-sys.path.insert(0, str(PROOF_DIR))
-import experiment  # noqa: E402  (its dataclasses need a registered module)
 
+
+def _registered(name: str, path: Path):
+    """A module its own dataclasses can find in sys.modules."""
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+experiment = _registered("adas_equivalence_experiment",
+                         PROOF_DIR / "experiment.py")
 prepare = load_module("adas_prepare_226",
                       experiment.EXAMPLE_DIR / "prepare.py")
 package = load_module("adas_fmu_package_226",

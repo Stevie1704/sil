@@ -103,3 +103,34 @@ array shape, and the proof keeps that result as evidence.
 - **The FMI 3.0.2 headers are vendored** so the compiler checks every
   function signature. FMI 3.0 requires every function to be exported;
   unsupported ones return `fmi3Error`.
+
+## Native and FMU equivalence (#226)
+
+The native library and the FMU run the same declared experiment through
+installed SiL. The proof is
+[proofs/adas-equivalence/](../../proofs/adas-equivalence/README.md).
+
+- **The importer maps `UInt8` and `Int64`.** Without them SiL cannot bind
+  the validity flags and the ages, and the FMU cannot run. Each type has one
+  field type of its own width, `u8` and `i64`, as for the other numeric
+  types. After `fmi3Error` the importer now frees the instance without
+  `fmi3Terminate`, so a failure names its own call.
+- **One declaration, a substituted controller.** `reference_manifest` takes
+  a `controller` argument. The Manifests then cannot differ in Channels,
+  Latencies, Interceptors, replay or routes, and `form_difference` checks
+  that they do not.
+- **`delay` stays native only.** It delivers three radar lists in one Slot.
+  The FMU's inputs hold the last value written, so the FMU form would
+  silently receive one of three. The proof states the exclusion rather than
+  run a case whose deliveries differ.
+- **Tolerance 0 for the accelerations.** Both forms compute in binary64 from
+  one source with `-ffp-contract=off` and round once to binary32. A nonzero
+  tolerance would hide a real difference.
+- **The independent execution is FMPy, with its own fault code.** It applies
+  drop, override and Latency itself and imports no SiL. The oracle stays the
+  hand-enumerated trajectories; native/FMU agreement alone validates nothing
+  about the shared algorithm.
+- **The Sample-time offset control is a contract change.** The output Sample
+  time t + 10 ms is a property of the controller in both forms; the
+  comparison contract is where an observer could mistake the publication
+  Slot for it.
