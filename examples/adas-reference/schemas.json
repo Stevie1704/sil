@@ -29,7 +29,11 @@
       {"name": "mode", "type": "u32"},
       {"name": "selected_object_id", "type": "i32"},
       {"name": "target_acceleration_mps2", "type": "f32"},
-      {"name": "acceleration_mps2", "type": "f32"}
+      {"name": "acceleration_mps2", "type": "f32"},
+      {"name": "radar_age_ns", "type": "i64"},
+      {"name": "camera_age_ns", "type": "i64"},
+      {"name": "ego_age_ns", "type": "i64"},
+      {"name": "ignored_observations", "type": "u32"}
     ]
   }
 }

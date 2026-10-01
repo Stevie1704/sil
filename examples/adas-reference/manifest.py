@@ -8,22 +8,34 @@ keep their state apart: each must match its own expected trajectory.
 
 What the Manifest makes explicit:
 
-- **Period.** Every input is sampled every 10 ms. The library registers one
-  10 ms Task and rejects any other `period_ns`.
-- **Latency.** Input Channels declare `latency_ns=0`. A Replay participant
-  without a priority publishes before every activation of a Slot, so a
-  Message sampled at t is consumed by the activation at t.
+- **Periods.** A maneuver samples each sensor at its own Period: `cadence`
+  publishes radar every 20 ms, camera every 40 ms and ego motion every
+  10 ms. The library registers one 10 ms Task, priority 0, and rejects any
+  other `period_ns`.
+- **Replay order.** A Replay participant without a priority publishes the
+  Messages of a Slot before every activation of that Slot, in Publish order.
+  `check_experiment` rejects a replay priority: the profile does not predict
+  a replay ordered among the activations.
+- **Latency.** Input Channels declare `latency_ns=0`, so a Message published
+  in Slot t is drained by the activation at t. One Period of Latency, the
+  `late` experiment, delivers every observation one activation later; the
+  profile predicts that trajectory. `check_experiment` rejects any other
+  input Latency.
 - **Sample time.** The activation at t advances over [t, t + 10 ms] and
   publishes, in Slot t, a Command whose `sample_time_ns` is t + 10 ms. The
   Recording stores the publication Slot t, as for an FMU output.
-- **Finite routes.** Each input route holds one Message and fails on
-  overflow. A list is one Message, whatever its count. The Command
-  Channels have no in-Run subscriber; they are
-  recorded.
+- **Finite routes.** Each input route holds three Messages and fails on
+  overflow. A list is one Message, whatever its count. A delayed Message
+  holds its place in the route from its publication until it is drained,
+  and a later Message waits behind it: the `delay` experiment keeps three
+  radar lists in one route. The Command Channels have no in-Run subscriber;
+  they are recorded.
 - **Profile.** Each Native config names the profile and its version; the
   library refuses another one.
 
     python manifest.py reference.json --inputs OUTDIR --library adas_reference.so
+    python manifest.py drop.json --inputs OUTDIR --library adas_reference.so \
+        --experiment drop
 """
 
 from __future__ import annotations
@@ -37,16 +49,17 @@ from sil.manifest import Manifest, SubscriberRoute
 EXAMPLE_DIR = Path(__file__).resolve().parent
 SCHEMAS = json.loads((EXAMPLE_DIR / "schemas.json").read_text())
 MANEUVERS = ("clear", "hazard", "release", "unavailable", "boundaries",
-             "occupancy", "turnover", "ordering")
+             "occupancy", "turnover", "ordering", "cadence", "freshness")
 
 PROFILE = "sil.adas-reference.radar-camera"
-PROFILE_VERSION = 2
-PERIOD_NS = 10_000_000
+PROFILE_VERSION = 3
+MS = 1_000_000
+PERIOD_NS = 10 * MS
 INPUT_LATENCY_NS = 0
 # No in-Run subscriber reads a Command; one Period keeps the default unit
 # delay explicit.
 OUTPUT_LATENCY_NS = PERIOD_NS
-INPUT_ROUTE_CAPACITY = 1
+INPUT_ROUTE_CAPACITY = 3
 # Twenty activations, 0 ms to 190 ms; the last publishes Sample time 200 ms.
 DURATION_NS = 200_000_000
 
@@ -57,6 +70,52 @@ PARAMETERS = {
 
 INPUTS = {"radar": "adas.ObjectList", "camera": "adas.ObjectList",
           "ego": "adas.EgoMotion"}
+
+# The experiments over one maneuver. Each runs that maneuver alone in its own
+# Manifest and is compared with maneuvers/<maneuver>.<experiment>.expected.csv.
+# An Interceptor acts on an input Channel of the Run only: the authored input
+# Recording and the expected trajectory stay outside every faulted path.
+EXPERIMENT_MANEUVER = "cadence"
+EXPERIMENTS = {
+    # The camera lists sampled at 40 ms and 80 ms are lost.
+    "drop": {"interceptors": {"camera": [
+        {"kind": "drop", "start_ns": 40 * MS, "end_ns": 100 * MS}]}},
+    # The radar lists sampled at 60 ms and 80 ms arrive 50 ms late; the lists
+    # sampled at 100 ms and 120 ms wait behind the second one.
+    "delay": {"interceptors": {"radar": [
+        {"kind": "delay", "delay_ns": 50 * MS,
+         "start_ns": 60 * MS, "end_ns": 100 * MS}]}},
+    # The radar list sampled at 100 ms is invalid; the ego motion sampled at
+    # 150, 160 and 170 ms repeats the sequence of the one sampled at 140 ms.
+    "rewrite": {"interceptors": {
+        "radar": [{"kind": "override", "field": "validity", "value": 0,
+                   "start_ns": 100 * MS, "end_ns": 120 * MS}],
+        "ego": [{"kind": "override", "field": "sequence", "value": 14,
+                 "start_ns": 150 * MS, "end_ns": 180 * MS}]}},
+    # Every observation is delivered one activation after its publication.
+    "late": {"input_latency_ns": PERIOD_NS},
+}
+# The input Latencies whose trajectories the profile predicts.
+PREDICTED_INPUT_LATENCIES_NS = (0, PERIOD_NS)
+
+
+class ExperimentError(ValueError):
+    """An experiment whose result the reference profile does not predict."""
+
+
+def check_experiment(input_latency_ns: int,
+                     replay_priority: int | None) -> None:
+    """Rejects a scheduling change the profile does not predict."""
+    if replay_priority is not None:
+        raise ExperimentError(
+            f"replay priority {replay_priority}: the replay publishes before "
+            "every activation of its Slot; the profile does not predict a "
+            "replay ordered among the activations")
+    if input_latency_ns not in PREDICTED_INPUT_LATENCIES_NS:
+        raise ExperimentError(
+            f"input latency {input_latency_ns} ns: the profile predicts "
+            "input Latency 0 or one controller Period "
+            f"({PERIOD_NS} ns) only")
 
 
 def controller_config(maneuver: str, **overrides) -> dict:
@@ -74,23 +133,34 @@ def controller_config(maneuver: str, **overrides) -> dict:
 
 def reference_manifest(inputs: Path, library: Path,
                        maneuvers: tuple[str, ...] = MANEUVERS,
-                       configs: dict[str, dict] | None = None) -> Manifest:
+                       configs: dict[str, dict] | None = None,
+                       interceptors: dict[str, list[dict]] | None = None,
+                       input_latency_ns: int = INPUT_LATENCY_NS,
+                       replay_priority: int | None = None) -> Manifest:
     """The Run over the Recordings `prepare.py` wrote into `inputs`.
 
-    `configs` replaces the config of a named maneuver's controller."""
+    `configs` replaces the config of a named maneuver's controller.
+    `interceptors` declares, per input role, Interceptors on that input
+    Channel of every maneuver. `check_experiment` rejects an input Latency or
+    a replay priority the profile does not predict."""
+    check_experiment(input_latency_ns, replay_priority)
     configs = configs or {}
+    interceptors = interceptors or {}
     m = Manifest(duration_ns=DURATION_NS)
     m.add_schemas(SCHEMAS)
     for maneuver in maneuvers:
         for role, schema in INPUTS.items():
             m.add_channel(f"{maneuver}.{role}", schema=schema,
-                          latency_ns=INPUT_LATENCY_NS)
+                          latency_ns=input_latency_ns)
+            for interceptor in interceptors.get(role, ()):
+                m.add_interceptor(f"{maneuver}.{role}", **interceptor)
         m.add_channel(f"{maneuver}.command", schema="adas.Command",
                       latency_ns=OUTPUT_LATENCY_NS)
         m.add_replay(
             f"{maneuver}_replay",
             recording=(Path(inputs) / f"{maneuver}.inputs.mcap").resolve(),
             channels=[f"{maneuver}.{role}" for role in INPUTS],
+            priority=replay_priority,
         )
         m.add_native(
             maneuver,
@@ -104,6 +174,14 @@ def reference_manifest(inputs: Path, library: Path,
     return m
 
 
+def experiment_manifest(inputs: Path, library: Path,
+                        experiment: str) -> Manifest:
+    """The Run of one named experiment over its maneuver."""
+    return reference_manifest(inputs, library,
+                              maneuvers=(EXPERIMENT_MANEUVER,),
+                              **EXPERIMENTS[experiment])
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("out", help="path to write the Manifest to")
@@ -111,5 +189,9 @@ if __name__ == "__main__":
                         help="the directory prepare.py wrote")
     parser.add_argument("--library", type=Path, required=True,
                         help="the adas_reference Native library build")
+    parser.add_argument("--experiment", choices=sorted(EXPERIMENTS),
+                        help=f"run one experiment over {EXPERIMENT_MANEUVER}")
     args = parser.parse_args()
-    print(reference_manifest(args.inputs, args.library).write(args.out).hash)
+    m = (experiment_manifest(args.inputs, args.library, args.experiment)
+         if args.experiment else reference_manifest(args.inputs, args.library))
+    print(m.write(args.out).hash)

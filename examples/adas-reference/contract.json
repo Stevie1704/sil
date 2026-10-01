@@ -13,7 +13,11 @@
         "mode": "exact",
         "selected_object_id": "exact",
         "target_acceleration_mps2": {"atol": 0, "rtol": 0},
-        "acceleration_mps2": {"atol": 0, "rtol": 0}
+        "acceleration_mps2": {"atol": 0, "rtol": 0},
+        "radar_age_ns": "exact",
+        "camera_age_ns": "exact",
+        "ego_age_ns": "exact",
+        "ignored_observations": "exact"
       }
     }
   }

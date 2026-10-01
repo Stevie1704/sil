@@ -39,8 +39,9 @@ set_target_properties(ego_motion PROPERTIES
 # adas-reference/adas_reference.c is a C application with its own API and no
 # SiL include; sil_adapter.c is the Native participant around it, built
 # against the public ABI header and the layouts silschema generates from
-# schemas.json. The wrong-sign build is the same sources with one defect
-# chosen by the preprocessor, so the comparison can be shown to fail.
+# schemas.json. The wrong-sign and arrival-time builds are the same sources
+# with one defect chosen by the preprocessor, so the comparison can be shown
+# to fail.
 set(ADAS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/adas-reference)
 set(ADAS_GEN_DIR ${CMAKE_BINARY_DIR}/generated/adas-reference)
 add_custom_command(
@@ -68,6 +69,7 @@ endfunction()
 
 add_adas_reference(adas_reference)
 add_adas_reference(adas_reference_wrong_sign ADAS_REFERENCE_WRONG_SIGN)
+add_adas_reference(adas_reference_arrival_time ADAS_REFERENCE_ARRIVAL_TIME)
 
 # The application's lifecycle without SiL: init, reset, terminate and the
 # rejections a Run cannot observe.
@@ -80,6 +82,7 @@ if(NOT APPLE)
   target_link_libraries(adas_reference_test PRIVATE m)
   target_link_libraries(adas_reference PRIVATE m)
   target_link_libraries(adas_reference_wrong_sign PRIVATE m)
+  target_link_libraries(adas_reference_arrival_time PRIVATE m)
 endif()
 add_test(NAME adas_reference_application COMMAND adas_reference_test
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})

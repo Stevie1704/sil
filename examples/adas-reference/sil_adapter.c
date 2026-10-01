@@ -11,8 +11,9 @@
  * whole Run and the runner process exit reclaims it, so adas_ref_terminate is
  * never called here. The application holds no other resource.
  *
- * Every activation consumes, from each input Channel, the one Message
- * visible at t, and publishes one adas.Command for Sample time t + 10 ms.
+ * Every activation drains each input Channel, radar, camera, then ego,
+ * passing every Message visible at t to the application in Publish order,
+ * and publishes one adas.Command for Sample time t + 10 ms.
  *
  * An adas.ObjectList carries its objects as flat arrays of capacity 8 and an
  * active count. The adapter checks the count before it reads any element,
@@ -218,16 +219,16 @@ static void fail_at(controller *c, uint64_t t, const char *message) {
   c->api->fail(c->api->ctx, reason);
 }
 
-/* Takes the one Message visible on channel at t into payload (size bytes).
+/* Takes the next Message visible on channel at t into payload (size bytes).
  * Returns 1 when there is one, 0 when there is none, -1 after a failure. */
-static int take_one(controller *c, uint64_t t, const char *channel,
-                    void *payload, size_t size) {
+static int take_next(controller *c, uint64_t t, const char *channel,
+                     void *payload, size_t size) {
   const void *data;
   size_t len;
   int r = c->api->take(c->api->ctx, channel, &data, &len);
   if (r != 1) return r == 0 ? 0 : -1;
-  char message[200];
   if (len != size) {
+    char message[200];
     snprintf(message, sizeof message,
              "Channel '%s' carries %zu bytes, its Schema %zu", channel, len,
              size);
@@ -235,15 +236,15 @@ static int take_one(controller *c, uint64_t t, const char *channel,
     return -1;
   }
   memcpy(payload, data, size);
-  r = c->api->take(c->api->ctx, channel, &data, &len);
-  if (r == 0) return 1;
-  if (r == 1) {
-    snprintf(message, sizeof message,
-             "Channel '%s' has more than one Message at this activation",
-             channel);
-    fail_at(c, t, message);
-  }
-  return -1;
+  return 1;
+}
+
+/* Fails the Run with the application's fault unless status is OK. */
+static int received(controller *c, uint64_t t, adas_ref_status status,
+                    const adas_ref_fault *fault) {
+  if (status == ADAS_REF_OK) return 1;
+  fail_at(c, t, fault->message);
+  return 0;
 }
 
 /* Fails unless elements [count, capacity) of array are all-bits zero. */
@@ -297,47 +298,55 @@ static int to_list(controller *c, uint64_t t, const char *sensor,
   return 1;
 }
 
-/* Takes the sensor's list visible at t into *list, and points *in at it.
- * Returns 1 on success (also when there is none), 0 after a failure. */
-static int take_list(controller *c, uint64_t t, const char *sensor,
-                     const char *channel, adas_ref_object_list *list,
-                     const adas_ref_object_list **in) {
+typedef adas_ref_status (*receive_list_fn)(adas_ref_instance *, uint64_t,
+                                           const adas_ref_object_list *,
+                                           adas_ref_fault *);
+
+/* Passes every list visible on channel at t to receive, in Publish order.
+ * Returns 1 on success, also when there is none, 0 after a failure. */
+static int drain_lists(controller *c, uint64_t t, const char *sensor,
+                       const char *channel, receive_list_fn receive) {
   adas_ObjectList m;
-  int r = take_one(c, t, channel, &m, sizeof m);
-  if (r < 0) return 0;
-  if (r == 0) return 1;
-  if (!to_list(c, t, sensor, &m, list)) return 0;
-  *in = list;
-  return 1;
+  adas_ref_object_list list;
+  adas_ref_fault fault;
+  int r;
+  while ((r = take_next(c, t, channel, &m, sizeof m)) == 1)
+    if (!to_list(c, t, sensor, &m, &list) ||
+        !received(c, t, receive(&c->app, t, &list, &fault), &fault))
+      return 0;
+  return r == 0;
+}
+
+static int drain_ego(controller *c, uint64_t t) {
+  adas_EgoMotion m;
+  adas_ref_fault fault;
+  int r;
+  while ((r = take_next(c, t, c->ego, &m, sizeof m)) == 1) {
+    adas_ref_ego ego = {m.sample_time_ns, m.sequence, m.validity,
+                        m.speed_mps};
+    if (!received(c, t, adas_ref_receive_ego(&c->app, t, &ego, &fault),
+                  &fault))
+      return 0;
+  }
+  return r == 0;
 }
 
 static void activate(void *user, uint64_t t) {
   controller *c = user;
-  adas_ref_object_list radar, camera;
-  adas_EgoMotion ego_msg;
-  adas_ref_ego ego;
-  adas_ref_inputs in = {NULL, NULL, NULL};
-
-  if (!take_list(c, t, "radar", c->radar, &radar, &in.radar) ||
-      !take_list(c, t, "camera", c->camera, &camera, &in.camera))
+  if (!drain_lists(c, t, "radar", c->radar, adas_ref_receive_radar) ||
+      !drain_lists(c, t, "camera", c->camera, adas_ref_receive_camera) ||
+      !drain_ego(c, t))
     return;
-  int r = take_one(c, t, c->ego, &ego_msg, sizeof ego_msg);
-  if (r < 0) return;
-  if (r == 1) {
-    ego = (adas_ref_ego){ego_msg.sample_time_ns, ego_msg.sequence,
-                         ego_msg.validity, ego_msg.speed_mps};
-    in.ego = &ego;
-  }
 
   adas_ref_output out;
   adas_ref_fault fault;
-  if (adas_ref_advance(&c->app, t, &in, &out, &fault) != ADAS_REF_OK) {
-    fail_at(c, t, fault.message);
+  if (!received(c, t, adas_ref_advance(&c->app, t, &out, &fault), &fault))
     return;
-  }
   adas_Command command = {out.sample_time_ns, out.sequence, out.mode,
                           out.selected_object_id,
-                          out.target_acceleration_mps2, out.acceleration_mps2};
+                          out.target_acceleration_mps2, out.acceleration_mps2,
+                          out.radar_age_ns, out.camera_age_ns, out.ego_age_ns,
+                          out.ignored_observations};
   c->api->publish(c->api->ctx, c->command, &command, sizeof command);
 }
 
