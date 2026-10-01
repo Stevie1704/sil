@@ -3,9 +3,9 @@
 The proof in `proofs/adas-fmu/` builds the archive on Linux x86-64 in a
 pinned image and drives it with FMPy. These tests run what needs neither:
 archive reproducibility of the packaging on this host, the archive declares the
-profile's interface, SiL's current inspection refuses the recorded-input
-mapping only for missing types and arrays, and the committed pin still
-names the sources in this checkout.
+profile's interface, SiL's current inspection accepts each scalar binding of
+a mapped type and refuses the rest only for missing types and arrays, and the
+committed pin still names the sources in this checkout.
 """
 
 from __future__ import annotations
@@ -84,13 +84,36 @@ def test_inspection_refuses_only_missing_types_and_arrays(built):
     fmu, _ = built
     inspected = audit.inspection(fmu)
     assert audit.inspection_findings(inspected) == []
-    assert inspected["missing_types"] == [
-        "Float32", "Int32", "Int64", "UInt32", "UInt64", "UInt8"]
+    assert inspected["missing_types"] == ["Int64", "UInt8"]
     assert inspected["arrays_refused"] == sorted(
         f"{sensor}:{field}={sensor}.{field}"
         for sensor in ("radar", "camera")
         for field in ("object_id", "x_m", "y_m", "relative_vx_mps",
                       "confidence"))
+
+
+def test_inspection_accepts_each_scalar_of_a_mapped_type(built):
+    """Issue #189: every Float32, Int32, UInt32 and UInt64 scalar the
+    profile declares is bound on its own."""
+    fmu, _ = built
+    schemas = audit.MAPPING["schemas"]
+    expected = sorted(
+        f"{channel}:{field['name']}={channel}.{field['name']}"
+        for channel, spec in audit.MAPPING["channels"].items()
+        for field in schemas[spec["schema"]]["fields"]
+        if field["type"] in ("f32", "i32", "u32", "u64")
+        and "count" not in field)
+    assert audit.inspection(fmu)["mapped"] == expected
+    assert len(expected) == 20
+
+
+def test_a_refused_scalar_of_a_mapped_type_is_a_finding():
+    bind = "ego:sequence=ego.sequence"
+    result = {"verdict": "mapping-rejected", "unusable": [],
+              "bindings": {bind: "Channel 'ego' declares schema field 'x', "
+                                 "which no binding names an FMU variable for"}}
+    assert audit.inspection_findings(result) == [
+        f"{bind}: {result['bindings'][bind]}"]
 
 
 @pytest.mark.skipif(not PIN.exists(), reason="no archive is pinned yet")
