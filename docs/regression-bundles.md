@@ -300,3 +300,13 @@ or empty and outside every bundle.
 bundles, a failed KPI, a tampered bundle, a stalled participant with a
 response deadline and one without. It also shows that the case order and
 `--jobs` do not change the Recording of a case.
+
+## Processed-sensor ADAS matrix
+
+[proofs/adas-matrix](../proofs/adas-matrix/README.md) delivers the reference
+native replay, FMU replay and both mixed closed-loop forms as sealed bundles
+using these same commands. Its clean Linux x86-64 consumer image runs all
+experiments offline and checks manifest, malformed-input, comparison,
+tampered-bundle, FMI deadline and native hang/crash controls explicitly.
+The adoption guide describes target replacement, changed interfaces,
+calibration/freshness changes, dependencies and unsupported profiles.

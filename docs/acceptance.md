@@ -205,3 +205,13 @@ platform, compatibility policy, licensing and limits, and
 [models/can/example/](../models/can/example/README.md) configures a Run without
 source edits. `models/can/bundle.sh` validates that example from a clean
 installed SiL bundle against an independent FMPy path.
+
+## Installed processed-sensor regression matrix
+
+[proofs/adas-matrix](../proofs/adas-matrix/README.md) packages the #226 replay
+and #227 mixed-loop experiments as sealed Regression bundles. The existing
+`sil-matrix` runs four nominal cases plus required failing controls from a
+clean installed Linux x86-64 runtime without network or source-tree imports.
+It archives JSON, JUnit, Recordings, provenance, Determinism and comparisons.
+Its acceptance driver checks the selected failures' exit codes, diagnostics
+and cleanup, including whole-case containment of native hangs and crashes.
