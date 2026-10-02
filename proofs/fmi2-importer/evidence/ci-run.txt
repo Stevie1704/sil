@@ -1,0 +1,2 @@
+run 37006499200 (proof-fmi2-importer), head 8501f9053913e72ed8ae204f64978f1dd0788c88
+source_revision in report.json is GitHub's pull-request merge commit of that head onto main

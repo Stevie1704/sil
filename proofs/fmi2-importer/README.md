@@ -61,6 +61,16 @@ the FMU build, not an Importer defect. The OSMP binary variables are #244.
 
 ## Results
 
-The proof passed under amd64 emulation before this pull request was opened.
-The evidence from native Linux x86-64 CI is added to `evidence/` after the
-`proof-fmi2-importer` workflow runs on it.
+CI run 37006499200 on native Linux x86-64 ([`evidence/`](evidence/),
+[`ci-run.txt`](evidence/ci-run.txt)):
+
+| Item | Value |
+| --- | --- |
+| Inspection | 5 archives `compatible`; `Feedthrough` `unusable`, naming `String_input`, `String_output`, `Enumeration_input`, `Enumeration_output` |
+| Reference FMUs | all 6 cases agree with FMPy; largest difference 0.0 |
+| Identity | every case: two Recordings byte-identical |
+| Wrong input | `dahlquist-k-0.5` diverges at 0.1 s (`x` 0.95 against 0.9); `bouncingball-e-0.8` diverges at 0.46 s in `h` |
+| Failing status | fake FMU: exit 1, `fmi2DoStep returned Error`. `Stair`: exit 1, `fmi2DoStep returned Discard`; SiL and FMPy both complete 44 Steps |
+| Cleanup | nothing left after the successful or the failed Run, or after the Importer closes |
+| Two instances | identical, and equal to FMPy |
+| `OSMPDummySensor` | archive `e6dece86…`, binary `a0c38eda…`: the #230 pin. It accepts the lifecycle without a SensorView; `valid` 0 and `count` 0 at all 50 Steps, as under FMPy |
