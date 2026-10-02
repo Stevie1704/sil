@@ -86,6 +86,7 @@ CI run 37012947185 on native Linux x86-64 ([`evidence/`](evidence/),
 | Size error | exit 1: `OSMP binary variable 'OSMPSensorDataOut' reports 2870 bytes; the Channel carries 1024, and nothing is truncated` |
 | Cleanup | nothing left after any Run |
 
-The SensorData here is larger than in #230 (1396 to 1940 B). The sensor
-copies parts of its input into its output, and the source's SensorView
-carries more fields than the SensorView that #230 built in Python.
+The SensorData here is larger than in #230 (1396 to 1940 B), where the
+sensor got a SensorView that the proof built in Python. The decoded objects
+agree with the same slice in both proofs. This proof does not find out
+which extra fields cause the difference.
