@@ -46,6 +46,7 @@ from sil.manifest import Manifest, SubscriberRoute  # noqa: E402
 from sil.testing import RunResult  # noqa: E402
 
 SIL_RUN = Path("/build/sil-run")
+NS_PER_S = 1_000_000_000
 STEPS = osmp_prepare.STEPS
 NOMINAL_RANGE_M = osmp_prepare.NOMINAL_RANGE_M
 # Above the largest SensorView (2004 B) and SensorData (1940 B) #230 measured.
@@ -75,6 +76,33 @@ SENSOR_BINDS = [
     f"{STATUS}:valid=valid",
     f"{STATUS}:count=count",
 ]
+
+
+def step_end_s(t_ns: int) -> float:
+    """The FMU time at the end of the Step from the Slot at `t_ns`.
+
+    The Importer hands `fmi2DoStep` the communication point `t / 1e9` and
+    the step `dt / 1e9`, each from integer nanoseconds, and both FMUs stamp
+    their output with the sum of the two doubles. That sum truncates to
+    whole nanoseconds, so the expected values are computed at the same
+    double rather than at `(t + dt) / 1e9`.
+    """
+    return t_ns / NS_PER_S + scene.STEP_NS / NS_PER_S
+
+
+def expected_slice() -> list[dict]:
+    """The #230 expected slice, at the Importer's communication points."""
+    steps = []
+    for step in range(STEPS):
+        now = step_end_s(step * scene.STEP_NS)
+        seconds, nanos = scene.timestamp(now)
+        steps.append({
+            "t_ns": (step + 1) * scene.STEP_NS, "seconds": seconds,
+            "nanos": nanos,
+            "detections": scene.detections(
+                scene.ground_truth(now), scene.HOST_ID, NOMINAL_RANGE_M),
+        })
+    return steps
 
 
 def require(condition, message):
@@ -201,7 +229,7 @@ def check_views(run: SilRun) -> dict:
     for t, data in payloads(run, VIEW):
         view = SensorView()
         view.ParseFromString(data)
-        divergence = drive.view_divergence(view, (t + scene.STEP_NS) / 1e9)
+        divergence = drive.view_divergence(view, step_end_s(t))
         require(divergence is None,
                 f"SensorView at {t} ns leaves the closed form: {divergence}")
         sizes.append(len(data))
@@ -215,7 +243,7 @@ def nominal(fmus: dict[str, Path], work: Path) -> dict:
     require(run.returncode == 0, f"nominal Run: {run.stderr[-2000:]}")
     views = check_views(run)
     steps, sizes = sensor_steps(run)
-    expected = osmp_prepare.expected_slice(NOMINAL_RANGE_M)
+    expected = expected_slice()
     divergence = scene.first_divergence(expected, steps)
     require(divergence is None, f"sensor leaves the expected slice: {divergence}")
     repeat = run_sil(manifest(fmus), work / "repeat")
@@ -248,8 +276,7 @@ def late_connection(fmus: dict[str, Path], work: Path) -> dict:
         message = SensorData()
         message.ParseFromString(data)
         steps.append(osmp_prepare.observation(t // scene.STEP_NS, message))
-    divergence = scene.first_divergence(
-        osmp_prepare.expected_slice(NOMINAL_RANGE_M), steps)
+    divergence = scene.first_divergence(expected_slice(), steps)
     require(divergence is not None,
             "a SensorView one Period late was not detected")
     return {"sensor_view_latency": "default (next activation)",
