@@ -1,0 +1,105 @@
+-- The C compiler identification is GNU 12.2.0
+-- The CXX compiler identification is GNU 12.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found Protobuf: /usr/lib/x86_64-linux-gnu/libprotobuf.so (found version "3.21.12")
+-- Configuring done (0.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /work/build-1
+[  0%] Running cpp protocol buffer compiler on /work/build-1/osi-cpp/osi_version.proto
+[  2%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_common.proto
+[  4%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_datarecording.proto
+[  6%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_detectedlane.proto
+[  6%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_detectedobject.proto
+[  8%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_detectedoccupant.proto
+[ 10%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_detectedroadmarking.proto
+[ 10%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_detectedtrafficlight.proto
+[ 12%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_detectedtrafficsign.proto
+[ 14%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_environment.proto
+[ 16%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_featuredata.proto
+[ 16%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_groundtruth.proto
+[ 18%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_hostvehicledata.proto
+[ 20%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_lane.proto
+[ 22%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_logicaldetectiondata.proto
+[ 22%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_logicallane.proto
+[ 25%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_motionrequest.proto
+[ 27%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_object.proto
+[ 27%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_occupant.proto
+[ 29%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_referenceline.proto
+[ 33%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_route.proto
+[ 33%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_roadmarking.proto
+[ 33%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_sensordata.proto
+[ 35%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_sensorspecific.proto
+[ 37%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_sensorview.proto
+[ 39%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_sensorviewconfiguration.proto
+[ 39%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_streamingupdate.proto
+[ 41%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_trafficcommand.proto
+[ 43%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_trafficcommandupdate.proto
+[ 43%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_trafficsign.proto
+[ 45%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_trafficlight.proto
+[ 47%] Running cpp protocol buffer compiler on /sources/osmp/examples/osi-cpp/open-simulation-interface/osi_trafficupdate.proto
+[ 50%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_version.pb.cc.o
+[ 50%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_common.pb.cc.o
+[ 52%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_datarecording.pb.cc.o
+[ 54%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_detectedlane.pb.cc.o
+[ 56%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_detectedobject.pb.cc.o
+[ 56%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_detectedoccupant.pb.cc.o
+[ 58%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_detectedroadmarking.pb.cc.o
+[ 60%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_detectedtrafficlight.pb.cc.o
+[ 62%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_detectedtrafficsign.pb.cc.o
+[ 62%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_environment.pb.cc.o
+[ 64%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_featuredata.pb.cc.o
+[ 66%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_groundtruth.pb.cc.o
+[ 66%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_hostvehicledata.pb.cc.o
+[ 68%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_lane.pb.cc.o
+[ 70%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_logicaldetectiondata.pb.cc.o
+[ 72%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_logicallane.pb.cc.o
+[ 72%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_motionrequest.pb.cc.o
+[ 75%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_object.pb.cc.o
+[ 77%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_occupant.pb.cc.o
+[ 79%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_referenceline.pb.cc.o
+[ 79%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_roadmarking.pb.cc.o
+[ 81%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_route.pb.cc.o
+[ 83%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_sensordata.pb.cc.o
+[ 83%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_sensorspecific.pb.cc.o
+[ 85%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_sensorview.pb.cc.o
+[ 87%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_sensorviewconfiguration.pb.cc.o
+[ 89%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_streamingupdate.pb.cc.o
+[ 89%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_trafficcommand.pb.cc.o
+[ 91%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_trafficcommandupdate.pb.cc.o
+[ 93%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_trafficlight.pb.cc.o
+[ 95%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_trafficsign.pb.cc.o
+[ 95%] Building CXX object osi-cpp/CMakeFiles/open_simulation_interface_obj.dir/osi_trafficupdate.pb.cc.o
+[ 95%] Built target open_simulation_interface_obj
+[ 97%] Linking CXX static library libopen_simulation_interface_pic.a
+[ 97%] Built target open_simulation_interface_pic
+[100%] Building CXX object OSMPDummySensor/CMakeFiles/OSMPDummySensor.dir/OSMPDummySensor.cpp.o
+[100%] Linking CXX shared library OSMPDummySensor.so
+modelDescription.xml
+sources
+sources/OSMPDummySensor.h
+sources/OSMPDummySensor.cpp
+sources/OSMPDummySensorConfig.h
+binaries/linux64
+binaries/linux64/OSMPDummySensor.so
+[100%] Built target OSMPDummySensor
+[ 93%] Built target open_simulation_interface_obj
+[ 95%] Built target open_simulation_interface_pic
+[ 97%] Building CXX object OSMPDummySource/CMakeFiles/OSMPDummySource.dir/OSMPDummySource.cpp.o
+[100%] Linking CXX shared library OSMPDummySource.so
+modelDescription.xml
+sources
+sources/OSMPDummySourceConfig.h
+sources/OSMPDummySource.h
+sources/OSMPDummySource.cpp
+binaries/linux64
+binaries/linux64/OSMPDummySource.so
+[100%] Built target OSMPDummySource

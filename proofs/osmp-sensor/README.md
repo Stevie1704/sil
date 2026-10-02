@@ -44,9 +44,31 @@ The build runs twice. `report.json` → `build.rebuild_identical_members`
 states whether every archive member has the same bytes. This is reported,
 not required: the bundle pins the first build.
 
-Toolchain, from the Debian bookworm snapshot of 2026-09-01:
-`bundle.json` → `toolchain` names the exact compiler, CMake, `protoc`,
-`libprotobuf-dev`, `libc6` and `libstdc++6` versions.
+Toolchain (`bundle.json` → `toolchain`): GCC 12.2.0, glibc 2.36,
+`protoc` and `libprotobuf-dev` 3.21.12, all from the Debian bookworm snapshot
+of 2026-09-01. CMake is 4.4.3 from the hash-pinned
+[lock file](requirements.lock) (an FMPy dependency). It comes before Debian's
+CMake 3.25.1 on the `PATH`.
+
+## Results
+
+CI run 36986891466 on native Linux x86-64 ([`evidence/`](evidence/),
+[`ci-run.txt`](evidence/ci-run.txt)):
+
+| Item | Value |
+| --- | --- |
+| `OSMPDummySensor.so` | SHA-256 `a0c38eda…`, archive `e6dece86…` |
+| `OSMPDummySource.so` | SHA-256 `43bab291…`, archive `3409a410…` |
+| Rebuild | every archive member is identical in both builds |
+| ELF | x86-64. `NEEDED`: `libprotobuf.so.32`, `libstdc++.so.6`, `libm.so.6`, `libgcc_s.so.1`, `libc.so.6` |
+| Configuration request | 20 ms update cycle, range 148.5 m |
+| Expected slice | 1500 steps, 7890 detections, exact agreement to 1e-9. Repeat run identical |
+| Source | 1500 SensorViews equal the closed form |
+| Failing control | diverges at step 1 (40 ms), object 0, `x`: 40.08 m instead of 40.16 m |
+| Both FMUs in one process | aborts (signal 6): `File already exists in database: osi_version.proto` |
+| Sizes | source SensorView 1996 to 2004 B; SensorData 1396 to 1940 B |
+| Sensor step cost | 92.2 µs mean `fmi2DoStep` (138 ms for 1500 steps) |
+| Sensor process peak RSS | 84280 KiB (FMPy, Python Protobuf and one FMU) |
 
 ## Static compatibility report
 

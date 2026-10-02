@@ -5,7 +5,8 @@ the external adoption milestone. They are not two forms of one function, and
 no equivalence between them is claimed. This records the selection for
 [#230](https://github.com/Stevie1704/sil/issues/230). #230 stays open until
 the remaining pins and the static FMU inspection exist (see
-[Status](#status-of-230)).
+[Status](#status-of-230)). They now exist in
+[proofs/osmp-sensor](../../proofs/osmp-sensor/README.md).
 
 | Role | Target | Input kind | Licence |
 | --- | --- | --- | --- |
@@ -106,13 +107,19 @@ frames through the maintained CAN bus model.
 
 | Acceptance item | Status |
 | --- | --- |
-| Pins, licences, digests | C target pinned by #178. FMU source pinned above. FMU binary digest, exporter toolchain and runtime dependencies still open |
+| Pins, licences, digests | C target pinned by #178. FMU source and submodules pinned, FMU binaries built and digested by [proofs/osmp-sensor](../../proofs/osmp-sensor/README.md#results): GCC 12.2.0, CMake 4.4.3, Protobuf 3.21.12. Runtime needs `libprotobuf.so.32` |
 | C headers and runtime contract | Done above and in proofs/public-workloads |
-| FMU inspection | Open: build the FMU and retain a static compatibility report |
-| Recording or generator, expected slice | C target done (receive side). FMU generator selected. Expected slice still open |
+| FMU inspection | Done: `proofs/osmp-sensor/evidence/fmu-inspection.json` |
+| Recording or generator, expected slice | C target done (receive side). FMU: `OSMPDummySource` checked against its closed form. Expected slice of 1500 steps agrees exactly with the sensor under FMPy |
 | CAN or Ethernet definition | CAN: frames are consumed encoded and the library is the decoder. Capture format: openpilot `rlog`. No Ethernet |
-| Throughput expectations | C target: 6000 events in 60 s, one participant. FMU: 20 ms period, 10 objects. Feed both into #125 |
+| Throughput expectations | C target: 6000 events in 60 s, one participant. FMU: 20 ms period, 10 objects, about 2 kB per SensorView, 92 µs mean sensor step. Feed both into #125 |
 | Follow-on blockers | Selected above |
+
+**Finding for #233.** Both FMUs link OSI statically and `libprotobuf`
+dynamically. Two of them in one process abort in the Protobuf descriptor
+pool. An OSMP connection needs both in one process, so #233 must rebuild
+them or connect the sensor to an importer-owned SensorView. See
+[One process](../../proofs/osmp-sensor/README.md#one-process).
 
 ## What this decision is not
 
