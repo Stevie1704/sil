@@ -1,0 +1,551 @@
+{
+  "claim": "public-artifact acceptance of one shared library as a Native participant against its independent reference, receive and recorded-derived transmit; not production-vehicle validation",
+  "identities": {
+    "library": {
+      "path": "libsafety/libsafety.so",
+      "sha256": "ad19bdcd96f6b9c6daf1f55c1851dfe8dfb1c613ed4747f72b3b5b9b7300dec1"
+    },
+    "adapters": {
+      "libsafety_native.so": "4427da033873ab7c9fba8531f0ce22bbefdd265d41890bebac9eb19e3ad727a2",
+      "libsafety_native_crash.so": "af42a812ea538fa7c4d18f8afcd347fd68e7b95ddbfe784660181104c4d2a4ef",
+      "libsafety_native_hang.so": "b6d46eaa7e9144e4111862a3964b43292b7a75b67bbddbc2957bfd9d25322978"
+    },
+    "source_recording": {
+      "path": "recordings/rlog.zst",
+      "sha256": "b0d19f7ccf67fef1c4afd9cf579e96cecc1d278be2aa4a3adf97b2d64d940a4c"
+    },
+    "receive_reference": {
+      "path": "references/libsafety-states.json",
+      "sha256": "ba8731f785431226e80fbb49cd065e39b76ee5140baf0148837f69735a4a9b21"
+    },
+    "calibration": {
+      "platform": "TOYOTA_RAV4_TSS2",
+      "mode": 2,
+      "mode_name": "toyota",
+      "param": 73,
+      "alternative_experience": 0
+    },
+    "transmit_export": {
+      "recording": {
+        "path": "recordings/rlog.zst",
+        "sha256": "b0d19f7ccf67fef1c4afd9cf579e96cecc1d278be2aa4a3adf97b2d64d940a4c"
+      },
+      "library": {
+        "path": "libsafety/libsafety.so",
+        "sha256": "ad19bdcd96f6b9c6daf1f55c1851dfe8dfb1c613ed4747f72b3b5b9b7300dec1"
+      },
+      "reference": {
+        "path": "references/libsafety-states.json",
+        "sha256": "ba8731f785431226e80fbb49cd065e39b76ee5140baf0148837f69735a4a9b21"
+      },
+      "exporter_sha256": "41d87bc1aa58140b701e1de0511281af5cf06f5d9d538f2d438e16d3c64ca2c8",
+      "transmit_csv_sha256": "406c0b8556b10bcb03738e14a9e3c6a856ae1392ae8377af0c423252fc8e3fc8",
+      "native_reference_sha256": "49238791de0b8fb541f25bd142f749fefb37386ed0975b6b546bd73bfd99b00b",
+      "candidates": {
+        "kind": "recorded stock-camera frames (bus 2) readdressed to bus 0; not openpilot sendcan",
+        "addresses": [
+          "0x191",
+          "0x2e4",
+          "0x343",
+          "0x412"
+        ],
+        "frames": 6934,
+        "events": 5244,
+        "largest_burst": 3,
+        "by_address": {
+          "0x191": {
+            "accepted": 0,
+            "rejected": 2500
+          },
+          "0x2e4": {
+            "accepted": 2500,
+            "rejected": 0
+          },
+          "0x343": {
+            "accepted": 1874,
+            "rejected": 1
+          },
+          "0x412": {
+            "accepted": 59,
+            "rejected": 0
+          }
+        }
+      },
+      "upstream_replay_drive": {
+        "received": 149228,
+        "invalid": 0,
+        "transmitted": 6934,
+        "blocked": 2501,
+        "blocked_with_controls_allowed": 2499,
+        "blocked_addresses": "Counter({401: 2500, 835: 1})"
+      },
+      "reference_totals": {
+        "received": 149228,
+        "invalid": 0,
+        "transmitted": 6934,
+        "blocked": 2501
+      },
+      "agrees_with_upstream": true,
+      "receive_state_divergence_from_178": null
+    },
+    "conversion": {
+      "frames": {
+        "sil_csv_receipt": 1,
+        "converter": {
+          "name": "sil-csv",
+          "version": "0.1.0",
+          "revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
+          "mcap": "mcap-python/1.4.0"
+        },
+        "source": {
+          "file": "frames.csv",
+          "sha256": "41041ccc195c700fdcded64d15ec924fbc0245cb106c672b775b93d470c9cd4d",
+          "rows": 149228
+        },
+        "mapping": {
+          "file": "native-frames.json",
+          "sha256": "d535d0400fbe4b57e3afa3403f67647c4a8996dbb3834b19af35d79f27c410b2"
+        },
+        "recording": {
+          "file": "native-frames.mcap",
+          "sha256": "e3f6ca61847dec014109cfc2896ab7333c29dae936cbf7a674a57d24e88a811c"
+        },
+        "channels": {
+          "can.rx": {
+            "schema": "can.TimedFrame",
+            "messages": 149228,
+            "first_ns": 18054876797669,
+            "last_ns": 18114867092416
+          }
+        },
+        "time_bounds": {
+          "first_ns": 18054876797669,
+          "last_ns": 18114867092416
+        }
+      },
+      "transmit": {
+        "sil_csv_receipt": 1,
+        "converter": {
+          "name": "sil-csv",
+          "version": "0.1.0",
+          "revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
+          "mcap": "mcap-python/1.4.0"
+        },
+        "source": {
+          "file": "transmit.csv",
+          "sha256": "406c0b8556b10bcb03738e14a9e3c6a856ae1392ae8377af0c423252fc8e3fc8",
+          "rows": 6934
+        },
+        "mapping": {
+          "file": "transmit.json",
+          "sha256": "75873fce4d8d58a33b376bd6ace5b9006f987c235ab5dd595f57df69e8f016ef"
+        },
+        "recording": {
+          "file": "transmit.mcap",
+          "sha256": "d9c0ce1ca1e4d9451a2ae549b069db0ffa321afd2d4a16fef70b7a3fa426b225"
+        },
+        "channels": {
+          "can.tx": {
+            "schema": "can.TimedFrame",
+            "messages": 6934,
+            "first_ns": 18054876797669,
+            "last_ns": 18114867092416
+          }
+        },
+        "time_bounds": {
+          "first_ns": 18054876797669,
+          "last_ns": 18114867092416
+        }
+      },
+      "frames_window": {
+        "sil_window_receipt": 1,
+        "preparer": {
+          "name": "sil-window",
+          "version": "0.1.0",
+          "revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
+          "mcap": "mcap-python/1.4.0"
+        },
+        "source": {
+          "file": "native-frames.mcap",
+          "sha256": "e3f6ca61847dec014109cfc2896ab7333c29dae936cbf7a674a57d24e88a811c"
+        },
+        "window": {
+          "file": "native-window.json",
+          "sha256": "b1d43fb03e2cf3b98d2d849d80144aa393e468e15e2d18ea8b4aa7fc17546c8c"
+        },
+        "recording": {
+          "file": "native-window.mcap",
+          "sha256": "23975f2286b13869f88ff26629a24c00e1e52bfc2711379c9ece0d4005cc9326"
+        },
+        "source_origin_ns": 18054876797669,
+        "intervals": {
+          "warm_up": {
+            "source": {
+              "start_ns": 18054876797669,
+              "end_ns": 18054876797669
+            },
+            "virtual": {
+              "start_ns": 0,
+              "end_ns": 0
+            }
+          },
+          "evaluation": {
+            "source": {
+              "start_ns": 18054876797669,
+              "end_ns": 18114867092417
+            },
+            "virtual": {
+              "start_ns": 0,
+              "end_ns": 59990294748
+            }
+          }
+        },
+        "duration_ns": 59990294748,
+        "evaluation_window": {
+          "from_ns": 0,
+          "to_ns": 59990294747
+        },
+        "channels": {
+          "can.rx": {
+            "schema": "can.TimedFrame",
+            "source_span": {
+              "first_ns": 18054876797669,
+              "last_ns": 18114867092416
+            },
+            "held": null,
+            "largest_gap_ns": 11029012,
+            "warm_up": {
+              "messages": 0,
+              "first_ns": null,
+              "last_ns": null
+            },
+            "evaluation": {
+              "messages": 149228,
+              "first_ns": 0,
+              "last_ns": 59990294747
+            }
+          }
+        }
+      },
+      "transmit_window": {
+        "sil_window_receipt": 1,
+        "preparer": {
+          "name": "sil-window",
+          "version": "0.1.0",
+          "revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
+          "mcap": "mcap-python/1.4.0"
+        },
+        "source": {
+          "file": "transmit.mcap",
+          "sha256": "d9c0ce1ca1e4d9451a2ae549b069db0ffa321afd2d4a16fef70b7a3fa426b225"
+        },
+        "window": {
+          "file": "transmit-window.json",
+          "sha256": "99ca7364efb4af068f0735dc36104e916f760a50596a9a71c4c7b9d666576995"
+        },
+        "recording": {
+          "file": "transmit-window.mcap",
+          "sha256": "ca0b49239212ba8d9b4374b42cd85bfea96c9ff38cbbe55990c2ee03267fab3a"
+        },
+        "source_origin_ns": 18054876797669,
+        "intervals": {
+          "warm_up": {
+            "source": {
+              "start_ns": 18054876797669,
+              "end_ns": 18054876797669
+            },
+            "virtual": {
+              "start_ns": 0,
+              "end_ns": 0
+            }
+          },
+          "evaluation": {
+            "source": {
+              "start_ns": 18054876797669,
+              "end_ns": 18114867092417
+            },
+            "virtual": {
+              "start_ns": 0,
+              "end_ns": 59990294748
+            }
+          }
+        },
+        "duration_ns": 59990294748,
+        "evaluation_window": {
+          "from_ns": 0,
+          "to_ns": 59990294747
+        },
+        "channels": {
+          "can.tx": {
+            "schema": "can.TimedFrame",
+            "source_span": {
+              "first_ns": 18054876797669,
+              "last_ns": 18114867092416
+            },
+            "held": null,
+            "largest_gap_ns": 20868164,
+            "warm_up": {
+              "messages": 0,
+              "first_ns": null,
+              "last_ns": null
+            },
+            "evaluation": {
+              "messages": 6934,
+              "first_ns": 0,
+              "last_ns": 59990294747
+            }
+          }
+        }
+      },
+      "reference": {
+        "sil_csv_receipt": 1,
+        "converter": {
+          "name": "sil-csv",
+          "version": "0.1.0",
+          "revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
+          "mcap": "mcap-python/1.4.0"
+        },
+        "source": {
+          "file": "native-reference.csv",
+          "sha256": "b0639683baa776b7e847a9371ab327ae340cd83e2bc2c4824937b8ca04ffdaa5",
+          "rows": 6000
+        },
+        "mapping": {
+          "file": "native-reference.json",
+          "sha256": "416d6815a5afc3348c8ecd39950430349c32a8bc4eb2da94d478043296915449"
+        },
+        "recording": {
+          "file": "native-reference.mcap",
+          "sha256": "3cb355bbaf2d22bf8a6ce5aad47cc6d2844cbc916633535b0f2d7a22d2ac2646"
+        },
+        "channels": {
+          "libsafety.state": {
+            "schema": "libsafety.NativeReferenceState",
+            "messages": 6000,
+            "first_ns": 0,
+            "last_ns": 59991000000
+          }
+        },
+        "time_bounds": {
+          "first_ns": 0,
+          "last_ns": 59991000000
+        }
+      }
+    },
+    "runtime": {
+      "machine": "x86_64",
+      "libc": "glibc 2.36",
+      "python": "3.13.7",
+      "runner": {
+        "license": "Apache-2.0",
+        "source_repository": "https://github.com/Stevie1704/sil",
+        "source_revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
+        "version": "0.1.0"
+      },
+      "libubsan1": "12.2.0-14+deb12u1",
+      "library_ldd": [
+        "linux-vdso.so.1",
+        "libubsan.so.1 => /lib/x86_64-linux-gnu/libubsan.so.1",
+        "libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6",
+        "libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6",
+        "libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1",
+        "/lib64/ld-linux-x86-64.so.2",
+        "libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6"
+      ],
+      "example_image_id": "sha256:102026a41ed73f9546c2cb3432f9b74c7544ecbab96af093f9e3d96f4ca1f20c"
+    },
+    "compilers_absent": [
+      "cc",
+      "gcc",
+      "clang",
+      "c++"
+    ]
+  },
+  "run": {
+    "participant": "native: native_adapter.c, dlopens libsafety.so",
+    "task_period_ns": 1000000,
+    "latency_ns": {
+      "can.rx": 0,
+      "can.tx": 0,
+      "libsafety.state": 0
+    },
+    "route_capacity": {
+      "can.rx": 47,
+      "can.tx": 3
+    },
+    "duration_ns": 59992000000,
+    "event_time": "frame field event_ns, rebased by sil-window",
+    "transmit": "upstream sendcan event after the can event at the same instant: set_timer, safety_tick when warm, safety_tx_hook per candidate",
+    "instances": "one per Run: C globals; a second is a Manifest error",
+    "termination": "none: no ABI callback and no library call; the library ends with the runner process"
+  },
+  "nominal": {
+    "manifest_hash": "661cf2ad039e4fe79a857f63709c60ec8b7a251e105feb4c290ebbe4cc583e43",
+    "recording_sha256": "f48c4e949cf20515ce578fcb756447d757b1a823bdfafc2f5b934788950bb689",
+    "byte_identical": true,
+    "observations_checked": 6000,
+    "config_valid": {
+      "ticked_events": 5800,
+      "ticked_invalid": 0,
+      "unticked_events": 200,
+      "unticked_invalid": 1
+    },
+    "provenance": {
+      "artifacts": {
+        "clock_shim": null,
+        "command_files": [],
+        "native_participants": [
+          {
+            "library": {
+              "path": "/opt/libsafety/native/libsafety_native.so",
+              "sha256": "4427da033873ab7c9fba8531f0ce22bbefdd265d41890bebac9eb19e3ad727a2"
+            },
+            "name": "libsafety"
+          }
+        ],
+        "process_participants": [],
+        "runner": {
+          "path": "/usr/local/bin/sil-run",
+          "sha256": "2a0a79c3685527f33fd2a2216027d3985d03e3a1e50334526f640309defa13ad"
+        }
+      },
+      "errors": [],
+      "machine_class": {
+        "architecture": "x86-64",
+        "id": "Linux/x86-64/glibc-2.36",
+        "libc": "glibc-2.36",
+        "os": "Linux"
+      },
+      "manifest_hash": "661cf2ad039e4fe79a857f63709c60ec8b7a251e105feb4c290ebbe4cc583e43",
+      "recording": {
+        "sha256": "f48c4e949cf20515ce578fcb756447d757b1a823bdfafc2f5b934788950bb689"
+      },
+      "run_exit_code": 0,
+      "schema_version": 1,
+      "sil": {
+        "source_repository": "https://github.com/Stevie1704/sil",
+        "source_revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
+        "version": "0.1.0"
+      }
+    }
+  },
+  "contract_sha256": "3fa3be04d3fcdad55ed504878016f07689e5dcd4ace7b5617e5b954b7772a079",
+  "controls": {
+    "timer-in-ns": {
+      "manifest_hash": "e2b21d7dd77e2967962398face64b9679a9dd68c12aa954400f430783ba93a8e",
+      "verdict": "fail",
+      "divergences": 9574,
+      "first_divergence": {
+        "kind": "value",
+        "channel": "libsafety.state",
+        "reference_channel": "libsafety.state",
+        "field": "controls_allowed",
+        "observation_ns": 1001000000,
+        "actual_publication_ns": 1001000000,
+        "reference_time_ns": 1001000000,
+        "actual": 0,
+        "expected": 1,
+        "tolerance": "exact",
+        "abs_error": null
+      }
+    },
+    "stock-longitudinal": {
+      "manifest_hash": "eb0c4bc4c5ee30777241b60b52bad0d201af4195f621fe69e0fe216ca760b394",
+      "verdict": "fail",
+      "divergences": 3748,
+      "first_divergence": {
+        "kind": "value",
+        "channel": "libsafety.state",
+        "reference_channel": "libsafety.state",
+        "field": "tx_accepted",
+        "observation_ns": 31000000,
+        "actual_publication_ns": 31000000,
+        "reference_time_ns": 31000000,
+        "actual": 0,
+        "expected": 1,
+        "tolerance": "exact",
+        "abs_error": null
+      }
+    },
+    "second-instance": {
+      "manifest_hash": "0498ac78dc81f2fbeb3e3cbf7d563dec4bd3e4f764a41322290ab639678fc53b",
+      "exit_code": 2,
+      "diagnostic": "sil-run: manifest error: participant 'libsafety-2' failed: participant 'libsafety-2': libsafety keeps its state in C globals, so one Run holds at most one instance of it"
+    }
+  },
+  "sealed_regression": {
+    "nominal": {
+      "status": "pass",
+      "lock_sha256": "6d88f1cb7d6d43afead7aefb8462dc03ec2ef669fc72bbae37196fc0c579cdef",
+      "timeout_s": 600,
+      "runs": [
+        {
+          "name": "native-nominal",
+          "status": "pass",
+          "exit_code": 0,
+          "recording_sha256": "f5318f9c6a18e7dee43966362f19f73e9b2aa6ed029d8c6367f92d5a8afe959c"
+        }
+      ]
+    },
+    "crash": {
+      "status": "behavioral-failure",
+      "reason": "run native-crash: sil-run exited -11",
+      "simulated": "the failure build crashes or hangs in the adapter, just before the library call; the library itself is unchanged",
+      "runs": [
+        {
+          "name": "native-crash",
+          "status": "behavioral-failure",
+          "exit_code": -11,
+          "recording_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "reached_event": "100",
+      "residue": []
+    },
+    "hang": {
+      "status": "timeout",
+      "reason": "exceeded its 30 s guard; its Run processes were terminated",
+      "simulated": "the failure build crashes or hangs in the adapter, just before the library call; the library itself is unchanged",
+      "timeout_s": 30,
+      "reached_event": "100",
+      "residue": []
+    }
+  },
+  "resources": {
+    "note": "observational, from one runner; not an acceptance criterion and not a representative vECU measurement for #125",
+    "native_run_wall_s": [
+      0.15109844599999178,
+      0.15315106399998513
+    ],
+    "native_events_per_s": 39709.210510347184,
+    "native_virtual_to_wall": 397.0278737810663,
+    "process_run_wall_s": [
+      2.453595016999998,
+      2.5902587089999827
+    ],
+    "library_computation": {
+      "what": "the pinned library's calls alone, as native_adapter.c makes them, packets built before the timed interval; equal to the nominal Run's published states at every event",
+      "harness_sha256": "a4ee2281daf6b2071ce935df451548881c8ec641afd8b116d0a46767c55e9ba0",
+      "events": 6000,
+      "frames": 149228,
+      "candidates": 6934,
+      "warmup": 1,
+      "repeats": 5,
+      "elapsed_ns": {
+        "median": 31060724,
+        "min": 30739866,
+        "max": 31694648,
+        "all": [
+          30782861,
+          31066533,
+          30739866,
+          31060724,
+          31694648
+        ]
+      },
+      "us_per_event": 5.176787333333333,
+      "ns_per_library_frame": 198.90065444858544,
+      "share_of_native_run": 0.20556613798663217
+    }
+  }
+}

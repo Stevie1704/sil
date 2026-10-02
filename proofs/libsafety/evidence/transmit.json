@@ -1,0 +1,63 @@
+{
+  "recording": {
+    "path": "recordings/rlog.zst",
+    "sha256": "b0d19f7ccf67fef1c4afd9cf579e96cecc1d278be2aa4a3adf97b2d64d940a4c"
+  },
+  "library": {
+    "path": "libsafety/libsafety.so",
+    "sha256": "ad19bdcd96f6b9c6daf1f55c1851dfe8dfb1c613ed4747f72b3b5b9b7300dec1"
+  },
+  "reference": {
+    "path": "references/libsafety-states.json",
+    "sha256": "ba8731f785431226e80fbb49cd065e39b76ee5140baf0148837f69735a4a9b21"
+  },
+  "exporter_sha256": "41d87bc1aa58140b701e1de0511281af5cf06f5d9d538f2d438e16d3c64ca2c8",
+  "transmit_csv_sha256": "406c0b8556b10bcb03738e14a9e3c6a856ae1392ae8377af0c423252fc8e3fc8",
+  "native_reference_sha256": "49238791de0b8fb541f25bd142f749fefb37386ed0975b6b546bd73bfd99b00b",
+  "candidates": {
+    "kind": "recorded stock-camera frames (bus 2) readdressed to bus 0; not openpilot sendcan",
+    "addresses": [
+      "0x191",
+      "0x2e4",
+      "0x343",
+      "0x412"
+    ],
+    "frames": 6934,
+    "events": 5244,
+    "largest_burst": 3,
+    "by_address": {
+      "0x191": {
+        "accepted": 0,
+        "rejected": 2500
+      },
+      "0x2e4": {
+        "accepted": 2500,
+        "rejected": 0
+      },
+      "0x343": {
+        "accepted": 1874,
+        "rejected": 1
+      },
+      "0x412": {
+        "accepted": 59,
+        "rejected": 0
+      }
+    }
+  },
+  "upstream_replay_drive": {
+    "received": 149228,
+    "invalid": 0,
+    "transmitted": 6934,
+    "blocked": 2501,
+    "blocked_with_controls_allowed": 2499,
+    "blocked_addresses": "Counter({401: 2500, 835: 1})"
+  },
+  "reference_totals": {
+    "received": 149228,
+    "invalid": 0,
+    "transmitted": 6934,
+    "blocked": 2501
+  },
+  "agrees_with_upstream": true,
+  "receive_state_divergence_from_178": null
+}

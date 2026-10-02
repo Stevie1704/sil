@@ -1,4 +1,4 @@
-# Public shared-library acceptance: opendbc `libsafety` (#193)
+# Public shared-library acceptance: opendbc `libsafety` (#193, #232)
 
 ```sh
 proofs/public-workloads/run-proof.sh                 # once: the #178 bundle; needs docker and network
@@ -21,7 +21,9 @@ validation, and it says nothing about whether the safety logic is correct.
 | --- | --- | --- | --- |
 | Bundle (#178) | public-workload tool image | image build only | `libsafety.so`, `rlog.zst`, `libsafety-states.json`, digests |
 | Frame export | the same tool image | none | `prepared/frames.csv`, `frames.json`, `packet-layout.json` |
-| Acceptance | example image: production runtime + `libubsan1` + this directory | none | `inputs/`, `runs/`, `evidence/report.json` |
+| Transmit export (#232) | the same tool image, a process of its own | none | `prepared/transmit.csv`, `native-reference.json`, `transmit.json` |
+| Acceptance | example image: production runtime + `libubsan1` + this directory + the built Native adapter | none | `inputs/`, `runs/`, `evidence/report.json` |
+| Native acceptance (#232) | the same example image | none | `bundles/`, `matrix/`, `evidence/native-report.json` |
 
 Only the tool image has opendbc's log reader, pycapnp and CFFI. The example
 image has none of them. SiL comes from the installed wheel and the installed
@@ -113,16 +115,131 @@ observational, from one runner. They are not acceptance criteria. The
 library is small decision logic behind a Python adapter, so they are not a
 representative vECU Step cost for #125.
 
+## Native participant and transmit (#232)
+
+`native_acceptance.py` runs after `acceptance.py` in the same example image.
+It runs the same library and recording as a **Native participant**, in the
+runner's own process, and adds **transmit** coverage. The Process form above
+is unchanged.
+
+**Adapter.** `native_adapter.c` exports `sil_participant_init`. It loads the
+pinned `libsafety.so` with `dlopen` from its config and resolves every symbol
+before the Run starts. It applies the same policy as `adapter.py`: one Burst
+per activation, the timer from the Burst's instant, `safety_tick` only when
+warm, then `safety_fwd_hook` and `safety_rx_hook` per frame. The example
+image builds it in the SiL build stage, against the installed
+`sil/participant.h` and the layouts that `silschema` generates from
+`workload.py`. The example image itself has no compiler.
+
+**Event time.** The Native ABI's `take` returns a payload without its
+Message time. Each frame therefore carries its recorded time in a field,
+`event_ns` (`can.TimedFrame`). `sil-window` rebases that field together with
+the log time (`source_time_fields`), so `event_ns` is the Burst's Virtual
+instant. No ABI change is necessary.
+
+**Transmit candidates.** The segment has no `sendcan`. The candidates are
+therefore derived from recorded frames, not generated. On this Toyota the
+stock camera sends `STEERING_LTA` (0x191), `STEERING_LKA` (0x2E4),
+`ACC_CONTROL` (0x343) and `LKAS_HUD` (0x412) on bus 2. openpilot sends these
+messages in their place on bus 0. `prepare_transmit.py` makes each recorded
+camera frame of these addresses one candidate on bus 0, with its recorded
+payload. The candidates of one `can` event are one upstream `sendcan` event
+at the same instant, after the `can` event: `set_timer`, `safety_tick` when
+warm, then `safety_tx_hook` per candidate. These candidates are recorded
+stimulus, not openpilot output: the recorded `STEERING_LKA` torque is always
+0, so the torque rate limits are not exercised.
+
+**Reference.** `prepare_transmit.py` runs in the tool image. It drives the
+pinned library through upstream's CFFI declarations, event by event, and
+records the state and the transmit verdicts per event. Two cross-checks stop
+the export when they fail:
+
+- upstream `replay_drive` replays the same `can` and `sendcan` events and
+  must count the same received, invalid, transmitted and blocked frames;
+- the receive-side state of every event must equal the #178 reference, so
+  the candidates do not change what #193 compares.
+
+**Run contract.** As for the Process form, with these differences:
+
+| Item | Value |
+| --- | --- |
+| Participant | Native, `libsafety_native.so`; Task period 1 ms |
+| Inputs | `can.rx` (frames) and `can.tx` (candidates), both `can.TimedFrame`, from two Replay participants, Latency 0 |
+| Route capacity | `can.rx` 47, `can.tx` the largest candidate set of one event |
+| `can.tx` window | from the first candidate to the last event, origin the first event, `max_gap_ns` 100 ms |
+| Observation | `libsafety.NativeState`: the Process fields plus `tx_accepted` and `tx_rejected` |
+| Comparison | every recorded field exact at every event; `config_valid` checked separately |
+| Instances | one per Run (C globals); a second Participant of the adapter is a Manifest error |
+| Termination | none: Native ABI v1 has no termination callback and the library has no shutdown call. The library ends with the runner process |
+| Threads and blocking | none: the library starts no thread, reads no clock and blocks on nothing |
+
+**Controls.** Each must fail, and fail for its reason:
+
+| Control | Change | Required failure |
+| --- | --- | --- |
+| `timer-in-ns` | timer unit 1 ns instead of 1 µs | `sil-compare`: `controls_allowed` diverges at event 100, where #178 found it |
+| `stock-longitudinal` | param 73 + opendbc's stock-longitudinal flag (0x200) | `sil-compare`: the first divergence is a transmit verdict; `ACC_CONTROL` is refused |
+| `second-instance` | a second Participant of the same adapter | Manifest error (exit 2): `one Run holds at most one instance` |
+| `crash` | the adapter raises SIGSEGV at event 100 | sealed case `behavioral-failure`: `sil-run` ends with signal 11 |
+| `hang` | the adapter never returns at event 100 | sealed case `timeout`: the 30 s whole-case guard |
+
+**Sealed regression.** The nominal Run is also a sealed offline regression
+bundle (`bundles/native-nominal`): the adapter, the library, both windowed
+Recordings, the reference and the contract, with the loader dependencies of
+both libraries and no compiler. `sil-matrix` runs it under a 600 s
+whole-case guard, twice for Recording identity, with the comparison. The
+crash and hang controls are sealed bundles of their own. They are simulated
+failures: the adapter crashes or hangs just before the library call, and the
+library is unchanged. Each failure build
+writes `$TMPDIR/libsafety-failure-event` first, so the control shows that
+the Run reached event 100. A hung Run is killed before its log is kept.
+
+**What the Native form cannot do.** These are incompatibilities of an
+in-process library, recorded and not worked around:
+
+- A crash in the library ends the runner. There is no participant
+  diagnostic. The case evidence keeps an empty Recording, and a core dump
+  when the host's `core_pattern` writes one into the working directory.
+- A hang in the library stops the Run. No Process response deadline
+  applies, because no Process exists. Only a whole-case guard outside the
+  runner ends it.
+- One Run holds at most one instance.
+
+**Cost.** `native-report.json` → `resources` keeps two kinds of cost from
+one runner. The full Run cost is the wall-clock time of whole Native and
+Process Runs. The target computation cost comes from `library_cost.c`. This
+small C program loads the pinned library without SiL and builds every
+`CANPacket_t` first. It then times only the library calls, which it makes in
+the order `native_adapter.c` makes them. It runs once untimed and five times
+timed, each time in a fresh process, because the library's state is C
+globals. Each time, the states it writes must equal, byte for byte, the
+states that the nominal Run published. The timed computation is therefore
+the computation that was compared. Both numbers are observational. They are
+not the #125 vECU measurement: the library is small decision logic, not a
+vECU.
+
+`libsafety_api.h` holds the library binding, the packet, the time policy and
+the state read. The adapter and the timing program both include it, so they
+cannot make different calls.
+
+The Process form keeps each of these inside one Process participant. It
+stays the isolated alternative.
+
 ## Retained results
 
-[`evidence/`](evidence/) is the output of CI run 36232866332 on native
+[`evidence/`](evidence/) is the output of CI run 36996714268 on native
 Linux x86-64 (glibc 2.36, CPython 3.13.7, `libubsan1` 12.2.0-14+deb12u1). It
-holds `report.json`, the three conversion receipts, the comparison reports,
-and the export's `frames.json`, `packet-layout.json` and `tool-image.json`.
-The Recordings are not committed, because they hold the recorded data. The
-job keeps the Manifests and runner output as the `libsafety-evidence`
-artifact. A run of the same job under amd64 emulation on an arm64 host gave
-the same Manifest hash and the same Recording bytes.
+holds `report.json` and `native-report.json`, the conversion receipts, the
+comparison reports, the export's `frames.json`, `transmit.json`,
+`packet-layout.json` and `tool-image.json`, and for the Native form the
+bundle declarations and locks (`bundles/`) and the `sil-matrix` case lists
+and summaries (`matrix/`). The Recordings and `native-reference.json` are not
+committed, because they hold the recorded data or its replay. The job keeps
+the Manifests and runner output as the `libsafety-evidence` artifact. The
+Process results are the same as in the first #193 run (36232866332): the
+same Manifest hash and the same Recording bytes. A run of that job under amd64
+emulation on an arm64 host gave the same Manifest hash and the same Recording
+bytes.
 
 | Check | Result |
 | --- | --- |
@@ -142,16 +259,51 @@ The runtime identity (glibc, CPython, `sil-run --build-info`, `libubsan1`
 version, resolved `ldd`, image ID) and the export tool image ID are in
 `report.json` → `identities`.
 
-Resource observations from that runner: a nominal Run took 5.6 to 5.8 s of
-wall-clock time for 59.99 s of Virtual time. That is about 1060 events and
-26,400 frames per second. The largest child resident set was 104 MiB.
+Resource observations from that runner: a nominal Run took 2.5 to 2.6 s of
+wall-clock time for 59.99 s of Virtual time. That is about 2450 events and
+60,800 frames per second. The largest child resident set was 103 MiB. The
+runner of the first #193 run was slower (5.6 to 5.8 s): wall-clock times
+change with the runner and are not compared across runs.
+
+**Native form (#232).**
+
+| Check | Result |
+| --- | --- |
+| Transmit export | 6934 candidates in 5244 events, at most 3 per event. 0x2E4: 2500 accepted. 0x191: 2500 rejected. 0x343: 1874 accepted, 1 rejected. 0x412: 59 accepted |
+| Upstream `replay_drive` | same counts: 149,228 received, 0 invalid, 6934 transmitted, 2501 blocked |
+| Receive state | equal to the #178 reference at all 6000 events |
+| Nominal | 6000 of 6000 observations equal, every compared field, the transmit verdicts included |
+| `config_valid` | 1 at all 5800 ticked events |
+| Determinism | two Runs of Manifest `661cf2ad…`, byte-identical Recordings (`f48c4e94…`) |
+| `timer-in-ns` | first divergence at Slot 1.001 s (event 100): `controls_allowed` 0, expected 1 |
+| `stock-longitudinal` | first divergence at Slot 31 ms: `tx_accepted` 0, expected 1 |
+| `second-instance` | exit 2: `one Run holds at most one instance of it` |
+| Sealed nominal | `sil-matrix` `pass`: lock `6d88f1cb…`, two Runs, comparison, no compiler |
+| Sealed `crash` | `behavioral-failure`: `sil-run exited -11`; event 100 reached |
+| Sealed `hang` | `timeout`: `exceeded its 30 s guard`; event 100 reached |
+
+Cost on the same runner, observational:
+
+| Measurement | Result |
+| --- | --- |
+| Full Run, Native form | 0.15 s for 59.99 s of Virtual time, about 39,700 events per second |
+| Full Run, Process form | 2.5 to 2.6 s |
+| Target computation (`library_cost`) | median 31.1 ms over 5 repeats (30.7 to 31.7 ms): 5.2 µs per event, 199 ns per library frame call |
+| Target computation share of the Native Run | 21 % |
+| Computation equal to the Run | the states of all 6000 events, byte for byte, in every repeat |
+
+The adapter and harness digests are in `native-report.json` →
+`identities.adapters` and `resources.library_computation`.
 
 ## Limits
 
-- **Receive side only.** The segment has no `sendcan`, so no transmit hook is
-  covered.
+- **Recorded-derived transmit only.** The segment has no `sendcan`. The
+  Native form covers the transmit hook with recorded camera frames
+  readdressed to bus 0. Their steering torque is always 0, so no torque
+  limit is exercised. The Process form is receive side only.
 - **One instance per process.** The library keeps its state in C globals.
-  One Process participant is one library instance.
+  One Process participant, or one Run with the Native form, is one library
+  instance.
 - **Runtime dependency.** The upstream build links `libubsan.so.1`. The
   example image installs Debian's `libubsan1`; `report.json` names its
   version and the resolved `ldd` of the library.

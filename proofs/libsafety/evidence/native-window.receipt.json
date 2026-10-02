@@ -7,16 +7,16 @@
     "mcap": "mcap-python/1.4.0"
   },
   "source": {
-    "file": "frames.mcap",
-    "sha256": "190f21053dd3544c51e4647cf9746be2c35647321bd53c0aa3f2e2d7c2ba1f38"
+    "file": "native-frames.mcap",
+    "sha256": "e3f6ca61847dec014109cfc2896ab7333c29dae936cbf7a674a57d24e88a811c"
   },
   "window": {
-    "file": "window.json",
-    "sha256": "12e43c37001d6cde666aaa933147d55194bd6443d26436fa2ad0cacd8d3b03c7"
+    "file": "native-window.json",
+    "sha256": "b1d43fb03e2cf3b98d2d849d80144aa393e468e15e2d18ea8b4aa7fc17546c8c"
   },
   "recording": {
-    "file": "window.mcap",
-    "sha256": "1a8708da361ead8e9fb75a8966ab6017dc205f0779c8be011b7a60a359ac310b"
+    "file": "native-window.mcap",
+    "sha256": "23975f2286b13869f88ff26629a24c00e1e52bfc2711379c9ece0d4005cc9326"
   },
   "source_origin_ns": 18054876797669,
   "intervals": {
@@ -48,7 +48,7 @@
   },
   "channels": {
     "can.rx": {
-      "schema": "can.Frame",
+      "schema": "can.TimedFrame",
       "source_span": {
         "first_ns": 18054876797669,
         "last_ns": 18114867092416

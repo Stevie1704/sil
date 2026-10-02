@@ -25,6 +25,22 @@ Each control changes exactly one of these:
 | `wrong-param` | param 73 + the alternative-brake flag | the state diverges |
 | `crash` | SIGSEGV at event 100 | the library process dies |
 | `hang` | no return at event 100 | the response deadline is missed |
+
+`native_manifest` declares the Native form (#232) of the same Run. Two
+Replay participants publish the frames on `can.rx` and the transmit
+candidates on `can.tx`, both as `can.TimedFrame`, with Latency 0. One Native
+participant, `native_adapter.c` built as a shared library, loads the pinned
+`libsafety.so` from its config and publishes `libsafety.state` as
+`libsafety.NativeState`. Its Task period is the same 1 ms. Its controls:
+
+| Control | Change | Must fail because |
+| --- | --- | --- |
+| `timer-in-ns` | timer unit 1 ns | the state diverges (#178: event 100) |
+| `stock-longitudinal` | param 73 + the stock-longitudinal flag | ACC_CONTROL candidates are rejected |
+| `second-instance` | a second participant of the adapter | a Manifest error: the library's globals allow one instance |
+
+The crash and hang controls are adapter builds of their own; they run as
+sealed bundles under `sil-matrix`.
 """
 
 from __future__ import annotations
@@ -35,10 +51,13 @@ from pathlib import Path
 from workload import (
     FRAME_CHANNEL,
     FRAME_SCHEMA,
+    NATIVE_STATE_SCHEMA,
     SCHEMAS,
     STATE_CHANNEL,
     STATE_SCHEMA,
     STEP_PERIOD_NS,
+    TIMED_FRAME_SCHEMA,
+    TRANSMIT_CHANNEL,
     duration_ns,
 )
 
@@ -49,6 +68,8 @@ TIMER_UNIT_NS = 1000
 FAILURE_EVENT = 100
 # opendbc's TOYOTA_PARAM_ALT_BRAKE: read the brake from another message.
 TOYOTA_ALT_BRAKE = 1 << 8
+# opendbc's TOYOTA_PARAM_STOCK_LONGITUDINAL: only cancel requests on 0x343.
+TOYOTA_STOCK_LONGITUDINAL = 2 << 8
 
 CONTROLS = {
     "input-one-step-late": {"frame_latency_ns": STEP_PERIOD_NS},
@@ -56,6 +77,13 @@ CONTROLS = {
     "wrong-param": {"param_flags": TOYOTA_ALT_BRAKE},
     "crash": {"failure": "crash"},
     "hang": {"failure": "hang"},
+}
+
+
+NATIVE_CONTROLS = {
+    "timer-in-ns": {"timer_unit_ns": 1},
+    "stock-longitudinal": {"param_flags": TOYOTA_STOCK_LONGITUDINAL},
+    "second-instance": {"instances": 2},
 }
 
 
@@ -69,6 +97,7 @@ class Segment:
     param: int
     alternative_experience: int
     largest_burst: int
+    largest_transmit_burst: int = 0
 
 
 def replay_manifest(recording: Path, library: Path, segment: Segment, *,
@@ -104,4 +133,41 @@ def replay_manifest(recording: Path, library: Path, segment: Segment, *,
         subscribes=[SubscriberRoute(FRAME_CHANNEL,
                                     capacity=segment.largest_burst)],
         publishes=[STATE_CHANNEL])
+    return m
+
+
+def native_manifest(frames: Path, transmit: Path, adapter: Path, library: Path,
+                    segment: Segment, *, timer_unit_ns: int = TIMER_UNIT_NS,
+                    param_flags: int = 0, instances: int = 1) -> Manifest:
+    """The Native form: `adapter` is the built `native_adapter.c`."""
+    m = Manifest(duration_ns=duration_ns(segment.last_event_ns))
+    m.add_schemas({name: SCHEMAS[name]
+                   for name in (TIMED_FRAME_SCHEMA, NATIVE_STATE_SCHEMA)})
+    m.add_channel(FRAME_CHANNEL, schema=TIMED_FRAME_SCHEMA, latency_ns=0)
+    m.add_channel(TRANSMIT_CHANNEL, schema=TIMED_FRAME_SCHEMA, latency_ns=0)
+    m.add_replay("replay", recording=Path(frames).resolve(),
+                 channels=[FRAME_CHANNEL])
+    m.add_replay("transmit", recording=Path(transmit).resolve(),
+                 channels=[TRANSMIT_CHANNEL])
+    for index in range(instances):
+        name = "libsafety" if index == 0 else f"libsafety-{index + 1}"
+        state = STATE_CHANNEL if index == 0 else f"{STATE_CHANNEL}.{index + 1}"
+        m.add_channel(state, schema=NATIVE_STATE_SCHEMA, latency_ns=0)
+        m.add_native(
+            name, library=str(Path(adapter).resolve()),
+            config={
+                "library": str(Path(library).resolve()),
+                "frames": FRAME_CHANNEL, "transmit": TRANSMIT_CHANNEL,
+                "state": state, "period_ns": STEP_PERIOD_NS,
+                "mode": segment.mode, "param": segment.param | param_flags,
+                "alternative_experience": segment.alternative_experience,
+                "timer_origin_ns": segment.first_log_mono_ns,
+                "timer_unit_ns": timer_unit_ns,
+                "first_event_ns": 0, "last_event_ns": segment.last_event_ns,
+            },
+            subscribes=[
+                SubscriberRoute(FRAME_CHANNEL, capacity=segment.largest_burst),
+                SubscriberRoute(TRANSMIT_CHANNEL,
+                                capacity=segment.largest_transmit_burst)],
+            publishes=[state])
     return m

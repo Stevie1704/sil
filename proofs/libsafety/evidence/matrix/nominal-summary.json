@@ -1,0 +1,42 @@
+{
+  "sil_matrix_evidence": 1,
+  "verdict": "pass",
+  "jobs": 1,
+  "fail_fast": false,
+  "counts": {
+    "manifest-error": 0,
+    "determinism-violation": 0,
+    "behavioral-failure": 0,
+    "pass": 1,
+    "timeout": 0,
+    "skipped": 0
+  },
+  "cases": [
+    {
+      "name": "native-nominal",
+      "required": true,
+      "evidence": "cases/native-nominal",
+      "log": "logs/native-nominal.log",
+      "status": "pass",
+      "bundle_exit_code": 0,
+      "runs": [
+        {
+          "name": "native-nominal",
+          "status": "pass",
+          "exit_code": 0,
+          "recording_sha256": "f5318f9c6a18e7dee43966362f19f73e9b2aa6ed029d8c6367f92d5a8afe959c"
+        }
+      ],
+      "identity": {
+        "status": "pass",
+        "bundle_exit_code": 0,
+        "summary_sha256": "cbfd742d6cdefa7aa68ce40ec6f54dc4d6afb63a72cc7d0ca681dd5ea47ebcb3"
+      },
+      "identity_sha256": "609ac5cbbfa7e25ed6f8e90bc9930ee60603beb0e3e47cc138b98173001ee2f7",
+      "observations": {
+        "duration_s": 1.453,
+        "max_rss_kib": 49712
+      }
+    }
+  ]
+}

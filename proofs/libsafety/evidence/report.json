@@ -29,13 +29,13 @@
       }
     },
     "bundle": {
-      "bundle_json_sha256": "613a785b2d2c52e3bea1b2c84472df23e9b97c50b9a2c47e0caa545231c6ba32",
+      "bundle_json_sha256": "55e52f5eb2f281f8db191d2be69c63330606bd7f444102b895ac86db8904f467",
       "tools": {
         "machine": "x86_64",
         "libc": "glibc 2.36",
         "python": "3.13.7",
         "compiler": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
-        "source_revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367",
+        "source_revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
         "packages": {
           "fmpy": "0.3.26",
           "pycapnp": "2.2.1",
@@ -82,9 +82,9 @@
     },
     "export_tool_image": {
       "tag": "sil-public-workloads:qualification",
-      "id": "sha256:20727bd71c4d56965575996705e97cf34d54e4bf8741396f454c6ec6dcddb8f0",
+      "id": "sha256:401c8191013dd3e7badf4e32466b16b1ae0bf2de8464ac7fc395a74ca85ee808",
       "platform": "linux/amd64",
-      "source_revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367"
+      "source_revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709"
     },
     "packet_layout": {
       "compared": 149228,
@@ -97,7 +97,7 @@
         "converter": {
           "name": "sil-csv",
           "version": "0.1.0",
-          "revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367",
+          "revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
           "mcap": "mcap-python/1.4.0"
         },
         "source": {
@@ -131,7 +131,7 @@
         "preparer": {
           "name": "sil-window",
           "version": "0.1.0",
-          "revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367",
+          "revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
           "mcap": "mcap-python/1.4.0"
         },
         "source": {
@@ -201,7 +201,7 @@
         "converter": {
           "name": "sil-csv",
           "version": "0.1.0",
-          "revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367",
+          "revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
           "mcap": "mcap-python/1.4.0"
         },
         "source": {
@@ -238,7 +238,7 @@
       "runner": {
         "license": "Apache-2.0",
         "source_repository": "https://github.com/Stevie1704/sil",
-        "source_revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367",
+        "source_revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
         "version": "0.1.0"
       },
       "libubsan1": "12.2.0-14+deb12u1",
@@ -251,7 +251,7 @@
         "/lib64/ld-linux-x86-64.so.2",
         "libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6"
       ],
-      "example_image_id": "sha256:ed2b43e7f7bbb356d13db210ecda11825f044f627eb4cc47721519d72ce7ea97"
+      "example_image_id": "sha256:102026a41ed73f9546c2cb3432f9b74c7544ecbab96af093f9e3d96f4ca1f20c"
     }
   },
   "run": {
@@ -335,7 +335,7 @@
         ],
         "runner": {
           "path": "/usr/local/bin/sil-run",
-          "sha256": "abaf98ab3b93bc5c5731800d9c294c76a2c313945862aec773ed89d1d1264a43"
+          "sha256": "2a0a79c3685527f33fd2a2216027d3985d03e3a1e50334526f640309defa13ad"
         }
       },
       "errors": [],
@@ -353,7 +353,7 @@
       "schema_version": 1,
       "sil": {
         "source_repository": "https://github.com/Stevie1704/sil",
-        "source_revision": "889ef12d0d61bc524a741182e5e8175d5a7aa367",
+        "source_revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
         "version": "0.1.0"
       }
     }
@@ -440,12 +440,12 @@
   "resources": {
     "note": "observational, from one runner; not an acceptance criterion and not a representative vECU measurement for #125",
     "run_wall_s": [
-      5.787962424,
-      5.642521504999991
+      2.453595016999998,
+      2.5902587089999827
     ],
-    "events_per_s": 1063.35438769409,
-    "frames_per_s": 26447.041427802276,
-    "virtual_to_wall": 10.631823856380695,
-    "nominal_peak_child_rss_kib": 106400
+    "events_per_s": 2445.391337375709,
+    "frames_per_s": 60820.14308231705,
+    "virtual_to_wall": 24.44995785015488,
+    "nominal_peak_child_rss_kib": 105260
   }
 }

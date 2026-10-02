@@ -1,0 +1,47 @@
+{
+  "sil_bundle_lock": 1,
+  "name": "native-crash",
+  "root": "/workspace/bundles/native-crash",
+  "contents_sha256": {
+    "bundle.json": "50021f6df8c012427adacf3b1732fd2770d812404725e4447a906ad0e7f338cd",
+    "libsafety.so": "ad19bdcd96f6b9c6daf1f55c1851dfe8dfb1c613ed4747f72b3b5b9b7300dec1",
+    "libsafety_native.so": "af42a812ea538fa7c4d18f8afcd347fd68e7b95ddbfe784660181104c4d2a4ef",
+    "native-crash.json": "4daa15e162b23ee325f61aef712caebbba1aa73d182d8e65c8fd88f623525a19",
+    "native-window.mcap": "23975f2286b13869f88ff26629a24c00e1e52bfc2711379c9ece0d4005cc9326",
+    "transmit-window.mcap": "ca0b49239212ba8d9b4374b42cd85bfea96c9ff38cbbe55990c2ee03267fab3a"
+  },
+  "dependencies": {
+    "runner": {
+      "path": "/usr/local/bin/sil-run",
+      "sha256": "2a0a79c3685527f33fd2a2216027d3985d03e3a1e50334526f640309defa13ad",
+      "build_info": {
+        "license": "Apache-2.0",
+        "source_repository": "https://github.com/Stevie1704/sil",
+        "source_revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
+        "version": "0.1.0"
+      }
+    },
+    "executables": {},
+    "python": null,
+    "files": {
+      "/lib/x86_64-linux-gnu/libc.so.6": {
+        "sha256": "bff8750fe719e6000791b88b11747dce8772c37118d0b2348044b70819d13835"
+      },
+      "/lib/x86_64-linux-gnu/libgcc_s.so.1": {
+        "sha256": "2bd1552c47799ef67e701e81d4383061fd76059868e446e63560f0dd0d5ec14e"
+      },
+      "/lib/x86_64-linux-gnu/libm.so.6": {
+        "sha256": "7f2ca87f652f56b094462474b076749e90e689d0ecb9cb63c7679820b271b4e7"
+      },
+      "/lib/x86_64-linux-gnu/libstdc++.so.6": {
+        "sha256": "e7848e32af4932840ba775169041759a2a8dd5a008af360e5c55bce506eebcf4"
+      },
+      "/lib/x86_64-linux-gnu/libubsan.so.1": {
+        "sha256": "f9f47dc4672d943f44d1882142c854a1abaf36490cd118f2b29d1815a3395282"
+      },
+      "/lib64/ld-linux-x86-64.so.2": {
+        "sha256": "593bb1d5355658e645f36e6b1f49832691b24e177209765914e4cce51499dbb4"
+      }
+    }
+  }
+}

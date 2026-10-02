@@ -1,0 +1,12 @@
+{
+  "sil_matrix": 1,
+  "cases": [
+    {
+      "name": "native-nominal",
+      "bundle": "/workspace/bundles/native-nominal",
+      "expect_lock": "6d88f1cb7d6d43afead7aefb8462dc03ec2ef669fc72bbae37196fc0c579cdef",
+      "timeout_s": 600,
+      "required": true
+    }
+  ]
+}

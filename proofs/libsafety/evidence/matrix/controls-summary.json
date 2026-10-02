@@ -1,0 +1,63 @@
+{
+  "sil_matrix_evidence": 1,
+  "verdict": "fail",
+  "jobs": 1,
+  "fail_fast": false,
+  "counts": {
+    "manifest-error": 0,
+    "determinism-violation": 0,
+    "behavioral-failure": 1,
+    "pass": 0,
+    "timeout": 1,
+    "skipped": 0
+  },
+  "cases": [
+    {
+      "name": "native-crash",
+      "required": true,
+      "evidence": "cases/native-crash",
+      "log": "logs/native-crash.log",
+      "status": "behavioral-failure",
+      "bundle_exit_code": 1,
+      "reason": "run native-crash: sil-run exited -11",
+      "runs": [
+        {
+          "name": "native-crash",
+          "status": "behavioral-failure",
+          "exit_code": -11,
+          "recording_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "identity": {
+        "status": "behavioral-failure",
+        "bundle_exit_code": 1,
+        "summary_sha256": "9b77c53fee4073334af7a7d5da57f8ed6d15bdfa3c9a8bde287d9773f7aa0ffa"
+      },
+      "identity_sha256": "f8b2ed2265e5474cc9c6eabf47be5a83823f7a08a608ff9021e49d1ded71d69e",
+      "observations": {
+        "duration_s": 0.351,
+        "max_rss_kib": 27392
+      }
+    },
+    {
+      "name": "native-hang",
+      "required": true,
+      "evidence": "cases/native-hang",
+      "log": "logs/native-hang.log",
+      "status": "timeout",
+      "bundle_exit_code": -9,
+      "reason": "exceeded its 30 s guard; its Run processes were terminated",
+      "runs": [],
+      "identity": {
+        "status": "timeout",
+        "bundle_exit_code": -9,
+        "summary_sha256": null
+      },
+      "identity_sha256": "ff87c68ef2ef94112957de0399a862b229fc8a222817c2ea764898e16db69e67",
+      "observations": {
+        "duration_s": 41.069,
+        "max_rss_kib": 27344
+      }
+    }
+  ]
+}

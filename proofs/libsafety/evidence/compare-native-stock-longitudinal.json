@@ -1,0 +1,50 @@
+{
+  "sil_comparison_report": 1,
+  "comparison": "reference",
+  "determinism": "not judged: a reference comparison says whether two trajectories agree within the contract, not whether either Run reproduces; a determinism check (sil-check) bit-compares two Recordings of one Manifest",
+  "verdict": "fail",
+  "contract": {
+    "path": "/workspace/inputs/native-contract.json",
+    "sha256": "3fa3be04d3fcdad55ed504878016f07689e5dcd4ace7b5617e5b954b7772a079"
+  },
+  "actual": {
+    "path": "/workspace/runs/native-stock-longitudinal.mcap",
+    "sha256": "165eb59c156a8c84467f5460176c893b94553e44beea7126572b75c14e26635c"
+  },
+  "reference": {
+    "path": "/workspace/inputs/native-reference.mcap",
+    "sha256": "3cb355bbaf2d22bf8a6ce5aad47cc6d2844cbc916633535b0f2d7a22d2ac2646"
+  },
+  "evaluation": {
+    "from_ns": 0,
+    "to_ns": 59991999999
+  },
+  "coverage": [],
+  "channels": {
+    "libsafety.state": {
+      "reference_channel": "libsafety.state",
+      "observations": 6000,
+      "checked": 6000,
+      "failed": 1874,
+      "nonfinite": 0,
+      "missing_actual": 0,
+      "missing_reference": 0,
+      "ambiguous_actual": 0,
+      "ambiguous_reference": 0
+    }
+  },
+  "divergences": 3748,
+  "first_divergence": {
+    "kind": "value",
+    "channel": "libsafety.state",
+    "reference_channel": "libsafety.state",
+    "field": "tx_accepted",
+    "observation_ns": 31000000,
+    "actual_publication_ns": 31000000,
+    "reference_time_ns": 31000000,
+    "actual": 0,
+    "expected": 1,
+    "tolerance": "exact",
+    "abs_error": null
+  }
+}

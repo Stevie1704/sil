@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Qualify opendbc's safety library against its independent reference (#193).
+# Qualify opendbc's safety library against its independent reference (#193),
+# as a Process participant and as a Native participant with transmit (#232).
 #
 #   proofs/libsafety/run-proof.sh <bundle-directory> [output-directory]
 #
 # <bundle-directory> is the #178 offline bundle: proofs/public-workloads/
 # run-proof.sh writes it to build/public-workloads/bundle, and CI keeps it as
 # the public-workloads-bundle artifact. The output (default build/libsafety)
-# receives prepared/ (the exported frames), inputs/, runs/ and evidence/.
+# receives prepared/ (the exported frames and transmit candidates), inputs/,
+# runs/, bundles/, matrix/ and evidence/.
 #
 # The frames are exported in the #178 tool image, which carries opendbc's log
 # reader. It is always built from proofs/public-workloads/Dockerfile at this
@@ -21,6 +23,7 @@ bundle=${1:?usage: run-proof.sh <bundle-directory> [output-directory]}
 output=${2:-"$root/build/libsafety"}
 platform=linux/amd64
 tools_image=sil-public-workloads:qualification
+build_image=sil-libsafety-build:local
 runtime_image=sil-libsafety-runtime:local
 example_image=sil-libsafety-example:local
 timeout_ms=${SIL_LIBSAFETY_PARTICIPANT_TIMEOUT_MS:-30000}
@@ -49,30 +52,40 @@ if [[ "$tools_revision" != "$revision" ]]; then
     echo "tool image $tools_image holds revision $tools_revision, not $revision" >&2
     exit 1
 fi
-docker build --platform "$platform" --target runtime "${base[@]}" \
-    --build-arg SIL_VERSION="$version" --build-arg SIL_SOURCE_REVISION="$revision" \
-    -t "$runtime_image" "$root"
+for target in build runtime; do
+    image=$build_image
+    if [[ "$target" == runtime ]]; then image=$runtime_image; fi
+    docker build --platform "$platform" --target "$target" "${base[@]}" \
+        --build-arg SIL_VERSION="$version" --build-arg SIL_SOURCE_REVISION="$revision" \
+        -t "$image" "$root"
+done
 docker build --platform "$platform" -f "$root/proofs/libsafety/Dockerfile" \
+    --build-arg SIL_BUILD_IMAGE="$build_image" \
     --build-arg SIL_RUNTIME_IMAGE="$runtime_image" -t "$example_image" "$root"
 
 cat > "$output/prepared/tool-image.json" <<JSON
 {"tag": "$tools_image", "id": "$(image_id "$tools_image")", "platform": "$platform",
  "source_revision": "$tools_revision"}
 JSON
+# Two processes: the transmit reference loads the library, whose state is
+# C globals, so it runs in a process of its own.
 container=$(docker create --platform "$platform" --network none "$tools_image" \
-    python /opt/libsafety/prepare_frames.py /bundle /sources/opendbc \
-    /src/proofs/public-workloads /out)
+    sh -c 'for step in prepare_frames prepare_transmit; do
+               python "/opt/libsafety/$step.py" /bundle /sources/opendbc \
+                   /src/proofs/public-workloads /out || exit; done')
 docker cp "$root/proofs/libsafety/." "$container:/opt/libsafety/"
 docker cp "$bundle/." "$container:/bundle/"
 docker start -a "$container"
 docker cp "$container:/out/." "$output/prepared/"
 cleanup
 
+# The Process form (#193), then the Native form with transmit (#232).
 container=$(docker create --platform "$platform" --network none \
-    --entrypoint python3 \
+    --entrypoint sh \
     -e SIL_LIBSAFETY_PARTICIPANT_TIMEOUT_MS="$timeout_ms" \
     -e SIL_LIBSAFETY_EXAMPLE_IMAGE_ID="$(image_id "$example_image")" \
-    "$example_image" /opt/libsafety/acceptance.py /bundle /prepared /workspace)
+    "$example_image" -c 'for step in acceptance native_acceptance; do
+        python3 "/opt/libsafety/$step.py" /bundle /prepared /workspace || exit; done')
 # The example image runs as a non-root user, and upstream's build leaves the
 # library with mode 0600 (mkstemp). Copy a readable stage of the bundle in.
 stage=$(mktemp -d "$output/bundle-stage.XXXXXX")

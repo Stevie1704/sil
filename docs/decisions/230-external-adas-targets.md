@@ -66,6 +66,19 @@ Gaps that #232 must close:
   global state and one instance per process, an in-process Native run is
   possible for one instance. #232 must try it.
 
+#232 closed both in
+[proofs/libsafety](../../proofs/libsafety/README.md#native-participant-and-transmit-232):
+
+- **Transmit.** No public route with `sendcan` was selected. The candidates
+  are the recorded stock-camera frames that openpilot replaces (0x191,
+  0x2E4, 0x343, 0x412), readdressed to bus 0. They are recorded stimulus,
+  not generated and not openpilot output. Their steering torque is always 0.
+- **Native.** One Native participant runs the library in the runner's
+  process and matches the reference at every event. A second instance in
+  one Run is refused. A library crash ends the runner, and a hang is ended
+  only by the whole-case guard. The Native ABI did not change: each frame
+  carries its own event time, because `take` gives no Message time.
+
 ## FMU target: OSMPDummySensor
 
 | Item | Value |
