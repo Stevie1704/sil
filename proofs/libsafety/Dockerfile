@@ -14,11 +14,12 @@ ARG SIL_RUNTIME_IMAGE
 # the preprocessor.
 FROM ${SIL_BUILD_IMAGE} AS native
 WORKDIR /native
-COPY proofs/libsafety/native_adapter.c proofs/libsafety/workload.py ./
+COPY proofs/libsafety/native_adapter.c proofs/libsafety/libsafety_api.h \
+     proofs/libsafety/workload.py ./
 RUN python -c "import json, workload as w; print(json.dumps({k: w.SCHEMAS[k] for k in (w.TIMED_FRAME_SCHEMA, w.NATIVE_STATE_SCHEMA)}))" > schemas.json \
     && /opt/sil/native/bin/silschema schemas.json libsafety_messages.h \
-    && build() { cc -std=c11 -D_POSIX_C_SOURCE=200809L -O2 -Wall -Wextra -Werror -pedantic \
-         -fPIC -shared -I/opt/sil/native/include -I. "$@" native_adapter.c; } \
+    && flags="-std=c11 -D_POSIX_C_SOURCE=200809L -O2 -Wall -Wextra -Werror -pedantic -I." \
+    && build() { cc $flags -fPIC -shared -I/opt/sil/native/include "$@" native_adapter.c; } \
     && mkdir out \
     && build -o out/libsafety_native.so \
     && build -DLIBSAFETY_FAILURE_AT_EVENT=100 -DLIBSAFETY_FAILURE_CRASH -o out/libsafety_native_crash.so \

@@ -41,7 +41,6 @@
  * until something outside it, the whole-case guard, ends it. */
 #include <sil/participant.h>
 
-#include <dlfcn.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <signal.h>
@@ -51,7 +50,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "libsafety_messages.h"
+#include "libsafety_api.h"
 
 #define MAX_TEXT 256
 #define MAX_ENTRIES 16
@@ -59,14 +58,6 @@
  * activation time. */
 #define MESSAGE_BYTES 1024
 #define REASON_BYTES (MESSAGE_BYTES + 64)
-#define TIMER_MODULUS 0xFFFFFFFFull
-#define TICK_MARGIN_NS 1000000000ull
-/* opendbc's packed CANPacket_t: a 40-bit header, a checksum byte, 64 data
- * bytes. Classic CAN only: a length of 0 to 8 bytes is its own DLC. */
-#define PACKET_BYTES 70
-#define HEADER_BYTES 5
-#define MAX_CLASSIC_LENGTH 8
-#define EXTENDED_FROM 0x800u
 
 /* --- configuration: a flat object of strings and unsigned integers ------ */
 
@@ -182,77 +173,6 @@ static bool no_unknown_keys(config_doc *doc) {
   return true;
 }
 
-/* --- the library's C API, as opendbc's libsafety harness declares it --- */
-
-typedef struct library {
-  int (*set_safety_hooks)(uint16_t mode, uint16_t param);
-  void (*set_alternative_experience)(int mode);
-  void (*set_timer)(uint32_t t);
-  void (*safety_tick)(void);
-  bool (*safety_config_valid)(void);
-  int (*safety_fwd_hook)(int bus, int address);
-  bool (*safety_rx_hook)(void *packet);
-  bool (*safety_tx_hook)(void *packet);
-  bool (*get_controls_allowed)(void);
-  bool (*get_gas_pressed_prev)(void);
-  bool (*get_brake_pressed_prev)(void);
-  bool (*get_cruise_engaged_prev)(void);
-  bool (*get_vehicle_moving)(void);
-  bool (*get_acc_main_on)(void);
-  float (*get_vehicle_speed_min)(void);
-  float (*get_vehicle_speed_max)(void);
-} library;
-
-#define RESOLVE(name)                                                    \
-  if (!(*(void **)&lib->name = dlsym(handle, #name))) {                 \
-    snprintf(error, size, "library '%s' does not export '%s'", path,    \
-             #name);                                                     \
-    return false;                                                        \
-  }
-
-/* Loads the library and resolves every symbol before anything runs. */
-static bool bind(const char *path, library *lib, char *error, size_t size) {
-  void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
-  if (!handle) {
-    snprintf(error, size, "cannot load library '%s': %s", path, dlerror());
-    return false;
-  }
-  RESOLVE(set_safety_hooks)
-  RESOLVE(set_alternative_experience)
-  RESOLVE(set_timer)
-  RESOLVE(safety_tick)
-  RESOLVE(safety_config_valid)
-  RESOLVE(safety_fwd_hook)
-  RESOLVE(safety_rx_hook)
-  RESOLVE(safety_tx_hook)
-  RESOLVE(get_controls_allowed)
-  RESOLVE(get_gas_pressed_prev)
-  RESOLVE(get_brake_pressed_prev)
-  RESOLVE(get_cruise_engaged_prev)
-  RESOLVE(get_vehicle_moving)
-  RESOLVE(get_acc_main_on)
-  RESOLVE(get_vehicle_speed_min)
-  RESOLVE(get_vehicle_speed_max)
-  return true;
-}
-
-/* The packed CANPacket_t upstream's make_CANPacket builds. Header bits,
- * least significant first: fd 1, bus 3, data_len_code 4, rejected 1,
- * returned 1, extended 1, addr 29. The checksum byte stays 0. */
-static void packet(const can_TimedFrame *frame, int bus,
-                   uint8_t out[PACKET_BYTES]) {
-  uint64_t header = ((uint64_t)(bus & 0x7) << 1) |
-                    ((uint64_t)frame->length << 4) |
-                    ((uint64_t)frame->address << 11);
-  if (frame->address >= EXTENDED_FROM) header |= 1u << 10;
-  memset(out, 0, PACKET_BYTES);
-  for (int i = 0; i < HEADER_BYTES; i++) out[i] = (uint8_t)(header >> (8 * i));
-  const uint8_t data[MAX_CLASSIC_LENGTH] = {frame->d0, frame->d1, frame->d2,
-                                            frame->d3, frame->d4, frame->d5,
-                                            frame->d6, frame->d7};
-  memcpy(out + HEADER_BYTES + 1, data, frame->length);
-}
-
 /* --- the Participant ---------------------------------------------------- */
 
 typedef struct participant {
@@ -261,10 +181,7 @@ typedef struct participant {
   char frames[MAX_TEXT];
   char transmit[MAX_TEXT];
   char state[MAX_TEXT];
-  uint64_t timer_origin_ns;
-  uint64_t timer_unit_ns;
-  uint64_t first_event_ns;
-  uint64_t last_event_ns;
+  event_policy policy;
   uint64_t events;
 } participant;
 
@@ -298,15 +215,6 @@ static void inject_failure(uint64_t event) {
 #else
   (void)event;
 #endif
-}
-
-/* set_timer and, when warm, safety_tick: the start of one upstream event. */
-static void start_event(participant *p, uint64_t event_ns) {
-  p->lib.set_timer((uint32_t)((p->timer_origin_ns + event_ns) /
-                              p->timer_unit_ns % TIMER_MODULUS));
-  if (event_ns > p->first_event_ns + TICK_MARGIN_NS &&
-      event_ns + TICK_MARGIN_NS < p->last_event_ns)
-    p->lib.safety_tick();
 }
 
 /* Takes the next frame on channel into frame. Returns 1 when there is one,
@@ -350,7 +258,7 @@ static void activate(void *user, uint64_t t) {
   participant *p = user;
   libsafety_NativeState out = {0};
   can_TimedFrame frame;
-  uint8_t raw[PACKET_BYTES];
+  can_packet raw;
   int r;
 
   if ((r = take_frame(p, t, p->frames, &frame)) != 1) {
@@ -360,12 +268,12 @@ static void activate(void *user, uint64_t t) {
   }
   out.event_ns = frame.event_ns;
   inject_failure(p->events++);
-  start_event(p, out.event_ns);
+  start_event(&p->lib, &p->policy, out.event_ns);
   do {
     if (!same_instant(p, t, p->frames, out.event_ns, frame.event_ns)) return;
     p->lib.safety_fwd_hook(frame.src, (int)frame.address);
-    packet(&frame, frame.src % 4, raw);
-    if (p->lib.safety_rx_hook(raw))
+    packet(&frame, frame.src % 4, &raw);
+    if (p->lib.safety_rx_hook(raw.bytes))
       out.accepted++;
     else
       out.rejected++;
@@ -375,25 +283,17 @@ static void activate(void *user, uint64_t t) {
   bool started = false;
   while ((r = take_frame(p, t, p->transmit, &frame)) == 1) {
     if (!same_instant(p, t, p->transmit, out.event_ns, frame.event_ns)) return;
-    if (!started) start_event(p, out.event_ns);
+    if (!started) start_event(&p->lib, &p->policy, out.event_ns);
     started = true;
-    packet(&frame, frame.src % 4, raw);
-    if (p->lib.safety_tx_hook(raw))
+    packet(&frame, frame.src % 4, &raw);
+    if (p->lib.safety_tx_hook(raw.bytes))
       out.tx_accepted++;
     else
       out.tx_rejected++;
   }
   if (r < 0) return;
 
-  out.config_valid = p->lib.safety_config_valid();
-  out.controls_allowed = p->lib.get_controls_allowed();
-  out.gas_pressed_prev = p->lib.get_gas_pressed_prev();
-  out.brake_pressed_prev = p->lib.get_brake_pressed_prev();
-  out.cruise_engaged_prev = p->lib.get_cruise_engaged_prev();
-  out.vehicle_moving = p->lib.get_vehicle_moving();
-  out.acc_main_on = p->lib.get_acc_main_on();
-  out.vehicle_speed_min = p->lib.get_vehicle_speed_min();
-  out.vehicle_speed_max = p->lib.get_vehicle_speed_max();
+  read_state(&p->lib, &out);
   p->api->publish(p->api->ctx, p->state, &out, sizeof out);
 }
 
@@ -409,13 +309,13 @@ static bool configure(participant *p, config_doc *doc, uint64_t *period_ns) {
       !unsigned_value(doc, "mode", &mode) ||
       !unsigned_value(doc, "param", &param) ||
       !unsigned_value(doc, "alternative_experience", &alternative_experience) ||
-      !unsigned_value(doc, "timer_origin_ns", &p->timer_origin_ns) ||
-      !unsigned_value(doc, "timer_unit_ns", &p->timer_unit_ns) ||
-      !unsigned_value(doc, "first_event_ns", &p->first_event_ns) ||
-      !unsigned_value(doc, "last_event_ns", &p->last_event_ns) ||
+      !unsigned_value(doc, "timer_origin_ns", &p->policy.timer_origin_ns) ||
+      !unsigned_value(doc, "timer_unit_ns", &p->policy.timer_unit_ns) ||
+      !unsigned_value(doc, "first_event_ns", &p->policy.first_event_ns) ||
+      !unsigned_value(doc, "last_event_ns", &p->policy.last_event_ns) ||
       !no_unknown_keys(doc))
     return false;
-  if (*period_ns == 0 || p->timer_unit_ns == 0 || mode > UINT16_MAX ||
+  if (*period_ns == 0 || p->policy.timer_unit_ns == 0 || mode > UINT16_MAX ||
       param > UINT16_MAX || alternative_experience > INT32_MAX) {
     snprintf(doc->error, sizeof doc->error,
              "config needs a nonzero period and timer unit, a 16-bit mode "
