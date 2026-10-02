@@ -15,7 +15,8 @@ silently omitting the rotation. Nothing here reads an FMU output.
 """
 import math
 
-STEP_S = 0.020
+STEP_NS = 20_000_000
+STEP_S = STEP_NS / 1e9
 HOST_ID = 14
 SENSOR_ID = 10000
 # OSMPDummySource.cpp, doCalc: one entry per vehicle, ids 10 to 19.

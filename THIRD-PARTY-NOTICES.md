@@ -128,6 +128,29 @@ FMPy 0.3.26 (BSD-2-Clause) and PythonFMU3 0.3.4 (MIT), pinned by hash in
 distribution metadata retains their notices. They are tools of the proof
 only.
 
+## OSMP FMU target (#230)
+
+[proofs/osmp-sensor/](proofs/osmp-sensor/) downloads these sources into a
+locally built proof image, at the exact identities pinned in
+[`sources.json`](proofs/osmp-sensor/sources.json). No copy of them is in this
+repository, nothing here links against them, and none of them reaches a
+published SiL artifact. The retained evidence holds only digests, the model
+description contents and derived statistics. The bundle that the proof
+writes as a CI artifact carries the two built FMUs. Each FMU has OSI linked
+statically and carries its own sources. The bundle keeps the upstream
+`LICENSE` at `fmus/LICENSE`.
+
+| Component | Version | License | Where |
+| --- | --- | --- | --- |
+| [OSI Sensor Model Packaging](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging) | `v1.6.0`, commit `9fe6d0b1` | MPL-2.0 | cloned into the image; the proof builds `OSMPDummySensor` and `OSMPDummySource` unmodified |
+| [osi-cpp](https://github.com/OpenSimulationInterface/osi-cpp) and [Open Simulation Interface](https://github.com/OpenSimulationInterface/open-simulation-interface) | `v3.8.0` (`82add6cd`, `083481d6`) | MPL-2.0 | submodules of the checkout above; compiled into both FMUs and into the proof's Python classes |
+
+The proof image also installs Protobuf 3.21.12 from Debian (BSD-3-Clause),
+which the FMUs load at run time, and FMPy 0.3.26 (BSD-2-Clause), Protobuf
+4.21.12 for Python (BSD-3-Clause) and pytest (MIT), pinned by hash in
+[its lock file](proofs/osmp-sensor/requirements.lock). They are tools of the
+proof only.
+
 ## Python wheel and source distribution
 
 The wheel and the source distribution contain SiL code only. They declare

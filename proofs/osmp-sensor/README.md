@@ -11,7 +11,8 @@ for the target selected in
 `OSMPDummySource` from the same commit. It gives #233 a pinned FMU binary, a
 static compatibility report and an independently computed expected slice.
 It does not run either FMU in SiL. The Importer cannot drive them yet
-(see [Gaps](#gaps-for-233)).
+(see [Gaps](#gaps-for-233)), and the two FMUs cannot share one process
+(see [One process](#one-process)).
 
 The image build is the only step that uses the network. It fetches the
 checkout pinned in [`sources.json`](sources.json) and stops unless the
@@ -80,30 +81,63 @@ sensor geometry that upstream documents. It never reads an FMU output.
 | Sensor Period | 20 ms, from the sensor's own `SensorViewConfiguration` request |
 | Run length | 1500 Periods (30 s) |
 | Sample time | Row `t_ns` is the end of communication step `[t_ns − 20 ms, t_ns]`. Both FMUs stamp their output with that time |
-| Freshness | The sensor consumes the SensorView that the source produced in the same step. No stale-data policy is involved |
+| Freshness | The sensor consumes the ground truth of the same instant `t_ns`. No stale-data policy is involved |
+| Outputs | `bundle/references/expected-detections.json` → `contract.outputs` gives the meaning of each field. The existence probability is a demonstration value, not a calibrated probability |
 | Parameter | `nominalrange`, default 135 m |
 
-FMPy drives both FMUs as an independent FMI 2.0 importer. In each step the
-source steps first. Its three OSMP integers are then copied to the sensor's
-input, as an OSMP connection does, and the sensor steps. The proof requires:
+FMPy runs the FMUs as an independent FMI 2.0 importer, each FMU in its own
+process (see [One process](#one-process)):
 
-- every SensorView to equal the closed-form ground truth (to 1e-9);
-- every SensorData to equal the expected slice: the same vehicles in the
+- **Source** (`drive.py source`). Every SensorView must equal the
+  closed-form ground truth to 1e-9, with host 14, sensor 10000, no mounting
+  position and the truncated timestamp.
+- **Sensor** (`prepare.py`). In each step the proof serializes the
+  closed-form SensorView into a buffer that it owns. It sets the three OSMP
+  integers to that buffer, as an importer does, and then steps the sensor.
+  Every SensorData must equal the expected slice: the same vehicles in the
   same order, tracking ids, timestamps, and each position, orientation,
-  dimension and existence probability to 1e-9;
-- `valid` true and `count` equal to the number of reported objects;
-- two runs to produce identical traces;
-- with `nominalrange = 100`, agreement with that range's own slice, and a
-  difference from the 135 m slice.
+  dimension and existence probability to 1e-9. `valid` must be true and
+  `count` must equal the number of reported objects.
+
+The proof also requires that:
+
+- the sensor's `SensorViewConfiguration` request declares a 20 ms update
+  cycle and a range of 1.1 × `nominalrange`. The proof reads the request in
+  initialization mode, because upstream sets it to zero once the simulation
+  starts;
+- two sensor runs produce identical outputs;
+- with `nominalrange = 100`, the output agrees with that range's own slice
+  and differs from the 135 m slice.
 
 `report.json` → `runs.transitions` lists each time the set of reported
 vehicles changes. The 30 s cover a vehicle entering the cone, vehicles
 leaving the range and vehicles falling behind the host.
 
 **Failing control.** The sensor receives the previous step's SensorView: a
-connection delayed by one Period. OSMP keeps the previous output buffer valid
-for exactly that step, so the pointer stays valid. The comparison must
-diverge at step 1, in a position field.
+connection delayed by one Period. The comparison must diverge at step 1, in
+a position field.
+
+## One process
+
+Both FMUs link OSI statically and the system `libprotobuf` dynamically.
+Each FMU therefore registers the OSI `.proto` files in the one process-wide
+Protobuf pool. When a second FMU (or the same FMU from a second path) is
+loaded into the same process, libprotobuf aborts with `File already exists
+in database: osi_version.proto`. The proof loads both FMUs into one child
+process and requires this failure (`runs.both_fmus_in_one_process`). If
+upstream changes this behaviour, the proof stops and asks for a new review.
+
+The OSMP pointers are valid only inside the process that loaded the FMU, so
+an OSMP connection needs both FMUs in one process. The existing placement
+of connected FMUs in one process participant
+([ADR 0001](../../docs/adr/0001-connected-fmus-in-one-process-participant.md))
+therefore cannot hold these two archives as built. #233 must choose one of
+these options:
+
+- build with `LINK_WITH_SHARED_OSI=ON` (one shared OSI library);
+- link Protobuf statically with hidden symbols;
+- connect the sensor only to an importer-owned SensorView, as this proof
+  does.
 
 ## Gaps for #233
 
@@ -111,15 +145,16 @@ diverge at step 1, in a position field.
 | --- | --- |
 | FMI 2.0 Co-Simulation; the Importer drives FMI 3.0 only | #191 |
 | OSMP binary variables: memory addresses in `fmi2Integer` variables | #244 |
-| Runtime `libprotobuf` (see `NEEDED`) must be in the runtime image | #233 |
-
-The OSMP pointers are valid only inside the process that loaded the FMU.
-That fits the existing placement of connected FMUs in one process
-participant ([ADR 0001](../../docs/adr/0001-connected-fmus-in-one-process-participant.md)).
+| Runtime `libprotobuf.so.32` must be in the runtime image | #233 |
+| Two of these FMUs cannot share one process | #233, #244 |
 
 ## Throughput
 
 `report.json` → `runs.observed` gives the SensorView and SensorData sizes
-and the FMPy wall time of one 1500-step run. That is one single-process run,
-not aggregate CI throughput, and FMPy overhead is included. Feed it to #125
-together with the FMU's own step cost once #233 runs it in SiL.
+and the time spent in the sensor's `fmi2DoStep` over one 1500-step run
+(`sensor_do_step_mean_us`). The proof's own checks and the Python
+serialization are not in that time. `runs.source.sensor_view_bytes` gives the
+size of the source's own SensorView. `sensor_process_peak_rss_kib` is the
+whole sensor process: FMPy, Python Protobuf and one FMU. The run is one
+participant in one process. It is not aggregate CI throughput. This is the
+target computation measurement for #125.

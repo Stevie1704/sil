@@ -33,6 +33,9 @@ def binary_variables(model_description):
             if tool.get("name") != OSMP_TOOL:
                 continue
             annotation = tool.find(f"{OSMP_NS}osmp-binary-variable")
+            if annotation is None:
+                raise ValueError(f"{variable.get('name')}: OSMP annotation without a binary "
+                                 "variable element")
             entry = found.setdefault(annotation.get("name"), {
                 "causality": variable.get("causality"),
                 "mime_type": annotation.get("mime-type"), "value_references": {}})

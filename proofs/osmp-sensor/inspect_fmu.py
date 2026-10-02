@@ -19,7 +19,9 @@ LINUX_X86_64 = "linux64"
 
 
 def _variable(element):
-    typed = next(child for child in element if child.tag != "Annotations")
+    typed = next((child for child in element if child.tag != "Annotations"), None)
+    if typed is None:
+        raise ValueError(f"variable {element.get('name')} has no type element")
     return {"name": element.get("name"), "value_reference": int(element.get("valueReference")),
             "type": typed.tag, "causality": element.get("causality", "local"),
             "variability": element.get("variability"), "initial": element.get("initial"),
@@ -62,6 +64,14 @@ def sil_gaps(description):
     return gaps
 
 
+def runtime_gaps(shared):
+    """Protobuf linked dynamically while OSI is linked statically: every such FMU
+    registers the OSI .proto files in the one process-wide Protobuf pool."""
+    return [f"needs the system {library} at run time; a second FMU built this way "
+            "aborts in the same process (#233, #244)"
+            for library in shared["needed"] if library.startswith("libprotobuf")]
+
+
 def _command(*arguments):
     return subprocess.run(arguments, check=True, capture_output=True, text=True).stdout
 
@@ -92,7 +102,7 @@ def inspect(archive, directory):
         opened.extractall(directory)
     description = describe(model_description, members)
     identifier = description["interfaces"]["CoSimulation"]["modelIdentifier"]
-    library = Path(directory) / "binaries" / LINUX_X86_64 / f"{identifier}.so"
+    shared = binary(Path(directory) / "binaries" / LINUX_X86_64 / f"{identifier}.so")
     return {"archive_sha256": hashlib.sha256(Path(archive).read_bytes()).hexdigest(),
             "members": members, "model_description": description,
-            "binary": binary(library), "sil_gaps": sil_gaps(description)}
+            "binary": shared, "sil_gaps": sil_gaps(description) + runtime_gaps(shared)}

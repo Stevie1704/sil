@@ -1,5 +1,5 @@
 """The static compatibility report reads only the model description and archive names."""
-from inspect_fmu import describe, sil_gaps
+from inspect_fmu import describe, runtime_gaps, sil_gaps
 
 FMI2 = """<fmiModelDescription fmiVersion="2.0" modelName="Dummy" guid="{g}"
   generationTool="Tool" generationDateAndTime="2026-10-02T00:00:00Z">
@@ -41,3 +41,10 @@ def test_fmi_2_and_osmp_pointers_are_named_with_their_issues():
 def test_a_missing_linux_binary_is_a_gap():
     description = describe(FMI2, ["binaries/win64/Dummy.dll"])
     assert "no Linux x86-64 binary (binaries/linux64)" in sil_gaps(description)
+
+
+def test_a_dynamic_protobuf_is_a_runtime_gap():
+    assert runtime_gaps({"needed": ["libprotobuf.so.32", "libc.so.6"]}) == [
+        "needs the system libprotobuf.so.32 at run time; a second FMU built this way "
+        "aborts in the same process (#233, #244)"]
+    assert runtime_gaps({"needed": ["libc.so.6"]}) == []
