@@ -25,9 +25,12 @@ import csv
 import dataclasses
 import json
 import shutil
+import statistics
+import struct
 import subprocess
 import sys
 import time
+from collections import defaultdict
 from pathlib import Path
 
 import manifest
@@ -50,9 +53,12 @@ from acceptance import (
     write_reference_csv,
 )
 
+from sil.recording import read_records
+
 HERE = Path(__file__).resolve().parent
 ADAPTERS = HERE / "native"
 ADAPTER = ADAPTERS / "libsafety_native.so"
+LIBRARY_COST = ADAPTERS / "library_cost"
 FAILURE_ADAPTERS = {"crash": ADAPTERS / "libsafety_native_crash.so",
                     "hang": ADAPTERS / "libsafety_native_hang.so"}
 # Built into the failure adapters (Dockerfile): the event the failure starts at.
@@ -65,6 +71,11 @@ SIMULATED = ("the failure build crashes or hangs in the adapter, just before "
 NOMINAL_TIMEOUT_S = 600
 HANG_TIMEOUT_S = 30
 COMPILERS = ["cc", "gcc", "clang", "c++"]
+# The computation timing: untimed repeats first, then the timed ones, each a
+# fresh process because the library's state is C globals.
+COST_WARMUP = 1
+COST_REPEATS = 5
+FRAME_RECORD, CANDIDATE_RECORD = b"\x00", b"\x01"
 
 
 # Inputs --------------------------------------------------------------------------
@@ -203,7 +214,8 @@ def nominal(native: Native) -> dict:
             "config_valid": config_valid_when_warm(
                 native.setup, first["recording"], workload.NATIVE_STATE_SCHEMA),
             "provenance": read_json(Path(f"{first['recording']}.provenance.json")),
-            "wall_s": [first["wall_s"], second["wall_s"]]}
+            "wall_s": [first["wall_s"], second["wall_s"]],
+            "recording": first["recording"]}
 
 
 def comparison_control(native: Native, name: str, expect) -> dict:
@@ -245,6 +257,83 @@ def direct_controls(native: Native, pins: dict) -> dict:
         "second-instance": {"manifest_hash": second["manifest_hash"],
                             "exit_code": 2,
                             "diagnostic": second["stderr"].strip().splitlines()[-1]},
+    }
+
+
+# The library's own computation ----------------------------------------------------
+
+def payloads(recording: Path, channel: str) -> list[bytes]:
+    return [data for name, _, data in read_records(recording) if name == channel]
+
+
+def event_ns(payload: bytes) -> int:
+    """A can.TimedFrame or libsafety.NativeState begins with its u64 event_ns."""
+    return struct.unpack_from("<Q", payload)[0]
+
+
+def cost_records(frames: list[bytes], transmit: list[bytes]) -> list[bytes]:
+    """The harness records in Run order: the frames of an event, then its
+    candidates. A candidate without a frame at its instant is refused."""
+    candidates = defaultdict(list)
+    for payload in transmit:
+        candidates[event_ns(payload)].append(payload)
+    records, current = [], None
+    for payload in frames:
+        if current is not None and event_ns(payload) != current:
+            records += [CANDIDATE_RECORD + c for c in candidates.pop(current, [])]
+        current = event_ns(payload)
+        records.append(FRAME_RECORD + payload)
+    records += [CANDIDATE_RECORD + c for c in candidates.pop(current, [])]
+    require(not candidates, f"{len(candidates)} candidate instants have no event")
+    return records
+
+
+def cost_input(native: Native, path: Path) -> None:
+    """Every frame and candidate of the nominal Run, in Run order."""
+    path.write_bytes(b"".join(cost_records(
+        payloads(native.inputs / "native-window.mcap", workload.FRAME_CHANNEL),
+        payloads(native.inputs / "transmit-window.mcap",
+                 workload.TRANSMIT_CHANNEL))))
+
+
+def library_computation(native: Native, nominal_recording: Path,
+                        run_wall_s: float) -> dict:
+    """The library calls alone, on the nominal Run's inputs, and proof that
+    they compute what the Run published."""
+    work = native.runs / "library-cost"
+    work.mkdir()
+    cost_input(native, work / "input.bin")
+    expected = b"".join(payloads(nominal_recording, workload.STATE_CHANNEL))
+    seg = native.segment
+    timings = []
+    for repeat in range(COST_WARMUP + COST_REPEATS):
+        output = work / f"output-{repeat}.bin"
+        proc = subprocess.run(
+            [str(LIBRARY_COST), str(native.library), str(work / "input.bin"),
+             str(output), str(seg.mode), str(seg.param),
+             str(seg.alternative_experience), str(seg.first_log_mono_ns),
+             str(manifest.TIMER_UNIT_NS), "0", str(seg.last_event_ns)],
+            capture_output=True, text=True, timeout=NOMINAL_TIMEOUT_S)
+        require(proc.returncode == 0, f"library_cost failed:\n{proc.stderr}")
+        require(output.read_bytes() == expected,
+                "library_cost computed other states than the Run published")
+        result = json.loads(proc.stdout)
+        if repeat >= COST_WARMUP:
+            timings.append(result["elapsed_ns"])
+    median = statistics.median(timings)
+    return {
+        "what": "the pinned library's calls alone, as native_adapter.c makes "
+                "them, packets built before the timed interval; equal to the "
+                "nominal Run's published states at every event",
+        "harness_sha256": sha256(LIBRARY_COST),
+        "events": result["events"], "frames": result["frames"],
+        "candidates": result["candidates"],
+        "warmup": COST_WARMUP, "repeats": COST_REPEATS,
+        "elapsed_ns": {"median": median, "min": min(timings),
+                       "max": max(timings), "all": timings},
+        "us_per_event": median / result["events"] / 1000,
+        "ns_per_library_frame": median / (result["frames"] + result["candidates"]),
+        "share_of_native_run": median / 1e9 / run_wall_s,
     }
 
 
@@ -377,8 +466,10 @@ def sealed_regression(native: Native, workspace: Path) -> dict:
 
 # Report ---------------------------------------------------------------------------
 
-def resources(native_result: dict, process_report: Path, frames: dict) -> dict:
-    """Observational Run cost of both forms on this runner."""
+def resources(native: Native, native_result: dict, process_report: Path,
+              frames: dict) -> dict:
+    """Observational cost on this runner: whole Runs of both forms, and the
+    library's computation alone."""
     wall = min(native_result["wall_s"])
     process = read_json(process_report)["resources"]
     return {
@@ -391,8 +482,8 @@ def resources(native_result: dict, process_report: Path, frames: dict) -> dict:
         # The resident set of a runner forked from Python includes the
         # driver's, so it is not reported for the in-process form.
         "process_run_wall_s": process["run_wall_s"],
-        "not_measured": "the library calls alone: each wall time is a whole "
-                        "Run, replay and recording included",
+        "library_computation": library_computation(
+            native, native_result["recording"], wall),
     }
 
 
@@ -448,11 +539,12 @@ def main(bundle: str, prepared: str, workspace: str) -> None:
             "termination": "none: no ABI callback and no library call; the "
                            "library ends with the runner process",
         },
-        "nominal": {k: v for k, v in result.items() if k != "wall_s"},
+        "nominal": {k: v for k, v in result.items()
+                    if k not in ("wall_s", "recording")},
         "contract_sha256": sha256(native.setup.contract),
         "controls": direct_controls(native, pinned["pins"]),
         "sealed_regression": sealed_regression(native, workspace),
-        "resources": resources(result, evidence / "report.json", frames),
+        "resources": resources(native, result, evidence / "report.json", frames),
     }
     write_json(evidence / "native-report.json", report)
     print(json.dumps({"native_nominal": report["nominal"]["recording_sha256"],

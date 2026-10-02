@@ -205,10 +205,22 @@ in-process library, recorded and not worked around:
   runner ends it.
 - One Run holds at most one instance.
 
-**Cost.** `native-report.json` → `resources` keeps the wall-clock time of
-whole Native and Process Runs on one runner. It does not measure the library
-calls alone. These numbers are observational and are not the #125 vECU
-measurement.
+**Cost.** `native-report.json` → `resources` keeps two kinds of cost from
+one runner. The full Run cost is the wall-clock time of whole Native and
+Process Runs. The target computation cost comes from `library_cost.c`. This
+small C program loads the pinned library without SiL and builds every
+`CANPacket_t` first. It then times only the library calls, which it makes in
+the order `native_adapter.c` makes them. It runs once untimed and five times
+timed, each time in a fresh process, because the library's state is C
+globals. Each time, the states it writes must equal, byte for byte, the
+states that the nominal Run published. The timed computation is therefore
+the computation that was compared. Both numbers are observational. They are
+not the #125 vECU measurement: the library is small decision logic, not a
+vECU.
+
+`libsafety_api.h` holds the library binding, the packet, the time policy and
+the state read. The adapter and the timing program both include it, so they
+cannot make different calls.
 
 The Process form keeps each of these inside one Process participant. It
 stays the isolated alternative.
@@ -269,9 +281,9 @@ wall-clock time for 59.99 s of Virtual time. That is about 1490 events and
 | Sealed `hang` | `timeout`: `exceeded its 30 s guard`; event 100 reached |
 
 A nominal Native Run took 0.22 s of wall-clock time on the same runner, about
-27,000 events per second, against 4.0 s for the Process form. This is whole
-Run cost, not the cost of the library calls alone. The adapter digests are in
-`native-report.json` → `identities.adapters`.
+27,000 events per second, against 4.0 s for the Process form. That is the
+full Run cost. The adapter digests are in `native-report.json` →
+`identities.adapters`.
 
 ## Limits
 

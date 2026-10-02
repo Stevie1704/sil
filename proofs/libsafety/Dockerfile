@@ -11,11 +11,12 @@ ARG SIL_RUNTIME_IMAGE
 # The Native adapter (#232), built in the SiL build stage against the
 # installed ABI header and the layouts silschema generates from workload.py.
 # The crash and hang controls are the same source with one failure chosen by
-# the preprocessor.
+# the preprocessor. library_cost times the library's calls alone, with the
+# same shared header and compiler flags.
 FROM ${SIL_BUILD_IMAGE} AS native
 WORKDIR /native
-COPY proofs/libsafety/native_adapter.c proofs/libsafety/libsafety_api.h \
-     proofs/libsafety/workload.py ./
+COPY proofs/libsafety/native_adapter.c proofs/libsafety/library_cost.c \
+     proofs/libsafety/libsafety_api.h proofs/libsafety/workload.py ./
 RUN python -c "import json, workload as w; print(json.dumps({k: w.SCHEMAS[k] for k in (w.TIMED_FRAME_SCHEMA, w.NATIVE_STATE_SCHEMA)}))" > schemas.json \
     && /opt/sil/native/bin/silschema schemas.json libsafety_messages.h \
     && flags="-std=c11 -D_POSIX_C_SOURCE=200809L -O2 -Wall -Wextra -Werror -pedantic -I." \
@@ -23,7 +24,8 @@ RUN python -c "import json, workload as w; print(json.dumps({k: w.SCHEMAS[k] for
     && mkdir out \
     && build -o out/libsafety_native.so \
     && build -DLIBSAFETY_FAILURE_AT_EVENT=100 -DLIBSAFETY_FAILURE_CRASH -o out/libsafety_native_crash.so \
-    && build -DLIBSAFETY_FAILURE_AT_EVENT=100 -DLIBSAFETY_FAILURE_HANG -o out/libsafety_native_hang.so
+    && build -DLIBSAFETY_FAILURE_AT_EVENT=100 -DLIBSAFETY_FAILURE_HANG -o out/libsafety_native_hang.so \
+    && cc $flags library_cost.c -o out/library_cost
 
 FROM ${SIL_RUNTIME_IMAGE}
 
