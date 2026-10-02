@@ -45,9 +45,12 @@ def test_late_reports_nothing_first_then_the_previous_instant():
     assert "osi.GroundTruth" not in first
 
 
-def test_unparseable_never_reports_valid_output():
-    assert all(fields["sensor.Status"]["valid"] == 0
-               for _, fields in references.rows("unparseable", {"sensor": 135.0}))
+def test_unparseable_reports_valid_output_without_objects():
+    nominal = references.rows("nominal", SENSORS)
+    unparseable = references.rows("unparseable", {"sensor": 135.0})
+    for (_, want), (_, fields) in zip(nominal, unparseable, strict=True):
+        assert fields["sensor.Status"] == {"valid": 1, "count": 0}
+        assert fields["sensor.Detections"]["nanos"] == want["sensor.Detections"]["nanos"]
 
 
 def _recording(tmp_path, kind):

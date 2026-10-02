@@ -14,8 +14,10 @@ Three references, one per expected behavior:
   has no input, so the sensor reports no valid output; every later Step
   reports the ground truth of the previous instant with the timestamp of its
   own (upstream takes the timestamp from the FMU time, not from the input).
-- `unparseable`: a SensorView that does not parse. The sensor reports no
-  valid output at every Step and returns `fmi2OK`.
+- `unparseable`: a SensorView that does not parse. Upstream ignores the
+  result of `ParseFromArray` and treats any non-empty input as valid, so the
+  sensor reports valid output with no objects at every Step. Only a missing
+  input (size 0) makes it report no valid output.
 """
 import csv
 import json
@@ -109,12 +111,14 @@ NO_OUTPUT = (detection_fields(0, 0, []), {"valid": 0, "count": 0})
 
 def sensor_fields(step: int, nominal_range: float, kind: str) -> tuple[dict, dict]:
     """The decoded SensorData and the status of one sensor at one Step."""
-    if kind == "unparseable" or (kind == "late" and step == 0):
+    if kind == "late" and step == 0:
         return NO_OUTPUT
+    seconds, nanos = scene.timestamp(step_end_s(step))
+    if kind == "unparseable":
+        return detection_fields(seconds, nanos, []), {"valid": 1, "count": 0}
     seen = step - 1 if kind == "late" else step
     found = scene.detections(scene.ground_truth(step_end_s(seen)),
                              scene.HOST_ID, nominal_range)
-    seconds, nanos = scene.timestamp(step_end_s(step))
     return (detection_fields(seconds, nanos, found),
             {"valid": 1, "count": len(found)})
 

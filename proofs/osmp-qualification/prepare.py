@@ -23,6 +23,7 @@ import hashlib
 import importlib.util
 import json
 import shutil
+import subprocess
 import sys
 import xml.etree.ElementTree as ElementTree
 import zipfile
@@ -366,6 +367,10 @@ def main(prepared: Path) -> None:
     work.mkdir(parents=True)
     report = prepared / "preparation"
     report.mkdir()
+    gate = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+                           HERE], capture_output=True, text=True, cwd=HERE)
+    (report / "gate-tests.log").write_text(gate.stdout + gate.stderr)
+    require(gate.returncode == 0, f"gate tests failed:\n{gate.stdout[-2000:]}")
     fmus, built = build(work)
     static = {"inspection": inspection(fmus),
               "packaging": {name: packaging(archive, name, work)
