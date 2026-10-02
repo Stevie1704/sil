@@ -127,3 +127,7 @@ that work and their implementation prerequisites, rather than on private access.
 Distinguish public-model adoption acceptance from production-vehicle validation.
 Performance conclusions about this workload must not be generalized to an
 unavailable company vECU or treated as satisfying #125's real-vECU gate.
+
+The external adoption milestone reuses the opendbc target and adds
+`OSMPDummySensor` as its FMU target; see
+[decisions/230-external-adas-targets.md](../decisions/230-external-adas-targets.md).
