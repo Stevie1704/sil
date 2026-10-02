@@ -122,6 +122,10 @@ in every array. The layout is packed (`silschema`), so there is no padding
 byte to clear. A publisher zeroes the inactive elements before it publishes;
 the adapter rejects a list that does not.
 
+Every Schema name and field name is a valid C and C++ name, because
+`silschema` refuses a name that is not. The naming rule is in the
+generated-header contract in [SUPPORT.md](../SUPPORT.md#covered-by-the-compatibility-policy).
+
 The adapter checks `count` against the capacity before it reads an element,
 then checks that every inactive element is zero. The application then checks
 every header field and every active element, also when `validity` is 0. A

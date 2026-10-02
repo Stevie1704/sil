@@ -4,12 +4,21 @@
 One schema file is the single typed contract: C/C++ participants use the
 generated packed structs, Python uses sil.schema to pack/unpack the same
 byte layout (little-endian, declared field order, no padding).
+
+Before it writes output, the tool refuses each name that is not valid in a
+C11 and C++17 header. The Manifest does not apply this rule.
 """
 
+from __future__ import annotations
+
 import json
+import os
+import re
 import runpy
 import sys
+from collections import defaultdict
 from pathlib import Path
+from typing import NoReturn
 
 # Load the exact same stdlib-only source in a checkout and a development
 # prefix, without importing sil (or depending on PYTHONPATH/site packages).
@@ -21,8 +30,98 @@ C_TYPES = _metadata["C_TYPES"]
 SIZES = _metadata["SIZES"]
 
 
+IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+KEYWORDS = frozenset("""
+    auto break case char const continue default do double else enum extern
+    float for goto if inline int long register restrict return short signed
+    sizeof static struct switch typedef union unsigned void volatile while
+    _Alignas _Alignof _Atomic _Bool _Complex _Generic _Imaginary _Noreturn
+    _Static_assert _Thread_local
+    alignas alignof and and_eq asm bitand bitor bool catch char16_t char32_t
+    class compl constexpr const_cast decltype delete dynamic_cast explicit
+    export false friend mutable namespace new noexcept not not_eq nullptr
+    operator or or_eq private protected public reinterpret_cast static_assert
+    static_cast template this thread_local throw true try typeid typename
+    using virtual wchar_t xor xor_eq
+""".split())
+# Macros that <stdint.h> defines, or that C reserves for it (C11 7.31.10).
+STDINT_MACRO = re.compile(r"(U?INT\w*|SIZE|PTRDIFF|SIG_ATOMIC|WCHAR|WINT)_(MAX|MIN|WIDTH|C)")
+
+
 def c_ident(schema_name: str) -> str:
     return schema_name.replace(".", "_")
+
+
+def ident_problem(name) -> str | None:
+    """Why `name` cannot be a C and C++ identifier, or None if it can."""
+    if not isinstance(name, str) or not IDENT.fullmatch(name):
+        return f"does not match {IDENT.pattern}"
+    if name in KEYWORDS:
+        return "is a C11 or C++17 keyword"
+    if "__" in name:
+        return "contains '__' (reserved in C and C++)"
+    if re.match(r"_[A-Z]", name):
+        return "starts with '_' followed by an uppercase letter (reserved in C and C++)"
+    if name.endswith("_t"):
+        return "ends in '_t' (reserved for type names by POSIX and <stdint.h>)"
+    if STDINT_MACRO.fullmatch(name):
+        return "is reserved for <stdint.h> macros"
+    return None
+
+
+def type_problem(f: dict) -> str | None:
+    """Why the field's type or count cannot become a C member, or None."""
+    if f.get("type") not in C_TYPES:
+        return f"type {f.get('type')!r} is not one of {', '.join(C_TYPES)}"
+    count = f.get("count")
+    if count is not None and (not isinstance(count, int) or isinstance(count, bool) or count < 1):
+        return f"count must be an integer >= 1, got {count!r}"
+    return None
+
+
+def schema_name_problem(name: str) -> str | None:
+    for segment in name.split("."):
+        if problem := ident_problem(segment):
+            return f"segment {segment!r} {problem}"
+    if problem := ident_problem(c_ident(name)):
+        return f"C identifier {c_ident(name)!r} {problem}"
+    if name.startswith("_"):
+        return "starts with '_' (reserved at file scope in C)"
+    return None
+
+
+def field_problems(name: str, fields: list) -> list[str]:
+    """Every reason the fields cannot become the members of one C struct."""
+    if not fields:
+        return [f"Schema {name!r}: has no fields"]
+    problems = []
+    seen = set()
+    for f in fields:
+        field = f["name"]
+        if problem := ident_problem(field):
+            problems.append(f"Schema {name!r} field {field!r}: {problem}")
+        elif field in seen:
+            problems.append(f"Schema {name!r} field {field!r}: duplicate field name")
+        if problem := type_problem(f):
+            problems.append(f"Schema {name!r} field {field!r}: {problem}")
+        seen.add(field)
+    return problems
+
+
+def validate(schemas: dict) -> list[str]:
+    """Every reason the Schema set cannot become a valid C and C++ header."""
+    problems = []
+    by_ident = defaultdict(list)
+    for name in sorted(schemas):
+        by_ident[c_ident(name)].append(name)
+        if problem := schema_name_problem(name):
+            problems.append(f"Schema {name!r}: {problem}")
+        problems += field_problems(name, schemas[name]["fields"])
+    for ident, names in by_ident.items():
+        if len(names) > 1:
+            listed = " and ".join(repr(n) for n in names)
+            problems.append(f"Schemas {listed} both map to the C identifier {ident!r}")
+    return problems
 
 
 def member(f: dict) -> str:
@@ -58,23 +157,49 @@ def generate(schemas: dict) -> str:
     lines.append("")
     for name in sorted(schemas):
         size = sum(field_bytes(f) for f in schemas[name]["fields"])
+        check = f'(sizeof({c_ident(name)}) == {size}, "{name} layout must be packed");'
         lines.append(
-            "#ifdef __cplusplus\n"
-            f"static_assert(sizeof({c_ident(name)}) == {size}, "
-            f'"{name} layout must be packed");\n'
-            "#endif"
+            f"#ifdef __cplusplus\nstatic_assert{check}\n#else\n_Static_assert{check}\n#endif"
         )
     lines.append("")
     return "\n".join(lines)
 
 
+def fail(*messages: str) -> NoReturn:
+    for message in messages:
+        print(f"silschema: {message}", file=sys.stderr)
+    sys.exit(2)
+
+
+def write_atomically(out: Path, text: str) -> None:
+    """Replace `out` in one step, so no partial header is ever visible."""
+    out.parent.mkdir(parents=True, exist_ok=True)
+    # A plain write, unlike mkstemp, gives the header the umask's file mode.
+    tmp = out.with_name(f".{out.name}.{os.getpid()}.tmp")
+    try:
+        tmp.write_text(text)
+        os.replace(tmp, out)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
 def main() -> None:
     if len(sys.argv) != 3:
-        sys.exit("usage: silschema.py <schema.json> <out.h>")
-    schemas = json.loads(Path(sys.argv[1]).read_text())
-    out = Path(sys.argv[2])
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(generate(schemas))
+        fail("usage: silschema.py <schema.json> <out.h>")
+    try:
+        schemas = json.loads(Path(sys.argv[1]).read_text())
+    except (OSError, ValueError) as e:
+        fail(f"cannot read {sys.argv[1]}: {e}")
+    try:
+        if not isinstance(schemas, dict):
+            raise TypeError("the top level is not an object")
+        problems = validate(schemas)
+    except (AttributeError, KeyError, TypeError) as e:
+        fail(f"{sys.argv[1]} is not a Schema set ({type(e).__name__}: {e})")
+    if problems:
+        fail(*problems)
+    write_atomically(Path(sys.argv[2]), generate(schemas))
 
 
 if __name__ == "__main__":

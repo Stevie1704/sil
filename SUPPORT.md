@@ -99,6 +99,25 @@ When relocating the installed schema generator, keep `silschema` and
 content; its Python names are private implementation details, not a supported
 import API. The command still requires only Python's standard library.
 
+The generated-header contract: `silschema` writes one packed C struct for each
+Schema, named `c_ident(name)` (each `.` in the Schema name becomes `_`), and a
+packed-size check for C11 (`_Static_assert`) and for C++17 (`static_assert`).
+The header compiles as C11 and as C++17. Before `silschema` writes output, it
+applies this naming rule:
+
+| Name | Rule |
+| --- | --- |
+| Field name | matches `[A-Za-z_][A-Za-z0-9_]*`; is not a C11 or C++17 keyword; does not contain `__`; does not start with `_` followed by an uppercase letter; does not end in `_t`; is not a `<stdint.h>` macro name, such as `INT8_MAX`, `UINT64_C` or `SIZE_MAX`; is unique in its Schema |
+| Field type | one of `u8`, `u16`, `u32`, `u64`, `i8`, `i16`, `i32`, `i64`, `f32`, `f64`; an optional `count` is an integer `>= 1` |
+| Schema | has one or more fields |
+| Schema name | one or more `.`-separated segments, each segment obeys the field-name rule; does not start with `_`; the mapped C name obeys the field-name rule |
+| Mapped Schema name | `c_ident(name)` is unique in the Schema set |
+
+If a Schema breaks the rule, `silschema` names the Schema, the field and the
+rule, writes no output file, and exits `2`. It does not rename a name. The
+Manifest builder and the kernel do not apply this rule, so a Schema that only
+Python or Process participants use can have any name.
+
 ## Explicitly implementation details
 
 Do not build on these. They change without notice and without a release note.
