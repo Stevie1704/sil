@@ -173,7 +173,8 @@ def bind_channels(
             continue
         bindings = mapping.inputs if direction == "in" else mapping.outputs
         bindings[channel] = bind_channel(
-            channel, direction, fields, bound[channel]
+            channel, direction, fields, bound[channel],
+            description.fmi_version,
         )
     return mapping
 

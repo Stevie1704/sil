@@ -185,6 +185,21 @@ class TestInspection:
         (reason,) = report["unusable"]
         assert "String" in reason and "Enumeration" in reason
 
+    def test_a_refused_archive_names_the_fmi2_platform(self):
+        """The platform follows the declared version on a refusal too."""
+        report = inspect(FEEDTHROUGH)
+
+        assert report["verdict"] == "unusable"
+        assert report["platform"] == fmi2_platform_directory()
+
+    def test_an_unbound_calculated_parameter_is_listed(self, fake):
+        mapping = {"sil_fmi_mapping": 1, "schemas": FAKE_SCHEMAS,
+                   "channels": FAKE_INIT["channels"], "bind": FAKE_BINDS}
+        report = inspect(fake(), mapping)
+
+        assert report["mapping"]["accepted"], report["mapping"]
+        assert "offset" in report["mapping"]["unbound"]
+
     def test_an_fmi3_report_names_its_own_profile(self):
         fmi3 = ROOT / "tests" / "fixtures" / "reference-fmus" / "3.0"
         report = inspect(fmi3 / "BouncingBall.fmu")
@@ -276,6 +291,37 @@ class TestLifecycle:
         try:
             with pytest.raises(ManifestError, match="calculatedParameter"):
                 participant.on_init(FAKE_INIT)
+        finally:
+            participant.close()
+
+    def test_a_calculated_parameter_is_read_after_initialization(self, fake):
+        """`offset` is computed as 2 * gain when initialization ends."""
+        schemas = {**FAKE_SCHEMAS,
+                   "fake.Offset": {"fields": [{"name": "o", "type": "f64"}]}}
+        init = {**FAKE_INIT, "schemas": schemas, "channels": {
+            **FAKE_INIT["channels"],
+            "fake.Offset": {"schema": "fake.Offset", "direction": "out"},
+        }}
+        participant = FmuParticipant(
+            fake(), binds=[*FAKE_BINDS, "fake.Offset:o=offset"],
+            starts=["gain=4"],
+        )
+        try:
+            participant.on_init(init)
+            published = dict(participant.on_step(0, STEP_PERIOD_NS, []))
+        finally:
+            participant.close()
+
+        assert published["fake.Offset"] == {"o": 8.0}
+
+    def test_a_calculated_parameter_is_never_written(self, fake):
+        participant = FmuParticipant(fake(), binds=["fake.In:u=offset"])
+        init = {**FAKE_INIT, "schemas": {
+            "fake.In": {"fields": [{"name": "u", "type": "f64"}]}},
+            "channels": {"fake.In": {"schema": "fake.In", "direction": "in"}}}
+        try:
+            with pytest.raises(ManifestError, match="calculatedParameter"):
+                participant.on_init(init)
         finally:
             participant.close()
 

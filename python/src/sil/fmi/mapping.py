@@ -26,6 +26,7 @@ from sil.fmi.binding import (
 from sil.fmi.description import (
     BINARY,
     FMI2,
+    FMI3,
     CLOCK,
     HAS_EVENT_MODE,
     SCALARS,
@@ -255,12 +256,26 @@ def _require_mappable(binding: Binding) -> None:
         raise ManifestError(f"{binding}, {reason}")
 
 
-def _require_causality(binding: Binding, causality: str) -> None:
-    """Reject a variable bound to a Channel of the other direction."""
-    if binding.variable.causality != causality:
+def _require_causality(binding: Binding, causality: str,
+                       fmi_version: str = FMI3) -> None:
+    """Reject a variable bound to a Channel of the other direction.
+
+    The FMI 2.0 profile also reads a calculated parameter onto an
+    output-direction Channel: the FMU computes it in initialization, so it
+    has a value to publish from the first Step on, and it is never written.
+    """
+    readable = (
+        binding.variable.causality == _CALCULATED
+        and causality == "output" and fmi_version == FMI2
+    )
+    if binding.variable.causality != causality and not readable:
+        also = (
+            f" and, in the FMI {FMI2} profile, {_CALCULATED} variables"
+            if causality == "output" and fmi_version == FMI2 else ""
+        )
         raise ManifestError(
             f"{binding}, whose causality is {binding.variable.causality!r}; "
-            f"this Channel's direction binds {causality} variables"
+            f"this Channel's direction binds {causality} variables{also}"
         )
 
 
@@ -507,6 +522,7 @@ def bind_channel(
     direction: str,
     fields: dict[str, dict],
     bound: dict[str, Variable],
+    fmi_version: str = FMI3,
 ) -> ChannelBinding:
     """One Channel's fields, checked against the variables they name."""
     causality = causality_of(direction)
@@ -518,7 +534,7 @@ def bind_channel(
             continue
         binding = Binding(channel, field, bound[field])
         _require_mappable(binding)
-        _require_causality(binding, causality)
+        _require_causality(binding, causality, fmi_version)
         if binding.variable.kind == BINARY:
             binary = binary_field(binding, fields, causality)
             lengths[binary.length_field] = field

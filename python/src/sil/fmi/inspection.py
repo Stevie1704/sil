@@ -49,6 +49,7 @@ from sil.fmi.description import (
     ModelDescription,
     Terminal,
     Variable,
+    fmi2_platform_directory,
     fmi2_type,
     library_suffix,
     platform_directory,
@@ -79,6 +80,7 @@ _DIRECTIONS = ("in", "out")
 # The causalities a Run can touch. A local, a calculated parameter and the
 # independent variable are the FMU's own business.
 _CARRIED = ("input", "output", "parameter", "structuralParameter")
+_CALCULATED = "calculatedParameter"
 
 
 class MappingError(ValueError):
@@ -122,7 +124,6 @@ def _inspect_extracted(
         unusable.append(stated(error))
     return _report(
         archive, facts, unusable=unusable,
-        platform=description.platform_directory(),
         variables=_variables(root, description),
         terminals=[_terminal(description, t)
                    for t in description.terminals.values()],
@@ -134,7 +135,6 @@ def _inspect_extracted(
 
 
 def _report(archive: Path, facts: dict, *, unusable: list[str],
-            platform: str | None = None,
             variables: list[dict] = (), terminals: list[dict] = (),
             bus: dict | None = None, unverified: list[str] = (),
             mapping: dict | None = None) -> dict:
@@ -148,9 +148,7 @@ def _report(archive: Path, facts: dict, *, unusable: list[str],
     return {
         "sil_fmi_inspection": REPORT_VERSION,
         "archive": str(archive),
-        # The `binaries/` directory this host loads for this archive's FMI
-        # version. FMI 2.0 has no name for some hosts.
-        "platform": platform_directory() if platform is None else platform,
+        "platform": _platform(facts["fmi_version"]),
         "verdict": verdict,
         "unusable": list(unusable),
         "facts": facts,
@@ -160,6 +158,18 @@ def _report(archive: Path, facts: dict, *, unusable: list[str],
         "mapping": mapping,
         "unverified": list(unverified),
     }
+
+
+def _platform(fmi_version: str | None) -> str | None:
+    """The `binaries/` directory this host loads for an archive's version.
+
+    It follows the version the archive declares, whether or not the archive
+    is usable, so a refused FMI 2.0 archive names an FMI 2.0 directory. FMI
+    2.0 has no name for some hosts, which is None.
+    """
+    if fmi_version == FMI2:
+        return fmi2_platform_directory()
+    return platform_directory()
 
 
 def _description_root(extracted: Path) -> ElementTree.Element | None:
@@ -403,11 +413,17 @@ def _unbound(mapping: dict, description: ModelDescription) -> list[str]:
     }
     return [
         name for name, variable in description.variables.items()
-        if _carried(variable) and name not in touched
+        if _carried(variable, description) and name not in touched
     ]
 
 
-def _carried(variable: Variable) -> bool:
+def _carried(variable: Variable, description: ModelDescription) -> bool:
+    """Whether a Run can touch the variable: write it, or read it.
+
+    The FMI 2.0 profile also reads a calculated parameter.
+    """
+    if description.fmi_version == FMI2 and variable.causality == _CALCULATED:
+        return True
     return variable.causality in _CARRIED
 
 
@@ -482,7 +498,7 @@ def render(report: dict) -> str:
         f"model: {facts['model_name']} ({facts['generation_tool']})",
         f"interfaces: {', '.join(facts['interfaces']) or 'none'}",
         f"platform binaries: {', '.join(facts['platforms']) or 'none'} "
-        f"(this host: {report['platform']})",
+        f"(this host: {report['platform'] or 'none'})",
     ]
     co_simulation = facts["interfaces"].get("CoSimulation")
     if co_simulation:

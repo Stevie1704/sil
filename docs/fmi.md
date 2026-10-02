@@ -488,7 +488,8 @@ The readable report names the profile the archive is checked against —
 the archive declares. The JSON report states that version in
 `facts.fmi_version`. For FMI 2.0, `facts.instantiation_token` holds the
 `guid`, and `platform` is the FMI 2.0 directory (`linux64`, or `darwin64` on
-a development Mac).
+a development Mac), also when the archive is refused. On a host that FMI 2.0
+has no directory for, `platform` is `null`.
 
 `--mapping` checks a proposed single-FMU mapping. The document is the init
 line's `schemas` and `channels` and the importer's `--bind` and `--start`
@@ -541,7 +542,7 @@ This is the whole profile. It is not general FMI 2.0 conformance.
 | Interface | Co-Simulation. Model Exchange is refused |
 | Platform | Linux x86-64, `binaries/linux64/`. `darwin64` is loaded on a Mac for development only |
 | Variable types | scalar `Real`, `Integer` and `Boolean`. An archive with a `String` or `Enumeration` variable is refused, and the reason names each one |
-| Parameters | `--start` sets a `parameter` (`fixed` or `tunable`) or an input in the instantiated state, before `fmi2SetupExperiment`. A `calculatedParameter` takes no start value: the FMU computes it in initialization |
+| Parameters | `--start` sets a `parameter` (`fixed` or `tunable`) or an input in the instantiated state, before `fmi2SetupExperiment`. A `calculatedParameter` takes no start value: the FMU computes it in initialization. It is read after initialization: `--bind` it to a field of an output-direction Channel, and each Step publishes its value |
 | Lifecycle | `fmi2Instantiate` → start values → `fmi2SetupExperiment` (start 0, no tolerance, no stop time) → `fmi2EnterInitializationMode` → `fmi2ExitInitializationMode` → one `fmi2DoStep` per Step → `fmi2Terminate` → `fmi2FreeInstance` |
 | Resources | the extracted `resources/` directory as a `file://` URI, also when the archive has none |
 | Step | the fixed communication step of the Manifest. No variable step, even when the FMU declares `canHandleVariableCommunicationStepSize` |
@@ -559,7 +560,7 @@ binding rules above apply unchanged:
 | `Boolean` | `Boolean` | `u8` | `true` or `false` |
 
 A Real mapping is derived from the field names, as for Float64. An Integer or
-Boolean variable is bound with `--bind`. A diagnostic names the type as it is
+Boolean variable, and a `calculatedParameter`, is bound with `--bind`. A diagnostic names the type as it is
 carried: a `Real` variable is a `Float64` variable there.
 
 The FMI 2.0 logger is a C variadic function. The Importer prints the message
