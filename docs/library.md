@@ -173,3 +173,116 @@ crash or hang. Use this adapter for an existing library with its own API.
 [The Native ADAS reference application](adas-reference.md) shows the Native
 path: a C application with its own API, and a small adapter that exports
 `sil_participant_init` and keeps one instance per Participant.
+
+## Large interfaces
+
+A Native participant exchanges SiL Schemas. A SiL Schema is flat: primitive
+fields and fixed `count` arrays, packed and little-endian. A production
+library often has large, deeply nested input and output structs. Do not
+write their Schemas by hand. `sil-schema-import` reads the layout that the
+compiler recorded in DWARF and writes:
+
+1. A flat Schema whose packed layout is byte-identical to the compiled
+   layout of the type. Padding becomes explicit padding fields.
+2. A C layout-check header. It checks `sizeof` of each type and `offsetof`
+   and `sizeof` of each imported member, against the project's own type.
+
+The adapter then copies between the project struct and the SiL struct with
+`memcpy`. It needs no conversion code.
+
+The command needs the optional extra: `pip install 'sil[dwarf]'`. It reads
+ELF objects only (Linux). It needs no compiler, `libclang` or `pahole`.
+
+```sh
+sil-schema-import build/interface_types.o \
+    --type 'AdasInput=adas.Input' --type 'AdasOutput=adas.Output' \
+    -o schemas.json --layout-check adas_layout_check.h
+silschema schemas.json adas_messages.h
+```
+
+Each `--type` is `<C type>=<Schema name>`. The C type is a `typedef` name or
+a `struct` tag. The command prints the field count and the byte size of each
+Schema: an unrolled array of structs can give thousands of fields.
+
+Include the project header, then `adas_layout_check.h`, in the adapter.
+Compile the adapter with the release flags. If the Schema and the real
+layout differ, the build fails and names the member. The compiler, not the
+import, has the last word.
+
+```c
+#include "interface_types.h"
+#include "adas_layout_check.h"
+#include "adas_messages.h"
+
+AdasInput in;          /* filled through the project's own members */
+adas_Input message;
+memcpy(&message, &in, sizeof message);
+api->publish(api->ctx, "adas.input", &message, sizeof message);
+```
+
+### Flattening rules
+
+| C construct (from DWARF) | Schema result |
+| --- | --- |
+| Nested struct member | member path joined by `_` (`ego.pose.x` becomes `ego_pose_x`) |
+| Array of primitives, any number of dimensions | one field, `count` is the product of the dimensions |
+| Array of structs | one set of fields per element: `objects[3].x` becomes `objects_3_x`. Each element stays a scalar, so `sil-csv`, an Interceptor `override` and `sil-compare` can address it |
+| Padding, between members and at the end | `u8` field with `count` equal to the gap, named `_sil_pad_<offset>` |
+| `enum` | integer of the enum's size and DWARF signedness |
+| `_Bool` / `bool` | `u8` |
+| `char`, `signed char`, `unsigned char` | `i8` or `u8`, from the DWARF encoding |
+| `float`, `double`, fixed-width integers, `typedef`s | the matching primitive, after `typedef` resolution |
+
+Fields are in offset order. The same object and the same arguments give
+the same output bytes.
+
+The import is rejected (exit 2) and writes no file when a type contains a
+union, a bit-field, a pointer, a flexible array member, `long double`,
+`__int128`, `_Float16` or a vector type; when two flattened names collide
+(`a_b.c` and `a.b_c`); when a name breaks the `silschema` naming rule (see
+[SUPPORT.md](../SUPPORT.md)); when the object is big-endian; or when the
+object has no DWARF type of a requested name. Each diagnostic names the
+type and the member path:
+
+```text
+sil-schema-import: type 'Frame' member 'payload.value': union is not supported
+sil-schema-import: type 'Frame' members 'a_b.c' and 'a.b_c' both flatten to 'a_b_c'
+```
+
+### Where the DWARF comes from
+
+- `-g` does not need `-O0`. `-O2 -g` keeps the complete type information and
+  does not change the generated code.
+- Take the layout from the same release configuration that SiL runs. A debug
+  build can have different members through `#ifdef DEBUG` or `NDEBUG`.
+- Recommended: compile one translation unit that includes the interface
+  header, with the release flags and defines plus `-g -c`, and import from
+  that `.o`. The library itself needs no change. A compiler does not keep an
+  unused type in DWARF, so define one object of each imported type:
+
+  ```c
+  #include "interface_types.h"
+  AdasInput sil_import_input;
+  struct AdasOutput sil_import_output;
+  ```
+
+- Alternatively, build the library with `-g` and keep the debug information
+  in a separate file (`objcopy --only-keep-debug`, `-gsplit-dwarf`). A
+  stripped `.so` has no DWARF types.
+- Take the layout from the host build that SiL loads (Linux x86-64 or
+  arm64), never from the ECU toolchain. An ECU target can have a different
+  integer and pointer size, alignment and endianness.
+
+### When an opaque payload is better
+
+A Schema field is one value that a Recording, `sil-csv`, an Interceptor and
+`sil-compare` can address. Use an opaque `u8` field with a `count` instead
+when:
+
+- the type contains a construct that the import rejects, for example a
+  union or a bit-field, and no tool has to read inside it;
+- the bytes are an encoded message (for example an OSMP or a CAN frame) that
+  another tool decodes;
+- the struct is so large that thousands of fields are of no use, and only
+  some of its values have to be checked. Import a smaller struct with those
+  values, or carry the rest as one opaque field.
