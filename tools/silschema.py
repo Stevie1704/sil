@@ -5,8 +5,8 @@ One schema file is the single typed contract: C/C++ participants use the
 generated packed structs, Python uses sil.schema to pack/unpack the same
 byte layout (little-endian, declared field order, no padding).
 
-The tool refuses, before it writes anything, names it cannot turn into a
-valid C11 and C++17 header. The Manifest does not apply this rule.
+Before it writes output, the tool refuses each name that is not valid in a
+C11 and C++17 header. The Manifest does not apply this rule.
 """
 
 from __future__ import annotations
@@ -16,9 +16,9 @@ import os
 import re
 import runpy
 import sys
-import tempfile
 from collections import defaultdict
 from pathlib import Path
+from typing import NoReturn
 
 # Load the exact same stdlib-only source in a checkout and a development
 # prefix, without importing sil (or depending on PYTHONPATH/site packages).
@@ -136,7 +136,7 @@ def generate(schemas: dict) -> str:
     return "\n".join(lines)
 
 
-def fail(*messages: str) -> None:
+def fail(*messages: str) -> NoReturn:
     for message in messages:
         print(f"silschema: {message}", file=sys.stderr)
     sys.exit(2)
@@ -145,13 +145,13 @@ def fail(*messages: str) -> None:
 def write_atomically(out: Path, text: str) -> None:
     """Replace `out` in one step, so no partial header is ever visible."""
     out.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=out.parent, prefix=f".{out.name}.")
+    # A plain write, unlike mkstemp, gives the header the umask's file mode.
+    tmp = out.with_name(f".{out.name}.{os.getpid()}.tmp")
     try:
-        with os.fdopen(fd, "w") as f:
-            f.write(text)
+        tmp.write_text(text)
         os.replace(tmp, out)
     except BaseException:
-        os.unlink(tmp)
+        tmp.unlink(missing_ok=True)
         raise
 
 
@@ -162,7 +162,13 @@ def main() -> None:
         schemas = json.loads(Path(sys.argv[1]).read_text())
     except (OSError, ValueError) as e:
         fail(f"cannot read {sys.argv[1]}: {e}")
-    if problems := validate(schemas):
+    try:
+        if not isinstance(schemas, dict):
+            raise TypeError("the top level is not an object")
+        problems = validate(schemas)
+    except (AttributeError, KeyError, TypeError) as e:
+        fail(f"{sys.argv[1]} is not a Schema set ({type(e).__name__}: {e})")
+    if problems:
         fail(*problems)
     write_atomically(Path(sys.argv[2]), generate(schemas))
 

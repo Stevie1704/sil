@@ -228,3 +228,22 @@ def test_size_check_fires_for_a_wrong_size(tmp_path, compiler, lang, std):
     result = _syntax_check(header, compiler, lang, std)
     assert result.returncode != 0
     assert "t.Pose layout must be packed" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "schemas", ['{"S": {}}', '{"S": {"fields": [{"type": "u8"}]}}', "[]"]
+)
+def test_malformed_schema_set_is_a_usage_error(tmp_path, schemas):
+    result = _run(_write_schemas(tmp_path, schemas), tmp_path / "s.h")
+    assert result.returncode == 2
+    assert "is not a Schema set" in result.stderr
+    assert not (tmp_path / "s.h").exists()
+
+
+def test_output_file_mode_follows_the_umask(tmp_path):
+    src = _write_schemas(tmp_path, '{"S": {"fields": [{"name": "y", "type": "u8"}]}}')
+    out = tmp_path / "s.h"
+    reference = tmp_path / "reference"
+    reference.write_text("")
+    assert _run(src, out).returncode == 0
+    assert out.stat().st_mode == reference.stat().st_mode
