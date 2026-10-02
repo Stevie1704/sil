@@ -21,6 +21,16 @@ disagree:
   every event, from the first observation through the last. The reference
   does not record `config_valid`; acceptance requires it to be 1 at every
   nominal event that ran `safety_tick`, as upstream does.
+
+The Native form (#232) runs the same events through `native_adapter.c`:
+
+- **Event time.** The Native ABI's `take` returns a payload without its
+  Message time, so each frame carries its recorded time in `event_ns`.
+  `sil-window` rebases that field with the log time, so it is the Burst's
+  Virtual instant, as `publish_ns` is for the Process adapter.
+- **Transmit.** The recorded camera frames openpilot replaces become
+  transmit candidates on `can.tx` (see `prepare_transmit.py`). The
+  observation adds their accepted and rejected counts.
 """
 
 from __future__ import annotations
@@ -36,6 +46,20 @@ REFERENCE_SCHEMA = "libsafety.ReferenceState"
 TRANSMIT_ECHO_SOURCE = 128
 # A recorded event interval is at least 8.75 ms; 12 ms rejects a lost event.
 MAX_GAP_NS = 12_000_000
+
+# The Native form (#232).
+TRANSMIT_CHANNEL = "can.tx"
+TIMED_FRAME_SCHEMA = "can.TimedFrame"
+NATIVE_STATE_SCHEMA = "libsafety.NativeState"
+NATIVE_REFERENCE_SCHEMA = "libsafety.NativeReferenceState"
+# STEERING_LTA, STEERING_LKA, ACC_CONTROL and LKAS_HUD: the Toyota stock
+# camera sends them on bus 2, and openpilot sends them in its place on bus 0.
+TRANSMIT_ADDRESSES = (0x191, 0x2E4, 0x343, 0x412)
+CAMERA_BUS = 2
+TRANSMIT_BUS = 0
+# The candidates are not in every event; 100 ms still rejects a lost burst
+# of camera frames, which come at 20 to 42 Hz per address.
+TRANSMIT_MAX_GAP_NS = 100_000_000
 
 FRAME_COLUMNS = ("log_mono_ns", "address", "src", "length",
                  *(f"d{i}" for i in range(8)))
@@ -60,20 +84,39 @@ SCHEMAS = {
         *({"name": name, "type": "f32"} for name in FLOAT_STATE),
     ]},
 }
-SCHEMAS[REFERENCE_SCHEMA] = {"fields": [
-    field for field in SCHEMAS[STATE_SCHEMA]["fields"]
-    if field["name"] != "config_valid"]}
+SCHEMAS[TIMED_FRAME_SCHEMA] = {"fields": [
+    {"name": "event_ns", "type": "u64"}, *SCHEMAS[FRAME_SCHEMA]["fields"]]}
+# The transmit verdicts follow the receive verdicts.
+SCHEMAS[NATIVE_STATE_SCHEMA] = {"fields": [
+    added for field in SCHEMAS[STATE_SCHEMA]["fields"]
+    for added in ([field, {"name": "tx_accepted", "type": "u32"},
+                   {"name": "tx_rejected", "type": "u32"}]
+                  if field["name"] == "rejected" else [field])]}
+
+
+def _without_config_valid(schema: str) -> dict:
+    return {"fields": [field for field in SCHEMAS[schema]["fields"]
+                       if field["name"] != "config_valid"]}
+
+
+SCHEMAS[REFERENCE_SCHEMA] = _without_config_valid(STATE_SCHEMA)
+SCHEMAS[NATIVE_REFERENCE_SCHEMA] = _without_config_valid(NATIVE_STATE_SCHEMA)
 STATE_FIELDS = [field["name"] for field in SCHEMAS[STATE_SCHEMA]["fields"]]
+NATIVE_STATE_FIELDS = [field["name"]
+                       for field in SCHEMAS[NATIVE_STATE_SCHEMA]["fields"]]
 
 
-def _mapping(timestamp_column: str, channel: str, schema: str) -> dict:
+def _mapping(timestamp_column: str, channel: str, schema: str,
+             columns: dict | None = None) -> dict:
+    columns = columns or {}
     return {
         "sil_csv_mapping": 1,
         "timestamp": {"column": timestamp_column, "unit": "ns"},
         "schemas": {schema: SCHEMAS[schema]},
         "channels": [{
             "channel": channel, "schema": schema,
-            "fields": {field["name"]: {"column": field["name"]}
+            "fields": {field["name"]: {"column": columns.get(field["name"],
+                                                             field["name"])}
                        for field in SCHEMAS[schema]["fields"]},
         }],
     }
@@ -81,6 +124,13 @@ def _mapping(timestamp_column: str, channel: str, schema: str) -> dict:
 
 FRAME_MAPPING = _mapping("log_mono_ns", FRAME_CHANNEL, FRAME_SCHEMA)
 REFERENCE_MAPPING = _mapping("slot_ns", STATE_CHANNEL, REFERENCE_SCHEMA)
+# The recorded time feeds the Message time and the frame's own event_ns.
+TIMED_FRAME_MAPPING = _mapping("log_mono_ns", FRAME_CHANNEL, TIMED_FRAME_SCHEMA,
+                               {"event_ns": "log_mono_ns"})
+TRANSMIT_MAPPING = _mapping("log_mono_ns", TRANSMIT_CHANNEL, TIMED_FRAME_SCHEMA,
+                            {"event_ns": "log_mono_ns"})
+NATIVE_REFERENCE_MAPPING = _mapping("slot_ns", STATE_CHANNEL,
+                                    NATIVE_REFERENCE_SCHEMA)
 
 
 def window_document(first_log_mono_ns: int, last_log_mono_ns: int) -> dict:
@@ -94,6 +144,20 @@ def window_document(first_log_mono_ns: int, last_log_mono_ns: int) -> dict:
         "channels": [FRAME_CHANNEL],
         "max_gap_ns": MAX_GAP_NS,
     }
+
+
+def timed_window_document(first_log_mono_ns: int, last_log_mono_ns: int,
+                          channel: str, max_gap_ns: int,
+                          channel_start_ns: int | None = None) -> dict:
+    """The same window for a timed frame Channel: its event_ns is rebased
+    with the log time. A Channel that starts later than the first event, as
+    the transmit candidates may, starts its replay there; the origin, and so
+    Virtual time, stays the first event's."""
+    start = first_log_mono_ns if channel_start_ns is None else channel_start_ns
+    return {**window_document(first_log_mono_ns, last_log_mono_ns),
+            "replay_start_ns": start, "evaluation_start_ns": start,
+            "channels": [channel], "max_gap_ns": max_gap_ns,
+            "source_time_fields": {channel: ["event_ns"]}}
 
 
 def observation_slot(event_ns: int) -> int:
@@ -121,6 +185,15 @@ def reference_rows(trace: list[dict], first_log_mono_ns: int) -> list[dict]:
     return rows
 
 
+def native_reference_rows(trace: list[dict],
+                          first_log_mono_ns: int) -> list[dict]:
+    """The Native reference rows: the receive rows and the transmit verdicts."""
+    return [{**row, "tx_accepted": state["tx_accepted"],
+             "tx_rejected": state["tx_rejected"]}
+            for row, state in zip(reference_rows(trace, first_log_mono_ns),
+                                  trace)]
+
+
 def _rule(field: str):
     if field == "config_valid":
         # The reference does not record it; acceptance checks it separately.
@@ -128,7 +201,8 @@ def _rule(field: str):
     return {"atol": 0, "rtol": 0} if field in FLOAT_STATE else "exact"
 
 
-def comparison_contract(slots: list[int]) -> dict:
+def comparison_contract(slots: list[int],
+                        fields: list[str] = STATE_FIELDS) -> dict:
     """Every recorded field exact at every observation Slot, the last one
     included."""
     return {
@@ -139,6 +213,6 @@ def comparison_contract(slots: list[int]) -> dict:
             "actual_offset_ns": 0,
             "reference_offset_ns": 0,
             "observations": {"times_ns": list(slots)},
-            "fields": {name: _rule(name) for name in STATE_FIELDS},
+            "fields": {name: _rule(name) for name in fields},
         }},
     }
