@@ -87,6 +87,19 @@ def message(data: bytes, capacity: int = CAPACITY) -> dict:
             "payload_length": len(data)}
 
 
+def with_unannotated(*names: str):
+    """A description rewrite that adds unannotated input Integers."""
+    declared = "\n".join(
+        variable(name, 9 + index, "input") for index, name in enumerate(names)
+    )
+    return replace("  </ModelVariables>", f"{declared}\n  </ModelVariables>")
+
+
+INT_INIT = {**INIT, "schemas": {
+    "osmp.Int": {"fields": [{"name": "v", "type": "i32"}]}},
+    "channels": {"osmp.In": {"schema": "osmp.Int", "direction": "in"}}}
+
+
 def participant(archive: Path, *, init=INIT, binds=BINDS, starts=()):
     imported = FmuParticipant(archive, binds=binds, starts=starts)
     try:
@@ -109,6 +122,23 @@ class TestDescription:
         assert binary.mime_type == MIME_TYPE
         assert (binary.osmp.lo, binary.osmp.hi, binary.osmp.size) == (0, 1, 2)
         assert description.variables["OSMPOut"].causality == "output"
+
+    def test_the_binary_variable_has_no_reference_of_its_own(
+            self, fake, tmp_path):
+        description = read(fake(), tmp_path)
+
+        assert description.variables["OSMPIn"].reference is None
+        assert description.variables["OSMPIn.base.lo"].reference == 0
+
+    def test_an_unannotated_address_and_its_size_are_marked(
+            self, fake, tmp_path):
+        rewrite = with_unannotated("Other.base.hi", "Other.size", "Count.size")
+        variables = read(fake(rewrite=rewrite), tmp_path).variables
+
+        assert variables["Other.base.hi"].osmp_unannotated == "Other"
+        assert variables["Other.size"].osmp_unannotated == "Other"
+        assert variables["Count.size"].osmp_unannotated is None
+        assert variables["OSMPIn.base.lo"].osmp_unannotated is None
 
     def test_each_member_names_its_binary_variable(self, fake, tmp_path):
         description = read(fake(), tmp_path)
@@ -195,25 +225,26 @@ class TestMapping:
         "OSMPIn.base.lo", "OSMPIn.base.hi", "OSMPIn.size",
     ])
     def test_a_member_is_not_bound_on_its_own(self, fake, member):
-        init = {**INIT, "schemas": {
-            "osmp.Int": {"fields": [{"name": "v", "type": "i32"}]}},
-            "channels": {"osmp.In": {"schema": "osmp.Int", "direction": "in"}}}
         with pytest.raises(ManifestError) as refused:
-            participant(fake(), init=init, binds=[f"osmp.In:v={member}"])
+            participant(fake(), init=INT_INIT, binds=[f"osmp.In:v={member}"])
 
         assert "OSMP binary variable 'OSMPIn'" in str(refused.value)
 
-    def test_an_unannotated_address_half_is_not_bound(self, fake):
-        rewrite = replace(
-            "  </ModelVariables>",
-            variable("Other.base.lo", 9, "input") + "\n  </ModelVariables>",
-        )
-        init = {**INIT, "schemas": {
-            "osmp.Int": {"fields": [{"name": "v", "type": "i32"}]}},
-            "channels": {"osmp.In": {"schema": "osmp.Int", "direction": "in"}}}
-        with pytest.raises(ManifestError, match="address"):
-            participant(fake(rewrite=rewrite), init=init,
-                        binds=["osmp.In:v=Other.base.lo"])
+    @pytest.mark.parametrize("name", ["Other.base.lo", "Other.size"])
+    def test_an_unannotated_address_is_not_bound(self, fake, name):
+        rewrite = with_unannotated("Other.base.lo", "Other.size")
+        with pytest.raises(ManifestError, match="OSMP address 'Other'"):
+            participant(fake(rewrite=rewrite), init=INT_INIT,
+                        binds=[f"osmp.In:v={name}"])
+
+    def test_an_unannotated_address_takes_no_start_value(self, fake):
+        rewrite = with_unannotated("Other.base.lo")
+        with pytest.raises(ManifestError, match="OSMP address 'Other'"):
+            participant(fake(rewrite=rewrite), starts=["Other.base.lo=1"])
+
+    def test_a_size_without_an_address_is_an_ordinary_integer(self, fake):
+        participant(fake(rewrite=with_unannotated("Count.size")),
+                    init=INT_INIT, binds=["osmp.In:v=Count.size"]).close()
 
     @pytest.mark.parametrize("start", ["OSMPIn=00", "OSMPIn.size=3"])
     def test_no_start_value_is_set(self, fake, start):
@@ -337,6 +368,14 @@ class TestInspection:
         variables = {v["name"]: v for v in report["variables"]}
         assert "OSMP binary variable 'OSMPIn'" in (
             variables["OSMPIn.base.lo"]["unmappable"])
+
+    def test_an_unannotated_address_is_reported_unmappable(self, fake):
+        rewrite = with_unannotated("Other.base.lo", "Other.size")
+        report = inspect(fake(rewrite=rewrite))
+
+        variables = {v["name"]: v for v in report["variables"]}
+        for name in ("Other.base.lo", "Other.size"):
+            assert "OSMP address 'Other'" in variables[name]["unmappable"]
 
     def test_a_mapping_of_the_binary_variables_is_accepted(self, fake):
         mapping = {"sil_fmi_mapping": 1, "schemas": SCHEMAS,

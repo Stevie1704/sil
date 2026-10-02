@@ -235,7 +235,9 @@ class Variable:
     """One FMU variable, as `modelDescription.xml` declares it."""
 
     name: str
-    reference: int
+    # None for an OSMP binary variable, which has no value reference of its
+    # own: each of its three Integers has one, in `osmp`.
+    reference: int | None
     # The element name the description uses: 'Float64', 'Binary', 'Clock'…
     kind: str
     causality: str
@@ -262,6 +264,9 @@ class Variable:
     # Set on each of those three Integer variables: the name of the OSMP
     # binary variable it is part of.
     osmp_member: str | None = None
+    # Set on an Integer that OSMP would name as part of an address, but that
+    # no OSMP annotation declares: the name the address would have.
+    osmp_unannotated: str | None = None
 
     @property
     def is_array(self) -> bool:
@@ -714,7 +719,36 @@ def _with_osmp(root, variables: dict[str, Variable]) -> dict[str, Variable]:
         declared[binary] = _osmp_binary(binary, roles, variables)
         for member, _ in roles.values():
             declared[member.name] = replace(member, osmp_member=binary)
-    return declared
+    return _with_unannotated(declared)
+
+
+def _with_unannotated(variables: dict[str, Variable]) -> dict[str, Variable]:
+    """The variables, with each unannotated OSMP look-alike marked.
+
+    An Integer named `<name>.base.lo` or `<name>.base.hi` without an OSMP
+    annotation is half of an address that the Importer cannot tell from a
+    number. A `<name>.size` beside such a half is the count of that address.
+    A `<name>.size` alone is an ordinary Integer.
+    """
+    def unannotated(name: str) -> bool:
+        variable = variables.get(name)
+        return (variable is not None and variable.kind == OSMP_INTEGER
+                and variable.osmp_member is None)
+
+    addresses = {
+        name.removesuffix(f".{role}")
+        for name in variables for role in OSMP_ROLES[:2]
+        if name.endswith(f".{role}") and unannotated(name)
+    }
+    marked = dict(variables)
+    for address in addresses:
+        for role in OSMP_ROLES:
+            name = f"{address}.{role}"
+            if unannotated(name):
+                marked[name] = replace(
+                    variables[name], osmp_unannotated=address
+                )
+    return marked
 
 
 def _osmp_binary(
@@ -769,7 +803,7 @@ def _osmp_binary(
     )
     return Variable(
         name=binary,
-        reference=address.lo,
+        reference=None,
         kind=BINARY,
         causality=causalities.pop(),
         max_size=None,

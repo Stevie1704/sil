@@ -30,7 +30,6 @@ from sil.fmi.description import (
     FMI3,
     CLOCK,
     HAS_EVENT_MODE,
-    OSMP_INTEGER,
     SCALARS,
     TRIGGERED,
     ModelDescription,
@@ -59,11 +58,6 @@ _LENGTH_CEILINGS = {
 # The most bytes an OSMP binary variable can state: its size is an
 # fmi2Integer, a signed 32-bit C `int`.
 _OSMP_SIZE_CEILING = 0x7FFF_FFFF
-
-# The names OSMP gives the two halves of an address. An Integer named so and
-# declared by no OSMP annotation is an address the Importer cannot tell from
-# a number, so it carries it neither way.
-_ADDRESS_SUFFIXES = (".base.lo", ".base.hi")
 
 
 def channel_fields(init: dict) -> dict[str, dict[str, dict]]:
@@ -247,12 +241,11 @@ def _osmp_problem(variable: Variable) -> str | None:
             f"{variable.osmp_member!r}, whose bytes the Importer passes by "
             f"address"
         )
-    if variable.kind == OSMP_INTEGER and variable.name.endswith(
-            _ADDRESS_SUFFIXES):
+    if variable.osmp_unannotated is not None:
         return (
-            "which is named like half of an OSMP address, but no OSMP "
-            "annotation declares it; this importer passes no address as a "
-            "number"
+            f"which is named like part of OSMP address "
+            f"{variable.osmp_unannotated!r}, but no OSMP annotation declares "
+            f"it; this importer passes no address as a number"
         )
     return None
 
