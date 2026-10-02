@@ -289,6 +289,8 @@ class TestRejected:
              "type 'WithBitField' member 'flags.mode': bit-field"),
             ("WithPointer",
              "type 'WithPointer' member 'buffer.samples': pointer"),
+            ("WithPointerArray",
+             "type 'WithPointerArray' member 'list.items': pointer"),
             ("WithFlexibleArray",
              "type 'WithFlexibleArray' member 'samples': flexible array"),
             ("WithCollision",
@@ -311,6 +313,16 @@ class TestRejected:
         assert proc.returncode == 2
         assert diagnostic in proc.stderr
         assert list(tmp_path.iterdir()) == []
+
+    def test_schema_names_with_one_c_identifier_are_rejected(self, tmp_path):
+        obj = compile_elf(FIXTURES / "dwarf_layout.c", tmp_path / "layout.o",
+                          "-O2", "-g")
+        proc = run_import(obj, tmp_path / "import", "AdasInput=a.B",
+                          "AdasOutput=a_B")
+        assert proc.returncode == 2
+        assert ("Schemas 'a.B' and 'a_B' both map to the C identifier 'a_B'"
+                in proc.stderr)
+        assert list((tmp_path / "import").iterdir()) == []
 
     def test_a_stripped_object_is_rejected(self, tmp_path):
         obj = compile_elf(FIXTURES / "dwarf_layout.c", tmp_path / "layout.o",

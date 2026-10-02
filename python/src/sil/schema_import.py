@@ -28,7 +28,7 @@ from math import prod
 from pathlib import Path
 from typing import NoReturn
 
-from ._schema_types import ident_problem, schema_name_problem
+from ._schema_types import c_ident, ident_problem, schema_name_problem
 
 PAD_PREFIX = "_sil_pad_"
 
@@ -109,8 +109,10 @@ def _type_of(die):
 
 
 def _unqualified(die):
-    """The type under typedefs and const/volatile/restrict qualifiers."""
-    while die.tag in _QUALIFIERS:
+    """The type under typedefs and const/volatile/restrict qualifiers.
+
+    A qualifier without DW_AT_type qualifies void; it is returned as is."""
+    while die.tag in _QUALIFIERS and "DW_AT_type" in die.attributes:
         die = _type_of(die)
     return die
 
@@ -214,6 +216,8 @@ class _Flattener:
         if element.tag in _PRIMITIVE_TAGS:
             self.leaf(element, path, member, offset, prod(dims))
             return
+        if element.tag in _REJECTED_TAGS:  # may have no DW_AT_byte_size
+            raise _Rejection(member, _REJECTED_TAGS[element.tag])
         stride = _byte_size(element)
         for flat in range(prod(dims)):
             index = _unravel(flat, dims)
@@ -278,10 +282,10 @@ def _name_problems(c_type: str, fields: list[Field]) -> list[str]:
 
 
 def _incomplete(die) -> bool:
-    """A declaration, or a typedef of one: no layout in this unit."""
+    """A declaration, or a typedef of one or of void: no layout here."""
     if die.tag == "DW_TAG_typedef":
         die = _unqualified(die)
-    return "DW_AT_declaration" in die.attributes
+    return die.tag in _QUALIFIERS or "DW_AT_declaration" in die.attributes
 
 
 class _TypeIndex:
@@ -463,6 +467,14 @@ def main(argv: list[str] | None = None) -> None:
     if duplicates:
         _fail(*(f"Schema {s!r} is requested more than once"
                 for s in duplicates))
+    by_ident = defaultdict(list)
+    for schema_name in requested:
+        by_ident[c_ident(schema_name)].append(schema_name)
+    collisions = [names for names in by_ident.values() if len(names) > 1]
+    if collisions:
+        _fail(*(f"Schemas {' and '.join(map(repr, names))} both map to the "
+                f"C identifier {c_ident(names[0])!r}"
+                for names in collisions))
     try:
         layouts = import_layouts(args.elf, args.types)
     except OSError as e:

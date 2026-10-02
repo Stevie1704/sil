@@ -5,3 +5,7 @@
 
 AdasInput dwarf_layout_input;
 struct AdasOutput dwarf_layout_output;
+
+/* An unrelated typedef of void: the index must skip it. */
+typedef void dwarf_layout_nothing;
+dwarf_layout_nothing *dwarf_layout_opaque_handle;

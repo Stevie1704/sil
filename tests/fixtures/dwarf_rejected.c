@@ -28,6 +28,12 @@ struct WithPointer {
   } buffer;
 };
 
+struct WithPointerArray {
+  struct {
+    int *items[2];
+  } list;
+};
+
 struct WithFlexibleArray {
   uint32_t count;
   float samples[];
@@ -61,6 +67,7 @@ struct Empty {};
 struct WithUnion dwarf_rejected_union;
 struct WithBitField dwarf_rejected_bit_field;
 struct WithPointer dwarf_rejected_pointer;
+struct WithPointerArray dwarf_rejected_pointer_array;
 struct WithFlexibleArray dwarf_rejected_flexible;
 struct WithCollision dwarf_rejected_collision;
 struct WithReservedName dwarf_rejected_reserved;
