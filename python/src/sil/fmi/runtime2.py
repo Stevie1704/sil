@@ -26,7 +26,12 @@ from pathlib import Path
 
 from sil.participant import ParticipantFailure
 
-from sil.fmi.description import ModelDescription, OsmpAddress, Variable
+from sil.fmi.description import (
+    OSMP_INTEGER,
+    ModelDescription,
+    OsmpAddress,
+    Variable,
+)
 from sil.fmi.runtime import _Library, _references
 
 # fmi2Status. OK and Warning continue: FMI 2.0 defines Warning as a call that
@@ -288,10 +293,10 @@ class OsmpBuffer:
             _signed(address & _HALF), _signed(address >> 32 & _HALF),
             len(payload),
         ]
-        fmu._set_values("Int32", self._references, self._integers)
+        fmu._set_values(OSMP_INTEGER, self._references, self._integers)
 
     def read(self, fmu: CoSimulation2) -> bytes:
-        fmu._get_values("Int32", self._references, self._integers)
+        fmu._get_values(OSMP_INTEGER, self._references, self._integers)
         lo, hi, size = self._integers
         address = (hi & _HALF) << 32 | lo & _HALF
         if size < 0:

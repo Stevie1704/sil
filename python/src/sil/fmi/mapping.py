@@ -30,6 +30,7 @@ from sil.fmi.description import (
     FMI3,
     CLOCK,
     HAS_EVENT_MODE,
+    OSMP_INTEGER,
     SCALARS,
     TRIGGERED,
     ModelDescription,
@@ -63,7 +64,6 @@ _OSMP_SIZE_CEILING = 0x7FFF_FFFF
 # declared by no OSMP annotation is an address the Importer cannot tell from
 # a number, so it carries it neither way.
 _ADDRESS_SUFFIXES = (".base.lo", ".base.hi")
-_ADDRESS_KIND = "Int32"
 
 
 def channel_fields(init: dict) -> dict[str, dict[str, dict]]:
@@ -247,7 +247,7 @@ def _osmp_problem(variable: Variable) -> str | None:
             f"{variable.osmp_member!r}, whose bytes the Importer passes by "
             f"address"
         )
-    if variable.kind == _ADDRESS_KIND and variable.name.endswith(
+    if variable.kind == OSMP_INTEGER and variable.name.endswith(
             _ADDRESS_SUFFIXES):
         return (
             "which is named like half of an OSMP address, but no OSMP "
@@ -639,15 +639,16 @@ def start_value(variable: Variable, text: str):
     separated by single spaces. Nothing is broadcast and nothing is filled
     in: the count it lists is the count the dimensions declare.
     """
-    osmp = _osmp_problem(variable)
-    if osmp is None and variable.osmp is not None:
-        osmp = (
-            "which is an OSMP binary variable; this importer passes OSMP "
-            "bytes from a Channel and sets no start value for them"
-        )
-    if osmp is not None:
+    if variable.osmp is not None:
         raise ManifestError(
-            f"start value for FMU variable {variable.name!r}, {osmp}"
+            f"start value for FMU variable {variable.name!r}, which is an "
+            f"OSMP binary variable; this importer passes OSMP bytes from a "
+            f"Channel and sets no start value for them"
+        )
+    address = _osmp_problem(variable)
+    if address is not None:
+        raise ManifestError(
+            f"start value for FMU variable {variable.name!r}, {address}"
         )
     if variable.kind == BINARY:
         return _binary_start(variable, text)

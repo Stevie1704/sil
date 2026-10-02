@@ -643,7 +643,7 @@ def _fmi2_variables(root) -> dict[str, Variable]:
 OSMP_TOOL = "net.pmsf.osmp"
 _OSMP_NAMESPACE = "{http://xsd.pmsf.net/OSISensorModelPackaging}"
 OSMP_ROLES = ("base.lo", "base.hi", "size")
-_OSMP_INTEGER = _FMI2_TYPES["Integer"]
+OSMP_INTEGER = _FMI2_TYPES["Integer"]
 
 
 def _osmp_annotation(element) -> ElementTree.Element | None:
@@ -737,7 +737,7 @@ def _osmp_binary(
             f"already names an FMU variable"
         )
     for role, (member, _) in roles.items():
-        if member.kind != _OSMP_INTEGER:
+        if member.kind != OSMP_INTEGER:
             raise ManifestError(
                 f"FMU declares {member.name!r}, the {role!r} of OSMP binary "
                 f"variable {binary!r}, as {member.kind}; OSMP passes it in "
