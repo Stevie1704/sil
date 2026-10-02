@@ -222,7 +222,7 @@ def test_wheel_installs_acc_entrypoint_without_checkout_imports(
     assert manifest.is_file()
     for entrypoint in ("sil-acc", "sil-check", "sil-compare", "sil-csv",
                        "sil-fmi-inspect", "sil-footprint", "sil-participant",
-                       "sil-window"):
+                       "sil-schema-import", "sil-window"):
         assert (installed_python / "bin" / entrypoint).is_file()
     assert str(ROOT) not in origin.stdout
     assert str(ROOT) not in manifest.read_text()
@@ -248,6 +248,24 @@ def test_wheel_installs_acc_entrypoint_without_checkout_imports(
     )
     assert participant.returncode == 0, participant.stderr
     assert participant_operations(participant.stdout) == ["ready", "step_done"]
+
+
+def test_schema_import_without_the_dwarf_extra_names_the_extra(
+    installed_python: Path, tmp_path: Path,
+):
+    """The plain wheel does not install pyelftools (issue #253)."""
+    proc = subprocess.run(
+        [str(installed_python / "bin" / "sil-schema-import"), "types.o",
+         "--type", "A=a.A", "-o", "schemas.json",
+         "--layout-check", "layout_check.h"],
+        cwd=tmp_path,
+        env=installed_environment(installed_python),
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 2
+    assert "pip install 'sil[dwarf]'" in proc.stderr
+    assert list(tmp_path.iterdir()) == []
 
 
 @pytest.mark.parametrize("delayed_sensing", [False, True])

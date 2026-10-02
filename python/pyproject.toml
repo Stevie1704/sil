@@ -12,7 +12,9 @@ Repository = "https://github.com/Stevie1704/sil"
 Source = "https://github.com/Stevie1704/sil"
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "pyelftools>=0.31"]
+# sil-schema-import reads DWARF with pyelftools (public domain / Unlicense).
+dwarf = ["pyelftools>=0.31"]
 
 [project.scripts]
 sil-bundle = "sil.bundle:main"
@@ -26,6 +28,7 @@ sil-fmu-substitute = "sil.fmi.substitution:main"
 sil-matrix = "sil.matrix:main"
 sil-footprint = "sil.footprint:main"
 sil-participant = "sil.participant:main"
+sil-schema-import = "sil.schema_import:main"
 sil-window = "sil.replay_window:main"
 sil-acc = "sil.examples.acc.manifest:main"
 
