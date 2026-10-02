@@ -8,6 +8,9 @@ the buffers and the participant are the FMI 3.0 ones: a buffer holds values
 as the FMI 3.0 element of the same width, and only a Boolean, which FMI 2.0
 holds as a C `int`, is converted on its way across.
 
+An OSMP binary variable is passed by address in three of those Integers, and
+`OsmpBuffer` is the memory behind it: every raw pointer of FMI 2.0 is here.
+
 The lifecycle is instantiate, set the start values, set up the experiment,
 enter and exit initialization mode, one `fmi2DoStep` per Step, terminate and
 free. FMI 2.0 has no Configuration Mode, no Event Mode and no Clocks, so none
@@ -23,7 +26,12 @@ from pathlib import Path
 
 from sil.participant import ParticipantFailure
 
-from sil.fmi.description import ModelDescription, Variable
+from sil.fmi.description import (
+    OSMP_INTEGER,
+    ModelDescription,
+    OsmpAddress,
+    Variable,
+)
 from sil.fmi.runtime import _Library, _references
 
 # fmi2Status. OK and Warning continue: FMI 2.0 defines Warning as a call that
@@ -242,6 +250,72 @@ class CoSimulation2:
             if status == _PENDING else ""
         )
         raise ParticipantFailure(f"{name} returned {_status_name(status)}{reason}")
+
+
+# One half of an OSMP address: the low or high 32 bits, held in an
+# fmi2Integer, a signed C `int`.
+_HALF = 0xFFFF_FFFF
+
+
+def _signed(half: int) -> int:
+    """32 bits as the signed C `int` an fmi2Integer holds."""
+    return half - (1 << 32) if half & 0x8000_0000 else half
+
+
+class OsmpBuffer:
+    """The memory one OSMP binary variable is passed through, by address.
+
+    A buffer writes or reads, never both, because the Channel's direction
+    decides which. A written one owns a buffer of the Channel's bound for as
+    long as this object lives, and hands the FMU its address. The bytes
+    there stay as they were written until the next write, so they are valid
+    for the whole `fmi2DoStep` and after it, as OSMP requires.
+
+    A read one hands over nothing: the address and size are the FMU's own,
+    valid only until its next `fmi2DoStep`, so they are read once after the
+    step and the bytes are copied at once. The size is checked against the
+    Channel's bound before anything is copied, so an oversized output fails
+    the Run rather than being truncated or read past.
+    """
+
+    def __init__(self, name: str, address: OsmpAddress, capacity: int,
+                 *, incoming: bool):
+        self._name = name
+        self._capacity = capacity
+        self._references = _references(address.lo, address.hi, address.size)
+        self._integers = (ctypes.c_int * 3)()
+        self._buffer = (ctypes.c_char * max(capacity, 1))() if incoming else None
+
+    def write(self, fmu: CoSimulation2, payload: bytes) -> None:
+        ctypes.memmove(self._buffer, payload, len(payload))
+        address = ctypes.addressof(self._buffer)
+        self._integers[:] = [
+            _signed(address & _HALF), _signed(address >> 32 & _HALF),
+            len(payload),
+        ]
+        fmu._set_values(OSMP_INTEGER, self._references, self._integers)
+
+    def read(self, fmu: CoSimulation2) -> bytes:
+        fmu._get_values(OSMP_INTEGER, self._references, self._integers)
+        lo, hi, size = self._integers
+        address = (hi & _HALF) << 32 | lo & _HALF
+        if size < 0:
+            raise ParticipantFailure(
+                f"OSMP binary variable {self._name!r} reports size {size}; "
+                f"a size counts bytes"
+            )
+        if size > self._capacity:
+            raise ParticipantFailure(
+                f"OSMP binary variable {self._name!r} reports {size} bytes; "
+                f"the Channel carries {self._capacity}, and nothing is "
+                f"truncated"
+            )
+        if size and not address:
+            raise ParticipantFailure(
+                f"OSMP binary variable {self._name!r} reports {size} bytes "
+                f"at address 0"
+            )
+        return ctypes.string_at(address, size) if size else b""
 
 
 def _as(element, values):

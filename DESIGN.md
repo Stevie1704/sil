@@ -97,7 +97,9 @@ bit-diffing trivial.
   FMI master in the kernel. The same Importer also drives a narrow FMI 2.0
   co-simulation profile (scalar Real, Integer and Boolean, #191), because the
   selected external FMU (#230) ships as FMI 2.0 only. A port to FMI 3.0 made
-  here would not be independent evidence.
+  here would not be independent evidence. Its OSMP binary variables
+  (addresses in Integer triples, #244) are mapped at the Importer edge to
+  bounded byte payloads; the kernel never sees an address or decodes OSI.
 
 ### 11. Implementation: C++ kernel, stable C ABI, Python bindings
 C++20 core (matches vECU code, org skills, vendor SDKs). The integration

@@ -57,7 +57,8 @@ the authored inputs are the start values above.
 Two OSI FMUs in one process abort in the Protobuf pool
 ([One process](../osmp-sensor/README.md#one-process)). Two instances of
 `OSMPDummySensor` are therefore not run in one process. This is a limit of
-the FMU build, not an Importer defect. The OSMP binary variables are #244.
+the FMU build, not an Importer defect. The OSMP binary variables are mapped
+by #244 ([proofs/osmp-importer](../osmp-importer/README.md)).
 
 ## Results
 

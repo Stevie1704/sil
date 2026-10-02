@@ -116,6 +116,23 @@ add_fmi2_fmu(InitializeError FMI2_INIT_STATUS=3)
 add_fmi2_fmu(TerminateError FMI2_TERMINATE_STATUS=3)
 add_fmi2_fmu(StepErrorTerminateError FMI2_STEP_STATUS=3 FMI2_TERMINATE_STATUS=3)
 
+# A small FMI 2.0 FMU with OSMP binary variables backs the OSMP mapping tests
+# (issue #244). Each variant reports a wrong output, chosen by the
+# preprocessor. The Python tests write its description.
+function(add_fmi2_osmp_fmu name)
+  set(target fmi2_osmp_${name})
+  add_library(${target} SHARED fixtures/fmi2_osmp.c)
+  target_compile_definitions(${target} PRIVATE ${ARGN})
+  set_target_properties(${target} PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME "Osmp${name}")
+endfunction()
+
+add_fmi2_osmp_fmu(Ok)
+add_fmi2_osmp_fmu(Oversize OSMP_REPORTED_SIZE=2147483647)
+add_fmi2_osmp_fmu(NegativeSize OSMP_REPORTED_SIZE=-1)
+add_fmi2_osmp_fmu(NullAddress OSMP_NULL_ADDRESS)
+
 # A clocked FMI shared library backs the Event Mode importer tests. It stands
 # in for the FMI-LS-BUS CAN node of proofs/fmi-ls-bus/, which is built inside a
 # pinned container and not vendored here: it drives the same lifecycle and

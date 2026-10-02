@@ -1,0 +1,31 @@
+name: proof-osmp-importer
+
+# OSMP binary-variable acceptance (issue #244). The image build fetches the
+# pinned OSMP sources to build OSMPDummySource and OSMPDummySensor, so this
+# sits outside the general push gate like the other external proofs. The runs
+# use no network on native Linux x86-64.
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/osmp-importer/**'
+      - 'proofs/osmp-sensor/**'
+      - 'python/src/sil/fmi/**'
+      - '.github/workflows/proof-osmp-importer.yml'
+  workflow_dispatch:
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the OSMP FMUs and drive the source into the sensor
+        timeout-minutes: 40
+        run: proofs/osmp-importer/run-proof.sh "$PWD/build/osmp-importer"
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: osmp-importer-evidence
+          path: build/osmp-importer/evidence/

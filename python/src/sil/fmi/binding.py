@@ -24,6 +24,7 @@ from sil.fmi.runtime import (
     CoSimulation,
     ScalarBuffer,
 )
+from sil.fmi.runtime2 import OsmpBuffer
 
 
 @dataclass(frozen=True)
@@ -213,6 +214,33 @@ class BinaryGroup:
     def read(self, fmu: CoSimulation, into: dict) -> None:
         for binary, payload in zip(self._bound, self._buffer.read(fmu)):
             into.update(_incoming_payload(binary, payload))
+
+
+class OsmpGroup:
+    """One Channel's OSMP binary variables, passed by address.
+
+    The Channel's representation is a Binary variable's: a payload out of the
+    length field beside it on a write, and a payload padded to the Channel's
+    bound with its length on a read. Only the bytes move; what they encode is
+    the FMUs' business.
+    """
+
+    def __init__(self, bound: list[BinaryField], causality: str):
+        self._bound = [
+            (binary, OsmpBuffer(
+                binary.variable.name, binary.variable.osmp, binary.capacity,
+                incoming=causality == "input",
+            ))
+            for binary in bound
+        ]
+
+    def write(self, fmu, fields: dict) -> None:
+        for binary, buffer in self._bound:
+            buffer.write(fmu, outgoing_payload(binary, fields))
+
+    def read(self, fmu, into: dict) -> None:
+        for binary, buffer in self._bound:
+            into.update(_incoming_payload(binary, buffer.read(fmu)))
 
 
 class ChannelBinding:

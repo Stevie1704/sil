@@ -14,7 +14,7 @@ import math
 import platform
 import re
 import struct
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from decimal import Decimal
 from pathlib import Path
 from collections.abc import Callable
@@ -218,11 +218,26 @@ def library_suffix() -> str:
 
 
 @dataclass(frozen=True)
+class OsmpAddress:
+    """The value references of the three fmi2Integer variables of OSMP.
+
+    OSI Sensor Model Packaging passes one binary value as a memory address in
+    two signed 32-bit halves and a byte count beside it.
+    """
+
+    lo: int
+    hi: int
+    size: int
+
+
+@dataclass(frozen=True)
 class Variable:
     """One FMU variable, as `modelDescription.xml` declares it."""
 
     name: str
-    reference: int
+    # None for an OSMP binary variable, which has no value reference of its
+    # own: each of its three Integers has one, in `osmp`.
+    reference: int | None
     # The element name the description uses: 'Float64', 'Binary', 'Clock'…
     kind: str
     causality: str
@@ -243,6 +258,15 @@ class Variable:
     # Each `<Dimension>` in declaration order: its literal `start`, or None
     # where another variable's value sizes it. Empty for a scalar.
     shape: tuple[int | None, ...] = ()
+    # Set on the Binary variable an FMI 2.0 FMU declares through OSMP
+    # annotations: the three Integer variables it is passed in.
+    osmp: OsmpAddress | None = None
+    # Set on each of those three Integer variables: the name of the OSMP
+    # binary variable it is part of.
+    osmp_member: str | None = None
+    # Set on an Integer that OSMP would name as part of an address, but that
+    # no OSMP annotation declares: the name the address would have.
+    osmp_unannotated: str | None = None
 
     @property
     def is_array(self) -> bool:
@@ -573,6 +597,7 @@ def _read_fmi2(root) -> ModelDescription:
             f"FMU declares {', '.join(outside)}; the FMI {FMI2} profile maps "
             f"{', '.join(_FMI2_TYPES)} variables only"
         )
+    variables = _with_osmp(root, variables)
     return ModelDescription(
         model_identifier=co_simulation.get("modelIdentifier"),
         instantiation_token=guid,
@@ -616,6 +641,176 @@ def _fmi2_variables(root) -> dict[str, Variable]:
             value_count=1,
         )
     return declared
+
+
+# OSI Sensor Model Packaging: the tool name of its annotations, the namespace
+# of their elements, and the three roles of one binary variable's Integers.
+OSMP_TOOL = "net.pmsf.osmp"
+_OSMP_NAMESPACE = "{http://xsd.pmsf.net/OSISensorModelPackaging}"
+OSMP_ROLES = ("base.lo", "base.hi", "size")
+OSMP_INTEGER = _FMI2_TYPES["Integer"]
+
+
+def _osmp_annotation(element) -> ElementTree.Element | None:
+    """The OSMP binary-variable annotation of one `<ScalarVariable>`, if any."""
+    for tool in element.iterfind("Annotations/Tool"):
+        if tool.get("name") != OSMP_TOOL:
+            continue
+        annotation = tool.find(f"{_OSMP_NAMESPACE}osmp-binary-variable")
+        if annotation is None:
+            raise ManifestError(
+                f"FMU variable {element.get('name')!r} carries an "
+                f"{OSMP_TOOL} annotation without an osmp-binary-variable"
+            )
+        return annotation
+    return None
+
+
+def _declares_osmp(root) -> bool:
+    """Whether the model declares OSMP in its vendor annotations."""
+    return any(
+        tool.find(f"{_OSMP_NAMESPACE}osmp") is not None
+        for tool in root.iterfind("VendorAnnotations/Tool")
+        if tool.get("name") == OSMP_TOOL
+    )
+
+
+def _with_osmp(root, variables: dict[str, Variable]) -> dict[str, Variable]:
+    """The variables, with each OSMP binary variable added as one Binary.
+
+    Each Integer of a triple keeps its own entry and names the binary
+    variable it is part of, so a Run that binds it alone can be told what
+    to bind instead. Every annotation is checked here: an address that is
+    half declared would be passed on as a number.
+    """
+    triples: dict[str, dict[str, tuple[Variable, str | None]]] = {}
+    for element in root.find("ModelVariables").iter("ScalarVariable"):
+        annotation = _osmp_annotation(element)
+        if annotation is None:
+            continue
+        member = variables[element.get("name")]
+        binary, role = annotation.get("name"), annotation.get("role")
+        if not binary:
+            raise ManifestError(
+                f"FMU variable {member.name!r} carries an OSMP annotation "
+                f"that names no binary variable"
+            )
+        if role not in OSMP_ROLES:
+            raise ManifestError(
+                f"FMU variable {member.name!r} declares OSMP role {role!r} of "
+                f"binary variable {binary!r}; OSMP declares the roles "
+                f"{', '.join(repr(r) for r in OSMP_ROLES)}"
+            )
+        roles = triples.setdefault(binary, {})
+        if role in roles:
+            raise ManifestError(
+                f"FMU declares OSMP role {role!r} twice for binary variable "
+                f"{binary!r}: {roles[role][0].name!r} and {member.name!r}"
+            )
+        roles[role] = (member, annotation.get("mime-type"))
+    if triples and not _declares_osmp(root):
+        raise ManifestError(
+            f"FMU annotates OSMP binary variables "
+            f"{', '.join(repr(b) for b in triples)} but declares no OSMP "
+            f"annotation under VendorAnnotations"
+        )
+    declared = dict(variables)
+    for binary, roles in triples.items():
+        declared[binary] = _osmp_binary(binary, roles, variables)
+        for member, _ in roles.values():
+            declared[member.name] = replace(member, osmp_member=binary)
+    return _with_unannotated(declared)
+
+
+def _with_unannotated(variables: dict[str, Variable]) -> dict[str, Variable]:
+    """The variables, with each unannotated OSMP look-alike marked.
+
+    An Integer named `<name>.base.lo` or `<name>.base.hi` without an OSMP
+    annotation is half of an address that the Importer cannot tell from a
+    number. A `<name>.size` beside such a half is the count of that address.
+    A `<name>.size` alone is an ordinary Integer.
+    """
+    def unannotated(name: str) -> bool:
+        variable = variables.get(name)
+        return (variable is not None and variable.kind == OSMP_INTEGER
+                and variable.osmp_member is None)
+
+    addresses = {
+        name.removesuffix(f".{role}")
+        for name in variables for role in OSMP_ROLES[:2]
+        if name.endswith(f".{role}") and unannotated(name)
+    }
+    marked = dict(variables)
+    for address in addresses:
+        for role in OSMP_ROLES:
+            name = f"{address}.{role}"
+            if unannotated(name):
+                marked[name] = replace(
+                    variables[name], osmp_unannotated=address
+                )
+    return marked
+
+
+def _osmp_binary(
+    binary: str,
+    roles: dict[str, tuple[Variable, str | None]],
+    variables: dict[str, Variable],
+) -> Variable:
+    """One OSMP binary variable, checked against its three Integers."""
+    missing = [role for role in OSMP_ROLES if role not in roles]
+    if missing:
+        raise ManifestError(
+            f"FMU declares OSMP binary variable {binary!r} without the "
+            f"{', '.join(repr(r) for r in missing)} role; one binary "
+            f"variable is the three Integers "
+            f"{', '.join(repr(r) for r in OSMP_ROLES)}"
+        )
+    if binary in variables:
+        raise ManifestError(
+            f"FMU declares OSMP binary variable {binary!r}, a name that "
+            f"already names an FMU variable"
+        )
+    for role, (member, _) in roles.items():
+        if member.kind != OSMP_INTEGER:
+            raise ManifestError(
+                f"FMU declares {member.name!r}, the {role!r} of OSMP binary "
+                f"variable {binary!r}, as {member.kind}; OSMP passes it in "
+                f"an Integer"
+            )
+        if member.name != f"{binary}.{role}":
+            raise ManifestError(
+                f"FMU declares {member.name!r} as the {role!r} of OSMP binary "
+                f"variable {binary!r}; OSMP names it {f'{binary}.{role}'!r}"
+            )
+    members = [member for member, _ in roles.values()]
+    causalities = {member.causality for member in members}
+    if len(causalities) != 1:
+        raise ManifestError(
+            f"FMU declares the Integers of OSMP binary variable {binary!r} "
+            f"with causality {', '.join(sorted(map(repr, causalities)))}; "
+            f"the three are one variable of one causality"
+        )
+    mime_types = {mime_type for _, mime_type in roles.values()}
+    if len(mime_types) != 1:
+        raise ManifestError(
+            f"FMU annotates the Integers of OSMP binary variable {binary!r} "
+            f"with mime-type "
+            f"{', '.join(sorted(repr(m) for m in mime_types))}; the three "
+            f"carry one value of one type"
+        )
+    address = OsmpAddress(
+        *(roles[role][0].reference for role in OSMP_ROLES)
+    )
+    return Variable(
+        name=binary,
+        reference=None,
+        kind=BINARY,
+        causality=causalities.pop(),
+        max_size=None,
+        value_count=1,
+        mime_type=mime_types.pop(),
+        osmp=address,
+    )
 
 
 def dimensions(variable: Variable) -> str:
