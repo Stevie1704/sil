@@ -174,8 +174,9 @@ class _Library:
     ctypes would truncate it to an int.
     """
 
-    def __init__(self, binary: Path):
+    def __init__(self, binary: Path, signatures: dict = _SIGNATURES):
         self._library = ctypes.CDLL(str(binary))
+        self._signatures = signatures
         self._bound: dict[str, Callable] = {}
 
     def __getitem__(self, name: str) -> Callable:
@@ -187,7 +188,7 @@ class _Library:
                 raise ParticipantFailure(
                     f"FMU exports no {name}"
                 ) from error
-            restype, argtypes = _SIGNATURES[name]
+            restype, argtypes = self._signatures[name]
             entry_point.restype = restype
             entry_point.argtypes = argtypes
             self._bound[name] = entry_point

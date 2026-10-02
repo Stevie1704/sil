@@ -1,5 +1,9 @@
 """Importer for FMI 3.0 co-simulation FMUs, run as a process participant.
 
+An FMU that declares FMI 2.0 is driven by the same participant under the
+narrower FMI 2.0 profile: co-simulation with scalar Real, Integer and Boolean
+variables, each carried as its FMI 3.0 counterpart (docs/fmi.md).
+
 The kernel learns nothing about FMI. A Manifest declares this module as a
 process participant's command with an FMU path, and the step protocol drives
 the FMU's co-simulation interface: its input variables are written from the
@@ -47,8 +51,9 @@ hashed Manifest.
 The importer is a package of small modules, and the direction between them is
 one way. `description` reads the archive; `runtime` drives the native library
 and owns every buffer and pointer; `binding` moves a Channel's fields across
-that seam and `mapping` resolves which fields those are; `stepping` states what
-an Importer of either shape obeys around an event; `single` and `group` are the
+that seam and `mapping` resolves which fields those are; `runtime2` is the
+native side of an FMI 2.0 FMU, behind the same calls `runtime` answers;
+`stepping` states what an Importer of either shape obeys around an event; `single` and `group` are the
 two scheduling policies, `terminals` and `composition` the group's own members
 and how they are declared; `archive` unpacks the FMU and `cli` chooses between
 the two participants; `inspection` runs the checks before loading on an

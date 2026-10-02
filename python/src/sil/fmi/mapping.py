@@ -25,6 +25,7 @@ from sil.fmi.binding import (
 )
 from sil.fmi.description import (
     BINARY,
+    FMI2,
     CLOCK,
     HAS_EVENT_MODE,
     SCALARS,
@@ -34,6 +35,9 @@ from sil.fmi.description import (
     array_problem,
     dimensions,
 )
+
+# The FMI 2.0 causality of a parameter the FMU computes itself.
+_CALCULATED = "calculatedParameter"
 
 # The field a clocked Channel carries beside the payload and its length: the
 # FMI event time the activation belongs to, in the kernel's own nanoseconds.
@@ -633,6 +637,12 @@ def start_values(
             raise ManifestError(
                 f"start value {start!r} names FMU variable {name!r}, which FMU "
                 f"{description.model_identifier!r} does not declare"
+            )
+        if description.fmi_version == FMI2 and variable.causality == _CALCULATED:
+            raise ManifestError(
+                f"start value {start!r} names FMU variable {name!r}, a "
+                f"{_CALCULATED}: the FMU computes it in initialization, and "
+                f"it is read after initialization rather than set"
             )
         values.append((variable, start_value(variable, text)))
     return values

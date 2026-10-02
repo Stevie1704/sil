@@ -57,7 +57,8 @@ def _close_after_failure(participant: StepParticipant) -> None:
 def _arguments(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="python -m sil.fmi",
-        description="Drive an FMI 3.0 co-simulation FMU as a participant.",
+        description="Drive an FMI 3.0 or FMI 2.0 co-simulation FMU as a "
+                    "participant.",
     )
     parser.add_argument(
         "fmu", nargs="?",

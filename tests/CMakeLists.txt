@@ -89,6 +89,33 @@ add_failing_fmu(TerminateFatal FMI_TERMINATE_STATUS=4)
 add_failing_fmu(Terminate FMI_TERMINATE_STATUS=3)
 add_failing_fmu(TerminateFlag FMI_TERMINATE_FLAG=1)
 
+# A small FMI 2.0 co-simulation FMU backs the FMI 2.0 importer tests (issue
+# #191). The Reference FMUs ship FMI 2.0 binaries for x86-64 only, so this
+# one is built for the host. Every variant is the same source built once
+# more, with the call that answers a status other than fmi2OK chosen by the
+# preprocessor. The Python tests write its description.
+function(add_fmi2_fmu name)
+  set(target fmi2_fake_${name})
+  add_library(${target} SHARED fixtures/fmi2_fake.c)
+  target_compile_definitions(${target} PRIVATE ${ARGN})
+  set_target_properties(${target} PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME "Fmi2${name}")
+endfunction()
+
+add_fmi2_fmu(Ok)
+# The fmi2Status enum, so a variant is named by the status fmi2DoStep answers.
+set(fmi2_status_names OK Warning Discard Error Fatal Pending)
+foreach(fmi2_step_status IN ITEMS Warning Discard Error Fatal Pending)
+  list(FIND fmi2_status_names ${fmi2_step_status} fmi2_status_value)
+  add_fmi2_fmu(Step${fmi2_step_status} FMI2_STEP_STATUS=${fmi2_status_value})
+endforeach()
+add_fmi2_fmu(InitializeError FMI2_INIT_STATUS=3)
+# An fmi2Terminate that answers Error, alone and after a step that already
+# answered Error, which must free the instance without terminating it.
+add_fmi2_fmu(TerminateError FMI2_TERMINATE_STATUS=3)
+add_fmi2_fmu(StepErrorTerminateError FMI2_STEP_STATUS=3 FMI2_TERMINATE_STATUS=3)
+
 # A clocked FMI shared library backs the Event Mode importer tests. It stands
 # in for the FMI-LS-BUS CAN node of proofs/fmi-ls-bus/, which is built inside a
 # pinned container and not vendored here: it drives the same lifecycle and
