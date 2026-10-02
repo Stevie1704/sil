@@ -471,40 +471,53 @@ def pack_output(o) -> bytes:
 def estimates(results: list[dict], application: dict, long_s: int) -> dict:
     """Costs derived from medians of the Recording-off rows unless stated.
     Each is an estimate: a difference of observations, not a measurement of
-    one mechanism. A difference is `resolved` only when it exceeds the
-    summed spread (max - min) of the two rows it comes from; otherwise it is
-    within the noise of this machine and policy."""
+    one mechanism. Each carries its spread: the summed max - min of every
+    observation it is computed from, in its own unit. It is `resolved` only
+    when its magnitude exceeds that spread; otherwise it is within the noise
+    of this machine and policy."""
     w = workload.workloads(long_s)
     wall = {_key(r): r["observational"]["wall_s"] for r in results}
-    app_us = application["long"]["us_per_activation"]["median"]
+    app = application["long"]["us_per_activation"]
+    app_spread_us = app["max"] - app["min"]
     span = w["long"].activations - w["ci"].activations
 
-    def difference(a: tuple, b: tuple, per: float) -> dict:
-        value = wall[a]["median"] - wall[b]["median"]
-        spread = sum(wall[k]["max"] - wall[k]["min"] for k in (a, b))
-        return {"us": value / per * 1e6, "resolved": abs(value) > spread}
+    def difference(a: tuple, b: tuple) -> tuple[float, float]:
+        """Median difference of two rows and their summed spread, in s."""
+        return (wall[a]["median"] - wall[b]["median"],
+                sum(wall[k]["max"] - wall[k]["min"] for k in (a, b)))
+
+    def per_step(a: tuple, b: tuple, steps: int) -> dict:
+        value, spread = difference(a, b)
+        return _estimate("us", value / steps * 1e6, spread / steps * 1e6)
 
     costs = {}
     for form in FORMS:
         for n in workload.INSTANCES:
-            step = difference((form, "long", n, False), (form, "ci", n, False),
-                              span * n)
+            step = per_step((form, "long", n, False), (form, "ci", n, False),
+                            span * n)
             costs[f"{form}-x{n}"] = {
                 "startup_s": wall[(form, "startup", n, False)]["median"],
                 "participant_step": step,
-                "application_us_per_step": app_us,
-                # Inherits the resolution of the difference it nets.
-                "adaptation_and_routing": {"us": step["us"] - app_us,
-                                           "resolved": step["resolved"]},
-                "recording_per_participant_step": difference(
+                "application_us_per_step": app["median"],
+                # A new difference: the Step's spread plus the
+                # application's own.
+                "adaptation_and_routing": _estimate(
+                    "us", step["us"] - app["median"],
+                    step["spread_us"] + app_spread_us),
+                "recording_per_participant_step": per_step(
                     (form, "long", n, True), (form, "long", n, False),
                     w["long"].activations * n),
             }
     for n in workload.INSTANCES:
-        costs[f"fmu-x{n}"]["startup_over_process_s"] = (
-            costs[f"fmu-x{n}"]["startup_s"]
-            - costs[f"process-x{n}"]["startup_s"])
+        costs[f"fmu-x{n}"]["startup_over_process"] = _estimate(
+            "s", *difference(("fmu", "startup", n, False),
+                             ("process", "startup", n, False)))
     return costs
+
+
+def _estimate(unit: str, value: float, spread: float) -> dict:
+    return {unit: value, f"spread_{unit}": spread,
+            "resolved": abs(value) > spread}
 
 
 # --- the environment ---------------------------------------------------------------------------

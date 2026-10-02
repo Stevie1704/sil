@@ -88,8 +88,9 @@ def _counters(results: list[dict]) -> list[str]:
                    "arena read", "route high water", "overflows"], rows)
 
 
-def _difference(d: dict) -> str:
-    return f"{d['us']:.1f}" + ("" if d["resolved"] else " (within spread)")
+def _difference(d: dict, unit: str = "us", scale: float = 1.0) -> str:
+    return f"{d[unit] * scale:.1f}" + (
+        "" if d["resolved"] else " (within spread)")
 
 
 def _estimates(estimates: dict) -> list[str]:
@@ -100,8 +101,8 @@ def _estimates(estimates: dict) -> list[str]:
             f"{e['application_us_per_step']:.2f}",
             _difference(e["adaptation_and_routing"]),
             _difference(e["recording_per_participant_step"]),
-            _ms(e["startup_over_process_s"])
-            if "startup_over_process_s" in e else "n/a"])
+            _difference(e["startup_over_process"], "s", 1e3)
+            if "startup_over_process" in e else "n/a"])
     return _table(["form x instances", "startup ms", "µs per Participant-Step",
                    "application µs", "adaptation + routing µs",
                    "Recording µs", "FMU startup over process ms"], rows)
@@ -195,8 +196,10 @@ def render(result: dict) -> str:
         "off per Participant-Step. `FMU startup over process` is FMI "
         "Importer import, archive extraction, `modelDescription.xml` and "
         "instantiation beyond the ctypes adapter's start. A difference "
-        "marked `within spread` does not exceed the summed max − min of the "
-        "two rows it comes from: this machine and policy do not resolve it.",
+        "marked `within spread` does not exceed the summed max − min of every "
+        "observation it comes from (for `adaptation + routing`, both rows and "
+        "the application's own spread): this machine and policy do not "
+        "resolve it.",
         "",
         *_estimates(result["estimates"]),
         "",

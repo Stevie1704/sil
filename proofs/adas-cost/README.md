@@ -98,9 +98,12 @@ Command count per mode is in the results.
 Runs. The report states the median, with min and max; peak RSS is the
 maximum. No confidence interval and no outlier rejection: five samples on a
 shared CI runner support neither. Rows run in a fixed order, one at a time.
-Every estimate is a difference of two medians. It is `resolved` only when
-it exceeds the summed spread (max − min) of the two rows it comes from;
-otherwise the table marks it `within spread`.
+Every estimate is a difference of medians and carries its spread: the
+summed max − min of every observation it comes from. `adaptation + routing`
+nets the application from the per-Step difference, so its spread is that
+difference's spread plus the application's own. An estimate is `resolved`
+only when its magnitude exceeds its spread; otherwise the table marks it
+`within spread`.
 
 `--long-s`, `--warmup` and `--repeats` change the policy for a local run;
 the values used are in `results.json`.
@@ -170,8 +173,10 @@ claims.
 Reading:
 
 - **The application is not the cost.** Its own computation over full 8 + 8
-  object lists is 1.4 µs per activation. In the native form, adaptation,
-  routing and replay add about 1.5 µs. In the process form, the ctypes
+  object lists is 1.4 µs per activation. In the native form with one
+  instance, adaptation, routing and replay add about 1.5 µs; with four
+  instances the same residual (1.4 µs) is within its spread (2.2 µs), so
+  this run does not resolve it. In the process form, the ctypes
   adapter and the Step protocol add about 46 µs; the FMI Importer adds
   about 61 µs. These agree in size with the ad-hoc observations of #125
   (~50 µs per Python Process participant).
@@ -181,7 +186,8 @@ Reading:
   linearly with Process instances (about 50 ms and 73 ms each), as if they
   start one after another; this measurement does not show the mechanism. The FMI Importer costs about 22 ms
   per instance more than the ctypes adapter: imports, archive extraction,
-  `modelDescription.xml` and instantiation (estimate).
+  `modelDescription.xml` and instantiation (estimate; 21.6 ms against a
+  spread of 6.9 ms with one instance, 89.8 ms against 47.7 ms with four).
 - **Per-Step cost per instance rises with the instance count** in the
   Process forms (47 → 66 µs, 63 → 87 µs) and not in the native form. Four
   child processes and the runner share 4 vCPUs and alternate on pipes; this
@@ -234,4 +240,7 @@ a GitHub-hosted `ubuntu-24.04` x86-64 runner:
 | `image-id.txt` | the ID of the image this build made |
 
 The artifacts, inputs, Manifests and Recordings are in `work/` of the
-workflow artifact and are not committed.
+workflow artifact and are not committed. The estimates in the committed
+files were re-derived from the retained samples after the residual spread
+check was added; no Run was repeated, and every observation is the
+workflow's.

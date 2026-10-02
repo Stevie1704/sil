@@ -154,12 +154,12 @@ The application's own calls (every receive and one advance per activation) over 
 
 ## Estimates
 
-Differences of medians, Recording off unless stated; each is an estimate, not a measurement of one mechanism. `startup` is the one-activation Run. `µs per Participant-Step` is (long − ci) wall over the extra activations and instances. `adaptation + routing` is that minus the application alone. `Recording` is long on − long off per Participant-Step. `FMU startup over process` is FMI Importer import, archive extraction, `modelDescription.xml` and instantiation beyond the ctypes adapter's start. A difference marked `within spread` does not exceed the summed max − min of the two rows it comes from: this machine and policy do not resolve it.
+Differences of medians, Recording off unless stated; each is an estimate, not a measurement of one mechanism. `startup` is the one-activation Run. `µs per Participant-Step` is (long − ci) wall over the extra activations and instances. `adaptation + routing` is that minus the application alone. `Recording` is long on − long off per Participant-Step. `FMU startup over process` is FMI Importer import, archive extraction, `modelDescription.xml` and instantiation beyond the ctypes adapter's start. A difference marked `within spread` does not exceed the summed max − min of every observation it comes from (for `adaptation + routing`, both rows and the application's own spread): this machine and policy do not resolve it.
 
 | form x instances | startup ms | µs per Participant-Step | application µs | adaptation + routing µs | Recording µs | FMU startup over process ms |
 |---|---|---|---|---|---|---|
 | native-x1 | 4.8 | 2.9 | 1.39 | 1.5 | 1.7 | n/a |
-| native-x4 | 5.6 | 2.8 | 1.39 | 1.4 | 1.4 (within spread) | n/a |
+| native-x4 | 5.6 | 2.8 | 1.39 | 1.4 (within spread) | 1.4 (within spread) | n/a |
 | process-x1 | 54.2 | 47.4 | 1.39 | 46.0 | 1.0 (within spread) | n/a |
 | process-x4 | 204.4 | 65.6 | 1.39 | 64.2 | -0.1 (within spread) | n/a |
 | fmu-x1 | 75.8 | 62.6 | 1.39 | 61.2 | 1.4 (within spread) | 21.6 |

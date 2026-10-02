@@ -135,23 +135,53 @@ class TestEstimates:
                                   0.2 + 0.00002 * 5980 * n + extra, spread)]
         return rows
 
+    APPLICATION = {"long": {"us_per_activation": {
+        "median": 5.0, "min": 4.9, "max": 5.1}}}
+
     def test_the_per_step_cost_nets_the_shorter_run_and_the_application(self):
-        application = {"long": {"us_per_activation": {"median": 5.0}}}
-        e = measure.estimates(self.results(), application, long_s=60)
+        e = measure.estimates(self.results(), self.APPLICATION, long_s=60)
         native = e["native-x4"]
         assert native["participant_step"]["us"] == pytest.approx(20.0)
         assert native["adaptation_and_routing"]["us"] == pytest.approx(15.0)
         assert native["recording_per_participant_step"]["us"] == \
             pytest.approx(0.004 / (6000 * 4) * 1e6)
         assert native["participant_step"]["resolved"]
+        assert native["adaptation_and_routing"]["resolved"]
 
     def test_a_difference_inside_the_spread_is_not_resolved(self):
-        application = {"long": {"us_per_activation": {"median": 5.0}}}
-        e = measure.estimates(self.results(spread=1.0), application,
+        e = measure.estimates(self.results(spread=1.0), self.APPLICATION,
                               long_s=60)
         assert not e["fmu-x1"]["participant_step"]["resolved"]
         assert not e["fmu-x1"]["adaptation_and_routing"]["resolved"]
         assert not e["fmu-x1"]["recording_per_participant_step"]["resolved"]
+        assert not e["fmu-x1"]["startup_over_process"]["resolved"]
+
+    def test_a_residual_inside_the_combined_spread_is_not_resolved(self):
+        """The Step cost exceeds its spread, but the application netted
+        from it leaves a residual smaller than the Step and application
+        spreads together: the residual is not resolved."""
+        e = measure.estimates(self.results(spread=0.2), self.APPLICATION,
+                              long_s=60)
+        native = e["native-x4"]
+        assert native["participant_step"]["resolved"]
+        # 0.4 s of summed row spread over 5980 x 4 Participant-Steps, plus
+        # the application's own 0.2 us spread.
+        assert native["adaptation_and_routing"]["spread_us"] == \
+            pytest.approx(0.4 / (5980 * 4) * 1e6 + 0.2)
+        assert native["adaptation_and_routing"]["us"] == pytest.approx(15.0)
+        assert not native["adaptation_and_routing"]["resolved"]
+
+    def test_the_fmu_startup_over_process_is_a_checked_difference(self):
+        rows = self.results()
+        for row in rows:
+            if row["form"] == "fmu" and row["workload"] == "startup":
+                row["observational"]["wall_s"] = {
+                    "median": 0.125, "min": 0.12, "max": 0.13}
+        e = measure.estimates(rows, self.APPLICATION, long_s=60)
+        startup = e["fmu-x1"]["startup_over_process"]
+        assert startup["s"] == pytest.approx(0.025)
+        assert startup["spread_s"] == pytest.approx(0.01)
+        assert startup["resolved"]
 
 
 needs_cc = pytest.mark.skipif(shutil.which("cc") is None,

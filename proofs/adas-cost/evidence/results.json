@@ -6252,15 +6252,18 @@
       "startup_s": 0.004846094,
       "participant_step": {
         "us": 2.8757117056856187,
+        "spread_us": 0.22288377926421463,
         "resolved": true
       },
       "application_us_per_step": 1.3905085,
       "adaptation_and_routing": {
         "us": 1.4852032056856188,
+        "spread_us": 0.23905161259754812,
         "resolved": true
       },
       "recording_per_participant_step": {
         "us": 1.6631233333333333,
+        "spread_us": 0.18772883333333448,
         "resolved": true
       }
     },
@@ -6268,15 +6271,18 @@
       "startup_s": 0.005612433,
       "participant_step": {
         "us": 2.834570903010034,
+        "spread_us": 2.203494356187291,
         "resolved": true
       },
       "application_us_per_step": 1.3905085,
       "adaptation_and_routing": {
         "us": 1.4440624030100342,
-        "resolved": true
+        "spread_us": 2.2196621895206246,
+        "resolved": false
       },
       "recording_per_participant_step": {
         "us": 1.4375214583333331,
+        "spread_us": 2.326042416666667,
         "resolved": false
       }
     },
@@ -6284,15 +6290,18 @@
       "startup_s": 0.054211139,
       "participant_step": {
         "us": 47.429713545150506,
+        "spread_us": 3.654669063545155,
         "resolved": true
       },
       "application_us_per_step": 1.3905085,
       "adaptation_and_routing": {
         "us": 46.0392050451505,
+        "spread_us": 3.6708368968784884,
         "resolved": true
       },
       "recording_per_participant_step": {
         "us": 1.0329096666666648,
+        "spread_us": 13.144432000000002,
         "resolved": false
       }
     },
@@ -6300,15 +6309,18 @@
       "startup_s": 0.204445035,
       "participant_step": {
         "us": 65.59496596989966,
+        "spread_us": 4.777067391304342,
         "resolved": true
       },
       "application_us_per_step": 1.3905085,
       "adaptation_and_routing": {
         "us": 64.20445746989967,
+        "spread_us": 4.793235224637676,
         "resolved": true
       },
       "recording_per_participant_step": {
         "us": -0.14515991666666506,
+        "spread_us": 11.14419645833333,
         "resolved": false
       }
     },
@@ -6316,35 +6328,49 @@
       "startup_s": 0.075805929,
       "participant_step": {
         "us": 62.63436739130433,
+        "spread_us": 4.0137737458194,
         "resolved": true
       },
       "application_us_per_step": 1.3905085,
       "adaptation_and_routing": {
         "us": 61.24385889130433,
+        "spread_us": 4.029941579152733,
         "resolved": true
       },
       "recording_per_participant_step": {
         "us": 1.4136453333333336,
+        "spread_us": 7.3816153333333325,
         "resolved": false
       },
-      "startup_over_process_s": 0.021594789999999996
+      "startup_over_process": {
+        "s": 0.021594789999999996,
+        "spread_s": 0.006882508000000009,
+        "resolved": true
+      }
     },
     "fmu-x4": {
       "startup_s": 0.294228622,
       "participant_step": {
         "us": 87.26534180602007,
+        "spread_us": 6.968853720735785,
         "resolved": true
       },
       "application_us_per_step": 1.3905085,
       "adaptation_and_routing": {
         "us": 85.87483330602008,
+        "spread_us": 6.985021554069118,
         "resolved": true
       },
       "recording_per_participant_step": {
         "us": 4.104949708333324,
+        "spread_us": 16.414256666666663,
         "resolved": false
       },
-      "startup_over_process_s": 0.089783587
+      "startup_over_process": {
+        "s": 0.089783587,
+        "spread_s": 0.04771259599999997,
+        "resolved": true
+      }
     }
   },
   "checks": {
