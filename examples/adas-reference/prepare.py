@@ -165,14 +165,21 @@ def expectations(maneuver: str) -> list[str]:
                   for path in MANEUVER_DIR.glob(f"{maneuver}.*expected.csv"))
 
 
+def prepare_inputs(source: Path, maneuver: str, out_dir: Path) -> Path:
+    """Expand the authored maneuver `source` and convert it with the Channel
+    prefix `<maneuver>.`. Returns `<maneuver>.inputs.mcap` in `out_dir`."""
+    expanded = out_dir / f"{maneuver}.inputs.csv"
+    expand(source, expanded)
+    recording = out_dir / f"{maneuver}.inputs.mcap"
+    _convert(EXAMPLE_DIR / "mapping.json", maneuver, expanded, recording,
+             out_dir / f"{maneuver}.inputs.receipt.json")
+    return recording
+
+
 def prepare(out_dir: Path, maneuvers: tuple[str, ...] = MANEUVERS) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     for maneuver in maneuvers:
-        expanded = out_dir / f"{maneuver}.inputs.csv"
-        expand(MANEUVER_DIR / f"{maneuver}.csv", expanded)
-        _convert(EXAMPLE_DIR / "mapping.json", maneuver, expanded,
-                 out_dir / f"{maneuver}.inputs.mcap",
-                 out_dir / f"{maneuver}.inputs.receipt.json")
+        prepare_inputs(MANEUVER_DIR / f"{maneuver}.csv", maneuver, out_dir)
         for name in expectations(maneuver):
             _convert(EXAMPLE_DIR / "expected-mapping.json", maneuver,
                      MANEUVER_DIR / f"{name}.expected.csv",

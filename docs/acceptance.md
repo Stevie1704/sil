@@ -86,6 +86,17 @@ form, against KPIs and an effect envelope declared before the Runs.
 proofs/adas-closed-loop/run-proof.sh    # needs docker and network
 ```
 
+[proofs/adas-cost/](../proofs/adas-cost/README.md) measures one declared
+workload of the same controller through the Native participant, a
+process-isolated C-library adapter and the FMI Importer. Every form must
+publish the same Commands, and the instrumented Runs must write the same
+Recording bytes as the production Runs. Its timings are observational and
+its retained results are a reference baseline, not a capacity claim.
+
+```sh
+proofs/adas-cost/run-proof.sh           # needs docker and network
+```
+
 ## Regression bundles
 
 `sil-bundle` packages an adopter's own regression in the same way. The

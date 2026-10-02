@@ -156,13 +156,38 @@ def native_controller(library: Path,
     return add
 
 
+def process_controller(library: Path,
+                       configs: dict[str, dict] | None = None,
+                       python: str = "python3") -> Controller:
+    """The controller as a Process participant: `process_adapter.py` loads
+    `library` with ctypes in a child process of its own and takes the
+    Native config as one JSON argument. `configs` replaces the config of a
+    named maneuver's controller."""
+    configs = configs or {}
+
+    def add(m: Manifest, maneuver: str,
+            routes: list[SubscriberRoute]) -> None:
+        config = configs.get(maneuver, controller_config(maneuver))
+        m.add_process(
+            maneuver,
+            command=[python, str(EXAMPLE_DIR / "process_adapter.py"),
+                     str(Path(library).resolve()),
+                     json.dumps(config, sort_keys=True)],
+            step_period_ns=PERIOD_NS,
+            subscribes=routes,
+            publishes=[f"{maneuver}.command"],
+        )
+    return add
+
+
 def reference_manifest(inputs: Path, library: Path | None,
                        maneuvers: tuple[str, ...] = MANEUVERS,
                        configs: dict[str, dict] | None = None,
                        interceptors: dict[str, list[dict]] | None = None,
                        input_latency_ns: int = INPUT_LATENCY_NS,
                        replay_priority: int | None = None,
-                       controller: Controller | None = None) -> Manifest:
+                       controller: Controller | None = None,
+                       duration_ns: int = DURATION_NS) -> Manifest:
     """The Run over the Recordings `prepare.py` wrote into `inputs`.
 
     `configs` replaces the config of a named maneuver's controller.
@@ -170,11 +195,13 @@ def reference_manifest(inputs: Path, library: Path | None,
     Channel of every maneuver. `check_experiment` rejects an input Latency or
     a replay priority the profile does not predict. `controller` substitutes
     the execution form, such as the FMU (proofs/adas-equivalence); the
-    default is the Native participant of `library`."""
+    default is the Native participant of `library`. `duration_ns` lengthens
+    the Run for longer inputs, such as the cost measurement
+    (proofs/adas-cost)."""
     check_experiment(input_latency_ns, replay_priority)
     controller = controller or native_controller(library, configs)
     interceptors = interceptors or {}
-    m = Manifest(duration_ns=DURATION_NS)
+    m = Manifest(duration_ns=duration_ns)
     m.add_schemas(SCHEMAS)
     for maneuver in maneuvers:
         for role, schema in INPUTS.items():

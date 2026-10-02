@@ -1,0 +1,32 @@
+name: proof-adas-cost
+
+# The reference execution-cost measurement of the ADAS controller (issue
+# #229) on its acceptance platform. It builds a pinned image with network,
+# so it sits outside the general push gate. It runs for PRs touching the
+# application, its forms or the measurement, and on demand to refresh the
+# retained results. Its timings are observational; its checks gate the job.
+
+on:
+  pull_request:
+    paths:
+      - 'examples/adas-reference/**'
+      - 'proofs/adas-cost/**'
+      - 'proofs/adas-equivalence/experiment.py'
+      - '.github/workflows/proof-adas-cost.yml'
+  workflow_dispatch:
+
+jobs:
+  measure:
+    # Native linux/amd64, the supported acceptance platform, on a pinned
+    # runner image: the machine class of the retained results.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Measure the three forms, check equivalence and inertness
+        run: proofs/adas-cost/run-proof.sh "$PWD/build/adas-cost-evidence"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: adas-cost-evidence
+          path: build/adas-cost-evidence/

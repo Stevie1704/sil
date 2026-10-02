@@ -32,3 +32,14 @@ repeatable counters (`deterministic`) apart from its wall-clock and RSS values
 
 `sil-run --no-recording` runs a manifest and writes no recording. That
 separates the cost of routing to subscribers from the cost of recording I/O.
+
+## ADAS reference execution cost
+
+[proofs/adas-cost/](../proofs/adas-cost/README.md) measures the ADAS
+reference controller through the Native participant, a process-isolated
+C-library adapter and the FMI Importer on Linux x86-64. It uses the same
+separation: `sil-run-instrumented` for counters, the production `sil-run`
+for repeated timings. It also proves that the instrumented Runs write the
+same Recording bytes. Its retained results are a reference baseline for
+[#125](https://github.com/Stevie1704/sil/issues/125).
+
