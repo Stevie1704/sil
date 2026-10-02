@@ -10,9 +10,13 @@ on:
     paths:
       - 'proofs/osmp-qualification/**'
       - 'proofs/osmp-sensor/**'
-      - 'python/src/sil/fmi/**'
-      - 'python/src/sil/bundle.py'
-      - 'python/src/sil/matrix.py'
+      - 'python/src/sil/**'
+      - 'examples/bundle/prepare.py'
+      - 'kernel/**'
+      - 'include/**'
+      - 'shim/**'
+      - 'CMakeLists.txt'
+      - 'container/requirements.lock'
       - '.github/workflows/proof-osmp-qualification.yml'
   workflow_dispatch:
 

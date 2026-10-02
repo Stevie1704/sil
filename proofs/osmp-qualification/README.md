@@ -214,7 +214,8 @@ own Protobuf encoding and decoding.
   installed Importer, outside a Run.
 - SiL reads calculated parameters only after initialization. So
   `OSMPDummySensor`'s SensorView configuration request is always empty in
-  SiL, and the OSMP configuration exchange is not available. FMPy read it in
+  SiL, and the OSMP configuration exchange is not available
+  ([#251](https://github.com/Stevie1704/sil/issues/251)). FMPy read it in
   #230 during initialization mode: 20 ms, 148.5 m.
 - `OSMPDummySensor` returns `fmi2OK` from every call. No case gives a
   non-OK FMI status. Its failure states are the `valid` and `count`
