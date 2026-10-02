@@ -1,0 +1,203 @@
+{
+  "passed": true,
+  "initialization": {
+    "instances": {
+      "source": {
+        "exit_code": 0,
+        "outputs": {
+          "osi.SensorView": {
+            "payload": "",
+            "payload_length": 0
+          }
+        },
+        "expected": {
+          "osi.SensorView": {
+            "payload": "",
+            "payload_length": 0
+          }
+        },
+        "leftover_files": [],
+        "passed": true
+      },
+      "sensor": {
+        "exit_code": 0,
+        "outputs": {
+          "sensor.SensorData": {
+            "payload": "",
+            "payload_length": 0
+          },
+          "sensor.Status": {
+            "valid": 0,
+            "count": 0
+          },
+          "sensor.ConfigRequest": {
+            "payload": "",
+            "payload_length": 0
+          }
+        },
+        "expected": {
+          "sensor.SensorData": {
+            "payload": "",
+            "payload_length": 0
+          },
+          "sensor.Status": {
+            "valid": 0,
+            "count": 0
+          },
+          "sensor.ConfigRequest": {
+            "payload": "",
+            "payload_length": 0
+          }
+        },
+        "leftover_files": [],
+        "passed": true
+      },
+      "sensor-50m": {
+        "exit_code": 0,
+        "outputs": {
+          "sensor-50m.SensorData": {
+            "payload": "",
+            "payload_length": 0
+          },
+          "sensor-50m.Status": {
+            "valid": 0,
+            "count": 0
+          },
+          "sensor-50m.ConfigRequest": {
+            "payload": "",
+            "payload_length": 0
+          }
+        },
+        "expected": {
+          "sensor-50m.SensorData": {
+            "payload": "",
+            "payload_length": 0
+          },
+          "sensor-50m.Status": {
+            "valid": 0,
+            "count": 0
+          },
+          "sensor-50m.ConfigRequest": {
+            "payload": "",
+            "payload_length": 0
+          }
+        },
+        "leftover_files": [],
+        "passed": true
+      }
+    },
+    "passed": true
+  },
+  "matrices": {
+    "nominal": {
+      "exit_code": 0,
+      "cases": {
+        "nominal": {
+          "status": "pass",
+          "expected": "pass",
+          "passed": true,
+          "leftover_processes": [],
+          "leftover_files": []
+        }
+      },
+      "passed": true
+    },
+    "controls": {
+      "exit_code": 1,
+      "cases": {
+        "control-binding": {
+          "status": "manifest-error",
+          "expected": "manifest-error",
+          "passed": true,
+          "run_exit_codes": [
+            2
+          ],
+          "diagnostic": [
+            "sil-run: participant 'sensor': sil.participant.ManifestError: Channel 'sensor.Status' field 'count' names FMU variable 'objectcount', which FMU 'OSMPDummySensor' does not declare"
+          ],
+          "leftover_processes": [],
+          "leftover_files": []
+        },
+        "control-late": {
+          "status": "behavioral-failure",
+          "expected": "behavioral-failure",
+          "passed": true,
+          "run_exit_codes": [
+            0
+          ],
+          "comparisons": {
+            "independent": "fail",
+            "predicted": "pass"
+          },
+          "first_divergence": {
+            "kind": "value",
+            "channel": "sensor.Detections",
+            "reference_channel": "sensor.Detections",
+            "field": "nanos",
+            "observation_ns": 20000000,
+            "actual_publication_ns": 0,
+            "reference_time_ns": 20000000,
+            "actual": 0,
+            "expected": 20000000,
+            "tolerance": "exact",
+            "abs_error": null
+          },
+          "leftover_processes": [],
+          "leftover_files": []
+        },
+        "control-size": {
+          "status": "behavioral-failure",
+          "expected": "behavioral-failure",
+          "passed": true,
+          "run_exit_codes": [
+            1
+          ],
+          "diagnostic": [
+            "sil-run: participant 'sensor' failed: sil.participant.ParticipantFailure: OSMP binary variable 'OSMPSensorDataOut' reports 2870 bytes; the Channel carries 1024, and nothing is truncated"
+          ],
+          "leftover_processes": [],
+          "leftover_files": []
+        }
+      },
+      "passed": true
+    }
+  },
+  "cost": {
+    "policy": {
+      "warmup": 1,
+      "repeats": 5,
+      "statistic": "median",
+      "recording": "off"
+    },
+    "machine": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "cpus": 4,
+      "python": "3.13.7"
+    },
+    "steps": {
+      "startup": 1,
+      "long": 1500
+    },
+    "period_ns": 20000000,
+    "wall_clock_s": {
+      "startup": {
+        "median": 0.2851,
+        "min": 0.2805,
+        "max": 0.3641
+      },
+      "long": {
+        "median": 1.2352,
+        "min": 1.2272,
+        "max": 1.2627
+      }
+    },
+    "startup_ms": 285.1,
+    "per_step_both_fmus_us": {
+      "estimate": 633.8,
+      "spread": 79.4,
+      "resolved": true
+    },
+    "real_time_factor_long": 24.3
+  }
+}

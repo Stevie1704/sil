@@ -607,6 +607,7 @@ python -m sil.fmi OSMPDummySensor.fmu \
 | Input | The Importer copies the payload into a buffer of the Channel's bound that it owns for the whole Run, and sets the three Integers to that buffer's address and the payload length before `fmi2DoStep`. The bytes stay valid for the whole step and until the next Message on that Channel: a Step without a Message hands the FMU the previous payload again |
 | Output | After each `fmi2DoStep` the Importer reads the three Integers once and copies the bytes at once, before the next call, as OSMP requires. A calculated parameter is read the same way |
 | Size checks | before any byte is copied: a negative size, a size above the Channel's bound, and a non-zero size at address 0 each fail the Run (exit 1) and name the variable. Nothing is truncated |
+| Configuration exchange | Not supported ([#251](https://github.com/Stevie1704/sil/issues/251)). The Importer reads nothing in initialization mode, and `--start` refuses a binary variable, so it cannot read `<prefix>InConfigRequest` or set `<prefix>InConfig` there. A bound `InConfigRequest` is read after each Step like any calculated parameter. An FMU that builds the request only in initialization mode, as `OSMPDummySensor` does, then gives an empty payload. The FMU keeps its start configuration |
 | Bytes only | The Importer never decodes OSI. The `mime-type` is reported, not checked. The kernel sees an ordinary bounded `u8` payload |
 
 Only the single-FMU participant maps OSMP. A group refuses FMI 2.0 FMUs, and
