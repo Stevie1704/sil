@@ -163,6 +163,17 @@ FMUs it runs are the vendored FMI 2.0 archives listed under Reference
 artifacts. The retained evidence holds digests, inspection reports and
 comparison results only.
 
+## OSMP binary-variable acceptance (#244)
+
+[proofs/osmp-importer/](proofs/osmp-importer/) downloads the same OSMP
+sources as the OSMP FMU target above, at the same pinned identities, and
+builds `OSMPDummySource` and `OSMPDummySensor` from them the same way. The
+licenses and the statements above apply unchanged. The proof image installs
+the same tools from the same lock file, and also the SiL runtime closure
+from [`container/requirements.lock`](container/requirements.lock). The
+retained evidence holds digests, inspection results and comparison results
+only.
+
 ## Python wheel and source distribution
 
 The wheel and the source distribution contain SiL code only. They declare

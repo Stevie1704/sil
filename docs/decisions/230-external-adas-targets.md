@@ -102,6 +102,10 @@ Gaps that #233 must close:
   edge capability ([#244](https://github.com/Stevie1704/sil/issues/244)). It requires the
   FMU in the Importer's address space, which is the existing placement under
   [ADR 0001](../adr/0001-connected-fmus-in-one-process-participant.md).
+  #244 maps them at the Importer edge to bounded byte payloads, so the
+  source and the sensor each run in their own Process participant and the
+  SensorView crosses a Channel as bytes. See
+  [proofs/osmp-importer](../../proofs/osmp-importer/README.md).
 - **Not needed:** #199 (no Clocks or events), #192 (no raw data), #188.
 
 ## Follow-on blockers
