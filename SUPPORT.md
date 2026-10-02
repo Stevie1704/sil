@@ -107,11 +107,13 @@ applies this naming rule:
 
 | Name | Rule |
 | --- | --- |
-| Field name | matches `[A-Za-z_][A-Za-z0-9_]*`; is not a C11 or C++17 keyword; does not contain `__`; does not start with `_` followed by an uppercase letter; is unique in its Schema |
-| Schema name | one or more `.`-separated segments, each segment obeys the field-name rule, and the mapped C name does not contain `__` |
+| Field name | matches `[A-Za-z_][A-Za-z0-9_]*`; is not a C11 or C++17 keyword; does not contain `__`; does not start with `_` followed by an uppercase letter; does not end in `_t`; is not a `<stdint.h>` macro name, such as `INT8_MAX`, `UINT64_C` or `SIZE_MAX`; is unique in its Schema |
+| Field type | one of `u8`, `u16`, `u32`, `u64`, `i8`, `i16`, `i32`, `i64`, `f32`, `f64`; an optional `count` is an integer `>= 1` |
+| Schema | has one or more fields |
+| Schema name | one or more `.`-separated segments, each segment obeys the field-name rule; does not start with `_`; the mapped C name obeys the field-name rule |
 | Mapped Schema name | `c_ident(name)` is unique in the Schema set |
 
-If a name breaks the rule, `silschema` names the Schema, the field and the
+If a Schema breaks the rule, `silschema` names the Schema, the field and the
 rule, writes no output file, and exits `2`. It does not rename a name. The
 Manifest builder and the kernel do not apply this rule, so a Schema that only
 Python or Process participants use can have any name.

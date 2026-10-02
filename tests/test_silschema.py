@@ -122,6 +122,13 @@ def test_rejection_keeps_an_existing_output_unchanged(tmp_path):
         ("static_assert", "keyword"),
         ("a__b", "'__'"),
         ("_Pose", "'_' followed by an uppercase letter"),
+        ("uint8_t", "'_t'"),
+        ("pose_t", "'_t'"),
+        ("INT8_MAX", "<stdint.h>"),
+        ("UINT64_C", "<stdint.h>"),
+        ("INT_LEAST16_MIN", "<stdint.h>"),
+        ("SIZE_MAX", "<stdint.h>"),
+        ("WCHAR_MIN", "<stdint.h>"),
     ],
 )
 def test_invalid_field_name_names_schema_field_and_rule(name, rule):
@@ -131,11 +138,41 @@ def test_invalid_field_name_names_schema_field_and_rule(name, rule):
     assert rule in problems[0]
 
 
-@pytest.mark.parametrize("name", ["t-1", "t..S", ".S", "t.", "t.int", "t._S", "a_.b"])
+@pytest.mark.parametrize(
+    "name", ["t-1", "t..S", ".S", "t.", "t.int", "t._S", "a_.b", "_t.s", "t.int8_t"]
+)
 def test_invalid_schema_name_is_named(name):
     problems = silschema.validate({name: {"fields": [{"name": "y", "type": "u8"}]}})
     assert len(problems) == 1
     assert f"Schema '{name}'" in problems[0]
+
+
+@pytest.mark.parametrize(
+    ("field", "problem"),
+    [
+        ({"name": "y"}, "type None is not one of u8,"),
+        ({"name": "y", "type": "u7"}, "type 'u7' is not one of u8,"),
+        ({"name": "y", "type": "u8", "count": 0}, "count must be an integer >= 1, got 0"),
+        ({"name": "y", "type": "u8", "count": "2"}, "count must be an integer >= 1, got '2'"),
+        ({"name": "y", "type": "u8", "count": True}, "count must be an integer >= 1, got True"),
+    ],
+)
+def test_invalid_type_or_count_is_named(field, problem):
+    problems = silschema.validate({"S": {"fields": [field]}})
+    assert len(problems) == 1
+    assert problems[0].startswith(f"Schema 'S' field 'y': {problem}")
+
+
+def test_schema_without_fields_is_rejected():
+    assert silschema.validate({"S": {"fields": []}}) == ["Schema 'S': has no fields"]
+
+
+def test_invalid_type_is_a_rejection_not_a_traceback(tmp_path):
+    src = _write_schemas(tmp_path, '{"S": {"fields": [{"name": "y", "type": "u7"}]}}')
+    result = _run(src, tmp_path / "s.h")
+    assert result.returncode == 2
+    assert "Schema 'S' field 'y': type 'u7'" in result.stderr
+    assert "Traceback" not in result.stderr
 
 
 def test_duplicate_field_name_is_rejected():
@@ -161,7 +198,7 @@ def test_valid_names_are_accepted():
     assert silschema.validate(
         {
             "acc.Sensing": {"fields": [{"name": "x_1", "type": "f64"}]},
-            "_t.s_": {"fields": [{"name": "_x", "type": "u8"}]},
+            "t.s_": {"fields": [{"name": "_x", "type": "u8"}]},
         }
     ) == []
 

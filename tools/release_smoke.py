@@ -152,7 +152,11 @@ def smoke_native(
         env=environment,
     )
     (workdir / "schema.json").write_text(
-        json.dumps({"smoke.Empty": {"fields": []}}, sort_keys=True) + "\n"
+        json.dumps(
+            {"smoke.Counter": {"fields": [{"name": "seq", "type": "u64"}]}},
+            sort_keys=True,
+        )
+        + "\n"
     )
     checked(
         [str(native_root / "bin" / "silschema"), "schema.json", "generated.h"],
