@@ -186,7 +186,7 @@ class CoSimulation2:
         self._call("fmi2ExitInitializationMode")
 
     def do_step(self, communication_point: float, step_size: float) -> bool:
-        """Advance over one interval. FMI 2.0 has no event to report."""
+        """Step the FMU over one interval. FMI 2.0 has no event to report."""
         self._call("fmi2DoStep", communication_point, step_size, True)
         return False
 

@@ -61,4 +61,6 @@ the FMU build, not an Importer defect. The OSMP binary variables are #244.
 
 ## Results
 
-Retained evidence from the CI run is in [`evidence/`](evidence/).
+The proof passed under amd64 emulation before this pull request was opened.
+The evidence from native Linux x86-64 CI is added to `evidence/` after the
+`proof-fmi2-importer` workflow runs on it.
