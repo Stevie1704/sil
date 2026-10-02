@@ -66,7 +66,7 @@ Not needed: #199 (no Clocks or events), #192 (no raw data), #188.
 | Parameters | `sensor`: `nominalrange` at its start value 135 m. `sensor-50m`: `--start nominalrange=50.0` before initialization |
 | Connection | `osi.SensorView`, Latency 0: each sensor consumes the ground truth of the instant its own Step ends at |
 | Payload bound | 4096 bytes per SensorView and SensorData |
-| Process response deadline | 30 s per Run |
+| Process response deadline | 30 s for each `ready` and `step_done` answer |
 
 The Importer moves OSMP payloads as bytes. `osi_edge.py` is an edge
 participant of the bundle, not part of SiL. Its `Decoder` decodes each
@@ -163,10 +163,10 @@ Cost (observational, median of five, Recording off):
 
 Per FMU Step this is about five times the 62.6 µs that
 [#229](../adas-cost/README.md#reference-results) measured for its FMU form. The
-OSMP payloads are about 2 to 3 kB, against 17 to 185 B there, and they cross
-the Step protocol inline as base64 JSON, three times per Step. This
-measurement does not separate that cost from the FMUs' own Protobuf
-encoding and decoding.
+OSMP payloads are about 2 to 3 kB, against 17 to 185 B there. They cross
+the Step protocol inline, three times per Step. This measurement does not
+find which part of the cost comes from the payloads and which from the FMUs'
+own Protobuf encoding and decoding.
 
 ## Coverage and what remains
 
@@ -181,3 +181,15 @@ encoding and decoding.
   inspected, the configuration parameter keeps its start value), and
   bit-exactness across platforms.
 - No native form exists, so there is no equivalence comparison.
+- The input is the synthetic `OSMPDummySource` generator that #230
+  selected, not a pinned Recording.
+- FMPy, the independent importer, ran in #230 at `nominalrange` 135 m and
+  100 m and with a one-Period input delay. It did not run the 50 m sensor
+  or the unparseable input. For those, the closed-form references are the
+  only independent evidence.
+- The comparison starts at the end of the first Step. The Importer publishes
+  each FMU's state after its Step, so no Channel carries the outputs of
+  initialization mode, and they are not compared.
+- `OSMPDummySensor` returns `fmi2OK` from every call. No case gives a
+  non-OK FMI status. Its failure states are the `valid` and `count`
+  outputs only.
