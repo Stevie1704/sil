@@ -64,8 +64,28 @@ were built from.
 | SensorData | every recorded SensorData equals the expected slice of `proofs/osmp-sensor/scene.py` (default `nominalrange` 135 m): the same vehicles in the same order, tracking ids, timestamps, and each pose, dimension and existence probability to 1e-9. `valid` is 1 and `count` is the number of objects |
 | Identity | the Run twice: the two Recordings are byte-identical |
 | Late connection | with the default Latency on `osi.SensorView`, the sensor sees each SensorView one Period late and its first Step none. The comparison must fail |
-| Size error | with `osi.SensorData` bound to 1024 bytes, below the smallest SensorData #230 measured (1396 B), the Run fails with exit 1 and the diagnostic names `OSMPSensorDataOut` and the bound |
+| Size error | with `osi.SensorData` bound to 1024 bytes, below the smallest SensorData of the nominal Run, the Run fails with exit 1 and the diagnostic names `OSMPSensorDataOut` and the bound |
 | Cleanup | nothing is left in the runner's directory after any Run |
 
 The FMU binaries are compared with the #230 pins in `report.json` → `build`.
 That is reported, not required: #230 found the rebuild identical.
+
+## Results
+
+CI run 37012947185 on native Linux x86-64 ([`evidence/`](evidence/),
+[`ci-run.txt`](evidence/ci-run.txt)):
+
+| Item | Value |
+| --- | --- |
+| Build | `OSMPDummySensor.so` `a0c38eda…`, `OSMPDummySource.so` `43bab291…`: both equal the #230 pins |
+| Inspection | both `compatible`. Source: `OSMPSensorViewOut`. Sensor: `OSMPSensorViewIn`, `OSMPSensorDataOut`, `OSMPSensorViewInConfigRequest`, `OSMPSensorViewInConfig` |
+| SensorView | 1500 Messages, 1996 to 2004 B, all equal the closed form |
+| SensorData | 1500 Messages, 2438 to 3014 B, 7890 detections, all equal the expected slice |
+| Identity | the two Recordings are byte-identical (`5e163032…`) |
+| Late connection | diverges at step 0 (`t_ns` 20 ms): no SensorView yet, so `nanos` is 0 instead of 20000000 |
+| Size error | exit 1: `OSMP binary variable 'OSMPSensorDataOut' reports 2870 bytes; the Channel carries 1024, and nothing is truncated` |
+| Cleanup | nothing left after any Run |
+
+The SensorData here is larger than in #230 (1396 to 1940 B). The sensor
+copies parts of its input into its output, and the source's SensorView
+carries more fields than the SensorView that #230 built in Python.

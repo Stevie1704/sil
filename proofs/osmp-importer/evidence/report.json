@@ -1,0 +1,132 @@
+{
+  "issue": 244,
+  "source_revision": "e58b6e545dd5fe8cc67bad70d69eec68d2c9928e",
+  "build": {
+    "OSMPDummySensor": {
+      "archive_sha256": "e6dece862f2e4b8ad4181de7769dfad53297554cc405e8365e3e3b0039bc58ee",
+      "binary_sha256": "a0c38eda8571eb191a28490a46ec9f1ad9b8dec95ee457df22403b848ad5e8c7",
+      "binary_matches_230_pin": true
+    },
+    "OSMPDummySource": {
+      "archive_sha256": "3409a410eafe1aebecf63c8b129f9f508e25cf5f8af5d8c100a1a74ae3a5ac3f",
+      "binary_sha256": "43bab2919fe08c8e7267ca1a73517695829960eb906e1d31aa39dbc0048d986d",
+      "binary_matches_230_pin": true
+    }
+  },
+  "inspection": {
+    "OSMPDummySource": {
+      "verdict": "compatible",
+      "osmp": [
+        {
+          "name": "OSMPSensorViewOut",
+          "causality": "output",
+          "mime_type": "application/x-open-simulation-interface; type=SensorView; version=3.8.0",
+          "value_references": {
+            "base.lo": 0,
+            "base.hi": 1,
+            "size": 2
+          }
+        }
+      ],
+      "unbound": [
+        "valid",
+        "count"
+      ]
+    },
+    "OSMPDummySensor": {
+      "verdict": "compatible",
+      "osmp": [
+        {
+          "name": "OSMPSensorViewIn",
+          "causality": "input",
+          "mime_type": "application/x-open-simulation-interface; type=SensorView; version=3.8.0",
+          "value_references": {
+            "base.lo": 0,
+            "base.hi": 1,
+            "size": 2
+          }
+        },
+        {
+          "name": "OSMPSensorDataOut",
+          "causality": "output",
+          "mime_type": "application/x-open-simulation-interface; type=SensorData; version=3.8.0",
+          "value_references": {
+            "base.lo": 3,
+            "base.hi": 4,
+            "size": 5
+          }
+        },
+        {
+          "name": "OSMPSensorViewInConfigRequest",
+          "causality": "calculatedParameter",
+          "mime_type": "application/x-open-simulation-interface; type=SensorViewConfiguration; version=3.8.0",
+          "value_references": {
+            "base.lo": 6,
+            "base.hi": 7,
+            "size": 8
+          }
+        },
+        {
+          "name": "OSMPSensorViewInConfig",
+          "causality": "parameter",
+          "mime_type": "application/x-open-simulation-interface; type=SensorViewConfiguration; version=3.8.0",
+          "value_references": {
+            "base.lo": 9,
+            "base.hi": 10,
+            "size": 11
+          }
+        }
+      ],
+      "unbound": [
+        "nominalrange",
+        "OSMPSensorViewInConfigRequest",
+        "OSMPSensorViewInConfig"
+      ]
+    }
+  },
+  "nominal": {
+    "steps": 1500,
+    "period_ns": 20000000,
+    "nominal_range_m": 135.0,
+    "sensor_view_latency_ns": 0,
+    "sensor_views": {
+      "messages": 1500,
+      "agrees_with_closed_form": true,
+      "bytes": {
+        "min": 1996,
+        "max": 2004
+      }
+    },
+    "sensor_data": {
+      "messages": 1500,
+      "bytes": {
+        "min": 2438,
+        "max": 3014
+      },
+      "expected_slice_agrees": true,
+      "detections": 7890
+    },
+    "recording_sha256": "5e163032e3d5521d8af0d77533ebe7b23420cd6bd1e82f3b614f2f677494b4f3",
+    "repeat_identical": true
+  },
+  "failing_controls": {
+    "late_connection": {
+      "sensor_view_latency": "default (next activation)",
+      "first_divergence": {
+        "step": 0,
+        "t_ns": 20000000,
+        "field": "nanos",
+        "expected": 20000000,
+        "actual": 0
+      }
+    },
+    "size_error": {
+      "bound_bytes": 1024,
+      "exit_code": 1,
+      "diagnostic": [
+        "sil-run: participant 'sensor' failed: sil.participant.ParticipantFailure: OSMP binary variable 'OSMPSensorDataOut' reports 2870 bytes; the Channel carries 1024, and nothing is truncated"
+      ]
+    }
+  },
+  "cleanup": "nothing left in the runner's directory after any Run"
+}

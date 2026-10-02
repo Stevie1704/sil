@@ -49,9 +49,9 @@ SIL_RUN = Path("/build/sil-run")
 NS_PER_S = 1_000_000_000
 STEPS = osmp_prepare.STEPS
 NOMINAL_RANGE_M = osmp_prepare.NOMINAL_RANGE_M
-# Above the largest SensorView (2004 B) and SensorData (1940 B) #230 measured.
+# Above the largest SensorView (2004 B) and SensorData (3014 B) of this Run.
 BOUND_BYTES = 4096
-# Below the smallest SensorData #230 measured (1396 B): the size error.
+# Below the smallest SensorData of this Run (2438 B): the size error.
 SMALL_BOUND_BYTES = 1024
 
 VIEW, DATA, STATUS = "osi.SensorView", "osi.SensorData", "sensor.Status"
