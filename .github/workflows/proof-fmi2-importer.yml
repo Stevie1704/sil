@@ -1,0 +1,33 @@
+name: proof-fmi2-importer
+
+# FMI 2.0 importer acceptance (issue #191). The image build fetches the pinned
+# OSMP sources to build OSMPDummySensor, so this sits outside the general push
+# gate like the other external proofs. The runs use no network on native
+# Linux x86-64.
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/fmi2-importer/**'
+      - 'python/src/sil/fmi/**'
+      - 'tests/fmi2_fixture.py'
+      - 'tests/fixtures/fmi2_fake.c'
+      - 'tests/fixtures/reference-fmus/2.0/**'
+      - '.github/workflows/proof-fmi2-importer.yml'
+  workflow_dispatch:
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build OSMPDummySensor and qualify the FMI 2.0 profile
+        timeout-minutes: 40
+        run: proofs/fmi2-importer/run-proof.sh "$PWD/build/fmi2-importer"
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fmi2-importer-evidence
+          path: build/fmi2-importer/evidence/

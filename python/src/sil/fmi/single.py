@@ -18,7 +18,7 @@ from sil.participant import ParticipantFailure, StepParticipant
 
 from sil.fmi.archive import Extraction
 from sil.fmi.binding import ChannelBinding, ClockedPayload
-from sil.fmi.description import ModelDescription
+from sil.fmi.description import FMI2, ModelDescription
 from sil.fmi.mapping import (
     bind_channel,
     channel_fields,
@@ -28,6 +28,7 @@ from sil.fmi.mapping import (
     start_values,
 )
 from sil.fmi.runtime import NS_PER_S, CoSimulation
+from sil.fmi.runtime2 import CoSimulation2
 from sil.fmi.stepping import declared_ns, require_contiguous, run_event
 
 
@@ -172,7 +173,8 @@ def bind_channels(
             continue
         bindings = mapping.inputs if direction == "in" else mapping.outputs
         bindings[channel] = bind_channel(
-            channel, direction, fields, bound[channel]
+            channel, direction, fields, bound[channel],
+            description.fmi_version,
         )
     return mapping
 
@@ -209,11 +211,17 @@ class FmuParticipant(StepParticipant):
         # configuration, and no FMU has to be loaded to see it.
         self._bind_channels(init, description)
         starts = start_values(self._starts, description)
-        self._fmu = CoSimulation(
-            description.binary(extracted), description,
-            event_mode=self._events is not None,
-            resource_path=Extraction.resource_path(extracted),
-        )
+        if description.fmi_version == FMI2:
+            self._fmu = CoSimulation2(
+                description.binary(extracted), description,
+                resources=extracted / "resources",
+            )
+        else:
+            self._fmu = CoSimulation(
+                description.binary(extracted), description,
+                event_mode=self._events is not None,
+                resource_path=Extraction.resource_path(extracted),
+            )
         self._fmu.apply_start_values(starts)
         self._fmu.initialize()
         if self._events is not None:

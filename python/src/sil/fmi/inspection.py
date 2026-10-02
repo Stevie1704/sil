@@ -8,7 +8,10 @@ the single-FMU binding of `single.bind_channels` and the group's
 the same archive and the same mapping. What only a loaded binary can answer is
 listed as not verified, not guessed.
 
-The report is one of three things per archive:
+The report names the FMI version the archive declares and the profile that
+version is checked against: FMI 3.0 co-simulation, or the narrower FMI 2.0
+co-simulation profile, which refuses the whole archive for one variable of a
+type it does not map. The report is one of three things per archive:
 
 - facts: what the archive declares, whether or not this importer uses it;
 - `unusable`: why no Run of this importer can drive it at all;
@@ -40,10 +43,14 @@ from sil.participant import ManifestError
 from sil.fmi.archive import Extraction
 from sil.fmi.composition import build_transceiver
 from sil.fmi.description import (
+    FMI2,
+    FMI3,
     RX_DATA,
     ModelDescription,
     Terminal,
     Variable,
+    fmi2_platform_directory,
+    fmi2_type,
     library_suffix,
     platform_directory,
 )
@@ -65,12 +72,15 @@ UNUSABLE = "unusable"
 MAPPING_REJECTED = "mapping-rejected"
 
 _DESCRIPTION = "modelDescription.xml"
+# The profile each FMI version is checked against, as the report names it.
+_PROFILES = {FMI3: "FMI 3.0 co-simulation", FMI2: "FMI 2.0 co-simulation"}
 _INTERFACES = ("CoSimulation", "ModelExchange", "ScheduledExecution")
 _MAPPING_KEYS = {"sil_fmi_mapping", "schemas", "channels", "bind", "start"}
 _DIRECTIONS = ("in", "out")
 # The causalities a Run can touch. A local, a calculated parameter and the
 # independent variable are the FMU's own business.
 _CARRIED = ("input", "output", "parameter", "structuralParameter")
+_CALCULATED = "calculatedParameter"
 
 
 class MappingError(ValueError):
@@ -138,7 +148,7 @@ def _report(archive: Path, facts: dict, *, unusable: list[str],
     return {
         "sil_fmi_inspection": REPORT_VERSION,
         "archive": str(archive),
-        "platform": platform_directory(),
+        "platform": _platform(facts["fmi_version"]),
         "verdict": verdict,
         "unusable": list(unusable),
         "facts": facts,
@@ -148,6 +158,18 @@ def _report(archive: Path, facts: dict, *, unusable: list[str],
         "mapping": mapping,
         "unverified": list(unverified),
     }
+
+
+def _platform(fmi_version: str | None) -> str | None:
+    """The `binaries/` directory this host loads for an archive's version.
+
+    It follows the version the archive declares, whether or not the archive
+    is usable, so a refused FMI 2.0 archive names an FMI 2.0 directory. FMI
+    2.0 has no name for some hosts, which is None.
+    """
+    if fmi_version == FMI2:
+        return fmi2_platform_directory()
+    return platform_directory()
 
 
 def _description_root(extracted: Path) -> ElementTree.Element | None:
@@ -171,7 +193,9 @@ def _facts(extracted: Path | None, root: ElementTree.Element | None) -> dict:
         "fmi_version": attribute("fmiVersion"),
         "model_name": attribute("modelName"),
         "generation_tool": attribute("generationTool"),
-        "instantiation_token": attribute("instantiationToken"),
+        # FMI 2.0 calls the same token the guid.
+        "instantiation_token": attribute("instantiationToken")
+        if attribute("fmiVersion") != FMI2 else attribute("guid"),
         "interfaces": {} if root is None else {
             element.tag: dict(element.attrib)
             for element in root if element.tag in _INTERFACES
@@ -196,9 +220,15 @@ def _platforms(extracted: Path) -> list[str]:
 def _variables(
     root: ElementTree.Element, description: ModelDescription
 ) -> list[dict]:
-    """Every variable, declared as the description declares it."""
+    """Every variable, declared as the description declares it.
+
+    An FMI 2.0 variable states its type, start, unit and declared type on the
+    type element inside `<ScalarVariable>`, and is reported by that type's
+    FMI 2.0 name rather than the FMI 3.0 kind it is carried as.
+    """
+    fmi2 = description.fmi_version == FMI2
     units = {
-        element.get("name"): element.get("unit")
+        element.get("name"): _typed(element, fmi2).get("unit")
         for element in root.iterfind("TypeDefinitions/*")
     }
     reports = []
@@ -206,15 +236,16 @@ def _variables(
         variable = description.variables.get(element.get("name"))
         if variable is None:
             continue
-        declared_type = element.get("declaredType")
+        typed = _typed(element, fmi2)
+        declared_type = typed.get("declaredType")
         reports.append({
             "name": variable.name,
-            "type": variable.kind,
+            "type": typed.tag if fmi2 else variable.kind,
             "value_reference": variable.reference,
             "causality": variable.causality,
             "variability": element.get("variability"),
-            "start": _start(element),
-            "unit": element.get("unit") or units.get(declared_type),
+            "start": _start(typed),
+            "unit": typed.get("unit") or units.get(declared_type),
             "declared_type": declared_type,
             "dimensions": [
                 {key: int(value) for key, value in (
@@ -236,6 +267,18 @@ def _variables(
             ),
         })
     return reports
+
+
+def _typed(element: ElementTree.Element, fmi2: bool) -> ElementTree.Element:
+    """The element that states a variable's or a type's attributes.
+
+    FMI 3.0 states them on the element itself; FMI 2.0 on the type element
+    inside it.
+    """
+    if not fmi2:
+        return element
+    typed = fmi2_type(element)
+    return element if typed is None else typed
 
 
 def array_record(variable: dict) -> dict:
@@ -299,8 +342,9 @@ def _media_type(
 
 def _unverified(extracted: Path, description: ModelDescription) -> list[str]:
     """What only a loaded binary, or its host, can answer."""
+    directory = description.platform_directory() or "linux64"
     binary = (
-        f"binaries/{platform_directory()}/"
+        f"binaries/{directory}/"
         f"{description.model_identifier}{library_suffix()}"
     )
     unverified = [
@@ -369,11 +413,17 @@ def _unbound(mapping: dict, description: ModelDescription) -> list[str]:
     }
     return [
         name for name, variable in description.variables.items()
-        if _carried(variable) and name not in touched
+        if _carried(variable, description) and name not in touched
     ]
 
 
-def _carried(variable: Variable) -> bool:
+def _carried(variable: Variable, description: ModelDescription) -> bool:
+    """Whether a Run can touch the variable: write it, or read it.
+
+    The FMI 2.0 profile also reads a calculated parameter.
+    """
+    if description.fmi_version == FMI2 and variable.causality == _CALCULATED:
+        return True
     return variable.causality in _CARRIED
 
 
@@ -444,10 +494,11 @@ def render(report: dict) -> str:
         f"archive: {report['archive']}",
         f"verdict: {report['verdict']}",
         f"fmiVersion: {facts['fmi_version']}",
+        f"profile: {_PROFILES.get(facts['fmi_version'], 'none')}",
         f"model: {facts['model_name']} ({facts['generation_tool']})",
         f"interfaces: {', '.join(facts['interfaces']) or 'none'}",
         f"platform binaries: {', '.join(facts['platforms']) or 'none'} "
-        f"(this host: {report['platform']})",
+        f"(this host: {report['platform'] or 'none'})",
     ]
     co_simulation = facts["interfaces"].get("CoSimulation")
     if co_simulation:

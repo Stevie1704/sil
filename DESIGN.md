@@ -94,7 +94,10 @@ bit-diffing trivial.
   never becomes a simulator.
 - **Vendor L2/L3 vECUs and models**: one blessed importer — **FMI 3.0
   co-simulation + FMI-LS-BUS** for bus traffic. Importer-as-adapter, not an
-  FMI master in the kernel.
+  FMI master in the kernel. The same Importer also drives a narrow FMI 2.0
+  co-simulation profile (scalar Real, Integer and Boolean, #191), because the
+  selected external FMU (#230) ships as FMI 2.0 only. A port to FMI 3.0 made
+  here would not be independent evidence.
 
 ### 11. Implementation: C++ kernel, stable C ABI, Python bindings
 C++20 core (matches vECU code, org skills, vendor SDKs). The integration

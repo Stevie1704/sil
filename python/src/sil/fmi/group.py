@@ -32,7 +32,7 @@ from sil.fmi.composition import (
     group_start_values,
     instance_paths,
 )
-from sil.fmi.description import ModelDescription
+from sil.fmi.description import FMI2, ModelDescription
 from sil.fmi.mapping import channel_fields
 from sil.fmi.stepping import require_contiguous
 from sil.fmi.terminals import Instance, Transceiver
@@ -360,7 +360,14 @@ class FmuGroupParticipant(StepParticipant):
         for name, path in paths.items():
             extracted = self._extraction.unpack(path, name)
             self._extracted[name] = extracted
-            instances[name] = Instance(name, ModelDescription.read(extracted))
+            description = ModelDescription.read(extracted)
+            if description.fmi_version == FMI2:
+                raise ManifestError(
+                    f"instance {name!r} is an FMI {FMI2} FMU; a group connects "
+                    f"FMI 3.0 terminals in Event Mode, which FMI {FMI2} has "
+                    f"not, so it drives FMI 3.0 instances only"
+                )
+            instances[name] = Instance(name, description)
         return instances
 
     def on_step(self, t: int, dt: int, inputs: list):

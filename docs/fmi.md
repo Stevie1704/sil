@@ -15,7 +15,9 @@ extraction is dropped at shutdown and, either way, goes with the tree the
 kernel removes after the Run. Channel schema field names map directly to the
 FMU's Float64 input and output variables; Channel direction decides whether a
 field is written before the FMU Step or published after it. Every other
-variable type is bound by name on the command line, below.
+variable type is bound by name on the command line, below. An FMI 2.0
+co-simulation FMU runs through the same participant under a narrower profile;
+see [FMI 2.0 co-simulation profile](#fmi-20-co-simulation-profile).
 
 The FMU path is just a command argument, so it is part of the hashed Manifest:
 
@@ -472,12 +474,22 @@ The report has four parts:
 | Part | What it states |
 | --- | --- |
 | facts | FMI version, interfaces and co-simulation capabilities, platform binaries, and each variable's type, causality, variability, start, unit, dimensions, value count, `maxSize`, `mimeType` and Clocks; the terminals and the FMI-LS-BUS manifest |
-| `unusable` | why no Run can drive the archive: unreadable archive or `modelDescription.xml`, an FMI version other than 3.0, no co-simulation interface, no binary for this platform |
+| `unusable` | why no Run can drive the archive: unreadable archive or `modelDescription.xml`, an FMI version other than 3.0 or 2.0, no co-simulation interface, no binary for this platform, and for FMI 2.0 every variable of a type outside the FMI 2.0 profile |
 | `unmappable`, per variable; `unsupported`, per terminal | why no Channel can carry the variable, or no group can connect the terminal: String, Enumeration and the unselected integer types, arrays outside the fixed-size numeric profile, a Clock outside the triggered profile, a terminal outside the BUS profile |
 | `unverified` | what only a loaded binary can answer: whether the library and its dependencies load, whether initialization succeeds, a required execution tool, the files read from `resources/` |
 
 A variable no Channel names is never touched, so an `unmappable` variable does
-not make the archive unusable. `Feedthrough` declares every FMI type and runs.
+not make the FMI 3.0 archive unusable. `Feedthrough` declares every FMI type
+and runs. The FMI 2.0 profile is stricter: its `Feedthrough` is `unusable`,
+and the reason names each `String` and `Enumeration` variable.
+
+The readable report names the profile the archive is checked against —
+`FMI 3.0 co-simulation` or `FMI 2.0 co-simulation` — from the `fmiVersion`
+the archive declares. The JSON report states that version in
+`facts.fmi_version`. For FMI 2.0, `facts.instantiation_token` holds the
+`guid`, and `platform` is the FMI 2.0 directory (`linux64`, or `darwin64` on
+a development Mac), also when the archive is refused. On a host that FMI 2.0
+has no directory for, `platform` is `null`.
 
 `--mapping` checks a proposed single-FMU mapping. The document is the init
 line's `schemas` and `channels` and the importer's `--bind` and `--start`
@@ -512,3 +524,57 @@ parameter that keeps its start value, and an output that is not published.
 The JSON report carries `"sil_fmi_inspection": 1`; a change to its keys raises
 that number. The inspection is an audit of this importer's profile, not an FMI
 conformance certification, and it does not probe dynamic dependencies.
+
+## FMI 2.0 co-simulation profile
+
+The same participant, `python -m sil.fmi model.fmu`, drives an FMU that
+declares `fmiVersion="2.0"`. The Importer reads the version from
+`modelDescription.xml` and selects the FMI 2.0 interface. Nothing changes at
+the Process boundary: the Manifest, the step protocol, the Recording and the
+Native ABI are the ones above ([ADR 0001](adr/0001-connected-fmus-in-one-process-participant.md)).
+The consumer is `OSMPDummySensor` from osi-sensor-model-packaging `v1.6.0`
+(#230), which upstream exports as FMI 2.0 only.
+
+This is the whole profile. It is not general FMI 2.0 conformance.
+
+| Item | Profile |
+| --- | --- |
+| Interface | Co-Simulation. Model Exchange is refused |
+| Platform | Linux x86-64, `binaries/linux64/`. `darwin64` is loaded on a Mac for development only |
+| Variable types | scalar `Real`, `Integer` and `Boolean`. An archive with a `String` or `Enumeration` variable is refused, and the reason names each one |
+| Parameters | `--start` sets a `parameter` (`fixed` or `tunable`) or an input in the instantiated state, before `fmi2SetupExperiment`. A `calculatedParameter` takes no start value: the FMU computes it in initialization. It is read after initialization: `--bind` it to a field of an output-direction Channel, and each Step publishes its value |
+| Lifecycle | `fmi2Instantiate` → start values → `fmi2SetupExperiment` (start 0, no tolerance, no stop time) → `fmi2EnterInitializationMode` → `fmi2ExitInitializationMode` → one `fmi2DoStep` per Step → `fmi2Terminate` → `fmi2FreeInstance` |
+| Resources | the extracted `resources/` directory as a `file://` URI, also when the archive has none |
+| Step | the fixed communication step of the Manifest. No variable step, even when the FMU declares `canHandleVariableCommunicationStepSize` |
+| Status | `fmi2OK` continues. `fmi2Warning` continues and writes `sil.fmi: <call> returned Warning` to stderr. `fmi2Discard`, `fmi2Error`, `fmi2Fatal` and `fmi2Pending` fail the Run and name the call. After a failing status the instance is freed without `fmi2Terminate`; after `fmi2Fatal` no call is made |
+| Callbacks | the logger, and the C library's `calloc` and `free` as `allocateMemory` and `freeMemory`. `stepFinished` is NULL |
+| Not supported | `fmi2GetFMUstate`/`fmi2SetFMUstate`, directional derivatives, input derivatives, asynchronous `fmi2DoStep`, a group of connected FMUs (`--instance`) |
+
+Each FMI 2.0 type is carried as the FMI 3.0 type of the same width, so the
+binding rules above apply unchanged:
+
+| FMI 2.0 type | Carried as | Field type | Start value (`--start`) |
+| --- | --- | --- | --- |
+| `Real` | `Float64` | `f64` | a decimal number |
+| `Integer` | `Int32` | `i32` | a decimal integer in [−2³¹, 2³¹ − 1] |
+| `Boolean` | `Boolean` | `u8` | `true` or `false` |
+
+A Real mapping is derived from the field names, as for Float64. An Integer or
+Boolean variable, and a `calculatedParameter`, is bound with `--bind`. A diagnostic names the type as it is
+carried: a `Real` variable is a `Float64` variable there.
+
+The FMI 2.0 logger is a C variadic function. The Importer prints the message
+the FMU passes without formatting its arguments, as FMPy does.
+
+`fmi2Warning` continues the Run. This differs from FMI 3.0 above, where
+`Warning` aborts: the FMI 2.0 profile was specified this way in #191, and the
+FMI 3.0 behavior is unchanged.
+
+The acceptance evidence is [proofs/fmi2-importer/](../proofs/fmi2-importer/):
+the Modelica Reference FMUs `v0.0.41` compared with FMPy 0.3.26, the
+`Feedthrough` refusal, and the `OSMPDummySensor` lifecycle. Two
+`OSMPDummySensor` instances cannot share one process, because two OSI FMUs
+abort in the Protobuf pool
+([proofs/osmp-sensor](../proofs/osmp-sensor/README.md#one-process)). That is
+a limit of the FMU build, not of the Importer. The OSMP binary variables
+(pointers in `Integer` variables) are #244.

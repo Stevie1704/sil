@@ -48,7 +48,7 @@ Debian records them.
 
 | Component | Version | License | Where |
 | --- | --- | --- | --- |
-| [Modelica Reference FMUs](https://github.com/modelica/Reference-FMUs) | 3.0 | BSD-2-Clause | `tests/fixtures/reference-fmus/LICENSE.txt`; copied into the `acceptance` image target only |
+| [Modelica Reference FMUs](https://github.com/modelica/Reference-FMUs) | `v0.0.41`, FMI 3.0 and FMI 2.0 archives | BSD-2-Clause | `tests/fixtures/reference-fmus/LICENSE.txt`; the FMI 3.0 archives are copied into the `acceptance` image target only |
 | [FMI 3.0 headers](https://github.com/modelica/fmi-standard/tree/v3.0.2/headers) | v3.0.2 | BSD-2-Clause | `examples/adas-reference/fmu/fmi3/`, unmodified, with `LICENSE.txt`; compiled into the ADAS reference FMU, which carries that license as `documentation/licenses/LICENSE-FMI.txt` |
 
 The `acceptance` image target exists for this repository's own checks. The
@@ -150,6 +150,18 @@ which the FMUs load at run time, and FMPy 0.3.26 (BSD-2-Clause), Protobuf
 4.21.12 for Python (BSD-3-Clause) and pytest (MIT), pinned by hash in
 [its lock file](proofs/osmp-sensor/requirements.lock). They are tools of the
 proof only.
+
+## FMI 2.0 importer acceptance (#191)
+
+[proofs/fmi2-importer/](proofs/fmi2-importer/) downloads the same OSMP
+sources as the OSMP FMU target above, at the same pinned identities, and
+builds `OSMPDummySensor` from them the same way. The licenses and the
+statements above apply unchanged. The proof image installs the same tools
+from the same lock file, and also the SiL runtime closure from
+[`container/requirements.lock`](container/requirements.lock). The Reference
+FMUs it runs are the vendored FMI 2.0 archives listed under Reference
+artifacts. The retained evidence holds digests, inspection reports and
+comparison results only.
 
 ## Python wheel and source distribution
 

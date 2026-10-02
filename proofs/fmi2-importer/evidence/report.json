@@ -1,0 +1,322 @@
+{
+  "issue": 191,
+  "environment": {
+    "machine": "x86_64",
+    "libc": "glibc 2.36",
+    "python": "3.13.7",
+    "fmpy": "0.3.26",
+    "source_revision": "d4ddd60b0af5bf10bbcfb4ea1552260bf2393008",
+    "tolerance": {
+      "absolute": 1e-12,
+      "relative": 1e-12
+    }
+  },
+  "inspection": {
+    "BouncingBall": {
+      "verdict": "compatible",
+      "unusable": [],
+      "platform": "linux64"
+    },
+    "Dahlquist": {
+      "verdict": "compatible",
+      "unusable": [],
+      "platform": "linux64"
+    },
+    "Feedthrough": {
+      "verdict": "unusable",
+      "unusable": [
+        "FMU declares String variable 'String_input', String variable 'String_output', Enumeration variable 'Enumeration_input', Enumeration variable 'Enumeration_output'; the FMI 2.0 profile maps Real, Integer, Boolean variables only"
+      ],
+      "platform": "x86_64-linux"
+    },
+    "Stair": {
+      "verdict": "compatible",
+      "unusable": [],
+      "platform": "linux64"
+    },
+    "VanDerPol": {
+      "verdict": "compatible",
+      "unusable": [],
+      "platform": "linux64"
+    },
+    "OSMPDummySensor": {
+      "verdict": "compatible",
+      "unusable": [],
+      "platform": "linux64"
+    }
+  },
+  "reference_fmus": {
+    "cases": {
+      "dahlquist": {
+        "fmu": "Dahlquist.fmu",
+        "fmu_sha256": "cecf1fb0f04cbb9de102c783dd7d905a17aec0c6e8ce4641f54a0b26673c2c7f",
+        "step_ns": 100000000,
+        "steps": 100,
+        "observation_grid": {
+          "first_ns": 100000000,
+          "last_ns": 10000000000,
+          "spacing_ns": 100000000
+        },
+        "starts": {},
+        "outputs": {
+          "x": "f64"
+        },
+        "comparison": {
+          "agrees": true,
+          "samples": 100,
+          "max_abs_difference": 0.0,
+          "final_sample": {
+            "t_ns": 10000000000,
+            "x": 2.656139888758746e-05
+          }
+        },
+        "recording_sha256": "e8ca96e917fbaed9ed0e80ffb4b33b084470ab125df97b2c414ec36d77bcac32",
+        "recordings_identical": true
+      },
+      "dahlquist-k-0.5": {
+        "fmu": "Dahlquist.fmu",
+        "fmu_sha256": "cecf1fb0f04cbb9de102c783dd7d905a17aec0c6e8ce4641f54a0b26673c2c7f",
+        "step_ns": 100000000,
+        "steps": 100,
+        "observation_grid": {
+          "first_ns": 100000000,
+          "last_ns": 10000000000,
+          "spacing_ns": 100000000
+        },
+        "starts": {
+          "k": "0.5"
+        },
+        "outputs": {
+          "x": "f64"
+        },
+        "comparison": {
+          "agrees": true,
+          "samples": 100,
+          "max_abs_difference": 0.0,
+          "final_sample": {
+            "t_ns": 10000000000,
+            "x": 0.005920529220334025
+          }
+        },
+        "recording_sha256": "5a8e21be00d323b3ceb79521aa0a10c8d620882bda41ea98ec49cf21ab9e34af",
+        "recordings_identical": true
+      },
+      "vanderpol": {
+        "fmu": "VanDerPol.fmu",
+        "fmu_sha256": "c22b935903fab007c57319d4134b6a9c08a7139d90c97150310dc05afe823a3d",
+        "step_ns": 10000000,
+        "steps": 2000,
+        "observation_grid": {
+          "first_ns": 10000000,
+          "last_ns": 20000000000,
+          "spacing_ns": 10000000
+        },
+        "starts": {},
+        "outputs": {
+          "x0": "f64",
+          "x1": "f64"
+        },
+        "comparison": {
+          "agrees": true,
+          "samples": 2000,
+          "max_abs_difference": 0.0,
+          "final_sample": {
+            "t_ns": 20000000000,
+            "x0": 2.0148418861546133,
+            "x1": 0.24419470751904407
+          }
+        },
+        "recording_sha256": "b37e9a64babe4645381e31e9e09addbc62c41885ef882da34bbb642d9fd985b5",
+        "recordings_identical": true
+      },
+      "bouncingball": {
+        "fmu": "BouncingBall.fmu",
+        "fmu_sha256": "3959d0dea751e788b7b9591da6beb11955352a1ac46138244ee5343efb7ce5e4",
+        "step_ns": 10000000,
+        "steps": 300,
+        "observation_grid": {
+          "first_ns": 10000000,
+          "last_ns": 3000000000,
+          "spacing_ns": 10000000
+        },
+        "starts": {},
+        "outputs": {
+          "h": "f64",
+          "v": "f64"
+        },
+        "comparison": {
+          "agrees": true,
+          "samples": 300,
+          "max_abs_difference": 0.0,
+          "final_sample": {
+            "t_ns": 3000000000,
+            "h": 2.2250738585072014e-308,
+            "v": 0.0
+          }
+        },
+        "recording_sha256": "8d0d62f3b8b01c1c808110f0503e3a6593e9ca4ecc8653a9fb84dd2df9c6b4fb",
+        "recordings_identical": true
+      },
+      "bouncingball-e-0.8": {
+        "fmu": "BouncingBall.fmu",
+        "fmu_sha256": "3959d0dea751e788b7b9591da6beb11955352a1ac46138244ee5343efb7ce5e4",
+        "step_ns": 10000000,
+        "steps": 300,
+        "observation_grid": {
+          "first_ns": 10000000,
+          "last_ns": 3000000000,
+          "spacing_ns": 10000000
+        },
+        "starts": {
+          "e": "0.8"
+        },
+        "outputs": {
+          "h": "f64",
+          "v": "f64"
+        },
+        "comparison": {
+          "agrees": true,
+          "samples": 300,
+          "max_abs_difference": 0.0,
+          "final_sample": {
+            "t_ns": 3000000000,
+            "h": 0.06753974799168012,
+            "v": 0.35861090688000163
+          }
+        },
+        "recording_sha256": "b924adb17847f8014e9bb74291d22b25a481c1f4dce3d7ed1a1127ac0f77acdb",
+        "recordings_identical": true
+      },
+      "stair": {
+        "fmu": "Stair.fmu",
+        "fmu_sha256": "917f5a7123cf5b2857ac6bc7a121fe96e0a37a9a734b84d0166fd0554298789c",
+        "step_ns": 200000000,
+        "steps": 40,
+        "observation_grid": {
+          "first_ns": 200000000,
+          "last_ns": 8000000000,
+          "spacing_ns": 200000000
+        },
+        "starts": {},
+        "outputs": {
+          "counter": "i32"
+        },
+        "comparison": {
+          "agrees": true,
+          "samples": 40,
+          "max_abs_difference": 0.0,
+          "final_sample": {
+            "t_ns": 8000000000,
+            "counter": 9
+          }
+        },
+        "recording_sha256": "cca483df998aed7cb5d4e5d7d14c456f311abab4bab608d613190e6678290722",
+        "recordings_identical": true
+      }
+    },
+    "wrong_input_controls": {
+      "dahlquist-k-0.5": {
+        "compared_with": "dahlquist",
+        "agrees": false,
+        "samples": 100,
+        "first_divergence": {
+          "t_ns": 100000000,
+          "variable": "x",
+          "sil": 0.95,
+          "fmpy": 0.9
+        }
+      },
+      "bouncingball-e-0.8": {
+        "compared_with": "bouncingball",
+        "agrees": false,
+        "samples": 300,
+        "first_divergence": {
+          "t_ns": 460000000,
+          "variable": "h",
+          "sil": 0.024679997999999884,
+          "fmpy": 0.021569246999999892
+        }
+      }
+    }
+  },
+  "status_failure": {
+    "exit_code": 1,
+    "diagnostic": [
+      "sil-run: participant 'fmu0' failed: sil.participant.ParticipantFailure: fmi2DoStep returned Error"
+    ],
+    "names_the_call": true,
+    "leftovers": []
+  },
+  "reference_fmu_discard": {
+    "fmu": "Stair.fmu",
+    "step_ns": 200000000,
+    "sil_exit_code": 1,
+    "sil_diagnostic": [
+      "sil-run: participant 'fmu0' failed: sil.participant.ParticipantFailure: fmi2DoStep returned Discard"
+    ],
+    "completed_steps": 44,
+    "fmpy_error": "FMICallException: fmi2DoStep failed with status 2 (discard)."
+  },
+  "importer_cleanup": {
+    "success": {
+      "extracted_during_run": 1,
+      "left_after_close": [],
+      "step_failure": null
+    },
+    "failure": {
+      "extracted_during_run": 1,
+      "left_after_close": [],
+      "step_failure": "fmi2DoStep returned Error"
+    }
+  },
+  "two_instances": {
+    "fmu": "VanDerPol.fmu",
+    "instances": 2,
+    "identical": true,
+    "comparison": {
+      "agrees": true,
+      "samples": 2000,
+      "max_abs_difference": 0.0,
+      "final_sample": {
+        "t_ns": 20000000000,
+        "x0": 2.0148418861546133,
+        "x1": 0.24419470751904407
+      }
+    }
+  },
+  "osmp_sensor": {
+    "build": {
+      "archive_sha256": "e6dece862f2e4b8ad4181de7769dfad53297554cc405e8365e3e3b0039bc58ee",
+      "binary_sha256": "a0c38eda8571eb191a28490a46ec9f1ad9b8dec95ee457df22403b848ad5e8c7",
+      "binary_matches_230_pin": true
+    },
+    "lifecycle": {
+      "step_ns": 20000000,
+      "steps": 50,
+      "sil_exit_code": 0,
+      "sil_diagnostic": [],
+      "fmpy_error": null,
+      "leftovers": [],
+      "accepted": true,
+      "comparison": {
+        "agrees": true,
+        "samples": 50,
+        "max_abs_difference": 0.0,
+        "final_sample": {
+          "t_ns": 1000000000,
+          "valid": 0,
+          "count": 0
+        }
+      },
+      "valid": [
+        0
+      ],
+      "count": [
+        0
+      ]
+    }
+  },
+  "known_limits": [
+    "Two OSI FMUs in one process abort in the Protobuf pool (proofs/osmp-sensor/README.md#one-process); two instances of OSMPDummySensor are therefore not run in one process. This is a limit of the FMU build, not of the Importer."
+  ]
+}

@@ -23,9 +23,10 @@ from xml.etree import ElementTree
 from sil._schema_types import INT_RANGES, SIZES
 from sil.participant import ManifestError
 
-# The one FMI version this importer drives. Anything else is rejected rather
-# than half-driven.
-_FMI_VERSION = "3.0"
+# The two FMI versions this importer drives, each against its own profile.
+# Anything else is rejected rather than half-driven.
+FMI3 = "3.0"
+FMI2 = "2.0"
 
 # The FMU's `binaries/` subdirectory for the running platform, and the shared
 # library suffix that goes with it.
@@ -185,6 +186,29 @@ def platform_directory() -> str:
     machine = _MACHINES.get(machine, machine)
     system, _ = _SYSTEMS[platform.system()]
     return f"{machine}-{system}"
+
+
+# The FMI 2.0 `binaries/` directory for the running platform. FMI 2.0 names a
+# platform by its system and word size only, so `linux64` is Linux x86-64 and
+# no other Linux machine has a name. `darwin64` holds whatever the exporter
+# built for macOS; it is a development host, not the qualified profile.
+_FMI2_PLATFORMS = {
+    ("Linux", "x86_64"): "linux64",
+    ("Darwin", "x86_64"): "darwin64",
+    ("Darwin", "arm64"): "darwin64",
+}
+
+# The FMI 2.0 types this profile maps, by the element name FMI 2.0 gives
+# them, and the FMI 3.0 type of the same width each is carried as. A Real is a
+# double, an Integer a C `int` and a Boolean a C `int` holding 0 or 1, so each
+# is carried by the field and read by the start-value grammar of its FMI 3.0
+# counterpart. Every other FMI 2.0 type refuses the FMU.
+_FMI2_TYPES = {"Real": "Float64", "Integer": "Int32", "Boolean": "Boolean"}
+
+
+def fmi2_platform_directory() -> str | None:
+    """The FMI 2.0 `binaries/` directory of this platform, or None."""
+    return _FMI2_PLATFORMS.get((platform.system(), platform.machine()))
 
 
 def library_suffix() -> str:
@@ -417,6 +441,9 @@ class ModelDescription:
     # layered standard connects, and the FMI-LS-BUS profile they belong to.
     terminals: dict[str, Terminal] = field(default_factory=dict)
     bus: BusProfile | None = None
+    # The FMI version the description declares, which decides the profile it
+    # is checked against and the native interface it is driven through.
+    fmi_version: str = FMI3
 
     def clock(self, reference: int) -> Variable | None:
         """The Clock one value reference names, if it names a Clock at all."""
@@ -434,9 +461,9 @@ class ModelDescription:
     def read(extracted: Path) -> ModelDescription:
         """Parse the description, rejecting an FMU this importer cannot drive.
 
-        Both rejections are eager and specific: an FMI 2.0 export otherwise
-        loads and fails on a missing symbol, and a Model Exchange FMU
-        otherwise fails on an absent element.
+        Each rejection is eager and specific: an FMU of another FMI version
+        otherwise loads and fails on a missing symbol, and a Model Exchange
+        FMU otherwise fails on an absent element.
         """
         try:
             root = ElementTree.parse(
@@ -447,10 +474,12 @@ class ModelDescription:
                 f"FMU has no readable modelDescription.xml: {error}"
             ) from error
         version = root.get("fmiVersion")
-        if version != _FMI_VERSION:
+        if version == FMI2:
+            return _read_fmi2(root)
+        if version != FMI3:
             raise ManifestError(
                 f"FMU declares fmiVersion {version!r}; this importer drives "
-                f"FMI {_FMI_VERSION} co-simulation only"
+                f"FMI {FMI3} and FMI {FMI2} co-simulation only"
             )
         co_simulation = root.find("CoSimulation")
         if co_simulation is None:
@@ -475,9 +504,26 @@ class ModelDescription:
             bus=_bus_profile(extracted),
         )
 
+    def platform_directory(self) -> str | None:
+        """The `binaries/` directory this platform loads from, for this FMU.
+
+        FMI 3.0 and FMI 2.0 name a platform differently, and FMI 2.0 has no
+        name for some platforms at all.
+        """
+        if self.fmi_version == FMI2:
+            return fmi2_platform_directory()
+        return platform_directory()
+
     def binary(self, extracted: Path) -> Path:
         """The shared library this platform loads out of the FMU."""
-        directory = platform_directory()
+        directory = self.platform_directory()
+        if directory is None:
+            raise ManifestError(
+                f"FMU {self.model_identifier!r} is FMI {FMI2}, whose profile "
+                f"loads binaries/linux64 on Linux x86-64; this host "
+                f"({platform.system()} {platform.machine()}) has no FMI "
+                f"{FMI2} platform directory"
+            )
         binary = (
             extracted / "binaries" / directory
             / f"{self.model_identifier}{library_suffix()}"
@@ -489,6 +535,87 @@ class ModelDescription:
                 f"the archive"
             )
         return binary
+
+
+def _read_fmi2(root) -> ModelDescription:
+    """An FMI 2.0 description, checked against the FMI 2.0 profile.
+
+    The profile is co-simulation with scalar Real, Integer and Boolean
+    variables. A variable of any other type refuses the FMU as a whole, and
+    every such variable is named: an FMI 2.0 FMU has no other way to say
+    which of its variables a Run may leave alone.
+    """
+    co_simulation = root.find("CoSimulation")
+    if co_simulation is None:
+        raise ManifestError(
+            f"FMU declares fmiVersion {FMI2!r} and no co-simulation interface; "
+            f"the FMI {FMI2} profile drives co-simulation only, not Model "
+            f"Exchange"
+        )
+    guid = root.get("guid")
+    if guid is None:
+        raise ManifestError(
+            f"FMU declares fmiVersion {FMI2!r} and no guid; an FMI {FMI2} "
+            f"description names its instantiation token there"
+        )
+    try:
+        variables = _fmi2_variables(root)
+    except ValueError as error:
+        raise ManifestError(
+            f"FMU declares a malformed FMI {FMI2} modelDescription.xml: {error}"
+        ) from error
+    outside = [
+        f"{variable.kind} variable {variable.name!r}"
+        for variable in variables.values() if variable.kind not in SCALARS
+    ]
+    if outside:
+        raise ManifestError(
+            f"FMU declares {', '.join(outside)}; the FMI {FMI2} profile maps "
+            f"{', '.join(_FMI2_TYPES)} variables only"
+        )
+    return ModelDescription(
+        model_identifier=co_simulation.get("modelIdentifier"),
+        instantiation_token=guid,
+        variables=variables,
+        inputs=_by_causality(variables, "input"),
+        outputs=_by_causality(variables, "output"),
+        capabilities=dict(co_simulation.attrib),
+        fmi_version=FMI2,
+    )
+
+
+def fmi2_type(element) -> ElementTree.Element | None:
+    """The type element an FMI 2.0 `<ScalarVariable>` declares, if any."""
+    return next(iter(element), None)
+
+
+def _fmi2_variables(root) -> dict[str, Variable]:
+    """Every FMI 2.0 scalar variable, in the importer's FMI 3.0 terms.
+
+    A mapped type takes its FMI 3.0 counterpart's kind; any other type keeps
+    its FMI 2.0 element name, so the profile check can name it.
+    """
+    elements = root.find("ModelVariables")
+    if elements is None:
+        raise ValueError("it declares no ModelVariables")
+    declared: dict[str, Variable] = {}
+    for element in elements.iter("ScalarVariable"):
+        name, reference = element.get("name"), element.get("valueReference")
+        declared_type = fmi2_type(element)
+        if name is None or reference is None or declared_type is None:
+            raise ValueError(
+                f"ScalarVariable {name!r} declares no name, valueReference "
+                f"or type"
+            )
+        declared[name] = Variable(
+            name=name,
+            reference=int(reference),
+            kind=_FMI2_TYPES.get(declared_type.tag, declared_type.tag),
+            causality=element.get("causality", "local"),
+            max_size=None,
+            value_count=1,
+        )
+    return declared
 
 
 def dimensions(variable: Variable) -> str:
