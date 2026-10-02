@@ -1,0 +1,33 @@
+name: proof-osmp-qualification
+
+# OSMP FMU qualification (issue #233). The image build fetches the pinned
+# OSMP sources to build OSMPDummySource and OSMPDummySensor, so this sits
+# outside the general push gate like the other external proofs. The matrices
+# and the cost measurement use no network on native Linux x86-64.
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/osmp-qualification/**'
+      - 'proofs/osmp-sensor/**'
+      - 'python/src/sil/fmi/**'
+      - 'python/src/sil/bundle.py'
+      - 'python/src/sil/matrix.py'
+      - '.github/workflows/proof-osmp-qualification.yml'
+  workflow_dispatch:
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare the bundles and run the installed matrices offline
+        timeout-minutes: 55
+        run: proofs/osmp-qualification/run-proof.sh "$PWD/build/osmp-qualification"
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: osmp-qualification-evidence
+          path: build/osmp-qualification/
