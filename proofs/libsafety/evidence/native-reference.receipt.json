@@ -7,21 +7,21 @@
     "mcap": "mcap-python/1.4.0"
   },
   "source": {
-    "file": "reference.csv",
-    "sha256": "105dc4881a9590d75be3252fc5209cb140a9f36fc944104af8e220abaea29ee5",
+    "file": "native-reference.csv",
+    "sha256": "b0639683baa776b7e847a9371ab327ae340cd83e2bc2c4824937b8ca04ffdaa5",
     "rows": 6000
   },
   "mapping": {
-    "file": "reference.json",
-    "sha256": "26911508dccab11caabf5642b9ef1c5ef8dddc0748520c8ef11539ba76169cef"
+    "file": "native-reference.json",
+    "sha256": "416d6815a5afc3348c8ecd39950430349c32a8bc4eb2da94d478043296915449"
   },
   "recording": {
-    "file": "reference.mcap",
-    "sha256": "f8cf004d78d03644d7f7c37c6679eb411b62766b90c24e3ec13a233d623a3cc5"
+    "file": "native-reference.mcap",
+    "sha256": "3cb355bbaf2d22bf8a6ce5aad47cc6d2844cbc916633535b0f2d7a22d2ac2646"
   },
   "channels": {
     "libsafety.state": {
-      "schema": "libsafety.ReferenceState",
+      "schema": "libsafety.NativeReferenceState",
       "messages": 6000,
       "first_ns": 0,
       "last_ns": 59991000000

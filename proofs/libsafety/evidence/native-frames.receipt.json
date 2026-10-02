@@ -12,16 +12,16 @@
     "rows": 149228
   },
   "mapping": {
-    "file": "frames.json",
-    "sha256": "019ac7af42bbd6fc445f8162bafe5b8ceb6d59faf9e25fb2bc3a72330be44cec"
+    "file": "native-frames.json",
+    "sha256": "d535d0400fbe4b57e3afa3403f67647c4a8996dbb3834b19af35d79f27c410b2"
   },
   "recording": {
-    "file": "frames.mcap",
-    "sha256": "190f21053dd3544c51e4647cf9746be2c35647321bd53c0aa3f2e2d7c2ba1f38"
+    "file": "native-frames.mcap",
+    "sha256": "e3f6ca61847dec014109cfc2896ab7333c29dae936cbf7a674a57d24e88a811c"
   },
   "channels": {
     "can.rx": {
-      "schema": "can.Frame",
+      "schema": "can.TimedFrame",
       "messages": 149228,
       "first_ns": 18054876797669,
       "last_ns": 18114867092416

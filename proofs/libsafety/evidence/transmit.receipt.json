@@ -7,22 +7,22 @@
     "mcap": "mcap-python/1.4.0"
   },
   "source": {
-    "file": "frames.csv",
-    "sha256": "41041ccc195c700fdcded64d15ec924fbc0245cb106c672b775b93d470c9cd4d",
-    "rows": 149228
+    "file": "transmit.csv",
+    "sha256": "406c0b8556b10bcb03738e14a9e3c6a856ae1392ae8377af0c423252fc8e3fc8",
+    "rows": 6934
   },
   "mapping": {
-    "file": "frames.json",
-    "sha256": "019ac7af42bbd6fc445f8162bafe5b8ceb6d59faf9e25fb2bc3a72330be44cec"
+    "file": "transmit.json",
+    "sha256": "75873fce4d8d58a33b376bd6ace5b9006f987c235ab5dd595f57df69e8f016ef"
   },
   "recording": {
-    "file": "frames.mcap",
-    "sha256": "190f21053dd3544c51e4647cf9746be2c35647321bd53c0aa3f2e2d7c2ba1f38"
+    "file": "transmit.mcap",
+    "sha256": "d9c0ce1ca1e4d9451a2ae549b069db0ffa321afd2d4a16fef70b7a3fa426b225"
   },
   "channels": {
-    "can.rx": {
-      "schema": "can.Frame",
-      "messages": 149228,
+    "can.tx": {
+      "schema": "can.TimedFrame",
+      "messages": 6934,
       "first_ns": 18054876797669,
       "last_ns": 18114867092416
     }

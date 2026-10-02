@@ -7,16 +7,16 @@
     "mcap": "mcap-python/1.4.0"
   },
   "source": {
-    "file": "frames.mcap",
-    "sha256": "190f21053dd3544c51e4647cf9746be2c35647321bd53c0aa3f2e2d7c2ba1f38"
+    "file": "transmit.mcap",
+    "sha256": "d9c0ce1ca1e4d9451a2ae549b069db0ffa321afd2d4a16fef70b7a3fa426b225"
   },
   "window": {
-    "file": "window.json",
-    "sha256": "12e43c37001d6cde666aaa933147d55194bd6443d26436fa2ad0cacd8d3b03c7"
+    "file": "transmit-window.json",
+    "sha256": "99ca7364efb4af068f0735dc36104e916f760a50596a9a71c4c7b9d666576995"
   },
   "recording": {
-    "file": "window.mcap",
-    "sha256": "1a8708da361ead8e9fb75a8966ab6017dc205f0779c8be011b7a60a359ac310b"
+    "file": "transmit-window.mcap",
+    "sha256": "ca0b49239212ba8d9b4374b42cd85bfea96c9ff38cbbe55990c2ee03267fab3a"
   },
   "source_origin_ns": 18054876797669,
   "intervals": {
@@ -47,21 +47,21 @@
     "to_ns": 59990294747
   },
   "channels": {
-    "can.rx": {
-      "schema": "can.Frame",
+    "can.tx": {
+      "schema": "can.TimedFrame",
       "source_span": {
         "first_ns": 18054876797669,
         "last_ns": 18114867092416
       },
       "held": null,
-      "largest_gap_ns": 11029012,
+      "largest_gap_ns": 20868164,
       "warm_up": {
         "messages": 0,
         "first_ns": null,
         "last_ns": null
       },
       "evaluation": {
-        "messages": 149228,
+        "messages": 6934,
         "first_ns": 0,
         "last_ns": 59990294747
       }

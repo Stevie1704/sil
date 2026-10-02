@@ -198,8 +198,8 @@ the Run reached event 100. A hung Run is killed before its log is kept.
 in-process library, recorded and not worked around:
 
 - A crash in the library ends the runner. There is no participant
-  diagnostic, and the case evidence keeps a core dump and an empty
-  Recording.
+  diagnostic. The case evidence keeps an empty Recording, and a core dump
+  when the host's `core_pattern` writes one into the working directory.
 - A hang in the library stops the Run. No Process response deadline
   applies, because no Process exists. Only a whole-case guard outside the
   runner ends it.
@@ -215,14 +215,19 @@ stays the isolated alternative.
 
 ## Retained results
 
-[`evidence/`](evidence/) is the output of CI run 36232866332 on native
+[`evidence/`](evidence/) is the output of CI run 36994430775 on native
 Linux x86-64 (glibc 2.36, CPython 3.13.7, `libubsan1` 12.2.0-14+deb12u1). It
-holds `report.json`, the three conversion receipts, the comparison reports,
-and the export's `frames.json`, `packet-layout.json` and `tool-image.json`.
-The Recordings are not committed, because they hold the recorded data. The
-job keeps the Manifests and runner output as the `libsafety-evidence`
-artifact. A run of the same job under amd64 emulation on an arm64 host gave
-the same Manifest hash and the same Recording bytes.
+holds `report.json` and `native-report.json`, the conversion receipts, the
+comparison reports, the export's `frames.json`, `transmit.json`,
+`packet-layout.json` and `tool-image.json`, and for the Native form the
+bundle declarations and locks (`bundles/`) and the `sil-matrix` case lists
+and summaries (`matrix/`). The Recordings and `native-reference.json` are not
+committed, because they hold the recorded data or its replay. The job keeps
+the Manifests and runner output as the `libsafety-evidence` artifact. The
+Process results are the same as in the first #193 run (36232866332): the
+same Manifest hash and the same Recording bytes. A run of that job under amd64
+emulation on an arm64 host gave the same Manifest hash and the same Recording
+bytes.
 
 | Check | Result |
 | --- | --- |
@@ -242,9 +247,31 @@ The runtime identity (glibc, CPython, `sil-run --build-info`, `libubsan1`
 version, resolved `ldd`, image ID) and the export tool image ID are in
 `report.json` → `identities`.
 
-Resource observations from that runner: a nominal Run took 5.6 to 5.8 s of
-wall-clock time for 59.99 s of Virtual time. That is about 1060 events and
-26,400 frames per second. The largest child resident set was 104 MiB.
+Resource observations from that runner: a nominal Run took 4.0 to 4.1 s of
+wall-clock time for 59.99 s of Virtual time. That is about 1490 events and
+37,000 frames per second. The largest child resident set was 104 MiB.
+
+**Native form (#232).**
+
+| Check | Result |
+| --- | --- |
+| Transmit export | 6934 candidates in 5244 events, at most 3 per event. 0x2E4: 2500 accepted. 0x191: 2500 rejected. 0x343: 1874 accepted, 1 rejected. 0x412: 59 accepted |
+| Upstream `replay_drive` | same counts: 149,228 received, 0 invalid, 6934 transmitted, 2501 blocked |
+| Receive state | equal to the #178 reference at all 6000 events |
+| Nominal | 6000 of 6000 observations equal, every compared field, the transmit verdicts included |
+| `config_valid` | 1 at all 5800 ticked events |
+| Determinism | two Runs of Manifest `661cf2ad…`, byte-identical Recordings (`f48c4e94…`) |
+| `timer-in-ns` | first divergence at Slot 1.001 s (event 100): `controls_allowed` 0, expected 1 |
+| `stock-longitudinal` | first divergence at Slot 31 ms: `tx_accepted` 0, expected 1 |
+| `second-instance` | exit 2: `one Run holds at most one instance of it` |
+| Sealed nominal | `sil-matrix` `pass`: lock `5dc4844e…`, two Runs, comparison, no compiler |
+| Sealed `crash` | `behavioral-failure`: `sil-run exited -11`; event 100 reached |
+| Sealed `hang` | `timeout`: `exceeded its 30 s guard`; event 100 reached |
+
+A nominal Native Run took 0.22 s of wall-clock time on the same runner, about
+27,000 events per second, against 4.0 s for the Process form. This is whole
+Run cost, not the cost of the library calls alone. The adapter digests are in
+`native-report.json` → `identities.adapters`.
 
 ## Limits
 

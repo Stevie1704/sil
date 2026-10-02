@@ -1,0 +1,19 @@
+{
+  "sil_matrix": 1,
+  "cases": [
+    {
+      "name": "native-crash",
+      "bundle": "/workspace/bundles/native-crash",
+      "expect_lock": "dcc29e8b8dede241553e78c3efaf3986736eece8e798a393f7dc346540e80f6b",
+      "timeout_s": 600,
+      "required": true
+    },
+    {
+      "name": "native-hang",
+      "bundle": "/workspace/bundles/native-hang",
+      "expect_lock": "71be216f2a12cb5e3161f2b2f6d1ffc096af596e0264de0fc774bc70511df34b",
+      "timeout_s": 30,
+      "required": true
+    }
+  ]
+}

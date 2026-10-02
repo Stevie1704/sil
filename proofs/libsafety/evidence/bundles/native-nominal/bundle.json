@@ -1,0 +1,52 @@
+{
+  "sil_bundle": 1,
+  "name": "native-nominal",
+  "artifacts": {
+    "libsafety_native.so": "target",
+    "libsafety.so": "target",
+    "native-window.mcap": "recording",
+    "transmit-window.mcap": "recording",
+    "native-reference.mcap": "reference",
+    "native-contract.json": "contract",
+    "native-nominal.json": "manifest"
+  },
+  "runtime": {
+    "runner": "sil-run",
+    "environment": {
+      "PATH": "/usr/local/bin:/usr/bin:/bin",
+      "TMPDIR": "/workspace/tmp/native-nominal"
+    }
+  },
+  "dependencies": {
+    "files": [
+      "/lib/x86_64-linux-gnu/libc.so.6",
+      "/lib/x86_64-linux-gnu/libgcc_s.so.1",
+      "/lib/x86_64-linux-gnu/libm.so.6",
+      "/lib/x86_64-linux-gnu/libstdc++.so.6",
+      "/lib/x86_64-linux-gnu/libubsan.so.1",
+      "/lib64/ld-linux-x86-64.so.2"
+    ]
+  },
+  "excluded": {
+    "executables": [
+      "cc",
+      "gcc",
+      "clang",
+      "c++"
+    ]
+  },
+  "runs": [
+    {
+      "name": "native-nominal",
+      "manifest": "native-nominal.json",
+      "determinism": true,
+      "comparisons": [
+        {
+          "name": "reference",
+          "contract": "native-contract.json",
+          "reference": "native-reference.mcap"
+        }
+      ]
+    }
+  ]
+}
