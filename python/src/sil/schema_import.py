@@ -22,7 +22,7 @@ import argparse
 import json
 import os
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from math import prod
 from pathlib import Path
@@ -39,7 +39,9 @@ _SIGNED = {0x05, 0x06}  # signed, signed_char
 _UNSIGNED = {0x07, 0x08, 0x10}  # unsigned, unsigned_char, UTF
 _INT_SIZES = {1, 2, 4, 8}
 _FLOAT_TYPES = {4: "f32", 8: "f64"}
-_QUALIFIERS = {"DW_TAG_typedef", "DW_TAG_const_type", "DW_TAG_volatile_type"}
+_QUALIFIERS = {"DW_TAG_typedef", "DW_TAG_const_type", "DW_TAG_volatile_type",
+               "DW_TAG_restrict_type"}
+_PRIMITIVE_TAGS = ("DW_TAG_base_type", "DW_TAG_enumeration_type")
 _REJECTED_TAGS = {
     "DW_TAG_union_type": "union",
     "DW_TAG_pointer_type": "pointer",
@@ -106,16 +108,20 @@ def _type_of(die):
     return die.get_DIE_from_attribute("DW_AT_type")
 
 
-def _strip(die):
-    """The type under typedefs and const/volatile qualifiers."""
+def _unqualified(die):
+    """The type under typedefs and const/volatile/restrict qualifiers."""
     while die.tag in _QUALIFIERS:
         die = _type_of(die)
     return die
 
 
+def _byte_size(die) -> int:
+    return die.attributes["DW_AT_byte_size"].value
+
+
 def _primitive(die, member: str) -> str:
     """The Schema type of a base or enumeration type."""
-    size = die.attributes["DW_AT_byte_size"].value
+    size = _byte_size(die)
     if die.tag == "DW_TAG_enumeration_type":
         return ("i" if _enum_is_signed(die) else "u") + str(size * 8)
     encoding = die.attributes["DW_AT_encoding"].value
@@ -130,7 +136,7 @@ def _primitive(die, member: str) -> str:
 
 def _enum_is_signed(die) -> bool:
     if "DW_AT_type" in die.attributes:
-        underlying = _strip(_type_of(die))
+        underlying = _unqualified(_type_of(die))
         return underlying.attributes["DW_AT_encoding"].value in _SIGNED
     return any(e.attributes["DW_AT_const_value"].value < 0
                for e in die.iter_children() if e.tag == "DW_TAG_enumerator")
@@ -182,14 +188,14 @@ class _Flattener:
                        child_offset)
 
     def value(self, die, path: list[str], member: str, offset: int) -> None:
-        die = _strip(die)
+        die = _unqualified(die)
         if die.tag in _REJECTED_TAGS:
             raise _Rejection(member, _REJECTED_TAGS[die.tag])
         if die.tag == "DW_TAG_structure_type":
             self.struct(die, path, member, offset)
         elif die.tag == "DW_TAG_array_type":
             self.array(die, path, member, offset)
-        elif die.tag in ("DW_TAG_base_type", "DW_TAG_enumeration_type"):
+        elif die.tag in _PRIMITIVE_TAGS:
             self.leaf(die, path, member, offset, None)
         else:
             raise _Rejection(member, die.tag)
@@ -198,28 +204,29 @@ class _Flattener:
         if "DW_AT_GNU_vector" in die.attributes:
             raise _Rejection(member, "vector type")
         dims = _dimensions(die, member)
-        element = _strip(_type_of(die))
+        element = _unqualified(_type_of(die))
         # A typedef of an array adds its dimensions to the outer ones.
         while element.tag == "DW_TAG_array_type":
             if "DW_AT_GNU_vector" in element.attributes:
                 raise _Rejection(member, "vector type")
             dims += _dimensions(element, member)
-            element = _strip(_type_of(element))
-        if element.tag in ("DW_TAG_base_type", "DW_TAG_enumeration_type"):
+            element = _unqualified(_type_of(element))
+        if element.tag in _PRIMITIVE_TAGS:
             self.leaf(element, path, member, offset, prod(dims))
             return
-        stride = element.attributes["DW_AT_byte_size"].value
+        stride = _byte_size(element)
         for flat in range(prod(dims)):
             index = _unravel(flat, dims)
             self.value(element, path + [str(i) for i in index],
                        member + "".join(f"[{i}]" for i in index),
                        offset + flat * stride)
 
-    def leaf(self, die, path, member, offset, count) -> None:
+    def leaf(self, die, path: list[str], member: str, offset: int,
+             count: int | None) -> None:
         if not path:
             raise _Rejection(member, "a type that is not a struct")
         type_ = _primitive(die, member)
-        size = die.attributes["DW_AT_byte_size"].value * (count or 1)
+        size = _byte_size(die) * (count or 1)
         self.fields.append(
             Field("_".join(path), type_, count, offset, size, member))
 
@@ -270,16 +277,24 @@ def _name_problems(c_type: str, fields: list[Field]) -> list[str]:
     return problems
 
 
+def _incomplete(die) -> bool:
+    """A declaration, or a typedef of one: no layout in this unit."""
+    if die.tag == "DW_TAG_typedef":
+        die = _unqualified(die)
+    return "DW_AT_declaration" in die.attributes
+
+
 class _TypeIndex:
     """Complete struct definitions and typedefs, by name, first one wins."""
 
     def __init__(self, dwarf):
+        """`dwarf` is None for an object without debug information."""
         self.typedefs = {}
         self.structs = {}
-        for cu in dwarf.iter_CUs():
+        for cu in dwarf.iter_CUs() if dwarf else ():
             for die in cu.get_top_DIE().iter_children():
                 name = _name(die)
-                if name is None or "DW_AT_declaration" in die.attributes:
+                if name is None or _incomplete(die):
                     continue
                 if die.tag == "DW_TAG_typedef":
                     self.typedefs.setdefault(name, die)
@@ -295,9 +310,8 @@ class _TypeIndex:
         return None, None
 
 
-def _layout(index: _TypeIndex | None, c_name: str,
-            schema_name: str) -> Layout:
-    die, spelling = index.find(c_name) if index else (None, None)
+def _layout(index: _TypeIndex, c_name: str, schema_name: str) -> Layout:
+    die, spelling = index.find(c_name)
     if die is None:
         raise ImportRejected([
             f"type {c_name!r}: no DWARF type of this name (is the object "
@@ -314,7 +328,10 @@ def _layout(index: _TypeIndex | None, c_name: str,
         raise ImportRejected(
             problems + [f"type {c_name!r}{where}: {r.construct} is not "
                         f"supported"]) from None
-    size = _strip(die).attributes["DW_AT_byte_size"].value
+    if not flattener.fields:
+        raise ImportRejected(problems + [f"type {c_name!r}: the type has no "
+                                         f"fields"])
+    size = _byte_size(_unqualified(die))
     fields = _with_padding(flattener.fields, size)
     problems += _name_problems(c_name, fields)
     if problems:
@@ -337,8 +354,8 @@ def import_layouts(elf_path: Path,
             raise ImportRejected([
                 f"{elf_path}: the object is big-endian; a Schema is "
                 f"little-endian"])
-        index = _TypeIndex(elf.get_dwarf_info()) if elf.has_dwarf_info() \
-            else None
+        index = _TypeIndex(elf.get_dwarf_info() if elf.has_dwarf_info()
+                           else None)
         layouts, problems = [], []
         for c_name, schema_name in types:
             try:
@@ -351,12 +368,14 @@ def import_layouts(elf_path: Path,
 
 
 def schemas(layouts: list[Layout]) -> dict:
+    """The Schema file content: each Schema's fields in offset order."""
     return {layout.schema_name: {"fields": [f.to_schema()
                                             for f in layout.fields]}
             for layout in layouts}
 
 
 def layout_check(layouts: list[Layout]) -> str:
+    """A C11 and C++17 header that checks each imported size and offset."""
     lines = [
         "/* Generated by sil-schema-import - do not edit.",
         " * Include the header that declares the imported types first. It",
@@ -392,6 +411,7 @@ def layout_check(layouts: list[Layout]) -> str:
 def _write_atomically(out: Path, text: str) -> None:
     """Replace `out` in one step, so no partial file is ever visible."""
     out.parent.mkdir(parents=True, exist_ok=True)
+    # A plain write, unlike mkstemp, gives the file the umask's file mode.
     tmp = out.with_name(f".{out.name}.{os.getpid()}.tmp")
     try:
         tmp.write_text(text)
@@ -438,8 +458,8 @@ def main(argv: list[str] | None = None) -> None:
     except ImportError:
         _fail("reading DWARF needs pyelftools; install it with "
               "pip install 'sil[dwarf]'")
-    duplicates = sorted({s for _, s in args.types
-                         if [t for _, t in args.types].count(s) > 1})
+    requested = Counter(schema_name for _, schema_name in args.types)
+    duplicates = sorted(s for s, n in requested.items() if n > 1)
     if duplicates:
         _fail(*(f"Schema {s!r} is requested more than once"
                 for s in duplicates))

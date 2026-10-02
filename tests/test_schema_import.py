@@ -300,6 +300,8 @@ class TestRejected:
             ("WithLongDouble",
              "type 'WithLongDouble' member 'precise': long double"),
             ("Absent", "type 'Absent': no DWARF type"),
+            ("Opaque", "type 'Opaque': no DWARF type"),
+            ("Empty", "type 'Empty': the type has no fields"),
         ],
     )
     def test_is_exit_2_with_the_type_and_member_path(

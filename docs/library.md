@@ -206,8 +206,8 @@ Schema: an unrolled array of structs can give thousands of fields.
 
 Include the project header, then `adas_layout_check.h`, in the adapter.
 Compile the adapter with the release flags. If the Schema and the real
-layout differ, the build fails and names the member. The compiler, not the
-import, has the last word.
+layout differ, the build fails and names the member. The result of the
+compiler is final, not the result of the import.
 
 ```c
 #include "interface_types.h"
@@ -267,7 +267,8 @@ sil-schema-import: type 'Frame' members 'a_b.c' and 'a.b_c' both flatten to 'a_b
   ```
 
 - Alternatively, build the library with `-g` and keep the debug information
-  in a separate file (`objcopy --only-keep-debug`, `-gsplit-dwarf`). A
+  in a separate ELF file with `objcopy --only-keep-debug`. Import from that
+  file. The import cannot read `-gsplit-dwarf` output (`.dwo` files). A
   stripped `.so` has no DWARF types.
 - Take the layout from the host build that SiL loads (Linux x86-64 or
   arm64), never from the ECU toolchain. An ECU target can have a different

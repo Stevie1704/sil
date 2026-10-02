@@ -24,7 +24,7 @@ struct WithBitField {
 
 struct WithPointer {
   struct {
-    const float *samples;
+    const float *restrict samples;
   } buffer;
 };
 
@@ -53,6 +53,11 @@ struct WithLongDouble {
   long double precise;
 };
 
+/* A typedef of a struct that this object only declares. */
+typedef struct Opaque Opaque;
+
+struct Empty {};
+
 struct WithUnion dwarf_rejected_union;
 struct WithBitField dwarf_rejected_bit_field;
 struct WithPointer dwarf_rejected_pointer;
@@ -60,3 +65,5 @@ struct WithFlexibleArray dwarf_rejected_flexible;
 struct WithCollision dwarf_rejected_collision;
 struct WithReservedName dwarf_rejected_reserved;
 struct WithLongDouble dwarf_rejected_long_double;
+Opaque *dwarf_rejected_opaque;
+struct Empty dwarf_rejected_empty;
