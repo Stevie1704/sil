@@ -75,3 +75,11 @@ def test_late_prediction_first_leaves_the_nominal_reference_at_the_first_step(tm
     assert (first["channel"], first["field"], first["observation_ns"]) == (
         "sensor.Detections", "nanos", 20_000_000)
     assert (first["actual"], first["expected"]) == (0, 20_000_000)
+
+
+def test_initialization_leaves_every_output_empty():
+    expected = references.initial_outputs(SENSORS)
+    assert set(expected) == {"source", *SENSORS}
+    for sensor in SENSORS:
+        assert expected[sensor][f"{sensor}.Status"] == {"valid": 0, "count": 0}
+        assert expected[sensor][f"{sensor}.ConfigRequest"]["payload_length"] == 0

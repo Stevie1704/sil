@@ -64,7 +64,8 @@ RUN /opt/sil/python/bin/pip install --no-cache-dir --require-hashes -r /tmp/requ
 COPY --from=prepare /bundles /bundles
 COPY --from=prepare /prepared/expected.json /opt/osmp/expected.json
 COPY --from=prepare /prepared/cost /opt/osmp/cost
-COPY proofs/osmp-qualification/run.py /opt/osmp/run.py
+COPY --from=prepare /prepared/initial.json /opt/osmp/initial.json
+COPY proofs/osmp-qualification/run.py proofs/osmp-qualification/initial.py /opt/osmp/
 ENV PATH=/opt/sil/python/bin:/opt/sil/native/bin \
     PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN python /opt/osmp/run.py --seal

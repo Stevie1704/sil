@@ -101,6 +101,27 @@ with its `sil-csv` mapping, converted into a Recording with a receipt.
 | `late` | prediction for a SensorView one Period late: the first Step has no input, so no valid output; each later Step reports the ground truth of the previous instant with the timestamp of its own (upstream takes the timestamp from the FMU time) |
 | `unparseable` | valid output with no objects at every Step: upstream ignores the result of `ParseFromArray`, so only a missing input (size 0) gives no valid output |
 
+## Initialization
+
+No Run Channel carries an FMU's outputs at the end of initialization: the
+Importer publishes outputs only after each `fmi2DoStep`. So, before the
+matrices, `run.py` starts [`initial.py`](initial.py) once for each FMU
+instance of the nominal Run (`source`, `sensor`, `sensor-50m`), each in its
+own process. It uses the installed Importer's own classes with that
+instance's Manifest bindings and start values: extract, bind, instantiate,
+apply the start values, set up the experiment, enter and exit initialization
+mode. Then it reads every output-direction Channel once, terminates the FMU
+and removes the extraction. No Step runs. Each sensor also binds its
+`OSMPSensorViewInConfigRequest`, a calculated parameter.
+
+The prediction ([`references.initial_outputs`](references.py)) comes from
+the upstream sources. `doInit` sets every variable to zero and every Boolean
+to false, and no initialization call sets an output. So each SensorView and
+SensorData payload is empty, `valid` is 0 and `count` is 0. The sensor
+computes its configuration request only when an importer reads it before
+`fmi2ExitInitializationMode`, so a read after initialization, as SiL does,
+gives an empty request.
+
 ## Matrix
 
 | Case | Run | Required outcome |
@@ -187,9 +208,13 @@ own Protobuf encoding and decoding.
   100 m and with a one-Period input delay. It did not run the 50 m sensor
   or the unparseable input. For those, the closed-form references are the
   only independent evidence.
-- The comparison starts at the end of the first Step. The Importer publishes
-  each FMU's state after its Step, so no Channel carries the outputs of
-  initialization mode, and they are not compared.
+- The Run comparisons start at the end of the first Step. The outputs at
+  the end of initialization are checked by `initial.py`, through the
+  installed Importer, outside a Run.
+- SiL reads calculated parameters only after initialization. So
+  `OSMPDummySensor`'s SensorView configuration request is always empty in
+  SiL, and the OSMP configuration exchange is not available. FMPy read it in
+  #230 during initialization mode: 20 ms, 148.5 m.
 - `OSMPDummySensor` returns `fmi2OK` from every call. No case gives a
   non-OK FMI status. Its failure states are the `valid` and `count`
   outputs only.

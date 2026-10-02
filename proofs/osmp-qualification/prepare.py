@@ -12,8 +12,9 @@ sources, the compiler, `protoc` and installed SiL. It runs no FMU code:
    with `sil-csv`. Compares the predicted late reference with the nominal one
    under the bundle's contract: that first divergence is the prediction the
    late control must meet.
-4. Writes one bundle per matrix case into /bundles, the cost Manifests and
-   the expectations the runtime checks.
+4. Writes one bundle per matrix case into /bundles, the cost Manifests, the
+   initialization check of each FMU instance and the expectations the
+   runtime checks.
 
 Every check raises, so a failed preparation cannot write a bundle.
 """
@@ -115,6 +116,13 @@ def sensor_binds(sensor: str, count_variable: str = "count") -> list[str]:
 SOURCE_BINDS = [f"{VIEW}:payload=OSMPSensorViewOut"]
 
 
+def sensor_starts(nominal_range: float) -> list[str]:
+    """`nominalrange` is set only where it differs from its start value."""
+    if nominal_range == references.SENSORS["sensor"]:
+        return []
+    return [f"nominalrange={nominal_range!r}"]
+
+
 def inspection(fmus: dict[str, Path]) -> dict:
     """Both archives are compatible with the mappings the Runs use."""
     schemas = {**PAYLOAD_SCHEMAS, STATUS_SCHEMA: references.SCHEMAS[STATUS_SCHEMA]}
@@ -194,8 +202,7 @@ def manifest(fmus: dict[str, Path], edge: Path, *, sensors: dict[str, float],
         m.add_channel(references.status_channel(sensor), schema=STATUS_SCHEMA)
         if decode:
             m.add_channel(references.detections_channel(sensor), schema="osi.Detections")
-        starts = ([] if nominal_range == references.SENSORS["sensor"]
-                  else ["--start", f"nominalrange={nominal_range!r}"])
+        starts = [a for start in sensor_starts(nominal_range) for a in ("--start", start)]
         m.add_process(
             sensor,
             command=["python3", "-m", "sil.fmi", str(fmus[SENSOR]), *starts,
@@ -352,6 +359,36 @@ def expectations(predicted: dict) -> dict:
     }
 
 
+def initial_spec(fmus: dict[str, Path]) -> dict:
+    """Each FMU instance of the nominal Run, for `initial.py`.
+
+    The bindings and start values are the nominal Manifest's. Each sensor
+    also binds its configuration request, a calculated parameter, so that
+    the check reads it too.
+    """
+    installed = {name: str(BUNDLES / "nominal" / archive.name) for name, archive in fmus.items()}
+    payload = PAYLOAD_SCHEMAS["osi.Payload"]
+    schemas = {"osi.Payload": payload, STATUS_SCHEMA: references.SCHEMAS[STATUS_SCHEMA]}
+    expected = references.initial_outputs(references.SENSORS)
+    spec = {"source": {"fmu": installed[SOURCE], "binds": SOURCE_BINDS, "starts": [],
+                       "schemas": schemas,
+                       "channels": {VIEW: {"schema": "osi.Payload", "direction": "out"}},
+                       "expected": expected["source"]}}
+    for sensor, nominal_range in references.SENSORS.items():
+        request = references.config_request_channel(sensor)
+        spec[sensor] = {
+            "fmu": installed[SENSOR],
+            "binds": [*sensor_binds(sensor), f"{request}:payload=OSMPSensorViewInConfigRequest"],
+            "starts": sensor_starts(nominal_range), "schemas": schemas,
+            "channels": {VIEW: {"schema": "osi.Payload", "direction": "in"},
+                         f"{sensor}.SensorData": {"schema": "osi.Payload", "direction": "out"},
+                         references.status_channel(sensor): {"schema": STATUS_SCHEMA,
+                                                             "direction": "out"},
+                         request: {"schema": "osi.Payload", "direction": "out"}},
+            "expected": expected[sensor]}
+    return spec
+
+
 def cost_manifests(fmus: dict[str, Path], out: Path) -> None:
     """The source and one sensor, the #244 shape without the decoder."""
     out.mkdir(parents=True)
@@ -386,6 +423,7 @@ def main(prepared: Path) -> None:
     write_bundles(fmus, shared)
     cost_manifests(fmus, prepared / "cost")
     write_json(prepared / "expected.json", expectations(predicted))
+    write_json(prepared / "initial.json", initial_spec(fmus))
     write_json(report / "report.json", {
         "issue": 233,
         "source_revision": (ROOT / "source-revision.txt").read_text().strip(),

@@ -123,6 +123,30 @@ def sensor_fields(step: int, nominal_range: float, kind: str) -> tuple[dict, dic
             {"valid": 1, "count": len(found)})
 
 
+def config_request_channel(sensor: str) -> str:
+    return f"{sensor}.ConfigRequest"
+
+
+EMPTY_PAYLOAD = {"payload": "", "payload_length": 0}
+
+
+def initial_outputs(sensors: dict[str, float]) -> dict[str, dict[str, dict]]:
+    """What each FMU holds after `fmi2ExitInitializationMode`, before any Step.
+
+    Upstream `doInit` sets every variable to zero and every Boolean to false,
+    and no initialization call sets an output: both FMUs write their outputs
+    in `doCalc`. The sensor computes its SensorView configuration request
+    only when it is read before `fmi2ExitInitializationMode`. An importer
+    that reads it after (as SiL does) gets an empty request.
+    """
+    expected = {"source": {VIEW: EMPTY_PAYLOAD}}
+    for sensor in sensors:
+        expected[sensor] = {f"{sensor}.SensorData": EMPTY_PAYLOAD,
+                            status_channel(sensor): {"valid": 0, "count": 0},
+                            config_request_channel(sensor): EMPTY_PAYLOAD}
+    return expected
+
+
 def channels(kind: str, sensors: dict[str, float]) -> dict[str, str]:
     """Each compared Channel of a reference and its schema."""
     # Only the nominal Run decodes the SensorView: a late SensorView Channel

@@ -4,12 +4,15 @@
 and writes the two case lists with the lock digests that `seal` returned.
 `run.py [evidence]` runs in the container with no network, as UID 10001:
 
-1. The nominal matrix must exit 0, and the controls matrix must exit 1.
-2. Each case must reach the status, Run exit codes, diagnostics and
+1. Each FMU instance of the nominal Run is initialized through the
+   installed Importer, and its outputs before the first Step must equal the
+   prediction (`initial.py`). No Run Channel carries them.
+2. The nominal matrix must exit 0, and the controls matrix must exit 1.
+3. Each case must reach the status, Run exit codes, diagnostics and
    comparison verdicts that preparation decided before any Run. The late
    control must first diverge where the references predict.
-3. No process may survive a case, and no Run working directory may remain.
-4. The cost of the two FMUs at their 20 ms Period is measured for #125:
+4. No process may survive a case, and no Run working directory may remain.
+5. The cost of the two FMUs at their 20 ms Period is measured for #125:
    wall-clock only, never a verdict.
 
 `acceptance.json` holds every check.
@@ -30,6 +33,7 @@ from pathlib import Path
 BUNDLES = Path("/bundles")
 OPT = Path("/opt/osmp")
 EXPECTED = OPT / "expected.json"
+INITIAL = OPT / "initial.json"
 COST = OPT / "cost"
 COST_STEPS = {"startup": 1, "long": 1500}
 PERIOD_NS = 20_000_000
@@ -108,6 +112,24 @@ def check_case(name: str, entry: dict, expected: dict, evidence: Path) -> dict:
     check["leftover_files"] = sorted(str(p) for p in evidence.rglob(".sil-run-*"))
     check["passed"] &= not check["leftover_processes"] and not check["leftover_files"]
     return check
+
+
+def check_initialization(work: Path) -> dict:
+    """Each instance's outputs at the end of initialization, in its own process."""
+    checks = {}
+    for name, instance in json.loads(INITIAL.read_text()).items():
+        directory = work / name
+        directory.mkdir(parents=True)
+        read = subprocess.run([sys.executable, str(OPT / "initial.py"), str(INITIAL), name],
+                              cwd=directory, capture_output=True, text=True)
+        outputs = json.loads(read.stdout) if read.returncode == 0 else None
+        leftovers = sorted(str(p) for p in directory.iterdir())
+        checks[name] = {"exit_code": read.returncode, "outputs": outputs,
+                        "expected": instance["expected"], "leftover_files": leftovers,
+                        "passed": outputs == instance["expected"] and not leftovers}
+        if read.returncode != 0:
+            checks[name]["stderr"] = read.stderr[-2000:]
+    return {"instances": checks, "passed": all(c["passed"] for c in checks.values())}
 
 
 def run_matrices(out: Path) -> dict:
@@ -192,9 +214,10 @@ def run(out: Path) -> bool:
     out.mkdir(parents=True, exist_ok=True)
     if any(out.iterdir()):
         raise SystemExit("name a new, empty evidence directory")
+    initialization = check_initialization(out.parent / "initial-runs")
     checks = run_matrices(out)
-    passed = all(c["passed"] for c in checks.values())
-    result = {"passed": passed, "matrices": checks,
+    passed = initialization["passed"] and all(c["passed"] for c in checks.values())
+    result = {"passed": passed, "initialization": initialization, "matrices": checks,
               # Measured only after the verdicts, so it cannot change one.
               "cost": cost(out.parent / "cost-runs") if passed else None}
     write(out / "acceptance.json", result)
