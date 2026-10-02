@@ -1,0 +1,16 @@
+{
+  "osmp": {
+    "role": "FMU target (#230, #233): the OSMPDummySensor and OSMPDummySource examples, built unmodified",
+    "kind": "git",
+    "repository": "https://github.com/OpenSimulationInterface/osi-sensor-model-packaging.git",
+    "tag": "v1.6.0",
+    "commit": "9fe6d0b1d3328667d228361d807a88a61727534e",
+    "tree": "354d010d8ef6d0e244638bbdab73562480784cba",
+    "submodules": {
+      "examples/osi-cpp": "82add6cd443ea1e1dd81b3023ba756b74913c43b",
+      "examples/osi-cpp/open-simulation-interface": "083481d67cd7abec49302f6df42fc8ab229bd075"
+    },
+    "license": "MPL-2.0 (OSMP and OSI)",
+    "license_file": "LICENSE"
+  }
+}
