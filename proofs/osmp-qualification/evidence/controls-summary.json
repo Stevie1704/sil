@@ -1,0 +1,97 @@
+{
+  "sil_matrix_evidence": 1,
+  "verdict": "fail",
+  "jobs": 1,
+  "fail_fast": false,
+  "counts": {
+    "manifest-error": 1,
+    "determinism-violation": 0,
+    "behavioral-failure": 2,
+    "pass": 0,
+    "timeout": 0,
+    "skipped": 0
+  },
+  "cases": [
+    {
+      "name": "control-late",
+      "required": true,
+      "evidence": "cases/control-late",
+      "log": "logs/control-late.log",
+      "status": "behavioral-failure",
+      "bundle_exit_code": 1,
+      "reason": "run late: comparison independent failed",
+      "runs": [
+        {
+          "name": "late",
+          "status": "behavioral-failure",
+          "exit_code": 0,
+          "recording_sha256": "ab75f4a3cbabe0452b74e91a11f4bc6b6984ae30734bb1e4579534350d36678e"
+        }
+      ],
+      "identity": {
+        "status": "behavioral-failure",
+        "bundle_exit_code": 1,
+        "summary_sha256": "bea1a2796f33e4b1d02705e28ff52de10facf96271fefc6625ba7f40884329dd"
+      },
+      "identity_sha256": "10cb6bbd15f7a6f1b154582aa127aa005109a753f86b30332dc96d4164cf96f9",
+      "observations": {
+        "duration_s": 7.666,
+        "max_rss_kib": 79820
+      }
+    },
+    {
+      "name": "control-binding",
+      "required": true,
+      "evidence": "cases/control-binding",
+      "log": "logs/control-binding.log",
+      "status": "manifest-error",
+      "bundle_exit_code": 1,
+      "reason": "run binding: sil-run exited 2",
+      "runs": [
+        {
+          "name": "binding",
+          "status": "manifest-error",
+          "exit_code": 2,
+          "recording_sha256": "851747da5a83c29f2c381d2b378e0a2df1389737d2953731750f8a17c30bd55f"
+        }
+      ],
+      "identity": {
+        "status": "manifest-error",
+        "bundle_exit_code": 1,
+        "summary_sha256": "4fb6058674a0e954a69f218f2954413f2ab7965e46f6ca06d18acab641fc315b"
+      },
+      "identity_sha256": "d8aaf181930146251d9db7330bab35b919562c564a3a9da6edf5e84951ff9285",
+      "observations": {
+        "duration_s": 0.402,
+        "max_rss_kib": 25560
+      }
+    },
+    {
+      "name": "control-size",
+      "required": true,
+      "evidence": "cases/control-size",
+      "log": "logs/control-size.log",
+      "status": "behavioral-failure",
+      "bundle_exit_code": 1,
+      "reason": "run size: sil-run exited 1",
+      "runs": [
+        {
+          "name": "size",
+          "status": "behavioral-failure",
+          "exit_code": 1,
+          "recording_sha256": "12c5ecaa39a745ecabfcaa12efe0309a78a65a09fef287bd4b4a198eecf80fac"
+        }
+      ],
+      "identity": {
+        "status": "behavioral-failure",
+        "bundle_exit_code": 1,
+        "summary_sha256": "24419fca669977cb1cc276c39dd36cd85136742d81258c824761869ced659e37"
+      },
+      "identity_sha256": "04c3e0dfb3b94b5ec72b2a904649ed5c6508658af50dc11b14fe18eb9f1fbac1",
+      "observations": {
+        "duration_s": 0.552,
+        "max_rss_kib": 31172
+      }
+    }
+  ]
+}

@@ -1,0 +1,321 @@
+{
+  "issue": 233,
+  "source_revision": "2f61ac2872c78a482170ad9a16bfb8a6bab9d013",
+  "build": {
+    "OSMPDummySensor": {
+      "archive_sha256": "e6dece862f2e4b8ad4181de7769dfad53297554cc405e8365e3e3b0039bc58ee",
+      "binary_sha256": "a0c38eda8571eb191a28490a46ec9f1ad9b8dec95ee457df22403b848ad5e8c7",
+      "binary_matches_230_pin": true
+    },
+    "OSMPDummySource": {
+      "archive_sha256": "3409a410eafe1aebecf63c8b129f9f508e25cf5f8af5d8c100a1a74ae3a5ac3f",
+      "binary_sha256": "43bab2919fe08c8e7267ca1a73517695829960eb906e1d31aa39dbc0048d986d",
+      "binary_matches_230_pin": true
+    }
+  },
+  "inspection": {
+    "OSMPDummySource": {
+      "verdict": "compatible",
+      "osmp": [
+        {
+          "name": "OSMPSensorViewOut",
+          "causality": "output",
+          "mime_type": "application/x-open-simulation-interface; type=SensorView; version=3.8.0",
+          "value_references": {
+            "base.lo": 0,
+            "base.hi": 1,
+            "size": 2
+          }
+        }
+      ],
+      "unbound": [
+        "valid",
+        "count"
+      ]
+    },
+    "OSMPDummySensor": {
+      "verdict": "compatible",
+      "osmp": [
+        {
+          "name": "OSMPSensorViewIn",
+          "causality": "input",
+          "mime_type": "application/x-open-simulation-interface; type=SensorView; version=3.8.0",
+          "value_references": {
+            "base.lo": 0,
+            "base.hi": 1,
+            "size": 2
+          }
+        },
+        {
+          "name": "OSMPSensorDataOut",
+          "causality": "output",
+          "mime_type": "application/x-open-simulation-interface; type=SensorData; version=3.8.0",
+          "value_references": {
+            "base.lo": 3,
+            "base.hi": 4,
+            "size": 5
+          }
+        },
+        {
+          "name": "OSMPSensorViewInConfigRequest",
+          "causality": "calculatedParameter",
+          "mime_type": "application/x-open-simulation-interface; type=SensorViewConfiguration; version=3.8.0",
+          "value_references": {
+            "base.lo": 6,
+            "base.hi": 7,
+            "size": 8
+          }
+        },
+        {
+          "name": "OSMPSensorViewInConfig",
+          "causality": "parameter",
+          "mime_type": "application/x-open-simulation-interface; type=SensorViewConfiguration; version=3.8.0",
+          "value_references": {
+            "base.lo": 9,
+            "base.hi": 10,
+            "size": 11
+          }
+        }
+      ],
+      "unbound": [
+        "nominalrange",
+        "OSMPSensorViewInConfigRequest",
+        "OSMPSensorViewInConfig"
+      ]
+    }
+  },
+  "packaging": {
+    "OSMPDummySensor": {
+      "members": [
+        "binaries/linux64/",
+        "binaries/linux64/OSMPDummySensor.so",
+        "modelDescription.xml",
+        "sources/",
+        "sources/OSMPDummySensor.cpp",
+        "sources/OSMPDummySensor.h",
+        "sources/OSMPDummySensorConfig.h"
+      ],
+      "resources": [],
+      "platforms": [
+        "linux64"
+      ],
+      "declared": {
+        "canBeInstantiatedOnlyOncePerProcess": "false",
+        "needsExecutionTool": "false",
+        "canGetAndSetFMUstate": "false",
+        "canSerializeFMUstate": "false"
+      },
+      "native_libraries": [
+        "/lib/x86_64-linux-gnu/libc.so.6",
+        "/lib/x86_64-linux-gnu/libgcc_s.so.1",
+        "/lib/x86_64-linux-gnu/libm.so.6",
+        "/lib/x86_64-linux-gnu/libprotobuf.so.32",
+        "/lib/x86_64-linux-gnu/libstdc++.so.6",
+        "/lib/x86_64-linux-gnu/libz.so.1",
+        "/lib64/ld-linux-x86-64.so.2"
+      ]
+    },
+    "OSMPDummySource": {
+      "members": [
+        "binaries/linux64/",
+        "binaries/linux64/OSMPDummySource.so",
+        "modelDescription.xml",
+        "sources/",
+        "sources/OSMPDummySource.cpp",
+        "sources/OSMPDummySource.h",
+        "sources/OSMPDummySourceConfig.h"
+      ],
+      "resources": [],
+      "platforms": [
+        "linux64"
+      ],
+      "declared": {
+        "canBeInstantiatedOnlyOncePerProcess": "false",
+        "needsExecutionTool": "false",
+        "canGetAndSetFMUstate": "false",
+        "canSerializeFMUstate": "false"
+      },
+      "native_libraries": [
+        "/lib/x86_64-linux-gnu/libc.so.6",
+        "/lib/x86_64-linux-gnu/libgcc_s.so.1",
+        "/lib/x86_64-linux-gnu/libm.so.6",
+        "/lib/x86_64-linux-gnu/libprotobuf.so.32",
+        "/lib/x86_64-linux-gnu/libstdc++.so.6",
+        "/lib/x86_64-linux-gnu/libz.so.1",
+        "/lib64/ld-linux-x86-64.so.2"
+      ]
+    }
+  },
+  "references": {
+    "nominal": {
+      "csv_sha256": "00a17c7cb7a4f72b36f1d70c023ad1a86d5b1d5292ebf27a401d508ea2fc4ba1",
+      "recording_sha256": "ac54463abb038ca523aab1579f8cd30b23f30653d0839092af5133021b12322f",
+      "receipt": {
+        "sil_csv_receipt": 1,
+        "converter": {
+          "name": "sil-csv",
+          "version": "0.1.0",
+          "revision": "development",
+          "mcap": "mcap-python/1.4.0"
+        },
+        "source": {
+          "file": "nominal.csv",
+          "sha256": "00a17c7cb7a4f72b36f1d70c023ad1a86d5b1d5292ebf27a401d508ea2fc4ba1",
+          "rows": 1500
+        },
+        "mapping": {
+          "file": "nominal.mapping.json",
+          "sha256": "630f75a42470d3636b4d0aa69700dfbc20282208365560f46b715ab4184eea5d"
+        },
+        "recording": {
+          "file": "nominal.mcap",
+          "sha256": "ac54463abb038ca523aab1579f8cd30b23f30653d0839092af5133021b12322f"
+        },
+        "channels": {
+          "osi.GroundTruth": {
+            "schema": "osi.GroundTruth",
+            "messages": 1500,
+            "first_ns": 20000000,
+            "last_ns": 30000000000
+          },
+          "sensor.Detections": {
+            "schema": "osi.Detections",
+            "messages": 1500,
+            "first_ns": 20000000,
+            "last_ns": 30000000000
+          },
+          "sensor.Status": {
+            "schema": "sensor.Status",
+            "messages": 1500,
+            "first_ns": 20000000,
+            "last_ns": 30000000000
+          },
+          "sensor-50m.Detections": {
+            "schema": "osi.Detections",
+            "messages": 1500,
+            "first_ns": 20000000,
+            "last_ns": 30000000000
+          },
+          "sensor-50m.Status": {
+            "schema": "sensor.Status",
+            "messages": 1500,
+            "first_ns": 20000000,
+            "last_ns": 30000000000
+          }
+        },
+        "time_bounds": {
+          "first_ns": 20000000,
+          "last_ns": 30000000000
+        }
+      }
+    },
+    "late": {
+      "csv_sha256": "f40b14563418eab77bc45265dd9c0e02e359e8d382598c7d69860c0d3663466c",
+      "recording_sha256": "28d21c9346e3dc4df4d7c7704501e9551ed1b95f57b20dd52837fde0b2ed5752",
+      "receipt": {
+        "sil_csv_receipt": 1,
+        "converter": {
+          "name": "sil-csv",
+          "version": "0.1.0",
+          "revision": "development",
+          "mcap": "mcap-python/1.4.0"
+        },
+        "source": {
+          "file": "late.csv",
+          "sha256": "f40b14563418eab77bc45265dd9c0e02e359e8d382598c7d69860c0d3663466c",
+          "rows": 1500
+        },
+        "mapping": {
+          "file": "late.mapping.json",
+          "sha256": "d558015c7048a21c58064c3e32d71baca2252f3f1ec0ef3bb76dc0ee9857e3c0"
+        },
+        "recording": {
+          "file": "late.mcap",
+          "sha256": "28d21c9346e3dc4df4d7c7704501e9551ed1b95f57b20dd52837fde0b2ed5752"
+        },
+        "channels": {
+          "sensor.Detections": {
+            "schema": "osi.Detections",
+            "messages": 1500,
+            "first_ns": 20000000,
+            "last_ns": 30000000000
+          },
+          "sensor.Status": {
+            "schema": "sensor.Status",
+            "messages": 1500,
+            "first_ns": 20000000,
+            "last_ns": 30000000000
+          },
+          "sensor-50m.Detections": {
+            "schema": "osi.Detections",
+            "messages": 1500,
+            "first_ns": 20000000,
+            "last_ns": 30000000000
+          },
+          "sensor-50m.Status": {
+            "schema": "sensor.Status",
+            "messages": 1500,
+            "first_ns": 20000000,
+            "last_ns": 30000000000
+          }
+        },
+        "time_bounds": {
+          "first_ns": 20000000,
+          "last_ns": 30000000000
+        }
+      }
+    },
+    "unparseable": {
+      "csv_sha256": "c3ac7d48533724cda21a9b2a76220cf2b87cc3ba756cb225106446702be6f0f2",
+      "recording_sha256": "b2292e87e19d99bf0f6c00fe9b4f82fe1f2a917fd1d6ad0e64690537d959542a",
+      "receipt": {
+        "sil_csv_receipt": 1,
+        "converter": {
+          "name": "sil-csv",
+          "version": "0.1.0",
+          "revision": "development",
+          "mcap": "mcap-python/1.4.0"
+        },
+        "source": {
+          "file": "unparseable.csv",
+          "sha256": "c3ac7d48533724cda21a9b2a76220cf2b87cc3ba756cb225106446702be6f0f2",
+          "rows": 1500
+        },
+        "mapping": {
+          "file": "unparseable.mapping.json",
+          "sha256": "f8c6b408ad148939887bdc3d130118358491d3c85aca88fdb9dc6d065bf8e7a4"
+        },
+        "recording": {
+          "file": "unparseable.mcap",
+          "sha256": "b2292e87e19d99bf0f6c00fe9b4f82fe1f2a917fd1d6ad0e64690537d959542a"
+        },
+        "channels": {
+          "sensor.Detections": {
+            "schema": "osi.Detections",
+            "messages": 1500,
+            "first_ns": 20000000,
+            "last_ns": 30000000000
+          },
+          "sensor.Status": {
+            "schema": "sensor.Status",
+            "messages": 1500,
+            "first_ns": 20000000,
+            "last_ns": 30000000000
+          }
+        },
+        "time_bounds": {
+          "first_ns": 20000000,
+          "last_ns": 30000000000
+        }
+      }
+    }
+  },
+  "predicted_late_divergence": {
+    "kind": "value",
+    "channel": "sensor.Detections",
+    "field": "nanos",
+    "observation_ns": 20000000,
+    "actual": 0,
+    "expected": 20000000
+  }
+}

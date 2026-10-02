@@ -136,7 +136,37 @@ measurement policy of [`../adas-cost`](../adas-cost/README.md) applies.
 
 ## Results
 
-Pending the CI run.
+CI run 37023512616 on native Linux x86-64 (GitHub-hosted `ubuntu-latest`, 4
+vCPUs): [`evidence/`](evidence/), [`ci-run.txt`](evidence/ci-run.txt). The
+runtime image ID is in [`image-id.txt`](evidence/image-id.txt).
+
+| Item | Value |
+| --- | --- |
+| Build | `OSMPDummySensor.so` `a0c38eda…`, `OSMPDummySource.so` `43bab291…`: both equal the #230 pins |
+| Inspection | both `compatible`. Resources: none. Platform: `linux64`. `canBeInstantiatedOnlyOncePerProcess`, `needsExecutionTool`, FMU state: all false |
+| Runtime dependencies | `libprotobuf.so.32`, `libz.so.1`, `libstdc++.so.6`, `libgcc_s.so.1`, `libm.so.6`, `libc.so.6`, the loader: declared and sealed in every bundle |
+| `nominal` | `pass`: 1500 of 1500 observations on each of `osi.GroundTruth`, `sensor.*` and `sensor-50m.*`. Recordings byte-identical (`b382560d…`) |
+| `unparseable` | `pass`: 1500 of 1500 observations. `valid` 1, no objects, `fmi2OK` |
+| `control-late` | `behavioral-failure`, Run exit 0. `predicted` passes. `independent` first diverges as predicted: `sensor.Detections.nanos` at 20 ms, 0 instead of 20000000 (no input, so no output) |
+| `control-binding` | `manifest-error`, Run exit 2: `participant 'sensor': … Channel 'sensor.Status' field 'count' names FMU variable 'objectcount', which FMU 'OSMPDummySensor' does not declare` |
+| `control-size` | `behavioral-failure`, Run exit 1: `participant 'sensor' failed: … OSMP binary variable 'OSMPSensorDataOut' reports 2870 bytes; the Channel carries 1024, and nothing is truncated` |
+| Cleanup | no process and no Run working directory left after any case |
+
+Cost (observational, median of five, Recording off):
+
+| Quantity | Value |
+| --- | --- |
+| `startup`: one Step of source and sensor, including both Importers' start, extraction, instantiation and initialization | 276.6 ms (274.5 to 278.1) |
+| `long`: 30 s | 1.212 s (1.202 to 1.238): real-time factor 24.8 |
+| one Step of both FMUs, with their Step protocol round trips (estimate) | 624 µs, spread 26 µs |
+| the sensor's own `fmi2DoStep` under FMPy ([#230](../osmp-sensor/README.md#results)) | 92 µs |
+
+Per FMU Step this is about five times the 62.6 µs that
+[#229](../adas-cost/README.md#reference-results) measured for its FMU form. The
+OSMP payloads are about 2 to 3 kB, against 17 to 185 B there, and they cross
+the Step protocol inline as base64 JSON, three times per Step. This
+measurement does not separate that cost from the FMUs' own Protobuf
+encoding and decoding.
 
 ## Coverage and what remains
 

@@ -1,0 +1,115 @@
+{
+  "passed": true,
+  "matrices": {
+    "nominal": {
+      "exit_code": 0,
+      "cases": {
+        "nominal": {
+          "status": "pass",
+          "expected": "pass",
+          "passed": true,
+          "leftover_processes": [],
+          "leftover_files": []
+        }
+      },
+      "passed": true
+    },
+    "controls": {
+      "exit_code": 1,
+      "cases": {
+        "control-binding": {
+          "status": "manifest-error",
+          "expected": "manifest-error",
+          "passed": true,
+          "run_exit_codes": [
+            2
+          ],
+          "diagnostic": [
+            "sil-run: participant 'sensor': sil.participant.ManifestError: Channel 'sensor.Status' field 'count' names FMU variable 'objectcount', which FMU 'OSMPDummySensor' does not declare"
+          ],
+          "leftover_processes": [],
+          "leftover_files": []
+        },
+        "control-late": {
+          "status": "behavioral-failure",
+          "expected": "behavioral-failure",
+          "passed": true,
+          "run_exit_codes": [
+            0
+          ],
+          "comparisons": {
+            "independent": "fail",
+            "predicted": "pass"
+          },
+          "first_divergence": {
+            "kind": "value",
+            "channel": "sensor.Detections",
+            "reference_channel": "sensor.Detections",
+            "field": "nanos",
+            "observation_ns": 20000000,
+            "actual_publication_ns": 0,
+            "reference_time_ns": 20000000,
+            "actual": 0,
+            "expected": 20000000,
+            "tolerance": "exact",
+            "abs_error": null
+          },
+          "leftover_processes": [],
+          "leftover_files": []
+        },
+        "control-size": {
+          "status": "behavioral-failure",
+          "expected": "behavioral-failure",
+          "passed": true,
+          "run_exit_codes": [
+            1
+          ],
+          "diagnostic": [
+            "sil-run: participant 'sensor' failed: sil.participant.ParticipantFailure: OSMP binary variable 'OSMPSensorDataOut' reports 2870 bytes; the Channel carries 1024, and nothing is truncated"
+          ],
+          "leftover_processes": [],
+          "leftover_files": []
+        }
+      },
+      "passed": true
+    }
+  },
+  "cost": {
+    "policy": {
+      "warmup": 1,
+      "repeats": 5,
+      "statistic": "median",
+      "recording": "off"
+    },
+    "machine": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "cpus": 4,
+      "python": "3.13.7"
+    },
+    "steps": {
+      "startup": 1,
+      "long": 1500
+    },
+    "period_ns": 20000000,
+    "wall_clock_s": {
+      "startup": {
+        "median": 0.2766,
+        "min": 0.2745,
+        "max": 0.2781
+      },
+      "long": {
+        "median": 1.2115,
+        "min": 1.2021,
+        "max": 1.2375
+      }
+    },
+    "startup_ms": 276.6,
+    "per_step_both_fmus_us": {
+      "estimate": 623.7,
+      "spread": 26.0,
+      "resolved": true
+    },
+    "real_time_factor_long": 24.8
+  }
+}
