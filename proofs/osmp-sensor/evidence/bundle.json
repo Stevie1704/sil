@@ -1,0 +1,45 @@
+{
+  "sources": {
+    "osmp": {
+      "role": "FMU target (#230, #233): the OSMPDummySensor and OSMPDummySource examples, built unmodified",
+      "kind": "git",
+      "repository": "https://github.com/OpenSimulationInterface/osi-sensor-model-packaging.git",
+      "tag": "v1.6.0",
+      "commit": "9fe6d0b1d3328667d228361d807a88a61727534e",
+      "tree": "354d010d8ef6d0e244638bbdab73562480784cba",
+      "submodules": {
+        "examples/osi-cpp": "82add6cd443ea1e1dd81b3023ba756b74913c43b",
+        "examples/osi-cpp/open-simulation-interface": "083481d67cd7abec49302f6df42fc8ab229bd075"
+      },
+      "license": "MPL-2.0 (OSMP and OSI)",
+      "license_file": "LICENSE"
+    }
+  },
+  "toolchain": {
+    "machine": "x86_64",
+    "libc": "glibc 2.36",
+    "c++": "c++ (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "cmake": "cmake version 4.4.3",
+    "protoc": "libprotoc 3.21.12",
+    "debian_packages": [
+      "cmake 3.25.1-1",
+      "g++ 4:12.2.0-3",
+      "libc6 2.36-9+deb12u14",
+      "libprotobuf-dev 3.21.12-3+deb12u1",
+      "libstdc++6 12.2.0-14+deb12u1",
+      "protobuf-compiler 3.21.12-3+deb12u1"
+    ],
+    "python": "3.13.7",
+    "python_packages": {
+      "fmpy": "0.3.26",
+      "protobuf": "4.21.12"
+    },
+    "source_revision": "fd70037cd93e3d56d201da38c5a84580d1c294c3"
+  },
+  "digests": {
+    "fmus/LICENSE": "6c3c328fc337933d7b9e0a938eeb50f81f98ac3b251b90ba5740d9ccb0f2a963",
+    "fmus/OSMPDummySensor.fmu": "e6dece862f2e4b8ad4181de7769dfad53297554cc405e8365e3e3b0039bc58ee",
+    "fmus/OSMPDummySource.fmu": "3409a410eafe1aebecf63c8b129f9f508e25cf5f8af5d8c100a1a74ae3a5ac3f",
+    "references/expected-detections.json": "437cf1b8499f342263f7e1a50074bfceaae1422ba41cca452bd9629e00aa29d4"
+  }
+}

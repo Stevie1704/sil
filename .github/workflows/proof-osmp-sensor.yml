@@ -1,0 +1,35 @@
+name: proof-osmp-sensor
+
+# FMU target inspection for external ADAS adoption (issue #230). The image
+# build fetches the pinned OSMP sources, so this sits outside the general push
+# gate like the other external proofs. The FMU build, inspection and runs use
+# no network on native Linux x86-64.
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/osmp-sensor/**'
+      - '.github/workflows/proof-osmp-sensor.yml'
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch, build, inspect and run the OSMP FMUs
+        timeout-minutes: 40
+        run: proofs/osmp-sensor/run-proof.sh "$PWD/build/osmp-sensor"
+      - name: Keep the FMU bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: osmp-sensor-bundle
+          path: build/osmp-sensor/bundle/
+      - name: Keep the inspection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: osmp-sensor-evidence
+          path: build/osmp-sensor/evidence/

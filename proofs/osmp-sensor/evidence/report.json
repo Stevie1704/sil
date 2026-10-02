@@ -1,0 +1,242 @@
+{
+  "bundle_sha256": "18ce2fb2b9b3be520bb2c40fda15040915217c809b01467eb7e3a254ebcb7ba7",
+  "build": {
+    "cmake_source": "examples/ (upstream CMakeLists.txt, unmodified)",
+    "cmake_args": [
+      "-DCMAKE_BUILD_TYPE=Release"
+    ],
+    "targets": [
+      "OSMPDummySensor",
+      "OSMPDummySource"
+    ],
+    "source_date_epoch": 1766392659,
+    "rebuild_identical_members": {
+      "OSMPDummySensor": true,
+      "OSMPDummySource": true
+    }
+  },
+  "binaries": {
+    "OSMPDummySensor": {
+      "so_sha256": "a0c38eda8571eb191a28490a46ec9f1ad9b8dec95ee457df22403b848ad5e8c7",
+      "archive_sha256": "e6dece862f2e4b8ad4181de7769dfad53297554cc405e8365e3e3b0039bc58ee",
+      "needed": [
+        "libprotobuf.so.32",
+        "libstdc++.so.6",
+        "libm.so.6",
+        "libgcc_s.so.1",
+        "libc.so.6"
+      ],
+      "sil_gaps": [
+        "fmiVersion 2.0: the Importer drives FMI 3.0 only (#191)",
+        "OSMP binary variables pass memory addresses in fmi2Integer variables (#244)",
+        "needs the system libprotobuf.so.32 at run time; a second FMU built this way aborts in the same process (#233, #244)"
+      ]
+    },
+    "OSMPDummySource": {
+      "so_sha256": "43bab2919fe08c8e7267ca1a73517695829960eb906e1d31aa39dbc0048d986d",
+      "archive_sha256": "3409a410eafe1aebecf63c8b129f9f508e25cf5f8af5d8c100a1a74ae3a5ac3f",
+      "needed": [
+        "libprotobuf.so.32",
+        "libstdc++.so.6",
+        "libm.so.6",
+        "libgcc_s.so.1",
+        "libc.so.6"
+      ],
+      "sil_gaps": [
+        "fmiVersion 2.0: the Importer drives FMI 3.0 only (#191)",
+        "OSMP binary variables pass memory addresses in fmi2Integer variables (#244)",
+        "needs the system libprotobuf.so.32 at run time; a second FMU built this way aborts in the same process (#233, #244)"
+      ]
+    }
+  },
+  "runs": {
+    "steps": 1500,
+    "period_ns": 20000000,
+    "nominal_range_m": 135.0,
+    "expected_slice_agrees": true,
+    "repeat_identical": true,
+    "detections": 7890,
+    "transitions": [
+      {
+        "t_ns": 20000000,
+        "ground_truth_ids": [
+          11,
+          12,
+          13,
+          17,
+          18,
+          19
+        ]
+      },
+      {
+        "t_ns": 1740000000,
+        "ground_truth_ids": [
+          10,
+          11,
+          12,
+          13,
+          17,
+          18,
+          19
+        ]
+      },
+      {
+        "t_ns": 9700000000,
+        "ground_truth_ids": [
+          10,
+          11,
+          13,
+          17,
+          18,
+          19
+        ]
+      },
+      {
+        "t_ns": 9960000000,
+        "ground_truth_ids": [
+          10,
+          11,
+          13,
+          18,
+          19
+        ]
+      },
+      {
+        "t_ns": 22820000000,
+        "ground_truth_ids": [
+          10,
+          11,
+          13,
+          19
+        ]
+      },
+      {
+        "t_ns": 27120000000,
+        "ground_truth_ids": [
+          10,
+          13,
+          19
+        ]
+      }
+    ],
+    "range_parameter": {
+      "nominal_range_m": 100.0,
+      "agrees_with_its_slice": true,
+      "transitions": [
+        {
+          "t_ns": 20000000,
+          "ground_truth_ids": [
+            11,
+            12,
+            13,
+            17,
+            18
+          ]
+        },
+        {
+          "t_ns": 1740000000,
+          "ground_truth_ids": [
+            10,
+            11,
+            12,
+            13,
+            17,
+            18
+          ]
+        },
+        {
+          "t_ns": 2000000000,
+          "ground_truth_ids": [
+            10,
+            11,
+            13,
+            17,
+            18
+          ]
+        },
+        {
+          "t_ns": 5020000000,
+          "ground_truth_ids": [
+            10,
+            11,
+            13,
+            17,
+            18,
+            19
+          ]
+        },
+        {
+          "t_ns": 9960000000,
+          "ground_truth_ids": [
+            10,
+            11,
+            13,
+            18,
+            19
+          ]
+        },
+        {
+          "t_ns": 17500000000,
+          "ground_truth_ids": [
+            10,
+            13,
+            18,
+            19
+          ]
+        },
+        {
+          "t_ns": 22820000000,
+          "ground_truth_ids": [
+            10,
+            13,
+            19
+          ]
+        }
+      ]
+    },
+    "failing_control": {
+      "one-period-input-delay": {
+        "step": 1,
+        "t_ns": 40000000,
+        "object": 0,
+        "field": "x",
+        "expected": 40.160000000000004,
+        "actual": 40.08
+      }
+    },
+    "source": {
+      "steps": 1500,
+      "agrees_with_closed_form": true,
+      "sensor_view_bytes": {
+        "min": 1996,
+        "max": 2004
+      }
+    },
+    "both_fmus_in_one_process": {
+      "one_process": false,
+      "returncode": -6,
+      "libprotobuf": [
+        "[libprotobuf ERROR google/protobuf/descriptor_database.cc:642] File already exists in database: osi_version.proto",
+        "[libprotobuf FATAL google/protobuf/descriptor.cc:1988] CHECK failed: GeneratedDatabase()->Add(encoded_file_descriptor, size): "
+      ]
+    },
+    "observed": {
+      "config_request": {
+        "update_cycle_time_ns": 20000000,
+        "range_m": 148.5,
+        "field_of_view_horizontal_rad": 3.14
+      },
+      "sensor_view_bytes": {
+        "min": 978,
+        "max": 986
+      },
+      "sensor_data_bytes": {
+        "min": 1396,
+        "max": 1940
+      },
+      "sensor_do_step_s": 0.1383,
+      "sensor_do_step_mean_us": 92.2
+    }
+  },
+  "sensor_process_peak_rss_kib": 84280
+}

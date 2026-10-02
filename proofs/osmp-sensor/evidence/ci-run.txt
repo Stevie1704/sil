@@ -1,0 +1,2 @@
+run 36986891466 (proof-osmp-sensor), head 65425f6a010c163cc3173df87dc8489b907e3a43
+source_revision in bundle.json is GitHub's pull-request merge commit of that head onto main

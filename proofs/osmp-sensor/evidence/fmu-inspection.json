@@ -1,0 +1,467 @@
+{
+  "OSMPDummySensor": {
+    "archive_sha256": "e6dece862f2e4b8ad4181de7769dfad53297554cc405e8365e3e3b0039bc58ee",
+    "members": [
+      "binaries/linux64/",
+      "binaries/linux64/OSMPDummySensor.so",
+      "modelDescription.xml",
+      "sources/",
+      "sources/OSMPDummySensor.cpp",
+      "sources/OSMPDummySensor.h",
+      "sources/OSMPDummySensorConfig.h"
+    ],
+    "model_description": {
+      "fmi_version": "2.0",
+      "identity": {
+        "modelName": "OSMP Dummy Sensor FMU",
+        "guid": "bbd7b2bd251f430797b8f36208d20c4b",
+        "version": "..",
+        "generationTool": "PMSF Manual FMU Framework",
+        "generationDateAndTime": "2025-12-22T08:37:39Z"
+      },
+      "interfaces": {
+        "CoSimulation": {
+          "modelIdentifier": "OSMPDummySensor",
+          "canHandleVariableCommunicationStepSize": "true",
+          "canNotUseMemoryManagementFunctions": "true"
+        }
+      },
+      "default_experiment": {
+        "startTime": "0.0",
+        "stepSize": "0.020"
+      },
+      "platforms": [
+        "linux64"
+      ],
+      "variables": [
+        {
+          "name": "OSMPSensorViewIn.base.lo",
+          "value_reference": 0,
+          "type": "Integer",
+          "causality": "input",
+          "variability": "discrete",
+          "initial": null,
+          "start": "0"
+        },
+        {
+          "name": "OSMPSensorViewIn.base.hi",
+          "value_reference": 1,
+          "type": "Integer",
+          "causality": "input",
+          "variability": "discrete",
+          "initial": null,
+          "start": "0"
+        },
+        {
+          "name": "OSMPSensorViewIn.size",
+          "value_reference": 2,
+          "type": "Integer",
+          "causality": "input",
+          "variability": "discrete",
+          "initial": null,
+          "start": "0"
+        },
+        {
+          "name": "OSMPSensorDataOut.base.lo",
+          "value_reference": 3,
+          "type": "Integer",
+          "causality": "output",
+          "variability": "discrete",
+          "initial": "exact",
+          "start": "0"
+        },
+        {
+          "name": "OSMPSensorDataOut.base.hi",
+          "value_reference": 4,
+          "type": "Integer",
+          "causality": "output",
+          "variability": "discrete",
+          "initial": "exact",
+          "start": "0"
+        },
+        {
+          "name": "OSMPSensorDataOut.size",
+          "value_reference": 5,
+          "type": "Integer",
+          "causality": "output",
+          "variability": "discrete",
+          "initial": "exact",
+          "start": "0"
+        },
+        {
+          "name": "OSMPSensorViewInConfigRequest.base.lo",
+          "value_reference": 6,
+          "type": "Integer",
+          "causality": "calculatedParameter",
+          "variability": "fixed",
+          "initial": "calculated",
+          "start": null
+        },
+        {
+          "name": "OSMPSensorViewInConfigRequest.base.hi",
+          "value_reference": 7,
+          "type": "Integer",
+          "causality": "calculatedParameter",
+          "variability": "fixed",
+          "initial": "calculated",
+          "start": null
+        },
+        {
+          "name": "OSMPSensorViewInConfigRequest.size",
+          "value_reference": 8,
+          "type": "Integer",
+          "causality": "calculatedParameter",
+          "variability": "fixed",
+          "initial": "calculated",
+          "start": null
+        },
+        {
+          "name": "OSMPSensorViewInConfig.base.lo",
+          "value_reference": 9,
+          "type": "Integer",
+          "causality": "parameter",
+          "variability": "fixed",
+          "initial": null,
+          "start": "0"
+        },
+        {
+          "name": "OSMPSensorViewInConfig.base.hi",
+          "value_reference": 10,
+          "type": "Integer",
+          "causality": "parameter",
+          "variability": "fixed",
+          "initial": null,
+          "start": "0"
+        },
+        {
+          "name": "OSMPSensorViewInConfig.size",
+          "value_reference": 11,
+          "type": "Integer",
+          "causality": "parameter",
+          "variability": "fixed",
+          "initial": null,
+          "start": "0"
+        },
+        {
+          "name": "valid",
+          "value_reference": 0,
+          "type": "Boolean",
+          "causality": "output",
+          "variability": "discrete",
+          "initial": "exact",
+          "start": "false"
+        },
+        {
+          "name": "count",
+          "value_reference": 12,
+          "type": "Integer",
+          "causality": "output",
+          "variability": "discrete",
+          "initial": "exact",
+          "start": "0"
+        },
+        {
+          "name": "nominalrange",
+          "value_reference": 0,
+          "type": "Real",
+          "causality": "parameter",
+          "variability": "fixed",
+          "initial": null,
+          "start": "135.0"
+        }
+      ],
+      "arrays": [],
+      "clocks": [],
+      "osmp_binary_variables": {
+        "OSMPSensorViewIn": {
+          "causality": "input",
+          "mime_type": "application/x-open-simulation-interface; type=SensorView; version=3.8.0",
+          "value_references": {
+            "base.lo": 0,
+            "base.hi": 1,
+            "size": 2
+          }
+        },
+        "OSMPSensorDataOut": {
+          "causality": "output",
+          "mime_type": "application/x-open-simulation-interface; type=SensorData; version=3.8.0",
+          "value_references": {
+            "base.lo": 3,
+            "base.hi": 4,
+            "size": 5
+          }
+        },
+        "OSMPSensorViewInConfigRequest": {
+          "causality": "calculatedParameter",
+          "mime_type": "application/x-open-simulation-interface; type=SensorViewConfiguration; version=3.8.0",
+          "value_references": {
+            "base.lo": 6,
+            "base.hi": 7,
+            "size": 8
+          }
+        },
+        "OSMPSensorViewInConfig": {
+          "causality": "parameter",
+          "mime_type": "application/x-open-simulation-interface; type=SensorViewConfiguration; version=3.8.0",
+          "value_references": {
+            "base.lo": 9,
+            "base.hi": 10,
+            "size": 11
+          }
+        }
+      },
+      "osmp_annotation": {
+        "version": "..",
+        "osi-version": "3.8.0"
+      }
+    },
+    "binary": {
+      "sha256": "a0c38eda8571eb191a28490a46ec9f1ad9b8dec95ee457df22403b848ad5e8c7",
+      "size": 2114216,
+      "machine": "Advanced Micro Devices X86-64",
+      "needed": [
+        "libprotobuf.so.32",
+        "libstdc++.so.6",
+        "libm.so.6",
+        "libgcc_s.so.1",
+        "libc.so.6"
+      ],
+      "required_symbol_versions": [
+        "CXXABI_1.3",
+        "CXXABI_1.3.9",
+        "GCC_3.0",
+        "GLIBCXX_3.4",
+        "GLIBCXX_3.4.11",
+        "GLIBCXX_3.4.21",
+        "GLIBCXX_3.4.9",
+        "GLIBC_2.14",
+        "GLIBC_2.2.5"
+      ],
+      "exported_fmi_functions": [
+        "fmi2CancelStep",
+        "fmi2DeSerializeFMUstate",
+        "fmi2DoStep",
+        "fmi2EnterInitializationMode",
+        "fmi2ExitInitializationMode",
+        "fmi2FreeFMUstate",
+        "fmi2FreeInstance",
+        "fmi2GetBoolean",
+        "fmi2GetBooleanStatus",
+        "fmi2GetDirectionalDerivative",
+        "fmi2GetFMUstate",
+        "fmi2GetInteger",
+        "fmi2GetIntegerStatus",
+        "fmi2GetReal",
+        "fmi2GetRealOutputDerivatives",
+        "fmi2GetRealStatus",
+        "fmi2GetStatus",
+        "fmi2GetString",
+        "fmi2GetStringStatus",
+        "fmi2GetTypesPlatform",
+        "fmi2GetVersion",
+        "fmi2Instantiate",
+        "fmi2Reset",
+        "fmi2SerializeFMUstate",
+        "fmi2SerializedFMUstateSize",
+        "fmi2SetBoolean",
+        "fmi2SetDebugLogging",
+        "fmi2SetFMUstate",
+        "fmi2SetInteger",
+        "fmi2SetReal",
+        "fmi2SetRealInputDerivatives",
+        "fmi2SetString",
+        "fmi2SetupExperiment",
+        "fmi2Terminate"
+      ],
+      "runtime_libraries": [
+        "linux-vdso.so.1 (0x00007f655946f000)",
+        "\tlibprotobuf.so.32 => /lib/x86_64-linux-gnu/libprotobuf.so.32 (0x00007f6558fa7000)",
+        "\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007f6558d8d000)",
+        "\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f6558cad000)",
+        "\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f6558c8d000)",
+        "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f6558aab000)",
+        "\tlibz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007f6558a8a000)",
+        "\t/lib64/ld-linux-x86-64.so.2 (0x00007f6559471000)"
+      ]
+    },
+    "sil_gaps": [
+      "fmiVersion 2.0: the Importer drives FMI 3.0 only (#191)",
+      "OSMP binary variables pass memory addresses in fmi2Integer variables (#244)",
+      "needs the system libprotobuf.so.32 at run time; a second FMU built this way aborts in the same process (#233, #244)"
+    ]
+  },
+  "OSMPDummySource": {
+    "archive_sha256": "3409a410eafe1aebecf63c8b129f9f508e25cf5f8af5d8c100a1a74ae3a5ac3f",
+    "members": [
+      "binaries/linux64/",
+      "binaries/linux64/OSMPDummySource.so",
+      "modelDescription.xml",
+      "sources/",
+      "sources/OSMPDummySource.cpp",
+      "sources/OSMPDummySource.h",
+      "sources/OSMPDummySourceConfig.h"
+    ],
+    "model_description": {
+      "fmi_version": "2.0",
+      "identity": {
+        "modelName": "OSMP Dummy Source FMU",
+        "guid": "bbd7b2bd251f430797b8f36208d20c4b",
+        "version": "..",
+        "generationTool": "PMSF Manual FMU Framework",
+        "generationDateAndTime": "2025-12-22T08:37:39Z"
+      },
+      "interfaces": {
+        "CoSimulation": {
+          "modelIdentifier": "OSMPDummySource",
+          "canHandleVariableCommunicationStepSize": "true",
+          "canNotUseMemoryManagementFunctions": "true"
+        }
+      },
+      "default_experiment": {
+        "startTime": "0.0",
+        "stepSize": "0.020"
+      },
+      "platforms": [
+        "linux64"
+      ],
+      "variables": [
+        {
+          "name": "OSMPSensorViewOut.base.lo",
+          "value_reference": 0,
+          "type": "Integer",
+          "causality": "output",
+          "variability": "discrete",
+          "initial": "exact",
+          "start": "0"
+        },
+        {
+          "name": "OSMPSensorViewOut.base.hi",
+          "value_reference": 1,
+          "type": "Integer",
+          "causality": "output",
+          "variability": "discrete",
+          "initial": "exact",
+          "start": "0"
+        },
+        {
+          "name": "OSMPSensorViewOut.size",
+          "value_reference": 2,
+          "type": "Integer",
+          "causality": "output",
+          "variability": "discrete",
+          "initial": "exact",
+          "start": "0"
+        },
+        {
+          "name": "valid",
+          "value_reference": 0,
+          "type": "Boolean",
+          "causality": "output",
+          "variability": "discrete",
+          "initial": "exact",
+          "start": "false"
+        },
+        {
+          "name": "count",
+          "value_reference": 3,
+          "type": "Integer",
+          "causality": "output",
+          "variability": "discrete",
+          "initial": "exact",
+          "start": "0"
+        }
+      ],
+      "arrays": [],
+      "clocks": [],
+      "osmp_binary_variables": {
+        "OSMPSensorViewOut": {
+          "causality": "output",
+          "mime_type": "application/x-open-simulation-interface; type=SensorView; version=3.8.0",
+          "value_references": {
+            "base.lo": 0,
+            "base.hi": 1,
+            "size": 2
+          }
+        }
+      },
+      "osmp_annotation": {
+        "version": "..",
+        "osi-version": "3.8.0"
+      }
+    },
+    "binary": {
+      "sha256": "43bab2919fe08c8e7267ca1a73517695829960eb906e1d31aa39dbc0048d986d",
+      "size": 1473832,
+      "machine": "Advanced Micro Devices X86-64",
+      "needed": [
+        "libprotobuf.so.32",
+        "libstdc++.so.6",
+        "libm.so.6",
+        "libgcc_s.so.1",
+        "libc.so.6"
+      ],
+      "required_symbol_versions": [
+        "CXXABI_1.3",
+        "CXXABI_1.3.9",
+        "GCC_3.0",
+        "GLIBCXX_3.4",
+        "GLIBCXX_3.4.11",
+        "GLIBCXX_3.4.21",
+        "GLIBCXX_3.4.9",
+        "GLIBC_2.14",
+        "GLIBC_2.2.5"
+      ],
+      "exported_fmi_functions": [
+        "fmi2CancelStep",
+        "fmi2DeSerializeFMUstate",
+        "fmi2DoStep",
+        "fmi2EnterInitializationMode",
+        "fmi2ExitInitializationMode",
+        "fmi2FreeFMUstate",
+        "fmi2FreeInstance",
+        "fmi2GetBoolean",
+        "fmi2GetBooleanStatus",
+        "fmi2GetDirectionalDerivative",
+        "fmi2GetFMUstate",
+        "fmi2GetInteger",
+        "fmi2GetIntegerStatus",
+        "fmi2GetReal",
+        "fmi2GetRealOutputDerivatives",
+        "fmi2GetRealStatus",
+        "fmi2GetStatus",
+        "fmi2GetString",
+        "fmi2GetStringStatus",
+        "fmi2GetTypesPlatform",
+        "fmi2GetVersion",
+        "fmi2Instantiate",
+        "fmi2Reset",
+        "fmi2SerializeFMUstate",
+        "fmi2SerializedFMUstateSize",
+        "fmi2SetBoolean",
+        "fmi2SetDebugLogging",
+        "fmi2SetFMUstate",
+        "fmi2SetInteger",
+        "fmi2SetReal",
+        "fmi2SetRealInputDerivatives",
+        "fmi2SetString",
+        "fmi2SetupExperiment",
+        "fmi2Terminate"
+      ],
+      "runtime_libraries": [
+        "linux-vdso.so.1 (0x00007fe62b620000)",
+        "\tlibprotobuf.so.32 => /lib/x86_64-linux-gnu/libprotobuf.so.32 (0x00007fe62b1d0000)",
+        "\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007fe62afb6000)",
+        "\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007fe62aed6000)",
+        "\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007fe62aeb6000)",
+        "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fe62acd4000)",
+        "\tlibz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007fe62acb3000)",
+        "\t/lib64/ld-linux-x86-64.so.2 (0x00007fe62b622000)"
+      ]
+    },
+    "sil_gaps": [
+      "fmiVersion 2.0: the Importer drives FMI 3.0 only (#191)",
+      "OSMP binary variables pass memory addresses in fmi2Integer variables (#244)",
+      "needs the system libprotobuf.so.32 at run time; a second FMU built this way aborts in the same process (#233, #244)"
+    ]
+  }
+}
