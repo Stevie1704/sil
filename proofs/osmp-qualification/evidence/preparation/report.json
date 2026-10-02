@@ -1,6 +1,6 @@
 {
   "issue": 233,
-  "source_revision": "2f61ac2872c78a482170ad9a16bfb8a6bab9d013",
+  "source_revision": "bddd5b52892f2b34c295756fcb694a4e2cb9b864",
   "build": {
     "OSMPDummySensor": {
       "archive_sha256": "e6dece862f2e4b8ad4181de7769dfad53297554cc405e8365e3e3b0039bc58ee",

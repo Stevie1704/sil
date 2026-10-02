@@ -31,12 +31,12 @@
       "identity": {
         "status": "behavioral-failure",
         "bundle_exit_code": 1,
-        "summary_sha256": "bea1a2796f33e4b1d02705e28ff52de10facf96271fefc6625ba7f40884329dd"
+        "summary_sha256": "d09c45bee1f5d14bf6459963bf050e7a9bd4ee2c489912e1b93bfe950236ab9f"
       },
-      "identity_sha256": "10cb6bbd15f7a6f1b154582aa127aa005109a753f86b30332dc96d4164cf96f9",
+      "identity_sha256": "67cf12b58a9f63b2971edade52dbcbf3c3363002e392958fdbfa409c220c32eb",
       "observations": {
-        "duration_s": 7.666,
-        "max_rss_kib": 79820
+        "duration_s": 7.767,
+        "max_rss_kib": 79588
       }
     },
     {
@@ -58,12 +58,12 @@
       "identity": {
         "status": "manifest-error",
         "bundle_exit_code": 1,
-        "summary_sha256": "4fb6058674a0e954a69f218f2954413f2ab7965e46f6ca06d18acab641fc315b"
+        "summary_sha256": "0c3396147d4e7643968d124fc4e7b15858b7ddb85e65334b795a9095dbbadaad"
       },
-      "identity_sha256": "d8aaf181930146251d9db7330bab35b919562c564a3a9da6edf5e84951ff9285",
+      "identity_sha256": "4cafd1330c0c56bda40110fa193a0066f15b7802ad438e44c5e589f890bdd826",
       "observations": {
-        "duration_s": 0.402,
-        "max_rss_kib": 25560
+        "duration_s": 0.452,
+        "max_rss_kib": 25548
       }
     },
     {
@@ -85,12 +85,12 @@
       "identity": {
         "status": "behavioral-failure",
         "bundle_exit_code": 1,
-        "summary_sha256": "24419fca669977cb1cc276c39dd36cd85136742d81258c824761869ced659e37"
+        "summary_sha256": "4b797ca4907598e48d6d8a6c230dc61f32542a74b2322b294373661f3eb2c02c"
       },
-      "identity_sha256": "04c3e0dfb3b94b5ec72b2a904649ed5c6508658af50dc11b14fe18eb9f1fbac1",
+      "identity_sha256": "297ece19280a24f9b95277ea37da2c25cacf7b41dee585aaf2e60f2751696beb",
       "observations": {
-        "duration_s": 0.552,
-        "max_rss_kib": 31172
+        "duration_s": 0.602,
+        "max_rss_kib": 31096
       }
     }
   ]

@@ -1,5 +1,93 @@
 {
   "passed": true,
+  "initialization": {
+    "instances": {
+      "source": {
+        "exit_code": 0,
+        "outputs": {
+          "osi.SensorView": {
+            "payload": "",
+            "payload_length": 0
+          }
+        },
+        "expected": {
+          "osi.SensorView": {
+            "payload": "",
+            "payload_length": 0
+          }
+        },
+        "leftover_files": [],
+        "passed": true
+      },
+      "sensor": {
+        "exit_code": 0,
+        "outputs": {
+          "sensor.SensorData": {
+            "payload": "",
+            "payload_length": 0
+          },
+          "sensor.Status": {
+            "valid": 0,
+            "count": 0
+          },
+          "sensor.ConfigRequest": {
+            "payload": "",
+            "payload_length": 0
+          }
+        },
+        "expected": {
+          "sensor.SensorData": {
+            "payload": "",
+            "payload_length": 0
+          },
+          "sensor.Status": {
+            "valid": 0,
+            "count": 0
+          },
+          "sensor.ConfigRequest": {
+            "payload": "",
+            "payload_length": 0
+          }
+        },
+        "leftover_files": [],
+        "passed": true
+      },
+      "sensor-50m": {
+        "exit_code": 0,
+        "outputs": {
+          "sensor-50m.SensorData": {
+            "payload": "",
+            "payload_length": 0
+          },
+          "sensor-50m.Status": {
+            "valid": 0,
+            "count": 0
+          },
+          "sensor-50m.ConfigRequest": {
+            "payload": "",
+            "payload_length": 0
+          }
+        },
+        "expected": {
+          "sensor-50m.SensorData": {
+            "payload": "",
+            "payload_length": 0
+          },
+          "sensor-50m.Status": {
+            "valid": 0,
+            "count": 0
+          },
+          "sensor-50m.ConfigRequest": {
+            "payload": "",
+            "payload_length": 0
+          }
+        },
+        "leftover_files": [],
+        "passed": true
+      }
+    },
+    "passed": true
+  },
   "matrices": {
     "nominal": {
       "exit_code": 0,
@@ -94,22 +182,22 @@
     "period_ns": 20000000,
     "wall_clock_s": {
       "startup": {
-        "median": 0.2766,
-        "min": 0.2745,
-        "max": 0.2781
+        "median": 0.2851,
+        "min": 0.2805,
+        "max": 0.3641
       },
       "long": {
-        "median": 1.2115,
-        "min": 1.2021,
-        "max": 1.2375
+        "median": 1.2352,
+        "min": 1.2272,
+        "max": 1.2627
       }
     },
-    "startup_ms": 276.6,
+    "startup_ms": 285.1,
     "per_step_both_fmus_us": {
-      "estimate": 623.7,
-      "spread": 26.0,
+      "estimate": 633.8,
+      "spread": 79.4,
       "resolved": true
     },
-    "real_time_factor_long": 24.8
+    "real_time_factor_long": 24.3
   }
 }

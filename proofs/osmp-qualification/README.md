@@ -157,7 +157,7 @@ measurement policy of [`../adas-cost`](../adas-cost/README.md) applies.
 
 ## Results
 
-CI run 37023512616 on native Linux x86-64 (GitHub-hosted `ubuntu-latest`, 4
+CI run 37026128629 on native Linux x86-64 (GitHub-hosted `ubuntu-latest`, 4
 vCPUs): [`evidence/`](evidence/), [`ci-run.txt`](evidence/ci-run.txt). The
 runtime image ID is in [`image-id.txt`](evidence/image-id.txt).
 
@@ -166,6 +166,7 @@ runtime image ID is in [`image-id.txt`](evidence/image-id.txt).
 | Build | `OSMPDummySensor.so` `a0c38eda…`, `OSMPDummySource.so` `43bab291…`: both equal the #230 pins |
 | Inspection | both `compatible`. Resources: none. Platform: `linux64`. `canBeInstantiatedOnlyOncePerProcess`, `needsExecutionTool`, FMU state: all false |
 | Runtime dependencies | `libprotobuf.so.32`, `libz.so.1`, `libstdc++.so.6`, `libgcc_s.so.1`, `libm.so.6`, `libc.so.6`, the loader: declared and sealed in every bundle |
+| Initialization | `source`, `sensor`, `sensor-50m`: every output equals the prediction (empty payloads and configuration requests, `valid` 0, `count` 0); no extraction left |
 | `nominal` | `pass`: 1500 of 1500 observations on each of `osi.GroundTruth`, `sensor.*` and `sensor-50m.*`. Recordings byte-identical (`b382560d…`) |
 | `unparseable` | `pass`: 1500 of 1500 observations. `valid` 1, no objects, `fmi2OK` |
 | `control-late` | `behavioral-failure`, Run exit 0. `predicted` passes. `independent` first diverges as predicted: `sensor.Detections.nanos` at 20 ms, 0 instead of 20000000 (no input, so no output) |
@@ -177,9 +178,9 @@ Cost (observational, median of five, Recording off):
 
 | Quantity | Value |
 | --- | --- |
-| `startup`: one Step of source and sensor, including both Importers' start, extraction, instantiation and initialization | 276.6 ms (274.5 to 278.1) |
-| `long`: 30 s | 1.212 s (1.202 to 1.238): real-time factor 24.8 |
-| one Step of both FMUs, with their Step protocol round trips (estimate) | 624 µs, spread 26 µs |
+| `startup`: one Step of source and sensor, including both Importers' start, extraction, instantiation and initialization | 285.1 ms (280.5 to 364.1) |
+| `long`: 30 s | 1.235 s (1.227 to 1.263): real-time factor 24.3 |
+| one Step of both FMUs, with their Step protocol round trips (estimate) | 634 µs, spread 79 µs |
 | the sensor's own `fmi2DoStep` under FMPy ([#230](../osmp-sensor/README.md#results)) | 92 µs |
 
 Per FMU Step this is about five times the 62.6 µs that

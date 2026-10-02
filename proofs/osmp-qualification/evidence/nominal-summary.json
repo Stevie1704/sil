@@ -36,12 +36,12 @@
       "identity": {
         "status": "pass",
         "bundle_exit_code": 0,
-        "summary_sha256": "e2cdc908c4bf19070a536357123db371999cb6b460eadde6a4789019f58eeb77"
+        "summary_sha256": "de3d71f30172da69d63c5d55f27f3a1f94d96593500380f744960bc88aa879ce"
       },
-      "identity_sha256": "570d5a3d30498066d510bcb288d9976785f2caa9cde397253ec97f36f8a09e92",
+      "identity_sha256": "37829f6083b5b35a146e8f29314baa97c3692f834281710fb0cf38c188cc3224",
       "observations": {
-        "duration_s": 9.97,
-        "max_rss_kib": 86256
+        "duration_s": 10.121,
+        "max_rss_kib": 86364
       }
     }
   ]
