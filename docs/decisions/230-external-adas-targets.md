@@ -137,6 +137,9 @@ dynamically. Two of them in one process abort in the Protobuf descriptor
 pool. An OSMP connection needs both in one process, so #233 must rebuild
 them or connect the sensor to an importer-owned SensorView. See
 [One process](../../proofs/osmp-sensor/README.md#one-process).
+#244 connected them through a Channel instead, each FMU in its own Process
+participant. #233 qualified that connection through installed SiL in
+[proofs/osmp-qualification](../../proofs/osmp-qualification/README.md).
 
 ## What this decision is not
 

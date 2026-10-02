@@ -138,7 +138,9 @@ def _timed(manifest: Path, directory: Path) -> float:
     subprocess.run(["sil-run", str(manifest), "--no-recording"], cwd=directory,
                    check=True, capture_output=True, text=True)
     elapsed = time.perf_counter() - started
-    leftovers = list(directory.iterdir())
+    # The provenance side-car is the Run's record, written also without a
+    # Recording; anything else is what the Run failed to remove.
+    leftovers = [p for p in directory.iterdir() if not p.name.endswith(".provenance.json")]
     if leftovers:
         raise RuntimeError(f"a cost Run left {leftovers}")
     return elapsed

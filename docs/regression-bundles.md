@@ -310,3 +310,12 @@ experiments offline and checks manifest, malformed-input, comparison,
 tampered-bundle, FMI deadline and native hang/crash controls explicitly.
 The adoption guide describes target replacement, changed interfaces,
 calibration/freshness changes, dependencies and unsupported profiles.
+
+## External FMU: OSMPDummySensor
+
+[proofs/osmp-qualification](../proofs/osmp-qualification/README.md) runs
+the external FMU selected in #230 as sealed bundles with the same commands.
+A bundle edge participant decodes the OSI payloads into typed Channels, so
+`sil-compare` compares every field with closed-form references. Its controls
+check a predicted timing divergence, a malformed binding and an
+undersized payload Channel.

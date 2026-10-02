@@ -167,8 +167,8 @@ these options:
 | --- | --- |
 | FMI 2.0 Co-Simulation; the Importer drives FMI 3.0 only | #191 |
 | OSMP binary variables: memory addresses in `fmi2Integer` variables | #244 |
-| Runtime `libprotobuf.so.32` must be in the runtime image | #233 |
-| Two of these FMUs cannot share one process | #233, #244 |
+| Runtime `libprotobuf.so.32` must be in the runtime image | #233: installed and sealed as a bundle file dependency ([osmp-qualification](../osmp-qualification/README.md)) |
+| Two of these FMUs cannot share one process | #244: each FMU in its own Process participant, connected through a Channel |
 
 ## Throughput
 
