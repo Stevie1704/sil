@@ -132,7 +132,7 @@ class TestTheArchiveFacts:
     """What the report states about a supported archive."""
 
     def test_the_verdict(self, report):
-        assert report["sil_fmi_inspection"] == 1
+        assert report["sil_fmi_inspection"] == 2
         assert report["verdict"] == "compatible"
         assert report["unusable"] == []
         assert report["mapping"] is None

@@ -475,7 +475,8 @@ The report has four parts:
 | --- | --- |
 | facts | FMI version, interfaces and co-simulation capabilities, platform binaries, and each variable's type, causality, variability, start, unit, dimensions, value count, `maxSize`, `mimeType` and Clocks; the terminals and the FMI-LS-BUS manifest |
 | `unusable` | why no Run can drive the archive: unreadable archive or `modelDescription.xml`, an FMI version other than 3.0 or 2.0, no co-simulation interface, no binary for this platform, and for FMI 2.0 every variable of a type outside the FMI 2.0 profile |
-| `unmappable`, per variable; `unsupported`, per terminal | why no Channel can carry the variable, or no group can connect the terminal: String, Enumeration and the unselected integer types, arrays outside the fixed-size numeric profile, a Clock outside the triggered profile, a terminal outside the BUS profile |
+| `unmappable`, per variable; `unsupported`, per terminal | why no Channel can carry the variable, or no group can connect the terminal: String, Enumeration and the unselected integer types, arrays outside the fixed-size numeric profile, a Clock outside the triggered profile, an Integer of an OSMP binary variable or named like an OSMP address, a terminal outside the BUS profile |
+| `osmp` | each OSMP binary variable of an FMI 2.0 archive: name, causality, `mime-type` and the value references of its three Integers |
 | `unverified` | what only a loaded binary can answer: whether the library and its dependencies load, whether initialization succeeds, a required execution tool, the files read from `resources/` |
 
 A variable no Channel names is never touched, so an `unmappable` variable does
@@ -521,7 +522,8 @@ parameter that keeps its start value, and an output that is not published.
 | `2` | usage error: the command line or the mapping document cannot be read |
 | `3` | `mapping-rejected`: the archive is usable and the mapping is not |
 
-The JSON report carries `"sil_fmi_inspection": 1`; a change to its keys raises
+The JSON report carries `"sil_fmi_inspection": 2`; version 2 added
+`osmp`. A change to its keys raises
 that number. The inspection is an audit of this importer's profile, not an FMI
 conformance certification, and it does not probe dynamic dependencies.
 
@@ -577,4 +579,41 @@ the Modelica Reference FMUs `v0.0.41` compared with FMPy 0.3.26, the
 abort in the Protobuf pool
 ([proofs/osmp-sensor](../proofs/osmp-sensor/README.md#one-process)). That is
 a limit of the FMU build, not of the Importer. The OSMP binary variables
-(pointers in `Integer` variables) are #244.
+are mapped as described below (#244).
+
+### OSMP binary variables
+
+OSI Sensor Model Packaging (OSMP) 1.x passes a serialized OSI message between
+FMI 2.0 FMUs as three `fmi2Integer` variables: `<name>.base.lo` and
+`<name>.base.hi` hold a memory address in two 32-bit halves, and
+`<name>.size` holds the number of bytes there. An address is valid only in
+the process that loaded the FMU, so a Channel cannot carry it. The Importer
+maps the three Integers to one Binary variable `<name>`, and a Channel
+carries its bytes as a bounded Binary payload: a `u8` array field and its
+`<field>_length` beside it, with the rules of
+[Bounded Binary payloads](#bounded-binary-payloads).
+
+```sh
+python -m sil.fmi OSMPDummySensor.fmu \
+  --bind osi.SensorView:payload=OSMPSensorViewIn \
+  --bind osi.SensorData:payload=OSMPSensorDataOut
+```
+
+| Item | Rule |
+| --- | --- |
+| Recognition | Each `<ScalarVariable>` with a `net.pmsf.osmp` `osmp-binary-variable` annotation is one member of the binary variable its `name` attribute names. The model must declare the `osmp:osmp` element under `VendorAnnotations` |
+| Refused when the FMU is read | a role other than `base.lo`, `base.hi` and `size`; a role declared twice or missing; a member that is not an `Integer`, or that is not named `<name>.<role>`; members of different causalities or `mime-type`s; a binary name that already names a variable |
+| Refused in a mapping | a `--bind` or `--start` of one of the three Integers on its own; an `Integer` named `*.base.lo` or `*.base.hi` that no OSMP annotation declares; a `--start` of the binary variable; a field bound above 2³¹ − 1 bytes, which an `fmi2Integer` size cannot state |
+| Input | The Importer copies the payload into a buffer of the Channel's bound that it owns for the whole Run, and sets the three Integers to that buffer's address and the payload length before `fmi2DoStep`. The bytes stay valid for the whole step and until the next Message on that Channel: a Step without a Message hands the FMU the previous payload again |
+| Output | After each `fmi2DoStep` the Importer reads the three Integers once and copies the bytes at once, before the next call, as OSMP requires. A calculated parameter is read the same way |
+| Size checks | before any byte is copied: a negative size, a size above the Channel's bound, and a non-zero size at address 0 each fail the Run (exit 1) and name the variable. Nothing is truncated |
+| Bytes only | The Importer never decodes OSI. The `mime-type` is reported, not checked. The kernel sees an ordinary bounded `u8` payload |
+
+Only the single-FMU participant maps OSMP. A group refuses FMI 2.0 FMUs, and
+two OSI FMUs built as upstream builds them cannot share one process anyway.
+OSMP over FMI 3.0 Binary variables needs no extra mapping: those are ordinary
+Binary variables. The acceptance evidence is
+[proofs/osmp-importer/](../proofs/osmp-importer/README.md):
+`OSMPDummySource` drives `OSMPDummySensor` through a Channel, each FMU in its
+own Process participant, and the decoded `SensorData` is compared with the
+independently computed expected slice of #230.

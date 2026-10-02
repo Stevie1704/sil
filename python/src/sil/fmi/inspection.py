@@ -59,7 +59,7 @@ from sil.fmi.mapping import start_values, unclockable, unmappable
 from sil.fmi.single import bind_channels
 from sil.fmi.terminals import Instance
 
-REPORT_VERSION = 1
+REPORT_VERSION = 2
 MAPPING_VERSION = 1
 
 # The exit status is the verdict. 2 is also what argparse exits with on a
