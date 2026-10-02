@@ -31,12 +31,12 @@
       "identity": {
         "status": "behavioral-failure",
         "bundle_exit_code": 1,
-        "summary_sha256": "052bf59703a1af79a5934c51b3cf3e1c93c72c58d2bca155b2044fdcf429b01c"
+        "summary_sha256": "9b77c53fee4073334af7a7d5da57f8ed6d15bdfa3c9a8bde287d9773f7aa0ffa"
       },
-      "identity_sha256": "57399ec8f49bfa11926aba2acf866cbc9af0f5d55fae82be862c729ec8ee6591",
+      "identity_sha256": "f8b2ed2265e5474cc9c6eabf47be5a83823f7a08a608ff9021e49d1ded71d69e",
       "observations": {
-        "duration_s": 0.402,
-        "max_rss_kib": 27540
+        "duration_s": 0.351,
+        "max_rss_kib": 27392
       }
     },
     {
@@ -55,8 +55,8 @@
       },
       "identity_sha256": "ff87c68ef2ef94112957de0399a862b229fc8a222817c2ea764898e16db69e67",
       "observations": {
-        "duration_s": 41.06,
-        "max_rss_kib": 27376
+        "duration_s": 41.069,
+        "max_rss_kib": 27344
       }
     }
   ]

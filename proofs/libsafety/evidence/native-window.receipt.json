@@ -3,7 +3,7 @@
   "preparer": {
     "name": "sil-window",
     "version": "0.1.0",
-    "revision": "1db683825d93b4518ccd5a8072f9b1fba5cb3847",
+    "revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
     "mcap": "mcap-python/1.4.0"
   },
   "source": {

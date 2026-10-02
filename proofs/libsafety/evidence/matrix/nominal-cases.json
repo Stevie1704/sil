@@ -4,7 +4,7 @@
     {
       "name": "native-nominal",
       "bundle": "/workspace/bundles/native-nominal",
-      "expect_lock": "5dc4844ed5c8f9c8f713f4bccd035323e858840b77b231c2da32ef6299a096f8",
+      "expect_lock": "6d88f1cb7d6d43afead7aefb8462dc03ec2ef669fc72bbae37196fc0c579cdef",
       "timeout_s": 600,
       "required": true
     }

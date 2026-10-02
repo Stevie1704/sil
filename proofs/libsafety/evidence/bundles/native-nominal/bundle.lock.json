@@ -5,7 +5,7 @@
   "contents_sha256": {
     "bundle.json": "05d5d9b522023ddd4466ad267fa445a51fdbe44a756ad0183e527d8d17c90a9c",
     "libsafety.so": "ad19bdcd96f6b9c6daf1f55c1851dfe8dfb1c613ed4747f72b3b5b9b7300dec1",
-    "libsafety_native.so": "68502aeaf61329d572e4da4ec843800412de76741ae0584b4fdcc0e1384ba36d",
+    "libsafety_native.so": "4427da033873ab7c9fba8531f0ce22bbefdd265d41890bebac9eb19e3ad727a2",
     "native-contract.json": "3fa3be04d3fcdad55ed504878016f07689e5dcd4ace7b5617e5b954b7772a079",
     "native-nominal.json": "55eebbe2347509dd783579f94048b668338bb1d46f3e2576dcef63343a8fa337",
     "native-reference.mcap": "3cb355bbaf2d22bf8a6ce5aad47cc6d2844cbc916633535b0f2d7a22d2ac2646",
@@ -15,11 +15,11 @@
   "dependencies": {
     "runner": {
       "path": "/usr/local/bin/sil-run",
-      "sha256": "efe8b9c8306213d00245f194aab5fb84e083a3c0258b2d26a026a40c9c41f99a",
+      "sha256": "2a0a79c3685527f33fd2a2216027d3985d03e3a1e50334526f640309defa13ad",
       "build_info": {
         "license": "Apache-2.0",
         "source_repository": "https://github.com/Stevie1704/sil",
-        "source_revision": "1db683825d93b4518ccd5a8072f9b1fba5cb3847",
+        "source_revision": "d986b86c307dcc618a27432e38a86d0c2bb8c709",
         "version": "0.1.0"
       }
     },

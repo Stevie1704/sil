@@ -227,7 +227,7 @@ stays the isolated alternative.
 
 ## Retained results
 
-[`evidence/`](evidence/) is the output of CI run 36994430775 on native
+[`evidence/`](evidence/) is the output of CI run 36996714268 on native
 Linux x86-64 (glibc 2.36, CPython 3.13.7, `libubsan1` 12.2.0-14+deb12u1). It
 holds `report.json` and `native-report.json`, the conversion receipts, the
 comparison reports, the export's `frames.json`, `transmit.json`,
@@ -259,9 +259,11 @@ The runtime identity (glibc, CPython, `sil-run --build-info`, `libubsan1`
 version, resolved `ldd`, image ID) and the export tool image ID are in
 `report.json` → `identities`.
 
-Resource observations from that runner: a nominal Run took 4.0 to 4.1 s of
-wall-clock time for 59.99 s of Virtual time. That is about 1490 events and
-37,000 frames per second. The largest child resident set was 104 MiB.
+Resource observations from that runner: a nominal Run took 2.5 to 2.6 s of
+wall-clock time for 59.99 s of Virtual time. That is about 2450 events and
+60,800 frames per second. The largest child resident set was 103 MiB. The
+runner of the first #193 run was slower (5.6 to 5.8 s): wall-clock times
+change with the runner and are not compared across runs.
 
 **Native form (#232).**
 
@@ -276,14 +278,22 @@ wall-clock time for 59.99 s of Virtual time. That is about 1490 events and
 | `timer-in-ns` | first divergence at Slot 1.001 s (event 100): `controls_allowed` 0, expected 1 |
 | `stock-longitudinal` | first divergence at Slot 31 ms: `tx_accepted` 0, expected 1 |
 | `second-instance` | exit 2: `one Run holds at most one instance of it` |
-| Sealed nominal | `sil-matrix` `pass`: lock `5dc4844e…`, two Runs, comparison, no compiler |
+| Sealed nominal | `sil-matrix` `pass`: lock `6d88f1cb…`, two Runs, comparison, no compiler |
 | Sealed `crash` | `behavioral-failure`: `sil-run exited -11`; event 100 reached |
 | Sealed `hang` | `timeout`: `exceeded its 30 s guard`; event 100 reached |
 
-A nominal Native Run took 0.22 s of wall-clock time on the same runner, about
-27,000 events per second, against 4.0 s for the Process form. That is the
-full Run cost. The adapter digests are in `native-report.json` →
-`identities.adapters`.
+Cost on the same runner, observational:
+
+| Measurement | Result |
+| --- | --- |
+| Full Run, Native form | 0.15 s for 59.99 s of Virtual time, about 39,700 events per second |
+| Full Run, Process form | 2.5 to 2.6 s |
+| Target computation (`library_cost`) | median 31.1 ms over 5 repeats (30.7 to 31.7 ms): 5.2 µs per event, 199 ns per library frame call |
+| Target computation share of the Native Run | 21 % |
+| Computation equal to the Run | the states of all 6000 events, byte for byte, in every repeat |
+
+The adapter and harness digests are in `native-report.json` →
+`identities.adapters` and `resources.library_computation`.
 
 ## Limits
 
