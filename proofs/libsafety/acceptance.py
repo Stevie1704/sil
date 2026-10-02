@@ -227,14 +227,15 @@ def compare(setup: Setup, name: str, recording: Path) -> dict:
     return report
 
 
-def config_valid_when_warm(setup: Setup, recording: Path) -> dict:
+def config_valid_when_warm(setup: Setup, recording: Path,
+                           state_schema: str = workload.STATE_SCHEMA) -> dict:
     """Upstream's check: the receive checks are valid at every ticked event.
 
     Before the first tick the library has not judged them, so an event there
     is counted, not required."""
     ticks = EventPolicy(timer_origin_ns=0, timer_unit_ns=1, first_event_ns=0,
                         last_event_ns=setup.segment.last_event_ns).ticks
-    decode = schema.load(workload.SCHEMAS)[workload.STATE_SCHEMA].unpack
+    decode = schema.load(workload.SCHEMAS)[state_schema].unpack
     observed = [decode(data) for channel, _, data in read_records(recording)
                 if channel == workload.STATE_CHANNEL]
     warm = [o["config_valid"] for o in observed if ticks(o["event_ns"])]

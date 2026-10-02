@@ -1,6 +1,7 @@
 name: proof-libsafety
 
-# Public shared-library acceptance (issue #193). It regenerates the #178
+# Public shared-library acceptance (issues #193, #232): the library as a
+# Process participant and as a Native participant with transmit. It regenerates the #178
 # bundle, whose image build fetches pinned public sources, so this sits
 # outside the general push gate like the other external proofs. The export
 # and the acceptance run with no network on native Linux x86-64.
@@ -32,7 +33,7 @@ jobs:
         timeout-minutes: 40
         run: proofs/public-workloads/run-proof.sh "$PWD/build/public-workloads"
 
-      - name: Export, replay, compare and run the controls
+      - name: Export, replay, compare, seal and run the controls
         timeout-minutes: 30
         run: proofs/libsafety/run-proof.sh "$PWD/build/public-workloads/bundle" "$PWD/build/libsafety"
 
@@ -47,3 +48,9 @@ jobs:
             build/libsafety/runs/*.json
             build/libsafety/runs/*.log
             build/libsafety/inputs/*.json
+            build/libsafety/bundles/*/bundle.json
+            build/libsafety/bundles/*/bundle.lock.json
+            build/libsafety/matrix/*.json
+            build/libsafety/matrix/*.log
+            build/libsafety/matrix/*/summary.json
+            build/libsafety/matrix/*/junit.xml
