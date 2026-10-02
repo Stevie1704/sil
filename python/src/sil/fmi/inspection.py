@@ -45,6 +45,7 @@ from sil.fmi.composition import build_transceiver
 from sil.fmi.description import (
     FMI2,
     FMI3,
+    OSMP_ROLES,
     RX_DATA,
     ModelDescription,
     Terminal,
@@ -125,6 +126,7 @@ def _inspect_extracted(
     return _report(
         archive, facts, unusable=unusable,
         variables=_variables(root, description),
+        osmp=_osmp(description),
         terminals=[_terminal(description, t)
                    for t in description.terminals.values()],
         bus=None if description.bus is None
@@ -135,7 +137,8 @@ def _inspect_extracted(
 
 
 def _report(archive: Path, facts: dict, *, unusable: list[str],
-            variables: list[dict] = (), terminals: list[dict] = (),
+            variables: list[dict] = (), osmp: list[dict] = (),
+            terminals: list[dict] = (),
             bus: dict | None = None, unverified: list[str] = (),
             mapping: dict | None = None) -> dict:
     """The report document, with the verdict its findings decide."""
@@ -153,6 +156,7 @@ def _report(archive: Path, facts: dict, *, unusable: list[str],
         "unusable": list(unusable),
         "facts": facts,
         "variables": list(variables),
+        "osmp": list(osmp),
         "terminals": list(terminals),
         "bus": bus,
         "mapping": mapping,
@@ -267,6 +271,22 @@ def _variables(
             ),
         })
     return reports
+
+
+def _osmp(description: ModelDescription) -> list[dict]:
+    """Each OSMP binary variable, and the Integers it is passed in.
+
+    A Channel binds one by its own name and carries its bytes; the three
+    Integers are listed as not mappable in `variables`.
+    """
+    return [
+        {"name": variable.name, "causality": variable.causality,
+         "mime_type": variable.mime_type,
+         "value_references": dict(zip(OSMP_ROLES, (
+             variable.osmp.lo, variable.osmp.hi, variable.osmp.size)))}
+        for variable in description.variables.values()
+        if variable.osmp is not None
+    ]
 
 
 def _typed(element: ElementTree.Element, fmi2: bool) -> ElementTree.Element:
@@ -420,8 +440,11 @@ def _unbound(mapping: dict, description: ModelDescription) -> list[str]:
 def _carried(variable: Variable, description: ModelDescription) -> bool:
     """Whether a Run can touch the variable: write it, or read it.
 
-    The FMI 2.0 profile also reads a calculated parameter.
+    The FMI 2.0 profile also reads a calculated parameter. The Integers of an
+    OSMP binary variable are touched through it, never on their own.
     """
+    if variable.osmp_member is not None:
+        return False
     if description.fmi_version == FMI2 and variable.causality == _CALCULATED:
         return True
     return variable.causality in _CARRIED
@@ -509,6 +532,14 @@ def render(report: dict) -> str:
     if report["variables"]:
         lines.append(f"variables ({len(report['variables'])}):")
         lines += [_render_variable(v) for v in report["variables"]]
+    if report["osmp"]:
+        lines.append(f"OSMP binary variables ({len(report['osmp'])}):")
+        lines += [
+            f"  {binary['name']}: {binary['causality']} "
+            f"mime_type={binary['mime_type']} — mappable as a bounded "
+            f"Binary payload"
+            for binary in report["osmp"]
+        ]
     if report["bus"] is not None:
         lines.append(
             f"FMI-LS-BUS {report['bus']['version']}, "

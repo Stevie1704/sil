@@ -20,6 +20,7 @@ from sil.fmi.binding import (
     Binding,
     ChannelBinding,
     ClockedPayload,
+    OsmpGroup,
     ScalarGroup,
     causality_of,
 )
@@ -53,6 +54,16 @@ _LENGTH_CEILINGS = {
     "u8": 0xFF, "u16": 0xFFFF, "u32": 0xFFFF_FFFF,
     "u64": 0xFFFF_FFFF_FFFF_FFFF,
 }
+
+# The most bytes an OSMP binary variable can state: its size is an
+# fmi2Integer, a signed 32-bit C `int`.
+_OSMP_SIZE_CEILING = 0x7FFF_FFFF
+
+# The names OSMP gives the two halves of an address. An Integer named so and
+# declared by no OSMP annotation is an address the Importer cannot tell from
+# a number, so it carries it neither way.
+_ADDRESS_SUFFIXES = (".base.lo", ".base.hi")
+_ADDRESS_KIND = "Int32"
 
 
 def channel_fields(init: dict) -> dict[str, dict[str, dict]]:
@@ -222,6 +233,30 @@ def _shape(field: dict) -> str:
     return f"a {field['type']!r} array of {count}"
 
 
+def _osmp_problem(variable: Variable) -> str | None:
+    """Why a variable is an OSMP address rather than a value, or None.
+
+    Worded like `unmappable`: the reason completes a sentence that names the
+    variable first.
+    """
+    if variable.osmp_member is not None:
+        role = variable.name.removeprefix(f"{variable.osmp_member}.")
+        return (
+            f"which is the {role!r} Integer of OSMP binary variable "
+            f"{variable.osmp_member!r}; a Channel binds "
+            f"{variable.osmp_member!r}, whose bytes the Importer passes by "
+            f"address"
+        )
+    if variable.kind == _ADDRESS_KIND and variable.name.endswith(
+            _ADDRESS_SUFFIXES):
+        return (
+            "which is named like half of an OSMP address, but no OSMP "
+            "annotation declares it; this importer passes no address as a "
+            "number"
+        )
+    return None
+
+
 def unmappable(variable: Variable) -> str | None:
     """Why this importer maps no Channel field to a variable, or None.
 
@@ -229,6 +264,9 @@ def unmappable(variable: Variable) -> str | None:
     rejected binding and an inspection report state the same rule in the same
     words.
     """
+    osmp = _osmp_problem(variable)
+    if osmp is not None:
+        return osmp
     if variable.kind == CLOCK:
         return (
             "which is a Clock variable; a Clock is driven through the "
@@ -357,6 +395,24 @@ def binary_field(
         variable=variable, field=field, length_field=length_field,
         capacity=capacity,
     )
+
+
+def osmp_field(binding: Binding, fields: dict[str, dict],
+               causality: str) -> BinaryField:
+    """The bounded representation a Channel carries one OSMP variable in.
+
+    It is a Binary variable's, and its bound must also fit the fmi2Integer
+    that states the size.
+    """
+    binary = binary_field(binding, fields, causality)
+    if binary.capacity > _OSMP_SIZE_CEILING:
+        raise ManifestError(
+            f"Channel {binding.channel!r} field {binding.field!r} carries "
+            f"{binary.capacity} bytes; OSMP binary variable "
+            f"{binding.variable.name!r} states its size in an fmi2Integer, "
+            f"which counts no further than {_OSMP_SIZE_CEILING}"
+        )
+    return binary
 
 
 def _require_every_field_carried(
@@ -528,6 +584,7 @@ def bind_channel(
     causality = causality_of(direction)
     scalars: dict[str, list[Binding]] = {}
     binaries: list[BinaryField] = []
+    addressed: list[BinaryField] = []
     lengths: dict[str, str] = {}
     for field in fields:
         if field not in bound:
@@ -535,7 +592,11 @@ def bind_channel(
         binding = Binding(channel, field, bound[field])
         _require_mappable(binding)
         _require_causality(binding, causality, fmi_version)
-        if binding.variable.kind == BINARY:
+        if binding.variable.osmp is not None:
+            binary = osmp_field(binding, fields, causality)
+            lengths[binary.length_field] = field
+            addressed.append(binary)
+        elif binding.variable.kind == BINARY:
             binary = binary_field(binding, fields, causality)
             lengths[binary.length_field] = field
             binaries.append(binary)
@@ -549,6 +610,8 @@ def bind_channel(
     ]
     if binaries:
         groups.append(BinaryGroup(binaries, causality))
+    if addressed:
+        groups.append(OsmpGroup(addressed, causality))
     return ChannelBinding(groups)
 
 
@@ -576,6 +639,16 @@ def start_value(variable: Variable, text: str):
     separated by single spaces. Nothing is broadcast and nothing is filled
     in: the count it lists is the count the dimensions declare.
     """
+    osmp = _osmp_problem(variable)
+    if osmp is None and variable.osmp is not None:
+        osmp = (
+            "which is an OSMP binary variable; this importer passes OSMP "
+            "bytes from a Channel and sets no start value for them"
+        )
+    if osmp is not None:
+        raise ManifestError(
+            f"start value for FMU variable {variable.name!r}, {osmp}"
+        )
     if variable.kind == BINARY:
         return _binary_start(variable, text)
     if variable.kind not in SCALARS:
