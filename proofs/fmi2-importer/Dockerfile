@@ -13,11 +13,12 @@ RUN rm -f /etc/apt/sources.list.d/*.sources \
     && apt-get install -y --no-install-recommends build-essential cmake ca-certificates git \
         libprotobuf-dev protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
-# FMPy 0.3.26 and the OSMP build tools, and the SiL runtime closure (mcap).
+# FMPy 0.3.26 and the OSMP build tools, pinned by hash, and the SiL runtime
+# closure (mcap), pinned by exact version as the runtime image installs it.
 COPY proofs/osmp-sensor/requirements.lock /tmp/requirements.lock
 COPY container/requirements.lock /tmp/runtime.lock
 RUN pip install --no-cache-dir --require-hashes -r /tmp/requirements.lock \
-    && pip install --no-cache-dir --require-hashes -r /tmp/runtime.lock
+    && pip install --no-cache-dir --only-binary=:all: -r /tmp/runtime.lock
 COPY proofs/osmp-sensor/fetch.py proofs/osmp-sensor/sources.json /tmp/fetch/
 RUN python /tmp/fetch/fetch.py /sources
 WORKDIR /src
