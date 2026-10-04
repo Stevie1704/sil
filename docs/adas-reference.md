@@ -290,7 +290,10 @@ same t. The caller owns each `adas_ref_instance`, and the held observations
 live in it; reset forgets them. The
 application keeps no global state, starts no thread, opens no file or
 socket, reads no clock, and allocates no memory. All work happens inside
-the registered Task, with the Virtual time the kernel passes.
+the registered Task, with the Virtual time the kernel passes. The no-clock
+rule is required: the Clock shim does not cover a Native participant, so a
+clock read would return real wall time
+([When the Clock shim applies](library.md#when-the-clock-shim-applies)).
 
 The adapter allocates one controller per Manifest entry and passes it as the
 Task's `user` pointer. One loaded library therefore backs all
