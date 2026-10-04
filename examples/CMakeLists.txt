@@ -4,7 +4,7 @@
 # incorrect build and the fault variants are the same library built once more,
 # with the defect chosen by the preprocessor. The ".so" suffix on every
 # platform keeps the tests' paths platform-neutral; dlopen does not care.
-function(add_speed_filter name source)
+function(add_example_library name source)
   add_library(${name} SHARED ${source})
   target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/library)
   target_compile_definitions(${name} PRIVATE ${ARGN})
@@ -13,18 +13,21 @@ function(add_speed_filter name source)
     SUFFIX ".so")
 endfunction()
 
-add_speed_filter(speed_filter library/speed_filter.c)
-add_speed_filter(speed_filter_defect library/speed_filter.c
+add_example_library(speed_filter library/speed_filter.c)
+add_example_library(speed_filter_defect library/speed_filter.c
   SPEED_FILTER_DEFECT)
-add_speed_filter(speed_filter_crash ${PROJECT_SOURCE_DIR}/tests/fixtures/speed_filter_fault.c
+add_example_library(speed_filter_crash ${PROJECT_SOURCE_DIR}/tests/fixtures/speed_filter_fault.c
   SPEED_FILTER_CRASH_AT_CYCLE=3)
-add_speed_filter(speed_filter_hang ${PROJECT_SOURCE_DIR}/tests/fixtures/speed_filter_fault.c
+add_example_library(speed_filter_hang ${PROJECT_SOURCE_DIR}/tests/fixtures/speed_filter_fault.c
   SPEED_FILTER_HANG_AT_CYCLE=3)
-add_speed_filter(speed_filter_no_terminate ${PROJECT_SOURCE_DIR}/tests/fixtures/speed_filter_fault.c
+add_example_library(speed_filter_no_terminate ${PROJECT_SOURCE_DIR}/tests/fixtures/speed_filter_fault.c
   SPEED_FILTER_OMIT_TERMINATE)
 # Wrong only in the cycle of the Run's last Step, at 100 ms.
-add_speed_filter(speed_filter_wrong_last ${PROJECT_SOURCE_DIR}/tests/fixtures/speed_filter_fault.c
+add_example_library(speed_filter_wrong_last ${PROJECT_SOURCE_DIR}/tests/fixtures/speed_filter_fault.c
   SPEED_FILTER_WRONG_AT_CYCLE=11)
+# The port binding's library (issue #259): two inputs, two outputs and two
+# cyclic runnables behind its own C API.
+add_example_library(gap_monitor library/gap_monitor.c)
 
 # --- recorded-data FMU example (issue #186) ---
 # The shared library of fmu-replay/, which the tests package into an

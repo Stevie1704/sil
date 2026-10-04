@@ -1,0 +1,26 @@
+{
+  "sil_csv_mapping": 1,
+  "timestamp": {"column": "time_ms", "unit": "ms"},
+  "schemas": {
+    "gap.Ego": {"fields": [{"name": "speed_mps", "type": "f64"}]},
+    "gap.Radar": {"fields": [
+      {"name": "range_m", "type": "f64"},
+      {"name": "object_id", "type": "u32"}
+    ]}
+  },
+  "channels": [
+    {
+      "channel": "ego.motion",
+      "schema": "gap.Ego",
+      "fields": {"speed_mps": {"column": "speed_mps"}}
+    },
+    {
+      "channel": "radar.object",
+      "schema": "gap.Radar",
+      "fields": {
+        "range_m": {"column": "range_m"},
+        "object_id": {"column": "object_id"}
+      }
+    }
+  ]
+}
