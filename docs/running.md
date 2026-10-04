@@ -200,16 +200,12 @@ that reads the clock via direct syscalls or the vDSO bypass the preload and are
 not virtualized. The shim answers only the calls listed above; the rest of the
 participant must still behave deterministically.
 
-The shim also does not cover **Native participants**. A Native library runs in
-the runner's process, and the shim is preloaded only into Process participant
-children. A Native library that reads the clock or sleeps uses real wall time,
-and the run is not deterministic. Preloading the shim into the runner is
-unsupported: the runner measures the Process response deadline
-(`--participant-timeout-ms`) with its own monotonic clock, and the shim would
-freeze that clock within a step. A Native library must take time only from its
-task's `now_ns` argument or the API's `now_ns`. Run a library that reads the
-clock as a Process participant with `shim=True`
-([docs/library.md](library.md#when-the-clock-shim-applies)).
+The shim also does not cover **native participants**. The runner preloads the
+shim only into process participant children. A native library runs in the
+kernel's own process, so its clock reads and sleeps use real time. Do not
+preload the shim into the runner: it freezes the runner's own deadline clock.
+[When the Clock shim applies](library.md#when-the-clock-shim-applies) gives the
+reason and the alternative.
 
 ## Shared-memory channel transport
 
