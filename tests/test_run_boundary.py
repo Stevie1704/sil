@@ -561,6 +561,58 @@ class TestClockShimRejection:
         assert "unknown sleep policy" in proc.stderr
         assert "'reject' or 'immediate'" in proc.stderr
 
+    def test_threads_on_native_participant_is_config_error(
+        self, run_sil, tmp_path
+    ):
+        bad = tmp_path / "bad.json"
+        bad.write_text(
+            '{"sil_manifest":1,"duration_ns":1000,"schemas":{},"channels":{},'
+            '"participants":{"n":{"type":"native","library":"x",'
+            '"threads":"report"}}}'
+        )
+        proc = run_sil(bad)
+        assert proc.returncode == 2
+        assert "threads is only valid on process participants" in proc.stderr
+
+    @pytest.mark.parametrize("shim", ["", ',"shim":false'])
+    @pytest.mark.parametrize("policy", ["allow", "report", "reject"])
+    def test_threads_without_shim_is_config_error(
+        self, run_sil, tmp_path, shim, policy
+    ):
+        # Even an explicit default: the policy only exists inside the shim.
+        bad = tmp_path / "bad.json"
+        bad.write_text(
+            '{"sil_manifest":1,"duration_ns":1000,"schemas":{},"channels":{},'
+            '"participants":{"p":{"type":"process","command":["x"],'
+            f'"step_period_ns":1000{shim},"threads":"{policy}"}}}}}}'
+        )
+        proc = run_sil(bad)
+        assert proc.returncode == 2
+        assert "threads requires shim" in proc.stderr
+
+    def test_unknown_thread_policy_is_config_error(self, run_sil, tmp_path):
+        bad = tmp_path / "bad.json"
+        bad.write_text(
+            '{"sil_manifest":1,"duration_ns":1000,"schemas":{},"channels":{},'
+            '"participants":{"p":{"type":"process","command":["x"],'
+            '"step_period_ns":1000,"shim":true,"threads":"serialize"}}}'
+        )
+        proc = run_sil(bad)
+        assert proc.returncode == 2
+        assert "unknown threads policy" in proc.stderr
+        assert "'allow', 'report' or 'reject'" in proc.stderr
+
+    def test_non_string_thread_policy_is_config_error(self, run_sil, tmp_path):
+        bad = tmp_path / "bad.json"
+        bad.write_text(
+            '{"sil_manifest":1,"duration_ns":1000,"schemas":{},"channels":{},'
+            '"participants":{"p":{"type":"process","command":["x"],'
+            '"step_period_ns":1000,"shim":true,"threads":true}}}'
+        )
+        proc = run_sil(bad)
+        assert proc.returncode == 2
+        assert "threads" in proc.stderr
+
     def test_shim_requested_but_library_missing_is_config_error(
         self, sil_run, tmp_path
     ):
@@ -827,6 +879,146 @@ class TestClockShimSleepPolicy:
         second = run_sil(m.write(tmp_path / "b.json").path)
         assert first.returncode == 0 and second.returncode == 0
         assert first.mcap_path.read_bytes() == second.mcap_path.read_bytes()
+
+
+class TestClockShimThreadPolicy:
+    """End-to-end thread policy at the run boundary (issue #262).
+
+    A shimmed participant starts and joins one worker in on_init and one in
+    every step. ``report`` adds one stderr line per created thread with the
+    Virtual time the call began at; ``reject`` stops every worker from
+    starting; ``allow`` is the behavior without the field.
+    """
+
+    PERIOD = 10_000_000
+    DURATION = 30_000_000  # steps at t = 0, 10ms, 20ms
+    REPORT = "sil clock shim: thread created at virtual time {} ns"
+
+    def _manifest(self, **kwargs):
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = toy_manifest(duration_ns=self.DURATION)
+        m.add_channel("readings", schema="toy.Counter")
+        m.add_process(
+            "vecu",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "thread_start.py")],
+            step_period_ns=self.PERIOD,
+            publishes=["readings"],
+            shim=True,
+            **kwargs,
+        )
+        return m
+
+    def _readings(self, mcap_path):
+        _, msgs = read_mcap(mcap_path)
+        return [
+            (TYPES["toy.Counter"].unpack(data)["seq"],
+             TYPES["toy.Counter"].unpack(data)["value"])
+            for topic, _, data in msgs
+            if topic == "readings"
+        ]
+
+    @staticmethod
+    def _reports(stderr):
+        return [line for line in stderr.splitlines()
+                if line.startswith("sil clock shim:")]
+
+    def test_allow_runs_every_worker_without_a_report(self, run_sil, tmp_path):
+        proc = run_sil(self._manifest(threads="allow").write(
+            tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        assert self._readings(proc.mcap_path) == [(1, 1)] * 3
+        assert self._reports(proc.stderr) == []
+
+    def test_report_runs_every_worker_and_reports_its_virtual_time(
+        self, run_sil, tmp_path
+    ):
+        proc = run_sil(self._manifest(threads="report").write(
+            tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        assert self._readings(proc.mcap_path) == [(1, 1)] * 3
+        # The init worker starts before the first Step, at Virtual time zero.
+        assert self._reports(proc.stderr) == [
+            self.REPORT.format(t)
+            for t in (0, 0, self.PERIOD, 2 * self.PERIOD)
+        ]
+
+    def test_reject_starts_no_worker(self, run_sil, tmp_path):
+        proc = run_sil(self._manifest(threads="reject").write(
+            tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        assert self._readings(proc.mcap_path) == [(0, 0)] * 3
+        assert self._reports(proc.stderr) == []
+
+    def test_report_records_the_same_messages_as_allow(
+        self, run_sil, tmp_path
+    ):
+        # Report is a diagnostic: the recorded Messages equal allow's.
+        allow = run_sil(self._manifest().write(tmp_path / "a.json").path,
+                        out=tmp_path / "a.mcap")
+        report = run_sil(self._manifest(threads="report").write(
+            tmp_path / "r.json").path, out=tmp_path / "r.mcap")
+        assert allow.returncode == 0 and report.returncode == 0
+        assert self._readings(allow.mcap_path) == self._readings(
+            report.mcap_path)
+
+    def test_hand_written_explicit_default_is_hashed_as_written(
+        self, run_sil, tmp_path
+    ):
+        # The Manifest hash is the digest of the exact file bytes, so an
+        # explicit "allow" is not stripped before hashing. It runs as allow.
+        import hashlib
+
+        m = self._manifest()
+        path = m.write(tmp_path / "m.json").path
+        doc = json.loads(path.read_text())
+        doc["participants"]["vecu"]["threads"] = "allow"
+        path.write_text(json.dumps(doc))
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+
+        proc = run_sil(path)
+        assert proc.returncode == 0, proc.stderr
+        assert digest != m.hash()
+        assert f"manifest_hash {digest}" in proc.stdout
+        assert self._readings(proc.mcap_path) == [(1, 1)] * 3
+        assert self._reports(proc.stderr) == []
+
+    def test_unshimmed_thread_creation_passes_through(self, run_sil, tmp_path):
+        import sys as _sys
+
+        from conftest import ROOT
+
+        m = toy_manifest(duration_ns=self.DURATION)
+        m.add_channel("readings", schema="toy.Counter")
+        m.add_process(
+            "vecu",
+            command=[_sys.executable,
+                     str(ROOT / "tests" / "participants" / "thread_start.py")],
+            step_period_ns=self.PERIOD,
+            publishes=["readings"],
+        )
+        proc = run_sil(m.write(tmp_path / "m.json").path)
+        assert proc.returncode == 0, proc.stderr
+        assert self._readings(proc.mcap_path) == [(1, 1)] * 3
+        assert self._reports(proc.stderr) == []
+
+    @pytest.mark.parametrize("policy", ["allow", "report"])
+    def test_sil_check_passes_with_joined_workers(
+        self, sil_run, tmp_path, policy
+    ):
+        import sys as _sys
+
+        ref = self._manifest(threads=policy).write(tmp_path / "m.json")
+        proc = subprocess.run(
+            [_sys.executable, "-m", "sil.check", str(ref.path),
+             "--runner", str(sil_run)],
+            capture_output=True, text=True,
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert proc.stdout.startswith("deterministic: ")
 
 
 class TestEmptyRun:

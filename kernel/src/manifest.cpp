@@ -435,11 +435,14 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
   std::string type = required<std::string>(participant, "type", ctx);
   // The clock shim is a process-participant-only opt-in; on any other type it
   // is a Manifest error (the Python builder cannot even express it there). The
-  // sleep policy (#52) is part of that same opt-in and follows it.
+  // sleep (#52) and thread (#262) policies are part of that same opt-in and
+  // follow it.
   if (type != "process" && find_value(participant, "shim", ctx))
     fail(ctx + ": shim is only valid on process participants");
   if (type != "process" && find_value(participant, "sleep", ctx))
     fail(ctx + ": sleep is only valid on process participants");
+  if (type != "process" && find_value(participant, "threads", ctx))
+    fail(ctx + ": threads is only valid on process participants");
   if (type == "native") {
     reject_unknown_keys(participant, ctx,
                         {"type", "library", "config", "subscribes",
@@ -466,7 +469,8 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
   } else if (type == "process") {
     reject_unknown_keys(participant, ctx,
                         {"type", "command", "step_period_ns", "subscribes",
-                         "publishes", "priority", "shim", "sleep"});
+                         "publishes", "priority", "shim", "sleep",
+                         "threads"});
     ProcessSpec ps;
     const json &cmd = require_array(
         require_value(participant, "command", ctx),
@@ -509,6 +513,26 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
       else
         fail(ctx + ": unknown sleep policy '" + value +
              "' (expected 'reject' or 'immediate')");
+    }
+    // Thread policy for the shimmed child (#262). Absent means "allow", the
+    // behavior before the field existed; the builder omits that default, so
+    // existing Manifests keep their bytes and hash. An explicit "allow" is
+    // accepted as written and hashed as written.
+    if (const json *threads = find_value(participant, "threads", ctx)) {
+      if (!ps.shim)
+        fail(ctx + ": threads requires shim (the policy only applies to the "
+                   "virtual clock shim)");
+      const std::string value =
+          extract<std::string>(*threads, ctx + " key 'threads'");
+      if (value == "allow")
+        ps.threads = ThreadPolicy::Allow;
+      else if (value == "report")
+        ps.threads = ThreadPolicy::Report;
+      else if (value == "reject")
+        ps.threads = ThreadPolicy::Reject;
+      else
+        fail(ctx + ": unknown threads policy '" + value +
+             "' (expected 'allow', 'report' or 'reject')");
     }
     p.impl = std::move(ps);
   } else if (type == "replay") {

@@ -63,6 +63,10 @@ enum class Transport { Inline, Shm };
 // frozen (issue #52). Absent means Immediate, which is the pre-#52 behavior.
 enum class SleepPolicy { Immediate, Reject };
 
+// What a shimmed Process participant's pthread_create does (issue #262): a
+// diagnostic, never serialization. Absent means Allow.
+enum class ThreadPolicy { Allow, Report, Reject };
+
 // One participant's delivery route from a Channel. A missing capacity is the
 // legacy unbounded behavior for Manifest documents written before issue #75.
 enum class OverflowPolicy { Fail, DropNewest };
@@ -110,6 +114,7 @@ struct ProcessSpec {
   int32_t priority = 0;
   bool shim = false;  // opt-in virtual clock shim (issue #27)
   SleepPolicy sleep = SleepPolicy::Immediate;  // issue #52
+  ThreadPolicy threads = ThreadPolicy::Allow;  // issue #262
 };
 
 struct ReplaySpec {
