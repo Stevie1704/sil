@@ -303,7 +303,7 @@ class PortLibraryParticipant(_LibraryLifecycle):
                 f"declared {direction!r} for this participant"
             )
         name = declared["schema"]
-        given = [(f["name"], f["type"], f.get("count", 1))
+        given = [(f["name"], f["type"], f.get("count"))
                  for f in init["schemas"][name]["fields"]]
         expected = [(f.name, f.type, f.count) for f in port.fields]
         if given != expected:
@@ -334,7 +334,7 @@ class PortLibraryParticipant(_LibraryLifecycle):
             channel = self._channels[port.name]
             try:
                 types[init["channels"][channel]["schema"]].pack(**values)
-            except struct.error as error:
+            except (struct.error, OverflowError) as error:
                 raise ManifestError(
                     f"initial value of port {port.name!r} does not fit its "
                     f"Schema: {error}"
@@ -371,8 +371,8 @@ def _check_names(kind: str, given: dict, expected: tuple) -> None:
         )
 
 
-def _layout(fields: list[tuple[str, str, int]]) -> list[str]:
-    return [f"{name}:{kind}" + (f"[{count}]" if count != 1 else "")
+def _layout(fields: list[tuple[str, str, int | None]]) -> list[str]:
+    return [f"{name}:{kind}" + (f"[{count}]" if count is not None else "")
             for name, kind, count in fields]
 
 
@@ -382,13 +382,15 @@ def _initial_name(port, field) -> str:
 
 
 def _initial_value(name: str, field, text: str):
-    """One `--initial` value as its field's Python value: a number, a list
-    of `count` comma-separated numbers, or bytes for a `u8` array."""
+    """One `--initial` value as its field's Python value: a number for a
+    scalar, a list of `count` comma-separated numbers for an array, or bytes
+    for a `u8` array."""
     parse = int if field.type in INTEGER_TYPES else float
     items = text.split(",")
-    if len(items) != field.count:
+    expected = 1 if field.count is None else field.count
+    if len(items) != expected:
         raise ManifestError(
-            f"initial value {name}={text!r} needs {field.count} "
+            f"initial value {name}={text!r} needs {expected} "
             f"comma-separated values, got {len(items)}"
         )
     try:
@@ -397,7 +399,7 @@ def _initial_value(name: str, field, text: str):
         raise ManifestError(
             f"initial value {name}={text!r} is not a {field.type}"
         ) from None
-    if field.count == 1:
+    if field.count is None:
         return numbers[0]
     if field.type != "u8":
         return numbers
@@ -506,8 +508,9 @@ def main(argv: list[str] | None = None) -> None:
                         help="one input value before the first Message; "
                              "<port>.<field> with --binding")
     args = parser.parse_args(argv)
-    participant = _participant(parser, args)
+    # Before the binding imports: its native dependencies can print too.
     _reserve_protocol_stdout()
+    participant = _participant(parser, args)
     try:
         run(participant)
     finally:

@@ -305,6 +305,8 @@ class TestDeclarations:
 
 
 @pytest.mark.parametrize("field, text, value", [
+    (ports.Field("speed", "f64"), "1.5", 1.5),
+    (ports.Field("speeds", "f64", 1), "1.5", [1.5]),
     (ports.Field("speeds", "f64", 2), "1.5,2", [1.5, 2.0]),
     (ports.Field("flags", "u8", 3), "0,1,255", bytes([0, 1, 255])),
 ])
@@ -321,6 +323,57 @@ def test_an_invalid_array_initial_value_is_a_manifest_error(
 ):
     with pytest.raises(ManifestError, match=message):
         adapter._initial_value("p.x", field, text)
+
+
+def test_a_count_of_one_is_an_array_not_a_scalar():
+    """An explicit `count` is an array in a Schema, even a count of 1."""
+    radar = (gap_binding.Binding.INPUT_PORTS[1]._replace(fields=(
+        ports.Field("range_m", "f64", 1), ports.Field("object_id", "u32"))),)
+    bound = participant(declaring(
+        INPUT_PORTS=(gap_binding.Binding.INPUT_PORTS[0], *radar)))
+    with pytest.raises(ManifestError, match=(
+            r"has fields \['range_m:f64', 'object_id:u32'\], but the binding "
+            r"declares \['range_m:f64\[1\]', 'object_id:u32'\]")):
+        bound.on_init(init_line())
+    schemas = init_line()["schemas"]
+    schemas["gap.Radar"] = {"fields": [
+        {"name": "range_m", "type": "f64", "count": 1},
+        {"name": "object_id", "type": "u32"}]}
+    with pytest.raises(ManifestError, match="cannot load library"):
+        bound.on_init({**init_line(), "schemas": schemas})
+
+
+def test_an_initial_value_that_overflows_its_type_is_a_manifest_error():
+    ego = gap_binding.Binding.INPUT_PORTS[0]._replace(
+        fields=(ports.Field("speed_mps", "f32"),))
+    bound = participant(declaring(
+        INPUT_PORTS=(ego, gap_binding.Binding.INPUT_PORTS[1])),
+        initial={**INITIAL, "ego.speed_mps": "1e100"})
+    schemas = init_line()["schemas"]
+    schemas["gap.Ego"] = {"fields": [{"name": "speed_mps", "type": "f32"}]}
+    with pytest.raises(ManifestError, match=(
+            "initial value of port 'ego' does not fit its Schema")):
+        bound.on_init({**init_line(), "schemas": schemas})
+
+
+def test_what_a_binding_prints_on_import_does_not_reach_the_protocol(
+    tmp_path
+):
+    noisy = tmp_path / "noisy_binding.py"
+    noisy.write_text(
+        "import os, sys\n"
+        f"sys.path.insert(0, {str(EXAMPLE)!r})\n"
+        "os.write(1, b'native diagnostic\\n')\n"
+        "from gap_binding import Binding, BindingError\n"
+    )
+    proc = subprocess.run(
+        [sys.executable, str(EXAMPLE / "adapter.py"), "unused.so",
+         "--binding", str(noisy), "--period-ns", "10000000"],
+        input="", capture_output=True, text=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout == ""
+    assert "native diagnostic" in proc.stderr
 
 
 def test_a_period_other_than_the_configured_one_fails_the_step():

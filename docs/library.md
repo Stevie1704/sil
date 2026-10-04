@@ -162,7 +162,8 @@ cmp "$workdir/run-1.mcap" "$workdir/run-2.mcap"
   entry point, in execution order.
 
 `fields` is the complete Schema of the port: one `Field(name, type, count)`
-per field, in Schema order. The calls are `Binding(library)`,
+per field, in Schema order. As in the Schema, a field without `count` is a
+scalar, and a field with a `count`, also 1, is an array. The calls are `Binding(library)`,
 `init(period_s, parameters)`, `write(port, fields)`, `run(entry)`,
 `read(port)` and `terminate()`. `init` gets the adapter's Step Period. The
 same rules as for `binding.py` apply: declare every C type from the header,
@@ -171,7 +172,9 @@ raise `BindingError` with the library's error code, and do not `print`.
 **The command line.** `--port <port>=<channel>` binds each port to one
 Channel. `--initial <port>.<field>=<value>` gives the value of each field of
 each input port before the first Message. An array field takes `count`
-comma-separated values. `--input` and `--output` are not used.
+comma-separated values. `--input` and `--output` are not used. The adapter
+moves the protocol off descriptor 1 before it imports the binding, so what
+the binding or its native dependencies print on import goes to stderr.
 
 **Checks before ready.** Before the library loads, the adapter rejects with
 a Manifest error (exit 2):
@@ -185,7 +188,7 @@ a Manifest error (exit 2):
 | a port without `--port`, an unknown `--port`, or two ports on one Channel | `ports 'gap' and 'report' are both bound to channel 'monitor.gap'` |
 | a Channel of the wrong direction, or a declared Channel that no port binds | `input port 'radar' needs channel 'radar.object' declared 'in' for this participant` |
 | a Schema whose field names, types, counts or order differ from the port | `port 'gap' on channel 'monitor.gap': Schema 'gap.TimeGap' has fields [...], but the binding declares [...]` |
-| a missing, unknown or invalid initial value | `every input field needs one --initial value: missing ['radar.object_id'], unknown []` |
+| a missing, unknown or invalid initial value, or one out of its type's range | `every input field needs one --initial value: missing ['radar.object_id'], unknown []` |
 
 A `--binding` file that does not import, or that declares no
 `ENTRY_POINTS`, stops the adapter with a usage error (exit 2) before the

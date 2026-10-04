@@ -11,11 +11,14 @@ from typing import NamedTuple
 
 
 class Field(NamedTuple):
-    """One Schema field: its name, primitive type and element count."""
+    """One Schema field: its name, primitive type and element count.
+
+    As in a Schema, a field without `count` is a scalar, and a field with a
+    `count`, even 1, is an array."""
 
     name: str
     type: str
-    count: int = 1
+    count: int | None = None
 
 
 class InputPort(NamedTuple):
