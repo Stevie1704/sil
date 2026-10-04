@@ -498,6 +498,61 @@ class TestSleepPolicy:
             assert "sleep" in entry
 
 
+class TestThreadPolicy:
+    """The thread policy (issue #262) is omit-the-default, unlike sleep.
+
+    `allow` is both the builder default and what an absent field means, so the
+    builder emits only `report` and `reject` and every existing Manifest keeps
+    its bytes and hash.
+    """
+
+    def _shimmed(self, **kwargs):
+        m = make_minimal()
+        m.add_process(
+            "vecu", command=["x"], step_period_ns=10_000_000, shim=True, **kwargs
+        )
+        return m
+
+    def _entry(self, m):
+        return json.loads(m.to_json())["participants"]["vecu"]
+
+    def test_default_allow_is_omitted_and_keeps_the_hash(self):
+        default = self._shimmed()
+        explicit = self._shimmed(threads="allow")
+        assert "threads" not in self._entry(default)
+        assert default.to_json() == explicit.to_json()
+        assert default.hash() == explicit.hash()
+
+    @pytest.mark.parametrize("policy", ["report", "reject"])
+    def test_non_default_policy_is_emitted(self, policy):
+        assert self._entry(self._shimmed(threads=policy))["threads"] == policy
+
+    def test_the_policies_hash_differently(self):
+        hashes = {self._shimmed(threads=p).hash()
+                  for p in ("allow", "report", "reject")}
+        assert len(hashes) == 3
+
+    @pytest.mark.parametrize("policy", ["serialize", "", True, ["report"]])
+    def test_unknown_or_mistyped_policy_rejected(self, policy):
+        with pytest.raises(ManifestError, match="threads must be"):
+            self._shimmed(threads=policy)
+
+    @pytest.mark.parametrize("policy", ["allow", "report", "reject"])
+    def test_policy_without_the_shim_is_rejected(self, policy):
+        # Even an explicit "allow": the kernel rejects the same declaration.
+        m = make_minimal()
+        with pytest.raises(ManifestError, match="threads requires shim"):
+            m.add_process(
+                "vecu", command=["x"], step_period_ns=10_000_000,
+                threads=policy,
+            )
+
+    def test_unshimmed_process_omits_the_policy(self):
+        plain = make_minimal()
+        plain.add_process("vecu", command=["x"], step_period_ns=10_000_000)
+        assert "threads" not in self._entry(plain)
+
+
 class TestArraySchemas:
     """Fixed-size array fields are declared with `count`. The builder rejects
     malformed declarations eagerly, mirroring the kernel's load-time rules."""

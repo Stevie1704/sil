@@ -58,6 +58,12 @@ add_custom_target(toy_messages DEPENDS ${SIL_GEN_DIR}/toy_messages.h)
 add_executable(sil_clock_probe fixtures/clock_probe.c)
 target_include_directories(sil_clock_probe PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
+# Thread probe: one dynamically linked pthread_create for the shim's thread
+# policy tests (issue #262).
+find_package(Threads REQUIRED)
+add_executable(sil_thread_probe fixtures/thread_probe.c)
+target_link_libraries(sil_thread_probe PRIVATE Threads::Threads)
+
 # A deliberately failing FMI shared library backs the importer run-failure
 # tests. The Python test packages it with the Reference FMU description so the
 # regression exercises the same archive extraction and ctypes boundary as a

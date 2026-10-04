@@ -129,6 +129,10 @@ def _reject_unknown(entry: dict, allowed: set[str], context: str) -> None:
 # the pre-#52 behavior an absent field selects in the kernel loader.
 _SLEEP_POLICIES = ("reject", "immediate")
 
+# Thread policies for a shimmed process participant (issue #262). "allow" is
+# both the builder default and what an absent field means, so it is omitted.
+_THREAD_POLICIES = ("allow", "report", "reject")
+
 
 class ManifestError(ValueError):
     """A manifest that could never be a valid kernel input."""
@@ -442,6 +446,7 @@ class Manifest:
         priority: int = 0,
         shim: bool = False,
         sleep: str = "reject",
+        threads: str | None = None,
     ) -> None:
         name = _string(name, "participant name")
         command = _array(command, f"participant {name!r} command")
@@ -479,6 +484,19 @@ class Manifest:
             raise ManifestError(
                 f"participant {name!r}: sleep requires shim=True"
             )
+        # None is "not declared", which means allow. An explicit value, even
+        # "allow", is a declaration and needs the shim, as in the kernel.
+        if threads is not None:
+            if not isinstance(threads, str) or threads not in _THREAD_POLICIES:
+                expected = ", ".join(repr(p) for p in _THREAD_POLICIES)
+                raise ManifestError(
+                    f"participant {name!r} threads must be one of {expected}, "
+                    f"got {threads!r}"
+                )
+            if not shim:
+                raise ManifestError(
+                    f"participant {name!r}: threads requires shim=True"
+                )
         entry: dict = {
             "type": "process",
             "command": command,
@@ -499,6 +517,10 @@ class Manifest:
             # before #52 keeps its behavior by staying silent. That is why the
             # field cannot be omitted when it matches the builder's default.
             entry["sleep"] = sleep
+            # Unlike sleep, the default matches what an absent field means, so
+            # omitting it keeps every existing Manifest's bytes and hash.
+            if threads not in (None, "allow"):
+                entry["threads"] = threads
         self._add_participant(name, entry)
 
     def add_replay(

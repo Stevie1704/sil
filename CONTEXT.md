@@ -165,7 +165,8 @@ The library preloaded into an opaque participant that answers every wall-clock
 POSIX read from virtual time, making it deterministic without modifying it.
 Such reads are frozen within a step: they only change between steps. Clock IDs
 outside the wall-clock classes — the CPU-time IDs and any the shim does not
-name — pass through to the real libc.
+name — pass through to the real libc. It also applies the participant's thread
+policy to `pthread_create`: allow, report or reject. This is a diagnostic only.
 _Avoid_: clock hook, time patch, LD_PRELOAD hack, interposer
 
 ### Data routing

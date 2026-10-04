@@ -188,8 +188,8 @@ older manifest with no `sleep` field keeps `"immediate"`, so its hash and its
 behavior are both unchanged.
 
 The shim applies **per participant**: a shimmed vECU and ordinary unshimmed
-participants coexist in one manifest and one run. `shim`, `sleep` and
-`epoch_ns` are all hashed into the manifest (they change output), so shimmed
+participants coexist in one manifest and one run. `shim`, `sleep`, `threads`
+and `epoch_ns` are all hashed into the manifest (they change output), so shimmed
 and unshimmed variants of a run never collide under hash-based caching, and two
 shimmed runs
 started at different wall-clock times still produce bit-identical MCAPs — run
@@ -206,6 +206,73 @@ kernel's own process, so its clock reads and sleeps use real time. Do not
 preload the shim into the runner: it freezes the runner's own deadline clock.
 [When the Clock shim applies](library.md#when-the-clock-shim-applies) gives the
 reason and the alternative.
+
+### Thread creation diagnostics
+
+A vECU can start worker, timer or condition-variable threads. Under frozen
+Virtual time, these threads often fail:
+
+- A timer thread fails on its sleeps, or spins on them.
+- A worker that finishes after the Step response publishes nothing, or
+  publishes in a later Step.
+
+A failed determinism check tells you that the Run is different. It does not
+tell you the cause. The `threads` policy makes thread creation by a shimmed
+participant visible:
+
+```python
+m.add_process(
+    "vecu",
+    command=["./vecu"],
+    step_period_ns=10_000_000,
+    shim=True,
+    threads="report",    # default "allow"
+)
+```
+
+| `threads` | `pthread_create` does | Use it for |
+| --- | --- | --- |
+| `"allow"` (default) | starts the thread; nothing is reported | normal runs |
+| `"report"` | starts the thread; the shim writes one stderr line for each successful creation | finding out whether, and at which Step, a vECU starts threads |
+| `"reject"` | returns `EAGAIN` and does not start the thread | checking whether a vECU runs without its threads |
+
+A `report` line has this form, with the Virtual time at which the call began
+(`0` before the first Step, for example during initialization):
+
+```text
+sil clock shim: thread created at virtual time 10000000 ns
+```
+
+The line goes to the participant's stderr, never to the protocol stdout. It has
+no pointers, OS thread IDs or wall time. The lines of threads created
+concurrently can come in any order.
+
+`reject` returns `EAGAIN` as the `pthread_create` return code and leaves
+`errno` alone. It does not stop the Run: the participant decides what to do
+with the error. A participant that retries forever is still stopped by the
+Response deadline.
+
+`threads` is valid only on a Process participant with `shim` enabled; on any
+other participant, without the shim, or with another value it is a Manifest
+error (exit 2). The builder omits the default `"allow"`, so a Manifest written
+before the field existed keeps its bytes and hash. A hand-written explicit
+`"allow"` is accepted and hashed as written.
+
+**Boundaries:** the policy observes only the `pthread_create` calls that the
+preload intercepts, not every thread. These are outside its coverage:
+
+- statically linked binaries;
+- threads started with a direct `clone` system call or another call that does
+  not go through `pthread_create`;
+- threads started before the shim loads, for example from another library's
+  load-time constructor;
+- what a thread does after it starts: a `report` line names only its creation;
+- how an opaque runtime uses its threads.
+
+The policy is detection only. It does not count threads, serialize or schedule
+them, diagnose races, or make a participant deterministic. A `report` line does
+not prove that the thread caused a determinism violation. Internal determinism
+stays the participant author's responsibility ([DESIGN.md](../DESIGN.md)).
 
 ## Shared-memory channel transport
 

@@ -348,6 +348,22 @@ class ProcessParticipant::StepCodec {
 // preloaded shim maps read-only. The shim has no knowledge of the kernel; the
 // only contract is the region layout and the SIL_CLOCK_REGION environment var.
 
+namespace {
+
+uint64_t shim_thread_policy(ThreadPolicy policy) {
+  switch (policy) {
+    case ThreadPolicy::Report:
+      return SIL_THREADS_REPORT;
+    case ThreadPolicy::Reject:
+      return SIL_THREADS_REJECT;
+    case ThreadPolicy::Allow:
+      break;
+  }
+  return SIL_THREADS_ALLOW;
+}
+
+}  // namespace
+
 void ProcessParticipant::setup_clock_region() {
   // The child's shim maps the region by path, so the file must stay on the
   // filesystem until the child has mapped it. The region owns that lifetime and
@@ -368,6 +384,7 @@ void ProcessParticipant::setup_clock_region() {
   region->sleep_policy = sleep_policy_ == SleepPolicy::Reject
                              ? SIL_SLEEP_REJECT
                              : SIL_SLEEP_IMMEDIATE;
+  region->thread_policy = shim_thread_policy(thread_policy_);
 
   // Resolve the shim library path here, in the parent: inject_shim_env runs
   // between fork and exec, where allocation and filesystem canonicalization are
@@ -439,7 +456,8 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
                                        RunBoundaryLimits limits)
     : engine_(engine), name_(name), period_ns_(spec.authored.step_period_ns),
       publishes_(spec.authored.publishes), epoch_ns_(engine.manifest().epoch_ns),
-      sleep_policy_(spec.authored.sleep), arenas_(name),
+      sleep_policy_(spec.authored.sleep),
+      thread_policy_(spec.authored.threads), arenas_(name),
       participant_timeout_(participant_timeout), limits_(limits) {
   try {
     // Preparation resolved this vector against the Manifest directory and

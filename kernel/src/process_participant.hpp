@@ -95,6 +95,7 @@ class ProcessParticipant {
   std::string shim_lib_;  // resolved in the parent so the child only setenv()s
   uint64_t epoch_ns_ = 0;
   SleepPolicy sleep_policy_ = SleepPolicy::Immediate;  // issue #52
+  ThreadPolicy thread_policy_ = ThreadPolicy::Allow;   // issue #262
 
   void setup_clock_region();
   void inject_shim_env() const;  // runs in the forked child before exec
