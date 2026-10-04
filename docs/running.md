@@ -197,7 +197,15 @@ started at different wall-clock times still produce bit-identical MCAPs — run
 
 **Boundaries (out of scope, documented):** statically linked binaries and code
 that reads the clock via direct syscalls or the vDSO bypass the preload and are
-not virtualized.
+not virtualized. The shim answers only the calls listed above; the rest of the
+participant must still behave deterministically.
+
+The shim also does not cover **native participants**. The runner preloads the
+shim only into process participant children. A native library runs in the
+kernel's own process, so its clock reads and sleeps use real time. Do not
+preload the shim into the runner: it freezes the runner's own deadline clock.
+[When the Clock shim applies](library.md#when-the-clock-shim-applies) gives the
+reason and the alternative.
 
 ## Shared-memory channel transport
 

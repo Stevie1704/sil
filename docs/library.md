@@ -152,6 +152,23 @@ calls. The example library reads no clock and needs no shim. The shim's
 boundaries apply: a statically linked clock read, a direct syscall, or the
 vDSO is not virtualized.
 
+The Clock shim applies only to Process participants. A Native participant
+runs in the kernel's own process, and the runner does not preload the shim
+into that process. A Native library that reads the clock or sleeps uses real
+time. The Run is then not deterministic, and nothing warns you before the
+determinism check fails.
+
+Do not preload the shim into the runner. The runner measures the response
+deadline with its own monotonic clock. The shim freezes that clock within a
+Step, so the deadline does not expire and a hung Process participant hangs
+the Run.
+
+A Native library must take time only from the `now_ns` argument of its Task
+or from `sil_api_v1.now_ns`. Put a library that reads the clock in a Process
+participant with `shim=True`. The shim answers only the intercepted calls in
+[Virtual clock shim](running.md#virtual-clock-shim-for-opaque-posix-vecus).
+The library must also behave deterministically in all other respects.
+
 ### Native participant alternative
 
 A library can also export `sil_participant_init` from
@@ -166,6 +183,7 @@ protocol line, but has limits:
 | hang | Run failure at the response deadline | the runner hangs; the response deadline applies only to Process participants |
 | global state | one set per process, so any number of instances | one set per runner process: at most one instance per Run unless state is behind the `user` pointer |
 | stdout | moved off the protocol by the adapter | shared with the runner |
+| clock | `shim=True` answers the intercepted clock reads from Virtual time and applies the `sleep` policy | no Clock shim: a clock read or sleep uses real time, so take time only from `now_ns` |
 | cost | one protocol round trip per Step | a function call per task |
 
 Use the Native ABI for a library you build against SiL and trust not to

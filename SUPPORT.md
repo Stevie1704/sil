@@ -45,6 +45,13 @@ What follows:
 - A developer machine gets best-effort reproduction, not the guarantee.
 - The determinism check (`sil-check`) proves determinism for one Manifest on
   one machine class at one moment. It does not certify a machine class.
+- The guarantee assumes Participants that take time only from Virtual time.
+  The Clock shim answers the documented clock reads and sleeps of a Process
+  participant with `shim=True`, and nothing more. It does not cover Native
+  participants. They run in the kernel's own process, and the runner does not
+  preload the shim into that process. A Native library must take time only
+  from `now_ns`. Put a library that reads the clock in a shimmed Process
+  participant ([docs/library.md](docs/library.md#when-the-clock-shim-applies)).
 
 Each Run writes a deterministic JSON provenance side-car next to its Recording:
 `<recording>.provenance.json` by default, or the path selected with
