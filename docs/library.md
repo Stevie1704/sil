@@ -123,12 +123,12 @@ header states it. There is no symbol inference.
 
 A production library often has several input and output interfaces, each on
 its own Channel, and several cyclic entry points, for example a 10 ms and a
-30 ms runnable. `adapter.py --binding <file>` opts into the port contract for
-such a library. The `binding.py` contract above stays as it is.
+30 ms entry point. For such a library, use the port contract:
+`adapter.py --binding <file>`. The `binding.py` contract above stays as it is.
 
 | File | Role |
 | --- | --- |
-| `gap_monitor.h`, `gap_monitor.c` | the library: two input structs, two output structs, two runnables |
+| `gap_monitor.h`, `gap_monitor.c` | the library: two input structs, two output structs, two entry points |
 | `ports.py` | the declaration types: `Field`, `InputPort`, `OutputPort`, `EntryPoint` |
 | `gap_binding.py` | the port binding: ports, entry points, symbols, C types, error codes |
 | `gap_test.py` | the Test participant: computes every output and its Steps independently |
@@ -187,6 +187,10 @@ a Manifest error (exit 2):
 | a Schema whose field names, types, counts or order differ from the port | `port 'gap' on channel 'monitor.gap': Schema 'gap.TimeGap' has fields [...], but the binding declares [...]` |
 | a missing, unknown or invalid initial value | `every input field needs one --initial value: missing ['radar.object_id'], unknown []` |
 
+A `--binding` file that does not import, or that declares no
+`ENTRY_POINTS`, stops the adapter with a usage error (exit 2) before the
+init line. The runner then reports that the participant exited.
+
 The init line does not carry the Manifest Period. As for `binding.py`, the
 first Step with a different `dt` is a Run failure (exit 1). A cycle or input
 the library refuses is a Run failure with the virtual time.
@@ -221,7 +225,7 @@ reset schedule per subsystem, and no port or entry point is added during a
 Run.
 
 **The example.** `gap_monitor` computes a time gap from an ego speed and a
-radar object in its 10 ms `track` runnable. Its 30 ms `report` runnable, at
+radar object in its 10 ms `track` entry point. Its 30 ms `report` entry point, at
 offset 10 ms, summarizes the `track` cycles since the previous report. The
 ego speed is recorded every 20 ms with a Latency of one Period, the radar
 object every 30 ms with a Latency of two Periods. Two radar objects share

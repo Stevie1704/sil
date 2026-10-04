@@ -26,7 +26,7 @@ add_example_library(speed_filter_no_terminate ${PROJECT_SOURCE_DIR}/tests/fixtur
 add_example_library(speed_filter_wrong_last ${PROJECT_SOURCE_DIR}/tests/fixtures/speed_filter_fault.c
   SPEED_FILTER_WRONG_AT_CYCLE=11)
 # The port binding's library (issue #259): two inputs, two outputs and two
-# cyclic runnables behind its own C API.
+# cyclic entry points behind its own C API.
 add_example_library(gap_monitor library/gap_monitor.c)
 
 # --- recorded-data FMU example (issue #186) ---

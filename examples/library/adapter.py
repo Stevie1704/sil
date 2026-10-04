@@ -164,8 +164,8 @@ class LibraryParticipant(_LibraryLifecycle):
                 f"channel {channel!r} must be declared {direction!r} for "
                 "this participant"
             )
-        fields_of = init["schemas"][declared["schema"]]["fields"]
-        names = [field["name"] for field in fields_of]
+        schema_fields = init["schemas"][declared["schema"]]["fields"]
+        names = [field["name"] for field in schema_fields]
         if sorted(names) != sorted(fields):
             raise ManifestError(
                 f"channel {channel!r} has fields {sorted(names)}, but the "
@@ -315,7 +315,7 @@ class PortLibraryParticipant(_LibraryLifecycle):
 
     def _initial_values(self, inputs: tuple, init: dict,
                         types: dict) -> dict[str, dict]:
-        expected = {f"{port.name}.{field.name}"
+        expected = {_initial_name(port, field)
                     for port in inputs for field in port.fields}
         if set(self._initial) != expected:
             raise ManifestError(
@@ -327,8 +327,8 @@ class PortLibraryParticipant(_LibraryLifecycle):
         for port in inputs:
             values = {
                 field.name: _initial_value(
-                    f"{port.name}.{field.name}", field,
-                    self._initial[f"{port.name}.{field.name}"])
+                    _initial_name(port, field), field,
+                    self._initial[_initial_name(port, field)])
                 for field in port.fields
             }
             channel = self._channels[port.name]
@@ -357,10 +357,10 @@ class PortLibraryParticipant(_LibraryLifecycle):
                         (t - entry.offset_ns) % entry.period_ns == 0):
                     self._binding.run(entry.name)
                     ran.add(entry.name)
+            return [(self._channels[port.name], self._binding.read(port.name))
+                    for port in declared.OUTPUT_PORTS if port.entry in ran]
         except self._binding_error as error:
             raise ParticipantFailure(f"at t={t} ns: {error}") from error
-        return [(self._channels[port.name], self._binding.read(port.name))
-                for port in declared.OUTPUT_PORTS if port.entry in ran]
 
 
 def _check_names(kind: str, given: dict, expected: tuple) -> None:
@@ -374,6 +374,11 @@ def _check_names(kind: str, given: dict, expected: tuple) -> None:
 def _layout(fields: list[tuple[str, str, int]]) -> list[str]:
     return [f"{name}:{kind}" + (f"[{count}]" if count != 1 else "")
             for name, kind, count in fields]
+
+
+def _initial_name(port, field) -> str:
+    """The `--initial` name of one field of one input port."""
+    return f"{port.name}.{field.name}"
 
 
 def _initial_value(name: str, field, text: str):
@@ -394,7 +399,14 @@ def _initial_value(name: str, field, text: str):
         ) from None
     if field.count == 1:
         return numbers[0]
-    return bytes(numbers) if field.type == "u8" else numbers
+    if field.type != "u8":
+        return numbers
+    try:
+        return bytes(numbers)
+    except ValueError:
+        raise ManifestError(
+            f"initial value {name}={text!r} is not a {field.type} array"
+        ) from None
 
 
 def _load_binding(path: str):
@@ -404,7 +416,7 @@ def _load_binding(path: str):
         sys.path.insert(0, directory)
     spec = importlib.util.spec_from_file_location(Path(path).stem, path)
     if spec is None or spec.loader is None:
-        raise SystemExit(f"cannot load binding module from {path!r}")
+        raise ImportError("not a Python file")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -458,8 +470,11 @@ def _participant(parser: argparse.ArgumentParser, args) -> _LibraryLifecycle:
     ports = dict(args.ports)
     if len(ports) != len(args.ports):
         parser.error("each --port names its port once")
-    binding = _load_binding(args.binding)
-    if not hasattr(binding.Binding, "ENTRY_POINTS"):
+    try:
+        binding = _load_binding(args.binding)
+    except Exception as error:  # noqa: BLE001 — any import error is the file's
+        parser.error(f"cannot load binding {args.binding!r}: {error!r}")
+    if not hasattr(getattr(binding, "Binding", None), "ENTRY_POINTS"):
         parser.error(f"{args.binding} declares no ENTRY_POINTS; it is not "
                      "a port binding")
     return PortLibraryParticipant(

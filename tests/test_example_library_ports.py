@@ -304,6 +304,25 @@ class TestDeclarations:
             participant().on_init(init_line())
 
 
+@pytest.mark.parametrize("field, text, value", [
+    (ports.Field("speeds", "f64", 2), "1.5,2", [1.5, 2.0]),
+    (ports.Field("flags", "u8", 3), "0,1,255", bytes([0, 1, 255])),
+])
+def test_an_array_field_takes_count_initial_values(field, text, value):
+    assert adapter._initial_value("p.x", field, text) == value
+
+
+@pytest.mark.parametrize("field, text, message", [
+    (ports.Field("speeds", "f64", 2), "1.5", "needs 2 comma-separated"),
+    (ports.Field("flags", "u8", 2), "0,300", "is not a u8 array"),
+])
+def test_an_invalid_array_initial_value_is_a_manifest_error(
+    field, text, message
+):
+    with pytest.raises(ManifestError, match=message):
+        adapter._initial_value("p.x", field, text)
+
+
 def test_a_period_other_than_the_configured_one_fails_the_step():
     with pytest.raises(ParticipantFailure, match="stepped every 20000000 ns"):
         participant().on_step(0, 20 * MS, [])

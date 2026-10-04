@@ -1,12 +1,12 @@
 /* gap_monitor — the example library of the port binding in examples/library/.
  *
  * It stands in for an adopter's ADAS library with several interfaces: two
- * input structs set by their own calls, two cyclic runnables at different
- * rates, and one output struct per runnable. Like speed_filter, it has no SiL
- * header, keeps its state in globals and writes progress to stdout.
+ * input structs set by their own calls, two cyclic entry points at different
+ * rates, and one output struct per entry point. Like speed_filter, it has no
+ * SiL header, keeps its state in globals and writes progress to stdout.
  *
- * The `track` runnable computes the time gap to the radar object from the
- * latest inputs. The `report` runnable summarizes the `track` cycles since
+ * The `track` entry point computes the time gap to the radar object from the
+ * latest inputs. The `report` entry point summarizes the `track` cycles since
  * the previous report: the smallest time gap and how many were below the
  * warning threshold. A report without a `track` cycle since the previous
  * report gives the latest time gap and no warning.
@@ -29,7 +29,7 @@ extern "C" {
 #define GAP_MONITOR_BAD_RANGE (-6)
 
 typedef struct gap_monitor_config {
-  double period_s;      /* > 0: the base cycle the runnables are scheduled on */
+  double period_s;      /* > 0: the base cycle of the entry points */
   double warning_gap_s; /* >= 0: a time gap below it counts as a warning */
 } gap_monitor_config;
 
@@ -58,17 +58,17 @@ typedef struct gap_monitor_report {
  * second init without gap_monitor_terminate is refused. */
 int gap_monitor_init(const gap_monitor_config *config);
 
-/* Set the input the next runnable reads. */
+/* Set the input the next entry point reads. */
 int gap_monitor_set_ego(const gap_monitor_ego *ego);
 int gap_monitor_set_radar(const gap_monitor_radar *radar);
 
-/* The 10 ms runnable: one time gap from the current inputs. */
+/* The 10 ms entry point: one time gap from the current inputs. */
 int gap_monitor_track(void);
 
-/* The 30 ms runnable: one summary of the `track` cycles since the last. */
+/* The 30 ms entry point: one summary of the `track` cycles since the last. */
 int gap_monitor_report_cycle(void);
 
-/* The result of the latest cycle of each runnable. */
+/* The result of the latest cycle of each entry point. */
 void gap_monitor_gap_output(gap_monitor_gap *gap);
 void gap_monitor_report_output(gap_monitor_report *report);
 
