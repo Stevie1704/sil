@@ -532,13 +532,14 @@ class TestThreadPolicy:
                   for p in ("allow", "report", "reject")}
         assert len(hashes) == 3
 
-    @pytest.mark.parametrize("policy", ["serialize", "", None, True, ["report"]])
+    @pytest.mark.parametrize("policy", ["serialize", "", True, ["report"]])
     def test_unknown_or_mistyped_policy_rejected(self, policy):
         with pytest.raises(ManifestError, match="threads must be"):
             self._shimmed(threads=policy)
 
-    @pytest.mark.parametrize("policy", ["report", "reject"])
-    def test_non_default_policy_without_the_shim_is_rejected(self, policy):
+    @pytest.mark.parametrize("policy", ["allow", "report", "reject"])
+    def test_policy_without_the_shim_is_rejected(self, policy):
+        # Even an explicit "allow": the kernel rejects the same declaration.
         m = make_minimal()
         with pytest.raises(ManifestError, match="threads requires shim"):
             m.add_process(

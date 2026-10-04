@@ -209,11 +209,15 @@ reason and the alternative.
 
 ### Thread creation diagnostics
 
-A vECU that starts worker, timer or condition-variable threads often behaves
-badly under frozen Virtual time: a timer thread fails or spins on its sleeps,
-and a worker that finishes after the Step response publishes nothing or
-publishes in a later Step. A failed determinism check shows *that* the Run
-differs, not *why*. The `threads` policy makes thread creation by a shimmed
+A vECU can start worker, timer or condition-variable threads. Under frozen
+Virtual time, these threads often fail:
+
+- A timer thread fails on its sleeps, or spins on them.
+- A worker that finishes after the Step response publishes nothing, or
+  publishes in a later Step.
+
+A failed determinism check tells you that the Run is different. It does not
+tell you the cause. The `threads` policy makes thread creation by a shimmed
 participant visible:
 
 ```python
@@ -262,7 +266,8 @@ preload intercepts, not every thread. These are outside its coverage:
   not go through `pthread_create`;
 - threads started before the shim loads, for example from another library's
   load-time constructor;
-- what a thread does after it starts: a `report` line names only its creation.
+- what a thread does after it starts: a `report` line names only its creation;
+- how an opaque runtime uses its threads.
 
 The policy is detection only. It does not count threads, serialize or schedule
 them, diagnose races, or make a participant deterministic. A `report` line does

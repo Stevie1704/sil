@@ -437,12 +437,10 @@ ParticipantSpec parse_participant(const std::string &name, const json &js,
   // is a Manifest error (the Python builder cannot even express it there). The
   // sleep (#52) and thread (#262) policies are part of that same opt-in and
   // follow it.
-  if (type != "process" && find_value(participant, "shim", ctx))
-    fail(ctx + ": shim is only valid on process participants");
-  if (type != "process" && find_value(participant, "sleep", ctx))
-    fail(ctx + ": sleep is only valid on process participants");
-  if (type != "process" && find_value(participant, "threads", ctx))
-    fail(ctx + ": threads is only valid on process participants");
+  if (type != "process")
+    for (const char *key : {"shim", "sleep", "threads"})
+      if (find_value(participant, key, ctx))
+        fail(ctx + ": " + key + " is only valid on process participants");
   if (type == "native") {
     reject_unknown_keys(participant, ctx,
                         {"type", "library", "config", "subscribes",

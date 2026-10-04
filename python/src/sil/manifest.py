@@ -446,7 +446,7 @@ class Manifest:
         priority: int = 0,
         shim: bool = False,
         sleep: str = "reject",
-        threads: str = "allow",
+        threads: str | None = None,
     ) -> None:
         name = _string(name, "participant name")
         command = _array(command, f"participant {name!r} command")
@@ -484,17 +484,19 @@ class Manifest:
             raise ManifestError(
                 f"participant {name!r}: sleep requires shim=True"
             )
-        if not isinstance(threads, str) or threads not in _THREAD_POLICIES:
-            expected = ", ".join(repr(p) for p in _THREAD_POLICIES)
-            raise ManifestError(
-                f"participant {name!r} threads must be one of {expected}, "
-                f"got {threads!r}"
-            )
-        if not shim and threads != "allow":
-            # Same rule as sleep: only the shim can apply the policy.
-            raise ManifestError(
-                f"participant {name!r}: threads requires shim=True"
-            )
+        # None is "not declared", which means allow. An explicit value, even
+        # "allow", is a declaration and needs the shim, as in the kernel.
+        if threads is not None:
+            if not isinstance(threads, str) or threads not in _THREAD_POLICIES:
+                expected = ", ".join(repr(p) for p in _THREAD_POLICIES)
+                raise ManifestError(
+                    f"participant {name!r} threads must be one of {expected}, "
+                    f"got {threads!r}"
+                )
+            if not shim:
+                raise ManifestError(
+                    f"participant {name!r}: threads requires shim=True"
+                )
         entry: dict = {
             "type": "process",
             "command": command,
@@ -517,7 +519,7 @@ class Manifest:
             entry["sleep"] = sleep
             # Unlike sleep, the default matches what an absent field means, so
             # omitting it keeps every existing Manifest's bytes and hash.
-            if threads != "allow":
+            if threads not in (None, "allow"):
                 entry["threads"] = threads
         self._add_participant(name, entry)
 

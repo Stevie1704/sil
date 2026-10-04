@@ -283,10 +283,10 @@ existing Process-participant response deadline through `sil-check`.
   manifest. `allow` calls the real function and is what an absent field
   selects; `report` also writes one stderr line per successful creation with
   the Virtual time at which the call began; `reject` returns `EAGAIN` without
-  calling it. It is a diagnostic only: it makes thread creation visible so a
-  failed determinism check has a cause to look at, and it adds no
-  serialization or scheduling, which stay non-goals. Internal determinism
-  remains the participant author's responsibility. Compatibility follows the
+  calling it. It is a diagnostic only. It makes thread creation visible, so a
+  failed determinism check has a cause to examine. It adds no serialization
+  or scheduling: these stay non-goals. Internal determinism remains the
+  participant author's responsibility. Compatibility follows the
   omit-the-default shape: the builder default `allow` equals the absent
   meaning, so the builder omits it and no existing Manifest changes bytes.
 - **Shared-memory channel transport (#9, #35):** a channel opts in with
