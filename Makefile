@@ -174,6 +174,18 @@ example-library: venv build ## Replay recorded input into the example C library 
 	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/library.json -o $(BUILD_DIR)/library-2.mcap --participant-timeout-ms 10000
 	cmp $(BUILD_DIR)/library-1.mcap $(BUILD_DIR)/library-2.mcap
 
+# The port binding of the shared-library adapter: two recorded inputs into a
+# library with two outputs and two cyclic entry points, run twice. `cmp`
+# fails the target when the two Run Recordings differ.
+.PHONY: example-library-ports
+example-library-ports: venv build ## Replay two recorded inputs into the example multi-port C library twice, compare
+	cc -shared -fPIC -O2 -o $(BUILD_DIR)/example-gap_monitor.so examples/library/gap_monitor.c
+	PYTHONPATH=$(SRC) $(PYTHON) -m sil.csv_recording examples/library/gap_mapping.json examples/library/gap_signals.csv -o $(BUILD_DIR)/gap-signals.mcap --receipt $(BUILD_DIR)/gap-signals.receipt.json
+	PYTHONPATH=$(SRC) $(PYTHON) examples/library/gap_manifest.py $(BUILD_DIR)/gap.json --recording $(BUILD_DIR)/gap-signals.mcap --library $(BUILD_DIR)/example-gap_monitor.so
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/gap.json -o $(BUILD_DIR)/gap-1.mcap --participant-timeout-ms 10000
+	PATH=$(PYTHON_BIN):$$PATH PYTHONPATH=$(SRC) ./$(BUILD_DIR)/sil-run $(BUILD_DIR)/gap.json -o $(BUILD_DIR)/gap-2.mcap --participant-timeout-ms 10000
+	cmp $(BUILD_DIR)/gap-1.mcap $(BUILD_DIR)/gap-2.mcap
+
 # The shared-library example over a selected replay window: run the library
 # over the full history and over the window after its warm-up, then compare
 # the two over the evaluation interval. The Durations are the window's end_ns

@@ -112,11 +112,123 @@ own error code and its meaning. Do not `print` from the binding: Python's
 `adapter.py` does not change. It checks that the command line gives exactly
 the binding's parameters and initial inputs, and that the input and output
 Channels' Schema fields are exactly `INPUTS` and `OUTPUTS`. Then declare your
-Schemas, Channels and adapter commands in your Manifest. The adapter binds
-one input Channel and one output Channel.
+Schemas, Channels and adapter commands in your Manifest. This contract binds
+one input Channel, one output Channel and one cycle per Step. For more, use
+the port contract.
 
 Nothing is discovered: the binding states the ABI because only the library's
 header states it. There is no symbol inference.
+
+### Bind several Channels and entry points
+
+A production library often has several input and output interfaces, each on
+its own Channel, and several cyclic entry points, for example a 10 ms and a
+30 ms runnable. `adapter.py --binding <file>` opts into the port contract for
+such a library. The `binding.py` contract above stays as it is.
+
+| File | Role |
+| --- | --- |
+| `gap_monitor.h`, `gap_monitor.c` | the library: two input structs, two output structs, two runnables |
+| `ports.py` | the declaration types: `Field`, `InputPort`, `OutputPort`, `EntryPoint` |
+| `gap_binding.py` | the port binding: ports, entry points, symbols, C types, error codes |
+| `gap_test.py` | the Test participant: computes every output and its Steps independently |
+| `gap_signals.csv`, `gap_mapping.json` | two recorded inputs at different rates, with one Burst |
+| `gap_manifest.py` | the Run: Replay, the library, Test participant |
+
+With the staged installation on `PATH`, from the checkout root:
+
+```sh
+workdir=$(mktemp -d "$HOME/sil-library-ports.XXXXXX")
+cc -shared -fPIC -O2 -o "$workdir/gap_monitor.so" examples/library/gap_monitor.c
+sil-csv examples/library/gap_mapping.json examples/library/gap_signals.csv \
+    -o "$workdir/gap-signals.mcap" --receipt "$workdir/gap-signals.receipt.json"
+python examples/library/gap_manifest.py "$workdir/gap.json" \
+    --recording "$workdir/gap-signals.mcap" --library "$workdir/gap_monitor.so"
+sil-run "$workdir/gap.json" -o "$workdir/run-1.mcap" --participant-timeout-ms 10000
+sil-run "$workdir/gap.json" -o "$workdir/run-2.mcap" --participant-timeout-ms 10000
+cmp "$workdir/run-1.mcap" "$workdir/run-2.mcap"
+```
+
+`make example-library-ports` runs the same sequence from the source tree.
+
+**The binding.** A port binding module exports `Binding` and `BindingError`.
+`Binding` declares, in order:
+
+- `PARAMETERS`: the names `--parameter` must give, as for `binding.py`.
+- `INPUT_PORTS`: one `InputPort(name, fields)` per input struct or call.
+- `OUTPUT_PORTS`: one `OutputPort(name, entry, fields)` per output struct or
+  call. `entry` names the one entry point that produces it.
+- `ENTRY_POINTS`: one `EntryPoint(name, period_ns, offset_ns)` per cyclic
+  entry point, in execution order.
+
+`fields` is the complete Schema of the port: one `Field(name, type, count)`
+per field, in Schema order. The calls are `Binding(library)`,
+`init(period_s, parameters)`, `write(port, fields)`, `run(entry)`,
+`read(port)` and `terminate()`. `init` gets the adapter's Step Period. The
+same rules as for `binding.py` apply: declare every C type from the header,
+raise `BindingError` with the library's error code, and do not `print`.
+
+**The command line.** `--port <port>=<channel>` binds each port to one
+Channel. `--initial <port>.<field>=<value>` gives the value of each field of
+each input port before the first Message. An array field takes `count`
+comma-separated values. `--input` and `--output` are not used.
+
+**Checks before ready.** Before the library loads, the adapter rejects with
+a Manifest error (exit 2):
+
+| What is wrong | Example diagnostic |
+| --- | --- |
+| an entry Period that is not greater than 0 or not a multiple of `--period-ns` | `entry point 'track': period_ns 10000000 is not a multiple of the Step Period 20000000 ns` |
+| an offset that is negative, not less than the entry Period, or not a multiple of `--period-ns` | `entry point 'report': offset_ns 5000000 is not a multiple of the Step Period 10000000 ns` |
+| a port or entry point name declared twice | `port 'ego' is declared twice` |
+| an output port whose entry point is not declared | `output port 'report' names entry point 'slow', which the binding does not declare` |
+| a port without `--port`, an unknown `--port`, or two ports on one Channel | `ports 'gap' and 'report' are both bound to channel 'monitor.gap'` |
+| a Channel of the wrong direction, or a declared Channel that no port binds | `input port 'radar' needs channel 'radar.object' declared 'in' for this participant` |
+| a Schema whose field names, types, counts or order differ from the port | `port 'gap' on channel 'monitor.gap': Schema 'gap.TimeGap' has fields [...], but the binding declares [...]` |
+| a missing, unknown or invalid initial value | `every input field needs one --initial value: missing ['radar.object_id'], unknown []` |
+
+The init line does not carry the Manifest Period. As for `binding.py`, the
+first Step with a different `dt` is a Run failure (exit 1). A cycle or input
+the library refuses is a Run failure with the virtual time.
+
+**Each Step**, in this order:
+
+1. **Inputs.** Each delivered Message replaces the held value of its
+   Channel's input port, in delivery order. In a Burst, the last Message
+   wins. An input port without a new Message keeps its value. Before the
+   first Message on its Channel is visible, the input is its `--initial`
+   value. The Channel's declared Latency decides when a Message is visible.
+   Nothing is interpolated, and there is no freshness check.
+2. **Write.** The adapter writes the held value of every input port, in
+   declared order, also when it did not change.
+3. **Entry points.** An entry point is due at Virtual time `t` when
+   `t >= offset_ns` and `(t - offset_ns) % period_ns == 0`. An entry point
+   with offset 0 runs at time 0. The due entry points run once each, one
+   after the other, in declared order. A due time is never caught up, and
+   an entry point never runs once per Message.
+4. **Outputs.** Each output port whose entry point ran publishes one Message
+   at `t`, in declared order. No other output port publishes.
+
+The `binding.py` contract steps like one input port, one output port and one
+entry point with the Step Period and offset 0. It checks only the field
+names of its two Schemas.
+
+**Lifecycle.** One `init` and one `terminate` per Process participant, as for
+`binding.py`. A library with several subsystems initializes them in order in
+`init`. If one fails, `init` cleans up the subsystems it already started and
+raises `BindingError`: the binding owns these library details. There is no
+reset schedule per subsystem, and no port or entry point is added during a
+Run.
+
+**The example.** `gap_monitor` computes a time gap from an ego speed and a
+radar object in its 10 ms `track` runnable. Its 30 ms `report` runnable, at
+offset 10 ms, summarizes the `track` cycles since the previous report. The
+ego speed is recorded every 20 ms with a Latency of one Period, the radar
+object every 30 ms with a Latency of two Periods. Two radar objects share
+the time 40 ms: a Burst. `gap_test.py` checks each output Message, its time
+and the Steps without a `report` output. When both entry points are due, the
+report includes the time gap of the same Step, because `track` is declared
+first.
 
 ### Library dependencies
 
