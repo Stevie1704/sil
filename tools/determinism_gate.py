@@ -5,8 +5,8 @@ The milestone exit criterion is that a Run recorded twice produces a
 bit-identical MCAP. `sil.check` proves that for one manifest; this proves it
 for the reference pipeline, both variants of the ACC example, the FMU import
 example, the CSV replay example, the recorded-data FMU example, the
-shared-library example, its replay window, and the Native ADAS reference
-application, so no example is left to be checked when someone remembers.
+shared-library example, its replay window, its port binding, and the Native
+ADAS reference application, so no example is left to be checked when someone remembers.
 
 Run from the repository root with `python/src` on PYTHONPATH.
 """
@@ -62,6 +62,10 @@ def main() -> int:
     library_window = build / "library-window.mcap"
     window = prepare("examples/library/window.json", library_history,
                      library_window)
+    gap = load("gap_manifest", "examples/library/gap_manifest.py")
+    gap_signals = build / "gap-signals.mcap"
+    convert("examples/library/gap_mapping.json",
+            "examples/library/gap_signals.csv", gap_signals)
     adas_prepare = load("adas_prepare", "examples/adas-reference/prepare.py")
     adas = load("adas_manifest", "examples/adas-reference/manifest.py")
     adas_inputs = build / "adas-reference-inputs"
@@ -80,6 +84,9 @@ def main() -> int:
             library_window, build / "speed_filter.so",
             duration_ns=window["duration_ns"],
         ).write(build / "library-window.json"),
+        gap.gap_monitor_manifest(
+            gap_signals, build / "gap_monitor.so",
+        ).write(build / "gap.json"),
         adas.reference_manifest(
             adas_inputs, build / "adas_reference.so",
         ).write(build / "adas-reference.json"),
