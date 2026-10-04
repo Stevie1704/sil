@@ -278,6 +278,17 @@ existing Process-participant response deadline through `sil-check`.
   both live in the hashed manifest. Boundary (documented, out of scope):
   statically linked binaries and direct-syscall/vDSO clock users bypass the
   shim.
+  **Amended by #262 — thread policy:** the shim also interposes
+  `pthread_create` with a per-participant `threads` policy in the hashed
+  manifest. `allow` calls the real function and is what an absent field
+  selects; `report` also writes one stderr line per successful creation with
+  the Virtual time at which the call began; `reject` returns `EAGAIN` without
+  calling it. It is a diagnostic only: it makes thread creation visible so a
+  failed determinism check has a cause to look at, and it adds no
+  serialization or scheduling, which stay non-goals. Internal determinism
+  remains the participant author's responsibility. Compatibility follows the
+  omit-the-default shape: the builder default `allow` equals the absent
+  meaning, so the builder omits it and no existing Manifest changes bytes.
 - **Shared-memory channel transport (#9, #35):** a channel opts in with
   `transport: "shm"` in the hashed manifest; `inline` (base64 inside the JSON
   step line) stays the default and is omitted from the canonical document, so
@@ -404,6 +415,8 @@ existing Process-participant response deadline through `sil-check`.
   shim `sleep` policy (#52) is always-emit: the builder defaults to `reject`
   and also accepts an explicit `immediate`, so compatibility is expressible in
   hashed bytes, and an absent field keeps today's immediate-success behavior.
+  The Clock shim `threads` policy (#262) is omit-the-default: `allow` is both
+  the builder default and the absent meaning, so it is never emitted.
   Bounded-route `capacity` and `overflow` (#75, split from #55) are
   always-emit; a route with both fields absent is unbounded, while a partial
   pair is invalid. The Clock shim's CPU-time pass-through (#76) takes none of
