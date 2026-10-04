@@ -16,14 +16,19 @@ import sys
 
 import pytest
 
-# Region layout mirrors include/sil/clock_region.h: three little-endian u64.
-REGION_FMT = "<QQQ"
+# Region layout mirrors include/sil/clock_region.h: four little-endian u64.
+REGION_FMT = "<QQQQ"
 REGION_SIZE = struct.calcsize(REGION_FMT)
 REGION_ENV = "SIL_CLOCK_REGION"
 
 # sil_sleep_policy values, mirroring the enum in the same header.
 IMMEDIATE = 0
 REJECT = 1
+
+# sil_thread_policy values, mirroring the enum in the same header.
+THREADS_ALLOW = 0
+THREADS_REPORT = 1
+THREADS_REJECT = 2
 
 
 @pytest.fixture
@@ -40,9 +45,11 @@ def clock_region(tmp_path):
                        mmap.PROT_READ | mmap.PROT_WRITE)
     os.close(fd)
 
-    def write(t: int, epoch: int, sleep_policy: int = IMMEDIATE) -> None:
+    def write(t: int, epoch: int, sleep_policy: int = IMMEDIATE,
+              thread_policy: int = THREADS_ALLOW) -> None:
         region.seek(0)
-        region.write(struct.pack(REGION_FMT, t, epoch, sleep_policy))
+        region.write(struct.pack(REGION_FMT, t, epoch, sleep_policy,
+                                 thread_policy))
         region.flush()
 
     try:
@@ -380,3 +387,99 @@ def test_frozen_across_steps(probe, shim, clock_region):
     second = run_probe(probe, shim, name)
     assert int(first["monotonic"]) == T
     assert int(second["monotonic"]) == T * 2
+
+
+# --- thread policy (issue #262) ----------------------------------------------
+# The probe starts one worker through pthread_create and joins it. The policy
+# decides whether the worker starts and whether the shim reports it on stderr.
+
+REPORT_PREFIX = "sil clock shim: thread created"
+
+
+@pytest.fixture(scope="session")
+def thread_probe(build_dir):
+    exe = build_dir / "sil_thread_probe"
+    assert exe.exists(), f"thread probe not built at {exe}"
+    return exe
+
+
+def run_thread_probe(thread_probe, shim, region_name=None):
+    """Run the thread probe under the preload; return (observations, reports).
+
+    ``reports`` holds the shim's stderr lines about created threads.
+    """
+    env = dict(os.environ)
+    if region_name is None:
+        env.pop(REGION_ENV, None)
+    else:
+        env[REGION_ENV] = region_name
+    if sys.platform == "darwin":
+        env["DYLD_INSERT_LIBRARIES"] = str(shim)
+    else:
+        env["LD_PRELOAD"] = str(shim)
+    proc = subprocess.run([str(thread_probe)], capture_output=True, text=True,
+                          env=env, timeout=30)
+    assert proc.returncode == 0, proc.stderr
+    out = dict(line.split("=", 1) for line in proc.stdout.splitlines()
+               if "=" in line)
+    reports = [line for line in proc.stderr.splitlines()
+               if line.startswith(REPORT_PREFIX)]
+    return out, reports
+
+
+def test_allow_starts_the_thread_without_a_report(thread_probe, shim,
+                                                  clock_region):
+    name, write = clock_region
+    write(T, EPOCH, thread_policy=THREADS_ALLOW)
+    out, reports = run_thread_probe(thread_probe, shim, name)
+    assert out["rc"] == "0"
+    assert out["worker_ran"] == "1"
+    assert reports == []
+
+
+def test_report_starts_the_thread_and_reports_its_virtual_time(
+        thread_probe, shim, clock_region):
+    name, write = clock_region
+    write(T, EPOCH, thread_policy=THREADS_REPORT)
+    out, reports = run_thread_probe(thread_probe, shim, name)
+    assert out["rc"] == "0"
+    assert out["worker_ran"] == "1"
+    assert reports == [f"{REPORT_PREFIX} at virtual time {T} ns"]
+
+
+def test_report_before_the_first_step_reads_virtual_time_zero(
+        thread_probe, shim, clock_region):
+    """The kernel starts the region at t=0, so an init-time thread reports 0."""
+    name, write = clock_region
+    write(0, EPOCH, thread_policy=THREADS_REPORT)
+    _, reports = run_thread_probe(thread_probe, shim, name)
+    assert reports == [f"{REPORT_PREFIX} at virtual time 0 ns"]
+
+
+def test_reject_returns_eagain_without_starting_the_thread(
+        thread_probe, shim, clock_region):
+    """pthread_create returns its error; it does not use errno."""
+    name, write = clock_region
+    write(T, EPOCH, thread_policy=THREADS_REJECT)
+    out, reports = run_thread_probe(thread_probe, shim, name)
+    assert int(out["rc"]) == errno.EAGAIN
+    assert out["errno"] == "0"
+    assert out["worker_ran"] == "0"
+    assert reports == []
+
+
+def test_unrecognized_thread_policy_reads_as_allow(thread_probe, shim,
+                                                    clock_region):
+    name, write = clock_region
+    write(T, EPOCH, thread_policy=99)
+    out, reports = run_thread_probe(thread_probe, shim, name)
+    assert out["rc"] == "0"
+    assert out["worker_ran"] == "1"
+    assert reports == []
+
+
+def test_thread_creation_without_a_region_passes_through(thread_probe, shim):
+    out, reports = run_thread_probe(thread_probe, shim)
+    assert out["rc"] == "0"
+    assert out["worker_ran"] == "1"
+    assert reports == []

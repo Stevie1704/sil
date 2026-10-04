@@ -16,12 +16,18 @@
  *   macOS:  built with a __DATA,__interpose table (DYLD_INTERPOSE) and loaded
  *           via DYLD_INSERT_LIBRARIES.
  *
+ * The shim also interposes pthread_create to apply the region's thread policy
+ * (issue #262): a diagnostic that reports or refuses thread creation. It never
+ * schedules or serializes threads.
+ *
  * If the region is absent or unmappable the interposers fall back to the real
  * libc functions, so a mis-set environment degrades to real time rather than
  * crashing the process. */
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/time.h>
@@ -180,6 +186,58 @@ static unsigned int sleep_seconds_left(unsigned int seconds) {
     return seconds;
 }
 
+/* --- thread policy (issue #262) ---------------------------------------------
+ * Detection only. `report` and `allow` call the real pthread_create; `reject`
+ * does not, and returns EAGAIN, the error pthread_create itself returns when a
+ * thread cannot be created. pthread_create returns its error number and does
+ * not set errno, so reject leaves errno alone too. */
+
+typedef int (*pthread_create_fn)(pthread_t *, const pthread_attr_t *,
+                                 void *(*)(void *), void *);
+
+/* The mapped region's thread policy. An unmapped region and an unrecognized
+ * value both read as allow. */
+static uint64_t thread_policy(void) {
+    if (!g_region)
+        return SIL_THREADS_ALLOW;
+    uint64_t policy = g_region->thread_policy;
+    if (policy == SIL_THREADS_REPORT || policy == SIL_THREADS_REJECT)
+        return policy;
+    return SIL_THREADS_ALLOW;
+}
+
+/* One bounded stderr line, written with a single write(2) so reports from
+ * concurrent creations do not split each other mid-line. Protocol stdout is
+ * never touched. errno is kept so a report cannot change what the caller
+ * observes. */
+static void report_thread_created(uint64_t t) {
+    char line[96];
+    int saved = errno;
+    int n = snprintf(line, sizeof line,
+                     "sil clock shim: thread created at virtual time %llu ns\n",
+                     (unsigned long long)t);
+    if (n > 0 && (size_t)n < sizeof line) {
+        ssize_t ignored = write(STDERR_FILENO, line, (size_t)n);
+        (void)ignored;
+    }
+    errno = saved;
+}
+
+static int create_thread(pthread_create_fn real, pthread_t *thread,
+                         const pthread_attr_t *attr,
+                         void *(*start)(void *), void *arg) {
+    const uint64_t policy = thread_policy();
+    if (policy == SIL_THREADS_REJECT)
+        return EAGAIN;
+    /* Read before the call: the report names the Virtual time at which the
+     * participant asked for the thread. */
+    const uint64_t t = g_region ? g_region->t : 0;
+    const int rc = real(thread, attr, start, arg);
+    if (rc == 0 && policy == SIL_THREADS_REPORT)
+        report_thread_created(t);
+    return rc;
+}
+
 /* --- interposed implementations -------------------------------------------- */
 /* Each interposer serves virtual time when the region is mapped and otherwise
  * falls back to the real libc function. On macOS the replacement is a distinct
@@ -245,6 +303,11 @@ int sil_usleep(useconds_t usec) {
     return sleep_status();
 }
 
+int sil_pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                       void *(*start)(void *), void *arg) {
+    return create_thread(pthread_create, thread, attr, start, arg);
+}
+
 /* DYLD interpose table: pairs (replacement, original). */
 #define DYLD_INTERPOSE(_repl, _orig)                                         \
     __attribute__((used)) static struct {                                   \
@@ -260,6 +323,7 @@ DYLD_INTERPOSE(sil_time, time);
 DYLD_INTERPOSE(sil_nanosleep, nanosleep);
 DYLD_INTERPOSE(sil_sleep, sleep);
 DYLD_INTERPOSE(sil_usleep, usleep);
+DYLD_INTERPOSE(sil_pthread_create, pthread_create);
 
 #else /* Linux: exported symbols shadow libc under LD_PRELOAD. */
 
@@ -341,6 +405,11 @@ int usleep(useconds_t usec) {
     if (!g_region)
         return REAL(usleep)(usec);
     return sleep_status();
+}
+
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                   void *(*start)(void *), void *arg) {
+    return create_thread(REAL(pthread_create), thread, attr, start, arg);
 }
 
 #endif
