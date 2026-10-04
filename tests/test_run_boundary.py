@@ -561,7 +561,7 @@ class TestClockShimRejection:
         assert "unknown sleep policy" in proc.stderr
         assert "'reject' or 'immediate'" in proc.stderr
 
-    def test_threads_on_native_participant_is_config_error(
+    def test_threads_on_native_participant_is_manifest_error(
         self, run_sil, tmp_path
     ):
         bad = tmp_path / "bad.json"
@@ -576,7 +576,7 @@ class TestClockShimRejection:
 
     @pytest.mark.parametrize("shim", ["", ',"shim":false'])
     @pytest.mark.parametrize("policy", ["allow", "report", "reject"])
-    def test_threads_without_shim_is_config_error(
+    def test_threads_without_shim_is_manifest_error(
         self, run_sil, tmp_path, shim, policy
     ):
         # Even an explicit default: the policy only exists inside the shim.
@@ -590,7 +590,7 @@ class TestClockShimRejection:
         assert proc.returncode == 2
         assert "threads requires shim" in proc.stderr
 
-    def test_unknown_thread_policy_is_config_error(self, run_sil, tmp_path):
+    def test_unknown_thread_policy_is_manifest_error(self, run_sil, tmp_path):
         bad = tmp_path / "bad.json"
         bad.write_text(
             '{"sil_manifest":1,"duration_ns":1000,"schemas":{},"channels":{},'
@@ -602,7 +602,7 @@ class TestClockShimRejection:
         assert "unknown threads policy" in proc.stderr
         assert "'allow', 'report' or 'reject'" in proc.stderr
 
-    def test_non_string_thread_policy_is_config_error(self, run_sil, tmp_path):
+    def test_non_string_thread_policy_is_manifest_error(self, run_sil, tmp_path):
         bad = tmp_path / "bad.json"
         bad.write_text(
             '{"sil_manifest":1,"duration_ns":1000,"schemas":{},"channels":{},'
