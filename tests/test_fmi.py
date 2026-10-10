@@ -1115,7 +1115,7 @@ class TestShippedReference:
         Determinism here is scoped to the same artifacts on the same machine
         class, and this CSV was produced elsewhere — on the vendor's machine
         class the same 600 values would be bit-identical. Bit-comparing would
-        assert the cross-platform bit-exactness `CONTEXT.md` (Determinism)
+        assert the cross-platform bit-exactness `GLOSSARY.md` (Determinism)
         declares is not claimed, and would fail on a machine the importer is
         correct on.
         """
