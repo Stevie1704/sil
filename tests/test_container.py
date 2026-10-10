@@ -130,8 +130,9 @@ def _assert_bounded_footprint(image: str, workspace: Path, manifest: Path):
     footprint = _container(
         image,
         workspace,
+        "footprint",
         str(manifest),
-        entrypoint="sil-footprint",
+        entrypoint="sil",
     )
     assert footprint.returncode == 0, footprint.stderr
     assert "unbounded" not in footprint.stdout
@@ -212,8 +213,10 @@ def test_acc_reference_run_is_bounded_deterministic_and_matches_native(
     built = _container(
         PRODUCTION_IMAGE,
         tmp_path,
+        "-m",
+        "sil.examples.acc.manifest",
         *build_args,
-        entrypoint="sil-acc",
+        entrypoint="python",
     )
 
     assert built.returncode == 0, built.stderr
@@ -227,7 +230,8 @@ def test_acc_reference_run_is_bounded_deterministic_and_matches_native(
 def test_default_entrypoint_supports_no_recording(tmp_path: Path):
     manifest = tmp_path / "acc.json"
     built = _container(
-        PRODUCTION_IMAGE, tmp_path, str(manifest), entrypoint="sil-acc"
+        PRODUCTION_IMAGE, tmp_path, "-m", "sil.examples.acc.manifest",
+        str(manifest), entrypoint="python",
     )
     run = _container(
         PRODUCTION_IMAGE,

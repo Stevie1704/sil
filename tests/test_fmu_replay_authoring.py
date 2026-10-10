@@ -1,4 +1,4 @@
-"""`sil-fmu-replay`: author a recorded-data Run into one FMU (issue #186).
+"""`sil fmi replay`: author a recorded-data Run into one FMU (issue #186).
 
 The helper turns an authoring document, an FMU and a converted Recording into
 an ordinary canonical Manifest. Every check it makes is made before anything
@@ -543,5 +543,5 @@ class TestCommand:
                      "--recording", str(recording),
                      "-o", str(tmp_path / "manifest.json")])
         assert code == 2
-        assert capsys.readouterr().err.startswith("sil-fmu-replay: error: ")
+        assert capsys.readouterr().err.startswith("sil fmi replay: error: ")
         assert not (tmp_path / "manifest.json").exists()

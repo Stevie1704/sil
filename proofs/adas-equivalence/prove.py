@@ -1,6 +1,6 @@
 """Run one experiment through the native and the FMU controller (issue #226).
 
-With installed SiL (`sil-run`, `silschema`, `sil-csv`, `sil-compare`, the
+With installed SiL (`sil-run`, `silschema`, `sil recording csv`, `sil compare`, the
 `sil` wheel and `include/sil`), a C compiler and a Python with FMPy:
 
 1. **Artifacts.** Build `AdasReference.fmu` with the pinned packaging and
@@ -181,7 +181,7 @@ class Proof:
                 capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
             entry = {"exit": proc.returncode, "stderr": proc.stderr.strip()}
             if proc.returncode == 0:
-                _run(["sil-csv",
+                _run(["sil", "recording", "csv",
                       str(self.inputs / f"{case.maneuver}.expected.mapping.json"),
                       str(rows), "-o", str(self.fmpy(case))])
                 # The consumption difference must be exactly the declared one.
@@ -368,7 +368,7 @@ def stop_process_tree(pid: int) -> None:
 def sil_compare(contract: Path, actual: Path, reference: Path) -> dict:
     try:
         proc = subprocess.run(
-            ["sil-compare", str(contract), str(actual), str(reference),
+            ["sil", "compare", str(contract), str(actual), str(reference),
              "--json"], capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
     except subprocess.TimeoutExpired as error:
         return {"exit": "timeout", "report": {"error": str(error)}}

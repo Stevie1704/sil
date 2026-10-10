@@ -10,7 +10,7 @@ This qualifies the external FMU that
 [#230](../../docs/decisions/230-external-adas-targets.md) selected:
 `OSMPDummySensor` from osi-sensor-model-packaging `v1.6.0` (MPL-2.0), driven
 by `OSMPDummySource` from the same commit. It runs through installed SiL,
-offline, as sealed Regression bundles under `sil-matrix`. The independent
+offline, as sealed Regression bundles under `sil bundle matrix`. The independent
 importer is FMPy, in [#230](../osmp-sensor/README.md). Supported acceptance
 platform: Linux x86-64, glibc 2.36, CPython 3.13.7.
 
@@ -40,7 +40,7 @@ both FMUs and reports whether each binary equals its #230 pin
 
 | Item | Source in `preparation/report.json` |
 | --- | --- |
-| `sil-fmi-inspect`: both archives `compatible` with every mapping the Runs use | `inspection` |
+| `sil fmi inspect`: both archives `compatible` with every mapping the Runs use | `inspection` |
 | Archive members, resources (none), platforms (`linux64`) | `packaging.<FMU>` |
 | Declared restrictions: `canBeInstantiatedOnlyOncePerProcess`, `needsExecutionTool`, FMU state | `packaging.<FMU>.declared` |
 | Native libraries the loader resolves (`ldd`): `libprotobuf.so.32` beyond the C and C++ runtimes | `packaging.<FMU>.native_libraries` |
@@ -73,7 +73,7 @@ participant of the bundle, not part of SiL. Its `Decoder` decodes each
 SensorView into `osi.GroundTruth` and each SensorData into
 `<sensor>.Detections` in the Slot it receives them. It uses Python classes
 that `protoc` generated from the `.proto` files the FMUs were built from.
-`sil-compare` then compares every field.
+`sil compare` then compares every field.
 
 ### Observation grid and tolerances
 
@@ -93,7 +93,7 @@ an observation.
 closed-form source motion and the sensor geometry that upstream documents
 ([`../osmp-sensor/scene.py`](../osmp-sensor/scene.py)), at the Importer's
 communication points. Nothing reads an FMU output. Each reference is a CSV
-with its `sil-csv` mapping, converted into a Recording with a receipt.
+with its `sil recording csv` mapping, converted into a Recording with a receipt.
 
 | Reference | Expected behavior |
 | --- | --- |

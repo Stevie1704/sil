@@ -94,7 +94,7 @@ them.
 [`recorded-input.mapping.json`](recorded-input.mapping.json) is the mapping
 a Run would declare to replay the maneuvers' input Recordings into this FMU
 and record its Commands. It binds every Schema field to its variable.
-`audit.py` runs `sil-fmi-inspect` with it, and with each binding alone, in a
+`audit.py` runs `sil fmi inspect` with it, and with each binding alone, in a
 Channel of that one field. The importer must accept the whole mapping and
 each of its 36 bindings: the scalars of `Float32`, `Int32`, `UInt32` and
 `UInt64` (since #189), the `[8]` object arrays (since #190), and the `UInt8`

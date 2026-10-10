@@ -1,4 +1,4 @@
-"""`sil-compare`: one Recording against a reference, under an explicit contract.
+"""`sil compare`: one Recording against a reference, under an explicit contract.
 
 A comparison contract states everything the comparison decides; nothing is
 inferred from the data:
@@ -30,7 +30,7 @@ wrong coverage.
 
 The comparison says whether two trajectories agree within a contract; it says
 nothing about whether either Run reproduces. That is the determinism check's
-question, answered by `sil-check` bit-comparing two Recordings of one Manifest.
+question, answered by `sil check` bit-comparing two Recordings of one Manifest.
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ from sil.schema import MessageType
 
 CONTRACT_VERSION = 1
 REPORT_VERSION = 1
-PROG = "sil-compare"
+PROG = "sil compare"
 
 EXIT_FAIL = 1
 EXIT_USAGE = 2
@@ -65,7 +65,7 @@ IGNORE = "ignore"
 DETERMINISM = (
     "not judged: a reference comparison says whether two trajectories agree "
     "within the contract, not whether either Run reproduces; a determinism "
-    "check (sil-check) bit-compares two Recordings of one Manifest"
+    "check (sil check) bit-compares two Recordings of one Manifest"
 )
 
 _CONTRACT_KEYS = {"sil_comparison", "evaluation", "channels"}
@@ -550,7 +550,7 @@ def render(report: dict) -> str:
     lines = [
         f"verdict: {report['verdict']}",
         "comparison: reference trajectory, not a determinism check "
-        "(sil-check bit-compares two Recordings of one Manifest)",
+        "(sil check bit-compares two Recordings of one Manifest)",
     ]
     for role in ("contract", "actual", "reference"):
         lines.append(f"{role}: {report[role]['path']} "

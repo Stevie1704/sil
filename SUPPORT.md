@@ -43,7 +43,7 @@ What follows:
 - Pin the container image by digest, not by a mutable tag. The digest is the
   artifact identity a deterministic CI Run needs.
 - A developer machine gets best-effort reproduction, not the guarantee.
-- The determinism check (`sil-check`) proves determinism for one Manifest on
+- The determinism check (`sil check`) proves determinism for one Manifest on
   one machine class at one moment. It does not certify a machine class.
 - The guarantee assumes Participants that take time only from Virtual time.
   The Clock shim answers the documented clock reads and sleeps of a Process
@@ -91,11 +91,11 @@ carries it.
 | Native participant C ABI | [include/sil/participant.h](include/sil/participant.h), plus `arena.h` and `clock_region.h` | `SIL_ABI_VERSION 1` |
 | Manifest document | the `sil.manifest` builder and the kernel validator | as validated by the shipped release |
 | Step protocol | [docs/step-protocol.md](docs/step-protocol.md) | protocol 2, protocol 1 still accepted |
-| Recording contract | MCAP, uncompressed, virtual timestamps only, Manifest hash embedded; a Recording converted by `sil-csv` embeds the source and mapping digests instead, because no Manifest produced it | as written by the shipped release |
-| Runner command line | `sil-run`, `sil-run --version`, `sil-run --build-info`, and the exit codes `0` ok, `1` run or test failure, `2` Manifest error, `3` determinism violation | as shipped |
+| Recording contract | MCAP, uncompressed, virtual timestamps only, Manifest hash embedded; a Recording converted by `sil recording csv` embeds the source and mapping digests instead, because no Manifest produced it | as written by the shipped release |
+| Runner command line | `sil-run` (also started as `sil run`), `sil-run --version`, `sil-run --build-info`, and the exit codes `0` ok, `1` run or test failure, `2` Manifest error, `3` determinism violation | as shipped |
 | FMI import profiles | [docs/fmi.md](docs/fmi.md): FMI 3.0 co-simulation, and the FMI 2.0 co-simulation profile (scalar `Real`, `Integer` and `Boolean`, OSMP binary variables as bounded byte payloads, `binaries/linux64`) | as shipped |
 | Native schema-generation tool | installed `silschema` command (`bin/silschema`, shipped together with `bin/_sil_schema_types.py`) and its generated-header contract | as shipped |
-| Python API | `sil.manifest`, `sil.participant`, `sil.testing`, `sil.footprint`, `sil.check`, `sil.compare` (`read_contract`, `compare`, `render`, `ContractError`, `RecordingError`) with its contract (`sil_comparison` 1), report (`sil_comparison_report` 1) and exit codes `0` pass, `1` fail, `2` usage error, `sil.recording`, `sil.schema`, `sil.fmi` with the `sil-fmi-inspect` report (`sil_fmi_inspection` 2), proposed mapping (`sil_fmi_mapping` 1) and exit codes `0` compatible, `1` unusable, `2` usage error, `3` mapping rejected, `sil.csv_recording` with its mapping document (`sil_csv_mapping` 1) and receipt (`sil_csv_receipt` 1), `sil-fmu-replay` (`sil.fmi.authoring`: `author`, `AuthoringError`) with its authoring document (`sil_fmu_replay` 1), receipt (`sil_fmu_replay_receipt` 1) and exit codes `0` written, `2` rejected, `sil-fmu-couple` (`sil.fmi.coupling`: `couple`, `render_plan`, `AuthoringError`) with its coupling document (`sil_fmu_coupling` 1), receipt (`sil_fmu_coupling_receipt` 1) and exit codes `0` written, `2` rejected, `sil-fmu-substitute` (`sil.fmi.substitution`: `substitute`, `render`, `AuthoringError`) with its receipt (`sil_fmu_substitution_receipt` 1), the comparison contract it writes (`sil_comparison` 1) and exit codes `0` written, `2` rejected, `sil-schema-import` (`sil.schema_import`, needs the `sil[dwarf]` extra) with the flat Schema and layout-check header it writes ([docs/library.md](docs/library.md#large-interfaces)) and exit codes `0` written, `2` rejected, and the `sil-*` console entry points | package version |
+| Python API | `sil.manifest`, `sil.participant`, `sil.testing`, `sil.footprint`, `sil.check`, `sil.compare` (`read_contract`, `compare`, `render`, `ContractError`, `RecordingError`) with its contract (`sil_comparison` 1), report (`sil_comparison_report` 1) and exit codes `0` pass, `1` fail, `2` usage error, `sil.recording`, `sil.schema`, `sil.fmi` with the `sil fmi inspect` report (`sil_fmi_inspection` 2), proposed mapping (`sil_fmi_mapping` 1) and exit codes `0` compatible, `1` unusable, `2` usage error, `3` mapping rejected, `sil.csv_recording` with its mapping document (`sil_csv_mapping` 1) and receipt (`sil_csv_receipt` 1), `sil fmi replay` (`sil.fmi.authoring`: `author`, `AuthoringError`) with its authoring document (`sil_fmu_replay` 1), receipt (`sil_fmu_replay_receipt` 1) and exit codes `0` written, `2` rejected, `sil fmi couple` (`sil.fmi.coupling`: `couple`, `render_plan`, `AuthoringError`) with its coupling document (`sil_fmu_coupling` 1), receipt (`sil_fmu_coupling_receipt` 1) and exit codes `0` written, `2` rejected, `sil fmi substitute` (`sil.fmi.substitution`: `substitute`, `render`, `AuthoringError`) with its receipt (`sil_fmu_substitution_receipt` 1), the comparison contract it writes (`sil_comparison` 1) and exit codes `0` written, `2` rejected, `sil schema import` (`sil.schema_import`, needs the `sil[dwarf]` extra) with the flat Schema and layout-check header it writes ([docs/library.md](docs/library.md#large-interfaces)) and exit codes `0` written, `2` rejected, and the `sil` console command with its subcommands (`sil --help`) | package version |
 | Container entry point | `sil-run` as `ENTRYPOINT`, `/workspace` as the mount point, non-root UID 10001 | image version and digest |
 
 SiL is below 1.0. A breaking change is possible in any release, but it is named
@@ -123,7 +123,7 @@ applies this naming rule:
 If a Schema breaks the rule, `silschema` names the Schema, the field and the
 rule, writes no output file, and exits `2`. It does not rename a name. The
 Manifest builder and the kernel do not apply this rule, so a Schema that only
-Python or Process participants use can have any name. `sil-schema-import` applies the same rule
+Python or Process participants use can have any name. `sil schema import` applies the same rule
 to the Schemas it writes.
 
 ## Explicitly implementation details

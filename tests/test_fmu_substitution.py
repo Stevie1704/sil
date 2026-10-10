@@ -1,4 +1,4 @@
-"""`sil-fmu-substitute`: replace one coupled FMU with its Recording (#198).
+"""`sil fmi substitute`: replace one coupled FMU with its Recording (#198).
 
 A coupled Run is recorded, one FMU is removed, and a Replay participant
 publishes the Channels it fed the retained FMUs. The retained outputs of the
@@ -449,7 +449,7 @@ class TestCommand:
         arguments = self.arguments(feedback, **paths)
         arguments[arguments.index("--replace") + 1] = "plant"
         assert main(arguments) == 2
-        assert "sil-fmu-substitute: error:" in capsys.readouterr().err
+        assert "sil fmi substitute: error:" in capsys.readouterr().err
         assert not any(path.exists() for path in paths.values())
 
 

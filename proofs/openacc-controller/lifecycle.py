@@ -1,6 +1,6 @@
 """Check the FMU's initialization and shutdown outside a Run (#194).
 
-`sil-fmi-inspect` cannot verify statically that the FMU accepts its start
+`sil fmi inspect` cannot verify statically that the FMU accepts its start
 values, that it initializes from the files in `resources/`, or that it
 terminates. This drives the installed importer's own FMI calls directly, one
 lifecycle per process, and writes each phase it completes:

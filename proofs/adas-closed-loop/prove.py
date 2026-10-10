@@ -1,7 +1,7 @@
 """Close a processed-sensor loop with interchangeable native and FMU
 controllers (issue #227).
 
-With installed SiL (`sil-run`, `silschema`, `sil-csv`, `sil-compare`, the
+With installed SiL (`sil-run`, `silschema`, `sil recording csv`, `sil compare`, the
 `sil` wheel and `include/sil`), a C compiler, a Python with FMPy, and the
 ACC plant archive built by proofs/acc-fmi/build.py:
 
@@ -217,7 +217,7 @@ class Proof:
                 capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
             entry = {"exit": proc.returncode, "stderr": proc.stderr.strip()}
             if proc.returncode == 0:
-                _run(["sil-csv", str(mapping), str(rows), "-o",
+                _run(["sil", "recording", "csv", str(mapping), str(rows), "-o",
                       str(self.fmpy(name))])
                 entry["initial_truth"] = json.loads(initial.read_text())
             entry["passed"] = proc.returncode == 0
@@ -439,7 +439,7 @@ def run_processes() -> list[str]:
 def sil_compare(contract: Path, actual: Path, reference: Path) -> dict:
     try:
         proc = subprocess.run(
-            ["sil-compare", str(contract), str(actual), str(reference),
+            ["sil", "compare", str(contract), str(actual), str(reference),
              "--json"], capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
     except subprocess.TimeoutExpired as error:
         return {"exit": "timeout", "report": {"error": str(error)}}

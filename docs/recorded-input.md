@@ -6,7 +6,7 @@ Commands below run from the repository root unless stated otherwise.
 
 ## Replay a timestamped CSV recording
 
-`sil-csv` converts one timestamped CSV file into a Recording the Replay
+`sil recording csv` converts one timestamped CSV file into a Recording the Replay
 participant accepts, under an explicit mapping document. CSV is the one
 starter format; decoding and unit conversion stay in this converter, and the
 kernel only sees an ordinary Recording. The worked example is in
@@ -19,9 +19,9 @@ root:
 
 ```sh
 workdir=$(mktemp -d)
-sil-csv examples/csv/mapping.json examples/csv/signals.csv \
+sil recording csv examples/csv/mapping.json examples/csv/signals.csv \
     -o "$workdir/signals.mcap" --receipt "$workdir/signals.receipt.json"
-sil-csv examples/csv/mapping.json examples/csv/signals.csv \
+sil recording csv examples/csv/mapping.json examples/csv/signals.csv \
     -o "$workdir/signals-2.mcap" --receipt "$workdir/signals-2.receipt.json"
 cmp "$workdir/signals.mcap" "$workdir/signals-2.mcap"
 python examples/csv/manifest.py "$workdir/replay.json" \
@@ -100,7 +100,7 @@ ROS bags, BLF or DBC, and no variable-length or payload fields.
 
 ## Replay recorded input into one FMU
 
-`sil-fmu-replay` writes the Manifest of a Run that replays a converted
+`sil fmi replay` writes the Manifest of a Run that replays a converted
 Recording into one FMU. An authoring document states every choice of the
 Run. The command checks the document against the FMU before anything runs,
 then writes an ordinary canonical Manifest: a Replay participant, and one
@@ -113,28 +113,28 @@ Manifest with the same bytes is the same Run.
 | File | Role |
 | --- | --- |
 | `ego_motion.c`, `modelDescription.xml`, `package.py` | `EgoMotion`, a scalar FMU with units: input `acceleration` (m/s2), parameters `initial_speed` (m/s) and `initial_position` (m), outputs `speed` (m/s) and `position` (m) |
-| `recorded.csv`, `mapping.json` | the recorded acceleration in cm/s², and the `sil-csv` mapping that converts it to m/s² |
+| `recorded.csv`, `mapping.json` | the recorded acceleration in cm/s², and the `sil recording csv` mapping that converts it to m/s² |
 | `authoring.json` | the authoring document |
-| `reference.csv`, `reference-mapping.json`, `contract.json` | the closed-form trajectory, computed by hand, and the `sil-compare` contract |
+| `reference.csv`, `reference-mapping.json`, `contract.json` | the closed-form trajectory, computed by hand, and the `sil compare` contract |
 
 With the staged installation on `PATH`, from the checkout root:
 
 ```sh
-workdir=$(mktemp -d "$HOME/sil-fmu-replay.XXXXXX")
+workdir=$(mktemp -d "$HOME/sil fmi replay.XXXXXX")
 cc -shared -fPIC -O2 -o "$workdir/EgoMotion.so" examples/fmu-replay/ego_motion.c
 python examples/fmu-replay/package.py "$workdir/EgoMotion.so" \
     -o "$workdir/EgoMotion.fmu"
-sil-csv examples/fmu-replay/mapping.json examples/fmu-replay/recorded.csv \
+sil recording csv examples/fmu-replay/mapping.json examples/fmu-replay/recorded.csv \
     -o "$workdir/recorded.mcap" --receipt "$workdir/recorded.receipt.json"
-sil-csv examples/fmu-replay/reference-mapping.json \
+sil recording csv examples/fmu-replay/reference-mapping.json \
     examples/fmu-replay/reference.csv -o "$workdir/reference.mcap"
-sil-fmu-replay examples/fmu-replay/authoring.json "$workdir/EgoMotion.fmu" \
+sil fmi replay examples/fmu-replay/authoring.json "$workdir/EgoMotion.fmu" \
     --recording "$workdir/recorded.mcap" -o "$workdir/fmu-replay.json" \
     --receipt "$workdir/authoring.receipt.json"
 sil-run "$workdir/fmu-replay.json" -o "$workdir/run-1.mcap"
 sil-run "$workdir/fmu-replay.json" -o "$workdir/run-2.mcap"
 cmp "$workdir/run-1.mcap" "$workdir/run-2.mcap"
-sil-compare examples/fmu-replay/contract.json "$workdir/run-1.mcap" \
+sil compare examples/fmu-replay/contract.json "$workdir/run-1.mcap" \
     "$workdir/reference.mcap"
 ```
 
@@ -191,13 +191,13 @@ Before it writes a Manifest, the command rejects (exit 2) with the reason:
   a variable type the importer does not map, a start value that does not
   parse, and a Binary field or Binary start value above the variable's
   `maxSize`. These are the checks
-  of [`sil-fmi-inspect`](fmi.md#inspecting-an-fmu-before-a-run). The importer makes
+  of [`sil fmi inspect`](fmi.md#inspecting-an-fmu-before-a-run). The importer makes
   the same checks when it initializes. The command does not load the FMU's
   binary;
 - a start value for a variable that is not an input or a parameter;
 - a stated unit that is not the unit the FMU variable declares. The
   importer converts no unit. Convert the recorded unit at the edge, with
-  `sil-csv`'s `scale` and `offset`, and state the FMU's unit. The example
+  `sil recording csv`'s `scale` and `offset`, and state the FMU's unit. The example
   records cm/s² and converts with `"scale": 0.01`;
 - an FMU input that is not bound, not given a start value and not held;
 - a Recording that does not carry an `in` Channel, or carries it with a

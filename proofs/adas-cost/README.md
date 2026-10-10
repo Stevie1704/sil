@@ -79,7 +79,7 @@ Command count per mode is in the results.
 
 1. Build the artifacts and record their digests and the compiler.
 2. Generate the inputs of each Run length, convert one Recording per
-   instance with `sil-csv` (`prepare.prepare_inputs`), and record digests.
+   instance with `sil recording csv` (`prepare.prepare_inputs`), and record digests.
 3. Author the 36 Manifests (3 forms × 3 Run lengths × 2 instance counts ×
    Recording on/off) and check that only the controller entries differ.
 4. Per row, run `sil-run-instrumented` twice for the copy, route and replay

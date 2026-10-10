@@ -3,7 +3,7 @@
 Runs inside the pinned tool image with no network on Linux x86-64. Usage:
 qualify.py <work-directory>. It writes `evidence/` there:
 
-1. Inspection: `sil-fmi-inspect` selects the Reference FMUs `Dahlquist`,
+1. Inspection: `sil fmi inspect` selects the Reference FMUs `Dahlquist`,
    `VanDerPol`, `BouncingBall` and `Stair` and `OSMPDummySensor`, and refuses
    `Feedthrough` with the variables outside the profile named.
 2. Reference FMUs: each case runs in SiL and under FMPy 0.3.26, an

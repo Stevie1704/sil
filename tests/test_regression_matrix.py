@@ -1,7 +1,7 @@
 """An offline regression matrix over sealed bundles (issue #202).
 
 The bundles are prepared from the source tree and sealed once per module.
-`sil-matrix` then runs them from the staged installation, as a CI job does:
+`sil bundle matrix` then runs them from the staged installation, as a CI job does:
 each case in its own evidence directory, with bounded concurrency, a
 whole-case wall-clock guard, and JSON, JUnit and readable summaries.
 """
@@ -37,7 +37,7 @@ def _env(runtime) -> dict[str, str]:
 
 def seal(runtime, root: Path) -> str:
     """Seal `root` and return the lock digest `seal` printed."""
-    proc = subprocess.run([str(runtime.python_bin / "sil-bundle"), "seal", str(root)],
+    proc = subprocess.run([str(runtime.python_bin / "sil"), "bundle", "seal", str(root)],
                           env=_env(runtime), capture_output=True, text=True)
     assert proc.returncode == 0, proc.stderr
     return proc.stdout.split("lock sha256 ")[1].strip()
@@ -95,7 +95,7 @@ def write_cases(path: Path, cases: list[dict]) -> Path:
 
 
 def sil_matrix(runtime, *args, **popen) -> subprocess.CompletedProcess:
-    return subprocess.run([str(runtime.python_bin / "sil-matrix"), *map(str, args)],
+    return subprocess.run([str(runtime.python_bin / "sil"), "bundle", "matrix", *map(str, args)],
                           env=_env(runtime), capture_output=True, text=True, **popen)
 
 
@@ -157,7 +157,7 @@ def test_a_mixed_matrix_reports_every_case_and_fails_on_required_cases(
     assert cases["invalid"]["bundle_exit_code"] == 2
     assert "altered artifact signals.csv" in cases["invalid"]["reason"]
     assert cases["stalled"]["runs"][0]["exit_code"] == 1
-    # The terminated sil-bundle keeps the runner code of the interrupted Run.
+    # The terminated sil bundle keeps the runner code of the interrupted Run.
     assert cases["wedged"]["bundle_exit_code"] == 1
     assert cases["wedged"]["runs"][0]["exit_code"] == 1
     assert "3 s" in cases["wedged"]["reason"]
@@ -239,7 +239,7 @@ def test_an_interrupted_matrix_terminates_its_run_process_trees(
         case(bundles, "wedged"), case(bundles, "library")])
     out = tmp_path / "out"
     matrix_proc = subprocess.Popen(
-        [str(runtime.python_bin / "sil-matrix"), str(cases), "-o", str(out),
+        [str(runtime.python_bin / "sil"), "bundle", "matrix", str(cases), "-o", str(out),
          "--jobs", "1"],
         env=_env(runtime), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     deadline = time.monotonic() + 30
@@ -361,7 +361,7 @@ def test_a_case_that_cannot_start_is_reported_with_the_others(
 
     for entry in summary(out)["cases"]:
         assert entry["status"] == "manifest-error"
-        assert "cannot start sil-bundle" in entry["reason"]
+        assert "cannot start sil bundle" in entry["reason"]
     assert (out / "junit.xml").is_file()
 
 

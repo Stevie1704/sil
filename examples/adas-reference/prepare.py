@@ -23,7 +23,7 @@ A list longer than the capacity is rejected, never truncated.
 `mapping.json`, `expected-mapping.json` and `contract.json` name the Channels
 of one maneuver without a prefix. One Run carries every maneuver side by side,
 so this script prefixes each Channel with `<maneuver>.` and converts with
-`sil-csv` (sil.csv_recording):
+`sil recording csv` (sil.csv_recording):
 
     python prepare.py OUTDIR
 

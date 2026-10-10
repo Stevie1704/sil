@@ -1,7 +1,7 @@
 """The port binding example's Manifest: two recorded inputs into gap_monitor.
 
 `gap_signals.csv` holds an ego speed every 20 ms and a radar object every
-30 ms, two of them at the same time; `sil-csv` converts it with
+30 ms, two of them at the same time; `sil recording csv` converts it with
 `gap_mapping.json` into a Recording. The Replay participant publishes both
 Channels. One `adapter.py` instance loads `gap_monitor` through
 `gap_binding.py`: two input ports, two output ports and two cyclic entry
@@ -15,7 +15,7 @@ Convert, build, run twice and compare:
 or, with the staged installation on PATH:
 
     cc -shared -fPIC -O2 -o gap_monitor.so examples/library/gap_monitor.c
-    sil-csv examples/library/gap_mapping.json examples/library/gap_signals.csv \\
+    sil recording csv examples/library/gap_mapping.json examples/library/gap_signals.csv \\
         -o gap-signals.mcap --receipt gap-signals.receipt.json
     python examples/library/gap_manifest.py gap.json \\
         --recording gap-signals.mcap --library gap_monitor.so
@@ -142,7 +142,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("out", help="path to write the Manifest to")
     parser.add_argument("--recording", type=Path, required=True,
-                        help="the Recording sil-csv wrote")
+                        help="the Recording sil recording csv wrote")
     parser.add_argument("--library", type=Path, required=True,
                         help="the gap_monitor shared library build")
     args = parser.parse_args()

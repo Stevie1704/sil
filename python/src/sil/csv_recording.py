@@ -62,6 +62,8 @@ from sil.manifest import Manifest, ManifestError
 
 MAPPING_VERSION = 1
 RECEIPT_VERSION = 1
+PROG = "sil recording csv"
+# The name the files it writes carry; it stays as the first release wrote it.
 CONVERTER = "sil-csv"
 
 _NS_PER_UNIT = {"s": 10**9, "ms": 10**6, "us": 10**3, "ns": 1}
@@ -616,7 +618,7 @@ def _receipt(plan: _Mapping, messages: list[_Message],
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog=CONVERTER,
+        prog=PROG,
         description="Convert a timestamped CSV file into a replayable "
                     "Recording under a mapping document.",
         allow_abbrev=False,
@@ -632,7 +634,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         receipt = convert(args.mapping, args.source, args.output)
     except ConversionError as e:
-        sys.stderr.write(f"{CONVERTER}: error: {e}\n")
+        sys.stderr.write(f"{PROG}: error: {e}\n")
         return 2
     text = json.dumps(receipt, indent=2) + "\n"
     if args.receipt is None:
@@ -641,7 +643,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         args.receipt.write_text(text)
     except OSError as e:
-        sys.stderr.write(f"{CONVERTER}: error: cannot write receipt "
+        sys.stderr.write(f"{PROG}: error: cannot write receipt "
                          f"{str(args.receipt)!r}: {e}\n")
         return 2
     return 0

@@ -45,10 +45,10 @@ contract.
 Profile 2 replaces one object per sensor with bounded lists: flat Schema
 arrays of capacity 8 and an active count. It reuses the existing fixed-size
 Schema arrays; it adds no nested or variable-length Schema form. To keep
-input preparation on `sil-csv` and its receipts, `sil-csv` converts a
+input preparation on `sil recording csv` and its receipts, `sil recording csv` converts a
 fixed-size array field from one column per element. This is additive: a
 scalar mapping and its Recording bytes do not change. The Manifest, Native
-ABI, Step protocol, Recording format and `sil-compare` contract do not
+ABI, Step protocol, Recording format and `sil compare` contract do not
 change. The five profile 1 maneuvers keep their expected trajectories as
 lists of at most one object.
 
@@ -78,7 +78,7 @@ same sources is the negative control: it must fail the `delay` comparison.
 The same application is exported as an FMI 3.0 Co-Simulation FMU,
 `AdasReference.fmu`, with a hand-written FMI interface. It is the reference
 acceptance artifact for the importer type and array slices (#189, #190), not
-a supplier FMU. The importer does not change: today `sil-fmi-inspect`
+a supplier FMU. The importer does not change: today `sil fmi inspect`
 refuses every binding of the recorded-input mapping for its type or its
 array shape, and the proof keeps that result as evidence.
 

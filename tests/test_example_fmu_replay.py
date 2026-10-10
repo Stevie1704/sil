@@ -1,7 +1,7 @@
 """The recorded-data FMU example at the run boundary (issue #186).
 
 A CSV of acceleration in cm/s² is converted into m/s² at the edge, authored
-into a Manifest with `sil-fmu-replay`, and replayed into `EgoMotion`, which
+into a Manifest with `sil fmi replay`, and replayed into `EgoMotion`, which
 integrates it from the parameters' initial speed and position. The outputs
 are compared with `reference.csv`, which states the closed-form trajectory
 and was computed without running the FMU.

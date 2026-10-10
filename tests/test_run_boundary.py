@@ -758,7 +758,7 @@ class TestClockShimRunBoundary:
 
     def test_sil_check_passes_on_shimmed_manifest(self, sil_run, tmp_path):
         # The determinism proof runs through the real tool, not a hand-rolled
-        # bit-compare: sil-check runs the shimmed manifest twice and must report
+        # bit-compare: sil check runs the shimmed manifest twice and must report
         # it deterministic unchanged (exit 0). Sleep between builder and check so
         # the two internal runs straddle a wall-clock advance; a virtual-time
         # leak would trip the check's own DETERMINISM VIOLATION path.

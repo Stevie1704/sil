@@ -27,7 +27,7 @@ records why it exists.
 | `maneuvers/<name>.csv` | the authored radar and camera object lists and ego speed of each maneuver |
 | `maneuvers/<name>.expected.csv` | the expected trajectory of each maneuver, enumerated by hand |
 | `maneuvers/cadence.<experiment>.expected.csv` | the expected trajectory of each [experiment](#experiments), enumerated by hand |
-| `mapping.json`, `expected-mapping.json`, `contract.json` | the `sil-csv` mappings and the `sil-compare` contract of one maneuver, without a Channel prefix |
+| `mapping.json`, `expected-mapping.json`, `contract.json` | the `sil recording csv` mappings and the `sil compare` contract of one maneuver, without a Channel prefix |
 | `prepare.py` | expands every maneuver to the flat Schema form, converts it with its Channel prefix and writes its contract |
 | `manifest.py` | the Run: one Replay participant and one controller per maneuver, by default the Native participant of one library; the experiments and their authoring checks |
 | `run.sh` | the one-command demonstration over installed SiL interfaces |
@@ -309,7 +309,7 @@ Each maneuver is 20 activations, from 0 ms to 190 ms. The expected
 trajectories are written row by row from the behavior above, and compare
 every output field, ages and counter included, up to the final Sample time
 200 ms. The oracle is
-`sil-compare` against these rows: it does not call the C application, import
+`sil compare` against these rows: it does not call the C application, import
 its code, or use the output of an earlier Run.
 
 An authored row is one activation, `time_ms,radar,camera,ego_speed_mps`. A
@@ -321,7 +321,7 @@ object `id x_m y_m confidence`. The ego cell is empty, `invalid` or a speed.
 active objects first and zero in every inactive element, one CSV column per
 array element. It rejects a list longer than 8 rather than truncate it.
 The sequence of every observation is its row index, so it increases within
-the maneuver. `sil-csv` then converts the expanded CSV under `mapping.json`. Its receipt
+the maneuver. `sil recording csv` then converts the expanded CSV under `mapping.json`. Its receipt
 records the digests of the expanded CSV, the prefixed mapping and the
 Recording; `prepare.py` writes identical bytes on every run.
 
@@ -414,7 +414,7 @@ The tests in
 [tests/test_example_adas_reference.py](../tests/test_example_adas_reference.py)
 also run two instances of the library with different lists, and require
 each to publish what it publishes beside the others. A live stimulus
-Participant delivers what `prepare.py` and `sil-csv` refuse to write:
+Participant delivers what `prepare.py` and `sil recording csv` refuse to write:
 nonfinite values, a count above the capacity, nonzero inactive elements,
 negative and repeated IDs, invalid confidence, a wrong frame or sensor ID,
 future and past Sample times, duplicate and decreasing sequences, a list

@@ -3,7 +3,7 @@
 # Native participant ABI, using only installed SiL interfaces:
 #
 #   - sil-run and silschema from an installed prefix, and its include/sil;
-#   - sil-compare and python3 with the sil wheel;
+#   - sil compare and python3 with the sil wheel;
 #   - a C compiler (cc, or $CC).
 #
 # Usage: run.sh WORKDIR
@@ -64,16 +64,16 @@ for expected in "$here"/maneuvers/*.expected.csv; do
             --library "$work/adas_reference.so" --experiment "$experiment"
         run_twice "$run"
     fi
-    sil-compare "$work/$maneuver.contract.json" "$work/$run-1.mcap" \
+    sil compare "$work/$maneuver.contract.json" "$work/$run-1.mcap" \
         "$work/$name.expected.mcap" > "$work/$name.compare.txt"
     echo "$name: pass"
 done
 
-# fails_comparison NAME EXPECTATION: requires sil-compare to report a
+# fails_comparison NAME EXPECTATION: requires sil compare to report a
 # divergence (exit 1) between $work/NAME.mcap and the expectation.
 fails_comparison() {
     status=0
-    sil-compare "$work/${2%%.*}.contract.json" "$work/$1.mcap" \
+    sil compare "$work/${2%%.*}.contract.json" "$work/$1.mcap" \
         "$work/$2.expected.mcap" > "$work/$1.$2.compare.txt" || status=$?
     if [ "$status" -ne 1 ]; then
         echo "$1 did not fail the $2 comparison (exit $status)" >&2

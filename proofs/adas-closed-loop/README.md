@@ -183,7 +183,7 @@ Everything below is declared in `loop.py` before any Run.
 | KPIs | gap ≥ 2 m, ego speed ≥ 0, commanded acceleration in [−3, 0] m/s², at every Sample time |
 | modes | the case's sequence, at the predicted start Sample times |
 | forms | the native and the FMU Manifest differ only in the controller entry |
-| native against FMU | every Command and truth field exact, through `sil-compare` |
+| native against FMU | every Command and truth field exact, through `sil compare` |
 | each form against FMPy | Commands exact; truth within `atol` 1e-10 m or m/s and `rtol` 1e-12 |
 
 ### Reference model, sampling and Latency
@@ -226,7 +226,7 @@ importer or edge process behind. `malformed_list` runs in both forms.
 imports no SiL. It implements the schedule above with its own code: the
 Maneuver windows, the sensor Periods, the binary32 rounding, the dropped
 lists, the sensor Latency, the Command latency of one Step and the initial
-acceleration. It writes one row per Sample time; `sil-csv` converts the
+acceleration. It writes one row per Sample time; `sil recording csv` converts the
 rows. It uses the same two archives, so it checks the coupling, the
 sensing, the conversions and the schedule; it does not check the control
 law. [#226](../adas-equivalence/README.md) checks the control law against

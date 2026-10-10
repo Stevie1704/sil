@@ -7,13 +7,13 @@ that it was prepared with. The bundle uses the preparation and verification
 mechanics of the ACC acceptance bundle (`proofs/acc-fmi/acceptance-bundle.sh`)
 for any target.
 
-`sil-bundle` has three commands:
+`sil bundle` has three commands:
 
 | Command | Where it runs | What it does |
 |---|---|---|
-| `sil-bundle seal <bundle>` | the runtime, once | Digests every bundle file, the runner and its build identity, and every declared dependency. Writes `bundle.lock.json` and prints its digest. |
-| `sil-bundle verify <bundle> [--expect-lock <sha256>]` | the runtime | Re-derives every sealed identity. Exit 2 when one differs; the diagnostic names every difference. |
-| `sil-bundle run <bundle> -o <evidence> [--expect-lock <sha256>]` | the runtime, offline | Verifies, then executes each declared Run into a separate evidence directory. Exit 1 when a verdict fails, 2 when the bundle is refused. |
+| `sil bundle seal <bundle>` | the runtime, once | Digests every bundle file, the runner and its build identity, and every declared dependency. Writes `bundle.lock.json` and prints its digest. |
+| `sil bundle verify <bundle> [--expect-lock <sha256>]` | the runtime | Re-derives every sealed identity. Exit 2 when one differs; the diagnostic names every difference. |
+| `sil bundle run <bundle> -o <evidence> [--expect-lock <sha256>]` | the runtime, offline | Verifies, then executes each declared Run into a separate evidence directory. Exit 1 when a verdict fails, 2 when the bundle is refused. |
 
 The lock is inside the bundle. It shows an accidental change, but a person
 who changes the bundle can also seal it again. Keep the lock digest that
@@ -102,7 +102,7 @@ python examples/bundle/prepare.py coupling /bundles/coupling \
   `participant`, `resource`, `recording`, `conversion-input`, `receipt`,
   `reference` or `contract`.
 - `runtime.environment` is the whole environment of every Run. Nothing is
-  inherited from the shell that calls `sil-bundle`. `run` adds only
+  inherited from the shell that calls `sil bundle`. `run` adds only
   `PYTHONDONTWRITEBYTECODE=1`, so an imported module does not write
   bytecode into the bundle.
 - `runtime.runner` and `dependencies.executables` are resolved on the
@@ -135,7 +135,7 @@ identities. Whatever the declaration does not name is not verified. The
 seal does not make an incomplete declaration complete.
 
 A runtime image pinned by its digest closes more of the environment than a
-declaration. `sil-bundle` does not replace that. Run the bundle in the
+declaration. `sil bundle` does not replace that. Run the bundle in the
 pinned image, and seal it there, so that the lock records the image's
 interpreter, modules and runner.
 
@@ -191,12 +191,12 @@ installation. The supported acceptance platform is Linux x86-64.
 
 ## Regression matrix
 
-`sil-matrix` runs several sealed bundles as one CI job. It orchestrates
+`sil bundle matrix` runs several sealed bundles as one CI job. It orchestrates
 independent Runs on one host. It does not step one Run in parallel, and it
 is not a distributed farm or a benchmark.
 
 ```sh
-sil-matrix cases.json -o matrix [--jobs N] [--fail-fast]
+sil bundle matrix cases.json -o matrix [--jobs N] [--fail-fast]
 ```
 
 The case list names every case explicitly:
@@ -232,7 +232,7 @@ is a Run failure. Without a deadline, only the whole-case guard ends it.
 
 ### Execution
 
-Each case is one `sil-bundle run --expect-lock` into
+Each case is one `sil bundle run --expect-lock` into
 `matrix/cases/<name>/`, with its output in `matrix/logs/<name>.log`. It
 runs in its own process group. At most `--jobs` cases run at the same time
 (default 1).
@@ -240,7 +240,7 @@ runs in its own process group. At most `--jobs` cases run at the same time
 When a case exceeds its guard, or the matrix receives SIGINT, SIGHUP or
 SIGTERM, the matrix sends SIGTERM to the process group of the case.
 `sil-run` then ends its Run and terminates the process groups of its
-Process participants, and `sil-bundle` writes the Runs that finished. The
+Process participants, and `sil bundle` writes the Runs that finished. The
 case keeps their exit codes. Each case runs in its own session, and its
 Process participant groups stay in that session. After 10 s, and after every
 case that ends, the matrix kills each process that is still in the session.
@@ -258,7 +258,7 @@ A process that starts a new session of its own is not reached.
 |---|---|
 | `pass` | Every Run exited 0, every determinism check and comparison passed, and the bundle stayed unchanged. |
 | `behavioral-failure` | A Run failure (exit 1), such as a failed KPI, a participant that exited unexpectedly or a missed response deadline, a comparison failed, or the bundle changed during its Runs. |
-| `manifest-error` | The bundle was refused (exit 2 of `sil-bundle`), a Run exited 2, the runner or `sil-bundle` did not start, or `sil-bundle` wrote no summary. |
+| `manifest-error` | The bundle was refused (exit 2 of `sil bundle`), a Run exited 2, the runner or `sil bundle` did not start, or `sil bundle` wrote no summary. |
 | `determinism-violation` | Two Runs of the same Manifest exited 0 with different Recordings. |
 | `timeout` | The case exceeded `timeout_s`. |
 | `skipped` | The case did not complete; see `reason`. |
@@ -273,15 +273,15 @@ in the order `manifest-error`, `determinism-violation`,
 matrix/
   summary.json
   junit.xml
-  cases/<name>/            (the evidence directory of sil-bundle run)
+  cases/<name>/            (the evidence directory of sil bundle run)
   logs/<name>.log
 ```
 
 `summary.json` lists the cases in the order of the case list. Each case
-holds its status and reason, the `sil-bundle` exit code, each Run's
+holds its status and reason, the `sil bundle` exit code, each Run's
 `sil-run` exit code and Recording digest, and the evidence and log paths,
 relative to the output directory. `identity` holds only deterministic
-values: the status, the `sil-bundle` exit code and the digest of the
+values: the status, the `sil bundle` exit code and the digest of the
 case's `summary.json`. `identity_sha256` is its digest. The duration and
 the peak resident set size of the largest process are in `observations`.
 They are not part of `identity`.
@@ -291,7 +291,7 @@ failure, a `manifest-error` or `timeout` as an error, and `skipped` as
 skipped. A case that is not required is marked `(optional case)` in its
 message.
 
-`sil-matrix` exits 0 when every required case passes, 1 when a required
+`sil bundle matrix` exits 0 when every required case passes, 1 when a required
 case does not pass, 2 when the case list or the output directory is
 refused, and 130 when it is interrupted. The output directory must be new
 or empty and outside every bundle.
@@ -316,6 +316,6 @@ calibration/freshness changes, dependencies and unsupported profiles.
 [proofs/osmp-qualification](../proofs/osmp-qualification/README.md) runs
 the external FMU selected in #230 as sealed bundles with the same commands.
 A bundle edge participant decodes the OSI payloads into typed Channels, so
-`sil-compare` compares every field with closed-form references. Its controls
+`sil compare` compares every field with closed-form references. Its controls
 check a predicted timing divergence, a malformed binding and an
 undersized payload Channel.

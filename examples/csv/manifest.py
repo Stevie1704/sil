@@ -2,7 +2,7 @@
 
 `signals.csv` is a small timestamped recording; `mapping.json` says which
 column is time, which columns feed which Channel fields, and how to scale
-them. `sil-csv` converts the pair into an MCAP Recording and a receipt. This
+them. `sil recording csv` converts the pair into an MCAP Recording and a receipt. This
 Manifest replays that Recording into `observer.py`, which republishes what it
 receives so the Run Recording shows the consumer's view.
 
@@ -79,6 +79,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("out", help="path to write the Manifest to")
     parser.add_argument("--recording", type=Path, required=True,
-                        help="the Recording sil-csv wrote")
+                        help="the Recording sil recording csv wrote")
     args = parser.parse_args()
     print(csv_replay_manifest(args.recording).write(args.out).hash)

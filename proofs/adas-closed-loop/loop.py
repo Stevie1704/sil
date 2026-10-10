@@ -537,7 +537,7 @@ CROSS_FORM_CONTRACT = contract(STEP_NS, EXACT_FLOAT)
 
 
 def independent_mapping() -> dict:
-    """The `sil-csv` mapping of independent.py's rows: one row per Sample
+    """The `sil recording csv` mapping of independent.py's rows: one row per Sample
     time, the Command and the truth it describes."""
     command = {"sample_time_ns": {"column": "time_ms", "scale": MS},
                **{n: {"column": n} for n in COMMAND_FIELDS

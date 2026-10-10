@@ -9,7 +9,7 @@ Three static audits of the archive, none of which loads its binary:
   `<Dimension start>`, and the capabilities declare one fixed 10 ms step
   and nothing optional. It reads the archive with the standard library.
 - FMPy's own validation of the description (in the preparation image).
-- `inspection`: SiL's `sil-fmi-inspect` on the archive, and on
+- `inspection`: SiL's `sil fmi inspect` on the archive, and on
   `recorded-input.mapping.json`, the mapping a Run that replays the
   maneuvers' Recordings into this FMU would declare. Each binding is also
   inspected on its own, in a Channel of its one field. The importer maps

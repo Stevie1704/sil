@@ -40,7 +40,7 @@ participant, `native_adapter.c` built as a shared library, loads the pinned
 | `second-instance` | a second participant of the adapter | a Manifest error: the library's globals allow one instance |
 
 The crash and hang controls are adapter builds of their own; they run as
-sealed bundles under `sil-matrix`.
+sealed bundles under `sil bundle matrix`.
 """
 
 from __future__ import annotations

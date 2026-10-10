@@ -112,7 +112,7 @@ Each Manifest runs twice and must write identical Recording bytes.
 expanded maneuver that `prepare.py` writes and a JSON of the case, applies
 the drop, override, delay and Latency faults with its own code, with routes
 that deliver in Publish order, and writes the Commands in the oracle's CSV
-form. `sil-csv` converts them. It also lists each activation where it wrote
+form. `sil recording csv` converts them. It also lists each activation where it wrote
 more than one observation of a sensor.
 
 ## Negative controls
@@ -120,7 +120,7 @@ more than one observation of a sensor.
 Each control changes exactly one thing in the nominal FMU form of one case.
 Its first divergence from the oracle is predicted in `experiment.CONTROLS`
 from the authored maneuver and the profile rules, before any Run. The proof
-requires `sil-compare` to fail (exit 1) with exactly that first divergence:
+requires `sil compare` to fail (exit 1) with exactly that first divergence:
 Sample time, field, actual and expected value.
 
 | Control | Case | Change | Predicted first divergence |

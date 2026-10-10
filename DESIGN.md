@@ -172,7 +172,7 @@ consumer evidence required to reopen it. The early FMI-LS-BUS and zero-copy
 directions above do not authorize implementation without that evidence.
 All existing core contracts remain unchanged. The concrete checker omission
 is isolated in [#134](https://github.com/Stevie1704/sil/issues/134): forward the
-existing Process-participant response deadline through `sil-check`.
+existing Process-participant response deadline through `sil check`.
 
 ## Resolved since (2026-07-07)
 - **Schema/code-gen (#9):** custom minimal generator. `tools/silschema.py`
@@ -602,7 +602,7 @@ existing Process-participant response deadline through `sil-check`.
   without a workload, and the answer is no.** Since #75 every newly authored
   route declares a capacity, so worst-case route memory is arithmetic over the
   hashed Manifest rather than a measurement: capacity times payload size,
-  reported by `python -m sil.footprint`. Inverting it asks how much fan-out
+  reported by `sil footprint`. Inverting it asks how much fan-out
   memory would take to bind. At capacity three, the depth the baseline's
   never-draining subscriber actually held, one subscriber costs 7.91 MiB on a
   720p RGB8 frame, 17.80 MiB on 1080p, 71.19 MiB on 4K, and 12.00 MiB on a

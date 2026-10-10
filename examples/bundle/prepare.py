@@ -18,14 +18,14 @@ compiler, the FMI exporter and an independent importer.
 
 Preparation is the step that needs the source checkout, the compiler and a
 runner; it writes the bundle where the runtime will find it, because the
-Manifests name their artifacts by absolute path. `sil-bundle seal` then runs
-in the runtime, and `sil-bundle run` executes the bundle there offline:
+Manifests name their artifacts by absolute path. `sil bundle seal` then runs
+in the runtime, and `sil bundle run` executes the bundle there offline:
 
     python examples/bundle/prepare.py library /bundles/library \\
         --python-bin /opt/sil/venv/bin --sil-bin /opt/sil/bin \\
         --library build/example-speed_filter.so
-    sil-bundle seal /bundles/library
-    sil-bundle run /bundles/library -o evidence/library
+    sil bundle seal /bundles/library
+    sil bundle run /bundles/library -o evidence/library
 """
 
 from __future__ import annotations

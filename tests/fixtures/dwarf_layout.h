@@ -1,4 +1,4 @@
-/* Synthetic interface types for sil-schema-import (issue #253).
+/* Synthetic interface types for sil schema import (issue #253).
  *
  * No project struct: each member exists to exercise one flattening rule.
  * The tests compile dwarf_layout.c, which defines one object of each type so

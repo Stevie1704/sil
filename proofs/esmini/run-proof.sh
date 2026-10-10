@@ -99,7 +99,7 @@ cp "$WORKSPACE/alks-cut-in.json" "$WORKSPACE/alks-cut-in-failing.json" "$EVIDENC
 } | tee "$EVIDENCE_DIR/manifest-hashes.txt"
 
 step "Declared payload footprint"
-sil_tool sil-footprint /workspace/alks-cut-in.json | tee "$EVIDENCE_DIR/footprint.txt"
+sil_tool sil footprint /workspace/alks-cut-in.json | tee "$EVIDENCE_DIR/footprint.txt"
 if grep -q "unbounded" "$EVIDENCE_DIR/footprint.txt"; then
     echo "a subscriber route declares no capacity" >&2
     exit 1
@@ -152,7 +152,7 @@ cp "$WORKSPACE/run-1.mcap" "$EVIDENCE_DIR/run-1.mcap"
 # The released determinism check runs the same comparison from inside the
 # image. It has no way to pass a Process-participant deadline, so both are
 # run: this one for the shipped tool, the pair above for the deadline.
-sil_tool sil-check /workspace/alks-cut-in.json --runner sil-run \
+sil_tool sil check /workspace/alks-cut-in.json --runner sil-run \
     | tee -a "$EVIDENCE_DIR/determinism.txt"
 
 step "Clock-shim control"

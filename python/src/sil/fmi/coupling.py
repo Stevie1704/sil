@@ -1,4 +1,4 @@
-"""`sil-fmu-couple`: author a Run of FMUs coupled through Channels.
+"""`sil fmi couple`: author a Run of FMUs coupled through Channels.
 
 A coupling document names each FMU as its own Process participant and each
 connection as a field of an ordinary Channel. This command turns it and
@@ -102,7 +102,9 @@ from sil.manifest import Manifest, ManifestError, SubscriberRoute
 
 DOCUMENT_VERSION = 1
 RECEIPT_VERSION = 1
-PROG = "sil-fmu-couple"
+PROG = "sil fmi couple"
+# The name the files it writes carry; it stays as the first release wrote it.
+AUTHOR = "sil-fmu-couple"
 
 _DOCUMENT_KEYS = {"sil_fmu_coupling", "duration_ns", "fmus", "channels"}
 _FMU_KEYS = {"step_period_ns", "priority", "start", "hold"}
@@ -208,7 +210,7 @@ def _receipt(connections: list[Connection], variables: dict, plan: dict,
              files: dict) -> dict:
     return {
         "sil_fmu_coupling_receipt": RECEIPT_VERSION,
-        "author": {"name": PROG, "version": build_info.__version__,
+        "author": {"name": AUTHOR, "version": build_info.__version__,
                    "revision": build_info.SOURCE_REVISION},
         **files,
         "connections": [

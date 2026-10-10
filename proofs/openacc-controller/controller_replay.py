@@ -9,7 +9,7 @@ expected control failures cannot disagree. The values are the #178 handoff's
   the derived ones. `recorded_inputs` recomputes every derived column from
   the recorded ones and refuses a difference: `gap_m` = `IVS1`,
   `relative_speed_mps` = `Speed1 - Speed2`, `ego_speed_mps` = `Speed2`, and
-  `t_ns` on the exact 100 ms grid from the window start. `sil-csv` then
+  `t_ns` on the exact 100 ms grid from the window start. `sil recording csv` then
   converts the derived columns into `acc.sensing`, with `t_ns` as the Message
   time.
 - **Input.** The Message of sample k is published at t_k and, with Latency
@@ -19,7 +19,7 @@ expected control failures cannot disagree. The values are the #178 handoff's
   t_k + 100 ms. The contract compares it with the reference row at that time,
   every row from 100 ms through 50.1 s.
 - **Comparison.** `abs(actual - reference) <= 1e-10 + 1e-12 * abs(reference)`,
-  `sil-compare`'s rule.
+  `sil compare`'s rule.
 
 Each control changes one thing and must fail where the control law, applied
 to what the FMU sees under that change, first leaves the tolerance. That place
@@ -139,7 +139,7 @@ def recorded_inputs(text: str, window_start_s: float) -> list[dict]:
 
 
 def input_mapping(variant: Variant) -> dict:
-    """The `sil-csv` mapping from the window CSV to `acc.sensing`."""
+    """The `sil recording csv` mapping from the window CSV to `acc.sensing`."""
     fields = {name: {"column": name} for name in INPUTS}
     if variant.relative_speed_scale != 1:
         fields["relative_speed_mps"]["scale"] = variant.relative_speed_scale
@@ -178,7 +178,7 @@ def route_capacity(variant: Variant) -> int:
 
 
 def authoring_document(variant: Variant, first: dict) -> dict:
-    """The `sil-fmu-replay` document of one Run; `first` is sample 0."""
+    """The `sil fmi replay` document of one Run; `first` is sample 0."""
     variable = {name: name for name in INPUTS}
     if variant.swap_speeds:
         variable["relative_speed_mps"] = "ego_speed_mps"

@@ -2,7 +2,7 @@
 # Validate the updated determinism checker against the #117 esmini consumer.
 #
 # The v0.1.0 proof beside this script is release evidence and stays as it is:
-# its `sil-check` invocation carries no Process-participant deadline, because
+# its `sil check` invocation carries no Process-participant deadline, because
 # the released checker has none. This script answers the separate question
 # issue #134 asks — does the *unreleased* checker hand the same deadline to
 # both of the Runs it compares, on the same consumer artifact?
