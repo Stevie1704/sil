@@ -27,6 +27,7 @@ from pathlib import Path
 
 from sil.schema import load as load_message_types
 
+PROG = "sil footprint"
 EXIT_CONFIG_ERROR = 2
 
 _MIB = 1024 * 1024
@@ -180,7 +181,7 @@ def report(doc: dict, out=None) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="sil footprint",
+        prog=PROG,
         description="Report the worst-case declared payload memory of a "
                     "manifest, from route capacities and arena slots alone.",
     )
@@ -190,19 +191,19 @@ def main(argv: list[str] | None = None) -> int:
     try:
         doc = json.loads(args.manifest.read_text())
     except OSError as exc:
-        sys.stderr.write(f"sil footprint: cannot read manifest: {exc}\n")
+        sys.stderr.write(f"{PROG}: cannot read manifest: {exc}\n")
         return EXIT_CONFIG_ERROR
     except json.JSONDecodeError as exc:
-        sys.stderr.write(f"sil footprint: manifest is not valid JSON: {exc}\n")
+        sys.stderr.write(f"{PROG}: manifest is not valid JSON: {exc}\n")
         return EXIT_CONFIG_ERROR
     if not isinstance(doc, dict):
-        sys.stderr.write("sil footprint: manifest is not a JSON object\n")
+        sys.stderr.write(f"{PROG}: manifest is not a JSON object\n")
         return EXIT_CONFIG_ERROR
 
     try:
         report(doc)
     except FootprintError as exc:
-        sys.stderr.write(f"sil footprint: {exc}\n")
+        sys.stderr.write(f"{PROG}: {exc}\n")
         return EXIT_CONFIG_ERROR
     return 0
 

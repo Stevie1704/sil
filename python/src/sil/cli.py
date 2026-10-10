@@ -15,7 +15,7 @@ import importlib
 import os
 import shutil
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 PROG = "sil"
 EXIT_USAGE = 2
@@ -23,7 +23,7 @@ EXIT_NOT_FOUND = 127  # the shell's "command not found"; sil-run uses 0 to 3
 
 
 @dataclass(frozen=True)
-class Command:
+class ModuleCommand:
     """A subcommand: the module whose `main` runs it, and what it does."""
 
     module: str
@@ -36,7 +36,7 @@ class Command:
 
 
 @dataclass(frozen=True)
-class Native:
+class NativeCommand:
     """A subcommand that is a native executable, found on PATH."""
 
     executable: str
@@ -56,50 +56,51 @@ class Group:
     """Subcommands that belong together, under one name."""
 
     summary: str
-    commands: dict[str, Command | Native | Group] = field(default_factory=dict)
+    commands: dict[str, ModuleCommand | NativeCommand | Group]
 
 
 ROOT = Group("SiL: deterministic Runs of virtual ECUs", {
-    "check": Command("sil.check",
-                     "run a Manifest twice and fail on any Recording difference"),
-    "compare": Command("sil.compare",
-                       "compare a Recording with a reference under a contract"),
-    "footprint": Command("sil.footprint",
-                         "report the worst-case payload memory a Manifest declares"),
-    "run": Native("sil-run", "execute a Manifest into a Recording (the native sil-run)"),
+    "check": ModuleCommand("sil.check",
+                           "run a Manifest twice and fail on any Recording difference"),
+    "compare": ModuleCommand("sil.compare",
+                             "compare a Recording with a reference under a contract"),
+    "footprint": ModuleCommand("sil.footprint",
+                               "report the worst-case payload memory a Manifest declares"),
+    "run": NativeCommand("sil-run",
+                         "execute a Manifest into a Recording (the native sil-run)"),
     "bundle": Group("seal and run offline regression bundles", {
-        "seal": Command("sil.bundle",
-                        "record the identity of a bundle and its runtime",
-                        ("seal",)),
-        "verify": Command("sil.bundle",
-                          "check every sealed identity without running",
-                          ("verify",)),
-        "run": Command("sil.bundle",
-                       "verify a bundle, then execute every declared Run",
-                       ("run",)),
-        "matrix": Command("sil.matrix",
-                          "run a list of sealed bundles as one CI job"),
+        "seal": ModuleCommand("sil.bundle",
+                              "record the identity of a bundle and its runtime",
+                              ("seal",)),
+        "verify": ModuleCommand("sil.bundle",
+                                "check every sealed identity without running",
+                                ("verify",)),
+        "run": ModuleCommand("sil.bundle",
+                             "verify a bundle, then execute every declared Run",
+                             ("run",)),
+        "matrix": ModuleCommand("sil.matrix",
+                                "run a list of sealed bundles as one CI job"),
     }),
     "fmi": Group("inspect FMUs and author Runs that use them", {
-        "inspect": Command("sil.fmi.inspection",
-                           "report whether this importer can drive an FMU"),
-        "couple": Command("sil.fmi.coupling",
-                          "author a Run of FMUs coupled through Channels"),
-        "replay": Command("sil.fmi.authoring",
-                          "author a Run that replays a Recording into one FMU"),
-        "substitute": Command("sil.fmi.substitution",
-                              "replace one coupled FMU with its Recording"),
+        "inspect": ModuleCommand("sil.fmi.inspection",
+                                 "report whether this importer can drive an FMU"),
+        "couple": ModuleCommand("sil.fmi.coupling",
+                                "author a Run of FMUs coupled through Channels"),
+        "replay": ModuleCommand("sil.fmi.authoring",
+                                "author a Run that replays a Recording into one FMU"),
+        "substitute": ModuleCommand("sil.fmi.substitution",
+                                    "replace one coupled FMU with its Recording"),
     }),
     "recording": Group("prepare Recordings for replay", {
-        "csv": Command("sil.csv_recording",
-                       "convert CSV signals into a Recording"),
-        "window": Command("sil.replay_window",
-                          "select and rebase a window of a Recording"),
+        "csv": ModuleCommand("sil.csv_recording",
+                             "convert CSV signals into a Recording"),
+        "window": ModuleCommand("sil.replay_window",
+                                "select and rebase a window of a Recording"),
     }),
     "schema": Group("derive Schemas", {
-        "import": Command("sil.schema_import",
-                          "write a flat Schema from the DWARF layout of a C type "
-                          "(needs sil[dwarf])"),
+        "import": ModuleCommand("sil.schema_import",
+                                "write a flat Schema from the DWARF layout of a C type "
+                                "(needs sil[dwarf])"),
     }),
 })
 

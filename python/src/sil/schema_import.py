@@ -30,6 +30,7 @@ from typing import NoReturn
 
 from ._schema_types import c_ident, ident_problem, schema_name_problem
 
+PROG = "sil schema import"
 PAD_PREFIX = "_sil_pad_"
 
 # DW_ATE_* base-type encodings.
@@ -427,7 +428,7 @@ def _write_atomically(out: Path, text: str) -> None:
 
 def _fail(*messages: str) -> NoReturn:
     for message in messages:
-        print(f"sil schema import: {message}", file=sys.stderr)
+        print(f"{PROG}: {message}", file=sys.stderr)
     sys.exit(2)
 
 
@@ -441,7 +442,7 @@ def _type_argument(text: str) -> tuple[str, str]:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        prog="sil schema import",
+        prog=PROG,
         description="Import flat SiL Schemas from the DWARF layout of C "
                     "types in an ELF object.")
     parser.add_argument("elf", type=Path, help="ELF object (.o or .so) "

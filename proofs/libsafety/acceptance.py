@@ -121,12 +121,12 @@ def runtime_identity(library: Path) -> dict:
 
 # Conversion ---------------------------------------------------------------------
 
-def convert(tool: str, document: dict, source: Path, output: Path,
+def convert(subcommand: str, document: dict, source: Path, output: Path,
             evidence: Path) -> dict:
-    """One `sil recording csv` or `window` step, with its document and receipt kept."""
+    """One `sil recording csv` or `sil recording window` step, with its document and receipt kept."""
     document_path = write_json(output.with_suffix(".json"), document)
     receipt = evidence / f"{output.stem}.receipt.json"
-    command("sil", "recording", tool, str(document_path), str(source), "-o", str(output),
+    command("sil", "recording", subcommand, str(document_path), str(source), "-o", str(output),
             "--receipt", str(receipt))
     return read_json(receipt)
 
