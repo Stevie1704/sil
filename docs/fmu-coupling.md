@@ -6,7 +6,7 @@ Commands below run from the repository root unless stated otherwise.
 
 ## Couple FMUs through Channels
 
-`sil-fmu-couple` writes the Manifest of a Run of FMUs that are coupled
+`sil fmi couple` writes the Manifest of a Run of FMUs that are coupled
 through Channels. Each FMU is its own Process participant, and each
 connection is a field of an ordinary Channel. A coupling document states
 every choice. The command checks the document against the FMUs before
@@ -27,9 +27,9 @@ a [group](fmi.md#connected-fmus-one-participant-one-bus) (ADR 0001).
 From the checkout root, with the staged installation on `PATH`:
 
 ```sh
-workdir=$(mktemp -d "$HOME/sil-fmu-couple.XXXXXX")
+workdir=$(mktemp -d "$HOME/sil fmi couple.XXXXXX")
 fmu=tests/fixtures/reference-fmus/3.0/Feedthrough.fmu
-sil-fmu-couple examples/fmu-coupling/feedback.json \
+sil fmi couple examples/fmu-coupling/feedback.json \
     --fmu left "$fmu" --fmu right "$fmu" \
     -o "$workdir/feedback.json" --receipt "$workdir/feedback.receipt.json"
 sil-run "$workdir/feedback.json" -o "$workdir/run-1.mcap"
@@ -91,7 +91,7 @@ Before it writes a Manifest, the command rejects (exit 2) with the reason:
 
 - an FMU the importer cannot drive, or a mapping the importer would reject.
   These are the checks of
-  [`sil-fmi-inspect`](fmi.md#inspecting-an-fmu-before-a-run). The command does not
+  [`sil fmi inspect`](fmi.md#inspecting-an-fmu-before-a-run). The command does not
   load an FMU's binary;
 - an FMU with no `--fmu` archive, and an archive for no declared FMU;
 - a publisher or subscriber that is not a declared FMU, and a bound field
@@ -260,7 +260,7 @@ refuses such a Duration before it writes the Manifest. The diagnostic names
 each FMU, the last Step and a Duration that fits, for example:
 
 ```text
-sil-fmu-couple: error: Duration 100 ms is not a multiple of the period of FMU 'slow' (period 30 ms). The last Step of 'slow' would start at 90 ms and end at 120 ms, after the Duration. [...] such as 60 ms or 120 ms
+sil fmi couple: error: Duration 100 ms is not a multiple of the period of FMU 'slow' (period 30 ms). The last Step of 'slow' would start at 90 ms and end at 120 ms, after the Duration. [...] such as 60 ms or 120 ms
 ```
 
 **The final samples.** The last Message of each FMU holds its values at the
@@ -283,7 +283,7 @@ Thus an in-run check cannot see:
 
 Only the Recording holds these Messages.
 
-Check the final samples post-hoc. `sil-compare` observes each Message at
+Check the final samples post-hoc. `sil compare` observes each Message at
 its sample time: `actual_offset_ns` is the publisher's period. With an
 observation grid that ends on the Duration, the final sample is compared
 like each other sample. The tests compare the Recording of this Run with a
@@ -293,7 +293,7 @@ divergence is at 120 ms.
 
 ### Replace one FMU with its Recording
 
-`sil-fmu-substitute` removes one live FMU from a recorded coupled Run and
+`sil fmi substitute` removes one live FMU from a recorded coupled Run and
 replays the Channels it fed the other FMUs. The other FMUs are the retained
 subsystem. The Channels of the removed FMU that a retained FMU takes are the
 replacement boundary. The command writes the replacement Manifest and a
@@ -303,14 +303,14 @@ of the original Run. From the checkout root, with the staged installation on
 `PATH`:
 
 ```sh
-workdir=$(mktemp -d "$HOME/sil-fmu-substitute.XXXXXX")
+workdir=$(mktemp -d "$HOME/sil fmi substitute.XXXXXX")
 fmu=tests/fixtures/reference-fmus/3.0/Feedthrough.fmu
 # 1. Record the coupled Run.
-sil-fmu-couple examples/fmu-coupling/feedback.json \
+sil fmi couple examples/fmu-coupling/feedback.json \
     --fmu left "$fmu" --fmu right "$fmu" -o "$workdir/original.json"
 sil-run "$workdir/original.json" -o "$workdir/original.mcap"
 # 2. Replace `left` by its recorded Channel `left.value`.
-sil-fmu-substitute examples/fmu-coupling/feedback.json \
+sil fmi substitute examples/fmu-coupling/feedback.json \
     --fmu left "$fmu" --fmu right "$fmu" --replace left \
     --recording "$workdir/original.mcap" -o "$workdir/replacement.json" \
     --contract "$workdir/contract.json" --receipt "$workdir/receipt.json"
@@ -319,14 +319,14 @@ sil-run "$workdir/replacement.json" -o "$workdir/replacement-1.mcap"
 sil-run "$workdir/replacement.json" -o "$workdir/replacement-2.mcap"
 cmp "$workdir/replacement-1.mcap" "$workdir/replacement-2.mcap"
 # 4. Compare the Messages with the original Run's.
-sil-compare "$workdir/contract.json" "$workdir/replacement-1.mcap" \
+sil compare "$workdir/contract.json" "$workdir/replacement-1.mcap" \
     "$workdir/original.mcap"
 ```
 
 `make example-fmu-substitution` runs the same sequence from the source tree.
 
 Give the command the document and the archives that the original Run was
-authored from. It makes every check of `sil-fmu-couple` again, and it then
+authored from. It makes every check of `sil fmi couple` again, and it then
 checks that they author the Manifest whose hash the Recording carries. The
 Manifest names each archive by its absolute path, so the archives must be at
 the paths the Run named. The command refuses a Recording that no Run
@@ -364,8 +364,8 @@ float fields with zero tolerance. It leaves out no warm-up: the replacement
 starts from the same initialization, so it compares the first Sample times,
 where a retained input still holds its start value, and the final one at the
 Duration. The two Runs have different Manifests, so their Recordings differ
-in bytes, and `sil-compare` compares their Messages. A byte comparison
-(`cmp`, `sil-check`) is only for two Runs of the same Manifest.
+in bytes, and `sil compare` compares their Messages. A byte comparison
+(`cmp`, `sil check`) is only for two Runs of the same Manifest.
 
 The tests (`tests/test_fmu_substitution.py`) do this for two compositions:
 

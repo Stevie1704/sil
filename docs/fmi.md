@@ -149,9 +149,9 @@ A start value is read by the same rule, before anything is loaded:
   else: no `+`, spaces, underscores, decimal point, exponent, `0x` or
   `true`/`false`. A value outside the type's range is refused; so is any
   `-` for an unsigned type, `-0` included.
-- A `Float32` start value uses the decimal grammar `sil-csv` reads an `f32`
+- A `Float32` start value uses the decimal grammar `sil recording csv` reads an `f32`
   cell in. It is read as the nearest binary64. Then it is rounded to the
-  nearest Float32, with ties to even. `sil-csv` uses the same two steps, so
+  nearest Float32, with ties to even. `sil recording csv` uses the same two steps, so
   one decimal is one Float32 on both paths into a Run. `0.1` is
   `0.100000001490116…`; `16777217` is `16777216`. A value that rounds to
   infinity, a non-zero value that rounds to zero, and `inf` or `nan` are
@@ -191,7 +191,7 @@ major, so the last dimension varies fastest. A `[2,3]` matrix `m` is the field
 not reorder anything: the FMU's flat value buffer is the field. A `[3,2]`
 variable and a `[2,3]` variable both have six values, but they are different
 shapes. Inspection reports each variable's `dimensions` and `value_count`,
-and `sil-fmu-replay` and `sil-fmu-couple` receipts record the dimensions and
+and `sil fmi replay` and `sil fmi couple` receipts record the dimensions and
 value count of each array they bind or start. A connection between two FMUs
 must join variables with the same dimensions, as it must join one type and
 one unit.
@@ -458,15 +458,15 @@ and [docs/adr/0002-a-replayed-terminal-lands-on-its-own-instant.md](adr/0002-a-r
 
 ### Inspecting an FMU before a Run
 
-`sil-fmi-inspect` reports whether this importer can drive an archive, before
+`sil fmi inspect` reports whether this importer can drive an archive, before
 any Manifest is written. It unpacks the archive and reads its declarations; it
 never loads or executes the FMU binary, so it needs no exporter, no reference
 importer and no working binary.
 
 ```sh
-sil-fmi-inspect model.fmu                       # readable report
-sil-fmi-inspect model.fmu --json                # the same report as JSON
-sil-fmi-inspect model.fmu --mapping mapping.json
+sil fmi inspect model.fmu                       # readable report
+sil fmi inspect model.fmu --json                # the same report as JSON
+sil fmi inspect model.fmu --mapping mapping.json
 ```
 
 The report has four parts:

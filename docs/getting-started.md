@@ -64,13 +64,13 @@ is needed:
 export PATH="$PWD/.venv-staged/bin:$prefix/bin:$PATH"
 workdir=$(mktemp -d)
 cd "$workdir"
-sil-acc acc.json
+python -m sil.examples.acc.manifest acc.json
 sil-run acc.json -o acc.mcap
-sil-check acc.json --runner sil-run
+sil check acc.json --runner sil-run
 
-sil-acc --delayed-sensing acc-delayed.json
+python -m sil.examples.acc.manifest --delayed-sensing acc-delayed.json
 sil-run acc-delayed.json -o acc-delayed.mcap
-sil-check acc-delayed.json --runner sil-run
+sil check acc-delayed.json --runner sil-run
 ```
 
 The installed runner resolves the Clock shim from the staged prefix's

@@ -26,15 +26,15 @@ One run = `sil-run manifest.json -o out.mcap`:
 - **Test API**: tests are scheduled participants (`sil.testing` +
   `sil.participant`) run under pytest; an in-simulation assertion failure
   aborts the run non-zero and fails the pytest test with that message.
-- **Determinism check**: `sil-check manifest.json --runner build/sil-run`
+- **Determinism check**: `sil check manifest.json --runner build/sil-run`
   runs twice and bit-compares (exit 3 on violation). Enforced in CI.
-- **Declared memory footprint**: `python -m sil.footprint manifest.json` reports
+- **Declared memory footprint**: `sil footprint manifest.json` reports
   the worst-case payload memory a manifest promises, from route capacities and
   arena slot counts alone — no run, no benchmark. It also names any route that
   declares no capacity, whose worst case is unbounded.
 
 Exit codes: `0` ok, `1` run/test failure, `2` Manifest error, `3` determinism
-violation (sil-check).
+violation (sil check).
 
 For a bounded CI wait, add the optional run-boundary guard:
 
@@ -52,7 +52,7 @@ The determinism check takes the same option and hands it to both of the runs
 it compares, so a stalled participant fails the check instead of hanging it:
 
 ```sh
-sil-check manifest.json --runner build/sil-run --participant-timeout-ms 5000
+sil check manifest.json --runner build/sil-run --participant-timeout-ms 5000
 ```
 
 The check then reports the run's own exit code and diagnostic — a missed
@@ -193,7 +193,7 @@ and `epoch_ns` are all hashed into the manifest (they change output), so shimmed
 and unshimmed variants of a run never collide under hash-based caching, and two
 shimmed runs
 started at different wall-clock times still produce bit-identical MCAPs — run
-`sil-check` on a shimmed manifest to prove it.
+`sil check` on a shimmed manifest to prove it.
 
 **Boundaries (out of scope, documented):** statically linked binaries and code
 that reads the clock via direct syscalls or the vDSO bypass the preload and are

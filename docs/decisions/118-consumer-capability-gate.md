@@ -78,7 +78,7 @@ All nine were solved by the consumer without changing SiL or esmini. The
 records each adaptation. None establishes a missing kernel contract.
 
 One exercised workflow remains unnecessarily difficult: direct Runs use
-`--participant-timeout-ms 30000`, but `sil-check` cannot forward that deadline
+`--participant-timeout-ms 30000`, but `sil check` cannot forward that deadline
 to its two Runs. The proof separately compared deadline-enabled Recordings;
 the checker itself can still wait indefinitely on a stalled Participant.
 The smallest correction is an optional checker argument forwarded to the
