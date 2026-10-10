@@ -1,7 +1,7 @@
-"""`sil-matrix`: run a list of sealed regression bundles as one CI job (issue #202).
+"""`sil bundle matrix`: run a list of sealed regression bundles as one CI job (issue #202).
 
 A case list names each case, the sealed bundle it runs and the lock digest
-`sil-bundle seal` printed for it. The lock pins the bundle's Manifests,
+`sil bundle seal` printed for it. The lock pins the bundle's Manifests,
 targets, references and comparison contracts, so it pins the comparison
 policy too. Each case states a whole-case wall-clock guard:
 
@@ -10,9 +10,9 @@ policy too. Each case states a whole-case wall-clock guard:
                 "expect_lock": "<sha256>", "timeout_s": 300,
                 "required": true}]}
 
-    sil-matrix cases.json -o <out> [--jobs N] [--fail-fast]
+    sil bundle matrix cases.json -o <out> [--jobs N] [--fail-fast]
 
-Every case is one `sil-bundle run` into its own evidence directory,
+Every case is one `sil bundle run` into its own evidence directory,
 `<out>/cases/<name>/`, in its own process group. Case names are unique
 without regard to case, so no two cases share a directory on any file
 system. At most `--jobs` cases run at the same time; a Run itself is never
@@ -21,14 +21,14 @@ declares (`runs[].participant_timeout_ms`).
 
 A case that exceeds its guard, or a matrix that receives SIGINT, SIGHUP or
 SIGTERM, has its process group sent SIGTERM. `sil-run` then ends its Run and
-terminates the process groups of its Process participants. `sil-bundle` then
+terminates the process groups of its Process participants. `sil bundle` then
 writes the Runs that finished. The Process participant groups stay in the
 session of the case, so after the grace period, and after every case, each
 process still in that session is killed.
 
 Each case gets one status: `pass`, `behavioral-failure`, `manifest-error`,
 `determinism-violation`, `timeout` or `skipped`. The summary keeps the
-`sil-bundle` exit code, each Run's `sil-run` exit code, and the evidence
+`sil bundle` exit code, each Run's `sil-run` exit code, and the evidence
 paths. Its `identity` holds only deterministic results; the duration and
 the peak resident set size are in `observations`.
 
@@ -58,7 +58,9 @@ from pathlib import Path
 
 from sil.bundle import EXIT_FAIL, EXIT_REFUSED, SUMMARY, _NAME, Refusal, file_sha256
 
-PROG = "sil-matrix"
+PROG = "sil bundle matrix"
+# The JUnit suite name CI dashboards key on; it stays as the first release wrote it.
+SUITE = "sil-matrix"
 FORMAT = 1
 JUNIT = "junit.xml"
 EXIT_INTERRUPTED = 130
@@ -151,7 +153,7 @@ def _output_directory(out: Path, cases: tuple[Case, ...]) -> Path:
 def classify(bundle_exit_code: int | None, bundle_summary: dict | None) -> tuple[str, str]:
     """The status of a finished case, and the reason for a status other than pass."""
     if bundle_summary is None:
-        return MANIFEST_ERROR, f"sil-bundle exited {bundle_exit_code} without a summary"
+        return MANIFEST_ERROR, f"sil bundle exited {bundle_exit_code} without a summary"
     if bundle_summary["verdict"] == "refused":
         return MANIFEST_ERROR, bundle_summary["refusal"]
     worst = (PASS, "")
@@ -220,7 +222,7 @@ class Matrix:
                 proc = _start(case, evidence, self.out / "logs" / f"{case.name}.log")
             except OSError as error:
                 proc = None
-                result = _unstarted(case, f"cannot start sil-bundle: {error}")
+                result = _unstarted(case, f"cannot start sil bundle: {error}")
         if proc is not None:
             result = self._finish(case, proc, evidence, started)
         if self.fail_fast and case.required and result["status"] != PASS:
@@ -233,7 +235,7 @@ class Matrix:
         code, usage, ended = _wait(proc, started + case.timeout_s, self.interrupted)
         observations = {"duration_s": round(time.monotonic() - started, 3),
                         "max_rss_kib": _kib(usage.ru_maxrss) if usage else None}
-        # A terminated sil-bundle still writes the Runs that finished.
+        # A terminated sil bundle still writes the Runs that finished.
         bundle_summary = _read_summary(evidence / SUMMARY)
         if ended == _INTERRUPTED:
             status, reason = SKIPPED, ("interrupted after it started; its Run "
@@ -254,7 +256,7 @@ def _start(case: Case, evidence: Path, log: Path) -> subprocess.Popen:
     command = [sys.executable, "-m", "sil.bundle", "run", str(case.bundle),
                "-o", str(evidence), "--expect-lock", case.expect_lock]
     with log.open("wb") as output:
-        # Its own session: the group holds sil-bundle and sil-run, and
+        # Its own session: the group holds sil bundle and sil-run, and
         # sil-run leads the groups of its Process participants.
         return subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=output,
                                 stderr=subprocess.STDOUT, start_new_session=True)
@@ -386,7 +388,7 @@ def _skipped(case: Case, reason: str) -> dict:
 
 
 def _unstarted(case: Case, reason: str) -> dict:
-    """A case whose sil-bundle could not start: an environment problem."""
+    """A case whose sil bundle could not start: an environment problem."""
     return _not_run(case, MANIFEST_ERROR, reason)
 
 
@@ -425,11 +427,11 @@ def write_junit(out: Path, results: list[dict]) -> None:
 
     root = ElementTree.Element("testsuites")
     suite = ElementTree.SubElement(
-        root, "testsuite", name=PROG, tests=str(len(results)),
+        root, "testsuite", name=SUITE, tests=str(len(results)),
         failures=count("failure"), errors=count("error"), skipped=count("skipped"))
     for result in results:
         testcase = ElementTree.SubElement(
-            suite, "testcase", classname=PROG, name=result["name"],
+            suite, "testcase", classname=SUITE, name=result["name"],
             time=str(result["observations"]["duration_s"] or 0))
         element = _JUNIT_ELEMENT.get(result["status"])
         if element:

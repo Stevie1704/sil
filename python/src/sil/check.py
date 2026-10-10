@@ -81,7 +81,7 @@ class _GivenOnce(argparse.Action):
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="sil-check",
+        prog="sil check",
         description="Run a manifest twice and fail on any output difference.",
         # The runner matches its options exactly. A checker that answered to
         # --participant-timeout-m would accept a spelling the Runs it forwards

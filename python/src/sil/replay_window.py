@@ -60,6 +60,8 @@ from sil._schema_types import FORMATS, INT_RANGES, SIZES
 
 WINDOW_VERSION = 1
 RECEIPT_VERSION = 1
+PROG = "sil recording window"
+# The name the files it writes carry; it stays as the first release wrote it.
 PREPARER = "sil-window"
 
 _U64_MAX = INT_RANGES["u64"][1]
@@ -499,7 +501,7 @@ def _receipt(plan: _Window, channels: dict[str, _SourceChannel],
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog=PREPARER,
+        prog=PROG,
         description="Select a replay window with a warm-up from a Recording "
                     "and rebase it to Virtual time zero.",
         allow_abbrev=False,
@@ -515,7 +517,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         receipt = prepare(args.window, args.source, args.output)
     except WindowError as e:
-        sys.stderr.write(f"{PREPARER}: error: {e}\n")
+        sys.stderr.write(f"{PROG}: error: {e}\n")
         return 2
     text = json.dumps(receipt, indent=2) + "\n"
     if args.receipt is None:
@@ -524,7 +526,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         args.receipt.write_text(text)
     except OSError as e:
-        sys.stderr.write(f"{PREPARER}: error: cannot write receipt "
+        sys.stderr.write(f"{PROG}: error: cannot write receipt "
                          f"{str(args.receipt)!r}: {e}\n")
         return 2
     return 0

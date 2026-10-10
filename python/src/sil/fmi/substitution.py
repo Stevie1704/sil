@@ -1,6 +1,6 @@
-"""`sil-fmu-substitute`: replace one FMU of a coupled Run with its Recording.
+"""`sil fmi substitute`: replace one FMU of a coupled Run with its Recording.
 
-A Run that `sil-fmu-couple` authored records every Channel. This command
+A Run that `sil fmi couple` authored records every Channel. This command
 takes that Recording, the coupling document and the FMU archives the Run was
 authored from, and the name of one FMU to remove. It writes two files:
 
@@ -8,17 +8,17 @@ authored from, and the name of one FMU to remove. It writes two files:
   they did. A Replay participant takes the removed FMU's name and publishes,
   from the Recording, each Channel of the removed FMU that a retained FMU
   takes: the replacement boundary;
-* the comparison contract (`sil-compare`) that says whether the retained
+* the comparison contract (`sil compare`) that says whether the retained
   outputs of the replacement Run are those of the original Run.
 
-    sil-fmu-substitute coupling.json --fmu plant plant.fmu \\
+    sil fmi substitute coupling.json --fmu plant plant.fmu \\
         --fmu controller controller.fmu --replace plant \\
         --recording original.mcap -o replacement.json \\
         --contract contract.json --receipt receipt.json
 
 Everything is checked before a file is written:
 
-* the document passes every check of `sil-fmu-couple`, and it and the
+* the document passes every check of `sil fmi couple`, and it and the
   archives author the Manifest whose hash the Recording carries. So the
   Recording is a Run of this experiment, and a retained FMU's start values,
   parameters, Period, priority and routes, and each Latency, are the ones
@@ -85,7 +85,9 @@ from sil.recording import (UnknownRecordingFormat, read_manifest_hash,
 
 RECEIPT_VERSION = 1
 CONTRACT_VERSION = 1
-PROG = "sil-fmu-substitute"
+PROG = "sil fmi substitute"
+# The name the files it writes carry; it stays as the first release wrote it.
+AUTHOR = "sil-fmu-substitute"
 
 VALIDITY = (
     "The Replay participant publishes the removed FMU's recorded response to "
@@ -131,7 +133,7 @@ def substitute(document: str | Path, fmus: dict[str, str | Path],
                 from e
     return {
         "sil_fmu_substitution_receipt": RECEIPT_VERSION,
-        "author": {"name": PROG, "version": build_info.__version__,
+        "author": {"name": AUTHOR, "version": build_info.__version__,
                    "revision": build_info.SOURCE_REVISION},
         "document": {"file": document.name,
                      "sha256": sha256(coupled.document_bytes)},

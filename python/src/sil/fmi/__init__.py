@@ -57,11 +57,11 @@ native side of an FMI 2.0 FMU, behind the same calls `runtime` answers;
 two scheduling policies, `terminals` and `composition` the group's own members
 and how they are declared; `archive` unpacks the FMU and `cli` chooses between
 the two participants; `inspection` runs the checks before loading on an
-archive alone, for `sil-fmi-inspect`; `authoring` writes a Manifest that
-replays a Recording into one FMU from those same checks, for `sil-fmu-replay`,
+archive alone, for `sil fmi inspect`; `authoring` writes a Manifest that
+replays a Recording into one FMU from those same checks, for `sil fmi replay`,
 and `coupling` one that connects several FMUs through Channels, for
-`sil-fmu-couple`; `substitution` replaces one coupled FMU with a replay of
-its recorded Channels, for `sil-fmu-substitute`; `documents` holds what the
+`sil fmi couple`; `substitution` replaces one coupled FMU with a replay of
+its recorded Channels, for `sil fmi substitute`; `documents` holds what the
 authoring commands share.
 What a Manifest names — `python -m sil.fmi` — and what
 another module imports — `sil.fmi.FmuParticipant` and the rest below — is the
