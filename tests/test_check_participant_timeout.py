@@ -1,6 +1,6 @@
 """Checker forwarding of the Process-participant response deadline (issue #134).
 
-The deadline is a run-boundary guard, so the two Runs `sil-check` compares
+The deadline is a run-boundary guard, so the two Runs `sil check` compares
 have to carry the same value a direct `sil-run` invocation carries. Otherwise
 the Run the checker judges is not the Run the caller executes, and a stalled
 Participant hangs the check that was supposed to bound it.

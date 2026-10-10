@@ -4,7 +4,7 @@ Every expectation here is stated by hand — the observation time, field and
 values of each divergence — never computed by the comparison's own
 arithmetic. The ACC cases compare the retained SiL Recording of the
 `plant-accelerate` qualification case against the independent fmpy trace of
-the same FMU, converted by `sil-csv`.
+the same FMU, converted by `sil recording csv`.
 """
 
 from __future__ import annotations
@@ -571,7 +571,7 @@ def test_the_command_exit_status_is_the_verdict(acc_reference, tmp_path, capsys)
 def test_the_command_refuses_unreadable_inputs(acc_reference, tmp_path, capsys):
     contract_path = str(EXAMPLE / "contract.json")
     assert main([contract_path, str(tmp_path / "absent.mcap"), str(acc_reference)]) == 2
-    assert "sil-compare:" in capsys.readouterr().err
+    assert "sil compare:" in capsys.readouterr().err
     csv = tmp_path / "actual.csv"
     csv.write_text("t\n")
     assert main([contract_path, str(csv), str(acc_reference)]) == 2

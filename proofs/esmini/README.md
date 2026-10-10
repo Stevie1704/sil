@@ -35,7 +35,7 @@ Recorded in [`evidence/identity.txt`](evidence/identity.txt).
 | Reported version | `sil-run --version` → `0.1.0` |
 
 The derived image is built `FROM` that **digest**, never the `0.1.0` tag. Every
-SiL command the proof runs — `sil-run`, `sil-footprint`, `sil-check`, the
+SiL command the proof runs — `sil-run`, `sil footprint`, `sil check`, the
 `sil.manifest` builder, the `sil.participant` Step endpoint, the
 `sil.recording` reader — is an entry point that image already ships. No
 binary, wheel, or Python module comes from a SiL checkout or build directory.
@@ -325,7 +325,7 @@ issue.
   sensor-grade ground truth is Open Simulation Interface over a UDP socket.
   The proof did not need it — it read the C API directly — so no bus adapter
   was written.
-- **`sil-check` cannot carry a Process-participant deadline.** The shipped
+- **`sil check` cannot carry a Process-participant deadline.** The shipped
   determinism check invokes the runner without `--participant-timeout-ms`, so
   the Run it checks is not the Run a caller with a deadline executes. Here
   both were run and both produced the same Recording hash, which is why this
@@ -335,7 +335,7 @@ issue.
 
 ## Validating the updated checker
 
-[Issue #134](https://github.com/Stevie1704/sil/issues/134) gives `sil-check` a
+[Issue #134](https://github.com/Stevie1704/sil/issues/134) gives `sil check` a
 `--participant-timeout-ms` option and forwards it to both of its Runs. That
 checker is not in any release, so it is not in the image above and does not
 belong in the release evidence. It is validated on the same consumer artifact

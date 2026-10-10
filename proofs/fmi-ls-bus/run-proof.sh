@@ -271,7 +271,7 @@ step "What the kernel says about the Channel the importer could not fill"
 # The bounded CAN frame Channel is declared in the same Manifest the importer
 # rejected. The footprint report reads it without running anything, which is
 # what separates a missing Importer capability from a missing Channel one.
-sil_tool sil-footprint /workspace/binary-channel.json \
+sil_tool sil footprint /workspace/binary-channel.json \
     | tee "$EVIDENCE_DIR/footprint.txt"
 
 step "Drive the same FMU with this checkout's FMI Importer"

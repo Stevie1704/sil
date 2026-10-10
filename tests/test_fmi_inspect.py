@@ -1,4 +1,4 @@
-"""`sil-fmi-inspect`: what an archive offers the importer, read statically.
+"""`sil fmi inspect`: what an archive offers the importer, read statically.
 
 The inspection states a verdict the importer would also reach, so every
 rejection here is compared with the one `FmuParticipant.on_init` raises for the

@@ -3,8 +3,8 @@
 Nothing here reads an FMU output. Every expected value comes from the
 closed-form source motion and the sensor geometry that upstream documents,
 in `proofs/osmp-sensor/scene.py`, at the communication points the Importer
-gives `fmi2DoStep`. Each reference is one CSV with its `sil-csv` mapping, so
-the bundle's `sil-compare` contracts compare the decoded Recordings with it.
+gives `fmi2DoStep`. Each reference is one CSV with its `sil recording csv` mapping, so
+the bundle's `sil compare` contracts compare the decoded Recordings with it.
 
 Three references, one per expected behavior:
 

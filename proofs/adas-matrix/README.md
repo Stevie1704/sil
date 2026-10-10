@@ -3,7 +3,7 @@
 Issue [#228](https://github.com/Stevie1704/sil/issues/228) packages the
 repository-owned processed-sensor experiments of
 [#226](../adas-equivalence/README.md) and
-[#227](../adas-closed-loop/README.md) with `sil-bundle` and `sil-matrix`.
+[#227](../adas-closed-loop/README.md) with `sil bundle` and `sil bundle matrix`.
 Supported acceptance platform: Linux x86-64, glibc 2.36, CPython 3.13.7.
 Reference evidence establishes the integration contract, not supplier
 compatibility or ADAS safety.
@@ -72,8 +72,8 @@ Every nominal Run has a 30 s Process response deadline, executes twice for
 Determinism, and compares against prepared references. A whole-case 600 s
 guard bounds the bundle including verification, every Run and comparisons.
 Cases execute serially in isolated evidence directories; adopters can invoke
-`sil-matrix /opt/adas/nominal.json -o /work/nominal --jobs N` directly.
-`sil-matrix /opt/adas/controls.json -o /work/controls` must exit 1.
+`sil bundle matrix /opt/adas/nominal.json -o /work/nominal --jobs N` directly.
+`sil bundle matrix /opt/adas/controls.json -o /work/controls` must exit 1.
 The acceptance driver checks both matrix exit codes and every expected case
 status. An optional-control matrix returning 0 fails acceptance even when
 its diagnostics still detect every fault.
@@ -126,7 +126,7 @@ and register the same Tasks/subscriptions. Replace `adas_reference.so` at its
 existing bundle path. For an FMU, replace `AdasReference.fmu` with an FMI 3.0
 Co-Simulation FMU supporting the same typed variables, starts and 10 ms fixed
 Step. If only variable names differ, update every controller `--bind` while
-preserving the Channel/field types. Run `sil-fmi-inspect` before sealing.
+preserving the Channel/field types. Run `sil fmi inspect` before sealing.
 
 For either replacement, declare every external native library and Python
 module the target loads in `bundle.json`. Update `identities.json` and

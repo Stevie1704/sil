@@ -47,7 +47,7 @@ The acceptance stops at the first difference:
 | FMU archive | SHA-256 equal to `bundle.json` and to the bundle's own handoff |
 | FMU model source | `resources/controller.py` equal to the committed [`../acc-fmi/models/controller.py`](../acc-fmi/models/controller.py); `resources/dynamics.py` equal to the installed `sil.examples.acc.dynamics`; both equal to the archive's embedded identity |
 | Exporter | the identity's exporter equal to the audited `PythonFMU3 0.3.4` |
-| Interface | `sil-fmi-inspect` verdict `compatible`; FMI version, model, exporter, capabilities, platforms and every variable (type, causality, unit, start, dimensions) equal to the committed [#178 audit](../public-workloads/evidence/fmu-audit.json) |
+| Interface | `sil fmi inspect` verdict `compatible`; FMI version, model, exporter, capabilities, platforms and every variable (type, causality, unit, start, dimensions) equal to the committed [#178 audit](../public-workloads/evidence/fmu-audit.json) |
 | Runtime | `ldd` of the Linux binary resolves; `libpython` is present |
 
 **Why the FMU digest is not pinned across revisions.** The exporter embeds
@@ -62,7 +62,7 @@ regenerates the bundle at a new revision, it is not: the archive
 
 ## Initialization and shutdown
 
-`sil-fmi-inspect` cannot verify statically that the FMU takes its start
+`sil fmi inspect` cannot verify statically that the FMU takes its start
 values, initializes from `resources/`, and terminates. `lifecycle.py` checks
 this outside a Run, with the installed importer's FMI calls, one lifecycle
 per process:
@@ -95,19 +95,19 @@ Every accepted Run exited 0.
    `gap_m` = `IVS1` (bumper to bumper, never the antenna separation),
    `relative_speed_mps` = `Speed1 − Speed2`, `ego_speed_mps` = `Speed2`, and
    `t_ns` = k × 100 ms from 300.0 s. There are 501 samples.
-2. **Convert** (`sil-csv`). The derived columns become the `acc.sensing`
+2. **Convert** (`sil recording csv`). The derived columns become the `acc.sensing`
    Channel, with `t_ns` as the Message time. The reference trajectory becomes the
    `reference.command` Channel, each row at the time it describes.
 3. **Expect** (`inputs/expectations.json`). Before any Run, the control law
    over what the FMU sees in each variant gives the first divergence of each
    control. The law gives the pinned reference bit for bit.
-4. **Author** (`sil-fmu-replay`). One authoring document per variant. The
+4. **Author** (`sil fmi replay`). One authoring document per variant. The
    nominal document is authored twice; the two Manifests must be
    byte-identical.
 5. **Run** (`sil-run`). The nominal Manifest runs twice; the two Recordings
    must be byte-identical. That is determinism, and it is separate from the
    agreement with FMPy below.
-6. **Compare** (`sil-compare`) with the contract below.
+6. **Compare** (`sil compare`) with the contract below.
 
 ## Run contract
 
@@ -138,7 +138,7 @@ contract's tolerance.
 
 | Control | Change | Expected |
 | --- | --- | --- |
-| `changed-input` | `sil-csv` converts `relative_speed_mps` with scale −1: `Speed2 − Speed1` | fail, first divergence from the law |
+| `changed-input` | `sil recording csv` converts `relative_speed_mps` with scale −1: `Speed2 − Speed1` | fail, first divergence from the law |
 | `wrong-binding` | the two speed fields bound to each other's input variable | fail, first divergence from the law |
 | `one-period-shift` | `acc.sensing` Latency 100 ms: Step k sees sample k−1, Step 0 the start values. The route holds the one Message in flight, so its capacity is 2 | fail at 21.8 s, as #178 found |
 | `declared-starts` | no start values: the FMU's declared starts (60 m, 0 m/s, 25 m/s) | pass |
@@ -160,7 +160,7 @@ leaves the clamp at once and diverges at the first observation.
 
 [`evidence/`](evidence/) is the output of CI run 36386108635 on native
 Linux x86-64 (glibc 2.36, CPython 3.13.7, `/usr/local/lib/libpython3.13.so`).
-It holds `report.json`, every `sil-compare` report, the contract and
+It holds `report.json`, every `sil compare` report, the contract and
 `expectations.json`. `report.json` includes the inspection result, the
 lifecycle phases, the conversion receipts and the nominal authoring receipt.
 The Recordings are not committed. The job keeps the full output as the
@@ -172,7 +172,7 @@ independently.
 | Check | Result |
 | --- | --- |
 | Pins | recording `968b007a…` and reference `f8607c9f…` as handed off; the FMU is the bundle's re-export `3f8a22e9…` at revision `6520667`, not `12df3da…`, with the committed model source and the installed control law |
-| Interface | `sil-fmi-inspect` verdict `compatible`; equal to the #178 audit |
+| Interface | `sil fmi inspect` verdict `compatible`; equal to the #178 audit |
 | Runtime | every library of the Linux binary resolves: libstdc++, libm, libgcc_s, libc |
 | Lifecycle | with `resources/`: described, instantiated, initialized, stepped, terminated, command −3.0 m/s² as the law gives; without: exit nonzero, stopped after described |
 | Conversion | 501 samples on `acc.sensing`, 0 to 50.0 s; 501 reference rows, 0.1 to 50.1 s |

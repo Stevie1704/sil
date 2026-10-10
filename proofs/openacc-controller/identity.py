@@ -11,7 +11,7 @@ what this module states for the acceptance to compare:
   digests of the model source and the shared control law in `resources/`.
   An archive whose files are not the ones its identity names is refused.
 - `inspected_interface` and `audited_interface`: the declared interface as
-  `sil-fmi-inspect` reports it and as the #178 audit recorded it, in one
+  `sil fmi inspect` reports it and as the #178 audit recorded it, in one
   shape, without the revision-dependent instantiation token.
 """
 
@@ -50,7 +50,7 @@ def _variable(name, kind, causality, unit, start, dimensions) -> dict:
 
 
 def inspected_interface(report: dict) -> dict:
-    """The interface in a `sil-fmi-inspect` report."""
+    """The interface in a `sil fmi inspect` report."""
     facts = report["facts"]
     return {
         "fmi_version": facts["fmi_version"],

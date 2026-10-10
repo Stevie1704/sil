@@ -354,7 +354,7 @@ class TestStep:
 
 
 class TestInspection:
-    """`sil-fmi-inspect` reports the OSMP variables and checks a mapping."""
+    """`sil fmi inspect` reports the OSMP variables and checks a mapping."""
 
     def test_the_binary_variables_and_members_are_reported(self, fake):
         report = inspect(fake())

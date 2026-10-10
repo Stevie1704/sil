@@ -126,7 +126,8 @@ def test_custom_bindir_with_trailing_slash_resolves_the_staged_shim(
     recording = tmp_path / "acc.mcap"
     env = installed_environment(installed_python)
     built = subprocess.run(
-        [str(installed_python / "bin" / "sil-acc"), str(manifest)],
+        [str(installed_python / "bin" / "python"), "-m",
+         "sil.examples.acc.manifest", str(manifest)],
         cwd=tmp_path,
         env=env,
         capture_output=True,
@@ -201,7 +202,8 @@ def test_wheel_installs_acc_entrypoint_without_checkout_imports(
     manifest = tmp_path / "installed-acc.json"
     env = installed_environment(installed_python)
     proc = subprocess.run(
-        [str(installed_python / "bin" / "sil-acc"), str(manifest)],
+        [str(installed_python / "bin" / "python"), "-m",
+         "sil.examples.acc.manifest", str(manifest)],
         cwd=tmp_path,
         env=env,
         capture_output=True,
@@ -220,15 +222,13 @@ def test_wheel_installs_acc_entrypoint_without_checkout_imports(
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.strip() == ACC_MANIFEST_HASHES["nominal"]
     assert manifest.is_file()
-    for entrypoint in ("sil-acc", "sil-check", "sil-compare", "sil-csv",
-                       "sil-fmi-inspect", "sil-footprint", "sil-participant",
-                       "sil-schema-import", "sil-window"):
-        assert (installed_python / "bin" / entrypoint).is_file()
+    assert (installed_python / "bin" / "sil").is_file()
+    assert not list((installed_python / "bin").glob("sil-*"))
     assert str(ROOT) not in origin.stdout
     assert str(ROOT) not in manifest.read_text()
 
     footprint = subprocess.run(
-        [str(installed_python / "bin" / "sil-footprint"), str(manifest)],
+        [str(installed_python / "bin" / "sil"), "footprint", str(manifest)],
         cwd=tmp_path,
         env=env,
         capture_output=True,
@@ -238,7 +238,7 @@ def test_wheel_installs_acc_entrypoint_without_checkout_imports(
     assert str(ROOT) not in footprint.stdout
 
     participant = subprocess.run(
-        [str(installed_python / "bin" / "sil-participant"),
+        [str(installed_python / "bin" / "python"), "-m", "sil.participant",
          "sil.examples.acc.safety:MinimumGapKPI"],
         cwd=tmp_path,
         env=env,
@@ -255,7 +255,7 @@ def test_schema_import_without_the_dwarf_extra_names_the_extra(
 ):
     """The plain wheel does not install pyelftools (issue #253)."""
     proc = subprocess.run(
-        [str(installed_python / "bin" / "sil-schema-import"), "types.o",
+        [str(installed_python / "bin" / "sil"), "schema", "import", "types.o",
          "--type", "A=a.A", "-o", "schemas.json",
          "--layout-check", "layout_check.h"],
         cwd=tmp_path,
@@ -285,7 +285,8 @@ def test_installed_acc_run_matches_source_tree_run(
         str(source_manifest),
     ]
     installed_build = [
-        str(installed_python / "bin" / "sil-acc"), str(installed_manifest),
+        str(installed_python / "bin" / "python"), "-m",
+        "sil.examples.acc.manifest", str(installed_manifest),
     ]
     if delayed_sensing:
         source_build.append("--delayed-sensing")
@@ -334,7 +335,8 @@ def test_installed_acc_determinism_check_uses_only_staged_inputs(
     delayed_sensing: bool,
 ):
     manifest = tmp_path / "acc.json"
-    build = [str(installed_python / "bin" / "sil-acc"), str(manifest)]
+    build = [str(installed_python / "bin" / "python"), "-m",
+             "sil.examples.acc.manifest", str(manifest)]
     if delayed_sensing:
         build.append("--delayed-sensing")
     env = installed_environment(installed_python)
@@ -342,7 +344,7 @@ def test_installed_acc_determinism_check_uses_only_staged_inputs(
         build, cwd=tmp_path, env=env, capture_output=True, text=True,
     )
     check = subprocess.run(
-        [str(installed_python / "bin" / "sil-check"), str(manifest),
+        [str(installed_python / "bin" / "sil"), "check", str(manifest),
          "--runner", str(staged_prefix / "bin" / "sil-run")],
         cwd=tmp_path,
         env=env,
@@ -373,7 +375,7 @@ def test_installed_csv_conversion_drives_the_staged_replay(
 
     recordings, runs = [], []
     for attempt in ("1", "2"):
-        run("sil-csv", str(example / "mapping.json"), str(example / "signals.csv"),
+        run("sil", "recording", "csv", str(example / "mapping.json"), str(example / "signals.csv"),
             "-o", "signals.mcap", "--receipt", f"receipt-{attempt}.json")
         recordings.append((tmp_path / "signals.mcap").read_bytes())
         run("python", str(example / "manifest.py"), f"replay-{attempt}.json",
@@ -420,7 +422,7 @@ def test_installed_library_example_replays_into_an_adopter_build(
         str(example / "speed_filter.c"))
     run("cc", "-shared", "-fPIC", "-O2", "-DSPEED_FILTER_DEFECT",
         "-o", "speed_filter_defect.so", str(example / "speed_filter.c"))
-    run("sil-csv", str(example / "mapping.json"), str(example / "signals.csv"),
+    run("sil", "recording", "csv", str(example / "mapping.json"), str(example / "signals.csv"),
         "-o", "signals.mcap", "--receipt", "signals.receipt.json")
 
     runs = []
@@ -464,14 +466,14 @@ def test_installed_fmu_replay_is_authored_run_and_compared(
         str(example / "ego_motion.c"))
     run("python", str(example / "package.py"), "EgoMotion.so",
         "-o", "EgoMotion.fmu")
-    run("sil-csv", str(example / "mapping.json"), str(example / "recorded.csv"),
+    run("sil", "recording", "csv", str(example / "mapping.json"), str(example / "recorded.csv"),
         "-o", "recorded.mcap", "--receipt", "recorded.receipt.json")
-    run("sil-csv", str(example / "reference-mapping.json"),
+    run("sil", "recording", "csv", str(example / "reference-mapping.json"),
         str(example / "reference.csv"), "-o", "reference.mcap")
 
     runs = []
     for attempt in ("1", "2"):
-        run("sil-fmu-replay", str(example / "authoring.json"), "EgoMotion.fmu",
+        run("sil", "fmi", "replay", str(example / "authoring.json"), "EgoMotion.fmu",
             "--recording", "recorded.mcap", "-o", f"fmu-replay-{attempt}.json",
             "--receipt", f"authoring-{attempt}.json")
         run("sil-run", f"fmu-replay-{attempt}.json", "-o", f"run-{attempt}.mcap")
@@ -480,7 +482,7 @@ def test_installed_fmu_replay_is_authored_run_and_compared(
         tmp_path / "fmu-replay-2.json").read_bytes()
     assert runs[0] == runs[1]
     report = json.loads(run(
-        "sil-compare", str(example / "contract.json"), "run-1.mcap",
+        "sil", "compare", str(example / "contract.json"), "run-1.mcap",
         "reference.mcap", "--json").stdout)
     assert report["verdict"] == "pass"
     assert report["channels"]["ego.motion"]["checked"] == 10
@@ -514,30 +516,30 @@ def test_installed_numeric_fmu_replay_round_trips_each_type(
                  for b in authoring["bind"]],
     }
     (tmp_path / "mapping.json").write_text(json.dumps(mapping))
-    report = json.loads(run("sil-fmi-inspect", str(fmu), "--json",
+    report = json.loads(run("sil", "fmi", "inspect", str(fmu), "--json",
                             "--mapping", "mapping.json").stdout)
     assert report["mapping"]["accepted"] is True
     narrow = json.loads(json.dumps(mapping))
     narrow["schemas"]["numeric.Sensor"]["fields"][3]["type"] = "u32"
     (tmp_path / "narrow.json").write_text(json.dumps(narrow))
-    rejected = json.loads(run("sil-fmi-inspect", str(fmu), "--json",
+    rejected = json.loads(run("sil", "fmi", "inspect", str(fmu), "--json",
                               "--mapping", "narrow.json", code=3).stdout)
     assert "'u64' scalar" in rejected["mapping"]["rejection"]
 
-    run("sil-csv", str(example / "mapping.json"), str(example / "recorded.csv"),
+    run("sil", "recording", "csv", str(example / "mapping.json"), str(example / "recorded.csv"),
         "-o", "recorded.mcap")
-    run("sil-csv", str(example / "reference-mapping.json"),
+    run("sil", "recording", "csv", str(example / "reference-mapping.json"),
         str(example / "reference.csv"), "-o", "reference.mcap")
     runs = []
     for attempt in ("1", "2"):
-        run("sil-fmu-replay", str(example / "authoring.json"), str(fmu),
+        run("sil", "fmi", "replay", str(example / "authoring.json"), str(fmu),
             "--recording", "recorded.mcap", "-o", f"numeric-{attempt}.json",
             "--receipt", f"authoring-{attempt}.json")
         run("sil-run", f"numeric-{attempt}.json", "-o", f"run-{attempt}.mcap")
         runs.append((tmp_path / f"run-{attempt}.mcap").read_bytes())
     assert runs[0] == runs[1]
     compared = json.loads(run(
-        "sil-compare", str(example / "contract.json"), "run-1.mcap",
+        "sil", "compare", str(example / "contract.json"), "run-1.mcap",
         "reference.mcap", "--json").stdout)
     assert compared["verdict"] == "pass"
     assert compared["channels"]["sensor.out"]["checked"] == 10
@@ -588,18 +590,18 @@ def test_installed_array_fmu_replay_and_coupling_round_trip(
         "start": [f"{s['variable']}={s['value']}" for s in authoring["start"]],
     }
     (tmp_path / "mapping.json").write_text(json.dumps(mapping))
-    report = json.loads(run("sil-fmi-inspect", str(fmu), "--json",
+    report = json.loads(run("sil", "fmi", "inspect", str(fmu), "--json",
                             "--mapping", "mapping.json").stdout)
     assert report["mapping"]["accepted"] is True
     matrix = next(v for v in report["variables"] if v["name"] == "matrix_in")
     assert (matrix["dimensions"], matrix["value_count"]) == (
         [{"start": 2}, {"start": 3}], 6)
 
-    run("sil-csv", str(example / "mapping.json"), str(example / "recorded.csv"),
+    run("sil", "recording", "csv", str(example / "mapping.json"), str(example / "recorded.csv"),
         "-o", "recorded.mcap")
-    run("sil-csv", str(example / "reference-mapping.json"),
+    run("sil", "recording", "csv", str(example / "reference-mapping.json"),
         str(example / "reference.csv"), "-o", "reference.mcap")
-    run("sil-fmu-replay", str(example / "authoring.json"), str(fmu),
+    run("sil", "fmi", "replay", str(example / "authoring.json"), str(fmu),
         "--recording", "recorded.mcap", "-o", "inline.json",
         "--receipt", "receipt.json")
     shm = json.loads((tmp_path / "inline.json").read_text())
@@ -614,7 +616,7 @@ def test_installed_array_fmu_replay_and_coupling_round_trip(
             recordings.append((tmp_path / out).read_bytes())
         assert recordings[0] == recordings[1]
         compared = json.loads(run(
-            "sil-compare", str(example / "contract.json"),
+            "sil", "compare", str(example / "contract.json"),
             f"{transport}-1.mcap", "reference.mcap", "--json").stdout)
         assert compared["verdict"] == "pass", compared["first_divergence"]
         assert compared["channels"]["sensor.out"]["checked"] == 4
@@ -623,16 +625,16 @@ def test_installed_array_fmu_replay_and_coupling_round_trip(
     transposed["channels"][0]["fields"]["matrix"]["columns"] = [
         f"matrix_{i}_{j}" for j in range(3) for i in range(2)]
     (tmp_path / "transposed.json").write_text(json.dumps(transposed))
-    run("sil-csv", "transposed.json", str(example / "reference.csv"),
+    run("sil", "recording", "csv", "transposed.json", str(example / "reference.csv"),
         "-o", "transposed.mcap")
     failed = json.loads(run(
-        "sil-compare", str(example / "contract.json"), "inline-1.mcap",
+        "sil", "compare", str(example / "contract.json"), "inline-1.mcap",
         "transposed.mcap", "--json", code=1).stdout)
     assert failed["first_divergence"]["field"] == "matrix"
 
     coupled = []
     for attempt in ("1", "2"):
-        run("sil-fmu-couple", str(example / "coupling.json"),
+        run("sil", "fmi", "couple", str(example / "coupling.json"),
             "--fmu", "left", str(fmu), "--fmu", "right", str(fmu),
             "-o", "coupled.json")
         run("sil-run", "coupled.json", "-o", f"coupled-{attempt}.mcap")
@@ -675,7 +677,7 @@ def test_installed_window_replays_into_the_library_after_a_warm_up(
 
     run("cc", "-shared", "-fPIC", "-O2", "-o", "speed_filter.so",
         str(example / "speed_filter.c"))
-    run("sil-csv", str(example / "mapping.json"), str(example / "history.csv"),
+    run("sil", "recording", "csv", str(example / "mapping.json"), str(example / "history.csv"),
         "-o", "history.mcap", "--receipt", "history.receipt.json")
     run("python", str(example / "manifest.py"), "full.json",
         "--recording", "history.mcap", "--library", "speed_filter.so",
@@ -684,7 +686,7 @@ def test_installed_window_replays_into_the_library_after_a_warm_up(
 
     recordings, runs = [], []
     for attempt in ("1", "2"):
-        run("sil-window", str(example / "window.json"), "history.mcap",
+        run("sil", "recording", "window", str(example / "window.json"), "history.mcap",
             "-o", "window.mcap", "--receipt", "window.receipt.json")
         recordings.append((tmp_path / "window.mcap").read_bytes())
         run("python", str(example / "manifest.py"), "windowed.json",
@@ -697,9 +699,9 @@ def test_installed_window_replays_into_the_library_after_a_warm_up(
     assert runs[0] == runs[1]
     run("python", str(example / "window_contract.py"), "window.receipt.json",
         "-o", "contract.json")
-    run("sil-compare", "contract.json", "window-1.mcap", "full.mcap")
+    run("sil", "compare", "contract.json", "window-1.mcap", "full.mcap")
 
-    run("sil-window", str(example / "window-no-warm-up.json"), "history.mcap",
+    run("sil", "recording", "window", str(example / "window-no-warm-up.json"), "history.mcap",
         "-o", "cold.mcap", "--receipt", "cold.receipt.json")
     run("python", str(example / "manifest.py"), "cold.json",
         "--recording", "cold.mcap", "--library", "speed_filter.so",
@@ -707,7 +709,7 @@ def test_installed_window_replays_into_the_library_after_a_warm_up(
     run("sil-run", "cold.json", "-o", "cold-run.mcap", *deadline)
     run("python", str(example / "window_contract.py"), "cold.receipt.json",
         "-o", "cold-contract.json")
-    failed = run("sil-compare", "cold-contract.json", "cold-run.mcap",
+    failed = run("sil", "compare", "cold-contract.json", "cold-run.mcap",
                  "full.mcap", code=1)
     assert "fail" in failed.stdout
 
@@ -719,7 +721,7 @@ def test_installed_fmu_inspection_needs_only_the_wheel(
     env = installed_environment(installed_python)
     fmu = ROOT / "tests" / "fixtures" / "reference-fmus" / "3.0" / "Feedthrough.fmu"
     proc = subprocess.run(
-        ["sil-fmi-inspect", str(fmu), "--json",
+        ["sil", "fmi", "inspect", str(fmu), "--json",
          "--mapping", str(ROOT / "examples" / "fmu" / "mapping.json")],
         cwd=tmp_path, env=env, capture_output=True, text=True,
     )
@@ -735,18 +737,18 @@ def test_installed_comparison_needs_only_the_wheel(
     installed_python: Path, tmp_path: Path,
 ):
     """Issue #182's command, with only the installed wheel on PATH: the
-    independent ACC trace converted by sil-csv, then compared."""
+    independent ACC trace converted by sil recording csv, then compared."""
     env = installed_environment(installed_python)
     example = ROOT / "examples" / "compare"
     converted = subprocess.run(
-        ["sil-csv", str(example / "reference-mapping.json"),
+        ["sil", "recording", "csv", str(example / "reference-mapping.json"),
          str(example / "plant-accelerate.reference.csv"),
          "-o", "reference.mcap"],
         cwd=tmp_path, env=env, capture_output=True, text=True,
     )
     assert converted.returncode == 0, converted.stderr
     proc = subprocess.run(
-        ["sil-compare", str(example / "contract.json"),
+        ["sil", "compare", str(example / "contract.json"),
          str(ROOT / "proofs" / "acc-fmi" / "evidence" / "plant-accelerate-1.mcap"),
          "reference.mcap", "--json"],
         cwd=tmp_path, env=env, capture_output=True, text=True,

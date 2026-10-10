@@ -4,7 +4,7 @@ Runs inside the pinned tool image with no network on Linux x86-64. Usage:
 prove.py <work-directory>. It writes `evidence/` there:
 
 1. Builds both FMUs as `proofs/osmp-sensor` builds them, and inspects each
-   with `sil-fmi-inspect` and the mapping the Runs use.
+   with `sil fmi inspect` and the mapping the Runs use.
 2. Nominal: one Run, each FMU in its own Process participant. The source's
    `OSMPSensorViewOut` is published on a Channel as bytes, and the sensor's
    `OSMPSensorViewIn` is handed those bytes by address in the same Slot

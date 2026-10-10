@@ -1,4 +1,4 @@
-"""The references convert with sil-csv and predict the late control's divergence."""
+"""The references convert with sil recording csv and predict the late control's divergence."""
 import sys
 from pathlib import Path
 

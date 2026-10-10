@@ -1,6 +1,6 @@
 """A selected replay window with a warm-up, into a stateful library (#185).
 
-`examples/library/history.csv` is converted with `sil-csv`, and `sil-window`
+`examples/library/history.csv` is converted with `sil recording csv`, and `sil recording window`
 selects a window of it. The `speed_filter` library is stateful: its output
 depends on every input since its init. Its Run over the full history is the
 reference; its Run over the window, warmed up by actual execution, must agree

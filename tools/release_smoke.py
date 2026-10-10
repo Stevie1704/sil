@@ -181,7 +181,7 @@ def smoke_native(
 
     acc_manifest = workdir / "acc.json"
     checked(
-        [str(python_bin / "sil-acc"), str(acc_manifest)],
+        [str(python_bin / "python"), "-m", "sil.examples.acc.manifest", str(acc_manifest)],
         cwd=workdir,
         env=environment,
     )
@@ -206,12 +206,12 @@ def smoke_native(
     if first.read_bytes() != second.read_bytes():
         raise SmokeError("two native release Runs produced different Recordings")
     check = checked(
-        [str(python_bin / "sil-check"), str(acc_manifest), "--runner", str(runner)],
+        [str(python_bin / "sil"), "check", str(acc_manifest), "--runner", str(runner)],
         cwd=workdir,
         env=environment,
     )
     if not check.stdout.startswith("deterministic: "):
-        raise SmokeError("sil-check did not report a deterministic Recording")
+        raise SmokeError("sil check did not report a deterministic Recording")
     return acc_manifest, manifest_hash
 
 
@@ -284,11 +284,11 @@ def smoke_container(
     check = docker_run(
         image,
         manifest.parent,
-        ["/workspace/acc.json", "--runner", "sil-run"],
-        "sil-check",
+        ["check", "/workspace/acc.json", "--runner", "sil-run"],
+        "sil",
     )
     if check.returncode or not check.stdout.startswith("deterministic: "):
-        raise SmokeError(f"container sil-check failed: {check.stdout}\n{check.stderr}")
+        raise SmokeError(f"container sil check failed: {check.stdout}\n{check.stderr}")
 
 
 def main(argv: list[str] | None = None) -> int:

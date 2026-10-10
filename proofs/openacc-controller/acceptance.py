@@ -120,11 +120,11 @@ def pinned_inputs(bundle: Path) -> dict:
 
 
 def inspected(fmu: Path, evidence: Path) -> dict:
-    """`sil-fmi-inspect` finds the interface #178 audited, and usable here."""
-    report = json.loads(command("sil-fmi-inspect", "--json", str(fmu)))
+    """`sil fmi inspect` finds the interface #178 audited, and usable here."""
+    report = json.loads(command("sil", "fmi", "inspect", "--json", str(fmu)))
     write_json(evidence / "inspection.json", report)
     require(report["verdict"] == "compatible",
-            f"sil-fmi-inspect: {report['verdict']}: {report['unusable']}")
+            f"sil fmi inspect: {report['verdict']}: {report['unusable']}")
     interface = inspected_interface(report)
     require(interface == audited_interface(read_json(AUDIT)["AccController"]),
             "the declared interface is not the one #178 audited")
@@ -188,10 +188,10 @@ def checked_lifecycle(fmu: Path, first: dict, evidence: Path) -> dict:
 # Conversion ---------------------------------------------------------------------
 
 def convert(document: dict, source: Path, output: Path, evidence: Path) -> dict:
-    """One sil-csv step, with its mapping and receipt kept."""
+    """One sil recording csv step, with its mapping and receipt kept."""
     mapping = write_json(output.with_suffix(".mapping.json"), document)
     receipt = evidence / f"{output.stem}.receipt.json"
-    command("sil-csv", str(mapping), str(source), "-o", str(output),
+    command("sil", "recording", "csv", str(mapping), str(source), "-o", str(output),
             "--receipt", str(receipt))
     return read_json(receipt)
 
@@ -208,7 +208,7 @@ def prepare_inputs(bundle: Path, pins: dict, inputs: Path, evidence: Path):
         receipts[name] = convert(replay.input_mapping(variant), bundle / RECORDING,
                                  inputs / f"{name}.mcap", evidence)
         count = receipts[name]["channels"][replay.SENSING_CHANNEL]["messages"]
-        require(count == len(samples), f"sil-csv converted {count} samples")
+        require(count == len(samples), f"sil recording csv converted {count} samples")
     trace = read_json(bundle / REFERENCE)["trace"]
     require([row["t_ns"] for row in trace]
             == [(k + 1) * replay.PERIOD_NS for k in range(len(samples))],
@@ -265,7 +265,7 @@ def authored(setup: Workspace, name: str, variant: replay.Variant) -> dict:
                           replay.authoring_document(variant, setup.first))
     manifest = setup.runs / f"{name}.json"
     receipt = setup.evidence / f"{name}.authoring-receipt.json"
-    command("sil-fmu-replay", str(document), str(setup.fmu),
+    command("sil", "fmi", "replay", str(document), str(setup.fmu),
             "--recording", str(setup.recording(variant)), "-o", str(manifest),
             "--receipt", str(receipt))
     return {"manifest": manifest, "receipt": read_json(receipt)}
@@ -285,10 +285,10 @@ def run(setup: Workspace, name: str, manifest: Path) -> dict:
 
 
 def compare(setup: Workspace, name: str, recording: Path) -> dict:
-    proc = subprocess.run(["sil-compare", str(setup.inputs / "contract.json"),
+    proc = subprocess.run(["sil", "compare", str(setup.inputs / "contract.json"),
                            str(recording), str(setup.inputs / "reference.mcap"),
                            "--json"], capture_output=True, text=True)
-    require(proc.returncode in (0, 1), f"sil-compare could not judge {name}: "
+    require(proc.returncode in (0, 1), f"sil compare could not judge {name}: "
             f"{proc.stderr}")
     report = json.loads(proc.stdout)
     write_json(setup.evidence / f"compare-{name}.json", report)
