@@ -71,24 +71,30 @@ The first difference names its kind (`metadata`, `channels`, `schema`,
 `message`, `bytes` or `unreadable`). A `message` difference names the
 Channel, the virtual time (`t_ns`) and the Message index in stored order. A
 `bytes` difference means that the Recordings differ, but not in the metadata,
-Channels, Schemas or Messages.
+Channels, Schemas or Messages. The check reports only the first difference.
+For a `message` difference, `run1` and `run2` give the SHA-256 of each
+payload, not the payload.
 
 `--keep DIR` keeps both Recordings in `DIR` as `run1.mcap` and `run2.mcap`.
 Then read the different Message with `sil recording show DIR/run1.mcap
 --channel NAME --from T --to T+1`. Without `--keep`, the check deletes the
 Recordings.
 
-`--json` writes the `sil_check_report` (version 1) to stdout, with the
-verdict (`deterministic` or `violation`), the SHA-256 of each Recording, the
-kept paths (null without `--keep`) and the first difference (null when the
-Recordings are bit-identical):
+`--json` writes the `sil_check_report` (version 1) to stdout. It holds:
+
+- `verdict`: `deterministic` or `violation`.
+- `runs`: the SHA-256 of each Recording, and its kept path (null without
+  `--keep`).
+- `first_difference`: null when the Recordings are bit-identical.
 
 ```sh
 sil check manifest.json --keep check-out --json
 ```
 
-The exit codes do not change: `0` deterministic, `3` violation, and the exit
-code of a Run that fails.
+A Run that fails writes no report. The check then gives the exit code and
+the diagnostic of that Run, as before. The exit codes are: `0` deterministic,
+`3` violation, `2` when `DIR` cannot be made, and the exit code of a Run that
+fails.
 
 The pytest helper takes the same option as a keyword. Install the `sil` wheel
 into the test environment, then give the helper the runner path:
