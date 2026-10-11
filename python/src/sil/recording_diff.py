@@ -16,8 +16,6 @@ from itertools import zip_longest
 from pathlib import Path
 from typing import NamedTuple
 
-from mcap.exceptions import McapError
-
 from sil.recording import read_channels, read_metadata, read_records
 
 
@@ -27,6 +25,10 @@ def first_difference(run1: str | Path, run2: str | Path) -> dict | None:
     # Compares in chunks: a Recording can be larger than memory allows twice.
     if filecmp.cmp(run1, run2, shallow=False):
         return None
+    # Imported here, as in sil.recording: a check of bit-identical
+    # Recordings needs no MCAP reader.
+    from mcap.exceptions import McapError
+
     try:
         return (_metadata_difference(run1, run2)
                 or _channel_difference(run1, run2)

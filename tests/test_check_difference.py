@@ -119,3 +119,15 @@ def test_a_keep_directory_that_cannot_be_made_is_a_usage_error(sil_run, tmp_path
 
     assert proc.returncode == 2
     assert "cannot keep the Recordings" in proc.stderr
+
+
+def test_the_check_loads_without_the_mcap_reader():
+    # The release smoke installs the wheel with --no-deps. A check of
+    # bit-identical Recordings must not need mcap.
+    proc = subprocess.run(
+        [sys.executable, "-c",
+         "import sys; sys.modules['mcap'] = None; import sil.check"],
+        capture_output=True, text=True,
+    )
+
+    assert proc.returncode == 0, proc.stderr
