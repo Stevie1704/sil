@@ -2,6 +2,7 @@
 (issue #271). A Run of one Manifest cannot write a different metadata record
 or Schema, so these Recordings are written by hand."""
 
+import hashlib
 import json
 
 from mcap.writer import CompressionType, Writer
@@ -88,8 +89,10 @@ def test_a_message_only_one_recording_holds_is_the_first_difference(tmp_path):
     assert (first["channel"], first["t_ns"], first["message_index"]) == (
         "echo", 20, 2)
     assert first["run1"] is None
-    assert first["run2"] == {"channel": "echo", "t_ns": 20,
-                             "payload": "02" * 8}
+    assert first["run2"] == {
+        "channel": "echo", "t_ns": 20,
+        # sha256 of eight 0x02 bytes
+        "payload_sha256": hashlib.sha256(b"\2" * 8).hexdigest()}
     assert first["detail"] == ("Message 2 in stored order differs: run 1 has "
                                "no Message, run 2 has 'echo' at t_ns 20")
 

@@ -67,20 +67,26 @@ def check(runner: Path, manifest: Path, out=sys.stdout, err=sys.stderr,
         hashes = [file_sha256(path) for path in recordings]
         difference = first_difference(*recordings)
 
+    # Only kept Recordings outlive the check, so only they are named.
     kept = recordings if keep is not None else [None, None]
+    report = _report(manifest, hashes, kept, difference)
+    _write(report, out, err, as_json=as_json)
+    return EXIT_VIOLATION if difference is not None else 0
+
+
+def _write(report: dict, out, err, *, as_json: bool) -> None:
     if as_json:
-        report = _report(manifest, hashes, kept, difference)
         out.write(json.dumps(report, indent=2) + "\n")
-    elif difference is not None:
+        return
+    run1, run2 = (_run_line(run) for run in report["runs"])
+    if report["verdict"] == VIOLATION:
         err.write(
             "DETERMINISM VIOLATION: two runs of the same manifest produced "
-            f"different recordings\n  run 1: {_run_line(hashes[0], kept[0])}\n"
-            f"  run 2: {_run_line(hashes[1], kept[1])}\n"
-            f"  first difference: {difference['detail']}\n"
+            f"different recordings\n  run 1: {run1}\n  run 2: {run2}\n"
+            f"  first difference: {report['first_difference']['detail']}\n"
         )
     else:
-        out.write(f"deterministic: {hashes[0]}\n")
-    return EXIT_VIOLATION if difference is not None else 0
+        out.write(f"deterministic: {report['runs'][0]['sha256']}\n")
 
 
 def _workdir(keep: Path | None):
@@ -91,8 +97,10 @@ def _workdir(keep: Path | None):
     return contextlib.nullcontext(keep)
 
 
-def _run_line(sha256: str, recording: Path | None) -> str:
-    return sha256 if recording is None else f"{sha256} ({recording})"
+def _run_line(run: dict) -> str:
+    if run["recording"] is None:
+        return run["sha256"]
+    return f"{run['sha256']} ({run['recording']})"
 
 
 def _report(manifest: Path, hashes: list[str], kept: list[Path | None],

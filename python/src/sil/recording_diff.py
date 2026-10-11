@@ -9,8 +9,10 @@ somewhere, and the difference says so.
 
 from __future__ import annotations
 
+import hashlib
 from itertools import zip_longest
 from pathlib import Path
+from typing import NamedTuple
 
 from mcap.exceptions import McapError
 
@@ -71,22 +73,31 @@ def _schema(channel) -> dict:
     return {"name": channel.schema_name, "schema": channel.schema}
 
 
+class _Message(NamedTuple):
+    """One recorded Message, as the byte-level diff compares it."""
+
+    channel: str
+    t_ns: int
+    payload: bytes
+
+
 def _first_message_difference(run1, run2) -> dict | None:
-    pairs = zip_longest(read_records(run1), read_records(run2))
+    pairs = zip_longest(map(_Message._make, read_records(run1)),
+                        map(_Message._make, read_records(run2)))
     for index, (a, b) in enumerate(pairs):
         if a != b:
             first = a or b
             return _difference(
-                "message", channel=first[0], t_ns=first[1], message_index=index,
-                run1=_message(a), run2=_message(b),
+                "message", channel=first.channel, t_ns=first.t_ns,
+                message_index=index, run1=_message(a), run2=_message(b),
                 detail=_message_detail(index, a, b))
     return None
 
 
-def _message_detail(index: int, a, b) -> str:
+def _message_detail(index: int, a: _Message | None, b: _Message | None) -> str:
     if a is not None and b is not None and a[:2] == b[:2]:
-        return (f"Message {index} in stored order, on Channel {a[0]!r} at "
-                f"t_ns {a[1]}, has a different payload")
+        return (f"Message {index} in stored order, on Channel {a.channel!r} "
+                f"at t_ns {a.t_ns}, has a different payload")
     return (f"Message {index} in stored order differs: run 1 {_describe(a)}, "
             f"run 2 {_describe(b)}")
 
@@ -98,14 +109,16 @@ def _difference(kind: str, *, channel=None, t_ns=None, message_index=None,
             "detail": detail}
 
 
-def _message(record) -> dict | None:
-    if record is None:
+def _message(message: _Message | None) -> dict | None:
+    # The payload's hash, not its bytes: a large Message would swamp the
+    # report. Read the payload from the kept Recordings.
+    if message is None:
         return None
-    channel, t_ns, data = record
-    return {"channel": channel, "t_ns": t_ns, "payload": data.hex()}
+    return {"channel": message.channel, "t_ns": message.t_ns,
+            "payload_sha256": hashlib.sha256(message.payload).hexdigest()}
 
 
-def _describe(record) -> str:
-    if record is None:
+def _describe(message: _Message | None) -> str:
+    if message is None:
         return "has no Message"
-    return f"has {record[0]!r} at t_ns {record[1]}"
+    return f"has {message.channel!r} at t_ns {message.t_ns}"

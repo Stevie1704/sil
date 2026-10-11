@@ -95,3 +95,27 @@ def test_an_unreadable_recording_is_still_a_violation(tmp_path):
     first = json.loads(proc.stdout)["first_difference"]
     assert first["kind"] == "unreadable"
     assert "cannot read" in first["detail"]
+
+
+def test_a_deterministic_json_report_has_no_difference(sil_run, tmp_path):
+    m = toy_manifest(duration_ns=30_000_000)
+    manifest = m.write(tmp_path / "quiet.json").path
+
+    proc = run_check(sil_run, manifest, "--json")
+
+    assert proc.returncode == 0, proc.stderr
+    report = json.loads(proc.stdout)
+    assert report["verdict"] == "deterministic"
+    assert report["runs"][0]["sha256"] == report["runs"][1]["sha256"]
+    assert report["first_difference"] is None
+
+
+def test_a_keep_directory_that_cannot_be_made_is_a_usage_error(sil_run, tmp_path):
+    blocker = tmp_path / "file"
+    blocker.write_text("")
+
+    proc = run_check(sil_run, nondet_manifest(tmp_path), "--keep",
+                     str(blocker / "kept"))
+
+    assert proc.returncode == 2
+    assert "cannot keep the Recordings" in proc.stderr
