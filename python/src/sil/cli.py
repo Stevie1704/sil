@@ -95,7 +95,11 @@ ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
         "substitute": ModuleCommand("sil.fmi.substitution",
                                     "replace one coupled FMU with its Recording"),
     }),
-    "recording": Group("prepare Recordings for replay", {
+    "recording": Group("read Recordings, and prepare them for replay", {
+        "channels": ModuleCommand("sil.recording_view",
+                                  "list the Channels of a Recording", ("channels",)),
+        "show": ModuleCommand("sil.recording_view",
+                              "print the decoded Messages of a Recording", ("show",)),
         "csv": ModuleCommand("sil.csv_recording",
                              "convert CSV signals into a Recording"),
         "window": ModuleCommand("sil.replay_window",

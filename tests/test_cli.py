@@ -31,7 +31,7 @@ def test_a_subcommand_runs_with_its_own_arguments_and_exit_code(tmp_path, capsys
 @pytest.mark.parametrize("group, commands", [
     ("bundle", ("seal", "verify", "run", "matrix")),
     ("fmi", ("inspect", "couple", "replay", "substitute")),
-    ("recording", ("csv", "window")),
+    ("recording", ("channels", "show", "csv", "window")),
     ("schema", ("import",)),
 ])
 def test_group_help_lists_its_subcommands(group, commands, capsys):

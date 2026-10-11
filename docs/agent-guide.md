@@ -44,10 +44,14 @@ Do the steps in this order. Each step names the topic to read.
    be on `PATH` from a native installation, or you run in the container image
    (read `sil docs container`). Read `sil docs running` for the exit codes,
    the guards and the Clock shim.
-4. **Check.** `sil check manifest.json` runs the Manifest twice and fails on
-   any Recording difference. `sil compare` compares a Recording with a
-   reference under a contract: read `sil docs comparison`. To keep a case for
-   CI, seal it as a regression bundle: read `sil docs regression-bundles`.
+4. **Check.** `sil recording channels out.mcap` lists the Channels of the
+   Recording, and `sil recording show out.mcap --channel NAME --from T --to T`
+   prints what a Channel carried in a virtual-time interval, decoded with its
+   Schema: read `sil docs running`. `sil check manifest.json` runs the
+   Manifest twice and fails on any Recording difference. `sil compare`
+   compares a Recording with a reference under a contract: read `sil docs
+   comparison`. To keep a case for CI, seal it as a regression bundle: read
+   `sil docs regression-bundles`.
 
 ## Machine-readable output
 
@@ -57,6 +61,8 @@ Use exit codes, not message text. Message text can change in any release.
 | --- | --- |
 | `sil fmi inspect --json` | the `sil_fmi_inspection` report |
 | `sil compare --json` | the `sil_comparison_report` report |
+| `sil recording channels --json` | the `sil_recording_channels` report |
+| `sil recording show --json` | one `sil_recording_show` JSON object per line and per Message |
 | `sil recording csv --receipt`, `sil recording window --receipt` | a JSON receipt |
 | `sil fmi couple --receipt`, `sil fmi replay --receipt`, `sil fmi substitute --receipt` | a JSON receipt |
 | `sil run` | the Recording and its `<recording>.provenance.json` side-car |
