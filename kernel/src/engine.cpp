@@ -182,7 +182,7 @@ void Engine::fail(const std::string &owner, const std::string &reason) {
 }
 
 void Engine::throw_failure() const {
-  RunFailure failure;
+  FailureFacts failure;
   failure.category = FailureCategory::Participant;
   failure.participant = failure_owner_;
   failure.virtual_time_ns = failure_ns_;

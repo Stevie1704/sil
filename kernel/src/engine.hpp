@@ -27,10 +27,10 @@ struct RunError : std::runtime_error {
 // A Run failure that knows which Participant failed, how and when. The runner
 // writes these facts to the failure report; the message stays the diagnostic.
 struct ParticipantRunError : RunError {
-  ParticipantRunError(const std::string &message, RunFailure failure)
+  ParticipantRunError(const std::string &message, FailureFacts failure)
       : RunError(message), failure(std::move(failure)) {}
 
-  RunFailure failure;
+  FailureFacts failure;
 };
 
 // Operational guards supplied at the Run boundary. They are deliberately

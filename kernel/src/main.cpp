@@ -9,8 +9,8 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <system_error>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <variant>
 
@@ -138,13 +138,13 @@ void write_side_car(sil::Provenance &provenance, int exit_code, bool recording,
 // The first diagnostic of a failed Run, kept with its facts for the report.
 struct FirstFailure {
   std::string message;
-  sil::RunFailure facts;
+  sil::FailureFacts facts;
 };
 
-sil::RunFailure classify(const std::exception &e) {
+sil::FailureFacts classify(const std::exception &e) {
   if (const auto *failure = dynamic_cast<const sil::ParticipantRunError *>(&e))
     return failure->failure;
-  sil::RunFailure facts;
+  sil::FailureFacts facts;
   if (dynamic_cast<const sil::ManifestError *>(&e))
     facts.category = sil::FailureCategory::Manifest;
   else if (sil::run_interrupted())
@@ -173,7 +173,7 @@ void write_failure_side_car(const std::optional<FirstFailure> &first,
   try {
     sil::write_failure_report(path, exit_code,
                               first ? first->message : std::string(),
-                              first ? first->facts : sil::RunFailure{});
+                              first ? first->facts : sil::FailureFacts{});
   } catch (const std::exception &e) {
     // As with the provenance side-car, the exit code stays authoritative.
     std::cerr << "sil-run: " << e.what() << "\n";

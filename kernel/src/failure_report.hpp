@@ -24,7 +24,7 @@ enum class FailureCategory {
 
 // The facts about a failed Run that a diagnostic line cannot carry in a form
 // an agent can parse. Absent fields are unknown or do not apply.
-struct RunFailure {
+struct FailureFacts {
   FailureCategory category = FailureCategory::Run;
   std::string participant;
   std::optional<int> exit_status;
@@ -42,6 +42,6 @@ std::filesystem::path default_failure_report_path(
 
 void write_failure_report(const std::filesystem::path &path, int exit_code,
                           const std::string &message,
-                          const RunFailure &failure);
+                          const FailureFacts &failure);
 
 }  // namespace sil

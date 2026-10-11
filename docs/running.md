@@ -38,8 +38,9 @@ violation (sil check).
 
 ## Failure report
 
-A Run that ends with exit `1` or `2` writes a failure report next to its
-Recording: `<recording>.failure.json`. With `--no-recording`, the report goes
+When `sil-run` has accepted its command line, a Run that ends with exit `1` or
+`2` writes a failure report next to its Recording: `<recording>.failure.json`.
+A usage error writes no report. With `--no-recording`, the report goes
 next to the default `out.mcap` location, like the provenance side-car. A
 successful Run writes no report, and it removes a report that an earlier
 failed Run left at the same path. The report adds facts to the diagnostic
@@ -63,15 +64,15 @@ line. It does not change the exit code.
 | `exit_status` | the exit status of a Process participant, or `null` |
 | `signal` | the signal that ended a Process participant, or `null` |
 | `virtual_time_ns` | the virtual time of the last Step sent to the Participant, or `null` before its first Step |
-| `step_index` | the 0-based index of that Step among the Participant's Steps, or `null` |
+| `step_index` | the 0-based index of that Step among the Participant's Steps, or `null`; always `null` for a Native participant |
 | `stderr_tail` | the last 20 lines that a Process participant wrote to stderr |
 
 | `category` | Meaning |
 | --- | --- |
 | `manifest` | the Run was rejected before any Participant was stepped (exit `2`) |
-| `spawn` | the runner could not start a Process participant |
+| `spawn` | the runner could not create the pipes or the process for a Process participant. A command that cannot be executed exits with status `127`, and the report gives `exit` with no Step |
 | `protocol` | a Participant broke the Step protocol, for example a wrong `op` or a line that is not JSON |
-| `timeout` | a Participant missed the `--participant-timeout-ms` deadline |
+| `timeout` | a Participant missed its response deadline (`--participant-timeout-ms`) |
 | `exit` | a Process participant exited or was killed by a signal before the runner shut it down, or exited non-zero at shutdown |
 | `guard` | a Participant exceeded a Step-protocol size guard |
 | `participant` | a Participant reported its own failure (`fail`, or a failed test assertion) |

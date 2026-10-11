@@ -81,7 +81,10 @@ class ProcessParticipant {
   // Reaps a child that closed its end of the protocol, and describes how it
   // ended. Every "exited unexpectedly" diagnostic is made here.
   ParticipantRunError unexpected_exit();
-  // " during Step <i> at virtual time <t> ns", or " during initialization".
+  // "Step <i> at virtual time <t> ns" for the last Step sent. Only valid
+  // after the first Step.
+  std::string last_step() const;
+  // " during <last_step()>", or " during initialization".
   std::string step_context() const;
 
   Engine &engine_;

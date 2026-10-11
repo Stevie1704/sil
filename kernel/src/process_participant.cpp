@@ -717,15 +717,16 @@ ProcessParticipant::decode_step_done(const json &done, uint64_t now_ns) {
                         done.value("reason", "(no reason)"));
     if (op != "step_done")
       throw failure(FailureCategory::Protocol,
-                    "participant '" + name_ + "': expected step_done, got " +
-                        done.dump());
+                    "participant '" + name_ + "': expected step_done" +
+                        step_context() + ", got " + done.dump());
 
     static const json kNoOutputs = json::array();
     const json &outputs = done.contains("out") ? done.at("out") : kNoOutputs;
     if (!outputs.is_array())
       throw failure(FailureCategory::Protocol,
                     "participant '" + name_ +
-                        "': step_done out must be an array");
+                        "': step_done out must be an array" +
+                        step_context());
     if (outputs.size() > limits_.max_step_output_messages)
       throw failure(
           FailureCategory::Guard,
@@ -743,7 +744,7 @@ ProcessParticipant::decode_step_done(const json &done, uint64_t now_ns) {
         throw failure(FailureCategory::Protocol,
                       "participant '" + name_ +
                           "' failed: published on undeclared channel '" + ch +
-                          "'");
+                          "'" + step_context());
     }
 
     const size_t inline_bytes = codec_->inline_payload_bytes(outputs);
@@ -967,7 +968,7 @@ ParticipantRunError ProcessParticipant::failure(
     FailureCategory category, const std::string &message,
     std::optional<int> wait_status) {
   drain_stderr();
-  RunFailure facts;
+  FailureFacts facts;
   facts.category = category;
   facts.participant = name_;
   if (wait_status && WIFEXITED(*wait_status))
@@ -995,10 +996,14 @@ ParticipantRunError ProcessParticipant::unexpected_exit() {
                  wait_status);
 }
 
+std::string ProcessParticipant::last_step() const {
+  return "Step " + std::to_string(steps_sent_ - 1) + " at virtual time " +
+         std::to_string(last_step_ns_) + " ns";
+}
+
 std::string ProcessParticipant::step_context() const {
   if (steps_sent_ == 0) return " during initialization";
-  return " during Step " + std::to_string(steps_sent_ - 1) +
-         " at virtual time " + std::to_string(last_step_ns_) + " ns";
+  return " during " + last_step();
 }
 
 int ProcessParticipant::terminate_child() {
@@ -1043,11 +1048,7 @@ void ProcessParticipant::shutdown() {
   if (!alive_) return;
   const int wait_status = terminate_child();
   const std::string when =
-      steps_sent_ == 0 ? " at shutdown"
-                       : " at shutdown after Step " +
-                             std::to_string(steps_sent_ - 1) +
-                             " at virtual time " +
-                             std::to_string(last_step_ns_) + " ns";
+      steps_sent_ == 0 ? " at shutdown" : " at shutdown after " + last_step();
   if (WIFEXITED(wait_status) && WEXITSTATUS(wait_status) != 0)
     throw failure(FailureCategory::Exit,
                   "participant '" + name_ + "' exited with status " +

@@ -53,7 +53,7 @@ fs::path default_failure_report_path(const fs::path &recording_path) {
 
 void write_failure_report(const fs::path &path, int exit_code,
                           const std::string &message,
-                          const RunFailure &failure) {
+                          const FailureFacts &failure) {
   json document = {
       {"category", category_name(failure.category)},
       {"exit_code", exit_code},
