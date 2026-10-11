@@ -132,6 +132,39 @@ payload of a Step is capped at three quarters of the line limit by base64
 expansion, so `--max-step-inline-payload-bytes` only bites once the line limit
 is raised. [docs/step-protocol.md](step-protocol.md) has the detail.
 
+## Reading a Recording
+
+A Recording stores the Schema of each Channel, so it can be decoded without
+its Manifest. Two read-only commands do that:
+
+| Command | Effect |
+| --- | --- |
+| `sil recording channels out.mcap [--json]` | list each Channel with its Schema name, Message count and first and last virtual time, and the Manifest hash |
+| `sil recording show out.mcap [--channel NAME]... [--from T] [--to T] [--limit N] [--json]` | print the decoded Messages in stored order |
+
+```sh
+sil recording show out.mcap --channel acc.Command --from 2000000000 --to 3000000000
+```
+
+`--from` and `--to` are virtual times in nanoseconds and select the half-open
+interval [`--from`, `--to`). The MCAP index applies `--channel`, `--from` and
+`--to`, so a long Recording is not loaded into memory at once. A Channel that the
+Recording does not declare is a usage error (exit `2`), and the error lists the
+Channels it declares. An unreadable Recording also exits `2`.
+
+`sil recording channels --json` prints one `sil_recording_channels` report
+(version 1): `manifest_hash` (`null` for a Recording no Run wrote, such as one
+from `sil recording csv`) and a `channels` list of `channel`, `schema`,
+`messages`, `first_t_ns` and `last_t_ns` (`null` for a Channel without
+Messages).
+
+`sil recording show --json` prints one JSON object per line and per Message
+(`sil_recording_show` version 1): `channel`, `t_ns` and `fields`, the decoded
+fields by name. A `u8` array, such as an OSMP or CAN-frame payload, is a
+lowercase hex string. Any other array is a list. A non-finite float is the
+string `"NaN"`, `"Infinity"` or `"-Infinity"`, because JSON has no such
+numbers.
+
 ## Virtual clock shim for opaque POSIX vECUs
 
 An out-of-process participant is expected to derive time from the `step(t, Δt)`
