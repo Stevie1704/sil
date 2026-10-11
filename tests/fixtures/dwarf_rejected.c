@@ -1,4 +1,4 @@
-/* Types that sil-schema-import must reject (issue #253): each type holds one
+/* Types that sil schema import must reject (issue #253): each type holds one
  * construct that a flat Schema cannot mirror, below a nested member so the
  * diagnostic has to name the member path. */
 #include <stdint.h>

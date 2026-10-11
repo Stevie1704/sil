@@ -579,7 +579,7 @@ def test_the_demonstration_runs_on_installed_interfaces(
     staged_prefix: Path, installed_python: Path, tmp_path: Path
 ):
     """run.sh builds against the staged include/sil and silschema only, and
-    drives the installed sil-run, sil-csv conversion and sil-compare."""
+    drives the installed sil-run, sil recording csv conversion and sil compare."""
     env = installed_environment(installed_python)
     env["PATH"] = str(staged_prefix / "bin") + os.pathsep + env["PATH"]
     proc = subprocess.run(

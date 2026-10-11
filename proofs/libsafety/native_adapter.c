@@ -10,7 +10,7 @@
  *   after its instant. An activation that holds frames of two instants fails
  *   the Run: one observation per activation could no longer name its event.
  * - Time. The Native ABI's take() returns no Message time, so each frame
- *   carries its Virtual instant in event_ns (rebased by sil-window). The
+ *   carries its Virtual instant in event_ns (rebased by sil recording window). The
  *   library's timer is ((timer_origin_ns + event_ns) / timer_unit_ns)
  *   % 0xFFFFFFFF; it reads no other clock.
  * - Receive. set_timer, safety_tick when more than 1 s from the first and

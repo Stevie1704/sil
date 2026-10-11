@@ -505,7 +505,7 @@ class TestCommandLine:
             capture_output=True, text=True,
         )
         assert proc.returncode == 2
-        assert proc.stderr.startswith("sil-csv: error: ")
+        assert proc.stderr.startswith("sil recording csv: error: ")
         assert "row 1" in proc.stderr
         assert not (tmp_path / "bad.mcap").exists()
 

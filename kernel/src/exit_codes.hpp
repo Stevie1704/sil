@@ -2,7 +2,7 @@
 
 namespace sil {
 
-// The Run boundary's three outcomes, as CONTEXT.md defines them. They are
+// The Run boundary's three outcomes, as GLOSSARY.md defines them. They are
 // shared because the provenance record reports the Run's exit code, so the
 // runner and the record cannot hold two opinions about what 2 means.
 constexpr int kExitOk = 0;

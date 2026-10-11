@@ -68,7 +68,7 @@ the following are not vulnerabilities:
   trusted input, exactly like a build script.
 - A Run that exhausts memory or time because a Manifest declares route
   capacities or Arena slot counts that its Participants do not respect. Use
-  `python -m sil.footprint` to see the declared worst case before a Run.
+  `sil footprint` to see the declared worst case before a Run.
 - A determinism violation. It is a correctness defect. Report it as a public
   issue.
 

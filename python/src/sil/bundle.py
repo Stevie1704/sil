@@ -1,4 +1,4 @@
-"""`sil-bundle`: seal a regression bundle and run it offline (issue #200).
+"""`sil bundle`: seal a regression bundle and run it offline (issue #200).
 
 A regression bundle is an Acceptance bundle an adopter prepares for their
 own targets: a shared library, one FMU, or several coupled FMUs. It is a
@@ -14,9 +14,9 @@ module an adapter imports, a native library a target loads, or an
 environment variable a participant reads. The declaration names those
 explicitly, and `seal` records their identities:
 
-    sil-bundle seal <bundle>
-    sil-bundle verify <bundle>
-    sil-bundle run <bundle> -o <evidence>
+    sil bundle seal <bundle>
+    sil bundle verify <bundle>
+    sil bundle run <bundle> -o <evidence>
 
 `seal` runs in the runtime that will execute the bundle. It digests every
 bundle file, the runner and its build identity, and every declared
@@ -56,7 +56,7 @@ from pathlib import Path
 
 from sil.compare import ContractError, RecordingError, compare, read_contract
 
-PROG = "sil-bundle"
+PROG = "sil bundle"
 FORMAT = 1
 DECLARATION = "bundle.json"
 LOCK = "bundle.lock.json"

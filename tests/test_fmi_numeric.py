@@ -18,7 +18,7 @@ test:
   type takes no sign at all;
 * a Float32 start value is a finite decimal, read as the nearest binary64
   and then rounded to the nearest Float32 (ties to even) — the two steps
-  `sil-csv` takes for an `f32` cell. A value that rounds to infinity, or a
+  `sil recording csv` takes for an `f32` cell. A value that rounds to infinity, or a
   non-zero value that rounds to zero, is refused.
 """
 

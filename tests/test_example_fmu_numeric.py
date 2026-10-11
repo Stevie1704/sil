@@ -1,7 +1,7 @@
 """The numeric-scalar FMU example at the run boundary (issue #189).
 
 A CSV of Float32, Int32, UInt32 and UInt64 values is converted into a
-Recording, authored into a Manifest with `sil-fmu-replay`, and replayed into
+Recording, authored into a Manifest with `sil fmi replay`, and replayed into
 the Reference FMU `Feedthrough`, which copies each input to the output of the
 same type. The outputs are compared with `reference.csv`, which states by hand
 what each output holds one Step after its input — `16777217` as the Float32
@@ -77,7 +77,7 @@ def test_the_recording_holds_the_values_above_2_53_exactly(prepared, sil_run):
                  if topic == "sensor.out"]
     assert [fields["sample_time_ns"] for fields in published[1:4]] == [
         2**64 - 1, 2**53 + 1, 2**63]
-    # The Float32 values against IEEE 754 constants, not against `sil-csv`,
+    # The Float32 values against IEEE 754 constants, not against `sil recording csv`,
     # which converts both the input and the reference.
     assert [fields["range_m"] for fields in published[:4]] == [
         13421773 / 2**27, (2 - 2**-23) * 2**127, -(2 - 2**-23) * 2**127,

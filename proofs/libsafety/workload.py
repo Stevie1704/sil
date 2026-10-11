@@ -5,10 +5,10 @@ Manifest, the conversion mappings and the comparison contract cannot
 disagree:
 
 - **Frames.** One CSV row per received frame (`src` < 128), in recorded
-  order. `sil-csv` converts it into the `can.rx` Channel, keeping the
+  order. `sil recording csv` converts it into the `can.rx` Channel, keeping the
   recorded `logMonoTime` as the Message time. Frames of one event share a
   time, so they are one Burst in Publish order.
-- **Window.** `sil-window` rebases the Recording so that the first event is
+- **Window.** `sil recording window` rebases the Recording so that the first event is
   at Virtual time 0 and selects every event. The warm-up is empty: the
   library starts from `set_safety_hooks` at the recording's first event, as
   the reference does, and the library's own warm-up (no `safety_tick` in the
@@ -26,7 +26,7 @@ The Native form (#232) runs the same events through `native_adapter.c`:
 
 - **Event time.** The Native ABI's `take` returns a payload without its
   Message time, so each frame carries its recorded time in `event_ns`.
-  `sil-window` rebases that field with the log time, so it is the Burst's
+  `sil recording window` rebases that field with the log time, so it is the Burst's
   Virtual instant, as `publish_ns` is for the Process adapter.
 - **Transmit.** The recorded camera frames openpilot replaces become
   transmit candidates on `can.tx` (see `prepare_transmit.py`). The

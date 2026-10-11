@@ -1,6 +1,6 @@
 # ACC multi-rate coupling evidence (#197)
 
-This proof exercises the authored `sil-fmu-couple` profile with the pinned,
+This proof exercises the authored `sil fmi couple` profile with the pinned,
 source-available `AccController` and `AccPlant` PythonFMU3 FMI 3.0
 Co-Simulation archives. It executes each coupled Run with an installed SiL
 runtime on Linux x86-64 and independently steps the same archives with FMPy.

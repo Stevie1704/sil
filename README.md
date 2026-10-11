@@ -35,6 +35,9 @@ make run ARGS="manifest.json -o build/run.mcap"
 make check ARGS="manifest.json"
 ```
 
+An installed SiL has one command for its tools: `sil --help` lists them
+(`sil check`, `sil compare`, `sil run`, `sil fmi inspect`, …).
+
 See [examples and installation](docs/getting-started.md) for the ACC example
 and staged installation, or [container deployment](docs/container.md) to run
 one Manifest in a Linux container. Detailed [Run behavior and guards](docs/running.md)

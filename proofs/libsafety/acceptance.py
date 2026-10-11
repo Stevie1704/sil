@@ -121,12 +121,12 @@ def runtime_identity(library: Path) -> dict:
 
 # Conversion ---------------------------------------------------------------------
 
-def convert(tool: str, document: dict, source: Path, output: Path,
+def convert(subcommand: str, document: dict, source: Path, output: Path,
             evidence: Path) -> dict:
-    """One sil-csv or sil-window step, with its document and receipt kept."""
+    """One `sil recording csv` or `sil recording window` step, with its document and receipt kept."""
     document_path = write_json(output.with_suffix(".json"), document)
     receipt = evidence / f"{output.stem}.receipt.json"
-    command(tool, str(document_path), str(source), "-o", str(output),
+    command("sil", "recording", subcommand, str(document_path), str(source), "-o", str(output),
             "--receipt", str(receipt))
     return read_json(receipt)
 
@@ -143,12 +143,12 @@ def prepare_inputs(bundle: Path, prepared: Path, inputs: Path,
                    evidence: Path, pinned: dict) -> tuple[dict, list[int]]:
     """The converted frames, window and reference, and the observation Slots."""
     frames = pinned["frames"]
-    converted = convert("sil-csv", workload.FRAME_MAPPING,
+    converted = convert("csv", workload.FRAME_MAPPING,
                         prepared / "frames.csv", inputs / "frames.mcap", evidence)
     count = converted["channels"][workload.FRAME_CHANNEL]["messages"]
     require(count == frames["received_frames"],
-            f"sil-csv converted {count} of {frames['received_frames']} frames")
-    window = convert("sil-window",
+            f"sil recording csv converted {count} of {frames['received_frames']} frames")
+    window = convert("window",
                      workload.window_document(frames["first_log_mono_ns"],
                                               frames["last_log_mono_ns"]),
                      inputs / "frames.mcap", inputs / "window.mcap", evidence)
@@ -162,7 +162,7 @@ def prepare_inputs(bundle: Path, prepared: Path, inputs: Path,
             "the reference does not hold one state per event")
     rows = workload.reference_rows(states, frames["first_log_mono_ns"])
     write_reference_csv(rows, inputs / "reference.csv")
-    reference = convert("sil-csv", workload.REFERENCE_MAPPING,
+    reference = convert("csv", workload.REFERENCE_MAPPING,
                         inputs / "reference.csv", inputs / "reference.mcap",
                         evidence)
     slots = [row["slot_ns"] for row in rows]
@@ -217,10 +217,10 @@ def run(setup: Setup, name: str, controls: dict | None = None,
 
 
 def compare(setup: Setup, name: str, recording: Path) -> dict:
-    proc = subprocess.run(["sil-compare", str(setup.contract), str(recording),
+    proc = subprocess.run(["sil", "compare", str(setup.contract), str(recording),
                            str(setup.reference), "--json"],
                           capture_output=True, text=True)
-    require(proc.returncode in (0, 1), f"sil-compare could not judge {name}: "
+    require(proc.returncode in (0, 1), f"sil compare could not judge {name}: "
             f"{proc.stderr}")
     report = json.loads(proc.stdout)
     write_json(setup.evidence / f"compare-{name}.json", report)

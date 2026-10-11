@@ -5,11 +5,11 @@ sources, the compiler, `protoc` and installed SiL. It runs no FMU code:
 
 1. Builds `OSMPDummySource` and `OSMPDummySensor` exactly as
    `proofs/osmp-sensor` does and compares them with the #230 pins.
-2. Inspects both archives statically: `sil-fmi-inspect` with every mapping
+2. Inspects both archives statically: `sil fmi inspect` with every mapping
    the Runs use, the declared instantiation restrictions, the archive
    members and the native libraries the loader resolves.
 3. Writes the independent references of `references.py` and converts them
-   with `sil-csv`. Compares the predicted late reference with the nominal one
+   with `sil recording csv`. Compares the predicted late reference with the nominal one
    under the bundle's contract: that first divergence is the prediction the
    late control must meet.
 4. Writes one bundle per matrix case into /bundles, the cost Manifests, the

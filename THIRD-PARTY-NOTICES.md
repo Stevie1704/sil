@@ -180,7 +180,7 @@ The wheel and the source distribution contain SiL code only. They declare
 `mcap` as a runtime dependency and bundle no third-party code, so they carry no
 third-party notice beyond this file. The optional extra `sil[dwarf]` declares
 [pyelftools](https://pypi.org/project/pyelftools/) (public domain, Unlicense)
-for `sil-schema-import`. The container image does not install it.
+for `sil schema import`. The container image does not install it.
 
 ## Standalone CAN model and qualification (#152)
 

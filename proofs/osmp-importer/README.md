@@ -59,7 +59,7 @@ were built from.
 
 | Check | Requirement |
 | --- | --- |
-| Inspection | `sil-fmi-inspect` reports both archives `compatible`, lists their OSMP binary variables and accepts the mappings the Runs use |
+| Inspection | `sil fmi inspect` reports both archives `compatible`, lists their OSMP binary variables and accepts the mappings the Runs use |
 | SensorView | every recorded SensorView equals the closed-form source motion (`proofs/osmp-sensor/drive.py`, 1e-9) |
 | SensorData | every recorded SensorData equals the expected slice of `proofs/osmp-sensor/scene.py` (default `nominalrange` 135 m): the same vehicles in the same order, tracking ids, timestamps, and each pose, dimension and existence probability to 1e-9. `valid` is 1 and `count` is the number of objects |
 | Identity | the Run twice: the two Recordings are byte-identical |

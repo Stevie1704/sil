@@ -6,10 +6,10 @@ Commands below run from the repository root unless stated otherwise.
 
 ## Compare a trajectory against a reference
 
-`sil-compare` compares one Recording with a reference Recording under a
+`sil compare` compares one Recording with a reference Recording under a
 comparison contract, and gives a pass/fail report. The contract states each
 decision; the command infers nothing from the data. A reference in another
-format becomes a Recording through `sil-csv` first.
+format becomes a Recording through `sil recording csv` first.
 
 The worked example compares the retained SiL Recording of the ACC
 `plant-accelerate` qualification case with the independent fmpy trace of the
@@ -21,11 +21,11 @@ is the contract. With the installed wheel on `PATH`, from the checkout root:
 
 ```sh
 workdir=$(mktemp -d)
-sil-csv examples/compare/reference-mapping.json \
+sil recording csv examples/compare/reference-mapping.json \
     examples/compare/plant-accelerate.reference.csv -o "$workdir/reference.mcap"
-sil-compare examples/compare/contract.json \
+sil compare examples/compare/contract.json \
     proofs/acc-fmi/evidence/plant-accelerate-1.mcap "$workdir/reference.mcap"
-sil-compare ... --json                          # the same report as JSON
+sil compare ... --json                          # the same report as JSON
 ```
 
 A contract names each compared Channel and states, for that Channel:
@@ -81,7 +81,7 @@ The JSON report is strict JSON: a non-finite value is the string `"nan"`,
 
 A reference comparison is not a determinism check. It tells whether two
 trajectories agree within a contract, often across two Manifests or two
-engines. It does not tell whether a Run reproduces. `sil-check` bit-compares
+engines. It does not tell whether a Run reproduces. `sil check` bit-compares
 two Recordings of one Manifest for that. Each report states this in its
 `determinism` key. Domain KPIs stay with the consumer, and the retained proof
 results stay attributable to their own contracts.

@@ -161,7 +161,7 @@ class TestDescription:
 
 
 class TestInspection:
-    """`sil-fmi-inspect` reports the version and checks its own profile."""
+    """`sil fmi inspect` reports the version and checks its own profile."""
 
     def test_an_fmi2_reference_fmu_is_selected(self):
         report = inspect(DAHLQUIST)

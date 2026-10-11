@@ -8,7 +8,7 @@ Commands below run from the repository root unless stated otherwise.
 
 A Run starts at Virtual time zero. To evaluate a part of a long recording,
 do not seek a stateful vECU into it: its state would be wrong. Select the
-window with `sil-window`, which writes a new Recording that starts at the
+window with `sil recording window`, which writes a new Recording that starts at the
 window. The vECU runs through a warm-up first, and only the rest is
 evaluated. There is no state snapshot and no seek into a running vECU.
 
@@ -16,15 +16,15 @@ The worked example is in [examples/library/](../examples/library/):
 `history.csv` is 3 s of recorded speed, `window.json` selects 0.5 s to 2.5 s
 with a 1 s warm-up, and `window-no-warm-up.json` is the negative control:
 the same evaluation interval with no warm-up. `window_contract.py` writes the
-`sil-compare` contract from the `sil-window` receipt. With the staged
+`sil compare` contract from the `sil recording window` receipt. With the staged
 installation on `PATH`, from the checkout root:
 
 ```sh
-workdir=$(mktemp -d "$HOME/sil-window.XXXXXX")
+workdir=$(mktemp -d "$HOME/sil recording window.XXXXXX")
 cc -shared -fPIC -O2 -o "$workdir/speed_filter.so" examples/library/speed_filter.c
-sil-csv examples/library/mapping.json examples/library/history.csv \
+sil recording csv examples/library/mapping.json examples/library/history.csv \
     -o "$workdir/history.mcap" --receipt "$workdir/history.receipt.json"
-sil-window examples/library/window.json "$workdir/history.mcap" \
+sil recording window examples/library/window.json "$workdir/history.mcap" \
     -o "$workdir/window.mcap" --receipt "$workdir/window.receipt.json"
 python examples/library/manifest.py "$workdir/full.json" \
     --recording "$workdir/history.mcap" --library "$workdir/speed_filter.so" \
@@ -38,7 +38,7 @@ sil-run "$workdir/windowed.json" -o "$workdir/windowed-2.mcap" --participant-tim
 cmp "$workdir/windowed-1.mcap" "$workdir/windowed-2.mcap"
 python examples/library/window_contract.py "$workdir/window.receipt.json" \
     -o "$workdir/contract.json"
-sil-compare "$workdir/contract.json" "$workdir/windowed-1.mcap" "$workdir/full.mcap"
+sil compare "$workdir/contract.json" "$workdir/windowed-1.mcap" "$workdir/full.mcap"
 ```
 
 `make example-window` runs the same sequence from the source tree. The full
@@ -134,7 +134,7 @@ the source and window digests as MCAP metadata. The same inputs give a
 byte-identical Recording, and a changed window gives a different Recording
 and so a different Manifest hash.
 
-`sil-window` exits 0 on success and 2 when the window or the source is
+`sil recording window` exits 0 on success and 2 when the window or the source is
 rejected; nothing is written then.
 
 ## Replay a long Recording
@@ -172,4 +172,4 @@ partial pass over the file, so a long Recording costs read time, not memory.
   Message after a Message with a later time. The Replay participant publishes
   the earlier Message at its own time, after the Messages stored before it.
   Its Slot is then earlier than the Slot before it. A Recording whose times start at or after the Duration publishes nothing.
-  `sil-csv` rejects descending timestamps, so its Recordings are in time order.
+  `sil recording csv` rejects descending timestamps, so its Recordings are in time order.

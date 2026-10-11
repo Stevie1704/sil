@@ -33,7 +33,7 @@ support and determinism scope lives in [SUPPORT.md](../SUPPORT.md).
 
 - `examples/` teaches adopter workflows with runnable inputs and adapters.
   The ACC example lives in `python/src/sil/examples/acc/` because it also ships
-  in the Python distribution as `sil-acc`.
+  in the Python distribution as `python -m sil.examples.acc.manifest`.
 - `tests/` verifies behavior through Run and installation interfaces, with
   focused C++ tests for internal invariants. `tests/fixtures/` owns native toy
   and benchmark Participants, fixture schemas, the Clock probe, FMU fixtures,

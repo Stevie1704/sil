@@ -1,4 +1,4 @@
-/* Native participant for the sil-schema-import round trip (issue #253).
+/* Native participant for the sil schema import round trip (issue #253).
  *
  * It fills the project type AdasInput through its own members, copies it with
  * memcpy into the imported SiL struct and publishes that on "adas.input".

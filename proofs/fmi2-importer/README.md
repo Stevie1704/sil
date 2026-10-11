@@ -28,7 +28,7 @@ Linux x86-64 and uploads `evidence/`.
 
 | Check | Requirement |
 | --- | --- |
-| Inspection | `sil-fmi-inspect` reports `fmiVersion` 2.0 and selects `Dahlquist`, `VanDerPol`, `BouncingBall`, `Stair` and `OSMPDummySensor`. It refuses `Feedthrough` and names each `String` and `Enumeration` variable |
+| Inspection | `sil fmi inspect` reports `fmiVersion` 2.0 and selects `Dahlquist`, `VanDerPol`, `BouncingBall`, `Stair` and `OSMPDummySensor`. It refuses `Feedthrough` and names each `String` and `Enumeration` variable |
 | Reference FMUs | Each case runs in SiL and under FMPy 0.3.26 with the same start values and communication points. Every sample of the observation grid, the final one included, agrees within 1e-12 absolute plus 1e-12 relative (Real) or exactly (Integer) |
 | Identity | Each case runs twice in SiL, and the two Recordings are byte-identical |
 | Wrong input | `Dahlquist` with `k = 0.5` and `BouncingBall` with `e = 0.8` must diverge from the nominal reference |

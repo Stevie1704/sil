@@ -1,4 +1,4 @@
-"""`sil-fmu-couple`: author a Run of FMUs coupled through Channels (#187).
+"""`sil fmi couple`: author a Run of FMUs coupled through Channels (#187).
 
 A coupling document names FMUs as separate Process participants and the
 Channels that connect them. Every check is made before anything runs, and the

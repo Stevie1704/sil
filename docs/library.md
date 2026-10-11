@@ -17,7 +17,7 @@ library as a Process participant without changing it:
 | `binding.py` | the per-library binding: symbols, C types, error codes |
 | `adapter.py` | the Process participant: Step protocol, lifecycle, routes, failures |
 | `filter_test.py` | the Test participant: computes every output independently |
-| `signals.csv`, `mapping.json` | the recorded input and its `sil-csv` mapping |
+| `signals.csv`, `mapping.json` | the recorded input and its `sil recording csv` mapping |
 | `manifest.py` | the Run: Replay, two library instances, Test participant |
 
 With the staged installation on `PATH`, from the checkout root:
@@ -25,7 +25,7 @@ With the staged installation on `PATH`, from the checkout root:
 ```sh
 workdir=$(mktemp -d "$HOME/sil-library.XXXXXX")
 cc -shared -fPIC -O2 -o "$workdir/speed_filter.so" examples/library/speed_filter.c
-sil-csv examples/library/mapping.json examples/library/signals.csv \
+sil recording csv examples/library/mapping.json examples/library/signals.csv \
     -o "$workdir/signals.mcap" --receipt "$workdir/signals.receipt.json"
 python examples/library/manifest.py "$workdir/library.json" \
     --recording "$workdir/signals.mcap" --library "$workdir/speed_filter.so"
@@ -140,7 +140,7 @@ With the staged installation on `PATH`, from the checkout root:
 ```sh
 workdir=$(mktemp -d "$HOME/sil-library-ports.XXXXXX")
 cc -shared -fPIC -O2 -o "$workdir/gap_monitor.so" examples/library/gap_monitor.c
-sil-csv examples/library/gap_mapping.json examples/library/gap_signals.csv \
+sil recording csv examples/library/gap_mapping.json examples/library/gap_signals.csv \
     -o "$workdir/gap-signals.mcap" --receipt "$workdir/gap-signals.receipt.json"
 python examples/library/gap_manifest.py "$workdir/gap.json" \
     --recording "$workdir/gap-signals.mcap" --library "$workdir/gap_monitor.so"
@@ -316,7 +316,7 @@ path: a C application with its own API, and a small adapter that exports
 A Native participant exchanges SiL Schemas. A SiL Schema is flat: primitive
 fields and fixed `count` arrays, packed and little-endian. A production
 library often has large, deeply nested input and output structs. Do not
-write their Schemas by hand. `sil-schema-import` reads the layout that the
+write their Schemas by hand. `sil schema import` reads the layout that the
 compiler recorded in DWARF and writes:
 
 1. A flat Schema whose packed layout is byte-identical to the compiled
@@ -331,7 +331,7 @@ The command needs the optional extra: `pip install 'sil[dwarf]'`. It reads
 ELF objects only (Linux). It needs no compiler, `libclang` or `pahole`.
 
 ```sh
-sil-schema-import build/interface_types.o \
+sil schema import build/interface_types.o \
     --type 'AdasInput=adas.Input' --type 'AdasOutput=adas.Output' \
     -o schemas.json --layout-check adas_layout_check.h
 silschema schemas.json adas_messages.h
@@ -363,7 +363,7 @@ api->publish(api->ctx, "adas.input", &message, sizeof message);
 | --- | --- |
 | Nested struct member | member path joined by `_` (`ego.pose.x` becomes `ego_pose_x`) |
 | Array of primitives, any number of dimensions | one field, `count` is the product of the dimensions |
-| Array of structs | one set of fields per element: `objects[3].x` becomes `objects_3_x`. Each element stays a scalar, so `sil-csv`, an Interceptor `override` and `sil-compare` can address it |
+| Array of structs | one set of fields per element: `objects[3].x` becomes `objects_3_x`. Each element stays a scalar, so `sil recording csv`, an Interceptor `override` and `sil compare` can address it |
 | Padding, between members and at the end | `u8` field with `count` equal to the gap, named `_sil_pad_<offset>` |
 | `enum` | integer of the enum's size and DWARF signedness |
 | `_Bool` / `bool` | `u8` |
@@ -382,8 +382,8 @@ object has no DWARF type of a requested name. Each diagnostic names the
 type and the member path:
 
 ```text
-sil-schema-import: type 'Frame' member 'payload.value': union is not supported
-sil-schema-import: type 'Frame' members 'a_b.c' and 'a.b_c' both flatten to 'a_b_c'
+sil schema import: type 'Frame' member 'payload.value': union is not supported
+sil schema import: type 'Frame' members 'a_b.c' and 'a.b_c' both flatten to 'a_b_c'
 ```
 
 ### Where the DWARF comes from
@@ -413,8 +413,8 @@ sil-schema-import: type 'Frame' members 'a_b.c' and 'a.b_c' both flatten to 'a_b
 
 ### When an opaque payload is better
 
-A Schema field is one value that a Recording, `sil-csv`, an Interceptor and
-`sil-compare` can address. Use an opaque `u8` field with a `count` instead
+A Schema field is one value that a Recording, `sil recording csv`, an Interceptor and
+`sil compare` can address. Use an opaque `u8` field with a `count` instead
 when:
 
 - the type contains a construct that the import rejects, for example a

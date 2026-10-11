@@ -1,4 +1,4 @@
-"""`sil-fmi-inspect`: whether this importer can drive an archive, read statically.
+"""`sil fmi inspect`: whether this importer can drive an archive, read statically.
 
 An inspection unpacks the archive and reads what it declares; it never loads
 the binary. Every verdict it states comes from the checks a Run itself makes
@@ -598,7 +598,7 @@ def exit_status(report: dict) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="sil-fmi-inspect",
+        prog="sil fmi inspect",
         description="Report whether the FMI importer can drive an FMU, "
                     "without loading the FMU's binary.",
         allow_abbrev=False,
@@ -615,7 +615,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         mapping = None if args.mapping is None else read_mapping(args.mapping)
     except MappingError as error:
-        sys.stderr.write(f"sil-fmi-inspect: {error}\n")
+        sys.stderr.write(f"sil fmi inspect: {error}\n")
         return EXIT_USAGE
     report = inspect(args.fmu, mapping)
     if args.json:

@@ -25,7 +25,7 @@ Commands in the guides run from the repository root unless stated otherwise.
 
 - [Architecture and repository map](architecture.md) describes the current
   module responsibilities and build ownership.
-- [CONTEXT.md](../CONTEXT.md) defines the domain vocabulary used throughout the
+- [GLOSSARY.md](../GLOSSARY.md) defines the domain vocabulary used throughout the
   code and documentation.
 - [Step protocol](step-protocol.md) is the normative Process participant
   protocol. [Public headers](../include/sil/) define the native and shared-memory

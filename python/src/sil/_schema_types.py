@@ -2,7 +2,7 @@
 
 Widths come from explicitly little-endian struct formats (never native ABI
 sizes); integer bounds follow from those widths. C spellings and the silschema
-name rule are the only additional language mapping; sil-schema-import applies
+name rule are the only additional language mapping; sil schema import applies
 the same rule. The kernel deliberately validates independently;
 tests/fixtures/schema_conformance.json pins actual bytes across both languages.
 """

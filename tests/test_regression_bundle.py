@@ -1,4 +1,4 @@
-"""Offline regression bundles at the `sil-bundle` boundary (issue #200).
+"""Offline regression bundles at the `sil bundle` boundary (issue #200).
 
 Every bundle here is prepared from the source tree and then sealed, verified
 and run by the staged installation: the wheel in its own venv and the CMake
@@ -35,7 +35,7 @@ def library_binary(build_dir: Path) -> Path:
 def sil_bundle(runtime, *args) -> subprocess.CompletedProcess:
     """The installed command, with no source tree on any path."""
     env = {"PATH": f"{runtime.python_bin}:{runtime.sil_bin}", "PYTHONNOUSERSITE": "1"}
-    return subprocess.run([str(runtime.python_bin / "sil-bundle"), *map(str, args)],
+    return subprocess.run([str(runtime.python_bin / "sil"), "bundle", *map(str, args)],
                           env=env, capture_output=True, text=True)
 
 

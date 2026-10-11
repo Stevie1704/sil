@@ -45,7 +45,7 @@ def _boolean(text: str) -> int:
 # `-` and ASCII digits. Python's `int()` also reads a `+`, whitespace,
 # underscores and non-ASCII digits, so it is not the grammar on its own.
 _DECIMAL_INTEGER = re.compile(r"-?[0-9]+")
-# A Float32 start value is the decimal grammar `sil-csv` reads an `f32` cell
+# A Float32 start value is the decimal grammar `sil recording csv` reads an `f32` cell
 # in, so one decimal is one Float32 on both paths into a Run.
 _FLOAT = re.compile(r"[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?")
 _NON_FINITE = re.compile(r"[+-]?(nan|inf|infinity)", re.IGNORECASE)
@@ -74,7 +74,7 @@ def _integer(kind: str, field_type: str) -> Callable[[str], int]:
 def _float32(text: str) -> float:
     """A Float32 start value: a finite decimal, rounded to the nearest Float32.
 
-    The decimal is read as the nearest binary64 first, which is how `sil-csv`
+    The decimal is read as the nearest binary64 first, which is how `sil recording csv`
     reads an `f32` cell, then rounded to the nearest Float32 with ties to
     even. Nothing is clamped: a value that rounds to infinity, or a non-zero
     one that rounds to zero, is refused rather than carried as another value.

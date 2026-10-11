@@ -1,7 +1,7 @@
 """Selecting a replay window from a Recording (issue #185).
 
 A source Recording and a window document in; a rebased Recording and a
-receipt out. The source is converted from CSV text with `sil-csv`, the
+receipt out. The source is converted from CSV text with `sil recording csv`, the
 supported ingestion path, and every expected value here is stated by hand
 from that text.
 """
@@ -476,6 +476,6 @@ class TestCommandLine:
              "-o", str(tmp_path / "w.mcap")],
             capture_output=True, text=True)
         assert proc.returncode == 2
-        assert proc.stderr.startswith("sil-window: error: ")
+        assert proc.stderr.startswith("sil recording window: error: ")
         assert "end_ns 5000000" in proc.stderr
         assert not (tmp_path / "w.mcap").exists()

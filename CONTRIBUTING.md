@@ -46,8 +46,8 @@ The issue states what to build and the acceptance criteria that decide when it
 is done. Open one and agree on the shape before you write the change; that is
 cheaper than rewriting the pull request.
 
-Read [CONTEXT.md](CONTEXT.md) for the vocabulary and [DESIGN.md](DESIGN.md) for
-the decisions already taken. Use the terms as `CONTEXT.md` defines them.
+Read [GLOSSARY.md](GLOSSARY.md) for the vocabulary and [DESIGN.md](DESIGN.md) for
+the decisions already taken. Use the terms as `GLOSSARY.md` defines them.
 [SUPPORT.md](SUPPORT.md) says which interfaces are compatibility surfaces; a
 change to one of them belongs in the pull request description.
 

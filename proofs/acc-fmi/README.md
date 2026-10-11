@@ -388,7 +388,7 @@ trajectory is shifted to make it match.
 ### Authored coupling (#187)
 
 [`examples/fmu-coupling/acc.json`](../../examples/fmu-coupling/acc.json)
-states the same Run as a `sil-fmu-couple` document. The proof renders it over
+states the same Run as a `sil fmi couple` document. The proof renders it over
 the two archives and requires that the Manifest is the nominal Manifest without
 its in-run KPI participant. Then it runs that Manifest twice, requires
 byte-identical Recordings, and compares the first with the independent FMPy

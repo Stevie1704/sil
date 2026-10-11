@@ -1,4 +1,4 @@
-"""sil-schema-import: a flat Schema from the DWARF layout of a C type (#253).
+"""sil schema import: a flat Schema from the DWARF layout of a C type (#253).
 
 The fixture types in tests/fixtures/dwarf_layout.h are compiled to an ELF
 object and imported. The tests prove the import by running code: a value of

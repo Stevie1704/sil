@@ -14,7 +14,7 @@ It writes into the workspace:
 - `inputs/native-*`, `inputs/transmit*`: the timed Recordings, windows,
   reference and contract;
 - `runs/native-*`: the directly run Manifests, Recordings and runner output;
-- `bundles/`: the sealed regression bundles, `matrix/`: the `sil-matrix`
+- `bundles/`: the sealed regression bundles, `matrix/`: the `sil bundle matrix`
   evidence;
 - `evidence/native-report.json`.
 """
@@ -114,19 +114,19 @@ def prepare_inputs(prepared: Path, inputs: Path, evidence: Path, pinned: dict,
     frames = pinned["frames"]
     first, last = frames["first_log_mono_ns"], frames["last_log_mono_ns"]
     receipts = {
-        "frames": convert("sil-csv", workload.TIMED_FRAME_MAPPING,
+        "frames": convert("csv", workload.TIMED_FRAME_MAPPING,
                           prepared / "frames.csv", inputs / "native-frames.mcap",
                           evidence),
-        "transmit": convert("sil-csv", workload.TRANSMIT_MAPPING,
+        "transmit": convert("csv", workload.TRANSMIT_MAPPING,
                             prepared / "transmit.csv", inputs / "transmit.mcap",
                             evidence),
     }
     receipts["frames_window"] = convert(
-        "sil-window", workload.timed_window_document(
+        "window", workload.timed_window_document(
             first, last, workload.FRAME_CHANNEL, workload.MAX_GAP_NS),
         inputs / "native-frames.mcap", inputs / "native-window.mcap", evidence)
     receipts["transmit_window"] = convert(
-        "sil-window", workload.timed_window_document(
+        "window", workload.timed_window_document(
             first, last, workload.TRANSMIT_CHANNEL, workload.TRANSMIT_MAX_GAP_NS,
             channel_start_ns=first_candidate_ns(prepared)),
         inputs / "transmit.mcap", inputs / "transmit-window.mcap", evidence)
@@ -145,7 +145,7 @@ def prepare_inputs(prepared: Path, inputs: Path, evidence: Path, pinned: dict,
     rows = workload.native_reference_rows(trace, first)
     write_reference_csv(rows, inputs / "native-reference.csv")
     receipts["reference"] = convert(
-        "sil-csv", workload.NATIVE_REFERENCE_MAPPING,
+        "csv", workload.NATIVE_REFERENCE_MAPPING,
         inputs / "native-reference.csv", inputs / "native-reference.mcap",
         evidence)
     slots = [row["slot_ns"] for row in rows]
@@ -337,7 +337,7 @@ def library_computation(native: Native, nominal_recording: Path,
     }
 
 
-# Sealed bundles under sil-matrix ---------------------------------------------------
+# Sealed bundles under sil bundle matrix ---------------------------------------------------
 
 def loader_files(binary: Path) -> list[str]:
     """The shared libraries the loader resolves for `binary`, declared because
@@ -383,13 +383,13 @@ def build_bundle(native: Native, root: Path, name: str, adapter: Path,
         "excluded": {"executables": COMPILERS},
         "runs": [run],
     })
-    command("sil-bundle", "seal", str(root))
+    command("sil", "bundle", "seal", str(root))
     return root
 
 
 def matrix(cases: list[dict], case_list: Path, out: Path) -> tuple[int, dict]:
     write_json(case_list, {"sil_matrix": 1, "cases": cases})
-    proc = subprocess.run(["sil-matrix", str(case_list), "-o", str(out),
+    proc = subprocess.run(["sil", "bundle", "matrix", str(case_list), "-o", str(out),
                            "--jobs", "1"], capture_output=True, text=True)
     (out.parent / f"{out.name}.log").write_text(proc.stdout + proc.stderr)
     summary = read_json(out / "summary.json")

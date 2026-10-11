@@ -99,7 +99,7 @@ proofs/adas-cost/run-proof.sh           # needs docker and network
 
 ## Regression bundles
 
-`sil-bundle` packages an adopter's own regression in the same way. The
+`sil bundle` packages an adopter's own regression in the same way. The
 target is a shared library, one FMU or several coupled FMUs. The bundle
 holds the authored Manifests, the targets, the Recordings and their
 conversion inputs, the prepared references and the comparison contracts.
@@ -108,8 +108,8 @@ executable, Python module and file that the Runs need outside the bundle,
 their whole environment, and the tools that must be absent.
 
 ```sh
-sil-bundle seal /bundles/library                        # in the runtime, once
-sil-bundle run /bundles/library -o evidence/library     # offline
+sil bundle seal /bundles/library                        # in the runtime, once
+sil bundle run /bundles/library -o evidence/library     # offline
 ```
 
 `run` verifies every sealed identity before the first Run, then writes the
@@ -122,12 +122,12 @@ declaration, the three examples in
 [examples/bundle/prepare.py](../examples/bundle/prepare.py) and the failure
 cases.
 
-`sil-matrix` runs a list of sealed bundles as one CI job. Each case names a
+`sil bundle matrix` runs a list of sealed bundles as one CI job. Each case names a
 bundle, the lock digest `seal` printed, and a whole-case wall-clock guard:
 
 ```sh
-sil-matrix cases.json -o matrix --jobs 4        # complete matrix
-sil-matrix cases.json -o matrix --fail-fast     # stop starting cases at a failure
+sil bundle matrix cases.json -o matrix --jobs 4        # complete matrix
+sil bundle matrix cases.json -o matrix --fail-fast     # stop starting cases at a failure
 ```
 
 Every case gets its own evidence directory and one status: `pass`,
@@ -166,9 +166,9 @@ frame that lost arbitration follows at 300.96 ms.
 ## Public shared-library acceptance
 
 [proofs/libsafety/](../proofs/libsafety/) replays a public vehicle CAN recording
-into a public shared library. It uses the supported workflow: `sil-csv`,
-`sil-window`, a Process participant adapter over the library's own C API, and
-`sil-compare`. The library is opendbc's safety logic. The recording is one
+into a public shared library. It uses the supported workflow: `sil recording csv`,
+`sil recording window`, a Process participant adapter over the library's own C API, and
+`sil compare`. The library is opendbc's safety logic. The recording is one
 commaCarSegments segment. [proofs/public-workloads/](../proofs/public-workloads/)
 pins both, and an independent reference. All 6000 observations match exactly,
 and two Runs are byte-identical. A timing, a time-unit, a calibration, a crash
@@ -183,7 +183,7 @@ proofs/libsafety/run-proof.sh build/public-workloads/bundle
 
 [proofs/openacc-controller/](../proofs/openacc-controller/) replays a public
 recorded car-following window into one FMU with the supported workflow:
-`sil-csv`, `sil-fmu-replay` and `sil-compare` against an independent FMPy
+`sil recording csv`, `sil fmi replay` and `sil compare` against an independent FMPy
 execution. The recording is a 50 s JRC OpenACC window. The FMU is
 `AccController`, a PythonFMU3 export written in this repository, not a
 third-party model. [proofs/public-workloads/](../proofs/public-workloads/) pins
@@ -221,7 +221,7 @@ installed SiL bundle against an independent FMPy path.
 
 [proofs/adas-matrix](../proofs/adas-matrix/README.md) packages the #226 replay
 and #227 mixed-loop experiments as sealed Regression bundles. The existing
-`sil-matrix` runs four nominal cases plus required failing controls from a
+`sil bundle matrix` runs four nominal cases plus required failing controls from a
 clean installed Linux x86-64 runtime without network or source-tree imports.
 It archives JSON, JUnit, Recordings, provenance, Determinism and comparisons.
 Its acceptance driver checks the selected failures' exit codes, diagnostics

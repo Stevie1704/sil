@@ -1,4 +1,4 @@
-"""`sil-fmu-replay`: author a Run that replays recorded input into one FMU.
+"""`sil fmi replay`: author a Run that replays recorded input into one FMU.
 
 An authoring document states every choice of the Run, and this command turns
 it, an FMU and a converted Recording into an ordinary canonical Manifest. It
@@ -32,7 +32,7 @@ Everything is checked before a Manifest is written, and nothing is loaded:
   lists every value, separated by single spaces, in row-major order;
 * each binding and each start value states the unit of its FMU variable.
   The Importer converts no unit. When the recorded unit differs, convert it
-  at the edge (sil-csv's scale and offset) and state the FMU's unit;
+  at the edge (sil recording csv's scale and offset) and state the FMU's unit;
 * each FMU input is bound, started, or held at its declared start value;
 * the Recording carries each input Channel with the schema declared here.
 
@@ -73,7 +73,9 @@ from sil.recording import UnknownRecordingFormat, read_schemas
 
 DOCUMENT_VERSION = 1
 RECEIPT_VERSION = 1
-PROG = "sil-fmu-replay"
+PROG = "sil fmi replay"
+# The name the files it writes carry; it stays as the first release wrote it.
+AUTHOR = "sil-fmu-replay"
 
 REPLAY = "replay"
 FMU = "fmu"
@@ -127,7 +129,7 @@ def _receipt(doc: dict, variables: dict[str, dict], report: dict,
     type, causality and unit the FMU declares for it."""
     return {
         "sil_fmu_replay_receipt": RECEIPT_VERSION,
-        "author": {"name": PROG, "version": build_info.__version__,
+        "author": {"name": AUTHOR, "version": build_info.__version__,
                    "revision": build_info.SOURCE_REVISION},
         **files,
         "bindings": [
@@ -292,7 +294,7 @@ def _require_units(doc: dict, variables: dict[str, dict]) -> None:
             f"Channel {b['channel']!r} field {b['field']!r}", b["unit"],
             variables[b["variable"]],
             "the Importer converts no unit, so convert it at the edge "
-            "(sil-csv's scale and offset) and state {unit}",
+            "(sil recording csv's scale and offset) and state {unit}",
         )
     for s in doc["start"]:
         _require_unit(

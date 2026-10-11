@@ -1,4 +1,4 @@
-"""Export the recorded received CAN frames as the CSV `sil-csv` converts.
+"""Export the recorded received CAN frames as the CSV `sil recording csv` converts.
 
 Runs in the public-workload tool image (issue #178) with no network, because
 decoding `rlog.zst` needs opendbc's log reader and pycapnp, which the SiL

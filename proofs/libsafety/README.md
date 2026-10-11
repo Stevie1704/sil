@@ -41,11 +41,11 @@ and stops at the first difference.
    builds each frame's `CANPacket_t` with this directory's binding and with
    upstream's CFFI `make_CANPacket`, and requires identical bytes for all of
    them.
-2. **Convert** (`sil-csv`). The mapping in `workload.py` turns the CSV into
+2. **Convert** (`sil recording csv`). The mapping in `workload.py` turns the CSV into
    the `can.rx` Channel, schema `can.Frame`. The Message time is the recorded
    `logMonoTime` in ns. Frames of one event share that time, so they are one
    Burst, in Publish order.
-3. **Window** (`sil-window`). The window rebases the Recording to the first
+3. **Window** (`sil recording window`). The window rebases the Recording to the first
    event and selects all of it, with `max_gap_ns` 12 ms: a lost event fails
    preparation. The warm-up is empty (see below).
 4. **Run** (`sil-run`). A Replay participant publishes `can.rx`. One Process
@@ -55,8 +55,8 @@ and stops at the first difference.
    `safety_config_valid()`. The reference does not record it, so the contract
    ignores it. As upstream does, the acceptance requires it to be 1 at every
    nominal event that ran `safety_tick`.
-5. **Compare** (`sil-compare`). The reference becomes a second Recording
-   through `sil-csv`. The contract compares every field it records, at every
+5. **Compare** (`sil compare`). The reference becomes a second Recording
+   through `sil recording csv`. The contract compares every field it records, at every
    event, exactly.
 
 ## Run contract
@@ -97,9 +97,9 @@ fail for its reason:
 
 | Control | Change | Required failure |
 | --- | --- | --- |
-| `input-one-step-late` | `can.rx` Latency 1 ms | `sil-compare`: no observation at any of the 6000 Slots (missing-actual from Slot 0) |
-| `timer-in-ns` | timer unit 1 ns instead of 1 µs | `sil-compare`: `controls_allowed` diverges at event 100, where #178 found it |
-| `wrong-param` | param 73 + 256: opendbc's alternative-brake flag | `sil-compare`: a state value diverges; the observation names the correct event |
+| `input-one-step-late` | `can.rx` Latency 1 ms | `sil compare`: no observation at any of the 6000 Slots (missing-actual from Slot 0) |
+| `timer-in-ns` | timer unit 1 ns instead of 1 µs | `sil compare`: `controls_allowed` diverges at event 100, where #178 found it |
+| `wrong-param` | param 73 + 256: opendbc's alternative-brake flag | `sil compare`: a state value diverges; the observation names the correct event |
 | `crash` | the library process gets SIGSEGV at event 100 | Run failure (exit 1): `'libsafety' exited unexpectedly` |
 | `hang` | the library call at event 100 never returns | Run failure (exit 1): the 5 s response deadline at event 100's Slot |
 
@@ -133,7 +133,7 @@ image builds it in the SiL build stage, against the installed
 
 **Event time.** The Native ABI's `take` returns a payload without its
 Message time. Each frame therefore carries its recorded time in a field,
-`event_ns` (`can.TimedFrame`). `sil-window` rebases that field together with
+`event_ns` (`can.TimedFrame`). `sil recording window` rebases that field together with
 the log time (`source_time_fields`), so `event_ns` is the Burst's Virtual
 instant. No ABI change is necessary.
 
@@ -177,8 +177,8 @@ the export when they fail:
 
 | Control | Change | Required failure |
 | --- | --- | --- |
-| `timer-in-ns` | timer unit 1 ns instead of 1 µs | `sil-compare`: `controls_allowed` diverges at event 100, where #178 found it |
-| `stock-longitudinal` | param 73 + opendbc's stock-longitudinal flag (0x200) | `sil-compare`: the first divergence is a transmit verdict; `ACC_CONTROL` is refused |
+| `timer-in-ns` | timer unit 1 ns instead of 1 µs | `sil compare`: `controls_allowed` diverges at event 100, where #178 found it |
+| `stock-longitudinal` | param 73 + opendbc's stock-longitudinal flag (0x200) | `sil compare`: the first divergence is a transmit verdict; `ACC_CONTROL` is refused |
 | `second-instance` | a second Participant of the same adapter | Manifest error (exit 2): `one Run holds at most one instance` |
 | `crash` | the adapter raises SIGSEGV at event 100 | sealed case `behavioral-failure`: `sil-run` ends with signal 11 |
 | `hang` | the adapter never returns at event 100 | sealed case `timeout`: the 30 s whole-case guard |
@@ -186,7 +186,7 @@ the export when they fail:
 **Sealed regression.** The nominal Run is also a sealed offline regression
 bundle (`bundles/native-nominal`): the adapter, the library, both windowed
 Recordings, the reference and the contract, with the loader dependencies of
-both libraries and no compiler. `sil-matrix` runs it under a 600 s
+both libraries and no compiler. `sil bundle matrix` runs it under a 600 s
 whole-case guard, twice for Recording identity, with the comparison. The
 crash and hang controls are sealed bundles of their own. They are simulated
 failures: the adapter crashes or hangs just before the library call, and the
@@ -232,7 +232,7 @@ Linux x86-64 (glibc 2.36, CPython 3.13.7, `libubsan1` 12.2.0-14+deb12u1). It
 holds `report.json` and `native-report.json`, the conversion receipts, the
 comparison reports, the export's `frames.json`, `transmit.json`,
 `packet-layout.json` and `tool-image.json`, and for the Native form the
-bundle declarations and locks (`bundles/`) and the `sil-matrix` case lists
+bundle declarations and locks (`bundles/`) and the `sil bundle matrix` case lists
 and summaries (`matrix/`). The Recordings and `native-reference.json` are not
 committed, because they hold the recorded data or its replay. The job keeps
 the Manifests and runner output as the `libsafety-evidence` artifact. The
@@ -278,7 +278,7 @@ change with the runner and are not compared across runs.
 | `timer-in-ns` | first divergence at Slot 1.001 s (event 100): `controls_allowed` 0, expected 1 |
 | `stock-longitudinal` | first divergence at Slot 31 ms: `tx_accepted` 0, expected 1 |
 | `second-instance` | exit 2: `one Run holds at most one instance of it` |
-| Sealed nominal | `sil-matrix` `pass`: lock `6d88f1cb…`, two Runs, comparison, no compiler |
+| Sealed nominal | `sil bundle matrix` `pass`: lock `6d88f1cb…`, two Runs, comparison, no compiler |
 | Sealed `crash` | `behavioral-failure`: `sil-run exited -11`; event 100 reached |
 | Sealed `hang` | `timeout`: `exceeded its 30 s guard`; event 100 reached |
 

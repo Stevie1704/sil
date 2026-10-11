@@ -12,7 +12,7 @@ An override is one of:
 - `<sensor>.<field>[<i>]=<value>@<step>` replaces one array element;
 - `<sensor>*<n>@<step>` publishes that sensor's Message n times.
 
-This is how the tests deliver what `sil-csv` refuses to convert or
+This is how the tests deliver what `sil recording csv` refuses to convert or
 `prepare.py` refuses to write, such as NaN, a count above the capacity,
 nonzero inactive elements and impossible Sample times.
 """

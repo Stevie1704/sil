@@ -52,7 +52,7 @@ def seal() -> None:
     cases = {"nominal": [], "controls": []}
     for name, expected in json.loads(EXPECTED.read_text()).items():
         root = BUNDLES / name
-        sealed = subprocess.run(["sil-bundle", "seal", str(root)],
+        sealed = subprocess.run(["sil", "bundle", "seal", str(root)],
                                 capture_output=True, text=True, check=True)
         print(sealed.stdout, end="")
         lock = hashlib.sha256((root / "bundle.lock.json").read_bytes()).hexdigest()
@@ -136,7 +136,7 @@ def run_matrices(out: Path) -> dict:
     expected = json.loads(EXPECTED.read_text())
     checks = {}
     for kind, exit_code in (("nominal", 0), ("controls", 1)):
-        matrix = subprocess.run(["sil-matrix", str(OPT / f"{kind}.json"), "-o",
+        matrix = subprocess.run(["sil", "bundle", "matrix", str(OPT / f"{kind}.json"), "-o",
                                  str(out / kind), "--jobs", "1"],
                                 capture_output=True, text=True)
         (out / f"{kind}.log").write_text(matrix.stdout + matrix.stderr)

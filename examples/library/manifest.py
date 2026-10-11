@@ -1,6 +1,6 @@
 """The shared-library example's Manifest: recorded input into a C library.
 
-`signals.csv` holds recorded speed values; `sil-csv` converts it with
+`signals.csv` holds recorded speed values; `sil recording csv` converts it with
 `mapping.json` into a Recording. The Replay participant publishes it on
 `ego.speed`. Two instances of `adapter.py` load the same `speed_filter`
 library, each in its own process with its own parameters, and publish its
@@ -20,7 +20,7 @@ Convert, build, run twice and compare:
 or, with the staged installation on PATH:
 
     cc -shared -fPIC -O2 -o speed_filter.so examples/library/speed_filter.c
-    sil-csv examples/library/mapping.json examples/library/signals.csv \\
+    sil recording csv examples/library/mapping.json examples/library/signals.csv \\
         -o signals.mcap --receipt signals.receipt.json
     python examples/library/manifest.py library.json \\
         --recording signals.mcap --library speed_filter.so
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("out", help="path to write the Manifest to")
     parser.add_argument("--recording", type=Path, required=True,
-                        help="the Recording sil-csv wrote")
+                        help="the Recording sil recording csv wrote")
     parser.add_argument("--library", type=Path, required=True,
                         help="the speed_filter shared library build")
     parser.add_argument("--duration-ns", type=int, default=DURATION_NS,
