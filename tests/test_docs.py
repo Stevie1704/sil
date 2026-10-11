@@ -66,5 +66,14 @@ def test_an_unknown_topic_is_a_usage_error_that_lists_the_topics(
 
     assert proc.returncode == 2
     assert proc.stdout == ""
+    assert proc.stderr.startswith("usage: sil docs ")
     assert "sil docs: error: unknown topic 'step-protokol'" in proc.stderr
     assert "\n  step-protocol " in proc.stderr
+
+
+def test_docs_path_takes_no_topic(installed_python: Path, tmp_path: Path):
+    proc = _sil_docs(installed_python, "--path", "running", cwd=tmp_path)
+
+    assert proc.returncode == 2
+    assert proc.stdout == ""
+    assert proc.stderr.endswith("sil docs: error: --path takes no topic\n")

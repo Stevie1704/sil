@@ -1,9 +1,9 @@
 # Agent guide
 
-The entry point for a coding agent that helps a user test a system under test
-(SUT) with SiL. Read it with `sil docs agent-guide`. These docs are for the
-installed version: `sil docs` lists the topics, and `sil docs --path` prints
-their directory, so you can search them with `grep`.
+This guide is the entry point for a coding agent that helps a user test a
+system under test (SUT) with SiL. Read it with `sil docs agent-guide`. These
+docs are for the installed version: `sil docs` lists the topics, and
+`sil docs --path` prints their directory, so you can search them with `grep`.
 
 ## What SiL is
 
@@ -39,9 +39,11 @@ Do the steps in this order. Each step names the topic to read.
    copy from. For FMUs, `sil fmi couple`, `sil fmi replay` and
    `sil fmi substitute` write the Manifest for you: read `sil docs
    fmu-coupling` and `sil docs recorded-input`.
-3. **Run.** `sil run manifest.json -o out.mcap` (the native `sil-run`). Read
-   `sil docs running` for the exit codes, the guards and the Clock shim. In a
-   container, read `sil docs container`.
+3. **Run.** `sil run manifest.json -o out.mcap` starts the native `sil-run`,
+   and `sil check` uses it too. The wheel does not contain `sil-run`: it must
+   be on `PATH` from a native installation, or you run in the container image
+   (read `sil docs container`). Read `sil docs running` for the exit codes,
+   the guards and the Clock shim.
 4. **Check.** `sil check manifest.json` runs the Manifest twice and fails on
    any Recording difference. `sil compare` compares a Recording with a
    reference under a contract: read `sil docs comparison`. To keep a case for

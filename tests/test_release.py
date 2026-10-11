@@ -107,12 +107,15 @@ def test_runner_reports_the_project_version(sil_run):
     assert json.loads(info.stdout)["version"] == "0.1.0"
 
 
-def test_stamp_python_packages_every_doc_listed_as_a_topic(tmp_path: Path):
+@pytest.fixture
+def docs(tmp_path: Path) -> Path:
+    """The docs directory of a freshly stamped Python tree."""
     destination = tmp_path / "python-release"
-
     stamp_python(ROOT, "0.1.0", "test-revision", destination)
+    return destination / "src" / "sil" / "_docs"
 
-    docs = destination / "src" / "sil" / "_docs"
+
+def test_stamp_python_packages_every_doc_listed_as_a_topic(docs: Path):
     topics = json.loads((docs / "topics.json").read_text())
     assert {"agent-guide", "step-protocol", "glossary", "support"} <= set(topics)
     assert all(summary for summary in topics.values())
@@ -120,12 +123,7 @@ def test_stamp_python_packages_every_doc_listed_as_a_topic(tmp_path: Path):
     assert (docs / "step-protocol.md").read_text().startswith("# Step protocol\n")
 
 
-def test_stamped_docs_link_each_other_and_the_release_for_the_rest(tmp_path: Path):
-    destination = tmp_path / "python-release"
-
-    stamp_python(ROOT, "0.1.0", "test-revision", destination)
-
-    docs = destination / "src" / "sil" / "_docs"
+def test_stamped_docs_link_each_other_and_the_release_for_the_rest(docs: Path):
     support = (docs / "support.md").read_text()
     assert "](library.md#when-the-clock-shim-applies)" in support
     assert ("](https://github.com/Stevie1704/sil/blob/v0.1.0/include/sil/participant.h)"
@@ -137,12 +135,7 @@ def test_stamped_docs_link_each_other_and_the_release_for_the_rest(tmp_path: Pat
     assert "](https://github.com/Stevie1704/sil/tree/v0.1.0/examples/library/)" in library
 
 
-def test_every_stamped_doc_link_resolves_in_the_package_or_the_release(tmp_path: Path):
-    destination = tmp_path / "python-release"
-
-    stamp_python(ROOT, "0.1.0", "test-revision", destination)
-
-    docs = destination / "src" / "sil" / "_docs"
+def test_every_stamped_doc_link_resolves_in_the_package_or_the_release(docs: Path):
     for doc in docs.glob("*.md"):
         for target in re.findall(r"\]\(([^)]+)\)", doc.read_text()):
             if target.startswith(("https://", "http://", "mailto:", "#")):

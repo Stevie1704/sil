@@ -14,7 +14,7 @@ from importlib.resources import files
 from pathlib import Path
 
 PROG = "sil docs"
-EXIT_FAILURE = 1
+EXIT_FAIL = 1
 EXIT_USAGE = 2
 DOCS = Path(str(files("sil").joinpath("_docs")))
 
@@ -36,12 +36,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--path", action="store_true",
                         help="print the directory of the docs, to search them")
     args = parser.parse_args(argv)
+    if args.path and args.topic is not None:
+        parser.error("--path takes no topic")
     try:
         topics = json.loads((DOCS / "topics.json").read_text())
     except OSError:
         sys.stderr.write(f"{PROG}: error: this installation has no docs; "
                          "a release wheel or the container image has them\n")
-        return EXIT_FAILURE
+        return EXIT_FAIL
     if args.path:
         print(DOCS)
     elif args.topic is None:
@@ -49,8 +51,8 @@ def main(argv: list[str] | None = None) -> int:
     elif args.topic in topics:
         sys.stdout.write((DOCS / f"{args.topic}.md").read_text())
     else:
-        sys.stderr.write(f"{topic_list(topics)}{PROG}: error: "
-                         f"unknown topic '{args.topic}'\n")
+        sys.stderr.write(f"{parser.format_usage()}{topic_list(topics)}"
+                         f"{PROG}: error: unknown topic '{args.topic}'\n")
         return EXIT_USAGE
     return 0
 
