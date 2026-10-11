@@ -48,7 +48,8 @@ Do the steps in this order. Each step names the topic to read.
    Recording, and `sil recording show out.mcap --channel NAME --from T --to T`
    prints what a Channel carried in a virtual-time interval, decoded with its
    Schema: read `sil docs running`. `sil check manifest.json` runs the
-   Manifest twice and fails on any Recording difference. `sil compare`
+   Manifest twice and fails on any Recording difference. It reports the first
+   difference, and `--keep DIR` keeps both Recordings. `sil compare`
    compares a Recording with a reference under a contract: read `sil docs
    comparison`. To keep a case for CI, seal it as a regression bundle: read
    `sil docs regression-bundles`.
@@ -60,6 +61,7 @@ Use exit codes, not message text. Message text can change in any release.
 | Command | Output |
 | --- | --- |
 | `sil fmi inspect --json` | the `sil_fmi_inspection` report |
+| `sil check --json` | the `sil_check_report` report |
 | `sil compare --json` | the `sil_comparison_report` report |
 | `sil recording channels --json` | the `sil_recording_channels` report |
 | `sil recording show --json` | one `sil_recording_show` JSON object per line and per Message |
