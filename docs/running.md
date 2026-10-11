@@ -148,7 +148,7 @@ sil recording show out.mcap --channel acc.Command --from 2000000000 --to 3000000
 
 `--from` and `--to` are virtual times in nanoseconds and select the half-open
 interval [`--from`, `--to`). The MCAP index applies `--channel`, `--from` and
-`--to`, so a long Recording is not loaded into memory at once. A Channel that the
+`--to`, so the reader holds one chunk of a long Recording in memory at a time. A Channel that the
 Recording does not declare is a usage error (exit `2`), and the error lists the
 Channels it declares. An unreadable Recording also exits `2`.
 

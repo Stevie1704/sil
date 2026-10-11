@@ -49,9 +49,9 @@ Do the steps in this order. Each step names the topic to read.
    prints what a Channel carried in a virtual-time interval, decoded with its
    Schema: read `sil docs running`. `sil check manifest.json` runs the
    Manifest twice and fails on any Recording difference. `sil compare`
-   compares a Recording with a
-   reference under a contract: read `sil docs comparison`. To keep a case for
-   CI, seal it as a regression bundle: read `sil docs regression-bundles`.
+   compares a Recording with a reference under a contract: read `sil docs
+   comparison`. To keep a case for CI, seal it as a regression bundle: read
+   `sil docs regression-bundles`.
 
 ## Machine-readable output
 
