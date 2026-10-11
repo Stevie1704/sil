@@ -93,10 +93,10 @@ EVERY_TYPE = {"fields": [
 ]}
 
 
-def write_recording(path, spec, payload, *, other=None):
+def write_recording(path, spec, payload, *, other=None, times=(7,)):
     """A Recording shaped like the kernel's: Channel `bus.Frame` with one
-    Message at t_ns 7, and Channel `bus.Idle` without Messages when `other`
-    gives its Schema."""
+    Message per t_ns in `times`, in that stored order, and Channel `bus.Idle`
+    without Messages when `other` gives its Schema."""
     with open(path, "wb") as f:
         writer = Writer(f, compression=CompressionType.NONE)
         writer.start(profile="sil", library="test")
@@ -106,7 +106,9 @@ def write_recording(path, spec, payload, *, other=None):
         if other is not None:
             writer.register_channel("bus.Idle", "sil_pod", writer.register_schema(
                 "bus.Idle", "sil_pod", json.dumps(other).encode()))
-        writer.add_message(channel_id, log_time=7, data=payload, publish_time=7)
+        for t in times:
+            writer.add_message(channel_id, log_time=t, data=payload,
+                               publish_time=t)
         writer.finish()
     return path
 
@@ -188,3 +190,20 @@ def test_show_decodes_a_selected_channel_beside_a_foreign_schema(
     code, _, err = sil(capsys, "show", str(recording))
     assert code == 2
     assert "'bus.Idle' has a Schema that is not a SiL Schema" in err
+
+
+def test_channels_reports_the_earliest_and_latest_time_of_an_unsorted_channel(
+        tmp_path, capsys):
+    recording = write_recording(tmp_path / "frame.mcap",
+                                {"fields": [{"name": "a", "type": "u8"}]},
+                                b"\x01", times=(30, 10, 20))
+
+    code, out, _ = sil(capsys, "channels", str(recording), "--json")
+
+    assert code == 0
+    assert json.loads(out)["channels"] == [{
+        "channel": "bus.Frame", "schema": "bus.Frame", "messages": 3,
+        "first_t_ns": 10, "last_t_ns": 30}]
+    # show keeps the stored order.
+    assert sil(capsys, "show", str(recording))[1] == (
+        "30 bus.Frame a=1\n10 bus.Frame a=1\n20 bus.Frame a=1\n")

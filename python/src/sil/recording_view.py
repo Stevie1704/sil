@@ -4,8 +4,8 @@ Each Message is decoded with the Schema the Recording stores for its Channel,
 so no Manifest is needed. Both commands are read-only.
 
 `sil recording channels` lists each Channel with its Schema name, Message
-count and first and last virtual time, and the Manifest hash of the Run that
-wrote the Recording (none for a Recording converted at the edge). With
+count and earliest and latest virtual time, and the Manifest hash of the Run
+that wrote the Recording (none for a Recording converted at the edge). With
 `--json` it is one `sil_recording_channels` report.
 
 `sil recording show` prints the Messages in stored order. `--channel` and the
@@ -47,7 +47,9 @@ class RecordingViewError(ValueError):
 
 @dataclass
 class _Span:
-    """The Messages of one Channel: how many, and their first and last time."""
+    """The Messages of one Channel: how many, and their earliest and latest
+    virtual time. Stored order need not be time order, so these are the
+    minimum and the maximum, not the first and last Message stored."""
 
     messages: int = 0
     first_t_ns: int | None = None
@@ -56,8 +58,9 @@ class _Span:
     def add(self, t_ns: int) -> None:
         self.messages += 1
         if self.first_t_ns is None:
-            self.first_t_ns = t_ns
-        self.last_t_ns = t_ns
+            self.first_t_ns = self.last_t_ns = t_ns
+        self.first_t_ns = min(self.first_t_ns, t_ns)
+        self.last_t_ns = max(self.last_t_ns, t_ns)
 
 
 def channel_report(path: str | Path) -> dict:

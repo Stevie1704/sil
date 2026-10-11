@@ -139,7 +139,7 @@ its Manifest. Two read-only commands do that:
 
 | Command | Effect |
 | --- | --- |
-| `sil recording channels out.mcap [--json]` | list each Channel with its Schema name, Message count and first and last virtual time, and the Manifest hash |
+| `sil recording channels out.mcap [--json]` | list each Channel with its Schema name, Message count and earliest and latest virtual time, and the Manifest hash |
 | `sil recording show out.mcap [--channel NAME]... [--from T] [--to T] [--limit N] [--json]` | print the decoded Messages in stored order |
 
 ```sh
@@ -155,8 +155,10 @@ Channels it declares. An unreadable Recording also exits `2`.
 `sil recording channels --json` prints one `sil_recording_channels` report
 (version 1): `manifest_hash` (`null` for a Recording no Run wrote, such as one
 from `sil recording csv`) and a `channels` list of `channel`, `schema`,
-`messages`, `first_t_ns` and `last_t_ns` (`null` for a Channel without
-Messages).
+`messages`, `first_t_ns` and `last_t_ns`. `first_t_ns` is the earliest and
+`last_t_ns` the latest virtual time of the Channel's Messages, also when the
+Recording does not store them in time order. Both are `null` for a Channel
+without Messages.
 
 `sil recording show --json` prints one JSON object per line and per Message
 (`sil_recording_show` version 1): `channel`, `t_ns` and `fields`, the decoded
