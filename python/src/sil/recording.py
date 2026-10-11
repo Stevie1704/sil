@@ -26,19 +26,19 @@ class RecordedChannel(NamedTuple):
     schema: dict
 
 
-def read_records(path: str | Path, *, topics: Collection[str] | None = None,
+def read_records(path: str | Path, *, channels: Collection[str] | None = None,
                  start_ns: int | None = None, end_ns: int | None = None,
                  ) -> Iterator[tuple[str, int, bytes]]:
     """Yields (topic, log_time_ns, data) for every recorded message, in stored
     order. Dispatches on the path extension; raises UnknownRecordingFormat for
     an unrecognized one.
 
-    `topics` keeps only those Channels, and `start_ns` and `end_ns` only the
-    log times in [start_ns, end_ns). The MCAP index applies the filters, so
-    a long Recording is read message by message, not all at once."""
+    `channels` keeps only those Channels, and `start_ns` and `end_ns` keep
+    only the log times in [start_ns, end_ns). The MCAP index applies the
+    filters, so the reader holds one chunk of a long Recording at a time."""
     path = Path(path)
     if path.suffix == ".mcap":
-        return _read_mcap(path, topics, start_ns, end_ns)
+        return _read_mcap(path, channels, start_ns, end_ns)
     raise UnknownRecordingFormat(
         f"unrecognized recording format {path.suffix!r} for recording "
         f"{str(path)!r}"
@@ -94,13 +94,15 @@ def read_manifest_hash(path: str | Path) -> str | None:
     return None
 
 
-def _read_mcap(path: Path, topics: Collection[str] | None,
+def _read_mcap(path: Path, channels: Collection[str] | None,
                start_ns: int | None, end_ns: int | None,
                ) -> Iterator[tuple[str, int, bytes]]:
     from mcap.reader import make_reader
 
     with open(path, "rb") as f:
+        # Stored order is Publish order; log-time order could reorder the
+        # Messages of one timestamp.
         for _, channel, message in make_reader(f).iter_messages(
-                topics=None if topics is None else list(topics),
-                start_time=start_ns, end_time=end_ns):
+                topics=None if channels is None else list(channels),
+                start_time=start_ns, end_time=end_ns, log_time_order=False):
             yield channel.topic, message.log_time, message.data

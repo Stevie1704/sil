@@ -93,14 +93,19 @@ EVERY_TYPE = {"fields": [
 ]}
 
 
-def write_recording(path, spec, payload):
-    """A Recording shaped like the kernel's, with one Channel `bus.Frame`."""
+def write_recording(path, spec, payload, *, other=None):
+    """A Recording shaped like the kernel's: Channel `bus.Frame` with one
+    Message at t_ns 7, and Channel `bus.Idle` without Messages when `other`
+    gives its Schema."""
     with open(path, "wb") as f:
         writer = Writer(f, compression=CompressionType.NONE)
         writer.start(profile="sil", library="test")
         schema_id = writer.register_schema(
             "bus.Frame", "sil_pod", json.dumps(spec).encode())
         channel_id = writer.register_channel("bus.Frame", "sil_pod", schema_id)
+        if other is not None:
+            writer.register_channel("bus.Idle", "sil_pod", writer.register_schema(
+                "bus.Idle", "sil_pod", json.dumps(other).encode()))
         writer.add_message(channel_id, log_time=7, data=payload, publish_time=7)
         writer.finish()
     return path
@@ -156,3 +161,30 @@ def test_an_unreadable_recording_is_a_usage_error(name, tmp_path, capsys):
     assert code == 2
     assert out == ""
     assert err.startswith("sil recording channels: error: cannot read Recording")
+
+
+def test_a_channel_without_messages_has_no_times(tmp_path, capsys):
+    recording = write_recording(tmp_path / "frame.mcap",
+                                {"fields": [{"name": "a", "type": "u8"}]},
+                                b"\x01", other={"fields": []})
+
+    code, out, _ = sil(capsys, "channels", str(recording), "--json")
+
+    assert code == 0
+    assert json.loads(out)["channels"][1] == {
+        "channel": "bus.Idle", "schema": "bus.Idle", "messages": 0,
+        "first_t_ns": None, "last_t_ns": None}
+
+
+def test_show_decodes_a_selected_channel_beside_a_foreign_schema(
+        tmp_path, capsys):
+    recording = write_recording(tmp_path / "frame.mcap",
+                                {"fields": [{"name": "a", "type": "u8"}]},
+                                b"\x01", other={"fields": [{"name": "z",
+                                                             "type": "f128"}]})
+
+    assert sil(capsys, "show", str(recording), "--channel", "bus.Frame") == (
+        0, "7 bus.Frame a=1\n", "")
+    code, _, err = sil(capsys, "show", str(recording))
+    assert code == 2
+    assert "'bus.Idle' has a Schema that is not a SiL Schema" in err

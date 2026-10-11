@@ -9,12 +9,13 @@ wrote the Recording (none for a Recording converted at the edge). With
 `--json` it is one `sil_recording_channels` report.
 
 `sil recording show` prints the Messages in stored order. `--channel` and the
-half-open virtual-time interval [`--from`, `--to`) select them, and the MCAP
-index applies that selection, so a long Recording is not loaded at once. With
-`--json` each Message is one line: an object with `channel`, `t_ns` and the
-decoded `fields`. A `u8` array is a lowercase hex string (opaque bytes, such
-as a CAN frame, stay bytes), any other array a list, and a non-finite float
-the string "NaN", "Infinity" or "-Infinity", because JSON has no such numbers.
+half-open virtual-time interval [`--from`, `--to`) select them. The MCAP index
+applies that selection, so the reader holds one chunk of a long Recording at a
+time. With `--json` each Message is one line: an object with `channel`, `t_ns`
+and the decoded `fields`. A `u8` array is a lowercase hex string. Opaque bytes,
+such as a CAN frame, are `u8` arrays. Any other array is a list. A non-finite
+float is the string "NaN", "Infinity" or "-Infinity", because JSON has no such
+numbers.
 """
 
 from __future__ import annotations
@@ -26,6 +27,8 @@ import math
 import struct
 import sys
 from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 
 from mcap.exceptions import McapError
@@ -42,19 +45,33 @@ class RecordingViewError(ValueError):
     """The Recording cannot be read, or the arguments name what it lacks."""
 
 
-def channels(path: str | Path) -> dict:
+@dataclass
+class _Span:
+    """The Messages of one Channel: how many, and their first and last time."""
+
+    messages: int = 0
+    first_t_ns: int | None = None
+    last_t_ns: int | None = None
+
+    def add(self, t_ns: int) -> None:
+        self.messages += 1
+        if self.first_t_ns is None:
+            self.first_t_ns = t_ns
+        self.last_t_ns = t_ns
+
+
+def channel_report(path: str | Path) -> dict:
     """The `sil_recording_channels` report of the Recording at `path`."""
-    declared = _read_channels(path)
-    seen: dict[str, list[int]] = {}  # Channel -> [count, first, last]
-    for topic, t, _ in _read_records(path):
-        stats = seen.setdefault(topic, [0, t, t])
-        stats[0] += 1
-        stats[2] = t
-    rows = []
-    for channel in declared:
-        count, first, last = seen.get(channel.name, (0, None, None))
-        rows.append({"channel": channel.name, "schema": channel.schema_name,
-                     "messages": count, "first_t_ns": first, "last_t_ns": last})
+    with _reading(path):
+        declared = read_channels(path)
+        spans = {channel.name: _Span() for channel in declared}
+        for channel, t, _ in read_records(path):
+            spans[channel].add(t)
+    rows = [{"channel": channel.name, "schema": channel.schema_name,
+             "messages": spans[channel.name].messages,
+             "first_t_ns": spans[channel.name].first_t_ns,
+             "last_t_ns": spans[channel.name].last_t_ns}
+            for channel in declared]
     return {"sil_recording_channels": CHANNELS_VERSION,
             "manifest_hash": read_manifest_hash(path),
             "channels": rows}
@@ -67,28 +84,43 @@ def messages(path: str | Path, *, channels: list[str] | None = None,
 
     Raises RecordingViewError for a Channel the Recording does not declare;
     the message lists the Channels it does."""
-    try:
-        declared = {c.name: schema.MessageType(c.schema_name, c.schema)
-                    for c in _read_channels(path)}
-    except (KeyError, TypeError, struct.error) as e:
-        raise RecordingViewError(
-            f"Recording {str(path)!r} stores a Schema that is not a SiL "
-            f"Schema: {e!r}") from e
-    unknown = [name for name in channels or () if name not in declared]
+    with _reading(path):
+        decoders = _decoders(path, channels)
+        for channel, t, data in read_records(path, channels=channels,
+                                             start_ns=start_ns, end_ns=end_ns):
+            yield {"channel": channel, "t_ns": t,
+                   "fields": _decoded(decoders[channel], channel, t, data)}
+
+
+def _decoders(path, selected: list[str] | None) -> dict[str, schema.MessageType]:
+    """The decoder of each selected Channel, or of every Channel for None."""
+    declared = {channel.name: channel for channel in read_channels(path)}
+    unknown = [name for name in selected or () if name not in declared]
     if unknown:
         raise RecordingViewError(
             f"unknown Channel(s) {', '.join(map(repr, unknown))}; the Recording "
             f"has: {', '.join(declared) or 'no Channels'}")
-    for topic, t, data in _read_records(path, topics=channels,
-                                        start_ns=start_ns, end_ns=end_ns):
+    decoders = {}
+    for name in declared if selected is None else selected:
+        channel = declared[name]
         try:
-            fields = declared[topic].unpack(data)
-        except struct.error as e:
+            decoders[name] = schema.MessageType(channel.schema_name, channel.schema)
+        except (KeyError, TypeError, struct.error) as e:
             raise RecordingViewError(
-                f"Message on {topic!r} at t_ns {t} does not match its "
-                f"Schema: {e}") from e
-        yield {"channel": topic, "t_ns": t,
-               "fields": {name: _json_value(v) for name, v in fields.items()}}
+                f"Channel {name!r} has a Schema that is not a SiL Schema: "
+                f"{e!r}") from e
+    return decoders
+
+
+def _decoded(decoder: schema.MessageType, channel: str, t: int,
+             data: bytes) -> dict:
+    try:
+        fields = decoder.unpack(data)
+    except struct.error as e:
+        raise RecordingViewError(
+            f"the Message on {channel!r} at t_ns {t} does not match its "
+            f"Schema: {e}") from e
+    return {name: _json_value(value) for name, value in fields.items()}
 
 
 def _json_value(value):
@@ -102,17 +134,14 @@ def _json_value(value):
     return value
 
 
-def _read_channels(path):
+@contextmanager
+def _reading(path):
+    """Reports a Recording the reader cannot read as a RecordingViewError."""
     try:
-        return read_channels(path)
-    except (OSError, ValueError, McapError) as e:
-        raise RecordingViewError(f"cannot read Recording {str(path)!r}: {e}") from e
-
-
-def _read_records(path, **selection):
-    try:
-        yield from read_records(path, **selection)
-    except (OSError, ValueError, McapError) as e:
+        yield
+    except RecordingViewError:
+        raise
+    except (OSError, ValueError, KeyError, McapError) as e:
         raise RecordingViewError(f"cannot read Recording {str(path)!r}: {e}") from e
 
 
@@ -194,7 +223,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         if args.command == "channels":
-            _write_channels(channels(args.recording), args.json)
+            _write_channels(channel_report(args.recording), args.json)
             return 0
         selected = messages(args.recording, channels=args.channel,
                             start_ns=args.start_ns, end_ns=args.end_ns)
