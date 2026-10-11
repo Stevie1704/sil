@@ -81,6 +81,17 @@ def read_manifest_hash(path: str | Path) -> str | None:
     Recording no Run wrote, such as one converted at the edge.
 
     Dispatches like `read_records`."""
+    for name, metadata in read_metadata(path):
+        if name == "sil" and "manifest_hash" in metadata:
+            return metadata["manifest_hash"]
+    return None
+
+
+def read_metadata(path: str | Path) -> list[tuple[str, dict[str, str]]]:
+    """Every metadata record of the Recording as (name, metadata), in stored
+    order.
+
+    Dispatches like `read_records`."""
     path = Path(path)
     if path.suffix != ".mcap":
         # read_records states the refusal.
@@ -88,10 +99,8 @@ def read_manifest_hash(path: str | Path) -> str | None:
     from mcap.reader import make_reader
 
     with open(path, "rb") as f:
-        for metadata in make_reader(f).iter_metadata():
-            if metadata.name == "sil" and "manifest_hash" in metadata.metadata:
-                return metadata.metadata["manifest_hash"]
-    return None
+        return [(record.name, dict(record.metadata))
+                for record in make_reader(f).iter_metadata()]
 
 
 def _read_mcap(path: Path, channels: Collection[str] | None,

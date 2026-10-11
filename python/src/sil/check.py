@@ -7,18 +7,30 @@ reported loudly (exit 3) the day it is introduced.
 A caller who bounds a direct Run with a Process-participant response deadline
 can bound both Runs of a check with the same option, so the Run the check
 judges is the Run the caller executes.
+
+On a violation the check reports where the two Recordings first differ, so a
+caller can find the cause without running the Manifest again. `--keep` keeps
+both Recordings, and `--json` writes the `sil_check_report`.
 """
 
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
+import json
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
+from sil.recording_diff import first_difference
+
+EXIT_USAGE = 2
 EXIT_VIOLATION = 3
+REPORT_VERSION = 1
+DETERMINISTIC = "deterministic"
+VIOLATION = "violation"
 
 # The ceiling the runner accepts: std::chrono::milliseconds::max(). Mirroring
 # it here keeps the checker from forwarding a value its two Runs reject.
@@ -30,14 +42,20 @@ def file_sha256(path: Path) -> str:
 
 
 def check(runner: Path, manifest: Path, out=sys.stdout, err=sys.stderr,
-          *, participant_timeout_ms: int | None = None) -> int:
+          *, participant_timeout_ms: int | None = None,
+          keep: Path | None = None, as_json: bool = False) -> int:
     deadline_argument = [] if participant_timeout_ms is None else [
         "--participant-timeout-ms", str(participant_timeout_ms)
     ]
-    hashes = []
-    with tempfile.TemporaryDirectory() as tmp:
-        for i in (1, 2):
-            mcap_path = Path(tmp) / f"run{i}.mcap"
+    with contextlib.ExitStack() as stack:
+        try:
+            directory = Path(stack.enter_context(_workdir(keep)))
+        except OSError as error:
+            err.write(f"sil check: error: cannot keep the Recordings in "
+                      f"{str(keep)!r}: {error}\n")
+            return EXIT_USAGE
+        recordings = [directory / f"run{i}.mcap" for i in (1, 2)]
+        for mcap_path in recordings:
             proc = subprocess.run(
                 [str(runner), str(manifest), "-o", str(mcap_path),
                  *deadline_argument],
@@ -46,16 +64,48 @@ def check(runner: Path, manifest: Path, out=sys.stdout, err=sys.stderr,
             if proc.returncode != 0:
                 err.write(proc.stderr)
                 return proc.returncode
-            hashes.append(file_sha256(mcap_path))
+        hashes = [file_sha256(path) for path in recordings]
+        difference = first_difference(*recordings)
 
-    if hashes[0] != hashes[1]:
+    kept = recordings if keep is not None else [None, None]
+    if as_json:
+        report = _report(manifest, hashes, kept, difference)
+        out.write(json.dumps(report, indent=2) + "\n")
+    elif difference is not None:
         err.write(
             "DETERMINISM VIOLATION: two runs of the same manifest produced "
-            f"different recordings\n  run 1: {hashes[0]}\n  run 2: {hashes[1]}\n"
+            f"different recordings\n  run 1: {_run_line(hashes[0], kept[0])}\n"
+            f"  run 2: {_run_line(hashes[1], kept[1])}\n"
+            f"  first difference: {difference['detail']}\n"
         )
-        return EXIT_VIOLATION
-    out.write(f"deterministic: {hashes[0]}\n")
-    return 0
+    else:
+        out.write(f"deterministic: {hashes[0]}\n")
+    return EXIT_VIOLATION if difference is not None else 0
+
+
+def _workdir(keep: Path | None):
+    """The directory the two Runs write to: `keep`, or a temporary one."""
+    if keep is None:
+        return tempfile.TemporaryDirectory()
+    keep.mkdir(parents=True, exist_ok=True)
+    return contextlib.nullcontext(keep)
+
+
+def _run_line(sha256: str, recording: Path | None) -> str:
+    return sha256 if recording is None else f"{sha256} ({recording})"
+
+
+def _report(manifest: Path, hashes: list[str], kept: list[Path | None],
+            difference: dict | None) -> dict:
+    return {
+        "sil_check_report": REPORT_VERSION,
+        "verdict": VIOLATION if difference is not None else DETERMINISTIC,
+        "manifest": str(manifest),
+        "runs": [{"sha256": sha256,
+                  "recording": None if path is None else str(path)}
+                 for sha256, path in zip(hashes, kept)],
+        "first_difference": difference,
+    }
 
 
 def _positive_milliseconds(text: str) -> int:
@@ -97,9 +147,15 @@ def main(argv: list[str] | None = None) -> int:
                         help="wall-clock deadline in milliseconds for each "
                              "Process participant response, forwarded to "
                              "both runs")
+    parser.add_argument("--keep", type=Path, metavar="DIR", default=None,
+                        help="keep both Recordings in DIR as run1.mcap and "
+                             "run2.mcap")
+    parser.add_argument("--json", action="store_true",
+                        help="write the sil_check_report as JSON to stdout")
     args = parser.parse_args(argv)
     return check(args.runner, args.manifest,
-                 participant_timeout_ms=args.participant_timeout_ms)
+                 participant_timeout_ms=args.participant_timeout_ms,
+                 keep=args.keep, as_json=args.json)
 
 
 if __name__ == "__main__":
