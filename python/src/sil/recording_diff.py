@@ -9,7 +9,9 @@ somewhere, and the difference says so.
 
 from __future__ import annotations
 
+import filecmp
 import hashlib
+import struct
 from itertools import zip_longest
 from pathlib import Path
 from typing import NamedTuple
@@ -22,7 +24,8 @@ from sil.recording import read_channels, read_metadata, read_records
 def first_difference(run1: str | Path, run2: str | Path) -> dict | None:
     """The first difference between two Recordings, or None when they are
     bit-identical."""
-    if Path(run1).read_bytes() == Path(run2).read_bytes():
+    # Compares in chunks: a Recording can be larger than memory allows twice.
+    if filecmp.cmp(run1, run2, shallow=False):
         return None
     try:
         return (_metadata_difference(run1, run2)
@@ -32,7 +35,7 @@ def first_difference(run1: str | Path, run2: str | Path) -> dict | None:
                     "bytes",
                     detail="the Recordings differ in bytes outside the "
                            "metadata, Channels, Schemas and Messages"))
-    except (OSError, ValueError, McapError) as error:
+    except (OSError, ValueError, KeyError, struct.error, McapError) as error:
         return _difference("unreadable",
                            detail=f"cannot read the Recordings to find where "
                                   f"they differ: {error}")

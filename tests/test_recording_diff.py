@@ -103,3 +103,15 @@ def test_a_difference_outside_metadata_channels_and_messages_is_bytes(tmp_path):
 
     assert first["kind"] == "bytes"
     assert first["channel"] is None and first["t_ns"] is None
+
+
+def test_truncated_recordings_are_unreadable_not_a_crash(tmp_path):
+    messages = [("echo", t, bytes([t]) * 8) for t in range(4)]
+    full = recording(tmp_path / "full.mcap", messages=messages).read_bytes()
+    a, b = tmp_path / "a.mcap", tmp_path / "b.mcap"
+    # Cut inside the magic and header, where the MCAP reader unpacks a
+    # length from too few bytes.
+    a.write_bytes(full[:1])
+    b.write_bytes(full[:1] + b"\0")
+
+    assert first_difference(a, b)["kind"] == "unreadable"

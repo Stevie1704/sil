@@ -65,7 +65,8 @@ def check(runner: Path, manifest: Path, out=sys.stdout, err=sys.stderr,
                 err.write(proc.stderr)
                 return proc.returncode
         hashes = [file_sha256(path) for path in recordings]
-        difference = first_difference(*recordings)
+        difference = (None if hashes[0] == hashes[1]
+                      else first_difference(*recordings))
 
     # Only kept Recordings outlive the check, so only they are named.
     kept = recordings if keep is not None else [None, None]
