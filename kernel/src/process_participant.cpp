@@ -1,6 +1,7 @@
 #include "process_participant.hpp"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <poll.h>
 #include <signal.h>
 #include <sys/wait.h>
@@ -11,6 +12,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <functional>
 #include <limits>
 #include <map>
 #include <string_view>
@@ -111,13 +113,48 @@ std::string participant_directory_name(const std::string &name) {
   return encoded;
 }
 
+// The failure report keeps the last lines of a child's stderr. The byte
+// bound keeps a child that never writes a newline from growing the buffer.
+constexpr size_t kStderrTailLines = 20;
+constexpr size_t kStderrTailBytes = 64 * 1024;
+
+std::vector<std::string> last_lines(const std::string &text) {
+  std::vector<std::string> lines;
+  size_t end = text.size();
+  if (end > 0 && text[end - 1] == '\n') --end;
+  while (end > 0 && lines.size() < kStderrTailLines) {
+    const size_t newline = text.rfind('\n', end - 1);
+    const size_t start = newline == std::string::npos ? 0 : newline + 1;
+    lines.push_back(text.substr(start, end - start));
+    if (newline == std::string::npos) break;
+    end = newline;
+  }
+  std::reverse(lines.begin(), lines.end());
+  return lines;
+}
+
+void forward_to_stderr(const char *data, size_t length) noexcept {
+  while (length > 0) {
+    const ssize_t n = write(STDERR_FILENO, data, length);
+    if (n < 0 && errno == EINTR) continue;
+    if (n <= 0) return;  // Losing passthrough must not fail the Run.
+    data += n;
+    length -= size_t(n);
+  }
+}
+
 // Owns the direct child's wait status and the process-group escalation policy.
 // Descendants cannot be waitpid()'d by the runner, so group existence is the
 // observation that keeps their bounded TERM/KILL grace period meaningful.
 class ChildProcessGroup {
  public:
-  ChildProcessGroup(pid_t pid, pid_t process_group_id)
-      : pid_(pid), process_group_id_(process_group_id) {}
+  // `wait` passes about 10 ms while the group drains. The owner uses it to
+  // keep reading the child's stderr pipe, so a child that writes while it
+  // exits cannot block on a full pipe.
+  ChildProcessGroup(pid_t pid, pid_t process_group_id,
+                    std::function<void()> wait)
+      : pid_(pid), process_group_id_(process_group_id),
+        wait_(std::move(wait)) {}
 
   int terminate() noexcept {
     (void)reap_within(200);
@@ -156,7 +193,7 @@ class ChildProcessGroup {
   bool reap_within(int centiseconds) noexcept {
     for (int i = 0; i < centiseconds; ++i) {
       if (reap_once()) return true;
-      usleep(10000);
+      wait_();
     }
     return false;
   }
@@ -183,7 +220,7 @@ class ChildProcessGroup {
     for (int i = 0; i < centiseconds; ++i) {
       if (!process_group_exists()) return true;
       (void)reap_once();
-      usleep(10000);
+      wait_();
     }
     (void)reap_once();
     return !process_group_exists();
@@ -196,6 +233,7 @@ class ChildProcessGroup {
 
   pid_t pid_;
   pid_t process_group_id_;
+  std::function<void()> wait_;
   int wait_status_ = 0;
   bool child_reaped_ = false;
 };
@@ -495,12 +533,16 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     if (arenas_.max_slots() > 1) protocol_ = kIndexedSlotsProtocol;
     const int offered_protocol = protocol_;
 
-    int to_child[2], from_child[2];
-    if (pipe(to_child) != 0 || pipe(from_child) != 0)
-      throw RunError("participant '" + name + "': pipe failed");
+    int to_child[2], from_child[2], child_errors[2];
+    if (pipe(to_child) != 0 || pipe(from_child) != 0 ||
+        pipe(child_errors) != 0)
+      throw failure(FailureCategory::Spawn,
+                    "participant '" + name + "': pipe failed");
 
     pid_ = fork();
-    if (pid_ < 0) throw RunError("participant '" + name + "': fork failed");
+    if (pid_ < 0)
+      throw failure(FailureCategory::Spawn,
+                    "participant '" + name + "': fork failed");
     if (pid_ == 0) {
       // Keep every descendant in a group owned by this Process participant.
       // This is deliberately the first child-side operation, before the
@@ -512,10 +554,13 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
       }
       dup2(to_child[0], STDIN_FILENO);
       dup2(from_child[1], STDOUT_FILENO);
+      dup2(child_errors[1], STDERR_FILENO);
       close(to_child[0]);
       close(to_child[1]);
       close(from_child[0]);
       close(from_child[1]);
+      close(child_errors[0]);
+      close(child_errors[1]);
       if (chdir(working_directory_->path().c_str()) != 0) {
         perror("sil: chdir participant");
         _exit(127);
@@ -534,8 +579,13 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     (void)setpgid(pid_, pid_);
     close(to_child[0]);
     close(from_child[1]);
+    close(child_errors[1]);
     child_stdin_ = to_child[1];
     child_stdout_ = from_child[0];
+    // Non-blocking, so draining it never waits for a child that is quiet.
+    child_stderr_ = child_errors[0];
+    (void)fcntl(child_stderr_, F_SETFL,
+                fcntl(child_stderr_, F_GETFL) | O_NONBLOCK);
     // The child-side setpgid above runs before exec, so a successfully
     // started child and every descendant it creates share this group. A
     // failed setpgid exits before exec and cannot leave a live participant in
@@ -573,7 +623,7 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
                  {"protocol", offered_protocol},
                  {"channels", channels},
                  {"schemas", schemas}};
-    json ready = json::parse(request_response(init.dump(), std::nullopt));
+    json ready = exchange(init.dump(), std::nullopt);
     const std::string op = ready.value("op", "");
     // `fail` in answer to `init` is a Manifest error (exit 2), unless the child
     // explicitly marks a failure from its own initialization work as a Run
@@ -583,12 +633,14 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
       const std::string reason =
           ready.value("reason", "rejected its init line");
       if (ready.value("failure", "") == "run")
-        throw RunError("participant '" + name + "' failed: " + reason);
+        throw failure(FailureCategory::Participant,
+                      "participant '" + name + "' failed: " + reason);
       throw ManifestError("participant '" + name + "': " + reason);
     }
     if (op != "ready")
-      throw RunError("participant '" + name + "': expected ready, got " +
-                     ready.dump());
+      throw failure(FailureCategory::Protocol,
+                    "participant '" + name + "': expected ready, got " +
+                        ready.dump());
     int announced_protocol = kSingleSlotProtocol;
     if (ready.contains("protocol")) {
       const json &value = ready.at("protocol");
@@ -646,51 +698,76 @@ void ProcessParticipant::step(uint64_t now_ns) {
 
   json step = {
       {"op", "step"}, {"t", now_ns}, {"dt", period_ns_}, {"in", in}};
-  json done = json::parse(request_response(step.dump(), now_ns));
+  last_step_ns_ = now_ns;
+  ++steps_sent_;
+  const json done = exchange(step.dump(), now_ns);
 
-  std::string op = done.value("op", "");
-  if (op == "fail") {
-    engine_.fail(name_, done.value("reason", "(no reason)"));
-    return;
-  }
-  if (op != "step_done")
-    throw RunError("participant '" + name_ + "': expected step_done, got " +
-                   done.dump());
-
-  static const json kNoOutputs = json::array();
-  const json &outputs = done.contains("out") ? done.at("out") : kNoOutputs;
-  if (!outputs.is_array())
-    throw RunError("participant '" + name_ +
-                   "': step_done out must be an array");
-  if (outputs.size() > limits_.max_step_output_messages)
-    throw RunError(
-        "participant '" + name_ +
-        "': maximum output-Message count per Step exceeded during Step at "
-        "virtual time " + std::to_string(now_ns) + " ns: configured " +
-        std::to_string(limits_.max_step_output_messages) + " Messages, "
-        "observed " + std::to_string(outputs.size()) + " Messages");
-
-  for (const json &out : outputs) {
-    std::string ch = out.at("ch").get<std::string>();
-    if (std::find(publishes_.begin(), publishes_.end(), ch) ==
-        publishes_.end()) {
-      engine_.fail(name_, "published on undeclared channel '" + ch + "'");
-      return;
-    }
-  }
-
-  const size_t inline_bytes = codec_->inline_payload_bytes(outputs);
-  if (inline_bytes > limits_.max_step_inline_payload_bytes)
-    throw RunError(
-        "participant '" + name_ +
-        "': maximum total inline payload bytes per Step exceeded during Step "
-        "at virtual time " + std::to_string(now_ns) + " ns: configured " +
-        std::to_string(limits_.max_step_inline_payload_bytes) + " bytes, "
-        "observed " + std::to_string(inline_bytes) + " bytes");
-
-  for (StepOutput &output : codec_->decode_outputs(outputs))
+  for (StepOutput &output : decode_step_done(done, now_ns))
     engine_.publish(name_, output.channel, output.bytes.data(),
                     output.bytes.size());
+}
+
+std::vector<ProcessParticipant::StepOutput>
+ProcessParticipant::decode_step_done(const json &done, uint64_t now_ns) {
+  try {
+    const std::string op = done.value("op", "");
+    if (op == "fail")
+      throw failure(FailureCategory::Participant,
+                    "participant '" + name_ + "' failed: " +
+                        done.value("reason", "(no reason)"));
+    if (op != "step_done")
+      throw failure(FailureCategory::Protocol,
+                    "participant '" + name_ + "': expected step_done, got " +
+                        done.dump());
+
+    static const json kNoOutputs = json::array();
+    const json &outputs = done.contains("out") ? done.at("out") : kNoOutputs;
+    if (!outputs.is_array())
+      throw failure(FailureCategory::Protocol,
+                    "participant '" + name_ +
+                        "': step_done out must be an array");
+    if (outputs.size() > limits_.max_step_output_messages)
+      throw failure(
+          FailureCategory::Guard,
+          "participant '" + name_ +
+              "': maximum output-Message count per Step exceeded during Step "
+              "at virtual time " + std::to_string(now_ns) + " ns: configured " +
+              std::to_string(limits_.max_step_output_messages) +
+              " Messages, observed " + std::to_string(outputs.size()) +
+              " Messages");
+
+    for (const json &out : outputs) {
+      std::string ch = out.at("ch").get<std::string>();
+      if (std::find(publishes_.begin(), publishes_.end(), ch) ==
+          publishes_.end())
+        throw failure(FailureCategory::Protocol,
+                      "participant '" + name_ +
+                          "' failed: published on undeclared channel '" + ch +
+                          "'");
+    }
+
+    const size_t inline_bytes = codec_->inline_payload_bytes(outputs);
+    if (inline_bytes > limits_.max_step_inline_payload_bytes)
+      throw failure(
+          FailureCategory::Guard,
+          "participant '" + name_ +
+              "': maximum total inline payload bytes per Step exceeded during "
+              "Step at virtual time " + std::to_string(now_ns) +
+              " ns: configured " +
+              std::to_string(limits_.max_step_inline_payload_bytes) +
+              " bytes, observed " + std::to_string(inline_bytes) + " bytes");
+
+    return codec_->decode_outputs(outputs);
+  } catch (const ParticipantRunError &) {
+    throw;
+  } catch (const RunError &e) {
+    // Stale Arena sequences and capacity violations come from the codec.
+    throw failure(FailureCategory::Protocol, e.what());
+  } catch (const json::exception &e) {
+    throw failure(FailureCategory::Protocol,
+                  "participant '" + name_ + "': malformed step_done" +
+                      step_context() + ": " + e.what());
+  }
 }
 
 void ProcessParticipant::send_line(const std::string &line) {
@@ -703,8 +780,7 @@ void ProcessParticipant::send_line(const std::string &line) {
         throw RunError(run_interrupt_message());
       continue;
     }
-    if (n < 0)
-      throw RunError("participant '" + name_ + "': write failed (exited?)");
+    if (n < 0) throw unexpected_exit();
     off += size_t(n);
   }
 }
@@ -731,18 +807,30 @@ std::string ProcessParticipant::request_response(
   return read_line(deadline, step_time);
 }
 
+json ProcessParticipant::exchange(const std::string &line,
+                                  std::optional<uint64_t> step_time) {
+  const std::string response = request_response(line, step_time);
+  try {
+    return json::parse(response);
+  } catch (const json::parse_error &e) {
+    throw failure(FailureCategory::Protocol,
+                  "participant '" + name_ + "': response is not JSON" +
+                      step_context() + ": " + e.what());
+  }
+}
+
 std::string ProcessParticipant::read_line(
     const std::optional<Clock::time_point> &deadline,
     std::optional<uint64_t> step_time) {
-  const auto line_limit = [&](size_t observed) -> RunError {
+  const auto line_limit = [&](size_t observed) -> ParticipantRunError {
     if (!step_time)
-      return RunError(
+      return failure(FailureCategory::Guard,
           "participant '" + name_ +
           "': maximum protocol line length exceeded while waiting for "
           "initialization ready response: configured " +
           std::to_string(limits_.max_protocol_line_bytes) +
           " bytes, observed " + std::to_string(observed) + " bytes");
-    return RunError(
+    return failure(FailureCategory::Guard,
         "participant '" + name_ +
         "': maximum protocol line length exceeded during Step at virtual "
         "time " + std::to_string(*step_time) + " ns: configured " +
@@ -786,11 +874,13 @@ std::string ProcessParticipant::read_line(
     read_buffer_.append(data, length);
   };
 
-  const auto timeout = [&]() -> RunError {
+  const auto timeout = [&]() -> ParticipantRunError {
     if (!step_time)
-      return RunError("participant '" + name_ +
-                      "': timeout waiting for initialization ready response");
-    return RunError(
+      return failure(FailureCategory::Timeout,
+                     "participant '" + name_ +
+                         "': timeout waiting for initialization ready "
+                         "response");
+    return failure(FailureCategory::Timeout,
         "participant '" + name_ +
         "': timeout waiting for step_done response during Step at virtual "
         "time " +
@@ -805,31 +895,26 @@ std::string ProcessParticipant::read_line(
       return line;
     }
 
-    if (!deadline) {
-      char buf[4096];
-      ssize_t n = read(child_stdout_, buf, sizeof buf);
-      if (n < 0 && errno == EINTR) {
-        if (run_interrupted()) throw RunError(run_interrupt_message());
-        continue;
-      }
-      if (n <= 0)
-        throw RunError("participant '" + name_ + "' exited unexpectedly");
-      append_checked(buf, size_t(n));
-      continue;
+    // Without a deadline the runner waits for as long as the child takes.
+    int wait_ms = -1;
+    if (deadline) {
+      const Clock::duration remaining = *deadline - Clock::now();
+      if (remaining <= Clock::duration::zero()) throw timeout();
+      auto remaining_ms =
+          std::chrono::duration_cast<std::chrono::milliseconds>(remaining);
+      if (remaining_ms.count() == 0) remaining_ms = std::chrono::milliseconds(1);
+      const auto max_poll_ms =
+          std::chrono::milliseconds(std::numeric_limits<int>::max());
+      if (remaining_ms > max_poll_ms) remaining_ms = max_poll_ms;
+      wait_ms = static_cast<int>(remaining_ms.count());
     }
 
-    const Clock::duration remaining = *deadline - Clock::now();
-    if (remaining <= Clock::duration::zero()) throw timeout();
-    auto wait_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        remaining);
-    if (wait_ms.count() == 0) wait_ms = std::chrono::milliseconds(1);
-    const auto max_poll_ms = std::chrono::milliseconds(
-        std::numeric_limits<int>::max());
-    if (wait_ms > max_poll_ms) wait_ms = max_poll_ms;
-
-    pollfd descriptor{child_stdout_, POLLIN, 0};
-    const int ready =
-        poll(&descriptor, 1, static_cast<int>(wait_ms.count()));
+    // Both pipes are watched: a child that fills its stderr pipe while the
+    // runner waits only for stdout would block forever. poll ignores the
+    // stderr entry once that pipe is closed (-1).
+    pollfd descriptors[2] = {{child_stdout_, POLLIN, 0},
+                             {child_stderr_, POLLIN, 0}};
+    const int ready = poll(descriptors, 2, wait_ms);
     if (ready < 0 && errno == EINTR) {
       if (run_interrupted()) throw RunError(run_interrupt_message());
       continue;
@@ -837,6 +922,8 @@ std::string ProcessParticipant::read_line(
     if (ready == 0) throw timeout();
     if (ready < 0)
       throw RunError("participant '" + name_ + "': poll failed");
+    if (descriptors[1].revents != 0) drain_stderr();
+    if (descriptors[0].revents == 0) continue;
 
     char buf[4096];
     ssize_t n = read(child_stdout_, buf, sizeof buf);
@@ -844,10 +931,74 @@ std::string ProcessParticipant::read_line(
       if (run_interrupted()) throw RunError(run_interrupt_message());
       continue;
     }
-    if (n <= 0)
-      throw RunError("participant '" + name_ + "' exited unexpectedly");
+    if (n <= 0) throw unexpected_exit();
     append_checked(buf, size_t(n));
   }
+}
+
+void ProcessParticipant::drain_stderr() {
+  while (child_stderr_ >= 0) {
+    char buf[4096];
+    const ssize_t n = read(child_stderr_, buf, sizeof buf);
+    if (n < 0 && errno == EINTR) continue;
+    if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return;
+    if (n <= 0) {
+      close(child_stderr_);
+      child_stderr_ = -1;
+      return;
+    }
+    forward_to_stderr(buf, size_t(n));
+    stderr_tail_.append(buf, size_t(n));
+    if (stderr_tail_.size() > 2 * kStderrTailBytes)
+      stderr_tail_.erase(0, stderr_tail_.size() - kStderrTailBytes);
+  }
+}
+
+void ProcessParticipant::wait_draining_stderr() {
+  if (child_stderr_ < 0) {
+    usleep(10000);
+    return;
+  }
+  pollfd descriptor{child_stderr_, POLLIN, 0};
+  if (poll(&descriptor, 1, 10) > 0) drain_stderr();
+}
+
+ParticipantRunError ProcessParticipant::failure(
+    FailureCategory category, const std::string &message,
+    std::optional<int> wait_status) {
+  drain_stderr();
+  RunFailure facts;
+  facts.category = category;
+  facts.participant = name_;
+  if (wait_status && WIFEXITED(*wait_status))
+    facts.exit_status = WEXITSTATUS(*wait_status);
+  if (wait_status && WIFSIGNALED(*wait_status))
+    facts.signal = WTERMSIG(*wait_status);
+  if (steps_sent_ > 0) {
+    facts.virtual_time_ns = last_step_ns_;
+    facts.step_index = steps_sent_ - 1;
+  }
+  facts.stderr_tail = last_lines(stderr_tail_);
+  return ParticipantRunError(message, std::move(facts));
+}
+
+ParticipantRunError ProcessParticipant::unexpected_exit() {
+  const int wait_status = terminate_child();
+  std::string how = "exited unexpectedly";
+  if (WIFEXITED(wait_status))
+    how += " with status " + std::to_string(WEXITSTATUS(wait_status));
+  else if (WIFSIGNALED(wait_status))
+    how = "was terminated unexpectedly by signal " +
+          std::to_string(WTERMSIG(wait_status));
+  return failure(FailureCategory::Exit,
+                 "participant '" + name_ + "' " + how + step_context(),
+                 wait_status);
+}
+
+std::string ProcessParticipant::step_context() const {
+  if (steps_sent_ == 0) return " during initialization";
+  return " during Step " + std::to_string(steps_sent_ - 1) +
+         " at virtual time " + std::to_string(last_step_ns_) + " ns";
 }
 
 int ProcessParticipant::terminate_child() {
@@ -861,7 +1012,24 @@ int ProcessParticipant::terminate_child() {
   close(child_stdout_);
 
   const int wait_status =
-      ChildProcessGroup(pid_, process_group_id_).terminate();
+      ChildProcessGroup(pid_, process_group_id_, [this] {
+        try {
+          wait_draining_stderr();
+        } catch (...) {
+          // Keeping the tail can fail to allocate; the wait must go on.
+        }
+      }).terminate();
+  // Whatever the child wrote before it exited is forwarded and kept here.
+  // A descendant that escaped the group can hold the pipe open, so this read
+  // does not wait for end of file.
+  try {
+    drain_stderr();
+  } catch (...) {
+  }
+  if (child_stderr_ >= 0) {
+    close(child_stderr_);
+    child_stderr_ = -1;
+  }
   // Release the regions at run end rather than at destruction, so a finished
   // run leaves nothing in the temp directory even while the engine still holds
   // the participant. Both releases are the owning type's destructor.
@@ -874,12 +1042,22 @@ int ProcessParticipant::terminate_child() {
 void ProcessParticipant::shutdown() {
   if (!alive_) return;
   const int wait_status = terminate_child();
+  const std::string when =
+      steps_sent_ == 0 ? " at shutdown"
+                       : " at shutdown after Step " +
+                             std::to_string(steps_sent_ - 1) +
+                             " at virtual time " +
+                             std::to_string(last_step_ns_) + " ns";
   if (WIFEXITED(wait_status) && WEXITSTATUS(wait_status) != 0)
-    throw RunError("participant '" + name_ + "' exited with status " +
-                   std::to_string(WEXITSTATUS(wait_status)));
+    throw failure(FailureCategory::Exit,
+                  "participant '" + name_ + "' exited with status " +
+                      std::to_string(WEXITSTATUS(wait_status)) + when,
+                  wait_status);
   if (WIFSIGNALED(wait_status))
-    throw RunError("participant '" + name_ + "' terminated by signal " +
-                   std::to_string(WTERMSIG(wait_status)));
+    throw failure(FailureCategory::Exit,
+                  "participant '" + name_ + "' terminated by signal " +
+                      std::to_string(WTERMSIG(wait_status)) + when,
+                  wait_status);
 }
 
 }  // namespace sil

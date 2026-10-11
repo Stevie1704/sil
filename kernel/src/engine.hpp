@@ -10,8 +10,10 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "failure_report.hpp"
 #include "manifest.hpp"
 #include "virtual_time.hpp"
 
@@ -20,6 +22,15 @@ namespace sil {
 // Failure while executing an otherwise valid manifest. Runner exits 1.
 struct RunError : std::runtime_error {
   using std::runtime_error::runtime_error;
+};
+
+// A Run failure that knows which Participant failed, how and when. The runner
+// writes these facts to the failure report; the message stays the diagnostic.
+struct ParticipantRunError : RunError {
+  ParticipantRunError(const std::string &message, RunFailure failure)
+      : RunError(message), failure(std::move(failure)) {}
+
+  RunFailure failure;
 };
 
 // Operational guards supplied at the Run boundary. They are deliberately
@@ -201,6 +212,10 @@ class Engine {
   bool in_setup_ = false;
   bool in_task_ = false;
   std::string failure_;
+  std::string failure_owner_;
+  uint64_t failure_ns_ = 0;
+
+  [[noreturn]] void throw_failure() const;
 };
 
 }  // namespace sil

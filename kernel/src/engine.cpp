@@ -175,8 +175,18 @@ bool Engine::take(SubscriberRoute &route, PendingMessage &out) {
 }
 
 void Engine::fail(const std::string &owner, const std::string &reason) {
-  if (failure_.empty())
-    failure_ = "participant '" + owner + "' failed: " + reason;
+  if (!failure_.empty()) return;
+  failure_ = "participant '" + owner + "' failed: " + reason;
+  failure_owner_ = owner;
+  failure_ns_ = now_ns_;
+}
+
+void Engine::throw_failure() const {
+  RunFailure failure;
+  failure.category = FailureCategory::Participant;
+  failure.participant = failure_owner_;
+  failure.virtual_time_ns = failure_ns_;
+  throw ParticipantRunError(failure_, std::move(failure));
 }
 
 void Engine::run() {
@@ -221,7 +231,7 @@ void Engine::run() {
     for (const Due &d : due) {
       if (d.replayer) {
         d.replayer->publish_due(slot);
-        if (!failure_.empty()) throw RunError(failure_);
+        if (!failure_.empty()) throw_failure();
         continue;
       }
       Task *t = d.task;
@@ -229,7 +239,7 @@ void Engine::run() {
       t->fn(slot);
       in_task_ = false;
       if (run_interrupted()) throw RunError(run_interrupt_message());
-      if (!failure_.empty()) throw RunError(failure_);
+      if (!failure_.empty()) throw_failure();
       // A next activation the clock cannot represent, or one at or beyond the
       // half-open run duration, ends this task and nothing else. `next_ns`
       // stays at the activation just executed, so slot selection never sees

@@ -10,6 +10,8 @@
 #include <utility>
 #include <vector>
 
+#include <nlohmann/json.hpp>
+
 #include "sil/clock_region.h"
 
 #include "channel_arenas.hpp"
@@ -61,6 +63,26 @@ class ProcessParticipant {
   std::string read_line(
       const std::optional<Clock::time_point> &deadline,
       std::optional<uint64_t> step_time);
+  // Sends one request and parses its response line. A line that is not JSON
+  // is a Step protocol violation.
+  nlohmann::json exchange(const std::string &line,
+                          std::optional<uint64_t> step_time);
+
+  // Forwards what the child wrote to stderr since the last call to the
+  // runner's stderr, and keeps its tail for the failure report. Never blocks.
+  void drain_stderr();
+  // Waits up to 10 ms for child stderr, so the runner can drain it while it
+  // waits for the child to exit.
+  void wait_draining_stderr();
+  // The facts of a failure of this Participant, as of the last Step sent.
+  ParticipantRunError failure(FailureCategory category,
+                              const std::string &message,
+                              std::optional<int> wait_status = std::nullopt);
+  // Reaps a child that closed its end of the protocol, and describes how it
+  // ended. Every "exited unexpectedly" diagnostic is made here.
+  ParticipantRunError unexpected_exit();
+  // " during Step <i> at virtual time <t> ns", or " during initialization".
+  std::string step_context() const;
 
   Engine &engine_;
   std::string name_;
@@ -70,6 +92,13 @@ class ProcessParticipant {
   std::vector<std::string> publishes_;
   int child_stdin_ = -1;
   int child_stdout_ = -1;
+  // The child's stderr, piped through the runner so its tail can go into the
+  // failure report. -1 once the child has closed it.
+  int child_stderr_ = -1;
+  std::string stderr_tail_;
+  // Steps sent so far, and the virtual time of the last one.
+  uint64_t steps_sent_ = 0;
+  uint64_t last_step_ns_ = 0;
   pid_t pid_ = -1;
   // The child sets its own process group before it can exec or spawn any
   // descendants. The group ID is therefore the child's PID, and never the
@@ -117,6 +146,12 @@ class ProcessParticipant {
     std::string channel;
     std::vector<uint8_t> bytes;
   };
+
+  // Checks a step_done line against the Step protocol and the size guards,
+  // and decodes its outputs. Publishing them is the caller's job, so a route
+  // capacity failure is never reported as this Participant's protocol fault.
+  std::vector<StepOutput> decode_step_done(const nlohmann::json &done,
+                                           uint64_t now_ns);
 
   // Private step-scoped codec seam (issue #41), with inline and Arena as
   // adapters behind it. `encode_inputs` receives the complete input set
