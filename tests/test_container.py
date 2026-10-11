@@ -331,3 +331,12 @@ def test_wedged_process_participant_cannot_hang_the_container(tmp_path: Path):
     assert run.returncode == 1
     assert "wedged" in run.stderr
     assert "timeout" in run.stderr
+
+
+def test_production_image_prints_the_docs_of_its_version(tmp_path: Path):
+    """The image carries the user docs, offline (issue #267)."""
+    proc = _container(PRODUCTION_IMAGE, tmp_path, "docs", "agent-guide",
+                      entrypoint="sil")
+
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.startswith("# Agent guide\n")

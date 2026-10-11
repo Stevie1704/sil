@@ -59,7 +59,11 @@ class Group:
     commands: dict[str, ModuleCommand | NativeCommand | Group]
 
 
-ROOT = Group("SiL: deterministic Runs of virtual ECUs", {
+ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
+             "The docs of this version are installed: 'sil docs' lists the topics,\n"
+             "and 'sil docs agent-guide' is the entry point for a coding agent.", {
+    "docs": ModuleCommand("sil.docs",
+                          "print the docs of this version, offline (start here)"),
     "check": ModuleCommand("sil.check",
                            "run a Manifest twice and fail on any Recording difference"),
     "compare": ModuleCommand("sil.compare",
