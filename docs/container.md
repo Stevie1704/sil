@@ -57,6 +57,14 @@ COPY --chown=10001:10001 participants/ /opt/participants/
 USER 10001:10001
 ```
 
+The image also contains the user docs of its version. Read them without a
+checkout or network access:
+
+```sh
+docker run --rm --network none --entrypoint sil sil:local docs
+docker run --rm --network none --entrypoint sil sil:local docs agent-guide
+```
+
 The default image user is non-root. Callers may still select their host UID and
 GID as above; the installed runner and Python Participant entry points do not
 depend on a passwd entry or a writable home directory.

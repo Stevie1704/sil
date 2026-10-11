@@ -22,6 +22,9 @@ WORKDIR /src
 # Installed SiL, as a consumer installs it: the native prefix and the wheel
 # in its own environment, as proofs/adas-equivalence installs them.
 COPY CMakeLists.txt LICENSE NOTICE THIRD-PARTY-NOTICES.md ./
+# stamp-python packages these user docs into the wheel for `sil docs`.
+COPY GLOSSARY.md SUPPORT.md ./
+COPY docs docs
 COPY include include
 COPY kernel kernel
 COPY shim shim

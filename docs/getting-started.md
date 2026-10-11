@@ -41,11 +41,16 @@ gate.
 
 The production runner, virtual Clock shim, and public Native participant
 headers can be staged independently of the build tree. The Python wheel
-contains the `sil` package, the ACC reference Run, and its command-line entry
-points. Build the two parts from the repository:
+contains the `sil` package, the ACC reference Run, the `sil` command, and the
+user docs that `sil docs` prints. Build the two parts from the repository.
+`stamp-python` copies the Python tree and puts the docs and the release
+metadata into it, as the release build does:
 
 ```sh
-uv build --wheel --out-dir dist python
+python3 tools/release.py stamp-python --output-dir build/python-release \
+    --version "$(python3 tools/release.py project-version)" \
+    --source-revision "$(git rev-parse HEAD)"
+uv build --wheel --out-dir dist build/python-release
 wheel=$(find dist -maxdepth 1 -name 'sil-*.whl' -print -quit)
 uv venv .venv-staged
 uv pip install -p .venv-staged/bin/python "$wheel"

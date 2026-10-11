@@ -103,10 +103,14 @@ def uv_environment() -> dict[str, str]:
 
 @pytest.fixture(scope="session")
 def wheel_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The wheel as a release builds it: from the stamped tree, with the docs."""
+    release = load_module("release", ROOT / "tools" / "release.py")
+    stamped = tmp_path_factory.mktemp("sil-stamped") / "python"
+    release.stamp_python(ROOT, release.project_version(ROOT), "test-revision",
+                         stamped)
     wheel_dir = tmp_path_factory.mktemp("sil-wheel")
     subprocess.run(
-        ["uv", "build", "--wheel", "--out-dir", str(wheel_dir),
-         str(ROOT / "python")],
+        ["uv", "build", "--wheel", "--out-dir", str(wheel_dir), str(stamped)],
         check=True, env=uv_environment(),
         capture_output=True,
         text=True,

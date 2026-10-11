@@ -5,8 +5,13 @@ Commands in the guides run from the repository root unless stated otherwise.
 
 ## User guides
 
+An installed SiL contains the user guides of its version: `sil docs` lists
+them, and the [agent guide](agent-guide.md) is the entry point for a coding
+agent.
+
 | Task | Guide |
 | --- | --- |
+| Onboard a system under test as a coding agent | [Agent guide](agent-guide.md) |
 | Run the ACC example or install a staged release | [Examples and installation](getting-started.md) |
 | Configure Run guards, the Clock shim, and Channel Transport | [Running simulations](running.md) |
 | Import and inspect an FMU, bind variables, or connect network terminals | [FMI importer](fmi.md) |

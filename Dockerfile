@@ -31,6 +31,9 @@ RUN rm -f /etc/apt/sources.list.d/*.sources \
 
 WORKDIR /src
 COPY CMakeLists.txt LICENSE NOTICE THIRD-PARTY-NOTICES.md ./
+# stamp-python packages these user docs into the wheel for `sil docs`.
+COPY GLOSSARY.md SUPPORT.md ./
+COPY docs docs
 COPY include include
 COPY kernel kernel
 COPY shim shim

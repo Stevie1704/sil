@@ -19,6 +19,9 @@ WORKDIR /src
 # installed beside sil-run so it finds the same clock shim. The measurement
 # runs with no checkout on any import path.
 COPY CMakeLists.txt LICENSE NOTICE THIRD-PARTY-NOTICES.md ./
+# stamp-python packages these user docs into the wheel for `sil docs`.
+COPY GLOSSARY.md SUPPORT.md ./
+COPY docs docs
 COPY include include
 COPY kernel kernel
 COPY shim shim

@@ -13,6 +13,7 @@ import argparse
 import gzip
 import hashlib
 import json
+import posixpath
 import re
 import shutil
 import subprocess
@@ -85,6 +86,73 @@ def write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
 
 
+# The user docs `sil docs` serves: topic -> (source in the checkout, summary).
+# Contributor material (ADRs, proposals, research, releasing) stays out.
+PACKAGED_DOCS = {
+    "agent-guide": ("docs/agent-guide.md",
+                    "start here: onboard a system under test with SiL, step by step"),
+    "getting-started": ("docs/getting-started.md",
+                        "run the ACC example or install a staged release"),
+    "running": ("docs/running.md",
+                "configure Run guards, the Clock shim, and Channel Transport"),
+    "step-protocol": ("docs/step-protocol.md",
+                      "the JSON-lines protocol of a Process participant"),
+    "fmi": ("docs/fmi.md",
+            "import and inspect an FMU, bind variables, connect network terminals"),
+    "recorded-input": ("docs/recorded-input.md",
+                       "convert CSV data and replay it into an FMU"),
+    "fmu-coupling": ("docs/fmu-coupling.md",
+                     "couple FMUs through Channels or replace one with replay"),
+    "library": ("docs/library.md", "bring an existing C library into a Run"),
+    "adas-reference": ("docs/adas-reference.md",
+                       "run a C application through the Native ABI and compare it"),
+    "replay": ("docs/replay.md",
+               "select a replay window, warm up a target, replay long Recordings"),
+    "comparison": ("docs/comparison.md",
+                   "compare outputs against a reference trajectory"),
+    "regression-bundles": ("docs/regression-bundles.md",
+                           "seal and run regression cases and matrices"),
+    "container": ("docs/container.md", "run one Manifest in a Linux container"),
+    "glossary": ("GLOSSARY.md", "the domain terms SiL uses"),
+    "support": ("SUPPORT.md",
+                "supported machine class, compatibility policy, determinism scope"),
+}
+PACKAGED_TOPICS = {source: topic for topic, (source, _) in PACKAGED_DOCS.items()}
+MARKDOWN_LINK = re.compile(r"\]\(([^)\s]+)\)")
+URL_SCHEME = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:")
+
+
+def packaged_link(root: Path, source: str, target: str, version: str) -> str:
+    """Point a link of a packaged doc at a packaged doc or at the release."""
+    if target.startswith("#") or URL_SCHEME.match(target):
+        return target
+    path, hash_sign, fragment = target.partition("#")
+    linked = posixpath.normpath(posixpath.join(posixpath.dirname(source), path))
+    if linked in PACKAGED_TOPICS:
+        return f"{PACKAGED_TOPICS[linked]}.md{hash_sign}{fragment}"
+    kind = "tree" if (root / linked).is_dir() else "blob"
+    slash = "/" if path.endswith("/") else ""
+    return f"{REPOSITORY}/{kind}/v{version}/{linked}{slash}{hash_sign}{fragment}"
+
+
+def stamp_docs(root: Path, version: str, output_dir: Path) -> None:
+    """Copy the user docs and their topic index into the sil package.
+
+    A link to another packaged doc stays relative; a link to anything else
+    points at the release tag, so it shows the files of this version.
+    """
+    docs = output_dir / "src" / "sil" / "_docs"
+    docs.mkdir(parents=True)
+    for topic, (source, _) in PACKAGED_DOCS.items():
+        text = MARKDOWN_LINK.sub(
+            lambda link: f"]({packaged_link(root, source, link[1], version)})",
+            (root / source).read_text())
+        (docs / f"{topic}.md").write_text(text)
+    # Not write_json: `sil docs` lists the topics in this order.
+    index = {topic: summary for topic, (_, summary) in PACKAGED_DOCS.items()}
+    (docs / "topics.json").write_text(json.dumps(index, indent=2) + "\n")
+
+
 def stamp_python(
     root: Path, version: str, revision: str, output_dir: Path
 ) -> Path:
@@ -92,6 +160,7 @@ def stamp_python(
     version = checked_version(root, version)
     source_dir = root / "python"
     shutil.copytree(source_dir, output_dir)
+    stamp_docs(root, version, output_dir)
     destination = output_dir / "src" / "sil" / "release.json"
     write_json(destination, source_metadata(version, revision))
     return destination
@@ -149,6 +218,9 @@ def _wheel_release(wheel: Path) -> tuple[dict[str, str], str]:
             raise fail(f"{context}: expected one dist-info/METADATA")
         if "sil/release.json" not in names:
             raise fail(f"{context}: missing sil/release.json")
+        docs = {"sil/_docs/topics.json", *(f"sil/_docs/{topic}.md" for topic in PACKAGED_DOCS)}
+        if not docs <= names:
+            raise fail(f"{context}: missing packaged docs {sorted(docs - names)}")
         message, version = _metadata_message(
             archive.read(metadata_names[0]).decode(), context
         )
