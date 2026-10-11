@@ -68,6 +68,7 @@ Use exit codes, not message text. Message text can change in any release.
 | `sil recording csv --receipt`, `sil recording window --receipt` | a JSON receipt |
 | `sil fmi couple --receipt`, `sil fmi replay --receipt`, `sil fmi substitute --receipt` | a JSON receipt |
 | `sil run` | the Recording and its `<recording>.provenance.json` side-car |
+| `sil run`, on a failed Run | the `<recording>.failure.json` report: which Participant failed, how, at which Step and virtual time, and its stderr tail (`sil docs running`) |
 | every command | the exit code: `sil docs running` lists those of a Run |
 
 `sil docs support` says which interfaces and report versions are stable, and

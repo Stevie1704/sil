@@ -36,6 +36,53 @@ One run = `sil-run manifest.json -o out.mcap`:
 Exit codes: `0` ok, `1` run/test failure, `2` Manifest error, `3` determinism
 violation (sil check).
 
+## Failure report
+
+A Run that ends with exit `1` or `2` writes a failure report next to its
+Recording: `<recording>.failure.json`. With `--no-recording`, the report goes
+next to the default `out.mcap` location, like the provenance side-car. A
+successful Run writes no report, and it removes a report that an earlier
+failed Run left at the same path. The report adds facts to the diagnostic
+line. It does not change the exit code.
+
+```json
+{"category":"exit","exit_code":1,"exit_status":3,
+ "message":"participant 'controller' exited unexpectedly with status 3 during Step 3 at virtual time 30000000 ns",
+ "participant":"controller","schema_version":1,"signal":null,
+ "stderr_tail":["Traceback (most recent call last):","..."],
+ "step_index":3,"virtual_time_ns":30000000}
+```
+
+| Field | Value |
+| --- | --- |
+| `schema_version` | `1` |
+| `exit_code` | the exit code of the Run |
+| `category` | what went wrong, from the table below |
+| `message` | the first diagnostic line, without the `sil-run: ` prefix |
+| `participant` | the name of the Participant that failed, or `null` |
+| `exit_status` | the exit status of a Process participant, or `null` |
+| `signal` | the signal that ended a Process participant, or `null` |
+| `virtual_time_ns` | the virtual time of the last Step sent to the Participant, or `null` before its first Step |
+| `step_index` | the 0-based index of that Step among the Participant's Steps, or `null` |
+| `stderr_tail` | the last 20 lines that a Process participant wrote to stderr |
+
+| `category` | Meaning |
+| --- | --- |
+| `manifest` | the Run was rejected before any Participant was stepped (exit `2`) |
+| `spawn` | the runner could not start a Process participant |
+| `protocol` | a Participant broke the Step protocol, for example a wrong `op` or a line that is not JSON |
+| `timeout` | a Participant missed the `--participant-timeout-ms` deadline |
+| `exit` | a Process participant exited or was killed by a signal before the runner shut it down, or exited non-zero at shutdown |
+| `guard` | a Participant exceeded a Step-protocol size guard |
+| `participant` | a Participant reported its own failure (`fail`, or a failed test assertion) |
+| `interrupted` | `sil-run` received a termination signal |
+| `run` | any other Run failure, for example a full subscriber route |
+
+The runner reads the stderr of each Process participant through a pipe. It
+writes what it reads to its own stderr unchanged, and keeps only the tail for
+the report. The child's stderr is therefore a pipe, not a terminal. Reading it
+does not change the Step protocol, the Clock shim or the Recording.
+
 For a bounded CI wait, add the optional run-boundary guard:
 
 ```sh
