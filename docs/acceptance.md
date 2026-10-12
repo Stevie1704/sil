@@ -236,3 +236,8 @@ too little evidence. The agent uses only the installed commands and
 follow-up bundles. `verify.py` checks every value, verdict and experiment that
 a report quotes. The ordinary test suite checks the cases, the driver, the
 checks and the retained real-agent trial offline. It calls no model.
+
+[proofs/recording-query](../proofs/recording-query/README.md) checks the bounded
+query interface against that retained ADAS failure and an independent binary
+scan. Long fixtures preserve a one-Message event missed by downsampling and
+retain peak RSS and output sizes for different chunk layouts.

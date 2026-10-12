@@ -69,7 +69,10 @@ Do the steps in this order. Each step names the topic to read.
 5. **Check.** `sil recording channels out.mcap` lists the Channels of the
    Recording, and `sil recording show out.mcap --channel NAME --from T --to T`
    prints what a Channel carried in a virtual-time interval, decoded with its
-   Schema: read `sil docs running`. `sil check manifest.json` runs the
+   Schema: read `sil docs running`. `sil recording query` projects fields,
+   summarizes numeric values, or locates a comparison or threshold crossing
+   with bounded output and an explicit completion report: read
+   `sil docs recording-queries`. `sil check manifest.json` runs the
    Manifest twice and fails on any Recording difference. It reports the first
    difference, and `--keep DIR` keeps both Recordings. `sil compare`
    compares a Recording with a reference under a contract: read `sil docs
@@ -94,6 +97,14 @@ use only the commands of this guide.
    and the inputs near that time with `sil recording show --channel NAME
    --from T --to T --json`. Its `t_ns` is the publication time. A Sample time
    is a payload field: do not mix the two.
+   For long Recordings, use `sil recording query --channel NAME --field FIELD
+   --where FIELD cross-up LIMIT --max-results 1` to locate a threshold crossing,
+   then project nearby inputs in a half-open publication-time window. Check
+   `scan.complete` and `scan.matches`, since empty returned results can also
+   mean truncated output or an incomplete scan. Summaries are not a substitute
+   for exact predicate scans. The versioned query report supplies the source
+   digest and Message index needed to cite equal-time evidence; read
+   `sil docs recording-queries` for its window and crossing context rules.
 3. **Know what the evidence covers.** A failed Run can leave a partial
    Recording: `sil recording channels` gives the last time of each Channel.
    Make no statement about a time after it. When a Recording, a report or a
@@ -129,6 +140,7 @@ Use exit codes, not message text. Message text can change in any release.
 | `sil compare --json` | the `sil_comparison_report` report |
 | `sil recording channels --json` | the `sil_recording_channels` report |
 | `sil recording show --json` | one `sil_recording_show` JSON object per line and per Message |
+| `sil recording query` | a bounded `sil_recording_query` version 1 report, including scan/output completion and source/evidence identity |
 | `sil recording csv --receipt`, `sil recording window --receipt` | a JSON receipt |
 | `sil fmi couple --receipt`, `sil fmi replay --receipt`, `sil fmi substitute --receipt` | a JSON receipt |
 | `sil run` | the Recording and its `<recording>.provenance.json` side-car |

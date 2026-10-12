@@ -106,12 +106,46 @@ def read_metadata(path: str | Path) -> list[tuple[str, dict[str, str]]]:
 def _read_mcap(path: Path, channels: Collection[str] | None,
                start_ns: int | None, end_ns: int | None,
                ) -> Iterator[tuple[str, int, bytes]]:
-    from mcap.reader import make_reader
+    from mcap.reader import NonSeekingReader, make_reader
+    from mcap.records import Chunk, Message
+    from mcap.stream_reader import StreamReader, breakup_chunk
 
     with open(path, "rb") as f:
-        # Stored order is Publish order; log-time order could reorder the
-        # Messages of one timestamp.
-        for _, channel, message in make_reader(f).iter_messages(
-                topics=None if channels is None else list(channels),
-                start_time=start_ns, end_time=end_ns, log_time_order=False):
-            yield channel.topic, message.log_time, message.data
+        summary = make_reader(f).get_summary()
+        if summary is None or not summary.chunk_indexes:
+            f.seek(0)
+            for _, channel, message in NonSeekingReader(f).iter_messages(
+                    topics=channels, start_time=start_ns, end_time=end_ns,
+                    log_time_order=False):
+                yield channel.topic, message.log_time, message.data
+            return
+
+        # MCAP's seeking stored-order iterator queues all chunks before their
+        # Messages, retaining every selected payload before its first yield.
+        # Decode one indexed chunk at a time instead. Physical file order is
+        # Publish order; timestamps must not reorder equal-time Messages.
+        selected = None if channels is None else set(channels)
+        for index in sorted(summary.chunk_indexes, key=lambda c: c.chunk_start_offset):
+            if start_ns is not None and index.message_end_time < start_ns:
+                continue
+            if end_ns is not None and index.message_start_time >= end_ns:
+                continue
+            if selected is not None and index.message_index_offsets and not any(
+                    summary.channels[id_].topic in selected
+                    for id_ in index.message_index_offsets):
+                continue
+            f.seek(index.chunk_start_offset)
+            chunk = next(StreamReader(f, skip_magic=True, emit_chunks=True).records)
+            if not isinstance(chunk, Chunk):
+                raise ValueError("Recording chunk index does not point to a Chunk")
+            for record in breakup_chunk(chunk):
+                if not isinstance(record, Message):
+                    continue
+                channel = summary.channels[record.channel_id]
+                if selected is not None and channel.topic not in selected:
+                    continue
+                if start_ns is not None and record.log_time < start_ns:
+                    continue
+                if end_ns is not None and record.log_time >= end_ns:
+                    continue
+                yield channel.topic, record.log_time, record.data

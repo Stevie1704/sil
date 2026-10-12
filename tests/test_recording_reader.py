@@ -34,3 +34,52 @@ def test_mcap_extension_reads_recorded_messages(sil_run, tmp_path):
     records = list(read_records(out))
     assert [t for _, t, _ in records] == [i * 10_000_000 for i in range(3)]
     assert all(topic == "ticks" for topic, _, _ in records)
+
+
+def test_stored_order_reader_does_not_buffer_all_messages_before_first_yield(tmp_path):
+    """Read-side resource contract: one small chunk, not all selected payloads."""
+    import tracemalloc
+
+    from mcap.writer import CompressionType, Writer
+
+    path = tmp_path / "long.mcap"
+    with path.open("wb") as stream:
+        writer = Writer(stream, compression=CompressionType.NONE, chunk_size=65536)
+        writer.start()
+        channel = writer.register_channel("signal", "raw", 0)
+        for i in range(30000):
+            writer.add_message(channel, log_time=i, publish_time=i, data=b"x" * 128)
+        writer.finish()
+    records = read_records(path, channels=["signal"])
+    tracemalloc.start()
+    try:
+        assert next(records) == ("signal", 0, b"x" * 128)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+        records.close()
+    assert peak < 4 * 1024 * 1024, f"first Message allocated {peak} bytes"
+
+
+@pytest.mark.parametrize("chunking,indexed", [(True, True), (True, False), (False, False)])
+def test_reader_preserves_stored_order_and_filters_across_chunk_boundaries(
+        tmp_path, chunking, indexed):
+    from mcap.writer import CompressionType, IndexType, Writer
+
+    path = tmp_path / "order.mcap"
+    expected = [("left", 20, b"a"), ("right", 10, b"b"),
+                ("left", 10, b"c"), ("left", 10, b"d"), ("left", 30, b"e")]
+    with path.open("wb") as stream:
+        writer = Writer(stream, compression=CompressionType.NONE, chunk_size=1,
+                        use_chunking=chunking,
+                        index_types=IndexType.ALL if indexed else IndexType.NONE)
+        writer.start()
+        channels = {name: writer.register_channel(name, "raw", 0)
+                    for name in ("left", "right")}
+        for name, t, data in expected:
+            writer.add_message(channels[name], log_time=t, publish_time=t, data=data)
+        writer.finish()
+    assert list(read_records(path)) == expected
+    assert list(read_records(path, channels=["left"], start_ns=10, end_ns=20)) == [
+        ("left", 10, b"c"), ("left", 10, b"d")]
+    assert list(read_records(path, channels=[])) == []
