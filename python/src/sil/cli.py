@@ -112,6 +112,8 @@ ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
                                   "list the Channels of a Recording", ("channels",)),
         "show": ModuleCommand("sil.recording_view",
                               "print the decoded Messages of a Recording", ("show",)),
+        "query": ModuleCommand("sil.recording_query",
+                               "bounded fields, summaries and predicate search"),
         "csv": ModuleCommand("sil.csv_recording",
                              "convert CSV signals into a Recording"),
         "window": ModuleCommand("sil.replay_window",

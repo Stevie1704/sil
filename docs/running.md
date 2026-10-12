@@ -318,12 +318,18 @@ is raised. [docs/step-protocol.md](step-protocol.md) has the detail.
 ## Reading a Recording
 
 A Recording stores the Schema of each Channel, so it can be decoded without
-its Manifest. Two read-only commands do that:
+its Manifest. These read-only commands do that:
 
 | Command | Effect |
 | --- | --- |
 | `sil recording channels out.mcap [--json]` | list each Channel with its Schema name, Message count and earliest and latest virtual time, and the Manifest hash |
 | `sil recording show out.mcap [--channel NAME]... [--from T] [--to T] [--limit N] [--json]` | print the decoded Messages in stored order |
+| `sil recording query out.mcap --channel NAME --field FIELD... [--summary] [--where FIELD OP JSON_NUMBER]` | bounded projection, numeric summaries and exact predicate search with a completion report |
+
+The [bounded query contract](recording-queries.md) documents field/array
+selection, predicate and crossing semantics, byte and scan budgets, evidence
+locators, source hashing, `sil_recording_query` version 1 and exit codes
+`0` complete, `2` refused, `3` incomplete, `4` complete scan with limited output.
 
 ```sh
 sil recording show out.mcap --channel acc.Command --from 2000000000 --to 3000000000

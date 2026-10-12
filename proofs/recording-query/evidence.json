@@ -1,0 +1,954 @@
+{
+  "sil_recording_query_evidence": 1,
+  "machine": {
+    "os": "Darwin",
+    "architecture": "arm64",
+    "python": "3.14.5",
+    "mcap": "1.4.0"
+  },
+  "implementation": {
+    "python/src/sil/recording.py": "e26e8669e0b5ed15b98688085430f53dc766472a2bdc05fc46e5f67a06d586b6",
+    "python/src/sil/recording_query.py": "f4d2c4915c5cd414c230ec5436bddbb11e8d31570dee7e13c0201d8467ae649a",
+    "proofs/recording-query/verify.py": "5fa1f2859dfa7d5b9b1dd9e2ba262ce476bdcfd0805a68190f442cd0ca470f2f",
+    "proofs/adas-cost/run_measured.c": "c39c1fc34de23e825c9923b38940691b62266359d3a9969b6f1214585c412841"
+  },
+  "seed": {
+    "path": "proofs/agent-investigation/evidence/trial-1/ci/cases/delay-regression/runs/delay-regression/run-1.mcap",
+    "sha256": "02e4b4225de5dd20e51ddd06e9651b885e07182da36cf5d00c1fb236d708fff2",
+    "queries": {
+      "crossing": {
+        "sil_recording_query": 1,
+        "source": {
+          "sha256": "02e4b4225de5dd20e51ddd06e9651b885e07182da36cf5d00c1fb236d708fff2",
+          "size_bytes": 10079
+        },
+        "query": {
+          "channel": "cadence.command",
+          "fields": [
+            "radar_age_ns",
+            "mode"
+          ],
+          "start_ns": null,
+          "end_ns": null,
+          "mode": "rows",
+          "where": {
+            "field": "radar_age_ns",
+            "operator": "cross-up",
+            "value": 40000000
+          }
+        },
+        "status": "complete",
+        "results": [
+          {
+            "channel": "cadence.command",
+            "t_ns": 90000000,
+            "message_index": 9,
+            "fields": {
+              "radar_age_ns": 50000000,
+              "mode": 2
+            },
+            "match": {
+              "channel": "cadence.command",
+              "t_ns": 90000000,
+              "message_index": 9,
+              "field": "radar_age_ns",
+              "value": 50000000
+            },
+            "previous": {
+              "channel": "cadence.command",
+              "t_ns": 80000000,
+              "message_index": 8,
+              "field": "radar_age_ns",
+              "value": 40000000
+            }
+          }
+        ],
+        "scan": {
+          "complete": true,
+          "messages": 20,
+          "matches": 1,
+          "predicate_nonfinite": 0,
+          "first_t_ns": 0,
+          "last_t_ns": 190000000,
+          "last_message_index": 19,
+          "inspected_message_range": [
+            0,
+            20
+          ],
+          "first_message": {
+            "channel": "cadence.command",
+            "t_ns": 0,
+            "message_index": 0
+          },
+          "last_message": {
+            "channel": "cadence.command",
+            "t_ns": 190000000,
+            "message_index": 19
+          },
+          "next_message": null,
+          "lookahead_messages": 0
+        },
+        "query_sha256": "81fd76f51a53d5a3cf9d3e6db28159afb46c34448f24e9ec82afc7da568a1ff3",
+        "limits": {
+          "max_results": 100,
+          "max_bytes": 65536,
+          "max_messages": null
+        },
+        "output": {
+          "complete": true,
+          "returned": 1,
+          "omitted": 0,
+          "first_omitted": null,
+          "serialized_bytes": 1423
+        },
+        "continuation": null,
+        "crossing_context": {
+          "outside_window": false,
+          "first_message": "no_crossing",
+          "nonfinite": "breaks_adjacency"
+        }
+      },
+      "summary": {
+        "sil_recording_query": 1,
+        "source": {
+          "sha256": "02e4b4225de5dd20e51ddd06e9651b885e07182da36cf5d00c1fb236d708fff2",
+          "size_bytes": 10079
+        },
+        "query": {
+          "channel": "cadence.command",
+          "fields": [
+            "radar_age_ns"
+          ],
+          "start_ns": null,
+          "end_ns": null,
+          "mode": "summary",
+          "where": null
+        },
+        "status": "complete",
+        "results": [
+          {
+            "channel": "cadence.command",
+            "field": "radar_age_ns",
+            "count": 20,
+            "finite_count": 20,
+            "nonfinite_count": 0,
+            "min": {
+              "channel": "cadence.command",
+              "t_ns": 0,
+              "message_index": 0,
+              "field": "radar_age_ns",
+              "value": 0
+            },
+            "max": {
+              "channel": "cadence.command",
+              "t_ns": 100000000,
+              "message_index": 10,
+              "field": "radar_age_ns",
+              "value": 60000000
+            }
+          }
+        ],
+        "scan": {
+          "complete": true,
+          "messages": 20,
+          "matches": 20,
+          "predicate_nonfinite": 0,
+          "first_t_ns": 0,
+          "last_t_ns": 190000000,
+          "last_message_index": 19,
+          "inspected_message_range": [
+            0,
+            20
+          ],
+          "first_message": {
+            "channel": "cadence.command",
+            "t_ns": 0,
+            "message_index": 0
+          },
+          "last_message": {
+            "channel": "cadence.command",
+            "t_ns": 190000000,
+            "message_index": 19
+          },
+          "next_message": null,
+          "lookahead_messages": 0
+        },
+        "query_sha256": "5defba779cc870c866d0866727cc677cbf707e678c58b17053aa3ae2b87b24e6",
+        "limits": {
+          "max_results": 100,
+          "max_bytes": 65536,
+          "max_messages": null
+        },
+        "output": {
+          "complete": true,
+          "returned": 1,
+          "omitted": 0,
+          "first_omitted": null,
+          "serialized_bytes": 1255
+        },
+        "continuation": null,
+        "crossing_context": null
+      },
+      "nearby_inputs": {
+        "sil_recording_query": 1,
+        "source": {
+          "sha256": "02e4b4225de5dd20e51ddd06e9651b885e07182da36cf5d00c1fb236d708fff2",
+          "size_bytes": 10079
+        },
+        "query": {
+          "channel": "cadence.radar",
+          "fields": [
+            "sample_time_ns",
+            "object_id[0]",
+            "x_m[0]"
+          ],
+          "start_ns": 80000000,
+          "end_ns": 120000000,
+          "mode": "rows",
+          "where": null
+        },
+        "status": "complete",
+        "results": [
+          {
+            "channel": "cadence.radar",
+            "t_ns": 110000000,
+            "message_index": 0,
+            "fields": {
+              "sample_time_ns": 60000000,
+              "object_id[0]": 30,
+              "x_m[0]": 50.0
+            }
+          },
+          {
+            "channel": "cadence.radar",
+            "t_ns": 100000000,
+            "message_index": 1,
+            "fields": {
+              "sample_time_ns": 100000000,
+              "object_id[0]": 30,
+              "x_m[0]": 50.0
+            }
+          }
+        ],
+        "scan": {
+          "complete": true,
+          "messages": 2,
+          "matches": 2,
+          "predicate_nonfinite": 0,
+          "first_t_ns": 100000000,
+          "last_t_ns": 110000000,
+          "last_message_index": 1,
+          "inspected_message_range": [
+            0,
+            2
+          ],
+          "first_message": {
+            "channel": "cadence.radar",
+            "t_ns": 110000000,
+            "message_index": 0
+          },
+          "last_message": {
+            "channel": "cadence.radar",
+            "t_ns": 100000000,
+            "message_index": 1
+          },
+          "next_message": null,
+          "lookahead_messages": 0
+        },
+        "query_sha256": "5306df7967050e83c7835965f5c710882e251c8f6364f44d4b009b9a39e2a128",
+        "limits": {
+          "max_results": 100,
+          "max_bytes": 65536,
+          "max_messages": null
+        },
+        "output": {
+          "complete": true,
+          "returned": 2,
+          "omitted": 0,
+          "first_omitted": null,
+          "serialized_bytes": 1247
+        },
+        "continuation": null,
+        "crossing_context": null
+      },
+      "operators": [
+        {
+          "operator": "eq",
+          "literal": 40000000,
+          "indices": [
+            8
+          ],
+          "count": 1,
+          "first_match": {
+            "channel": "cadence.command",
+            "t_ns": 80000000,
+            "message_index": 8,
+            "field": "radar_age_ns",
+            "value": 40000000
+          },
+          "last_match": {
+            "channel": "cadence.command",
+            "t_ns": 80000000,
+            "message_index": 8,
+            "field": "radar_age_ns",
+            "value": 40000000
+          }
+        },
+        {
+          "operator": "ne",
+          "literal": 40000000,
+          "indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "count": 19,
+          "first_match": {
+            "channel": "cadence.command",
+            "t_ns": 0,
+            "message_index": 0,
+            "field": "radar_age_ns",
+            "value": 0
+          },
+          "last_match": {
+            "channel": "cadence.command",
+            "t_ns": 190000000,
+            "message_index": 19,
+            "field": "radar_age_ns",
+            "value": 10000000
+          }
+        },
+        {
+          "operator": "lt",
+          "literal": 40000000,
+          "indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "count": 17,
+          "first_match": {
+            "channel": "cadence.command",
+            "t_ns": 0,
+            "message_index": 0,
+            "field": "radar_age_ns",
+            "value": 0
+          },
+          "last_match": {
+            "channel": "cadence.command",
+            "t_ns": 190000000,
+            "message_index": 19,
+            "field": "radar_age_ns",
+            "value": 10000000
+          }
+        },
+        {
+          "operator": "le",
+          "literal": 40000000,
+          "indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "count": 18,
+          "first_match": {
+            "channel": "cadence.command",
+            "t_ns": 0,
+            "message_index": 0,
+            "field": "radar_age_ns",
+            "value": 0
+          },
+          "last_match": {
+            "channel": "cadence.command",
+            "t_ns": 190000000,
+            "message_index": 19,
+            "field": "radar_age_ns",
+            "value": 10000000
+          }
+        },
+        {
+          "operator": "gt",
+          "literal": 40000000,
+          "indices": [
+            9,
+            10
+          ],
+          "count": 2,
+          "first_match": {
+            "channel": "cadence.command",
+            "t_ns": 90000000,
+            "message_index": 9,
+            "field": "radar_age_ns",
+            "value": 50000000
+          },
+          "last_match": {
+            "channel": "cadence.command",
+            "t_ns": 100000000,
+            "message_index": 10,
+            "field": "radar_age_ns",
+            "value": 60000000
+          }
+        },
+        {
+          "operator": "ge",
+          "literal": 40000000,
+          "indices": [
+            8,
+            9,
+            10
+          ],
+          "count": 3,
+          "first_match": {
+            "channel": "cadence.command",
+            "t_ns": 80000000,
+            "message_index": 8,
+            "field": "radar_age_ns",
+            "value": 40000000
+          },
+          "last_match": {
+            "channel": "cadence.command",
+            "t_ns": 100000000,
+            "message_index": 10,
+            "field": "radar_age_ns",
+            "value": 60000000
+          }
+        },
+        {
+          "operator": "cross-up",
+          "literal": 40000000,
+          "indices": [
+            9
+          ],
+          "count": 1,
+          "first_match": {
+            "channel": "cadence.command",
+            "t_ns": 90000000,
+            "message_index": 9,
+            "field": "radar_age_ns",
+            "value": 50000000
+          },
+          "last_match": {
+            "channel": "cadence.command",
+            "t_ns": 90000000,
+            "message_index": 9,
+            "field": "radar_age_ns",
+            "value": 50000000
+          }
+        },
+        {
+          "operator": "cross-down",
+          "literal": 40000000,
+          "indices": [
+            11
+          ],
+          "count": 1,
+          "first_match": {
+            "channel": "cadence.command",
+            "t_ns": 110000000,
+            "message_index": 11,
+            "field": "radar_age_ns",
+            "value": 0
+          },
+          "last_match": {
+            "channel": "cadence.command",
+            "t_ns": 110000000,
+            "message_index": 11,
+            "field": "radar_age_ns",
+            "value": 0
+          }
+        }
+      ]
+    }
+  },
+  "measurements": [
+    {
+      "messages": 10000,
+      "chunk_size": 65536,
+      "reference": {
+        "matches": [
+          [
+            5001,
+            50010000000,
+            50000000
+          ]
+        ],
+        "every_100th_message_matches": 0,
+        "chunks": 14
+      },
+      "report": {
+        "sil_recording_query": 1,
+        "source": {
+          "sha256": "7ffa026a2b43ca88f20e64513180abe04c4bf3e1806431fe7a42423f1abf0dff",
+          "size_bytes": 1033364
+        },
+        "query": {
+          "channel": "cadence.command",
+          "fields": [
+            "radar_age_ns"
+          ],
+          "start_ns": null,
+          "end_ns": null,
+          "mode": "rows",
+          "where": {
+            "field": "radar_age_ns",
+            "operator": "cross-up",
+            "value": 40000000
+          }
+        },
+        "status": "complete",
+        "results": [
+          {
+            "channel": "cadence.command",
+            "t_ns": 50010000000,
+            "message_index": 5001,
+            "fields": {
+              "radar_age_ns": 50000000
+            },
+            "match": {
+              "channel": "cadence.command",
+              "t_ns": 50010000000,
+              "message_index": 5001,
+              "field": "radar_age_ns",
+              "value": 50000000
+            },
+            "previous": {
+              "channel": "cadence.command",
+              "t_ns": 50000000000,
+              "message_index": 5000,
+              "field": "radar_age_ns",
+              "value": 0
+            }
+          }
+        ],
+        "scan": {
+          "complete": true,
+          "messages": 10000,
+          "matches": 1,
+          "predicate_nonfinite": 0,
+          "first_t_ns": 0,
+          "last_t_ns": 99990000000,
+          "last_message_index": 9999,
+          "inspected_message_range": [
+            0,
+            10000
+          ],
+          "first_message": {
+            "channel": "cadence.command",
+            "t_ns": 0,
+            "message_index": 0
+          },
+          "last_message": {
+            "channel": "cadence.command",
+            "t_ns": 99990000000,
+            "message_index": 9999
+          },
+          "next_message": null,
+          "lookahead_messages": 0
+        },
+        "query_sha256": "cda41b245876622aedabdc9b783e262b3036b262a79d544edd158aba41c127ae",
+        "limits": {
+          "max_results": 1,
+          "max_bytes": 4096,
+          "max_messages": null
+        },
+        "output": {
+          "complete": true,
+          "returned": 1,
+          "omitted": 0,
+          "first_omitted": null,
+          "serialized_bytes": 1431
+        },
+        "continuation": null,
+        "crossing_context": {
+          "outside_window": false,
+          "first_message": "no_crossing",
+          "nonfinite": "breaks_adjacency"
+        }
+      },
+      "peak_rss_bytes": 28196864,
+      "wall_ns": 115241000,
+      "user_us": 90857,
+      "system_us": 16496,
+      "output_bytes": 1431,
+      "recording_bytes": 1033364
+    },
+    {
+      "messages": 1000000,
+      "chunk_size": 65536,
+      "reference": {
+        "matches": [
+          [
+            500001,
+            5000010000000,
+            50000000
+          ]
+        ],
+        "every_100th_message_matches": 0,
+        "chunks": 1327
+      },
+      "report": {
+        "sil_recording_query": 1,
+        "source": {
+          "sha256": "38bce5edeee9d811c64fc36dad7ab2df213c930ab6f0342946a53d93786870e2",
+          "size_bytes": 103196375
+        },
+        "query": {
+          "channel": "cadence.command",
+          "fields": [
+            "radar_age_ns"
+          ],
+          "start_ns": null,
+          "end_ns": null,
+          "mode": "rows",
+          "where": {
+            "field": "radar_age_ns",
+            "operator": "cross-up",
+            "value": 40000000
+          }
+        },
+        "status": "complete",
+        "results": [
+          {
+            "channel": "cadence.command",
+            "t_ns": 5000010000000,
+            "message_index": 500001,
+            "fields": {
+              "radar_age_ns": 50000000
+            },
+            "match": {
+              "channel": "cadence.command",
+              "t_ns": 5000010000000,
+              "message_index": 500001,
+              "field": "radar_age_ns",
+              "value": 50000000
+            },
+            "previous": {
+              "channel": "cadence.command",
+              "t_ns": 5000000000000,
+              "message_index": 500000,
+              "field": "radar_age_ns",
+              "value": 0
+            }
+          }
+        ],
+        "scan": {
+          "complete": true,
+          "messages": 1000000,
+          "matches": 1,
+          "predicate_nonfinite": 0,
+          "first_t_ns": 0,
+          "last_t_ns": 9999990000000,
+          "last_message_index": 999999,
+          "inspected_message_range": [
+            0,
+            1000000
+          ],
+          "first_message": {
+            "channel": "cadence.command",
+            "t_ns": 0,
+            "message_index": 0
+          },
+          "last_message": {
+            "channel": "cadence.command",
+            "t_ns": 9999990000000,
+            "message_index": 999999
+          },
+          "next_message": null,
+          "lookahead_messages": 0
+        },
+        "query_sha256": "cda41b245876622aedabdc9b783e262b3036b262a79d544edd158aba41c127ae",
+        "limits": {
+          "max_results": 1,
+          "max_bytes": 4096,
+          "max_messages": null
+        },
+        "output": {
+          "complete": true,
+          "returned": 1,
+          "omitted": 0,
+          "first_omitted": null,
+          "serialized_bytes": 1457
+        },
+        "continuation": null,
+        "crossing_context": {
+          "outside_window": false,
+          "first_message": "no_crossing",
+          "nonfinite": "breaks_adjacency"
+        }
+      },
+      "peak_rss_bytes": 31997952,
+      "wall_ns": 3079525000,
+      "user_us": 2927363,
+      "system_us": 79227,
+      "output_bytes": 1457,
+      "recording_bytes": 103196375
+    },
+    {
+      "messages": 10000,
+      "chunk_size": 1048576,
+      "reference": {
+        "matches": [
+          [
+            5001,
+            50010000000,
+            50000000
+          ]
+        ],
+        "every_100th_message_matches": 0,
+        "chunks": 1
+      },
+      "report": {
+        "sil_recording_query": 1,
+        "source": {
+          "sha256": "6f59fe0b1b769ff0762e8d6ff0988b496773aa13d819f07ccb399f0d2ec3616c",
+          "size_bytes": 1031453
+        },
+        "query": {
+          "channel": "cadence.command",
+          "fields": [
+            "radar_age_ns"
+          ],
+          "start_ns": null,
+          "end_ns": null,
+          "mode": "rows",
+          "where": {
+            "field": "radar_age_ns",
+            "operator": "cross-up",
+            "value": 40000000
+          }
+        },
+        "status": "complete",
+        "results": [
+          {
+            "channel": "cadence.command",
+            "t_ns": 50010000000,
+            "message_index": 5001,
+            "fields": {
+              "radar_age_ns": 50000000
+            },
+            "match": {
+              "channel": "cadence.command",
+              "t_ns": 50010000000,
+              "message_index": 5001,
+              "field": "radar_age_ns",
+              "value": 50000000
+            },
+            "previous": {
+              "channel": "cadence.command",
+              "t_ns": 50000000000,
+              "message_index": 5000,
+              "field": "radar_age_ns",
+              "value": 0
+            }
+          }
+        ],
+        "scan": {
+          "complete": true,
+          "messages": 10000,
+          "matches": 1,
+          "predicate_nonfinite": 0,
+          "first_t_ns": 0,
+          "last_t_ns": 99990000000,
+          "last_message_index": 9999,
+          "inspected_message_range": [
+            0,
+            10000
+          ],
+          "first_message": {
+            "channel": "cadence.command",
+            "t_ns": 0,
+            "message_index": 0
+          },
+          "last_message": {
+            "channel": "cadence.command",
+            "t_ns": 99990000000,
+            "message_index": 9999
+          },
+          "next_message": null,
+          "lookahead_messages": 0
+        },
+        "query_sha256": "cda41b245876622aedabdc9b783e262b3036b262a79d544edd158aba41c127ae",
+        "limits": {
+          "max_results": 1,
+          "max_bytes": 4096,
+          "max_messages": null
+        },
+        "output": {
+          "complete": true,
+          "returned": 1,
+          "omitted": 0,
+          "first_omitted": null,
+          "serialized_bytes": 1431
+        },
+        "continuation": null,
+        "crossing_context": {
+          "outside_window": false,
+          "first_message": "no_crossing",
+          "nonfinite": "breaks_adjacency"
+        }
+      },
+      "peak_rss_bytes": 31752192,
+      "wall_ns": 115372000,
+      "user_us": 92795,
+      "system_us": 18350,
+      "output_bytes": 1431,
+      "recording_bytes": 1031453
+    },
+    {
+      "messages": 1000000,
+      "chunk_size": 1048576,
+      "reference": {
+        "matches": [
+          [
+            500001,
+            5000010000000,
+            50000000
+          ]
+        ],
+        "every_100th_message_matches": 0,
+        "chunks": 83
+      },
+      "report": {
+        "sil_recording_query": 1,
+        "source": {
+          "sha256": "cf89607604de1225f05fe1a1ee1b5f378395ae89502acb0e83a3d779916468b4",
+          "size_bytes": 103013507
+        },
+        "query": {
+          "channel": "cadence.command",
+          "fields": [
+            "radar_age_ns"
+          ],
+          "start_ns": null,
+          "end_ns": null,
+          "mode": "rows",
+          "where": {
+            "field": "radar_age_ns",
+            "operator": "cross-up",
+            "value": 40000000
+          }
+        },
+        "status": "complete",
+        "results": [
+          {
+            "channel": "cadence.command",
+            "t_ns": 5000010000000,
+            "message_index": 500001,
+            "fields": {
+              "radar_age_ns": 50000000
+            },
+            "match": {
+              "channel": "cadence.command",
+              "t_ns": 5000010000000,
+              "message_index": 500001,
+              "field": "radar_age_ns",
+              "value": 50000000
+            },
+            "previous": {
+              "channel": "cadence.command",
+              "t_ns": 5000000000000,
+              "message_index": 500000,
+              "field": "radar_age_ns",
+              "value": 0
+            }
+          }
+        ],
+        "scan": {
+          "complete": true,
+          "messages": 1000000,
+          "matches": 1,
+          "predicate_nonfinite": 0,
+          "first_t_ns": 0,
+          "last_t_ns": 9999990000000,
+          "last_message_index": 999999,
+          "inspected_message_range": [
+            0,
+            1000000
+          ],
+          "first_message": {
+            "channel": "cadence.command",
+            "t_ns": 0,
+            "message_index": 0
+          },
+          "last_message": {
+            "channel": "cadence.command",
+            "t_ns": 9999990000000,
+            "message_index": 999999
+          },
+          "next_message": null,
+          "lookahead_messages": 0
+        },
+        "query_sha256": "cda41b245876622aedabdc9b783e262b3036b262a79d544edd158aba41c127ae",
+        "limits": {
+          "max_results": 1,
+          "max_bytes": 4096,
+          "max_messages": null
+        },
+        "output": {
+          "complete": true,
+          "returned": 1,
+          "omitted": 0,
+          "first_omitted": null,
+          "serialized_bytes": 1457
+        },
+        "continuation": null,
+        "crossing_context": {
+          "outside_window": false,
+          "first_message": "no_crossing",
+          "nonfinite": "breaks_adjacency"
+        }
+      },
+      "peak_rss_bytes": 34586624,
+      "wall_ns": 3109222000,
+      "user_us": 2979523,
+      "system_us": 71042,
+      "output_bytes": 1457,
+      "recording_bytes": 103013507
+    }
+  ]
+}
