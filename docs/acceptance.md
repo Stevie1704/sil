@@ -239,5 +239,5 @@ checks and the retained real-agent trial offline. It calls no model.
 
 [proofs/recording-query](../proofs/recording-query/README.md) checks the bounded
 query interface against that retained ADAS failure and an independent binary
-scan. Long fixtures preserve a one-Message event missed by downsampling and
+scan. Long fixtures preserve a one-Message threshold violation missed by downsampling and
 retain peak RSS and output sizes for different chunk layouts.

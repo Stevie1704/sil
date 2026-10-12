@@ -2,9 +2,13 @@
 
 This proof starts with the [investigator trial](../agent-investigation/README.md)
 and its retained `delay-regression` ADAS Run. The trial needed a full divergence
-list/count per field; it did not need event search at its 20-activation scale.
+list/count per field; it did not need predicate search at its 20-activation scale.
 This extension provides single-Recording projection and numeric summaries.
 It does not replace a Comparison contract or implement paired divergences.
+The original trial does not establish an investigator's need for every
+operator. The comparison/crossing vocabulary comes from the requested scope of
+#282; the checks below establish retrieval correctness on its retained inputs.
+They do not claim a measured benefit for an agent investigation.
 
 The first check finds a known threshold crossing in that actual Recording,
 compares it with an independent binary decoder of the published ADAS C layout,
@@ -18,9 +22,17 @@ and reads nearby radar inputs:
 - Summary extrema agree with the direct command scan. The source digest is
   pinned to the retained trial's provenance, not derived from query output.
 
-To justify exact event search on a long selection, the proof expands the
+The proof checks all eight requested operators against worked Message indices
+from that pinned trajectory. With a literal of 40 ms, `eq` matches index 8,
+`gt` matches 9 and 10, `ge` matches 8 through 10, `lt` matches 17 Messages and
+`le` matches 18. `ne` matches every index except 8. `cross-up` matches 9 and
+`cross-down` matches 11. Match values and locations agree with the independent
+binary scan, even when only `mode` is projected. Filtered summary counts agree
+with those matches. This is a numeric retrieval check, not a freshness verdict.
+
+To check exact predicate search on a long selection, the proof expands the
 recorded command payloads into a **synthetic throughput fixture**: all Messages
-use its normal age-0 payload except one age-50-ms payload from the known event.
+use its normal age-0 payload except one age-50-ms payload from the known crossing.
 Publication times increase by 10 ms. Payload Sample times remain the original
 values. This fixture is not a new Run or a domain trajectory. It answers a
 concrete retrieval question: locate that one excursion in a million Messages.
@@ -46,10 +58,10 @@ numbers. The ordinary tests repeat the proof at 1,000 Messages per chunk size.
 
 | Messages | Chunk target | Recording bytes | Chunks | Peak RSS | Output bytes |
 | ---: | ---: | ---: | ---: | ---: | ---: |
-| 10,000 | 64 KiB | 1,033,364 | 14 | 28.0 MB | 1,098 |
-| 1,000,000 | 64 KiB | 103,196,375 | 1,327 | 30.1 MB | 1,114 |
-| 10,000 | 1 MiB | 1,031,453 | 1 | 30.6 MB | 1,098 |
-| 1,000,000 | 1 MiB | 103,013,507 | 83 | 34.8 MB | 1,114 |
+| 10,000 | 64 KiB | 1,033,364 | 14 | 28.5 MB | 1,431 |
+| 1,000,000 | 64 KiB | 103,196,375 | 1,327 | 32.2 MB | 1,457 |
+| 10,000 | 1 MiB | 1,031,453 | 1 | 31.0 MB | 1,431 |
+| 1,000,000 | 1 MiB | 103,013,507 | 83 | 34.8 MB | 1,457 |
 
 RSS includes interpreter/import overhead, hashing buffers, summary/index
 metadata, decoded chunk records, selected scalar state and returned results.
@@ -70,6 +82,9 @@ Recordings. No Recording bytes, existing JSON streams or kernel contracts change
 
 The feature tests also exercise empty/non-finite selections, typed literals,
 UInt64 precision, invalid fields and array indices, strict crossing direction,
-first-sample/equality semantics, malformed data after an output limit, source
+first-Message/equality semantics, malformed data after an output limit, source
 changes, bounded refusals, oversized arrays/bytes and scan versus output limits.
-No pagination or speculative predicate operators are introduced.
+Run tests publish real Bursts over inline Transport and one- and two-slot
+Arenas. They check same-Slot crossing witnesses and Publish order. Reader
+filters also accept a `frozenset` of Channel names in indexed and unindexed
+Recordings. No pagination or additional predicate operators are introduced.

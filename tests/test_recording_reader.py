@@ -82,4 +82,6 @@ def test_reader_preserves_stored_order_and_filters_across_chunk_boundaries(
     assert list(read_records(path)) == expected
     assert list(read_records(path, channels=["left"], start_ns=10, end_ns=20)) == [
         ("left", 10, b"c"), ("left", 10, b"d")]
+    assert list(read_records(path, channels=frozenset({"left"}), start_ns=10, end_ns=20)) == [
+        ("left", 10, b"c"), ("left", 10, b"d")]
     assert list(read_records(path, channels=[])) == []

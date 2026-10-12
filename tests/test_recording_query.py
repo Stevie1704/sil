@@ -97,13 +97,13 @@ def test_crossing_finds_a_one_message_excursion_and_discloses_window_context(tmp
         "channel": "signal", "field": "value", "value": 5.0,
         "t_ns": 10, "message_index": 0}
     assert report["crossing_context"] == {
-        "outside_window": False, "first_sample": "no_crossing",
+        "outside_window": False, "first_message": "no_crossing",
         "nonfinite": "breaks_adjacency"}
     assert report["scan"]["predicate_nonfinite"] == 1
     assert report["scan"]["matches"] == 2
 
     # No predecessor is read at t=0; starting already above the threshold is
-    # not a crossing. The non-finite sample likewise breaks adjacency.
+    # not a crossing. The non-finite Message likewise breaks adjacency.
     selected = RecordingQuery(path).query(
         "signal", ["value"], start_ns=30, end_ns=40,
         where=Predicate("value", "cross-up", 5))
@@ -188,7 +188,7 @@ def test_invalid_fields_types_and_limits_are_refused(tmp_path, options):
         RecordingQuery(path).query("signal", **{"fields": ["value"], **options})
 
 
-def test_source_session_rejects_a_changed_file_even_when_size_is_unchanged(tmp_path):
+def test_query_object_rejects_a_changed_file_even_when_size_is_unchanged(tmp_path):
     path = recording(tmp_path / "signal.mcap", [(0, payload(1))])
     source = RecordingQuery(path)
     first = source.query("signal", ["value"])
@@ -334,3 +334,70 @@ def test_declared_field_names_are_preserved_before_parsing_array_suffixes(tmp_pa
     summary = source.query("signal", ["plant.temperature"], mode="summary",
                            where=Predicate("rädar values[2]", "eq", 3))
     assert summary["results"][0]["max"]["value"] == 2.5
+
+
+@pytest.mark.parametrize("op,literal", [("eq", 6), ("ne", 5), ("lt", 7),
+                                      ("le", 6), ("gt", 5), ("ge", 6)])
+def test_match_evidence_includes_predicate_value_outside_projected_fields(
+        tmp_path, capsys, op, literal):
+    path = recording(tmp_path / "signal.mcap", [(10, payload(6))])
+    code = cli.main(["recording", "query", str(path), "--channel", "signal",
+                     "--field", "samples[1]", "--where", "value", op, str(literal)])
+    out, err = capsys.readouterr()
+    assert code == 0 and err == ""
+    row = json.loads(out)["results"][0]
+    assert row["fields"] == {"samples[1]": 2}
+    assert row["match"] == {"channel": "signal", "field": "value", "value": 6.0,
+                             "t_ns": 10, "message_index": 0}
+
+
+def test_partial_unsorted_scan_reports_positions_without_claiming_time_coverage(tmp_path):
+    path = recording(tmp_path / "signal.mcap", [
+        (30, payload(1)), (10, payload(2)), (20, payload(3)), (15, payload(4))])
+    report = RecordingQuery(path).query("signal", ["value"], start_ns=10, end_ns=40,
+                                       max_messages=2)
+    assert report["status"] == "incomplete"
+    scan = report["scan"]
+    assert scan["inspected_message_range"] == [0, 2]
+    assert scan["first_message"] == {"channel": "signal", "t_ns": 30, "message_index": 0}
+    assert scan["last_message"] == {"channel": "signal", "t_ns": 10, "message_index": 1}
+    assert scan["next_message"] == {"channel": "signal", "t_ns": 20, "message_index": 2}
+    assert (scan["first_t_ns"], scan["last_t_ns"]) == (10, 30)
+
+
+@pytest.mark.parametrize("transport,slots", [("inline", 1), ("shm", 1), ("shm", 2)])
+def test_query_preserves_actual_participant_bursts_and_finds_same_slot_crossing(
+        run_sil, tmp_path, transport, slots):
+    import sys
+
+    from conftest import ROOT
+    from sil.manifest import Manifest
+    from test_run_boundary import ARRAY_SCHEMAS
+
+    manifest = Manifest(duration_ns=30000000)
+    manifest.add_schemas(ARRAY_SCHEMAS)
+    manifest.add_channel("payload", schema="big.Payload", transport=transport,
+                         slots=slots if transport == "shm" else None)
+    manifest.add_process("publisher",
+                         command=[sys.executable, str(ROOT / "tests/participants/burst_array_source.py")],
+                         step_period_ns=10000000, publishes=["payload"])
+    run = run_sil(manifest.write(tmp_path / "burst.json").path)
+    assert run.returncode == 0, run.stderr
+    source = RecordingQuery(run.mcap_path)
+    rows = source.query("payload", ["id"])["results"]
+    assert [(r["t_ns"], r["message_index"], r["fields"]["id"]) for r in rows] == [
+        (0, 0, 0), (0, 1, 1), (10000000, 2, 2), (10000000, 3, 3),
+        (20000000, 4, 4), (20000000, 5, 5)]
+    crossing = source.query("payload", ["blob[0]"], where=Predicate("id", "cross-up", 2))
+    assert crossing["results"][0]["match"] == {
+        "channel": "payload", "t_ns": 10000000, "message_index": 3, "field": "id", "value": 3}
+    assert crossing["results"][0]["previous"]["message_index"] == 2
+    assert crossing["results"][0]["fields"] == {"blob[0]": 3}
+
+
+@pytest.mark.parametrize("spec", [{"fields": None}, {"fields": [None]},
+                                   {"fields": [{"name": "value", "type": []}]}])
+def test_malformed_schema_is_refused_at_the_recording_input_boundary(tmp_path, spec):
+    path = recording(tmp_path / "schema.mcap", [(0, b"")], spec)
+    with pytest.raises(QueryError, match="invalid SiL Schema"):
+        RecordingQuery(path).query("signal", ["value"])

@@ -41,10 +41,10 @@ def seed_evidence() -> tuple[dict, bytes, bytes, bytes]:
     assert ages[8:11] == [(80000000, 40000000), (90000000, 50000000),
                           (100000000, 60000000)]
     source = RecordingQuery(SEED)
-    event = source.query(CHANNEL, [FIELD, "mode"],
+    crossing = source.query(CHANNEL, [FIELD, "mode"],
                          where=Predicate(FIELD, "cross-up", THRESHOLD))
     assert [(r["t_ns"], r["message_index"], r["fields"][FIELD])
-            for r in event["results"]] == [(90000000, 9, 50000000)]
+            for r in crossing["results"]] == [(90000000, 9, 50000000)]
     summary = source.query(CHANNEL, [FIELD], mode="summary")
     assert summary["results"][0]["max"]["value"] == max(age for _, age in ages)
     nearby = source.query("cadence.radar", ["sample_time_ns", "object_id[0]", "x_m[0]"],
@@ -62,14 +62,38 @@ def seed_evidence() -> tuple[dict, bytes, bytes, bytes]:
              r["fields"]["x_m[0]"]) for r in nearby["results"]] == reference
     schema = messages[0][0]
     assert schema is not None
-    return ({"event": event, "summary": summary, "nearby_inputs": nearby},
+    operators = operator_evidence(source, ages)
+    return ({"crossing": crossing, "summary": summary, "nearby_inputs": nearby,
+             "operators": operators},
             schema.data, messages[0][1].data, messages[9][1].data)
+
+
+def operator_evidence(source: RecordingQuery, reference: list[tuple[int, int]]) -> list[dict]:
+    """Worked literal matches from the pinned ADAS command trajectory."""
+    expected = {
+        "eq": [8], "ne": [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+        "lt": [0, 1, 2, 3, 4, 5, 6, 7, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+        "le": [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+        "gt": [9, 10], "ge": [8, 9, 10], "cross-up": [9], "cross-down": [11]}
+    evidence = []
+    for op, indices in expected.items():
+        report = source.query(CHANNEL, ["mode"], where=Predicate(FIELD, op, THRESHOLD))
+        rows = report["results"]
+        assert [r["message_index"] for r in rows] == indices
+        assert [(r["t_ns"], r["match"]["value"]) for r in rows] == [reference[i] for i in indices]
+        summarized = source.query(CHANNEL, [FIELD], mode="summary",
+                                   where=Predicate(FIELD, op, THRESHOLD))
+        assert summarized["results"][0]["count"] == len(indices)
+        evidence.append({"operator": op, "literal": THRESHOLD, "indices": indices,
+                         "count": len(indices), "first_match": rows[0]["match"],
+                         "last_match": rows[-1]["match"]})
+    return evidence
 
 
 def expand(path: Path, count: int, chunk_size: int, schema: bytes,
            normal: bytes, excursion: bytes) -> int:
-    event_index = count // 2 + 1
-    assert event_index % 100 != 0
+    crossing_index = count // 2 + 1
+    assert crossing_index % 100 != 0
     with path.open("wb") as stream:
         writer = Writer(stream, compression=CompressionType.NONE, chunk_size=chunk_size)
         writer.start(profile="sil", library="sil-recording-query-proof")
@@ -78,12 +102,12 @@ def expand(path: Path, count: int, chunk_size: int, schema: bytes,
         for index in range(count):
             t = index * 10000000
             writer.add_message(channel, log_time=t, publish_time=t,
-                               data=excursion if index == event_index else normal)
+                               data=excursion if index == crossing_index else normal)
         writer.finish()
-    return event_index
+    return crossing_index
 
 
-def direct_scan(path: Path, event_index: int) -> dict:
+def direct_scan(path: Path, crossing_index: int) -> dict:
     matches = []
     downsample_matches = 0
     with path.open("rb") as stream:
@@ -98,7 +122,7 @@ def direct_scan(path: Path, event_index: int) -> dict:
             if value > THRESHOLD:
                 matches.append((index, message.log_time, value))
                 downsample_matches += index % 100 == 0
-    assert matches == [(event_index, event_index * 10000000, 50000000)]
+    assert matches == [(crossing_index, crossing_index * 10000000, 50000000)]
     assert downsample_matches == 0
     return {"matches": matches, "every_100th_message_matches": downsample_matches,
             "chunks": chunks}
@@ -139,8 +163,8 @@ def main() -> None:
     for chunk_size in (65536, 1048576):
         for count in args.counts:
             path = args.out / f"commands-{count}-{chunk_size}.mcap"
-            event_index = expand(path, count, chunk_size, schema, normal, excursion)
-            direct = direct_scan(path, event_index)
+            crossing_index = expand(path, count, chunk_size, schema, normal, excursion)
+            direct = direct_scan(path, crossing_index)
             measured = measure(launcher, path, count, args.out)
             row = measured["report"]["results"][0]
             assert (row["message_index"], row["t_ns"], row["fields"][FIELD]) == tuple(

@@ -10,8 +10,13 @@ from __future__ import annotations
 
 import json
 from collections.abc import Collection
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, NamedTuple
+from typing import TYPE_CHECKING, BinaryIO, Iterator, NamedTuple
+
+if TYPE_CHECKING:
+    from mcap.records import Channel, ChunkIndex, Message
+    from mcap.summary import Summary
 
 
 class UnknownRecordingFormat(ValueError):
@@ -103,49 +108,69 @@ def read_metadata(path: str | Path) -> list[tuple[str, dict[str, str]]]:
                 for record in make_reader(f).iter_metadata()]
 
 
-def _read_mcap(path: Path, channels: Collection[str] | None,
-               start_ns: int | None, end_ns: int | None,
-               ) -> Iterator[tuple[str, int, bytes]]:
-    from mcap.reader import NonSeekingReader, make_reader
+@dataclass(frozen=True)
+class _RecordFilter:
+    channels: frozenset[str] | None
+    start_ns: int | None
+    end_ns: int | None
+
+    def matches_chunk(self, index: ChunkIndex, channels: dict[int, Channel]) -> bool:
+        if self.start_ns is not None and index.message_end_time < self.start_ns:
+            return False
+        if self.end_ns is not None and index.message_start_time >= self.end_ns:
+            return False
+        return self.channels is None or not index.message_index_offsets or any(
+            channels[id_].topic in self.channels for id_ in index.message_index_offsets)
+
+    def matches_message(self, channel: Channel, message: Message) -> bool:
+        return ((self.channels is None or channel.topic in self.channels)
+                and (self.start_ns is None or message.log_time >= self.start_ns)
+                and (self.end_ns is None or message.log_time < self.end_ns))
+
+
+def _unindexed_records(stream: BinaryIO, selected: _RecordFilter
+                       ) -> Iterator[tuple[str, int, bytes]]:
+    from mcap.reader import NonSeekingReader
+
+    stream.seek(0)
+    topics = None if selected.channels is None else list(selected.channels)
+    for _, channel, message in NonSeekingReader(stream).iter_messages(
+            topics=topics, start_time=selected.start_ns, end_time=selected.end_ns,
+            log_time_order=False):
+        yield channel.topic, message.log_time, message.data
+
+
+def _indexed_records(stream: BinaryIO, summary: Summary, selected: _RecordFilter
+                     ) -> Iterator[tuple[str, int, bytes]]:
     from mcap.records import Chunk, Message
     from mcap.stream_reader import StreamReader, breakup_chunk
 
+    # The seeking stored-order iterator retains all selected Messages before
+    # yielding. Visit chunks by physical file offset to keep Publish order.
+    for index in sorted(summary.chunk_indexes, key=lambda c: c.chunk_start_offset):
+        if not selected.matches_chunk(index, summary.channels):
+            continue
+        stream.seek(index.chunk_start_offset)
+        chunk = next(StreamReader(stream, skip_magic=True, emit_chunks=True).records)
+        if not isinstance(chunk, Chunk):
+            raise ValueError("Recording chunk index does not point to a Chunk")
+        for record in breakup_chunk(chunk):
+            if isinstance(record, Message):
+                channel = summary.channels[record.channel_id]
+                if selected.matches_message(channel, record):
+                    yield channel.topic, record.log_time, record.data
+
+
+def _read_mcap(path: Path, channels: Collection[str] | None,
+               start_ns: int | None, end_ns: int | None,
+               ) -> Iterator[tuple[str, int, bytes]]:
+    from mcap.reader import make_reader
+
+    selected = _RecordFilter(None if channels is None else frozenset(channels),
+                             start_ns, end_ns)
     with open(path, "rb") as f:
         summary = make_reader(f).get_summary()
         if summary is None or not summary.chunk_indexes:
-            f.seek(0)
-            for _, channel, message in NonSeekingReader(f).iter_messages(
-                    topics=channels, start_time=start_ns, end_time=end_ns,
-                    log_time_order=False):
-                yield channel.topic, message.log_time, message.data
-            return
-
-        # MCAP's seeking stored-order iterator queues all chunks before their
-        # Messages, retaining every selected payload before its first yield.
-        # Decode one indexed chunk at a time instead. Physical file order is
-        # Publish order; timestamps must not reorder equal-time Messages.
-        selected = None if channels is None else set(channels)
-        for index in sorted(summary.chunk_indexes, key=lambda c: c.chunk_start_offset):
-            if start_ns is not None and index.message_end_time < start_ns:
-                continue
-            if end_ns is not None and index.message_start_time >= end_ns:
-                continue
-            if selected is not None and index.message_index_offsets and not any(
-                    summary.channels[id_].topic in selected
-                    for id_ in index.message_index_offsets):
-                continue
-            f.seek(index.chunk_start_offset)
-            chunk = next(StreamReader(f, skip_magic=True, emit_chunks=True).records)
-            if not isinstance(chunk, Chunk):
-                raise ValueError("Recording chunk index does not point to a Chunk")
-            for record in breakup_chunk(chunk):
-                if not isinstance(record, Message):
-                    continue
-                channel = summary.channels[record.channel_id]
-                if selected is not None and channel.topic not in selected:
-                    continue
-                if start_ns is not None and record.log_time < start_ns:
-                    continue
-                if end_ns is not None and record.log_time >= end_ns:
-                    continue
-                yield channel.topic, record.log_time, record.data
+            yield from _unindexed_records(f, selected)
+        else:
+            yield from _indexed_records(f, summary, selected)

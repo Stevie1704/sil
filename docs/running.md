@@ -324,7 +324,7 @@ its Manifest. These read-only commands do that:
 | --- | --- |
 | `sil recording channels out.mcap [--json]` | list each Channel with its Schema name, Message count and earliest and latest virtual time, and the Manifest hash |
 | `sil recording show out.mcap [--channel NAME]... [--from T] [--to T] [--limit N] [--json]` | print the decoded Messages in stored order |
-| `sil recording query out.mcap --channel NAME --field FIELD... [--summary] [--where FIELD OP JSON_NUMBER]` | bounded projection, numeric summaries and exact event search with a completion report |
+| `sil recording query out.mcap --channel NAME --field FIELD... [--summary] [--where FIELD OP JSON_NUMBER]` | bounded projection, numeric summaries and exact predicate search with a completion report |
 
 The [bounded query contract](recording-queries.md) documents field/array
 selection, predicate and crossing semantics, byte and scan budgets, evidence

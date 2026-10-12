@@ -1,7 +1,7 @@
 # Bounded Recording queries
 
 `sil recording query` inspects selected fields at full resolution and returns
-one bounded JSON report. Use it to locate a scalar event, summarize a field,
+one bounded JSON report. Use it to locate a scalar match, summarize a field,
 then read nearby inputs. Times are **publication times**, in nanoseconds.
 A payload's Sample time or age field retains the Participant's own contract;
 this command does not derive Observation age from publication time.
@@ -51,7 +51,7 @@ field or explicit array element:
 | `cross-down` | previous finite value >= literal, current finite value < literal |
 
 Equality belongs to the starting side of a crossing. The first selected
-sample never crosses. No predecessor outside the requested interval is read;
+Message never crosses. No predecessor outside the requested interval is read;
 `crossing_context` discloses this. A non-finite value never matches, even for
 `ne`, and breaks crossing adjacency. `scan.predicate_nonfinite` counts these
 values. A missing field is a refusal; a Message with an incorrect payload
@@ -65,9 +65,9 @@ and compound predicates are refused. There is no cross-Channel predicate.
 
 Rows keep stored Publish order, including equal-time Messages and Bursts.
 Crossing queries require nondecreasing publication times **within the selected
-Channel and interval**; an encountered regression is a refusal. Thus the first
-returned crossing is the earliest inspected crossing, with stored order
-breaking equal-time ties. Rows and summaries also support unsorted times.
+Channel and interval**. An encountered regression is a refusal. The first
+returned crossing is therefore the earliest inspected crossing. Stored order
+breaks equal-time ties. Rows and summaries also support unsorted times.
 
 ## Summaries
 
@@ -114,7 +114,7 @@ not bound source hashing, index loading, chunk decoding or wall-clock time.
 Only a completed exact predicate scan with `scan.matches == 0` establishes
 that the predicate had no matches in the selection. Empty returned results
 alone do not. A summary alone does not establish that no crossing occurred.
-An incomplete scan can report a found event but cannot exclude later events
+An incomplete scan can report a found match but cannot exclude later matches
 or a later publication-time regression.
 
 The report is **`sil_recording_query` version 1**:
@@ -126,20 +126,33 @@ The report is **`sil_recording_query` version 1**:
 - `scan`: completion, selected Messages inspected, matches, predicate non-finite
   count, minimum/maximum inspected publication times, last inspected Message
   index, and lookahead count. Times and last index are null for an empty scan.
+  `inspected_message_range` is the half-open range of inspected Message indices,
+  starting at zero. `first_message` and `last_message` locate its endpoints in
+  stored order; `next_message` locates the fetched, uninspected Message when the
+  scan limit stops inspection. Each position has Channel, publication time and
+  Message index. All three locators are null for an empty scan.
 - `results`: projected rows with `channel`, `t_ns`, `message_index`, and `fields`,
-  or summary field results. Crossing rows also carry the `previous` sample's
-  evidence locator. Extrema locators contain Channel, field, time, index and value.
+  or summary field results. Every predicate row also carries `match`, with the
+  predicate field's value and locator, even when that field is not projected.
+  Crossing rows also carry the `previous` Message's field value and locator.
+  Extrema locators contain Channel, field, time, index and value.
 - `output`: completion of returned results, returned/omitted counts, first
   omission and the exact `serialized_bytes` of the canonical report.
-- `crossing_context`: outside-window and first-sample/non-finite policies, or null.
+- `crossing_context`: outside-window and `first_message`/non-finite policies, or null.
 - `continuation`: always null in version 1. Pagination is not supported.
 
 `message_index` is the zero-based position in the **selected Channel/time
 stream before applying a predicate**. It distinguishes same-time Messages
 without retaining a timestamp table. Cite it together with the source digest,
-Channel, field, publication time **and query interval**; narrowing an interval
+Channel, field, publication time **and query interval**. A narrower interval
 can change the index. Changing only fields, predicates or result budgets
 does not change indices for the same Channel and interval.
+
+For unsorted publication times, `first_t_ns` and `last_t_ns` are extrema of
+the inspected Messages. They do not describe a fully inspected time interval.
+For example, an incomplete scan can inspect times 30 and 10, then stop before
+times 20 and 15. Its extrema are 10 and 30, but its inspected Message range is
+`[0, 2)`. The position locators identify exactly what was read and what is next.
 
 Refusal reports contain status, source identity when available, null scan,
 empty results, bounded error text and `request_sha256` of `render(arguments)`
@@ -154,12 +167,12 @@ is refused using the default. Error text is not a stable contract.
 from sil.recording_query import Predicate, RecordingQuery, render
 
 source = RecordingQuery("failed.mcap")
-event = source.query("cadence.command", ["radar_age_ns", "mode"],
+crossing = source.query("cadence.command", ["radar_age_ns", "mode"],
                      where=Predicate("radar_age_ns", "cross-up", 40_000_000),
                      max_results=1, max_bytes=4096)
 nearby = source.query("cadence.radar", ["sample_time_ns", "x_m[0]"],
                       start_ns=80_000_000, end_ns=120_000_000)
-print(render(event), end="")
+print(render(crossing), end="")
 ```
 
 `query()` accepts `mode="rows"` or `"summary"`, `start_ns`, `end_ns`, `where`,
@@ -167,9 +180,9 @@ print(render(event), end="")
 or raises `QueryError`. `render()` defines byte-budget serialization: compact
 ASCII-escaped JSON, finite JSON numbers only, and one trailing newline.
 
-Constructing a session reads the entire file once for SHA-256, in 1 MiB
-blocks: O(file bytes). Multiple queries on the same session reuse that digest.
-Each independent CLI invocation constructs a new session and hashes again;
+Constructing a `RecordingQuery` object reads the entire file once for SHA-256,
+in 1 MiB blocks: O(file bytes). Queries on the same object reuse that digest.
+Each independent CLI invocation constructs a new object and hashes again;
 there are no pages or persistent hash cache. Device, inode, size, mtime and
 ctime are checked before and after scans, refusing an observed source change.
 Use completed immutable Recordings; these checks are not a snapshot against
@@ -189,4 +202,4 @@ constant-RSS claim independent of Recording length or chunk layout.
 
 The [acceptance evidence](../proofs/recording-query/README.md) retains measured
 peak RSS and output bytes for two Recording lengths and two chunk sizes,
-including a one-Message event missed by an every-100th-Message view.
+including a one-Message threshold violation missed by an every-100th-Message view.

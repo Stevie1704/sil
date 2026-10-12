@@ -20,7 +20,7 @@ agent.
 | Bring an existing C library into a Run | [Shared-library participants](library.md) |
 | Run a C application through the Native ABI and compare it | [Native ADAS reference application](adas-reference.md) |
 | Select a replay window, warm up a target, or replay long Recordings | [Replay](replay.md) |
-| Find exact events or summarize selected Recording fields with bounded output | [Bounded Recording queries](recording-queries.md) |
+| Find exact matches or summarize selected Recording fields with bounded output | [Bounded Recording queries](recording-queries.md) |
 | Compare outputs against a reference trajectory | [Comparisons](comparison.md) |
 | Seal and run regression cases and matrices | [Regression bundles](regression-bundles.md) |
 | Run one Manifest in a Linux container | [Container deployment](container.md) |
