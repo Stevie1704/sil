@@ -357,6 +357,36 @@ def test_installed_acc_determinism_check_uses_only_staged_inputs(
     assert check.stdout.startswith("deterministic: ")
 
 
+@pytest.mark.parametrize("kind", ["--process", "--native"])
+def test_installed_participant_scaffold_runs_with_no_edits(
+    installed_python: Path, staged_prefix: Path, tmp_path: Path, kind: str,
+):
+    env = installed_environment(installed_python)
+    env["PATH"] = str(staged_prefix / "bin") + os.pathsep + env["PATH"]
+    directory = tmp_path / "brake"
+    manifest = directory / "manifest.json"
+
+    def sil(*argv):
+        return subprocess.run([str(installed_python / "bin" / "sil"), *argv],
+                              cwd=tmp_path, env=env, capture_output=True,
+                              text=True)
+
+    written = sil("new", "participant", kind, "brake")
+    built = subprocess.run(
+        [str(installed_python / "bin" / "python"),
+         str(directory / "manifest.py"), str(manifest)],
+        cwd=tmp_path, env=env, capture_output=True, text=True,
+    )
+    valid = sil("manifest", "validate", str(manifest))
+    check = sil("check", str(manifest))
+
+    assert written.returncode == 0, written.stderr
+    assert built.returncode == 0, built.stderr
+    assert valid.returncode == 0, valid.stderr
+    assert check.returncode == 0, check.stderr
+    assert check.stdout.startswith("deterministic: ")
+
+
 def test_installed_csv_conversion_drives_the_staged_replay(
     installed_python: Path, staged_prefix: Path, tmp_path: Path,
 ):

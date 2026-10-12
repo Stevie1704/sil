@@ -95,6 +95,16 @@ ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
         "substitute": ModuleCommand("sil.fmi.substitution",
                                     "replace one coupled FMU with its Recording"),
     }),
+    "manifest": Group("check Manifests", {
+        "validate": ModuleCommand("sil.manifest_validate",
+                                  "list every error of a Manifest without "
+                                  "running it"),
+    }),
+    "new": Group("write starting points to edit", {
+        "participant": ModuleCommand("sil.scaffold",
+                                     "write a minimal Participant and a "
+                                     "Manifest builder that runs it"),
+    }),
     "recording": Group("read Recordings, and prepare them for replay", {
         "channels": ModuleCommand("sil.recording_view",
                                   "list the Channels of a Recording", ("channels",)),

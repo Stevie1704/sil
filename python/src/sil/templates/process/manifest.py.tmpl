@@ -1,0 +1,39 @@
+"""Write the Manifest of a Run of the $name Process participant.
+
+    python3 manifest.py manifest.json
+    sil manifest validate manifest.json
+    sil check manifest.json
+
+sil-run starts the bare command `python3` from its own PATH, so activate the
+environment that has `sil` installed before the Run.
+"""
+
+import os
+import sys
+from pathlib import Path
+
+from sil.manifest import Manifest
+
+HERE = Path(__file__).resolve().parent
+STEP_PERIOD_NS = 10_000_000
+SCHEMAS = {"$name.Out": {"fields": [{"name": "step", "type": "u64"}]}}
+
+
+def build(out: Path) -> Manifest:
+    m = Manifest(duration_ns=1_000_000_000)
+    m.add_schemas(SCHEMAS)
+    m.add_channel("$name.out", schema="$name.Out")
+    # A relative path in a command resolves against the Manifest's directory.
+    participant = os.path.relpath(HERE / "participant.py", out.resolve().parent)
+    m.add_process(
+        "$name",
+        command=["python3", participant],
+        step_period_ns=STEP_PERIOD_NS,
+        publishes=["$name.out"],
+    )
+    return m
+
+
+if __name__ == "__main__":
+    out = Path(sys.argv[1] if len(sys.argv) > 1 else "manifest.json")
+    print(build(out).write(out).hash)

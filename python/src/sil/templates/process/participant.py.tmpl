@@ -1,0 +1,24 @@
+"""$name: a Process participant, written by `sil new participant --process`.
+
+The kernel starts this file as a child process and steps it over the Step
+protocol (`sil docs step-protocol`). At each Step it publishes one `$name.Out`
+Message on the Channel `$name.out`. Replace `on_step` with the behavior of
+your system under test.
+
+The Participant contract applies: no wall-clock reads and no free-running
+threads. All behavior must come from (t, dt, inputs), or two Runs of the same
+Manifest give different Recordings and `sil check` fails.
+"""
+
+from sil.participant import StepParticipant, run
+
+
+class Participant(StepParticipant):
+    def on_step(self, t, dt, inputs):
+        # `inputs` holds the Messages of the Channels in `subscribes`, decoded
+        # with their Schemas. Return (channel, fields) pairs to publish.
+        return [("$name.out", {"step": t // dt})]
+
+
+if __name__ == "__main__":
+    run(Participant())

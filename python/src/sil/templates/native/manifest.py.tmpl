@@ -1,0 +1,63 @@
+"""Build the $name Native participant, and write the Manifest of its Run.
+
+    python3 manifest.py manifest.json
+    sil manifest validate manifest.json
+    sil check manifest.json
+
+The library is compiled with `$$CC` (default `cc`) against the C ABI headers
+installed beside `sil-run`. Add flags, such as `-I<dir>` for headers that are
+somewhere else, with `$$CFLAGS`.
+"""
+
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+from sil.manifest import Manifest
+
+HERE = Path(__file__).resolve().parent
+SCHEMAS = {"$name.Out": {"fields": [{"name": "step", "type": "u64"}]}}
+
+
+def sil_include_dir() -> Path | None:
+    runner = shutil.which("sil-run")
+    if runner is None:
+        return None
+    include = Path(runner).resolve().parent.parent / "include"
+    return include if (include / "sil" / "participant.h").is_file() else None
+
+
+def build_library() -> Path:
+    library = HERE / "$name.silp"
+    include = sil_include_dir()
+    flags = shlex.split(os.environ.get("CFLAGS", ""))
+    if include is not None:
+        flags.append(f"-I{include}")
+    command = [os.environ.get("CC", "cc"), "-shared", "-fPIC", "-O2", *flags,
+               str(HERE / "participant.c"), "-o", str(library)]
+    if subprocess.run(command).returncode != 0:
+        sys.exit("manifest.py: cannot compile participant.c. If "
+                 "sil/participant.h was not found, put sil-run on PATH, or "
+                 "set CFLAGS=-I<include dir of the SiL installation>.")
+    return library
+
+
+def build(out: Path, library: Path) -> Manifest:
+    m = Manifest(duration_ns=1_000_000_000)
+    m.add_schemas(SCHEMAS)
+    m.add_channel("$name.out", schema="$name.Out")
+    # A relative library path resolves against the Manifest's directory.
+    m.add_native(
+        "$name",
+        library=os.path.relpath(library, out.resolve().parent),
+        publishes=["$name.out"],
+    )
+    return m
+
+
+if __name__ == "__main__":
+    out = Path(sys.argv[1] if len(sys.argv) > 1 else "manifest.json")
+    print(build(out, build_library()).write(out).hash)
