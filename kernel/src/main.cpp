@@ -8,7 +8,9 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <variant>
 
@@ -16,6 +18,7 @@
 #include "copy_counters.hpp"
 #include "engine.hpp"
 #include "exit_codes.hpp"
+#include "failure_report.hpp"
 #include "manifest.hpp"
 #include "provenance.hpp"
 #include "recording_sink.hpp"
@@ -132,6 +135,51 @@ void write_side_car(sil::Provenance &provenance, int exit_code, bool recording,
   }
 }
 
+// The first diagnostic of a failed Run, kept with its facts for the report.
+struct FirstFailure {
+  std::string message;
+  sil::FailureFacts facts;
+};
+
+sil::FailureFacts classify(const std::exception &e) {
+  if (const auto *failure = dynamic_cast<const sil::ParticipantRunError *>(&e))
+    return failure->failure;
+  sil::FailureFacts facts;
+  if (dynamic_cast<const sil::ManifestError *>(&e))
+    facts.category = sil::FailureCategory::Manifest;
+  else if (sil::run_interrupted())
+    facts.category = sil::FailureCategory::Interrupted;
+  return facts;
+}
+
+// Prints the diagnostic line and keeps the first one for the failure report.
+void report_failure(std::optional<FirstFailure> &first,
+                    const std::exception &e) {
+  std::cerr << "sil-run: " << e.what() << "\n";
+  if (!first) first = FirstFailure{e.what(), classify(e)};
+}
+
+// A failed Run leaves a report beside its Recording; a successful one removes
+// a report left by an earlier failed Run at the same path, so the file always
+// describes the most recent Run.
+void write_failure_side_car(const std::optional<FirstFailure> &first,
+                            int exit_code, const char *out_path) {
+  const std::filesystem::path path = sil::default_failure_report_path(out_path);
+  if (exit_code == kExitOk) {
+    std::error_code ignored;
+    std::filesystem::remove(path, ignored);
+    return;
+  }
+  try {
+    sil::write_failure_report(path, exit_code,
+                              first ? first->message : std::string(),
+                              first ? first->facts : sil::FailureFacts{});
+  } catch (const std::exception &e) {
+    // As with the provenance side-car, the exit code stays authoritative.
+    std::cerr << "sil-run: " << e.what() << "\n";
+  }
+}
+
 int run(int argc, char **argv) {
   const int report = report_version(argc, argv);
   if (report >= 0) return report;
@@ -226,6 +274,7 @@ int run(int argc, char **argv) {
   std::optional<sil::PreparedRun> prepared;
   std::unique_ptr<sil::RecordingSink> recorder;
   std::optional<sil::Manifest> manifest;
+  std::optional<FirstFailure> failure;
   int exit_code = kExitConfigError;
 
   try {
@@ -260,14 +309,14 @@ int run(int argc, char **argv) {
     } catch (const sil::ManifestError &) {
       throw;
     } catch (const std::exception &e) {
-      std::cerr << "sil-run: " << e.what() << "\n";
+      report_failure(failure, e);
       exit_code = kExitRunFailure;
     }
   } catch (const sil::ManifestError &e) {
-    std::cerr << "sil-run: " << e.what() << "\n";
+    report_failure(failure, e);
     exit_code = kExitConfigError;
   } catch (const std::exception &e) {
-    std::cerr << "sil-run: " << e.what() << "\n";
+    report_failure(failure, e);
     exit_code = kExitRunFailure;
   }
 
@@ -277,7 +326,7 @@ int run(int argc, char **argv) {
     try {
       recorder->close();
     } catch (const std::exception &e) {
-      std::cerr << "sil-run: " << e.what() << "\n";
+      report_failure(failure, e);
       if (exit_code == kExitOk) exit_code = kExitRunFailure;
     }
   }
@@ -285,6 +334,7 @@ int run(int argc, char **argv) {
   if (provenance)
     write_side_car(*provenance, exit_code, recording, out_path,
                    provenance_path_arg);
+  write_failure_side_car(failure, exit_code, out_path);
 
   if (exit_code == kExitOk && manifest)
     std::cout << "manifest_hash " << manifest->hash_hex << "\n";

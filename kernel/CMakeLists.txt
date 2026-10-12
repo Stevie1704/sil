@@ -3,6 +3,7 @@ set(SIL_KERNEL_SOURCES
   src/manifest.cpp
   src/interceptor.cpp
   src/engine.cpp
+  src/failure_report.cpp
   src/clock_shim.cpp
   src/mapped_region.cpp
   src/owned_directory.cpp

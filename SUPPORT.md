@@ -63,6 +63,13 @@ against the Manifest's directory. With `--no-recording`, the side-car is
 still emitted next to the default `out.mcap` location and its `recording` value
 is `null`.
 
+A failed Run (exit `1` or `2`) also writes a failure report next to its
+Recording: `<recording>.failure.json`. It names the failure category, the
+Participant, its exit status or signal, the virtual time and index of its last
+Step, and the last lines of its stderr
+([docs/running.md](docs/running.md#failure-report)). A successful Run writes
+none.
+
 ## Supported machine class
 
 | Property | Supported |
@@ -93,6 +100,7 @@ carries it.
 | Step protocol | [docs/step-protocol.md](docs/step-protocol.md) | protocol 2, protocol 1 still accepted |
 | Recording contract | MCAP, uncompressed, virtual timestamps only, Manifest hash embedded; a Recording converted by `sil recording csv` embeds the source and mapping digests instead, because no Manifest produced it | as written by the shipped release |
 | Runner command line | `sil-run` (also started as `sil run`), `sil-run --version`, `sil-run --build-info`, and the exit codes `0` ok, `1` run or test failure, `2` Manifest error, `3` determinism violation | as shipped |
+| Failure report | `<recording>.failure.json` of a failed Run: its fields and `category` values ([docs/running.md](docs/running.md#failure-report)). The `message` and `stderr_tail` text is not covered. | `schema_version` 1 |
 | FMI import profiles | [docs/fmi.md](docs/fmi.md): FMI 3.0 co-simulation, and the FMI 2.0 co-simulation profile (scalar `Real`, `Integer` and `Boolean`, OSMP binary variables as bounded byte payloads, `binaries/linux64`) | as shipped |
 | Native schema-generation tool | installed `silschema` command (`bin/silschema`, shipped together with `bin/_sil_schema_types.py`) and its generated-header contract | as shipped |
 | Python API | `sil.manifest`, `sil.participant`, `sil.testing`, `sil.footprint`, `sil.check` with its report (`sil_check_report` 1) and exit codes `0` deterministic, `2` usage error, `3` violation, `sil.compare` (`read_contract`, `compare`, `render`, `ContractError`, `RecordingError`) with its contract (`sil_comparison` 1), report (`sil_comparison_report` 1) and exit codes `0` pass, `1` fail, `2` usage error, `sil.recording`, `sil recording channels` and `sil recording show` (`sil.recording_view`) with the channels report (`sil_recording_channels` 1), the one-object-per-Message lines of `show --json` (`sil_recording_show` 1) and exit codes `0` ok, `2` usage error or unreadable Recording, `sil.schema`, `sil.fmi` with the `sil fmi inspect` report (`sil_fmi_inspection` 2), proposed mapping (`sil_fmi_mapping` 1) and exit codes `0` compatible, `1` unusable, `2` usage error, `3` mapping rejected, `sil.csv_recording` with its mapping document (`sil_csv_mapping` 1) and receipt (`sil_csv_receipt` 1), `sil fmi replay` (`sil.fmi.authoring`: `author`, `AuthoringError`) with its authoring document (`sil_fmu_replay` 1), receipt (`sil_fmu_replay_receipt` 1) and exit codes `0` written, `2` rejected, `sil fmi couple` (`sil.fmi.coupling`: `couple`, `render_plan`, `AuthoringError`) with its coupling document (`sil_fmu_coupling` 1), receipt (`sil_fmu_coupling_receipt` 1) and exit codes `0` written, `2` rejected, `sil fmi substitute` (`sil.fmi.substitution`: `substitute`, `render`, `AuthoringError`) with its receipt (`sil_fmu_substitution_receipt` 1), the comparison contract it writes (`sil_comparison` 1) and exit codes `0` written, `2` rejected, `sil schema import` (`sil.schema_import`, needs the `sil[dwarf]` extra) with the flat Schema and layout-check header it writes ([docs/library.md](docs/library.md#large-interfaces)) and exit codes `0` written, `2` rejected, and the `sil` console command with its subcommands (`sil --help`) | package version |
