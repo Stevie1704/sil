@@ -76,6 +76,47 @@ Do the steps in this order. Each step names the topic to read.
    comparison`. To keep a case for CI, seal it as a regression bundle: read
    `sil docs regression-bundles`.
 
+## Investigate a failed Run
+
+Use these steps when a Run, a regression bundle or a matrix case fails. They
+use only the commands of this guide.
+
+1. **Classify the failure first.** A matrix status is not a diagnosis:
+   `behavioral-failure` also includes a Participant that missed its response
+   deadline. Read the `exit_code` of each Run in the bundle `summary.json`. A
+   Run that exited `1` and wrote `<recording>.failure.json` did not complete.
+   Its `category`, `participant` and `virtual_time_ns` tell what stopped it.
+   Such a Run has no comparison, so it has no behavioral verdict. A Run that
+   exited `0` and failed a comparison is a behavioral failure.
+2. **Find where it starts.** Read `<comparison>.comparison.json`. Its
+   `first_divergence` gives the Channel, the field, the observation time and
+   the publication time. It is a lead, not the cause. Read the other fields
+   and the inputs near that time with `sil recording show --channel NAME
+   --from T --to T --json`. Its `t_ns` is the publication time. A Sample time
+   is a payload field: do not mix the two.
+3. **Know what the evidence covers.** A failed Run can leave a partial
+   Recording: `sil recording channels` gives the last time of each Channel.
+   Make no statement about a time after it. When a Recording, a report or a
+   bundle is missing, say so. Do not fill the gap.
+4. **Test a hypothesis with a new Run.** For each hypothesis, write down what
+   it predicts for a Run that you can do. Select a Run for which the
+   hypotheses predict different results. Copy the bundle into a new
+   directory, change only its Manifest, seal it, and run it with `sil bundle
+   run` into a new evidence directory. Do not change the original bundle,
+   its evidence, its comparison contract or its references. A tolerance that
+   you relax until the case passes is not a diagnosis.
+5. **Keep the regression case.** Keep the sealed follow-up bundle that shows
+   the failure, with the original contract and references. Add it to the
+   matrix with its lock digest.
+6. **Report.** Keep observations (artifact digest, Channel, field, `t_ns`,
+   value), hypotheses, experiments, conclusions and open alternatives apart.
+   Two events at the same time do not show a cause. When the evidence does
+   not decide, the result is "inconclusive", with the evidence that is
+   missing.
+
+[proofs/agent-investigation](../proofs/agent-investigation/README.md) shows
+these steps on four cases, with a real agent trial and checks of its claims.
+
 ## Machine-readable output
 
 Use exit codes, not message text. Message text can change in any release.

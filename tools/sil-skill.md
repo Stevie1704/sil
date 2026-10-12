@@ -21,6 +21,8 @@ installed version.
 3. **Run** it into a Recording: `sil docs running`, `sil docs container`.
    A failed Run writes `<recording>.failure.json`: `sil docs running`.
 4. **Check** the Recording: `sil docs comparison`, `sil docs regression-bundles`.
+5. **Investigate** a failed Run or matrix case: `sil docs agent-guide`, the
+   section "Investigate a failed Run".
 
 ## Rules
 
