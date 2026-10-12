@@ -1,0 +1,41 @@
+{
+  "sil_bundle_evidence": 1,
+  "bundle": "bundle",
+  "name": "nominal-in-delay-bundle",
+  "lock_sha256": "b8549ae5b05eda4e4ceb6ee2c592c699b0b88fe03a840c728d5f460083706528",
+  "runtime": {
+    "license": "Apache-2.0",
+    "source_repository": "https://github.com/Stevie1704/sil",
+    "source_revision": "unknown",
+    "version": "0.1.0"
+  },
+  "verdict": "pass",
+  "dependency_closure": "Every declared artifact, executable, Python module and file matched its sealed digest, and the Runs saw only the declared environment. A Manifest hash covers the Manifest's bytes only; it does not close the modules, native libraries and environment a Run loads, which the lock names instead. Anything the declaration does not name is not verified.",
+  "bundle_unchanged": true,
+  "interrupted": false,
+  "runs": [
+    {
+      "name": "nominal-in-delay-bundle",
+      "manifest": "nominal-in-delay-bundle.json",
+      "manifest_sha256": "4794dc18fb79200b203a14dff90465c852f0c86378f56b0f63706bd6d62591ff",
+      "exit_code": 0,
+      "recording_sha256": "4090d97719ca4ca58ad2790c9090fa26c7d2d3da5b33d68c7547a9af2884c264",
+      "determinism": {
+        "verdict": "pass",
+        "second_exit_code": 0,
+        "recording_sha256": [
+          "4090d97719ca4ca58ad2790c9090fa26c7d2d3da5b33d68c7547a9af2884c264",
+          "4090d97719ca4ca58ad2790c9090fa26c7d2d3da5b33d68c7547a9af2884c264"
+        ]
+      },
+      "comparisons": {
+        "cadence": {
+          "verdict": "pass",
+          "divergences": 0,
+          "coverage_problems": 0
+        }
+      },
+      "verdict": "pass"
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "sil_bundle_lock": 1,
+  "name": "delay-regression",
+  "root": "/private/tmp/claude-501/-Users-steffenkrakau-Developer-sil/356ce850-d5a6-4767-86ce-9e570affe7fd/scratchpad/trial/agent/bundles/delay-regression",
+  "contents_sha256": {
+    "adas_reference.so": "d152d64db9a1f753cd698b1c9e76b5cf11c3d21f88e9240d2016e06b42b29c7e",
+    "bundle.json": "a74f2a1b35d2b086f07a00f7ae387b0444da296c6fba969bc584b09019146f38",
+    "cadence.contract.json": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590",
+    "cadence.delay.expected.csv": "a55d3cc723bed7ce4145ff3251f51f13f97334449b9f4351680bb4d5073dab5d",
+    "cadence.delay.expected.mapping.json": "c1f1b860969fac81038e577a17e4c6e55b1a1733968f6c13748afa03db2ef0bf",
+    "cadence.delay.expected.mcap": "c7ba69ff08b4b2be7709355e105097fe87ae1a793f9cdb3feaf37794bf96bc00",
+    "cadence.delay.expected.receipt.json": "3593aeea2f52eb61dd96722a1b7add0f6f5f68e481207d06c970e20ade2f8066",
+    "cadence.drop.expected.csv": "c8e7cee5b96b5135eb8b495bb3c6e10c693cb45840c5e72e3d562c88d547f31b",
+    "cadence.drop.expected.mapping.json": "c1f1b860969fac81038e577a17e4c6e55b1a1733968f6c13748afa03db2ef0bf",
+    "cadence.drop.expected.mcap": "9afceea266f5cdc292b1d89267da147506e79d22d04c7a0875b471f97e7fbe8c",
+    "cadence.drop.expected.receipt.json": "ffaf26376d1cd00f77ef259cd0bf6e292d8343a2b73890655a2bd8501ddcad28",
+    "cadence.expected.csv": "8446440566210308cc69b18d0d498dd25f8a10c8aecd0db25d97f2981ce9123a",
+    "cadence.expected.mapping.json": "c1f1b860969fac81038e577a17e4c6e55b1a1733968f6c13748afa03db2ef0bf",
+    "cadence.expected.mcap": "173b68ee2c47fe36d8f17efdb0fd16bad5775ff1caa9808928e0cbf3d8a91bac",
+    "cadence.expected.receipt.json": "6ceb1dd1b74827a020990ee3e28cee91f719657da87bbe6dc1f82632c774bac7",
+    "cadence.inputs.csv": "33fbb51db1322210d5848fd0692b621bf90cbc3dc954d58c24462429f6b117b1",
+    "cadence.inputs.mapping.json": "02d8037cf0ed7a2bee52c7616888edf2d6a00d29399053edd117ad5efa8f8000",
+    "cadence.inputs.mcap": "50cd6a8dbc62782b4d39bbdc918599f688769f89cd3a2a8869e9fa6997fb9d8b",
+    "cadence.inputs.receipt.json": "4e6ac33d463dabc473981972d776ea4be93286ffa3f1360463e97311d08af02d",
+    "cadence.late.expected.csv": "6bde1a93d109906e8264167078ee45bb01ba53ad94da2a637f627d8d2de48452",
+    "cadence.late.expected.mapping.json": "c1f1b860969fac81038e577a17e4c6e55b1a1733968f6c13748afa03db2ef0bf",
+    "cadence.late.expected.mcap": "a99a3b8b3008902ce1c8fdda8403f90ec77c8a6dcb33b6fd0c99341d229fde3b",
+    "cadence.late.expected.receipt.json": "b508861656ab72c9682eb64d0fe09f34addbb0f59025c973fb81286f655fd923",
+    "cadence.rewrite.expected.csv": "b4532f716332e9657ca027056965c47c50a2897529755dee3e0c0ef9f8c5964c",
+    "cadence.rewrite.expected.mapping.json": "c1f1b860969fac81038e577a17e4c6e55b1a1733968f6c13748afa03db2ef0bf",
+    "cadence.rewrite.expected.mcap": "42f3c28d891ad23adf8763096b2be9d724566a009079733d6e47e91232958fee",
+    "cadence.rewrite.expected.receipt.json": "4b4ae4ad702ad31ded2974d8441fdf96cc2cd25111963b8e54ddd0723f54e997",
+    "delay-regression.json": "97f4a036b0af5662b41be0049a504bc8574b93919c6ed84cff4e29902f15ac8f"
+  },
+  "dependencies": {
+    "runner": {
+      "path": "/private/tmp/claude-501/-Users-steffenkrakau-Developer-sil/356ce850-d5a6-4767-86ce-9e570affe7fd/scratchpad/rt/prefix/bin/sil-run",
+      "sha256": "098366a4decfa32a985aab6b51b9f10ec20fa5143fcc1a086de6d505c0e5ab4a",
+      "build_info": {
+        "license": "Apache-2.0",
+        "source_repository": "https://github.com/Stevie1704/sil",
+        "source_revision": "unknown",
+        "version": "0.1.0"
+      }
+    },
+    "executables": {
+      "python3": {
+        "path": "/private/tmp/claude-501/-Users-steffenkrakau-Developer-sil/356ce850-d5a6-4767-86ce-9e570affe7fd/scratchpad/rt/venv/bin/python3",
+        "sha256": "2477b47fa3ae65b9574eb18a15edb364e96948eaa1875ad3f1c80d780efc9c12"
+      }
+    },
+    "python": {
+      "interpreter": {
+        "path": "/private/tmp/claude-501/-Users-steffenkrakau-Developer-sil/356ce850-d5a6-4767-86ce-9e570affe7fd/scratchpad/rt/venv/bin/python3",
+        "sha256": "2477b47fa3ae65b9574eb18a15edb364e96948eaa1875ad3f1c80d780efc9c12"
+      },
+      "version": "3.14.5 (main, May 10 2026, 10:21:34) [Clang 21.0.0 (clang-2100.0.123.102)]",
+      "modules": {
+        "sil": {
+          "origin": [
+            "/private/tmp/claude-501/-Users-steffenkrakau-Developer-sil/356ce850-d5a6-4767-86ce-9e570affe7fd/scratchpad/rt/venv/lib/python3.14/site-packages/sil"
+          ],
+          "sha256": "fefc5d0a82eb3b0cfb69edf6a3c8ba265f9ec13ad6ff1badd4b281eba60fb85b"
+        },
+        "mcap": {
+          "origin": [
+            "/private/tmp/claude-501/-Users-steffenkrakau-Developer-sil/356ce850-d5a6-4767-86ce-9e570affe7fd/scratchpad/rt/venv/lib/python3.14/site-packages/mcap"
+          ],
+          "sha256": "b94f8187d59be70c401178cba33e947563100505c283751b9e12fb437ca48aa5"
+        },
+        "ctypes": {
+          "origin": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ctypes"
+          ],
+          "sha256": "e5876b560b5553a4b0e8260d4cd8ee7bb9c6b7f26ad8b0aa80b45ea5dafecdf1"
+        },
+        "_ctypes": {
+          "origin": "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/lib-dynload/_ctypes.cpython-314-darwin.so",
+          "sha256": "a37a174effa4161894a52d4ba21f54c7260ef4e091c517e13d2836da83dea770"
+        }
+      }
+    },
+    "files": {}
+  }
+}

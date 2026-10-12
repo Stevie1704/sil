@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites>
+  <testsuite name="sil-matrix" tests="4" failures="3" errors="0" skipped="0">
+    <testcase classname="sil-matrix" name="delay-regression" time="0.517">
+      <failure type="behavioral-failure" message="run delay-regression: comparison cadence.delay failed" />
+      <system-out>evidence cases/delay-regression
+log logs/delay-regression.log
+</system-out>
+    </testcase>
+    <testcase classname="sil-matrix" name="nominal-control" time="0.349">
+      <system-out>evidence cases/nominal-control
+log logs/nominal-control.log
+</system-out>
+    </testcase>
+    <testcase classname="sil-matrix" name="monitor-timeout" time="4.7">
+      <failure type="behavioral-failure" message="run monitor-timeout: sil-run exited 1" />
+      <system-out>evidence cases/monitor-timeout
+log logs/monitor-timeout.log
+</system-out>
+    </testcase>
+    <testcase classname="sil-matrix" name="late-private" time="0.391">
+      <failure type="behavioral-failure" message="run late-private: comparison cadence.late failed" />
+      <system-out>evidence cases/late-private
+log logs/late-private.log
+</system-out>
+    </testcase>
+  </testsuite>
+</testsuites>

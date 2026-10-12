@@ -1,0 +1,2 @@
+bundle monitor-timeout: fail
+  run monitor-timeout: fail (exit 1)

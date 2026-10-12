@@ -1,0 +1,1407 @@
+{
+  "sil_investigation_verification": 1,
+  "passed": false,
+  "outcomes": {
+    "delay-regression": "diagnosed",
+    "nominal-control": "no-failure",
+    "monitor-timeout": "execution-failure",
+    "late-private": "inconclusive"
+  },
+  "metrics": {
+    "tool_calls": 48,
+    "tool_output_bytes": 189423,
+    "experiments": 3,
+    "runs": 6,
+    "refusals": 1,
+    "budget_refusals": 0,
+    "first_action_utc": "2026-10-12T14:03:16+00:00",
+    "last_action_utc": "2026-10-12T14:08:07+00:00"
+  },
+  "counts": {
+    "pass": 229,
+    "fail": 1,
+    "unavailable": 0
+  },
+  "checks": [
+    {
+      "check": "original-unchanged",
+      "subject": "brief.md",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/adas_reference.so",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/bundle.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/bundle.lock.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.contract.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.delay.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.delay.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.delay.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.delay.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.drop.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.drop.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.drop.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.drop.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.inputs.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.inputs.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.inputs.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.inputs.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.late.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.late.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.late.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.late.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.rewrite.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.rewrite.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.rewrite.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/cadence.rewrite.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/delay-regression/delay-regression.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/adas_reference.so",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/bundle.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/bundle.lock.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.contract.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.delay.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.delay.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.delay.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.delay.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.drop.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.drop.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.drop.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.drop.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.inputs.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.inputs.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.inputs.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.inputs.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.late.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.late.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.late.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.late.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.rewrite.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.rewrite.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.rewrite.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/cadence.rewrite.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/monitor-timeout.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/monitor-timeout/monitor.py",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/adas_reference.so",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/bundle.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/bundle.lock.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.contract.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.delay.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.delay.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.delay.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.delay.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.drop.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.drop.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.drop.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.drop.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.inputs.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.inputs.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.inputs.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.inputs.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.late.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.late.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.late.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.late.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.rewrite.expected.csv",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.rewrite.expected.mapping.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.rewrite.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/cadence.rewrite.expected.receipt.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "bundles/nominal-control/nominal-control.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/delay-regression/runs/delay-regression/cadence.delay.comparison.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/delay-regression/runs/delay-regression/run-1.log",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/delay-regression/runs/delay-regression/run-1.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/delay-regression/runs/delay-regression/run-1.provenance.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/delay-regression/runs/delay-regression/run-2.log",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/delay-regression/runs/delay-regression/run-2.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/delay-regression/runs/delay-regression/run-2.provenance.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/delay-regression/summary.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/late-private/summary.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/monitor-timeout/runs/monitor-timeout/run-1.log",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/monitor-timeout/runs/monitor-timeout/run-1.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/monitor-timeout/runs/monitor-timeout/run-1.mcap.failure.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/monitor-timeout/runs/monitor-timeout/run-1.provenance.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/monitor-timeout/summary.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/nominal-control/runs/nominal-control/cadence.comparison.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/nominal-control/runs/nominal-control/run-1.log",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/nominal-control/runs/nominal-control/run-1.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/nominal-control/runs/nominal-control/run-1.provenance.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/nominal-control/runs/nominal-control/run-2.log",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/nominal-control/runs/nominal-control/run-2.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/nominal-control/runs/nominal-control/run-2.provenance.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/cases/nominal-control/summary.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/junit.xml",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/logs/delay-regression.log",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/logs/monitor-timeout.log",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/logs/nominal-control.log",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "ci/summary.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "investigation.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "original-unchanged",
+      "subject": "tools/investigate.py",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "report-format",
+      "subject": "delay-regression",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "report-references",
+      "subject": "delay-regression",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "delay-regression/O1",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "delay-regression/O1",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "delay-regression/O2",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "delay-regression/O2",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "delay-regression/O3",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "delay-regression/O3",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "delay-regression/O4",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "delay-regression/O4",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "delay-regression/O5",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "delay-regression/O5",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "delay-regression/O6",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "delay-regression/O6",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "delay-regression/O7",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "delay-regression/O7",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "delay-regression/O8",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "delay-regression/O8",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "delay-regression/O9",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "delay-regression/O9",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "delay-regression/O10",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "delay-regression/O10",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "delay-regression/O11",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "delay-regression/O11",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "delay-regression/O12",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "delay-regression/O12",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "nominal-in-delay-bundle/spec",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "nominal-in-delay-bundle/summary",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "nominal-in-delay-bundle/manifest",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "nominal-in-delay-bundle/lock",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-parent",
+      "subject": "nominal-in-delay-bundle",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "assertions-unchanged",
+      "subject": "nominal-in-delay-bundle/contract",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "assertions-unchanged",
+      "subject": "nominal-in-delay-bundle/cadence.contract.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "assertions-unchanged",
+      "subject": "nominal-in-delay-bundle/cadence.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "intervention-scope",
+      "subject": "nominal-in-delay-bundle",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "determinism",
+      "subject": "nominal-in-delay-bundle",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "comparison-verdict",
+      "subject": "nominal-in-delay-bundle/cadence",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "late-probe/spec",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "late-probe/summary",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "late-probe/manifest",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "late-probe/lock",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-parent",
+      "subject": "late-probe",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "assertions-unchanged",
+      "subject": "late-probe/contract",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "assertions-unchanged",
+      "subject": "late-probe/cadence.contract.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "assertions-unchanged",
+      "subject": "late-probe/cadence.late.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "intervention-scope",
+      "subject": "late-probe",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "determinism",
+      "subject": "late-probe",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "comparison-verdict",
+      "subject": "late-probe/cadence.late",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "divergence-values",
+      "subject": "late-probe/cadence.late",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "delay-repro/spec",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "delay-repro/summary",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "delay-repro/manifest",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "delay-repro/lock",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-parent",
+      "subject": "delay-repro",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "assertions-unchanged",
+      "subject": "delay-repro/contract",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "assertions-unchanged",
+      "subject": "delay-repro/cadence.contract.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "assertions-unchanged",
+      "subject": "delay-repro/cadence.delay.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "intervention-scope",
+      "subject": "delay-repro",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "determinism",
+      "subject": "delay-repro",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "comparison-verdict",
+      "subject": "delay-repro/cadence.delay",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "divergence-values",
+      "subject": "delay-repro/cadence.delay",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "outcome-facts",
+      "subject": "delay-regression",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "expected-outcome",
+      "subject": "delay-regression",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "report-format",
+      "subject": "nominal-control",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "report-references",
+      "subject": "nominal-control",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "nominal-control/O1",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "nominal-control/O1",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "nominal-control/O2",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "nominal-control/O2",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "nominal-control/O3",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "nominal-control/O3",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "nominal-control/O4",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "nominal-control/O4",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "nominal-control/O5",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "nominal-control/O5",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "outcome-facts",
+      "subject": "nominal-control",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "expected-outcome",
+      "subject": "nominal-control",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "report-format",
+      "subject": "monitor-timeout",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "report-references",
+      "subject": "monitor-timeout",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "monitor-timeout/O1",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "monitor-timeout/O1",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "monitor-timeout/O2",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "monitor-timeout/O2",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "monitor-timeout/O3",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "monitor-timeout/O3",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "monitor-timeout/O4",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "monitor-timeout/O4",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "monitor-timeout/O5",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "monitor-timeout/O5",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "monitor-timeout/O6",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "monitor-timeout/O6",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "monitor-timeout/O7",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "monitor-timeout/O7",
+      "status": "fail",
+      "detail": "cannot read the value: Extra data: line 1 column 3 (char 2)"
+    },
+    {
+      "check": "observation-digest",
+      "subject": "monitor-timeout/O8",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "monitor-timeout/O8",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "outcome-facts",
+      "subject": "monitor-timeout",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "expected-outcome",
+      "subject": "monitor-timeout",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "report-format",
+      "subject": "late-private",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "report-references",
+      "subject": "late-private",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "late-private/O1",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "late-private/O1",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "late-private/O2",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "late-private/O2",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "late-private/O3",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "late-private/O3",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "late-private/O4",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "late-private/O4",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-digest",
+      "subject": "late-private/O5",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "observation-value",
+      "subject": "late-private/O5",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "outcome-facts",
+      "subject": "late-private",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "expected-outcome",
+      "subject": "late-private",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "budget",
+      "subject": "ledger",
+      "status": "pass",
+      "detail": ""
+    }
+  ]
+}

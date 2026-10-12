@@ -1,0 +1,41 @@
+{
+  "sil_bundle_evidence": 1,
+  "bundle": "nominal-control",
+  "name": "nominal-control",
+  "lock_sha256": "17cea827953491b1b06317f2d2f4b739edc14613d44dbf9ba3234b78f0b3b218",
+  "runtime": {
+    "license": "Apache-2.0",
+    "source_repository": "https://github.com/Stevie1704/sil",
+    "source_revision": "unknown",
+    "version": "0.1.0"
+  },
+  "verdict": "pass",
+  "dependency_closure": "Every declared artifact, executable, Python module and file matched its sealed digest, and the Runs saw only the declared environment. A Manifest hash covers the Manifest's bytes only; it does not close the modules, native libraries and environment a Run loads, which the lock names instead. Anything the declaration does not name is not verified.",
+  "bundle_unchanged": true,
+  "interrupted": false,
+  "runs": [
+    {
+      "name": "nominal-control",
+      "manifest": "nominal-control.json",
+      "manifest_sha256": "c4c21e4fef9f29d97dc9b0d782764e64a2dd72c6814e3d353924711aaa85a683",
+      "exit_code": 0,
+      "recording_sha256": "ada509b39bfbb433985da12edc36ce30e18a9702f8a702bd0e4ff1333252bab9",
+      "determinism": {
+        "verdict": "pass",
+        "second_exit_code": 0,
+        "recording_sha256": [
+          "ada509b39bfbb433985da12edc36ce30e18a9702f8a702bd0e4ff1333252bab9",
+          "ada509b39bfbb433985da12edc36ce30e18a9702f8a702bd0e4ff1333252bab9"
+        ]
+      },
+      "comparisons": {
+        "cadence": {
+          "verdict": "pass",
+          "divergences": 0,
+          "coverage_problems": 0
+        }
+      },
+      "verdict": "pass"
+    }
+  ]
+}

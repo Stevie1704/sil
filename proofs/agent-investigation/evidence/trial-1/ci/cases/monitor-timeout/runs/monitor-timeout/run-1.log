@@ -1,0 +1,2 @@
+participant terminated by signal 15
+sil-run: participant 'monitor': timeout waiting for step_done response during Step at virtual time 100000000 ns

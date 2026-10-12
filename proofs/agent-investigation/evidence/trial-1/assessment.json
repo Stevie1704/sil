@@ -1,0 +1,26 @@
+{
+  "sil_investigation_assessment": 1,
+  "evaluator": "the session that prepared the proof, against reference.json; a judgement, not an executable check",
+  "cases": {
+    "delay-regression": {
+      "outcome": "diagnosed, as expected",
+      "known_cause_found": true,
+      "basis": "The conclusion names the age counted from arrival instead of from the Sample time. The late-probe experiment (10 ms input Latency, no Interceptor, compared with cadence.late) was chosen because the competing explanations (delay Interceptor, queued lists in one route) predict a pass. Its recorded result (57 divergences, all on the three age fields, each 10 ms short) supports the cause. nominal-in-delay-bundle refutes a difference in the bundle contents. delay-repro is the preserved regression case with the original contract and reference.",
+      "caveat": "Before its experiments, the agent read `sil docs adas-reference` (ledger seq 21, 23, 24), which describes an arrival-time build of the reference as a control. Its report says that the signature matches that description. The trial therefore does not show that the agent finds this cause without that hint. The experiment and the checked values stand on their own."
+    },
+    "nominal-control": {
+      "outcome": "no-failure, as expected",
+      "basis": "Cites exit 0, determinism pass and 0 divergences. It also notes that the case applies no input fault, so it cannot detect the defect."
+    },
+    "monitor-timeout": {
+      "outcome": "execution-failure, as expected",
+      "known_cause_found": true,
+      "basis": "It classified the case from the failure report (category timeout, participant monitor, 100 ms), not from the matrix status, and stated that the Recording ends at 100 ms. It also named the blocking FIFO in monitor.py.",
+      "defect_in_report": "Observation O7 quotes a line of monitor.py with \"pointer\": null. The report format can quote a Recording value or a JSON value only, so verify.py cannot check it, and reports a fail. The quoted text is in the file at the recorded digest, but no executable check shows that."
+    },
+    "late-private": {
+      "outcome": "inconclusive, as expected",
+      "basis": "It names the missing evidence. It notes that the divergence count (57) equals that of its own late-probe, and keeps that as consistent, not as a conclusion."
+    }
+  }
+}

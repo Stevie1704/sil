@@ -1,0 +1,136 @@
+{
+  "sil_investigation_experiment_record": 1,
+  "name": "late-probe",
+  "spec": {
+    "path": "experiments/late-probe/spec.json",
+    "sha256": "e6d4b9938f839943ed5b11eaf5d966e5ccc49f09f2749e591a29e2e81382d7ca"
+  },
+  "hypothesis": "H1: the controller counts age from arrival. With input latency 10 ms on all three inputs and no interceptor, every observation arrives 10 ms after its sample time, so H1 predicts that radar_age_ns, camera_age_ns and ego_age_ns are 10 ms smaller than in cadence.late.expected.mcap at every activation that holds an observation, and the comparison fails.",
+  "distinguishes": "H2 (the kernel's delay interceptor delivers the delayed radar list wrongly, controller correct) predicts a pass here, because no interceptor is active. H3 (the controller mishandles out-of-order or queued radar lists only) also predicts a pass, because Latency keeps Publish order and one message per route.",
+  "parent": {
+    "case": "delay-regression",
+    "bundle": "bundles/delay-regression",
+    "lock_sha256": "ed47514a6473af250ac0edeba0df2f5cc494795cd111b424ebff607f12e25a82",
+    "manifest_sha256": "97f4a036b0af5662b41be0049a504bc8574b93919c6ed84cff4e29902f15ac8f"
+  },
+  "intervention": {
+    "cadence.camera": {
+      "latency_ns": {
+        "parent": 0,
+        "follow_up": 10000000
+      }
+    },
+    "cadence.ego": {
+      "latency_ns": {
+        "parent": 0,
+        "follow_up": 10000000
+      }
+    },
+    "cadence.radar": {
+      "latency_ns": {
+        "parent": 0,
+        "follow_up": 10000000
+      },
+      "interceptors": {
+        "parent": [
+          {
+            "delay_ns": 50000000,
+            "end_ns": 100000000,
+            "kind": "delay",
+            "start_ns": 60000000
+          }
+        ],
+        "follow_up": null
+      }
+    }
+  },
+  "bundle": "experiments/late-probe/bundle",
+  "lock_sha256": "a58025447ea49e3c185e023795ed3f78c547d88b10925d9813366b093e7edfa8",
+  "manifest_sha256": "8274d8eaa295b4465acedc7a8c7e4924ce40f6c59716add731f2965940e3205b",
+  "contract": {
+    "name": "cadence.contract.json",
+    "sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590"
+  },
+  "references": {
+    "cadence.late.expected.mcap": "a99a3b8b3008902ce1c8fdda8403f90ec77c8a6dcb33b6fd0c99341d229fde3b"
+  },
+  "commands": [
+    {
+      "argv": [
+        "sil",
+        "manifest",
+        "validate",
+        "experiments/late-probe/bundle/late-probe.json",
+        "--json"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.086
+    },
+    {
+      "argv": [
+        "sil",
+        "bundle",
+        "seal",
+        "experiments/late-probe/bundle"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.163
+    },
+    {
+      "argv": [
+        "sil",
+        "bundle",
+        "run",
+        "experiments/late-probe/bundle",
+        "-o",
+        "experiments/late-probe/evidence",
+        "--expect-lock",
+        "a58025447ea49e3c185e023795ed3f78c547d88b10925d9813366b093e7edfa8"
+      ],
+      "exit_code": 1,
+      "elapsed_s": 0.263
+    }
+  ],
+  "evidence": "experiments/late-probe/evidence",
+  "summary_sha256": "1296228ed41ab878217d0d97e60998ebb847e32da66177a049c1d9542173ebde",
+  "result": [
+    {
+      "name": "late-probe",
+      "manifest": "late-probe.json",
+      "manifest_sha256": "8274d8eaa295b4465acedc7a8c7e4924ce40f6c59716add731f2965940e3205b",
+      "exit_code": 0,
+      "recording_sha256": "81d92d5855b875840ab53d4d208c47cb0cf113422bd5bf8ffbaa120a4cd3a3a2",
+      "determinism": {
+        "verdict": "pass",
+        "second_exit_code": 0,
+        "recording_sha256": [
+          "81d92d5855b875840ab53d4d208c47cb0cf113422bd5bf8ffbaa120a4cd3a3a2",
+          "81d92d5855b875840ab53d4d208c47cb0cf113422bd5bf8ffbaa120a4cd3a3a2"
+        ]
+      },
+      "comparisons": {
+        "cadence.late": {
+          "verdict": "fail",
+          "divergences": 57,
+          "coverage_problems": 0
+        }
+      },
+      "verdict": "fail"
+    }
+  ],
+  "first_divergences": {
+    "cadence.late": {
+      "kind": "value",
+      "channel": "cadence.command",
+      "reference_channel": "cadence.command",
+      "field": "radar_age_ns",
+      "observation_ns": 20000000,
+      "actual_publication_ns": 10000000,
+      "reference_time_ns": 20000000,
+      "actual": 0,
+      "expected": 10000000,
+      "tolerance": "exact",
+      "abs_error": null
+    }
+  }
+}

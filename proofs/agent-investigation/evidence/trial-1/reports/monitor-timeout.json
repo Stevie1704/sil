@@ -1,0 +1,27 @@
+{
+  "sil_investigation_report": 1,
+  "case": "monitor-timeout",
+  "outcome": "execution-failure",
+  "summary": "The Run did not complete: sil-run exited 1 because the Process participant 'monitor' did not answer step_done at virtual time 100000000 ns. No comparison and no determinism check ran, so no behavioral verdict about the controller exists. The matrix label 'behavioral-failure' is wrong for this case; the failure record classifies it as a timeout.",
+  "observations": [
+    {"id": "O1", "artifact": "ci/summary.json", "sha256": "fd6b5480a7189daaca2d3f3175a062377637c9fc01a7a869b66107e9e303307e", "pointer": "/cases/2/status", "value": "behavioral-failure", "statement": "The matrix labels the case behavioral-failure, although the reason is 'run monitor-timeout: sil-run exited 1'."},
+    {"id": "O2", "artifact": "ci/cases/monitor-timeout/runs/monitor-timeout/run-1.mcap.failure.json", "sha256": "2088db0c75a6fc6e2a9d1df30a7e5f2112c8fcf7acb03eedea6c55db2a811704", "pointer": "/category", "value": "timeout", "statement": "The kernel's failure record classifies the end of the Run as a timeout."},
+    {"id": "O3", "artifact": "ci/cases/monitor-timeout/runs/monitor-timeout/run-1.mcap.failure.json", "sha256": "2088db0c75a6fc6e2a9d1df30a7e5f2112c8fcf7acb03eedea6c55db2a811704", "pointer": "/message", "value": "participant 'monitor': timeout waiting for step_done response during Step at virtual time 100000000 ns", "statement": "The participant that failed is the monitor, not the controller, at step_index 10."},
+    {"id": "O4", "artifact": "ci/cases/monitor-timeout/summary.json", "sha256": "11366fb2e4e5c52d2d967e06b2a4d84306e6a9a3592daeab68f1edc0a1227c2c", "pointer": "/runs/0/comparisons", "value": {}, "statement": "No comparison ran."},
+    {"id": "O5", "artifact": "ci/cases/monitor-timeout/summary.json", "sha256": "11366fb2e4e5c52d2d967e06b2a4d84306e6a9a3592daeab68f1edc0a1227c2c", "pointer": "/runs/0/determinism", "value": null, "statement": "No determinism check ran (no second Run)."},
+    {"id": "O6", "artifact": "ci/cases/monitor-timeout/runs/monitor-timeout/run-1.mcap", "sha256": "274e7db77ed0d60a84bcb28a80d5c2899ab2c9906b18631fad21d6bf7b6f21ee", "channel": "cadence.command", "t_ns": 100000000, "ordinal": 0, "field": "sequence", "value": 11, "statement": "The partial Recording ends with the Command published at 100 ms; the Run stopped there, before its 200 ms duration."},
+    {"id": "O7", "artifact": "bundles/monitor-timeout/monitor.py", "sha256": "e5d884b96e235fc567bf1082fc82ec709606c949f3465dd8eea71cd89522a409", "pointer": null, "value": "FLUSH_AT_NS = 100_000_000", "statement": "From 100 ms the monitor opens the FIFO monitor-report.fifo for writing, which blocks until a reader opens it; no participant reads it, so the monitor stops answering the runner. This matches the time in O3."},
+    {"id": "O8", "artifact": "ci/summary.json", "sha256": "fd6b5480a7189daaca2d3f3175a062377637c9fc01a7a869b66107e9e303307e", "pointer": "/counts/timeout", "value": 0, "statement": "The matrix counts 0 timeouts, so the matrix classification disagrees with the failure record (O2)."}
+  ],
+  "hypotheses": [
+    {"id": "H1", "statement": "The Run ended because the monitor Process participant blocked on opening a FIFO for writing at 100 ms and missed its step_done response deadline.", "predicts": "A timeout of participant 'monitor' at virtual time 100000000 ns, independent of the controller's Commands."}
+  ],
+  "experiments": [],
+  "conclusions": [
+    {"statement": "The Run did not complete, so there is no behavioral verdict for the controller in this case; the matrix status behavioral-failure is a misclassification of an execution failure (timeout).", "supported_by": ["O2", "O3", "O4", "O5", "O6", "O8"]},
+    {"statement": "The timeout point agrees with the monitor code, which blocks on an unread FIFO from 100 ms. This is read from the code and the failure record; no experiment was run, because the experiment driver can change only input Channels, not the monitor.", "supported_by": ["O3", "O7"]}
+  ],
+  "unresolved_alternatives": [],
+  "missing_evidence": ["A behavioral verdict needs a completed Run of this case; the monitor must not block (for example, a monitor that does not open an unread FIFO). The experiment driver cannot change a participant, so this was not tested."],
+  "regression_case": null
+}

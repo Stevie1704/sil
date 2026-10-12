@@ -1,0 +1,41 @@
+{
+  "sil_bundle_evidence": 1,
+  "bundle": "delay-regression",
+  "name": "delay-regression",
+  "lock_sha256": "ed47514a6473af250ac0edeba0df2f5cc494795cd111b424ebff607f12e25a82",
+  "runtime": {
+    "license": "Apache-2.0",
+    "source_repository": "https://github.com/Stevie1704/sil",
+    "source_revision": "unknown",
+    "version": "0.1.0"
+  },
+  "verdict": "fail",
+  "dependency_closure": "Every declared artifact, executable, Python module and file matched its sealed digest, and the Runs saw only the declared environment. A Manifest hash covers the Manifest's bytes only; it does not close the modules, native libraries and environment a Run loads, which the lock names instead. Anything the declaration does not name is not verified.",
+  "bundle_unchanged": true,
+  "interrupted": false,
+  "runs": [
+    {
+      "name": "delay-regression",
+      "manifest": "delay-regression.json",
+      "manifest_sha256": "97f4a036b0af5662b41be0049a504bc8574b93919c6ed84cff4e29902f15ac8f",
+      "exit_code": 0,
+      "recording_sha256": "02e4b4225de5dd20e51ddd06e9651b885e07182da36cf5d00c1fb236d708fff2",
+      "determinism": {
+        "verdict": "pass",
+        "second_exit_code": 0,
+        "recording_sha256": [
+          "02e4b4225de5dd20e51ddd06e9651b885e07182da36cf5d00c1fb236d708fff2",
+          "02e4b4225de5dd20e51ddd06e9651b885e07182da36cf5d00c1fb236d708fff2"
+        ]
+      },
+      "comparisons": {
+        "cadence.delay": {
+          "verdict": "fail",
+          "divergences": 18,
+          "coverage_problems": 0
+        }
+      },
+      "verdict": "fail"
+    }
+  ]
+}

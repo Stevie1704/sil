@@ -1,0 +1,82 @@
+{
+  "sil_bundle": 1,
+  "name": "delay-repro",
+  "artifacts": {
+    "adas_reference.so": "target",
+    "cadence.inputs.csv": "conversion-input",
+    "cadence.inputs.mapping.json": "conversion-input",
+    "cadence.inputs.mcap": "recording",
+    "cadence.inputs.receipt.json": "receipt",
+    "cadence.contract.json": "contract",
+    "cadence.expected.mcap": "reference",
+    "cadence.expected.mapping.json": "conversion-input",
+    "cadence.expected.receipt.json": "receipt",
+    "cadence.expected.csv": "conversion-input",
+    "cadence.drop.expected.mcap": "reference",
+    "cadence.drop.expected.mapping.json": "conversion-input",
+    "cadence.drop.expected.receipt.json": "receipt",
+    "cadence.drop.expected.csv": "conversion-input",
+    "cadence.delay.expected.mcap": "reference",
+    "cadence.delay.expected.mapping.json": "conversion-input",
+    "cadence.delay.expected.receipt.json": "receipt",
+    "cadence.delay.expected.csv": "conversion-input",
+    "cadence.rewrite.expected.mcap": "reference",
+    "cadence.rewrite.expected.mapping.json": "conversion-input",
+    "cadence.rewrite.expected.receipt.json": "receipt",
+    "cadence.rewrite.expected.csv": "conversion-input",
+    "cadence.late.expected.mcap": "reference",
+    "cadence.late.expected.mapping.json": "conversion-input",
+    "cadence.late.expected.receipt.json": "receipt",
+    "cadence.late.expected.csv": "conversion-input",
+    "delay-repro.json": "manifest"
+  },
+  "runtime": {
+    "runner": "sil-run",
+    "environment": {
+      "PATH": "/private/tmp/claude-501/-Users-steffenkrakau-Developer-sil/356ce850-d5a6-4767-86ce-9e570affe7fd/scratchpad/rt/venv/bin:/private/tmp/claude-501/-Users-steffenkrakau-Developer-sil/356ce850-d5a6-4767-86ce-9e570affe7fd/scratchpad/rt/prefix/bin",
+      "PYTHONNOUSERSITE": "1"
+    }
+  },
+  "dependencies": {
+    "executables": [
+      "python3"
+    ],
+    "python": {
+      "interpreter": "python3",
+      "modules": [
+        "sil",
+        "mcap",
+        "ctypes",
+        "_ctypes"
+      ]
+    },
+    "files": []
+  },
+  "excluded": {
+    "executables": [
+      "cc",
+      "gcc",
+      "clang",
+      "c++"
+    ],
+    "modules": [
+      "fmpy",
+      "pythonfmu3"
+    ]
+  },
+  "runs": [
+    {
+      "name": "delay-repro",
+      "manifest": "delay-repro.json",
+      "participant_timeout_ms": 2000,
+      "determinism": true,
+      "comparisons": [
+        {
+          "name": "cadence.delay",
+          "contract": "cadence.contract.json",
+          "reference": "cadence.delay.expected.mcap"
+        }
+      ]
+    }
+  ]
+}

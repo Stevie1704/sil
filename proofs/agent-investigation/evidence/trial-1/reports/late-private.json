@@ -1,0 +1,34 @@
+{
+  "sil_investigation_report": 1,
+  "case": "late-private",
+  "outcome": "inconclusive",
+  "summary": "The supplier's Run completed and repeated bit-identically, and its comparison cadence.late failed with 57 divergences. Our controller build, which counts age from arrival (see delay-regression), gives exactly 57 divergences under the late input settings, which is consistent, but the supplier's bundle, controller build, Manifest, Recording and comparison report are private, so the cause cannot be confirmed.",
+  "observations": [
+    {"id": "O1", "artifact": "ci/cases/late-private/summary.json", "sha256": "b0149eaa901da34336ccf2fc4538faf8d7266174f2d7f188c07332fac4de124e", "pointer": "/runs/0/exit_code", "value": 0, "statement": "The supplier's Run completed."},
+    {"id": "O2", "artifact": "ci/cases/late-private/summary.json", "sha256": "b0149eaa901da34336ccf2fc4538faf8d7266174f2d7f188c07332fac4de124e", "pointer": "/runs/0/determinism/verdict", "value": "pass", "statement": "The Run repeats bit-identically."},
+    {"id": "O3", "artifact": "ci/cases/late-private/summary.json", "sha256": "b0149eaa901da34336ccf2fc4538faf8d7266174f2d7f188c07332fac4de124e", "pointer": "/runs/0/comparisons/cadence.late/divergences", "value": 57, "statement": "The comparison against the late reference failed with 57 divergences and 0 coverage problems."},
+    {"id": "O4", "artifact": "ci/cases/late-private/summary.json", "sha256": "b0149eaa901da34336ccf2fc4538faf8d7266174f2d7f188c07332fac4de124e", "pointer": "/lock_sha256", "value": "0a44291e5ad0f496b77a197a292bb5eb791e2784efcb99a06af5d3ceb87f9c49", "statement": "The evidence comes from the lock digest that investigation.json expects; the locked content is not visible to us."},
+    {"id": "O5", "artifact": "experiments/late-probe/record.json", "sha256": "ef4cc1d7dc6ae288836e930f8731d4748d142660fc30407764ec4060d72efb3d", "pointer": "/result/0/comparisons/cadence.late/divergences", "value": 57, "statement": "Our controller build with input Latency 10 ms on all inputs and no Interceptor (the settings of cadence.late.expected.mcap) also gives 57 divergences: each of the three ages is 10 ms too small at each of the 19 observations after the first (19 x 3 = 57)."}
+  ],
+  "hypotheses": [
+    {"id": "H1", "statement": "The supplier's controller has the same age-from-arrival defect as the build in delay-regression, and its Manifest uses the late input settings.", "predicts": "57 divergences, all on radar_age_ns, camera_age_ns and ego_age_ns, first on radar_age_ns at observation 20 ms (actual 0, expected 10000000)."},
+    {"id": "H2", "statement": "The supplier's Manifest does not have the input settings that cadence.late.expected.mcap was enumerated for (for example another Latency, or an Interceptor), and the comparison is not meaningful.", "predicts": "Divergences with other fields or another first divergence; the count could equal 57 only by chance."},
+    {"id": "H3", "statement": "The supplier's controller has a different behavioral defect.", "predicts": "A different set of divergent fields."}
+  ],
+  "experiments": [
+    {"name": "late-probe", "tests": ["H1"], "result": "On our bundle (not the supplier's), the late settings give 57 divergences, the same count as O3. This is consistent with H1 but is not a test of the supplier's Run.", "observations": ["O5"]}
+  ],
+  "conclusions": [
+    {"statement": "The supplier's Run completed and is deterministic, so the failure is behavioral, not an execution failure.", "supported_by": ["O1", "O2", "O3"]},
+    {"statement": "The divergence count agrees with the age-from-arrival defect found in delay-regression, but a matching count is not a diagnosis; the supplier's case cannot be tested here.", "supported_by": ["O3", "O5", "late-probe"]}
+  ],
+  "unresolved_alternatives": ["H1: same age-from-arrival defect as delay-regression", "H2: the supplier's Manifest input settings differ from those of cadence.late.expected.mcap", "H3: another controller defect"],
+  "missing_evidence": [
+    "The supplier's comparison report (cadence.late.comparison.json) with the first divergence and the per-field failures",
+    "The supplier's run-1.mcap, to read the Commands and the delivered input times",
+    "The supplier's Manifest, to confirm input latency_ns 10000000 on all three inputs and no Interceptor",
+    "The digest of the supplier's controller build, to compare with d152d64db9a1f753cd698b1c9e76b5cf11c3d21f88e9240d2016e06b42b29c7e",
+    "The supplier's bundle, to run a follow-up experiment (for example with input Latency 0 against cadence.expected.mcap)"
+  ],
+  "regression_case": null
+}

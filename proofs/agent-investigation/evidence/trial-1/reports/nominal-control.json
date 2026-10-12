@@ -1,0 +1,21 @@
+{
+  "sil_investigation_report": 1,
+  "case": "nominal-control",
+  "outcome": "no-failure",
+  "summary": "The case passed. The Run completed with exit code 0, its two Recordings are bit-identical, and the Commands match cadence.expected.mcap with 0 divergences over 20 checked observations. The evidence was produced from the expected lock digest.",
+  "observations": [
+    {"id": "O1", "artifact": "ci/summary.json", "sha256": "fd6b5480a7189daaca2d3f3175a062377637c9fc01a7a869b66107e9e303307e", "pointer": "/cases/1/status", "value": "pass", "statement": "The matrix reports pass for the case."},
+    {"id": "O2", "artifact": "ci/cases/nominal-control/summary.json", "sha256": "0f96fa5f0e0b780d3418c156cbbf2c92b61ba98aeb45a9517a5b1856f0b1ba43", "pointer": "/runs/0/exit_code", "value": 0, "statement": "The Run completed."},
+    {"id": "O3", "artifact": "ci/cases/nominal-control/summary.json", "sha256": "0f96fa5f0e0b780d3418c156cbbf2c92b61ba98aeb45a9517a5b1856f0b1ba43", "pointer": "/runs/0/determinism/verdict", "value": "pass", "statement": "Both Runs gave the Recording ada509b3...; the Run repeats bit-identically."},
+    {"id": "O4", "artifact": "ci/cases/nominal-control/runs/nominal-control/cadence.comparison.json", "sha256": "e01a0fb94c0faf2484bd400a441a0bd25cce227218e09444896ae0c59f1518db", "pointer": "/divergences", "value": 0, "statement": "The comparison against cadence.expected.mcap has no divergence; 20 observations checked, 0 failed, no coverage problem."},
+    {"id": "O5", "artifact": "ci/cases/nominal-control/summary.json", "sha256": "0f96fa5f0e0b780d3418c156cbbf2c92b61ba98aeb45a9517a5b1856f0b1ba43", "pointer": "/lock_sha256", "value": "17cea827953491b1b06317f2d2f4b739edc14613d44dbf9ba3234b78f0b3b218", "statement": "The evidence comes from the lock digest that investigation.json expects."}
+  ],
+  "hypotheses": [],
+  "experiments": [],
+  "conclusions": [
+    {"statement": "The case meets the target contract: deterministic Run and Commands equal to the reference under the bundle's contract. Note that this case applies no input fault, so it does not exercise the age-from-arrival defect found in delay-regression with the same controller build.", "supported_by": ["O1", "O2", "O3", "O4", "O5"]}
+  ],
+  "unresolved_alternatives": [],
+  "missing_evidence": [],
+  "regression_case": null
+}
