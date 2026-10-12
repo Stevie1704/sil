@@ -1,0 +1,41 @@
+{
+  "sil_bundle_evidence": 1,
+  "bundle": "bundle",
+  "name": "delay-repro",
+  "lock_sha256": "cf0220c2507ea51bd0fc52d8a0d4dda461585dc3bd6ad307359f5527a1b000ff",
+  "runtime": {
+    "license": "Apache-2.0",
+    "source_repository": "https://github.com/Stevie1704/sil",
+    "source_revision": "unknown",
+    "version": "0.1.0"
+  },
+  "verdict": "fail",
+  "dependency_closure": "Every declared artifact, executable, Python module and file matched its sealed digest, and the Runs saw only the declared environment. A Manifest hash covers the Manifest's bytes only; it does not close the modules, native libraries and environment a Run loads, which the lock names instead. Anything the declaration does not name is not verified.",
+  "bundle_unchanged": true,
+  "interrupted": false,
+  "runs": [
+    {
+      "name": "delay-repro",
+      "manifest": "delay-repro.json",
+      "manifest_sha256": "42c622d63abdee1ec55001c2ca9fc7ca84fdb05e8eb38bb1ded30eeee5151f9d",
+      "exit_code": 0,
+      "recording_sha256": "b60e18c1184d45c97d90a92c1c49d75de407040917de179329365ef4e42e98be",
+      "determinism": {
+        "verdict": "pass",
+        "second_exit_code": 0,
+        "recording_sha256": [
+          "b60e18c1184d45c97d90a92c1c49d75de407040917de179329365ef4e42e98be",
+          "b60e18c1184d45c97d90a92c1c49d75de407040917de179329365ef4e42e98be"
+        ]
+      },
+      "comparisons": {
+        "cadence.delay": {
+          "verdict": "fail",
+          "divergences": 18,
+          "coverage_problems": 0
+        }
+      },
+      "verdict": "fail"
+    }
+  ]
+}

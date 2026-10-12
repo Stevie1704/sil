@@ -1,0 +1,126 @@
+{
+  "sil_investigation": 1,
+  "matrix": "ci/summary.json",
+  "cases": [
+    {
+      "name": "delay-regression",
+      "bundle": "bundles/delay-regression",
+      "expect_lock": "ed47514a6473af250ac0edeba0df2f5cc494795cd111b424ebff607f12e25a82",
+      "evidence": "ci/cases/delay-regression"
+    },
+    {
+      "name": "nominal-control",
+      "bundle": "bundles/nominal-control",
+      "expect_lock": "17cea827953491b1b06317f2d2f4b739edc14613d44dbf9ba3234b78f0b3b218",
+      "evidence": "ci/cases/nominal-control"
+    },
+    {
+      "name": "monitor-timeout",
+      "bundle": "bundles/monitor-timeout",
+      "expect_lock": "0b170a9b08e4bb7dac0e7821bf5910766e8c1f6bca8fdc4089e920bbc4922f7e",
+      "evidence": "ci/cases/monitor-timeout"
+    },
+    {
+      "name": "late-private",
+      "bundle": null,
+      "expect_lock": "0a44291e5ad0f496b77a197a292bb5eb791e2784efcb99a06af5d3ceb87f9c49",
+      "evidence": "ci/cases/late-private"
+    }
+  ],
+  "experiment": {
+    "input_channels": [
+      "cadence.radar",
+      "cadence.camera",
+      "cadence.ego"
+    ],
+    "contract": "cadence.contract.json",
+    "prepared_references": {
+      "cadence.expected.mcap": {
+        "experiment": "none",
+        "channels": {}
+      },
+      "cadence.drop.expected.mcap": {
+        "experiment": "drop",
+        "channels": {
+          "cadence.camera": {
+            "interceptors": [
+              {
+                "kind": "drop",
+                "start_ns": 40000000,
+                "end_ns": 100000000
+              }
+            ]
+          }
+        }
+      },
+      "cadence.delay.expected.mcap": {
+        "experiment": "delay",
+        "channels": {
+          "cadence.radar": {
+            "interceptors": [
+              {
+                "kind": "delay",
+                "delay_ns": 50000000,
+                "start_ns": 60000000,
+                "end_ns": 100000000
+              }
+            ]
+          }
+        }
+      },
+      "cadence.rewrite.expected.mcap": {
+        "experiment": "rewrite",
+        "channels": {
+          "cadence.radar": {
+            "interceptors": [
+              {
+                "kind": "override",
+                "field": "validity",
+                "value": 0,
+                "start_ns": 100000000,
+                "end_ns": 120000000
+              }
+            ]
+          },
+          "cadence.ego": {
+            "interceptors": [
+              {
+                "kind": "override",
+                "field": "sequence",
+                "value": 14,
+                "start_ns": 150000000,
+                "end_ns": 180000000
+              }
+            ]
+          }
+        }
+      },
+      "cadence.late.expected.mcap": {
+        "experiment": "late",
+        "channels": {
+          "cadence.radar": {
+            "latency_ns": 10000000
+          },
+          "cadence.camera": {
+            "latency_ns": 10000000
+          },
+          "cadence.ego": {
+            "latency_ns": 10000000
+          }
+        }
+      }
+    }
+  },
+  "budgets": {
+    "runs": 16,
+    "elapsed_s": 3600,
+    "tool_calls": 200,
+    "tool_output_bytes": 2000000,
+    "inference": "one agent session; usage is recorded from the harness, and the driver does not enforce it"
+  },
+  "tool_output_limit": 65536,
+  "runtime": {
+    "python_bin": "/private/tmp/claude-501/-Users-steffenkrakau-Developer-sil/356ce850-d5a6-4767-86ce-9e570affe7fd/scratchpad/rt/venv/bin",
+    "sil_bin": "/private/tmp/claude-501/-Users-steffenkrakau-Developer-sil/356ce850-d5a6-4767-86ce-9e570affe7fd/scratchpad/rt/prefix/bin"
+  }
+}

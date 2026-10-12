@@ -1,0 +1,108 @@
+{
+  "sil_investigation_experiment_record": 1,
+  "name": "nominal-in-delay-bundle",
+  "spec": {
+    "path": "experiments/nominal-in-delay-bundle/spec.json",
+    "sha256": "cae22c7ce526301b42937f454960bc69a408a5273c00e8533cc43135573a2755"
+  },
+  "hypothesis": "Control: with the radar delay interceptor removed, the delay-regression bundle is the nominal cadence case. H1 predicts a pass against cadence.expected.mcap, because every observation arrives at its sample time, so arrival age equals sample age.",
+  "distinguishes": "A defect in the bundle other than the delay declaration (another build, input or manifest difference) predicts a failure here.",
+  "parent": {
+    "case": "delay-regression",
+    "bundle": "bundles/delay-regression",
+    "lock_sha256": "ed47514a6473af250ac0edeba0df2f5cc494795cd111b424ebff607f12e25a82",
+    "manifest_sha256": "97f4a036b0af5662b41be0049a504bc8574b93919c6ed84cff4e29902f15ac8f"
+  },
+  "intervention": {
+    "cadence.radar": {
+      "interceptors": {
+        "parent": [
+          {
+            "delay_ns": 50000000,
+            "end_ns": 100000000,
+            "kind": "delay",
+            "start_ns": 60000000
+          }
+        ],
+        "follow_up": null
+      }
+    }
+  },
+  "bundle": "experiments/nominal-in-delay-bundle/bundle",
+  "lock_sha256": "b8549ae5b05eda4e4ceb6ee2c592c699b0b88fe03a840c728d5f460083706528",
+  "manifest_sha256": "4794dc18fb79200b203a14dff90465c852f0c86378f56b0f63706bd6d62591ff",
+  "contract": {
+    "name": "cadence.contract.json",
+    "sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590"
+  },
+  "references": {
+    "cadence.expected.mcap": "173b68ee2c47fe36d8f17efdb0fd16bad5775ff1caa9808928e0cbf3d8a91bac"
+  },
+  "commands": [
+    {
+      "argv": [
+        "sil",
+        "manifest",
+        "validate",
+        "experiments/nominal-in-delay-bundle/bundle/nominal-in-delay-bundle.json",
+        "--json"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.082
+    },
+    {
+      "argv": [
+        "sil",
+        "bundle",
+        "seal",
+        "experiments/nominal-in-delay-bundle/bundle"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.183
+    },
+    {
+      "argv": [
+        "sil",
+        "bundle",
+        "run",
+        "experiments/nominal-in-delay-bundle/bundle",
+        "-o",
+        "experiments/nominal-in-delay-bundle/evidence",
+        "--expect-lock",
+        "b8549ae5b05eda4e4ceb6ee2c592c699b0b88fe03a840c728d5f460083706528"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.294
+    }
+  ],
+  "evidence": "experiments/nominal-in-delay-bundle/evidence",
+  "summary_sha256": "47c92206368071c4c8d7e56c14d47354284d22ac8fc9fa15d729f50c58d54117",
+  "result": [
+    {
+      "name": "nominal-in-delay-bundle",
+      "manifest": "nominal-in-delay-bundle.json",
+      "manifest_sha256": "4794dc18fb79200b203a14dff90465c852f0c86378f56b0f63706bd6d62591ff",
+      "exit_code": 0,
+      "recording_sha256": "4090d97719ca4ca58ad2790c9090fa26c7d2d3da5b33d68c7547a9af2884c264",
+      "determinism": {
+        "verdict": "pass",
+        "second_exit_code": 0,
+        "recording_sha256": [
+          "4090d97719ca4ca58ad2790c9090fa26c7d2d3da5b33d68c7547a9af2884c264",
+          "4090d97719ca4ca58ad2790c9090fa26c7d2d3da5b33d68c7547a9af2884c264"
+        ]
+      },
+      "comparisons": {
+        "cadence": {
+          "verdict": "pass",
+          "divergences": 0,
+          "coverage_problems": 0
+        }
+      },
+      "verdict": "pass"
+    }
+  ],
+  "first_divergences": {
+    "cadence": null
+  }
+}

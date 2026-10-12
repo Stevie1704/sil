@@ -1,0 +1,35 @@
+{
+  "sil_investigation_reference": 1,
+  "note": "The evaluator's reference. The investigator never gets this file.",
+  "cases": {
+    "delay-regression": {
+      "outcome": "diagnosed",
+      "known_cause": "The controller build counts the age of a held observation from the activation that drains it (its arrival), not from its Sample time. A radar list that arrives 50 ms late is therefore fresh on arrival (age 0) instead of stale, and the controller acts on old sensing.",
+      "cause_evidence": [
+        "cadence.command radar_age_ns is 0 where the reference holds the age since the Sample time of the delayed list",
+        "a follow-up without the delay but with input Latency predicts and shows ages short by the Latency (cadence.late fails on an age field), so the delay Interceptor and the route ordering are not needed for the defect"
+      ],
+      "competing_explanations": [
+        "the delay Interceptor or the finite route reorders or loses lists",
+        "the reference is wrong",
+        "a freshness limit or the hazard logic is wrong"
+      ]
+    },
+    "nominal-control": {
+      "outcome": "no-failure"
+    },
+    "monitor-timeout": {
+      "outcome": "execution-failure",
+      "known_cause": "The Process participant 'monitor' missed its 2000 ms response deadline at virtual time 100 ms (failure report category timeout). The Run ended with exit 1 and no comparison was made, so no behavioral verdict about the controller exists. The partial Recording ends at 100 ms."
+    },
+    "late-private": {
+      "outcome": "inconclusive",
+      "known_cause": "Only the bundle summary is shared: it says the comparison failed, but no Recording, comparison report, Manifest or bundle is available to locate or explain it.",
+      "missing_evidence": [
+        "the Recording of the Run",
+        "the comparison report with its first divergence",
+        "the Manifest and the bundle, to repeat the Run"
+      ]
+    }
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "sil_matrix_evidence": 1,
+  "verdict": "fail",
+  "jobs": 1,
+  "fail_fast": false,
+  "counts": {
+    "manifest-error": 0,
+    "determinism-violation": 0,
+    "behavioral-failure": 3,
+    "pass": 1,
+    "timeout": 0,
+    "skipped": 0
+  },
+  "cases": [
+    {
+      "name": "delay-regression",
+      "required": true,
+      "evidence": "cases/delay-regression",
+      "log": "logs/delay-regression.log",
+      "status": "behavioral-failure",
+      "bundle_exit_code": 1,
+      "reason": "run delay-regression: comparison cadence.delay failed",
+      "runs": [
+        {
+          "name": "delay-regression",
+          "status": "behavioral-failure",
+          "exit_code": 0,
+          "recording_sha256": "02e4b4225de5dd20e51ddd06e9651b885e07182da36cf5d00c1fb236d708fff2"
+        }
+      ],
+      "identity": {
+        "status": "behavioral-failure",
+        "bundle_exit_code": 1,
+        "summary_sha256": "5766371f6693189120e663ccaea83480e7aef78cd282f076b788dc7d0764a631"
+      },
+      "identity_sha256": "402c28a093eaab23e511dd2f4edff8262b2a0286a8b1de451126237130824387",
+      "observations": {
+        "duration_s": 0.517,
+        "max_rss_kib": 30080
+      }
+    },
+    {
+      "name": "nominal-control",
+      "required": true,
+      "evidence": "cases/nominal-control",
+      "log": "logs/nominal-control.log",
+      "status": "pass",
+      "bundle_exit_code": 0,
+      "runs": [
+        {
+          "name": "nominal-control",
+          "status": "pass",
+          "exit_code": 0,
+          "recording_sha256": "ada509b39bfbb433985da12edc36ce30e18a9702f8a702bd0e4ff1333252bab9"
+        }
+      ],
+      "identity": {
+        "status": "pass",
+        "bundle_exit_code": 0,
+        "summary_sha256": "0f96fa5f0e0b780d3418c156cbbf2c92b61ba98aeb45a9517a5b1856f0b1ba43"
+      },
+      "identity_sha256": "0da870dab35b68eceaf0be5fb8d6339204f46d15ac301f34cce252ef86e63283",
+      "observations": {
+        "duration_s": 0.349,
+        "max_rss_kib": 28304
+      }
+    },
+    {
+      "name": "monitor-timeout",
+      "required": true,
+      "evidence": "cases/monitor-timeout",
+      "log": "logs/monitor-timeout.log",
+      "status": "behavioral-failure",
+      "bundle_exit_code": 1,
+      "reason": "run monitor-timeout: sil-run exited 1",
+      "runs": [
+        {
+          "name": "monitor-timeout",
+          "status": "behavioral-failure",
+          "exit_code": 1,
+          "recording_sha256": "274e7db77ed0d60a84bcb28a80d5c2899ab2c9906b18631fad21d6bf7b6f21ee"
+        }
+      ],
+      "identity": {
+        "status": "behavioral-failure",
+        "bundle_exit_code": 1,
+        "summary_sha256": "11366fb2e4e5c52d2d967e06b2a4d84306e6a9a3592daeab68f1edc0a1227c2c"
+      },
+      "identity_sha256": "2ad8e6bc8fd1cf82f2ef52d8778483b68eaf63ba49576a2bafcd2a774c45ac1f",
+      "observations": {
+        "duration_s": 4.7,
+        "max_rss_kib": 26544
+      }
+    },
+    {
+      "name": "late-private",
+      "required": true,
+      "evidence": "cases/late-private",
+      "log": "logs/late-private.log",
+      "status": "behavioral-failure",
+      "bundle_exit_code": 1,
+      "reason": "run late-private: comparison cadence.late failed",
+      "runs": [
+        {
+          "name": "late-private",
+          "status": "behavioral-failure",
+          "exit_code": 0,
+          "recording_sha256": "944b2b637502f5995d077073f8cde4fbc7bc41ee4b55e68cd6f444d08165927d"
+        }
+      ],
+      "identity": {
+        "status": "behavioral-failure",
+        "bundle_exit_code": 1,
+        "summary_sha256": "b0149eaa901da34336ccf2fc4538faf8d7266174f2d7f188c07332fac4de124e"
+      },
+      "identity_sha256": "e323cb5aa2209d4113bfb4b3863ff48ec5b931d8c520a9c0cb747434ff673a1a",
+      "observations": {
+        "duration_s": 0.391,
+        "max_rss_kib": 27936
+      }
+    }
+  ]
+}

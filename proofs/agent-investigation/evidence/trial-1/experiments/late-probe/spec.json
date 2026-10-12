@@ -1,0 +1,13 @@
+{
+  "sil_investigation_experiment": 1,
+  "name": "late-probe",
+  "parent": "delay-regression",
+  "hypothesis": "H1: the controller counts age from arrival. With input latency 10 ms on all three inputs and no interceptor, every observation arrives 10 ms after its sample time, so H1 predicts that radar_age_ns, camera_age_ns and ego_age_ns are 10 ms smaller than in cadence.late.expected.mcap at every activation that holds an observation, and the comparison fails.",
+  "distinguishes": "H2 (the kernel's delay interceptor delivers the delayed radar list wrongly, controller correct) predicts a pass here, because no interceptor is active. H3 (the controller mishandles out-of-order or queued radar lists only) also predicts a pass, because Latency keeps Publish order and one message per route.",
+  "channels": {
+    "cadence.radar": {"latency_ns": 10000000, "interceptors": []},
+    "cadence.camera": {"latency_ns": 10000000, "interceptors": []},
+    "cadence.ego": {"latency_ns": 10000000, "interceptors": []}
+  },
+  "references": ["cadence.late.expected.mcap"]
+}

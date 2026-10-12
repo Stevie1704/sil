@@ -226,3 +226,13 @@ clean installed Linux x86-64 runtime without network or source-tree imports.
 It archives JSON, JUnit, Recordings, provenance, Determinism and comparisons.
 Its acceptance driver checks the selected failures' exit codes, diagnostics
 and cleanup, including whole-case containment of native hangs and crashes.
+
+## Agent investigation of a failed regression
+
+[proofs/agent-investigation](../proofs/agent-investigation/README.md) gives an
+agent a failed regression matrix of the ADAS reference controller. It has a
+behavioral failure, a passing control, a missed response deadline and a case with
+too little evidence. The agent uses only the installed commands and
+follow-up bundles. `verify.py` checks every value, verdict and experiment that
+a report quotes. The ordinary test suite checks the cases, the driver, the
+checks and the retained real-agent trial offline. It calls no model.

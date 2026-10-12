@@ -1,0 +1,106 @@
+{
+  "sil_investigation_experiment_record": 1,
+  "name": "delay-repro",
+  "spec": {
+    "path": "experiments/delay-repro/spec.json",
+    "sha256": "0ab38e12b50e7b1cad02a4f5b91d0427132a65861482afd814d1ad6c443b04ff"
+  },
+  "hypothesis": "H1: the controller build counts a held observation's age from its arrival time, not from its sample_time_ns. Under the delay declaration of the parent, it predicts the same failure as CI: radar_age_ns 0 and mode 0 at observation 120 ms, where the reference has 2.",
+  "distinguishes": "A one-off CI fault or a nondeterministic Run predicts a pass or a different divergence; H1 and H2 (kernel delivers the delayed radar wrongly) both predict the same failure, so this Run only reproduces the failure and serves as the regression case.",
+  "parent": {
+    "case": "delay-regression",
+    "bundle": "bundles/delay-regression",
+    "lock_sha256": "ed47514a6473af250ac0edeba0df2f5cc494795cd111b424ebff607f12e25a82",
+    "manifest_sha256": "97f4a036b0af5662b41be0049a504bc8574b93919c6ed84cff4e29902f15ac8f"
+  },
+  "intervention": {},
+  "bundle": "experiments/delay-repro/bundle",
+  "lock_sha256": "cf0220c2507ea51bd0fc52d8a0d4dda461585dc3bd6ad307359f5527a1b000ff",
+  "manifest_sha256": "42c622d63abdee1ec55001c2ca9fc7ca84fdb05e8eb38bb1ded30eeee5151f9d",
+  "contract": {
+    "name": "cadence.contract.json",
+    "sha256": "03de578b437e778c5fdfff9c5cae1e28f639ceff295a690aeb50fb102148f590"
+  },
+  "references": {
+    "cadence.delay.expected.mcap": "c7ba69ff08b4b2be7709355e105097fe87ae1a793f9cdb3feaf37794bf96bc00"
+  },
+  "commands": [
+    {
+      "argv": [
+        "sil",
+        "manifest",
+        "validate",
+        "experiments/delay-repro/bundle/delay-repro.json",
+        "--json"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.089
+    },
+    {
+      "argv": [
+        "sil",
+        "bundle",
+        "seal",
+        "experiments/delay-repro/bundle"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.171
+    },
+    {
+      "argv": [
+        "sil",
+        "bundle",
+        "run",
+        "experiments/delay-repro/bundle",
+        "-o",
+        "experiments/delay-repro/evidence",
+        "--expect-lock",
+        "cf0220c2507ea51bd0fc52d8a0d4dda461585dc3bd6ad307359f5527a1b000ff"
+      ],
+      "exit_code": 1,
+      "elapsed_s": 0.433
+    }
+  ],
+  "evidence": "experiments/delay-repro/evidence",
+  "summary_sha256": "5a2bead33d9cf2ac0816f6f55f8ce56e587fee1d5c3cdfeb7e2ac36849818d2d",
+  "result": [
+    {
+      "name": "delay-repro",
+      "manifest": "delay-repro.json",
+      "manifest_sha256": "42c622d63abdee1ec55001c2ca9fc7ca84fdb05e8eb38bb1ded30eeee5151f9d",
+      "exit_code": 0,
+      "recording_sha256": "b60e18c1184d45c97d90a92c1c49d75de407040917de179329365ef4e42e98be",
+      "determinism": {
+        "verdict": "pass",
+        "second_exit_code": 0,
+        "recording_sha256": [
+          "b60e18c1184d45c97d90a92c1c49d75de407040917de179329365ef4e42e98be",
+          "b60e18c1184d45c97d90a92c1c49d75de407040917de179329365ef4e42e98be"
+        ]
+      },
+      "comparisons": {
+        "cadence.delay": {
+          "verdict": "fail",
+          "divergences": 18,
+          "coverage_problems": 0
+        }
+      },
+      "verdict": "fail"
+    }
+  ],
+  "first_divergences": {
+    "cadence.delay": {
+      "kind": "value",
+      "channel": "cadence.command",
+      "reference_channel": "cadence.command",
+      "field": "mode",
+      "observation_ns": 120000000,
+      "actual_publication_ns": 110000000,
+      "reference_time_ns": 120000000,
+      "actual": 0,
+      "expected": 2,
+      "tolerance": "exact",
+      "abs_error": null
+    }
+  }
+}

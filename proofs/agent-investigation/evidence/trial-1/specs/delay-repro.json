@@ -1,0 +1,9 @@
+{
+  "sil_investigation_experiment": 1,
+  "name": "delay-repro",
+  "parent": "delay-regression",
+  "hypothesis": "H1: the controller build counts a held observation's age from its arrival time, not from its sample_time_ns. Under the delay declaration of the parent, it predicts the same failure as CI: radar_age_ns 0 and mode 0 at observation 120 ms, where the reference has 2.",
+  "distinguishes": "A one-off CI fault or a nondeterministic Run predicts a pass or a different divergence; H1 and H2 (kernel delivers the delayed radar wrongly) both predict the same failure, so this Run only reproduces the failure and serves as the regression case.",
+  "channels": {"cadence.radar": {"latency_ns": 0, "interceptors": [{"kind": "delay", "delay_ns": 50000000, "start_ns": 60000000, "end_ns": 100000000}]}},
+  "references": ["cadence.delay.expected.mcap"]
+}

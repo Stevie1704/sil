@@ -1,0 +1,2 @@
+bundle nominal-control: pass
+  run nominal-control: pass (exit 0, determinism pass, cadence pass)

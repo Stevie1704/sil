@@ -1,0 +1,28 @@
+{
+  "sil_bundle_evidence": 1,
+  "bundle": "monitor-timeout",
+  "name": "monitor-timeout",
+  "lock_sha256": "0b170a9b08e4bb7dac0e7821bf5910766e8c1f6bca8fdc4089e920bbc4922f7e",
+  "runtime": {
+    "license": "Apache-2.0",
+    "source_repository": "https://github.com/Stevie1704/sil",
+    "source_revision": "unknown",
+    "version": "0.1.0"
+  },
+  "verdict": "fail",
+  "dependency_closure": "Every declared artifact, executable, Python module and file matched its sealed digest, and the Runs saw only the declared environment. A Manifest hash covers the Manifest's bytes only; it does not close the modules, native libraries and environment a Run loads, which the lock names instead. Anything the declaration does not name is not verified.",
+  "bundle_unchanged": true,
+  "interrupted": false,
+  "runs": [
+    {
+      "name": "monitor-timeout",
+      "manifest": "monitor-timeout.json",
+      "manifest_sha256": "cfdab7b84c63924a4e709fbd9e730ced6ac57319cb820e0f1d9620136936b2c3",
+      "exit_code": 1,
+      "recording_sha256": "274e7db77ed0d60a84bcb28a80d5c2899ab2c9906b18631fad21d6bf7b6f21ee",
+      "verdict": "fail",
+      "determinism": null,
+      "comparisons": {}
+    }
+  ]
+}

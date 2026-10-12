@@ -1,0 +1,2 @@
+bundle delay-regression: fail
+  run delay-regression: fail (exit 0, determinism pass, cadence.delay fail)

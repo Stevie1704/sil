@@ -1,0 +1,41 @@
+{
+  "sil_bundle_evidence": 1,
+  "bundle": "late-private",
+  "name": "late-private",
+  "lock_sha256": "0a44291e5ad0f496b77a197a292bb5eb791e2784efcb99a06af5d3ceb87f9c49",
+  "runtime": {
+    "license": "Apache-2.0",
+    "source_repository": "https://github.com/Stevie1704/sil",
+    "source_revision": "unknown",
+    "version": "0.1.0"
+  },
+  "verdict": "fail",
+  "dependency_closure": "Every declared artifact, executable, Python module and file matched its sealed digest, and the Runs saw only the declared environment. A Manifest hash covers the Manifest's bytes only; it does not close the modules, native libraries and environment a Run loads, which the lock names instead. Anything the declaration does not name is not verified.",
+  "bundle_unchanged": true,
+  "interrupted": false,
+  "runs": [
+    {
+      "name": "late-private",
+      "manifest": "late-private.json",
+      "manifest_sha256": "8ba433eb1ebbd1c8776b4374e2df01a2729c75b4f778366da077b96faea05393",
+      "exit_code": 0,
+      "recording_sha256": "944b2b637502f5995d077073f8cde4fbc7bc41ee4b55e68cd6f444d08165927d",
+      "determinism": {
+        "verdict": "pass",
+        "second_exit_code": 0,
+        "recording_sha256": [
+          "944b2b637502f5995d077073f8cde4fbc7bc41ee4b55e68cd6f444d08165927d",
+          "944b2b637502f5995d077073f8cde4fbc7bc41ee4b55e68cd6f444d08165927d"
+        ]
+      },
+      "comparisons": {
+        "cadence.late": {
+          "verdict": "fail",
+          "divergences": 57,
+          "coverage_problems": 0
+        }
+      },
+      "verdict": "fail"
+    }
+  ]
+}

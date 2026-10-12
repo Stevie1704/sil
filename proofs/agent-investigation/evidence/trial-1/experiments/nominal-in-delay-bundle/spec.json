@@ -1,0 +1,9 @@
+{
+  "sil_investigation_experiment": 1,
+  "name": "nominal-in-delay-bundle",
+  "parent": "delay-regression",
+  "hypothesis": "Control: with the radar delay interceptor removed, the delay-regression bundle is the nominal cadence case. H1 predicts a pass against cadence.expected.mcap, because every observation arrives at its sample time, so arrival age equals sample age.",
+  "distinguishes": "A defect in the bundle other than the delay declaration (another build, input or manifest difference) predicts a failure here.",
+  "channels": {"cadence.radar": {"latency_ns": 0, "interceptors": []}},
+  "references": ["cadence.expected.mcap"]
+}
