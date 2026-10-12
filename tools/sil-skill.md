@@ -1,14 +1,14 @@
 ---
 name: sil
-description: Test a system under test deterministically with SiL, the `sil` command. Use it to onboard a SUT (an FMU, a C library or an executable) as a Participant, inspect or couple FMUs, write and validate a Manifest, execute a Run into a Recording, read or compare Recordings, do a determinism check, or find why a Run failed. Use it when the user names SiL, a vECU, an FMU, a Manifest, a Recording, a determinism check or a Run failure.
+description: Test a system under test (SUT) deterministically with SiL, the `sil` command. Use it to bring a SUT (an FMU, a C library or an executable) into a Run as a Participant. Use it to inspect or couple FMUs, or to write and validate a Manifest. Use it to execute a Run into a Recording, or to read and compare Recordings. Use it for a determinism check, or to find why a Run failed. Use it when the user names SiL, a vECU, an FMU, a Manifest, a Recording, a determinism check or a Run failure.
 metadata:
   sil-version: "$version"
 ---
 
 # SiL
 
-This skill is for SiL $version. If `python -c "import sil; print(sil.__version__)"`
-prints a different version, run `sil skill install` again with the same options.
+This skill is for SiL $version. When you change the installed SiL version, run
+`sil skill install` again with the same options.
 
 ## Steps
 
@@ -19,8 +19,8 @@ installed version.
    library), `sil docs step-protocol` (an executable).
 2. **Author** the Manifest: `sil docs getting-started`, `sil docs fmu-coupling`.
 3. **Run** it into a Recording: `sil docs running`, `sil docs container`.
-4. **Check** the Recording: `sil docs comparison`, `sil docs regression-bundles`.
    A failed Run writes `<recording>.failure.json`: `sil docs running`.
+4. **Check** the Recording: `sil docs comparison`, `sil docs regression-bundles`.
 
 ## Rules
 

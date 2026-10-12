@@ -23,7 +23,7 @@ SKILL_DIR = Path(".agents", "skills", "sil")
 CLAUDE_LINK = Path(".claude", "skills", "sil")
 
 
-def install(skill: str, directory: Path) -> Path:
+def write_skill(skill: str, directory: Path) -> Path:
     """Write `skill` into `directory`, over an older copy, and return its path."""
     directory.mkdir(parents=True, exist_ok=True)
     target = directory / "SKILL.md"
@@ -48,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
         allow_abbrev=False,
     )
     where = parser.add_mutually_exclusive_group()
-    where.add_argument("--dir", type=Path, default=None,
+    where.add_argument("--dir", type=Path,
                        help="write the skill into this directory instead, "
                             "and make no link")
     where.add_argument("--user", action="store_true",
@@ -70,7 +70,7 @@ def main(argv: list[str] | None = None) -> int:
                          "not a link; remove it, or use --dir\n")
         return EXIT_USAGE
     try:
-        print(install(skill, directory))
+        print(write_skill(skill, directory))
         if link_path is not None:
             link(link_path, directory)
             print(link_path)
