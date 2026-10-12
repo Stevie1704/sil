@@ -189,8 +189,11 @@ def test_sil_run_reports_corrupt_operations_and_fails_unsupported_ones(tmp_path)
         assert "fmi3UpdateDiscreteStates" in result.stderr
         assert diagnostic in result.stderr
         # The Run working directory, participants' directories and the
-        # extracted FMU are gone after the failure.
-        assert list(invocation.iterdir()) == []
+        # extracted FMU are gone after the failure. Only the failure report
+        # stays, beside the default out.mcap location (issue #272).
+        assert [p.name for p in invocation.iterdir()] == ["out.mcap.failure.json"]
+        report = json.loads((invocation / "out.mcap.failure.json").read_text())
+        assert report["exit_code"] == 1
         evidence[name] = {"exit_code": result.returncode, "diagnostic": diagnostic}
     (ARTIFACTS / "issue157-sil.json").write_text(json.dumps(evidence, indent=2) + "\n")
 
