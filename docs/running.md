@@ -174,6 +174,45 @@ a Native callback that does not return is not bounded by this option. Give the
 CI job its own overall timeout (for example `timeout-minutes` in GitHub
 Actions). That timeout bounds this case and all other waits.
 
+### Process participant command
+
+`sil-run` finds the first word of a Process participant command before the
+Run starts:
+
+- A bare name, such as `python3`, is found on the `PATH` of `sil-run`.
+- A path with a `/` that is not absolute is found relative to the directory of
+  the Manifest.
+- An absolute path is used as it is.
+
+The runner starts the file that it found. The provenance side-car records the
+command with that path, and the SHA-256 of the file. The other arguments of
+the command are not looked up on `PATH`.
+
+Thus the environment of `sil-run` decides what a bare name starts. The ACC
+example uses `python3 -m sil.participant ...`. If the environment that has
+`sil` installed is not active, a different `python3` starts and the Run fails:
+
+```text
+No module named 'sil'
+sil-run: participant 'controller' exited unexpectedly
+```
+
+Activate that environment (or put its `bin` directory first on `PATH`), then
+run again.
+
+For a Manifest that you write, select one of the two forms:
+
+| Command | Manifest hash | Provenance side-car |
+| --- | --- | --- |
+| Bare name (`python3`) | Is the same on each machine and in each environment, because the Manifest bytes do not change. | Records which file `PATH` gave, so two Runs with different interpreters have different side-cars. |
+| Absolute path (`/opt/venv/bin/python3`) | Changes with the path, so the Manifest is tied to one installation. | Records that path, and the SHA-256 of the file that it names. |
+
+Use a bare name when the same Manifest must run from source and from an
+installed wheel, or on more than one machine. The ACC example does this.
+Use an absolute path when the Manifest must not depend on `PATH`. In both
+forms, the Manifest hash does not identify the interpreter or the modules that
+it imports: the side-car does that for the interpreter only.
+
 ### Process participant descendants
 
 Each Process participant becomes the leader of its own process group before it

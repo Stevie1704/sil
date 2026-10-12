@@ -38,7 +38,13 @@ Do the steps in this order. Each step names the topic to read.
    (`python -m sil.examples.acc.manifest acc.json`), a complete Manifest to
    copy from. For FMUs, `sil fmi couple`, `sil fmi replay` and
    `sil fmi substitute` write the Manifest for you: read `sil docs
-   fmu-coupling` and `sil docs recorded-input`.
+   fmu-coupling` and `sil docs recorded-input`. `sil-run` finds a bare
+   Process participant command, such as `python3`, on its own `PATH`. Thus
+   the environment that has `sil` installed must be active when the Run
+   starts, or the Run fails with `No module named 'sil'`. A bare name keeps
+   the Manifest hash the same on each machine. An absolute path ties the
+   Manifest to one installation. Read the Process participant command
+   section of `sil docs running`.
 3. **Run.** `sil run manifest.json -o out.mcap` starts the native `sil-run`,
    and `sil check` uses it too. The wheel does not contain `sil-run`: it must
    be on `PATH` from a native installation, or you run in the container image
