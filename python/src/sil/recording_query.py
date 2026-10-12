@@ -64,6 +64,10 @@ class _PredicateScan:
             low, high = INT_RANGES[field.type]
             if type(literal) is not int or not low <= literal <= high:
                 raise QueryError(f"predicate literal must be a {field.type} integer")
+        try:
+            _serialized_size(literal)
+        except ValueError as e:
+            raise QueryError("predicate literal cannot be represented as a JSON number") from e
         self.predicate = predicate
         self.field = field
         self.channel = channel
@@ -174,7 +178,10 @@ def _fields(spec: dict, selected: Sequence[str]) -> tuple[list[_Field], int]:
         if match is None or match[1] not in layout:
             raise QueryError(f"unknown or invalid field {selector!r}")
         field = layout[match[1]]
-        index = int(match[2])
+        try:
+            index = int(match[2])
+        except ValueError as e:
+            raise QueryError(f"array index out of bounds for {selector!r}") from e
         if field.count is None or index >= field.count:
             raise QueryError(f"array index out of bounds for {selector!r}")
         field = _Field(selector, field.type,

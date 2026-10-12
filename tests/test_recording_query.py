@@ -401,3 +401,21 @@ def test_malformed_schema_is_refused_at_the_recording_input_boundary(tmp_path, s
     path = recording(tmp_path / "schema.mcap", [(0, b"")], spec)
     with pytest.raises(QueryError, match="invalid SiL Schema"):
         RecordingQuery(path).query("signal", ["value"])
+
+
+def test_an_enormous_array_index_has_a_bounded_cli_refusal(tmp_path, capsys):
+    path = recording(tmp_path / "signal.mcap", [(0, payload(1))])
+    code = cli.main(["recording", "query", str(path), "--channel", "signal",
+                     "--field", "samples[" + "1" * 5000 + "]", "--max-bytes", "2048"])
+    out, err = capsys.readouterr()
+    assert code == 2
+    assert json.loads(out)["status"] == "refused"
+    assert len(out.encode()) <= 2048
+    assert len(err.encode()) <= 2048
+
+
+def test_a_python_integer_literal_beyond_json_conversion_limits_is_refused(tmp_path):
+    path = recording(tmp_path / "signal.mcap", [(0, payload(1))])
+    with pytest.raises(QueryError, match="JSON number"):
+        RecordingQuery(path).query("signal", ["value"],
+                                   where=Predicate("value", "gt", 10**5000))
