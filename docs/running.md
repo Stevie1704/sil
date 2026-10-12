@@ -174,6 +174,49 @@ a Native callback that does not return is not bounded by this option. Give the
 CI job its own overall timeout (for example `timeout-minutes` in GitHub
 Actions). That timeout bounds this case and all other waits.
 
+### Process participant command
+
+Before the Run starts, `sil-run` finds the first word of each Process
+participant command:
+
+- For a bare name, such as `python3`, `sil-run` searches its own `PATH`.
+- For a relative path with a `/`, `sil-run` starts from the directory of the
+  Manifest.
+- `sil-run` uses an absolute path as it is.
+
+The runner starts the file that it found. The provenance side-car records the
+command with the path of that file. The side-car also records the SHA-256 of
+the file after symbolic links. For a venv `python3`, that file is the base
+interpreter. The runner does not search `PATH` for the other arguments. If a
+relative argument names a file in the Manifest directory, the runner and the
+side-car use the absolute path of that file.
+
+Because of this, the environment of `sil-run` decides which file a bare name
+starts. The ACC example uses `python3 -m sil.participant ...`. If the
+environment that has `sil` installed is not active, a different `python3`
+starts. Then a Participant fails, for example:
+
+```text
+No module named 'sil'
+sil-run: participant 'controller' exited unexpectedly
+```
+
+To correct this, activate that environment. Then start the Run again. You can
+also put the `bin` directory of the environment first on `PATH`.
+
+For a Manifest that you write, select one of the two forms:
+
+| Command | Manifest hash | Provenance side-car |
+| --- | --- | --- |
+| Bare name (`python3`) | Does not change between machines or environments. | Records the file that `PATH` gave. |
+| Absolute path (`/opt/venv/bin/python3`) | Changes with the path. The Manifest is tied to one installation. | Records that path. |
+
+Use a bare name if the same Manifest must run from source and from an
+installed wheel, or on more than one machine. The ACC example does this. Use
+an absolute path if the Manifest must not depend on `PATH`. The Manifest hash
+does not identify the interpreter in either form. The side-car identifies the
+interpreter, but not the modules that it imports.
+
 ### Process participant descendants
 
 Each Process participant becomes the leader of its own process group before it

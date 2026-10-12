@@ -16,6 +16,11 @@ Guidance for coding agents working in this repository.
 
 `make help` lists the other targets.
 
+## Known traps
+
+Before you debug a Docker proof, a link error or a flaky test, read
+`docs/agents/traps.md`. It lists environment traps with their symptom and fix.
+
 ## Agent skills
 
 ### Issue tracker
