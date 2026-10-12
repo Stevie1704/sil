@@ -319,3 +319,18 @@ def test_long_recording_proof_checks_events_nearby_inputs_and_retained_measureme
         assert row["report"]["results"][0]["message_index"] == 501
         assert row["output_bytes"] <= 4096
         assert row["peak_rss_bytes"] > 0
+
+
+def test_declared_field_names_are_preserved_before_parsing_array_suffixes(tmp_path):
+    path = recording(tmp_path / "names.mcap", [(0, struct.pack("<d3hB", 2.5, 1, 2, 3, 9))],
+                     {"fields": [{"name": "plant.temperature", "type": "f64"},
+                                 {"name": "rädar values", "type": "i16", "count": 3},
+                                 {"name": "rädar values[1]", "type": "u8"}]})
+    source = RecordingQuery(path)
+    projected = source.query("signal", ["plant.temperature", "rädar values[1]",
+                                        "rädar values[2]"])
+    assert projected["results"][0]["fields"] == {
+        "plant.temperature": 2.5, "rädar values[1]": 9, "rädar values[2]": 3}
+    summary = source.query("signal", ["plant.temperature"], mode="summary",
+                           where=Predicate("rädar values[2]", "eq", 3))
+    assert summary["results"][0]["max"]["value"] == 2.5

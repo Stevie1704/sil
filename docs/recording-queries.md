@@ -31,6 +31,10 @@ element such as `x_m[0]` can be projected. Indices are zero-based; invalid
 fields, duplicate selectors, invalid Schemas and out-of-bounds indices are
 refused. Whole `u8` arrays become lowercase hex strings; other arrays become
 lists. Non-finite floats become `"NaN"`, `"Infinity"` or `"-Infinity"`.
+Exact declared names take precedence over array suffix parsing, including
+names containing dots, spaces, Unicode or brackets. If a literal field name
+such as `values[1]` exists, that selector names the field rather than an element
+of a separate `values` array.
 
 `--from T` includes T and `--to T` excludes T. Either bound may be omitted.
 Bounds must be non-negative integer nanoseconds, with end at least start.

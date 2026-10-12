@@ -126,15 +126,17 @@ def _fields(spec: dict, selected: Sequence[str]) -> tuple[list[_Field], int]:
     for field in spec["fields"]:
         name, type_ = field["name"], field["type"]
         count = field.get("count")
-        if (not isinstance(name, str) or name in layout or type_ not in FORMATS
+        if (not isinstance(name, str) or not name or name in layout or type_ not in FORMATS
                 or (count is not None and (type(count) is not int or count < 1))):
             raise QueryError("invalid SiL Schema field")
         layout[name] = _Field(name, type_, offset, count)
         offset += SIZES[type_] * (1 if count is None else count)
     plans = []
     for selector in selected:
-        match = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_]*)(?:\[(0|[1-9][0-9]*)\])?",
-                             selector)
+        if selector in layout:
+            plans.append(layout[selector])
+            continue
+        match = re.fullmatch(r"(.+)\[(0|[1-9][0-9]*)\]", selector, re.DOTALL)
         if match is None or match[1] not in layout:
             raise QueryError(f"unknown or invalid field {selector!r}")
         field = layout[match[1]]
@@ -185,8 +187,9 @@ class _Results:
         # Reserve room for counters and the first omission's locator. Final
         # serialization is checked exactly, including the report and newline.
         names = report["query"]["fields"]
+        longest = max(names, key=lambda name: len(render(name).encode()))
         locator_room = len(render({"channel": report["query"]["channel"],
-                                   "field": max(names, key=len)}).encode())
+                                   "field": longest}).encode())
         self.remaining = max_bytes - len(render(report).encode()) - 512 - locator_room
         if self.remaining < 0:
             raise QueryError("query and report metadata exceed max_bytes")
