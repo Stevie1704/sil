@@ -340,3 +340,14 @@ def test_production_image_prints_the_docs_of_its_version(tmp_path: Path):
 
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.startswith("# Agent guide\n")
+
+
+def test_production_image_installs_the_skill_of_its_version(tmp_path: Path):
+    """The image carries the agent skill, offline (issue #277)."""
+    proc = _container(PRODUCTION_IMAGE, tmp_path, "skill", "install",
+                      entrypoint="sil")
+
+    assert proc.returncode == 0, proc.stderr
+    written = tmp_path / ".agents" / "skills" / "sil" / "SKILL.md"
+    assert proc.stdout.splitlines()[0] == str(written)
+    assert "sil-version" in written.read_text()
