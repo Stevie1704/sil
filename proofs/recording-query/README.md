@@ -46,10 +46,10 @@ numbers. The ordinary tests repeat the proof at 1,000 Messages per chunk size.
 
 | Messages | Chunk target | Recording bytes | Chunks | Peak RSS | Output bytes |
 | ---: | ---: | ---: | ---: | ---: | ---: |
-| 10,000 | 64 KiB | 1,033,364 | 14 | 28.4 MB | 1,098 |
-| 1,000,000 | 64 KiB | 103,196,375 | 1,327 | 31.8 MB | 1,114 |
-| 10,000 | 1 MiB | 1,031,453 | 1 | 31.5 MB | 1,098 |
-| 1,000,000 | 1 MiB | 103,013,507 | 83 | 34.7 MB | 1,114 |
+| 10,000 | 64 KiB | 1,033,364 | 14 | 28.0 MB | 1,098 |
+| 1,000,000 | 64 KiB | 103,196,375 | 1,327 | 30.1 MB | 1,114 |
+| 10,000 | 1 MiB | 1,031,453 | 1 | 30.6 MB | 1,098 |
+| 1,000,000 | 1 MiB | 103,013,507 | 83 | 34.8 MB | 1,114 |
 
 RSS includes interpreter/import overhead, hashing buffers, summary/index
 metadata, decoded chunk records, selected scalar state and returned results.
