@@ -8,7 +8,7 @@
   },
   "implementation": {
     "python/src/sil/recording.py": "e26e8669e0b5ed15b98688085430f53dc766472a2bdc05fc46e5f67a06d586b6",
-    "python/src/sil/recording_query.py": "e5ad53e2c38eff8a6724db346a4511bd32bd71262649715d2251a3299518a624",
+    "python/src/sil/recording_query.py": "f4d2c4915c5cd414c230ec5436bddbb11e8d31570dee7e13c0201d8467ae649a",
     "proofs/recording-query/verify.py": "5fa1f2859dfa7d5b9b1dd9e2ba262ce476bdcfd0805a68190f442cd0ca470f2f",
     "proofs/adas-cost/run_measured.c": "c39c1fc34de23e825c9923b38940691b62266359d3a9969b6f1214585c412841"
   },
@@ -610,10 +610,10 @@
           "nonfinite": "breaks_adjacency"
         }
       },
-      "peak_rss_bytes": 28491776,
-      "wall_ns": 148163000,
-      "user_us": 97005,
-      "system_us": 21039,
+      "peak_rss_bytes": 28196864,
+      "wall_ns": 115241000,
+      "user_us": 90857,
+      "system_us": 16496,
       "output_bytes": 1431,
       "recording_bytes": 1033364
     },
@@ -721,10 +721,10 @@
           "nonfinite": "breaks_adjacency"
         }
       },
-      "peak_rss_bytes": 32210944,
-      "wall_ns": 3087348000,
-      "user_us": 2972860,
-      "system_us": 50079,
+      "peak_rss_bytes": 31997952,
+      "wall_ns": 3079525000,
+      "user_us": 2927363,
+      "system_us": 79227,
       "output_bytes": 1457,
       "recording_bytes": 103196375
     },
@@ -832,10 +832,10 @@
           "nonfinite": "breaks_adjacency"
         }
       },
-      "peak_rss_bytes": 30982144,
-      "wall_ns": 117383000,
-      "user_us": 93555,
-      "system_us": 17811,
+      "peak_rss_bytes": 31752192,
+      "wall_ns": 115372000,
+      "user_us": 92795,
+      "system_us": 18350,
       "output_bytes": 1431,
       "recording_bytes": 1031453
     },
@@ -943,10 +943,10 @@
           "nonfinite": "breaks_adjacency"
         }
       },
-      "peak_rss_bytes": 34783232,
-      "wall_ns": 3131377000,
-      "user_us": 3011870,
-      "system_us": 58749,
+      "peak_rss_bytes": 34586624,
+      "wall_ns": 3109222000,
+      "user_us": 2979523,
+      "system_us": 71042,
       "output_bytes": 1457,
       "recording_bytes": 103013507
     }
