@@ -36,6 +36,59 @@ One run = `sil-run manifest.json -o out.mcap`:
 Exit codes: `0` ok, `1` run/test failure, `2` Manifest error, `3` determinism
 violation (sil check).
 
+## Validate a Manifest
+
+`sil-run` stops at the first Manifest error. `sil manifest validate` checks a
+Manifest without a Run and lists every error:
+
+```sh
+sil manifest validate manifest.json
+sil manifest validate manifest.json --json
+```
+
+It applies the rules of `sil-run`: keys, types, ranges, references between
+Schemas, Channels and Participants, one publisher for each Channel, and the
+files that the Manifest names. Paths resolve against the Manifest directory,
+as in a Run. A bare Process participant command is looked up on the `PATH` of
+the check, and `sil-run` uses its own `PATH`. The check needs only the wheel,
+not `sil-run`.
+
+Some Manifest errors need the artifact loaded, so only a Run finds them: a
+Native library that does not load or does not export
+`sil_participant_init`, a replayed Recording whose Channels or Schemas do not
+match the Manifest, an Arena that the system cannot map, and a missing Clock
+shim.
+
+`--json` writes the `sil_manifest_validation` report (version 1) to stdout:
+
+- `valid`: `true` or `false`.
+- `errors`: one object for each error, with `path` (a JSON Pointer, RFC 6901,
+  to the value at fault; `""` is the whole document), `message`, and `hint`
+  (a short fix).
+
+The exit codes are `0` valid and `2` not valid, as for `sil-run`.
+
+## Start a Participant
+
+`sil new participant --process NAME` writes a Python Process participant, and
+`sil new participant --native NAME` writes a C Native participant. Each comes
+with a `manifest.py` that writes the Manifest of a Run of it. `NAME` must be a
+C identifier. The files go to `./NAME`, or to `--dir DIR`. The command does
+not overwrite a file.
+
+```sh
+sil new participant --process brake
+python3 brake/manifest.py brake/manifest.json
+sil manifest validate brake/manifest.json
+sil check brake/manifest.json
+```
+
+The generated Participant publishes one Message on the Channel `NAME.out` at
+each Step. It runs and passes `sil check` with no edits. For a Native
+participant, `manifest.py` first compiles the library with `$CC` (default
+`cc`) against the headers installed beside `sil-run`. To give a different
+include directory, set `CFLAGS=-I<dir>`.
+
 ## Failure report
 
 When `sil-run` has accepted its command line, a Run that ends with exit `1` or

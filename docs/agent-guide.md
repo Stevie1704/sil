@@ -32,6 +32,11 @@ Do the steps in this order. Each step names the topic to read.
    - An executable: it must speak the Step protocol. Read
      `sil docs step-protocol`. A Python Participant uses `sil.participant`.
    - A C application against the Native ABI: read `sil docs adas-reference`.
+
+   To start a new Participant, run `sil new participant --process NAME` or
+   `sil new participant --native NAME`. It writes a minimal Participant and a
+   `manifest.py` that writes the Manifest of a Run of it. The result runs and
+   passes `sil check` with no edits. Read `sil docs running`.
 2. **Author the Manifest.** Use the `sil.manifest` builder (`Manifest`,
    `add_schemas`, `add_channel`, `add_process`, `write`). `sil docs
    getting-started` names the packaged ACC example
@@ -44,12 +49,16 @@ Do the steps in this order. Each step names the topic to read.
    Run fails with `No module named 'sil'`. To select between a bare name and
    an absolute path, read the Process participant command section of `sil
    docs running`.
-3. **Run.** `sil run manifest.json -o out.mcap` starts the native `sil-run`,
+3. **Validate.** `sil manifest validate manifest.json --json` checks the
+   Manifest without a Run. It lists every error with its JSON path and a fix
+   hint, where `sil-run` stops at the first. Fix all errors, then run. Exit
+   code `0` is valid, `2` is not. Read `sil docs running`.
+4. **Run.** `sil run manifest.json -o out.mcap` starts the native `sil-run`,
    and `sil check` uses it too. The wheel does not contain `sil-run`: it must
    be on `PATH` from a native installation, or you run in the container image
    (read `sil docs container`). Read `sil docs running` for the exit codes,
    the guards and the Clock shim.
-4. **Check.** `sil recording channels out.mcap` lists the Channels of the
+5. **Check.** `sil recording channels out.mcap` lists the Channels of the
    Recording, and `sil recording show out.mcap --channel NAME --from T --to T`
    prints what a Channel carried in a virtual-time interval, decoded with its
    Schema: read `sil docs running`. `sil check manifest.json` runs the
@@ -66,6 +75,7 @@ Use exit codes, not message text. Message text can change in any release.
 | Command | Output |
 | --- | --- |
 | `sil fmi inspect --json` | the `sil_fmi_inspection` report |
+| `sil manifest validate --json` | the `sil_manifest_validation` report |
 | `sil check --json` | the `sil_check_report` report |
 | `sil compare --json` | the `sil_comparison_report` report |
 | `sil recording channels --json` | the `sil_recording_channels` report |

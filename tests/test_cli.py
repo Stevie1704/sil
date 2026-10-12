@@ -15,7 +15,7 @@ def test_help_lists_every_top_level_command(capsys):
     out = capsys.readouterr().out
     assert out.startswith("usage: sil <command>")
     for command in ("check", "compare", "footprint", "run",
-                    "bundle", "fmi", "recording", "schema"):
+                    "bundle", "fmi", "manifest", "new", "recording", "schema"):
         assert f"\n  {command} " in out
 
 
@@ -31,6 +31,8 @@ def test_a_subcommand_runs_with_its_own_arguments_and_exit_code(tmp_path, capsys
 @pytest.mark.parametrize("group, commands", [
     ("bundle", ("seal", "verify", "run", "matrix")),
     ("fmi", ("inspect", "couple", "replay", "substitute")),
+    ("manifest", ("validate",)),
+    ("new", ("participant",)),
     ("recording", ("channels", "show", "csv", "window")),
     ("schema", ("import",)),
 ])
@@ -41,6 +43,14 @@ def test_group_help_lists_its_subcommands(group, commands, capsys):
     assert out.startswith(f"usage: sil {group} <command>")
     for command in commands:
         assert f"\n  {command} " in out
+
+
+def test_manifest_validate_reaches_the_validator(tmp_path, capsys):
+    missing = tmp_path / "missing.json"
+
+    assert cli.main(["manifest", "validate", str(missing)]) == 2
+
+    assert "cannot open manifest file" in capsys.readouterr().err
 
 
 def test_a_bundle_subcommand_reaches_the_bundle_tool(tmp_path, capsys):
