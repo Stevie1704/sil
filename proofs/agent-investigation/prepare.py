@@ -20,7 +20,7 @@ contract and the independently enumerated references of that example:
 | --- | --- | --- |
 | `delay-regression` | radar delay experiment | `behavioral-failure` (comparison) |
 | `nominal-control` | no fault | `pass` |
-| `monitor-timeout` | no fault, with a command monitor that stalls | `behavioral-failure` (Run exit 1, timeout) |
+| `monitor-timeout` | no fault, with a command monitor that stalls | `behavioral-failure` (Run exit 1, a missed response deadline) |
 | `late-private` | 10 ms input Latency, a private bundle | `behavioral-failure`; only its summary is shared |
 
     python proofs/agent-investigation/prepare.py OUT \\
@@ -38,6 +38,9 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import NamedTuple
+
+from sil.manifest import SubscriberRoute
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -57,9 +60,9 @@ BUDGETS = {
     "elapsed_s": 3_600,
     "tool_calls": 200,
     "tool_output_bytes": 2_000_000,
-    # The driver cannot count inference. The harness enforces it.
-    "inference": "one agent session; usage is recorded from the harness, "
-                 "and the driver does not enforce it",
+    # The driver cannot count inference. The evaluator compares the
+    # harness's token total of the session with it after the session.
+    "inference_tokens": 400_000,
 }
 TOOL_OUTPUT_LIMIT = 65_536
 
@@ -102,15 +105,13 @@ def prepared_references() -> dict[str, dict]:
     return references
 
 
-class Case:
+class Case(NamedTuple):
     """One regression case: its bundle and how its Manifest differs."""
 
-    def __init__(self, name: str, experiment: str | None, reference: str,
-                 monitor: bool = False):
-        self.name = name
-        self.experiment = experiment
-        self.reference = reference
-        self.monitor = monitor
+    name: str
+    experiment: str | None
+    reference: str
+    monitor: bool = False
 
 
 CASES = (
@@ -145,7 +146,6 @@ def build_bundle(root: Path, case: Case, runtime, target: Path,
          example_manifest.reference_manifest(bundle.root, library,
                                              maneuvers=(MANEUVER,)))
     if case.monitor:
-        from sil.manifest import SubscriberRoute
         monitor = bundle.copy(HERE / "monitor.py", "participant")
         m.add_process("monitor", command=["python3", str(monitor)],
                       step_period_ns=example_manifest.PERIOD_NS,
@@ -184,7 +184,10 @@ def share_only_the_summary(ci: Path) -> None:
     case = ci / "cases" / PRIVATE
     for path in sorted(case.iterdir()):
         if path.name != "summary.json":
-            shutil.rmtree(path) if path.is_dir() else path.unlink()
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
     (ci / "logs" / f"{PRIVATE}.log").unlink()
 
 

@@ -2,8 +2,9 @@
 
 The nightly regression matrix of an ADAS radar/camera controller failed:
 `ci/summary.json` and `ci/junit.xml` hold its result. Investigate each case
-that `investigation.json` lists. For each case, find out what failed and why,
-or show why you cannot. Write one report per case to `reports/<case>.json`.
+that `investigation.json` lists. For each case, identify what failed and
+why. If you cannot, show why. Write one report per case to
+`reports/<case>.json`.
 
 This directory is your whole workspace. SiL is installed: `sil docs` lists
 its offline docs, and `sil docs agent-guide` is the entry point. Do not read
@@ -22,7 +23,7 @@ The `late-private` case comes from a supplier. The supplier keeps its bundle
 and its evidence private and shared only `ci/cases/late-private/summary.json`.
 
 The target contract: each Run must repeat bit-identically, and the controller's
-Commands must match the prepared reference under the comparison contract of the
+commands must match the prepared reference under the comparison contract of the
 bundle (`cadence.contract.json`). The references are enumerated independently
 of the controller. The contract, the references, the controller build and the
 original bundles and evidence are fixed. Do not change them.
@@ -37,10 +38,11 @@ python3 tools/investigate.py tool -- cat ci/summary.json
 python3 tools/investigate.py status
 ```
 
-The driver allows read-only commands only (`sil recording`, `sil compare`,
+The driver allows these commands: `sil recording`, `sil compare`,
 `sil bundle verify`, `sil manifest validate`, `sil docs`, `sil fmi inspect`,
-`cat`, `head`, `grep`, `python3` and similar). It counts the bytes of output
-it gives you. Read files through it, so that the count is complete.
+and readers such as `cat`, `head`, `grep` and `python3`. It counts the bytes
+of output that it gives you. Read files through it, so that the count is
+complete. Do not start a Run in a `python3` script: a Run is an experiment.
 
 To test a hypothesis, run a follow-up experiment of a case with a bundle.
 Write a spec into `specs/NAME.json`, then run
@@ -75,7 +77,8 @@ and writes `experiments/NAME/record.json`. The parent case does not change.
 ## Budgets
 
 `investigation.json` gives the budgets: Runs, elapsed time from your first
-driver call, tool calls and tool output bytes. When a budget is exhausted,
+driver call, tool calls, tool output bytes and inference tokens. The harness
+counts the inference tokens of your session, and the driver counts the others. When a budget is exhausted,
 the driver refuses every later action. Then write your reports with what you
 have, and mark each unfinished case `incomplete`.
 

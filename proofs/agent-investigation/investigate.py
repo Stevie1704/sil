@@ -7,10 +7,13 @@ against the budgets of `investigation.json`:
     python3 tools/investigate.py experiment specs/NAME.json
     python3 tools/investigate.py status
 
-`tool` runs one read-only command and passes its output through. It counts
+`tool` runs one allowed command and passes its output through. It counts
 the exact bytes it passes on. Only the commands in `READERS` and the `sil`
-commands in `SIL_COMMANDS` are allowed, and every path must be in the
-workspace. A command that executes a Run is refused: a Run is an experiment.
+commands in `SIL_COMMANDS` are allowed, and every path argument must be in
+the workspace. A `sil` command that executes a Run is refused: a Run is an
+experiment. `python3`, `find` and `sort` can still write files or start a
+process; the driver cannot stop that. The ledger records every command line,
+and `verify.py` fails a ledger with a Run started that way.
 
 `experiment` runs one follow-up experiment of a case. The spec names the
 parent case, the hypothesis, why the experiment separates the explanations,
@@ -45,6 +48,8 @@ EXIT_BUDGET = 65
 SPEC_FORMAT = 1
 RECORD_FORMAT = 1
 
+# The driver is copied into the workspace and runs alone, so it shares no
+# helper with prepare.py or verify.py.
 READERS = {"cat", "head", "tail", "ls", "wc", "grep", "diff", "cmp", "find",
            "sort", "uniq", "cut", "shasum", "sha256sum", "python3"}
 # The read-only `sil` commands, by their first one or two words.
@@ -329,11 +334,22 @@ def experiment(spec_path: Path) -> int:
         shutil.rmtree(home)
         raise NotAllowed(f"the follow-up Manifest is not valid:\n{commands[0]['stdout']}")
     commands.append(command(["bundle", "seal", str(root)]))
+    if commands[-1]["exit_code"] != 0:
+        shutil.rmtree(home)
+        raise NotAllowed(f"the follow-up bundle does not seal:\n{commands[-1]['stderr']}")
     lock = commands[-1]["stdout"].rsplit("lock sha256 ", 1)[-1].strip()
     evidence = home / "evidence"
     commands.append(command(["bundle", "run", str(root), "-o", str(evidence),
                              "--expect-lock", lock]))
-    summary = json.loads((evidence / "summary.json").read_text())
+    try:
+        summary = json.loads((evidence / "summary.json").read_text())
+    except (OSError, ValueError) as error:
+        # No summary tells how many Runs started, so count the most.
+        append({"kind": "experiment", "name": spec["name"], "parent": case["name"],
+                "exit_code": commands[-1]["exit_code"], "runs": 2,
+                "error": f"no bundle summary: {error}"})
+        sys.stderr.write(commands[-1]["stdout"] + commands[-1]["stderr"])
+        return commands[-1]["exit_code"] or 1
     record = {
         "sil_investigation_experiment_record": RECORD_FORMAT,
         "name": spec["name"],

@@ -17,8 +17,11 @@ do so:
   values of a first divergence are decoded again as well.
 - The outcome must fit the facts: `no-failure` needs a passed case,
   `execution-failure` a failure report of the case's Run, `diagnosed` an
-  experiment and a preserved regression case, `inconclusive` the missing
-  evidence, and `incomplete` a budget refusal in the ledger.
+  experiment and a preserved regression case that fails against the parent
+  case's references, `inconclusive` the missing evidence, and `incomplete` a
+  budget refusal in the ledger.
+- The ledger is within its budgets, or has a budget refusal, and no command
+  line in it starts a Run outside an experiment.
 - With `--digests`, every workspace file that preparation wrote is unchanged.
 - With `--reference`, each outcome is compared with the evaluator's expected
   outcome. Whether a report found the known cause is the evaluator's
@@ -38,8 +41,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import struct
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from mcap.reader import make_reader
@@ -161,7 +166,8 @@ class Workspace:
                         if line] if ledger.is_file() else [])
         matrix = self.root / self.investigation["matrix"]
         self.matrix = json.loads(matrix.read_text()) if matrix.is_file() else None
-        self._records: dict[str, bool] = {}
+        # The result of each experiment record, checked once.
+        self.records: dict[str, bool] = {}
 
     def path(self, relative: str) -> Path | None:
         path = (self.root / relative).resolve()
@@ -243,11 +249,9 @@ def check_divergence_values(checks: Checks, subject: str, divergence: dict | Non
 
 
 def check_record(ws: Workspace, checks: Checks, name: str) -> bool:
-    if name in ws._records:
-        return ws._records[name]
-    ok = _check_record(ws, checks, name)
-    ws._records[name] = ok
-    return ok
+    if name not in ws.records:
+        ws.records[name] = _check_record(ws, checks, name)
+    return ws.records[name]
 
 
 def _check_record(ws: Workspace, checks: Checks, name: str) -> bool:
@@ -356,6 +360,24 @@ def case_status(ws: Workspace, case: str) -> str | None:
     return None
 
 
+def check_regression_case(ws: Workspace, checks: Checks, case: str,
+                          name: str) -> None:
+    """The preserved case must fail against every reference of the parent
+    case's Run, under the unchanged contract."""
+    record = json.loads((ws.root / "experiments" / name / "record.json").read_text())
+    declaration = ws.root / record["parent"]["bundle"] / "bundle.json"
+    if not declaration.is_file():
+        checks.add("regression-case", case, "unavailable",
+                   "the parent bundle is not retained here")
+        return
+    (parent_run,) = json.loads(declaration.read_text())["runs"]
+    original = {c["reference"] for c in parent_run["comparisons"]}
+    (result,) = record["result"]
+    checks.expect("regression-case", case,
+                  original <= set(record["references"]) and result["verdict"] == "fail",
+                  f"{name} must fail against the parent's references {sorted(original)}")
+
+
 def check_outcome(ws: Workspace, checks: Checks, case: str, report: dict) -> None:
     outcome = report["outcome"]
     failed = case_run_failed(ws, case)
@@ -373,6 +395,8 @@ def check_outcome(ws: Workspace, checks: Checks, case: str, report: dict) -> Non
                       and all(check_record(ws, checks, n) for n in named),
                       "a diagnosis needs a completed Run, verified experiments and "
                       "a preserved regression case among them")
+        if regression in named:
+            check_regression_case(ws, checks, case, regression)
     elif outcome == "inconclusive":
         checks.expect("outcome-facts", case, bool(report["missing_evidence"]),
                       "an inconclusive report must name the missing evidence")
@@ -381,6 +405,22 @@ def check_outcome(ws: Workspace, checks: Checks, case: str, report: dict) -> Non
                       any(e["kind"] == "refusal" and "budget exhausted" in e["reason"]
                           for e in ws.ledger),
                       "no budget refusal in the ledger")
+
+
+LIST_OF_OBJECTS = ("observations", "hypotheses", "experiments", "conclusions")
+LIST_OF_STRINGS = ("unresolved_alternatives", "missing_evidence")
+
+
+def structure_problems(report: dict) -> list[str]:
+    problems = [f"{key} must be a list of objects" for key in LIST_OF_OBJECTS
+                if not isinstance(report[key], list)
+                or not all(isinstance(item, dict) for item in report[key])]
+    problems += [f"{key} must be a list of strings" for key in LIST_OF_STRINGS
+                 if not isinstance(report[key], list)
+                 or not all(isinstance(item, str) for item in report[key])]
+    if report["regression_case"] is not None and not isinstance(report["regression_case"], str):
+        problems.append("regression_case must be a name or null")
+    return problems
 
 
 def check_report(ws: Workspace, checks: Checks, case: str, path: Path) -> str | None:
@@ -395,6 +435,8 @@ def check_report(ws: Workspace, checks: Checks, case: str, path: Path) -> str | 
     elif report["sil_investigation_report"] != FORMAT or report["case"] != case \
             or report["outcome"] not in OUTCOMES:
         problems.append("version, case or outcome is not valid")
+    else:
+        problems += structure_problems(report)
     if not checks.expect("report-format", case, not problems, "; ".join(problems)):
         return None
     ids = {o.get("id") for o in report["observations"]}
@@ -427,7 +469,19 @@ def metrics(ws: Workspace) -> dict:
                                and "budget exhausted" in e["reason"]),
         "first_action_utc": ws.ledger[0]["utc"] if ws.ledger else None,
         "last_action_utc": ws.ledger[-1]["utc"] if ws.ledger else None,
+        "elapsed_s": int((datetime.fromisoformat(ws.ledger[-1]["utc"])
+                          - datetime.fromisoformat(ws.ledger[0]["utc"])).total_seconds())
+        if ws.ledger else 0,
     }
+
+
+# A Run that a `python3` or `find` command line starts, outside the driver.
+RUN_STARTED = re.compile(r"sil-run|\bsil\W+(run|check)\b|\bbundle\W+(run|matrix)\b")
+
+
+def runs_outside_the_driver(ws: Workspace) -> list[int]:
+    return [e["seq"] for e in ws.ledger if e["kind"] == "tool"
+            and RUN_STARTED.search(" ".join(e["argv"]))]
 
 
 def verify(root: Path, digests: Path | None = None,
@@ -455,7 +509,11 @@ def verify(root: Path, digests: Path | None = None,
                           f"{expected[case]['outcome']}")
     m = metrics(ws)
     budgets = ws.investigation["budgets"]
-    within = all(m[k] <= budgets[k] for k in ("runs", "tool_calls", "tool_output_bytes"))
+    within = all(m[k] <= budgets[k]
+                 for k in ("runs", "elapsed_s", "tool_calls", "tool_output_bytes"))
+    outside = runs_outside_the_driver(ws)
+    checks.expect("runs-in-experiments", "ledger", not outside,
+                  f"ledger entries {outside} start a Run outside an experiment")
     checks.add("budget", "ledger", "pass" if within or m["budget_refusals"] else "fail",
                "" if within else "over budget without a refusal")
     return {"sil_investigation_verification": FORMAT,

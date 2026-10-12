@@ -9,7 +9,9 @@ claim of the report that they can test.
 
 The proof uses the commands that exist today: `sil bundle`,
 `sil bundle matrix`, `sil compare`, `sil recording` and the failure report of
-#272. It adds no runner and no verdict engine. The proof driver only
+#272. #272 is closed and on `main` (commit 7b6c09a), but it is not in the
+release v0.1.0, so the proof needs a build from `main`. It adds no runner and
+no verdict engine. The proof driver only
 restricts and counts what the agent does, and it composes follow-up bundles
 from those commands.
 
@@ -89,9 +91,12 @@ ability. Only a retained real-agent trial is that evidence.
 
 The agent runs commands only through `investigate.py`. It allows
 `sil recording channels|show`, `sil compare`, `sil bundle verify`,
-`sil manifest validate`, `sil docs`, `sil fmi inspect`, and read-only shell
-readers and `python3`. All paths must be in the workspace. A command that
-executes a Run is refused (exit 64). Follow-up Runs are experiments. An
+`sil manifest validate`, `sil docs`, `sil fmi inspect`, shell readers and
+`python3`. All path arguments must be in the workspace. A `sil` command that
+executes a Run is refused (exit 64). Follow-up Runs are experiments.
+`python3`, `find` and `sort` can still write files or start a Run. The driver
+cannot stop that, but the ledger records each command line, and `verify.py`
+fails a ledger in which a command line starts a Run. An
 experiment can change only the input Channels' `latency_ns` and
 `interceptors`. It can compare only with prepared references, under the
 parent's contract.
@@ -102,7 +107,7 @@ parent's contract.
 | Elapsed time from the first action | 3600 s | the driver |
 | Tool calls | 200 | the driver |
 | Tool output bytes delivered | 2 000 000 (65 536 per call; a longer output is cut with a notice) | the driver |
-| Inference | one agent session | the harness, not the driver |
+| Inference tokens | 400 000 | the evaluator, from the harness's token total after the session |
 
 When a budget is exhausted, the driver refuses every later action (exit 65)
 and tells the agent to report each unfinished case as `incomplete`. The
@@ -122,8 +127,12 @@ completed experiments stay in the workspace.
   and its first-divergence values are decoded again.
 - The outcome must fit the facts. `no-failure` needs a passed case.
   `execution-failure` needs a failure report. `diagnosed` needs a completed
-  Run, verified experiments and a preserved regression case. `inconclusive`
-  needs the missing evidence, and `incomplete` a budget refusal.
+  Run, verified experiments and a preserved regression case that fails
+  against the parent case's references. `inconclusive` needs the missing
+  evidence, and `incomplete` a budget refusal.
+- The ledger is within the Run, elapsed-time, tool-call and output budgets,
+  or has a budget refusal. No command line in it starts a Run outside an
+  experiment.
 - Every file that preparation wrote is unchanged. Each outcome is compared
   with the evaluator's reference.
 
@@ -164,7 +173,11 @@ did not use them as a conclusion.
 | First to last action (wall clock) | 14:03:16 to 14:08:07 UTC |
 | Harness usage | 123 134 subagent tokens, 28 tool uses, 311 s |
 
-[`verification.json`](evidence/trial-1/verification.json) has 229 passing
+Trial 1 ran before the inference budget had a number. Its brief named "one
+agent session" as the inference budget. Its 123 134 tokens are within the
+400 000 tokens that later trials get.
+
+[`verification.json`](evidence/trial-1/verification.json) has 231 passing
 checks and 1 failing check. In observation O7 of `monitor-timeout`, the agent
 quoted a line of `monitor.py` source text. The report format cannot cite
 source text, so no executable check can confirm that quote. Every other
@@ -203,6 +216,7 @@ about 4 KB. Nothing was adopted, so this trial cannot show the effect of
 | A whole doc topic is the smallest unit of `sil docs` | ledger 21, 23 and 24: three reads of the 35 KB `adas-reference` topic, 56 % of all delivered bytes | a section or search option of `sil docs` |
 | A report cannot cite a line of text | observation O7 of `monitor-timeout` cannot be checked | the report format of this proof |
 | An experiment can change only input Channels | the agent could not test a non-blocking monitor | intended for this proof; a wider follow-up is #284 |
+| The matrix gives a missed response deadline the status `behavioral-failure` | `ci/summary.json` of `monitor-timeout`; the agent's report calls the status misleading | `sil bundle matrix`: a status apart from a failed comparison, documented today in `sil docs regression-bundles` |
 
 The proof does not need event search and threshold crossings at this scale.
 Bring them back to #282 only with a long Recording on which an investigation

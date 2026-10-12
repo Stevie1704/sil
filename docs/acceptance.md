@@ -231,7 +231,7 @@ and cleanup, including whole-case containment of native hangs and crashes.
 
 [proofs/agent-investigation](../proofs/agent-investigation/README.md) gives an
 agent a failed regression matrix of the ADAS reference controller. It has a
-behavioral failure, a passing control, a Participant timeout and a case with
+behavioral failure, a passing control, a missed response deadline and a case with
 too little evidence. The agent uses only the installed commands and
 follow-up bundles. `verify.py` checks every value, verdict and experiment that
 a report quotes. The ordinary test suite checks the cases, the driver, the

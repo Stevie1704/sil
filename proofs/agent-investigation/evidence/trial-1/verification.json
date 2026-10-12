@@ -15,10 +15,11 @@
     "refusals": 1,
     "budget_refusals": 0,
     "first_action_utc": "2026-10-12T14:03:16+00:00",
-    "last_action_utc": "2026-10-12T14:08:07+00:00"
+    "last_action_utc": "2026-10-12T14:08:07+00:00",
+    "elapsed_s": 291
   },
   "counts": {
-    "pass": 229,
+    "pass": 231,
     "fail": 1,
     "unavailable": 0
   },
@@ -889,6 +890,78 @@
     },
     {
       "check": "experiment-digest",
+      "subject": "delay-repro/spec",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "delay-repro/summary",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "delay-repro/manifest",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
+      "subject": "delay-repro/lock",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-parent",
+      "subject": "delay-repro",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "assertions-unchanged",
+      "subject": "delay-repro/contract",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "assertions-unchanged",
+      "subject": "delay-repro/cadence.contract.json",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "assertions-unchanged",
+      "subject": "delay-repro/cadence.delay.expected.mcap",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "intervention-scope",
+      "subject": "delay-repro",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "determinism",
+      "subject": "delay-repro",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "comparison-verdict",
+      "subject": "delay-repro/cadence.delay",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "divergence-values",
+      "subject": "delay-repro/cadence.delay",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "experiment-digest",
       "subject": "nominal-in-delay-bundle/spec",
       "status": "pass",
       "detail": ""
@@ -1026,79 +1099,13 @@
       "detail": ""
     },
     {
-      "check": "experiment-digest",
-      "subject": "delay-repro/spec",
-      "status": "pass",
-      "detail": ""
-    },
-    {
-      "check": "experiment-digest",
-      "subject": "delay-repro/summary",
-      "status": "pass",
-      "detail": ""
-    },
-    {
-      "check": "experiment-digest",
-      "subject": "delay-repro/manifest",
-      "status": "pass",
-      "detail": ""
-    },
-    {
-      "check": "experiment-digest",
-      "subject": "delay-repro/lock",
-      "status": "pass",
-      "detail": ""
-    },
-    {
-      "check": "experiment-parent",
-      "subject": "delay-repro",
-      "status": "pass",
-      "detail": ""
-    },
-    {
-      "check": "assertions-unchanged",
-      "subject": "delay-repro/contract",
-      "status": "pass",
-      "detail": ""
-    },
-    {
-      "check": "assertions-unchanged",
-      "subject": "delay-repro/cadence.contract.json",
-      "status": "pass",
-      "detail": ""
-    },
-    {
-      "check": "assertions-unchanged",
-      "subject": "delay-repro/cadence.delay.expected.mcap",
-      "status": "pass",
-      "detail": ""
-    },
-    {
-      "check": "intervention-scope",
-      "subject": "delay-repro",
-      "status": "pass",
-      "detail": ""
-    },
-    {
-      "check": "determinism",
-      "subject": "delay-repro",
-      "status": "pass",
-      "detail": ""
-    },
-    {
-      "check": "comparison-verdict",
-      "subject": "delay-repro/cadence.delay",
-      "status": "pass",
-      "detail": ""
-    },
-    {
-      "check": "divergence-values",
-      "subject": "delay-repro/cadence.delay",
-      "status": "pass",
-      "detail": ""
-    },
-    {
       "check": "outcome-facts",
+      "subject": "delay-regression",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "regression-case",
       "subject": "delay-regression",
       "status": "pass",
       "detail": ""
@@ -1394,6 +1401,12 @@
     {
       "check": "expected-outcome",
       "subject": "late-private",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "check": "runs-in-experiments",
+      "subject": "ledger",
       "status": "pass",
       "detail": ""
     },

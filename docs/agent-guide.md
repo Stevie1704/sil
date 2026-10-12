@@ -101,10 +101,10 @@ use only the commands of this guide.
 4. **Test a hypothesis with a new Run.** For each hypothesis, write down what
    it predicts for a Run that you can do. Select a Run for which the
    hypotheses predict different results. Copy the bundle into a new
-   directory, change only its Manifest, seal it, and run it with `sil bundle
-   run` into a new evidence directory. Do not change the original bundle,
-   its evidence, its comparison contract or its references. A tolerance that
-   you relax until the case passes is not a diagnosis.
+   directory. Change only its Manifest. Seal the new bundle. Run it with
+   `sil bundle run` into a new evidence directory. Do not change the original
+   bundle, its evidence, its comparison contract or its references. A
+   tolerance that you relax until the case passes is not a diagnosis.
 5. **Keep the regression case.** Keep the sealed follow-up bundle that shows
    the failure, with the original contract and references. Add it to the
    matrix with its lock digest.

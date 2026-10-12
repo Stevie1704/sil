@@ -253,9 +253,10 @@ def canned_reports(agent: Path) -> dict:
              "field": "radar_age_ns", "value": 0}],
             hypotheses=[{"id": "H1", "statement": "age from arrival", "predicts": ""}],
             experiments=[{"name": "late", "tests": ["H1"], "result": "fail",
-                          "observations": ["O2"]}],
+                          "observations": ["O2"]},
+                         {"name": "repro", "tests": [], "result": "fail"}],
             conclusions=[{"statement": "", "supported_by": ["O1", "late"]}],
-            regression_case="late"),
+            regression_case="repro"),
         "nominal-control": _report("nominal-control", "no-failure", observations=[
             {"id": "O1", "artifact": "ci/summary.json",
              "sha256": sha256(agent / "ci" / "summary.json"),
@@ -276,6 +277,13 @@ def reported(proof, runtime) -> Path:
         driver(runtime, agent, "experiment",
                spec(agent, "late", channels=LATE,
                     references=["cadence.late.expected.mcap"]))
+    # The parent's own Manifest, contract and reference: the regression case.
+    driver(runtime, agent, "experiment",
+           spec(agent, "repro", references=["cadence.delay.expected.mcap"]))
+    # Without the Interceptor the build passes: no regression case.
+    driver(runtime, agent, "experiment",
+           spec(agent, "nominal", channels={"cadence.radar": {"interceptors": []}},
+                references=["cadence.expected.mcap"]))
     _write_reports(agent, canned_reports(agent))
     return agent
 
@@ -317,6 +325,13 @@ class TestVerify:
          "outcome-facts", "late-private"),
         (lambda r: r[DELAY].update(regression_case=None),
          "outcome-facts", DELAY),
+        (lambda r: (r[DELAY]["experiments"].append({"name": "nominal"}),
+                    r[DELAY].update(regression_case="nominal")),
+         "regression-case", DELAY),
+        (lambda r: r[DELAY].update(regression_case="late"),
+         "regression-case", DELAY),
+        (lambda r: r["nominal-control"].update(observations="pass"),
+         "report-format", "nominal-control"),
         (lambda r: r[DELAY]["conclusions"][0].update(supported_by=["O9"]),
          "report-references", DELAY),
         (lambda r: r["late-private"].update(outcome="diagnosed"),
@@ -343,6 +358,21 @@ class TestVerify:
 
         assert _status(result, "original-unchanged",
                        f"bundles/{DELAY}/cadence.contract.json") == "fail"
+
+    def test_a_run_started_outside_an_experiment_fails(self, reported):
+        ledger = reported / "ledger.jsonl"
+        original = ledger.read_text()
+        ledger.write_text(original + json.dumps({
+            "seq": 999, "kind": "tool", "utc": "2026-01-01T00:00:00+00:00",
+            "argv": ["python3", "-c", "import subprocess; subprocess.run("
+                     "['sil', 'bundle', 'run', 'bundles/x', '-o', 'y'])"],
+            "delivered_bytes": 0}) + "\n")
+        try:
+            result = verifier.verify(reported)
+        finally:
+            ledger.write_text(original)
+
+        assert _status(result, "runs-in-experiments", "ledger") == "fail"
 
     def test_an_experiment_outside_its_parameters_fails(self, reported):
         manifest = reported / "experiments" / "late" / "bundle" / "late.json"
