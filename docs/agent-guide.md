@@ -5,6 +5,13 @@ system under test (SUT) with SiL. Read it with `sil docs agent-guide`. These
 docs are for the installed version: `sil docs` lists the topics, and
 `sil docs --path` prints their directory, so you can search them with `grep`.
 
+To let a coding agent find SiL without this guide, run `sil skill install` in
+the project. It writes the agent skill of the installed version to
+`.agents/skills/sil/SKILL.md` and links `.claude/skills/sil` to it. The agent
+then loads the skill for SUT, FMU, Manifest, Recording and Run tasks.
+`--user` installs it into the home directory, and `--dir DIR` into `DIR`.
+Run the command again after you upgrade SiL: the skill names its version.
+
 ## What SiL is
 
 SiL runs virtual ECUs (vECUs) and models deterministically in Virtual time.
