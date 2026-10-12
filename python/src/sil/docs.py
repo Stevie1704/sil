@@ -2,7 +2,8 @@
 
 The release build (`tools/release.py stamp-python`) copies the docs into the
 package with a topic index, so they always match the installed version. A
-source tree that was not stamped has no docs here; read `docs/` instead.
+source checkout that was not stamped has no docs here; the error names its
+`docs/` instead. It does not print them: they can differ from the release.
 """
 
 from __future__ import annotations
@@ -17,6 +18,17 @@ PROG = "sil docs"
 EXIT_FAIL = 1
 EXIT_USAGE = 2
 DOCS = Path(str(files("sil").joinpath("_docs")))
+# In a checkout this file is python/src/sil/docs.py, three levels below the root.
+CHECKOUT_GUIDE = Path(__file__).resolve().parents[3] / "docs" / "agent-guide.md"
+
+
+def no_docs_message() -> str:
+    message = (f"{PROG}: error: this installation has no docs; "
+               "a release wheel or the container image has them\n")
+    if CHECKOUT_GUIDE.is_file():
+        message += (f"{PROG}: this source checkout has them in "
+                    f"{CHECKOUT_GUIDE.parent}; start with {CHECKOUT_GUIDE}\n")
+    return message
 
 
 def topic_list(topics: dict[str, str]) -> str:
@@ -41,8 +53,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         topics = json.loads((DOCS / "topics.json").read_text())
     except OSError:
-        sys.stderr.write(f"{PROG}: error: this installation has no docs; "
-                         "a release wheel or the container image has them\n")
+        sys.stderr.write(no_docs_message())
         return EXIT_FAIL
     if args.path:
         print(DOCS)

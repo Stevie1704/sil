@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
+from conftest import ROOT
 from test_staged_install import installed_environment
 
 
@@ -77,3 +79,14 @@ def test_docs_path_takes_no_topic(installed_python: Path, tmp_path: Path):
     assert proc.returncode == 2
     assert proc.stdout == ""
     assert proc.stderr.endswith("sil docs: error: --path takes no topic\n")
+
+
+def test_a_checkout_points_at_its_docs_directory(tmp_path: Path):
+    """An unstamped checkout has no packaged docs, but has them in `docs/`."""
+    proc = subprocess.run([sys.executable, "-m", "sil.docs", "agent-guide"],
+                          cwd=tmp_path, capture_output=True, text=True,
+                          check=False)
+
+    assert proc.returncode == 1
+    assert proc.stdout == ""
+    assert str(ROOT / "docs" / "agent-guide.md") in proc.stderr
