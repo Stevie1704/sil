@@ -63,6 +63,19 @@ def test_without_json_each_error_is_one_line_with_its_hint(tmp_path, capsys):
     assert "\n  hint: " in err
 
 
+def test_an_override_without_field_and_value_reports_both(tmp_path, capsys):
+    doc = copy.deepcopy(VALID)
+    doc["channels"]["ticks"]["interceptors"] = [{"kind": "override"}]
+
+    code, report = _validate(tmp_path, doc, capsys)
+
+    assert code == 2
+    assert [error["path"] for error in report["errors"]] == [
+        "/channels/ticks/interceptors/0/field",
+        "/channels/ticks/interceptors/0/value",
+    ]
+
+
 # Parity with sil-run (#275): one corpus, two checkers, one verdict. Each case
 # is one change to a valid base Manifest. sil-run rejects a Manifest with exit
 # 2; validate must reject exactly the same cases, and accept the others.
@@ -167,6 +180,11 @@ INVALID_CASES = {
     "duration beyond u64": _set(("duration_ns",), 2**64),
     "epoch negative": _set(("epoch_ns",), -1),
     "schemas missing": _drop("schemas"),
+    "sil_manifest null": _set(("sil_manifest",), None),
+    "duration_ns null": _set(("duration_ns",), None),
+    "schemas null": _set(("schemas",), None),
+    "channels null": _set(("channels",), None),
+    "participants null": _set(("participants",), None),
     "schemas an array": _set((S,), []),
     "schema unknown key": _set((S, "toy.Accum", "doc"), "x"),
     "schema without fields": _set((S, "toy.Accum", "fields"), []),
@@ -200,6 +218,14 @@ INVALID_CASES = {
         {"kind": "override", "field": "seq", "value": -1}]),
     "override not whole": _set(TICKS_INTERCEPTORS, [
         {"kind": "override", "field": "value", "value": 1.5}]),
+    "override value null": _set(TICKS_INTERCEPTORS, [
+        {"kind": "override", "field": "value", "value": None}]),
+    "f64 override beyond double": lambda doc: (
+        _set((S, "toy.Counter", "fields"), [
+            {"name": "seq", "type": "u64"}, {"name": "value", "type": "i64"},
+            {"name": "gain", "type": "f64"}])(doc),
+        _set(TICKS_INTERCEPTORS, [
+            {"kind": "override", "field": "gain", "value": 10**400}])(doc)),
     "participant not an object": _set((P, "echo"), []),
     "participant without type": _drop(P, "echo", "type"),
     "unknown participant type": _set((P, "echo", "type"), "remote"),

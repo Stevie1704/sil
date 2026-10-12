@@ -144,10 +144,15 @@ class _Checker:
                           "in the range given.")
 
     def required(self, obj: dict, key: str, path):
+        # Callers read None as "no valid value", so a JSON null is reported
+        # here: the kernel rejects null wherever it requires a value.
         if key not in obj:
             self.add(path + (key,), f"missing required key '{key}'",
                      f"Add the key '{key}'.")
             return None
+        if obj[key] is None:
+            self.add(path + (key,), f"expected a value for '{key}', got null",
+                     "Replace null with a value of the required type.")
         return obj[key]
 
     def known_keys(self, obj: dict, path, allowed) -> None:
@@ -338,9 +343,9 @@ def _check_interceptor(c: _Checker, interceptor, path, fields) -> None:
 
 def _check_override(c: _Checker, interceptor, path, fields) -> None:
     name = c.required(interceptor, "field", path)
+    value = c.required(interceptor, "value", path)
     if name is None or c.string(name, path + ("field",)) is None:
         return
-    value = c.required(interceptor, "value", path)
     if fields is None:
         return
     field = next((f for f in fields if f["name"] == name), None)
@@ -635,7 +640,7 @@ def _parse_int(text: str):
     # The kernel's JSON parser keeps an integer outside the 64-bit ranges as a
     # floating-point number, which no integer key accepts.
     value = int(text)
-    return value if -(2**63) <= value <= _U64[1] else float(text)
+    return value if -(2**63) <= value <= _U64[1] else _parse_float(text)
 
 
 def _parse_float(text: str) -> float:
