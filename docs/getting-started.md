@@ -18,13 +18,13 @@ imports that same module rather than restating it.
 make example                                    # run it, record it into build/
 ```
 
-The Manifest starts each Participant with `python3 -m sil.participant ...`.
-`sil-run` finds `python3` on its own `PATH`, so the environment that has `sil`
-installed must be active when the Run starts. If it is not, the Run fails with
-`No module named 'sil'`. The command uses `PATH`, not an absolute path, so the
-source and the wheel Manifests have the same bytes and hash.
-[Running simulations](running.md#process-participant-command) gives the rule
-for Manifests that you write.
+The Manifest starts each Participant with `python3`, and `sil-run` finds
+`python3` on its own `PATH`. Activate the environment that has `sil` installed
+before you start the Run. If you do not, the Run fails with `No module named
+'sil'`. The command does not use an absolute path, so the source Manifest and
+the wheel Manifest have the same hash.
+[Process participant command](running.md#process-participant-command) gives
+the rule for Manifests that you write.
 
 It ships in two variants. The second declares one Interceptor — five Steps of
 delay on the sensing Channel over a one-second window — and comes from the same

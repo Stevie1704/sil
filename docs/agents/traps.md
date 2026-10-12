@@ -1,6 +1,6 @@
 # Known traps
 
-Environment traps that agent sessions on this repo find again and again. These
+Agent sessions on this repo find these environment traps many times. They
 are facts for contributors, not user docs. Each entry gives the symptom, then
 the fix. Remove an entry when it is no longer true.
 
@@ -16,17 +16,18 @@ the fix. Remove an entry when it is no longer true.
 - **ACC FMI proofs on arm64.** Symptom: a local `proofs/acc-fmi/**` run or
   `acceptance-bundle.sh prepare` builds for minutes, then fails on the
   machine-class check. Cause: the PythonFMU3 archives contain only x86-64
-  binaries, and the proofs require `x86_64` Linux. Fix: on an arm64 Mac, run
+  binaries, and the proofs require `x86_64` Linux. The legacy Docker builder
+  ignores `--platform linux/amd64` for the multi-platform base digest, so the
+  proof image builds as arm64. Fix: on an arm64 Mac, run
   only what needs no FMU binary (the gate tests, `ruff`, the `tests/` suite).
   CI on x86-64 is the real gate.
 - **amd64 runtime image without buildx.** Symptom: the legacy builder says the
-  base image `does not provide the specified platform`, or silently builds
-  arm64. Fix: pass the amd64 manifest of the pinned base index,
-  `--build-arg
-  PYTHON_IMAGE=python@sha256:781449467ffb6f04218f09b1ecdcdc7d22b289ee5da9ec498b024e24ad7a6db7`
-  (`models/can/bundle.sh` reads it from `CAN_RUNTIME_PYTHON_IMAGE`). Under
-  qemu, `cc1plus` sometimes segfaults while it compiles the kernel. That is a
-  flake: run the build again.
+  base image `does not provide the specified platform`, or it builds arm64
+  with no error. Fix: pass `--build-arg PYTHON_IMAGE=python@sha256:...` with
+  the amd64 manifest of the pinned base index. The comment in
+  `models/can/bundle.sh` gives the digest, and that script reads it from
+  `CAN_RUNTIME_PYTHON_IMAGE`. Under qemu, `cc1plus` sometimes segfaults while
+  it compiles the kernel. That is a flake: run the build again.
 - **CMake sources outside the Dockerfile build stage.** Symptom: pytest passes
   locally, but the `test`, `Build and smoke-test release shapes` and `qualify`
   CI jobs fail at CMake generate. Cause: the root `Dockerfile` build stage
