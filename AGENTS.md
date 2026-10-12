@@ -2,6 +2,20 @@
 
 Guidance for coding agents working in this repository.
 
+## Start here
+
+- Bringing software into a Run as a Participant: `docs/agent-guide.md`. In this checkout `sil docs` has no packaged docs; read `docs/` directly.
+- Deciding where a change goes: `docs/architecture.md`.
+
+## Build and test
+
+- `make venv`: create `.venv` and install the Python package with dev deps.
+- `make build`: build the kernel (`sil-run`) into `build/`.
+- `make test`: run the C++ unit tests and the full pytest suite.
+- Determinism gate, as CI runs it after `make build`: `PYTHONPATH=python/src .venv/bin/python tools/determinism_gate.py`.
+
+`make help` lists the other targets.
+
 ## Agent skills
 
 ### Issue tracker
