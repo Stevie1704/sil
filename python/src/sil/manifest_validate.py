@@ -10,13 +10,17 @@ Manifests so that they cannot drift apart:
 
 - the loader, `kernel/src/manifest.cpp`: keys, types, ranges, references;
 - the one-publisher-per-Channel rule;
+- the Participant setup rules that need only the Manifest, such as the
+  shm Channel that one Process participant subscribes and publishes;
 - the artifact preflight, `kernel/src/provenance.cpp`, and the Replay
-  participant's Recording hash: the files the Manifest names exist.
+  participant's Recording checks: the files the Manifest names can be read,
+  and a replayed Channel is in the Recording with the same Schema.
 
-Some Manifest errors only a Run can find, because they need the artifact
-loaded: a Native library that does not load or does not export
-`sil_participant_init`, a Recording whose Channels or Schemas do not match,
-an Arena the system cannot map, and a missing Clock shim. A bare Process
+Some Manifest errors only a Run can find. They need the artifact loaded or
+the Participant started: a Native library that does not load, does not
+export `sil_participant_init` or fails its init, a Process participant that
+answers `init` with `fail`, a Recording Message that does not decode, an
+Arena the system cannot map, and a missing Clock shim. A bare Process
 participant command is looked up on the PATH of this check; `sil-run` uses
 its own PATH.
 
@@ -34,17 +38,21 @@ import os
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import NamedTuple
 
 from ._schema_types import INT_RANGES, SIZES
+# The builder and this check share the closed sets of the Manifest format.
+from .manifest import (_FLOAT32_MAX, _INTERCEPTOR_KINDS, _OVERFLOW_POLICIES,
+                       _SLEEP_POLICIES, _THREAD_POLICIES, _TRANSPORTS,
+                       MANIFEST_VERSION)
+from .recording import read_channels
 
 REPORT_VERSION = 1
 EXIT_INVALID = 2
-MANIFEST_VERSION = 1
 
 _U64 = (0, 2**64 - 1)
 _SIZE = _U64  # the kernel's size_t on the 64-bit hosts it supports
 _I32 = (-(2**31), 2**31 - 1)
-_FLOAT32_MAX = 3.4028234663852886e38
 _DEFAULT_PATH = "/usr/local/bin:/usr/bin:/bin"  # the kernel's, for an empty PATH
 
 _TOP_KEYS = ("sil_manifest", "duration_ns", "epoch_ns", "schemas", "channels",
@@ -52,15 +60,18 @@ _TOP_KEYS = ("sil_manifest", "duration_ns", "epoch_ns", "schemas", "channels",
 _CHANNEL_KEYS = ("schema", "latency_ns", "transport", "slots", "interceptors")
 _INTERCEPTOR_KEYS = ("kind", "start_ns", "end_ns", "delay_ns", "n", "field",
                      "value")
-_INTERCEPTOR_KINDS = ("drop", "drop_nth", "delay", "override")
-_PARTICIPANT_KEYS = {
-    "native": ("type", "library", "config", "subscribes", "publishes", "shim"),
-    "process": ("type", "command", "step_period_ns", "subscribes", "publishes",
-                "priority", "shim", "sleep", "threads"),
-    "replay": ("type", "recording", "recording_hash", "channels", "priority",
-               "shim"),
-}
 _SHIM_KEYS = ("shim", "sleep", "threads")
+
+
+class _Channel(NamedTuple):
+    """What the Participant checks need to know of a declared Channel.
+
+    Each part is None if the Manifest does not declare it validly."""
+
+    schema: str | None
+    schema_doc: dict | None
+    fields: list[dict] | None
+    transport: str | None
 
 
 @dataclass(frozen=True)
@@ -150,7 +161,7 @@ class _Checker:
         value = self.string(value, path)
         if value is not None and value not in choices:
             self.add(path, f"unknown {what} '{value}'",
-                     "Use one of: " + ", ".join(choices) + ".")
+                     "Use one of: " + ", ".join(sorted(choices)) + ".")
             return None
         return value
 
@@ -170,13 +181,14 @@ def _check_document(doc, base_dir: Path) -> list[Problem]:
                   f"Set sil_manifest to {MANIFEST_VERSION}.")
     duration = c.required(doc, "duration_ns", ())
     if duration is not None:
-        duration = c.integer(duration, ("duration_ns",), _U64, minimum=1)
+        c.integer(duration, ("duration_ns",), _U64, minimum=1)
     if "epoch_ns" in doc:
         c.integer(doc["epoch_ns"], ("epoch_ns",), _U64)
 
-    schemas = {}
+    schemas, value_schemas = {}, {}
     value = c.required(doc, "schemas", ())
     if value is not None and c.object(value, ("schemas",)) is not None:
+        value_schemas = value
         for name in sorted(value):
             schemas[name] = _check_schema(c, value[name], ("schemas", name))
 
@@ -185,7 +197,7 @@ def _check_document(doc, base_dir: Path) -> list[Problem]:
     if value is not None and c.object(value, ("channels",)) is not None:
         for name in sorted(value):
             channels[name] = _check_channel(c, value[name], ("channels", name),
-                                            schemas, duration)
+                                            value_schemas, schemas)
 
     value = c.required(doc, "participants", ())
     if value is not None and c.object(value, ("participants",)) is not None:
@@ -251,10 +263,10 @@ def _check_schema(c: _Checker, schema, path) -> list[dict] | None:
     return fields if valid else None
 
 
-def _check_channel(c: _Checker, channel, path, schemas, duration):
-    """The Channel's Schema fields, or None if they are not known."""
+def _check_channel(c: _Checker, channel, path, schema_docs,
+                   schemas) -> _Channel:
     if c.object(channel, path) is None:
-        return None
+        return _Channel(None, None, None, None)
     c.known_keys(channel, path, _CHANNEL_KEYS)
     fields = None
     schema = c.required(channel, "schema", path)
@@ -263,6 +275,7 @@ def _check_channel(c: _Checker, channel, path, schemas, duration):
             c.add(path + ("schema",), f"references unknown schema '{schema}'",
                   "Declare the Schema under 'schemas', or correct the name. "
                   "Declared: " + (", ".join(sorted(schemas)) or "none") + ".")
+            schema = None
         else:
             fields = schemas[schema]
     if "latency_ns" in channel:
@@ -270,7 +283,7 @@ def _check_channel(c: _Checker, channel, path, schemas, duration):
     transport = "inline"
     if "transport" in channel:
         transport = c.choice(channel["transport"], path + ("transport",),
-                             ("inline", "shm"), "transport")
+                             _TRANSPORTS, "transport")
     if "slots" in channel:
         if transport == "inline":
             c.add(path + ("slots",), "slots is only valid with shm transport",
@@ -286,7 +299,8 @@ def _check_channel(c: _Checker, channel, path, schemas, duration):
         for index, interceptor in enumerate(interceptors or []):
             _check_interceptor(c, interceptor, path + ("interceptors", index),
                                fields)
-    return fields
+    return _Channel(schema, schema_docs.get(schema) if fields else None, fields,
+                    transport)
 
 
 def _byte_size(fields: list[dict]) -> int:
@@ -367,13 +381,13 @@ def _check_participant(c: _Checker, participant, path, channels) -> list[str]:
                 c.add(path + (key,),
                       f"{key} is only valid on process participants",
                       f"Remove '{key}'.")
-    if ptype not in _PARTICIPANT_KEYS:
+    if ptype not in _PARTICIPANT_TYPES:
         c.add(path + ("type",), f"unknown type '{ptype}'",
-              "Use one of: " + ", ".join(_PARTICIPANT_KEYS) + ".")
+              "Use one of: " + ", ".join(_PARTICIPANT_TYPES) + ".")
         return []
-    c.known_keys(participant, path, _PARTICIPANT_KEYS[ptype])
-    return {"native": _check_native, "process": _check_process,
-            "replay": _check_replay}[ptype](c, participant, path, channels)
+    keys, check = _PARTICIPANT_TYPES[ptype]
+    c.known_keys(participant, path, keys)
+    return check(c, participant, path, channels)
 
 
 def _check_native(c: _Checker, participant, path, channels) -> list[str]:
@@ -405,19 +419,21 @@ def _check_process(c: _Checker, participant, path, channels) -> list[str]:
                  for index, item in enumerate(command)]
         if items and items[0] is not None:
             _check_executable(c, items[0], path + ("command", 0))
+        _check_command_files(c, items[1:], path + ("command",))
     period = c.required(participant, "step_period_ns", path)
     if period is not None:
         c.integer(period, path + ("step_period_ns",), _U64, minimum=1)
+    subscribed = []
     if "subscribes" in participant:
-        _check_routes(c, participant["subscribes"], path + ("subscribes",),
-                      channels)
+        subscribed = _check_routes(c, participant["subscribes"],
+                                   path + ("subscribes",), channels)
     if "priority" in participant:
         c.integer(participant["priority"], path + ("priority",), _I32)
     shim = False
     if "shim" in participant:
         shim = c.boolean(participant["shim"], path + ("shim",))
-    for key, policies in (("sleep", ("immediate", "reject")),
-                          ("threads", ("allow", "report", "reject"))):
+    for key, policies in (("sleep", _SLEEP_POLICIES),
+                          ("threads", _THREAD_POLICIES)):
         if key not in participant:
             continue
         if shim is False:
@@ -427,8 +443,17 @@ def _check_process(c: _Checker, participant, path, channels) -> list[str]:
         c.choice(participant[key], path + (key,), policies, f"{key} policy")
     if "publishes" not in participant:
         return []
-    return _check_channel_list(c, participant["publishes"],
-                               path + ("publishes",), channels)
+    published = _check_channel_list(c, participant["publishes"],
+                                    path + ("publishes",), channels)
+    for name in published:
+        # One Arena has one writer direction.
+        if channels[name].transport == "shm" and name in subscribed:
+            c.add(path + ("publishes", participant["publishes"].index(name)),
+                  f"channel '{name}' cannot be both subscribed and published "
+                  "over shm transport",
+                  "Use two Channels, one for each direction, or the inline "
+                  "transport.")
+    return published
 
 
 def _check_replay(c: _Checker, participant, path, channels) -> list[str]:
@@ -440,15 +465,28 @@ def _check_replay(c: _Checker, participant, path, channels) -> list[str]:
         digest = c.string(digest, path + ("recording_hash",))
     if "priority" in participant:
         c.integer(participant["priority"], path + ("priority",), _I32)
-    if recording is not None and digest is not None:
-        _check_recording(c, recording, digest, path)
     replayed = c.required(participant, "channels", path)
     if replayed is None or c.array(replayed, path + ("channels",)) is None:
         return []
     if not replayed:
         c.add(path + ("channels",), "channels must be a non-empty array",
               "Name at least one recorded Channel to replay.")
-    return _check_channel_list(c, replayed, path + ("channels",), channels)
+    names = _check_channel_list(c, replayed, path + ("channels",), channels)
+    if recording is not None and digest is not None:
+        _check_recording(c, recording, digest, path,
+                         {name: channels[name] for name in names}, replayed)
+    return names
+
+
+_PARTICIPANT_TYPES = {
+    "native": (("type", "library", "config", "subscribes", "publishes",
+                "shim"), _check_native),
+    "process": (("type", "command", "step_period_ns", "subscribes",
+                 "publishes", "priority", "shim", "sleep", "threads"),
+                _check_process),
+    "replay": (("type", "recording", "recording_hash", "channels", "priority",
+                "shim"), _check_replay),
+}
 
 
 def _check_channel_list(c: _Checker, value, path, channels) -> list[str]:
@@ -461,7 +499,8 @@ def _check_channel_list(c: _Checker, value, path, channels) -> list[str]:
     return names
 
 
-def _check_routes(c: _Checker, value, path, channels) -> None:
+def _check_routes(c: _Checker, value, path, channels) -> list[str]:
+    """The Channels of the valid routes."""
     seen: list[str] = []
     for index, route in enumerate(c.array(value, path) or []):
         route_path = path + (index,)
@@ -478,6 +517,7 @@ def _check_routes(c: _Checker, value, path, channels) -> None:
         if name is not None and _check_reference(c, name, route_path,
                                                  channels, seen):
             seen.append(name)
+    return seen
 
 
 def _check_route_policy(c: _Checker, route: dict, path) -> None:
@@ -489,16 +529,15 @@ def _check_route_policy(c: _Checker, route: dict, path) -> None:
     if "capacity" not in route:
         return
     c.integer(route["capacity"], path + ("capacity",), _SIZE, minimum=1)
-    overflow = c.string(route["overflow"], path + ("overflow",))
-    if overflow == "blocking":
+    if route["overflow"] == "blocking":
         c.add(path + ("overflow",), "blocking overflow is unsupported because "
                                     "the sequential scheduler cannot activate "
                                     "the consumer while the publisher is "
                                     "blocked",
               "Use 'fail' or 'drop_newest'.")
-    elif overflow is not None and overflow not in ("fail", "drop_newest"):
-        c.add(path + ("overflow",), f"unknown overflow policy '{overflow}'",
-              "Use 'fail' or 'drop_newest'.")
+    else:
+        c.choice(route["overflow"], path + ("overflow",), _OVERFLOW_POLICIES,
+                 "overflow policy")
 
 
 def _check_reference(c: _Checker, name: str, path, channels, seen) -> bool:
@@ -519,11 +558,30 @@ def _check_reference(c: _Checker, name: str, path, channels, seen) -> bool:
 def _check_file(c: _Checker, name: str, path, what: str) -> Path | None:
     candidate = c.base_dir / name
     if name and candidate.is_file():
-        return candidate
+        return candidate if _check_readable(c, candidate, path, what) else None
     c.add(path, f"{what} '{name}' is not a file",
           "Relative paths resolve against the Manifest's directory. Build the "
           "file, or correct the path.")
     return None
+
+
+def _check_readable(c: _Checker, file: Path, path, what: str) -> bool:
+    """sil-run reads every artifact to record its digest."""
+    try:
+        with open(file, "rb"):
+            return True
+    except OSError as error:
+        c.add(path, f"cannot read {what} '{file}': {error.strerror}",
+              "Give the user that runs sil-run read permission.")
+        return False
+
+
+def _check_command_files(c: _Checker, arguments, path) -> None:
+    """A command argument that names a file is an artifact of the Run."""
+    for index, argument in enumerate(arguments, start=1):
+        if argument and (c.base_dir / argument).is_file():
+            _check_readable(c, c.base_dir / argument, path + (index,),
+                            "command file")
 
 
 def _check_executable(c: _Checker, command: str, path) -> None:
@@ -533,13 +591,15 @@ def _check_executable(c: _Checker, command: str, path) -> None:
     for entry in (os.environ.get("PATH") or _DEFAULT_PATH).split(":"):
         candidate = c.base_dir / entry / command
         if candidate.is_file() and os.access(candidate, os.X_OK):
+            _check_readable(c, candidate, path, "executable")
             return
     c.add(path, f"executable '{command}' was not found on PATH",
           "sil-run looks up a bare command on its own PATH. Activate the "
           "environment that has it, or give a path.")
 
 
-def _check_recording(c: _Checker, recording: str, digest: str, path) -> None:
+def _check_recording(c: _Checker, recording: str, digest: str, path,
+                     replayed: dict[str, _Channel], names: list) -> None:
     file = _check_file(c, recording, path + ("recording",), "Recording")
     if file is None:
         return
@@ -550,6 +610,25 @@ def _check_recording(c: _Checker, recording: str, digest: str, path) -> None:
               f"recording hash {actual} does not match manifest {digest}",
               "Build the Manifest again from the Recording you mean to "
               "replay.")
+        return
+    try:
+        recorded = {channel.name: channel for channel in read_channels(file)}
+    except Exception as error:  # noqa: BLE001 — any decode failure, as sil-run
+        c.add(path + ("recording",), f"cannot read recording: {error}",
+              "Replay a Recording that a Run wrote.")
+        return
+    for name, channel in replayed.items():
+        where = path + ("channels", names.index(name))
+        if name not in recorded:
+            c.add(where, f"channel '{name}' not present in recording",
+                  "Replay only Channels that the Recording has: "
+                  + ", ".join(sorted(recorded)) + ".")
+        elif channel.schema_doc is not None and (
+                recorded[name].schema_name != channel.schema
+                or recorded[name].schema != channel.schema_doc):
+            c.add(where, f"channel '{name}' schema in recording does not "
+                         f"match manifest schema '{channel.schema}'",
+                  "Declare the Schema exactly as the Recording has it.")
 
 
 def _parse_int(text: str):
@@ -585,6 +664,12 @@ def validate(path: Path) -> list[Problem]:
     except ValueError as error:
         return [Problem("", f"invalid JSON: {error}",
                         "Write the Manifest with the sil.manifest builder.")]
+    try:
+        json.dumps(doc, ensure_ascii=False).encode()
+    except UnicodeEncodeError:
+        return [Problem("", "invalid JSON: a string has a lone surrogate "
+                            "escape", "Escape a character outside the Basic "
+                                      "Multilingual Plane as a pair.")]
     return _check_document(doc, path.absolute().parent)
 
 

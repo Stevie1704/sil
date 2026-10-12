@@ -55,9 +55,9 @@ def test_existing_files_are_not_overwritten(tmp_path, capsys):
     assert "manifest.py" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize("name", ["brake-ecu", "1st", "int", "speed_t"])
+@pytest.mark.parametrize("name", ["brake-ecu", "1st", "int", "speed_t", ""])
 def test_a_name_that_is_not_a_c_identifier_is_refused(name, tmp_path, capsys):
-    assert scaffold.main(["--native", name, "--dir", str(tmp_path)]) == 2
+    assert scaffold.main(["--process", name, "--dir", str(tmp_path)]) == 2
 
     assert list(tmp_path.iterdir()) == []
-    assert name in capsys.readouterr().err
+    assert repr(name) in capsys.readouterr().err

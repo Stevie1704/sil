@@ -55,8 +55,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dir", type=Path, default=None,
                         help="where to write the files (default: ./NAME)")
     args = parser.parse_args(argv)
-    kind_name = "process" if args.process else "native"
-    name = args.process or args.native
+    kind_name = "process" if args.process is not None else "native"
+    name = args.process if args.process is not None else args.native
     # The name becomes a Participant, Channel and Schema name, and appears in
     # C source, so it must be a valid identifier in both languages.
     if problem := ident_problem(name):

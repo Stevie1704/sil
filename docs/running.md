@@ -47,20 +47,22 @@ sil manifest validate manifest.json --json
 ```
 
 It applies the rules of `sil-run`: keys, types, ranges, references between
-Schemas, Channels and Participants, one publisher for each Channel, and the
-files that the Manifest names. Paths resolve against the Manifest directory,
-as in a Run. A bare Process participant command is looked up on the `PATH` of
+Schemas, Channels and Participants, and one publisher for each Channel. It
+also reads the files that the Manifest names, and it compares the Channels
+and Schemas of a replayed Recording with the Manifest. Paths resolve against
+the Manifest directory, as in a Run. A bare Process participant command is looked up on the `PATH` of
 the check, and `sil-run` uses its own `PATH`. The check needs only the wheel,
 not `sil-run`.
 
-Some Manifest errors need the artifact loaded, so only a Run finds them: a
-Native library that does not load or does not export
-`sil_participant_init`, a replayed Recording whose Channels or Schemas do not
-match the Manifest, an Arena that the system cannot map, and a missing Clock
-shim.
+Only a Run finds the Manifest errors that come from the code of a
+Participant or from the system: a Native library that does not load, does not
+export `sil_participant_init`, or fails its init; a Process participant that
+answers `init` with `fail`; a Recording Message that does not decode; an
+Arena that the system cannot map; and a missing Clock shim.
 
 `--json` writes the `sil_manifest_validation` report (version 1) to stdout:
 
+- `manifest`: the Manifest path, as given.
 - `valid`: `true` or `false`.
 - `errors`: one object for each error, with `path` (a JSON Pointer, RFC 6901,
   to the value at fault; `""` is the whole document), `message`, and `hint`
@@ -72,7 +74,8 @@ The exit codes are `0` valid and `2` not valid, as for `sil-run`.
 
 `sil new participant --process NAME` writes a Python Process participant, and
 `sil new participant --native NAME` writes a C Native participant. Each comes
-with a `manifest.py` that writes the Manifest of a Run of it. `NAME` must be a
+with a `manifest.py` script. This script writes a Manifest that runs the
+Participant. `NAME` must be a
 C identifier. The files go to `./NAME`, or to `--dir DIR`. The command does
 not overwrite a file.
 

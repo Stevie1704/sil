@@ -35,8 +35,8 @@ Do the steps in this order. Each step names the topic to read.
 
    To start a new Participant, run `sil new participant --process NAME` or
    `sil new participant --native NAME`. It writes a minimal Participant and a
-   `manifest.py` that writes the Manifest of a Run of it. The result runs and
-   passes `sil check` with no edits. Read `sil docs running`.
+   `manifest.py` script. This script writes a Manifest that runs the
+   Participant. The result runs and passes `sil check` with no edits. Read `sil docs running`.
 2. **Author the Manifest.** Use the `sil.manifest` builder (`Manifest`,
    `add_schemas`, `add_channel`, `add_process`, `write`). `sil docs
    getting-started` names the packaged ACC example
@@ -50,8 +50,9 @@ Do the steps in this order. Each step names the topic to read.
    an absolute path, read the Process participant command section of `sil
    docs running`.
 3. **Validate.** `sil manifest validate manifest.json --json` checks the
-   Manifest without a Run. It lists every error with its JSON path and a fix
-   hint, where `sil-run` stops at the first. Fix all errors, then run. Exit
+   Manifest without a Run. `sil-run` stops at the first error, but this
+   command lists every error with its JSON path and a fix hint. Fix all
+   errors, then run. Exit
    code `0` is valid, `2` is not. Read `sil docs running`.
 4. **Run.** `sil run manifest.json -o out.mcap` starts the native `sil-run`,
    and `sil check` uses it too. The wheel does not contain `sil-run`: it must

@@ -3,6 +3,7 @@
 import copy
 import hashlib
 import json
+import os
 import subprocess
 import sys
 
@@ -226,12 +227,25 @@ INVALID_CASES = {
         {"channel": "ticks", "capacity": 4, "overflow": "blocking"}]),
     "publishes unknown channel": _set((P, "echo", "publishes"), ["ech0"]),
     "two publishers": _set((P, "echo", "publishes"), ["echo", "sums"]),
+    "shm channel subscribed and published": lambda doc: (
+        _set((C, "echo", "transport"), "shm")(doc),
+        _set((P, "echo", "subscribes"), ["ticks", "echo"])(doc)),
 }
+
+def _doc_text(mutate) -> str:
+    doc = _base()
+    mutate(doc)
+    return json.dumps(doc)
+
 
 TEXT_CASES = {
     "invalid JSON": '{"sil_manifest": 1,',
     "NaN": '{"sil_manifest": 1, "duration_ns": NaN}',
     "number overflow": '{"sil_manifest": 1, "duration_ns": 1e400}',
+    # A field name may be any string, so only the escape makes this invalid.
+    "lone surrogate": _doc_text(_set((S, "toy.Accum", "fields"), ACCUM_FIELDS + [
+        {"name": "SURROGATE", "type": "u8"}])).replace('"SURROGATE"',
+                                                        '"\\ud800"'),
 }
 
 
@@ -266,12 +280,6 @@ def _both_verdicts(sil_run, tmp_path, text):
     return problems, run
 
 
-def _doc_text(mutate) -> str:
-    doc = _base()
-    mutate(doc)
-    return json.dumps(doc)
-
-
 @pytest.mark.parametrize("case", VALID_CASES)
 def test_validate_accepts_what_sil_run_accepts(case, sil_run, tmp_path):
     problems, run = _both_verdicts(sil_run, tmp_path,
@@ -297,6 +305,7 @@ def test_validate_rejects_what_sil_run_rejects(case, sil_run, tmp_path):
     ({"recording": "missing.mcap"}, False),
     ({"channels": []}, False),
     ({"channels": ["nope"]}, False),
+    ({"channels": ["echo"]}, False),
 ])
 def test_replay_participants_get_the_same_verdict(change, valid, recording,
                                                   sil_run, tmp_path):
@@ -305,3 +314,50 @@ def test_replay_participants_get_the_same_verdict(change, valid, recording,
 
     assert (run.returncode != 2) == valid, run.stderr
     assert (problems == []) == valid, problems
+
+
+def test_replay_with_a_schema_unlike_the_recorded_one_is_rejected_by_both(
+        recording, sil_run, tmp_path):
+    def mutate(doc):
+        _replay(recording)(doc)
+        doc[S]["toy.Counter"]["fields"][1]["type"] = "i32"
+
+    problems, run = _both_verdicts(sil_run, tmp_path, _doc_text(mutate))
+
+    assert run.returncode == 2, run.stderr
+    assert [p.path for p in problems] == ["/participants/replay/channels/0"]
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root reads any file")
+@pytest.mark.parametrize("artifact", ["library", "command file", "recording"])
+def test_an_unreadable_artifact_is_rejected_by_both(artifact, recording,
+                                                    sil_run, tmp_path):
+    unreadable = tmp_path / "artifact"
+    if artifact == "recording":
+        unreadable.write_bytes(recording.read_bytes())
+    else:
+        unreadable.write_text("x")
+    unreadable.chmod(0)
+
+    def mutate(doc):
+        if artifact == "library":
+            doc[P]["producer"]["library"] = str(unreadable)
+        elif artifact == "command file":
+            doc[P]["echo"]["command"].append(str(unreadable))
+        else:
+            _replay(unreadable)(doc)
+
+    try:
+        doc = _base()
+        if artifact == "recording":
+            unreadable.chmod(0o600)
+            mutate(doc)
+            unreadable.chmod(0)
+        else:
+            mutate(doc)
+        problems, run = _both_verdicts(sil_run, tmp_path, json.dumps(doc))
+    finally:
+        unreadable.chmod(0o600)
+
+    assert run.returncode == 2, run.stderr
+    assert problems
