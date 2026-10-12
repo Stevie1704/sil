@@ -12,10 +12,12 @@ from __future__ import annotations
 import argparse
 import gzip
 import hashlib
+import importlib.util
 import json
 import posixpath
 import re
 import shutil
+import string
 import subprocess
 import sys
 import tarfile
@@ -135,13 +137,13 @@ def packaged_link(root: Path, source: str, target: str, version: str) -> str:
     return f"{REPOSITORY}/{kind}/v{version}/{linked}{slash}{hash_sign}{fragment}"
 
 
-def stamp_docs(root: Path, version: str, output_dir: Path) -> None:
+def stamp_docs(root: Path, version: str, package: Path) -> None:
     """Copy the user docs and their topic index into the sil package.
 
     A link to another packaged doc stays relative; a link to anything else
     points at the release tag, so it shows the files of this version.
     """
-    docs = output_dir / "src" / "sil" / "_docs"
+    docs = package / "_docs"
     docs.mkdir(parents=True)
     for topic, (source, _) in PACKAGED_DOCS.items():
         text = MARKDOWN_LINK.sub(
@@ -153,6 +155,38 @@ def stamp_docs(root: Path, version: str, output_dir: Path) -> None:
     (docs / "topics.json").write_text(json.dumps(index, indent=2) + "\n")
 
 
+def command_rows(cli, group, path: str) -> list[str]:
+    """One Markdown table row for each command under `group` of `sil`."""
+    rows = []
+    for name, entry in group.commands.items():
+        if isinstance(entry, cli.Group):
+            rows += command_rows(cli, entry, f"{path} {name}")
+        else:
+            rows.append(f"| `{path} {name}` | {entry.summary} |")
+    return rows
+
+
+def stamp_skill(root: Path, version: str, package: Path) -> None:
+    """Write the agent skill of this version into the sil package.
+
+    Its command table comes from `cli.ROOT` of the stamped tree, so it names
+    exactly the commands that this version has.
+    """
+    # cli.py imports only the standard library, so it loads without its package.
+    spec = importlib.util.spec_from_file_location("sil_release_cli", package / "cli.py")
+    cli = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = cli  # dataclasses look up their module here
+    try:
+        spec.loader.exec_module(cli)
+    finally:
+        del sys.modules[spec.name]
+    text = string.Template((root / "tools" / "sil-skill.md").read_text()).substitute(
+        version=version, commands="\n".join(command_rows(cli, cli.ROOT, cli.PROG)))
+    skill = package / "_skill"
+    skill.mkdir()
+    (skill / "SKILL.md").write_text(text)
+
+
 def stamp_python(
     root: Path, version: str, revision: str, output_dir: Path
 ) -> Path:
@@ -160,8 +194,10 @@ def stamp_python(
     version = checked_version(root, version)
     source_dir = root / "python"
     shutil.copytree(source_dir, output_dir)
-    stamp_docs(root, version, output_dir)
-    destination = output_dir / "src" / "sil" / "release.json"
+    package = output_dir / "src" / "sil"
+    stamp_docs(root, version, package)
+    stamp_skill(root, version, package)
+    destination = package / "release.json"
     write_json(destination, source_metadata(version, revision))
     return destination
 
@@ -221,6 +257,8 @@ def _wheel_release(wheel: Path) -> tuple[dict[str, str], str]:
         docs = {"sil/_docs/topics.json", *(f"sil/_docs/{topic}.md" for topic in PACKAGED_DOCS)}
         if not docs <= names:
             raise fail(f"{context}: missing packaged docs {sorted(docs - names)}")
+        if "sil/_skill/SKILL.md" not in names:
+            raise fail(f"{context}: missing sil/_skill/SKILL.md")
         message, version = _metadata_message(
             archive.read(metadata_names[0]).decode(), context
         )

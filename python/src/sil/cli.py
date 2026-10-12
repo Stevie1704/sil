@@ -61,7 +61,9 @@ class Group:
 
 ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
              "The docs of this version are installed: 'sil docs' lists the topics,\n"
-             "and 'sil docs agent-guide' is the entry point for a coding agent.", {
+             "and 'sil docs agent-guide' is the entry point for a coding agent.\n"
+             "'sil skill install' gives a coding agent a skill, so it finds SiL\n"
+             "without being told.", {
     "docs": ModuleCommand("sil.docs",
                           "print the docs of this version, offline (start here)"),
     "check": ModuleCommand("sil.check",
@@ -114,6 +116,11 @@ ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
                              "convert CSV signals into a Recording"),
         "window": ModuleCommand("sil.replay_window",
                                 "select and rebase a window of a Recording"),
+    }),
+    "skill": Group("give a coding agent the skill of this version", {
+        "install": ModuleCommand("sil.skill",
+                                 "copy the SiL agent skill into a project or "
+                                 "the home directory"),
     }),
     "schema": Group("derive Schemas", {
         "import": ModuleCommand("sil.schema_import",
