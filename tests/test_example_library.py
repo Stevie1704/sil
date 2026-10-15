@@ -11,8 +11,10 @@ the library's fault builds from `tests/fixtures/speed_filter_fault.c`.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -84,6 +86,18 @@ def assert_cleaned_up(proc, tmp_path: Path, library_path: Path) -> None:
     assert survivors.stdout == ""
 
 
+def assert_first_difference(proc, workdir: Path) -> None:
+    assert proc.returncode == 1, proc.stderr
+    # Forward-Euler gain 1/2 instead of 1/3 on the first activation.
+    assert ("filter.fast at t=0 ns: filtered_speed_mps 4.0 differs from "
+            "the independently computed 2.666666666666667") in proc.stderr
+    report = json.loads((workdir / "run.mcap.failure.json").read_text())
+    assert report["category"] == "participant"
+    assert report["participant"] == "filter_test"
+    assert report["virtual_time_ns"] == 0
+    assert report["step_index"] == 0
+
+
 class TestNominal:
     def test_each_instance_starts_a_fresh_lifecycle_with_its_own_state(
         self, nominal
@@ -140,11 +154,30 @@ class TestIncorrectOutput:
         self, sil_run, build_dir, tmp_path
     ):
         proc = run_at_boundary(sil_run, build_dir, tmp_path, variant="defect")
-        assert proc.returncode == 1, proc.stderr
-        # Forward-Euler gain 1/2 instead of 1/3 on the first cycle.
-        assert ("filter.fast at t=0 ns: filtered_speed_mps 4.0 differs from "
-                "the independently computed 2.666666666666667") in proc.stderr
+        assert_first_difference(proc, tmp_path)
         assert_cleaned_up(proc, tmp_path, library(build_dir, "defect"))
+
+    def test_the_first_difference_is_reported_under_parallel_load(
+        self, sil_run, build_dir, tmp_path
+    ):
+        # Issue #288 was the macOS spawn race fixed by #289: filter_test
+        # could exit before init, so no Step or assertion ever ran. Exercise
+        # concurrent Runs as well as the single-Run diagnostic above.
+        def attempt(index):
+            workdir = tmp_path / str(index)
+            workdir.mkdir()
+            return run_at_boundary(
+                sil_run, build_dir, workdir, variant="defect"
+            ), workdir
+
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            runs = list(executor.map(attempt, range(50)))
+
+        # Check survivors only after all Runs end: another Run can still be
+        # using the same library while its peers finish.
+        for proc, workdir in runs:
+            assert_first_difference(proc, workdir)
+            assert_cleaned_up(proc, workdir, library(build_dir, "defect"))
 
     def test_an_output_of_the_last_step_is_checked_too(
         self, sil_run, build_dir, tmp_path

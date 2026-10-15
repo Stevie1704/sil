@@ -55,10 +55,6 @@ the fix. Remove an entry when it is no longer true.
 Run a flaky test again alone before you investigate. If it passes and the
 branch does not touch the code that it names, report it as intermittent.
 
-- **Library example `TestIncorrectOutput`.** Symptom:
-  `tests/test_example_library.py::TestIncorrectOutput` fails with
-  `participant 'filter_test' exited unexpectedly`. Tracked in #288.
-
 ## Measurement and expected values
 
 - **Linux `maxrss` survives `exec`.** Symptom: on Linux, the `wait4` peak RSS
