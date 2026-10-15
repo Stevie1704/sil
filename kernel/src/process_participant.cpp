@@ -533,11 +533,15 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     if (arenas_.max_slots() > 1) protocol_ = kIndexedSlotsProtocol;
     const int offered_protocol = protocol_;
 
-    int to_child[2], from_child[2], child_errors[2];
+    int to_child[2], from_child[2], child_errors[2], group_ready[2];
     if (pipe(to_child) != 0 || pipe(from_child) != 0 ||
-        pipe(child_errors) != 0)
+        pipe(child_errors) != 0 || pipe(group_ready) != 0)
       throw failure(FailureCategory::Spawn,
                     "participant '" + name + "': pipe failed");
+    // Only this child may hold the write end. A child that another thread
+    // forks and execs at this time must not keep the parent's read open.
+    (void)fcntl(group_ready[0], F_SETFD, FD_CLOEXEC);
+    (void)fcntl(group_ready[1], F_SETFD, FD_CLOEXEC);
 
     pid_ = fork();
     if (pid_ < 0)
@@ -545,13 +549,15 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
                     "participant '" + name + "': fork failed");
     if (pid_ == 0) {
       // Keep every descendant in a group owned by this Process participant.
-      // This is deliberately the first child-side operation, before the
-      // existing pre-exec work. A failure uses the same child-start failure
-      // path as chdir/exec below.
+      // Set the group before all other pre-exec work, then tell the parent.
+      // A failure uses the same child-start failure path as chdir/exec below.
+      close(group_ready[0]);
       if (setpgid(0, 0) != 0) {
         perror("sil: setpgid participant");
         _exit(127);
       }
+      (void)!write(group_ready[1], "", 1);
+      close(group_ready[1]);
       dup2(to_child[0], STDIN_FILENO);
       dup2(from_child[1], STDOUT_FILENO);
       dup2(child_errors[1], STDERR_FILENO);
@@ -574,9 +580,19 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
       perror("sil: exec participant");
       _exit(127);
     }
-    // Repeat the operation in the parent to close the fork-to-child race. If
-    // the child already exec'd, EACCES means its child-side call succeeded.
-    (void)setpgid(pid_, pid_);
+    // Wait until the child has its group, so nothing can signal the group
+    // before it exists. Only the child calls setpgid. If the parent also calls
+    // it, the two calls can race on macOS, and both can fail with EPERM
+    // (issue #289). EOF instead of the byte means the child exited first.
+    // That needs no action here: the next exchange finds the dead child.
+    close(group_ready[1]);
+    for (;;) {
+      char group_ready_byte;
+      if (read(group_ready[0], &group_ready_byte, 1) < 0 && errno == EINTR)
+        continue;
+      break;
+    }
+    close(group_ready[0]);
     close(to_child[0]);
     close(from_child[1]);
     close(child_errors[1]);
@@ -586,10 +602,9 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     child_stderr_ = child_errors[0];
     (void)fcntl(child_stderr_, F_SETFL,
                 fcntl(child_stderr_, F_GETFL) | O_NONBLOCK);
-    // The child-side setpgid above runs before exec, so a successfully
-    // started child and every descendant it creates share this group. A
-    // failed setpgid exits before exec and cannot leave a live participant in
-    // the runner's group.
+    // A started child and all its descendants share this group. A child whose
+    // setpgid failed exited before exec, so no live participant stays in the
+    // runner's group.
     process_group_id_ = pid_;
     alive_ = true;
 

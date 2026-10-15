@@ -58,12 +58,6 @@ branch does not touch the code that it names, report it as intermittent.
 - **Library example `TestIncorrectOutput`.** Symptom:
   `tests/test_example_library.py::TestIncorrectOutput` fails with
   `participant 'filter_test' exited unexpectedly`. Tracked in #288.
-- **`setpgid` at Process participant spawn.** Symptom: under load, a test that
-  starts Process participants fails with `sil: setpgid participant: Operation
-  not permitted`. Seen in `test_fmu_substitution`, `test_adas_closed_loop`,
-  `test_fmi_group`, `test_staged_install` and
-  `test_adas_process_adapter`. Do not run two full pytest
-  suites at the same time. Tracked in #289.
 
 ## Measurement and expected values
 
