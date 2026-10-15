@@ -160,9 +160,9 @@ class TestIncorrectOutput:
     def test_the_first_difference_is_reported_under_parallel_load(
         self, sil_run, build_dir, tmp_path
     ):
-        # Issue #288 was the macOS spawn race fixed by #289: filter_test
-        # could exit before init, so no Step or assertion ever ran. Exercise
-        # concurrent Runs as well as the single-Run diagnostic above.
+        # The #288 symptom reproduces with the macOS spawn race fixed by
+        # #289: filter_test could exit before init, without running a Step.
+        # Exercise concurrent Runs as well as the single-Run diagnostic above.
         def attempt(index):
             workdir = tmp_path / str(index)
             workdir.mkdir()
