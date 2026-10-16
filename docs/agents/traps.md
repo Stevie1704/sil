@@ -28,13 +28,15 @@ the fix. Remove an entry when it is no longer true.
   `models/can/bundle.sh` gives the digest, and that script reads it from
   `CAN_RUNTIME_PYTHON_IMAGE`. Under qemu, `cc1plus` sometimes segfaults while
   it compiles the kernel. That is a flake: run the build again.
-- **CMake sources outside the Dockerfile build stage.** Symptom: pytest passes
-  locally, but the `test`, `Build and smoke-test release shapes` and `qualify`
-  CI jobs fail at CMake generate. Cause: the root `Dockerfile` build stage
-  copies only `include`, `kernel`, `shim`, `tests`, `tools`, `cmake`,
-  `python`, `container` and `docs`. Fix: guard a target whose sources are
-  elsewhere (for example `examples/`) with `if(EXISTS ...)`, or copy its
-  directory in the Dockerfile.
+- **Sources missing from a selective Docker build stage.** Symptom: pytest
+  passes locally, but a proof image fails at CMake generate or `stamp-python`.
+  Some proof images copy selected directories before building the installed
+  runtime, then copy the rest of the checkout later. Release stamping needs
+  `examples/` alongside the Python sources and docs. Fix: copy required
+  directories before the `RUN` that uses them; a later `COPY . .` is too late.
+  For optional CMake targets, guard absent source directories with
+  `if(EXISTS ...)`. `tests/test_release.py` checks the stamping inputs of the
+  selective proof builds without running Docker.
 - **Docker proofs copy the sources at start.** Symptom: a source edit made
   while a proof runs is not in its result. The committed `image-id.txt`
   changes with any source change. Fix: finish and commit the edits, then start

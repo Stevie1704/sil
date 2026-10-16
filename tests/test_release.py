@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -14,6 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from release import (  # noqa: E402
+    PACKAGED_DOCS,
+    PACKAGED_EXAMPLES,
     REQUIRED_NATIVE_PATHS,
     ReleaseError,
     make_native_archive,
@@ -57,6 +61,51 @@ def test_stamp_python_does_not_mutate_the_checkout(tmp_path: Path):
     assert json.loads(
         (destination / "src" / "sil" / "release.json").read_text()
     )["source_revision"] == "test-revision"
+
+
+@pytest.mark.parametrize("dockerfile", [
+    "Dockerfile",
+    "proofs/adas-closed-loop/Dockerfile",
+    "proofs/adas-cost/Dockerfile",
+    "proofs/adas-equivalence/Dockerfile",
+    "proofs/osmp-qualification/Dockerfile",
+])
+def test_docker_build_has_release_inputs_before_stamping(tmp_path: Path, dockerfile: str):
+    """Exercise stamping with only inputs copied before the Docker RUN.
+
+    Later COPY instructions cannot satisfy the release build's inputs. The
+    ADAS matrix uses the closed-loop image as its preparation environment.
+    """
+    copied = []
+    instructions = (ROOT / dockerfile).read_text().replace("\\\n", " ").splitlines()
+    for instruction in instructions:
+        if instruction.startswith("RUN ") and "stamp-python" in instruction:
+            break
+        if instruction.startswith("COPY ") and "--from=" not in instruction:
+            copied.extend(Path(source) for source in shlex.split(instruction)[1:-1]
+                          if not source.startswith("--"))
+    else:
+        pytest.fail(f"{dockerfile} no longer invokes stamp-python")
+    inputs = {"python", "LICENSE", "tools/sil-skill.md",
+              *(source for source, _ in PACKAGED_DOCS.values()),
+              *(f"examples/{name}" for name in PACKAGED_EXAMPLES)}
+    staged = tmp_path / "src"
+    for name in sorted(inputs):
+        if not any(Path(name).is_relative_to(source) for source in copied):
+            continue
+        target = staged / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        source = ROOT / name
+        if source.is_dir():
+            shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__"))
+        else:
+            shutil.copyfile(source, target)
+    release = tmp_path / "release"
+    stamp_python(staged, "0.1.0", "test-docker-inputs", release)
+    examples = release / "src" / "sil" / "_examples"
+    assert all((examples / name).is_dir() for name in PACKAGED_EXAMPLES)
+    assert (examples / "library" / "adapter.py").is_file()
+    assert (examples / "bundle" / "prepare.py").is_file()
 
 
 def test_release_title_must_match_version():
