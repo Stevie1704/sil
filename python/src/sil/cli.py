@@ -66,6 +66,8 @@ ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
              "without being told.", {
     "docs": ModuleCommand("sil.docs",
                           "print the docs of this version, offline (start here)"),
+    "examples": ModuleCommand("sil.example_files",
+                              "list or copy the examples of this version, offline"),
     "check": ModuleCommand("sil.check",
                            "run a Manifest twice and fail on any Recording difference"),
     "compare": ModuleCommand("sil.compare",

@@ -342,6 +342,19 @@ def test_production_image_prints_the_docs_of_its_version(tmp_path: Path):
     assert proc.stdout.startswith("# Agent guide\n")
 
 
+def test_production_image_exports_the_onboarding_sources_offline(tmp_path: Path):
+    proc = _container(PRODUCTION_IMAGE, tmp_path, "examples", "--dir",
+                      str(tmp_path / "examples"), entrypoint="sil")
+    assert proc.returncode == 0, proc.stderr
+    for name in ("library/adapter.py", "library/binding.py", "library/ports.py",
+                 "library/gap_binding.py", "bundle/prepare.py"):
+        assert (tmp_path / "examples" / name).is_file()
+    query = _container(PRODUCTION_IMAGE, tmp_path, "docs", "recording-queries",
+                       entrypoint="sil")
+    assert query.returncode == 0, query.stderr
+    assert query.stdout.startswith("# Bounded Recording queries\n")
+
+
 def test_production_image_installs_the_skill_of_its_version(tmp_path: Path):
     """The image carries the agent skill, offline (issue #277)."""
     proc = _container(PRODUCTION_IMAGE, tmp_path, "skill", "install",

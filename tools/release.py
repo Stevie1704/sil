@@ -95,6 +95,8 @@ PACKAGED_DOCS = {
                     "start here: onboard a system under test with SiL, step by step"),
     "getting-started": ("docs/getting-started.md",
                         "run the ACC example or install a staged release"),
+    "examples": ("docs/examples.md",
+                 "copy installed adapters, bindings and preparation examples"),
     "running": ("docs/running.md",
                 "configure Run guards, the Clock shim, and Channel Transport"),
     "step-protocol": ("docs/step-protocol.md",
@@ -112,6 +114,8 @@ PACKAGED_DOCS = {
                "select a replay window, warm up a target, replay long Recordings"),
     "comparison": ("docs/comparison.md",
                    "compare outputs against a reference trajectory"),
+    "recording-queries": ("docs/recording-queries.md",
+                          "bounded fields, summaries and event search in Recordings"),
     "regression-bundles": ("docs/regression-bundles.md",
                            "seal and run regression cases and matrices"),
     "container": ("docs/container.md", "run one Manifest in a Linux container"),
@@ -120,18 +124,35 @@ PACKAGED_DOCS = {
                 "supported machine class, compatibility policy, determinism scope"),
 }
 PACKAGED_TOPICS = {source: topic for topic, (source, _) in PACKAGED_DOCS.items()}
+PACKAGED_EXAMPLES = {
+    "library": "C library bindings, multi-port adapter and replay windows",
+    "bundle": "prepare library, FMU replay and coupling regression bundles",
+    "csv": "convert CSV signals and replay them into a Process participant",
+    "fmu": "single-FMU mapping, stimulus and Manifest",
+    "fmu-replay": "build a small FMU and compare replay with a reference",
+    "fmu-coupling": "coupling and substitution documents",
+    "fmu-numeric": "numeric FMU replay mappings and reference inputs",
+    "fmu-array": "fixed-size array replay and coupling documents",
+    "compare": "comparison contract and reference trajectory",
+    "adas-reference": "Native and Process adapters, maneuvers and FMU sources",
+}
+# Include source inputs only; local builds and Python caches are not examples.
+EXAMPLE_SUFFIXES = {".py", ".c", ".h", ".csv", ".json", ".xml", ".sh", ".txt"}
 MARKDOWN_LINK = re.compile(r"\]\(([^)\s]+)\)")
 URL_SCHEME = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:")
 
 
 def packaged_link(root: Path, source: str, target: str, version: str) -> str:
-    """Point a link of a packaged doc at a packaged doc or at the release."""
+    """Link to installed docs/examples, or optional material at the release tag."""
     if target.startswith("#") or URL_SCHEME.match(target):
         return target
     path, hash_sign, fragment = target.partition("#")
     linked = posixpath.normpath(posixpath.join(posixpath.dirname(source), path))
     if linked in PACKAGED_TOPICS:
         return f"{PACKAGED_TOPICS[linked]}.md{hash_sign}{fragment}"
+    if linked.startswith("examples/") and linked.split("/")[1] in PACKAGED_EXAMPLES:
+        return f"../_examples/{linked.removeprefix('examples/')}" + (
+            "/" if path.endswith("/") else "") + f"{hash_sign}{fragment}"
     kind = "tree" if (root / linked).is_dir() else "blob"
     slash = "/" if path.endswith("/") else ""
     return f"{REPOSITORY}/{kind}/v{version}/{linked}{slash}{hash_sign}{fragment}"
@@ -140,8 +161,8 @@ def packaged_link(root: Path, source: str, target: str, version: str) -> str:
 def stamp_docs(root: Path, version: str, package: Path) -> None:
     """Copy the user docs and their topic index into the sil package.
 
-    A link to another packaged doc stays relative; a link to anything else
-    points at the release tag, so it shows the files of this version.
+    Links to packaged docs and examples stay relative. Other links point at
+    the release tag, so they show the files of this version.
     """
     docs = package / "_docs"
     docs.mkdir(parents=True)
@@ -153,6 +174,22 @@ def stamp_docs(root: Path, version: str, package: Path) -> None:
     # Not write_json: `sil docs` lists the topics in this order.
     index = {topic: summary for topic, (_, summary) in PACKAGED_DOCS.items()}
     (docs / "topics.json").write_text(json.dumps(index, indent=2) + "\n")
+
+
+def stamp_examples(root: Path, package: Path) -> None:
+    """Ship editable user examples with the same layout as their guides."""
+    destination = package / "_examples"
+    for name in PACKAGED_EXAMPLES:
+        source = root / "examples" / name
+        for path in sorted(source.rglob("*")):
+            if (path.is_file() and path.suffix in EXAMPLE_SUFFIXES
+                    and "__pycache__" not in path.parts):
+                target = destination / name / path.relative_to(source)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(path, target)
+    # The ADAS FMU packager carries SiL's license into the archive it creates.
+    shutil.copyfile(root / "LICENSE", destination / "adas-reference" / "LICENSE")
+    write_json(destination / "topics.json", PACKAGED_EXAMPLES)
 
 
 def command_rows(cli, group, path: str) -> list[str]:
@@ -196,6 +233,7 @@ def stamp_python(
     shutil.copytree(source_dir, output_dir)
     package = output_dir / "src" / "sil"
     stamp_docs(root, version, package)
+    stamp_examples(root, package)
     stamp_skill(root, version, package)
     destination = package / "release.json"
     write_json(destination, source_metadata(version, revision))
@@ -259,6 +297,16 @@ def _wheel_release(wheel: Path) -> tuple[dict[str, str], str]:
             raise fail(f"{context}: missing packaged docs {sorted(docs - names)}")
         if "sil/_skill/SKILL.md" not in names:
             raise fail(f"{context}: missing sil/_skill/SKILL.md")
+        examples = {"sil/_examples/topics.json", "sil/_examples/library/adapter.py",
+                    "sil/_examples/library/binding.py", "sil/_examples/library/ports.py",
+                    "sil/_examples/library/gap_binding.py",
+                    "sil/_examples/bundle/prepare.py",
+                    "sil/_examples/adas-reference/LICENSE"}
+        if not examples <= names:
+            raise fail(f"{context}: missing packaged examples {sorted(examples - names)}")
+        for directory in PACKAGED_EXAMPLES:
+            if not any(name.startswith(f"sil/_examples/{directory}/") for name in names):
+                raise fail(f"{context}: missing packaged example {directory}")
         message, version = _metadata_message(
             archive.read(metadata_names[0]).decode(), context
         )

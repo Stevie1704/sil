@@ -16,7 +16,9 @@ Each step names the docs to read. All docs are offline and match the
 installed version.
 
 1. **Inspect** the SUT: `sil docs fmi` (an FMU), `sil docs library` (a C
-   library), `sil docs step-protocol` (an executable).
+   library), `sil docs step-protocol` (an executable). When a guide uses
+   `examples/...` files, get them with `sil examples --dir examples`:
+   `sil docs examples`.
 2. **Author** the Manifest: `sil docs getting-started`, `sil docs fmu-coupling`.
 3. **Run** it into a Recording: `sil docs running`, `sil docs container`.
    A failed Run writes `<recording>.failure.json`: `sil docs running`.

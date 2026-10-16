@@ -12,6 +12,7 @@ agent.
 | Task | Guide |
 | --- | --- |
 | Onboard a system under test as a coding agent | [Agent guide](agent-guide.md) |
+| Get adapters, bindings and preparation scripts without a checkout | [Installed examples](examples.md) |
 | Run the ACC example or install a staged release | [Examples and installation](getting-started.md) |
 | Configure Run guards, the Clock shim, and Channel Transport | [Running simulations](running.md) |
 | Import and inspect an FMU, bind variables, or connect network terminals | [FMI importer](fmi.md) |

@@ -2,7 +2,10 @@
 
 [Documentation index](README.md) · [Repository overview](../README.md)
 
-Commands below run from the repository root unless stated otherwise.
+With the installed SiL runtime on `PATH`, export the guides' source inputs
+with `sil examples --dir examples` into a new working directory. Run the
+commands below from the parent of that exported directory. Read
+`sil docs examples` for compiler, native-header and FMU requirements.
 
 ## What it is
 
@@ -38,7 +41,7 @@ With an installed prefix (`sil-run`, `silschema`, `include/sil`) and the
 `sil` wheel on `PATH`:
 
 ```sh
-examples/adas-reference/run.sh "$(mktemp -d "$HOME/sil-adas.XXXXXX")"
+sh examples/adas-reference/run.sh "$(mktemp -d "$HOME/sil-adas.XXXXXX")"
 ```
 
 `make example-adas-reference` stages the build into a prefix and runs the

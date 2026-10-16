@@ -44,12 +44,20 @@ and Debian packages under their own terms. Those layers already carry their
 copyright files under `/usr/share/doc/*/copyright` in the image, which is where
 Debian records them.
 
+## Shipped example sources
+
+The wheel, source distribution and production runtime image include the
+editable examples exported by `sil examples --dir DIR`.
+
+| Component | Version | License | Where |
+| --- | --- | --- | --- |
+| [FMI 3.0 headers](https://github.com/modelica/fmi-standard/tree/v3.0.2/headers) | v3.0.2 | BSD-2-Clause | `sil/_examples/adas-reference/fmu/fmi3/`, unmodified, with `LICENSE.txt`; exported under `adas-reference/fmu/fmi3/`. The example FMU packager also carries this text as `documentation/licenses/LICENSE-FMI.txt` |
+
 ## Reference artifacts, not in the production runtime
 
 | Component | Version | License | Where |
 | --- | --- | --- | --- |
 | [Modelica Reference FMUs](https://github.com/modelica/Reference-FMUs) | `v0.0.41`, FMI 3.0 and FMI 2.0 archives | BSD-2-Clause | `tests/fixtures/reference-fmus/LICENSE.txt`; the FMI 3.0 archives are copied into the `acceptance` image target only |
-| [FMI 3.0 headers](https://github.com/modelica/fmi-standard/tree/v3.0.2/headers) | v3.0.2 | BSD-2-Clause | `examples/adas-reference/fmu/fmi3/`, unmodified, with `LICENSE.txt`; compiled into the ADAS reference FMU, which carries that license as `documentation/licenses/LICENSE-FMI.txt` |
 
 The `acceptance` image target exists for this repository's own checks. The
 production `runtime` target contains no test fixture and no FMU supplied by
@@ -176,9 +184,9 @@ only.
 
 ## Python wheel and source distribution
 
-The wheel and the source distribution contain SiL code only. They declare
-`mcap` as a runtime dependency and bundle no third-party code, so they carry no
-third-party notice beyond this file. The optional extra `sil[dwarf]` declares
+The wheel and the source distribution contain SiL code and the editable
+example sources, including the FMI headers and their license described above.
+They declare `mcap` as a runtime dependency. The optional extra `sil[dwarf]` declares
 [pyelftools](https://pypi.org/project/pyelftools/) (public domain, Unlicense)
 for `sil schema import`. The container image does not install it.
 

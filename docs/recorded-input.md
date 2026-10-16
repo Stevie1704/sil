@@ -2,7 +2,10 @@
 
 [Documentation index](README.md) · [Repository overview](../README.md)
 
-Commands below run from the repository root unless stated otherwise.
+With the installed SiL runtime on `PATH`, export the guides' source inputs
+with `sil examples --dir examples` into a new working directory. Run the
+commands below from the parent of that exported directory. Read
+`sil docs examples` for compiler, native-header and FMU requirements.
 
 ## Replay a timestamped CSV recording
 
@@ -14,8 +17,7 @@ kernel only sees an ordinary Recording. The worked example is in
 `observer.py` consumer that republishes every Message it receives, and the
 `manifest.py` that replays the Recording into it.
 
-With the staged installation on `PATH` (previous section), from the checkout
-root:
+With the installed runtime on `PATH`, from the exported examples' parent:
 
 ```sh
 workdir=$(mktemp -d)
@@ -117,7 +119,7 @@ Manifest with the same bytes is the same Run.
 | `authoring.json` | the authoring document |
 | `reference.csv`, `reference-mapping.json`, `contract.json` | the closed-form trajectory, computed by hand, and the `sil compare` contract |
 
-With the staged installation on `PATH`, from the checkout root:
+With the installed runtime on `PATH`, from the exported examples' parent:
 
 ```sh
 workdir=$(mktemp -d "$HOME/sil fmi replay.XXXXXX")

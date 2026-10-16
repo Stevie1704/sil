@@ -12,6 +12,11 @@ then loads the skill for SUT, FMU, Manifest, Recording and Run tasks.
 `--user` installs it into the home directory, and `--dir DIR` into `DIR`.
 Run the command again after you upgrade SiL: the skill names its version.
 
+For the guides' adapter, binding and regression preparation files, run
+`sil examples --dir examples` in a new working directory. Then run their
+`examples/...` commands there. `sil docs examples` describes the exported
+sources and the native installation or compiler each workflow needs.
+
 ## What SiL is
 
 SiL runs virtual ECUs (vECUs) and models deterministically in Virtual time.

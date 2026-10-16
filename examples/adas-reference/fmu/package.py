@@ -52,7 +52,9 @@ SOURCES = {
     "modelDescription.xml": FMU_DIR / "modelDescription.xml",
 }
 LICENSES = {
-    "documentation/licenses/LICENSE-SiL.txt": ROOT / "LICENSE",
+    "documentation/licenses/LICENSE-SiL.txt": (
+        EXAMPLE_DIR / "LICENSE" if (EXAMPLE_DIR / "LICENSE").is_file()
+        else ROOT / "LICENSE"),
     "documentation/licenses/LICENSE-FMI.txt": FMU_DIR / "fmi3" / "LICENSE.txt",
 }
 # The reference arithmetic is specified without contracted floating-point

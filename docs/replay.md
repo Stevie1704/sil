@@ -2,7 +2,10 @@
 
 [Documentation index](README.md) · [Repository overview](../README.md)
 
-Commands below run from the repository root unless stated otherwise.
+With the installed SiL runtime on `PATH`, export the guides' source inputs
+with `sil examples --dir examples` into a new working directory. Run the
+commands below from the parent of that exported directory. Read
+`sil docs examples` for compiler, native-header and FMU requirements.
 
 ## Replay a selected window after a warm-up
 
@@ -17,7 +20,7 @@ The worked example is in [examples/library/](../examples/library/):
 with a 1 s warm-up, and `window-no-warm-up.json` is the negative control:
 the same evaluation interval with no warm-up. `window_contract.py` writes the
 `sil compare` contract from the `sil recording window` receipt. With the staged
-installation on `PATH`, from the checkout root:
+installation on `PATH`, from the exported examples' parent directory:
 
 ```sh
 workdir=$(mktemp -d "$HOME/sil recording window.XXXXXX")

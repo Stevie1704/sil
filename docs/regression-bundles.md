@@ -22,8 +22,16 @@ bundle that was changed and sealed again is refused.
 
 ## Prepare
 
-Preparation is the one step that needs a source checkout, a compiler, an
-exporter or an independent importer. It writes the bundle directory at the
+Preparation uses the target artifacts and any compiler, exporter or
+independent importer needed to produce them. The installed examples supply
+the preparation scripts, adapters, bindings and reference inputs; a SiL
+source checkout is not required. Export them in a new working directory:
+
+```sh
+sil examples --dir examples
+```
+
+Preparation writes the bundle directory at the
 location the runtime will use, because an authored Manifest names its
 Recordings, FMU archives and libraries by absolute path. A bundle that is
 moved after sealing is refused. In a container, copy the bundle to the same
@@ -38,9 +46,13 @@ The bundle holds:
 - the references, prepared beforehand, and the comparison contracts;
 - `bundle.json`, the declaration.
 
-`examples/bundle/prepare.py` prepares the three examples:
+`examples/bundle/prepare.py` prepares the three examples. Build the two small
+example targets first, or supply existing builds of those example targets:
 
 ```sh
+mkdir -p build
+cc -shared -fPIC -O2 -o build/example-speed_filter.so examples/library/speed_filter.c
+cc -shared -fPIC -O2 -o build/EgoMotion.so examples/fmu-replay/ego_motion.c
 python examples/bundle/prepare.py library /bundles/library \
     --python-bin /opt/sil/venv/bin --sil-bin /opt/sil/bin \
     --library build/example-speed_filter.so
@@ -49,8 +61,14 @@ python examples/bundle/prepare.py fmu-replay /bundles/fmu-replay \
     --fmu-binary build/EgoMotion.so
 python examples/bundle/prepare.py coupling /bundles/coupling \
     --python-bin /opt/sil/venv/bin --sil-bin /opt/sil/bin \
-    --fmu tests/fixtures/reference-fmus/3.0/Feedthrough.fmu --runner build/sil-run
+    --fmu /path/to/Feedthrough.fmu --runner /opt/sil/bin/sil-run
 ```
+
+Use your installation's interpreter and runner directories for `--python-bin`
+and `--sil-bin`, and a writable final location for each bundle. The coupling
+example expects the FMI 3.0 Reference `Feedthrough` archive, supplied separately.
+The script is an editable preparation example: adapt its target binding,
+inputs and independent references for your own library or FMU.
 
 | Bundle | Runs | Verdicts |
 |---|---|---|

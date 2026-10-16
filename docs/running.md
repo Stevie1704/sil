@@ -2,7 +2,8 @@
 
 [Documentation index](README.md) · [Repository overview](../README.md)
 
-Commands below run from the repository root unless stated otherwise.
+Commands below use the installed wheel and native runtime on `PATH` and run
+from the directory containing your Manifest. A source checkout is not needed.
 
 ## Run contract
 
@@ -26,7 +27,7 @@ One run = `sil-run manifest.json -o out.mcap`:
 - **Test API**: tests are scheduled participants (`sil.testing` +
   `sil.participant`) run under pytest; an in-simulation assertion failure
   aborts the run non-zero and fails the pytest test with that message.
-- **Determinism check**: `sil check manifest.json --runner build/sil-run`
+- **Determinism check**: `sil check manifest.json`
   runs twice and bit-compares (exit 3 on violation). Enforced in CI.
 - **Declared memory footprint**: `sil footprint manifest.json` reports
   the worst-case payload memory a manifest promises, from route capacities and
@@ -156,7 +157,7 @@ The determinism check takes the same option and hands it to both of the runs
 it compares, so a stalled participant fails the check instead of hanging it:
 
 ```sh
-sil check manifest.json --runner build/sil-run --participant-timeout-ms 5000
+sil check manifest.json --participant-timeout-ms 5000
 ```
 
 The check then reports the run's own exit code and diagnostic — a missed
