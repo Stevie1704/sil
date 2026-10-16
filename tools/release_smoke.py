@@ -144,6 +144,15 @@ def smoke_native(
         env=clean_environment(python_bin, native_root / "bin"),
     )
     environment = clean_environment(python_bin, native_root / "bin")
+    for topic in ("agent-guide", "recording-queries", "examples"):
+        checked([str(python_bin / "sil"), "docs", topic],
+                cwd=workdir, env=environment)
+    checked([str(python_bin / "sil"), "examples", "--dir", "examples"],
+            cwd=workdir, env=environment)
+    for relative in ("library/adapter.py", "library/binding.py", "library/ports.py",
+                     "library/gap_binding.py", "bundle/prepare.py"):
+        if not (workdir / "examples" / relative).is_file():
+            raise SmokeError(f"missing exported example {relative}")
     checked(
         [str(python_bin / "python"), "-c", (
             python_metadata_check(version, revision)

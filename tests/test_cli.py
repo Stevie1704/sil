@@ -14,7 +14,7 @@ def test_help_lists_every_top_level_command(capsys):
 
     out = capsys.readouterr().out
     assert out.startswith("usage: sil <command>")
-    for command in ("check", "compare", "footprint", "run",
+    for command in ("check", "compare", "footprint", "run", "examples",
                     "bundle", "fmi", "manifest", "new", "recording", "schema"):
         assert f"\n  {command} " in out
 

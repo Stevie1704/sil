@@ -59,8 +59,9 @@ metadata, and notices are installed by `cmake/install.cmake`.
 
 All native artifacts retain their names and locations directly under the
 chosen build directory. Defining a target in a subdirectory does not change
-paths consumed by Manifests or tests. The runtime Docker build omits examples;
-the root build includes their targets only when their build definition exists.
+paths consumed by Manifests or tests. The runtime image carries editable
+example sources in the Python package; its native build selects only the
+runner and Clock shim targets.
 
 `python/pyproject.toml` owns the Python distribution and the shared product
 version. The root `Makefile` provides developer entry points across the native

@@ -37,6 +37,9 @@ make check ARGS="manifest.json"
 
 An installed SiL has one command for its tools: `sil --help` lists them
 (`sil check`, `sil compare`, `sil run`, `sil fmi inspect`, …).
+`sil docs agent-guide` explains onboarding, and `sil examples --dir examples`
+provides the adapters, bindings and preparation inputs without a checkout.
+`sil skill install` gives a coding agent the guide and commands of that version.
 
 See [examples and installation](docs/getting-started.md) for the ACC example
 and staged installation, or [container deployment](docs/container.md) to run

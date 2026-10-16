@@ -2,7 +2,10 @@
 
 [Documentation index](README.md) · [Repository overview](../README.md)
 
-Commands below run from the repository root unless stated otherwise.
+With the installed SiL runtime on `PATH`, export the guides' source inputs
+with `sil examples --dir examples` into a new working directory. Run the
+commands below from the parent of that exported directory. Read
+`sil docs examples` for compiler, native-header and FMU requirements.
 
 ## Compare a trajectory against a reference
 
@@ -17,14 +20,18 @@ same FMU. [examples/compare/plant-accelerate.reference.csv](../examples/compare/
 is that trace, one row per time and one column group per FMU instance;
 [examples/compare/reference-mapping.json](../examples/compare/reference-mapping.json)
 converts it; [examples/compare/contract.json](../examples/compare/contract.json)
-is the contract. With the installed wheel on `PATH`, from the checkout root:
+is the contract. Supply the Recording to evaluate separately as
+`/path/to/plant-accelerate.mcap`. For a complete runnable comparison that
+builds its own small FMU, read `sil docs recorded-input`.
+
+With the installed wheel on `PATH`, from the exported examples' parent:
 
 ```sh
 workdir=$(mktemp -d)
 sil recording csv examples/compare/reference-mapping.json \
     examples/compare/plant-accelerate.reference.csv -o "$workdir/reference.mcap"
 sil compare examples/compare/contract.json \
-    proofs/acc-fmi/evidence/plant-accelerate-1.mcap "$workdir/reference.mcap"
+    /path/to/plant-accelerate.mcap "$workdir/reference.mcap"
 sil compare ... --json                          # the same report as JSON
 ```
 

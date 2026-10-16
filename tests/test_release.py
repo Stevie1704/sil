@@ -117,7 +117,8 @@ def docs(tmp_path: Path) -> Path:
 
 def test_stamp_python_packages_every_doc_listed_as_a_topic(docs: Path):
     topics = json.loads((docs / "topics.json").read_text())
-    assert {"agent-guide", "step-protocol", "glossary", "support"} <= set(topics)
+    assert {"agent-guide", "step-protocol", "glossary", "support",
+            "examples", "recording-queries"} <= set(topics)
     assert all(summary for summary in topics.values())
     assert {path.stem for path in docs.glob("*.md")} == set(topics)
     assert (docs / "step-protocol.md").read_text().startswith("# Step protocol\n")
@@ -132,7 +133,7 @@ def test_stamped_docs_link_each_other_and_the_release_for_the_rest(docs: Path):
     assert "](step-protocol.md)" in running
     assert "](https://github.com/Stevie1704/sil/blob/v0.1.0/README.md)" in running
     library = (docs / "library.md").read_text()
-    assert "](https://github.com/Stevie1704/sil/tree/v0.1.0/examples/library/)" in library
+    assert "](../_examples/library/)" in library
 
 
 def test_every_stamped_doc_link_resolves_in_the_package_or_the_release(docs: Path):
@@ -140,4 +141,11 @@ def test_every_stamped_doc_link_resolves_in_the_package_or_the_release(docs: Pat
         for target in re.findall(r"\]\(([^)]+)\)", doc.read_text()):
             if target.startswith(("https://", "http://", "mailto:", "#")):
                 continue
-            assert (docs / target.split("#")[0]).is_file(), f"{doc.name}: {target}"
+            assert (docs / target.split("#")[0]).exists(), f"{doc.name}: {target}"
+
+
+def test_every_doc_command_in_a_packaged_guide_has_a_topic(docs: Path):
+    topics = json.loads((docs / "topics.json").read_text())
+    for doc in docs.glob("*.md"):
+        for topic in re.findall(r"sil\s+docs\s+([a-z][a-z-]*)", doc.read_text()):
+            assert topic in topics, f"{doc.name}: sil docs {topic}"

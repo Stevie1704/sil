@@ -16,8 +16,9 @@ compiler, the FMI exporter and an independent importer.
 - `coupling`: two coupled `Feedthrough` FMUs, and the same loop with `left`
   replaced by its Recording, each compared with the prepared coupled Run.
 
-Preparation is the step that needs the source checkout, the compiler and a
-runner; it writes the bundle where the runtime will find it, because the
+Export these sources with `sil examples --dir examples`. Preparation needs
+the built target artifacts and a runner; it writes the bundle where the
+runtime will find it, because the
 Manifests name their artifacts by absolute path. `sil bundle seal` then runs
 in the runtime, and `sil bundle run` executes the bundle there offline:
 

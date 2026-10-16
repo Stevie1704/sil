@@ -2,7 +2,10 @@
 
 [Documentation index](README.md) · [Repository overview](../README.md)
 
-Commands below run from the repository root unless stated otherwise.
+With the installed SiL runtime on `PATH`, export the guides' source inputs
+with `sil examples --dir examples` into a new working directory. Run the
+commands below from the parent of that exported directory. Read
+`sil docs examples` for compiler, native-header and FMU requirements.
 
 ## FMI 3.0 co-simulation importer
 
@@ -47,9 +50,16 @@ m.add_process(
 stimulus participant. `examples/fmu/manifest.py` is the whole Run, and
 `tests/test_example_fmu.py` imports that same file rather than restating it.
 
+With a separately supplied FMI 3.0 Reference `Feedthrough` archive:
+
 ```sh
-make example-fmu                                # run it, record it into build/
+workdir=$(mktemp -d)
+python examples/fmu/manifest.py "$workdir/fmu.json" --fmu /path/to/Feedthrough.fmu
+sil run "$workdir/fmu.json" -o "$workdir/fmu.mcap"
+sil check "$workdir/fmu.json"
 ```
+
+`make example-fmu` is the equivalent convenience target in a source checkout.
 
 Because `Feedthrough` copies each input to the output of the same name, the
 Recording shows the mapping round-trip directly: an output at `t` is the input

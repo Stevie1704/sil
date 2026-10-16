@@ -2,7 +2,27 @@
 
 [Documentation index](README.md) · [Repository overview](../README.md)
 
-Commands below run from the repository root unless stated otherwise.
+## Use the installed framework
+
+Install the release wheel together with the native development archive and
+put both `bin` directories on `PATH`. The runtime image is another execution
+option (`sil docs container`). The wheel supplies documentation and Python
+tools; the native archive supplies `sil-run`, `silschema` and `include/sil`.
+
+From any working directory, without the SiL source checkout:
+
+```sh
+sil docs agent-guide
+sil skill install
+python -m sil.examples.acc.manifest acc.json
+sil run acc.json -o acc.mcap
+sil check acc.json
+sil examples --dir examples
+```
+
+`sil docs examples` describes the exported adapters, bindings, recorded
+inputs and bundle preparation scripts. The following build instructions are
+for contributors preparing those release artifacts from a checkout.
 
 ## ACC reference example
 

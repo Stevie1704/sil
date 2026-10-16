@@ -2,7 +2,10 @@
 
 [Documentation index](README.md) · [Repository overview](../README.md)
 
-Commands below run from the repository root unless stated otherwise.
+With the installed SiL runtime on `PATH`, export the guides' source inputs
+with `sil examples --dir examples` into a new working directory. Run the
+commands below from the parent of that exported directory. Read
+`sil docs examples` for compiler, native-header and FMU requirements.
 
 ## Couple FMUs through Channels
 
@@ -24,11 +27,11 @@ a [group](fmi.md#connected-fmus-one-participant-one-bus) (ADR 0001).
 | `acc.json` | the ACC controller/plant loop of `proofs/acc-fmi` (#148): one Period of Latency in each direction |
 | `feedback.json` | a delayed feedback loop between two `Feedthrough` instances |
 
-From the checkout root, with the staged installation on `PATH`:
+From the exported examples' parent, with the installed runtime on `PATH`:
 
 ```sh
 workdir=$(mktemp -d "$HOME/sil fmi couple.XXXXXX")
-fmu=tests/fixtures/reference-fmus/3.0/Feedthrough.fmu
+fmu=/path/to/Feedthrough.fmu
 sil fmi couple examples/fmu-coupling/feedback.json \
     --fmu left "$fmu" --fmu right "$fmu" \
     -o "$workdir/feedback.json" --receipt "$workdir/feedback.receipt.json"
@@ -299,12 +302,12 @@ subsystem. The Channels of the removed FMU that a retained FMU takes are the
 replacement boundary. The command writes the replacement Manifest and a
 [comparison contract](comparison.md#compare-a-trajectory-against-a-reference). The
 contract says whether the retained outputs of the replacement Run are those
-of the original Run. From the checkout root, with the staged installation on
-`PATH`:
+of the original Run. From the exported examples' parent, with the installed
+runtime on `PATH`:
 
 ```sh
 workdir=$(mktemp -d "$HOME/sil fmi substitute.XXXXXX")
-fmu=tests/fixtures/reference-fmus/3.0/Feedthrough.fmu
+fmu=/path/to/Feedthrough.fmu
 # 1. Record the coupled Run.
 sil fmi couple examples/fmu-coupling/feedback.json \
     --fmu left "$fmu" --fmu right "$fmu" -o "$workdir/original.json"

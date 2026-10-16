@@ -23,17 +23,14 @@ Build it and run it:
 
     make example-fmu
 
-or, without the convenience target:
+or, with an installed framework and exported examples:
 
-    PYTHONPATH=$PWD/python/src python examples/fmu/manifest.py build/fmu.json
-    PYTHONPATH=$PWD/python/src ./build/sil-run build/fmu.json -o build/fmu.mcap
+    python examples/fmu/manifest.py fmu.json --fmu /path/to/Feedthrough.fmu
+    sil run fmu.json -o fmu.mcap
 
-`sil-run` spawns the participants as child processes, so `PYTHONPATH` has to be
-set on the run as well as on the build, and absolute: the kernel starts each
-child in its own kernel-owned working directory, so a relative entry would be
-resolved from there. The importer extracts the archive into that directory,
-which the kernel removes after the Run, so a demo leaves the working tree
-clean.
+The importer extracts the archive into the child's kernel-owned working
+directory, which the kernel removes after the Run. Activate the environment
+that has SiL installed so the child processes find it too.
 
 To point this at your own FMU, change three things and nothing else: the path
 below, `schemas.json` to carry your FMU's Float64 input and output variable names,
@@ -97,5 +94,7 @@ def fmu_manifest(*, fmu: Path = FMU_PATH) -> Manifest:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("out", help="path to write the Manifest to")
+    parser.add_argument("--fmu", type=Path, default=FMU_PATH,
+                        help="the FMU archive; required outside the source checkout")
     args = parser.parse_args()
-    print(fmu_manifest().write(args.out).hash)
+    print(fmu_manifest(fmu=args.fmu.resolve()).write(args.out).hash)

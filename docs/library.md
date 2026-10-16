@@ -2,7 +2,10 @@
 
 [Documentation index](README.md) · [Repository overview](../README.md)
 
-Commands below run from the repository root unless stated otherwise.
+With the installed SiL runtime on `PATH`, export the guides' source inputs
+with `sil examples --dir examples` into a new working directory. Run the
+commands below from the parent of that exported directory. Read
+`sil docs examples` for compiler, native-header and FMU requirements.
 
 ## Replay recorded input into a shared library
 
@@ -20,7 +23,7 @@ library as a Process participant without changing it:
 | `signals.csv`, `mapping.json` | the recorded input and its `sil recording csv` mapping |
 | `manifest.py` | the Run: Replay, two library instances, Test participant |
 
-With the staged installation on `PATH`, from the checkout root:
+With the installed runtime on `PATH`, from the exported examples' parent:
 
 ```sh
 workdir=$(mktemp -d "$HOME/sil-library.XXXXXX")
@@ -135,7 +138,7 @@ its own Channel, and several cyclic entry points, for example a 10 ms and a
 | `gap_signals.csv`, `gap_mapping.json` | two recorded inputs at different rates, with one Burst |
 | `gap_manifest.py` | the Run: Replay, the library, Test participant |
 
-With the staged installation on `PATH`, from the checkout root:
+With the installed runtime on `PATH`, from the exported examples' parent:
 
 ```sh
 workdir=$(mktemp -d "$HOME/sil-library-ports.XXXXXX")
