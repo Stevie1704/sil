@@ -103,7 +103,7 @@ ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
         NativeCommand("sil-run", ""),
         ModuleCommand("sil.diagnostics_run", ""),
         "execute a Manifest into a Recording (the native sil-run); "
-        "--diagnostics measures it"),
+        "'sil run --diagnostics --help' lists the measurement options"),
     "benchmark": ModuleCommand("sil.benchmark",
                                "repeat fresh diagnostics Runs of a Manifest "
                                "and summarize them"),
