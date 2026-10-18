@@ -399,6 +399,44 @@ def test_installed_diagnostics_runner_measures_the_installed_acc_example(
     assert check.stdout == "succeeded\n"
 
 
+def test_installed_sil_run_diagnostics_default_custom_and_no_recording(
+    installed_python: Path, staged_prefix: Path, tmp_path: Path,
+):
+    """`sil run --diagnostics` needs only the wheel and the native prefix."""
+    env = installed_environment(installed_python)
+    env["PATH"] = os.pathsep.join(
+        [str(installed_python / "bin"), str(staged_prefix / "bin"),
+         "/usr/bin:/bin"])
+    built = subprocess.run(
+        [str(installed_python / "bin" / "python"), "-m",
+         "sil.examples.acc.manifest", "acc.json"],
+        cwd=tmp_path, env=env, capture_output=True, text=True,
+    )
+    assert built.returncode == 0, built.stderr
+    (tmp_path / "my results").mkdir()
+
+    def sil(*argv: str):
+        return subprocess.run(["sil", "run", "acc.json", *argv], cwd=tmp_path,
+                              env=env, capture_output=True, text=True)
+
+    runs = {
+        "default": (sil("--diagnostics", "-o", "run.mcap"),
+                    "run.mcap.diagnostics.json"),
+        "custom": (sil("-o", "custom.mcap", "--diagnostics-out",
+                       "my results/run.json"), "my results/run.json"),
+        "no recording": (sil("--no-recording", "--diagnostics"),
+                         "out.mcap.diagnostics.json"),
+    }
+    for name, (proc, report) in runs.items():
+        assert proc.returncode == 0, (name, proc.stderr)
+        assert proc.stdout.startswith("manifest_hash "), name
+        assert f"diagnostics report: {report}\n" in proc.stdout, name
+        assert "run: succeeded, exit code 0, complete\n" in proc.stdout, name
+        assert json.loads((tmp_path / report).read_text())[
+            "sil_run_diagnostics"] == 1
+    assert not (tmp_path / "out.mcap").exists()
+
+
 @pytest.mark.parametrize("kind", ["--process", "--native"])
 def test_installed_participant_scaffold_runs_with_no_edits(
     installed_python: Path, staged_prefix: Path, tmp_path: Path, kind: str,
