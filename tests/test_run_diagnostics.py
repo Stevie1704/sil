@@ -7,6 +7,7 @@ identities, counts, structure, null reasons and the outcome.
 """
 
 import json
+import os
 import signal
 import subprocess
 import sys
@@ -463,6 +464,38 @@ def wedged_manifest(tmp_path: Path, observer: Path | None = None) -> Path:
         command.append(str(observer))
     m.add_process("wedged", command=command, step_period_ns=10 * MS)
     return m.write(tmp_path / "wedged.json").path
+
+
+PID_MARKER = ROOT / "tests" / "participants" / "pid_marker.py"
+
+
+@pytest.mark.parametrize("mode, options, exit_code", [
+    ("ok", [], 0),
+    ("fail", [], 1),
+    ("hang", ["--participant-timeout-ms", "200"], 1),
+])
+def test_no_participant_outlives_the_runner(sil_run_diagnostics, tmp_path,
+                                            mode, options, exit_code):
+    """After a normal end, a failed Participant and a participant timeout,
+    the Participant is reaped, and so measured, before the runner exits."""
+    marker = tmp_path / "pid"
+    m = toy_manifest(duration_ns=50 * MS)
+    m.add_process("marked", command=[sys.executable, str(PID_MARKER),
+                                     str(marker), mode],
+                  step_period_ns=10 * MS)
+    manifest = m.write(tmp_path / "marked.json").path
+
+    proc, report = run_diagnostics(sil_run_diagnostics, manifest, tmp_path,
+                                   *options)
+
+    assert proc.returncode == exit_code, proc.stderr
+    pid = int(marker.read_text())
+    # A reaped child is gone at once; a zombie or a live child still answers.
+    with pytest.raises(ProcessLookupError):
+        os.kill(pid, 0)
+    if RESOURCES_SUPPORTED:
+        _, _, processes = resource_records(report)
+        assert processes["marked"]["unavailable"] == {}
 
 
 class TestFailedRuns:
