@@ -66,6 +66,9 @@ struct RunFacts {
 
 #ifdef SIL_RUN_DIAGNOSTICS
 
+// The id a Task's or a Replay participant's work is recorded under.
+using Id = size_t;
+
 // Run wall time starts here, before the Manifest is loaded.
 void start_run() noexcept;
 // Closes the current phase and opens `phase`; re-entering it is a no-op.
@@ -75,9 +78,9 @@ void end_run() noexcept;
 
 void participant(const std::string &name, ParticipantKind kind) noexcept;
 // Returns the id an Activation names the Task by.
-size_t task(const std::string &participant, const std::string &task,
-            TaskKind kind, uint64_t period_ns, uint64_t offset_ns) noexcept;
-size_t replay(const std::string &participant) noexcept;
+Id task(const std::string &participant, const std::string &task,
+        TaskKind kind, uint64_t period_ns, uint64_t offset_ns) noexcept;
+Id replay(const std::string &participant) noexcept;
 // A Process participant's child was reaped: `usage` is what wait4 reported
 // for it and its waited descendants, or null when the reap failed.
 void process_reaped(const std::string &participant,
@@ -92,12 +95,16 @@ void write_report(const std::filesystem::path &path, const RunFacts &facts);
 // interrupted when a termination signal had arrived.
 class Activation {
  public:
-  Activation(size_t task, uint64_t slot_ns) noexcept;
+  Activation(Id task, uint64_t slot_ns) noexcept;
   ~Activation();
   void completed() noexcept;
+  // Completed unless the Engine recorded a failure during the activation.
+  void completed_unless(const std::string &failure) noexcept {
+    if (failure.empty()) completed();
+  }
 
  private:
-  size_t task_;
+  Id task_;
   uint64_t slot_ns_;
   uint64_t start_ns_;
   bool done_ = false;
@@ -108,13 +115,17 @@ class Activation {
 // read before and after to count the Messages it published.
 class ReplayWork {
  public:
-  ReplayWork(size_t replay, const Replayer &replayer, uint64_t slot_ns,
+  ReplayWork(Id replay, const Replayer &replayer, uint64_t slot_ns,
              const uint64_t &publications) noexcept;
   ~ReplayWork();
   void completed() noexcept;
+  // Completed unless the Engine recorded a failure during the publication.
+  void completed_unless(const std::string &failure) noexcept {
+    if (failure.empty()) completed();
+  }
 
  private:
-  size_t replay_;
+  Id replay_;
   uint64_t slot_ns_;
   const uint64_t &publications_;
   uint64_t publications_before_;
@@ -136,27 +147,32 @@ class PhaseOnExit {
 
 #else
 
+// Empty, so a [[no_unique_address]] id member takes no storage in sil-run.
+struct Id {};
+
 inline void start_run() noexcept {}
 inline void enter_phase(Phase) noexcept {}
 inline void end_run() noexcept {}
 inline void participant(const std::string &, ParticipantKind) noexcept {}
-inline size_t task(const std::string &, const std::string &, TaskKind,
-                   uint64_t, uint64_t) noexcept {
-  return 0;
+inline Id task(const std::string &, const std::string &, TaskKind, uint64_t,
+               uint64_t) noexcept {
+  return {};
 }
-inline size_t replay(const std::string &) noexcept { return 0; }
+inline Id replay(const std::string &) noexcept { return {}; }
 inline void process_reaped(const std::string &, const rusage *) noexcept {}
 
 class Activation {
  public:
-  Activation(size_t, uint64_t) noexcept {}
+  Activation(Id, uint64_t) noexcept {}
   void completed() noexcept {}
+  void completed_unless(const std::string &) noexcept {}
 };
 
 class ReplayWork {
  public:
-  ReplayWork(size_t, const Replayer &, uint64_t, const uint64_t &) noexcept {}
+  ReplayWork(Id, const Replayer &, uint64_t, const uint64_t &) noexcept {}
   void completed() noexcept {}
+  void completed_unless(const std::string &) noexcept {}
 };
 
 class PhaseOnExit {

@@ -222,17 +222,18 @@ void Engine::run() {
       size_t registration_index;
       Task *task;
       Replayer *replayer;
-      size_t replay_index;
+      [[no_unique_address]] diagnostics::Id replay_id;
     };
     std::vector<Due> due;
     for (Task &t : tasks_)
       if (!t.done && t.next_ns == slot)
-        due.push_back({t.priority, t.registration_index, &t, nullptr, 0});
+        due.push_back({t.priority, t.registration_index, &t, nullptr, {}});
     for (size_t i = 0; i < replayers_.size(); i++)
       if (replay_places_[i].priority)
         due.push_back({*replay_places_[i].priority,
                        replay_places_[i].registration_index, nullptr,
-                       replayers_[i].get(), i});
+                       replayers_[i].get(),
+                       replay_places_[i].diagnostics_id});
     std::sort(due.begin(), due.end(), [](const Due &a, const Due &b) {
       if (a.priority != b.priority) return a.priority < b.priority;
       return a.registration_index < b.registration_index;
@@ -247,13 +248,12 @@ void Engine::run() {
       diagnostics::ReplayWork work(replay_places_[i].diagnostics_id,
                                    *replayers_[i], slot, global_seq_);
       replayers_[i]->publish_due(slot);
-      if (failure_.empty()) work.completed();
+      work.completed_unless(failure_);
     }
     for (const Due &d : due) {
       if (d.replayer) {
-        diagnostics::ReplayWork work(
-            replay_places_[d.replay_index].diagnostics_id, *d.replayer, slot,
-            global_seq_);
+        diagnostics::ReplayWork work(d.replay_id, *d.replayer, slot,
+                                     global_seq_);
         d.replayer->publish_due(slot);
         if (!failure_.empty()) throw_failure();
         work.completed();
@@ -266,7 +266,7 @@ void Engine::run() {
       in_task_ = true;
       t->fn(slot);
       in_task_ = false;
-      if (failure_.empty()) activation.completed();
+      activation.completed_unless(failure_);
       if (run_interrupted()) throw RunError(run_interrupt_message());
       if (!failure_.empty()) throw_failure();
       // A next activation the clock cannot represent, or one at or beyond the

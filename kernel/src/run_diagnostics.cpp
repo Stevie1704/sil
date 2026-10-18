@@ -706,9 +706,9 @@ void participant(const std::string &name, ParticipantKind kind) noexcept {
   guarded([&](Collector &c) { c.participants.push_back({name, kind}); });
 }
 
-size_t task(const std::string &participant, const std::string &task,
-            TaskKind kind, uint64_t period_ns, uint64_t offset_ns) noexcept {
-  size_t id = 0;
+Id task(const std::string &participant, const std::string &task,
+        TaskKind kind, uint64_t period_ns, uint64_t offset_ns) noexcept {
+  Id id = 0;
   guarded([&](Collector &c) {
     c.tasks.push_back({participant, task, kind, period_ns, offset_ns,
                        WorkRecord(c.next_seed++)});
@@ -727,8 +727,8 @@ void process_reaped(const std::string &participant,
   });
 }
 
-size_t replay(const std::string &participant) noexcept {
-  size_t id = 0;
+Id replay(const std::string &participant) noexcept {
+  Id id = 0;
   guarded([&](Collector &c) {
     c.replays.push_back({participant, 0, WorkRecord(c.next_seed++)});
     id = c.replays.size() - 1;
@@ -744,7 +744,7 @@ void write_report(const fs::path &path, const RunFacts &facts) {
   publish_new_file(path, text);
 }
 
-Activation::Activation(size_t task, uint64_t slot_ns) noexcept
+Activation::Activation(Id task, uint64_t slot_ns) noexcept
     : task_(task), slot_ns_(slot_ns), start_ns_(now_ns()) {}
 
 void Activation::completed() noexcept {
@@ -767,7 +767,7 @@ Activation::~Activation() {
   });
 }
 
-ReplayWork::ReplayWork(size_t replay, const Replayer &replayer,
+ReplayWork::ReplayWork(Id replay, const Replayer &replayer,
                        uint64_t slot_ns, const uint64_t &publications) noexcept
     : replay_(replay),
       slot_ns_(slot_ns),
