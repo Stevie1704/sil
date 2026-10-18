@@ -25,6 +25,7 @@
 #include <nlohmann/json.hpp>
 
 #include "diagnostics_stats.hpp"
+#include "resource_usage.hpp"
 #include "replayer.hpp"
 #include "run_signal.hpp"
 
@@ -36,10 +37,19 @@ using nlohmann::json;
 namespace fs = std::filesystem;
 
 constexpr int kReportVersion = 1;
-constexpr int kCollectorVersion = 1;
+constexpr int kCollectorVersion = 2;
 // The reservoir seeds are fixed, so two reports of the same Run retain the
 // same sample positions; each distribution adds its ordinal.
 constexpr uint64_t kBaseSeed = 0x53494C4449414731ULL;  // "SILDIAG1"
+
+// The unit of ru_maxrss, or none on a host this collector does not support.
+#if defined(__linux__)
+constexpr std::optional<MaxRssUnit> kMaxRssUnit = MaxRssUnit::Kibibytes;
+#elif defined(__APPLE__)
+constexpr std::optional<MaxRssUnit> kMaxRssUnit = MaxRssUnit::Bytes;
+#else
+constexpr std::optional<MaxRssUnit> kMaxRssUnit;
+#endif
 
 const char *const kPhaseNames[] = {
     "preflight_ns", "setup_ns", "scheduled_execution_ns", "shutdown_ns",
@@ -106,6 +116,8 @@ struct ReplayRecord {
 struct ParticipantRecord {
   std::string name;
   ParticipantKind kind;
+  // A Process participant's reap: absent before it, null if it failed.
+  std::optional<std::optional<rusage>> reaped;
 };
 
 struct Collector {
@@ -115,6 +127,7 @@ struct Collector {
   uint64_t phase_start_ns = 0;
   std::array<std::optional<uint64_t>, size_t(Phase::kCount)> phase_ns;
   std::optional<uint64_t> last_virtual_time_ns;
+  std::optional<rusage> runner_usage;
   std::vector<ParticipantRecord> participants;
   std::vector<TaskRecord> tasks;
   std::vector<ReplayRecord> replays;
@@ -264,17 +277,112 @@ json failed_wall_json(const WorkRecord &work) {
           {"wall_ns", work.failed_activation->wall_ns}};
 }
 
-// The resource records #301 fills in. This collector version reserves their
-// shape and reports every value as not collected.
-json reserved_resource(const char *scope) {
-  json j = {{"scope", scope}, {"unavailable", json::object()}};
-  const char *fields[] = {"collector",      "interval",
-                          "includes_waited_descendants",
-                          "user_cpu_ns",    "system_cpu_ns",
-                          "peak_rss_bytes", "peak_rss_kind"};
-  for (const char *field : fields)
-    set_or_unavailable(j, field, std::optional<int>(), "not_collected");
+const char *const kResourceFields[] = {
+    "collector",     "interval",       "includes_waited_descendants",
+    "user_cpu_ns",   "system_cpu_ns",  "peak_rss_bytes",
+    "peak_rss_kind",
+};
+
+// How one resource scope is measured.
+struct ResourceScope {
+  const char *scope;
+  const char *collector;
+  const char *interval;
+  bool includes_waited_descendants;
+  const char *peak_rss_kind;
+  std::vector<const char *> limitations;
+};
+
+// One resource record; every value is null for `missing_reason` when there
+// is no measurement.
+json resource_json(const ResourceScope &how,
+                   const std::optional<ResourceUsage> &usage,
+                   const char *missing_reason) {
+  json j = {{"scope", how.scope},
+            {"limitations", json::array()},
+            {"unavailable", json::object()}};
+  if (!usage) {
+    for (const char *field : kResourceFields)
+      set_or_unavailable(j, field, std::optional<int>(), missing_reason);
+    return j;
+  }
+  for (const char *limitation : how.limitations)
+    j["limitations"].push_back(limitation);
+  j["collector"] = how.collector;
+  j["interval"] = how.interval;
+  j["includes_waited_descendants"] = how.includes_waited_descendants;
+  j["user_cpu_ns"] = usage->cpu.user_ns;
+  j["system_cpu_ns"] = usage->cpu.system_ns;
+  j["peak_rss_kind"] = how.peak_rss_kind;
+  set_or_unavailable(j, "peak_rss_bytes", usage->peak_rss_bytes,
+                     "not_reported_by_os");
   return j;
+}
+
+// On Linux a high-water mark survives exec: a process starts with the
+// resident size its parent had when it forked.
+std::vector<const char *> exec_limitations() {
+#if defined(__linux__)
+  return {"peak_includes_parent_rss_at_spawn"};
+#else
+  return {};
+#endif
+}
+
+std::optional<ResourceUsage> measured(const std::optional<rusage> &usage) {
+  if (!usage || !kMaxRssUnit) return std::nullopt;
+  return from_rusage(*usage, *kMaxRssUnit);
+}
+
+json resources_json(const Collector &c) {
+  const char *platform = kMaxRssUnit ? nullptr : "unsupported_platform";
+  std::vector<std::optional<CpuTime>> cpu_scopes;
+
+  const std::optional<ResourceUsage> runner = measured(c.runner_usage);
+  cpu_scopes.push_back(runner ? std::optional(runner->cpu) : std::nullopt);
+  const ResourceScope runner_scope{"runner_process", "getrusage_self",
+                                   "runner_start_to_run_end", false,
+                                   "process_peak_rss", exec_limitations()};
+  json runner_record = resource_json(
+      runner_scope, runner, platform ? platform : "not_reported_by_os");
+
+  std::vector<const char *> process_limitations = exec_limitations();
+  process_limitations.push_back("descendants_counted_only_when_waited");
+  const ResourceScope process_scope{"process_participant", "wait4_child",
+                                    "spawn_to_reap", true,
+                                    "largest_process_peak_rss",
+                                    process_limitations};
+  json processes = json::array();
+  for (const ParticipantRecord &p : c.participants) {
+    if (p.kind != ParticipantKind::Process) continue;
+    std::optional<ResourceUsage> usage;
+    const char *reason = platform;
+    if (!reason && !p.reaped) reason = "not_started";
+    if (!reason && p.reaped && !*p.reaped) reason = "not_reported_by_os";
+    if (!reason) usage = measured(**p.reaped);
+    cpu_scopes.push_back(usage ? std::optional(usage->cpu) : std::nullopt);
+    json record = resource_json(process_scope, usage, reason);
+    record["participant"] = p.name;
+    processes.push_back(std::move(record));
+  }
+
+  // The runner's self usage excludes the children it reaped, and each child
+  // is reaped once, so these scopes do not overlap and their CPU adds up.
+  // Their peaks do not: no memory total is reported.
+  const std::optional<CpuTime> total = disjoint_cpu_total(cpu_scopes);
+  json cpu_total = {{"scope", "runner_and_process_participants"},
+                    {"unavailable", json::object()}};
+  set_or_unavailable(cpu_total, "user_cpu_ns",
+                     total ? std::optional(total->user_ns) : std::nullopt,
+                     "incomplete_scopes");
+  set_or_unavailable(cpu_total, "system_cpu_ns",
+                     total ? std::optional(total->system_ns) : std::nullopt,
+                     "incomplete_scopes");
+
+  return {{"runner", std::move(runner_record)},
+          {"process_participants", std::move(processes)},
+          {"native_participants", "shared_with_runner"},
+          {"cpu_total", std::move(cpu_total)}};
 }
 
 std::optional<std::string> cpu_description() {
@@ -441,24 +549,13 @@ json observational_json(const Collector &c, const RunFacts &facts) {
   set_or_unavailable(speed, "end_to_end_factor", end_to_end_factor,
                      speed_reason);
 
-  json processes = json::array();
-  for (const ParticipantRecord &p : c.participants) {
-    if (p.kind != ParticipantKind::Process) continue;
-    json record = reserved_resource("process_participant");
-    record["participant"] = p.name;
-    processes.push_back(std::move(record));
-  }
-  json resources = {{"runner", reserved_resource("runner_process")},
-                    {"process_participants", std::move(processes)},
-                    {"native_participants", "shared_with_runner"}};
-
   return {{"run_wall_time", std::move(wall)},
           {"phases", std::move(phases)},
           {"tasks", std::move(tasks)},
           {"replay", std::move(replays)},
           {"throughput", std::move(throughput)},
           {"virtual_time_speed", std::move(speed)},
-          {"resources", std::move(resources)}};
+          {"resources", resources_json(c)}};
 }
 
 json report_json(const Collector &c, const RunFacts &facts) {
@@ -600,6 +697,8 @@ void end_run() noexcept {
     const uint64_t at = now_ns();
     c.close_phase(at);
     c.run_end_ns = at;
+    rusage usage;
+    if (getrusage(RUSAGE_SELF, &usage) == 0) c.runner_usage = usage;
   });
 }
 
@@ -616,6 +715,16 @@ size_t task(const std::string &participant, const std::string &task,
     id = c.tasks.size() - 1;
   });
   return id;
+}
+
+void process_reaped(const std::string &participant,
+                    const rusage *usage) noexcept {
+  guarded([&](Collector &c) {
+    for (ParticipantRecord &p : c.participants)
+      if (p.name == participant)
+        p.reaped = usage ? std::optional<rusage>(*usage)
+                         : std::optional<rusage>();
+  });
 }
 
 size_t replay(const std::string &participant) noexcept {

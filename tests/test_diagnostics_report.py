@@ -80,8 +80,12 @@ class TestRunExamples:
         (child,) = report["observational"]["resources"]["process_participants"]
         assert child["peak_rss_bytes"] is None
         assert child["unavailable"]["peak_rss_bytes"] == "unsupported_platform"
-        assert report["observational"]["resources"]["runner"][
-            "peak_rss_bytes"] > 0
+        resources = report["observational"]["resources"]
+        assert resources["runner"]["user_cpu_ns"] is None
+        # A total over scopes with a missing member is missing, not partial.
+        assert resources["cpu_total"]["user_cpu_ns"] is None
+        assert resources["cpu_total"]["unavailable"]["user_cpu_ns"] == (
+            "incomplete_scopes")
         assert "unsupported_platform" in all_null_reasons(report)
 
 
@@ -188,6 +192,17 @@ class TestRejections:
         timing["samples_ns"] = [1] * 8193
         timing["quantiles"]["retained_count"] = 8193
         assert any("more than 8192" in e for e in validate_run_report(report))
+
+    def test_cpu_total_that_is_not_the_disjoint_sum_is_rejected(self):
+        report = example("run-success.json")
+        report["observational"]["resources"]["cpu_total"]["user_cpu_ns"] += 1
+        assert any("cpu_total" in e for e in validate_run_report(report))
+
+    def test_summed_peak_memory_is_rejected(self):
+        """Peaks of different processes need not coincide: no total."""
+        report = example("run-success.json")
+        report["observational"]["resources"]["total_peak_rss_bytes"] = 1
+        assert any("peak" in e for e in validate_run_report(report))
 
     def test_status_that_contradicts_the_exit_code_is_rejected(self):
         report = example("run-failed-partial.json")

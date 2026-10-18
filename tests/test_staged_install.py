@@ -59,7 +59,8 @@ def custom_staged_prefix(
     )
     subprocess.run(
         ["cmake", "--build", str(custom_build),
-         "--target", "sil-run", "sil-run-diagnostics", "sil_clock_shim", "-j"],
+         "--target", "sil-run", "sil-run-diagnostics",
+         "sil-diagnostics-launcher", "sil_clock_shim", "-j"],
         check=True,
         capture_output=True,
         text=True,
@@ -92,6 +93,8 @@ def test_cmake_stages_the_production_runtime_and_public_headers(
     # The diagnostics runner is a supported installed runner (#300); the
     # copy-counter build stays a development binary.
     assert (staged_prefix / "bin" / "sil-run-diagnostics").is_file()
+    # The launcher a supervisor starts it through ships with it (#301).
+    assert (staged_prefix / "bin" / "sil-diagnostics-launcher").is_file()
     assert not (staged_prefix / "bin" / "sil-run-instrumented").exists()
     metadata = json.loads((staged_prefix / "share" / "sil" / "release.json").read_text())
     assert metadata["version"] == "0.1.0"

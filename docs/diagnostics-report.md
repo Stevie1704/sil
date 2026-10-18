@@ -42,16 +42,19 @@ Reasons in v1:
 | `manifest_not_loaded` | The Manifest was not loaded |
 | `not_reported_by_os` | The host does not report this value |
 | `not_measured` | The collector has no measurement for this value |
-| `not_collected` | This collector version does not collect the value (resource records until #301) |
+| `unsupported_platform` | The collector cannot measure resources on this host |
+| `not_started` | The Process participant was never started, so it has no resource record |
+| `incomplete_scopes` | A total is missing because one of the scopes it adds is missing |
 
-A later collector version can add reasons, for example
-`unsupported_platform`. A reader shows an unknown reason as it is.
+Collector version 1 also used `not_collected` for every resource value. A
+later collector version can add reasons. A reader shows an unknown reason as
+it is.
 
 ## Run report: `sil_run_diagnostics` v1
 
 | Member | Content |
 | --- | --- |
-| `collector` | `name`, `collector_version` (1), `clock` (`host_monotonic`), `slowest_retained` (20), `p95_minimum_samples` (20), `p99_minimum_samples` (100) |
+| `collector` | `name`, `collector_version` (2), `clock` (`host_monotonic`), `slowest_retained` (20), `p95_minimum_samples` (20), `p99_minimum_samples` (100) |
 | `identity` | `manifest_path` as given, `manifest_hash`, `sil_version`, `source_repository`, `source_revision` |
 | `host` | `os`, `os_release`, `architecture`, `logical_cpu_count`, `cpu_description` |
 | `configuration` | `measurement_mode` (`diagnostics`), `recording`, `participant_timeout_ms` (null when not given), the three Step-protocol size guards |
@@ -87,7 +90,7 @@ A later collector version can add reasons, for example
 | `replay` | One row per Replay participant: `participant`, `timing`, `failed_activation` |
 | `throughput` | `completed_native_activations`, `completed_process_steps`, `native_activations_per_s`, `process_steps_per_s`, and their `denominator`, `scheduled_execution_ns` |
 | `virtual_time_speed` | `scheduled_factor` (Duration / scheduled-execution time) and `end_to_end_factor` (Duration / Run wall time); null for a failed or partial Run |
-| `resources` | `runner` and `process_participants` resource records; `native_participants` is `shared_with_runner` |
+| `resources` | `runner` and `process_participants` resource records, `cpu_total`; `native_participants` is `shared_with_runner` |
 
 Phases: preflight is Manifest load, preparation and Recording open; setup is
 Engine construction and Participant init or spawn; scheduled execution is the
@@ -131,11 +134,56 @@ completed publication Slots of one Replay participant:
 
 A resource record has `scope` (`runner_process` or `process_participant`,
 with `participant`), `collector`, `interval`, `includes_waited_descendants`,
-`user_cpu_ns`, `system_cpu_ns`, `peak_rss_bytes` and `peak_rss_kind`.
-Collector version 1 reports every value as null with `not_collected`; #301
-fills them in. Native participants share the runner process, so they have no
-record of their own. A peak resident value is a largest-process high-water
-mark; a reader must not add peaks to make a total.
+`user_cpu_ns`, `system_cpu_ns`, `peak_rss_bytes`, `peak_rss_kind` and
+`limitations`. CPU times are nanoseconds; peak resident memory is bytes on
+every host (Linux reports KiB, macOS bytes).
+
+| Scope | `collector` | `interval` | `includes_waited_descendants` | `peak_rss_kind` |
+| --- | --- | --- | --- | --- |
+| `runner_process` | `getrusage_self` | `runner_start_to_run_end`: from the runner's process start to the end of Run wall time | `false` | `process_peak_rss` |
+| `process_participant` | `wait4_child` | `spawn_to_reap`: from fork to the reap of the child | `true` | `largest_process_peak_rss` |
+
+- The runner record is the runner's own usage, all threads, without any
+  child. Native participants run in the runner, so they have no record of
+  their own; their cost is in the runner record.
+- A Process participant record is the child's usage plus that of the
+  descendants it waited for. A grouped FMU Importer is one Process
+  participant and one record.
+- A failed or short-lived Participant keeps its record: the child is reaped,
+  and so measured, on every cleanup path. A Run that ends by SIGKILL writes no
+  report.
+- `peak_rss_bytes` is a high-water mark of one process: for a Process
+  participant, of the largest process among the child and its waited
+  descendants. It is not the memory the process tree held at one time.
+
+`cpu_total` (`scope` `runner_and_process_participants`, `user_cpu_ns`,
+`system_cpu_ns`) adds the runner and every Process participant record. These
+scopes do not overlap: the runner's self usage excludes the children it
+reaped, and each child is reaped once. One missing scope makes the total
+null with `incomplete_scopes`. CPU time can exceed wall time for
+multithreaded software. **No memory total exists.** Peaks of different
+processes need not occur at the same time, so a sum of them is memory no
+process tree used; the validator rejects any other member of `resources`.
+
+`limitations` names the OS accounting limits of a measured record:
+
+| Code | Meaning |
+| --- | --- |
+| `peak_includes_parent_rss_at_spawn` | Linux: a high-water mark survives exec, so the peak is at least the parent's resident size when it forked. For the runner, start it through `sil-diagnostics-launcher` so that parent is small; for a Process participant, the parent is the runner. |
+| `descendants_counted_only_when_waited` | A descendant the child did not wait for (one that outlived it or was reparented) is in no record. |
+
+An unmeasured record is null in every value with one reason, and its
+`limitations` list is empty.
+
+### Launcher
+
+`sil-diagnostics-launcher RUNNER [ARG...]` runs `RUNNER ARG...` as its child
+and ends as it ended: with its exit code, or by the same signal. It forwards
+SIGINT, SIGTERM and SIGHUP to the child and changes nothing else in its
+environment. Its own failures are one stderr line beginning
+`sil-diagnostics-launcher: ` and exit 2 (no RUNNER), 1 (fork or wait failed)
+or 127 (RUNNER cannot be executed). A supervisor that has a large resident
+size, such as a Python process, starts `sil-run-diagnostics` through it.
 
 ## Benchmark report: `sil_benchmark_report` v1
 

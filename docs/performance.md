@@ -37,8 +37,10 @@ sources with an opt-in collector, so `sil-run` stays uninstrumented
 ([decision](adr/0004-opt-in-run-diagnostics-runner.md)). It takes the
 `sil-run` command line plus `--diagnostics-out PATH` and writes a
 `sil_run_diagnostics` v1 report: lifecycle phases, inclusive timing per Native
-Task, Process Step and Replay publication Slot, and bounded statistics
-([report contract](diagnostics-report.md)). The determinism suite asserts that
+Task, Process Step and Replay publication Slot, bounded statistics, and CPU
+time and peak resident memory for the runner and each Process participant
+([report contract](diagnostics-report.md)). Start it through
+`sil-diagnostics-launcher` from a large supervisor process. The determinism suite asserts that
 it writes the same Recording and exit code as `sil-run`. Its timings include
 the collector's own cost.
 

@@ -256,21 +256,153 @@ class TestNullSemantics:
         }
         assert validate_run_report(report) == []
 
-    def test_resource_records_are_reserved_and_not_collected(
+
+MEMORY_PEAK = ROOT / "tests" / "participants" / "memory_peak.py"
+RESOURCES_SUPPORTED = sys.platform in ("linux", "darwin")
+requires_resources = pytest.mark.skipif(
+    not RESOURCES_SUPPORTED, reason="resource collection needs Linux or macOS"
+)
+
+
+def resource_records(document):
+    resources = document["observational"]["resources"]
+    by_participant = {r["participant"]: r for r in resources["process_participants"]}
+    return resources, resources["runner"], by_participant
+
+
+@requires_resources
+class TestResources:
+    def test_runner_record_is_self_accounting_only(
+        self, sil_run_diagnostics, tmp_path
+    ):
+        proc, report = run_diagnostics(
+            sil_run_diagnostics, mixed_period_manifest(tmp_path), tmp_path
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert report["collector"]["collector_version"] == 2
+        _, runner, _ = resource_records(report)
+        assert runner["scope"] == "runner_process"
+        assert runner["collector"] == "getrusage_self"
+        assert runner["interval"] == "runner_start_to_run_end"
+        # RUSAGE_SELF never includes the Process participants it reaped.
+        assert runner["includes_waited_descendants"] is False
+        assert runner["peak_rss_kind"] == "process_peak_rss"
+        assert runner["unavailable"] == {}
+        assert runner["peak_rss_bytes"] > 0
+        assert isinstance(runner["user_cpu_ns"], int)
+        assert isinstance(runner["system_cpu_ns"], int)
+        assert validate_run_report(report) == []
+
+    def test_each_process_participant_is_its_own_waited_scope(
         self, sil_run_diagnostics, tmp_path
     ):
         _, report = run_diagnostics(
             sil_run_diagnostics, mixed_period_manifest(tmp_path), tmp_path
         )
-        resources = report["observational"]["resources"]
+        resources, _, processes = resource_records(report)
+        # Native Tasks run inside the runner, so they share its record.
         assert resources["native_participants"] == "shared_with_runner"
-        assert [r["participant"] for r in resources["process_participants"]] == [
-            "pyecho"
-        ]
-        for record in [resources["runner"], *resources["process_participants"]]:
-            assert record["peak_rss_bytes"] is None
-            assert record["unavailable"]["peak_rss_bytes"] == "not_collected"
-            assert record["user_cpu_ns"] is None
+        assert set(processes) == {"pyecho"}
+        record = processes["pyecho"]
+        assert record["scope"] == "process_participant"
+        assert record["collector"] == "wait4_child"
+        assert record["interval"] == "spawn_to_reap"
+        assert record["includes_waited_descendants"] is True
+        assert record["peak_rss_kind"] == "largest_process_peak_rss"
+        assert record["unavailable"] == {}
+        assert record["peak_rss_bytes"] > 0
+        assert "descendants_counted_only_when_waited" in record["limitations"]
+
+    def test_cpu_total_adds_only_disjoint_scopes(
+        self, sil_run_diagnostics, tmp_path
+    ):
+        _, report = run_diagnostics(
+            sil_run_diagnostics, mixed_period_manifest(tmp_path), tmp_path
+        )
+        resources, runner, processes = resource_records(report)
+        total = resources["cpu_total"]
+        assert total["scope"] == "runner_and_process_participants"
+        for key in ("user_cpu_ns", "system_cpu_ns"):
+            assert total[key] == runner[key] + sum(
+                r[key] for r in processes.values())
+
+    def test_no_member_sums_peak_memory(self, sil_run_diagnostics, tmp_path):
+        """Peaks of different processes are never added into a total."""
+        _, report = run_diagnostics(
+            sil_run_diagnostics, mixed_period_manifest(tmp_path), tmp_path
+        )
+        resources = report["observational"]["resources"]
+        assert set(resources) == {
+            "runner", "process_participants", "native_participants",
+            "cpu_total",
+        }
+        assert not any("rss" in key for key in resources["cpu_total"])
+
+    def test_peaks_at_different_times_stay_separate(
+        self, sil_run_diagnostics, tmp_path
+    ):
+        """Two 64 MiB peaks, 30 ms apart: each record has its own, none adds
+        them, and no member claims the Run held 128 MiB at once."""
+        mib = 64
+        m = toy_manifest(duration_ns=50 * MS)
+        for name, peak_at in (("early", 0), ("late", 30 * MS)):
+            m.add_process(
+                name,
+                command=[sys.executable, str(MEMORY_PEAK), str(peak_at),
+                         str(mib)],
+                step_period_ns=10 * MS,
+            )
+        proc, report = run_diagnostics(
+            sil_run_diagnostics, m.write(tmp_path / "peaks.json").path,
+            tmp_path,
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert validate_run_report(report) == []
+        resources, runner, processes = resource_records(report)
+        assert set(processes) == {"early", "late"}
+        for record in processes.values():
+            assert record["peak_rss_kind"] == "largest_process_peak_rss"
+            assert record["peak_rss_bytes"] >= mib * 2**20
+            # The other Participant's peak is not in this one.
+            assert record["peak_rss_bytes"] < 2 * mib * 2**20
+        # Children's memory is not the runner's.
+        assert runner["peak_rss_bytes"] < mib * 2**20
+        assert "cpu_total" in resources
+        assert not any("rss" in key for key in resources["cpu_total"])
+
+    def test_short_lived_failing_participant_keeps_its_evidence(
+        self, sil_run_diagnostics, tmp_path
+    ):
+        m = toy_manifest(duration_ns=50 * MS)
+        m.add_process(
+            "quitter",
+            command=[sys.executable, "-c", "import sys; sys.exit(3)"],
+            step_period_ns=10 * MS,
+        )
+        proc, report = run_diagnostics(
+            sil_run_diagnostics, m.write(tmp_path / "quitter.json").path,
+            tmp_path,
+        )
+        assert proc.returncode == 1
+        assert "exited unexpectedly with status 3" in proc.stderr
+        assert "status 3" in report["run"]["failure"]["message"]
+        _, _, processes = resource_records(report)
+        record = processes["quitter"]
+        assert record["unavailable"] == {}
+        assert record["peak_rss_bytes"] > 0
+        assert record["user_cpu_ns"] + record["system_cpu_ns"] > 0
+        assert validate_run_report(report) == []
+
+    def test_failed_step_participant_keeps_its_evidence(
+        self, sil_run_diagnostics, tmp_path
+    ):
+        proc, report = run_diagnostics(
+            sil_run_diagnostics, failing_step_manifest(tmp_path), tmp_path
+        )
+        assert proc.returncode == 1
+        assert "boom" in report["run"]["failure"]["message"]
+        _, _, processes = resource_records(report)
+        assert processes["test"]["peak_rss_bytes"] > 0
 
 
 def failing_step_manifest(tmp_path: Path) -> Path:
@@ -361,6 +493,10 @@ class TestFailedRuns:
         step = task_rows(report)[("wedged", "step")]
         assert (step["attempted"], step["failed"]) == (1, 1)
         assert validate_run_report(report) == []
+        if RESOURCES_SUPPORTED:
+            # The wedged child is killed and reaped, so it is still measured.
+            _, _, processes = resource_records(report)
+            assert processes["wedged"]["peak_rss_bytes"] > 0
 
     def test_interrupted_run_marks_the_interrupted_step(
         self, sil_run_diagnostics, tmp_path

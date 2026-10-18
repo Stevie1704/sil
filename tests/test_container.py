@@ -156,6 +156,7 @@ def test_production_image_contains_only_the_installed_runtime():
         """
           test -x /usr/local/bin/sil-run
           test -x /usr/local/bin/sil-run-diagnostics
+          test -x /usr/local/bin/sil-diagnostics-launcher
           test -f /usr/local/lib/libsil_clock_shim.so
           python3 -c 'import sil, mcap, lz4, zstandard'
           python3 -c 'import importlib.metadata as m; assert {n: m.version(n) for n in ("lz4", "mcap", "zstandard")} == {"lz4": "4.4.5", "mcap": "1.4.0", "zstandard": "0.25.0"}'

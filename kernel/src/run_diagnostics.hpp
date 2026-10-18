@@ -12,6 +12,8 @@
 // Manifest hash, scheduling or the Run's exit code; it reads the runner's real
 // monotonic clock, which the Participant Clock shim never interposes.
 
+#include <sys/resource.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -76,6 +78,10 @@ void participant(const std::string &name, ParticipantKind kind) noexcept;
 size_t task(const std::string &participant, const std::string &task,
             TaskKind kind, uint64_t period_ns, uint64_t offset_ns) noexcept;
 size_t replay(const std::string &participant) noexcept;
+// A Process participant's child was reaped: `usage` is what wait4 reported
+// for it and its waited descendants, or null when the reap failed.
+void process_reaped(const std::string &participant,
+                    const rusage *usage) noexcept;
 
 // Writes the report as a new file through a temporary sibling. Throws on any
 // write error; the caller reports it without changing the Run's exit code.
@@ -139,6 +145,7 @@ inline size_t task(const std::string &, const std::string &, TaskKind,
   return 0;
 }
 inline size_t replay(const std::string &) noexcept { return 0; }
+inline void process_reaped(const std::string &, const rusage *) noexcept {}
 
 class Activation {
  public:

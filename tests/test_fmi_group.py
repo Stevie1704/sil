@@ -33,6 +33,7 @@ import hashlib
 import importlib.util
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -1025,6 +1026,30 @@ class TestRunBoundary:
             ] == [
                 event for event in expected if event["source"] == source
             ], channel
+
+    def test_the_group_is_one_resource_scope_in_run_diagnostics(
+        self, sil_run_diagnostics, tmp_path, build_dir
+    ):
+        """Three FMUs in one importer are one Process participant, so one
+        resource record: v1 attributes nothing to an FMU inside it (#301)."""
+        declared = case("aligned")
+        manifest = group_manifest(
+            built(build_dir, tmp_path, "node", "CanNodeOnABus"),
+            built(build_dir, tmp_path, "bus", "CanBus"),
+            step_period_ns=declared["step_size_ns"],
+            duration_ns=declared["duration_ns"],
+        ).write(tmp_path / "group.json").path
+        report = tmp_path / "run.json"
+        proc = subprocess.run(
+            [str(sil_run_diagnostics), str(manifest), "-o",
+             str(tmp_path / "run.mcap"), "--diagnostics-out", str(report)],
+            capture_output=True, text=True, cwd=tmp_path,
+        )
+        assert proc.returncode == 0, proc.stderr
+        resources = json.loads(report.read_text())["observational"]["resources"]
+        assert [r["participant"] for r in resources["process_participants"]] == [
+            "importer", "observer"
+        ]
 
     def test_an_fmu_path_resolves_against_the_manifest_and_is_digested(
         self, sil_run, tmp_path, build_dir
