@@ -5,8 +5,9 @@ standalone HTML page (sil.diagnostics_html). It executes nothing and needs
 neither the Manifest, nor `sil-run`, nor any file next to the input.
 
 Exit codes: 0 when the HTML report was written; 1 when it could not be
-written; 2 for invalid usage, an input that is missing, corrupt or of an
-unknown version, or an output path that exists or has no directory.
+written, also because the output path exists or has no directory; 2 for
+invalid usage or an input that is missing, corrupt or of an unknown version.
+The input is checked first, so invalid input is always 2.
 """
 
 from __future__ import annotations
@@ -50,9 +51,6 @@ def output_problem(path: Path) -> str | None:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(sys.argv[1:] if argv is None else argv)
-    problem = output_problem(args.html)
-    if problem is not None:
-        return _error(problem, EXIT_USAGE)
     try:
         text = args.report.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as error:
@@ -63,6 +61,9 @@ def main(argv: list[str] | None = None) -> int:
     except ReportError as error:
         return _error(f"'{args.report}' is not a report this version can "
                       f"render: {error}", EXIT_USAGE)
+    problem = output_problem(args.html)
+    if problem is not None:
+        return _error(problem, EXIT_FAILURE)
     try:
         write_new_file(args.html, page)
     except OSError as error:
