@@ -453,6 +453,38 @@ def test_a_missing_native_tool_is_not_found(build_dir, tmp_path, present,
     assert f"cannot find {missing} on PATH" in proc.stderr
 
 
+def test_a_signal_while_the_runner_starts_is_forwarded(build_dir, tmp_path,
+                                                      monkeypatch):
+    """A signal between the spawn and the runner's first instruction is
+    held and forwarded, so a runner in its own session cannot outlive it."""
+    path = fake_tools(tmp_path, build_dir, "exec sleep 20\n")
+    spawn = subprocess.Popen
+
+    def spawn_then_signal(*args, **kwargs):
+        process = spawn(*args, **kwargs)
+        os.kill(os.getpid(), signal.SIGTERM)
+        return process
+
+    monkeypatch.setattr(subprocess, "Popen", spawn_then_signal)
+    unforwarded: list[int] = []
+    outer = signal.signal(signal.SIGTERM,
+                          lambda number, _frame: unforwarded.append(number))
+    started = time.monotonic()
+    try:
+        outcome = execute(RunRequest(Path("m.json"), Path("r.json")),
+                          NativeTools(path / "sil-run-diagnostics",
+                                      path / "sil-diagnostics-launcher"),
+                          cwd=tmp_path, stdout=subprocess.DEVNULL,
+                          stderr=ClosingSink())
+    finally:
+        signal.signal(signal.SIGTERM, outer)
+
+    assert unforwarded == []
+    assert outcome.supervisor_signal == signal.SIGTERM
+    assert outcome.signal == signal.SIGTERM
+    assert time.monotonic() - started < 10
+
+
 @pytest.mark.parametrize("termination_signal", [signal.SIGINT, signal.SIGTERM])
 def test_a_signal_to_sil_stops_the_run_and_its_descendants(
     native_path, tmp_path, termination_signal

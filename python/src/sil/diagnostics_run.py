@@ -229,19 +229,23 @@ def execute(request: RunRequest, tools: NativeTools, *,
                str(tools.runner), *request.runner_arguments()]
     sys.stdout.flush()
     sys.stderr.flush()
-    try:
-        process = subprocess.Popen(command, cwd=cwd, stdout=stdout,
-                                   stderr=subprocess.PIPE,
-                                   pass_fds=(status_write,),
-                                   start_new_session=True)
-    except BaseException:
-        os.close(status_read)
-        raise
-    finally:
-        os.close(status_write)
     received: list[int] = []
-    previous = _forward_signals(process, received)
+    forwarder = _SignalForwarder(received)
+    # Handlers go in before the spawn: a signal that arrives while the
+    # runner starts is held and forwarded once it exists, never lost.
+    previous = forwarder.install()
     try:
+        try:
+            process = subprocess.Popen(command, cwd=cwd, stdout=stdout,
+                                       stderr=subprocess.PIPE,
+                                       pass_fds=(status_write,),
+                                       start_new_session=True)
+        except BaseException:
+            os.close(status_read)
+            raise
+        finally:
+            os.close(status_write)
+        forwarder.attach(process)
         copier = _StderrCopy(process.stderr, sink)
         copier.start()
         status = _wait(process)
@@ -266,19 +270,41 @@ def _wait(process: subprocess.Popen) -> int:
             process.send_signal(signal.SIGINT)
 
 
-def _forward_signals(process: subprocess.Popen, received: list[int]):
-    if threading.current_thread() is not threading.main_thread():
-        return {}
+class _SignalForwarder:
+    """Forwards termination signals to the launcher, once it exists."""
 
-    def forward(number, _frame):
-        received.append(number)
+    def __init__(self, received: list[int]):
+        self._received = received
+        self._sent = 0
+        self._process: subprocess.Popen | None = None
+
+    def install(self) -> dict:
+        if threading.current_thread() is not threading.main_thread():
+            return {}
+        return {number: signal.signal(number, self._on_signal)
+                for number in FORWARDED_SIGNALS}
+
+    def attach(self, process: subprocess.Popen) -> None:
+        self._process = process
+        self._flush()
+
+    def _on_signal(self, number, _frame) -> None:
+        self._received.append(number)
+        self._flush()
+
+    def _flush(self) -> None:
+        # The index moves before the send, so a handler that interrupts
+        # this loop never sends the same signal twice.
+        while self._process is not None and self._sent < len(self._received):
+            number = self._received[self._sent]
+            self._sent += 1
+            self._send(number)
+
+    def _send(self, number: int) -> None:
         try:
-            process.send_signal(number)
+            self._process.send_signal(number)
         except OSError:
             pass
-
-    return {number: signal.signal(number, forward)
-            for number in FORWARDED_SIGNALS}
 
 
 def _restore_signals(previous) -> None:
