@@ -658,6 +658,33 @@ class TestRealRuns:
                 "run.mcap", "run.mcap.diagnostics.json",
                 "run.mcap.provenance.json", "stderr.log", "stdout.log"]
 
+    def test_no_recording_leaves_every_artifact_but_the_recording(
+        self, native_path, tmp_path
+    ):
+        fresh_state_manifest(tmp_path)
+
+        proc = sil(["benchmark", "fresh.json", "--repeats", "2", "--warmup",
+                    "1", "--no-recording", "--out", "bench"], native_path,
+                   tmp_path)
+
+        assert proc.returncode == 0, proc.stderr
+        out = tmp_path / "bench"
+        summary = load_report(out / "summary.json")
+        for run in summary["runs"]:
+            directory = out / run["directory"]
+            assert sorted(p.name for p in directory.iterdir()) == [
+                "out.mcap.diagnostics.json", "out.mcap.provenance.json",
+                "stderr.log", "stdout.log"]
+            report = run["report"]
+            assert report["configuration"]["recording"] is False
+            assert report["artifacts"]["recording"] is None
+            assert report["artifacts"]["provenance"] == \
+                "out.mcap.provenance.json"
+            phases = report["observational"]["phases"]
+            assert phases["recording_finalization_ns"] is None
+            assert phases["unavailable"]["recording_finalization_ns"] == \
+                "no_recording"
+
     def test_a_signal_stops_the_campaign_and_launches_no_later_run(
         self, native_path, tmp_path
     ):
