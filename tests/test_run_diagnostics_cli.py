@@ -85,10 +85,10 @@ run wall time: 67.235 ms (native runner start before Manifest load through \
 Participant cleanup and Recording close)
 phases: preflight 8.079 ms, setup 38.608 ms, scheduled execution 202.083 us, \
 shutdown 20.237 ms, recording finalization 108.542 us, unattributed 0 ns
-virtual-time speed: scheduled 98.97x, end-to-end 0.30x
+Virtual-time speed: scheduled 98.97x, end-to-end 0.30x
 throughput per second of scheduled execution (202.083 us): \
-24 native activations, 118763.08/s; 2 process steps, 9896.92/s
-tasks (inclusive wall time of completed activations):
+24 Native Activations, 118763.08/s; 2 Process Steps, 9896.92/s
+Tasks (inclusive wall time of completed Activations):
   multi/fast native_task: 20 of 20 completed, mean 1.215 us, p50 208 ns, \
 p95 542 ns, p99 unavailable (insufficient_samples), max 19.583 us
   multi/slow native_task: 4 of 4 completed, mean 302 ns, p50 167 ns, \
@@ -115,14 +115,14 @@ def test_summary_of_a_failed_run_is_marked_partial():
 
     assert "run: run_failure, exit code 1, partial (run_failure)" in lines
     assert ("failure: participant 'test' failed: AssertionError: boom at "
-            "t=20000000 (participant, Participant test, virtual time "
+            "t=20000000 (participant, Participant test, Virtual time "
             "20.000 ms)") in lines
-    assert "last virtual time: 20.000 ms of Duration 50.000 ms" in lines
-    assert ("virtual-time speed: scheduled unavailable (run_not_successful), "
+    assert "last Virtual time: 20.000 ms of Duration 50.000 ms" in lines
+    assert ("Virtual-time speed: scheduled unavailable (run_not_successful), "
             "end-to-end unavailable (run_not_successful)") in lines
     assert any(line.startswith(
         "  test/step process_step: 2 of 3 completed, 1 failed (first at "
-        "activation 2, virtual time 20.000 ms), mean ") for line in lines)
+        "Activation 2, Virtual time 20.000 ms), mean ") for line in lines)
 
 
 def test_summary_without_samples_or_resources_shows_reasons_not_zeros():

@@ -430,7 +430,7 @@ def format_summary(report: dict, report_path: Path) -> str:
         f"{_value(phases, name, format_duration_ns)}"
         for name in (*PHASES, "unattributed_ns")))
     speed = observational["virtual_time_speed"]
-    lines.append(f"virtual-time speed: scheduled "
+    lines.append(f"Virtual-time speed: scheduled "
                  f"{_value(speed, 'scheduled_factor', format_factor)}, end-to-end "
                  f"{_value(speed, 'end_to_end_factor', format_factor)}")
     lines.append(_throughput_line(observational["throughput"]))
@@ -453,13 +453,13 @@ def _run_lines(report: dict) -> list[str]:
         if failure.get("participant"):
             context.append(f"Participant {failure['participant']}")
         if failure.get("virtual_time_ns") is not None:
-            context.append("virtual time "
+            context.append("Virtual time "
                            + format_duration_ns(failure["virtual_time_ns"]))
         lines.append(f"failure: {failure['message']} ({', '.join(context)})")
     if not completeness["run_complete"]:
         execution = report["execution"]
         lines.append(
-            "last virtual time: "
+            "last Virtual time: "
             f"{_value(execution, 'last_virtual_time_ns', format_duration_ns)}"
             f" of Duration "
             f"{_value(execution, 'duration_ns', format_duration_ns)}")
@@ -470,10 +470,10 @@ def _throughput_line(throughput: dict) -> str:
     denominator = _value(throughput, "scheduled_execution_ns",
                          format_duration_ns)
     return (f"throughput per second of scheduled execution ({denominator}): "
-            f"{throughput['completed_native_activations']} native "
-            f"activations, "
+            f"{throughput['completed_native_activations']} Native "
+            f"Activations, "
             f"{_value(throughput, 'native_activations_per_s', format_rate)}; "
-            f"{throughput['completed_process_steps']} process steps, "
+            f"{throughput['completed_process_steps']} Process Steps, "
             f"{_value(throughput, 'process_steps_per_s', format_rate)}")
 
 
@@ -495,7 +495,7 @@ def _task_lines(report: dict) -> list[str]:
                 f"  {name} replay: {replay['publications']} Messages; "
                 "publication Slots " + _counts(replay)
                 + _timing(replays[name]))
-    return ["tasks (inclusive wall time of completed activations):", *lines] \
+    return ["Tasks (inclusive wall time of completed Activations):", *lines] \
         if lines else []
 
 
@@ -506,8 +506,8 @@ def _counts(counts: dict) -> str:
             text += f", {counts[outcome]} {outcome}"
     first = counts.get("failed_activation")
     if first is not None:
-        text += (f" (first at activation {first['activation_index']}, "
-                 f"virtual time {format_duration_ns(first['virtual_time_ns'])})")
+        text += (f" (first at Activation {first['activation_index']}, "
+                 f"Virtual time {format_duration_ns(first['virtual_time_ns'])})")
     return text
 
 
