@@ -332,6 +332,37 @@ class TestResources:
             assert total[key] == runner[key] + sum(
                 r[key] for r in processes.values())
 
+    def test_a_waited_grandchild_is_counted_once_in_its_participant(
+        self, sil_run_diagnostics, tmp_path
+    ):
+        """The grandchild's CPU is in the Process participant that waited for
+        it, not in the runner, so cpu_total counts it exactly once."""
+        burned_file = tmp_path / "burned"
+        m = toy_manifest(duration_ns=20 * MS)
+        m.add_process("burner", command=[
+            sys.executable, str(ROOT / "tests" / "participants" /
+                                "cpu_grandchild.py"),
+            str(burned_file), "0.5"], step_period_ns=10 * MS)
+        manifest = m.write(tmp_path / "burner.json").path
+
+        proc, report = run_diagnostics(sil_run_diagnostics, manifest, tmp_path)
+
+        assert proc.returncode == 0, proc.stderr
+        burned = int(burned_file.read_text())
+        resources, runner, processes = resource_records(report)
+        record = processes["burner"]
+        assert record["includes_waited_descendants"] is True
+
+        def cpu(r):
+            return r["user_cpu_ns"] + r["system_cpu_ns"]
+
+        # Bounds relative to what the grandchild burned, not to this host.
+        assert cpu(record) >= burned
+        assert cpu(runner) < burned
+        total = resources["cpu_total"]
+        assert cpu(total) == cpu(runner) + cpu(record)
+        assert burned <= cpu(total) < 2 * burned
+
     def test_no_member_sums_peak_memory(self, sil_run_diagnostics, tmp_path):
         """Peaks of different processes are never added into a total."""
         _, report = run_diagnostics(
