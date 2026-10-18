@@ -123,6 +123,19 @@
       });
     });
 
+  // --- wide tables: say so while a table is wider than its box ------------
+  var wraps = document.querySelectorAll(".table-wrap");
+  function markWideTables() {
+    Array.prototype.forEach.call(wraps, function (wrap) {
+      var hint = wrap.parentNode.querySelector(".scroll-hint");
+      if (hint) hint.hidden = wrap.scrollWidth <= wrap.clientWidth + 1;
+    });
+  }
+  markWideTables();
+  window.addEventListener("resize", markWideTables);
+  // An opened <details> or a newly shown Run can hold a wide table.
+  document.addEventListener("toggle", markWideTables, true);
+
   // --- Run selector (benchmark) ------------------------------------------
   var select = document.getElementById("run-select");
   if (select) {
@@ -132,6 +145,7 @@
         detail.hidden = value !== "all" &&
           detail.getAttribute("data-run") !== value;
       });
+      markWideTables();
     };
     select.parentNode.parentNode.hidden = false;
     select.addEventListener("change", function () { show(select.value); });

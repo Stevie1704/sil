@@ -209,7 +209,7 @@ def _runs_section(summary: dict) -> Html:
             measured(wall, "wall_ns", "ns") if wall else missing,
             measured(speed, "scheduled_factor", "factor") if speed else missing,
             measured(runner, "peak_rss_bytes", "bytes") if runner else missing,
-            code(run["report_path"]),
+            tag("code", run["report_path"], class_="run-path"),
         ])
         classes.append(f"role-{run['role']} tone-{tone}")
     headers = [("Run", False), ("Role", False), ("Outcome", False),

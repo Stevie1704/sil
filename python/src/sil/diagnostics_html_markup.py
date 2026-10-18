@@ -154,9 +154,14 @@ def table(id_: str, caption: str, headers: Sequence[tuple[str, bool]],
         if filterable and len(rows) > 1 else None
     count = tag("span", "", class_="filter-count", aria_live="polite",
                 id=f"{id_}-count") if search else None
+    # Shown by the script while the table is wider than its box; without the
+    # script, edge shadows (report.css) show that the table scrolls.
+    hint = tag("p", "Scroll the table sideways for more columns \u2192",
+               class_="scroll-hint", hidden=True)
     return tag(
         "div",
         tag("div", search, count, class_="table-tools") if search else None,
+        hint,
         tag("div",
             tag("table", tag("caption", caption), tag("thead", head),
                 tag("tbody", *body_rows), id=id_,

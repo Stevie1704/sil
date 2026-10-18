@@ -133,6 +133,39 @@ def test_layout_and_contrast(chrome, pages, name, scheme, width):
         assert role == "img" and text not in ("", "null")
 
 
+TABLE_WIDTHS = """[...document.querySelectorAll('.table-wrap')]
+  .filter(w => w.offsetParent).map(w => {
+    const hint = w.closest('.table-block').querySelector('.scroll-hint');
+    return {id: w.querySelector('table').id,
+            overflow: w.scrollWidth > w.clientWidth + 1,
+            hint: !!hint && hint.offsetParent !== null,
+            shadow: getComputedStyle(w).backgroundImage.includes('gradient')};
+  })"""
+
+
+@pytest.mark.parametrize("width", [390, 1280])
+@pytest.mark.parametrize("name", ["benchmark", "many-participants"])
+def test_a_table_wider_than_its_box_says_so(chrome, pages, name, width):
+    chrome.resize(width)
+    opened(chrome, pages[name])
+
+    tables = chrome.evaluate(TABLE_WIDTHS)
+
+    assert any(table["overflow"] for table in tables)  # the case is exercised
+    for table in tables:
+        assert table["hint"] == table["overflow"], table
+        assert table["shadow"], table  # the cue without JavaScript
+
+
+def test_the_runs_table_fits_a_desktop_window(chrome, pages):
+    chrome.resize(1280)
+    opened(chrome, pages["benchmark"])
+
+    widths = {table["id"]: table for table in chrome.evaluate(TABLE_WIDTHS)}
+
+    assert not widths["runs-table"]["overflow"]
+
+
 def test_hostile_names_stay_text(chrome, pages):
     opened(chrome, pages["hostile"])
 

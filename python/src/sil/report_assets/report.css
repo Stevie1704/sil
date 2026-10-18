@@ -18,6 +18,7 @@
   --bar: #0b5f6e;
   --bar-fail: #a3261d;
   --spread: rgba(11, 95, 110, 0.12);
+  --scroll-shadow: rgba(0, 0, 0, 0.3);
   --p0: #0b5f6e; --p1: #c47f17; --p2: #4b6fb5; --p3: #8a4f9e;
   --p4: #3d8b5a; --p5: #8c8c8c;
   --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas,
@@ -34,6 +35,7 @@
     --ok: #7fd49a; --ok-soft: #173322; --fail: #ff9b8f; --fail-soft: #3d1c19;
     --warn: #f0c56a; --warn-soft: #3a2f14;
     --bar: #6cc4d2; --bar-fail: #ff9b8f; --spread: rgba(108, 196, 210, 0.16);
+    --scroll-shadow: rgba(0, 0, 0, 0.6);
     --p0: #6cc4d2; --p1: #f0b35a; --p2: #93aef0; --p3: #cf9ae0;
     --p4: #86cf9f; --p5: #a8a8a8;
   }
@@ -46,6 +48,7 @@
   --ok: #7fd49a; --ok-soft: #173322; --fail: #ff9b8f; --fail-soft: #3d1c19;
   --warn: #f0c56a; --warn-soft: #3a2f14;
   --bar: #6cc4d2; --bar-fail: #ff9b8f; --spread: rgba(108, 196, 210, 0.16);
+  --scroll-shadow: rgba(0, 0, 0, 0.6);
   --p0: #6cc4d2; --p1: #f0b35a; --p2: #93aef0; --p3: #cf9ae0;
   --p4: #86cf9f; --p5: #a8a8a8;
 }
@@ -56,7 +59,7 @@ body {
   margin: 0; background: var(--bg); color: var(--ink);
   font: 15px/1.5 var(--sans);
 }
-main { max-width: 1200px; margin: 0 auto; padding: 0 16px 64px; }
+main { max-width: 1440px; margin: 0 auto; padding: 0 16px 64px; }
 a { color: var(--accent); }
 a:focus-visible, button:focus-visible, select:focus-visible,
 input:focus-visible, summary:focus-visible, .table-wrap:focus-visible {
@@ -73,7 +76,7 @@ code { overflow-wrap: break-word; }
 .skip:focus { left: 16px; top: 8px; z-index: 10; background: var(--surface);
   padding: 6px 10px; }
 header.site { border-bottom: 1px solid var(--line); background: var(--surface); }
-.topbar { max-width: 1200px; margin: 0 auto; padding: 10px 16px;
+.topbar { max-width: 1440px; margin: 0 auto; padding: 10px 16px;
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; flex-wrap: wrap; }
 .brand { margin: 0; font-weight: 700; letter-spacing: 0.08em;
@@ -149,8 +152,23 @@ h4.status-title { font-size: 18px; }
 .table-block { margin: 10px 0 16px; }
 .table-tools { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .filter-count { color: var(--muted); font-size: 13px; }
+/* Edge shadows show that a table scrolls sideways: the two surface
+ * gradients scroll with the content and cover a shadow at an end that is
+ * reached; the shadows stay at the edges of the box. */
 .table-wrap { overflow-x: auto; border: 1px solid var(--line);
-  border-radius: 8px; background: var(--surface); }
+  border-radius: 8px; background-color: var(--surface);
+  background-image:
+    linear-gradient(to right, var(--surface) 30%, transparent),
+    linear-gradient(to left, var(--surface) 30%, transparent),
+    radial-gradient(farthest-side at 0 50%, var(--scroll-shadow), transparent),
+    radial-gradient(farthest-side at 100% 50%, var(--scroll-shadow),
+                    transparent);
+  background-position: left center, right center, left center, right center;
+  background-repeat: no-repeat;
+  background-size: 40px 100%, 40px 100%, 18px 100%, 18px 100%;
+  background-attachment: local, local, scroll, scroll; }
+.scroll-hint { margin: 0 0 6px; font-size: 13px; color: var(--muted); }
+td .run-path { overflow-wrap: anywhere; }
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
 caption { text-align: left; padding: 8px 12px; color: var(--muted);
   font-size: 13px; caption-side: top; }
@@ -159,6 +177,7 @@ th, td { padding: 6px 12px; text-align: left; vertical-align: top;
 th { background: var(--surface-2); font-weight: 600; white-space: nowrap; }
 td.numeric, th.numeric { text-align: right; }
 td .name, td code { max-width: 32ch; display: inline-block; }
+td .name { min-width: 14ch; }
 td code + code { margin-left: 6px; }
 td.empty { color: var(--muted); font-style: italic; }
 tbody tr:hover { background: var(--accent-soft); }
@@ -230,7 +249,8 @@ summary { cursor: pointer; color: var(--accent); }
   body { font-size: 11pt; }
   header.site, .table-tools, .run-selector, .skip { display: none !important; }
   .run-detail[hidden] { display: block !important; }
-  .table-wrap { overflow: visible; border: none; }
+  .table-wrap { overflow: visible; border: none; background: none; }
+  .scroll-hint { display: none !important; }
   table { font-size: 9pt; }
   th, td { padding: 3px 6px; }
   td .name, td code { max-width: none; }
