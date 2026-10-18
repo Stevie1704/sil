@@ -184,7 +184,7 @@ def test_guards_are_forwarded_to_the_runner(native_path, tmp_path):
 
 
 @pytest.mark.parametrize("argv, message", [
-    (["--html", "run.html"], "--html is not available in this version"),
+    (["--html", "a.html", "--html", "b.html"], "may be given only once"),
     (["--diagnostics", "--no-recording", "-o", "x.mcap"],
      "-o and --no-recording exclude each other"),
     (["--diagnostics", "--participant-timeout-ms", "0"],
@@ -477,3 +477,84 @@ def test_manifest_relative_replay_is_summarized_apart_from_tasks(
     assert any(line.startswith("  rep replay: 5 Messages; publication Slots "
                                "5 of 5 completed, mean ")
                for line in proc.stdout.splitlines())
+
+
+# --- --html (#304) -------------------------------------------------------------
+
+FAKE_SUCCESS = ('for a; do last="$a"; done\necho manifest_hash fake\n'
+                f'cp "{FIXTURES / "run-success.json"}" "$last"\nexit 0\n')
+
+
+def test_html_adds_a_page_of_the_kept_json(native_path, tmp_path):
+    from sil.diagnostics_html import render
+
+    proc = sil(["run", str(mixed_period_manifest(tmp_path)), "-o", "run.mcap",
+                "--html", "run.html"], native_path, tmp_path)
+
+    assert proc.returncode == 0, proc.stderr
+    report = (tmp_path / "run.mcap.diagnostics.json").read_text()
+    assert (tmp_path / "run.html").read_text() == render(report)
+    assert proc.stdout.endswith("HTML report: run.html\n")
+    assert "diagnostics report: run.mcap.diagnostics.json" in proc.stdout
+
+
+def test_html_of_a_failed_run_keeps_the_run_exit_code(native_path, tmp_path):
+    proc = sil(["run", str(failing_step_manifest(tmp_path)), "-o", "run.mcap",
+                "--html", "run.html"], native_path, tmp_path)
+
+    assert proc.returncode == 1
+    assert "Run failure" in (tmp_path / "run.html").read_text()
+    assert "HTML report: run.html" in proc.stdout
+
+
+@pytest.mark.parametrize("argv, message", [
+    (["--html", "taken.html"], "HTML report 'taken.html' already exists"),
+    (["--html", "missing/run.html"], "does not exist"),
+    (["--diagnostics-out", "r.json", "--html", "r.json"],
+     "HTML report 'r.json' is also the diagnostics report"),
+    (["-o", "run.mcap", "--html", "run.mcap"], "is also the Recording"),
+])
+def test_rejected_html_destinations_start_no_run(build_dir, tmp_path, argv,
+                                                 message):
+    counter = tmp_path / "started"
+    path = fake_tools(tmp_path, build_dir, f"touch '{counter}'\nexit 0\n")
+    (tmp_path / "taken.html").write_text("keep")
+
+    proc = sil(["run", "m.json", *argv], path, tmp_path)
+
+    assert proc.returncode == 2
+    assert message in proc.stderr
+    assert not counter.exists()
+    assert (tmp_path / "taken.html").read_text() == "keep"
+
+
+def test_no_report_means_no_html_and_exit_1(build_dir, tmp_path):
+    path = fake_tools(tmp_path, build_dir, "exit 0\n")
+
+    proc = sil(["run", "m.json", "--html", "run.html"], path, tmp_path)
+
+    assert proc.returncode == 1
+    assert ("sil run: cannot write the HTML report 'run.html': no valid "
+            "diagnostics report to render") in proc.stderr
+    assert not (tmp_path / "run.html").exists()
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root writes anywhere")
+def test_an_unwritable_html_report_exits_1_and_keeps_the_json(build_dir,
+                                                              tmp_path):
+    path = fake_tools(tmp_path, build_dir, FAKE_SUCCESS)
+    locked = tmp_path / "locked"
+    locked.mkdir()
+    locked.chmod(0o555)
+    try:
+        proc = sil(["run", "m.json", "--html", "locked/run.html"], path,
+                   tmp_path)
+    finally:
+        locked.chmod(0o755)
+
+    assert proc.returncode == 1
+    assert "sil run: cannot write the HTML report 'locked/run.html': " \
+        in proc.stderr
+    assert json.loads((tmp_path / "out.mcap.diagnostics.json").read_text())[
+        "run"]["exit_code"] == 0
+    assert list(locked.iterdir()) == []

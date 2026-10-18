@@ -107,6 +107,11 @@ ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
     "benchmark": ModuleCommand("sil.benchmark",
                                "repeat fresh diagnostics Runs of a Manifest "
                                "and summarize them"),
+    "diagnostics": Group("present saved diagnostics reports", {
+        "render": ModuleCommand("sil.diagnostics_render",
+                                "write the standalone HTML report of a "
+                                "saved Run or benchmark report"),
+    }),
     "bundle": Group("seal and run offline regression bundles", {
         "seal": ModuleCommand("sil.bundle",
                               "record the identity of a bundle and its runtime",

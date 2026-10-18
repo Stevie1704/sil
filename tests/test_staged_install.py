@@ -429,6 +429,8 @@ def test_installed_sil_run_diagnostics_default_custom_and_no_recording(
                        "my results/run.json"), "my results/run.json"),
         "no recording": (sil("--no-recording", "--diagnostics"),
                          "out.mcap.diagnostics.json"),
+        "html": (sil("-o", "page.mcap", "--html", "my results/run.html"),
+                 "page.mcap.diagnostics.json"),
     }
     for name, (proc, report) in runs.items():
         assert proc.returncode == 0, (name, proc.stderr)
@@ -438,6 +440,8 @@ def test_installed_sil_run_diagnostics_default_custom_and_no_recording(
         assert json.loads((tmp_path / report).read_text())[
             "sil_run_diagnostics"] == 1
     assert not (tmp_path / "out.mcap").exists()
+    page = (tmp_path / "my results" / "run.html").read_text()
+    assert page.startswith("<!doctype html>") and "Succeeded" in page
 
 
 def test_installed_sil_benchmark_writes_a_self_contained_summary(
@@ -457,11 +461,13 @@ def test_installed_sil_benchmark_writes_a_self_contained_summary(
 
     proc = subprocess.run(
         ["sil", "benchmark", "acc.json", "--repeats", "2", "--warmup", "1",
-         "--out", "bench"],
+         "--out", "bench", "--html", "bench/report.html"],
         cwd=tmp_path, env=env, capture_output=True, text=True)
 
     assert proc.returncode == 0, proc.stderr
     assert "benchmark summary: bench/summary.json\n" in proc.stdout
+    assert proc.stdout.endswith("HTML report: bench/report.html\n")
+    assert (tmp_path / "bench" / "report.html").is_file()
     # The summary alone is the evidence: it is valid after the Run
     # directories are gone.
     summary = tmp_path / "copied-summary.json"
@@ -475,6 +481,15 @@ def test_installed_sil_benchmark_writes_a_self_contained_summary(
     assert all(run["report"]["sil_run_diagnostics"] == 1
                for run in report["runs"])
     assert validate_benchmark_report(report) == []
+    # The copied summary renders again with no Run directory and no runner.
+    rendered = subprocess.run(
+        ["sil", "diagnostics", "render", "copied-summary.json", "--html",
+         "copied.html"], cwd=tmp_path, capture_output=True, text=True,
+        env={**env, "PATH": os.pathsep.join(
+            [str(installed_python / "bin"), "/usr/bin:/bin"])})
+    assert rendered.returncode == 0, rendered.stderr
+    page = (tmp_path / "copied.html").read_text()
+    assert "Complete benchmark" in page and "run-002" in page
 
 
 @pytest.mark.parametrize("kind", ["--process", "--native"])

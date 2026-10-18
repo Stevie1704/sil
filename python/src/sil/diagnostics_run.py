@@ -5,7 +5,8 @@
 this module instead: it checks the output paths, starts
 `sil-run-diagnostics` through `sil-diagnostics-launcher`, reads the
 `sil_run_diagnostics` report and prints a summary of it on stdout after the
-Run.
+Run. `--html PATH` implies diagnostics and also writes the standalone HTML
+page of that report (sil.diagnostics_html) after the Run.
 
 The module is also the seam that `sil benchmark` and the HTML output reuse:
 `preflight` checks new-file destinations, `execute` runs one diagnostics Run
@@ -358,12 +359,23 @@ def _value(record: dict, key: str, render) -> str:
     return render(record[key])
 
 
-def _factor(value: float) -> str:
+def format_factor(value: float) -> str:
     return f"{value:.2f}x"
 
 
-def _rate(value: float) -> str:
+def format_rate(value: float) -> str:
     return f"{value:.2f}/s"
+
+
+def format_value(unit: str, value) -> str:
+    """A value of a benchmark metric unit: `ns`, `bytes`, `factor`, `1/s`."""
+    if unit == "ns":
+        return format_duration_ns(value)
+    if unit == "bytes":
+        return format_bytes(value)
+    if unit == "factor":
+        return format_factor(value)
+    return format_rate(value)
 
 
 def format_summary(report: dict, report_path: Path) -> str:
@@ -380,8 +392,8 @@ def format_summary(report: dict, report_path: Path) -> str:
         for name in (*PHASES, "unattributed_ns")))
     speed = observational["virtual_time_speed"]
     lines.append(f"virtual-time speed: scheduled "
-                 f"{_value(speed, 'scheduled_factor', _factor)}, end-to-end "
-                 f"{_value(speed, 'end_to_end_factor', _factor)}")
+                 f"{_value(speed, 'scheduled_factor', format_factor)}, end-to-end "
+                 f"{_value(speed, 'end_to_end_factor', format_factor)}")
     lines.append(_throughput_line(observational["throughput"]))
     lines += _task_lines(report)
     lines += _resource_lines(observational["resources"])
@@ -421,9 +433,9 @@ def _throughput_line(throughput: dict) -> str:
     return (f"throughput per second of scheduled execution ({denominator}): "
             f"{throughput['completed_native_activations']} native "
             f"activations, "
-            f"{_value(throughput, 'native_activations_per_s', _rate)}; "
+            f"{_value(throughput, 'native_activations_per_s', format_rate)}; "
             f"{throughput['completed_process_steps']} process steps, "
-            f"{_value(throughput, 'process_steps_per_s', _rate)}")
+            f"{_value(throughput, 'process_steps_per_s', format_rate)}")
 
 
 def _task_lines(report: dict) -> list[str]:
@@ -575,29 +587,46 @@ def _parser() -> argparse.ArgumentParser:
                         help="write the report to PATH; implies --diagnostics")
     parser.add_argument("--html", type=Path, action=GivenOnce,
                         metavar="PATH",
-                        help="not available in this version")
+                        help="also write a standalone HTML report of the "
+                             "diagnostics report; implies --diagnostics")
     return parser
 
 
-def request_from_arguments(argv: list[str]) -> RunRequest:
+def request_from_arguments(argv: list[str]) -> tuple[RunRequest, Path | None]:
+    """The Run to execute and the HTML report path, if one was asked for."""
     parser = _parser()
     args = parser.parse_args(argv)
-    if args.html is not None:
-        parser.error("--html is not available in this version: the HTML "
-                     "renderer is not installed yet; use --diagnostics and "
-                     "read the JSON report")
     if args.no_recording and args.recording is not None:
         parser.error("-o and --no-recording exclude each other")
     recording = None if args.no_recording else (
         args.recording or Path(DEFAULT_RECORDING))
     report = args.diagnostics_out or default_report_path(recording)
     return RunRequest(args.manifest, report, recording, args.provenance,
-                      guards_from(args))
+                      guards_from(args)), args.html
+
+
+def write_html_report(outcome: RunOutcome, path: Path,
+                      cwd: Path | None = None) -> str | None:
+    """Render the Run's report into `path`; return the failed artifact."""
+    from sil.diagnostics_html import write_html  # imports this module
+
+    label = f"HTML report '{path}'"
+    if outcome.report is None:
+        return f"{label}: no valid diagnostics report to render"
+    try:
+        text = (Path(cwd or ".") / outcome.report_path).read_text(
+            encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as error:
+        return f"{label}: {error}"
+    problem = write_html(text, Path(cwd or ".") / path)
+    return None if problem is None else f"{label}: {problem}"
 
 
 def main(argv: list[str] | None = None) -> int:
-    request = request_from_arguments(sys.argv[1:] if argv is None else argv)
-    problems = preflight(request)
+    request, html = request_from_arguments(
+        sys.argv[1:] if argv is None else argv)
+    new_files = [] if html is None else [("HTML report", html)]
+    problems = preflight(request, new_files)
     if problems:
         for problem in problems:
             sys.stderr.write(f"{PROG}: error: {problem}\n")
@@ -608,12 +637,18 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.write(f"{PROG}: error: {error}\n")
         return EXIT_NOT_FOUND
     outcome = execute(request, tools)
+    failed = []
+    if html is not None:
+        failed = [problem for problem in [write_html_report(outcome, html)]
+                  if problem is not None]
     if outcome.report is not None:
         sys.stdout.write(format_summary(outcome.report, request.report))
+        if html is not None and not failed:
+            sys.stdout.write(f"HTML report: {html}\n")
         sys.stdout.flush()
-    for line in describe_problems(outcome):
+    for line in describe_problems(outcome, failed):
         sys.stderr.write(f"{PROG}: {line}\n")
-    return resolve_exit(outcome)
+    return resolve_exit(outcome, failed)
 
 
 if __name__ == "__main__":
