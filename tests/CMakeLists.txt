@@ -23,6 +23,15 @@ target_include_directories(sil_engine_interface_test PRIVATE ${PROJECT_SOURCE_DI
 add_test(NAME sil_engine_interface COMMAND sil_engine_interface_test
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+# The diagnostics collector's statistics (#300) are pure arithmetic over
+# synthetic durations, so they get a focused C++ test rather than a timed Run.
+add_executable(sil_diagnostics_stats_test
+  diagnostics_stats_test.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/diagnostics_stats.cpp)
+target_include_directories(sil_diagnostics_stats_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src)
+add_test(NAME sil_diagnostics_stats COMMAND sil_diagnostics_stats_test
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
 # The Arena layout — slot stride, seq freshness, capacity bounds — is the
 # binary contract a Process participant maps, and it holds without a child
 # process, so it gets a focused C++ test target.
