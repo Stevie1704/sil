@@ -43,7 +43,9 @@ agent.
 - [docs/adr/](adr/) contains accepted architectural decisions, including
   [FMU groups](adr/0001-connected-fmus-in-one-process-participant.md),
   [terminal replay timing](adr/0002-a-replayed-terminal-lands-on-its-own-instant.md),
-  and [maintained CAN models](adr/0003-maintained-can-model-at-the-edge.md).
+  [maintained CAN models](adr/0003-maintained-can-model-at-the-edge.md)
+  and the [opt-in diagnostics runner](adr/0004-opt-in-run-diagnostics-runner.md),
+  whose [report contracts](diagnostics-report.md) are versioned.
   Record new architectural decisions here; consult the applicable ADR and its
   status when an older design statement differs.
 - [docs/decisions/](decisions/) retains the historical

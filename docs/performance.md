@@ -21,14 +21,26 @@ make bench                     # regenerate docs/bench/routing-baseline.{json,md
 Copy counts come from `sil-run-instrumented`, the same kernel sources compiled
 with `SIL_COPY_COUNTERS`. Wall-clock comes from the production `sil-run`, which
 carries no instrumentation. Keeping the two apart lets a run report copies as
-counts instead of inferring them from timing. These counters are the whole
-counter surface (#63): there is no metrics artifact and no metrics flag on
+counts instead of inferring them from timing. These counters are a development
+surface with no stability promise (#63): there is no metrics flag on
 `sil-run`, because a run reproduces exactly, so re-running it instrumented
 answers the question for the price of one run — an inertness the determinism
 suite asserts per fixture, as the same exit code and the same recording bytes
 under both runners. The report states the run's exit code and keeps its
 repeatable counters (`deterministic`) apart from its wall-clock and RSS values
 (`observational`).
+
+## Run diagnostics
+
+`sil-run-diagnostics` is the installed measurement runner: the same kernel
+sources with an opt-in collector, so `sil-run` stays uninstrumented
+([decision](adr/0004-opt-in-run-diagnostics-runner.md)). It takes the
+`sil-run` command line plus `--diagnostics-out PATH` and writes a
+`sil_run_diagnostics` v1 report: lifecycle phases, inclusive timing per Native
+Task, Process Step and Replay publication Slot, and bounded statistics
+([report contract](diagnostics-report.md)). The determinism suite asserts that
+it writes the same Recording and exit code as `sil-run`. Its timings include
+the collector's own cost.
 
 `sil-run --no-recording` runs a manifest and writes no recording. That
 separates the cost of routing to subscribers from the cost of recording I/O.
