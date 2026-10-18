@@ -365,6 +365,56 @@ SIGINT, SIGTERM and SIGHUP sent to `sil` go to the runner, which stops the
 Run and its Process participants as for `sil-run` (exit `1`, status
 `interrupted`).
 
+## Benchmark repeated Runs
+
+`sil benchmark` executes a Manifest several times, each time as its own
+diagnostics Run, and writes one `sil_benchmark_report` (version 1,
+[docs/diagnostics-report.md](diagnostics-report.md)) to `DIR/summary.json`.
+
+```sh
+sil benchmark manifest.json --out results                 # 1 warm-up, 5 Runs
+sil benchmark manifest.json --repeats 10 --warmup 0 --out results \
+  --participant-timeout-ms 5000 --no-recording
+```
+
+- `--repeats N` (an integer, at least 1, default 5) measured Runs follow
+  `--warmup N` (an integer, at least 0, default 1) warm-up Runs. Each Run has
+  fresh processes and a fresh working directory, and the Runs are one after
+  the other. A Run does not start with cold file-system caches, and external
+  services are not reset.
+- `--out DIR` is required and must not exist; its parent must exist. A path
+  that exists is rejected before any Run starts (exit `2`) and is not changed.
+- `--no-recording`, `--participant-timeout-ms` and the three Step-protocol size
+  guards go to every Run. The Manifest is not moved or changed, so its
+  relative paths resolve as in an ordinary Run.
+- Each Run has a directory, `warmup-001/`, `run-001/`, ...: the Run report
+  `run.mcap.diagnostics.json` (`out.mcap.diagnostics.json` under
+  `--no-recording`), the provenance record, the Recording, the failure report
+  of a failed Run, `stdout.log` and `stderr.log`. The Run's stderr is also
+  copied to the stderr of `sil`.
+- `summary.json` holds every attempted Run with its complete Run report, so it
+  is all that a reader needs. Statistics (min, median, max, mean, population
+  standard deviation) use only the successful measured Runs: warm-ups and
+  failed Runs never enter them. Activation percentiles stay per Run and are
+  never pooled across Runs.
+- The first failed warm-up or measured Run stops the benchmark: no later Run
+  starts, the earlier Runs are kept, and the summary is marked incomplete.
+  SIGINT, SIGTERM or SIGHUP stops the active Run as for `sil run
+  --diagnostics`, and no later Run starts.
+- A summary of `summary.json` goes to stdout after the last Run. The values
+  are diagnostics-runner measurements, not timings of the ordinary `sil-run`.
+- `--html PATH` is reserved for the HTML report and is not available in this
+  version: it exits `2`.
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | Every Run succeeded and `summary.json` was written. |
+| the first failure | The exit code `sil run --diagnostics` gives for the first failed Run: the Run's code, `1` for a missing report after a successful Run, `128+N` for a runner that ended by signal `N`. |
+| `1` | The Runs succeeded, but `summary.json` could not be written. |
+| `2` | Invalid options, or `--out` exists. |
+| `127` | `sil-run-diagnostics` or `sil-diagnostics-launcher` is not on `PATH`. |
+| `128+N` | Signal `N` stopped the benchmark between Runs. |
+
 ## Reading a Recording
 
 A Recording stores the Schema of each Channel, so it can be decoded without

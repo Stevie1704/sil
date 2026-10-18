@@ -47,6 +47,9 @@ Reasons in v1:
 | `unsupported_platform` | The collector cannot measure resources on this host |
 | `not_started` | The Process participant was never started, so it has no resource record |
 | `incomplete_scopes` | A total is missing because one of the scopes it adds is missing |
+| `no_successful_measured_runs` | Benchmark: no measured Run succeeded, so a statistic has no sample |
+| `unavailable_in_a_measured_run` | Benchmark: a successful measured Run has no value for this metric |
+| `no_run_report` | Benchmark: no Run wrote a report to take this identity or host value from |
 
 Collector version 1 also used `not_collected` for every resource value. A
 later collector version can add reasons. A reader shows an unknown reason as
@@ -196,10 +199,10 @@ is the shape `sil benchmark` (#303) writes.
 | --- | --- |
 | `generator` | `name` (`sil benchmark`), `sil_version` |
 | `measurement_mode` | `diagnostics`: every Run uses the diagnostics runner |
-| `identity` | `manifest_path`, `manifest_hash`, `sil_version`, `source_revision`, `diagnostics_collector_version` |
-| `host` | As in the Run report |
-| `policy` | `repeats`, `warmup`, `recording`, `execution` (`serial_fresh_processes`), `participant_timeout_ms` and the three size guards |
-| `status` | `complete`, `exit_code` (the first Run failure, else 0), `stopped_reason` (null, `warmup_failed`, `run_failed` or `interrupted`) |
+| `identity` | `manifest_path` (absolute), `manifest_hash`, `sil_version`, `source_revision`, `diagnostics_collector_version`, `unavailable`; from the first Run report, null with `no_run_report` when no Run wrote one |
+| `host` | As in the Run report; null with `no_run_report` when no Run wrote one |
+| `policy` | `repeats`, `warmup`, `recording`, `execution` (`serial_fresh_processes`), `participant_timeout_ms` and the three size guards: the values in the first Run report's `configuration`, else the requested ones (null = runner default) |
+| `status` | `complete`, `exit_code` (the command's exit code for the first failed Run, as `sil run --diagnostics` gives it: the Run's code, `1` for a missing or invalid report, `128+N` for a signal; `128+N` for a signal between Runs; else 0), `stopped_reason` (null, `warmup_failed`, `run_failed` or `interrupted`) |
 | `counts` | `requested`, `attempted`, `completed`, `failed`, and the same four with the prefix `warmups_` |
 | `runs` | Every attempted warm-up and measured Run, in order |
 | `aggregates` | `scope` (`successful_measured_runs`), `sample_count` and `metrics` |
@@ -219,3 +222,25 @@ Aggregates use only successful measured Runs: warm-ups and failed Runs never
 enter them, and `sample_count` is their number. With no such Run every
 statistic is null with `no_successful_measured_runs`. Activations are never
 pooled across Runs; per-Run distributions stay in the embedded reports.
+
+A Run is successful when its process exited 0 and it wrote a valid report.
+`counts.completed` counts successful Runs, `counts.failed` the others. A
+`per_run` value is null when that Run report has no value; its reason is in
+the Run report at `source`. Then every statistic of the metric is null with
+`unavailable_in_a_measured_run`, so no statistic uses fewer Runs than
+`sample_count`.
+
+The metrics, in this order:
+
+| `metric` | `unit` | `source` |
+| --- | --- | --- |
+| `run_wall_ns` | `ns` | `observational.run_wall_time.wall_ns` |
+| `preflight_ns`, `setup_ns`, `scheduled_execution_ns`, `shutdown_ns`, `recording_finalization_ns`, `unattributed_ns` | `ns` | `observational.phases.<metric>` |
+| `scheduled_factor`, `end_to_end_factor` | `factor` | `observational.virtual_time_speed.<metric>` |
+| `native_activations_per_s`, `process_steps_per_s` | `1/s` | `observational.throughput.<metric>` |
+| `runner_user_cpu_ns`, `runner_system_cpu_ns`, `runner_peak_rss_bytes` | `ns`, `bytes` | `observational.resources.runner.*` |
+| `cpu_total_user_cpu_ns`, `cpu_total_system_cpu_ns` | `ns` | `observational.resources.cpu_total.*` |
+| `process_user_cpu_ns`, `process_system_cpu_ns`, `process_peak_rss_bytes` | `ns`, `bytes` | `observational.resources.process_participants[participant].*`; one metric each per Process participant, in name order, with a `participant` member |
+
+The throughput denominator of each Run is `scheduled_execution_ns`, which is
+also a metric. No memory metric adds peaks of different processes.
