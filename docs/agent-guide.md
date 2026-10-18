@@ -150,8 +150,8 @@ Use exit codes, not message text. Message text can change in any release.
 | `sil fmi couple --receipt`, `sil fmi replay --receipt`, `sil fmi substitute --receipt` | a JSON receipt |
 | `sil run` | the Recording and its `<recording>.provenance.json` side-car |
 | `sil run`, on a failed Run | the `<recording>.failure.json` report: which Participant failed, how, at which Step and virtual time, and its stderr tail (`sil docs running`) |
-| `sil run --diagnostics` | the `sil_run_diagnostics` report, `<recording>.diagnostics.json` by default, and a summary on stdout (`sil docs running`) |
-| `sil benchmark --out DIR` | `DIR/summary.json`, a `sil_benchmark_report` with every Run report embedded, a directory of evidence per Run, and a summary on stdout (`sil docs running`) |
+| `sil run --diagnostics` | the `sil_run_diagnostics` report, `<recording>.diagnostics.json` by default, and a summary on stdout (`sil docs running`, `sil docs diagnostics-report`) |
+| `sil benchmark --out DIR` | `DIR/summary.json`, a `sil_benchmark_report` with every Run report embedded, a directory of evidence per Run, and a summary on stdout (`sil docs running`, `sil docs diagnostics-report`) |
 | every command | the exit code: `sil docs running` lists those of a Run |
 
 `sil docs support` says which interfaces and report versions are stable, and

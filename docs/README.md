@@ -15,6 +15,7 @@ agent.
 | Get adapters, bindings and preparation scripts without a checkout | [Installed examples](examples.md) |
 | Run the ACC example or install a staged release | [Examples and installation](getting-started.md) |
 | Configure Run guards, the Clock shim, and Channel Transport | [Running simulations](running.md) |
+| Measure a Run, benchmark repeated Runs, and read their HTML reports | [Measure a Run](running.md#measure-a-run), [what the measurements mean](running.md#what-the-measurements-mean), [report contracts](diagnostics-report.md) |
 | Import and inspect an FMU, bind variables, or connect network terminals | [FMI importer](fmi.md) |
 | Convert CSV data and replay it into an FMU | [Recorded input and FMU replay](recorded-input.md) |
 | Couple FMUs through Channels or replace one with replay | [Coupling and substituting FMUs](fmu-coupling.md) |
@@ -26,7 +27,7 @@ agent.
 | Seal and run regression cases and matrices | [Regression bundles](regression-bundles.md) |
 | Run one Manifest in a Linux container | [Container deployment](container.md) |
 | Find acceptance evidence and maintained models | [Acceptance proofs](acceptance.md) |
-| Understand routing measurements and memory costs | [Performance](performance.md), [routing baseline](bench/routing-baseline.md), [large-message baseline](bench/large-message-routing-baseline.md), [ADAS execution cost](../proofs/adas-cost/README.md) |
+| Understand routing measurements and memory costs | [Performance](performance.md), [routing baseline](bench/routing-baseline.md), [large-message baseline](bench/large-message-routing-baseline.md), [diagnostics overhead](bench/diagnostics-overhead.md), [ADAS execution cost](../proofs/adas-cost/README.md) |
 
 ## Architecture and contracts
 

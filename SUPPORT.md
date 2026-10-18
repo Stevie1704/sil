@@ -154,7 +154,7 @@ Do not build on these. They change without notice and without a release note.
 - `sil-run-instrumented`, its copy-counter report, and every other
   development build target. They are not part of a production installation.
   `sil-run-diagnostics` is the one installed measurement runner.
-- Anything under `tests/`, `tools/bench_*`, and the schemas
+- Anything under `tests/`, `tools/bench_*`, `tools/diagnostics_overhead.py`, and the schemas
   that serve them. They are fixtures for this repository's own checks.
 - The `acceptance` container image target and everything it adds under
   `/opt/sil/reference`.
