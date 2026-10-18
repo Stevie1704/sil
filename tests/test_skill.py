@@ -15,8 +15,10 @@ from test_staged_install import installed_environment
 
 sys.path.insert(0, str(ROOT / "tools"))
 
-from release import PACKAGED_DOCS, stamp_python  # noqa: E402
+from release import PACKAGED_DOCS, project_version, stamp_python  # noqa: E402
 from sil.cli import ROOT as CLI_ROOT, Group  # noqa: E402
+
+VERSION = project_version(ROOT)
 
 
 def _command_paths(group: Group, path: str) -> list[str]:
@@ -33,7 +35,7 @@ def _command_paths(group: Group, path: str) -> list[str]:
 def skill(tmp_path_factory: pytest.TempPathFactory) -> str:
     """The SKILL.md of a freshly stamped Python tree."""
     destination = tmp_path_factory.mktemp("stamped") / "python-release"
-    stamp_python(ROOT, "0.1.0", "test-revision", destination)
+    stamp_python(ROOT, VERSION, "test-revision", destination)
     return (destination / "src" / "sil" / "_skill" / "SKILL.md").read_text()
 
 
@@ -54,8 +56,8 @@ def test_the_skill_is_in_the_agent_skills_format(skill: str):
 
 
 def test_the_skill_states_the_version_it_was_generated_for(skill: str):
-    assert '  sil-version: "0.1.0"\n' in skill
-    assert "SiL 0.1.0" in skill.partition("\n---\n")[2]
+    assert f'  sil-version: "{VERSION}"\n' in skill
+    assert f"SiL {VERSION}" in skill.partition("\n---\n")[2]
 
 
 def test_the_skill_names_every_command_of_sil(skill: str):
@@ -97,7 +99,7 @@ def test_install_writes_the_skill_into_the_project_and_links_it_for_claude(
     assert proc.returncode == 0, proc.stderr
     written = project / ".agents" / "skills" / "sil" / "SKILL.md"
     assert proc.stdout.splitlines()[0] == str(written)
-    assert '  sil-version: "0.1.0"\n' in written.read_text()
+    assert f'  sil-version: "{VERSION}"\n' in written.read_text()
     link = project / ".claude" / "skills" / "sil"
     assert link.is_symlink()
     assert not Path(link.readlink()).is_absolute()

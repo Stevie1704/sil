@@ -8,6 +8,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -101,7 +102,8 @@ def test_cmake_stages_the_production_runtime_and_public_headers(
     assert (staged_prefix / "bin" / "sil-diagnostics-launcher").is_file()
     assert not (staged_prefix / "bin" / "sil-run-instrumented").exists()
     metadata = json.loads((staged_prefix / "share" / "sil" / "release.json").read_text())
-    assert metadata["version"] == "0.1.0"
+    assert metadata["version"] == tomllib.loads(
+        (ROOT / "python" / "pyproject.toml").read_text())["project"]["version"]
     assert metadata["license"] == "Apache-2.0"
     assert metadata["source_repository"] == "https://github.com/Stevie1704/sil"
 
