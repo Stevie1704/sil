@@ -69,7 +69,10 @@ invalid options or report input exit 2.
 ## Consequences
 
 - An installed SiL carries two runners. The native archive, the staged install
-  and the runtime image contain `sil-run-diagnostics`.
+  and the runtime image contain `sil-run-diagnostics` and the small
+  `sil-diagnostics-launcher` a supervisor starts it through, so the runner's
+  peak RSS is not a Linux high-water mark inherited from the supervisor
+  (#301).
 - Instrumentation overhead can move a Run that sits on a response-deadline
   edge. Inertness is asserted with deadlines far from the fixtures' response
   times; it is not claimed for every deadline.
