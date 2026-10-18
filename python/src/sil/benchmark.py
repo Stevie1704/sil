@@ -11,9 +11,13 @@ scalar statistics over the successful measured Runs only. Warm-ups and
 failed Runs never enter a statistic, and activations are never pooled across
 Runs.
 
-Exit codes: 0 when every Run succeeded and the summary was written; the
-first failed Run's exit code (as `sil run --diagnostics` gives it); 1 when
-the Runs succeeded but the summary could not be written; 2 for invalid usage
+`--html PATH` also writes the standalone HTML page of summary.json
+(sil.diagnostics_html) after the summary; PATH may be inside `--out`.
+
+Exit codes: 0 when every Run succeeded and the summary (and HTML report, if
+asked for) was written; the first failed Run's exit code (as `sil run
+--diagnostics` gives it); 1 when the Runs succeeded but the summary or the
+HTML report could not be written; 2 for invalid usage
 or an existing `--out`; 127 when a native tool is missing.
 """
 
@@ -30,6 +34,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from sil import build_info
+from sil.diagnostics_html import write_html
 from sil.diagnostics_report import (
     BENCHMARK_REPORT_KEY, SUPPORTED_VERSION, validate_benchmark_report,
     write_new_file,
@@ -361,14 +366,18 @@ def _run_one(policy: Policy, manifest: Path, out: Path, tools: NativeTools,
     return RunResult(label, role, index, label, outcome)
 
 
+def summary_text(summary: dict) -> str:
+    """The exact text of summary.json."""
+    return json.dumps(summary, indent=2, allow_nan=False) + "\n"
+
+
 def _write_summary(summary: dict, path: Path) -> str | None:
     """Write the summary; return why it could not be written, or None."""
     errors = validate_benchmark_report(summary)
     if errors:
         return "the summary is not a valid report: " + "; ".join(errors)
     try:
-        write_new_file(path, json.dumps(summary, indent=2, allow_nan=False)
-                       + "\n")
+        write_new_file(path, summary_text(summary))
     except (OSError, ValueError) as error:
         return str(error)
     return None
@@ -462,16 +471,15 @@ def _parser() -> argparse.ArgumentParser:
                         help="execute every Run without a Recording")
     add_guard_arguments(parser)
     parser.add_argument("--html", type=Path, action=GivenOnce,
-                        metavar="PATH", help="not available in this version")
+                        metavar="PATH",
+                        help="also write a standalone HTML report of "
+                             "summary.json; it may be inside DIR")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
-    if args.html is not None:
-        parser.error("--html is not available in this version: the HTML "
-                     "renderer is not installed yet; read summary.json")
     policy = Policy(
         repeats=DEFAULT_REPEATS if args.repeats is None else args.repeats,
         warmup=DEFAULT_WARMUP if args.warmup is None else args.warmup,
@@ -486,6 +494,10 @@ def main(argv: list[str] | None = None) -> int:
     if not Path(os.path.realpath(out)).parent.is_dir():
         return _usage_error(f"--out '{out}': its parent directory does not "
                             "exist")
+    if args.html is not None:
+        problem = _html_problem(args.html, out, policy)
+        if problem is not None:
+            return _usage_error(problem)
     try:
         tools = find_native_tools()
     except ToolMissing as error:
@@ -507,10 +519,42 @@ def main(argv: list[str] | None = None) -> int:
     if problem is not None:
         sys.stderr.write(f"{PROG}: cannot write the benchmark summary "
                          f"'{out / SUMMARY}': {problem}\n")
+        if args.html is not None:
+            sys.stderr.write(f"{PROG}: cannot write the HTML report "
+                             f"'{args.html}': it presents only a written "
+                             "summary\n")
         return exit_code or EXIT_FAILURE
     sys.stdout.write(format_summary(summary, out / SUMMARY))
+    if args.html is not None:
+        problem = write_html(summary_text(summary), args.html)
+        if problem is not None:
+            sys.stdout.flush()
+            sys.stderr.write(f"{PROG}: cannot write the HTML report "
+                             f"'{args.html}': {problem}\n")
+            return exit_code or EXIT_FAILURE
+        sys.stdout.write(f"HTML report: {args.html}\n")
     sys.stdout.flush()
     return exit_code
+
+
+def _html_problem(html: Path, out: Path, policy: Policy) -> str | None:
+    """Why `html` cannot be the new HTML report; it may be inside --out."""
+    if os.path.lexists(html):
+        return (f"HTML report '{html}' already exists; a benchmark never "
+                "replaces earlier results")
+    target = Path(os.path.realpath(html))
+    out_directory = Path(os.path.realpath(out))
+    if target == out_directory:
+        return f"HTML report '{html}' is the --out directory"
+    if target.parent == out_directory:
+        if target.name == SUMMARY:
+            return f"HTML report '{html}' is also the benchmark summary"
+        if target.name in {label for label, _role, _i in plan(policy)}:
+            return f"HTML report '{html}' is also a Run directory"
+        return None
+    if not target.parent.is_dir():
+        return f"HTML report '{html}': its directory does not exist"
+    return None
 
 
 def _usage_error(message: str) -> int:

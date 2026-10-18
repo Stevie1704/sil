@@ -16,6 +16,7 @@ import pytest
 
 from conftest import ROOT
 from sil.benchmark import Policy, RunResult, summarize
+from sil.diagnostics_html import render
 from sil.diagnostics_report import load_report, validate_benchmark_report
 from sil.diagnostics_run import Guards, RunOutcome
 from test_process_descendants import (
@@ -452,12 +453,19 @@ class TestCommand:
         (["--repeats", "2", "--repeats", "3"], "only once"),
         (["-o", "x.mcap"], "unrecognized"),
         (["--participant-timeout-ms", "0"], "--participant-timeout-ms"),
-        (["--html", "report.html"], "--html is not available"),
+        (["--html", "a.html", "--html", "b.html"], "only once"),
+        (["--html", "taken.html"], "HTML report 'taken.html' already exists"),
+        (["--html", "elsewhere/r.html"], "does not exist"),
+        (["--html", "results"], "is the --out directory"),
+        (["--html", "results/summary.json"], "is also the benchmark summary"),
+        (["--html", "results/run-001"], "is also a Run directory"),
+        (["--html", "results/run-001/r.html"], "does not exist"),
     ])
     def test_invalid_options_exit_2_before_any_run(self, build_dir, tmp_path,
                                                    argv, message):
         counter = tmp_path / "count"
         path = fake_tools(tmp_path, build_dir, runner_script(counter))
+        (tmp_path / "taken.html").write_text("keep")
 
         proc = sil(["benchmark", "m.json", "--out", "results", *argv], path,
                    tmp_path)
@@ -466,6 +474,54 @@ class TestCommand:
         assert message in proc.stderr
         assert invocations(counter) == 0
         assert not (tmp_path / "results").exists()
+
+    @pytest.mark.parametrize("html", ["results/report.html", "report.html"])
+    def test_html_presents_the_written_summary(self, build_dir, tmp_path,
+                                               html):
+        counter = tmp_path / "count"
+        path = fake_tools(tmp_path, build_dir, runner_script(counter))
+
+        proc = sil(["benchmark", "m.json", "--repeats", "2", "--out",
+                    "results", "--html", html], path, tmp_path)
+
+        assert proc.returncode == 0, proc.stderr
+        summary = (tmp_path / "results" / "summary.json").read_text()
+        assert (tmp_path / html).read_text() == render(summary)
+        assert proc.stdout.endswith(f"HTML report: {html}\n")
+
+    def test_html_of_a_failed_campaign_keeps_its_exit_code(self, build_dir,
+                                                           tmp_path):
+        counter = tmp_path / "count"
+        path = fake_tools(tmp_path, build_dir, runner_script(counter, 2))
+
+        proc = sil(["benchmark", "m.json", "--out", "results", "--html",
+                    "results/report.html"], path, tmp_path)
+
+        assert proc.returncode == 1
+        page = (tmp_path / "results" / "report.html").read_text()
+        assert "Incomplete benchmark: run failed" in page
+
+    @pytest.mark.skipif(os.geteuid() == 0, reason="root writes anywhere")
+    def test_an_unwritable_html_report_exits_1_after_good_runs(
+        self, build_dir, tmp_path
+    ):
+        counter = tmp_path / "count"
+        path = fake_tools(tmp_path, build_dir, runner_script(counter))
+        locked = tmp_path / "locked"
+        locked.mkdir()
+        locked.chmod(0o555)
+        try:
+            proc = sil(["benchmark", "m.json", "--repeats", "1", "--out",
+                        "results", "--html", "locked/r.html"], path, tmp_path)
+        finally:
+            locked.chmod(0o755)
+
+        assert proc.returncode == 1
+        assert ("sil benchmark: cannot write the HTML report "
+                "'locked/r.html': ") in proc.stderr
+        assert load_report(tmp_path / "results" / "summary.json")[
+            "status"]["exit_code"] == 0
+        assert list(locked.iterdir()) == []
 
     def test_out_is_required(self, build_dir, tmp_path):
         path = fake_tools(tmp_path, build_dir, "exit 0\n")
