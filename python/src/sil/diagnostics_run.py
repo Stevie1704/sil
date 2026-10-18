@@ -319,9 +319,10 @@ def describe_problems(outcome: RunOutcome,
                      f"{outcome.launcher_error.removeprefix(LAUNCHER + ': ')}")
         return lines
     if outcome.signal is not None:
-        name = signal.Signals(outcome.signal).name \
-            if outcome.signal in signal.Signals._value2member_map_ \
-            else str(outcome.signal)
+        try:
+            name = signal.Signals(outcome.signal).name
+        except ValueError:
+            name = str(outcome.signal)
         lines.append(f"the diagnostics runner ended by signal {name} "
                      f"({outcome.signal}); no Run exit code exists")
     if outcome.report is None:

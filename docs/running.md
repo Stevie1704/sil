@@ -316,6 +316,55 @@ payload of a Step is capped at three quarters of the line limit by base64
 expansion, so `--max-step-inline-payload-bytes` only bites once the line limit
 is raised. [docs/step-protocol.md](step-protocol.md) has the detail.
 
+## Measure a Run
+
+`--diagnostics` runs the Manifest with the installed diagnostics runner,
+`sil-run-diagnostics`, and writes a `sil_run_diagnostics` report (version 1,
+[docs/diagnostics-report.md](diagnostics-report.md)). After the Run, `sil`
+prints a summary of the report on stdout.
+
+```sh
+sil run manifest.json --diagnostics -o run.mcap   # run.mcap.diagnostics.json
+sil run manifest.json -o run.mcap --diagnostics-out "results/run 1.json"
+sil run manifest.json --no-recording --diagnostics  # out.mcap.diagnostics.json
+```
+
+- The report is `<recording>.diagnostics.json`, also under `--no-recording`
+  (`out.mcap.diagnostics.json`). `--diagnostics-out PATH` gives another path
+  and implies `--diagnostics`.
+- `-o`, `--no-recording`, `--provenance`, `--participant-timeout-ms` and the
+  three Step-protocol size guards have the same meaning as for `sil-run`. The
+  Manifest is not moved or changed, so its relative paths resolve as in an
+  ordinary Run.
+- The report must be a new file in an existing directory. A path that exists,
+  or that is also the Manifest, the Recording, the provenance record or the
+  failure report, is rejected before any Participant starts (exit `2`).
+- The Run's stdout (`manifest_hash ...`) and stderr are unchanged; the summary
+  follows the stdout. It gives each value with its unit and scope, and an
+  unavailable value as `unavailable (reason)`. A failed Run is marked
+  `partial`. Peak resident memory is per process; no total is given.
+- `--html PATH` is reserved for the HTML report and is not available in this
+  version: it exits `2`.
+- Without a diagnostics option, `sil run` is `sil-run`, with no measurement.
+
+The diagnostics runner is the same kernel with a measurement collector. Its
+Recordings and exit codes are those of `sil-run`. The collector adds work to
+each activation, so a Run that only just meets a response deadline can miss
+it with diagnostics.
+
+| Exit | Meaning |
+| --- | --- |
+| the Run's code | The Run failed (`1`) or its Manifest is not valid (`2`). A partial report and summary are written where possible. |
+| `0` | The Run succeeded and the report was written. |
+| `1` | The Run succeeded, but the report is missing or not valid; or `sil-diagnostics-launcher` failed and no Run took place. stderr says which. |
+| `2` | Invalid options, or a rejected report path. |
+| `127` | `sil-run-diagnostics` or `sil-diagnostics-launcher` is not on `PATH`. |
+| `128+N` | The runner ended by signal `N`, for example SIGKILL. It wrote no report, and `sil` gives no metrics. |
+
+SIGINT, SIGTERM and SIGHUP sent to `sil` go to the runner, which stops the
+Run and its Process participants as for `sil-run` (exit `1`, status
+`interrupted`).
+
 ## Reading a Recording
 
 A Recording stores the Schema of each Channel, so it can be decoded without

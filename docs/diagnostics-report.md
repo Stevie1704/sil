@@ -5,6 +5,8 @@
 Two versioned JSON documents carry Run measurements:
 
 - `{"sil_run_diagnostics": 1, ...}`: one Run, written by `sil-run-diagnostics`.
+  `sil run --diagnostics` starts it and prints a summary
+  ([docs/running.md](running.md#measure-a-run)).
 - `{"sil_benchmark_report": 1, ...}`: repeated Runs, written by
   `sil benchmark` (#303), with every Run report embedded.
 
