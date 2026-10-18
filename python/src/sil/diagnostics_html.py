@@ -26,7 +26,8 @@ from pathlib import Path
 from typing import Any, Iterable, Sequence
 
 from sil.diagnostics_report import (
-    BENCHMARK_REPORT_KEY, PHASES, parse_report, write_new_file,
+    BENCHMARK_REPORT_KEY, PHASES, parse_report, process_participant_names,
+    process_record, write_new_file,
 )
 from sil.diagnostics_run import format_duration_ns, format_value
 
@@ -1227,22 +1228,6 @@ def _run_bars(summary: dict, value_of) -> list[tuple[str, Any, str, str]]:
     return bars
 
 
-def _process_record(report: dict | None, participant: str) -> dict | None:
-    if report is None:
-        return None
-    for record in report["observational"]["resources"]["process_participants"]:
-        if record["participant"] == participant:
-            return record
-    return None
-
-
-def _process_names(summary: dict) -> list[str]:
-    return sorted({record["participant"] for run in summary["runs"]
-                   if run["report"] is not None for record in
-                   run["report"]["observational"]["resources"]
-                   ["process_participants"]})
-
-
 def _run_charts(summary: dict) -> Html:
     charts = [_bar_chart(
         "chart-wall", "Run wall time", "ns",
@@ -1254,12 +1239,14 @@ def _run_charts(summary: dict) -> Html:
         _run_bars(summary, lambda r: _report_value(
             r, "observational.resources.runner.peak_rss_bytes")),
         _metric(summary, "runner_peak_rss_bytes")))
-    for index, name in enumerate(_process_names(summary)):
+    names = process_participant_names(run["report"]
+                                      for run in summary["runs"])
+    for index, name in enumerate(names):
         charts.append(_bar_chart(
             f"chart-process-rss-{index}",
             f"Process {name} peak RSS (largest_process_peak_rss)", "bytes",
             _run_bars(summary, lambda r, n=name: (
-                _process_record(r, n) or {}).get("peak_rss_bytes")),
+                process_record(r, n) or {}).get("peak_rss_bytes")),
             _metric(summary, "process_peak_rss_bytes", name)))
     return section(
         "run-charts", "Per-Run comparison",
@@ -1275,7 +1262,7 @@ def _per_run_reason(summary: dict, metric: dict, label: str) -> str | None:
     if report is None:
         return None
     if "participant" in metric:
-        record = _process_record(report, metric["participant"]) or {}
+        record = process_record(report, metric["participant"]) or {}
         member = metric["source"].rsplit(".", 1)[1]
         return record.get("unavailable", {}).get(member, "not_started"
                                                  if not record else None)

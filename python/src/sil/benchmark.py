@@ -37,7 +37,8 @@ from sil import build_info
 from sil.diagnostics_html import write_html
 from sil.diagnostics_report import (
     BENCHMARK_REPORT_KEY, SUPPORTED_VERSION, new_path_problem,
-    validate_benchmark_report, write_new_file,
+    process_participant_names, process_record, validate_benchmark_report,
+    write_new_file,
 )
 from sil.diagnostics_run import (
     EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE,
@@ -237,9 +238,11 @@ def _metrics(successful: Sequence[RunResult]) -> list[dict]:
                        [(label, _member(report, source))
                         for label, report in reports])
                for name, unit, source in RUN_METRICS]
-    for participant in _process_participants(reports):
+    # Every Run's Participants; one a Run lacks is null there.
+    names = process_participant_names(report for _label, report in reports)
+    for participant in names:
         for name, unit, member in PROCESS_METRICS:
-            values = [(label, _process_record(report, participant)
+            values = [(label, (process_record(report, participant) or {})
                        .get(member)) for label, report in reports]
             metrics.append({"participant": participant, **_metric(
                 name, unit, f"{PROCESS_SOURCE}.{member}", values)})
@@ -251,20 +254,6 @@ def _member(report: dict, source: str) -> Any:
     for key in source.split("."):
         value = value[key]
     return value
-
-
-def _process_participants(reports) -> list[str]:
-    """Every Process participant of any Run; one a Run lacks is null there."""
-    return sorted({record["participant"] for _label, report in reports
-                   for record in report["observational"]["resources"]
-                   ["process_participants"]})
-
-
-def _process_record(report: dict, participant: str) -> dict:
-    for record in report["observational"]["resources"]["process_participants"]:
-        if record["participant"] == participant:
-            return record
-    return {}
 
 
 def _metric(name: str, unit: str, source: str,
