@@ -32,7 +32,7 @@ RUN test -n "$SOURCE_REVISION" && echo "$SOURCE_REVISION" > source-revision.txt
 # Installed SiL, as a consumer installs it: the native prefix and the wheel
 # in its own environment (the recipe of proofs/adas-cost).
 RUN cmake -S . -B /build -DCMAKE_BUILD_TYPE=Release -DSIL_SOURCE_REVISION="$SOURCE_REVISION" \
-    && cmake --build /build --target sil-run sil_clock_shim -j2 \
+    && cmake --build /build --target sil-run sil-run-diagnostics sil_clock_shim -j2 \
     && cmake --install /build --prefix /opt/sil/native \
     && python tools/release.py stamp-python --root /src --output-dir /release-python \
       --version "$(python tools/release.py project-version --root /src)" \

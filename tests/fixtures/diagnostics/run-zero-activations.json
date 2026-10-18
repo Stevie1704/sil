@@ -1,0 +1,175 @@
+{
+  "artifacts": {
+    "failure_report": null,
+    "provenance": "/work/run.mcap.provenance.json",
+    "recording": "/work/run.mcap"
+  },
+  "collection_errors": [],
+  "collector": {
+    "clock": "host_monotonic",
+    "collector_version": 1,
+    "name": "sil-run-diagnostics",
+    "p95_minimum_samples": 20,
+    "p99_minimum_samples": 100,
+    "slowest_retained": 20
+  },
+  "completeness": {
+    "reasons": [],
+    "run_complete": true
+  },
+  "configuration": {
+    "max_protocol_line_bytes": 16777216,
+    "max_step_inline_payload_bytes": 67108864,
+    "max_step_output_messages": 1024,
+    "measurement_mode": "diagnostics",
+    "participant_timeout_ms": null,
+    "recording": true
+  },
+  "execution": {
+    "duration_ns": 10000000,
+    "last_virtual_time_ns": null,
+    "participants": [
+      {
+        "kind": "native",
+        "participant": "late",
+        "replay": null,
+        "tasks": [
+          {
+            "attempted": 0,
+            "completed": 0,
+            "failed": 0,
+            "failed_activation": null,
+            "interrupted": 0,
+            "kind": "native_task",
+            "offset_ns": 20000000,
+            "period_ns": 1000000,
+            "task": "tick"
+          }
+        ]
+      }
+    ],
+    "unavailable": {
+      "last_virtual_time_ns": "no_slot_opened"
+    }
+  },
+  "host": {
+    "architecture": "x86_64",
+    "cpu_description": "Example CPU @ 3.0GHz",
+    "logical_cpu_count": 8,
+    "os": "Linux",
+    "os_release": "6.8.0",
+    "unavailable": {}
+  },
+  "identity": {
+    "manifest_hash": "246d262034f91787aa6ac9451dd10b97fbb2f47427b06db4292be8cef23d45a5",
+    "manifest_path": "/work/late.json",
+    "sil_version": "0.1.0",
+    "source_repository": "https://github.com/Stevie1704/sil",
+    "source_revision": "0000000000000000000000000000000000000000",
+    "unavailable": {}
+  },
+  "observational": {
+    "phases": {
+      "preflight_ns": 7238250,
+      "recording_finalization_ns": 47375,
+      "scheduled_execution_ns": 83,
+      "setup_ns": 348250,
+      "shutdown_ns": 50000,
+      "unattributed_ns": 0,
+      "unavailable": {}
+    },
+    "replay": [],
+    "resources": {
+      "native_participants": "shared_with_runner",
+      "process_participants": [],
+      "runner": {
+        "collector": null,
+        "includes_waited_descendants": null,
+        "interval": null,
+        "peak_rss_bytes": null,
+        "peak_rss_kind": null,
+        "scope": "runner_process",
+        "system_cpu_ns": null,
+        "unavailable": {
+          "collector": "not_collected",
+          "includes_waited_descendants": "not_collected",
+          "interval": "not_collected",
+          "peak_rss_bytes": "not_collected",
+          "peak_rss_kind": "not_collected",
+          "system_cpu_ns": "not_collected",
+          "user_cpu_ns": "not_collected"
+        },
+        "user_cpu_ns": null
+      }
+    },
+    "run_wall_time": {
+      "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
+      "unavailable": {},
+      "wall_ns": 7683958
+    },
+    "tasks": [
+      {
+        "failed_activation": null,
+        "kind": "native_task",
+        "participant": "late",
+        "task": "tick",
+        "timing": {
+          "completed": 0,
+          "max_ns": null,
+          "mean_ns": null,
+          "min_ns": null,
+          "p50_ns": null,
+          "p95_ns": null,
+          "p99_ns": null,
+          "quantiles": {
+            "approximate": false,
+            "method": "nearest_rank",
+            "reservoir": {
+              "algorithm": "algorithm_r",
+              "algorithm_version": 1,
+              "capacity": 8192,
+              "generator": "splitmix64",
+              "seed": 6001411834618398513
+            },
+            "retained_count": 0,
+            "sample_count": 0
+          },
+          "samples_ns": [],
+          "scope": "inclusive_native_activation",
+          "slowest": [],
+          "stddev_ns": null,
+          "sum_ns": 0,
+          "unavailable": {
+            "max_ns": "no_completed_activations",
+            "mean_ns": "no_completed_activations",
+            "min_ns": "no_completed_activations",
+            "p50_ns": "no_completed_activations",
+            "p95_ns": "no_completed_activations",
+            "p99_ns": "no_completed_activations",
+            "stddev_ns": "no_completed_activations"
+          }
+        }
+      }
+    ],
+    "throughput": {
+      "completed_native_activations": 0,
+      "completed_process_steps": 0,
+      "denominator": "scheduled_execution_ns",
+      "native_activations_per_s": 0.0,
+      "process_steps_per_s": 0.0,
+      "scheduled_execution_ns": 83,
+      "unavailable": {}
+    },
+    "virtual_time_speed": {
+      "end_to_end_factor": 1.3014126313548304,
+      "scheduled_factor": 120481.92771084337,
+      "unavailable": {}
+    }
+  },
+  "run": {
+    "exit_code": 0,
+    "failure": null,
+    "status": "succeeded"
+  },
+  "sil_run_diagnostics": 1
+}

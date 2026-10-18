@@ -16,7 +16,14 @@ namespace {
 
 constexpr int kSchemaVersion = 1;
 
-const char *category_name(FailureCategory category) {
+template <typename T>
+json optional_json(const std::optional<T> &value) {
+  return value ? json(*value) : json(nullptr);
+}
+
+}  // namespace
+
+const char *failure_category_name(FailureCategory category) {
   switch (category) {
     case FailureCategory::Manifest:
       return "manifest";
@@ -40,13 +47,6 @@ const char *category_name(FailureCategory category) {
   return "run";
 }
 
-template <typename T>
-json optional_json(const std::optional<T> &value) {
-  return value ? json(*value) : json(nullptr);
-}
-
-}  // namespace
-
 fs::path default_failure_report_path(const fs::path &recording_path) {
   return fs::path(recording_path.string() + ".failure.json");
 }
@@ -55,7 +55,7 @@ void write_failure_report(const fs::path &path, int exit_code,
                           const std::string &message,
                           const FailureFacts &failure) {
   json document = {
-      {"category", category_name(failure.category)},
+      {"category", failure_category_name(failure.category)},
       {"exit_code", exit_code},
       {"exit_status", optional_json(failure.exit_status)},
       {"message", message},

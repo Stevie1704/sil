@@ -524,8 +524,12 @@ existing Process-participant response deadline through `sil check`.
   ECUs on one diagnostic or log Channel, becomes one Channel per ECU plus a
   bus Participant, which native bus emulation in the core already being a
   non-goal points to.
-- **Metrics surface for pool and route counters (#63):** there is no external
-  metrics surface. Every counter #54, #55, and #59 ask for is test
+- **Metrics surface for pool and route counters (#63):** *Amended by
+  [ADR 0004](docs/adr/0004-opt-in-run-diagnostics-runner.md) (#299): the
+  separately installed `sil-run-diagnostics` writes a supported, versioned
+  observational Run report. The separate-build rationale, the Recording
+  separation and everything below about the copy counters still hold.* There
+  is no external metrics surface for the counters. Every counter #54, #55, and #59 ask for is test
   instrumentation in `sil-run-instrumented`, reported as one JSON object to the
   path in `SIL_COPY_COUNTERS_OUT` after the Run. The production runner writes
   exactly one artifact, the Recording. **The classification rule is not

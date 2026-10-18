@@ -59,7 +59,7 @@ def custom_staged_prefix(
     )
     subprocess.run(
         ["cmake", "--build", str(custom_build),
-         "--target", "sil-run", "sil_clock_shim", "-j"],
+         "--target", "sil-run", "sil-run-diagnostics", "sil_clock_shim", "-j"],
         check=True,
         capture_output=True,
         text=True,
@@ -89,6 +89,9 @@ def test_cmake_stages_the_production_runtime_and_public_headers(
     else:
         pytest.skip("staged runtime layout is only exercised on POSIX hosts")
     assert shim.is_file()
+    # The diagnostics runner is a supported installed runner (#300); the
+    # copy-counter build stays a development binary.
+    assert (staged_prefix / "bin" / "sil-run-diagnostics").is_file()
     assert not (staged_prefix / "bin" / "sil-run-instrumented").exists()
     metadata = json.loads((staged_prefix / "share" / "sil" / "release.json").read_text())
     assert metadata["version"] == "0.1.0"
@@ -355,6 +358,42 @@ def test_installed_acc_determinism_check_uses_only_staged_inputs(
     assert built.returncode == 0, built.stderr
     assert check.returncode == 0, check.stderr
     assert check.stdout.startswith("deterministic: ")
+
+
+def test_installed_diagnostics_runner_measures_the_installed_acc_example(
+    installed_python: Path, staged_prefix: Path, tmp_path: Path,
+):
+    """The staged diagnostics runner needs no source tree (#300)."""
+    manifest = tmp_path / "acc.json"
+    env = installed_environment(installed_python)
+    built = subprocess.run(
+        [str(installed_python / "bin" / "python"), "-m",
+         "sil.examples.acc.manifest", str(manifest)],
+        cwd=tmp_path, env=env, capture_output=True, text=True,
+    )
+    assert built.returncode == 0, built.stderr
+
+    def run(runner: str, out: str, *extra: str):
+        return subprocess.run(
+            [str(staged_prefix / "bin" / runner), str(manifest), "-o",
+             str(tmp_path / out), *extra],
+            cwd=tmp_path, env=env, capture_output=True, text=True,
+        )
+
+    ordinary = run("sil-run", "ordinary.mcap")
+    measured = run("sil-run-diagnostics", "measured.mcap")
+    assert ordinary.returncode == measured.returncode == 0, measured.stderr
+    assert (tmp_path / "ordinary.mcap").read_bytes() == (
+        tmp_path / "measured.mcap").read_bytes()
+    check = subprocess.run(
+        [str(installed_python / "bin" / "python"), "-c",
+         "import sys; from sil.diagnostics_report import load_report; "
+         "r = load_report(sys.argv[1]); print(r['run']['status'])",
+         str(tmp_path / "measured.mcap.diagnostics.json")],
+        cwd=tmp_path, env=env, capture_output=True, text=True,
+    )
+    assert check.returncode == 0, check.stderr
+    assert check.stdout == "succeeded\n"
 
 
 @pytest.mark.parametrize("kind", ["--process", "--native"])

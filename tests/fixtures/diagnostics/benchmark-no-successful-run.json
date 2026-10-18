@@ -1,0 +1,142 @@
+{
+  "aggregates": {
+    "metrics": [
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
+        "metric": "run_wall_ns",
+        "min": null,
+        "per_run": [],
+        "source": "observational.run_wall_time.wall_ns",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "ns"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
+        "metric": "scheduled_execution_ns",
+        "min": null,
+        "per_run": [],
+        "source": "observational.phases.scheduled_execution_ns",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "ns"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
+        "metric": "process_steps_per_s",
+        "min": null,
+        "per_run": [],
+        "source": "observational.throughput.process_steps_per_s",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "1/s"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
+        "metric": "runner_peak_rss_bytes",
+        "min": null,
+        "per_run": [],
+        "source": "observational.resources.runner.peak_rss_bytes",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "bytes"
+      }
+    ],
+    "sample_count": 0,
+    "scope": "successful_measured_runs"
+  },
+  "counts": {
+    "attempted": 0,
+    "completed": 0,
+    "failed": 0,
+    "requested": 5,
+    "warmups_attempted": 1,
+    "warmups_completed": 0,
+    "warmups_failed": 1,
+    "warmups_requested": 1
+  },
+  "generator": {
+    "name": "sil benchmark",
+    "sil_version": "0.1.0"
+  },
+  "host": {
+    "architecture": "x86_64",
+    "cpu_description": "Example CPU @ 3.0GHz",
+    "logical_cpu_count": 8,
+    "os": "Linux",
+    "os_release": "6.8.0",
+    "unavailable": {}
+  },
+  "identity": {
+    "diagnostics_collector_version": 1,
+    "manifest_hash": "2f9ba41079fd01465e177ca9fd61daeebb01ff5d0424f8a5ae4c36494c70bdb0",
+    "manifest_path": "/work/mixed.json",
+    "sil_version": "0.1.0",
+    "source_revision": "0000000000000000000000000000000000000000"
+  },
+  "measurement_mode": "diagnostics",
+  "policy": {
+    "execution": "serial_fresh_processes",
+    "max_protocol_line_bytes": 16777216,
+    "max_step_inline_payload_bytes": 67108864,
+    "max_step_output_messages": 1024,
+    "participant_timeout_ms": null,
+    "recording": true,
+    "repeats": 5,
+    "warmup": 1
+  },
+  "runs": [
+    {
+      "directory": "warmup-001",
+      "index": 1,
+      "label": "warmup-001",
+      "process_outcome": {
+        "exit_code": null,
+        "signal": 9
+      },
+      "report": null,
+      "report_path": "warmup-001/run.mcap.diagnostics.json",
+      "report_status": "missing",
+      "role": "warmup",
+      "run_exit_code": null
+    }
+  ],
+  "sil_benchmark_report": 1,
+  "status": {
+    "complete": false,
+    "exit_code": 1,
+    "stopped_reason": "warmup_failed"
+  }
+}

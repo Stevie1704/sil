@@ -32,7 +32,7 @@ COPY cmake cmake
 COPY python python
 COPY container container
 RUN cmake -S . -B /build -DCMAKE_BUILD_TYPE=Release \
-    && cmake --build /build --target sil-run sil-run-instrumented sil_clock_shim -j2 \
+    && cmake --build /build --target sil-run sil-run-diagnostics sil-run-instrumented sil_clock_shim -j2 \
     && cmake --install /build --prefix /opt/sil/native \
     && install -m 0755 /build/sil-run-instrumented /opt/sil/native/bin/ \
     && python tools/release.py stamp-python --root /src --output-dir /release-python \

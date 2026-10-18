@@ -23,6 +23,15 @@ target_include_directories(sil_engine_interface_test PRIVATE ${PROJECT_SOURCE_DI
 add_test(NAME sil_engine_interface COMMAND sil_engine_interface_test
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+# The diagnostics collector's statistics (#300) are pure arithmetic over
+# synthetic durations, so they get a focused C++ test rather than a timed Run.
+add_executable(sil_diagnostics_stats_test
+  diagnostics_stats_test.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/diagnostics_stats.cpp)
+target_include_directories(sil_diagnostics_stats_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src)
+add_test(NAME sil_diagnostics_stats COMMAND sil_diagnostics_stats_test
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
 # The Arena layout — slot stride, seq freshness, capacity bounds — is the
 # binary contract a Process participant maps, and it holds without a child
 # process, so it gets a focused C++ test target.
@@ -220,7 +229,10 @@ add_library(toy_accumulator MODULE fixtures/participants/toy_accumulator.cpp)
 # Throws across the C ABI seam on purpose, so exception containment is tested
 # through a real shared library (issue #65).
 add_library(toy_thrower MODULE fixtures/participants/toy_thrower.cpp)
-foreach(toy toy_producer toy_accumulator toy_thrower)
+# Two Tasks of different Periods in one Participant, for the diagnostics
+# collector's per-Task identities (#300).
+add_library(toy_multitask MODULE fixtures/participants/toy_multitask.cpp)
+foreach(toy toy_producer toy_accumulator toy_thrower toy_multitask)
   add_dependencies(${toy} toy_messages)
   target_include_directories(${toy} PRIVATE ${PROJECT_SOURCE_DIR}/include ${SIL_GEN_DIR})
   target_link_libraries(${toy} PRIVATE nlohmann_json::nlohmann_json)
