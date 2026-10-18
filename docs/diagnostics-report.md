@@ -207,7 +207,7 @@ is the shape `sil benchmark` (#303) writes.
 | `identity` | `manifest_path` (absolute), `manifest_hash`, `sil_version`, `source_revision`, `diagnostics_collector_version`, `unavailable`; from the first Run report, null with `no_run_report` when no Run wrote one |
 | `host` | As in the Run report; null with `no_run_report` when no Run wrote one |
 | `policy` | `repeats`, `warmup`, `recording`, `execution` (`serial_fresh_processes`), `participant_timeout_ms` and the three size guards: the values in the first Run report's `configuration`, else the requested ones (null = runner default) |
-| `status` | `complete`, `exit_code` (the command's exit code for the first failed Run, as `sil run --diagnostics` gives it: the Run's code, `1` for a missing or invalid report, `128+N` for a signal; `128+N` for a signal between Runs; else 0), `stopped_reason` (null, `warmup_failed`, `run_failed` or `interrupted`) |
+| `status` | `complete`, `exit_code` (the command's exit code for the first failed Run, as `sil run --diagnostics` gives it: the Run's code, `1` for a missing or invalid report, `128+N` for a signal; `128+N` for a signal between Runs; else 0), `stopped_reason` (null, `warmup_failed`, `run_failed`, `report_failed` for a Run that exited 0 without a valid report, or `interrupted`) |
 | `counts` | `requested`, `attempted`, `completed`, `failed`, and the same four with the prefix `warmups_` |
 | `runs` | Every attempted warm-up and measured Run, in order |
 | `aggregates` | `scope` (`successful_measured_runs`), `sample_count` and `metrics` |
@@ -245,7 +245,7 @@ The metrics, in this order:
 | `native_activations_per_s`, `process_steps_per_s` | `1/s` | `observational.throughput.<metric>` |
 | `runner_user_cpu_ns`, `runner_system_cpu_ns`, `runner_peak_rss_bytes` | `ns`, `bytes` | `observational.resources.runner.*` |
 | `cpu_total_user_cpu_ns`, `cpu_total_system_cpu_ns` | `ns` | `observational.resources.cpu_total.*` |
-| `process_user_cpu_ns`, `process_system_cpu_ns`, `process_peak_rss_bytes` | `ns`, `bytes` | `observational.resources.process_participants[participant].*`; one metric each per Process participant, in name order, with a `participant` member |
+| `process_user_cpu_ns`, `process_system_cpu_ns`, `process_peak_rss_bytes` | `ns`, `bytes` | `observational.resources.process_participants[participant].*`; one metric each per Process participant of any successful measured Run, in name order, with a `participant` member; a Run without that record has a null value |
 
 The throughput denominator of each Run is `scheduled_execution_ns`, which is
 also a metric. No memory metric adds peaks of different processes.

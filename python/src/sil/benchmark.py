@@ -186,12 +186,19 @@ def _status(policy: Policy, runs: Sequence[RunResult],
         if exit_code == EXIT_OK:
             exit_code = 128 + interrupt_signal
     elif failed is not None:
-        reason = "warmup_failed" if failed.role == "warmup" else "run_failed"
+        reason = _stopped_reason(failed)
     else:
         reason = None
     complete = reason is None and len(runs) == policy.repeats + policy.warmup
     return {"complete": complete, "exit_code": exit_code,
             "stopped_reason": reason}
+
+
+def _stopped_reason(failed: RunResult) -> str:
+    """A Run that exited 0 failed only for want of a valid report."""
+    if failed.outcome.run_exit_code == EXIT_OK:
+        return "report_failed"
+    return "warmup_failed" if failed.role == "warmup" else "run_failed"
 
 
 def _counts(policy: Policy, runs: Sequence[RunResult]) -> dict:
@@ -247,11 +254,10 @@ def _member(report: dict, source: str) -> Any:
 
 
 def _process_participants(reports) -> list[str]:
-    if not reports:
-        return []
-    return sorted(record["participant"] for record in
-                  reports[0][1]["observational"]["resources"]
-                  ["process_participants"])
+    """Every Process participant of any Run; one a Run lacks is null there."""
+    return sorted({record["participant"] for _label, report in reports
+                   for record in report["observational"]["resources"]
+                   ["process_participants"]})
 
 
 def _process_record(report: dict, participant: str) -> dict:
