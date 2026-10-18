@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from sil.diagnostics_report import validate_benchmark_report
 
 ROOT = Path(__file__).resolve().parents[1]
 ACC_MANIFEST_HASHES = {
@@ -435,6 +438,43 @@ def test_installed_sil_run_diagnostics_default_custom_and_no_recording(
         assert json.loads((tmp_path / report).read_text())[
             "sil_run_diagnostics"] == 1
     assert not (tmp_path / "out.mcap").exists()
+
+
+def test_installed_sil_benchmark_writes_a_self_contained_summary(
+    installed_python: Path, staged_prefix: Path, tmp_path: Path,
+):
+    """`sil benchmark` needs only the wheel and the native prefix."""
+    env = installed_environment(installed_python)
+    env["PATH"] = os.pathsep.join(
+        [str(installed_python / "bin"), str(staged_prefix / "bin"),
+         "/usr/bin:/bin"])
+    built = subprocess.run(
+        [str(installed_python / "bin" / "python"), "-m",
+         "sil.examples.acc.manifest", "acc.json"],
+        cwd=tmp_path, env=env, capture_output=True, text=True,
+    )
+    assert built.returncode == 0, built.stderr
+
+    proc = subprocess.run(
+        ["sil", "benchmark", "acc.json", "--repeats", "2", "--warmup", "1",
+         "--out", "bench"],
+        cwd=tmp_path, env=env, capture_output=True, text=True)
+
+    assert proc.returncode == 0, proc.stderr
+    assert "benchmark summary: bench/summary.json\n" in proc.stdout
+    # The summary alone is the evidence: it is valid after the Run
+    # directories are gone.
+    summary = tmp_path / "copied-summary.json"
+    summary.write_text((tmp_path / "bench" / "summary.json").read_text())
+    shutil.rmtree(tmp_path / "bench")
+    report = json.loads(summary.read_text())
+    assert report["status"]["complete"] is True
+    assert report["aggregates"]["sample_count"] == 2
+    assert [run["label"] for run in report["runs"]] == [
+        "warmup-001", "run-001", "run-002"]
+    assert all(run["report"]["sil_run_diagnostics"] == 1
+               for run in report["runs"])
+    assert validate_benchmark_report(report) == []
 
 
 @pytest.mark.parametrize("kind", ["--process", "--native"])
