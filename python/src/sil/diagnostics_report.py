@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -87,6 +89,20 @@ def parse_report(text: str, *, source: str = "report") -> dict[str, Any]:
     if errors:
         raise ReportError(f"{source}: " + "; ".join(errors))
     return document
+
+
+def write_new_file(path: Path, text: str) -> None:
+    """Write `path` completely or not at all; never replace a file."""
+    descriptor, temporary = tempfile.mkstemp(
+        dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.link(temporary, path)
+    finally:
+        os.unlink(temporary)
 
 
 def validate_run_report(document: Any) -> list[str]:

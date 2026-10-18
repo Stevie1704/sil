@@ -358,12 +358,23 @@ def _value(record: dict, key: str, render) -> str:
     return render(record[key])
 
 
-def _factor(value: float) -> str:
+def format_factor(value: float) -> str:
     return f"{value:.2f}x"
 
 
-def _rate(value: float) -> str:
+def format_rate(value: float) -> str:
     return f"{value:.2f}/s"
+
+
+def format_value(unit: str, value) -> str:
+    """A value of a benchmark metric unit: `ns`, `bytes`, `factor`, `1/s`."""
+    if unit == "ns":
+        return format_duration_ns(value)
+    if unit == "bytes":
+        return format_bytes(value)
+    if unit == "factor":
+        return format_factor(value)
+    return format_rate(value)
 
 
 def format_summary(report: dict, report_path: Path) -> str:
@@ -380,8 +391,8 @@ def format_summary(report: dict, report_path: Path) -> str:
         for name in (*PHASES, "unattributed_ns")))
     speed = observational["virtual_time_speed"]
     lines.append(f"virtual-time speed: scheduled "
-                 f"{_value(speed, 'scheduled_factor', _factor)}, end-to-end "
-                 f"{_value(speed, 'end_to_end_factor', _factor)}")
+                 f"{_value(speed, 'scheduled_factor', format_factor)}, end-to-end "
+                 f"{_value(speed, 'end_to_end_factor', format_factor)}")
     lines.append(_throughput_line(observational["throughput"]))
     lines += _task_lines(report)
     lines += _resource_lines(observational["resources"])
@@ -421,9 +432,9 @@ def _throughput_line(throughput: dict) -> str:
     return (f"throughput per second of scheduled execution ({denominator}): "
             f"{throughput['completed_native_activations']} native "
             f"activations, "
-            f"{_value(throughput, 'native_activations_per_s', _rate)}; "
+            f"{_value(throughput, 'native_activations_per_s', format_rate)}; "
             f"{throughput['completed_process_steps']} process steps, "
-            f"{_value(throughput, 'process_steps_per_s', _rate)}")
+            f"{_value(throughput, 'process_steps_per_s', format_rate)}")
 
 
 def _task_lines(report: dict) -> list[str]:

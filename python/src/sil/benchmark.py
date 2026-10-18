@@ -25,7 +25,6 @@ import os
 import signal
 import statistics
 import sys
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
@@ -33,12 +32,13 @@ from typing import Any, Sequence
 from sil import build_info
 from sil.diagnostics_report import (
     BENCHMARK_REPORT_KEY, SUPPORTED_VERSION, validate_benchmark_report,
+    write_new_file,
 )
 from sil.diagnostics_run import (
     DEFAULT_RECORDING, EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE,
     FORWARDED_SIGNALS, GivenOnce, Guards, NativeTools, RunOutcome, RunRequest,
     ToolMissing, add_guard_arguments, default_report_path, describe_problems,
-    execute, find_native_tools, format_bytes, format_duration_ns,
+    execute, find_native_tools, format_duration_ns, format_value,
     guards_from, resolve_exit,
 )
 
@@ -361,20 +361,6 @@ def _run_one(policy: Policy, manifest: Path, out: Path, tools: NativeTools,
     return RunResult(label, role, index, label, outcome)
 
 
-def write_new_file(path: Path, text: str) -> None:
-    """Write `path` completely or not at all; never replace a file."""
-    descriptor, temporary = tempfile.mkstemp(
-        dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-            stream.write(text)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.link(temporary, path)
-    finally:
-        os.unlink(temporary)
-
-
 def _write_summary(summary: dict, path: Path) -> str | None:
     """Write the summary; return why it could not be written, or None."""
     errors = validate_benchmark_report(summary)
@@ -389,16 +375,6 @@ def _write_summary(summary: dict, path: Path) -> str | None:
 
 
 # --- terminal summary -------------------------------------------------------
-
-
-def _render(unit: str, value: Any) -> str:
-    if unit == "ns":
-        return format_duration_ns(value)
-    if unit == "bytes":
-        return format_bytes(value)
-    if unit == "factor":
-        return f"{value:.2f}x"
-    return f"{value:.2f}/s"
 
 
 def format_summary(summary: dict, summary_path: Path) -> str:
@@ -432,7 +408,7 @@ def format_summary(summary: dict, summary_path: Path) -> str:
             lines.append(f"  {name}: unavailable ({reason})")
             continue
         lines.append(f"  {name}: " + " / ".join(
-            _render(metric["unit"], metric[key]) for key in STATISTICS))
+            format_value(metric["unit"], metric[key]) for key in STATISTICS))
     return "\n".join(lines) + "\n"
 
 
