@@ -28,9 +28,11 @@ from release import (  # noqa: E402
     validate_native_archive,
 )
 
+VERSION = project_version(ROOT)
+
 
 def test_project_version_is_a_release_semver():
-    assert project_version(ROOT) == "0.1.0"
+    assert re.fullmatch(r"\d+\.\d+\.\d+", project_version(ROOT))
     assert tag_version("v0.1.0") == "0.1.0"
 
 
@@ -47,7 +49,7 @@ def test_python_build_metadata_is_self_describing():
     assert value["license"] == "Apache-2.0"
     assert value["source_repository"] == "https://github.com/Stevie1704/sil"
     assert value["source_revision"]
-    assert value["version"] == "0.1.0"
+    assert value["version"] == VERSION
 
 
 def test_stamp_python_does_not_mutate_the_checkout(tmp_path: Path):
@@ -55,7 +57,7 @@ def test_stamp_python_does_not_mutate_the_checkout(tmp_path: Path):
     before = source.read_bytes()
     destination = tmp_path / "python-release"
 
-    stamp_python(ROOT, "0.1.0", "test-revision", destination)
+    stamp_python(ROOT, VERSION, "test-revision", destination)
 
     assert source.read_bytes() == before
     assert json.loads(
@@ -101,7 +103,7 @@ def test_docker_build_has_release_inputs_before_stamping(tmp_path: Path, dockerf
         else:
             shutil.copyfile(source, target)
     release = tmp_path / "release"
-    stamp_python(staged, "0.1.0", "test-docker-inputs", release)
+    stamp_python(staged, VERSION, "test-docker-inputs", release)
     examples = release / "src" / "sil" / "_examples"
     assert all((examples / name).is_dir() for name in PACKAGED_EXAMPLES)
     assert (examples / "library" / "adapter.py").is_file()
@@ -130,7 +132,7 @@ def test_native_archive_is_complete_and_deterministic(tmp_path: Path):
                         "license": "Apache-2.0",
                         "source_repository": "https://github.com/Stevie1704/sil",
                         "source_revision": "test-revision",
-                        "version": "0.1.0",
+                        "version": VERSION,
                     }
                 )
             )
@@ -139,10 +141,10 @@ def test_native_archive_is_complete_and_deterministic(tmp_path: Path):
 
     first = tmp_path / "first.tar.gz"
     second = tmp_path / "second.tar.gz"
-    make_native_archive(prefix, first, "0.1.0")
-    make_native_archive(prefix, second, "0.1.0")
+    make_native_archive(prefix, first, VERSION)
+    make_native_archive(prefix, second, VERSION)
     assert first.read_bytes() == second.read_bytes()
-    validate_native_archive(first, "0.1.0", "test-revision")
+    validate_native_archive(first, VERSION, "test-revision")
 
 
 def test_runner_reports_the_project_version(sil_run):
@@ -152,15 +154,15 @@ def test_runner_reports_the_project_version(sil_run):
     info = subprocess.run(
         [str(sil_run), "--build-info"], capture_output=True, text=True, check=True
     )
-    assert version.stdout == "0.1.0\n"
-    assert json.loads(info.stdout)["version"] == "0.1.0"
+    assert version.stdout == f"{VERSION}\n"
+    assert json.loads(info.stdout)["version"] == VERSION
 
 
 @pytest.fixture
 def docs(tmp_path: Path) -> Path:
     """The docs directory of a freshly stamped Python tree."""
     destination = tmp_path / "python-release"
-    stamp_python(ROOT, "0.1.0", "test-revision", destination)
+    stamp_python(ROOT, VERSION, "test-revision", destination)
     return destination / "src" / "sil" / "_docs"
 
 
@@ -176,13 +178,13 @@ def test_stamp_python_packages_every_doc_listed_as_a_topic(docs: Path):
 def test_stamped_docs_link_each_other_and_the_release_for_the_rest(docs: Path):
     support = (docs / "support.md").read_text()
     assert "](library.md#when-the-clock-shim-applies)" in support
-    assert ("](https://github.com/Stevie1704/sil/blob/v0.1.0/include/sil/participant.h)"
+    assert (f"](https://github.com/Stevie1704/sil/blob/v{VERSION}/include/sil/participant.h)"
             in support)
     running = (docs / "running.md").read_text()
     assert "](step-protocol.md)" in running
     # The diagnostics report contract ships with the commands that write it.
     assert "](diagnostics-report.md)" in running
-    assert "](https://github.com/Stevie1704/sil/blob/v0.1.0/README.md)" in running
+    assert f"](https://github.com/Stevie1704/sil/blob/v{VERSION}/README.md)" in running
     library = (docs / "library.md").read_text()
     assert "](../_examples/library/)" in library
 

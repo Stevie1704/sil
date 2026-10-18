@@ -139,7 +139,7 @@ class TestExampleFixture:
         assert receipt["recording"] == {"file": "signals.mcap",
                                         "sha256": digest(out)}
         assert receipt["converter"]["name"] == "sil-csv"
-        assert receipt["converter"]["version"] == "0.1.0"
+        assert receipt["converter"]["version"] == "0.2.0"
         assert receipt["converter"]["mcap"].startswith("mcap-python/")
 
     def test_repeat_conversion_is_byte_identical(self, tmp_path):
