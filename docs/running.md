@@ -439,7 +439,8 @@ sil diagnostics render results/summary.json --html copy.html
 - The page shows the status, identity, machine and policy, overview cards,
   lifecycle phases, Task and resource tables, sampled timing distributions,
   slow activations and, for a benchmark, every Run with per-Run charts, the
-  statistics and a Run selector. Values have the units of the terminal
+  statistics, a Run selector and a closed section that says what each
+  metric means. Values have the units of the terminal
   summary; the tooltip of a value holds its exact JSON number.
 - The status, cards and tables are complete without JavaScript and in print.
   The script only sorts and filters tables, selects a Run, switches the theme

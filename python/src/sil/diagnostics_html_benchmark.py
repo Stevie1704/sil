@@ -21,6 +21,66 @@ from sil.diagnostics_html_run import (
 from sil.diagnostics_report import process_participant_names, process_record
 
 
+METRIC_MEANINGS = {
+    "run_wall_ns":
+        "Run wall time: host time from before the Manifest is loaded through "
+        "Participant cleanup and Recording close.",
+    "preflight_ns":
+        "Preflight phase: Manifest load, Run preparation and Recording open.",
+    "setup_ns":
+        "Setup phase: Engine construction and the init or spawn of each "
+        "Participant.",
+    "scheduled_execution_ns":
+        "Scheduled execution phase: the Slot loop that runs every Task and "
+        "Step. It is the denominator of the throughput metrics.",
+    "shutdown_ns":
+        "Shutdown phase: Process participant shutdown, Run directory "
+        "removal and Engine teardown.",
+    "recording_finalization_ns":
+        "Recording finalization phase: the Recording close.",
+    "unattributed_ns":
+        "Run wall time that is in no phase. With the phases, it adds up to "
+        "run_wall_ns.",
+    "scheduled_factor":
+        "Manifest Duration divided by scheduled-execution time. A value "
+        "above 1 means faster than real time during the Slot loop.",
+    "end_to_end_factor":
+        "Manifest Duration divided by Run wall time, setup and shutdown "
+        "included.",
+    "native_activations_per_s":
+        "Completed Native Task activations per second of scheduled-execution "
+        "time.",
+    "process_steps_per_s":
+        "Completed Process Steps per second of scheduled-execution time.",
+    "runner_user_cpu_ns":
+        "CPU time of the native runner in user mode, all threads, no child "
+        "process. Native participants run in the runner, so their cost is "
+        "here.",
+    "runner_system_cpu_ns":
+        "CPU time of the native runner in the kernel (system calls, I/O, "
+        "IPC), all threads, no child process.",
+    "runner_peak_rss_bytes":
+        "Highest resident memory of the runner process during the Run.",
+    "cpu_total_user_cpu_ns":
+        "User-mode CPU time of the runner plus every Process participant. "
+        "These scopes do not overlap. It can be more than the wall time.",
+    "cpu_total_system_cpu_ns":
+        "Kernel-mode CPU time of the runner plus every Process participant.",
+    "process_user_cpu_ns":
+        "User-mode CPU time of the named Process participant, from spawn to "
+        "reap, with the descendants it waited for. This is the time its own "
+        "code ran.",
+    "process_system_cpu_ns":
+        "Kernel-mode CPU time of the named Process participant, from spawn "
+        "to reap, with the descendants it waited for: system calls such as "
+        "the pipe I/O of each Step.",
+    "process_peak_rss_bytes":
+        "Highest resident memory of the largest single process among the "
+        "named Process participant and its waited descendants. It is not a "
+        "sum.",
+}
+
+
 def _successful(run: dict) -> bool:
     """docs/diagnostics-report.md: exit 0 and a valid report."""
     return (run["role"] == "measured" and run["run_exit_code"] == 0
@@ -53,6 +113,7 @@ def benchmark_page(summary: dict) -> Html:
         _aggregates(summary),
         _run_details(summary),
         methodology(report_reasons(summary), benchmark=True),
+        _metric_meanings(summary),
     ])
 
 
@@ -282,9 +343,10 @@ def _per_run_reason(summary: dict, metric: dict, label: str) -> str | None:
 
 
 def _metric_label(metric: dict) -> Html:
-    return join([tag("code", metric["metric"]),
-                 tag("span", " ", metric["participant"], class_="name")
-                 if "participant" in metric else None])
+    if "participant" not in metric:
+        return tag("code", metric["metric"])
+    return join([tag("code", metric["metric"]), " · Participant ",
+                 tag("span", metric["participant"], class_="name")])
 
 
 def _aggregates(summary: dict) -> Html:
@@ -335,6 +397,28 @@ def _aggregates(summary: dict) -> Html:
              "has no value for a metric, every statistic of that metric is "
              "unavailable (unavailable_in_a_measured_run). An average of "
              "per-Run percentiles is never shown as an overall percentile.")
+
+
+def _metric_meanings(summary: dict) -> Html:
+    names = list(dict.fromkeys(metric["metric"]
+                               for metric in summary["aggregates"]["metrics"]))
+    rows = [[tag("code", name), METRIC_MEANINGS.get(name, "as reported")]
+            for name in names]
+    return section(
+        "metric-meanings", "Metrics",
+        tag("details",
+            tag("summary", "What each metric means"),
+            table("metric-meanings-table", "The metrics of the aggregate "
+                                           "statistics",
+                  [("Metric", False), ("Meaning", False)], rows,
+                  filterable=False) if rows else
+            tag("p", "This benchmark has no metric.", class_="note"),
+            tag("p", "A metric that starts with process_ exists once for "
+                     "each Process participant, and the table names that "
+                     "Participant from the Manifest. User CPU is time in the "
+                     "program's own code; system CPU is time in the "
+                     "operating system kernel for it.", class_="note"),
+            class_="methodology"))
 
 
 def _run_details(summary: dict) -> Html:

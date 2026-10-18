@@ -125,6 +125,35 @@ def test_benchmark_shows_campaign_state_counts_and_warmups():
     assert "not uninstrumented timings" in text
 
 
+def test_every_metric_of_the_campaign_is_explained_last():
+    summary = json.loads(fixture_text("benchmark-complete.json"))
+    html = render(fixture_text("benchmark-complete.json"))
+    glossary = html[html.index('id="metric-meanings"'):]
+
+    assert "<section" not in glossary
+    assert "What each metric means" in glossary
+    for name in {metric["metric"] for metric in summary["aggregates"]["metrics"]}:
+        assert f"<code>{name}</code>" in glossary
+    assert "Process participant" in glossary
+
+
+def test_a_participant_name_is_apart_from_its_metric_name():
+    html = render(fixture_text("benchmark-complete.json"))
+
+    # In a table cell the name is an inline-block, which drops a space
+    # at its own start.
+    assert ('<code>process_user_cpu_ns</code> · Participant '
+            '<span class="name">pyecho') in html
+
+
+def test_every_benchmark_metric_has_a_meaning():
+    from sil.benchmark import PROCESS_METRICS, RUN_METRICS
+    from sil.diagnostics_html_benchmark import METRIC_MEANINGS
+
+    names = [name for name, _unit, _source in (*RUN_METRICS, *PROCESS_METRICS)]
+    assert sorted(METRIC_MEANINGS) == sorted(names)
+
+
 def test_a_campaign_without_a_successful_run_has_no_statistic():
     text = page("benchmark-no-successful-run.json").text
 
