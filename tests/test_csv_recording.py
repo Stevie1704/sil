@@ -15,6 +15,7 @@ import pytest
 from mcap.reader import make_reader
 
 from conftest import ROOT
+from sil import __version__
 from sil.csv_recording import ConversionError, convert, main
 
 EXAMPLE = ROOT / "examples" / "csv"
@@ -139,7 +140,7 @@ class TestExampleFixture:
         assert receipt["recording"] == {"file": "signals.mcap",
                                         "sha256": digest(out)}
         assert receipt["converter"]["name"] == "sil-csv"
-        assert receipt["converter"]["version"] == "0.2.0"
+        assert receipt["converter"]["version"] == __version__
         assert receipt["converter"]["mcap"].startswith("mcap-python/")
 
     def test_repeat_conversion_is_byte_identical(self, tmp_path):

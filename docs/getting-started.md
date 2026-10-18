@@ -33,9 +33,10 @@ curl -fsSL https://github.com/Stevie1704/sil/releases/download/v<VERSION>/instal
   for all options. A release before 0.2.1 has no `install.sh` asset: use the
   script of a later release, or of `tools/install.sh` in the repository, with
   `--version`.
-- The native archive of 0.2.0 needs glibc 2.38 or newer, for example Ubuntu
-  24.04. On an older glibc, such as Debian bookworm, the script stops with
-  "the installed sil-run does not start"; use the runtime image there.
+- From 0.2.1, the native archive runs on Debian bookworm (glibc 2.36) or
+  newer. The published 0.1.0 and 0.2.0 archives need glibc 2.38 and
+  `GLIBCXX_3.4.32`, for example Ubuntu 24.04. For 0.2.0 on bookworm, use
+  its runtime image. The published archives are not replaced.
 - On Windows and macOS, the script stops before any download. See
   [Windows and macOS](#windows-and-macos).
 

@@ -84,11 +84,14 @@ jobs:
           REVISION: ${{ steps.version.outputs.source_revision }}
         run: |
           set -euo pipefail
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
-            -DSIL_SOURCE_REPOSITORY="$SOURCE_REPOSITORY" \
-            -DSIL_SOURCE_REVISION="$REVISION"
-          cmake --build build -j2
-          cmake --install build --prefix build/native
+          # Reuse the runtime's pinned bookworm toolchain, not the host's libc.
+          docker build --target build --tag "sil-native-build:${VERSION}-ci" \
+            --build-arg SIL_VERSION="$VERSION" \
+            --build-arg SIL_SOURCE_REPOSITORY="$SOURCE_REPOSITORY" \
+            --build-arg SIL_SOURCE_REVISION="$REVISION" .
+          native_container="$(docker create "sil-native-build:${VERSION}-ci")"
+          trap 'docker rm "$native_container" >/dev/null' EXIT
+          docker cp "$native_container:/opt/sil/native" build/native
           python3 tools/release.py make-native-archive \
             --prefix build/native \
             --output "dist/sil-native-dev-${VERSION}-linux-x86_64.tar.gz" \
@@ -127,6 +130,23 @@ jobs:
             --image "sil-runtime:${VERSION}-ci" \
             --version "$VERSION" \
             --source-revision "$REVISION"
+
+      - name: Smoke-test the native archive on Debian bookworm
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          REVISION: ${{ steps.version.outputs.source_revision }}
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --mount "type=bind,src=$PWD/dist,dst=/bundle,readonly" \
+            --mount "type=bind,src=$PWD/tools,dst=/smoke,readonly" \
+            debian:bookworm-slim sh -ec '
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                python3 python3-venv gcc libc6-dev libstdc++6 ca-certificates binutils
+              python3 /smoke/release_smoke.py --native-only --check-symbols \
+                --bundle /bundle --version "$1" --source-revision "$2"
+            ' sh "$VERSION" "$REVISION"
 
       - name: Install the new release with the install script
         env:

@@ -471,6 +471,46 @@ def validate_native_archive(
         return root
 
 
+def validate_native_symbols(prefix: Path) -> None:
+    """Reject numeric ELF imports newer than bookworm, including helpers.
+
+    Run on Linux with binutils installed. Non-ELF files (headers, scripts,
+    notices and metadata) do not have dynamic symbol requirements.
+    """
+    for path in sorted(prefix.rglob("*")):
+        try:
+            if path.is_file():
+                _validate_elf_symbols(path)
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise fail(f"cannot inspect ELF symbols in {path}: {exc}") from exc
+
+
+def _validate_elf_symbols(path: Path) -> None:
+    with path.open("rb") as stream:
+        if stream.read(4) != b"\x7fELF":
+            return
+    report = subprocess.run(
+        ["objdump", "--dynamic-syms", str(path)],
+        capture_output=True, text=True, check=True,
+    )
+    limits = {"GLIBC": (2, 36), "GLIBCXX": (3, 4, 30)}
+    for line in report.stdout.splitlines():
+        if "*UND*" not in line:
+            continue
+        for symbol in re.findall(r"\bGLIBC(?:XX)?_[A-Za-z0-9_.]+", line):
+            family, _, version = symbol.partition("_")
+            # Non-numeric ABI tags cannot be ordered as versions. The
+            # bookworm Run smoke checks dynamic-loader compatibility.
+            if not re.fullmatch(r"\d+(?:\.\d+)+", version):
+                continue
+            if tuple(map(int, version.split("."))) > limits[family]:
+                limit = ".".join(map(str, limits[family]))
+                raise fail(
+                    f"{path} requires {symbol}; "
+                    f"Debian bookworm provides at most {family}_{limit}"
+                )
+
+
 def validate_runner(runner: Path, version: str, revision: str | None = None) -> None:
     try:
         report = subprocess.run(
