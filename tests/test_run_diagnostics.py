@@ -534,3 +534,32 @@ class TestClockShim:
         step = timing_rows(report)[("vecu", "step")]["timing"]
         assert step["completed"] == 3
         assert 0 < step["sum_ns"] <= wall
+
+
+def member_paths(value, prefix=""):
+    """Every member name in a document, with list positions collapsed."""
+    paths = set()
+    if isinstance(value, dict):
+        for key, item in value.items():
+            # `unavailable` maps are keyed by data, not by the schema.
+            if key == "unavailable":
+                paths.add(f"{prefix}.unavailable")
+                continue
+            paths.add(f"{prefix}.{key}")
+            paths |= member_paths(item, f"{prefix}.{key}")
+    elif isinstance(value, list):
+        for item in value:
+            paths |= member_paths(item, f"{prefix}[]")
+    return paths
+
+
+def test_live_report_has_the_frozen_example_shape(sil_run_diagnostics, tmp_path):
+    """The runner and tests/fixtures/diagnostics/ cannot drift apart."""
+    _, report = run_diagnostics(
+        sil_run_diagnostics, mixed_period_manifest(tmp_path), tmp_path
+    )
+    frozen = json.loads(
+        (ROOT / "tests" / "fixtures" / "diagnostics" / "run-success.json")
+        .read_text()
+    )
+    assert member_paths(report) == member_paths(frozen)

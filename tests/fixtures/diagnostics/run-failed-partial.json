@@ -1,0 +1,220 @@
+{
+  "artifacts": {
+    "failure_report": "/work/run.mcap.failure.json",
+    "provenance": "/work/run.mcap.provenance.json",
+    "recording": "/work/run.mcap"
+  },
+  "collection_errors": [],
+  "collector": {
+    "clock": "host_monotonic",
+    "collector_version": 1,
+    "name": "sil-run-diagnostics",
+    "p95_minimum_samples": 20,
+    "p99_minimum_samples": 100,
+    "slowest_retained": 20
+  },
+  "completeness": {
+    "reasons": [
+      "run_failure"
+    ],
+    "run_complete": false
+  },
+  "configuration": {
+    "max_protocol_line_bytes": 16777216,
+    "max_step_inline_payload_bytes": 67108864,
+    "max_step_output_messages": 1024,
+    "measurement_mode": "diagnostics",
+    "participant_timeout_ms": null,
+    "recording": true
+  },
+  "execution": {
+    "duration_ns": 50000000,
+    "last_virtual_time_ns": 20000000,
+    "participants": [
+      {
+        "kind": "process",
+        "participant": "test",
+        "replay": null,
+        "tasks": [
+          {
+            "attempted": 3,
+            "completed": 2,
+            "failed": 1,
+            "failed_activation": {
+              "activation_index": 2,
+              "outcome": "failed",
+              "virtual_time_ns": 20000000
+            },
+            "interrupted": 0,
+            "kind": "process_step",
+            "offset_ns": 0,
+            "period_ns": 10000000,
+            "task": "step"
+          }
+        ]
+      }
+    ],
+    "unavailable": {}
+  },
+  "host": {
+    "architecture": "x86_64",
+    "cpu_description": "Example CPU @ 3.0GHz",
+    "logical_cpu_count": 8,
+    "os": "Linux",
+    "os_release": "6.8.0",
+    "unavailable": {}
+  },
+  "identity": {
+    "manifest_hash": "f1b26356662743bde3cc1c33b5b491edae0dc1d9129a0e87ddf3a953597d917d",
+    "manifest_path": "/work/failing.json",
+    "sil_version": "0.1.0",
+    "source_repository": "https://github.com/Stevie1704/sil",
+    "source_revision": "0000000000000000000000000000000000000000",
+    "unavailable": {}
+  },
+  "observational": {
+    "phases": {
+      "preflight_ns": 6363083,
+      "recording_finalization_ns": 124334,
+      "scheduled_execution_ns": 194208,
+      "setup_ns": 36870250,
+      "shutdown_ns": 20099250,
+      "unattributed_ns": 0,
+      "unavailable": {}
+    },
+    "replay": [],
+    "resources": {
+      "native_participants": "shared_with_runner",
+      "process_participants": [
+        {
+          "collector": null,
+          "includes_waited_descendants": null,
+          "interval": null,
+          "participant": "test",
+          "peak_rss_bytes": null,
+          "peak_rss_kind": null,
+          "scope": "process_participant",
+          "system_cpu_ns": null,
+          "unavailable": {
+            "collector": "not_collected",
+            "includes_waited_descendants": "not_collected",
+            "interval": "not_collected",
+            "peak_rss_bytes": "not_collected",
+            "peak_rss_kind": "not_collected",
+            "system_cpu_ns": "not_collected",
+            "user_cpu_ns": "not_collected"
+          },
+          "user_cpu_ns": null
+        }
+      ],
+      "runner": {
+        "collector": null,
+        "includes_waited_descendants": null,
+        "interval": null,
+        "peak_rss_bytes": null,
+        "peak_rss_kind": null,
+        "scope": "runner_process",
+        "system_cpu_ns": null,
+        "unavailable": {
+          "collector": "not_collected",
+          "includes_waited_descendants": "not_collected",
+          "interval": "not_collected",
+          "peak_rss_bytes": "not_collected",
+          "peak_rss_kind": "not_collected",
+          "system_cpu_ns": "not_collected",
+          "user_cpu_ns": "not_collected"
+        },
+        "user_cpu_ns": null
+      }
+    },
+    "run_wall_time": {
+      "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
+      "unavailable": {},
+      "wall_ns": 63651125
+    },
+    "tasks": [
+      {
+        "failed_activation": {
+          "activation_index": 2,
+          "wall_ns": 133667
+        },
+        "kind": "process_step",
+        "participant": "test",
+        "task": "step",
+        "timing": {
+          "completed": 2,
+          "max_ns": 34583,
+          "mean_ns": 27687.0,
+          "min_ns": 20791,
+          "p50_ns": 20791,
+          "p95_ns": null,
+          "p99_ns": null,
+          "quantiles": {
+            "approximate": false,
+            "method": "nearest_rank",
+            "reservoir": {
+              "algorithm": "algorithm_r",
+              "algorithm_version": 1,
+              "capacity": 8192,
+              "generator": "splitmix64",
+              "seed": 6001411834618398513
+            },
+            "retained_count": 2,
+            "sample_count": 2
+          },
+          "samples_ns": [
+            20791,
+            34583
+          ],
+          "scope": "inclusive_process_step",
+          "slowest": [
+            {
+              "activation_index": 0,
+              "virtual_time_ns": 0,
+              "wall_ns": 34583
+            },
+            {
+              "activation_index": 1,
+              "virtual_time_ns": 10000000,
+              "wall_ns": 20791
+            }
+          ],
+          "stddev_ns": 6896.0,
+          "sum_ns": 55374,
+          "unavailable": {
+            "p95_ns": "insufficient_samples",
+            "p99_ns": "insufficient_samples"
+          }
+        }
+      }
+    ],
+    "throughput": {
+      "completed_native_activations": 0,
+      "completed_process_steps": 2,
+      "denominator": "scheduled_execution_ns",
+      "native_activations_per_s": 0.0,
+      "process_steps_per_s": 10298.236941835557,
+      "scheduled_execution_ns": 194208,
+      "unavailable": {}
+    },
+    "virtual_time_speed": {
+      "end_to_end_factor": null,
+      "scheduled_factor": null,
+      "unavailable": {
+        "end_to_end_factor": "run_not_successful",
+        "scheduled_factor": "run_not_successful"
+      }
+    }
+  },
+  "run": {
+    "exit_code": 1,
+    "failure": {
+      "category": "participant",
+      "message": "participant 'test' failed: AssertionError: boom at t=20000000",
+      "participant": "test",
+      "virtual_time_ns": 20000000
+    },
+    "status": "run_failure"
+  },
+  "sil_run_diagnostics": 1
+}
