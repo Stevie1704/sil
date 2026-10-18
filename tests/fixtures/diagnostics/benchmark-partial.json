@@ -19,6 +19,40 @@
         "unit": "ns"
       },
       {
+        "max": 15202500,
+        "mean": 15202500.0,
+        "median": 15202500,
+        "metric": "preflight_ns",
+        "min": 15202500,
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 15202500
+          }
+        ],
+        "source": "observational.phases.preflight_ns",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "ns"
+      },
+      {
+        "max": 15202500,
+        "mean": 15202500.0,
+        "median": 15202500,
+        "metric": "setup_ns",
+        "min": 15202500,
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 15202500
+          }
+        ],
+        "source": "observational.phases.setup_ns",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "ns"
+      },
+      {
         "max": 190000,
         "mean": 190000.0,
         "median": 190000,
@@ -34,6 +68,108 @@
         "stddev": 0.0,
         "unavailable": {},
         "unit": "ns"
+      },
+      {
+        "max": 15202500,
+        "mean": 15202500.0,
+        "median": 15202500,
+        "metric": "shutdown_ns",
+        "min": 15202500,
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 15202500
+          }
+        ],
+        "source": "observational.phases.shutdown_ns",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "ns"
+      },
+      {
+        "max": 15201500,
+        "mean": 15201500.0,
+        "median": 15201500,
+        "metric": "recording_finalization_ns",
+        "min": 15201500,
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 15201500
+          }
+        ],
+        "source": "observational.phases.recording_finalization_ns",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "ns"
+      },
+      {
+        "max": 1000,
+        "mean": 1000.0,
+        "median": 1000,
+        "metric": "unattributed_ns",
+        "min": 1000,
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 1000
+          }
+        ],
+        "source": "observational.phases.unattributed_ns",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "ns"
+      },
+      {
+        "max": 105.26315789473684,
+        "mean": 105.26315789473684,
+        "median": 105.26315789473684,
+        "metric": "scheduled_factor",
+        "min": 105.26315789473684,
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 105.26315789473684
+          }
+        ],
+        "source": "observational.virtual_time_speed.scheduled_factor",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "factor"
+      },
+      {
+        "max": 0.32786885245901637,
+        "mean": 0.32786885245901637,
+        "median": 0.32786885245901637,
+        "metric": "end_to_end_factor",
+        "min": 0.32786885245901637,
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 0.32786885245901637
+          }
+        ],
+        "source": "observational.virtual_time_speed.end_to_end_factor",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "factor"
+      },
+      {
+        "max": 126315.7894736842,
+        "mean": 126315.7894736842,
+        "median": 126315.7894736842,
+        "metric": "native_activations_per_s",
+        "min": 126315.7894736842,
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 126315.7894736842
+          }
+        ],
+        "source": "observational.throughput.native_activations_per_s",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "1/s"
       },
       {
         "max": 10526.315789473683,
@@ -53,9 +189,43 @@
         "unit": "1/s"
       },
       {
+        "max": 42000000,
+        "mean": 42000000.0,
+        "median": 42000000,
+        "metric": "runner_user_cpu_ns",
+        "min": 42000000,
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 42000000
+          }
+        ],
+        "source": "observational.resources.runner.user_cpu_ns",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "ns"
+      },
+      {
+        "max": 12000000,
+        "mean": 12000000.0,
+        "median": 12000000,
+        "metric": "runner_system_cpu_ns",
+        "min": 12000000,
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 12000000
+          }
+        ],
+        "source": "observational.resources.runner.system_cpu_ns",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "ns"
+      },
+      {
         "max": 9502720,
         "mean": 9502720.0,
-        "median": 9502720.0,
+        "median": 9502720,
         "metric": "runner_peak_rss_bytes",
         "min": 9502720,
         "per_run": [
@@ -65,6 +235,94 @@
           }
         ],
         "source": "observational.resources.runner.peak_rss_bytes",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "bytes"
+      },
+      {
+        "max": 223000000,
+        "mean": 223000000.0,
+        "median": 223000000,
+        "metric": "cpu_total_user_cpu_ns",
+        "min": 223000000,
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 223000000
+          }
+        ],
+        "source": "observational.resources.cpu_total.user_cpu_ns",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "ns"
+      },
+      {
+        "max": 42000000,
+        "mean": 42000000.0,
+        "median": 42000000,
+        "metric": "cpu_total_system_cpu_ns",
+        "min": 42000000,
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 42000000
+          }
+        ],
+        "source": "observational.resources.cpu_total.system_cpu_ns",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "ns"
+      },
+      {
+        "max": 181000000,
+        "mean": 181000000.0,
+        "median": 181000000,
+        "metric": "process_user_cpu_ns",
+        "min": 181000000,
+        "participant": "pyecho",
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 181000000
+          }
+        ],
+        "source": "observational.resources.process_participants[participant].user_cpu_ns",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "ns"
+      },
+      {
+        "max": 30000000,
+        "mean": 30000000.0,
+        "median": 30000000,
+        "metric": "process_system_cpu_ns",
+        "min": 30000000,
+        "participant": "pyecho",
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 30000000
+          }
+        ],
+        "source": "observational.resources.process_participants[participant].system_cpu_ns",
+        "stddev": 0.0,
+        "unavailable": {},
+        "unit": "ns"
+      },
+      {
+        "max": 14680064,
+        "mean": 14680064.0,
+        "median": 14680064,
+        "metric": "process_peak_rss_bytes",
+        "min": 14680064,
+        "participant": "pyecho",
+        "per_run": [
+          {
+            "label": "run-001",
+            "value": 14680064
+          }
+        ],
+        "source": "observational.resources.process_participants[participant].peak_rss_bytes",
         "stddev": 0.0,
         "unavailable": {},
         "unit": "bytes"
@@ -100,7 +358,8 @@
     "manifest_hash": "2f9ba41079fd01465e177ca9fd61daeebb01ff5d0424f8a5ae4c36494c70bdb0",
     "manifest_path": "/work/mixed.json",
     "sil_version": "0.1.0",
-    "source_revision": "0000000000000000000000000000000000000000"
+    "source_revision": "0000000000000000000000000000000000000000",
+    "unavailable": {}
   },
   "measurement_mode": "diagnostics",
   "policy": {

@@ -23,6 +23,42 @@
         "max": null,
         "mean": null,
         "median": null,
+        "metric": "preflight_ns",
+        "min": null,
+        "per_run": [],
+        "source": "observational.phases.preflight_ns",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "ns"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
+        "metric": "setup_ns",
+        "min": null,
+        "per_run": [],
+        "source": "observational.phases.setup_ns",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "ns"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
         "metric": "scheduled_execution_ns",
         "min": null,
         "per_run": [],
@@ -36,6 +72,114 @@
           "stddev": "no_successful_measured_runs"
         },
         "unit": "ns"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
+        "metric": "shutdown_ns",
+        "min": null,
+        "per_run": [],
+        "source": "observational.phases.shutdown_ns",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "ns"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
+        "metric": "recording_finalization_ns",
+        "min": null,
+        "per_run": [],
+        "source": "observational.phases.recording_finalization_ns",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "ns"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
+        "metric": "unattributed_ns",
+        "min": null,
+        "per_run": [],
+        "source": "observational.phases.unattributed_ns",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "ns"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
+        "metric": "scheduled_factor",
+        "min": null,
+        "per_run": [],
+        "source": "observational.virtual_time_speed.scheduled_factor",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "factor"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
+        "metric": "end_to_end_factor",
+        "min": null,
+        "per_run": [],
+        "source": "observational.virtual_time_speed.end_to_end_factor",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "factor"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
+        "metric": "native_activations_per_s",
+        "min": null,
+        "per_run": [],
+        "source": "observational.throughput.native_activations_per_s",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "1/s"
       },
       {
         "max": null,
@@ -59,6 +203,42 @@
         "max": null,
         "mean": null,
         "median": null,
+        "metric": "runner_user_cpu_ns",
+        "min": null,
+        "per_run": [],
+        "source": "observational.resources.runner.user_cpu_ns",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "ns"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
+        "metric": "runner_system_cpu_ns",
+        "min": null,
+        "per_run": [],
+        "source": "observational.resources.runner.system_cpu_ns",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "ns"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
         "metric": "runner_peak_rss_bytes",
         "min": null,
         "per_run": [],
@@ -72,6 +252,42 @@
           "stddev": "no_successful_measured_runs"
         },
         "unit": "bytes"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
+        "metric": "cpu_total_user_cpu_ns",
+        "min": null,
+        "per_run": [],
+        "source": "observational.resources.cpu_total.user_cpu_ns",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "ns"
+      },
+      {
+        "max": null,
+        "mean": null,
+        "median": null,
+        "metric": "cpu_total_system_cpu_ns",
+        "min": null,
+        "per_run": [],
+        "source": "observational.resources.cpu_total.system_cpu_ns",
+        "stddev": null,
+        "unavailable": {
+          "max": "no_successful_measured_runs",
+          "mean": "no_successful_measured_runs",
+          "median": "no_successful_measured_runs",
+          "min": "no_successful_measured_runs",
+          "stddev": "no_successful_measured_runs"
+        },
+        "unit": "ns"
       }
     ],
     "sample_count": 0,
@@ -92,19 +308,31 @@
     "sil_version": "0.1.0"
   },
   "host": {
-    "architecture": "x86_64",
-    "cpu_description": "Example CPU @ 3.0GHz",
-    "logical_cpu_count": 8,
-    "os": "Linux",
-    "os_release": "6.8.0",
-    "unavailable": {}
+    "architecture": null,
+    "cpu_description": null,
+    "logical_cpu_count": null,
+    "os": null,
+    "os_release": null,
+    "unavailable": {
+      "architecture": "no_run_report",
+      "cpu_description": "no_run_report",
+      "logical_cpu_count": "no_run_report",
+      "os": "no_run_report",
+      "os_release": "no_run_report"
+    }
   },
   "identity": {
-    "diagnostics_collector_version": 2,
-    "manifest_hash": "2f9ba41079fd01465e177ca9fd61daeebb01ff5d0424f8a5ae4c36494c70bdb0",
+    "diagnostics_collector_version": null,
+    "manifest_hash": null,
     "manifest_path": "/work/mixed.json",
-    "sil_version": "0.1.0",
-    "source_revision": "0000000000000000000000000000000000000000"
+    "sil_version": null,
+    "source_revision": null,
+    "unavailable": {
+      "diagnostics_collector_version": "no_run_report",
+      "manifest_hash": "no_run_report",
+      "sil_version": "no_run_report",
+      "source_revision": "no_run_report"
+    }
   },
   "measurement_mode": "diagnostics",
   "policy": {
@@ -136,7 +364,7 @@
   "sil_benchmark_report": 1,
   "status": {
     "complete": false,
-    "exit_code": 1,
+    "exit_code": 137,
     "stopped_reason": "warmup_failed"
   }
 }

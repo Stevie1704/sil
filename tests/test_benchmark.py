@@ -5,16 +5,25 @@ chosen wall times, so every expected statistic is a worked literal and no
 assertion depends on how long anything took.
 """
 
-import copy
 import json
+import os
+import signal
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 from conftest import ROOT
 from sil.benchmark import Policy, RunResult, summarize
-from sil.diagnostics_report import validate_benchmark_report
+from sil.diagnostics_report import load_report, validate_benchmark_report
 from sil.diagnostics_run import Guards, RunOutcome
+from test_process_descendants import (
+    _wait_for_observer, assert_cleanup, descendant_manifest,
+)
+from test_run_diagnostics import MS, add_multitask
+from test_run_diagnostics_cli import fake_tools, native_path, sil  # noqa: F401
+from toys import toy_manifest
 
 FIXTURES = ROOT / "tests" / "fixtures" / "diagnostics"
 MANIFEST = Path("/work/mixed.json")
@@ -227,3 +236,332 @@ class TestAggregation:
             "max_step_output_messages": 1024,
             "max_step_inline_payload_bytes": 67108864}
         assert summary["identity"]["diagnostics_collector_version"] == 2
+
+
+def resummarize(example_report: dict) -> dict:
+    """What `summarize` writes for the Runs an example benchmark embeds."""
+    runs = []
+    for run in example_report["runs"]:
+        outcome = RunOutcome(
+            exit_code=run["process_outcome"]["exit_code"],
+            signal=run["process_outcome"]["signal"], launcher_error=None,
+            report=run["report"],
+            report_problem=None if run["report"] else "missing",
+            report_path=Path(run["report_path"]))
+        runs.append(RunResult(run["label"], run["role"], run["index"],
+                              run["directory"], outcome))
+    given = example_report["policy"]
+    guards = Guards(given["participant_timeout_ms"],
+                    given["max_protocol_line_bytes"],
+                    given["max_step_output_messages"],
+                    given["max_step_inline_payload_bytes"])
+    summary = summarize(
+        Policy(given["repeats"], given["warmup"], given["recording"], guards),
+        Path(example_report["identity"]["manifest_path"]), runs)
+    summary["generator"] = example_report["generator"]  # the release version
+    return summary
+
+
+@pytest.mark.parametrize("name", ["benchmark-complete.json",
+                                  "benchmark-partial.json",
+                                  "benchmark-no-successful-run.json"])
+def test_frozen_examples_are_what_the_command_writes(name):
+    report = example(name)
+
+    assert resummarize(report) == report
+
+
+# --- the command, with controlled fake runners -----------------------------
+
+SUCCESS = FIXTURES / "run-success.json"
+FAILURE = FIXTURES / "run-failed-partial.json"
+
+
+def runner_script(counter: Path, fail_at: int | None = None) -> str:
+    """A fake runner: notes its cwd and arguments, then writes a report.
+
+    Invocation `fail_at` (one-based) and later ones fail with exit 1.
+    """
+    fail = "false" if fail_at is None else f'[ "$n" -ge {fail_at} ]'
+    return (
+        'for a; do last="$a"; done\n'
+        f'n=$(cat "{counter}" 2>/dev/null || echo 0); n=$((n+1)); '
+        f'echo "$n" > "{counter}"\n'
+        'printf "%s\\n" "$PWD" "$@" > args.txt\n'
+        'echo "manifest_hash fake"\n'
+        f'if {fail}; then echo "run $n failed" >&2; '
+        f'cp "{FAILURE}" "$last"; exit 1; fi\n'
+        f'cp "{SUCCESS}" "$last"\nexit 0\n')
+
+
+def invocations(counter: Path) -> int:
+    return int(counter.read_text()) if counter.exists() else 0
+
+
+def run_arguments(directory: Path) -> list[str]:
+    return (directory / "args.txt").read_text().splitlines()
+
+
+class TestCommand:
+    def test_default_campaign_is_one_warmup_and_five_runs(self, build_dir,
+                                                          tmp_path):
+        counter = tmp_path / "count"
+        path = fake_tools(tmp_path, build_dir, runner_script(counter))
+
+        proc = sil(["benchmark", "m.json", "--out", "results"], path,
+                   tmp_path)
+
+        assert proc.returncode == 0, proc.stderr
+        out = tmp_path / "results"
+        summary = load_report(out / "summary.json")
+        assert [run["label"] for run in summary["runs"]] == [
+            "warmup-001", "run-001", "run-002", "run-003", "run-004",
+            "run-005"]
+        assert summary["status"]["complete"] is True
+        assert summary["aggregates"]["sample_count"] == 5
+        for run in summary["runs"]:
+            directory = out / run["directory"]
+            assert run["report_path"] == \
+                f"{run['label']}/run.mcap.diagnostics.json"
+            assert (out / run["report_path"]).is_file()
+            assert (directory / "stdout.log").read_text() == \
+                "manifest_hash fake\n"
+            assert (directory / "stderr.log").read_text() == ""
+        assert sorted(p.name for p in out.iterdir()) == sorted(
+            [run["label"] for run in summary["runs"]] + ["summary.json"])
+        assert "results/summary.json" in proc.stdout
+        assert "5 of 5 measured Runs succeeded" in proc.stdout
+
+    def test_every_run_gets_the_same_manifest_options_and_its_own_cwd(
+        self, build_dir, tmp_path
+    ):
+        counter = tmp_path / "count"
+        path = fake_tools(tmp_path, build_dir, runner_script(counter))
+
+        proc = sil(["benchmark", "project/m.json", "--repeats", "2",
+                    "--warmup", "0", "--out", "results",
+                    "--participant-timeout-ms", "5000",
+                    "--max-step-output-messages", "7"], path, tmp_path)
+
+        assert proc.returncode == 0, proc.stderr
+        out = (tmp_path / "results").resolve()
+        for label in ("run-001", "run-002"):
+            cwd, *argv = run_arguments(out / label)
+            assert Path(cwd).resolve() == out / label
+            assert [Path(argv[0]).resolve(), *argv[1:]] == [
+                (tmp_path / "project" / "m.json").resolve(),
+                "-o", str(out / label / "run.mcap"),
+                "--participant-timeout-ms", "5000",
+                "--max-step-output-messages", "7",
+                "--diagnostics-out",
+                str(out / label / "run.mcap.diagnostics.json")]
+
+    def test_no_recording_is_forwarded(self, build_dir, tmp_path):
+        counter = tmp_path / "count"
+        path = fake_tools(tmp_path, build_dir, runner_script(counter))
+
+        proc = sil(["benchmark", "m.json", "--repeats", "1", "--warmup", "0",
+                    "--no-recording", "--out", "results"], path, tmp_path)
+
+        assert proc.returncode == 0, proc.stderr
+        out = (tmp_path / "results").resolve()
+        _cwd, *argv = run_arguments(out / "run-001")
+        assert "--no-recording" in argv and "-o" not in argv
+        assert argv[-1] == str(out / "run-001" / "out.mcap.diagnostics.json")
+        summary = load_report(out / "summary.json")
+        assert summary["policy"]["recording"] is False
+
+    def test_a_failed_warmup_stops_before_any_measured_run(self, build_dir,
+                                                           tmp_path):
+        counter = tmp_path / "count"
+        path = fake_tools(tmp_path, build_dir, runner_script(counter, 1))
+
+        proc = sil(["benchmark", "m.json", "--out", "results"], path,
+                   tmp_path)
+
+        assert proc.returncode == 1
+        assert invocations(counter) == 1
+        out = tmp_path / "results"
+        assert sorted(p.name for p in out.iterdir()) == [
+            "summary.json", "warmup-001"]
+        summary = load_report(out / "summary.json")
+        assert summary["status"] == {"complete": False, "exit_code": 1,
+                                     "stopped_reason": "warmup_failed"}
+        assert summary["aggregates"]["sample_count"] == 0
+        # The Run's own diagnostic reaches the user and its log.
+        assert "run 1 failed" in proc.stderr
+        assert (out / "warmup-001" / "stderr.log").read_text() == \
+            "run 1 failed\n"
+        assert "warmup-001" in proc.stderr
+
+    def test_a_later_failed_run_keeps_earlier_results_and_stops(
+        self, build_dir, tmp_path
+    ):
+        counter = tmp_path / "count"
+        path = fake_tools(tmp_path, build_dir, runner_script(counter, 3))
+
+        proc = sil(["benchmark", "m.json", "--repeats", "4", "--out",
+                    "results"], path, tmp_path)
+
+        assert proc.returncode == 1
+        assert invocations(counter) == 3
+        summary = load_report(tmp_path / "results" / "summary.json")
+        assert [run["label"] for run in summary["runs"]] == [
+            "warmup-001", "run-001", "run-002"]
+        assert summary["status"]["stopped_reason"] == "run_failed"
+        assert summary["counts"]["attempted"] == 2
+        assert summary["counts"]["failed"] == 1
+        assert summary["aggregates"]["sample_count"] == 1
+        assert not (tmp_path / "results" / "run-003").exists()
+        assert "incomplete" in proc.stdout
+
+    def test_a_signalled_runner_propagates_128_plus_the_signal(
+        self, build_dir, tmp_path
+    ):
+        path = fake_tools(tmp_path, build_dir, "kill -KILL $$\n")
+
+        proc = sil(["benchmark", "m.json", "--warmup", "0", "--out", "r"],
+                   path, tmp_path)
+
+        assert proc.returncode == 137
+        summary = load_report(tmp_path / "r" / "summary.json")
+        assert summary["runs"][0]["report_status"] == "missing"
+        assert summary["runs"][0]["process_outcome"]["signal"] == 9
+
+    def test_an_existing_out_directory_is_rejected_untouched(
+        self, build_dir, tmp_path
+    ):
+        counter = tmp_path / "count"
+        path = fake_tools(tmp_path, build_dir, runner_script(counter))
+        (tmp_path / "results").mkdir()
+        (tmp_path / "results" / "keep.txt").write_text("earlier")
+
+        proc = sil(["benchmark", "m.json", "--out", "results"], path,
+                   tmp_path)
+
+        assert proc.returncode == 2
+        assert "already exists" in proc.stderr
+        assert invocations(counter) == 0
+        assert [p.name for p in (tmp_path / "results").iterdir()] == [
+            "keep.txt"]
+
+    @pytest.mark.parametrize("argv, message", [
+        (["--repeats", "0"], "--repeats"),
+        (["--repeats", "x"], "--repeats"),
+        (["--warmup", "-1"], "--warmup"),
+        (["--repeats", "2", "--repeats", "3"], "only once"),
+        (["-o", "x.mcap"], "unrecognized"),
+        (["--participant-timeout-ms", "0"], "--participant-timeout-ms"),
+        (["--html", "report.html"], "--html is not available"),
+    ])
+    def test_invalid_options_exit_2_before_any_run(self, build_dir, tmp_path,
+                                                   argv, message):
+        counter = tmp_path / "count"
+        path = fake_tools(tmp_path, build_dir, runner_script(counter))
+
+        proc = sil(["benchmark", "m.json", "--out", "results", *argv], path,
+                   tmp_path)
+
+        assert proc.returncode == 2
+        assert message in proc.stderr
+        assert invocations(counter) == 0
+        assert not (tmp_path / "results").exists()
+
+    def test_out_is_required(self, build_dir, tmp_path):
+        path = fake_tools(tmp_path, build_dir, "exit 0\n")
+
+        proc = sil(["benchmark", "m.json"], path, tmp_path)
+
+        assert proc.returncode == 2
+        assert "--out" in proc.stderr
+
+    def test_a_missing_native_tool_exits_127_without_output(self, tmp_path):
+        proc = sil(["benchmark", "m.json", "--out", "results"], tmp_path,
+                   tmp_path)
+
+        assert proc.returncode == 127
+        assert "sil-run-diagnostics" in proc.stderr
+        assert not (tmp_path / "results").exists()
+
+
+# --- real Runs ---------------------------------------------------------------
+
+
+def fresh_state_manifest(directory: Path) -> Path:
+    """Native Tasks, and a Process participant that publishes its call count."""
+    m = toy_manifest(duration_ns=30 * MS)
+    m.add_channel("ticks", schema="toy.Counter")
+    m.add_channel("calls", schema="toy.Counter")
+    add_multitask(m, fast_period_ns=1 * MS, slow_period_ns=5 * MS)
+    m.add_process(
+        "counter",
+        command=[sys.executable,
+                 str(ROOT / "tests" / "participants" / "call_counter.py")],
+        step_period_ns=10 * MS, publishes=["calls"])
+    return m.write(directory / "fresh.json").path
+
+
+class TestRealRuns:
+    def test_every_run_starts_fresh_and_records_what_one_run_records(
+        self, native_path, tmp_path
+    ):
+        project = tmp_path / "my project"
+        project.mkdir()
+        fresh_state_manifest(project)
+        single = sil(["run", "my project/fresh.json", "-o", "single.mcap"],
+                     native_path, tmp_path)
+        assert single.returncode == 0, single.stderr
+
+        proc = sil(["benchmark", "my project/fresh.json", "--repeats", "2",
+                    "--warmup", "1", "--out", "bench"], native_path, tmp_path)
+
+        assert proc.returncode == 0, proc.stderr
+        out = tmp_path / "bench"
+        summary = load_report(out / "summary.json")
+        assert summary["status"]["complete"] is True
+        expected = (tmp_path / "single.mcap").read_bytes()
+        # A reused Participant would continue its call count, and the later
+        # Recordings would differ from a single fresh Run.
+        for label in ("warmup-001", "run-001", "run-002"):
+            assert (out / label / "run.mcap").read_bytes() == expected
+        tasks = {(row["participant"], row["task"])
+                 for row in summary["runs"][1]["report"]["observational"]
+                 ["tasks"]}
+        assert tasks == {("multi", "fast"), ("multi", "slow"),
+                         ("counter", "step")}
+        # Only the Run's evidence is left; no Run working directory remains.
+        for label in ("warmup-001", "run-001", "run-002"):
+            assert sorted(p.name for p in (out / label).iterdir()) == [
+                "run.mcap", "run.mcap.diagnostics.json",
+                "run.mcap.provenance.json", "stderr.log", "stdout.log"]
+
+    def test_a_signal_stops_the_campaign_and_launches_no_later_run(
+        self, native_path, tmp_path
+    ):
+        regions = tmp_path / "regions"
+        regions.mkdir()
+        observer = tmp_path / "observer.json"
+        descendant_manifest("descendant-timeout", observer).write(
+            tmp_path / "run.json")
+        env = {**os.environ, "TMPDIR": str(regions),
+               "PATH": os.pathsep.join([str(native_path), "/usr/bin:/bin"])}
+        command = subprocess.Popen(
+            [sys.executable, "-m", "sil.cli", "benchmark", "run.json",
+             "--warmup", "0", "--repeats", "3", "--out", "bench"],
+            cwd=tmp_path, env=env, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, text=True)
+        _wait_for_observer(observer)
+
+        command.send_signal(signal.SIGINT)
+        stdout, stderr = command.communicate(timeout=30)
+
+        assert "run interrupted" in stderr
+        assert_cleanup(command, observer, regions, expected_code=1,
+                       stderr=stderr)
+        out = tmp_path / "bench"
+        assert sorted(p.name for p in out.iterdir()) == ["run-001",
+                                                         "summary.json"]
+        summary = load_report(out / "summary.json")
+        assert summary["status"] == {"complete": False, "exit_code": 1,
+                                     "stopped_reason": "interrupted"}
+        assert summary["runs"][0]["report"]["run"]["status"] == "interrupted"
