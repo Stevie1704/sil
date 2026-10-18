@@ -499,7 +499,7 @@ def _lifecycle(report: dict, prefix: str, level: int) -> Html:
                  measured(wall, "wall_ns", "ns")])
     return section(
         f"{prefix}lifecycle", "Lifecycle phases",
-        _phase_chart(phases, prefix),
+        _phase_chart(phases),
         table(f"{prefix}phases-table", "Lifecycle phases (non-overlapping)",
               [("Phase", False), ("Wall time", True)], rows,
               filterable=False),
@@ -509,7 +509,7 @@ def _lifecycle(report: dict, prefix: str, level: int) -> Html:
              "them: routing and recording inside a Task are in both.")
 
 
-def _phase_chart(phases: dict, prefix: str) -> Html:
+def _phase_chart(phases: dict) -> Html:
     names = [name for name in (*PHASES, "unattributed_ns")
              if phases.get(name)]
     total = sum(phases[name] for name in names)
@@ -644,18 +644,12 @@ def _replay(report: dict, prefix: str, level: int) -> Html:
              "Message was due. Replay work is never a Process Step.")
 
 
-def _distribution_rows(report: dict) -> list[tuple[str, str, dict, int]]:
-    rows = [(row["participant"], row["task"], row["timing"], index)
-            for index, row in enumerate(report["observational"]["tasks"])]
-    return rows
-
-
 def _distributions(report: dict, prefix: str, level: int) -> Html:
     figures = []
-    for participant, task, timing, index in _distribution_rows(report):
+    for index, row in enumerate(report["observational"]["tasks"]):
         figures.append(_histogram(
-            f"{prefix}dist-{index}", f"{participant} / {task}", timing,
-            f"#{prefix}task-{index}"))
+            f"{prefix}dist-{index}", f"{row['participant']} / {row['task']}",
+            row["timing"], f"#{prefix}task-{index}"))
     for index, row in enumerate(report["observational"]["replay"]):
         figures.append(_histogram(
             f"{prefix}replay-dist-{index}", f"{row['participant']} (Replay)",
@@ -784,7 +778,7 @@ def _histogram(id_: str, title: str, timing: dict, anchor: str) -> Html:
 
 
 def _slowest(report: dict, prefix: str, level: int) -> Html:
-    rows, link_ids = [], []
+    rows = []
     for index, row in enumerate(report["observational"]["tasks"]):
         for rank, slow in enumerate(row["timing"]["slowest"], start=1):
             rows.append([
@@ -799,7 +793,6 @@ def _slowest(report: dict, prefix: str, level: int) -> Html:
                  str(slow["virtual_time_ns"])),
                 (number(slow["wall_ns"], "ns"), str(slow["wall_ns"])),
             ])
-            link_ids.append(None)
     headers = [("Participant", False), ("Task", False), ("Rank", True),
                ("Activation index", True), ("Virtual time", True),
                ("Wall time", True)]
@@ -1095,7 +1088,7 @@ def _report_value(report: dict | None, path: str) -> Any:
 
 
 def _runs_section(summary: dict) -> Html:
-    rows, classes, ids = [], [], []
+    rows, classes = [], []
     for index, run in enumerate(summary["runs"]):
         text, tone = _run_outcome(run)
         report = run["report"]
@@ -1126,7 +1119,6 @@ def _runs_section(summary: dict) -> Html:
             code(run["report_path"]),
         ])
         classes.append(f"role-{run['role']} tone-{tone}")
-        ids.append(None)
     headers = [("Run", False), ("Role", False), ("Outcome", False),
                ("Run exit code", True), ("Process", False), ("Report", False),
                ("Run wall time", True), ("Scheduled speed", True),
