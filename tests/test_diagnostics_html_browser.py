@@ -157,9 +157,18 @@ def test_a_table_wider_than_its_box_says_so(chrome, pages, name, width):
         assert table["shadow"], table  # the cue without JavaScript
 
 
-def test_the_runs_table_fits_a_desktop_window(chrome, pages):
+# Verdana (macOS, Windows) and DejaVu Sans (the Linux default) are among
+# the widest common fallbacks for the report's system-ui font stack.
+WIDE_FONT = "Verdana, 'DejaVu Sans', sans-serif"
+
+
+@pytest.mark.parametrize("font", [None, WIDE_FONT], ids=["page-font", "wide-font"])
+def test_the_runs_table_fits_a_desktop_window(chrome, pages, font):
     chrome.resize(1280)
     opened(chrome, pages["benchmark"])
+    if font:
+        chrome.evaluate("document.documentElement.style.setProperty("
+                        f"'--sans', {json.dumps(font)})")
 
     widths = {table["id"]: table for table in chrome.evaluate(TABLE_WIDTHS)}
 

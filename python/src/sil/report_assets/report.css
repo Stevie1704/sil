@@ -174,7 +174,7 @@ caption { text-align: left; padding: 8px 12px; color: var(--muted);
   font-size: 13px; caption-side: top; }
 th, td { padding: 6px 12px; text-align: left; vertical-align: top;
   border-top: 1px solid var(--line); }
-th { background: var(--surface-2); font-weight: 600; white-space: nowrap; }
+th { background: var(--surface-2); font-weight: 600; vertical-align: bottom; }
 td.numeric, th.numeric { text-align: right; }
 td .name, td code { max-width: 32ch; display: inline-block; }
 td .name { min-width: 14ch; }
