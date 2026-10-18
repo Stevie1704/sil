@@ -69,8 +69,10 @@ wrote identical Recordings.
   1,000 s), each Task still retained 8,192 samples, marked approximate, and
   the largest-process peak RSS of the diagnostics Run stayed at a median of
   5.3 MiB in both cases (4.4 MiB for the ordinary runner). The runner peak
-  RSS in the report was 4.5 and 4.6 MiB. The added memory depends on the
-  number of Tasks, not on the number of activations.
+  RSS in the report was 4.5 and 4.6 MiB. That is an observation on these
+  two workloads, not a guarantee. The guarantee is the bounded storage of
+  the collector design: each Task keeps at most 8,192 samples and the 20
+  slowest activations, whatever the number of activations.
 - **Outside the Run wall time.** For the 1,000 s workload, about 400 ms of the
   diagnostics wall time is outside the report's Run wall time. Most of it is
   the SHA-256 of the 1.2 million-Message Recording for the provenance
