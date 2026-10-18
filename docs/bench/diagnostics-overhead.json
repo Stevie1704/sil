@@ -1,0 +1,2490 @@
+{
+  "sil_diagnostics_overhead": 1,
+  "host": {
+    "machine": "MacBook Pro (MacBookPro18,1), 16 GiB, on mains power, developer session not otherwise idle",
+    "os": "macOS-27.0.1-arm64-arm-64bit",
+    "architecture": "arm64",
+    "cpu": "Apple M1 Pro",
+    "logical_cpus": 10
+  },
+  "build": {
+    "source_revision": "d2255cc8eda324bc580babb37eda682abbc377c6",
+    "worktree_clean": true,
+    "cmake_build_type": "Release",
+    "sil_version": "0.1.0"
+  },
+  "pairs": 20,
+  "workloads": {
+    "native-multitask-100s": {
+      "description": "Native participant, 2 Tasks (1 ms, 5 ms), 100 s Duration: 120,000 activations",
+      "runs": [
+        {
+          "mode": "ordinary",
+          "pair": 1,
+          "exit_code": 0,
+          "external_wall_ns": 82248083,
+          "tree_largest_process_peak_rss_bytes": 4603904,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 1,
+          "exit_code": 0,
+          "external_wall_ns": 92995625,
+          "tree_largest_process_peak_rss_bytes": 5537792,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 37358958,
+            "scheduled_execution_ns": 29060375,
+            "runner_peak_rss_bytes": 4751360,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 2,
+          "exit_code": 0,
+          "external_wall_ns": 85206375,
+          "tree_largest_process_peak_rss_bytes": 4620288,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 2,
+          "exit_code": 0,
+          "external_wall_ns": 95224834,
+          "tree_largest_process_peak_rss_bytes": 5521408,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 41644542,
+            "scheduled_execution_ns": 29104375,
+            "runner_peak_rss_bytes": 4734976,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 3,
+          "exit_code": 0,
+          "external_wall_ns": 85283084,
+          "tree_largest_process_peak_rss_bytes": 4603904,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 3,
+          "exit_code": 0,
+          "external_wall_ns": 94995458,
+          "tree_largest_process_peak_rss_bytes": 5537792,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 41190958,
+            "scheduled_execution_ns": 29354542,
+            "runner_peak_rss_bytes": 4734976,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 4,
+          "exit_code": 0,
+          "external_wall_ns": 86826709,
+          "tree_largest_process_peak_rss_bytes": 4603904,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 4,
+          "exit_code": 0,
+          "external_wall_ns": 93816708,
+          "tree_largest_process_peak_rss_bytes": 5521408,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 43168583,
+            "scheduled_execution_ns": 29376084,
+            "runner_peak_rss_bytes": 4734976,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 5,
+          "exit_code": 0,
+          "external_wall_ns": 84728959,
+          "tree_largest_process_peak_rss_bytes": 4603904,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 5,
+          "exit_code": 0,
+          "external_wall_ns": 95367042,
+          "tree_largest_process_peak_rss_bytes": 5537792,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 42163917,
+            "scheduled_execution_ns": 29018917,
+            "runner_peak_rss_bytes": 4751360,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 6,
+          "exit_code": 0,
+          "external_wall_ns": 85375541,
+          "tree_largest_process_peak_rss_bytes": 4603904,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 6,
+          "exit_code": 0,
+          "external_wall_ns": 94988125,
+          "tree_largest_process_peak_rss_bytes": 5554176,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 42248834,
+            "scheduled_execution_ns": 28955416,
+            "runner_peak_rss_bytes": 4751360,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 7,
+          "exit_code": 0,
+          "external_wall_ns": 83864042,
+          "tree_largest_process_peak_rss_bytes": 4603904,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 7,
+          "exit_code": 0,
+          "external_wall_ns": 96526625,
+          "tree_largest_process_peak_rss_bytes": 5521408,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 41524708,
+            "scheduled_execution_ns": 29357959,
+            "runner_peak_rss_bytes": 4734976,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 8,
+          "exit_code": 0,
+          "external_wall_ns": 85713958,
+          "tree_largest_process_peak_rss_bytes": 4620288,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 8,
+          "exit_code": 0,
+          "external_wall_ns": 94056833,
+          "tree_largest_process_peak_rss_bytes": 5521408,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 40816459,
+            "scheduled_execution_ns": 29099583,
+            "runner_peak_rss_bytes": 4751360,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 9,
+          "exit_code": 0,
+          "external_wall_ns": 86484875,
+          "tree_largest_process_peak_rss_bytes": 4603904,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 9,
+          "exit_code": 0,
+          "external_wall_ns": 95359083,
+          "tree_largest_process_peak_rss_bytes": 5521408,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 40758750,
+            "scheduled_execution_ns": 29141375,
+            "runner_peak_rss_bytes": 4734976,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 10,
+          "exit_code": 0,
+          "external_wall_ns": 87773750,
+          "tree_largest_process_peak_rss_bytes": 4603904,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 10,
+          "exit_code": 0,
+          "external_wall_ns": 95668667,
+          "tree_largest_process_peak_rss_bytes": 5521408,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 41555625,
+            "scheduled_execution_ns": 28940916,
+            "runner_peak_rss_bytes": 4751360,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 11,
+          "exit_code": 0,
+          "external_wall_ns": 84696292,
+          "tree_largest_process_peak_rss_bytes": 4620288,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 11,
+          "exit_code": 0,
+          "external_wall_ns": 94692792,
+          "tree_largest_process_peak_rss_bytes": 5521408,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 40924417,
+            "scheduled_execution_ns": 29169541,
+            "runner_peak_rss_bytes": 4734976,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 12,
+          "exit_code": 0,
+          "external_wall_ns": 87335459,
+          "tree_largest_process_peak_rss_bytes": 4603904,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 12,
+          "exit_code": 0,
+          "external_wall_ns": 93683750,
+          "tree_largest_process_peak_rss_bytes": 5521408,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 40923916,
+            "scheduled_execution_ns": 29166416,
+            "runner_peak_rss_bytes": 4734976,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 13,
+          "exit_code": 0,
+          "external_wall_ns": 86381292,
+          "tree_largest_process_peak_rss_bytes": 4603904,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 13,
+          "exit_code": 0,
+          "external_wall_ns": 92940500,
+          "tree_largest_process_peak_rss_bytes": 5521408,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 40579458,
+            "scheduled_execution_ns": 29318667,
+            "runner_peak_rss_bytes": 4751360,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 14,
+          "exit_code": 0,
+          "external_wall_ns": 87938000,
+          "tree_largest_process_peak_rss_bytes": 4603904,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 14,
+          "exit_code": 0,
+          "external_wall_ns": 93684542,
+          "tree_largest_process_peak_rss_bytes": 5537792,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 41550750,
+            "scheduled_execution_ns": 28989709,
+            "runner_peak_rss_bytes": 4734976,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 15,
+          "exit_code": 0,
+          "external_wall_ns": 86097958,
+          "tree_largest_process_peak_rss_bytes": 4620288,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 15,
+          "exit_code": 0,
+          "external_wall_ns": 94522917,
+          "tree_largest_process_peak_rss_bytes": 5521408,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 40353625,
+            "scheduled_execution_ns": 29191125,
+            "runner_peak_rss_bytes": 4734976,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 16,
+          "exit_code": 0,
+          "external_wall_ns": 86991667,
+          "tree_largest_process_peak_rss_bytes": 4603904,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 16,
+          "exit_code": 0,
+          "external_wall_ns": 92904042,
+          "tree_largest_process_peak_rss_bytes": 5537792,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 40555125,
+            "scheduled_execution_ns": 29399375,
+            "runner_peak_rss_bytes": 4734976,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 17,
+          "exit_code": 0,
+          "external_wall_ns": 85510959,
+          "tree_largest_process_peak_rss_bytes": 4620288,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 17,
+          "exit_code": 0,
+          "external_wall_ns": 94976792,
+          "tree_largest_process_peak_rss_bytes": 5521408,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 40784250,
+            "scheduled_execution_ns": 29461375,
+            "runner_peak_rss_bytes": 4734976,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 18,
+          "exit_code": 0,
+          "external_wall_ns": 87202334,
+          "tree_largest_process_peak_rss_bytes": 4947968,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 18,
+          "exit_code": 0,
+          "external_wall_ns": 94568959,
+          "tree_largest_process_peak_rss_bytes": 5521408,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 41026209,
+            "scheduled_execution_ns": 29138333,
+            "runner_peak_rss_bytes": 4751360,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 19,
+          "exit_code": 0,
+          "external_wall_ns": 86880875,
+          "tree_largest_process_peak_rss_bytes": 4603904,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 19,
+          "exit_code": 0,
+          "external_wall_ns": 92858375,
+          "tree_largest_process_peak_rss_bytes": 5537792,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 41811417,
+            "scheduled_execution_ns": 29072625,
+            "runner_peak_rss_bytes": 4734976,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 20,
+          "exit_code": 0,
+          "external_wall_ns": 91508417,
+          "tree_largest_process_peak_rss_bytes": 4603904,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 20,
+          "exit_code": 0,
+          "external_wall_ns": 94301708,
+          "tree_largest_process_peak_rss_bytes": 5521408,
+          "recording_sha256": "330081ee211e68e7ce8aec15e9b99fa636418f774ad77b850e8e1870a14f0f87",
+          "report": {
+            "run_wall_ns": 40582875,
+            "scheduled_execution_ns": 28876458,
+            "runner_peak_rss_bytes": 4734976,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 100000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 20000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        }
+      ],
+      "summary": {
+        "ordinary": {
+          "external_wall_ns": {
+            "min": 82248083,
+            "median": 86239625.0,
+            "max": 91508417,
+            "count": 20
+          },
+          "tree_largest_process_peak_rss_bytes": {
+            "min": 4603904,
+            "median": 4603904.0,
+            "max": 4947968,
+            "count": 20
+          }
+        },
+        "diagnostics": {
+          "external_wall_ns": {
+            "min": 92858375,
+            "median": 94545938.0,
+            "max": 96526625,
+            "count": 20
+          },
+          "tree_largest_process_peak_rss_bytes": {
+            "min": 5521408,
+            "median": 5521408.0,
+            "max": 5554176,
+            "count": 20
+          }
+        },
+        "median_wall_ratio": 1.0963166641784448,
+        "recordings_identical": true
+      }
+    },
+    "native-multitask-1000s": {
+      "description": "the same Participant, 1,000 s Duration: 1,200,000 activations, far past the 8,192-sample reservoir",
+      "runs": [
+        {
+          "mode": "ordinary",
+          "pair": 1,
+          "exit_code": 0,
+          "external_wall_ns": 709579708,
+          "tree_largest_process_peak_rss_bytes": 4669440,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 1,
+          "exit_code": 0,
+          "external_wall_ns": 699057000,
+          "tree_largest_process_peak_rss_bytes": 5586944,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 303667583,
+            "scheduled_execution_ns": 295006791,
+            "runner_peak_rss_bytes": 4816896,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 2,
+          "exit_code": 0,
+          "external_wall_ns": 664502375,
+          "tree_largest_process_peak_rss_bytes": 4653056,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 2,
+          "exit_code": 0,
+          "external_wall_ns": 697378666,
+          "tree_largest_process_peak_rss_bytes": 5554176,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 304112208,
+            "scheduled_execution_ns": 294359416,
+            "runner_peak_rss_bytes": 4784128,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 3,
+          "exit_code": 0,
+          "external_wall_ns": 669691000,
+          "tree_largest_process_peak_rss_bytes": 4653056,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 3,
+          "exit_code": 0,
+          "external_wall_ns": 712534959,
+          "tree_largest_process_peak_rss_bytes": 5554176,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 319131750,
+            "scheduled_execution_ns": 307622666,
+            "runner_peak_rss_bytes": 4767744,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 4,
+          "exit_code": 0,
+          "external_wall_ns": 677335416,
+          "tree_largest_process_peak_rss_bytes": 4685824,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 4,
+          "exit_code": 0,
+          "external_wall_ns": 712548166,
+          "tree_largest_process_peak_rss_bytes": 6193152,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 319281958,
+            "scheduled_execution_ns": 308743917,
+            "runner_peak_rss_bytes": 4800512,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 5,
+          "exit_code": 0,
+          "external_wall_ns": 675326708,
+          "tree_largest_process_peak_rss_bytes": 4636672,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 5,
+          "exit_code": 0,
+          "external_wall_ns": 711422500,
+          "tree_largest_process_peak_rss_bytes": 5537792,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 317284708,
+            "scheduled_execution_ns": 306813833,
+            "runner_peak_rss_bytes": 4767744,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 6,
+          "exit_code": 0,
+          "external_wall_ns": 668004875,
+          "tree_largest_process_peak_rss_bytes": 4669440,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 6,
+          "exit_code": 0,
+          "external_wall_ns": 704042875,
+          "tree_largest_process_peak_rss_bytes": 5586944,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 311711667,
+            "scheduled_execution_ns": 301661209,
+            "runner_peak_rss_bytes": 4800512,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 7,
+          "exit_code": 0,
+          "external_wall_ns": 693060083,
+          "tree_largest_process_peak_rss_bytes": 4653056,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 7,
+          "exit_code": 0,
+          "external_wall_ns": 722995917,
+          "tree_largest_process_peak_rss_bytes": 5554176,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 329523541,
+            "scheduled_execution_ns": 320020500,
+            "runner_peak_rss_bytes": 4784128,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 8,
+          "exit_code": 0,
+          "external_wall_ns": 671279042,
+          "tree_largest_process_peak_rss_bytes": 4669440,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 8,
+          "exit_code": 0,
+          "external_wall_ns": 689500667,
+          "tree_largest_process_peak_rss_bytes": 5554176,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 298057459,
+            "scheduled_execution_ns": 289282167,
+            "runner_peak_rss_bytes": 4784128,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 9,
+          "exit_code": 0,
+          "external_wall_ns": 658546125,
+          "tree_largest_process_peak_rss_bytes": 4669440,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 9,
+          "exit_code": 0,
+          "external_wall_ns": 689948208,
+          "tree_largest_process_peak_rss_bytes": 5554176,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 297428125,
+            "scheduled_execution_ns": 288946292,
+            "runner_peak_rss_bytes": 4784128,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 10,
+          "exit_code": 0,
+          "external_wall_ns": 657147166,
+          "tree_largest_process_peak_rss_bytes": 4653056,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 10,
+          "exit_code": 0,
+          "external_wall_ns": 689980666,
+          "tree_largest_process_peak_rss_bytes": 6176768,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 297059833,
+            "scheduled_execution_ns": 288443666,
+            "runner_peak_rss_bytes": 4800512,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 11,
+          "exit_code": 0,
+          "external_wall_ns": 658357541,
+          "tree_largest_process_peak_rss_bytes": 4636672,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 11,
+          "exit_code": 0,
+          "external_wall_ns": 696757250,
+          "tree_largest_process_peak_rss_bytes": 5554176,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 303496791,
+            "scheduled_execution_ns": 294945000,
+            "runner_peak_rss_bytes": 4784128,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 12,
+          "exit_code": 0,
+          "external_wall_ns": 659325167,
+          "tree_largest_process_peak_rss_bytes": 4620288,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 12,
+          "exit_code": 0,
+          "external_wall_ns": 703435750,
+          "tree_largest_process_peak_rss_bytes": 5537792,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 309373958,
+            "scheduled_execution_ns": 293299541,
+            "runner_peak_rss_bytes": 4784128,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 13,
+          "exit_code": 0,
+          "external_wall_ns": 855192750,
+          "tree_largest_process_peak_rss_bytes": 4636672,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 13,
+          "exit_code": 0,
+          "external_wall_ns": 704114959,
+          "tree_largest_process_peak_rss_bytes": 5570560,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 311943583,
+            "scheduled_execution_ns": 302196833,
+            "runner_peak_rss_bytes": 4800512,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 14,
+          "exit_code": 0,
+          "external_wall_ns": 665826833,
+          "tree_largest_process_peak_rss_bytes": 4636672,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 14,
+          "exit_code": 0,
+          "external_wall_ns": 700044042,
+          "tree_largest_process_peak_rss_bytes": 5554176,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 307115625,
+            "scheduled_execution_ns": 298250666,
+            "runner_peak_rss_bytes": 4784128,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 15,
+          "exit_code": 0,
+          "external_wall_ns": 673274250,
+          "tree_largest_process_peak_rss_bytes": 4653056,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 15,
+          "exit_code": 0,
+          "external_wall_ns": 700542375,
+          "tree_largest_process_peak_rss_bytes": 5554176,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 306048625,
+            "scheduled_execution_ns": 297193125,
+            "runner_peak_rss_bytes": 4800512,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 16,
+          "exit_code": 0,
+          "external_wall_ns": 656988875,
+          "tree_largest_process_peak_rss_bytes": 4669440,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 16,
+          "exit_code": 0,
+          "external_wall_ns": 701604125,
+          "tree_largest_process_peak_rss_bytes": 5570560,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 302559167,
+            "scheduled_execution_ns": 294110792,
+            "runner_peak_rss_bytes": 4784128,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 17,
+          "exit_code": 0,
+          "external_wall_ns": 656067334,
+          "tree_largest_process_peak_rss_bytes": 4636672,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 17,
+          "exit_code": 0,
+          "external_wall_ns": 692470834,
+          "tree_largest_process_peak_rss_bytes": 5537792,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 299625375,
+            "scheduled_execution_ns": 291156667,
+            "runner_peak_rss_bytes": 4767744,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 18,
+          "exit_code": 0,
+          "external_wall_ns": 654081375,
+          "tree_largest_process_peak_rss_bytes": 4620288,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 18,
+          "exit_code": 0,
+          "external_wall_ns": 693303500,
+          "tree_largest_process_peak_rss_bytes": 5570560,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 298839000,
+            "scheduled_execution_ns": 290298375,
+            "runner_peak_rss_bytes": 4800512,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 19,
+          "exit_code": 0,
+          "external_wall_ns": 660764542,
+          "tree_largest_process_peak_rss_bytes": 4636672,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 19,
+          "exit_code": 0,
+          "external_wall_ns": 689091833,
+          "tree_largest_process_peak_rss_bytes": 5554176,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 297191583,
+            "scheduled_execution_ns": 288692750,
+            "runner_peak_rss_bytes": 4800512,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 20,
+          "exit_code": 0,
+          "external_wall_ns": 656004541,
+          "tree_largest_process_peak_rss_bytes": 4669440,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 20,
+          "exit_code": 0,
+          "external_wall_ns": 690400417,
+          "tree_largest_process_peak_rss_bytes": 5554176,
+          "recording_sha256": "27189d066db03d7b6ab42f47e7beeda3ad5b5f676a5263613f4aa688e0b43719",
+          "report": {
+            "run_wall_ns": 298345042,
+            "scheduled_execution_ns": 289748458,
+            "runner_peak_rss_bytes": 4784128,
+            "tasks": [
+              {
+                "participant": "multi",
+                "task": "fast",
+                "completed": 1000000,
+                "retained_count": 8192,
+                "approximate": true
+              },
+              {
+                "participant": "multi",
+                "task": "slow",
+                "completed": 200000,
+                "retained_count": 8192,
+                "approximate": true
+              }
+            ]
+          }
+        }
+      ],
+      "summary": {
+        "ordinary": {
+          "external_wall_ns": {
+            "min": 654081375,
+            "median": 665164604.0,
+            "max": 855192750,
+            "count": 20
+          },
+          "tree_largest_process_peak_rss_bytes": {
+            "min": 4620288,
+            "median": 4653056.0,
+            "max": 4685824,
+            "count": 20
+          }
+        },
+        "diagnostics": {
+          "external_wall_ns": {
+            "min": 689091833,
+            "median": 699550521.0,
+            "max": 722995917,
+            "count": 20
+          },
+          "tree_largest_process_peak_rss_bytes": {
+            "min": 5537792,
+            "median": 5554176.0,
+            "max": 6193152,
+            "count": 20
+          }
+        },
+        "median_wall_ratio": 1.0516953499828743,
+        "recordings_identical": true
+      }
+    },
+    "native-and-process-60s": {
+      "description": "2 Native Tasks (10 ms, 20 ms) and a Python Process participant (10 ms Step), 60 s Duration: 6,000 Process Steps",
+      "runs": [
+        {
+          "mode": "ordinary",
+          "pair": 1,
+          "exit_code": 0,
+          "external_wall_ns": 357408750,
+          "tree_largest_process_peak_rss_bytes": 23838720,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 1,
+          "exit_code": 0,
+          "external_wall_ns": 199433125,
+          "tree_largest_process_peak_rss_bytes": 23789568,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 181059166,
+            "scheduled_execution_ns": 117727375,
+            "runner_peak_rss_bytes": 5603328,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 2,
+          "exit_code": 0,
+          "external_wall_ns": 199165500,
+          "tree_largest_process_peak_rss_bytes": 23773184,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 2,
+          "exit_code": 0,
+          "external_wall_ns": 205442834,
+          "tree_largest_process_peak_rss_bytes": 23871488,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 181058958,
+            "scheduled_execution_ns": 114424625,
+            "runner_peak_rss_bytes": 5603328,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 3,
+          "exit_code": 0,
+          "external_wall_ns": 196115542,
+          "tree_largest_process_peak_rss_bytes": 23838720,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 3,
+          "exit_code": 0,
+          "external_wall_ns": 199921584,
+          "tree_largest_process_peak_rss_bytes": 23740416,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 180628042,
+            "scheduled_execution_ns": 114243792,
+            "runner_peak_rss_bytes": 5603328,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 4,
+          "exit_code": 0,
+          "external_wall_ns": 193681709,
+          "tree_largest_process_peak_rss_bytes": 23789568,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 4,
+          "exit_code": 0,
+          "external_wall_ns": 200814834,
+          "tree_largest_process_peak_rss_bytes": 23969792,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 181944334,
+            "scheduled_execution_ns": 113901000,
+            "runner_peak_rss_bytes": 5619712,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 5,
+          "exit_code": 0,
+          "external_wall_ns": 193728334,
+          "tree_largest_process_peak_rss_bytes": 23740416,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 5,
+          "exit_code": 0,
+          "external_wall_ns": 204009125,
+          "tree_largest_process_peak_rss_bytes": 23789568,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 181652625,
+            "scheduled_execution_ns": 117805292,
+            "runner_peak_rss_bytes": 5603328,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 6,
+          "exit_code": 0,
+          "external_wall_ns": 197349000,
+          "tree_largest_process_peak_rss_bytes": 23838720,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 6,
+          "exit_code": 0,
+          "external_wall_ns": 202950792,
+          "tree_largest_process_peak_rss_bytes": 23838720,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 182772958,
+            "scheduled_execution_ns": 114898458,
+            "runner_peak_rss_bytes": 5636096,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 7,
+          "exit_code": 0,
+          "external_wall_ns": 193590542,
+          "tree_largest_process_peak_rss_bytes": 23822336,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 7,
+          "exit_code": 0,
+          "external_wall_ns": 197708250,
+          "tree_largest_process_peak_rss_bytes": 23838720,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 179672958,
+            "scheduled_execution_ns": 116345292,
+            "runner_peak_rss_bytes": 5619712,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 8,
+          "exit_code": 0,
+          "external_wall_ns": 196415416,
+          "tree_largest_process_peak_rss_bytes": 23838720,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 8,
+          "exit_code": 0,
+          "external_wall_ns": 196646500,
+          "tree_largest_process_peak_rss_bytes": 23789568,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 177449250,
+            "scheduled_execution_ns": 113080458,
+            "runner_peak_rss_bytes": 5619712,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 9,
+          "exit_code": 0,
+          "external_wall_ns": 191900666,
+          "tree_largest_process_peak_rss_bytes": 23871488,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 9,
+          "exit_code": 0,
+          "external_wall_ns": 202479375,
+          "tree_largest_process_peak_rss_bytes": 23871488,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 183292125,
+            "scheduled_execution_ns": 117281125,
+            "runner_peak_rss_bytes": 5668864,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 10,
+          "exit_code": 0,
+          "external_wall_ns": 193371625,
+          "tree_largest_process_peak_rss_bytes": 23871488,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 10,
+          "exit_code": 0,
+          "external_wall_ns": 202236375,
+          "tree_largest_process_peak_rss_bytes": 23773184,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 180304042,
+            "scheduled_execution_ns": 114597666,
+            "runner_peak_rss_bytes": 5570560,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 11,
+          "exit_code": 0,
+          "external_wall_ns": 199151708,
+          "tree_largest_process_peak_rss_bytes": 23969792,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 11,
+          "exit_code": 0,
+          "external_wall_ns": 198898834,
+          "tree_largest_process_peak_rss_bytes": 23773184,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 179008083,
+            "scheduled_execution_ns": 113650250,
+            "runner_peak_rss_bytes": 5603328,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 12,
+          "exit_code": 0,
+          "external_wall_ns": 195781917,
+          "tree_largest_process_peak_rss_bytes": 23838720,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 12,
+          "exit_code": 0,
+          "external_wall_ns": 205365083,
+          "tree_largest_process_peak_rss_bytes": 23969792,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 182646333,
+            "scheduled_execution_ns": 113773667,
+            "runner_peak_rss_bytes": 5619712,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 13,
+          "exit_code": 0,
+          "external_wall_ns": 198584292,
+          "tree_largest_process_peak_rss_bytes": 23871488,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 13,
+          "exit_code": 0,
+          "external_wall_ns": 203779416,
+          "tree_largest_process_peak_rss_bytes": 23904256,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 183611333,
+            "scheduled_execution_ns": 115167875,
+            "runner_peak_rss_bytes": 5619712,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 14,
+          "exit_code": 0,
+          "external_wall_ns": 193453333,
+          "tree_largest_process_peak_rss_bytes": 23805952,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 14,
+          "exit_code": 0,
+          "external_wall_ns": 201523208,
+          "tree_largest_process_peak_rss_bytes": 23822336,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 182574459,
+            "scheduled_execution_ns": 115812166,
+            "runner_peak_rss_bytes": 5619712,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 15,
+          "exit_code": 0,
+          "external_wall_ns": 195498041,
+          "tree_largest_process_peak_rss_bytes": 23805952,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 15,
+          "exit_code": 0,
+          "external_wall_ns": 197592084,
+          "tree_largest_process_peak_rss_bytes": 23773184,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 179090042,
+            "scheduled_execution_ns": 116311458,
+            "runner_peak_rss_bytes": 5636096,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 16,
+          "exit_code": 0,
+          "external_wall_ns": 195494875,
+          "tree_largest_process_peak_rss_bytes": 23838720,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 16,
+          "exit_code": 0,
+          "external_wall_ns": 200934417,
+          "tree_largest_process_peak_rss_bytes": 23871488,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 179832792,
+            "scheduled_execution_ns": 116381667,
+            "runner_peak_rss_bytes": 5603328,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 17,
+          "exit_code": 0,
+          "external_wall_ns": 199001458,
+          "tree_largest_process_peak_rss_bytes": 23871488,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 17,
+          "exit_code": 0,
+          "external_wall_ns": 199205458,
+          "tree_largest_process_peak_rss_bytes": 23855104,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 181090958,
+            "scheduled_execution_ns": 115206875,
+            "runner_peak_rss_bytes": 5619712,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 18,
+          "exit_code": 0,
+          "external_wall_ns": 194202000,
+          "tree_largest_process_peak_rss_bytes": 23822336,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 18,
+          "exit_code": 0,
+          "external_wall_ns": 199655542,
+          "tree_largest_process_peak_rss_bytes": 23773184,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 180146792,
+            "scheduled_execution_ns": 115124666,
+            "runner_peak_rss_bytes": 5603328,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 19,
+          "exit_code": 0,
+          "external_wall_ns": 196985209,
+          "tree_largest_process_peak_rss_bytes": 23805952,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 19,
+          "exit_code": 0,
+          "external_wall_ns": 203477292,
+          "tree_largest_process_peak_rss_bytes": 23822336,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 182409917,
+            "scheduled_execution_ns": 114914167,
+            "runner_peak_rss_bytes": 5619712,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        },
+        {
+          "mode": "ordinary",
+          "pair": 20,
+          "exit_code": 0,
+          "external_wall_ns": 194529083,
+          "tree_largest_process_peak_rss_bytes": 23822336,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0"
+        },
+        {
+          "mode": "diagnostics",
+          "pair": 20,
+          "exit_code": 0,
+          "external_wall_ns": 197626750,
+          "tree_largest_process_peak_rss_bytes": 23822336,
+          "recording_sha256": "620f2811f17fe650d2f6333797d1c161b998fa9966112ce2f2f31436737478e0",
+          "report": {
+            "run_wall_ns": 178099291,
+            "scheduled_execution_ns": 114119209,
+            "runner_peak_rss_bytes": 5619712,
+            "tasks": [
+              {
+                "participant": "accumulator",
+                "task": "accumulate",
+                "completed": 3000,
+                "retained_count": 3000,
+                "approximate": false
+              },
+              {
+                "participant": "producer",
+                "task": "tick",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              },
+              {
+                "participant": "pyecho",
+                "task": "step",
+                "completed": 6000,
+                "retained_count": 6000,
+                "approximate": false
+              }
+            ]
+          }
+        }
+      ],
+      "summary": {
+        "ordinary": {
+          "external_wall_ns": {
+            "min": 191900666,
+            "median": 195639979.0,
+            "max": 357408750,
+            "count": 20
+          },
+          "tree_largest_process_peak_rss_bytes": {
+            "min": 23740416,
+            "median": 23838720.0,
+            "max": 23969792,
+            "count": 20
+          }
+        },
+        "diagnostics": {
+          "external_wall_ns": {
+            "min": 196646500,
+            "median": 200874625.5,
+            "max": 205442834,
+            "count": 20
+          },
+          "tree_largest_process_peak_rss_bytes": {
+            "min": 23740416,
+            "median": 23822336.0,
+            "max": 23969792,
+            "count": 20
+          }
+        },
+        "median_wall_ratio": 1.026756527611363,
+        "recordings_identical": true
+      }
+    }
+  }
+}
