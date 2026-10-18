@@ -509,12 +509,13 @@ class TestFailedRuns:
              "--diagnostics-out", str(report_path)],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
         )
+        # The participant writes <observer>.step when the first Step arrives:
+        # interrupt that Step, not the startup.
+        step_marker = Path(f"{observer}.step")
         deadline = time.monotonic() + 10
-        while not observer.exists() and time.monotonic() < deadline:
+        while not step_marker.exists() and time.monotonic() < deadline:
             time.sleep(0.01)
-        # The observer is written before init; give the first Step time to
-        # be sent, then interrupt it.
-        time.sleep(0.3)
+        assert step_marker.exists(), "the first Step did not arrive"
         runner.send_signal(signal.SIGINT)
         _, stderr = runner.communicate(timeout=10)
         assert runner.returncode == 1

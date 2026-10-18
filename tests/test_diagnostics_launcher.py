@@ -112,10 +112,13 @@ def test_signal_to_the_launcher_interrupts_the_run_and_its_participants(
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
         start_new_session=True,
     )
+    # The participant writes <observer>.step when the first Step arrives:
+    # interrupt that Step, not the startup.
+    step_marker = Path(f"{observer}.step")
     deadline = time.monotonic() + 10
-    while not observer.exists() and time.monotonic() < deadline:
+    while not step_marker.exists() and time.monotonic() < deadline:
         time.sleep(0.01)
-    time.sleep(0.3)
+    assert step_marker.exists(), "the first Step did not arrive"
     participant_pid = int(observer.read_text().split()[0])
     launcher.send_signal(signal_number)
     _, stderr = launcher.communicate(timeout=15)
