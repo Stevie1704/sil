@@ -81,6 +81,17 @@ def publish(mirror: Path, version: str) -> Path:
     return release
 
 
+def _can_create_a_venv_with_pip() -> bool:
+    proc = subprocess.run([sys.executable, "-c", "import ensurepip"],
+                          capture_output=True)
+    return proc.returncode == 0
+
+
+needs_venv = pytest.mark.skipif(
+    not _can_create_a_venv_with_pip(),
+    reason="the test Python has no ensurepip (Debian and Ubuntu: python3-venv)")
+
+
 @pytest.fixture
 def host(tmp_path: Path) -> dict[str, str]:
     """The environment of a Linux x86-64 host without network access for pip."""
@@ -112,6 +123,7 @@ def in_env(prefix: Path, command: str, env: dict[str, str]) -> str:
     return proc.stdout.strip()
 
 
+@needs_venv
 def test_install_puts_the_release_on_path(tmp_path, host):
     publish(tmp_path / "mirror", "0.2.0")
     prefix = tmp_path / "sil"
@@ -127,8 +139,8 @@ def test_install_puts_the_release_on_path(tmp_path, host):
         assert in_env(prefix, f"command -v {name}", host) == \
             str(prefix / "current" / "native" / "bin" / name)
     # Manifests start `python3 -m sil.participant`: python3 must be the venv's.
-    assert in_env(prefix, "python3 -c 'import sil; print(sil.__file__)'", host) \
-        .startswith(str(prefix / "0.2.0" / "venv"))
+    package = Path(in_env(prefix, "python3 -c 'import sil; print(sil.__file__)'", host))
+    assert package.resolve().is_relative_to((prefix / "0.2.0" / "venv").resolve())
     assert sorted(path.name for path in prefix.iterdir()) == ["0.2.0", "current", "env"]
 
 
@@ -173,6 +185,7 @@ def test_an_unsupported_host_is_refused_before_any_download(tmp_path, host, syst
     assert not prefix.exists()
 
 
+@needs_venv
 def test_an_installed_version_is_kept_and_not_downloaded_again(tmp_path, host):
     release = publish(tmp_path / "mirror", "0.2.0")
     prefix = tmp_path / "sil"
@@ -189,6 +202,7 @@ def test_an_installed_version_is_kept_and_not_downloaded_again(tmp_path, host):
     assert marker.stat().st_mtime_ns == before
 
 
+@needs_venv
 def test_versions_stay_side_by_side_and_the_last_installed_is_current(tmp_path, host):
     publish(tmp_path / "mirror", "0.2.0")
     publish(tmp_path / "mirror", "0.3.0")
@@ -215,6 +229,7 @@ def test_an_incomplete_installation_is_not_used(tmp_path, host):
     assert not (prefix / "current").exists()
 
 
+@needs_venv
 def test_a_runner_of_another_version_fails_the_installation(tmp_path, host):
     release = publish(tmp_path / "mirror", "0.2.0")
     (release / "sil-native-dev-0.2.0-linux-x86_64.tar.gz").write_bytes(
@@ -248,6 +263,7 @@ def test_usage_errors_exit_2(tmp_path, host, argv, message):
     assert "usage: install.sh" in proc.stderr
 
 
+@needs_venv
 def test_the_release_script_installs_its_own_version_by_default(tmp_path, host):
     version = project_version(ROOT)
     publish(tmp_path / "mirror", version)
