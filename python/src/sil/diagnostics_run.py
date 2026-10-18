@@ -523,13 +523,29 @@ def _positive(ceiling: int):
     return parse
 
 
-class _GivenOnce(argparse.Action):
+class GivenOnce(argparse.Action):
     """The runner rejects a repeated option; so does this command."""
 
     def __call__(self, parser, namespace, values, option_string=None):
         if getattr(namespace, self.dest) is not None:
             parser.error(f"{option_string} may be given only once")
         setattr(namespace, self.dest, values)
+
+
+def add_guard_arguments(parser: argparse.ArgumentParser) -> None:
+    """The timeout and Step-protocol guard options a Run forwards."""
+    parser.add_argument("--participant-timeout-ms", action=GivenOnce,
+                        type=_positive(MAX_MILLISECONDS), metavar="N")
+    for name in ("max-protocol-line-bytes", "max-step-output-messages",
+                 "max-step-inline-payload-bytes"):
+        parser.add_argument(f"--{name}", action=GivenOnce,
+                            type=_positive(MAX_SIZE), metavar="N")
+
+
+def guards_from(args: argparse.Namespace) -> Guards:
+    return Guards(args.participant_timeout_ms, args.max_protocol_line_bytes,
+                  args.max_step_output_messages,
+                  args.max_step_inline_payload_bytes)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -542,27 +558,22 @@ def _parser() -> argparse.ArgumentParser:
         allow_abbrev=False,
     )
     parser.add_argument("manifest", type=Path)
-    parser.add_argument("-o", dest="recording", type=Path, action=_GivenOnce,
+    parser.add_argument("-o", dest="recording", type=Path, action=GivenOnce,
                         metavar="OUT.mcap",
                         help=f"the Recording (default {DEFAULT_RECORDING})")
     parser.add_argument("--no-recording", action="store_true",
                         help="execute without writing a Recording")
-    parser.add_argument("--provenance", type=Path, action=_GivenOnce,
+    parser.add_argument("--provenance", type=Path, action=GivenOnce,
                         metavar="PATH", help="the provenance record")
-    parser.add_argument("--participant-timeout-ms", action=_GivenOnce,
-                        type=_positive(MAX_MILLISECONDS), metavar="N")
-    for name in ("max-protocol-line-bytes", "max-step-output-messages",
-                 "max-step-inline-payload-bytes"):
-        parser.add_argument(f"--{name}", action=_GivenOnce,
-                            type=_positive(MAX_SIZE), metavar="N")
+    add_guard_arguments(parser)
     parser.add_argument("--diagnostics", action="store_true",
                         help="write <recording>.diagnostics.json (also "
                              f"{DEFAULT_RECORDING}.diagnostics.json under "
                              "--no-recording) and print a summary")
-    parser.add_argument("--diagnostics-out", type=Path, action=_GivenOnce,
+    parser.add_argument("--diagnostics-out", type=Path, action=GivenOnce,
                         metavar="PATH",
                         help="write the report to PATH; implies --diagnostics")
-    parser.add_argument("--html", type=Path, action=_GivenOnce,
+    parser.add_argument("--html", type=Path, action=GivenOnce,
                         metavar="PATH",
                         help="not available in this version")
     return parser
@@ -580,11 +591,8 @@ def request_from_arguments(argv: list[str]) -> RunRequest:
     recording = None if args.no_recording else (
         args.recording or Path(DEFAULT_RECORDING))
     report = args.diagnostics_out or default_report_path(recording)
-    guards = Guards(args.participant_timeout_ms, args.max_protocol_line_bytes,
-                    args.max_step_output_messages,
-                    args.max_step_inline_payload_bytes)
     return RunRequest(args.manifest, report, recording, args.provenance,
-                      guards)
+                      guards_from(args))
 
 
 def main(argv: list[str] | None = None) -> int:
