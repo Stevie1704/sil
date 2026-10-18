@@ -493,6 +493,10 @@ class TestFailedRuns:
         step = task_rows(report)[("wedged", "step")]
         assert (step["attempted"], step["failed"]) == (1, 1)
         assert validate_run_report(report) == []
+        if RESOURCES_SUPPORTED:
+            # The wedged child is killed and reaped, so it is still measured.
+            _, _, processes = resource_records(report)
+            assert processes["wedged"]["peak_rss_bytes"] > 0
 
     def test_interrupted_run_marks_the_interrupted_step(
         self, sil_run_diagnostics, tmp_path
