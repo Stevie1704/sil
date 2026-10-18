@@ -1,4 +1,4 @@
-"""Release identity checks that do not require a registry or Docker daemon."""
+"""Release artifact checks that do not require a registry or Docker daemon."""
 
 from __future__ import annotations
 
@@ -156,6 +156,56 @@ def test_runner_reports_the_project_version(sil_run):
     )
     assert version.stdout == f"{VERSION}\n"
     assert json.loads(info.stdout)["version"] == VERSION
+
+
+@pytest.mark.parametrize("symbol", ["GLIBC_2.38", "GLIBCXX_3.4.32"])
+def test_native_symbol_gate_rejects_requirements_newer_than_bookworm(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, symbol: str,
+):
+    from release import validate_native_symbols
+
+    library = tmp_path / "lib" / "extra.so"
+    library.parent.mkdir()
+    library.write_bytes(b"\x7fELF")
+    # objdump is the external inspection boundary. These are the symbol
+    # requirements of the published 0.2.0 runners reported in issue #310.
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs:
+                        subprocess.CompletedProcess(args[0], 0,
+                            stdout=f"0000 DF *UND* 0000 ({symbol}) imported\n"))
+    with pytest.raises(ReleaseError, match=rf"extra.so.*{re.escape(symbol)}"):
+        validate_native_symbols(tmp_path)
+
+
+def test_native_symbol_gate_accepts_bookworm_imports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+):
+    from release import validate_native_symbols
+
+    (tmp_path / "sil-run").write_bytes(b"\x7fELF")
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs:
+                        subprocess.CompletedProcess(args[0], 0, stdout="""
+0000 DF *UND* 0000 (GLIBC_2.9) imported
+0000 DF *UND* 0000 (GLIBC_2.36) imported
+0000 DF *UND* 0000 (GLIBCXX_3.4.9) imported
+0000 DF *UND* 0000 (GLIBCXX_3.4.30) imported
+0000 g DF .text 0000 GLIBC_2.99 defined_not_imported
+"""))
+    validate_native_symbols(tmp_path)
+
+
+def test_native_symbol_gate_fails_when_elf_inspection_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+):
+    from release import validate_native_symbols
+
+    (tmp_path / "sil-run").write_bytes(b"\x7fELF")
+
+    def unavailable(*args, **kwargs):
+        raise FileNotFoundError("objdump")
+
+    monkeypatch.setattr(subprocess, "run", unavailable)
+    with pytest.raises(ReleaseError, match="cannot inspect ELF symbols"):
+        validate_native_symbols(tmp_path)
 
 
 @pytest.fixture

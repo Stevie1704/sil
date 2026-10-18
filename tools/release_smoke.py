@@ -2,7 +2,9 @@
 """Run a release bundle without importing anything from the source checkout.
 
 The wheel and native archive are installed into a temporary environment, then
-the same representative ACC Run is executed twice.  The optional container
+the same representative ACC Run is executed twice. ``--native-only`` also
+checks every ELF import against bookworm's symbol limits (requires binutils).
+The optional container
 run uses the exact image reference supplied by the workflow; a release job
 supplies an ``image@sha256:...`` reference rather than a mutable tag.
 """
@@ -27,6 +29,7 @@ from release import (
     validate_image,
     validate_native_archive,
     validate_runner,
+    validate_native_symbols,
 )
 
 
@@ -222,7 +225,8 @@ def smoke_diagnostics(
 
 
 def smoke_native(
-    bundle: Path, version: str, revision: str, workdir: Path
+    bundle: Path, version: str, revision: str, workdir: Path,
+    *, check_symbols: bool = False,
 ) -> tuple[Path, str]:
     bundle = bundle.resolve()
     wheels = sorted(bundle.glob(f"sil-{version}-*.whl"))
@@ -234,6 +238,8 @@ def smoke_native(
 
     archive_root = validate_native_archive(archives[0], version, revision)
     native_root = extract_archive(archives[0], workdir / "native", archive_root)
+    if check_symbols:
+        validate_native_symbols(native_root)
     venv_dir = workdir / "python"
     venv.EnvBuilder(with_pip=True, clear=True).create(venv_dir)
     python_bin = venv_dir / "bin"
@@ -425,7 +431,10 @@ def smoke_container(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bundle", type=Path, required=True)
-    parser.add_argument("--image", required=True)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--image")
+    mode.add_argument("--native-only", action="store_true",
+                      help="test the native bundle and its bookworm symbol requirements")
     parser.add_argument("--version", required=True)
     parser.add_argument("--source-revision", required=True)
     parser.add_argument("--workdir", type=Path)
@@ -435,9 +444,11 @@ def main(argv: list[str] | None = None) -> int:
     workdir.mkdir(parents=True, exist_ok=True)
     try:
         manifest, manifest_hash = smoke_native(
-            args.bundle, args.version, args.source_revision, workdir
+            args.bundle, args.version, args.source_revision, workdir,
+            check_symbols=args.native_only,
         )
-        smoke_container(args.image, args.version, args.source_revision, manifest, manifest_hash)
+        if args.image:
+            smoke_container(args.image, args.version, args.source_revision, manifest, manifest_hash)
     except (
         OSError,
         ReleaseError,

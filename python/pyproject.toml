@@ -1,6 +1,6 @@
 [project]
 name = "sil"
-version = "0.2.0"
+version = "0.2.1"
 description = "SiL framework: deterministic scheduling + typed data routing for vECU simulation"
 requires-python = ">=3.11"
 license = "Apache-2.0"
