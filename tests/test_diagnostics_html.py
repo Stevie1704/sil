@@ -381,19 +381,21 @@ def test_an_existing_output_is_never_replaced(tmp_path):
     proc = render_command(tmp_path, "in.json", "--html", "out.html")
     same = render_command(tmp_path, "in.json", "--html", "in.json")
 
-    assert proc.returncode == 2 and "already exists" in proc.stderr
+    # An output that cannot be written is an output failure, not invalid
+    # input: exit 1, as the spec defines for offline rendering.
+    assert proc.returncode == 1 and "already exists" in proc.stderr
     assert (tmp_path / "out.html").read_text() == "keep"
-    assert same.returncode == 2
+    assert same.returncode == 1
     assert (tmp_path / "in.json").read_text() == fixture_text(
         "run-success.json")
 
 
-def test_a_missing_output_directory_exits_2(tmp_path):
+def test_a_missing_output_directory_exits_1(tmp_path):
     (tmp_path / "in.json").write_text(fixture_text("run-success.json"))
 
     proc = render_command(tmp_path, "in.json", "--html", "no/out.html")
 
-    assert proc.returncode == 2
+    assert proc.returncode == 1
     assert "does not exist" in proc.stderr
 
 

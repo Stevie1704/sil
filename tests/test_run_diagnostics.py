@@ -612,7 +612,8 @@ class TestReportPublication:
         assert report is None
         assert proc.returncode == ordinary.returncode == (1 if failing else 0)
         # The report's own failure follows the Run's diagnostic.
-        assert proc.stderr.startswith(ordinary.stderr)
+        assert proc.stderr.startswith(ordinary.stderr.replace(
+            "sil-run: ", "sil-run-diagnostics: "))
         assert "cannot write diagnostics report" in proc.stderr
         assert proc.stdout == ordinary.stdout
 

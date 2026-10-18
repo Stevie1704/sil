@@ -21,7 +21,7 @@ import math
 import os
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 RUN_REPORT_KEY = "sil_run_diagnostics"
 BENCHMARK_REPORT_KEY = "sil_benchmark_report"
@@ -89,6 +89,43 @@ def parse_report(text: str, *, source: str = "report") -> dict[str, Any]:
     if errors:
         raise ReportError(f"{source}: " + "; ".join(errors))
     return document
+
+
+def process_records(report: dict) -> list[dict]:
+    """The resource records of a Run report's Process participants."""
+    return report["observational"]["resources"]["process_participants"]
+
+
+def process_record(report: dict | None, participant: str) -> dict | None:
+    """The resource record of `participant` in `report`, or None."""
+    if report is None:
+        return None
+    return next((record for record in process_records(report)
+                 if record["participant"] == participant), None)
+
+
+def process_participant_names(reports: Iterable[dict | None]) -> list[str]:
+    """Every Process participant of any of `reports`, in name order."""
+    return sorted({record["participant"] for report in reports
+                   if report is not None
+                   for record in process_records(report)})
+
+
+def new_path_problem(label: str, path: Path,
+                     cwd: Path | None = None) -> str | None:
+    """Why `path` (relative to `cwd`) cannot be created new, or None.
+
+    Diagnostics outputs never replace an earlier file, and their directory
+    must already exist.
+    """
+    full = (cwd or Path.cwd()) / path
+    if os.path.lexists(full):
+        return (f"{label} '{path}' already exists; an earlier file is never "
+                "replaced")
+    directory = Path(os.path.realpath(full)).parent
+    if not directory.is_dir():
+        return f"{label} '{path}': directory '{directory}' does not exist"
+    return None
 
 
 def write_new_file(path: Path, text: str) -> None:

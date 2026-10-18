@@ -49,6 +49,7 @@ class DurationDistribution {
   // Meaningful only when count() > 0.
   uint64_t min_ns() const { return min_ns_; }
   uint64_t max_ns() const { return max_ns_; }
+  // sum_ns() / count(), computed from the exact integer sum.
   std::optional<double> mean_ns() const;
   // Population standard deviation.
   std::optional<double> stddev_ns() const;
@@ -73,7 +74,7 @@ class DurationDistribution {
   uint64_t sum_ns_ = 0;
   uint64_t min_ns_ = 0;
   uint64_t max_ns_ = 0;
-  double mean_ = 0;
+  double running_mean_ = 0;  // Welford's, for the variance only
   double m2_ = 0;
   std::vector<uint64_t> samples_;
   std::vector<SlowActivation> slowest_;

@@ -41,7 +41,8 @@ target_link_libraries(sil-run-instrumented
 # The same kernel with the opt-in Run diagnostics collector compiled in
 # (#299, #300). It is the supported, installed measurement runner; #63's
 # separate-build rationale still holds, so sil-run keeps no clock read, counter
-# or branch on the activation path. See docs/decisions/299-run-diagnostics.md.
+# or branch on the activation path. See
+# docs/adr/0004-opt-in-run-diagnostics-runner.md.
 add_executable(sil-run-diagnostics
   ${SIL_KERNEL_SOURCES} src/run_diagnostics.cpp src/diagnostics_stats.cpp
   src/resource_usage.cpp)

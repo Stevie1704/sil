@@ -1,12 +1,17 @@
 /* sil-diagnostics-launcher: start the diagnostics runner from a small process.
  *
- *     sil-diagnostics-launcher RUNNER [ARG...]
+ *     sil-diagnostics-launcher [--status-fd N] RUNNER [ARG...]
  *
  * Runs RUNNER with ARG... as its own child and ends as RUNNER ended: with its
  * exit code, or by the signal that ended it. SIGINT, SIGTERM and SIGHUP sent
  * to the launcher are forwarded to RUNNER. The launcher writes nothing on
- * success; its own failures are one stderr line and exit 2 (usage), 1 (fork
- * or wait failed) or 127 (RUNNER could not be executed).
+ * success; its own failures are one line and exit 2 (usage), 1 (fork or wait
+ * failed) or 127 (RUNNER could not be executed).
+ *
+ * The failure line goes to stderr, or to the open file descriptor N with
+ * --status-fd. RUNNER does not inherit N, so nothing the Run writes can
+ * appear there: a supervisor reads N to tell a launcher failure from a Run
+ * whose stderr happens to contain the same text.
  *
  * Why: on Linux, ru_maxrss survives execve. A runner forked directly from a
  * large Python supervisor reports at least the supervisor's resident size as
@@ -18,8 +23,11 @@
 #define _DARWIN_C_SOURCE
 
 #include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -32,6 +40,23 @@ static volatile sig_atomic_t runner_pid = 0;
 
 static void forward(int signal_number) {
   if (runner_pid > 0) kill((pid_t)runner_pid, signal_number);
+}
+
+static void usage(void) {
+  fprintf(stderr,
+          "usage: sil-diagnostics-launcher [--status-fd N] RUNNER [ARG...]\n");
+}
+
+/* An open descriptor, marked close-on-exec so RUNNER never inherits it. */
+static int parse_status_fd(const char *text) {
+  char *end;
+  errno = 0;
+  const long value = strtol(text, &end, 10);
+  if (errno != 0 || *text == '\0' || *end != '\0' || value < 0 ||
+      value > INT_MAX)
+    return -1;
+  if (fcntl((int)value, F_SETFD, FD_CLOEXEC) == -1) return -1;
+  return (int)value;
 }
 
 /* Ends this process the way the runner ended. */
@@ -48,8 +73,18 @@ static int end_like(int status) {
 }
 
 int main(int argc, char **argv) {
-  if (argc < 2) {
-    fprintf(stderr, "usage: sil-diagnostics-launcher RUNNER [ARG...]\n");
+  int status_fd = STDERR_FILENO;
+  int first = 1;
+  if (argc >= 2 && strcmp(argv[1], "--status-fd") == 0) {
+    status_fd = argc >= 3 ? parse_status_fd(argv[2]) : -1;
+    if (status_fd < 0) {
+      usage();
+      return 2;
+    }
+    first = 3;
+  }
+  if (argc <= first) {
+    usage();
     return 2;
   }
 
@@ -70,16 +105,16 @@ int main(int argc, char **argv) {
 
   const pid_t pid = fork();
   if (pid < 0) {
-    fprintf(stderr, "sil-diagnostics-launcher: fork failed: %s\n",
+    dprintf(status_fd, "sil-diagnostics-launcher: fork failed: %s\n",
             strerror(errno));
     return 1;
   }
   if (pid == 0) {
     /* exec resets the handlers; the runner gets the supervisor's mask. */
     sigprocmask(SIG_SETMASK, &previous, NULL);
-    execvp(argv[1], argv + 1);
-    fprintf(stderr, "sil-diagnostics-launcher: cannot run '%s': %s\n",
-            argv[1], strerror(errno));
+    execvp(argv[first], argv + first);
+    dprintf(status_fd, "sil-diagnostics-launcher: cannot run '%s': %s\n",
+            argv[first], strerror(errno));
     _exit(127);
   }
   runner_pid = pid;
@@ -89,7 +124,7 @@ int main(int argc, char **argv) {
   for (;;) {
     if (waitpid(pid, &status, 0) == pid) break;
     if (errno == EINTR) continue;
-    fprintf(stderr, "sil-diagnostics-launcher: wait failed: %s\n",
+    dprintf(status_fd, "sil-diagnostics-launcher: wait failed: %s\n",
             strerror(errno));
     return 1;
   }

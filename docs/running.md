@@ -454,8 +454,8 @@ sil diagnostics render results/summary.json --html copy.html
 | Exit of `sil diagnostics render` | Meaning |
 | --- | --- |
 | `0` | The HTML report was written. |
-| `1` | The HTML report could not be written. |
-| `2` | Invalid options; the input is missing, not valid JSON, not a valid report, or of an unknown version; or the output exists or has no directory. |
+| `1` | The HTML report could not be written, also because the output exists or has no directory. |
+| `2` | Invalid options; or the input is missing, not valid JSON, not a valid report, or of an unknown version. |
 
 ## What the measurements mean
 

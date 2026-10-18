@@ -159,7 +159,8 @@ class TestAggregation:
 
         summary = summarize(policy(repeats=2, warmup=0), MANIFEST, runs)
 
-        assert summary["status"]["exit_code"] == 1
+        assert summary["status"] == {"complete": False, "exit_code": 1,
+                                     "stopped_reason": "report_failed"}
         assert summary["counts"]["failed"] == 1
         assert summary["aggregates"]["sample_count"] == 0
 
@@ -207,6 +208,24 @@ class TestAggregation:
         assert rss[0]["per_run"][0]["value"] == 14 * 2**20
         names = [m["metric"] for m in summary["aggregates"]["metrics"]]
         assert not any("rss" in name and "total" in name for name in names)
+
+    def test_a_participant_seen_only_in_a_later_run_is_kept(self):
+        later = run_report(6)
+        (record,) = later["observational"]["resources"]["process_participants"]
+        later["observational"]["resources"]["process_participants"].append(
+            {**record, "participant": "late", "peak_rss_bytes": 3 * 2**20})
+        runs = [result("run-001", run_report(5)), result("run-002", later)]
+
+        summary = summarize(policy(repeats=2, warmup=0), MANIFEST, runs)
+
+        rss = {m["participant"]: m for m in summary["aggregates"]["metrics"]
+               if m["metric"] == "process_peak_rss_bytes"}
+        assert sorted(rss) == ["late", "pyecho"]
+        assert rss["late"]["per_run"] == [
+            {"label": "run-001", "value": None},
+            {"label": "run-002", "value": 3 * 2**20}]
+        assert rss["late"]["unavailable"]["mean"] == \
+            "unavailable_in_a_measured_run"
 
     def test_activation_percentiles_are_not_pooled_across_runs(self):
         # Runs keep their own distributions and throughput denominators; no

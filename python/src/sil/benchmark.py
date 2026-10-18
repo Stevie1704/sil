@@ -34,17 +34,18 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from sil import build_info
+from sil.diagnostics_format import format_duration_ns, format_value
 from sil.diagnostics_html import write_html
 from sil.diagnostics_report import (
-    BENCHMARK_REPORT_KEY, SUPPORTED_VERSION, validate_benchmark_report,
+    BENCHMARK_REPORT_KEY, SUPPORTED_VERSION, new_path_problem,
+    process_participant_names, process_record, validate_benchmark_report,
     write_new_file,
 )
 from sil.diagnostics_run import (
-    DEFAULT_RECORDING, EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE,
+    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE,
     FORWARDED_SIGNALS, GivenOnce, Guards, NativeTools, RunOutcome, RunRequest,
-    ToolMissing, add_guard_arguments, default_report_path, describe_problems,
-    execute, find_native_tools, format_duration_ns, format_value,
-    guards_from, resolve_exit,
+    ToolMissing, add_guard_arguments, command_error, default_report_path,
+    describe_problems, execute, find_native_tools, guards_from, resolve_exit,
 )
 
 PROG = "sil benchmark"
@@ -186,12 +187,19 @@ def _status(policy: Policy, runs: Sequence[RunResult],
         if exit_code == EXIT_OK:
             exit_code = 128 + interrupt_signal
     elif failed is not None:
-        reason = "warmup_failed" if failed.role == "warmup" else "run_failed"
+        reason = _stopped_reason(failed)
     else:
         reason = None
     complete = reason is None and len(runs) == policy.repeats + policy.warmup
     return {"complete": complete, "exit_code": exit_code,
             "stopped_reason": reason}
+
+
+def _stopped_reason(failed: RunResult) -> str:
+    """A Run that exited 0 failed only for want of a valid report."""
+    if failed.outcome.run_exit_code == EXIT_OK:
+        return "report_failed"
+    return "warmup_failed" if failed.role == "warmup" else "run_failed"
 
 
 def _counts(policy: Policy, runs: Sequence[RunResult]) -> dict:
@@ -230,9 +238,11 @@ def _metrics(successful: Sequence[RunResult]) -> list[dict]:
                        [(label, _member(report, source))
                         for label, report in reports])
                for name, unit, source in RUN_METRICS]
-    for participant in _process_participants(reports):
+    # Every Run's Participants; one a Run lacks is null there.
+    names = process_participant_names(report for _label, report in reports)
+    for participant in names:
         for name, unit, member in PROCESS_METRICS:
-            values = [(label, _process_record(report, participant)
+            values = [(label, (process_record(report, participant) or {})
                        .get(member)) for label, report in reports]
             metrics.append({"participant": participant, **_metric(
                 name, unit, f"{PROCESS_SOURCE}.{member}", values)})
@@ -244,21 +254,6 @@ def _member(report: dict, source: str) -> Any:
     for key in source.split("."):
         value = value[key]
     return value
-
-
-def _process_participants(reports) -> list[str]:
-    if not reports:
-        return []
-    return sorted(record["participant"] for record in
-                  reports[0][1]["observational"]["resources"]
-                  ["process_participants"])
-
-
-def _process_record(report: dict, participant: str) -> dict:
-    for record in report["observational"]["resources"]["process_participants"]:
-        if record["participant"] == participant:
-            return record
-    return {}
 
 
 def _metric(name: str, unit: str, source: str,
@@ -488,29 +483,23 @@ def main(argv: list[str] | None = None) -> int:
     # absolute here; the Manifest itself is never copied or rewritten.
     manifest = Path.cwd() / args.manifest
     out: Path = args.out
-    if os.path.lexists(out):
-        return _usage_error(f"--out '{out}' already exists; a benchmark never "
-                            "replaces earlier results")
-    if not Path(os.path.realpath(out)).parent.is_dir():
-        return _usage_error(f"--out '{out}': its parent directory does not "
-                            "exist")
-    if args.html is not None:
+    problem = new_path_problem("--out", out)
+    if problem is None and args.html is not None:
         problem = _html_problem(args.html, out, policy)
-        if problem is not None:
-            return _usage_error(problem)
+    if problem is not None:
+        return command_error(PROG, problem, EXIT_USAGE)
     try:
         tools = find_native_tools()
     except ToolMissing as error:
-        sys.stderr.write(f"{PROG}: error: {error}\n")
-        return EXIT_NOT_FOUND
+        return command_error(PROG, str(error), EXIT_NOT_FOUND)
     try:
         out.mkdir()
     except FileExistsError:
-        return _usage_error(f"--out '{out}' already exists")
+        return command_error(PROG, f"--out '{out}' already exists",
+                             EXIT_USAGE)
     except OSError as error:
-        sys.stderr.write(f"{PROG}: error: cannot create --out '{out}': "
-                         f"{error}\n")
-        return EXIT_FAILURE
+        return command_error(PROG, f"cannot create --out '{out}': {error}",
+                             EXIT_FAILURE)
     results, interrupt_signal = run_campaign(policy, manifest, out.absolute(),
                                              tools)
     summary = summarize(policy, manifest, results, interrupt_signal)
@@ -538,10 +527,10 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _html_problem(html: Path, out: Path, policy: Policy) -> str | None:
-    """Why `html` cannot be the new HTML report; it may be inside --out."""
-    if os.path.lexists(html):
-        return (f"HTML report '{html}' already exists; a benchmark never "
-                "replaces earlier results")
+    """Why `html` cannot be the new HTML report; it may be inside --out.
+
+    `out` does not exist yet, so a path directly inside it is new.
+    """
     target = Path(os.path.realpath(html))
     out_directory = Path(os.path.realpath(out))
     if target == out_directory:
@@ -552,14 +541,7 @@ def _html_problem(html: Path, out: Path, policy: Policy) -> str | None:
         if target.name in {label for label, _role, _i in plan(policy)}:
             return f"HTML report '{html}' is also a Run directory"
         return None
-    if not target.parent.is_dir():
-        return f"HTML report '{html}': its directory does not exist"
-    return None
-
-
-def _usage_error(message: str) -> int:
-    sys.stderr.write(f"{PROG}: error: {message}\n")
-    return EXIT_USAGE
+    return new_path_problem("HTML report", html)
 
 
 if __name__ == "__main__":

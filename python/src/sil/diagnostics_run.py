@@ -32,12 +32,17 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import BinaryIO, Iterable, Sequence
 
-from sil.diagnostics_report import PHASES, ReportError, load_report
+from sil.diagnostics_format import (
+    format_bytes, format_duration_ns, format_factor, format_rate,
+)
+from sil.diagnostics_html import write_html
+from sil.diagnostics_report import (
+    PHASES, ReportError, load_report, new_path_problem,
+)
 
 PROG = "sil run"
 RUNNER = "sil-run-diagnostics"
 LAUNCHER = "sil-diagnostics-launcher"
-LAUNCHER_PREFIX = b"sil-diagnostics-launcher: "
 DEFAULT_RECORDING = "out.mcap"
 
 EXIT_OK = 0
@@ -47,8 +52,11 @@ EXIT_NOT_FOUND = 127
 
 FORWARDED_SIGNALS = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 # Time the stderr copy may take after the runner ended. A descendant that
-# escaped the runner's cleanup can hold the pipe open forever.
+# escaped the runner's cleanup can hold the pipe open forever; the copy then
+# stops writing to its sink and says so.
 STDERR_DRAIN_S = 2.0
+STDERR_DETACHED = (f"{PROG}: stopped copying the Run's stderr: a process "
+                   "that outlived the runner still holds it open\n").encode()
 
 # The runner's ceilings: std::chrono::milliseconds::max() and SIZE_MAX.
 MAX_MILLISECONDS = 2**63 - 1
@@ -151,21 +159,23 @@ def preflight(request: RunRequest,
         problems.append(f"the Recording '{request.recording}' is the Manifest")
     seen: list[tuple[str, Path]] = []
     for label, path in outputs:
+        problem = new_path_problem(label, path, base)
+        if problem is not None:
+            problems.append(problem)
+            continue
         target = absolute(path)
-        if os.path.lexists(base / path):
-            problems.append(f"{label} '{path}' already exists; diagnostics "
-                            "never replace an earlier file")
-            continue
-        if not target.parent.is_dir():
-            problems.append(f"{label} '{path}': directory "
-                            f"'{target.parent}' does not exist")
-            continue
         for other_label, other in [*others, *seen]:
             if _same(target, absolute(other)):
                 problems.append(f"{label} '{path}' is also the {other_label}")
                 break
         seen.append((label, path))
     return problems
+
+
+def command_error(prog: str, message: str, code: int) -> int:
+    """Write `PROG: error: message` to stderr; return the exit code."""
+    sys.stderr.write(f"{prog}: error: {message}\n")
+    return code
 
 
 def _same(a: Path, b: Path) -> bool:
@@ -183,7 +193,7 @@ class RunOutcome:
 
     exit_code: int | None  # the process exit code; None if ended by signal
     signal: int | None  # the signal that ended the runner
-    launcher_error: str | None  # the launcher's own failure line, if any
+    launcher_error: str | None  # the launcher's --status-fd line, if any
     report: dict | None  # the valid report, or None
     report_problem: str | None  # why `report` is None
     report_path: Path
@@ -206,30 +216,41 @@ def execute(request: RunRequest, tools: NativeTools, *,
     """Run one diagnostics Run to its end and read its report.
 
     The runner's stdout goes to `stdout` (inherited when None). Its stderr is
-    copied unchanged to `stderr` (this process's stderr when None) and read
-    for the launcher's own failure line. SIGINT, SIGTERM and SIGHUP sent to
-    this process are forwarded to the launcher, which forwards them to the
-    runner; the Run then ends through its own cleanup.
+    copied unchanged to `stderr` (this process's stderr when None). The
+    launcher's own failure arrives on a separate pipe (`--status-fd`) that
+    the runner and its Participants never inherit, so no Run output can pose
+    as one. SIGINT, SIGTERM and SIGHUP sent to this process are forwarded to
+    the launcher, which forwards them to the runner; the Run then ends
+    through its own cleanup.
     """
     sink = stderr if stderr is not None else sys.stderr.buffer
-    command = [str(tools.launcher), str(tools.runner),
-               *request.runner_arguments()]
+    status_read, status_write = os.pipe()
+    command = [str(tools.launcher), "--status-fd", str(status_write),
+               str(tools.runner), *request.runner_arguments()]
     sys.stdout.flush()
     sys.stderr.flush()
-    process = subprocess.Popen(command, cwd=cwd, stdout=stdout,
-                               stderr=subprocess.PIPE, start_new_session=True)
+    try:
+        process = subprocess.Popen(command, cwd=cwd, stdout=stdout,
+                                   stderr=subprocess.PIPE,
+                                   pass_fds=(status_write,),
+                                   start_new_session=True)
+    except BaseException:
+        os.close(status_read)
+        raise
+    finally:
+        os.close(status_write)
     received: list[int] = []
     previous = _forward_signals(process, received)
     try:
         copier = _StderrCopy(process.stderr, sink)
         copier.start()
         status = _wait(process)
-        copier.join(STDERR_DRAIN_S)
+        copier.finish(STDERR_DRAIN_S)
     finally:
         _restore_signals(previous)
     exit_code = status if status >= 0 else None
     ended_by = -status if status < 0 else None
-    launcher_error = copier.launcher_error
+    launcher_error = _read_status(status_read)
     report, problem = _read_report(Path(cwd or ".") / request.report,
                                    exit_code)
     return RunOutcome(exit_code, ended_by, launcher_error, report, problem,
@@ -265,21 +286,47 @@ def _restore_signals(previous) -> None:
         signal.signal(number, handler)
 
 
+def _read_status(fd: int) -> str | None:
+    """The launcher's failure line; None when it wrote none.
+
+    Only the launcher holds the write end, so the read ends when it does.
+    """
+    with os.fdopen(fd, "rb") as status:
+        text = status.read().decode(errors="replace").strip()
+    return text.splitlines()[0] if text else None
+
+
 class _StderrCopy(threading.Thread):
-    """Copies the runner's stderr unchanged and notes the launcher's line."""
+    """Copies the runner's stderr unchanged until it ends or is detached."""
 
     def __init__(self, source: BinaryIO, sink: BinaryIO):
         super().__init__(daemon=True)
         self.source = source
         self.sink = sink
-        self.launcher_error: str | None = None
+        self._lock = threading.Lock()
+        self._detached = False
 
     def run(self) -> None:
+        # Reading continues after a detach, so a writer that outlived the
+        # runner never blocks on a full pipe.
         for line in iter(self.source.readline, b""):
-            if line.startswith(LAUNCHER_PREFIX) and self.launcher_error is None:
-                self.launcher_error = line.decode(errors="replace").rstrip("\n")
-            self.sink.write(line)
-            self.sink.flush()
+            with self._lock:
+                if not self._detached:
+                    self.sink.write(line)
+                    self.sink.flush()
+
+    def finish(self, timeout: float) -> None:
+        """Wait for the copy; after `timeout`, detach the sink with a notice.
+
+        The sink is never written to after this returns, so its owner may
+        close it.
+        """
+        self.join(timeout)
+        with self._lock:
+            if self.is_alive():
+                self._detached = True
+                self.sink.write(STDERR_DETACHED)
+                self.sink.flush()
 
 
 def _read_report(path: Path, exit_code: int | None):
@@ -336,46 +383,12 @@ def describe_problems(outcome: RunOutcome,
 # --- terminal summary -------------------------------------------------------
 
 
-def format_duration_ns(value: float) -> str:
-    """Nanoseconds in the largest unit below the value, three decimals."""
-    for unit, scale in (("s", 1e9), ("ms", 1e6), ("us", 1e3)):
-        if abs(value) >= scale:
-            return f"{value / scale:.3f} {unit}"
-    return f"{value:.0f} ns"
-
-
-def format_bytes(value: int) -> str:
-    for unit, scale in (("GiB", 2**30), ("MiB", 2**20), ("KiB", 2**10)):
-        if value >= scale:
-            return f"{value / scale:.3f} {unit}"
-    return f"{value} B"
-
-
 def _value(record: dict, key: str, render) -> str:
     """A value with its unit, or `unavailable (reason)` for a null one."""
     if record.get(key) is None:
         reason = record.get("unavailable", {}).get(key, "not reported")
         return f"unavailable ({reason})"
     return render(record[key])
-
-
-def format_factor(value: float) -> str:
-    return f"{value:.2f}x"
-
-
-def format_rate(value: float) -> str:
-    return f"{value:.2f}/s"
-
-
-def format_value(unit: str, value) -> str:
-    """A value of a benchmark metric unit: `ns`, `bytes`, `factor`, `1/s`."""
-    if unit == "ns":
-        return format_duration_ns(value)
-    if unit == "bytes":
-        return format_bytes(value)
-    if unit == "factor":
-        return format_factor(value)
-    return format_rate(value)
 
 
 def format_summary(report: dict, report_path: Path) -> str:
@@ -391,7 +404,7 @@ def format_summary(report: dict, report_path: Path) -> str:
         f"{_value(phases, name, format_duration_ns)}"
         for name in (*PHASES, "unattributed_ns")))
     speed = observational["virtual_time_speed"]
-    lines.append(f"virtual-time speed: scheduled "
+    lines.append(f"Virtual-time speed: scheduled "
                  f"{_value(speed, 'scheduled_factor', format_factor)}, end-to-end "
                  f"{_value(speed, 'end_to_end_factor', format_factor)}")
     lines.append(_throughput_line(observational["throughput"]))
@@ -414,13 +427,13 @@ def _run_lines(report: dict) -> list[str]:
         if failure.get("participant"):
             context.append(f"Participant {failure['participant']}")
         if failure.get("virtual_time_ns") is not None:
-            context.append("virtual time "
+            context.append("Virtual time "
                            + format_duration_ns(failure["virtual_time_ns"]))
         lines.append(f"failure: {failure['message']} ({', '.join(context)})")
     if not completeness["run_complete"]:
         execution = report["execution"]
         lines.append(
-            "last virtual time: "
+            "last Virtual time: "
             f"{_value(execution, 'last_virtual_time_ns', format_duration_ns)}"
             f" of Duration "
             f"{_value(execution, 'duration_ns', format_duration_ns)}")
@@ -431,10 +444,10 @@ def _throughput_line(throughput: dict) -> str:
     denominator = _value(throughput, "scheduled_execution_ns",
                          format_duration_ns)
     return (f"throughput per second of scheduled execution ({denominator}): "
-            f"{throughput['completed_native_activations']} native "
-            f"activations, "
+            f"{throughput['completed_native_activations']} Native "
+            f"Activations, "
             f"{_value(throughput, 'native_activations_per_s', format_rate)}; "
-            f"{throughput['completed_process_steps']} process steps, "
+            f"{throughput['completed_process_steps']} Process Steps, "
             f"{_value(throughput, 'process_steps_per_s', format_rate)}")
 
 
@@ -456,7 +469,7 @@ def _task_lines(report: dict) -> list[str]:
                 f"  {name} replay: {replay['publications']} Messages; "
                 "publication Slots " + _counts(replay)
                 + _timing(replays[name]))
-    return ["tasks (inclusive wall time of completed activations):", *lines] \
+    return ["Tasks (inclusive wall time of completed Activations):", *lines] \
         if lines else []
 
 
@@ -467,8 +480,8 @@ def _counts(counts: dict) -> str:
             text += f", {counts[outcome]} {outcome}"
     first = counts.get("failed_activation")
     if first is not None:
-        text += (f" (first at activation {first['activation_index']}, "
-                 f"virtual time {format_duration_ns(first['virtual_time_ns'])})")
+        text += (f" (first at Activation {first['activation_index']}, "
+                 f"Virtual time {format_duration_ns(first['virtual_time_ns'])})")
     return text
 
 
@@ -608,8 +621,6 @@ def request_from_arguments(argv: list[str]) -> tuple[RunRequest, Path | None]:
 def write_html_report(outcome: RunOutcome, path: Path,
                       cwd: Path | None = None) -> str | None:
     """Render the Run's report into `path`; return the failed artifact."""
-    from sil.diagnostics_html import write_html  # imports this module
-
     label = f"HTML report '{path}'"
     if outcome.report is None:
         return f"{label}: no valid diagnostics report to render"
@@ -629,13 +640,12 @@ def main(argv: list[str] | None = None) -> int:
     problems = preflight(request, new_files)
     if problems:
         for problem in problems:
-            sys.stderr.write(f"{PROG}: error: {problem}\n")
+            command_error(PROG, problem, EXIT_USAGE)
         return EXIT_USAGE
     try:
         tools = find_native_tools()
     except ToolMissing as error:
-        sys.stderr.write(f"{PROG}: error: {error}\n")
-        return EXIT_NOT_FOUND
+        return command_error(PROG, str(error), EXIT_NOT_FOUND)
     outcome = execute(request, tools)
     failed = []
     if html is not None:

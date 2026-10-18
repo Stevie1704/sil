@@ -11,13 +11,17 @@ import os
 import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
 
 from conftest import ROOT
 from sil.diagnostics_report import validate_run_report
-from sil.diagnostics_run import format_summary
+from sil import diagnostics_run
+from sil.diagnostics_run import (
+    NativeTools, RunRequest, execute, format_summary,
+)
 from test_process_descendants import (
     _wait_for_observer, assert_cleanup, descendant_manifest,
 )
@@ -81,10 +85,10 @@ run wall time: 67.235 ms (native runner start before Manifest load through \
 Participant cleanup and Recording close)
 phases: preflight 8.079 ms, setup 38.608 ms, scheduled execution 202.083 us, \
 shutdown 20.237 ms, recording finalization 108.542 us, unattributed 0 ns
-virtual-time speed: scheduled 98.97x, end-to-end 0.30x
+Virtual-time speed: scheduled 98.97x, end-to-end 0.30x
 throughput per second of scheduled execution (202.083 us): \
-24 native activations, 118763.08/s; 2 process steps, 9896.92/s
-tasks (inclusive wall time of completed activations):
+24 Native Activations, 118763.08/s; 2 Process Steps, 9896.92/s
+Tasks (inclusive wall time of completed Activations):
   multi/fast native_task: 20 of 20 completed, mean 1.215 us, p50 208 ns, \
 p95 542 ns, p99 unavailable (insufficient_samples), max 19.583 us
   multi/slow native_task: 4 of 4 completed, mean 302 ns, p50 167 ns, \
@@ -111,14 +115,14 @@ def test_summary_of_a_failed_run_is_marked_partial():
 
     assert "run: run_failure, exit code 1, partial (run_failure)" in lines
     assert ("failure: participant 'test' failed: AssertionError: boom at "
-            "t=20000000 (participant, Participant test, virtual time "
+            "t=20000000 (participant, Participant test, Virtual time "
             "20.000 ms)") in lines
-    assert "last virtual time: 20.000 ms of Duration 50.000 ms" in lines
-    assert ("virtual-time speed: scheduled unavailable (run_not_successful), "
+    assert "last Virtual time: 20.000 ms of Duration 50.000 ms" in lines
+    assert ("Virtual-time speed: scheduled unavailable (run_not_successful), "
             "end-to-end unavailable (run_not_successful)") in lines
     assert any(line.startswith(
         "  test/step process_step: 2 of 3 completed, 1 failed (first at "
-        "activation 2, virtual time 20.000 ms), mean ") for line in lines)
+        "Activation 2, Virtual time 20.000 ms), mean ") for line in lines)
 
 
 def test_summary_without_samples_or_resources_shows_reasons_not_zeros():
@@ -261,8 +265,10 @@ def test_failed_run_keeps_its_exit_code_stderr_and_partial_summary(
                 "-o", "run.mcap"], native_path, tmp_path)
 
     assert proc.returncode == 1
-    # The runner's first diagnostic is the first stderr line, unchanged.
-    assert proc.stderr.startswith("sil-run: participant 'test' failed")
+    # The runner's first diagnostic is the first stderr line, unchanged, and
+    # names the runner that wrote it.
+    assert proc.stderr.startswith(
+        "sil-run-diagnostics: participant 'test' failed")
     assert "run: run_failure, exit code 1, partial (run_failure)" in proc.stdout
     assert "manifest_hash" not in proc.stdout
 
@@ -275,7 +281,7 @@ def test_manifest_error_exits_2_with_a_preflight_report(native_path, tmp_path):
 
     assert proc.returncode == 2
     assert "run: configuration_error, exit code 2" in proc.stdout
-    assert proc.stderr.startswith("sil-run: ")
+    assert proc.stderr.startswith("sil-run-diagnostics: manifest error")
 
 
 def fake_tools(tmp_path: Path, build_dir: Path, runner_script: str,
@@ -352,19 +358,82 @@ def test_a_hard_crash_is_reported_without_fabricated_metrics(build_dir,
 
 def test_a_launcher_failure_is_not_mistaken_for_a_run_failure(build_dir,
                                                               tmp_path):
-    launcher = ("echo 'sil-diagnostics-launcher: fork failed: Resource "
-                "temporarily unavailable' >&2\nexit 1\n")
+    # The launcher reports its own failure on the --status-fd channel.
+    launcher = ('[ "$1" = --status-fd ] || exit 99\n'
+                "echo 'sil-diagnostics-launcher: fork failed: Resource "
+                "temporarily unavailable' > /dev/fd/$2\nexit 1\n")
     path = fake_tools(tmp_path, build_dir, "exit 0\n", launcher)
 
     proc = sil(["run", "m.json", "--diagnostics"], path, tmp_path)
 
     assert proc.returncode == 1
     assert proc.stderr.splitlines() == [
-        "sil-diagnostics-launcher: fork failed: Resource temporarily "
-        "unavailable",
         "sil run: sil-diagnostics-launcher failed, so no Run took place: "
         "fork failed: Resource temporarily unavailable",
     ]
+
+
+def test_a_launcher_line_on_the_runs_stderr_is_only_copied(build_dir,
+                                                           tmp_path):
+    """Run stderr, which Participants write to, cannot fake the launcher."""
+    fake = "sil-diagnostics-launcher: fork failed: forged by a Participant"
+    script = (f"echo '{fake}' >&2\n"
+              'for a; do last="$a"; done\n'
+              f"cp '{FIXTURES / 'run-success.json'}' \"$last\"\nexit 0\n")
+    path = fake_tools(tmp_path, build_dir, script)
+
+    proc = sil(["run", "m.json", "--diagnostics"], path, tmp_path)
+
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stderr == fake + "\n"
+    assert "run: succeeded, exit code 0, complete" in proc.stdout
+
+
+class ClosingSink:
+    """A stderr sink its owner closes, like a benchmark Run's stderr.log."""
+
+    def __init__(self):
+        self.data = b""
+        self.closed = False
+
+    def write(self, data: bytes) -> None:
+        if self.closed:
+            raise ValueError("write to closed file")
+        self.data += data
+
+    def flush(self) -> None:
+        if self.closed:
+            raise ValueError("flush of closed file")
+
+
+def test_stderr_held_open_by_a_descendant_is_detached_with_a_notice(
+    build_dir, tmp_path, monkeypatch
+):
+    """After the drain time the copy stops writing to the sink and says so,
+    so a sink closed after execute() returns is never written to."""
+    monkeypatch.setattr(diagnostics_run, "STDERR_DRAIN_S", 0.2)
+    marker = tmp_path / "late-written"
+    script = ("echo early >&2\n"
+              f"(sleep 1; echo late >&2; touch '{marker}') &\nexit 0\n")
+    path = fake_tools(tmp_path, build_dir, script)
+    sink = ClosingSink()
+
+    outcome = execute(RunRequest(Path("m.json"), Path("r.json")),
+                      NativeTools(path / "sil-run-diagnostics",
+                                  path / "sil-diagnostics-launcher"),
+                      cwd=tmp_path, stdout=subprocess.DEVNULL, stderr=sink)
+    sink.closed = True
+    deadline = time.monotonic() + 10
+    while not marker.exists() and time.monotonic() < deadline:
+        time.sleep(0.05)
+
+    assert outcome.exit_code == 0
+    assert marker.exists()
+    time.sleep(0.2)  # the late line has reached the copy thread
+    assert sink.data == (
+        b"early\n"
+        b"sil run: stopped copying the Run's stderr: a process that "
+        b"outlived the runner still holds it open\n")
 
 
 @pytest.mark.parametrize("present, missing", [

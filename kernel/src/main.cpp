@@ -141,7 +141,7 @@ void write_side_car(sil::Provenance &provenance, int exit_code, bool recording,
   } catch (const std::exception &e) {
     // The Run's exit code and its first diagnostic remain authoritative. A
     // side-car write problem is reported without rewriting either.
-    std::cerr << "sil-run: " << e.what() << "\n";
+    std::cerr << SIL_RUNNER_NAME ": " << e.what() << "\n";
   }
 }
 
@@ -165,7 +165,7 @@ sil::FailureFacts classify(const std::exception &e) {
 // Prints the diagnostic line and keeps the first one for the failure report.
 void report_failure(std::optional<FirstFailure> &first,
                     const std::exception &e) {
-  std::cerr << "sil-run: " << e.what() << "\n";
+  std::cerr << SIL_RUNNER_NAME ": " << e.what() << "\n";
   if (!first) first = FirstFailure{e.what(), classify(e)};
 }
 
@@ -186,7 +186,7 @@ void write_failure_side_car(const std::optional<FirstFailure> &first,
                               first ? first->facts : sil::FailureFacts{});
   } catch (const std::exception &e) {
     // As with the provenance side-car, the exit code stays authoritative.
-    std::cerr << "sil-run: " << e.what() << "\n";
+    std::cerr << SIL_RUNNER_NAME ": " << e.what() << "\n";
   }
 }
 
@@ -283,7 +283,8 @@ int run(int argc, char **argv) {
   // A participant process dying mid-write must surface as a RunError,
   // not kill the kernel via SIGPIPE.
   if (!sil::install_run_signal_handlers()) {
-    std::cerr << "sil-run: failed to install termination handlers\n";
+    std::cerr << SIL_RUNNER_NAME
+        ": failed to install termination handlers\n";
     return kExitRunFailure;
   }
   signal(SIGPIPE, SIG_IGN);
@@ -329,8 +330,9 @@ int run(int argc, char **argv) {
       }
       std::chrono::milliseconds timeout;
       if (!parse_participant_timeout(argv[++i], timeout)) {
-        std::cerr << "sil-run: --participant-timeout-ms must be a positive "
-                     "integer representable as milliseconds\n";
+        std::cerr << SIL_RUNNER_NAME
+            ": --participant-timeout-ms must be a positive integer "
+            "representable as milliseconds\n";
         return kExitConfigError;
       }
       participant_timeout = timeout;
@@ -340,7 +342,7 @@ int run(int argc, char **argv) {
         return kExitConfigError;
       }
       if (!parse_positive_size(argv[++i], *option->destination)) {
-        std::cerr << "sil-run: " << option->flag
+        std::cerr << SIL_RUNNER_NAME ": " << option->flag
                   << " must be a positive integer representable as a "
                      "size_t\n";
         return kExitConfigError;

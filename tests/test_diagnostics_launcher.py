@@ -82,12 +82,61 @@ def test_missing_runner_exits_127(sil_diagnostics_launcher, tmp_path):
     assert str(missing) in proc.stderr
 
 
+def read_all(fd: int) -> str:
+    with os.fdopen(fd, "rb") as handle:
+        return handle.read().decode()
+
+
+def test_status_fd_carries_the_launchers_own_failure(
+    sil_diagnostics_launcher, tmp_path
+):
+    missing = tmp_path / "no-such-runner"
+    read_end, write_end = os.pipe()
+    proc = subprocess.run(
+        [str(sil_diagnostics_launcher), "--status-fd", str(write_end),
+         str(missing)],
+        capture_output=True, text=True, pass_fds=(write_end,),
+    )
+    os.close(write_end)
+    assert proc.returncode == 127
+    assert proc.stderr == ""
+    status = read_all(read_end)
+    assert status.startswith("sil-diagnostics-launcher: cannot run '")
+    assert str(missing) in status
+
+
+def test_the_runner_does_not_inherit_the_status_fd(sil_diagnostics_launcher):
+    read_end, write_end = os.pipe()
+    probe = "import os, sys; os.fstat(int(sys.argv[1]))"
+    proc = subprocess.run(
+        [str(sil_diagnostics_launcher), "--status-fd", str(write_end),
+         sys.executable, "-c", probe, str(write_end)],
+        capture_output=True, text=True, pass_fds=(write_end,),
+    )
+    os.close(write_end)
+    assert proc.returncode == 1, proc.stderr
+    assert "Bad file descriptor" in proc.stderr
+    assert read_all(read_end) == ""
+
+
+@pytest.mark.parametrize("argv", [["--status-fd"], ["--status-fd", "x", "sh"],
+                                  ["--status-fd", "-1", "sh"],
+                                  ["--status-fd", "999", "sh"]])
+def test_an_invalid_status_fd_is_a_usage_error(sil_diagnostics_launcher,
+                                               argv):
+    proc = subprocess.run([str(sil_diagnostics_launcher), *argv],
+                          capture_output=True, text=True)
+    assert proc.returncode == 2
+    assert "usage: sil-diagnostics-launcher " in proc.stderr
+
+
 def test_usage_error_exits_2(sil_diagnostics_launcher):
     proc = subprocess.run(
         [str(sil_diagnostics_launcher)], capture_output=True, text=True
     )
     assert proc.returncode == 2
-    assert "usage: sil-diagnostics-launcher RUNNER [ARG...]" in proc.stderr
+    assert ("usage: sil-diagnostics-launcher [--status-fd N] RUNNER "
+            "[ARG...]") in proc.stderr
 
 
 @pytest.mark.parametrize("signal_number", [signal.SIGINT, signal.SIGTERM])

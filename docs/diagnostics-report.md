@@ -116,7 +116,7 @@ completed publication Slots of one Replay participant:
 | --- | --- |
 | `scope` | `inclusive_native_activation`, `inclusive_process_step` or `inclusive_replay_publication_slot` |
 | `completed`, `sum_ns`, `min_ns`, `max_ns` | Exact |
-| `mean_ns`, `stddev_ns` | Exact running moments; population standard deviation |
+| `mean_ns`, `stddev_ns` | `mean_ns` is `sum_ns / completed`, from the exact integer sum; `stddev_ns` is the population standard deviation from running moments (Welford) |
 | `p50_ns`, `p95_ns`, `p99_ns` | Nearest rank, rank = ceil(p × n / 100), over the retained samples |
 | `quantiles` | `method` (`nearest_rank`), `approximate`, `sample_count` (all completed), `retained_count`, `reservoir` (`algorithm` `algorithm_r`, `generator` `splitmix64`, `algorithm_version` 1, `capacity` 8192, `seed`) |
 | `samples_ns` | The retained samples, ascending |
@@ -184,13 +184,16 @@ An unmeasured record is null in every value with one reason, and its
 
 ### Launcher
 
-`sil-diagnostics-launcher RUNNER [ARG...]` runs `RUNNER ARG...` as its child
-and ends as it ended: with its exit code, or by the same signal. It forwards
-SIGINT, SIGTERM and SIGHUP to the child and changes nothing else in its
-environment. Its own failures are one stderr line beginning
-`sil-diagnostics-launcher: ` and exit 2 (no RUNNER), 1 (fork or wait failed)
-or 127 (RUNNER cannot be executed). A supervisor that has a large resident
-size, such as a Python process, starts `sil-run-diagnostics` through it.
+`sil-diagnostics-launcher [--status-fd N] RUNNER [ARG...]` runs
+`RUNNER ARG...` as its child and ends as it ended: with its exit code, or by
+the same signal. It forwards SIGINT, SIGTERM and SIGHUP to the child and
+changes nothing else in its environment. Its own failures are one line
+beginning `sil-diagnostics-launcher: ` and exit 2 (usage), 1 (fork or wait
+failed) or 127 (RUNNER cannot be executed). The line goes to stderr, or to
+the open file descriptor N with `--status-fd`; RUNNER does not inherit N, so
+no Run output can pose as a launcher failure. A supervisor that has a large
+resident size, such as a Python process, starts `sil-run-diagnostics` through
+it; `sil run` and `sil benchmark` pass `--status-fd`.
 
 ## Benchmark report: `sil_benchmark_report` v1
 
@@ -204,7 +207,7 @@ is the shape `sil benchmark` (#303) writes.
 | `identity` | `manifest_path` (absolute), `manifest_hash`, `sil_version`, `source_revision`, `diagnostics_collector_version`, `unavailable`; from the first Run report, null with `no_run_report` when no Run wrote one |
 | `host` | As in the Run report; null with `no_run_report` when no Run wrote one |
 | `policy` | `repeats`, `warmup`, `recording`, `execution` (`serial_fresh_processes`), `participant_timeout_ms` and the three size guards: the values in the first Run report's `configuration`, else the requested ones (null = runner default) |
-| `status` | `complete`, `exit_code` (the command's exit code for the first failed Run, as `sil run --diagnostics` gives it: the Run's code, `1` for a missing or invalid report, `128+N` for a signal; `128+N` for a signal between Runs; else 0), `stopped_reason` (null, `warmup_failed`, `run_failed` or `interrupted`) |
+| `status` | `complete`, `exit_code` (the command's exit code for the first failed Run, as `sil run --diagnostics` gives it: the Run's code, `1` for a missing or invalid report, `128+N` for a signal; `128+N` for a signal between Runs; else 0), `stopped_reason` (null, `warmup_failed`, `run_failed`, `report_failed` for a Run that exited 0 without a valid report, or `interrupted`) |
 | `counts` | `requested`, `attempted`, `completed`, `failed`, and the same four with the prefix `warmups_` |
 | `runs` | Every attempted warm-up and measured Run, in order |
 | `aggregates` | `scope` (`successful_measured_runs`), `sample_count` and `metrics` |
@@ -242,7 +245,7 @@ The metrics, in this order:
 | `native_activations_per_s`, `process_steps_per_s` | `1/s` | `observational.throughput.<metric>` |
 | `runner_user_cpu_ns`, `runner_system_cpu_ns`, `runner_peak_rss_bytes` | `ns`, `bytes` | `observational.resources.runner.*` |
 | `cpu_total_user_cpu_ns`, `cpu_total_system_cpu_ns` | `ns` | `observational.resources.cpu_total.*` |
-| `process_user_cpu_ns`, `process_system_cpu_ns`, `process_peak_rss_bytes` | `ns`, `bytes` | `observational.resources.process_participants[participant].*`; one metric each per Process participant, in name order, with a `participant` member |
+| `process_user_cpu_ns`, `process_system_cpu_ns`, `process_peak_rss_bytes` | `ns`, `bytes` | `observational.resources.process_participants[participant].*`; one metric each per Process participant of any successful measured Run, in name order, with a `participant` member; a Run without that record has a null value |
 
 The throughput denominator of each Run is `scheduled_execution_ns`, which is
 also a metric. No memory metric adds peaks of different processes.

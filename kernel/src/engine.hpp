@@ -171,7 +171,7 @@ class Engine {
     size_t registration_index;
     std::function<void(uint64_t)> fn;
     bool done = false;
-    size_t diagnostics_id = 0;
+    [[no_unique_address]] diagnostics::Id diagnostics_id{};
   };
 
   void add_task(const std::string &owner, const std::string &task,
@@ -209,7 +209,7 @@ class Engine {
   struct ReplayPlace {
     std::optional<int32_t> priority;
     size_t registration_index;
-    size_t diagnostics_id;
+    [[no_unique_address]] diagnostics::Id diagnostics_id{};
   };
   std::vector<ReplayPlace> replay_places_;
   // Shared by tasks and prioritised replayers, so an equal priority is
