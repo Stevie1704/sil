@@ -24,11 +24,17 @@ MS = 1_000_000
 
 
 def run_diagnostics(runner: Path, manifest: Path, tmp_path: Path, *args: str,
-                    report: Path | None = None):
-    """One diagnostics Run; returns the process and the parsed report."""
+                    report: Path | None = None, launcher: Path | None = None):
+    """One diagnostics Run; returns the process and the parsed report.
+
+    Pass `launcher` when the runner's own peak RSS is asserted: on Linux a
+    runner started directly from pytest inherits pytest's high-water mark.
+    """
     report = report or tmp_path / "run.json"
     command = [str(runner), str(manifest), "--diagnostics-out", str(report),
                *args]
+    if launcher is not None:
+        command.insert(0, str(launcher))
     if "--no-recording" not in args and "-o" not in args:
         command += ["-o", str(tmp_path / "run.mcap")]
     # cwd: --no-recording still writes provenance beside the default out.mcap.
@@ -339,7 +345,7 @@ class TestResources:
         assert not any("rss" in key for key in resources["cpu_total"])
 
     def test_peaks_at_different_times_stay_separate(
-        self, sil_run_diagnostics, tmp_path
+        self, sil_run_diagnostics, sil_diagnostics_launcher, tmp_path
     ):
         """Two 64 MiB peaks, 30 ms apart: each record has its own, none adds
         them, and no member claims the Run held 128 MiB at once."""
@@ -354,7 +360,7 @@ class TestResources:
             )
         proc, report = run_diagnostics(
             sil_run_diagnostics, m.write(tmp_path / "peaks.json").path,
-            tmp_path,
+            tmp_path, launcher=sil_diagnostics_launcher,
         )
         assert proc.returncode == 0, proc.stderr
         assert validate_run_report(report) == []
@@ -509,12 +515,13 @@ class TestFailedRuns:
              "--diagnostics-out", str(report_path)],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
         )
+        # The participant writes <observer>.step when the first Step arrives:
+        # interrupt that Step, not the startup.
+        step_marker = Path(f"{observer}.step")
         deadline = time.monotonic() + 10
-        while not observer.exists() and time.monotonic() < deadline:
+        while not step_marker.exists() and time.monotonic() < deadline:
             time.sleep(0.01)
-        # The observer is written before init; give the first Step time to
-        # be sent, then interrupt it.
-        time.sleep(0.3)
+        assert step_marker.exists(), "the first Step did not arrive"
         runner.send_signal(signal.SIGINT)
         _, stderr = runner.communicate(timeout=10)
         assert runner.returncode == 1

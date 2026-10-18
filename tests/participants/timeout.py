@@ -130,6 +130,9 @@ def main(mode: str, observer: str | None = None) -> None:
                 print(json.dumps({"op": "ready"}), flush=True)
             elif message["op"] == "step":
                 if mode in {"step", "descendant-timeout"}:
+                    if mode == "step" and observer is not None:
+                        # Tells a test that the Step is in progress.
+                        Path(f"{observer}.step").write_text("step received\n")
                     _hang()
                 if mode == "partial":
                     _send_partial_step()

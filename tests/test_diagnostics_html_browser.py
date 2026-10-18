@@ -3,11 +3,13 @@
 Each page opens from `file://` with network requests failed and counted. The
 checks cover layout (no sideways page scroll at phone and desktop width),
 light and dark themes with readable contrast, keyboard use, the page with
-JavaScript disabled, and print. They skip when no Chrome is installed
-(set SIL_TEST_CHROME to a browser executable to choose one).
+JavaScript disabled, and print. They skip when no Chrome is installed.
+Set SIL_TEST_CHROME to a browser executable to choose one; then a missing
+browser is a collection error, not a skip, so CI cannot lose these checks.
 """
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -19,6 +21,9 @@ from test_diagnostics_html import (
 )
 
 CHROME = find_chrome()
+if CHROME is None and os.environ.get("SIL_TEST_CHROME"):
+    pytest.fail(f"SIL_TEST_CHROME={os.environ['SIL_TEST_CHROME']!r} is not an "
+                "executable browser", pytrace=False)
 pytestmark = pytest.mark.skipif(CHROME is None,
                                 reason="no Chrome or Chromium installed")
 

@@ -457,6 +457,55 @@ sil diagnostics render results/summary.json --html copy.html
 | `1` | The HTML report could not be written. |
 | `2` | Invalid options; the input is missing, not valid JSON, not a valid report, or of an unknown version; or the output exists or has no directory. |
 
+## What the measurements mean
+
+[docs/diagnostics-report.md](diagnostics-report.md) is the normative
+contract of each value. Read these limits before you compare numbers.
+
+- **Inclusive timing.** An Activation (what you may call a cycle) is one
+  execution of a Task. A Native activation time includes the synchronous
+  routing and recording of the Messages that the Task publishes. A Process
+  Step time starts when the kernel prepares the Step inputs and ends after it
+  publishes the outputs. It includes encoding, IPC, waiting for the operating
+  system, the Participant's own work, decoding and routing. It is not the time
+  of the algorithm alone. Do not add activation times to the lifecycle phases,
+  and do not subtract one measurement from another to get "pure" compute or
+  kernel time: the scopes overlap.
+- **Percentiles.** Up to 8,192 completed activations per Task, the median,
+  p95 and p99 are exact nearest-rank values. Above that, they are estimates
+  from a uniform sample of 8,192 durations: the report marks them
+  `approximate` and gives the total and the retained count. p95 needs at least
+  20 and p99 at least 100 completed activations; otherwise the value is
+  unavailable with a reason. These minimums do not make a tail reliable. The
+  maximum is the largest observed duration, not a worst-case execution time.
+- **Memory.** Each peak resident memory value has a scope. The runner value
+  is the runner process only, and Native participants share it. A Process
+  participant value is the peak of the largest single process among the child
+  and the descendants that were waited for (`largest_process_peak_rss`), not
+  the memory of its whole process tree at one time. On Linux, a peak also
+  includes the parent's resident memory at spawn. Peaks of different processes
+  are never added: there is no total memory value.
+- **CPU time.** User and system CPU time are given per scope. For
+  multithreaded software, CPU time can be more than wall time. `cpu_total`
+  adds only scopes that do not overlap.
+- **Workload length.** The Manifest Duration sets the length of one Run.
+  `--repeats` sets the number of independent Runs. There is no `--steps`
+  option: with different Periods, several Native Tasks and Replay, one global
+  Step count has no single meaning.
+- **Throughput.** Only completed Native activations per second and completed
+  Process Steps per second, over the scheduled-execution wall time. A generic
+  "operations per second" has no countable definition for an arbitrary
+  Participant.
+- **Not measured.** Hardware counters, instructions, cycles, TOPS and FLOPS,
+  algorithm-only time, memory history and leak detection, the memory of a
+  process tree at one time, flame graphs and full activation traces.
+- **Cost of measuring.** Diagnostics-runner values include the collector's
+  own cost. They are not a timing of `sil-run`, and no correction is
+  subtracted. [docs/bench/diagnostics-overhead.md](bench/diagnostics-overhead.md)
+  keeps one comparison of the two runners on a named machine.
+- **No determinism verdict.** Timing does not show whether a Run is
+  deterministic. Use `sil check` for that.
+
 ## Reading a Recording
 
 A Recording stores the Schema of each Channel, so it can be decoded without

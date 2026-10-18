@@ -180,9 +180,35 @@ def random_multitask_manifest(tmp_path):
     return m.write(tmp_path / "random.json")
 
 
+def replay_into_process_manifest(tmp_path):
+    """Replay of a recorded producer, consumed by a Process participant."""
+    source = toy_manifest(duration_ns=50_000_000)
+    source.add_channel("ticks", schema="toy.Counter")
+    add_producer(source, "producer", channel="ticks", period_ns=10_000_000)
+    recording = tmp_path / "recorded.mcap"
+    recorded = run_manifest(BUILD_DIR / "sil-run",
+                            source.write(tmp_path / "source.json").path,
+                            recording)
+    assert recorded.returncode == 0, recorded.stderr
+    m = toy_manifest(duration_ns=50_000_000)
+    m.add_channel("ticks", schema="toy.Counter")
+    m.add_channel("echo", schema="toy.Counter")
+    m.add_replay("replay", recording=str(recording), channels=["ticks"])
+    m.add_process(
+        "pyecho",
+        command=[sys.executable,
+                 str(ROOT / "tests" / "participants" / "echo.py")],
+        step_period_ns=10_000_000,
+        subscribes=[SubscriberRoute("ticks", capacity=COMPAT_ROUTE_CAPACITY)],
+        publishes=["echo"],
+    )
+    return m.write(tmp_path / "replay.json")
+
+
 DIAGNOSTICS_FIXTURES = {
     **FIXTURES,
     "random_multitask": Fixture(random_multitask_manifest, exit_code=0),
+    "replay_into_process": Fixture(replay_into_process_manifest, exit_code=0),
 }
 
 
