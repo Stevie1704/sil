@@ -9,8 +9,8 @@ Two versioned JSON documents carry Run measurements:
   renders on its own.
 
 docs/diagnostics-report.md defines every field. This module checks the parts
-a consumer depends on: the discriminator and version, the required members,
-counts that add up, no NaN or infinity, and that every null measurement names
+a consumer depends on: the discriminator and version, the type of every
+member a consumer reads (sil.diagnostics_shape), counts that add up, no NaN or infinity, and that every null measurement names
 its reason. It does not judge timing values.
 """
 
@@ -22,6 +22,8 @@ import os
 import tempfile
 from pathlib import Path
 from typing import Any, Iterable
+
+from sil.diagnostics_shape import BENCHMARK_REPORT, RUN_REPORT, shape_errors
 
 RUN_REPORT_KEY = "sil_run_diagnostics"
 BENCHMARK_REPORT_KEY = "sil_benchmark_report"
@@ -147,11 +149,7 @@ def validate_run_report(document: Any) -> list[str]:
     errors: list[str] = []
     if not _check_version(document, RUN_REPORT_KEY, errors):
         return errors
-    for key in ("collector", "identity", "host", "configuration", "run",
-                "completeness", "collection_errors", "execution",
-                "observational", "artifacts"):
-        if key not in document:
-            errors.append(f"missing member '{key}'")
+    errors += shape_errors(RUN_REPORT, document)
     if errors:
         return errors
     _check_finite(document, "$", errors)
@@ -167,10 +165,7 @@ def validate_benchmark_report(document: Any) -> list[str]:
     errors: list[str] = []
     if not _check_version(document, BENCHMARK_REPORT_KEY, errors):
         return errors
-    for key in ("generator", "identity", "host", "policy", "status", "counts",
-                "runs", "aggregates"):
-        if key not in document:
-            errors.append(f"missing member '{key}'")
+    errors += shape_errors(BENCHMARK_REPORT, document)
     if errors:
         return errors
     _check_finite(document, "$", errors)
@@ -187,8 +182,10 @@ def validate_benchmark_report(document: Any) -> list[str]:
             if run.get("report_status") != "missing":
                 errors.append(f"{where}: null report not marked missing")
         else:
-            errors += [f"{where}.report: {e}" for e in validate_run_report(report)]
-            if report.get("run", {}).get("exit_code") != run.get("run_exit_code"):
+            report_errors = validate_run_report(report)
+            errors += [f"{where}.report: {e}" for e in report_errors]
+            if (not report_errors and report["run"]["exit_code"]
+                    != run["run_exit_code"]):
                 errors.append(f"{where}: run_exit_code differs from its report")
         if (run.get("role") == "measured" and report is not None
                 and run.get("run_exit_code") == 0):

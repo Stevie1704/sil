@@ -13,8 +13,10 @@ Two versioned JSON documents carry Run measurements:
 Valid examples of every case are in
 [tests/fixtures/diagnostics/](../tests/fixtures/diagnostics/).
 `sil.diagnostics_report` validates both documents (`load_report`,
-`parse_report`, `validate_run_report`, `validate_benchmark_report`). A reader
-must reject an unknown version. `sil diagnostics render` presents either
+`parse_report`, `validate_run_report`, `validate_benchmark_report`). The
+validator checks the JSON type of every member below that a consumer reads
+(`sil.diagnostics_shape`), so a report it accepts is one the summaries and the
+HTML report can present. A reader must reject an unknown version. `sil diagnostics render` presents either
 document as a standalone HTML page
 ([docs/running.md](running.md#html-reports)).
 

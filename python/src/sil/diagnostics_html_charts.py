@@ -119,6 +119,9 @@ def histogram(id_: str, title: str, timing: dict, anchor: str) -> Html:
         low, high = bins[0][0], bins[-1][1]
         if high == low:
             return left + plot_w / 2
+        # A marker outside the retained range sits at the axis end, and a
+        # logarithm never sees a value it is not defined for.
+        value = min(max(value, low), high)
         if logarithmic:
             return left + plot_w * (math.log(value) - math.log(low)) / (
                 math.log(high) - math.log(low))
