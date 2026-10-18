@@ -15,6 +15,10 @@ jobs:
 
       - name: Set up Python environment
         run: |
+          # tests/test_install_script.py creates venvs with pip, which needs
+          # ensurepip: Ubuntu ships it in python3-venv.
+          python3 -c "import ensurepip" 2>/dev/null ||
+            sudo apt-get install -y --no-install-recommends python3-venv
           uv venv .venv
           uv pip install -p .venv/bin/python -e "python/[dev]"
 

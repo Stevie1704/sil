@@ -2,12 +2,100 @@
 
 [Documentation index](README.md) · [Repository overview](../README.md)
 
-## Use the installed framework
+## Install a release
 
-Install the release wheel together with the native development archive and
-put both `bin` directories on `PATH`. The runtime image is another execution
-option (`sil docs container`). The wheel supplies documentation and Python
-tools; the native archive supplies `sil-run`, `silschema` and `include/sil`.
+A release has two parts: the wheel (the `sil` command, the Python package and
+the docs) and the native development archive (`sil-run`,
+`sil-run-diagnostics`, `silschema`, the clock shim and `include/sil`). Both
+are assets of the GitHub release. The runtime image is another way to run
+SiL, with nothing to install but Docker (`sil docs container`).
+
+On Linux x86-64, the install script of a release installs both parts. It
+needs `curl`, `tar` and Python 3.11 or newer with `venv` (on Debian and
+Ubuntu, the `python3-venv` package):
+
+```sh
+curl -fsSL https://github.com/Stevie1704/sil/releases/download/v<VERSION>/install.sh | sh
+. ~/.local/share/sil/env
+```
+
+- It checks each download against the release's `SHA256SUMS` before it
+  installs anything, and installs nothing when one does not match.
+- It installs into `~/.local/share/sil/<VERSION>/` (`--prefix DIR` for
+  another directory): a virtual environment, `venv/`, and the native archive,
+  `native/`. Versions stay side by side, and an installed version is never
+  changed. `current` points at the version installed last.
+- `~/.local/share/sil/env` puts `current/venv/bin` and `current/native/bin`
+  first on `PATH`. Source it in your shell profile. Then `python3` is the
+  Python of the virtual environment, which Python Participants need
+  (`python3 -m sil.participant`).
+- `--version VERSION` installs another release. Run `sh install.sh --help`
+  for all options. A release before 0.2.1 has no `install.sh` asset: use the
+  script of a later release, or of `tools/install.sh` in the repository, with
+  `--version`.
+- The native archive of 0.2.0 needs glibc 2.38 or newer, for example Ubuntu
+  24.04. On an older glibc, such as Debian bookworm, the script stops with
+  "the installed sil-run does not start"; use the runtime image there.
+- On Windows and macOS, the script stops before any download. See
+  [Windows and macOS](#windows-and-macos).
+
+Without the script, download the wheel, the native archive and `SHA256SUMS`
+from the release, check them with `sha256sum -c --ignore-missing SHA256SUMS`,
+install the wheel into a virtual environment, unpack the archive, and put
+both `bin` directories on `PATH`.
+
+## Windows and macOS
+
+SiL releases support Linux x86-64 only (`sil docs support`). On Windows and on
+macOS, run that Linux x86-64 build in WSL2 or in Docker.
+
+**Windows: WSL2.** WSL2 runs a real Linux x86-64 kernel, so this is the
+supported machine class on an x86-64 PC. In PowerShell, install Ubuntu 24.04,
+then use the install script in its shell:
+
+```sh
+wsl --install -d Ubuntu-24.04
+# In the Ubuntu shell:
+sudo apt-get install -y curl python3-venv
+curl -fsSL https://github.com/Stevie1704/sil/releases/download/v<VERSION>/install.sh | sh
+. ~/.local/share/sil/env
+```
+
+Keep the Manifests, FMUs and Recordings in the Linux file system, for example
+under `~`, not under `/mnt/c`: the Windows drives are slower and do not keep
+Linux file modes.
+
+**Windows and macOS: Docker.** The runtime image is the reference environment.
+Pull it by the digest in the release notes and run it as
+`sil docs container` describes. The image is for `linux/amd64` only; on a Mac
+with Apple silicon, give `--platform linux/amd64` to each `docker pull` and
+`docker run`, and Docker Desktop emulates it:
+
+```sh
+image=ghcr.io/stevie1704/sil@sha256:<release-image-digest>
+docker pull --platform linux/amd64 "$image"
+docker run --rm --platform linux/amd64 --network none \
+  --user "$(id -u):$(id -g)" \
+  --mount "type=bind,src=$PWD,dst=/workspace" \
+  "$image" /workspace/manifest.json -o /workspace/out.mcap
+```
+
+- The emulated Run is the same machine class as the reference, but it is
+  slower. Do not use its diagnostics or benchmark times as the speed of the
+  SUT.
+- Docker Desktop on macOS shares only some directories with containers, by
+  default your home directory. Keep the workspace under it.
+- On Windows, run the `docker` commands in a WSL2 shell, where `$PWD` and
+  `id` exist, or give the paths and the user in PowerShell form.
+- The image entry point is `sil-run`. For the `sil` command, give
+  `--entrypoint sil`, for example `--entrypoint sil "$image" docs`.
+
+**Not supported:** a native Windows build, a native macOS build, and Linux
+arm64. A build from source on macOS can serve for development, but it is not
+a release, no determinism claim covers it, and the clock shim has no macOS
+counterpart.
+
+## Use the installed framework
 
 From any working directory, without the SiL source checkout:
 

@@ -85,7 +85,9 @@ the only machine class this project verifies. An older supported Python is
 declared, not exercised. The pinned base image also resolves an arm64
 layer, so an arm64 build may succeed; it is untested, and no determinism claim
 covers it. macOS and Windows are not supported; the Clock shim is a
-`LD_PRELOAD` library and has no counterpart there.
+`LD_PRELOAD` library and has no counterpart there. On them, run the Linux
+x86-64 release in WSL2 or the runtime image in Docker
+([docs/getting-started.md](docs/getting-started.md#windows-and-macos)).
 
 ## Covered by the compatibility policy
 

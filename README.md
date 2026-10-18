@@ -41,6 +41,8 @@ An installed SiL has one command for its tools: `sil --help` lists them
 provides the adapters, bindings and preparation inputs without a checkout.
 `sil skill install` gives a coding agent the guide and commands of that version.
 
+On Linux x86-64, the `install.sh` asset of a GitHub release installs that
+release ([install a release](docs/getting-started.md#install-a-release)).
 See [examples and installation](docs/getting-started.md) for the ACC example
 and staged installation, or [container deployment](docs/container.md) to run
 one Manifest in a Linux container. Detailed [Run behavior and guards](docs/running.md)

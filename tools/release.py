@@ -227,6 +227,20 @@ def stamp_skill(root: Path, version: str, package: Path) -> None:
     (skill / "SKILL.md").write_text(text)
 
 
+INSTALLER_DEFAULT = 'DEFAULT_VERSION=""\n'
+
+
+def stamp_installer(root: Path, version: str, output: Path) -> Path:
+    """Write tools/install.sh with `version` as its default release."""
+    version = checked_version(root, version)
+    text = (root / "tools" / "install.sh").read_text()
+    if text.count(INSTALLER_DEFAULT) != 1:
+        raise fail("tools/install.sh must contain exactly one empty DEFAULT_VERSION line")
+    output.write_text(text.replace(INSTALLER_DEFAULT, f'DEFAULT_VERSION="{version}"\n'))
+    output.chmod(0o755)
+    return output
+
+
 def stamp_python(
     root: Path, version: str, revision: str, output_dir: Path
 ) -> Path:
@@ -579,6 +593,11 @@ def parser() -> argparse.ArgumentParser:
     stamp.add_argument("--version", required=True)
     stamp.add_argument("--source-revision", required=True)
 
+    installer = sub.add_parser("stamp-installer")
+    root_arg(installer)
+    installer.add_argument("--output", type=Path, required=True)
+    installer.add_argument("--version", required=True)
+
     distributions = sub.add_parser("validate-distributions")
     root_arg(distributions)
     distributions.add_argument("--dist", type=Path, required=True)
@@ -649,6 +668,8 @@ def main(argv: list[str] | None = None) -> int:
                     args.output_dir,
                 )
             )
+        elif args.command == "stamp-installer":
+            print(stamp_installer(args.root, args.version, args.output))
         elif args.command == "validate-distributions":
             for artifact in validate_distributions(
                 args.root, args.dist, args.version, args.source_revision
