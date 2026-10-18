@@ -50,6 +50,12 @@ target_compile_definitions(sil-run-diagnostics PRIVATE SIL_RUN_DIAGNOSTICS)
 target_link_libraries(sil-run-diagnostics
   PRIVATE nlohmann_json::nlohmann_json mcap_headers)
 
+# The process a supervisor starts sil-run-diagnostics through (#301). It is
+# plain C with no allocation, so it is small when it forks the runner: on
+# Linux a peak RSS survives exec, and the runner's record must not inherit a
+# large supervisor's high-water mark.
+add_executable(sil-diagnostics-launcher src/diagnostics_launcher.c)
+
 set(SIL_RELEASE_DEFINITIONS
   SIL_VERSION="${SIL_VERSION}"
   SIL_SOURCE_REPOSITORY="${SIL_SOURCE_REPOSITORY}"
@@ -70,5 +76,5 @@ target_compile_definitions(sil-run PRIVATE ${SIL_INSTALL_DEFINITIONS})
 target_compile_definitions(sil-run-instrumented PRIVATE ${SIL_INSTALL_DEFINITIONS})
 target_compile_definitions(sil-run-diagnostics PRIVATE ${SIL_INSTALL_DEFINITIONS})
 
-install(TARGETS sil-run sil-run-diagnostics
+install(TARGETS sil-run sil-run-diagnostics sil-diagnostics-launcher
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
