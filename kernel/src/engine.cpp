@@ -71,6 +71,7 @@ void Engine::setup() {
   for (const PreparedParticipantSpec &p : prepared_.participants()) {
     if (run_interrupted()) throw RunError(run_interrupt_message());
     if (const auto *native = std::get_if<PreparedNativeSpec>(&p.impl)) {
+      diagnostics::participant(p.name, diagnostics::ParticipantKind::Native);
       natives_.push_back(
           std::make_unique<NativeParticipant>(*this, p.name, *native));
       // A contract violation during init is reported through fail(). A
@@ -78,17 +79,20 @@ void Engine::setup() {
       // that failure into the run.
       if (!failure_.empty()) throw ManifestError("manifest error: " + failure_);
     } else if (const auto *replay = std::get_if<ReplaySpec>(&p.impl)) {
+      diagnostics::participant(p.name, diagnostics::ParticipantKind::Replay);
       replayers_.push_back(
           std::make_unique<Replayer>(*this, p.name, *replay, manifest_.base_dir));
-      replay_places_.push_back({replay->priority, next_registration_index_++});
+      replay_places_.push_back({replay->priority, next_registration_index_++,
+                                diagnostics::replay(p.name)});
     } else {
+      diagnostics::participant(p.name, diagnostics::ParticipantKind::Process);
       const auto &spec = std::get<PreparedProcessSpec>(p.impl);
       auto proc = std::make_unique<ProcessParticipant>(
           *this, p.name, spec, participant_timeout_, limits_);
       ProcessParticipant *raw = proc.get();
-      register_task(p.name, "step", spec.authored.step_period_ns, 0,
-                    spec.authored.priority,
-                    [raw](uint64_t now) { raw->step(now); });
+      add_task(p.name, "step", diagnostics::TaskKind::ProcessStep,
+               spec.authored.step_period_ns, 0, spec.authored.priority,
+               [raw](uint64_t now) { raw->step(now); });
       processes_.push_back(std::move(proc));
     }
   }
@@ -98,6 +102,14 @@ void Engine::setup() {
 void Engine::register_task(const std::string &owner, const std::string &task,
                            uint64_t period_ns, uint64_t offset_ns,
                            int32_t priority, std::function<void(uint64_t)> fn) {
+  add_task(owner, task, diagnostics::TaskKind::NativeTask, period_ns,
+           offset_ns, priority, std::move(fn));
+}
+
+void Engine::add_task(const std::string &owner, const std::string &task,
+                      diagnostics::TaskKind kind, uint64_t period_ns,
+                      uint64_t offset_ns, int32_t priority,
+                      std::function<void(uint64_t)> fn) {
   if (period_ns == 0)
     throw ManifestError("manifest error: participant '" + owner + "' task '" +
                         task + "': period must be positive");
@@ -109,6 +121,8 @@ void Engine::register_task(const std::string &owner, const std::string &task,
   t.registration_index = next_registration_index_++;
   t.fn = std::move(fn);
   t.done = t.next_ns >= manifest_.duration_ns;
+  t.diagnostics_id =
+      diagnostics::task(owner, task, kind, period_ns, offset_ns);
   tasks_.push_back(std::move(t));
 }
 
@@ -190,6 +204,7 @@ void Engine::throw_failure() const {
 }
 
 void Engine::run() {
+  diagnostics::enter_phase(diagnostics::Phase::ScheduledExecution);
   for (;;) {
     if (run_interrupted()) throw RunError(run_interrupt_message());
     uint64_t slot = std::numeric_limits<uint64_t>::max();
@@ -207,16 +222,17 @@ void Engine::run() {
       size_t registration_index;
       Task *task;
       Replayer *replayer;
+      size_t replay_index;
     };
     std::vector<Due> due;
     for (Task &t : tasks_)
       if (!t.done && t.next_ns == slot)
-        due.push_back({t.priority, t.registration_index, &t, nullptr});
+        due.push_back({t.priority, t.registration_index, &t, nullptr, 0});
     for (size_t i = 0; i < replayers_.size(); i++)
       if (replay_places_[i].priority)
         due.push_back({*replay_places_[i].priority,
                        replay_places_[i].registration_index, nullptr,
-                       replayers_[i].get()});
+                       replayers_[i].get(), i});
     std::sort(due.begin(), due.end(), [](const Due &a, const Due &b) {
       if (a.priority != b.priority) return a.priority < b.priority;
       return a.registration_index < b.registration_index;
@@ -226,18 +242,31 @@ void Engine::run() {
     // A replayer without a priority publishes before any task activation in
     // the slot, so a consumer stepped in this slot sees its messages as it
     // saw a live publisher that ran first.
-    for (size_t i = 0; i < replayers_.size(); i++)
-      if (!replay_places_[i].priority) replayers_[i]->publish_due(slot);
+    for (size_t i = 0; i < replayers_.size(); i++) {
+      if (replay_places_[i].priority) continue;
+      diagnostics::ReplayWork work(replay_places_[i].diagnostics_id,
+                                   *replayers_[i], slot, global_seq_);
+      replayers_[i]->publish_due(slot);
+      if (failure_.empty()) work.completed();
+    }
     for (const Due &d : due) {
       if (d.replayer) {
+        diagnostics::ReplayWork work(
+            replay_places_[d.replay_index].diagnostics_id, *d.replayer, slot,
+            global_seq_);
         d.replayer->publish_due(slot);
         if (!failure_.empty()) throw_failure();
+        work.completed();
         continue;
       }
       Task *t = d.task;
+      // Inclusive: routing and recording called from inside the Task, and a
+      // Process participant's whole Step exchange, are part of this time.
+      diagnostics::Activation activation(t->diagnostics_id, slot);
       in_task_ = true;
       t->fn(slot);
       in_task_ = false;
+      if (failure_.empty()) activation.completed();
       if (run_interrupted()) throw RunError(run_interrupt_message());
       if (!failure_.empty()) throw_failure();
       // A next activation the clock cannot represent, or one at or beyond the
@@ -253,6 +282,7 @@ void Engine::run() {
     }
   }
 
+  diagnostics::enter_phase(diagnostics::Phase::Shutdown);
   for (auto &proc : processes_) proc->shutdown();
   if (run_interrupted()) throw RunError(run_interrupt_message());
   run_working_directory_.reset();

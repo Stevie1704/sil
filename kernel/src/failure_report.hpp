@@ -36,6 +36,9 @@ struct FailureFacts {
   std::vector<std::string> stderr_tail;
 };
 
+// The report's name for a category, as docs/running.md lists it.
+const char *failure_category_name(FailureCategory category);
+
 // The report sits beside the Recording, like the provenance side-car.
 std::filesystem::path default_failure_report_path(
     const std::filesystem::path &recording_path);

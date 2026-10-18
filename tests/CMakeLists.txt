@@ -229,7 +229,10 @@ add_library(toy_accumulator MODULE fixtures/participants/toy_accumulator.cpp)
 # Throws across the C ABI seam on purpose, so exception containment is tested
 # through a real shared library (issue #65).
 add_library(toy_thrower MODULE fixtures/participants/toy_thrower.cpp)
-foreach(toy toy_producer toy_accumulator toy_thrower)
+# Two Tasks of different Periods in one Participant, for the diagnostics
+# collector's per-Task identities (#300).
+add_library(toy_multitask MODULE fixtures/participants/toy_multitask.cpp)
+foreach(toy toy_producer toy_accumulator toy_thrower toy_multitask)
   add_dependencies(${toy} toy_messages)
   target_include_directories(${toy} PRIVATE ${PROJECT_SOURCE_DIR}/include ${SIL_GEN_DIR})
   target_link_libraries(${toy} PRIVATE nlohmann_json::nlohmann_json)
