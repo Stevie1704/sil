@@ -46,8 +46,11 @@ EXIT_NOT_FOUND = 127
 
 FORWARDED_SIGNALS = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 # Time the stderr copy may take after the runner ended. A descendant that
-# escaped the runner's cleanup can hold the pipe open forever.
+# escaped the runner's cleanup can hold the pipe open forever; the copy then
+# stops writing to its sink and says so.
 STDERR_DRAIN_S = 2.0
+STDERR_DETACHED = (f"{PROG}: stopped copying the Run's stderr: a process "
+                   "that outlived the runner still holds it open\n").encode()
 
 # The runner's ceilings: std::chrono::milliseconds::max() and SIZE_MAX.
 MAX_MILLISECONDS = 2**63 - 1
@@ -234,7 +237,7 @@ def execute(request: RunRequest, tools: NativeTools, *,
         copier = _StderrCopy(process.stderr, sink)
         copier.start()
         status = _wait(process)
-        copier.join(STDERR_DRAIN_S)
+        copier.finish(STDERR_DRAIN_S)
     finally:
         _restore_signals(previous)
     exit_code = status if status >= 0 else None
@@ -286,17 +289,36 @@ def _read_status(fd: int) -> str | None:
 
 
 class _StderrCopy(threading.Thread):
-    """Copies the runner's stderr unchanged."""
+    """Copies the runner's stderr unchanged until it ends or is detached."""
 
     def __init__(self, source: BinaryIO, sink: BinaryIO):
         super().__init__(daemon=True)
         self.source = source
         self.sink = sink
+        self._lock = threading.Lock()
+        self._detached = False
 
     def run(self) -> None:
+        # Reading continues after a detach, so a writer that outlived the
+        # runner never blocks on a full pipe.
         for line in iter(self.source.readline, b""):
-            self.sink.write(line)
-            self.sink.flush()
+            with self._lock:
+                if not self._detached:
+                    self.sink.write(line)
+                    self.sink.flush()
+
+    def finish(self, timeout: float) -> None:
+        """Wait for the copy; after `timeout`, detach the sink with a notice.
+
+        The sink is never written to after this returns, so its owner may
+        close it.
+        """
+        self.join(timeout)
+        with self._lock:
+            if self.is_alive():
+                self._detached = True
+                self.sink.write(STDERR_DETACHED)
+                self.sink.flush()
 
 
 def _read_report(path: Path, exit_code: int | None):

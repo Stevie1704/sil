@@ -11,13 +11,17 @@ import os
 import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
 
 from conftest import ROOT
 from sil.diagnostics_report import validate_run_report
-from sil.diagnostics_run import format_summary
+from sil import diagnostics_run
+from sil.diagnostics_run import (
+    NativeTools, RunRequest, execute, format_summary,
+)
 from test_process_descendants import (
     _wait_for_observer, assert_cleanup, descendant_manifest,
 )
@@ -383,6 +387,53 @@ def test_a_launcher_line_on_the_runs_stderr_is_only_copied(build_dir,
     assert proc.returncode == 0, proc.stderr
     assert proc.stderr == fake + "\n"
     assert "run: succeeded, exit code 0, complete" in proc.stdout
+
+
+class ClosingSink:
+    """A stderr sink its owner closes, like a benchmark Run's stderr.log."""
+
+    def __init__(self):
+        self.data = b""
+        self.closed = False
+
+    def write(self, data: bytes) -> None:
+        if self.closed:
+            raise ValueError("write to closed file")
+        self.data += data
+
+    def flush(self) -> None:
+        if self.closed:
+            raise ValueError("flush of closed file")
+
+
+def test_stderr_held_open_by_a_descendant_is_detached_with_a_notice(
+    build_dir, tmp_path, monkeypatch
+):
+    """After the drain time the copy stops writing to the sink and says so,
+    so a sink closed after execute() returns is never written to."""
+    monkeypatch.setattr(diagnostics_run, "STDERR_DRAIN_S", 0.2)
+    marker = tmp_path / "late-written"
+    script = ("echo early >&2\n"
+              f"(sleep 1; echo late >&2; touch '{marker}') &\nexit 0\n")
+    path = fake_tools(tmp_path, build_dir, script)
+    sink = ClosingSink()
+
+    outcome = execute(RunRequest(Path("m.json"), Path("r.json")),
+                      NativeTools(path / "sil-run-diagnostics",
+                                  path / "sil-diagnostics-launcher"),
+                      cwd=tmp_path, stdout=subprocess.DEVNULL, stderr=sink)
+    sink.closed = True
+    deadline = time.monotonic() + 10
+    while not marker.exists() and time.monotonic() < deadline:
+        time.sleep(0.05)
+
+    assert outcome.exit_code == 0
+    assert marker.exists()
+    time.sleep(0.2)  # the late line has reached the copy thread
+    assert sink.data == (
+        b"early\n"
+        b"sil run: stopped copying the Run's stderr: a process that "
+        b"outlived the runner still holds it open\n")
 
 
 @pytest.mark.parametrize("present, missing", [
