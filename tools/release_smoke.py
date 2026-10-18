@@ -121,6 +121,106 @@ def assert_manifest_hash(
     return expected
 
 
+def load_json(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError) as exc:
+        raise SmokeError(f"cannot read {path.name}: {exc}") from exc
+
+
+def assert_run_report(path: Path) -> None:
+    report = load_json(path)
+    if report.get("sil_run_diagnostics") != 1:
+        raise SmokeError(f"{path.name} is not a sil_run_diagnostics v1 report")
+    if report["run"]["exit_code"] != 0 or not report["completeness"]["run_complete"]:
+        raise SmokeError(f"{path.name} does not report a complete Run")
+
+
+def assert_benchmark_report(path: Path, measured: int) -> None:
+    summary = load_json(path)
+    if summary.get("sil_benchmark_report") != 1:
+        raise SmokeError(f"{path.name} is not a sil_benchmark_report v1 report")
+    if not summary["status"]["complete"] or summary["counts"]["completed"] != measured:
+        raise SmokeError(f"benchmark is incomplete: {summary['status']}")
+
+
+def assert_offline_html(path: Path) -> None:
+    try:
+        page = path.read_text()
+    except OSError as exc:
+        raise SmokeError(f"cannot read HTML report {path.name}: {exc}") from exc
+    if not page.lower().startswith("<!doctype html>"):
+        raise SmokeError(f"{path.name} is not an HTML page")
+    for reference in ("<script src", "<link rel=\"stylesheet\"", "@import"):
+        if reference in page:
+            raise SmokeError(f"{path.name} loads an external asset: {reference}")
+
+
+def smoke_diagnostics(
+    sil: list[str], workspace: Path, manifest: str, reference: Path,
+    execute,
+) -> None:
+    """Run the parent spec's diagnostics examples with installed commands.
+
+    `sil` is the command prefix and `manifest` the Manifest path as that
+    command sees it; `execute(args)` returns a completed process. Every
+    Recording written with diagnostics must equal the ordinary one.
+    """
+    def checked_sil(args: list[str], label: str):
+        result = execute(sil + args)
+        if result.returncode:
+            raise SmokeError(
+                f"{label} failed with {result.returncode}:\n"
+                f"{result.stdout}\n{result.stderr}"
+            )
+        return result
+
+    def inside(name: str) -> str:
+        return manifest.rsplit("/", 1)[0] + "/" + name
+
+    single = checked_sil(
+        ["run", manifest, "--diagnostics", "-o", inside("diagnostics.mcap")],
+        "sil run --diagnostics",
+    )
+    if not single.stdout.startswith("manifest_hash "):
+        raise SmokeError(f"diagnostics Run lost the hash line: {single.stdout!r}")
+    if (workspace / "diagnostics.mcap").read_bytes() != reference.read_bytes():
+        raise SmokeError("diagnostics changed the Recording bytes")
+    assert_run_report(workspace / "diagnostics.mcap.diagnostics.json")
+
+    (workspace / "results").mkdir()
+    checked_sil(
+        ["run", manifest, "--no-recording", "--diagnostics",
+         "--diagnostics-out", inside("results/run.json"),
+         "--html", inside("results/run.html")],
+        "sil run --no-recording --diagnostics-out --html",
+    )
+    assert_run_report(workspace / "results" / "run.json")
+    assert_offline_html(workspace / "results" / "run.html")
+
+    checked_sil(
+        ["benchmark", manifest, "--repeats", "2", "--warmup", "1",
+         "--out", inside("bench"), "--html", inside("results/report.html")],
+        "sil benchmark",
+    )
+    assert_benchmark_report(workspace / "bench" / "summary.json", 2)
+    assert_offline_html(workspace / "results" / "report.html")
+    for label in ("warmup-001", "run-001", "run-002"):
+        if (workspace / "bench" / label / "run.mcap").read_bytes() != reference.read_bytes():
+            raise SmokeError(f"benchmark {label} changed the Recording bytes")
+
+    # Rendering needs only the saved JSON: copy it away from its Run files.
+    (workspace / "copied").mkdir()
+    shutil.copyfile(workspace / "bench" / "summary.json",
+                    workspace / "copied" / "summary.json")
+    checked_sil(
+        ["diagnostics", "render", inside("copied/summary.json"),
+         "--html", inside("copied/report.html")],
+        "sil diagnostics render",
+    )
+    assert_offline_html(workspace / "copied" / "report.html")
+
+
 def smoke_native(
     bundle: Path, version: str, revision: str, workdir: Path
 ) -> tuple[Path, str]:
@@ -221,6 +321,17 @@ def smoke_native(
     )
     if not check.stdout.startswith("deterministic: "):
         raise SmokeError("sil check did not report a deterministic Recording")
+    native_workspace = workdir / "native-diagnostics"
+    native_workspace.mkdir()
+    shutil.copyfile(acc_manifest, native_workspace / "acc.json")
+    smoke_diagnostics(
+        [str(python_bin / "sil")],
+        native_workspace,
+        str(native_workspace / "acc.json"),
+        first,
+        lambda command: run(command, cwd=native_workspace, env=environment,
+                            timeout=300),
+    )
     return acc_manifest, manifest_hash
 
 
@@ -298,6 +409,17 @@ def smoke_container(
     )
     if check.returncode or not check.stdout.startswith("deterministic: "):
         raise SmokeError(f"container sil check failed: {check.stdout}\n{check.stderr}")
+    container_workspace = manifest.parent / "container-diagnostics"
+    container_workspace.mkdir()
+    shutil.copyfile(manifest, container_workspace / "acc.json")
+    smoke_diagnostics(
+        [],
+        container_workspace,
+        "/workspace/container-diagnostics/acc.json",
+        first,
+        lambda command: docker_run(image, manifest.parent, command, "sil",
+                                   timeout=300),
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
