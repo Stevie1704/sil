@@ -356,6 +356,7 @@ def validate_distributions(
 
 REQUIRED_NATIVE_PATHS = (
     "bin/sil-run",
+    "bin/sil-run-diagnostics",
     "bin/silschema",
     "bin/_sil_schema_types.py",
     "include/sil/arena.h",
