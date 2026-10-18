@@ -9,6 +9,7 @@ report content never becomes markup, and that the page needs no other file.
 
 import base64
 import json
+import os
 import re
 from html.parser import HTMLParser
 from pathlib import Path
@@ -20,6 +21,7 @@ from sil.benchmark import format_summary as benchmark_summary
 from sil.diagnostics_html import render
 from sil.diagnostics_report import ReportError
 from sil.diagnostics_run import format_summary as run_summary
+from test_run_diagnostics_cli import sil
 
 FIXTURES = ROOT / "tests" / "fixtures" / "diagnostics"
 ALL_FIXTURES = sorted(path.name for path in FIXTURES.glob("*.json"))
@@ -282,3 +284,94 @@ def test_the_script_sees_no_report_data():
         "http-equiv": "Content-Security-Policy"})
     assert "default-src 'none'" in policy["content"]
     assert "unsafe-inline" not in policy["content"]
+
+
+# --- sil diagnostics render ----------------------------------------------------
+
+
+def render_command(tmp_path: Path, *argv: str):
+    """`sil diagnostics render` with no native tool on PATH."""
+    return sil(["diagnostics", "render", *argv], tmp_path / "no-tools",
+               tmp_path)
+
+
+@pytest.mark.parametrize("name", ["run-failed-partial.json",
+                                  "benchmark-complete.json"])
+def test_render_needs_only_the_copied_json(tmp_path, name):
+    (tmp_path / "copy.json").write_text(fixture_text(name))
+
+    proc = render_command(tmp_path, "copy.json", "--html", "report.html")
+
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout == "HTML report: report.html\n"
+    assert proc.stderr == ""
+    assert (tmp_path / "report.html").read_text() == render(fixture_text(name))
+    assert sorted(p.name for p in tmp_path.iterdir()) == [
+        "copy.json", "report.html"]
+
+
+@pytest.mark.parametrize("content, message", [
+    (None, "cannot read report"),
+    ("{\"sil_run_diagnostics\": 1", "not valid JSON"),
+    ("{\"sil_run_diagnostics\": 7}", "unsupported sil_run_diagnostics version"),
+    ("{\"sil_benchmark_report\": 1}", "missing member"),
+    ("[]", "not a JSON object"),
+])
+def test_invalid_input_exits_2_without_output(tmp_path, content, message):
+    if content is not None:
+        (tmp_path / "in.json").write_text(content)
+
+    proc = render_command(tmp_path, "in.json", "--html", "out.html")
+
+    assert proc.returncode == 2
+    assert proc.stderr.startswith("sil diagnostics render: error: ")
+    assert message in proc.stderr
+    assert not (tmp_path / "out.html").exists()
+
+
+def test_an_existing_output_is_never_replaced(tmp_path):
+    (tmp_path / "in.json").write_text(fixture_text("run-success.json"))
+    (tmp_path / "out.html").write_text("keep")
+
+    proc = render_command(tmp_path, "in.json", "--html", "out.html")
+    same = render_command(tmp_path, "in.json", "--html", "in.json")
+
+    assert proc.returncode == 2 and "already exists" in proc.stderr
+    assert (tmp_path / "out.html").read_text() == "keep"
+    assert same.returncode == 2
+    assert (tmp_path / "in.json").read_text() == fixture_text(
+        "run-success.json")
+
+
+def test_a_missing_output_directory_exits_2(tmp_path):
+    (tmp_path / "in.json").write_text(fixture_text("run-success.json"))
+
+    proc = render_command(tmp_path, "in.json", "--html", "no/out.html")
+
+    assert proc.returncode == 2
+    assert "does not exist" in proc.stderr
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root writes anywhere")
+def test_an_unwritable_output_exits_1(tmp_path):
+    (tmp_path / "in.json").write_text(fixture_text("run-success.json"))
+    locked = tmp_path / "locked"
+    locked.mkdir()
+    locked.chmod(0o555)
+    try:
+        proc = render_command(tmp_path, "in.json", "--html",
+                              "locked/out.html")
+    finally:
+        locked.chmod(0o755)
+
+    assert proc.returncode == 1
+    assert "cannot write the HTML report 'locked/out.html'" in proc.stderr
+    assert list(locked.iterdir()) == []
+
+
+@pytest.mark.parametrize("argv", [["in.json"], ["--html", "x.html"],
+                                  ["in.json", "--html", "a", "--html", "b"]])
+def test_usage_errors_exit_2(tmp_path, argv):
+    proc = render_command(tmp_path, *argv)
+
+    assert proc.returncode == 2

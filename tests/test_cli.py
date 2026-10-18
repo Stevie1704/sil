@@ -14,7 +14,8 @@ def test_help_lists_every_top_level_command(capsys):
 
     out = capsys.readouterr().out
     assert out.startswith("usage: sil <command>")
-    for command in ("check", "compare", "footprint", "run", "examples",
+    for command in ("check", "compare", "footprint", "run", "benchmark",
+                    "diagnostics", "examples",
                     "bundle", "fmi", "manifest", "new", "recording", "schema"):
         assert f"\n  {command} " in out
 
@@ -30,6 +31,7 @@ def test_a_subcommand_runs_with_its_own_arguments_and_exit_code(tmp_path, capsys
 
 @pytest.mark.parametrize("group, commands", [
     ("bundle", ("seal", "verify", "run", "matrix")),
+    ("diagnostics", ("render",)),
     ("fmi", ("inspect", "couple", "replay", "substitute")),
     ("manifest", ("validate",)),
     ("new", ("participant",)),
