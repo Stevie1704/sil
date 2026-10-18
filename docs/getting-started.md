@@ -2,12 +2,47 @@
 
 [Documentation index](README.md) · [Repository overview](../README.md)
 
-## Use the installed framework
+## Install a release
 
-Install the release wheel together with the native development archive and
-put both `bin` directories on `PATH`. The runtime image is another execution
-option (`sil docs container`). The wheel supplies documentation and Python
-tools; the native archive supplies `sil-run`, `silschema` and `include/sil`.
+A release has two parts: the wheel (the `sil` command, the Python package and
+the docs) and the native development archive (`sil-run`,
+`sil-run-diagnostics`, `silschema`, the clock shim and `include/sil`). Both
+are assets of the GitHub release. The runtime image is another way to run
+SiL, with nothing to install but Docker (`sil docs container`).
+
+On Linux x86-64, the install script of a release installs both parts. It
+needs `curl`, `tar` and Python 3.11 or newer with `venv` (on Debian and
+Ubuntu, the `python3-venv` package):
+
+```sh
+curl -fsSL https://github.com/Stevie1704/sil/releases/download/v<VERSION>/install.sh | sh
+. ~/.local/share/sil/env
+```
+
+- It checks each download against the release's `SHA256SUMS` before it
+  installs anything, and installs nothing when one does not match.
+- It installs into `~/.local/share/sil/<VERSION>/` (`--prefix DIR` for
+  another directory): a virtual environment, `venv/`, and the native archive,
+  `native/`. Versions stay side by side, and an installed version is never
+  changed. `current` points at the version installed last.
+- `~/.local/share/sil/env` puts `current/venv/bin` and `current/native/bin`
+  first on `PATH`. Source it in your shell profile. Then `python3` is the
+  Python of the virtual environment, which Python Participants need
+  (`python3 -m sil.participant`).
+- `--version VERSION` installs another release. Run `sh install.sh --help`
+  for all options. A release before 0.2.1 has no `install.sh` asset: use the
+  script of a later release, or of `tools/install.sh` in the repository, with
+  `--version`.
+- The native archive of 0.2.0 needs glibc 2.38 or newer, for example Ubuntu
+  24.04. On an older glibc, such as Debian bookworm, the script stops with
+  "the installed sil-run does not start"; use the runtime image there.
+
+Without the script, download the wheel, the native archive and `SHA256SUMS`
+from the release, check them with `sha256sum -c --ignore-missing SHA256SUMS`,
+install the wheel into a virtual environment, unpack the archive, and put
+both `bin` directories on `PATH`.
+
+## Use the installed framework
 
 From any working directory, without the SiL source checkout:
 

@@ -20,6 +20,9 @@ with publishing disabled.
 2. Open a pull request. The release workflow builds the wheel and source
    distribution, stages and archives the Linux native development prefix,
    builds the pinned runtime image, and runs the clean-environment smoke job.
+   It also writes `install.sh` with the release version as its default
+   (`tools/release.py stamp-installer`) and installs the new artifacts with
+   it from a local mirror of the release layout.
 3. After merge, create and push the matching annotated tag:
 
    ```sh

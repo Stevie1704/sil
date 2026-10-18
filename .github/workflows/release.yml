@@ -128,6 +128,29 @@ jobs:
             --version "$VERSION" \
             --source-revision "$REVISION"
 
+      - name: Install the new release with the install script
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 tools/release.py stamp-installer --root . \
+            --output dist/install.sh --version "$VERSION"
+          # A local mirror of the release download layout, with the checksums
+          # the publish job attaches.
+          mirror="$RUNNER_TEMP/mirror"
+          mkdir -p "$mirror/v$VERSION"
+          cp dist/* "$mirror/v$VERSION/"
+          (cd "$mirror/v$VERSION" && sha256sum -- * > SHA256SUMS)
+          SIL_RELEASE_URL="file://$mirror" sh dist/install.sh \
+            --prefix "$RUNNER_TEMP/sil"
+          work="$(mktemp -d)"
+          cd "$work"
+          . "$RUNNER_TEMP/sil/env"
+          test "$(sil-run --version)" = "$VERSION"
+          python3 -m sil.examples.acc.manifest acc.json
+          sil run acc.json -o acc.mcap
+          sil check acc.json
+
       - name: Preserve the verified downloadable artifacts
         uses: actions/upload-artifact@v4
         with:
