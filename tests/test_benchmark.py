@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 
 from conftest import ROOT
+from sil import benchmark
 from sil.benchmark import Policy, RunResult, summarize
 from sil.diagnostics_html import render
 from sil.diagnostics_report import load_report, validate_benchmark_report
@@ -495,6 +496,40 @@ class TestCommand:
         summary = load_report(tmp_path / "r" / "summary.json")
         assert summary["runs"][0]["report_status"] == "missing"
         assert summary["runs"][0]["process_outcome"]["signal"] == 9
+
+    def test_a_signal_between_runs_starts_no_later_run(
+        self, build_dir, tmp_path, monkeypatch
+    ):
+        """A signal after one Run ended and before the next started stops
+        the campaign there, and the summary says it is incomplete."""
+        counter = tmp_path / "count"
+        path = fake_tools(tmp_path, build_dir, runner_script(counter))
+        monkeypatch.setenv("PATH",
+                           os.pathsep.join([str(path), "/usr/bin:/bin"]))
+        monkeypatch.chdir(tmp_path)
+        run_one = benchmark._run_one
+
+        def run_then_signal(*args, **kwargs):
+            result = run_one(*args, **kwargs)
+            os.kill(os.getpid(), signal.SIGTERM)  # no Run is active now
+            return result
+
+        monkeypatch.setattr(benchmark, "_run_one", run_then_signal)
+
+        code = benchmark.main(["m.json", "--repeats", "3", "--warmup", "0",
+                               "--out", "results"])
+
+        assert code == 128 + signal.SIGTERM
+        assert invocations(counter) == 1
+        out = tmp_path / "results"
+        assert sorted(p.name for p in out.iterdir()) == ["run-001",
+                                                         "summary.json"]
+        summary = load_report(out / "summary.json")
+        assert summary["status"] == {"complete": False,
+                                     "exit_code": 128 + signal.SIGTERM,
+                                     "stopped_reason": "interrupted"}
+        assert summary["counts"]["attempted"] == 1
+        assert summary["aggregates"]["sample_count"] == 1
 
     def test_an_existing_out_directory_is_rejected_untouched(
         self, build_dir, tmp_path
