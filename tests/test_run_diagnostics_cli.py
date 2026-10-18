@@ -659,3 +659,23 @@ def test_an_unwritable_html_report_exits_1_and_keeps_the_json(build_dir,
     assert json.loads((tmp_path / "out.mcap.diagnostics.json").read_text())[
         "run"]["exit_code"] == 0
     assert list(locked.iterdir()) == []
+
+
+def test_an_html_report_that_appears_during_the_run_is_never_replaced(
+    build_dir, tmp_path
+):
+    """Preflight found no HTML file; one created during the Run keeps its
+    content, the command exits 1, and no temporary file is left beside it."""
+    pages = tmp_path / "pages"
+    pages.mkdir()
+    page = pages / "run.html"
+    path = fake_tools(tmp_path, build_dir,
+                      f"printf earlier > '{page}'\n" + FAKE_SUCCESS)
+
+    proc = sil(["run", "m.json", "--html", "pages/run.html"], path, tmp_path)
+
+    assert proc.returncode == 1
+    assert "sil run: cannot write the HTML report 'pages/run.html': " \
+        in proc.stderr
+    assert page.read_text() == "earlier"
+    assert sorted(p.name for p in pages.iterdir()) == ["run.html"]

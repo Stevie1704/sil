@@ -618,6 +618,42 @@ class TestReportPublication:
         assert proc.stdout == ordinary.stdout
 
 
+    def test_a_report_that_appears_during_the_run_is_never_replaced(
+        self, sil_run_diagnostics, tmp_path
+    ):
+        """Preflight found no report; a file the Run creates later keeps its
+        content, and the runner leaves no temporary file beside it."""
+        reports = tmp_path / "reports"
+        reports.mkdir()
+        report = reports / "run.json"
+        m = toy_manifest(duration_ns=20 * MS)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_channel("echo", schema="toy.Counter")
+        add_multitask(m)
+        echo = ROOT / "tests" / "participants" / "echo.py"
+        m.add_process(
+            "pyecho",
+            command=["/bin/sh", "-c",
+                     f"printf earlier > '{report}'; "
+                     f"exec '{sys.executable}' '{echo}'"],
+            step_period_ns=10 * MS,
+            subscribes=[SubscriberRoute("ticks",
+                                        capacity=COMPAT_ROUTE_CAPACITY)],
+            publishes=["echo"],
+        )
+        manifest = m.write(tmp_path / "late.json").path
+
+        proc = subprocess.run(
+            [str(sil_run_diagnostics), str(manifest), "--diagnostics-out",
+             str(report), "-o", str(tmp_path / "run.mcap")],
+            capture_output=True, text=True, cwd=tmp_path)
+
+        assert proc.returncode == 0, proc.stderr
+        assert "cannot write diagnostics report" in proc.stderr
+        assert report.read_text() == "earlier"
+        assert sorted(p.name for p in reports.iterdir()) == ["run.json"]
+
+
 class TestOrdinaryRunnerIsUnchanged:
     def test_ordinary_runner_has_no_diagnostics_option(self, sil_run, tmp_path):
         proc = subprocess.run(
