@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from sil import build_info
+from sil.diagnostics_format import format_duration_ns, format_value
 from sil.diagnostics_html import write_html
 from sil.diagnostics_report import (
     BENCHMARK_REPORT_KEY, SUPPORTED_VERSION, new_path_problem,
@@ -44,8 +45,7 @@ from sil.diagnostics_run import (
     EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE,
     FORWARDED_SIGNALS, GivenOnce, Guards, NativeTools, RunOutcome, RunRequest,
     ToolMissing, add_guard_arguments, command_error, default_report_path,
-    describe_problems, execute, find_native_tools, format_duration_ns,
-    format_value, guards_from, resolve_exit,
+    describe_problems, execute, find_native_tools, guards_from, resolve_exit,
 )
 
 PROG = "sil benchmark"

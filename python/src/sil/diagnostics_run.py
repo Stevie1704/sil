@@ -32,6 +32,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import BinaryIO, Iterable, Sequence
 
+from sil.diagnostics_format import (
+    format_bytes, format_duration_ns, format_factor, format_rate,
+)
+from sil.diagnostics_html import write_html
 from sil.diagnostics_report import (
     PHASES, ReportError, load_report, new_path_problem,
 )
@@ -379,46 +383,12 @@ def describe_problems(outcome: RunOutcome,
 # --- terminal summary -------------------------------------------------------
 
 
-def format_duration_ns(value: float) -> str:
-    """Nanoseconds in the largest unit below the value, three decimals."""
-    for unit, scale in (("s", 1e9), ("ms", 1e6), ("us", 1e3)):
-        if abs(value) >= scale:
-            return f"{value / scale:.3f} {unit}"
-    return f"{value:.0f} ns"
-
-
-def format_bytes(value: int) -> str:
-    for unit, scale in (("GiB", 2**30), ("MiB", 2**20), ("KiB", 2**10)):
-        if value >= scale:
-            return f"{value / scale:.3f} {unit}"
-    return f"{value} B"
-
-
 def _value(record: dict, key: str, render) -> str:
     """A value with its unit, or `unavailable (reason)` for a null one."""
     if record.get(key) is None:
         reason = record.get("unavailable", {}).get(key, "not reported")
         return f"unavailable ({reason})"
     return render(record[key])
-
-
-def format_factor(value: float) -> str:
-    return f"{value:.2f}x"
-
-
-def format_rate(value: float) -> str:
-    return f"{value:.2f}/s"
-
-
-def format_value(unit: str, value) -> str:
-    """A value of a benchmark metric unit: `ns`, `bytes`, `factor`, `1/s`."""
-    if unit == "ns":
-        return format_duration_ns(value)
-    if unit == "bytes":
-        return format_bytes(value)
-    if unit == "factor":
-        return format_factor(value)
-    return format_rate(value)
 
 
 def format_summary(report: dict, report_path: Path) -> str:
@@ -651,8 +621,6 @@ def request_from_arguments(argv: list[str]) -> tuple[RunRequest, Path | None]:
 def write_html_report(outcome: RunOutcome, path: Path,
                       cwd: Path | None = None) -> str | None:
     """Render the Run's report into `path`; return the failed artifact."""
-    from sil.diagnostics_html import write_html  # imports this module
-
     label = f"HTML report '{path}'"
     if outcome.report is None:
         return f"{label}: no valid diagnostics report to render"
