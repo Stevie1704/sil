@@ -134,6 +134,51 @@ def test_a_campaign_without_a_successful_run_has_no_statistic():
     assert "unavailable (no_run_report)" in text
 
 
+LONG = "a-participant-with-an-unusually-long-name-that-does-not-wrap-"
+
+
+def many_participants(count: int = 40) -> str:
+    """run-success with `count` more Process participants, long names."""
+    report = json.loads(fixture_text("run-success.json"))
+    template = report["execution"]["participants"][1]
+    row = report["observational"]["tasks"][2]
+    record = report["observational"]["resources"]["process_participants"][0]
+    for index in range(count):
+        name = f"{LONG}{index:03d}"
+        report["execution"]["participants"].append(
+            {**json.loads(json.dumps(template)), "participant": name})
+        report["observational"]["tasks"].append(
+            {**json.loads(json.dumps(row)), "participant": name})
+        report["observational"]["resources"]["process_participants"].append(
+            {**json.loads(json.dumps(record)), "participant": name})
+    resources = report["observational"]["resources"]
+    for key in ("user_cpu_ns", "system_cpu_ns"):
+        resources["cpu_total"][key] = resources["runner"][key] + sum(
+            r[key] for r in resources["process_participants"])
+    return json.dumps(report, indent=1)
+
+
+def one_sample() -> str:
+    """run-success whose Process participant completed one Step."""
+    report = json.loads(fixture_text("run-success.json"))
+    task = report["execution"]["participants"][1]["tasks"][0]
+    task.update(attempted=1, completed=1)
+    timing = report["observational"]["tasks"][2]["timing"]
+    timing.update(completed=1, samples_ns=[37958], slowest=timing["slowest"][1:],
+                  min_ns=37958, max_ns=37958, mean_ns=37958.0, p50_ns=37958,
+                  stddev_ns=0.0, sum_ns=37958)
+    timing["quantiles"].update(retained_count=1, sample_count=1)
+    return json.dumps(report, indent=1)
+
+
+def test_many_participants_and_one_sample_render_every_row():
+    text = page_of(many_participants()).text
+    single = page_of(one_sample()).text
+
+    assert text.count(f"{LONG}039") >= 4  # Task, slow and resource rows
+    assert "all 1 of 1 completed activations retained" in single
+
+
 def edited(name: str, edit) -> str:
     document = json.loads(fixture_text(name))
     edit(document)

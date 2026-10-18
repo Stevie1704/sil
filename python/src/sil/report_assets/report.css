@@ -121,7 +121,9 @@ h4.status-title { font-size: 18px; }
   border: 1px solid currentColor; }
 .flag { color: var(--fail); }
 .na { color: var(--muted); font-style: italic; }
-.reason { font-family: var(--mono); font-size: 0.85em; font-style: normal; }
+.reason { font-family: var(--mono); font-size: 0.85em; font-style: normal;
+  overflow-wrap: anywhere; }
+.card-value .na { font-size: 16px; font-weight: 400; }
 .cards { display: grid; gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
 .card { background: var(--surface); border: 1px solid var(--line);
