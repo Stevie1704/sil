@@ -37,7 +37,6 @@ from sil.diagnostics_report import PHASES, ReportError, load_report
 PROG = "sil run"
 RUNNER = "sil-run-diagnostics"
 LAUNCHER = "sil-diagnostics-launcher"
-LAUNCHER_PREFIX = b"sil-diagnostics-launcher: "
 DEFAULT_RECORDING = "out.mcap"
 
 EXIT_OK = 0
@@ -183,7 +182,7 @@ class RunOutcome:
 
     exit_code: int | None  # the process exit code; None if ended by signal
     signal: int | None  # the signal that ended the runner
-    launcher_error: str | None  # the launcher's own failure line, if any
+    launcher_error: str | None  # the launcher's --status-fd line, if any
     report: dict | None  # the valid report, or None
     report_problem: str | None  # why `report` is None
     report_path: Path
@@ -206,18 +205,29 @@ def execute(request: RunRequest, tools: NativeTools, *,
     """Run one diagnostics Run to its end and read its report.
 
     The runner's stdout goes to `stdout` (inherited when None). Its stderr is
-    copied unchanged to `stderr` (this process's stderr when None) and read
-    for the launcher's own failure line. SIGINT, SIGTERM and SIGHUP sent to
-    this process are forwarded to the launcher, which forwards them to the
-    runner; the Run then ends through its own cleanup.
+    copied unchanged to `stderr` (this process's stderr when None). The
+    launcher's own failure arrives on a separate pipe (`--status-fd`) that
+    the runner and its Participants never inherit, so no Run output can pose
+    as one. SIGINT, SIGTERM and SIGHUP sent to this process are forwarded to
+    the launcher, which forwards them to the runner; the Run then ends
+    through its own cleanup.
     """
     sink = stderr if stderr is not None else sys.stderr.buffer
-    command = [str(tools.launcher), str(tools.runner),
-               *request.runner_arguments()]
+    status_read, status_write = os.pipe()
+    command = [str(tools.launcher), "--status-fd", str(status_write),
+               str(tools.runner), *request.runner_arguments()]
     sys.stdout.flush()
     sys.stderr.flush()
-    process = subprocess.Popen(command, cwd=cwd, stdout=stdout,
-                               stderr=subprocess.PIPE, start_new_session=True)
+    try:
+        process = subprocess.Popen(command, cwd=cwd, stdout=stdout,
+                                   stderr=subprocess.PIPE,
+                                   pass_fds=(status_write,),
+                                   start_new_session=True)
+    except BaseException:
+        os.close(status_read)
+        raise
+    finally:
+        os.close(status_write)
     received: list[int] = []
     previous = _forward_signals(process, received)
     try:
@@ -229,7 +239,7 @@ def execute(request: RunRequest, tools: NativeTools, *,
         _restore_signals(previous)
     exit_code = status if status >= 0 else None
     ended_by = -status if status < 0 else None
-    launcher_error = copier.launcher_error
+    launcher_error = _read_status(status_read)
     report, problem = _read_report(Path(cwd or ".") / request.report,
                                    exit_code)
     return RunOutcome(exit_code, ended_by, launcher_error, report, problem,
@@ -265,19 +275,26 @@ def _restore_signals(previous) -> None:
         signal.signal(number, handler)
 
 
+def _read_status(fd: int) -> str | None:
+    """The launcher's failure line; None when it wrote none.
+
+    Only the launcher holds the write end, so the read ends when it does.
+    """
+    with os.fdopen(fd, "rb") as status:
+        text = status.read().decode(errors="replace").strip()
+    return text.splitlines()[0] if text else None
+
+
 class _StderrCopy(threading.Thread):
-    """Copies the runner's stderr unchanged and notes the launcher's line."""
+    """Copies the runner's stderr unchanged."""
 
     def __init__(self, source: BinaryIO, sink: BinaryIO):
         super().__init__(daemon=True)
         self.source = source
         self.sink = sink
-        self.launcher_error: str | None = None
 
     def run(self) -> None:
         for line in iter(self.source.readline, b""):
-            if line.startswith(LAUNCHER_PREFIX) and self.launcher_error is None:
-                self.launcher_error = line.decode(errors="replace").rstrip("\n")
             self.sink.write(line)
             self.sink.flush()
 

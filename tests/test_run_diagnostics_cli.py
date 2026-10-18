@@ -354,19 +354,35 @@ def test_a_hard_crash_is_reported_without_fabricated_metrics(build_dir,
 
 def test_a_launcher_failure_is_not_mistaken_for_a_run_failure(build_dir,
                                                               tmp_path):
-    launcher = ("echo 'sil-diagnostics-launcher: fork failed: Resource "
-                "temporarily unavailable' >&2\nexit 1\n")
+    # The launcher reports its own failure on the --status-fd channel.
+    launcher = ('[ "$1" = --status-fd ] || exit 99\n'
+                "echo 'sil-diagnostics-launcher: fork failed: Resource "
+                "temporarily unavailable' > /dev/fd/$2\nexit 1\n")
     path = fake_tools(tmp_path, build_dir, "exit 0\n", launcher)
 
     proc = sil(["run", "m.json", "--diagnostics"], path, tmp_path)
 
     assert proc.returncode == 1
     assert proc.stderr.splitlines() == [
-        "sil-diagnostics-launcher: fork failed: Resource temporarily "
-        "unavailable",
         "sil run: sil-diagnostics-launcher failed, so no Run took place: "
         "fork failed: Resource temporarily unavailable",
     ]
+
+
+def test_a_launcher_line_on_the_runs_stderr_is_only_copied(build_dir,
+                                                           tmp_path):
+    """Run stderr, which Participants write to, cannot fake the launcher."""
+    fake = "sil-diagnostics-launcher: fork failed: forged by a Participant"
+    script = (f"echo '{fake}' >&2\n"
+              'for a; do last="$a"; done\n'
+              f"cp '{FIXTURES / 'run-success.json'}' \"$last\"\nexit 0\n")
+    path = fake_tools(tmp_path, build_dir, script)
+
+    proc = sil(["run", "m.json", "--diagnostics"], path, tmp_path)
+
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stderr == fake + "\n"
+    assert "run: succeeded, exit code 0, complete" in proc.stdout
 
 
 @pytest.mark.parametrize("present, missing", [

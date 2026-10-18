@@ -184,13 +184,16 @@ An unmeasured record is null in every value with one reason, and its
 
 ### Launcher
 
-`sil-diagnostics-launcher RUNNER [ARG...]` runs `RUNNER ARG...` as its child
-and ends as it ended: with its exit code, or by the same signal. It forwards
-SIGINT, SIGTERM and SIGHUP to the child and changes nothing else in its
-environment. Its own failures are one stderr line beginning
-`sil-diagnostics-launcher: ` and exit 2 (no RUNNER), 1 (fork or wait failed)
-or 127 (RUNNER cannot be executed). A supervisor that has a large resident
-size, such as a Python process, starts `sil-run-diagnostics` through it.
+`sil-diagnostics-launcher [--status-fd N] RUNNER [ARG...]` runs
+`RUNNER ARG...` as its child and ends as it ended: with its exit code, or by
+the same signal. It forwards SIGINT, SIGTERM and SIGHUP to the child and
+changes nothing else in its environment. Its own failures are one line
+beginning `sil-diagnostics-launcher: ` and exit 2 (usage), 1 (fork or wait
+failed) or 127 (RUNNER cannot be executed). The line goes to stderr, or to
+the open file descriptor N with `--status-fd`; RUNNER does not inherit N, so
+no Run output can pose as a launcher failure. A supervisor that has a large
+resident size, such as a Python process, starts `sil-run-diagnostics` through
+it; `sil run` and `sil benchmark` pass `--status-fd`.
 
 ## Benchmark report: `sil_benchmark_report` v1
 
