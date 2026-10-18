@@ -46,7 +46,11 @@ RESOURCE_FIELDS = (
     "system_cpu_ns",
     "peak_rss_bytes",
     "peak_rss_kind",
+    "limitations",
 )
+RESOURCE_MEMBERS = {
+    "runner", "process_participants", "native_participants", "cpu_total"
+}
 RUN_ROLES = {"warmup", "measured"}
 AGGREGATE_STATISTICS = ("min", "median", "max", "mean", "stddev")
 
@@ -282,13 +286,32 @@ def _check_observational(observational: dict, tasks: dict,
                       where, errors)
     for key in sorted(set(tasks) - seen, key=str):
         errors.append(f"Task {key} has no observational timing")
-    resources = observational["resources"]
+    _check_resources(observational["resources"], errors)
+
+
+def _check_resources(resources: dict, errors: list[str]) -> None:
+    unknown = set(resources) - RESOURCE_MEMBERS
+    if unknown:
+        # Peaks of different processes need not coincide, so a member that
+        # adds them up would describe memory no process tree ever used.
+        errors.append("observational.resources has unknown members "
+                      f"{sorted(unknown)}; no peak memory total exists")
     records = [resources.get("runner", {})] + list(
         resources.get("process_participants", []))
     for index, record in enumerate(records):
         for field in RESOURCE_FIELDS:
             if field not in record:
                 errors.append(f"resource record {index} lacks '{field}'")
+    total = resources.get("cpu_total")
+    if not isinstance(total, dict):
+        errors.append("observational.resources.cpu_total is missing")
+        return
+    for key in ("user_cpu_ns", "system_cpu_ns"):
+        values = [record.get(key) for record in records]
+        expected = None if None in values else sum(values)
+        if total.get(key) != expected:
+            errors.append(f"cpu_total.{key} is not the sum of the disjoint "
+                          "resource records")
 
 
 def _check_counts(counts: dict, runs: list, errors: list[str]) -> None:

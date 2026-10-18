@@ -7,7 +7,7 @@
   "collection_errors": [],
   "collector": {
     "clock": "host_monotonic",
-    "collector_version": 1,
+    "collector_version": 2,
     "name": "sil-run-diagnostics",
     "p95_minimum_samples": 20,
     "p99_minimum_samples": 100,
@@ -109,12 +109,22 @@
     },
     "replay": [],
     "resources": {
+      "cpu_total": {
+        "scope": "runner_and_process_participants",
+        "system_cpu_ns": null,
+        "unavailable": {
+          "system_cpu_ns": "incomplete_scopes",
+          "user_cpu_ns": "incomplete_scopes"
+        },
+        "user_cpu_ns": null
+      },
       "native_participants": "shared_with_runner",
       "process_participants": [
         {
           "collector": null,
           "includes_waited_descendants": null,
           "interval": null,
+          "limitations": [],
           "participant": "pyecho",
           "peak_rss_bytes": null,
           "peak_rss_kind": null,
@@ -133,15 +143,24 @@
         }
       ],
       "runner": {
-        "collector": "getrusage_self",
-        "includes_waited_descendants": false,
-        "interval": "run",
-        "peak_rss_bytes": 9437184,
-        "peak_rss_kind": "process_peak_rss",
+        "collector": null,
+        "includes_waited_descendants": null,
+        "interval": null,
+        "limitations": [],
+        "peak_rss_bytes": null,
+        "peak_rss_kind": null,
         "scope": "runner_process",
-        "system_cpu_ns": 12000000,
-        "unavailable": {},
-        "user_cpu_ns": 41000000
+        "system_cpu_ns": null,
+        "unavailable": {
+          "collector": "unsupported_platform",
+          "includes_waited_descendants": "unsupported_platform",
+          "interval": "unsupported_platform",
+          "peak_rss_bytes": "unsupported_platform",
+          "peak_rss_kind": "unsupported_platform",
+          "system_cpu_ns": "unsupported_platform",
+          "user_cpu_ns": "unsupported_platform"
+        },
+        "user_cpu_ns": null
       }
     },
     "run_wall_time": {

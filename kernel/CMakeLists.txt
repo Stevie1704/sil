@@ -43,7 +43,8 @@ target_link_libraries(sil-run-instrumented
 # separate-build rationale still holds, so sil-run keeps no clock read, counter
 # or branch on the activation path. See docs/decisions/299-run-diagnostics.md.
 add_executable(sil-run-diagnostics
-  ${SIL_KERNEL_SOURCES} src/run_diagnostics.cpp src/diagnostics_stats.cpp)
+  ${SIL_KERNEL_SOURCES} src/run_diagnostics.cpp src/diagnostics_stats.cpp
+  src/resource_usage.cpp)
 target_include_directories(sil-run-diagnostics PRIVATE ${PROJECT_SOURCE_DIR}/include)
 target_compile_definitions(sil-run-diagnostics PRIVATE SIL_RUN_DIAGNOSTICS)
 target_link_libraries(sil-run-diagnostics

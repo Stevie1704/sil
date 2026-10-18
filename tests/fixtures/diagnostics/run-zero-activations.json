@@ -7,7 +7,7 @@
   "collection_errors": [],
   "collector": {
     "clock": "host_monotonic",
-    "collector_version": 1,
+    "collector_version": 2,
     "name": "sil-run-diagnostics",
     "p95_minimum_samples": 20,
     "p99_minimum_samples": 100,
@@ -80,26 +80,27 @@
     },
     "replay": [],
     "resources": {
+      "cpu_total": {
+        "scope": "runner_and_process_participants",
+        "system_cpu_ns": 12000000,
+        "unavailable": {},
+        "user_cpu_ns": 41000000
+      },
       "native_participants": "shared_with_runner",
       "process_participants": [],
       "runner": {
-        "collector": null,
-        "includes_waited_descendants": null,
-        "interval": null,
-        "peak_rss_bytes": null,
-        "peak_rss_kind": null,
+        "collector": "getrusage_self",
+        "includes_waited_descendants": false,
+        "interval": "runner_start_to_run_end",
+        "limitations": [
+          "peak_includes_parent_rss_at_spawn"
+        ],
+        "peak_rss_bytes": 9437184,
+        "peak_rss_kind": "process_peak_rss",
         "scope": "runner_process",
-        "system_cpu_ns": null,
-        "unavailable": {
-          "collector": "not_collected",
-          "includes_waited_descendants": "not_collected",
-          "interval": "not_collected",
-          "peak_rss_bytes": "not_collected",
-          "peak_rss_kind": "not_collected",
-          "system_cpu_ns": "not_collected",
-          "user_cpu_ns": "not_collected"
-        },
-        "user_cpu_ns": null
+        "system_cpu_ns": 12000000,
+        "unavailable": {},
+        "user_cpu_ns": 41000000
       }
     },
     "run_wall_time": {

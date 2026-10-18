@@ -100,7 +100,7 @@
     "unavailable": {}
   },
   "identity": {
-    "diagnostics_collector_version": 1,
+    "diagnostics_collector_version": 2,
     "manifest_hash": "2f9ba41079fd01465e177ca9fd61daeebb01ff5d0424f8a5ae4c36494c70bdb0",
     "manifest_path": "/work/mixed.json",
     "sil_version": "0.1.0",
