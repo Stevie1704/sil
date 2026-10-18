@@ -35,8 +35,8 @@ curl -fsSL https://github.com/Stevie1704/sil/releases/download/v<VERSION>/instal
   `--version`.
 - From 0.2.1, the native archive runs on Debian bookworm (glibc 2.36) or
   newer. The published 0.1.0 and 0.2.0 archives need glibc 2.38 and
-  `GLIBCXX_3.4.32`, for example Ubuntu 24.04. Use their runtime image on
-  bookworm; those published archives are not replaced.
+  `GLIBCXX_3.4.32`, for example Ubuntu 24.04. For 0.2.0 on bookworm, use
+  its runtime image. The published archives are not replaced.
 - On Windows and macOS, the script stops before any download. See
   [Windows and macOS](#windows-and-macos).
 

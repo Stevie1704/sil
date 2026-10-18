@@ -21,9 +21,11 @@ with publishing disabled.
    distribution, copies the Linux native development prefix from the pinned
    bookworm Docker build stage, archives it, and builds the runtime image
    with the same toolchain. The clean-environment smoke runs on Ubuntu and
-   in `debian:bookworm-slim`. The bookworm gate checks every ELF file in the
-   archive for imports above `GLIBC_2.36` or `GLIBCXX_3.4.30`, then exercises
-   the installed commands, Runs and diagnostics without the source checkout.
+   in `debian:bookworm-slim`. The bookworm smoke uses `--check-symbols`
+   (requires binutils `objdump`) to check every ELF file in the archive for
+   numeric imports above `GLIBC_2.36` or `GLIBCXX_3.4.30`, then exercises the
+   installed commands, Runs and diagnostics without the source checkout.
+   Non-numeric ABI tags are left to the dynamic loader during the Run smoke.
    It also writes `install.sh` with the release version as its default
    (`tools/release.py stamp-installer`) and installs the new artifacts with
    it from a local mirror of the release layout.

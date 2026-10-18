@@ -1,4 +1,4 @@
-"""Release artifact checks that do not require a registry or Docker daemon."""
+"""Release identity checks that do not require a registry or Docker daemon."""
 
 from __future__ import annotations
 
@@ -206,6 +206,36 @@ def test_native_symbol_gate_fails_when_elf_inspection_fails(
     monkeypatch.setattr(subprocess, "run", unavailable)
     with pytest.raises(ReleaseError, match="cannot inspect ELF symbols"):
         validate_native_symbols(tmp_path)
+
+
+def test_native_symbol_gate_reports_the_unreadable_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+):
+    from release import validate_native_symbols
+
+    library = tmp_path / "unreadable.so"
+    library.write_bytes(b"\x7fELF")
+
+    def unreadable(*args, **kwargs):
+        raise PermissionError("permission denied")
+
+    monkeypatch.setattr(Path, "open", unreadable)
+    with pytest.raises(ReleaseError, match="unreadable.so.*permission denied"):
+        validate_native_symbols(tmp_path)
+
+
+def test_native_symbol_gate_leaves_non_numeric_abi_tags_to_the_loader(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+):
+    from release import validate_native_symbols
+
+    (tmp_path / "sil-run").write_bytes(b"\x7fELF")
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs:
+                        subprocess.CompletedProcess(args[0], 0, stdout="""
+0000 DF *UND* 0000 (GLIBC_PRIVATE) imported
+0000 DF *UND* 0000 (GLIBC_ABI_DT_RELR) imported
+"""))
+    validate_native_symbols(tmp_path)
 
 
 @pytest.fixture
