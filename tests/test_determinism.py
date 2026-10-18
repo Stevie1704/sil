@@ -244,7 +244,9 @@ class TestDiagnosticsRunnerIsInert:
             tmp_path / "ordinary.mcap"
         ).read_bytes()
         assert diagnostic.stdout == ordinary.stdout
-        assert diagnostic.stderr == ordinary.stderr
+        # The same diagnostics, each line named by the runner that wrote it.
+        assert diagnostic.stderr.replace(
+            "sil-run-diagnostics: ", "sil-run: ") == ordinary.stderr
         document = json.loads(report.read_text())
         assert document["run"]["exit_code"] == ordinary.returncode
 

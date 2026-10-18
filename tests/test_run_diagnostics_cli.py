@@ -261,8 +261,10 @@ def test_failed_run_keeps_its_exit_code_stderr_and_partial_summary(
                 "-o", "run.mcap"], native_path, tmp_path)
 
     assert proc.returncode == 1
-    # The runner's first diagnostic is the first stderr line, unchanged.
-    assert proc.stderr.startswith("sil-run: participant 'test' failed")
+    # The runner's first diagnostic is the first stderr line, unchanged, and
+    # names the runner that wrote it.
+    assert proc.stderr.startswith(
+        "sil-run-diagnostics: participant 'test' failed")
     assert "run: run_failure, exit code 1, partial (run_failure)" in proc.stdout
     assert "manifest_hash" not in proc.stdout
 
@@ -275,7 +277,7 @@ def test_manifest_error_exits_2_with_a_preflight_report(native_path, tmp_path):
 
     assert proc.returncode == 2
     assert "run: configuration_error, exit code 2" in proc.stdout
-    assert proc.stderr.startswith("sil-run: ")
+    assert proc.stderr.startswith("sil-run-diagnostics: manifest error")
 
 
 def fake_tools(tmp_path: Path, build_dir: Path, runner_script: str,
