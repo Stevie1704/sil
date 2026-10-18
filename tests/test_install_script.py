@@ -167,7 +167,9 @@ def test_an_unsupported_host_is_refused_before_any_download(tmp_path, host, syst
 
     assert proc.returncode == 1
     assert f"Linux x86-64 only, not {system} {machine}" in proc.stderr
+    assert "WSL2" in proc.stderr
     assert "runtime image" in proc.stderr
+    assert "--platform linux/amd64" in proc.stderr
     assert not prefix.exists()
 
 

@@ -82,7 +82,7 @@ esac
 system="$(uname -s)"
 machine="$(uname -m)"
 if [ "$system" != Linux ] || [ "$machine" != x86_64 ]; then
-    fail "SiL releases support Linux x86-64 only, not $system $machine. Use the runtime image instead: the release notes give its digest"
+    fail "SiL releases support Linux x86-64 only, not $system $machine. On Windows, run this script in WSL2 (Ubuntu 24.04). Otherwise use the runtime image with Docker, on a Mac with --platform linux/amd64: the release notes give its digest, and 'Windows and macOS' in docs/getting-started.md the commands"
 fi
 
 for tool in curl tar python3; do
