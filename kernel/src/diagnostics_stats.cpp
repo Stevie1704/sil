@@ -28,10 +28,11 @@ void DurationDistribution::add(uint64_t activation_index,
   }
   count_++;
   sum_ns_ += duration_ns;
-  // Welford's update keeps the moments exact enough without storing values.
-  const double delta = double(duration_ns) - mean_;
-  mean_ += delta / double(count_);
-  m2_ += delta * (double(duration_ns) - mean_);
+  // Welford's update gives a stable variance without storing values. Its
+  // running mean rounds at every step, so mean_ns() uses the exact sum.
+  const double delta = double(duration_ns) - running_mean_;
+  running_mean_ += delta / double(count_);
+  m2_ += delta * (double(duration_ns) - running_mean_);
 
   // Algorithm R: the k-th value replaces a random slot with probability
   // capacity / k, so every value is retained with the same probability.
@@ -62,7 +63,9 @@ void DurationDistribution::keep_if_slow(const SlowActivation &activation) {
 
 std::optional<double> DurationDistribution::mean_ns() const {
   if (count_ == 0) return std::nullopt;
-  return mean_;
+  // Integer quotient plus remainder: the exact sum / count, with the
+  // fraction the only part that rounds.
+  return double(sum_ns_ / count_) + double(sum_ns_ % count_) / double(count_);
 }
 
 std::optional<double> DurationDistribution::stddev_ns() const {

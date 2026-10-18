@@ -49,6 +49,18 @@ void test_moments_and_nearest_rank() {
   check(d.percentile(Percentile::P99).value_ns == 99, "p99 of 1..100");
 }
 
+/** The mean is the exact sum over the count, rounded once to a double. */
+void test_mean_is_the_exact_sum_over_the_count() {
+  // A running (Welford) mean rounds at every update and ends at
+  // 531.8333333333333 for these six values; 3191 / 6 is 531.8333333333334.
+  DurationDistribution d(1);
+  const uint64_t values[] = {10, 962, 903, 391, 703, 222};
+  for (uint64_t i = 0; i < 6; i++) d.add(i, i, values[i]);
+  check(d.sum_ns() == 3191, "sum");
+  check(*d.mean_ns() == 3191.0 / 6.0,
+        "mean: got " + std::to_string(*d.mean_ns()));
+}
+
 /** Nearest rank is ceil(p * n / 100), never an interpolation. */
 void test_nearest_rank_rounds_up() {
   // Five values, inserted out of order: p50 rank ceil(2.5) = 3.
@@ -160,6 +172,7 @@ void test_sampling_leaves_the_c_library_generator_alone() {
 int main() {
   try {
     test_moments_and_nearest_rank();
+    test_mean_is_the_exact_sum_over_the_count();
     test_nearest_rank_rounds_up();
     test_tail_minimum_counts();
     test_empty_distribution();
