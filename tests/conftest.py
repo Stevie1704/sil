@@ -64,6 +64,22 @@ def sil_run_instrumented(build_dir) -> Path:
     return exe
 
 
+@pytest.fixture(scope="session")
+def sil_run_diagnostics(build_dir) -> Path:
+    """The same kernel built with the opt-in diagnostics collector (#300)."""
+    exe = build_dir / "sil-run-diagnostics"
+    assert exe.exists(), f"diagnostics runner not built at {exe}"
+    return exe
+
+
+@pytest.fixture(scope="session")
+def sil_diagnostics_launcher(build_dir) -> Path:
+    """The minimal launcher a supervisor starts the diagnostics runner with."""
+    exe = build_dir / "sil-diagnostics-launcher"
+    assert exe.exists(), f"diagnostics launcher not built at {exe}"
+    return exe
+
+
 def run_manifest(runner: Path, manifest_path: Path, out: Path,
                  env: dict[str, str] | None = None):
     """One Run at the run boundary: manifest in, exit code + MCAP out.

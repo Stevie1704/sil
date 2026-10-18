@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <signal.h>
+#include <sys/resource.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -23,6 +24,7 @@
 #include "clock_shim.hpp"
 #include "copy_counters.hpp"
 #include "owned_directory.hpp"
+#include "run_diagnostics.hpp"
 #include "run_signal.hpp"
 
 namespace sil {
@@ -174,10 +176,24 @@ class ChildProcessGroup {
     return wait_status_;
   }
 
+  // What wait4 reported for the reaped child and its waited descendants;
+  // null when the child was not reaped or the build does not collect it.
+  const rusage *usage() const noexcept {
+#ifdef SIL_RUN_DIAGNOSTICS
+    if (child_reaped_) return &usage_;
+#endif
+    return nullptr;
+  }
+
  private:
   pid_t wait_for_child(int options) noexcept {
     for (;;) {
+#ifdef SIL_RUN_DIAGNOSTICS
+      // The diagnostics runner also keeps the child's resource usage.
+      const pid_t result = wait4(pid_, &wait_status_, options, &usage_);
+#else
       const pid_t result = waitpid(pid_, &wait_status_, options);
+#endif
       if (result < 0 && errno == EINTR) continue;
       return result;
     }
@@ -236,6 +252,9 @@ class ChildProcessGroup {
   std::function<void()> wait_;
   int wait_status_ = 0;
   bool child_reaped_ = false;
+#ifdef SIL_RUN_DIAGNOSTICS
+  rusage usage_{};
+#endif
 };
 
 }  // namespace
@@ -1031,14 +1050,15 @@ int ProcessParticipant::terminate_child() {
   close(child_stdin_);
   close(child_stdout_);
 
-  const int wait_status =
-      ChildProcessGroup(pid_, process_group_id_, [this] {
-        try {
-          wait_draining_stderr();
-        } catch (...) {
-          // Keeping the tail can fail to allocate; the wait must go on.
-        }
-      }).terminate();
+  ChildProcessGroup group(pid_, process_group_id_, [this] {
+    try {
+      wait_draining_stderr();
+    } catch (...) {
+      // Keeping the tail can fail to allocate; the wait must go on.
+    }
+  });
+  const int wait_status = group.terminate();
+  diagnostics::process_reaped(name_, group.usage());
   // Whatever the child wrote before it exited is forwarded and kept here.
   // A descendant that escaped the group can hold the pipe open, so this read
   // does not wait for end of file.

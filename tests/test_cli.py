@@ -14,7 +14,8 @@ def test_help_lists_every_top_level_command(capsys):
 
     out = capsys.readouterr().out
     assert out.startswith("usage: sil <command>")
-    for command in ("check", "compare", "footprint", "run", "examples",
+    for command in ("check", "compare", "footprint", "run", "benchmark",
+                    "diagnostics", "examples",
                     "bundle", "fmi", "manifest", "new", "recording", "schema"):
         assert f"\n  {command} " in out
 
@@ -28,8 +29,17 @@ def test_a_subcommand_runs_with_its_own_arguments_and_exit_code(tmp_path, capsys
         "sil footprint: cannot read manifest: ")
 
 
+def test_help_names_where_the_run_measurement_options_are(capsys):
+    """`sil run --help` is the native runner's usage, which has no
+    diagnostics option, so `sil --help` names the help that lists them."""
+    assert cli.main(["--help"]) == 0
+
+    assert "'sil run --diagnostics --help'" in capsys.readouterr().out
+
+
 @pytest.mark.parametrize("group, commands", [
     ("bundle", ("seal", "verify", "run", "matrix")),
+    ("diagnostics", ("render",)),
     ("fmi", ("inspect", "couple", "replay", "substitute")),
     ("manifest", ("validate",)),
     ("new", ("participant",)),

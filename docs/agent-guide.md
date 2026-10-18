@@ -133,6 +133,47 @@ use only the commands of this guide.
 [proofs/agent-investigation](../proofs/agent-investigation/README.md) shows
 these steps on four cases, with a real agent trial and checks of its claims.
 
+## Measure a Run
+
+Use these steps when the user asks how fast a Run is, which Participant is
+slow, or how much CPU time or memory a Participant uses. Read
+`sil docs running`, the sections from "Measure a Run" to "What the
+measurements mean", and the contract in `sil docs diagnostics-report`.
+
+1. **Select the command.** For one Run, use `sil run MANIFEST -o run.mcap
+   --diagnostics`. It writes `run.mcap.diagnostics.json`. To compare values or
+   to see their spread, use `sil benchmark MANIFEST --out DIR`. It writes
+   `DIR/summary.json`. The default is 1 warm-up Run and 5 measured Runs. Do
+   not compare a value of one Run with a value of another configuration:
+   use `sil benchmark` for both.
+2. **Read the JSON, not the stdout summary or the HTML report.** The summary
+   text can change in any release, and the HTML report is for people. Check
+   the exit code first. A Run report with `completeness.run_complete` false,
+   or a benchmark with `status.complete` false, has partial values.
+3. **Find the values for the question.**
+
+   | Question | Run report member | Benchmark member |
+   | --- | --- | --- |
+   | How long does the Run take? | `observational.run_wall_time.wall_ns`, `observational.phases` | the `run_wall_ns` and phase metrics in `aggregates.metrics` |
+   | Is the Run faster than real time? | `observational.virtual_time_speed.scheduled_factor` | the `scheduled_factor` metric |
+   | Which Task or Step is slow? | `observational.tasks`: `timing.p50_ns`, `p95_ns`, `max_ns` and `slowest` of each row | the Run reports in `runs[].report` |
+   | How much CPU time or memory does a Participant use? | `observational.resources.process_participants`, and `runner` for Native participants | the `process_*` metrics, with `participant`, and the `runner_*` metrics |
+
+4. **Treat an unavailable value as unknown.** A null value has its reason in
+   the `unavailable` map next to it. Do not use zero or an estimate instead.
+5. **Do not make these conclusions.**
+   - The values come from the instrumented `sil-run-diagnostics`. They are
+     not timings of `sil-run`.
+   - A Process Step time includes IPC and waiting for the operating system.
+     It is not the time of the algorithm alone.
+   - Do not add the peak memory of different processes. Native participants
+     have no record of their own: their cost is in the `runner` record.
+   - Do not add or average percentiles of different Runs. A maximum is not a
+     worst-case execution time.
+   - A timing value does not show if a Run is deterministic. Use `sil check`.
+6. **Report** each value with its unit, its scope, the host from the report
+   `host` member, and the number of measured Runs.
+
 ## Machine-readable output
 
 Use exit codes, not message text. Message text can change in any release.
@@ -150,6 +191,8 @@ Use exit codes, not message text. Message text can change in any release.
 | `sil fmi couple --receipt`, `sil fmi replay --receipt`, `sil fmi substitute --receipt` | a JSON receipt |
 | `sil run` | the Recording and its `<recording>.provenance.json` side-car |
 | `sil run`, on a failed Run | the `<recording>.failure.json` report: which Participant failed, how, at which Step and virtual time, and its stderr tail (`sil docs running`) |
+| `sil run --diagnostics` | the `sil_run_diagnostics` report, `<recording>.diagnostics.json` by default, and a summary on stdout (`sil docs running`, `sil docs diagnostics-report`) |
+| `sil benchmark --out DIR` | `DIR/summary.json`, a `sil_benchmark_report` with every Run report embedded, a directory of evidence per Run, and a summary on stdout (`sil docs running`, `sil docs diagnostics-report`) |
 | every command | the exit code: `sil docs running` lists those of a Run |
 
 `sil docs support` says which interfaces and report versions are stable, and

@@ -48,7 +48,8 @@ def test_the_skill_is_in_the_agent_skills_format(skill: str):
     frontmatter = _frontmatter(skill)
     assert frontmatter["name"] == "sil"
     assert 0 < len(frontmatter["description"]) <= 1024
-    for trigger in ("FMU", "Manifest", "Recording", "determinism", "Run fail"):
+    for trigger in ("FMU", "Manifest", "Recording", "determinism", "Run fail",
+                    "CPU time", "peak memory", "benchmark", "slow Run"):
         assert trigger in frontmatter["description"]
 
 
@@ -66,7 +67,7 @@ def test_the_skill_names_every_command_of_sil(skill: str):
 
 def test_every_topic_the_skill_names_is_in_sil_docs(skill: str):
     named = set(re.findall(r"sil docs ([a-z][a-z-]*)", skill))
-    assert {"agent-guide", "fmi", "running"} <= named
+    assert {"agent-guide", "fmi", "running", "diagnostics-report"} <= named
     assert named <= set(PACKAGED_DOCS)
 
 

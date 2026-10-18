@@ -17,7 +17,7 @@ from typing import Callable
 
 import pytest
 
-from conftest import COMPAT_ROUTE_CAPACITY, ROOT, run_manifest
+from conftest import BUILD_DIR, COMPAT_ROUTE_CAPACITY, ROOT, run_manifest
 from toys import (
     add_accumulator,
     add_producer,
@@ -159,6 +159,117 @@ class TestInstrumentedRunnerIsInert:
         # the authoritative first message is untouched.
         assert instrumented.stderr.startswith(production.stderr)
         assert "cannot write copy counters" in instrumented.stderr
+
+
+def random_multitask_manifest(tmp_path):
+    """Two Native Tasks that publish the C library generator's numbers.
+
+    The 1 ms Task runs 10,000 times, past the collector's 8,192-sample
+    reservoir, so the reservoir's random replacement is exercised in the same
+    process as a Participant that draws from rand().
+    """
+    m = toy_manifest(duration_ns=10_000_000_000)
+    m.add_channel("ticks", schema="toy.Counter")
+    m.add_native(
+        "multi",
+        library=str(BUILD_DIR / "toy_multitask.silp"),
+        config={"channel": "ticks", "fast_period_ns": 1_000_000,
+                "slow_period_ns": 5_000_000, "seed": 7},
+        publishes=["ticks"],
+    )
+    return m.write(tmp_path / "random.json")
+
+
+def replay_into_process_manifest(tmp_path):
+    """Replay of a recorded producer, consumed by a Process participant."""
+    source = toy_manifest(duration_ns=50_000_000)
+    source.add_channel("ticks", schema="toy.Counter")
+    add_producer(source, "producer", channel="ticks", period_ns=10_000_000)
+    recording = tmp_path / "recorded.mcap"
+    recorded = run_manifest(BUILD_DIR / "sil-run",
+                            source.write(tmp_path / "source.json").path,
+                            recording)
+    assert recorded.returncode == 0, recorded.stderr
+    m = toy_manifest(duration_ns=50_000_000)
+    m.add_channel("ticks", schema="toy.Counter")
+    m.add_channel("echo", schema="toy.Counter")
+    m.add_replay("replay", recording=str(recording), channels=["ticks"])
+    m.add_process(
+        "pyecho",
+        command=[sys.executable,
+                 str(ROOT / "tests" / "participants" / "echo.py")],
+        step_period_ns=10_000_000,
+        subscribes=[SubscriberRoute("ticks", capacity=COMPAT_ROUTE_CAPACITY)],
+        publishes=["echo"],
+    )
+    return m.write(tmp_path / "replay.json")
+
+
+DIAGNOSTICS_FIXTURES = {
+    **FIXTURES,
+    "random_multitask": Fixture(random_multitask_manifest, exit_code=0),
+    "replay_into_process": Fixture(replay_into_process_manifest, exit_code=0),
+}
+
+
+class TestDiagnosticsRunnerIsInert:
+    """Measuring a Run must not change it (#299, #300).
+
+    The deadlines here are the defaults, far from any of these fixtures'
+    response times: instrumentation overhead can move a Run that sits on a
+    deadline edge, so that case is not claimed to be inert.
+    """
+
+    @pytest.mark.parametrize("name", sorted(DIAGNOSTICS_FIXTURES))
+    def test_both_runners_agree_on_exit_code_recording_and_hash(
+        self, name, sil_run, sil_run_diagnostics, tmp_path
+    ):
+        fixture = DIAGNOSTICS_FIXTURES[name]
+        ref = fixture.build(tmp_path)
+        report = tmp_path / "report.json"
+
+        ordinary = run_manifest(sil_run, ref.path, tmp_path / "ordinary.mcap")
+        diagnostic = subprocess.run(
+            [str(sil_run_diagnostics), str(ref.path),
+             "-o", str(tmp_path / "diagnostic.mcap"),
+             "--diagnostics-out", str(report)],
+            capture_output=True, text=True,
+        )
+
+        assert ordinary.returncode == fixture.exit_code, ordinary.stderr
+        assert diagnostic.returncode == ordinary.returncode
+        # Byte-identity keeps every observation out of the Recording, and the
+        # same stdout keeps the Manifest hash line unchanged.
+        assert (tmp_path / "diagnostic.mcap").read_bytes() == (
+            tmp_path / "ordinary.mcap"
+        ).read_bytes()
+        assert diagnostic.stdout == ordinary.stdout
+        # The same diagnostics, each line named by the runner that wrote it.
+        assert diagnostic.stderr.replace(
+            "sil-run-diagnostics: ", "sil-run: ") == ordinary.stderr
+        document = json.loads(report.read_text())
+        assert document["run"]["exit_code"] == ordinary.returncode
+
+    def test_reservoir_sampling_was_exercised(
+        self, sil_run_diagnostics, tmp_path
+    ):
+        ref = random_multitask_manifest(tmp_path)
+        report = tmp_path / "report.json"
+        proc = subprocess.run(
+            [str(sil_run_diagnostics), str(ref.path), "--no-recording",
+             "--diagnostics-out", str(report)],
+            capture_output=True, text=True, cwd=tmp_path,
+        )
+        assert proc.returncode == 0, proc.stderr
+        rows = {
+            row["task"]: row["timing"]
+            for row in json.loads(report.read_text())["observational"]["tasks"]
+        }
+        assert rows["fast"]["quantiles"]["sample_count"] == 10_000
+        assert rows["fast"]["quantiles"]["retained_count"] == 8192
+        assert rows["fast"]["quantiles"]["approximate"] is True
+        assert rows["slow"]["quantiles"]["sample_count"] == 2_000
+        assert rows["slow"]["quantiles"]["approximate"] is False
 
 
 class TestCheckCli:

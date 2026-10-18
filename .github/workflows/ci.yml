@@ -28,7 +28,11 @@ jobs:
 
       # Full suite includes the milestone exit criterion: run twice ->
       # bit-identical MCAP (tests/test_determinism.py).
+      # The runner image ships Google Chrome. Naming it makes the HTML
+      # report browser checks fail, not skip, if it ever goes missing.
       - name: Run tests
+        env:
+          SIL_TEST_CHROME: google-chrome
         run: SIL_SKIP_BUILD=1 .venv/bin/python -m pytest tests/ -v
 
       # The reference pipeline, both variants of the ACC reference example, the

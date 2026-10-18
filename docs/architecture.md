@@ -14,7 +14,7 @@ behavior, and CAN semantics live at the edge.
 | `kernel/src/` | Loads and prepares a Manifest, schedules Tasks and Steps, routes Messages, and writes Recordings. `sil-run` is the execution entry point. |
 | `include/sil/` | C ABI for Native participants and binary layouts shared with Process participants and the Clock shim. |
 | `shim/` | Preloaded Clock shim that reads the kernel-provided Virtual time. Its test probe lives in `tests/fixtures/`. |
-| `python/src/sil/` | Manifest authoring and validation, Participant templates, schema codecs, Process participant support, test helpers, recording conversion, comparison, and regression tooling. |
+| `python/src/sil/` | Manifest authoring and validation, Participant templates, schema codecs, Process participant support, test helpers, recording conversion, comparison, regression tooling, and diagnostics orchestration with its summaries and offline HTML reports (inline page assets in `report_assets/`). |
 | `python/src/sil/fmi/` | Importer: archive inspection, variable binding, FMI lifecycle, and coordination of FMU groups within one Process participant. |
 | `models/` | Maintained model products. `models/can/` owns CAN behavior, its FMI adapter, supported profile, tests, qualification, and release policy. |
 
@@ -61,7 +61,7 @@ All native artifacts retain their names and locations directly under the
 chosen build directory. Defining a target in a subdirectory does not change
 paths consumed by Manifests or tests. The runtime image carries editable
 example sources in the Python package; its native build selects only the
-runner and Clock shim targets.
+runner, diagnostics runner, diagnostics launcher and Clock shim targets.
 
 `python/pyproject.toml` owns the Python distribution and the shared product
 version. The root `Makefile` provides developer entry points across the native

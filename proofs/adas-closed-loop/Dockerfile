@@ -35,7 +35,7 @@ COPY cmake cmake
 COPY python python
 COPY container container
 RUN cmake -S . -B /build -DCMAKE_BUILD_TYPE=Release \
-    && cmake --build /build --target sil-run sil_clock_shim -j2 \
+    && cmake --build /build --target sil-run sil-run-diagnostics sil-diagnostics-launcher sil_clock_shim -j2 \
     && cmake --install /build --prefix /opt/sil/native \
     && python tools/release.py stamp-python --root /src --output-dir /release-python \
       --version "$(python tools/release.py project-version --root /src)" \

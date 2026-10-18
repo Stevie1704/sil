@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from sil.diagnostics_report import validate_benchmark_report
 
 ROOT = Path(__file__).resolve().parents[1]
 ACC_MANIFEST_HASHES = {
@@ -59,7 +63,8 @@ def custom_staged_prefix(
     )
     subprocess.run(
         ["cmake", "--build", str(custom_build),
-         "--target", "sil-run", "sil_clock_shim", "-j"],
+         "--target", "sil-run", "sil-run-diagnostics",
+         "sil-diagnostics-launcher", "sil_clock_shim", "-j"],
         check=True,
         capture_output=True,
         text=True,
@@ -89,6 +94,11 @@ def test_cmake_stages_the_production_runtime_and_public_headers(
     else:
         pytest.skip("staged runtime layout is only exercised on POSIX hosts")
     assert shim.is_file()
+    # The diagnostics runner is a supported installed runner (#300); the
+    # copy-counter build stays a development binary.
+    assert (staged_prefix / "bin" / "sil-run-diagnostics").is_file()
+    # The launcher a supervisor starts it through ships with it (#301).
+    assert (staged_prefix / "bin" / "sil-diagnostics-launcher").is_file()
     assert not (staged_prefix / "bin" / "sil-run-instrumented").exists()
     metadata = json.loads((staged_prefix / "share" / "sil" / "release.json").read_text())
     assert metadata["version"] == "0.1.0"
@@ -355,6 +365,145 @@ def test_installed_acc_determinism_check_uses_only_staged_inputs(
     assert built.returncode == 0, built.stderr
     assert check.returncode == 0, check.stderr
     assert check.stdout.startswith("deterministic: ")
+
+
+def test_installed_diagnostics_runner_measures_the_installed_acc_example(
+    installed_python: Path, staged_prefix: Path, tmp_path: Path,
+):
+    """The staged diagnostics runner needs no source tree (#300)."""
+    manifest = tmp_path / "acc.json"
+    env = installed_environment(installed_python)
+    built = subprocess.run(
+        [str(installed_python / "bin" / "python"), "-m",
+         "sil.examples.acc.manifest", str(manifest)],
+        cwd=tmp_path, env=env, capture_output=True, text=True,
+    )
+    assert built.returncode == 0, built.stderr
+
+    def run(runner: str, out: str, *extra: str):
+        return subprocess.run(
+            [str(staged_prefix / "bin" / runner), str(manifest), "-o",
+             str(tmp_path / out), *extra],
+            cwd=tmp_path, env=env, capture_output=True, text=True,
+        )
+
+    ordinary = run("sil-run", "ordinary.mcap")
+    measured = run("sil-run-diagnostics", "measured.mcap")
+    assert ordinary.returncode == measured.returncode == 0, measured.stderr
+    assert (tmp_path / "ordinary.mcap").read_bytes() == (
+        tmp_path / "measured.mcap").read_bytes()
+    check = subprocess.run(
+        [str(installed_python / "bin" / "python"), "-c",
+         "import sys; from sil.diagnostics_report import load_report; "
+         "r = load_report(sys.argv[1]); print(r['run']['status'])",
+         str(tmp_path / "measured.mcap.diagnostics.json")],
+        cwd=tmp_path, env=env, capture_output=True, text=True,
+    )
+    assert check.returncode == 0, check.stderr
+    assert check.stdout == "succeeded\n"
+
+
+def test_installed_sil_run_diagnostics_default_custom_and_no_recording(
+    installed_python: Path, staged_prefix: Path, tmp_path: Path,
+):
+    """`sil run --diagnostics` needs only the wheel and the native prefix."""
+    env = installed_environment(installed_python)
+    env["PATH"] = os.pathsep.join(
+        [str(installed_python / "bin"), str(staged_prefix / "bin"),
+         "/usr/bin:/bin"])
+    built = subprocess.run(
+        [str(installed_python / "bin" / "python"), "-m",
+         "sil.examples.acc.manifest", "acc.json"],
+        cwd=tmp_path, env=env, capture_output=True, text=True,
+    )
+    assert built.returncode == 0, built.stderr
+    (tmp_path / "my results").mkdir()
+
+    def sil(*argv: str):
+        return subprocess.run(["sil", "run", "acc.json", *argv], cwd=tmp_path,
+                              env=env, capture_output=True, text=True)
+
+    runs = {
+        "default": (sil("--diagnostics", "-o", "run.mcap"),
+                    "run.mcap.diagnostics.json"),
+        "custom": (sil("-o", "custom.mcap", "--diagnostics-out",
+                       "my results/run.json"), "my results/run.json"),
+        "no recording": (sil("--no-recording", "--diagnostics"),
+                         "out.mcap.diagnostics.json"),
+        "html": (sil("-o", "page.mcap", "--html", "my results/run.html"),
+                 "page.mcap.diagnostics.json"),
+    }
+    for name, (proc, report) in runs.items():
+        assert proc.returncode == 0, (name, proc.stderr)
+        assert proc.stdout.startswith("manifest_hash "), name
+        assert f"diagnostics report: {report}\n" in proc.stdout, name
+        assert "run: succeeded, exit code 0, complete\n" in proc.stdout, name
+        assert json.loads((tmp_path / report).read_text())[
+            "sil_run_diagnostics"] == 1
+    assert not (tmp_path / "out.mcap").exists()
+    page = (tmp_path / "my results" / "run.html").read_text()
+    assert page.startswith("<!doctype html>") and "Succeeded" in page
+
+
+def test_installed_sil_benchmark_writes_a_self_contained_summary(
+    installed_python: Path, staged_prefix: Path, tmp_path: Path,
+):
+    """`sil benchmark` needs only the wheel and the native prefix."""
+    env = installed_environment(installed_python)
+    env["PATH"] = os.pathsep.join(
+        [str(installed_python / "bin"), str(staged_prefix / "bin"),
+         "/usr/bin:/bin"])
+    built = subprocess.run(
+        [str(installed_python / "bin" / "python"), "-m",
+         "sil.examples.acc.manifest", "acc.json"],
+        cwd=tmp_path, env=env, capture_output=True, text=True,
+    )
+    assert built.returncode == 0, built.stderr
+
+    proc = subprocess.run(
+        ["sil", "benchmark", "acc.json", "--repeats", "2", "--warmup", "1",
+         "--out", "bench", "--html", "bench/report.html"],
+        cwd=tmp_path, env=env, capture_output=True, text=True)
+
+    assert proc.returncode == 0, proc.stderr
+    assert "benchmark summary: bench/summary.json\n" in proc.stdout
+    assert proc.stdout.endswith("HTML report: bench/report.html\n")
+    assert (tmp_path / "bench" / "report.html").is_file()
+    # Each Run left its own evidence beside the summary.
+    for label in ("warmup-001", "run-001", "run-002"):
+        directory = tmp_path / "bench" / label
+        assert sorted(p.name for p in directory.iterdir()) == [
+            "run.mcap", "run.mcap.diagnostics.json",
+            "run.mcap.provenance.json", "stderr.log", "stdout.log"]
+        assert (directory / "run.mcap").stat().st_size > 0
+        provenance = json.loads(
+            (directory / "run.mcap.provenance.json").read_text())
+        assert provenance["recording"]["sha256"] == hashlib.sha256(
+            (directory / "run.mcap").read_bytes()).hexdigest()
+        assert json.loads((directory / "run.mcap.diagnostics.json")
+                          .read_text())["run"]["exit_code"] == 0
+    # The summary alone is the evidence: it is valid after the Run
+    # directories are gone.
+    summary = tmp_path / "copied-summary.json"
+    summary.write_text((tmp_path / "bench" / "summary.json").read_text())
+    shutil.rmtree(tmp_path / "bench")
+    report = json.loads(summary.read_text())
+    assert report["status"]["complete"] is True
+    assert report["aggregates"]["sample_count"] == 2
+    assert [run["label"] for run in report["runs"]] == [
+        "warmup-001", "run-001", "run-002"]
+    assert all(run["report"]["sil_run_diagnostics"] == 1
+               for run in report["runs"])
+    assert validate_benchmark_report(report) == []
+    # The copied summary renders again with no Run directory and no runner.
+    rendered = subprocess.run(
+        ["sil", "diagnostics", "render", "copied-summary.json", "--html",
+         "copied.html"], cwd=tmp_path, capture_output=True, text=True,
+        env={**env, "PATH": os.pathsep.join(
+            [str(installed_python / "bin"), "/usr/bin:/bin"])})
+    assert rendered.returncode == 0, rendered.stderr
+    page = (tmp_path / "copied.html").read_text()
+    assert "Complete benchmark" in page and "run-002" in page
 
 
 @pytest.mark.parametrize("kind", ["--process", "--native"])

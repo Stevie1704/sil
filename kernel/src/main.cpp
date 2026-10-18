@@ -22,6 +22,7 @@
 #include "manifest.hpp"
 #include "provenance.hpp"
 #include "recording_sink.hpp"
+#include "run_diagnostics.hpp"
 #include "run_signal.hpp"
 
 namespace {
@@ -43,16 +44,25 @@ using sil::kExitConfigError;
 using sil::kExitOk;
 using sil::kExitRunFailure;
 
+#ifdef SIL_RUN_DIAGNOSTICS
+#define SIL_RUNNER_NAME "sil-run-diagnostics"
+#define SIL_DIAGNOSTICS_USAGE " [--diagnostics-out <report.json>]"
+#else
+#define SIL_RUNNER_NAME "sil-run"
+#define SIL_DIAGNOSTICS_USAGE ""
+#endif
+
 void usage() {
-  std::cerr << "usage: sil-run <manifest.json> "
+  std::cerr << "usage: " SIL_RUNNER_NAME " <manifest.json> "
                "[--participant-timeout-ms <N>] "
                "[--max-protocol-line-bytes <N>] "
                "[--max-step-output-messages <N>] "
                "[--max-step-inline-payload-bytes <N>] "
                "[-o <out.mcap> | --no-recording] "
-               "[--provenance <out.provenance.json>]\n"
-               "       sil-run --version\n"
-               "       sil-run --build-info\n";
+               "[--provenance <out.provenance.json>]" SIL_DIAGNOSTICS_USAGE
+               "\n"
+               "       " SIL_RUNNER_NAME " --version\n"
+               "       " SIL_RUNNER_NAME " --build-info\n";
 }
 
 int report_version(int argc, char **argv) {
@@ -131,7 +141,7 @@ void write_side_car(sil::Provenance &provenance, int exit_code, bool recording,
   } catch (const std::exception &e) {
     // The Run's exit code and its first diagnostic remain authoritative. A
     // side-car write problem is reported without rewriting either.
-    std::cerr << "sil-run: " << e.what() << "\n";
+    std::cerr << SIL_RUNNER_NAME ": " << e.what() << "\n";
   }
 }
 
@@ -155,7 +165,7 @@ sil::FailureFacts classify(const std::exception &e) {
 // Prints the diagnostic line and keeps the first one for the failure report.
 void report_failure(std::optional<FirstFailure> &first,
                     const std::exception &e) {
-  std::cerr << "sil-run: " << e.what() << "\n";
+  std::cerr << SIL_RUNNER_NAME ": " << e.what() << "\n";
   if (!first) first = FirstFailure{e.what(), classify(e)};
 }
 
@@ -176,9 +186,95 @@ void write_failure_side_car(const std::optional<FirstFailure> &first,
                               first ? first->facts : sil::FailureFacts{});
   } catch (const std::exception &e) {
     // As with the provenance side-car, the exit code stays authoritative.
-    std::cerr << "sil-run: " << e.what() << "\n";
+    std::cerr << SIL_RUNNER_NAME ": " << e.what() << "\n";
   }
 }
+
+#ifdef SIL_RUN_DIAGNOSTICS
+std::filesystem::path default_diagnostics_path(const char *recording_path) {
+  return std::filesystem::path(std::string(recording_path) +
+                               ".diagnostics.json");
+}
+
+bool same_path(const std::filesystem::path &a,
+               const std::filesystem::path &b) {
+  std::error_code ignored;
+  return std::filesystem::absolute(a, ignored).lexically_normal() ==
+         std::filesystem::absolute(b, ignored).lexically_normal();
+}
+
+// A report is a new file: it never replaces an earlier one, and it never
+// lands on a path the Run writes for something else. Checked before the
+// Manifest is loaded, so a rejected path starts no Participant.
+bool diagnostics_path_is_new(const std::filesystem::path &path,
+                             const char *recording_path, bool recording,
+                             const std::filesystem::path &provenance_path) {
+  std::error_code error;
+  const auto status = std::filesystem::symlink_status(path, error);
+  const char *problem = nullptr;
+  if (std::filesystem::exists(status))
+    problem = "already exists";
+  else if ((recording && same_path(path, recording_path)) ||
+           same_path(path, provenance_path) ||
+           same_path(path, sil::default_failure_report_path(recording_path)))
+    problem = "is also another artifact of this Run";
+  if (!problem) return true;
+  std::cerr << "sil-run-diagnostics: diagnostics report '" << path.string()
+            << "' " << problem << "\n";
+  return false;
+}
+
+sil::diagnostics::RunFacts run_facts(
+    const char *manifest_path, const std::optional<sil::Manifest> &manifest,
+    int exit_code, const std::optional<FirstFailure> &failure, bool recording,
+    const char *out_path, const std::filesystem::path &provenance_path,
+    const std::optional<std::chrono::milliseconds> &participant_timeout,
+    const sil::RunBoundaryLimits &limits) {
+  sil::diagnostics::RunFacts facts;
+  facts.manifest_path = manifest_path;
+  if (manifest) {
+    facts.manifest_hash = manifest->hash_hex;
+    facts.duration_ns = manifest->duration_ns;
+  }
+  facts.sil_version = SIL_VERSION;
+  facts.source_repository = SIL_SOURCE_REPOSITORY;
+  facts.source_revision = SIL_SOURCE_REVISION;
+  facts.exit_code = exit_code;
+  if (exit_code != kExitOk) {
+    facts.failure_report_path =
+        sil::default_failure_report_path(out_path).string();
+    if (failure) {
+      facts.failure_message = failure->message;
+      facts.failure_category =
+          sil::failure_category_name(failure->facts.category);
+      if (!failure->facts.participant.empty())
+        facts.failure_participant = failure->facts.participant;
+      facts.failure_virtual_time_ns = failure->facts.virtual_time_ns;
+    }
+  }
+  facts.recording = recording;
+  facts.recording_path = out_path;
+  facts.provenance_path = provenance_path.string();
+  if (participant_timeout)
+    facts.participant_timeout_ms = uint64_t(participant_timeout->count());
+  facts.max_protocol_line_bytes = limits.max_protocol_line_bytes;
+  facts.max_step_output_messages = limits.max_step_output_messages;
+  facts.max_step_inline_payload_bytes = limits.max_step_inline_payload_bytes;
+  return facts;
+}
+
+void write_diagnostics(const std::filesystem::path &path,
+                       const sil::diagnostics::RunFacts &facts) {
+  try {
+    sil::diagnostics::write_report(path, facts);
+  } catch (const std::exception &e) {
+    // As with the other side-cars, the Run's exit code and its first
+    // diagnostic stay authoritative; this line only follows them.
+    std::cerr << "sil-run-diagnostics: cannot write diagnostics report: "
+              << e.what() << "\n";
+  }
+}
+#endif
 
 int run(int argc, char **argv) {
   const int report = report_version(argc, argv);
@@ -187,7 +283,8 @@ int run(int argc, char **argv) {
   // A participant process dying mid-write must surface as a RunError,
   // not kill the kernel via SIGPIPE.
   if (!sil::install_run_signal_handlers()) {
-    std::cerr << "sil-run: failed to install termination handlers\n";
+    std::cerr << SIL_RUNNER_NAME
+        ": failed to install termination handlers\n";
     return kExitRunFailure;
   }
   signal(SIGPIPE, SIG_IGN);
@@ -195,6 +292,9 @@ int run(int argc, char **argv) {
   const char *manifest_path = nullptr;
   const char *out_path = "out.mcap";
   const char *provenance_path_arg = nullptr;
+#ifdef SIL_RUN_DIAGNOSTICS
+  const char *diagnostics_path_arg = nullptr;
+#endif
   // Running without a Recording is what separates the cost of routing to
   // subscribers from the cost of Recording I/O (issue #61). The engine already
   // treats a null sink as "do not record"; this is the switch that reaches it.
@@ -230,8 +330,9 @@ int run(int argc, char **argv) {
       }
       std::chrono::milliseconds timeout;
       if (!parse_participant_timeout(argv[++i], timeout)) {
-        std::cerr << "sil-run: --participant-timeout-ms must be a positive "
-                     "integer representable as milliseconds\n";
+        std::cerr << SIL_RUNNER_NAME
+            ": --participant-timeout-ms must be a positive integer "
+            "representable as milliseconds\n";
         return kExitConfigError;
       }
       participant_timeout = timeout;
@@ -241,12 +342,21 @@ int run(int argc, char **argv) {
         return kExitConfigError;
       }
       if (!parse_positive_size(argv[++i], *option->destination)) {
-        std::cerr << "sil-run: " << option->flag
+        std::cerr << SIL_RUNNER_NAME ": " << option->flag
                   << " must be a positive integer representable as a "
                      "size_t\n";
         return kExitConfigError;
       }
       option->given = true;
+#ifdef SIL_RUN_DIAGNOSTICS
+    } else if (std::strcmp(argv[i], "--diagnostics-out") == 0 &&
+               i + 1 < argc) {
+      if (diagnostics_path_arg) {
+        usage();
+        return kExitConfigError;
+      }
+      diagnostics_path_arg = argv[++i];
+#endif
     } else if (std::strcmp(argv[i], "--no-recording") == 0) {
       recording = false;
     } else if (argv[i][0] == '-') {
@@ -270,6 +380,19 @@ int run(int argc, char **argv) {
     return kExitConfigError;
   }
 
+#ifdef SIL_RUN_DIAGNOSTICS
+  const std::filesystem::path diagnostics_path =
+      diagnostics_path_arg ? std::filesystem::path(diagnostics_path_arg)
+                           : default_diagnostics_path(out_path);
+  const std::filesystem::path provenance_path =
+      provenance_path_arg ? std::filesystem::path(provenance_path_arg)
+                          : sil::default_provenance_path(out_path);
+  if (!diagnostics_path_is_new(diagnostics_path, out_path, recording,
+                               provenance_path))
+    return kExitConfigError;
+#endif
+
+  sil::diagnostics::start_run();
   std::optional<sil::Provenance> provenance;
   std::optional<sil::PreparedRun> prepared;
   std::unique_ptr<sil::RecordingSink> recorder;
@@ -294,10 +417,14 @@ int run(int argc, char **argv) {
     if (recording)
       recorder = sil::make_recording_sink(out_path, prepared->manifest());
     try {
+      sil::diagnostics::enter_phase(sil::diagnostics::Phase::Setup);
       if (sil::run_interrupted())
         throw sil::RunError(sil::run_interrupt_message());
       sil::Engine engine(std::move(*prepared), recorder.get(),
                          participant_timeout, limits);
+      // Destroyed before the Engine, so its teardown counts as shutdown on
+      // the failure path as well.
+      sil::diagnostics::PhaseOnExit teardown(sil::diagnostics::Phase::Shutdown);
       engine.setup();
       engine.run();
       // A signal that arrived during the Run is a Run failure. Raising it here
@@ -323,6 +450,8 @@ int run(int argc, char **argv) {
   // Close before hashing so a failed Run's partial Recording is still an
   // auditable artifact. McapRecorder's destructor is a second safety net.
   if (recorder) {
+    sil::diagnostics::enter_phase(
+        sil::diagnostics::Phase::RecordingFinalization);
     try {
       recorder->close();
     } catch (const std::exception &e) {
@@ -330,11 +459,19 @@ int run(int argc, char **argv) {
       if (exit_code == kExitOk) exit_code = kExitRunFailure;
     }
   }
+  sil::diagnostics::end_run();
 
   if (provenance)
     write_side_car(*provenance, exit_code, recording, out_path,
                    provenance_path_arg);
   write_failure_side_car(failure, exit_code, out_path);
+
+#ifdef SIL_RUN_DIAGNOSTICS
+  write_diagnostics(diagnostics_path,
+                    run_facts(manifest_path, manifest, exit_code, failure,
+                              recording, out_path, provenance_path,
+                              participant_timeout, limits));
+#endif
 
   if (exit_code == kExitOk && manifest)
     std::cout << "manifest_hash " << manifest->hash_hex << "\n";

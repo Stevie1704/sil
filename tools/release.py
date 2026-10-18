@@ -98,7 +98,10 @@ PACKAGED_DOCS = {
     "examples": ("docs/examples.md",
                  "copy installed adapters, bindings and preparation examples"),
     "running": ("docs/running.md",
-                "configure Run guards, the Clock shim, and Channel Transport"),
+                "configure Run guards, the Clock shim, and Channel Transport; "
+                "measure and benchmark Runs"),
+    "diagnostics-report": ("docs/diagnostics-report.md",
+                           "the Run diagnostics and benchmark report contracts"),
     "step-protocol": ("docs/step-protocol.md",
                       "the JSON-lines protocol of a Process participant"),
     "fmi": ("docs/fmi.md",
@@ -356,6 +359,8 @@ def validate_distributions(
 
 REQUIRED_NATIVE_PATHS = (
     "bin/sil-run",
+    "bin/sil-run-diagnostics",
+    "bin/sil-diagnostics-launcher",
     "bin/silschema",
     "bin/_sil_schema_types.py",
     "include/sil/arena.h",

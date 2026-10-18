@@ -1,0 +1,466 @@
+{
+  "artifacts": {
+    "failure_report": null,
+    "provenance": "/work/run.mcap.provenance.json",
+    "recording": "/work/run.mcap"
+  },
+  "collection_errors": [],
+  "collector": {
+    "clock": "host_monotonic",
+    "collector_version": 2,
+    "name": "sil-run-diagnostics",
+    "p95_minimum_samples": 20,
+    "p99_minimum_samples": 100,
+    "slowest_retained": 20
+  },
+  "completeness": {
+    "reasons": [],
+    "run_complete": true
+  },
+  "configuration": {
+    "max_protocol_line_bytes": 16777216,
+    "max_step_inline_payload_bytes": 67108864,
+    "max_step_output_messages": 1024,
+    "measurement_mode": "diagnostics",
+    "participant_timeout_ms": null,
+    "recording": true
+  },
+  "execution": {
+    "duration_ns": 20000000,
+    "last_virtual_time_ns": 19000000,
+    "participants": [
+      {
+        "kind": "native",
+        "participant": "multi",
+        "replay": null,
+        "tasks": [
+          {
+            "attempted": 20,
+            "completed": 20,
+            "failed": 0,
+            "failed_activation": null,
+            "interrupted": 0,
+            "kind": "native_task",
+            "offset_ns": 0,
+            "period_ns": 1000000,
+            "task": "fast"
+          },
+          {
+            "attempted": 4,
+            "completed": 4,
+            "failed": 0,
+            "failed_activation": null,
+            "interrupted": 0,
+            "kind": "native_task",
+            "offset_ns": 0,
+            "period_ns": 5000000,
+            "task": "slow"
+          }
+        ]
+      },
+      {
+        "kind": "process",
+        "participant": "pyecho",
+        "replay": null,
+        "tasks": [
+          {
+            "attempted": 2,
+            "completed": 2,
+            "failed": 0,
+            "failed_activation": null,
+            "interrupted": 0,
+            "kind": "process_step",
+            "offset_ns": 0,
+            "period_ns": 10000000,
+            "task": "step"
+          }
+        ]
+      }
+    ],
+    "unavailable": {}
+  },
+  "host": {
+    "architecture": "x86_64",
+    "cpu_description": null,
+    "logical_cpu_count": 8,
+    "os": "Linux",
+    "os_release": "6.8.0",
+    "unavailable": {
+      "cpu_description": "not_reported_by_os"
+    }
+  },
+  "identity": {
+    "manifest_hash": "2f9ba41079fd01465e177ca9fd61daeebb01ff5d0424f8a5ae4c36494c70bdb0",
+    "manifest_path": "/work/mixed.json",
+    "sil_version": "0.1.0",
+    "source_repository": "https://github.com/Stevie1704/sil",
+    "source_revision": "0000000000000000000000000000000000000000",
+    "unavailable": {}
+  },
+  "observational": {
+    "phases": {
+      "preflight_ns": 8078708,
+      "recording_finalization_ns": 108542,
+      "scheduled_execution_ns": 202083,
+      "setup_ns": 38608375,
+      "shutdown_ns": 20237250,
+      "unattributed_ns": 0,
+      "unavailable": {}
+    },
+    "replay": [],
+    "resources": {
+      "cpu_total": {
+        "scope": "runner_and_process_participants",
+        "system_cpu_ns": null,
+        "unavailable": {
+          "system_cpu_ns": "incomplete_scopes",
+          "user_cpu_ns": "incomplete_scopes"
+        },
+        "user_cpu_ns": null
+      },
+      "native_participants": "shared_with_runner",
+      "process_participants": [
+        {
+          "collector": null,
+          "includes_waited_descendants": null,
+          "interval": null,
+          "limitations": [],
+          "participant": "pyecho",
+          "peak_rss_bytes": null,
+          "peak_rss_kind": null,
+          "scope": "process_participant",
+          "system_cpu_ns": null,
+          "unavailable": {
+            "collector": "unsupported_platform",
+            "includes_waited_descendants": "unsupported_platform",
+            "interval": "unsupported_platform",
+            "peak_rss_bytes": "unsupported_platform",
+            "peak_rss_kind": "unsupported_platform",
+            "system_cpu_ns": "unsupported_platform",
+            "user_cpu_ns": "unsupported_platform"
+          },
+          "user_cpu_ns": null
+        }
+      ],
+      "runner": {
+        "collector": null,
+        "includes_waited_descendants": null,
+        "interval": null,
+        "limitations": [],
+        "peak_rss_bytes": null,
+        "peak_rss_kind": null,
+        "scope": "runner_process",
+        "system_cpu_ns": null,
+        "unavailable": {
+          "collector": "unsupported_platform",
+          "includes_waited_descendants": "unsupported_platform",
+          "interval": "unsupported_platform",
+          "peak_rss_bytes": "unsupported_platform",
+          "peak_rss_kind": "unsupported_platform",
+          "system_cpu_ns": "unsupported_platform",
+          "user_cpu_ns": "unsupported_platform"
+        },
+        "user_cpu_ns": null
+      }
+    },
+    "run_wall_time": {
+      "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
+      "unavailable": {},
+      "wall_ns": 67234958
+    },
+    "tasks": [
+      {
+        "failed_activation": null,
+        "kind": "native_task",
+        "participant": "multi",
+        "task": "fast",
+        "timing": {
+          "completed": 20,
+          "max_ns": 19583,
+          "mean_ns": 1214.7,
+          "min_ns": 125,
+          "p50_ns": 208,
+          "p95_ns": 542,
+          "p99_ns": null,
+          "quantiles": {
+            "approximate": false,
+            "method": "nearest_rank",
+            "reservoir": {
+              "algorithm": "algorithm_r",
+              "algorithm_version": 1,
+              "capacity": 8192,
+              "generator": "splitmix64",
+              "seed": 6001411834618398513
+            },
+            "retained_count": 20,
+            "sample_count": 20
+          },
+          "samples_ns": [
+            125,
+            166,
+            166,
+            167,
+            167,
+            167,
+            167,
+            208,
+            208,
+            208,
+            209,
+            209,
+            209,
+            250,
+            292,
+            375,
+            417,
+            459,
+            542,
+            19583
+          ],
+          "scope": "inclusive_native_activation",
+          "slowest": [
+            {
+              "activation_index": 0,
+              "virtual_time_ns": 0,
+              "wall_ns": 19583
+            },
+            {
+              "activation_index": 7,
+              "virtual_time_ns": 7000000,
+              "wall_ns": 542
+            },
+            {
+              "activation_index": 1,
+              "virtual_time_ns": 1000000,
+              "wall_ns": 459
+            },
+            {
+              "activation_index": 6,
+              "virtual_time_ns": 6000000,
+              "wall_ns": 417
+            },
+            {
+              "activation_index": 3,
+              "virtual_time_ns": 3000000,
+              "wall_ns": 375
+            },
+            {
+              "activation_index": 13,
+              "virtual_time_ns": 13000000,
+              "wall_ns": 292
+            },
+            {
+              "activation_index": 2,
+              "virtual_time_ns": 2000000,
+              "wall_ns": 250
+            },
+            {
+              "activation_index": 4,
+              "virtual_time_ns": 4000000,
+              "wall_ns": 209
+            },
+            {
+              "activation_index": 11,
+              "virtual_time_ns": 11000000,
+              "wall_ns": 209
+            },
+            {
+              "activation_index": 15,
+              "virtual_time_ns": 15000000,
+              "wall_ns": 209
+            },
+            {
+              "activation_index": 5,
+              "virtual_time_ns": 5000000,
+              "wall_ns": 208
+            },
+            {
+              "activation_index": 8,
+              "virtual_time_ns": 8000000,
+              "wall_ns": 208
+            },
+            {
+              "activation_index": 10,
+              "virtual_time_ns": 10000000,
+              "wall_ns": 208
+            },
+            {
+              "activation_index": 9,
+              "virtual_time_ns": 9000000,
+              "wall_ns": 167
+            },
+            {
+              "activation_index": 14,
+              "virtual_time_ns": 14000000,
+              "wall_ns": 167
+            },
+            {
+              "activation_index": 16,
+              "virtual_time_ns": 16000000,
+              "wall_ns": 167
+            },
+            {
+              "activation_index": 17,
+              "virtual_time_ns": 17000000,
+              "wall_ns": 167
+            },
+            {
+              "activation_index": 12,
+              "virtual_time_ns": 12000000,
+              "wall_ns": 166
+            },
+            {
+              "activation_index": 18,
+              "virtual_time_ns": 18000000,
+              "wall_ns": 166
+            },
+            {
+              "activation_index": 19,
+              "virtual_time_ns": 19000000,
+              "wall_ns": 125
+            }
+          ],
+          "stddev_ns": 4215.411119926502,
+          "sum_ns": 24294,
+          "unavailable": {
+            "p99_ns": "insufficient_samples"
+          }
+        }
+      },
+      {
+        "failed_activation": null,
+        "kind": "native_task",
+        "participant": "multi",
+        "task": "slow",
+        "timing": {
+          "completed": 4,
+          "max_ns": 625,
+          "mean_ns": 302.0,
+          "min_ns": 166,
+          "p50_ns": 167,
+          "p95_ns": null,
+          "p99_ns": null,
+          "quantiles": {
+            "approximate": false,
+            "method": "nearest_rank",
+            "reservoir": {
+              "algorithm": "algorithm_r",
+              "algorithm_version": 1,
+              "capacity": 8192,
+              "generator": "splitmix64",
+              "seed": 6001411834618398514
+            },
+            "retained_count": 4,
+            "sample_count": 4
+          },
+          "samples_ns": [
+            166,
+            167,
+            250,
+            625
+          ],
+          "scope": "inclusive_native_activation",
+          "slowest": [
+            {
+              "activation_index": 0,
+              "virtual_time_ns": 0,
+              "wall_ns": 625
+            },
+            {
+              "activation_index": 2,
+              "virtual_time_ns": 10000000,
+              "wall_ns": 250
+            },
+            {
+              "activation_index": 3,
+              "virtual_time_ns": 15000000,
+              "wall_ns": 167
+            },
+            {
+              "activation_index": 1,
+              "virtual_time_ns": 5000000,
+              "wall_ns": 166
+            }
+          ],
+          "stddev_ns": 189.5745236048346,
+          "sum_ns": 1208,
+          "unavailable": {
+            "p95_ns": "insufficient_samples",
+            "p99_ns": "insufficient_samples"
+          }
+        }
+      },
+      {
+        "failed_activation": null,
+        "kind": "process_step",
+        "participant": "pyecho",
+        "task": "step",
+        "timing": {
+          "completed": 2,
+          "max_ns": 113750,
+          "mean_ns": 75854.0,
+          "min_ns": 37958,
+          "p50_ns": 37958,
+          "p95_ns": null,
+          "p99_ns": null,
+          "quantiles": {
+            "approximate": false,
+            "method": "nearest_rank",
+            "reservoir": {
+              "algorithm": "algorithm_r",
+              "algorithm_version": 1,
+              "capacity": 8192,
+              "generator": "splitmix64",
+              "seed": 6001411834618398515
+            },
+            "retained_count": 2,
+            "sample_count": 2
+          },
+          "samples_ns": [
+            37958,
+            113750
+          ],
+          "scope": "inclusive_process_step",
+          "slowest": [
+            {
+              "activation_index": 1,
+              "virtual_time_ns": 10000000,
+              "wall_ns": 113750
+            },
+            {
+              "activation_index": 0,
+              "virtual_time_ns": 0,
+              "wall_ns": 37958
+            }
+          ],
+          "stddev_ns": 37896.0,
+          "sum_ns": 151708,
+          "unavailable": {
+            "p95_ns": "insufficient_samples",
+            "p99_ns": "insufficient_samples"
+          }
+        }
+      }
+    ],
+    "throughput": {
+      "completed_native_activations": 24,
+      "completed_process_steps": 2,
+      "denominator": "scheduled_execution_ns",
+      "native_activations_per_s": 118763.08249580617,
+      "process_steps_per_s": 9896.923541317181,
+      "scheduled_execution_ns": 202083,
+      "unavailable": {}
+    },
+    "virtual_time_speed": {
+      "end_to_end_factor": 0.29746430420912884,
+      "scheduled_factor": 98.96923541317182,
+      "unavailable": {}
+    }
+  },
+  "run": {
+    "exit_code": 0,
+    "failure": null,
+    "status": "succeeded"
+  },
+  "sil_run_diagnostics": 1
+}

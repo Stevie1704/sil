@@ -15,6 +15,7 @@
 
 #include "failure_report.hpp"
 #include "manifest.hpp"
+#include "run_diagnostics.hpp"
 #include "virtual_time.hpp"
 
 namespace sil {
@@ -170,7 +171,13 @@ class Engine {
     size_t registration_index;
     std::function<void(uint64_t)> fn;
     bool done = false;
+    [[no_unique_address]] diagnostics::Id diagnostics_id{};
   };
+
+  void add_task(const std::string &owner, const std::string &task,
+                diagnostics::TaskKind kind, uint64_t period_ns,
+                uint64_t offset_ns, int32_t priority,
+                std::function<void(uint64_t)> fn);
 
   struct ChannelState {
     const ChannelSpec *spec;
@@ -202,6 +209,7 @@ class Engine {
   struct ReplayPlace {
     std::optional<int32_t> priority;
     size_t registration_index;
+    [[no_unique_address]] diagnostics::Id diagnostics_id{};
   };
   std::vector<ReplayPlace> replay_places_;
   // Shared by tasks and prioritised replayers, so an equal priority is

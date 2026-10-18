@@ -100,6 +100,13 @@ carries it.
 | Step protocol | [docs/step-protocol.md](docs/step-protocol.md) | protocol 2, protocol 1 still accepted |
 | Recording contract | MCAP, uncompressed, virtual timestamps only, Manifest hash embedded; a Recording converted by `sil recording csv` embeds the source and mapping digests instead, because no Manifest produced it | as written by the shipped release |
 | Runner command line | `sil-run` (also started as `sil run`), `sil-run --version`, `sil-run --build-info`, and the exit codes `0` ok, `1` run or test failure, `2` Manifest error, `3` determinism violation | as shipped |
+| Diagnostics runner | `sil-run-diagnostics`: the `sil-run` command line plus `--diagnostics-out PATH` (default `<recording>.diagnostics.json`), the same exit codes, and `2` when the report path exists or is another artifact of the Run ([decision](docs/adr/0004-opt-in-run-diagnostics-runner.md)) | as shipped |
+| Diagnostics command line | `sil run MANIFEST --diagnostics`, `--diagnostics-out PATH` and `--html PATH`: the `sil-run` options, a new report path checked before the Run, and the exit codes of [docs/running.md](docs/running.md#measure-a-run). The stdout summary text is not covered. | as shipped |
+| Diagnostics launcher | `sil-diagnostics-launcher RUNNER [ARG...]`: runs the runner as its child, forwards SIGINT, SIGTERM and SIGHUP, and ends with the runner's exit code or signal; exit `2` usage, `1` fork or wait failure, `127` runner not executable ([contract](docs/diagnostics-report.md#launcher)) | as shipped |
+| Benchmark command line | `sil benchmark MANIFEST --out DIR` with `--repeats N`, `--warmup N`, `--no-recording`, `--html PATH` and the guard options of `sil run`: serial fresh Runs, a new `--out` checked before the first Run, the per-Run directory layout and the exit codes of [docs/running.md](docs/running.md#benchmark-repeated-runs). The stdout summary text is not covered. | as shipped |
+| HTML report | `sil diagnostics render INPUT.json --html OUTPUT.html` and `--html` of `sil run` and `sil benchmark`: one offline page from a saved report, a new output path, and the exit codes of [docs/running.md](docs/running.md#html-reports). The page layout and text are not covered. | as shipped |
+| Run diagnostics report | the members, units, null reasons and timing scopes of `sil_run_diagnostics` ([docs/diagnostics-report.md](docs/diagnostics-report.md)). Measured values, and the cost of measuring them, are not covered. | `sil_run_diagnostics` 1 |
+| Benchmark report | the members, metrics, statistics policy and null reasons of `sil_benchmark_report` in `DIR/summary.json` ([docs/diagnostics-report.md](docs/diagnostics-report.md#benchmark-report-sil_benchmark_report-v1)). Measured values are not covered. | `sil_benchmark_report` 1 |
 | Failure report | `<recording>.failure.json` of a failed Run: its fields and `category` values ([docs/running.md](docs/running.md#failure-report)). The `message` and `stderr_tail` text is not covered. | `schema_version` 1 |
 | Bounded Recording queries | `sil recording query` and `sil.recording_query` (`RecordingQuery`, `Predicate`, `QueryError`, `render`): field projection, numeric summaries, scalar predicates, source and query identity, evidence locators and completion reports ([contract](docs/recording-queries.md)); exit codes `0` complete, `2` refused, `3` incomplete, `4` limited output after a complete scan. No continuation in v1. Error text and measured resource costs are not covered. | `sil_recording_query` 1, Python API at package version |
 | FMI import profiles | [docs/fmi.md](docs/fmi.md): FMI 3.0 co-simulation, and the FMI 2.0 co-simulation profile (scalar `Real`, `Integer` and `Boolean`, OSMP binary variables as bounded byte payloads, `binaries/linux64`) | as shipped |
@@ -144,9 +151,10 @@ Do not build on these. They change without notice and without a release note.
 
 - Kernel internals: scheduler ordering structures, the interceptor plan,
   router internals, and every C++ header under `kernel/`.
-- `sil-run-instrumented` and every other development or diagnostic build
-  target. They are not part of a production installation.
-- Anything under `tests/`, `tools/bench_*`, and the schemas
+- `sil-run-instrumented`, its copy-counter report, and every other
+  development build target. They are not part of a production installation.
+  `sil-run-diagnostics` is the one installed measurement runner.
+- Anything under `tests/`, `tools/bench_*`, `tools/diagnostics_overhead.py`, and the schemas
   that serve them. They are fixtures for this repository's own checks.
 - The `acceptance` container image target and everything it adds under
   `/opt/sil/reference`.

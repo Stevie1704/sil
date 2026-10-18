@@ -6,7 +6,9 @@ module's own. A module is imported only when its subcommand runs: `sil schema
 import` needs the `sil[dwarf]` extra, and no other subcommand should.
 
 `sil run` is the native runner itself: `sil` replaces its own process with
-`sil-run`, so the Run's exit code, signals and output are the runner's.
+`sil-run`, so the Run's exit code, signals and output are the runner's. Only
+a diagnostics option (`--diagnostics`, `--diagnostics-out`, `--html`) hands
+the Run to sil.diagnostics_run, which starts the diagnostics runner instead.
 """
 
 from __future__ import annotations
@@ -51,12 +53,35 @@ class NativeCommand:
         os.execv(found, [self.executable, *arguments])
 
 
+DIAGNOSTICS_OPTIONS = ("--diagnostics", "--diagnostics-out", "--html")
+
+
+def requests_diagnostics(arguments: list[str]) -> bool:
+    return any(argument in DIAGNOSTICS_OPTIONS
+               or argument.startswith(("--diagnostics-out=", "--html="))
+               for argument in arguments)
+
+
+@dataclass(frozen=True)
+class RunCommand:
+    """`sil run`: the ordinary runner, or the diagnostics Run when asked."""
+
+    ordinary: NativeCommand
+    diagnostics: ModuleCommand
+    summary: str
+
+    def run(self, path: str, arguments: list[str]) -> int:
+        chosen = (self.diagnostics if requests_diagnostics(arguments)
+                  else self.ordinary)
+        return chosen.run(path, arguments)
+
+
 @dataclass(frozen=True)
 class Group:
     """Subcommands that belong together, under one name."""
 
     summary: str
-    commands: dict[str, ModuleCommand | NativeCommand | Group]
+    commands: dict[str, ModuleCommand | NativeCommand | RunCommand | Group]
 
 
 ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
@@ -74,8 +99,19 @@ ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
                              "compare a Recording with a reference under a contract"),
     "footprint": ModuleCommand("sil.footprint",
                                "report the worst-case payload memory a Manifest declares"),
-    "run": NativeCommand("sil-run",
-                         "execute a Manifest into a Recording (the native sil-run)"),
+    "run": RunCommand(
+        NativeCommand("sil-run", ""),
+        ModuleCommand("sil.diagnostics_run", ""),
+        "execute a Manifest into a Recording (the native sil-run); "
+        "'sil run --diagnostics --help' lists the measurement options"),
+    "benchmark": ModuleCommand("sil.benchmark",
+                               "repeat fresh diagnostics Runs of a Manifest "
+                               "and summarize them"),
+    "diagnostics": Group("present saved diagnostics reports", {
+        "render": ModuleCommand("sil.diagnostics_render",
+                                "write the standalone HTML report of a "
+                                "saved Run or benchmark report"),
+    }),
     "bundle": Group("seal and run offline regression bundles", {
         "seal": ModuleCommand("sil.bundle",
                               "record the identity of a bundle and its runtime",

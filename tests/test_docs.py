@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import zipfile
@@ -90,3 +91,30 @@ def test_a_checkout_points_at_its_docs_directory(tmp_path: Path):
     assert proc.returncode == 1
     assert proc.stdout == ""
     assert str(ROOT / "docs" / "agent-guide.md") in proc.stderr
+
+
+def _member(document, path: str) -> bool:
+    """Whether the dotted `path` exists in `document`; a list uses its first item."""
+    value = document
+    for key in path.split("."):
+        if isinstance(value, list):
+            value = value[0]
+        if not isinstance(value, dict) or key not in value:
+            return False
+        value = value[key]
+    return True
+
+
+def test_the_agent_guide_names_only_report_members_that_exist():
+    guide = (ROOT / "docs" / "agent-guide.md").read_text()
+    section = guide.partition("## Measure a Run")[2].partition("\n## ")[0]
+    fixtures = ROOT / "tests" / "fixtures" / "diagnostics"
+    run = json.loads((fixtures / "run-success.json").read_text())
+    benchmark = json.loads((fixtures / "benchmark-complete.json").read_text())
+    paths = re.findall(r"`((?:observational|completeness|status|runs)"
+                       r"[a-z_.\[\]]*)`", section)
+
+    assert len(paths) >= 8
+    for path in paths:
+        document = benchmark if path.startswith(("status", "runs")) else run
+        assert _member(document, path.replace("[]", "")), path

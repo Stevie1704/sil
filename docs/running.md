@@ -316,6 +316,197 @@ payload of a Step is capped at three quarters of the line limit by base64
 expansion, so `--max-step-inline-payload-bytes` only bites once the line limit
 is raised. [docs/step-protocol.md](step-protocol.md) has the detail.
 
+## Measure a Run
+
+`--diagnostics` runs the Manifest with the installed diagnostics runner,
+`sil-run-diagnostics`, and writes a `sil_run_diagnostics` report (version 1,
+[docs/diagnostics-report.md](diagnostics-report.md)). After the Run, `sil`
+prints a summary of the report on stdout.
+
+```sh
+sil run manifest.json --diagnostics -o run.mcap   # run.mcap.diagnostics.json
+sil run manifest.json -o run.mcap --diagnostics-out "results/run 1.json"
+sil run manifest.json --no-recording --diagnostics  # out.mcap.diagnostics.json
+```
+
+- The report is `<recording>.diagnostics.json`, also under `--no-recording`
+  (`out.mcap.diagnostics.json`). `--diagnostics-out PATH` gives another path
+  and implies `--diagnostics`.
+- `-o`, `--no-recording`, `--provenance`, `--participant-timeout-ms` and the
+  three Step-protocol size guards have the same meaning as for `sil-run`. The
+  Manifest is not moved or changed, so its relative paths resolve as in an
+  ordinary Run.
+- The report must be a new file in an existing directory. A path that exists,
+  or that is also the Manifest, the Recording, the provenance record or the
+  failure report, is rejected before any Participant starts (exit `2`).
+- The Run's stdout (`manifest_hash ...`) and stderr are unchanged; the summary
+  follows the stdout. It gives each value with its unit and scope, and an
+  unavailable value as `unavailable (reason)`. A failed Run is marked
+  `partial`. Peak resident memory is per process; no total is given.
+- `--html PATH` also writes a [standalone HTML report](#html-reports) of the
+  report after the Run, and implies `--diagnostics`. The JSON report is always
+  kept. The HTML path is checked with the report path before the Run.
+- Without a diagnostics option, `sil run` is `sil-run`, with no measurement.
+
+The diagnostics runner is the same kernel with a measurement collector. Its
+Recordings and exit codes are those of `sil-run`. The collector adds work to
+each activation, so a Run that only just meets a response deadline can miss
+it with diagnostics.
+
+| Exit | Meaning |
+| --- | --- |
+| the Run's code | The Run failed (`1`) or its Manifest is not valid (`2`). A partial report and summary are written where possible. |
+| `0` | The Run succeeded and the report was written. |
+| `1` | The Run succeeded, but the report is missing or not valid, or the requested HTML report could not be written; or `sil-diagnostics-launcher` failed and no Run took place. stderr says which. |
+| `2` | Invalid options, or a rejected report or HTML path. |
+| `127` | `sil-run-diagnostics` or `sil-diagnostics-launcher` is not on `PATH`. |
+| `128+N` | The runner ended by signal `N`, for example SIGKILL. It wrote no report, and `sil` gives no metrics. |
+
+SIGINT, SIGTERM and SIGHUP sent to `sil` go to the runner, which stops the
+Run and its Process participants as for `sil-run` (exit `1`, status
+`interrupted`).
+
+## Benchmark repeated Runs
+
+`sil benchmark` executes a Manifest several times, each time as its own
+diagnostics Run, and writes one `sil_benchmark_report` (version 1,
+[docs/diagnostics-report.md](diagnostics-report.md)) to `DIR/summary.json`.
+
+```sh
+sil benchmark manifest.json --out results                 # 1 warm-up, 5 Runs
+sil benchmark manifest.json --repeats 10 --warmup 0 --out results \
+  --participant-timeout-ms 5000 --no-recording
+```
+
+- `--repeats N` (an integer, at least 1, default 5) measured Runs follow
+  `--warmup N` (an integer, at least 0, default 1) warm-up Runs. Each Run has
+  fresh processes and a fresh working directory, and the Runs are one after
+  the other. A Run does not start with cold file-system caches, and external
+  services are not reset.
+- `--out DIR` is required and must not exist; its parent must exist. A path
+  that exists is rejected before any Run starts (exit `2`) and is not changed.
+- `--no-recording`, `--participant-timeout-ms` and the three Step-protocol size
+  guards go to every Run. The Manifest is not moved or changed, so its
+  relative paths resolve as in an ordinary Run.
+- Each Run has a directory, `warmup-001/`, `run-001/`, ...: the Run report
+  `run.mcap.diagnostics.json` (`out.mcap.diagnostics.json` under
+  `--no-recording`), the provenance record, the Recording, the failure report
+  of a failed Run, `stdout.log` and `stderr.log`. The Run's stderr is also
+  copied to the stderr of `sil`.
+- `summary.json` holds every attempted Run with its complete Run report, so it
+  is all that a reader needs. Statistics (min, median, max, mean, population
+  standard deviation) use only the successful measured Runs: warm-ups and
+  failed Runs never enter them. Activation percentiles stay per Run and are
+  never pooled across Runs.
+- The first failed warm-up or measured Run stops the benchmark: no later Run
+  starts, the earlier Runs are kept, and the summary is marked incomplete.
+  SIGINT, SIGTERM or SIGHUP stops the active Run as for `sil run
+  --diagnostics`, and no later Run starts.
+- A summary of `summary.json` goes to stdout after the last Run. The values
+  are diagnostics-runner measurements, not timings of the ordinary `sil-run`.
+- `--html PATH` also writes a [standalone HTML report](#html-reports) of
+  `summary.json` after it. `PATH` may be inside `DIR`, for example
+  `--out results --html results/report.html`, but not `summary.json` or a Run
+  directory. Elsewhere its directory must exist. It is checked before the
+  first Run.
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | Every Run succeeded and `summary.json` (and the HTML report, if asked for) was written. |
+| the first failure | The exit code `sil run --diagnostics` gives for the first failed Run: the Run's code, `1` for a missing report after a successful Run, `128+N` for a runner that ended by signal `N`. |
+| `1` | The Runs succeeded, but `summary.json` or the HTML report could not be written. |
+| `2` | Invalid options, `--out` exists, or a rejected HTML path. |
+| `127` | `sil-run-diagnostics` or `sil-diagnostics-launcher` is not on `PATH`. |
+| `128+N` | Signal `N` stopped the benchmark between Runs. |
+
+## HTML reports
+
+An HTML report presents one saved report, a Run report or a benchmark
+summary, as a single page. It opens offline from the file, with no server,
+network, external font or other file, and it holds no measurement or
+statistic that is not in the JSON.
+
+```sh
+sil run manifest.json -o run.mcap --html run.html
+sil benchmark manifest.json --out results --html results/report.html
+sil diagnostics render results/summary.json --html copy.html
+```
+
+- `sil diagnostics render INPUT.json --html OUTPUT.html` renders a saved
+  `sil_run_diagnostics` or `sil_benchmark_report` file again. It executes
+  nothing and needs neither the Manifest, nor `sil-run`, nor the Run
+  directories: a copied `summary.json` is enough.
+- The page shows the status, identity, machine and policy, overview cards,
+  lifecycle phases, Task and resource tables, sampled timing distributions,
+  slow activations and, for a benchmark, every Run with per-Run charts, the
+  statistics, a Run selector and a closed section that says what each
+  metric means. Values have the units of the terminal
+  summary; the tooltip of a value holds its exact JSON number.
+- The status, cards and tables are complete without JavaScript and in print.
+  The script only sorts and filters tables, selects a Run, switches the theme
+  and prepares the download. "Download JSON" saves the source report byte for
+  byte.
+- Names, paths and messages from a report are always text, never markup or
+  script. The page allows no network request.
+- The HTML file must be new and its directory must exist; an existing file is
+  never replaced. It is written through a temporary file, so a failure leaves
+  no partial page.
+
+| Exit of `sil diagnostics render` | Meaning |
+| --- | --- |
+| `0` | The HTML report was written. |
+| `1` | The HTML report could not be written, also because the output exists or has no directory. |
+| `2` | Invalid options; or the input is missing, not valid JSON, not a valid report, or of an unknown version. |
+
+## What the measurements mean
+
+[docs/diagnostics-report.md](diagnostics-report.md) is the normative
+contract of each value. Read these limits before you compare numbers.
+
+- **Inclusive timing.** An Activation (what you may call a cycle) is one
+  execution of a Task. A Native activation time includes the synchronous
+  routing and recording of the Messages that the Task publishes. A Process
+  Step time starts when the kernel prepares the Step inputs and ends after it
+  publishes the outputs. It includes encoding, IPC, waiting for the operating
+  system, the Participant's own work, decoding and routing. It is not the time
+  of the algorithm alone. Do not add activation times to the lifecycle phases,
+  and do not subtract one measurement from another to get "pure" compute or
+  kernel time: the scopes overlap.
+- **Percentiles.** Up to 8,192 completed activations per Task, the median,
+  p95 and p99 are exact nearest-rank values. Above that, they are estimates
+  from a uniform sample of 8,192 durations: the report marks them
+  `approximate` and gives the total and the retained count. p95 needs at least
+  20 and p99 at least 100 completed activations; otherwise the value is
+  unavailable with a reason. These minimums do not make a tail reliable. The
+  maximum is the largest observed duration, not a worst-case execution time.
+- **Memory.** Each peak resident memory value has a scope. The runner value
+  is the runner process only, and Native participants share it. A Process
+  participant value is the peak of the largest single process among the child
+  and the descendants that were waited for (`largest_process_peak_rss`), not
+  the memory of its whole process tree at one time. On Linux, a peak also
+  includes the parent's resident memory at spawn. Peaks of different processes
+  are never added: there is no total memory value.
+- **CPU time.** User and system CPU time are given per scope. For
+  multithreaded software, CPU time can be more than wall time. `cpu_total`
+  adds only scopes that do not overlap.
+- **Workload length.** The Manifest Duration sets the length of one Run.
+  `--repeats` sets the number of independent Runs. There is no `--steps`
+  option: with different Periods, several Native Tasks and Replay, one global
+  Step count has no single meaning.
+- **Throughput.** Only completed Native activations per second and completed
+  Process Steps per second, over the scheduled-execution wall time. A generic
+  "operations per second" has no countable definition for an arbitrary
+  Participant.
+- **Not measured.** Hardware counters, instructions, cycles, TOPS and FLOPS,
+  algorithm-only time, memory history and leak detection, the memory of a
+  process tree at one time, flame graphs and full activation traces.
+- **Cost of measuring.** Diagnostics-runner values include the collector's
+  own cost. They are not a timing of `sil-run`, and no correction is
+  subtracted. [docs/bench/diagnostics-overhead.md](bench/diagnostics-overhead.md)
+  keeps one comparison of the two runners on a named machine.
+- **No determinism verdict.** Timing does not show whether a Run is
+  deterministic. Use `sil check` for that.
+
 ## Reading a Recording
 
 A Recording stores the Schema of each Channel, so it can be decoded without

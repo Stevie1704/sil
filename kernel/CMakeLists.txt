@@ -38,6 +38,25 @@ target_compile_definitions(sil-run-instrumented PRIVATE SIL_COPY_COUNTERS)
 target_link_libraries(sil-run-instrumented
   PRIVATE nlohmann_json::nlohmann_json mcap_headers)
 
+# The same kernel with the opt-in Run diagnostics collector compiled in
+# (#299, #300). It is the supported, installed measurement runner; #63's
+# separate-build rationale still holds, so sil-run keeps no clock read, counter
+# or branch on the activation path. See
+# docs/adr/0004-opt-in-run-diagnostics-runner.md.
+add_executable(sil-run-diagnostics
+  ${SIL_KERNEL_SOURCES} src/run_diagnostics.cpp src/diagnostics_stats.cpp
+  src/resource_usage.cpp)
+target_include_directories(sil-run-diagnostics PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_compile_definitions(sil-run-diagnostics PRIVATE SIL_RUN_DIAGNOSTICS)
+target_link_libraries(sil-run-diagnostics
+  PRIVATE nlohmann_json::nlohmann_json mcap_headers)
+
+# The process a supervisor starts sil-run-diagnostics through (#301). It is
+# plain C with no allocation, so it is small when it forks the runner: on
+# Linux a peak RSS survives exec, and the runner's record must not inherit a
+# large supervisor's high-water mark.
+add_executable(sil-diagnostics-launcher src/diagnostics_launcher.c)
+
 set(SIL_RELEASE_DEFINITIONS
   SIL_VERSION="${SIL_VERSION}"
   SIL_SOURCE_REPOSITORY="${SIL_SOURCE_REPOSITORY}"
@@ -45,6 +64,7 @@ set(SIL_RELEASE_DEFINITIONS
   SIL_LICENSE_IDENTIFIER="Apache-2.0")
 target_compile_definitions(sil-run PRIVATE ${SIL_RELEASE_DEFINITIONS})
 target_compile_definitions(sil-run-instrumented PRIVATE ${SIL_RELEASE_DEFINITIONS})
+target_compile_definitions(sil-run-diagnostics PRIVATE ${SIL_RELEASE_DEFINITIONS})
 
 # The runner is installed in the conventional executable directory and the
 # shim in the conventional library directory.  The runner carries the
@@ -55,6 +75,7 @@ set(SIL_INSTALL_DEFINITIONS
   SIL_INSTALL_LIBDIR="${CMAKE_INSTALL_LIBDIR}")
 target_compile_definitions(sil-run PRIVATE ${SIL_INSTALL_DEFINITIONS})
 target_compile_definitions(sil-run-instrumented PRIVATE ${SIL_INSTALL_DEFINITIONS})
+target_compile_definitions(sil-run-diagnostics PRIVATE ${SIL_INSTALL_DEFINITIONS})
 
-install(TARGETS sil-run
+install(TARGETS sil-run sil-run-diagnostics sil-diagnostics-launcher
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
