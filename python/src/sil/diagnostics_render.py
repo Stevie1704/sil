@@ -13,13 +13,16 @@ The input is checked first, so invalid input is always 2.
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
 from sil.diagnostics_html import render
-from sil.diagnostics_report import ReportError, write_new_file
-from sil.diagnostics_run import EXIT_FAILURE, EXIT_OK, EXIT_USAGE, GivenOnce
+from sil.diagnostics_report import (
+    ReportError, new_path_problem, write_new_file,
+)
+from sil.diagnostics_run import (
+    EXIT_FAILURE, EXIT_OK, EXIT_USAGE, GivenOnce, command_error,
+)
 
 PROG = "sil diagnostics render"
 
@@ -39,31 +42,22 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def output_problem(path: Path) -> str | None:
-    """Why `path` cannot be a new HTML report, or None."""
-    if os.path.lexists(path):
-        return (f"HTML report '{path}' already exists; a report never "
-                "replaces an earlier file")
-    if not Path(os.path.realpath(path)).parent.is_dir():
-        return f"HTML report '{path}': its directory does not exist"
-    return None
-
-
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(sys.argv[1:] if argv is None else argv)
     try:
         text = args.report.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as error:
-        return _error(f"cannot read report '{args.report}': {error}",
-                      EXIT_USAGE)
+        return command_error(
+            PROG, f"cannot read report '{args.report}': {error}", EXIT_USAGE)
     try:
         page = render(text)
     except ReportError as error:
-        return _error(f"'{args.report}' is not a report this version can "
-                      f"render: {error}", EXIT_USAGE)
-    problem = output_problem(args.html)
+        return command_error(
+            PROG, f"'{args.report}' is not a report this version can render: "
+            f"{error}", EXIT_USAGE)
+    problem = new_path_problem("HTML report", args.html)
     if problem is not None:
-        return _error(problem, EXIT_FAILURE)
+        return command_error(PROG, problem, EXIT_FAILURE)
     try:
         write_new_file(args.html, page)
     except OSError as error:
@@ -72,11 +66,6 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_FAILURE
     sys.stdout.write(f"HTML report: {args.html}\n")
     return EXIT_OK
-
-
-def _error(message: str, code: int) -> int:
-    sys.stderr.write(f"{PROG}: error: {message}\n")
-    return code
 
 
 if __name__ == "__main__":

@@ -91,6 +91,23 @@ def parse_report(text: str, *, source: str = "report") -> dict[str, Any]:
     return document
 
 
+def new_path_problem(label: str, path: Path,
+                     cwd: Path | None = None) -> str | None:
+    """Why `path` (relative to `cwd`) cannot be created new, or None.
+
+    Diagnostics outputs never replace an earlier file, and their directory
+    must already exist.
+    """
+    full = (cwd or Path.cwd()) / path
+    if os.path.lexists(full):
+        return (f"{label} '{path}' already exists; an earlier file is never "
+                "replaced")
+    directory = Path(os.path.realpath(full)).parent
+    if not directory.is_dir():
+        return f"{label} '{path}': directory '{directory}' does not exist"
+    return None
+
+
 def write_new_file(path: Path, text: str) -> None:
     """Write `path` completely or not at all; never replace a file."""
     descriptor, temporary = tempfile.mkstemp(

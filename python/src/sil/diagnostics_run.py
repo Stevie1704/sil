@@ -32,7 +32,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import BinaryIO, Iterable, Sequence
 
-from sil.diagnostics_report import PHASES, ReportError, load_report
+from sil.diagnostics_report import (
+    PHASES, ReportError, load_report, new_path_problem,
+)
 
 PROG = "sil run"
 RUNNER = "sil-run-diagnostics"
@@ -153,21 +155,23 @@ def preflight(request: RunRequest,
         problems.append(f"the Recording '{request.recording}' is the Manifest")
     seen: list[tuple[str, Path]] = []
     for label, path in outputs:
+        problem = new_path_problem(label, path, base)
+        if problem is not None:
+            problems.append(problem)
+            continue
         target = absolute(path)
-        if os.path.lexists(base / path):
-            problems.append(f"{label} '{path}' already exists; diagnostics "
-                            "never replace an earlier file")
-            continue
-        if not target.parent.is_dir():
-            problems.append(f"{label} '{path}': directory "
-                            f"'{target.parent}' does not exist")
-            continue
         for other_label, other in [*others, *seen]:
             if _same(target, absolute(other)):
                 problems.append(f"{label} '{path}' is also the {other_label}")
                 break
         seen.append((label, path))
     return problems
+
+
+def command_error(prog: str, message: str, code: int) -> int:
+    """Write `PROG: error: message` to stderr; return the exit code."""
+    sys.stderr.write(f"{prog}: error: {message}\n")
+    return code
 
 
 def _same(a: Path, b: Path) -> bool:
@@ -668,13 +672,12 @@ def main(argv: list[str] | None = None) -> int:
     problems = preflight(request, new_files)
     if problems:
         for problem in problems:
-            sys.stderr.write(f"{PROG}: error: {problem}\n")
+            command_error(PROG, problem, EXIT_USAGE)
         return EXIT_USAGE
     try:
         tools = find_native_tools()
     except ToolMissing as error:
-        sys.stderr.write(f"{PROG}: error: {error}\n")
-        return EXIT_NOT_FOUND
+        return command_error(PROG, str(error), EXIT_NOT_FOUND)
     outcome = execute(request, tools)
     failed = []
     if html is not None:

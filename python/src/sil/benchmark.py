@@ -36,15 +36,15 @@ from typing import Any, Sequence
 from sil import build_info
 from sil.diagnostics_html import write_html
 from sil.diagnostics_report import (
-    BENCHMARK_REPORT_KEY, SUPPORTED_VERSION, validate_benchmark_report,
-    write_new_file,
+    BENCHMARK_REPORT_KEY, SUPPORTED_VERSION, new_path_problem,
+    validate_benchmark_report, write_new_file,
 )
 from sil.diagnostics_run import (
-    DEFAULT_RECORDING, EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE,
+    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE,
     FORWARDED_SIGNALS, GivenOnce, Guards, NativeTools, RunOutcome, RunRequest,
-    ToolMissing, add_guard_arguments, default_report_path, describe_problems,
-    execute, find_native_tools, format_duration_ns, format_value,
-    guards_from, resolve_exit,
+    ToolMissing, add_guard_arguments, command_error, default_report_path,
+    describe_problems, execute, find_native_tools, format_duration_ns,
+    format_value, guards_from, resolve_exit,
 )
 
 PROG = "sil benchmark"
@@ -494,29 +494,23 @@ def main(argv: list[str] | None = None) -> int:
     # absolute here; the Manifest itself is never copied or rewritten.
     manifest = Path.cwd() / args.manifest
     out: Path = args.out
-    if os.path.lexists(out):
-        return _usage_error(f"--out '{out}' already exists; a benchmark never "
-                            "replaces earlier results")
-    if not Path(os.path.realpath(out)).parent.is_dir():
-        return _usage_error(f"--out '{out}': its parent directory does not "
-                            "exist")
-    if args.html is not None:
+    problem = new_path_problem("--out", out)
+    if problem is None and args.html is not None:
         problem = _html_problem(args.html, out, policy)
-        if problem is not None:
-            return _usage_error(problem)
+    if problem is not None:
+        return command_error(PROG, problem, EXIT_USAGE)
     try:
         tools = find_native_tools()
     except ToolMissing as error:
-        sys.stderr.write(f"{PROG}: error: {error}\n")
-        return EXIT_NOT_FOUND
+        return command_error(PROG, str(error), EXIT_NOT_FOUND)
     try:
         out.mkdir()
     except FileExistsError:
-        return _usage_error(f"--out '{out}' already exists")
+        return command_error(PROG, f"--out '{out}' already exists",
+                             EXIT_USAGE)
     except OSError as error:
-        sys.stderr.write(f"{PROG}: error: cannot create --out '{out}': "
-                         f"{error}\n")
-        return EXIT_FAILURE
+        return command_error(PROG, f"cannot create --out '{out}': {error}",
+                             EXIT_FAILURE)
     results, interrupt_signal = run_campaign(policy, manifest, out.absolute(),
                                              tools)
     summary = summarize(policy, manifest, results, interrupt_signal)
@@ -544,10 +538,10 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _html_problem(html: Path, out: Path, policy: Policy) -> str | None:
-    """Why `html` cannot be the new HTML report; it may be inside --out."""
-    if os.path.lexists(html):
-        return (f"HTML report '{html}' already exists; a benchmark never "
-                "replaces earlier results")
+    """Why `html` cannot be the new HTML report; it may be inside --out.
+
+    `out` does not exist yet, so a path directly inside it is new.
+    """
     target = Path(os.path.realpath(html))
     out_directory = Path(os.path.realpath(out))
     if target == out_directory:
@@ -558,14 +552,7 @@ def _html_problem(html: Path, out: Path, policy: Policy) -> str | None:
         if target.name in {label for label, _role, _i in plan(policy)}:
             return f"HTML report '{html}' is also a Run directory"
         return None
-    if not target.parent.is_dir():
-        return f"HTML report '{html}': its directory does not exist"
-    return None
-
-
-def _usage_error(message: str) -> int:
-    sys.stderr.write(f"{PROG}: error: {message}\n")
-    return EXIT_USAGE
+    return new_path_problem("HTML report", html)
 
 
 if __name__ == "__main__":
