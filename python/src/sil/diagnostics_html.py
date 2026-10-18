@@ -312,8 +312,9 @@ def identity_value(record: dict, key: str) -> Html:
 def _run_page(report: dict) -> Html:
     return join([
         _run_banner(report, level=1),
+        _overview(report, "", 2),
         _identity_section(report),
-        _run_body(report, "", 2),
+        _run_details_body(report, "", 2),
         _methodology(report_reasons(report)),
     ])
 
@@ -423,8 +424,12 @@ def _host_list(host: dict) -> Html:
 
 
 def _run_body(report: dict, prefix: str, level: int) -> Html:
+    return join([_overview(report, prefix, level),
+                 _run_details_body(report, prefix, level)])
+
+
+def _run_details_body(report: dict, prefix: str, level: int) -> Html:
     return join([
-        _overview(report, prefix, level),
         _lifecycle(report, prefix, level),
         _tasks(report, prefix, level),
         _replay(report, prefix, level),
@@ -452,9 +457,8 @@ def _overview(report: dict, prefix: str, level: int) -> Html:
     cards = [
         card("Run wall time", measured(wall, "wall_ns", "ns")[0],
              f"Boundary: {wall['boundary']}"),
-        card("Virtual-time speed",
-             tag("span", measured(speed, "scheduled_factor", "factor")[0],
-                 " scheduled"),
+        card("Virtual-time speed, scheduled",
+             measured(speed, "scheduled_factor", "factor")[0],
              tag("span", "End-to-end ",
                  measured(speed, "end_to_end_factor", "factor")[0]),
              "Manifest Duration over scheduled-execution and Run wall time"),
@@ -956,8 +960,8 @@ def _run_outcome(run: dict) -> tuple[str, str]:
 def _benchmark_page(summary: dict) -> Html:
     return join([
         _benchmark_banner(summary),
-        _benchmark_identity(summary),
         _benchmark_overview(summary),
+        _benchmark_identity(summary),
         _runs_section(summary),
         _run_charts(summary),
         _aggregates(summary),
@@ -1037,6 +1041,15 @@ def _statistic(metric: dict | None, key: str) -> Html:
         return unavailable("not reported")
     return measured(metric, key, metric["unit"])[0] if metric[key] is not None \
         else unavailable(metric["unavailable"].get(key))
+
+
+def _short_statistic(metric: dict, key: str) -> Html:
+    """A statistic, or `unavailable` whose reason is in its own column."""
+    if metric[key] is None:
+        reason = metric["unavailable"].get(key)
+        return tag("span", "unavailable", class_="na",
+                   title=REASONS.get(reason, reason))
+    return number(metric[key], metric["unit"])
 
 
 def _benchmark_overview(summary: dict) -> Html:
@@ -1291,17 +1304,21 @@ def _aggregates(summary: dict) -> Html:
     aggregates = summary["aggregates"]
     rows = []
     for metric in aggregates["metrics"]:
+        reasons = sorted(set(metric["unavailable"].values()))
         rows.append([
             _metric_label(metric), metric["unit"],
             (number(len(metric["per_run"]), "count"),
              str(len(metric["per_run"]))),
-            *((_statistic(metric, key), "" if metric[key] is None
+            *((_short_statistic(metric, key), "" if metric[key] is None
                else str(metric[key]))
               for key in ("min", "median", "max", "mean", "stddev")),
+            join([tag("code", reason, title=REASONS.get(reason, reason))
+                  for reason in reasons]) if reasons
+            else tag("span", "none", class_="muted"),
         ])
     headers = [("Metric", False), ("Unit", False), ("Runs", True),
                ("Min", True), ("Median", True), ("Max", True), ("Mean", True),
-               ("Population stddev", True)]
+               ("Population stddev", True), ("Unavailable because", False)]
     labels = [run["label"] for run in summary["runs"] if _successful(run)]
     per_run_rows = []
     for metric in aggregates["metrics"]:

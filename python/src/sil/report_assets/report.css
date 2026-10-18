@@ -64,8 +64,9 @@ input:focus-visible, summary:focus-visible, .table-wrap:focus-visible {
 }
 code, .num { font-family: var(--mono); font-size: 0.88em; }
 .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
-code { overflow-wrap: anywhere; }
-.name { overflow-wrap: anywhere; }
+code { overflow-wrap: break-word; }
+.name { overflow-wrap: break-word; }
+.card code, .card .name, .facts code, .banner code { overflow-wrap: anywhere; }
 .run-label { white-space: nowrap; font-family: var(--mono); font-size: 0.9em; }
 .muted, .muted-text { color: var(--muted); fill: var(--muted); }
 .skip { position: absolute; left: -9999px; }
@@ -121,8 +122,8 @@ h4.status-title { font-size: 18px; }
   border: 1px solid currentColor; }
 .flag { color: var(--fail); }
 .na { color: var(--muted); font-style: italic; }
-.reason { font-family: var(--mono); font-size: 0.85em; font-style: normal;
-  overflow-wrap: anywhere; }
+.reason { font-family: var(--mono); font-size: 0.85em; font-style: normal; }
+.card .reason, .facts .reason { overflow-wrap: anywhere; }
 .card-value .na { font-size: 16px; font-weight: 400; }
 .cards { display: grid; gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
@@ -218,6 +219,7 @@ summary { cursor: pointer; color: var(--accent); }
   .facts > div { grid-template-columns: 1fr; gap: 0; }
   .card-value { font-size: 21px; }
   th, td { padding: 5px 8px; }
+  .tick, .marker-label, .median-label { font-size: 17px; }
 }
 @media print {
   :root, :root[data-theme="dark"] {
