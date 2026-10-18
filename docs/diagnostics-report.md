@@ -116,7 +116,7 @@ completed publication Slots of one Replay participant:
 | --- | --- |
 | `scope` | `inclusive_native_activation`, `inclusive_process_step` or `inclusive_replay_publication_slot` |
 | `completed`, `sum_ns`, `min_ns`, `max_ns` | Exact |
-| `mean_ns`, `stddev_ns` | `mean_ns` is `sum_ns / completed`, from the exact integer sum; `stddev_ns` is the population standard deviation from running moments (Welford) |
+| `mean_ns`, `stddev_ns` | `mean_ns` is `sum_ns / completed`, from the exact integer sum, rounded once to the nearest double; `stddev_ns` is the population standard deviation from running moments (Welford) |
 | `p50_ns`, `p95_ns`, `p99_ns` | Nearest rank, rank = ceil(p × n / 100), over the retained samples |
 | `quantiles` | `method` (`nearest_rank`), `approximate`, `sample_count` (all completed), `retained_count`, `reservoir` (`algorithm` `algorithm_r`, `generator` `splitmix64`, `algorithm_version` 1, `capacity` 8192, `seed`) |
 | `samples_ns` | The retained samples, ascending |
