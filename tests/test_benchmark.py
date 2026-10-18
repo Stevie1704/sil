@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 
 from conftest import ROOT
+from sil import benchmark
 from sil.benchmark import Policy, RunResult, summarize
 from sil.diagnostics_html import render
 from sil.diagnostics_report import load_report, validate_benchmark_report
@@ -52,6 +53,38 @@ def result(label: str, report: dict | None, *, exit_code: int | None = None,
         report_problem=None if report else "no diagnostics report was written",
         report_path=Path(f"/out/{label}/run.mcap.diagnostics.json"))
     return RunResult(label, role, int(label[-3:]), label, outcome)
+
+
+def task_timing(report: dict, task: str) -> dict:
+    [row] = [row for row in report["observational"]["tasks"]
+             if row["task"] == task]
+    return row["timing"]
+
+
+def denser_run_report(wall_ns: int) -> dict:
+    """run-success with the fast Task at half the Period: 40 activations of
+    1000..1039 ns over twice the scheduled-execution time."""
+    report = run_report(wall_ns)
+    [native] = [p for p in report["execution"]["participants"]
+                if p["participant"] == "multi"]
+    [fast] = [t for t in native["tasks"] if t["task"] == "fast"]
+    fast.update(attempted=40, completed=40, period_ns=500_000)
+    samples = [1000 + i for i in range(40)]
+    timing = task_timing(report, "fast")
+    # Nearest rank over 40 samples: p50 rank 20, p95 rank 38.
+    timing.update(
+        completed=40, sum_ns=sum(samples), min_ns=1000, max_ns=1039,
+        mean_ns=1019.5, stddev_ns=11.543396380615196, p50_ns=1019,
+        p95_ns=1037, p99_ns=None, samples_ns=samples,
+        slowest=[{"activation_index": i, "virtual_time_ns": i * 500_000,
+                  "wall_ns": 1000 + i} for i in range(39, 19, -1)])
+    timing["quantiles"].update(sample_count=40, retained_count=40)
+    # 44 native activations (40 fast, 4 slow) over 404166 ns.
+    report["observational"]["throughput"].update(
+        completed_native_activations=44, scheduled_execution_ns=404166,
+        native_activations_per_s=108866.15895448899)
+    report["observational"]["phases"]["scheduled_execution_ns"] = 404166
+    return report
 
 
 def policy(repeats: int = 3, warmup: int = 1) -> Policy:
@@ -228,21 +261,37 @@ class TestAggregation:
             "unavailable_in_a_measured_run"
 
     def test_activation_percentiles_are_not_pooled_across_runs(self):
-        # Runs keep their own distributions and throughput denominators; no
-        # cross-Run percentile exists among the aggregates.
-        own = run_report(5)
-        runs = [result("run-001", own), result("run-002", run_report(6))]
+        # Two Runs of different shape: the second Run's fast Task has half
+        # the Period, twice the activations and another denominator. Each
+        # Run keeps its own distribution and throughput denominator, and no
+        # aggregate is a statistic over activations.
+        short = run_report(5)
+        dense = denser_run_report(6)
+        runs = [result("run-001", short), result("run-002", dense)]
 
         summary = summarize(policy(repeats=2, warmup=0), MANIFEST, runs)
 
-        names = [m["metric"] for m in summary["aggregates"]["metrics"]]
-        assert not any(name.startswith("p") and name[1:3].isdigit()
-                       or "_p9" in name or "_p5" in name for name in names)
-        assert summary["runs"][0]["report"]["observational"] == \
-            own["observational"]
-        assert metric(summary, "scheduled_execution_ns")["per_run"][0][
-            "value"] == own["observational"]["throughput"][
-            "scheduled_execution_ns"]
+        assert validate_benchmark_report(summary) == []
+        for embedded, given in zip(summary["runs"], (short, dense)):
+            assert embedded["report"]["observational"]["tasks"] == \
+                given["observational"]["tasks"]
+        fast = [task_timing(run["report"], "fast") for run in summary["runs"]]
+        assert [t["completed"] for t in fast] == [20, 40]
+        assert [t["p95_ns"] for t in fast] == [542, 1037]
+        assert metric(summary, "scheduled_execution_ns")["per_run"] == [
+            {"label": "run-001", "value": 202083},
+            {"label": "run-002", "value": 404166}]
+        assert metric(summary, "native_activations_per_s")["per_run"] == [
+            {"label": "run-001", "value": 118763.08249580617},
+            {"label": "run-002", "value": 108866.15895448899}]
+        sources = {m["source"].rsplit(".", 1)[0]
+                   for m in summary["aggregates"]["metrics"]}
+        assert sources == {
+            "observational.run_wall_time", "observational.phases",
+            "observational.virtual_time_speed", "observational.throughput",
+            "observational.resources.runner",
+            "observational.resources.cpu_total",
+            "observational.resources.process_participants[participant]"}
 
     def test_policy_reports_the_guards_the_runner_used(self):
         summary = summarize(policy(repeats=1, warmup=0), MANIFEST,
@@ -448,6 +497,40 @@ class TestCommand:
         assert summary["runs"][0]["report_status"] == "missing"
         assert summary["runs"][0]["process_outcome"]["signal"] == 9
 
+    def test_a_signal_between_runs_starts_no_later_run(
+        self, build_dir, tmp_path, monkeypatch
+    ):
+        """A signal after one Run ended and before the next started stops
+        the campaign there, and the summary says it is incomplete."""
+        counter = tmp_path / "count"
+        path = fake_tools(tmp_path, build_dir, runner_script(counter))
+        monkeypatch.setenv("PATH",
+                           os.pathsep.join([str(path), "/usr/bin:/bin"]))
+        monkeypatch.chdir(tmp_path)
+        run_one = benchmark._run_one
+
+        def run_then_signal(*args, **kwargs):
+            result = run_one(*args, **kwargs)
+            os.kill(os.getpid(), signal.SIGTERM)  # no Run is active now
+            return result
+
+        monkeypatch.setattr(benchmark, "_run_one", run_then_signal)
+
+        code = benchmark.main(["m.json", "--repeats", "3", "--warmup", "0",
+                               "--out", "results"])
+
+        assert code == 128 + signal.SIGTERM
+        assert invocations(counter) == 1
+        out = tmp_path / "results"
+        assert sorted(p.name for p in out.iterdir()) == ["run-001",
+                                                         "summary.json"]
+        summary = load_report(out / "summary.json")
+        assert summary["status"] == {"complete": False,
+                                     "exit_code": 128 + signal.SIGTERM,
+                                     "stopped_reason": "interrupted"}
+        assert summary["counts"]["attempted"] == 1
+        assert summary["aggregates"]["sample_count"] == 1
+
     def test_an_existing_out_directory_is_rejected_untouched(
         self, build_dir, tmp_path
     ):
@@ -609,6 +692,33 @@ class TestRealRuns:
             assert sorted(p.name for p in (out / label).iterdir()) == [
                 "run.mcap", "run.mcap.diagnostics.json",
                 "run.mcap.provenance.json", "stderr.log", "stdout.log"]
+
+    def test_no_recording_leaves_every_artifact_but_the_recording(
+        self, native_path, tmp_path
+    ):
+        fresh_state_manifest(tmp_path)
+
+        proc = sil(["benchmark", "fresh.json", "--repeats", "2", "--warmup",
+                    "1", "--no-recording", "--out", "bench"], native_path,
+                   tmp_path)
+
+        assert proc.returncode == 0, proc.stderr
+        out = tmp_path / "bench"
+        summary = load_report(out / "summary.json")
+        for run in summary["runs"]:
+            directory = out / run["directory"]
+            assert sorted(p.name for p in directory.iterdir()) == [
+                "out.mcap.diagnostics.json", "out.mcap.provenance.json",
+                "stderr.log", "stdout.log"]
+            report = run["report"]
+            assert report["configuration"]["recording"] is False
+            assert report["artifacts"]["recording"] is None
+            assert report["artifacts"]["provenance"] == \
+                "out.mcap.provenance.json"
+            phases = report["observational"]["phases"]
+            assert phases["recording_finalization_ns"] is None
+            assert phases["unavailable"]["recording_finalization_ns"] == \
+                "no_recording"
 
     def test_a_signal_stops_the_campaign_and_launches_no_later_run(
         self, native_path, tmp_path

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -468,6 +469,19 @@ def test_installed_sil_benchmark_writes_a_self_contained_summary(
     assert "benchmark summary: bench/summary.json\n" in proc.stdout
     assert proc.stdout.endswith("HTML report: bench/report.html\n")
     assert (tmp_path / "bench" / "report.html").is_file()
+    # Each Run left its own evidence beside the summary.
+    for label in ("warmup-001", "run-001", "run-002"):
+        directory = tmp_path / "bench" / label
+        assert sorted(p.name for p in directory.iterdir()) == [
+            "run.mcap", "run.mcap.diagnostics.json",
+            "run.mcap.provenance.json", "stderr.log", "stdout.log"]
+        assert (directory / "run.mcap").stat().st_size > 0
+        provenance = json.loads(
+            (directory / "run.mcap.provenance.json").read_text())
+        assert provenance["recording"]["sha256"] == hashlib.sha256(
+            (directory / "run.mcap").read_bytes()).hexdigest()
+        assert json.loads((directory / "run.mcap.diagnostics.json")
+                          .read_text())["run"]["exit_code"] == 0
     # The summary alone is the evidence: it is valid after the Run
     # directories are gone.
     summary = tmp_path / "copied-summary.json"

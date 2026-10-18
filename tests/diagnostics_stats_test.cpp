@@ -61,6 +61,24 @@ void test_mean_is_the_exact_sum_over_the_count() {
         "mean: got " + std::to_string(*d.mean_ns()));
 }
 
+/** The mean rounds once: an integer part rounded first would round twice. */
+void test_mean_rounds_once() {
+  DurationDistribution small(1);
+  const uint64_t five_over_three[] = {1, 2, 2};
+  for (uint64_t i = 0; i < 3; i++) small.add(i, i, five_over_three[i]);
+  check(*small.mean_ns() == 1.6666666666666667,
+        "mean of 5 / 3: got " + std::to_string(*small.mean_ns()));
+  // Above 2^53 the sum is not exact as a double. The exact mean is
+  // 230186899950887696 + 1/3; the nearest double is 230186899950887712
+  // (doubles here are 32 apart), worked out with exact rationals.
+  DurationDistribution large(1);
+  const uint64_t big[] = {230186899950887696ull, 230186899950887696ull,
+                          230186899950887697ull};
+  for (uint64_t i = 0; i < 3; i++) large.add(i, i, big[i]);
+  check(large.sum_ns() == 690560699852663089ull, "large sum");
+  check(*large.mean_ns() == 230186899950887712.0, "mean above 2^53");
+}
+
 /** Nearest rank is ceil(p * n / 100), never an interpolation. */
 void test_nearest_rank_rounds_up() {
   // Five values, inserted out of order: p50 rank ceil(2.5) = 3.
@@ -173,6 +191,7 @@ int main() {
   try {
     test_moments_and_nearest_rank();
     test_mean_is_the_exact_sum_over_the_count();
+    test_mean_rounds_once();
     test_nearest_rank_rounds_up();
     test_tail_minimum_counts();
     test_empty_distribution();

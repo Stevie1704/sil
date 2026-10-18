@@ -453,6 +453,38 @@ def test_a_missing_native_tool_is_not_found(build_dir, tmp_path, present,
     assert f"cannot find {missing} on PATH" in proc.stderr
 
 
+def test_a_signal_while_the_runner_starts_is_forwarded(build_dir, tmp_path,
+                                                      monkeypatch):
+    """A signal between the spawn and the runner's first instruction is
+    held and forwarded, so a runner in its own session cannot outlive it."""
+    path = fake_tools(tmp_path, build_dir, "exec sleep 20\n")
+    spawn = subprocess.Popen
+
+    def spawn_then_signal(*args, **kwargs):
+        process = spawn(*args, **kwargs)
+        os.kill(os.getpid(), signal.SIGTERM)
+        return process
+
+    monkeypatch.setattr(subprocess, "Popen", spawn_then_signal)
+    unforwarded: list[int] = []
+    outer = signal.signal(signal.SIGTERM,
+                          lambda number, _frame: unforwarded.append(number))
+    started = time.monotonic()
+    try:
+        outcome = execute(RunRequest(Path("m.json"), Path("r.json")),
+                          NativeTools(path / "sil-run-diagnostics",
+                                      path / "sil-diagnostics-launcher"),
+                          cwd=tmp_path, stdout=subprocess.DEVNULL,
+                          stderr=ClosingSink())
+    finally:
+        signal.signal(signal.SIGTERM, outer)
+
+    assert unforwarded == []
+    assert outcome.supervisor_signal == signal.SIGTERM
+    assert outcome.signal == signal.SIGTERM
+    assert time.monotonic() - started < 10
+
+
 @pytest.mark.parametrize("termination_signal", [signal.SIGINT, signal.SIGTERM])
 def test_a_signal_to_sil_stops_the_run_and_its_descendants(
     native_path, tmp_path, termination_signal
@@ -627,3 +659,23 @@ def test_an_unwritable_html_report_exits_1_and_keeps_the_json(build_dir,
     assert json.loads((tmp_path / "out.mcap.diagnostics.json").read_text())[
         "run"]["exit_code"] == 0
     assert list(locked.iterdir()) == []
+
+
+def test_an_html_report_that_appears_during_the_run_is_never_replaced(
+    build_dir, tmp_path
+):
+    """Preflight found no HTML file; one created during the Run keeps its
+    content, the command exits 1, and no temporary file is left beside it."""
+    pages = tmp_path / "pages"
+    pages.mkdir()
+    page = pages / "run.html"
+    path = fake_tools(tmp_path, build_dir,
+                      f"printf earlier > '{page}'\n" + FAKE_SUCCESS)
+
+    proc = sil(["run", "m.json", "--html", "pages/run.html"], path, tmp_path)
+
+    assert proc.returncode == 1
+    assert "sil run: cannot write the HTML report 'pages/run.html': " \
+        in proc.stderr
+    assert page.read_text() == "earlier"
+    assert sorted(p.name for p in pages.iterdir()) == ["run.html"]

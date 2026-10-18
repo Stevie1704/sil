@@ -61,11 +61,34 @@ void DurationDistribution::keep_if_slow(const SlowActivation &activation) {
   if (slowest_.size() > kSlowestRetained) slowest_.pop_back();
 }
 
+namespace {
+
+// The double nearest to numerator / denominator (ties to even), for any
+// 64-bit operands. A plain double division rounds the numerator first once
+// it exceeds 2^53, and an integer part plus a fraction rounds twice. Here the
+// numerator is scaled until the integer quotient has at least 55 bits, so
+// that quotient plus a sticky bit for the remainder carries everything one
+// correct rounding to 53 bits needs.
+double correctly_rounded_quotient(uint64_t numerator, uint64_t denominator) {
+  if (numerator == 0) return 0.0;
+  using u128 = unsigned __int128;
+  const u128 at_least = u128(denominator) << 54;
+  u128 scaled = numerator;
+  int shift = 0;
+  while (scaled < at_least) {
+    scaled <<= 1;
+    shift++;
+  }
+  u128 quotient = scaled / denominator;
+  if (scaled % denominator != 0) quotient |= 1;
+  return std::ldexp(double(quotient), -shift);
+}
+
+}  // namespace
+
 std::optional<double> DurationDistribution::mean_ns() const {
   if (count_ == 0) return std::nullopt;
-  // Integer quotient plus remainder: the exact sum / count, with the
-  // fraction the only part that rounds.
-  return double(sum_ns_ / count_) + double(sum_ns_ % count_) / double(count_);
+  return correctly_rounded_quotient(sum_ns_, count_);
 }
 
 std::optional<double> DurationDistribution::stddev_ns() const {

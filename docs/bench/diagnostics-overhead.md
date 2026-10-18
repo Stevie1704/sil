@@ -19,9 +19,9 @@ Both come from:
 
 | Item | Value |
 | --- | --- |
-| Machine | MacBook Pro (`MacBookPro18,1`), Apple M1 Pro, 10 logical CPUs, 16 GiB, on mains power. A developer session that was not otherwise idle. |
+| Machine | MacBook Pro (`MacBookPro18,1`), Apple M1 Pro, 10 logical CPUs, 16 GiB, on battery power. A developer session that was not otherwise idle. |
 | Operating system | macOS 27.0.1, arm64 |
-| Build | SiL 0.1.0, revision `d2255cc8eda324bc580babb37eda682abbc377c6`, clean worktree, CMake `Release` |
+| Build | SiL 0.1.0, revision `f3dafbf929903e9fdac9f9cc5b185d0b1058117f`, clean worktree, CMake `Release` |
 | Report versions | `sil_run_diagnostics` 1, collector version 2 |
 
 This machine is **not** the supported machine class. SUPPORT.md names Linux
@@ -50,17 +50,17 @@ the Linux resource collector has limitations that macOS does not
 
 | Workload | Activations | Ordinary wall, median | Diagnostics wall, median | Ratio | Report Run wall, median |
 | --- | --- | --- | --- | --- | --- |
-| Native, 2 Tasks (1 ms, 5 ms), 100 s Duration | 120,000 | 86.2 ms | 94.5 ms | 1.096 | 41.0 ms |
-| the same, 1,000 s Duration | 1,200,000 | 665.2 ms | 699.6 ms | 1.052 | 303.9 ms |
-| 2 Native Tasks and a Python Process participant, 60 s Duration | 9,000 Native, 6,000 Process Steps | 195.6 ms | 200.9 ms | 1.027 | 181.1 ms |
+| Native, 2 Tasks (1 ms, 5 ms), 100 s Duration | 120,000 | 88.1 ms | 95.6 ms | 1.085 | 40.8 ms |
+| the same, 1,000 s Duration | 1,200,000 | 662.4 ms | 697.5 ms | 1.053 | 302.9 ms |
+| 2 Native Tasks and a Python Process participant, 60 s Duration | 9,000 Native, 6,000 Process Steps | 196.8 ms | 201.1 ms | 1.022 | 180.9 ms |
 
 Minimum and maximum of each series are in the generated tables. All 60 pairs
 wrote identical Recordings.
 
 - **Collector time.** On this machine and build, diagnostics added about
-  8 ms to the 100 s Native workload and about 34 ms to the 1,000 s one: about
+  7 ms to the 100 s Native workload and about 35 ms to the 1,000 s one: about
   30 to 70 ns per Native activation, including the timer reads around each
-  activation. For the Process workload, the added time (about 5 ms over 6,000
+  activation. For the Process workload, the added time (about 4 ms over 6,000
   Steps) is small next to the IPC cost of each Step. These values come from
   medians of noisy wall times; they are an order of magnitude, not a
   per-activation constant.
@@ -69,12 +69,15 @@ wrote identical Recordings.
   1,000 s), each Task still retained 8,192 samples, marked approximate, and
   the largest-process peak RSS of the diagnostics Run stayed at a median of
   5.3 MiB in both cases (4.4 MiB for the ordinary runner). The runner peak
-  RSS in the report was 4.5 and 4.6 MiB. The added memory depends on the
-  number of Tasks, not on the number of activations.
+  RSS in the report was 4.5 MiB in both. That is an observation on these
+  two workloads, not a guarantee. The guarantee is the bounded storage of
+  the collector design: each Task keeps at most 8,192 samples and the 20
+  slowest activations, whatever the number of activations.
 - **Outside the Run wall time.** For the 1,000 s workload, about 400 ms of the
   diagnostics wall time is outside the report's Run wall time. Most of it is
   the SHA-256 of the 1.2 million-Message Recording for the provenance
-  record: in one spot check, not part of the retained series, an ordinary
+  record: in one earlier spot check at revision `d2255cc`, not part of the
+  retained series and not repeated for this revision, an ordinary
   Run of the same Manifest took 0.12 s with `--no-recording` and 0.73 s
   with a Recording. That cost belongs to the Recording, not to
   diagnostics.

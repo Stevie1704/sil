@@ -7,6 +7,7 @@ identities, counts, structure, null reasons and the outcome.
 """
 
 import json
+import os
 import signal
 import subprocess
 import sys
@@ -332,6 +333,37 @@ class TestResources:
             assert total[key] == runner[key] + sum(
                 r[key] for r in processes.values())
 
+    def test_a_waited_grandchild_is_counted_once_in_its_participant(
+        self, sil_run_diagnostics, tmp_path
+    ):
+        """The grandchild's CPU is in the Process participant that waited for
+        it, not in the runner, so cpu_total counts it exactly once."""
+        burned_file = tmp_path / "burned"
+        m = toy_manifest(duration_ns=20 * MS)
+        m.add_process("burner", command=[
+            sys.executable, str(ROOT / "tests" / "participants" /
+                                "cpu_grandchild.py"),
+            str(burned_file), "0.5"], step_period_ns=10 * MS)
+        manifest = m.write(tmp_path / "burner.json").path
+
+        proc, report = run_diagnostics(sil_run_diagnostics, manifest, tmp_path)
+
+        assert proc.returncode == 0, proc.stderr
+        burned = int(burned_file.read_text())
+        resources, runner, processes = resource_records(report)
+        record = processes["burner"]
+        assert record["includes_waited_descendants"] is True
+
+        def cpu(r):
+            return r["user_cpu_ns"] + r["system_cpu_ns"]
+
+        # Bounds relative to what the grandchild burned, not to this host.
+        assert cpu(record) >= burned
+        assert cpu(runner) < burned
+        total = resources["cpu_total"]
+        assert cpu(total) == cpu(runner) + cpu(record)
+        assert burned <= cpu(total) < 2 * burned
+
     def test_no_member_sums_peak_memory(self, sil_run_diagnostics, tmp_path):
         """Peaks of different processes are never added into a total."""
         _, report = run_diagnostics(
@@ -432,6 +464,38 @@ def wedged_manifest(tmp_path: Path, observer: Path | None = None) -> Path:
         command.append(str(observer))
     m.add_process("wedged", command=command, step_period_ns=10 * MS)
     return m.write(tmp_path / "wedged.json").path
+
+
+PID_MARKER = ROOT / "tests" / "participants" / "pid_marker.py"
+
+
+@pytest.mark.parametrize("mode, options, exit_code", [
+    ("ok", [], 0),
+    ("fail", [], 1),
+    ("hang", ["--participant-timeout-ms", "200"], 1),
+])
+def test_no_participant_outlives_the_runner(sil_run_diagnostics, tmp_path,
+                                            mode, options, exit_code):
+    """After a normal end, a failed Participant and a participant timeout,
+    the Participant is reaped, and so measured, before the runner exits."""
+    marker = tmp_path / "pid"
+    m = toy_manifest(duration_ns=50 * MS)
+    m.add_process("marked", command=[sys.executable, str(PID_MARKER),
+                                     str(marker), mode],
+                  step_period_ns=10 * MS)
+    manifest = m.write(tmp_path / "marked.json").path
+
+    proc, report = run_diagnostics(sil_run_diagnostics, manifest, tmp_path,
+                                   *options)
+
+    assert proc.returncode == exit_code, proc.stderr
+    pid = int(marker.read_text())
+    # A reaped child is gone at once; a zombie or a live child still answers.
+    with pytest.raises(ProcessLookupError):
+        os.kill(pid, 0)
+    if RESOURCES_SUPPORTED:
+        _, _, processes = resource_records(report)
+        assert processes["marked"]["unavailable"] == {}
 
 
 class TestFailedRuns:
@@ -616,6 +680,42 @@ class TestReportPublication:
             "sil-run: ", "sil-run-diagnostics: "))
         assert "cannot write diagnostics report" in proc.stderr
         assert proc.stdout == ordinary.stdout
+
+
+    def test_a_report_that_appears_during_the_run_is_never_replaced(
+        self, sil_run_diagnostics, tmp_path
+    ):
+        """Preflight found no report; a file the Run creates later keeps its
+        content, and the runner leaves no temporary file beside it."""
+        reports = tmp_path / "reports"
+        reports.mkdir()
+        report = reports / "run.json"
+        m = toy_manifest(duration_ns=20 * MS)
+        m.add_channel("ticks", schema="toy.Counter")
+        m.add_channel("echo", schema="toy.Counter")
+        add_multitask(m)
+        echo = ROOT / "tests" / "participants" / "echo.py"
+        m.add_process(
+            "pyecho",
+            command=["/bin/sh", "-c",
+                     f"printf earlier > '{report}'; "
+                     f"exec '{sys.executable}' '{echo}'"],
+            step_period_ns=10 * MS,
+            subscribes=[SubscriberRoute("ticks",
+                                        capacity=COMPAT_ROUTE_CAPACITY)],
+            publishes=["echo"],
+        )
+        manifest = m.write(tmp_path / "late.json").path
+
+        proc = subprocess.run(
+            [str(sil_run_diagnostics), str(manifest), "--diagnostics-out",
+             str(report), "-o", str(tmp_path / "run.mcap")],
+            capture_output=True, text=True, cwd=tmp_path)
+
+        assert proc.returncode == 0, proc.stderr
+        assert "cannot write diagnostics report" in proc.stderr
+        assert report.read_text() == "earlier"
+        assert sorted(p.name for p in reports.iterdir()) == ["run.json"]
 
 
 class TestOrdinaryRunnerIsUnchanged:
