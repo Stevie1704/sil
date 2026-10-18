@@ -343,8 +343,9 @@ sil run manifest.json --no-recording --diagnostics  # out.mcap.diagnostics.json
   follows the stdout. It gives each value with its unit and scope, and an
   unavailable value as `unavailable (reason)`. A failed Run is marked
   `partial`. Peak resident memory is per process; no total is given.
-- `--html PATH` is reserved for the HTML report and is not available in this
-  version: it exits `2`.
+- `--html PATH` also writes a [standalone HTML report](#html-reports) of the
+  report after the Run, and implies `--diagnostics`. The JSON report is always
+  kept. The HTML path is checked with the report path before the Run.
 - Without a diagnostics option, `sil run` is `sil-run`, with no measurement.
 
 The diagnostics runner is the same kernel with a measurement collector. Its
@@ -356,8 +357,8 @@ it with diagnostics.
 | --- | --- |
 | the Run's code | The Run failed (`1`) or its Manifest is not valid (`2`). A partial report and summary are written where possible. |
 | `0` | The Run succeeded and the report was written. |
-| `1` | The Run succeeded, but the report is missing or not valid; or `sil-diagnostics-launcher` failed and no Run took place. stderr says which. |
-| `2` | Invalid options, or a rejected report path. |
+| `1` | The Run succeeded, but the report is missing or not valid, or the requested HTML report could not be written; or `sil-diagnostics-launcher` failed and no Run took place. stderr says which. |
+| `2` | Invalid options, or a rejected report or HTML path. |
 | `127` | `sil-run-diagnostics` or `sil-diagnostics-launcher` is not on `PATH`. |
 | `128+N` | The runner ended by signal `N`, for example SIGKILL. It wrote no report, and `sil` gives no metrics. |
 
@@ -403,17 +404,58 @@ sil benchmark manifest.json --repeats 10 --warmup 0 --out results \
   --diagnostics`, and no later Run starts.
 - A summary of `summary.json` goes to stdout after the last Run. The values
   are diagnostics-runner measurements, not timings of the ordinary `sil-run`.
-- `--html PATH` is reserved for the HTML report and is not available in this
-  version: it exits `2`.
+- `--html PATH` also writes a [standalone HTML report](#html-reports) of
+  `summary.json` after it. `PATH` may be inside `DIR`, for example
+  `--out results --html results/report.html`, but not `summary.json` or a Run
+  directory. Elsewhere its directory must exist. It is checked before the
+  first Run.
 
 | Exit | Meaning |
 | --- | --- |
-| `0` | Every Run succeeded and `summary.json` was written. |
+| `0` | Every Run succeeded and `summary.json` (and the HTML report, if asked for) was written. |
 | the first failure | The exit code `sil run --diagnostics` gives for the first failed Run: the Run's code, `1` for a missing report after a successful Run, `128+N` for a runner that ended by signal `N`. |
-| `1` | The Runs succeeded, but `summary.json` could not be written. |
-| `2` | Invalid options, or `--out` exists. |
+| `1` | The Runs succeeded, but `summary.json` or the HTML report could not be written. |
+| `2` | Invalid options, `--out` exists, or a rejected HTML path. |
 | `127` | `sil-run-diagnostics` or `sil-diagnostics-launcher` is not on `PATH`. |
 | `128+N` | Signal `N` stopped the benchmark between Runs. |
+
+## HTML reports
+
+An HTML report presents one saved report, a Run report or a benchmark
+summary, as a single page. It opens offline from the file, with no server,
+network, external font or other file, and it holds no measurement or
+statistic that is not in the JSON.
+
+```sh
+sil run manifest.json -o run.mcap --html run.html
+sil benchmark manifest.json --out results --html results/report.html
+sil diagnostics render results/summary.json --html copy.html
+```
+
+- `sil diagnostics render INPUT.json --html OUTPUT.html` renders a saved
+  `sil_run_diagnostics` or `sil_benchmark_report` file again. It executes
+  nothing and needs neither the Manifest, nor `sil-run`, nor the Run
+  directories: a copied `summary.json` is enough.
+- The page shows the status, identity, machine and policy, overview cards,
+  lifecycle phases, Task and resource tables, sampled timing distributions,
+  slow activations and, for a benchmark, every Run with per-Run charts, the
+  statistics and a Run selector. Values have the units of the terminal
+  summary; the tooltip of a value holds its exact JSON number.
+- The status, cards and tables are complete without JavaScript and in print.
+  The script only sorts and filters tables, selects a Run, switches the theme
+  and prepares the download. "Download JSON" saves the source report byte for
+  byte.
+- Names, paths and messages from a report are always text, never markup or
+  script. The page allows no network request.
+- The HTML file must be new and its directory must exist; an existing file is
+  never replaced. It is written through a temporary file, so a failure leaves
+  no partial page.
+
+| Exit of `sil diagnostics render` | Meaning |
+| --- | --- |
+| `0` | The HTML report was written. |
+| `1` | The HTML report could not be written. |
+| `2` | Invalid options; the input is missing, not valid JSON, not a valid report, or of an unknown version; or the output exists or has no directory. |
 
 ## Reading a Recording
 

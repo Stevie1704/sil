@@ -14,7 +14,9 @@ Valid examples of every case are in
 [tests/fixtures/diagnostics/](../tests/fixtures/diagnostics/).
 `sil.diagnostics_report` validates both documents (`load_report`,
 `parse_report`, `validate_run_report`, `validate_benchmark_report`). A reader
-must reject an unknown version.
+must reject an unknown version. `sil diagnostics render` presents either
+document as a standalone HTML page
+([docs/running.md](running.md#html-reports)).
 
 ## Conventions
 
