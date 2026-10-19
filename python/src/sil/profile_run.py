@@ -237,7 +237,7 @@ class PerfUnavailable(RuntimeError):
 def _sampling_options(request: ProfileRequest) -> list[str]:
     return ["-e", EVENT, "-F", str(request.frequency_hz), "-k", "monotonic",
             "--call-graph", f"dwarf,{request.stack_bytes}", "--buildid-mmap",
-            "-q"]
+            "-N", "-q"]
 
 
 def _paranoid() -> int | None:
@@ -494,6 +494,21 @@ def _perf_text(perf: Path, arguments: list[str], cache: Path, cwd: Path,
     return done.stdout.decode(errors="replace"), None
 
 
+def _add_to_cache(perf: Path, copy: Path, cache: Path, cwd: Path,
+                  timeout: int, log) -> bool:
+    """`perf buildid-cache -a`; its stderr goes to the log."""
+    try:
+        done = subprocess.run(
+            [str(perf), "buildid-cache", "-v", "-a", str(copy)],
+            capture_output=True, cwd=cwd, timeout=timeout,
+            env=_tool_environment(cache))
+    except (OSError, subprocess.TimeoutExpired) as error:
+        log.write(f"{copy}: {error}\n".encode())
+        return False
+    log.write(done.stdout[-STDERR_TAIL_BYTES:] + done.stderr[-STDERR_TAIL_BYTES:])
+    return done.returncode == 0
+
+
 def _lost_sample_records(stats: str | None) -> int:
     match = re.search(r"LOST_SAMPLES events:\s*(\d+)", stats or "")
     return int(match[1]) if match else 0
@@ -543,9 +558,15 @@ def export(perf: Path, request: ProfileRequest, layout: Layout,
         if path:
             build_ids[path] = build_id
             facts(path, build_id)
-    for copy in locator.captured_files().values():
-        _perf_text(perf, ["buildid-cache", "-a", str(copy)], layout.cache,
-                   cwd, timeout)
+    cache_log = layout.cpu / "perf-buildid-cache.stderr.txt"
+    with cache_log.open("ab") as log:
+        for path, copy in locator.captured_files().items():
+            if not _add_to_cache(perf, copy, layout.cache, cwd, timeout, log):
+                # The copy is removed with the temporary files, so a module
+                # that is not in the cache was not captured.
+                key = (path, build_ids.get(path))
+                known[key] = ModuleFacts("unavailable", "module_unavailable",
+                                         None)
     stats, _ = _perf_text(perf, ["report", *data, "--stats"], layout.cache,
                           cwd, timeout)
     script, problem = _perf_text(perf, ["script", *data, *SCRIPT_FIELDS],

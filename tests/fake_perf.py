@@ -151,6 +151,9 @@ def main() -> int:
         cache = Path(os.environ["PERF_BUILDID_DIR"])
         cache.mkdir(parents=True, exist_ok=True)
         added = Path(option(rest, "-a"))
+        if os.environ.get("FAKE_PERF_CACHE_FAIL"):
+            sys.stderr.write(f"Couldn't add {added}\n")
+            return 1
         (cache / added.name).write_bytes(added.read_bytes())
         return 0
     if command == "report":

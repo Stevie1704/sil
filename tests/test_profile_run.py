@@ -63,9 +63,9 @@ def exports(tmp_path) -> dict[str, str]:
 
 
 def sil(argv, tools: Path, cwd: Path, env: dict | None = None,
-        wait: bool = True, **kwargs):
+        wait: bool = True, system_path: str = "/usr/bin:/bin", **kwargs):
     environment = {**os.environ, **(env or {}),
-                   "PATH": os.pathsep.join([str(tools), "/usr/bin:/bin"])}
+                   "PATH": os.pathsep.join([str(tools), system_path])}
     command = [sys.executable, "-m", "sil.cli", "profile", *argv]
     if not wait:
         return subprocess.Popen(command, cwd=cwd, env=environment,
@@ -106,7 +106,8 @@ def test_a_successful_capture_writes_the_profile_directory(
         "cpu", "profile.json", "run.diagnostics.json", "run.mcap",
         "run.mcap.provenance.json"]
     assert sorted(p.name for p in (out / "cpu").iterdir()) == [
-        "buildid-cache", "perf-script.stderr.txt", "perf-srcline.stderr.txt",
+        "buildid-cache", "perf-buildid-cache.stderr.txt",
+        "perf-script.stderr.txt", "perf-srcline.stderr.txt",
         "perf.data", "samples.json"]
     assert not list(tmp_path.glob(".sil-run-*"))
     samples = json.loads((out / "cpu" / "samples.json").read_text())
@@ -135,7 +136,7 @@ def test_the_run_keeps_its_command_and_environment(tools, exports,
     arguments = record["record"]
     assert arguments[:arguments.index("-o")] == [
         "-e", "cpu-clock:u", "-F", "999", "-k", "monotonic",
-        "--call-graph", "dwarf,8192", "--buildid-mmap", "-q", "--control",
+        "--call-graph", "dwarf,8192", "--buildid-mmap", "-N", "-q", "--control",
         f"fifo:{os.path.realpath(tmp_path)}/prof/cpu/.control"]
     workload = arguments[arguments.index("--") + 1:]
     assert Path(workload[0]).name == "sil-diagnostics-launcher"
@@ -199,8 +200,9 @@ def test_missing_perf_is_an_actionable_preflight_error(tools, exports,
     manifest = mixed_period_manifest(tmp_path)
     (tools / "perf").unlink()
 
+    # Only the tools directory: a host can have perf in /usr/bin.
     proc = sil([str(manifest), "--out", "prof", "--collector", "cpu"], tools,
-               tmp_path, exports)
+               tmp_path, exports, system_path=str(tmp_path / "empty"))
 
     assert proc.returncode == 1
     assert "cannot find perf on PATH" in proc.stderr
@@ -400,6 +402,14 @@ def test_a_removed_module_is_captured_from_a_named_archive(
     assert module["material"] == "captured_modules_from"
     assert (tmp_path / "second" / "cpu" / "buildid-cache" / "fmu.so").exists()
     assert not (tmp_path / "second" / "cpu" / ".modules-from").exists()
+    failed = sil([str(manifest), "--out", "third", "--collector", "cpu",
+                  "--modules-from", str(archive)], tools, tmp_path,
+                 {**env, "FAKE_PERF_CACHE_FAIL": "1"})
+    assert failed.returncode == 0, failed.stderr
+    module, = profile(tmp_path / "third")["capture"]["modules"]
+    assert module["material"] == "unavailable"
+    assert "Couldn't add" in (tmp_path / "third" / "cpu" /
+                              "perf-buildid-cache.stderr.txt").read_text()
 
 
 def test_a_missing_modules_from_source_is_a_usage_error(tools, exports,

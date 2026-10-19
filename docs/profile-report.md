@@ -58,7 +58,7 @@ Run, retry, change the collector or the event, or change a host setting.
 
    ```sh
    perf record -e cpu-clock:u -F 999 -k monotonic \
-       --call-graph dwarf,8192 --buildid-mmap -q \
+       --call-graph dwarf,8192 --buildid-mmap -N -q \
        --control fifo:DIR/cpu/.control -o DIR/cpu/perf.data -- \
      sil-diagnostics-launcher --status-fd N sil-run-diagnostics MANIFEST \
        -o RECORDING --diagnostics-out DIR/run.diagnostics.json \
@@ -66,7 +66,9 @@ Run, retry, change the collector or the event, or change a host setting.
    ```
 
    in a new session, in the current directory, with the environment of the
-   command unchanged. perf follows every descendant of
+   command unchanged. `-N` keeps perf from filling the user's build-ID
+   cache (`~/.debug`): the profile depends on no file outside `DIR` except
+   the host modules it names. perf follows every descendant of
    the runner (`inherit`), so the scope is the runner and all its
    descendants. The Manifest bytes, the working directory, the Participant
    commands and their environment do not change.
@@ -130,7 +132,7 @@ is a `complete` capture; it is not evidence that no CPU time was used.
 | `cpu/perf.data` | Raw perf capture: authoritative. It contains copies of user stacks: process memory. |
 | `cpu/buildid-cache/` | perf build-ID cache with the captured modules. |
 | `cpu/samples.json` | Normalized samples: the offline input for reports (below). |
-| `cpu/perf-script.stderr.txt`, `cpu/perf-srcline.stderr.txt` | The last 64 KiB of each export's stderr. |
+| `cpu/perf-script.stderr.txt`, `cpu/perf-srcline.stderr.txt`, `cpu/perf-buildid-cache.stderr.txt` | The last 64 KiB of each export's output on stderr; for the cache, of each `perf buildid-cache -a`. A copy that perf did not add is not captured. |
 
 Raw stack copies can hold any data that was on a stack, also secrets. Share
 `perf.data` only as you would share a core dump. `samples.json` and

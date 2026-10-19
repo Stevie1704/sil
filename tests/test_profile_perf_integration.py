@@ -268,3 +268,7 @@ def test_a_mismatched_debug_file_gives_no_name_and_no_source_line(
     assert fmu and all(m["material"] == "unavailable" and m["build_id"]
                        for m in fmu)
     assert sum(m["samples_leaf"] for m in fmu) > 0
+    # Nothing outside the profile directory names them (perf record -N).
+    fmu_ids = {m["id"] for m in fmu}
+    assert all(f["symbol"] is None for f in document["frames"]
+               if f["module"] in fmu_ids)
