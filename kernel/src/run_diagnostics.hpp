@@ -105,6 +105,15 @@ void process_reaped(const std::string &participant, pid_t pid,
 bool observe_activations(const std::filesystem::path &path,
                          uint64_t limit_bytes, std::string &error);
 
+// Starts the Process participant `participant` as `wrapper COMMAND...`
+// instead of `COMMAND...` (#317): a profiler's adapter that must exec the
+// command, so the participant keeps its PID, pipes, working directory,
+// arguments and environment. The Manifest and its hash do not change.
+void wrap_launch(const std::string &participant,
+                 const std::filesystem::path &wrapper);
+// The wrapper of `participant`, or null.
+const std::string *launch_wrapper(const std::string &participant) noexcept;
+
 // Writes the report as a new file through a temporary sibling. Throws on any
 // write error; the caller reports it without changing the Run's exit code.
 void write_report(const std::filesystem::path &path, const RunFacts &facts);
@@ -183,6 +192,10 @@ inline void process_spawned(const std::string &, pid_t,
                             const SpawnTime &) noexcept {}
 inline void process_reaped(const std::string &, pid_t,
                            const rusage *) noexcept {}
+// No wrapper: the ordinary runner execs the Manifest command only.
+inline const std::string *launch_wrapper(const std::string &) noexcept {
+  return nullptr;
+}
 
 class Activation {
  public:
