@@ -164,6 +164,7 @@ Reasons in v1, in addition to the diagnostics reasons:
 | `unverifiable_debug_file` | The module has no build ID, so a separate debug file cannot be matched |
 | `symbolization_timeout` | A `perf script` pass took longer than the limit |
 | `export_failed` | A `perf script` pass failed or its output did not decode |
+| `no_samples` | The capture has no sample to describe |
 | `not_requested` | The option or collector was not requested |
 | `reserved` | Reserved for a later ticket; not measured by this version |
 
@@ -239,7 +240,7 @@ have no samples.
 | --- | --- |
 | `function_names` | `samples_with_name`: leaf frames with a function name |
 | `call_frame_unwinding` | `method` (`dwarf`), `samples_with_caller` |
-| `source_lines` | `status` (`available`, `partial`, `unavailable`), `scope` (`leaf_frames`), `samples_with_line`, `unavailable` |
+| `source_lines` | `status` (`available`, `partial`, `unavailable`), `scope` (`leaf_frames`), `samples_with_line` (null for `unavailable`), `unavailable` |
 | `inlined_frames` | `status` `not_requested`: the export uses `--no-inline`, so an inlined function is part of its caller's frame and no sample counts twice |
 
 Function names and DWARF call frames are separate capabilities: a module can

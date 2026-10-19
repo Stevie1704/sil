@@ -110,10 +110,12 @@
         "status": "not_requested"
       },
       "source_lines": {
-        "samples_with_line": 0,
+        "samples_with_line": null,
         "scope": "leaf_frames",
         "status": "unavailable",
-        "unavailable": {}
+        "unavailable": {
+          "samples_with_line": "no_samples"
+        }
       }
     },
     "threads": [],
