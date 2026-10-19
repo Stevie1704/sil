@@ -1,0 +1,588 @@
+{
+  "activation_correlation": {
+    "kind": "not_requested"
+  },
+  "artifacts": [
+    {
+      "bytes": 11800,
+      "path": "run.diagnostics.json",
+      "role": "diagnostics_report",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "bytes": 28039,
+      "path": "run.mcap",
+      "role": "recording",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    {
+      "bytes": 23145678,
+      "path": "cpu/perf.data",
+      "role": "perf_data",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    {
+      "bytes": 4012,
+      "path": "cpu/samples.json",
+      "role": "cpu_samples",
+      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  ],
+  "capture": {
+    "backend": {
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock:u",
+        "-F",
+        "999",
+        "-k",
+        "monotonic",
+        "--call-graph",
+        "dwarf,8192",
+        "--buildid-mmap",
+        "-q",
+        "--control",
+        "fifo:/work/profile/cpu/.control",
+        "-o",
+        "/work/profile/cpu/perf.data",
+        "--",
+        "/opt/sil/bin/sil-diagnostics-launcher",
+        "--status-fd",
+        "5",
+        "/opt/sil/bin/sil-run-diagnostics",
+        "manifest.json",
+        "-o",
+        "/work/profile/run.mcap",
+        "--participant-timeout-ms",
+        "60000",
+        "--diagnostics-out",
+        "/work/profile/run.diagnostics.json",
+        "--retain-run-directory",
+        "/work/profile/cpu/.run-directory"
+      ],
+      "exit_code": 0,
+      "name": "perf",
+      "signal": null,
+      "version": "perf version 6.17.13"
+    },
+    "call_graph": {
+      "method": "dwarf",
+      "stack_bytes": 8192
+    },
+    "hotspots": {
+      "inclusive": [
+        {
+          "inclusive_samples": 5,
+          "inclusive_weight_ns": 5005000,
+          "module": "m1",
+          "self_samples": 0,
+          "self_weight_ns": 0,
+          "source_lines": [],
+          "symbol": "sil::Engine::run()"
+        },
+        {
+          "inclusive_samples": 5,
+          "inclusive_weight_ns": 5005000,
+          "module": "m4",
+          "self_samples": 0,
+          "self_weight_ns": 0,
+          "source_lines": [],
+          "symbol": "native_task"
+        },
+        {
+          "inclusive_samples": 3,
+          "inclusive_weight_ns": 3003000,
+          "module": "m4",
+          "self_samples": 3,
+          "self_weight_ns": 3003000,
+          "source_lines": [
+            {
+              "file": "silproof_native.c",
+              "line": 40,
+              "samples": 3
+            }
+          ],
+          "symbol": "silproof_native_spin_even"
+        },
+        {
+          "inclusive_samples": 2,
+          "inclusive_weight_ns": 2002000,
+          "module": "m2",
+          "self_samples": 2,
+          "self_weight_ns": 2002000,
+          "source_lines": [
+            {
+              "file": "silproof_fmu.c",
+              "line": 31,
+              "samples": 2
+            }
+          ],
+          "symbol": "silproof_fmu_spin"
+        },
+        {
+          "inclusive_samples": 2,
+          "inclusive_weight_ns": 2002000,
+          "module": "m4",
+          "self_samples": 2,
+          "self_weight_ns": 2002000,
+          "source_lines": [
+            {
+              "file": "silproof_native.c",
+              "line": 47,
+              "samples": 2
+            }
+          ],
+          "symbol": "silproof_native_spin_odd"
+        },
+        {
+          "inclusive_samples": 1,
+          "inclusive_weight_ns": 1001000,
+          "module": "m1",
+          "self_samples": 1,
+          "self_weight_ns": 1001000,
+          "source_lines": [],
+          "symbol": "sil::sha256_file(std::filesystem::__cxx11::path const&)"
+        },
+        {
+          "inclusive_samples": 1,
+          "inclusive_weight_ns": 1001000,
+          "module": "m3",
+          "self_samples": 1,
+          "self_weight_ns": 1001000,
+          "source_lines": [
+            {
+              "file": "silproof_child.c",
+              "line": 12,
+              "samples": 1
+            }
+          ],
+          "symbol": "silproof_child_spin"
+        },
+        {
+          "inclusive_samples": 1,
+          "inclusive_weight_ns": 1001000,
+          "module": "m5",
+          "self_samples": 1,
+          "self_weight_ns": 1001000,
+          "source_lines": [],
+          "symbol": null
+        }
+      ],
+      "limit": 50,
+      "self": [
+        {
+          "inclusive_samples": 3,
+          "inclusive_weight_ns": 3003000,
+          "module": "m4",
+          "self_samples": 3,
+          "self_weight_ns": 3003000,
+          "source_lines": [
+            {
+              "file": "silproof_native.c",
+              "line": 40,
+              "samples": 3
+            }
+          ],
+          "symbol": "silproof_native_spin_even"
+        },
+        {
+          "inclusive_samples": 2,
+          "inclusive_weight_ns": 2002000,
+          "module": "m2",
+          "self_samples": 2,
+          "self_weight_ns": 2002000,
+          "source_lines": [
+            {
+              "file": "silproof_fmu.c",
+              "line": 31,
+              "samples": 2
+            }
+          ],
+          "symbol": "silproof_fmu_spin"
+        },
+        {
+          "inclusive_samples": 2,
+          "inclusive_weight_ns": 2002000,
+          "module": "m4",
+          "self_samples": 2,
+          "self_weight_ns": 2002000,
+          "source_lines": [
+            {
+              "file": "silproof_native.c",
+              "line": 47,
+              "samples": 2
+            }
+          ],
+          "symbol": "silproof_native_spin_odd"
+        },
+        {
+          "inclusive_samples": 1,
+          "inclusive_weight_ns": 1001000,
+          "module": "m1",
+          "self_samples": 1,
+          "self_weight_ns": 1001000,
+          "source_lines": [],
+          "symbol": "sil::sha256_file(std::filesystem::__cxx11::path const&)"
+        },
+        {
+          "inclusive_samples": 1,
+          "inclusive_weight_ns": 1001000,
+          "module": "m3",
+          "self_samples": 1,
+          "self_weight_ns": 1001000,
+          "source_lines": [
+            {
+              "file": "silproof_child.c",
+              "line": 12,
+              "samples": 1
+            }
+          ],
+          "symbol": "silproof_child_spin"
+        },
+        {
+          "inclusive_samples": 1,
+          "inclusive_weight_ns": 1001000,
+          "module": "m5",
+          "self_samples": 1,
+          "self_weight_ns": 1001000,
+          "source_lines": [],
+          "symbol": null
+        }
+      ],
+      "self_remainder": {
+        "samples": 0,
+        "weight_ns": 0
+      }
+    },
+    "kind": "cpu",
+    "limits": {
+      "capture_bytes": 23145678,
+      "limit_reached": false,
+      "max_capture_bytes": 1073741824,
+      "symbolization_timeout_s": 600
+    },
+    "modules": [
+      {
+        "build_id": "8f74bf67a9037f6d799a69ee6b6163ea127f25b2",
+        "debug": {
+          "path": null,
+          "status": "not_found"
+        },
+        "id": "m1",
+        "mappings": [
+          {
+            "file_offset": "0x1000",
+            "process": "p2",
+            "size": "0x80000",
+            "start": "0x555d4d0c0000"
+          }
+        ],
+        "material": "host_file",
+        "path": "/opt/sil/bin/sil-run-diagnostics",
+        "samples_leaf": 1,
+        "samples_unknown_symbol": 0,
+        "unavailable": {}
+      },
+      {
+        "build_id": "243704ef884fedb46634fd686ff00c8e2c243ad8",
+        "debug": {
+          "path": null,
+          "status": "embedded"
+        },
+        "id": "m2",
+        "mappings": [
+          {
+            "file_offset": "0x1000",
+            "process": "p3",
+            "size": "0x1000",
+            "start": "0x7f6c4a4ee000"
+          }
+        ],
+        "material": "captured_modules_from",
+        "path": "/work/.sil-run-hGXqH9/participant-666d75/sil-fmu-2n47get4/binaries/x86_64-linux/EgoMotion.so",
+        "samples_leaf": 2,
+        "samples_unknown_symbol": 0,
+        "unavailable": {}
+      },
+      {
+        "build_id": "1a2bf19593cc4c0ea6fcfcae75ad6a4d5c52c4e7",
+        "debug": {
+          "path": null,
+          "status": "embedded"
+        },
+        "id": "m3",
+        "mappings": [
+          {
+            "file_offset": "0x1000",
+            "process": "p4",
+            "size": "0x1000",
+            "start": "0x559a6121a000"
+          }
+        ],
+        "material": "host_file",
+        "path": "/work/build/bin/silproof_child",
+        "samples_leaf": 1,
+        "samples_unknown_symbol": 0,
+        "unavailable": {}
+      },
+      {
+        "build_id": "bcd7e6ac947d4fcecfca3af39c6c952a2e2e72a2",
+        "debug": {
+          "path": "/work/build/lib/libsilproof_native.so.debug",
+          "status": "separate_matching"
+        },
+        "id": "m4",
+        "mappings": [
+          {
+            "file_offset": "0x1000",
+            "process": "p2",
+            "size": "0x1000",
+            "start": "0x7fcdf660d000"
+          }
+        ],
+        "material": "host_file",
+        "path": "/work/build/lib/libsilproof_native.so",
+        "samples_leaf": 5,
+        "samples_unknown_symbol": 0,
+        "unavailable": {}
+      },
+      {
+        "build_id": "e3016ebb4644e991b76c6f094343f22049d71675",
+        "debug": {
+          "path": null,
+          "status": "separate_mismatched"
+        },
+        "id": "m5",
+        "mappings": [
+          {
+            "file_offset": "0x1000",
+            "process": "p3",
+            "size": "0x1000",
+            "start": "0x7fd0d3416000"
+          }
+        ],
+        "material": "host_file",
+        "path": "/work/build/lib/libsilproof_process.so",
+        "samples_leaf": 1,
+        "samples_unknown_symbol": 1,
+        "unavailable": {}
+      }
+    ],
+    "processes": [
+      {
+        "commands": [
+          "perf",
+          "sil-diagnostics"
+        ],
+        "end_offset_ns": 120000000,
+        "execs": 1,
+        "exited": true,
+        "forked": false,
+        "id": "p1",
+        "parent": null,
+        "pid": 7020,
+        "role": "launcher",
+        "samples": 0,
+        "start_offset_ns": 0,
+        "threads": 1,
+        "weight_ns": 0
+      },
+      {
+        "commands": [
+          "sil-diagnostics",
+          "sil-run-diagnos"
+        ],
+        "end_offset_ns": 119000000,
+        "execs": 1,
+        "exited": true,
+        "forked": true,
+        "id": "p2",
+        "parent": "p1",
+        "pid": 7021,
+        "role": "runner",
+        "samples": 6,
+        "start_offset_ns": 100000,
+        "threads": 1,
+        "weight_ns": 6006000
+      },
+      {
+        "commands": [
+          "sil-run-diagnos",
+          "python3"
+        ],
+        "end_offset_ns": 110000000,
+        "execs": 1,
+        "exited": true,
+        "forked": true,
+        "id": "p3",
+        "parent": "p2",
+        "pid": 7022,
+        "role": "descendant",
+        "samples": 3,
+        "start_offset_ns": 20000000,
+        "threads": 1,
+        "weight_ns": 3003000
+      },
+      {
+        "commands": [
+          "python3",
+          "silproof_child"
+        ],
+        "end_offset_ns": 31000000,
+        "execs": 1,
+        "exited": true,
+        "forked": true,
+        "id": "p4",
+        "parent": "p3",
+        "pid": 7023,
+        "role": "descendant",
+        "samples": 1,
+        "start_offset_ns": 30000000,
+        "threads": 1,
+        "weight_ns": 1001000
+      }
+    ],
+    "reasons": [],
+    "samples_file": "cpu/samples.json",
+    "sampling": {
+      "clock": "host_monotonic",
+      "event": "cpu-clock:u",
+      "event_type": "software",
+      "frequency_hz": 999,
+      "mode": "frequency",
+      "privilege": "user",
+      "weight": "period",
+      "weight_unit": "cpu_clock_ns"
+    },
+    "scope": {
+      "inherit": true,
+      "kind": "runner_and_descendants",
+      "pid_namespace": "collector"
+    },
+    "status": "complete",
+    "symbolization": {
+      "call_frame_unwinding": {
+        "method": "dwarf",
+        "samples_with_caller": 10
+      },
+      "function_names": {
+        "samples_with_name": 9
+      },
+      "inlined_frames": {
+        "status": "not_requested"
+      },
+      "source_lines": {
+        "samples_with_line": 8,
+        "scope": "leaf_frames",
+        "status": "partial",
+        "unavailable": {}
+      }
+    },
+    "threads": [
+      {
+        "commands": [
+          "perf",
+          "sil-diagnostics"
+        ],
+        "id": "t1",
+        "process": "p1",
+        "samples": 0,
+        "tid": 7020,
+        "weight_ns": 0
+      },
+      {
+        "commands": [
+          "sil-diagnostics",
+          "sil-run-diagnos"
+        ],
+        "id": "t2",
+        "process": "p2",
+        "samples": 6,
+        "tid": 7021,
+        "weight_ns": 6006000
+      },
+      {
+        "commands": [
+          "sil-run-diagnos",
+          "python3"
+        ],
+        "id": "t3",
+        "process": "p3",
+        "samples": 3,
+        "tid": 7022,
+        "weight_ns": 3003000
+      },
+      {
+        "commands": [
+          "python3",
+          "silproof_child"
+        ],
+        "id": "t4",
+        "process": "p4",
+        "samples": 1,
+        "tid": 7023,
+        "weight_ns": 1001000
+      }
+    ],
+    "time_origin_ns": "272755902035",
+    "totals": {
+      "lost_records": 0,
+      "lost_samples": 0,
+      "samples": 10,
+      "samples_unknown_module": 0,
+      "samples_unknown_symbol": 1,
+      "samples_with_caller": 10,
+      "unavailable": {},
+      "weight_ns": 10010000
+    },
+    "unavailable": {}
+  },
+  "configuration": {
+    "collector": "cpu",
+    "cwd": "/work",
+    "max_protocol_line_bytes": null,
+    "max_step_inline_payload_bytes": null,
+    "max_step_output_messages": null,
+    "participant_timeout_ms": 60000,
+    "recording": "/work/profile/run.mcap"
+  },
+  "host": {
+    "architecture": "x86_64",
+    "kernel_release": "6.17.0-1022-azure",
+    "os": "Linux",
+    "perf_event_paranoid": 2,
+    "unavailable": {}
+  },
+  "identity": {
+    "manifest_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "manifest_path": "manifest.json",
+    "sil_version": "0.2.0",
+    "source_repository": "https://github.com/Stevie1704/sil",
+    "source_revision": "d59dffb",
+    "unavailable": {}
+  },
+  "limitations": [
+    "cpu_samples_estimate_on_cpu_time",
+    "user_space_only",
+    "scope_is_runner_and_descendants",
+    "host_build_only"
+  ],
+  "producer": {
+    "name": "sil profile",
+    "sil_version": "0.2.0"
+  },
+  "run": {
+    "diagnostics_report": "run.diagnostics.json",
+    "exit_code": 1,
+    "failure": {
+      "category": "participant",
+      "message": "participant 'process' failed: boom"
+    },
+    "signal": null,
+    "status": "run_failure",
+    "supervisor_signal": null
+  },
+  "sil_profile_report": 1
+}

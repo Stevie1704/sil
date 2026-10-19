@@ -386,3 +386,8 @@ def _check_aggregates(aggregates: dict, successful: int,
                 errors.append(f"{where}: missing '{statistic}'")
             elif successful == 0 and metric[statistic] is not None:
                 errors.append(f"{where}: '{statistic}' without a sample")
+
+
+# The shared conventions, for the other versioned contracts (sil.profile_report).
+check_finite = _check_finite
+check_reasons = _check_reasons
