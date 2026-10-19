@@ -15,6 +15,9 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Callable
 
 from sil.diagnostics_report import check_finite, check_reasons
+from sil.profile_activation import (
+    CLASSES, CORRELATION_REASONS, PHASES, UNATTRIBUTED_REASONS,
+)
 from sil.diagnostics_shape import (
     COUNT, FLAG, INTEGER, TEXT, Shape, items, maybe, members, reasoned,
     shape_errors,
@@ -38,6 +41,8 @@ MATERIALS = {"host_file", "captured_run_directory", "captured_modules_from",
              "unavailable"}
 PROCESS_ROLES = {"launcher", "runner", "descendant"}
 SOURCE_LINE_STATUSES = {"available", "partial", "unavailable"}
+CORRELATION_STATUSES = {"complete", "partial", "unavailable", "failed"}
+MAPPINGS = {"verified", "not_observed", "ambiguous"}
 
 
 class ProfileReportError(ValueError):
@@ -149,11 +154,44 @@ HEAP_CAPTURE = reasoned(
      "backend": reasoned({"name": TEXT}, {"version": TEXT}),
      "scope": HEAP_SCOPE},
     {"raw": TEXT, "analysis": members({})})
+COUNTS = members(SAMPLE_TOTALS)
+ACTIVATION_SUMMARY = members({
+    "interval": one_of({"half_open"}),
+    "correlation_file": TEXT,
+    "stream": reasoned(
+        {"records": COUNT, "truncated": FLAG, "write_failed": FLAG,
+         "terminated": FLAG, "limit_bytes": COUNT,
+         "undecodable_lines": COUNT},
+        {"dropped": COUNT}),
+    "intervals": members({"activations": COUNT, "process_steps": COUNT,
+                          "replay": COUNT, "phases": COUNT}),
+    "processes": items(members({"participant": TEXT, "pid": INTEGER,
+                                "process": maybe(TEXT),
+                                "mapping": one_of(MAPPINGS)})),
+    "samples": members({
+        "total": COUNTS,
+        **{name: COUNTS for name in CLASSES if name != "unattributed"},
+        "unattributed": members({
+            **SAMPLE_TOTALS,
+            "reasons": items(members({
+                "reason": one_of(set(UNATTRIBUTED_REASONS)),
+                **SAMPLE_TOTALS}))})}),
+    "tasks": items(members({
+        "participant": TEXT, "task": TEXT,
+        "kind": one_of({"native_task", "process_step"}),
+        "activations": COUNT, "completed": COUNT, "failed": COUNT,
+        "interrupted": COUNT, "with_samples": COUNT,
+        "without_samples": COUNT, "execution_context": COUNTS,
+        "window_associated": COUNTS})),
+    "lifecycle": items(members({"phase": one_of(set(PHASES)),
+                                **SAMPLE_TOTALS})),
+})
 CORRELATION = variant({
     "not_requested": members({}),
     "activation": reasoned(
-        STATUS_AND_REASONS,
-        {"clock": TEXT, "observations": TEXT, "summary": members({})}),
+        {**STATUS_AND_REASONS, "status": one_of(CORRELATION_STATUSES)},
+        {"clock": one_of({"host_monotonic"}), "observations": TEXT,
+         "summary": ACTIVATION_SUMMARY}),
 })
 REPORT = members({
     "producer": members({"name": TEXT, "sil_version": TEXT}),
@@ -238,10 +276,67 @@ def validate_profile_report(document: Any) -> list[str]:
     correlation = document["activation_correlation"]
     if correlation["kind"] == "activation":
         _check_status(correlation, "activation_correlation", errors)
-        if correlation["summary"] is not None:
-            errors.append("activation_correlation.summary is reserved and "
-                          "must be null in version 1")
+        _check_correlation(correlation, capture, errors)
     return errors
+
+
+def _check_correlation(correlation: dict, capture: dict,
+                       errors: list[str]) -> None:
+    where = "activation_correlation"
+    unknown = set(correlation["reasons"]) - CORRELATION_REASONS - {"reserved"}
+    if unknown:
+        errors.append(f"{where}.reasons: unknown reasons {sorted(unknown)}")
+    status, summary = correlation["status"], correlation["summary"]
+    if status in ("complete", "partial") and summary is None:
+        errors.append(f"{where}: status {status!r} without a summary")
+    if status in ("unavailable", "failed") and summary is not None:
+        errors.append(f"{where}: status {status!r} with a summary")
+    if summary is None:
+        return
+    where += ".summary"
+    samples = summary["samples"]
+    total = samples["total"]
+    if capture["kind"] == "cpu":
+        for key in SAMPLE_TOTALS:
+            if total[key] != capture["totals"][key]:
+                errors.append(f"{where}.samples.total.{key} is {total[key]}, "
+                              f"capture.totals.{key} is "
+                              f"{capture['totals'][key]}")
+    sums = [
+        ([samples[name] for name in CLASSES], total,
+         "samples: the classes add up to", "total"),
+        (samples["unattributed"]["reasons"], samples["unattributed"],
+         "samples.unattributed: the reasons add up to", "unattributed"),
+        (summary["lifecycle"], samples["lifecycle"],
+         "lifecycle: the phases add up to", "samples.lifecycle"),
+    ]
+    for parts, whole, text, name in sums:
+        for key in SAMPLE_TOTALS:
+            added = sum(part[key] for part in parts)
+            if added != whole[key]:
+                unit = "samples" if key == "samples" else "ns of weight"
+                errors.append(f"{where}.{text} {added} {unit}, {name} is "
+                              f"{whole[key]}")
+    for name in ("execution_context", "window_associated"):
+        added = sum(t[name]["samples"] for t in summary["tasks"])
+        if added != samples[name]["samples"]:
+            errors.append(f"{where}.tasks: {name} samples add up to {added}, "
+                          f"samples.{name} is {samples[name]['samples']}")
+    for index, task in enumerate(summary["tasks"]):
+        if task["completed"] + task["failed"] + task["interrupted"] != \
+                task["activations"] or task["with_samples"] + \
+                task["without_samples"] != task["activations"]:
+            errors.append(f"{where}.tasks[{index}]: counts do not add up to "
+                          "activations")
+    known = ({p["id"] for p in capture["processes"]}
+             if capture["kind"] == "cpu" else set())
+    for index, row in enumerate(summary["processes"]):
+        if (row["mapping"] == "verified") != (row["process"] is not None):
+            errors.append(f"{where}.processes[{index}]: a process is given "
+                          "exactly for 'verified'")
+        elif row["process"] is not None and row["process"] not in known:
+            errors.append(f"{where}.processes[{index}].process: unknown "
+                          f"process {row['process']!r}")
 
 
 def _check_status(record: dict, where: str, errors: list[str]) -> None:

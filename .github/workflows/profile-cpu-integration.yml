@@ -1,9 +1,10 @@
 name: profile-cpu-integration
 
-# `sil profile --collector cpu` with the real Linux perf (#315) on the
-# supported machine class, Linux x86-64/glibc, natively as the unprivileged
-# runner user. It needs apt for perf and one disclosed host change
-# (kernel.perf_event_paranoid), so it sits outside the general push gate. It
+# `sil profile --collector cpu` with the real Linux perf (#315), also with
+# the Activation join (#316), on the supported machine class, Linux
+# x86-64/glibc, natively as the unprivileged runner user. It needs apt for
+# perf and one disclosed host change (kernel.perf_event_paranoid), so it
+# sits outside the general push gate. It
 # runs for PRs that touch the profiler and on demand. Its checks are
 # presence and identity checks; no check uses a time or a sample share.
 
@@ -13,6 +14,10 @@ on:
       - 'python/src/sil/profile_*.py'
       - 'python/src/sil/diagnostics_run.py'
       - 'kernel/src/main.cpp'
+      - 'kernel/src/run_diagnostics.*'
+      - 'kernel/src/observation_log.*'
+      - 'kernel/src/process_participant.cpp'
+      - 'kernel/src/engine.cpp'
       - 'kernel/src/owned_directory.*'
       - 'kernel/src/diagnostics_launcher.c'
       - 'proofs/profiling/workload.py'
@@ -75,7 +80,7 @@ jobs:
           SIL_PROFILE_PERF: available
           SIL_SKIP_BUILD: '1'
           SIL_PROFILE_EVIDENCE: ${{ env.EVIDENCE }}
-        run: .venv/bin/python -m pytest tests/test_profile_perf_integration.py tests/test_profile_run.py tests/test_run_directory_retention.py -v -rs
+        run: .venv/bin/python -m pytest tests/test_profile_perf_integration.py tests/test_profile_run.py tests/test_profile_activation.py tests/test_activation_observations.py tests/test_run_directory_retention.py -v -rs
 
       # perf.data holds copies of user stacks; the workload holds no secret,
       # and the artifact is kept as the evidence of this run.

@@ -272,3 +272,99 @@ def test_a_mismatched_debug_file_gives_no_name_and_no_source_line(
     fmu_ids = {m["id"] for m in fmu}
     assert all(f["symbol"] is None for f in document["frames"]
                if f["module"] in fmu_ids)
+
+
+# --- Activation correlation (#316) -------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def correlated(workload, built, build_dir, tmp_path_factory):
+    """One capture with --activations, on the same workload."""
+    if MODE != "available":
+        pytest.skip("the perf-capable host")
+    cwd = tmp_path_factory.mktemp("correlated")
+    tools = cwd / "tools"
+    tools.mkdir()
+    for name in NATIVE:
+        (tools / name).symlink_to(build_dir / name)
+    with_debug_beside(built, built.native_debug)
+    manifest = write_manifest(workload, built, cwd / "manifest.json")
+    proc = profile_run(tools, cwd, manifest, "prof", "--modules-from",
+                       str(built.fmu), "--activations")
+    keep(cwd / "prof", "correlated")
+    return cwd, proc
+
+
+def contexts_by_leaf(out: Path) -> dict[str, list]:
+    """The correlation class of each sample, per leaf symbol."""
+    document = samples_document(out)
+    correlation = json.loads(
+        (out / "activation" / "correlation.json").read_text())
+    rows = correlation["activations"]
+    found: dict[str, list] = {}
+    for sample, (kind, ref) in zip(document["samples"],
+                                   correlation["samples"]):
+        frame = document["frames"][document["stacks"][sample[4]][0]]
+        owner = rows[ref]["participant"] if kind in (
+            "execution_context", "window_associated") else ref
+        found.setdefault(frame["symbol"], []).append((kind, owner))
+    return found
+
+
+def test_the_join_is_proven_and_complete(correlated):
+    cwd, proc = correlated
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    report = json.loads((cwd / "prof" / "profile.json").read_text())
+    assert validate_profile_report(report) == []
+    correlation = report["activation_correlation"]
+    assert (correlation["status"], correlation["clock"]) == (
+        "complete", "host_monotonic")
+    mapping = {p["participant"]: p["mapping"]
+               for p in correlation["summary"]["processes"]}
+    assert mapping == {"fmu": "verified", "process": "verified"}
+
+
+def test_native_hot_samples_carry_their_task_context(correlated):
+    cwd, _ = correlated
+    found = contexts_by_leaf(cwd / "prof")
+
+    for function in HOT["native"]:
+        assert found[function]
+        assert set(found[function]) == {("execution_context", "native")}
+
+
+def test_process_samples_are_window_associated_with_their_step(correlated):
+    # The Clock shim makes the participant's own clock Virtual time; the
+    # samples keep host time, so they fall inside the runner's host Step
+    # intervals. The Recording check below shows that Participant time
+    # stayed Virtual time in the same Run.
+    cwd, _ = correlated
+    found = contexts_by_leaf(cwd / "prof")
+
+    for participant in ("process", "fmu"):
+        for function in HOT[participant]:
+            assert found[function]
+            assert set(found[function]) == {
+                ("window_associated", participant)}
+    # A short-lived child belongs to the shimmed participant's tree; it is
+    # never in the runner thread's execution context.
+    assert found["silproof_child_spin"]
+    assert {kind for kind, _ in found["silproof_child_spin"]} <= {
+        "window_associated", "unattributed"}
+
+
+def test_participant_time_stays_virtual_with_activations(correlated,
+                                                         build_dir):
+    # clock_now_ns in the Recording is the shimmed participant's own
+    # CLOCK_MONOTONIC reading. Equal bytes to an ordinary Run show that it
+    # is Virtual time: two host readings of two Runs cannot be equal.
+    cwd, _ = correlated
+    ordinary = subprocess.run(
+        [str(build_dir / "sil-run"), str(cwd / "manifest.json"), "-o",
+         str(cwd / "ordinary.mcap"), "--participant-timeout-ms", "60000"],
+        cwd=cwd, capture_output=True, text=True)
+
+    assert ordinary.returncode == 0, ordinary.stderr
+    assert (cwd / "prof" / "run.mcap").read_bytes() == \
+        (cwd / "ordinary.mcap").read_bytes()

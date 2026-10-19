@@ -29,7 +29,8 @@ def test_every_documented_case_has_a_fixture():
             "cpu-not-started", "cpu-interrupted", "cpu-capture-absent",
             "cpu-runner-killed", "heap-reserved-runner",
             "heap-reserved-process", "heap-unsupported-scope",
-            "activation-reserved"} <= names
+            "activation-reserved", "activation-complete",
+            "activation-partial-truncated"} <= names
 
 
 @pytest.mark.parametrize("path", VALID, ids=lambda p: p.stem)
@@ -79,6 +80,20 @@ EXPECTED_VIOLATION = {
                               "in version 1",
     "heap-unknown-scope-kind": "capture.scope.kind: unknown kind "
                                "'native_participant'",
+    "activation-classes-do-not-add-up":
+        "activation_correlation.summary.samples: the classes add up to 11 "
+        "samples, total is 10",
+    "activation-unknown-unattributed-reason":
+        "activation_correlation.summary.samples.unattributed.reasons[0]."
+        "reason: unknown value 'probably_the_fmu'",
+    "activation-task-windows-do-not-add-up":
+        "activation_correlation.summary.tasks: window_associated samples "
+        "add up to 2, samples.window_associated is 3",
+    "activation-complete-without-summary":
+        "activation_correlation: status 'complete' without a summary",
+    "activation-unknown-process":
+        "activation_correlation.summary.processes[0].process: unknown "
+        "process 'p9'",
 }
 
 
