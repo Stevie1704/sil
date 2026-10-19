@@ -29,6 +29,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -574,24 +575,63 @@ class Export:
 
 
 def _perf_text(perf: Path, arguments: list[str], cache: Path, cwd: Path,
-               timeout: int, stderr_file: Path | None = None):
-    """stdout of one perf analysis command, or None with a reason."""
-    try:
-        done = subprocess.run(_analysis(perf, cache, *arguments),
-                              capture_output=True,
-                              cwd=cwd, timeout=timeout,
-                              env=_tool_environment())
-    except subprocess.TimeoutExpired as expired:
+               timeout: int, limit: int, stderr_file: Path | None = None):
+    """stdout of one perf analysis command, or None with a reason. The
+    output is read up to `limit` bytes; above it the command is stopped, so
+    the export holds a bounded text in memory."""
+    with tempfile.TemporaryFile() as errors:
+        try:
+            process = subprocess.Popen(
+                _analysis(perf, cache, *arguments), stdout=subprocess.PIPE,
+                stderr=errors, cwd=cwd, env=_tool_environment())
+        except OSError:
+            return None, "export_failed"
+        reader = _BoundedRead(process, limit)
+        reader.start()
+        try:
+            process.wait(timeout=timeout)
+            problem = None
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+            problem = "symbolization_timeout"
+        reader.join()
+        if reader.overflow:
+            errors.write(f"\n{PROG}: the output is larger than the export "
+                         f"limit of {limit} bytes; it was stopped\n".encode())
         if stderr_file is not None:
-            stderr_file.write_bytes((expired.stderr or b"")[-STDERR_TAIL_BYTES:])
-        return None, "symbolization_timeout"
-    except OSError:
+            errors.seek(max(0, errors.tell() - STDERR_TAIL_BYTES))
+            stderr_file.write_bytes(errors.read())
+    if problem is not None:
+        return None, problem
+    if reader.overflow or process.returncode != 0:
         return None, "export_failed"
-    if stderr_file is not None:
-        stderr_file.write_bytes(done.stderr[-STDERR_TAIL_BYTES:])
-    if done.returncode != 0:
-        return None, "export_failed"
-    return done.stdout.decode(errors="replace"), None
+    return b"".join(reader.chunks).decode(errors="replace"), None
+
+
+class _BoundedRead(threading.Thread):
+    """Reads a process's stdout up to a limit; at the limit it stops the
+    process and drops the rest."""
+
+    def __init__(self, process: subprocess.Popen, limit: int):
+        super().__init__(daemon=True)
+        self._process = process
+        self._limit = limit
+        self.chunks: list[bytes] = []
+        self.overflow = False
+
+    def run(self) -> None:
+        size = 0
+        stream = self._process.stdout
+        for chunk in iter(lambda: stream.read(1 << 16), b""):
+            size += len(chunk)
+            if size > self._limit:
+                self.overflow = True
+                self.chunks.clear()
+                self._process.kill()
+                break
+            self.chunks.append(chunk)
+        stream.close()
 
 
 def _add_to_cache(perf: Path, copy: Path, cache: Path, cwd: Path,
@@ -635,11 +675,19 @@ def _module_sources(request: ProfileRequest, layout: Layout,
     return tuple(sources)
 
 
+def export_limit(request: ProfileRequest) -> int:
+    """The output limit of each perf analysis pass: twice the capture
+    limit. perf's text of a sample is smaller than its stack copy in
+    perf.data, so the limit only stops an export out of proportion."""
+    return 2 * request.max_capture_bytes
+
+
 def export(perf: Path, request: ProfileRequest, layout: Layout,
            cwd: Path) -> Export:
     """Capture the retained modules, then export and normalize."""
     layout.cache.mkdir(exist_ok=True)
     timeout = request.symbolization_timeout_s
+    limit = export_limit(request)
     data = ["-i", str(layout.perf_data)]
     locator = ModuleLocator(cwd=cwd, retained=layout.retained,
                             sources=_module_sources(request, layout, cwd))
@@ -651,7 +699,7 @@ def export(perf: Path, request: ProfileRequest, layout: Layout,
         return known[path, build_id]
 
     listing, _ = _perf_text(perf, ["buildid-list", *data], layout.cache, cwd,
-                            timeout)
+                            timeout, limit)
     build_ids = {}
     for line in (listing or "").splitlines():
         build_id, _, path = line.strip().partition(" ")
@@ -668,13 +716,13 @@ def export(perf: Path, request: ProfileRequest, layout: Layout,
                 known[key] = ModuleFacts("unavailable", "module_unavailable",
                                          None)
     stats, _ = _perf_text(perf, ["report", *data, "--stats"], layout.cache,
-                          cwd, timeout)
+                          cwd, timeout, limit)
     script, problem = _perf_text(perf, ["script", *data, *SCRIPT_FIELDS],
-                                 layout.cache, cwd, timeout,
+                                 layout.cache, cwd, timeout, limit,
                                  layout.cpu / "perf-script.stderr.txt")
     srclines, srcline_problem = _perf_text(
         perf, ["script", *data, *SRCLINE_FIELDS], layout.cache, cwd, timeout,
-        layout.cpu / "perf-srcline.stderr.txt")
+        limit, layout.cpu / "perf-srcline.stderr.txt")
     if script is None:
         return Export(None, "export_failed")
     analysis = normalize_cpu(script, srclines=srclines, facts=facts,

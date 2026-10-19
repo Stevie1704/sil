@@ -327,6 +327,28 @@ def test_an_export_failure_keeps_the_raw_capture(tools, exports, tmp_path):
         tmp_path / "prof" / "cpu" / "perf-script.stderr.txt").read_text()
 
 
+def test_an_export_above_its_limit_fails_the_capture_not_the_run(
+        tools, exports, tmp_path):
+    # docs/profile-report.md: each perf script pass may write at most twice
+    # --max-capture-bytes. The canned export is larger than 2 x 200 bytes;
+    # the fake perf.data is smaller than 200 bytes.
+    assert Path(exports["FAKE_PERF_SCRIPT"]).stat().st_size > 400
+    manifest = mixed_period_manifest(tmp_path)
+
+    proc = sil([str(manifest), "--out", "prof", "--collector", "cpu",
+                "--max-capture-bytes", "200"], tools, tmp_path, exports)
+
+    assert proc.returncode == 1
+    report = profile(tmp_path / "prof")
+    assert report["run"]["status"] == "succeeded"
+    assert report["capture"]["status"] == "failed"
+    assert report["capture"]["reasons"] == ["export_failed"]
+    assert report["capture"]["samples_file"] is None
+    assert (tmp_path / "prof" / "cpu" / "perf.data").exists()
+    assert "export limit of 400 bytes" in (
+        tmp_path / "prof" / "cpu" / "perf-script.stderr.txt").read_text()
+
+
 def test_lost_samples_make_a_partial_capture(tools, exports, tmp_path):
     manifest = mixed_period_manifest(tmp_path)
     stats = tmp_path / "stats.txt"

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -32,6 +33,10 @@ from sil.profile_report import (
 
 ALLOCATIONS_KEY = "sil_profile_heap_allocations"
 SUPPORTED_VERSION = 1
+# The render path holds each file and its decoded document in memory, so each
+# file of the set has a fixed size limit. The default capture limits give
+# files far below it (docs/profile-report.md, "Offline report").
+MAX_INPUT_BYTES = 256 * 1024 * 1024
 
 
 class ProfileSetError(ValueError):
@@ -91,7 +96,7 @@ ALLOCATIONS = members({
 def load_profile_set(path: Path) -> ProfileSet:
     """Read and check the set of `path` (its `profile.json`)."""
     try:
-        text = Path(path).read_text(encoding="utf-8")
+        text = _read_bounded(Path(path), str(path)).decode("utf-8")
     except (OSError, UnicodeDecodeError) as error:
         raise ProfileSetError(f"cannot read '{path}': {error}") from error
     try:
@@ -136,7 +141,7 @@ def _sidecar(directory: Path, name: str | None, key: str, shape: Shape,
         raise ProfileSetError(f"'{name}' is not inside the profile directory")
     path = directory / relative
     try:
-        data = path.read_bytes()
+        data = _read_bounded(path, name)
     except OSError as error:
         raise ProfileSetError(
             f"profile.json names '{name}', which cannot be read ({error}); "
@@ -169,6 +174,19 @@ def _sidecar(directory: Path, name: str | None, key: str, shape: Shape,
     if errors:
         raise ProfileSetError(f"'{name}': " + "; ".join(errors[:5]))
     return document
+
+
+def _read_bounded(path: Path, name: str) -> bytes:
+    """The bytes of one file of the set; a file above MAX_INPUT_BYTES is
+    refused before it is read."""
+    with path.open("rb") as file:
+        size = os.fstat(file.fileno()).st_size
+        data = b"" if size > MAX_INPUT_BYTES else file.read(MAX_INPUT_BYTES + 1)
+    if size > MAX_INPUT_BYTES or len(data) > MAX_INPUT_BYTES:
+        raise ProfileSetError(
+            f"'{name}' has {max(size, len(data))} bytes, larger than the "
+            f"render limit of {MAX_INPUT_BYTES} bytes")
+    return data
 
 
 def _fail(name: str, problem: str) -> None:

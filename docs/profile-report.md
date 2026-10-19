@@ -108,7 +108,14 @@ Run, retry, change the collector or the event, or change a host setting.
    second pass gives the source line of each leaf frame (`-G -F
    ip,sym,srcline`). The analysis commands use
    `perf --buildid-dir DIR/cpu/buildid-cache` and run without
-   `DEBUGINFOD_URLS`, so no symbol is fetched from the network.
+   `DEBUGINFOD_URLS`, so no symbol is fetched from the network. Each pass
+   runs alone (no parallel symbolization), for at most
+   `--symbolization-timeout-s`, and its output is read up to the export
+   limit: twice `--max-capture-bytes`. Above that limit the pass is
+   stopped. For the sample pass that is `export_failed` (no
+   `samples.json`; `perf.data` stays); for the source-line pass, the
+   samples have no source lines. The command holds this text and its
+   normalized form in memory.
 6. **Join.** With `--activations`, it joins the observation stream with
    the samples (below) and writes `activation/correlation.json`.
 7. **Publish.** It writes `cpu/samples.json`, then `profile.json` through
@@ -197,7 +204,7 @@ Reasons in v1, in addition to the diagnostics reasons:
 | `debug_file_not_found` | No debug file with the module's build ID was found |
 | `unverifiable_debug_file` | The module has no build ID, so a separate debug file cannot be matched |
 | `symbolization_timeout` | A `perf script` pass took longer than the limit |
-| `export_failed` | A `perf script` pass failed or its output did not decode |
+| `export_failed` | A `perf script` pass failed, its output did not decode, or it was larger than the export limit |
 | `no_samples` | The capture has no sample to describe |
 | `not_requested` | The option or collector was not requested |
 | `reserved` | Reserved for a later ticket; not measured by this version |
@@ -751,6 +758,13 @@ The command checks the set before it writes anything: each named file must
 exist, have the size and SHA-256 that `artifacts` records, have version 1,
 refer only to identities of `profile.json` and add up to its totals (sample
 count and weight; allocation count and bytes; one class per sample).
+
+Each file of the set has a render limit of 268435456 bytes (256 MiB). A
+larger file is refused before it is read (exit 2). The command holds each
+file and its decoded document in memory, so its memory use grows with the
+files; a capture within the default limits gives files far below 256 MiB
+(the [#319 qualification](../proofs/profiling-qualification/README.md) records the
+sizes of named workloads).
 
 ### Exit codes
 

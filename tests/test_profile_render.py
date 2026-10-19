@@ -230,6 +230,21 @@ def test_a_missing_or_foreign_file_is_a_usage_error(tmp_path, damage,
     assert not (tmp_path / "report.html").exists()
 
 
+@pytest.mark.parametrize("name", ["profile.json", "cpu/samples.json"])
+def test_a_file_above_the_render_limit_is_refused_unread(tmp_path, name):
+    # docs/profile-report.md, "Offline report": 256 MiB for each file of the
+    # set. A sparse file has that size without the disk use.
+    profile = artifact_set(tmp_path / "set", "cpu-complete.json")
+    with (profile.parent / name).open("r+b") as large:
+        large.truncate(256 * 1024 * 1024 + 1)
+
+    proc = render([str(profile), "--html", "report.html"], tmp_path)
+
+    assert proc.returncode == 2
+    assert "larger than the render limit of 268435456 bytes" in proc.stderr
+    assert not (tmp_path / "report.html").exists()
+
+
 def test_a_sidecar_of_another_version_is_a_usage_error(tmp_path):
     profile = artifact_set(tmp_path / "set", "cpu-complete.json", samples={
         "sil_profile_cpu_samples": 2})
