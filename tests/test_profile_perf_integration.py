@@ -20,6 +20,7 @@ the profile directories for upload.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import platform
@@ -30,7 +31,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import ROOT, load_module
+from conftest import ROOT
 from sil.profile_report import validate_profile_report
 
 MODE = os.environ.get("SIL_PROFILE_PERF")
@@ -50,8 +51,14 @@ HOT = {
 
 @pytest.fixture(scope="module")
 def workload():
-    return load_module("silproof_workload",
-                       ROOT / "proofs" / "profiling" / "workload.py")
+    # Dataclasses need the module in sys.modules, under its own name.
+    name = "silproof_profile_workload"
+    spec = importlib.util.spec_from_file_location(
+        name, ROOT / "proofs" / "profiling" / "workload.py")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 @pytest.fixture(scope="module")
