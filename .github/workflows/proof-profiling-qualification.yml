@@ -1,0 +1,138 @@
+name: proof-profiling-qualification
+
+# Qualification of the installed `sil profile` workflows (issue #319) on the
+# supported machine class, Linux x86-64/glibc: native use of a release
+# install, and the documented container setup (CAP_PERFMON, no host
+# change). It needs network for apt and the image builds, and changes the
+# host twice, disclosed in the steps below, so it sits outside the general
+# push gate. Its checks gate the job; times and sizes are observations.
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/profiling-qualification/**'
+      - 'proofs/profiling/workload.py'
+      - 'proofs/profiling/workload/**'
+      - 'python/src/sil/profile_*.py'
+      - 'kernel/src/diagnostics_launcher.c'
+      - '.github/workflows/proof-profiling-qualification.yml'
+  workflow_dispatch:
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    env:
+      Q: proofs/profiling-qualification
+      EVIDENCE: ${{ github.workspace }}/build/qualification-evidence
+      SIL_SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      # The optional tools, pinned: perf is the package of the running
+      # kernel, Heaptrack the Ubuntu 24.04 package. build-essential and
+      # binutils build the workload only.
+      - name: Install perf, Heaptrack and the workload compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            "linux-tools-$(uname -r)" linux-tools-common \
+            heaptrack=1.5.0+dfsg1-2ubuntu3 libcap2-bin \
+            build-essential binutils
+          mkdir -p "$EVIDENCE"
+          cat /proc/sys/kernel/perf_event_paranoid > "$EVIDENCE/host-paranoid-before.txt"
+
+      - name: Install SiL as a release (wheel, native archive, install.sh)
+        run: $Q/install-native.sh "$RUNNER_TEMP/sil" "$RUNNER_TEMP/release"
+
+      - name: Build the runtime, profiling and builder images
+        run: $Q/container.sh images "$RUNNER_TEMP/ids"
+
+      - name: Build the workloads (host compiler; bookworm builder image)
+        run: |
+          . "$RUNNER_TEMP/sil/env"
+          python3 $Q/qualify.py build "$RUNNER_TEMP/work-native"
+          $Q/container.sh build "$RUNNER_TEMP/ids" "$RUNNER_TEMP/work-container"
+
+      # Host state as the runner provides it (paranoid 4): perf is denied to
+      # the unprivileged user; Heaptrack needs no privilege.
+      - name: Native, host default paranoid, preflight and heap
+        run: |
+          . "$RUNNER_TEMP/sil/env"
+          python3 $Q/qualify.py run "$RUNNER_TEMP/work-native" \
+            "$EVIDENCE/native-paranoid-default" \
+            --environment native-paranoid-default --perf denied \
+            --group preflight --group heap
+
+      - name: Container, default capabilities, preflight
+        if: ${{ !cancelled() }}
+        run: |
+          $Q/container.sh run "$RUNNER_TEMP/ids" "$RUNNER_TEMP/work-container" \
+            "$EVIDENCE/container-default-caps" -- \
+            --environment container-default-caps --perf denied --group preflight
+
+      # The documented container setup: --cap-add PERFMON, no host change.
+      # A 16 MiB tmpfs (exec allowed) is the file system that fills up.
+      - name: Container with CAP_PERFMON, preflight, cpu, heap, storage
+        if: ${{ !cancelled() }}
+        run: |
+          $Q/container.sh run "$RUNNER_TEMP/ids" "$RUNNER_TEMP/work-container" \
+            "$EVIDENCE/container-cap-perfmon" --cap-add PERFMON \
+            --tmpfs /small:rw,exec,size=16m,mode=1777 -- \
+            --environment container-cap-perfmon --perf available \
+            --group preflight --group cpu --group heap --group storage \
+            --small-dir /small
+
+      - name: Disclosed host change 1, kernel.perf_event_paranoid=2
+        if: ${{ !cancelled() }}
+        run: sudo sysctl -w kernel.perf_event_paranoid=2
+
+      - name: Disclosed host change 2, a 16 MiB tmpfs for storage exhaustion
+        if: ${{ !cancelled() }}
+        run: |
+          sudo mkdir -p /mnt/sil-small
+          sudo mount -t tmpfs -o size=16m,mode=1777 tmpfs /mnt/sil-small
+
+      - name: Native, paranoid 2, cpu and storage
+        if: ${{ !cancelled() }}
+        run: |
+          . "$RUNNER_TEMP/sil/env"
+          python3 $Q/qualify.py run "$RUNNER_TEMP/work-native" \
+            "$EVIDENCE/native-paranoid-2" \
+            --environment native-paranoid-2 --perf available \
+            --group cpu --group storage --small-dir /mnt/sil-small
+
+      # The copied portable sets, rendered where no perf, no Heaptrack, no
+      # profiled binary and no network is: the plain runtime image, and a
+      # native PATH with only the installed SiL.
+      - name: Offline render of the copied sets
+        if: ${{ !cancelled() }}
+        run: |
+          sets="$RUNNER_TEMP/sets"
+          mkdir -p "$sets"
+          for set in "$EVIDENCE"/*/sets/*/; do
+            environment=$(basename "$(dirname "$(dirname "$set")")")
+            cp -R "$set" "$sets/$environment-$(basename "$set")"
+          done
+          $Q/container.sh render "$RUNNER_TEMP/ids" "$sets" "$EVIDENCE/render-container"
+          current="$(readlink -f "$RUNNER_TEMP/sil/current")"
+          env -i HOME="$HOME" PATH="$current/venv/bin:$current/native/bin" \
+            python3 $Q/qualify.py render "$sets" "$EVIDENCE/render-native/result"
+
+      - name: Record the evidence digests
+        if: always()
+        run: |
+          cd "$EVIDENCE"
+          find . -type f ! -name digests.txt -print0 | sort -z \
+            | xargs -0 sha256sum > digests.txt || true
+
+      # perf.data holds copies of user stacks; the workload holds no secret.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: profiling-qualification-evidence
+          path: |
+            build/qualification-evidence/
+            !build/qualification-evidence/**/sets/**/perf.data
