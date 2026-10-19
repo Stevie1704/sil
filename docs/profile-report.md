@@ -9,9 +9,8 @@ command, the directory and the document.
 
 Status: the CPU collector (Linux perf) is implemented (#315), and so is
 the optional Activation correlation of its samples (#316). The heap
-collector (#317) is reserved: this contract fixes its discriminated shape,
-and the fixtures show it, but no command produces it yet. The offline HTML
-view is #318.
+collector (Heaptrack) is implemented (#317): see
+[Heap collector](#heap-collector). The offline HTML view is #318.
 
 Valid and invalid examples of every case are in
 [tests/fixtures/profile/](../tests/fixtures/profile/).
@@ -29,24 +28,33 @@ sil profile MANIFEST --out DIR --collector cpu
     [--frequency-hz N] [--stack-bytes N] [--max-capture-bytes N]
     [--symbolization-timeout-s N] [--modules-from PATH]...
     [--activations [--max-activation-bytes N]]
+
+sil profile MANIFEST --out DIR --collector heap (--runner | --participant NAME)
+    [-o RECORDING | --no-recording] [--provenance PATH]
+    [--participant-timeout-ms N] [--max-protocol-line-bytes N]
+    [--max-step-output-messages N] [--max-step-inline-payload-bytes N]
+    [--max-capture-bytes N] [--symbolization-timeout-s N]
 ```
 
 | Option | Default | Meaning |
 | --- | --- | --- |
 | `--out DIR` | required | The profile directory. It must not exist; its parent must exist. |
-| `--collector` | required | `cpu`. `heap` is reserved for #317 and is rejected (exit 2). |
+| `--collector` | required | `cpu` or `heap`. |
 | `-o`, `--no-recording`, `--provenance` | `DIR/run.mcap` | As `sil run`. A relative path resolves against the current directory. With `--no-recording` the provenance record is `DIR/run.provenance.json`; a failure report is `out.mcap.failure.json` in the current directory, as with `sil run`. |
 | the four guards | as `sil run` | Passed to the runner unchanged and recorded. |
 | `--frequency-hz` | 999 | perf sampling frequency (`-F`). |
 | `--stack-bytes` | 8192 | User stack bytes that perf copies per sample for DWARF unwinding. |
-| `--max-capture-bytes` | 1073741824 (1 GiB) | Limit for `perf.data`. |
-| `--symbolization-timeout-s` | 600 | Limit for each `perf script` pass. |
+| `--max-capture-bytes` | 1073741824 (1 GiB); heap: 268435456 (256 MiB) | Limit for `perf.data`; heap: for `heap/heaptrack.data`. |
+| `--symbolization-timeout-s` | 600 | Limit for each `perf script` pass; heap: for the interpreter to finish after the Run. |
 | `--modules-from PATH` | none | A directory, an ELF file or a zip archive (an FMU) with copies of modules that are gone after the Run. Repeatable. |
 | `--activations` | off | Also record the host interval of each Activation and join it with the samples ([Activation correlation](#activation-correlation)). |
 | `--max-activation-bytes` | 67108864 (64 MiB) | Storage limit of the observation stream. Only with `--activations`. |
 
-`--participant NAME` and `--runner` are reserved for the heap collector.
-With `--collector cpu` they are a usage error.
+`--participant NAME` and `--runner` select the scope of the heap
+collector. With `--collector cpu` they are a usage error. `--frequency-hz`,
+`--stack-bytes`, `--modules-from`, `--activations` and
+`--max-activation-bytes` are options of the CPU collector; with
+`--collector heap` they are a usage error.
 
 One command does one fresh Run with one collector. It does not repeat the
 Run, retry, change the collector or the event, or change a host setting.
@@ -144,6 +152,7 @@ is a `complete` capture; it is not evidence that no CPU time was used.
 | `activation/observations.jsonl` | With `--activations`: the runner's observation stream (below). Authoritative. |
 | `activation/correlation.json` | With `--activations`, when the join is proven: the class of each sample and each Activation's interval and counts (below). |
 | `cpu/perf-script.stderr.txt`, `cpu/perf-srcline.stderr.txt`, `cpu/perf-buildid-cache.stderr.txt` | The last 64 KiB of each export's output on stderr; for the cache, of each `perf buildid-cache -a`. A copy that perf did not add is not captured. |
+| `heap/...` | With `--collector heap` in place of `cpu/`: see [Heap files](#heap-files). |
 
 Raw stack copies can hold any data that was on a stack, also secrets. Share
 `perf.data` only as you would share a core dump. `samples.json` and
@@ -340,24 +349,65 @@ in that module), `self_samples`, `self_weight_ns`, `inclusive_samples`,
 leaf frames, most samples first). Inclusive values overlap, so they do not
 add up.
 
-### `capture`, kind `heap` (reserved, #317)
+### `capture`, kind `heap`
 
 | Member | Content |
 | --- | --- |
 | `kind` | `heap` |
 | `status` | `complete`, `partial`, `interrupted`, `failed`, `not_started`, `unavailable` |
-| `reasons` | List of reasons |
-| `backend` | `name` (`heaptrack`), `version` (or null) |
+| `reasons` | Subset of `capture_limit_reached`, `data_truncated`, `data_may_be_incomplete`, `interrupted`, `backend_failed`, `export_failed`, `no_data`, `run_not_started`, `unsupported_scope`, `reserved` |
+| `backend` | `name` (`heaptrack`), `version` (`heaptrack --version`, or null), `preload` and `interpreter` (the paths used), `interpreter_exit_code` (null when the command stopped it) |
 | `scope` | `kind` `runner`; or `kind` `process_participant` with `participant`; or `kind` `unsupported` with `requested` and `reason` |
-| `raw` | Path of the raw Heaptrack file, or null |
-| `analysis` | Reserved: null in v1 |
+| `launch` | `method` (`preload_exec_adapter`), `adapter` (`heap/launch-adapter.sh`), `wrapped` (`runner` or `process_participant`) |
+| `limits` | `max_capture_bytes`, `capture_bytes`, `limit_reached`, `interpreter_timeout_s` |
+| `activation_correlation` | Always `{"status": "unavailable", "reason": "no_validated_clock_mapping"}` |
+| `raw` | `heap/heaptrack.data`, or null |
+| `analysis` | Below, or null |
 | `unavailable` | Reasons for null members |
 
-The scope `unsupported` records a request that this version cannot capture,
-for example a Native participant (it is not a process) or a scope that is not
-qualified. The launch mechanics of a Process scope are not fixed here.
-#317 defines `analysis`; if its members are not a compatible addition, the
-version changes.
+`complete` and `partial` have an analysis. The other statuses can have one
+when the data decodes. `backend`, `launch`, `limits` and
+`activation_correlation` came with #317; a reserved heap capture of #315
+(status `unavailable`, reason `reserved`) has none of them and stays valid.
+The scope `unsupported` is a valid record of a request that a version cannot
+capture. This version does not write it: it rejects such a request before
+the Run (exit 2).
+
+Heap reasons:
+
+| Reason | Meaning |
+| --- | --- |
+| `capture_limit_reached` | The data reached `--max-capture-bytes`; later data is dropped |
+| `data_truncated` | The last record of the data is cut |
+| `data_may_be_incomplete` | Heaptrack writes its last data at normal process exit. The runner ended by a signal (runner scope), or the Run did not succeed and the runner stopped the participant (Process scope) |
+| `backend_failed` | The interpreter failed, or did not end within its time limit |
+| `export_failed` | The data is not Heaptrack's interpreted file version 3, or its stacks do not resolve |
+| `no_data` | Heaptrack wrote no data: the scope process did not start |
+
+`analysis`:
+
+| Member | Content |
+| --- | --- |
+| `file_version` | 3 |
+| `heaptrack_version` | The version in the data file, for example `1.5.0` |
+| `traced_executable` | The command line that Heaptrack recorded for the traced process; it shows which process the data is from |
+| `allocations_file` | `heap/allocations.json`, or null |
+| `totals` | Below |
+| `coverage` | `allocations_unknown_module`, `allocations_unknown_symbol` (the innermost frame has a module and no function name), `allocations_with_caller` (two or more frames), `undecodable_records`, `truncated` |
+| `modules` | `id`, `path`, `build_id` (or null), `allocations_leaf` (allocations whose innermost frame is in the module), `allocations_unknown_symbol`, `unavailable` |
+| `hotspots` | `limit` (50), `self`, `self_remainder`, `inclusive` (below) |
+
+A `hotspots` row: `module` (identity or null), `symbol` (or null),
+`allocations`, `allocated_bytes`, `temporary_allocations`,
+`outstanding_allocations`, `outstanding_bytes`, `source_lines` (at most 5
+`{file, line, allocations}` of the innermost frame). `self` keeps the union of
+the top `limit` rows by `allocated_bytes`, `allocations`,
+`temporary_allocations` and `outstanding_bytes`, ordered by
+`allocated_bytes`. `self` plus `self_remainder` equals `totals` for each of
+the five metrics. `inclusive` keeps rows the same way; inclusive values
+overlap, so they do not add up.
+
+See [Heap collector](#heap-collector) for the metrics and their boundaries.
 
 ### `activation_correlation`
 
@@ -377,6 +427,11 @@ See [Activation correlation](#activation-correlation) for the join.
 
 ### `limitations`
 
+The heap capture always lists `heap_tracks_allocation_calls_only`,
+`outstanding_is_not_a_leak_verdict`, `allocation_origin_is_not_ownership`,
+`activation_correlation_unavailable` and `host_build_only`
+([Heap collector](#heap-collector)).
+
 The CPU capture always lists:
 
 - `cpu_samples_estimate_on_cpu_time`: weights are sampled estimates, not
@@ -385,6 +440,173 @@ The CPU capture always lists:
 - `scope_is_runner_and_descendants`: other processes are not sampled.
 - `host_build_only`: the profile describes this host build, not a target ECU
   or a worst-case execution time.
+
+## Heap collector
+
+`--collector heap` captures the allocations of one process with
+[Heaptrack](https://github.com/KDE/heaptrack). The
+[#314 proof](../proofs/profiling/README.md) qualified Heaptrack 1.4 and 1.5
+on Linux x86-64/glibc for the runner and for an unshimmed Process
+participant.
+
+### Scope
+
+One command captures one scope:
+
+- `--runner`: the runner process. Every Native participant runs in it, so
+  their allocations are in one capture, together with the runner's own work
+  (routing, Recording, setup and shutdown). A Native participant cannot be a
+  scope by name: `--participant` with a Native participant is a usage error
+  (exit 2). Use `--runner` and read the sites by module and function.
+- `--participant NAME`: one Process participant. An FMU group is one Process
+  participant, so it is one scope.
+
+These selections are usage errors (exit 2) before the Run: an unknown name, a
+Native or Replay participant, and a Process participant with `shim: true`.
+Heaptrack in a shimmed participant is not qualified: it can stop the
+participant, it removes the shim from the participant's children and its
+timer writes data without bound (#314). Issue
+[#330](https://github.com/Stevie1704/sil/issues/330) investigates it. The
+Clock shim of the other participants is not affected: in the runner scope,
+the runner sets the shim of a shimmed participant itself, after Heaptrack.
+
+Heaptrack removes `LD_PRELOAD` and `DUMP_HEAPTRACK_OUTPUT` from the process
+it traces when it loads. Thus no child or sibling of the scope process is
+traced, and the allocations of a child are not in the capture. Heaptrack
+does not trace the copy of a process between `fork` and `exec`. Because
+Heaptrack removes all of `LD_PRELOAD`, the command stops in preflight (exit
+1) when `LD_PRELOAD` is set in its environment: the Run's processes would
+start with another environment.
+
+### What the command does
+
+1. **Preflight.** It checks the output paths as for the CPU collector, the
+   scope against the Manifest (exit 2), and then the host (exit 1): Linux,
+   `heaptrack` on `PATH`, the preload library and the interpreter (from the
+   `LIB_REL_PATH` and `LIBEXEC_REL_PATH` lines of the `heaptrack` script),
+   and a probe: `true` with the preload library must write data.
+2. **Adapter.** It writes `DIR/heap/launch-adapter.sh`. The adapter sets
+   `DUMP_HEAPTRACK_OUTPUT` to the FIFO `DIR/heap/.fifo`, puts the preload
+   library before any `LD_PRELOAD`, and execs its arguments. The process
+   keeps its PID, pipes, working directory, arguments and all other
+   environment.
+3. **Interpreter.** It starts `heaptrack_interpret < DIR/heap/.fifo` in a
+   session of its own, outside the Run, without `DEBUGINFOD_URLS`. Its output
+   goes to `DIR/heap/heaptrack.data` up to `--max-capture-bytes`. The command
+   reads and drops later data, so the traced process never waits for it. The
+   last 64 KiB of its stderr go to `DIR/heap/interpret.stderr.txt`. It
+   resolves symbols while the Run executes, so a module in the Run working
+   directory (an extracted FMU) is named before it is gone.
+4. **Run.** For the runner scope:
+
+   ```sh
+   sil-diagnostics-launcher --status-fd N DIR/heap/launch-adapter.sh \
+     sil-run-diagnostics MANIFEST -o RECORDING \
+       --diagnostics-out DIR/run.diagnostics.json [guards] \
+       --retain-run-directory DIR/heap/.run-directory
+   ```
+
+   For a Process participant, the runner is not wrapped. It gets
+   `--launch-wrapper NAME DIR/heap/launch-adapter.sh`: the diagnostics
+   runner starts that participant as `ADAPTER COMMAND...` instead of
+   `COMMAND...`, in the child that it forked, after its own setup of the
+   process group, the pipes, the working directory and the environment. The
+   option is in `sil-run-diagnostics` only; `sil-run` rejects it. The
+   Manifest bytes, its hash, the Native ABI and the Step protocol do not
+   change.
+5. **Data end.** When the Run ends, the command opens and closes the FIFO
+   for writing, so an interpreter whose scope process never started reads
+   the end of the data. It waits for the interpreter at most
+   `--symbolization-timeout-s`, and stops it after that.
+6. **Normalize.** It reads `heaptrack.data` (below) and writes
+   `DIR/heap/allocations.json`. It reads the build ID of each module file:
+   at its path, or in the retained Run working directory. Then it removes
+   the retained directory.
+7. **Publish.** It writes `profile.json` last, as for the CPU collector, and
+   prints a summary.
+
+SIGINT, SIGTERM and SIGHUP go to the launcher, which forwards them to the
+runner. The runner records the interruption and cleans up as without a
+profiler. The interpreter is not in the Run's session: it ends when the data
+ends. A signal while the command waits for the interpreter stops the
+interpreter.
+
+The exit codes are those of the CPU collector, with these additions: a scope
+that cannot be captured is exit 2; a host without Heaptrack, a failed probe,
+a host that is not Linux and a set `LD_PRELOAD` are exit 1 before any
+Participant starts. After a successful Run, a capture that is not `complete`
+gives exit 1.
+
+### Heap files
+
+| Path | Content |
+| --- | --- |
+| `heap/heaptrack.data` | The raw evidence: Heaptrack's interpreted data file, format version 3, uncompressed. `heaptrack_print` and `heaptrack_gui` read it. It holds allocation stacks, sizes, module paths and the traced command line; no memory content. |
+| `heap/allocations.json` | Normalized allocations: the offline input for reports (below). |
+| `heap/launch-adapter.sh` | The adapter of this capture. |
+| `heap/interpret.stderr.txt` | The last 64 KiB of the interpreter's stderr. |
+
+A copy of `profile.json` and `heap/allocations.json` is sufficient for an
+offline report. It needs neither Heaptrack nor the profiled binaries.
+
+### Metrics and their boundaries
+
+The data covers the whole life of the scope process under Heaptrack: from
+the load of the preload library to the last data that Heaptrack wrote. For
+the runner scope that is before the Manifest loads to after the Recording
+closes, so it includes setup, shutdown and Recording work. Each value counts
+each allocation event once.
+
+| Metric | Meaning |
+| --- | --- |
+| `allocations` | Calls of the allocation functions that Heaptrack interposes (`malloc`, `calloc`, `realloc`, `posix_memalign`, `aligned_alloc` and the others in its preload library). A `realloc` that moves is one free and one allocation. C++ `new` counts through `malloc`. |
+| `allocated_bytes` | The requested sizes of these allocations, summed. It is not allocator overhead and not live memory. |
+| `frees` | Frees of tracked allocations. |
+| `temporary_allocations` | Frees that directly follow the allocation of the same allocation info (the same stack and size), with no other allocation or free between. This is Heaptrack's definition on its data file. `heaptrack_print` also counts a free of the first allocation info after any free; `heaptrack_interpret`'s own statistics compare addresses and can be lower. |
+| `outstanding_allocations`, `outstanding_bytes` | Allocations not freed at the end of the data: a snapshot at capture end. They are not a leak verdict: the process can keep memory on purpose until it exits. |
+| `peak_tracked_bytes` | The largest sum of outstanding requested bytes at any record of the data. This is tracked heap: not RSS, not stack, not mapped pages, not allocator overhead. |
+
+A `self` row attributes each allocation to its innermost frame: the first
+frame that Heaptrack records, the function that called the allocation
+function (for C++ `new` it can be `operator new` in the C++ library). An
+inlined function is its own frame. An `inclusive` row counts each function
+that is anywhere in an allocation's stack once per allocation, also when it
+is in the stack more than one time (recursion). Inclusive values overlap and
+are never totals.
+
+### Coverage and limits
+
+- Only the interposed allocation functions are seen. A custom pool (an arena
+  allocator, a static buffer pool, Python's `pymalloc`) shows as its few
+  backing allocations; the logical allocations inside it are not seen.
+  Direct `mmap`, `brk` and stack memory are not tracked.
+- An allocation site is where memory was allocated. It is not the owner of
+  that memory now.
+- Symbols: the interpreter finds a separate debug file through its build ID
+  or `.gnu_debuglink`, as perf does, and refuses a debug file with another
+  build ID. Then the allocations stay in the evidence with an unknown
+  function. A library without debug information gives names for its
+  exported functions only.
+- Module identity: Heaptrack records module paths, no build IDs. The build
+  ID in `modules` is that of the file after the Run. A module that its
+  participant removed itself (the FMI importer removes its extracted FMU)
+  has no build ID (`module_unavailable`); its names were resolved live.
+- There are no memory totals per Native participant or per FMU instance, and
+  no allocation history per Activation or Step. Activation correlation is
+  unavailable: Heaptrack's timestamps are milliseconds since its own start,
+  with no validated mapping to host time.
+
+### Normalized allocations: `heap/allocations.json`
+
+`{"sil_profile_heap_allocations": 1, ...}`:
+
+| Member | Content |
+| --- | --- |
+| `frames` | List of `{module, symbol, address, source}`; `source` is `{file, line}` or null. An address with inlined functions gives one frame per function, innermost first. |
+| `stacks` | List of frame index lists, innermost first |
+| `allocations` | One `[stack, size_bytes, allocations, temporary_allocations, outstanding_allocations]` per Heaptrack allocation info (one stack and one size), in data order |
+
+Rows refer to the module identities of `profile.json`.
 
 ## Activation correlation
 
