@@ -338,3 +338,40 @@ def test_a_normalized_capture_fits_the_report_contract(analysis):
     capture.update(status="partial", reasons=["lost_samples"])
 
     assert validate_profile_report(report) == []
+
+
+# perf prints a sample with no frame when DWARF unwinding cannot start: the
+# module of its address is not available (perf 6.17, a removed FMU library).
+FRAMELESS = "\n".join([
+    mmap("python3", 300, 0, "0x7f1000000000", "0x2000", "0x1000", "cc" * 20,
+         FMU),
+    f"{header('python3', 300, 300, 100)} {1000000:>10} ",
+    "",
+]) + "\n"
+
+
+def test_a_frameless_sample_takes_its_leaf_from_the_srcline_pass():
+    result = normalize_cpu(FRAMELESS, srclines="    7f1000000180 [unknown]\n"
+                           "  ??:0\n", facts=facts, lost_sample_records=0)
+
+    fmu, = result.modules
+    assert (fmu["path"], fmu["samples_leaf"],
+            fmu["samples_unknown_symbol"]) == (FMU, 1, 1)
+    leaf = result.samples_document["frames"][0]
+    assert (leaf["address"], leaf["module_offset"]) == ("0x7f1000000180",
+                                                        "0x1180")
+    assert result.totals["samples_unknown_module"] == 0
+
+
+def test_a_frameless_sample_without_a_leaf_stays_in_the_totals():
+    result = normalize_cpu(FRAMELESS, srclines=None, facts=facts,
+                           lost_sample_records=0,
+                           srcline_problem="symbolization_timeout")
+
+    assert result.totals["samples"] == 1
+    assert result.totals["samples_unknown_module"] == 1
+    assert result.hotspots["self"] == [{
+        "module": None, "symbol": None, "self_samples": 1,
+        "self_weight_ns": 1000000, "inclusive_samples": 1,
+        "inclusive_weight_ns": 1000000, "source_lines": []}]
+    assert result.samples_document["stacks"] == [[]]

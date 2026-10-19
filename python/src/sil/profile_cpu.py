@@ -33,7 +33,8 @@ _HEADER = re.compile(
     r"^\s*(?P<comm>\S.*?)\s+(?P<pid>-?\d+)/(?P<tid>-?\d+)\s+"
     r"(?P<sec>\d+)\.(?P<nsec>\d{9}):\s?(?P<rest>.*)$")
 _FRAME = re.compile(
-    r"^\s*(?P<ip>[0-9a-f]+)\s+(?P<sym>.*?)\s+\((?P<dso>[^()]*)\)\s*$")
+    r"^\s*(?P<ip>[0-9a-f]+)\s+(?P<sym>.*?)\s+"
+    r"\((?P<dso>[^()]*(?:\([^()]*\)[^()]*)?)\)\s*$")
 _PERIOD = re.compile(r"^\s*(?P<period>\d+)\s*(?P<frame>.*)$")
 _TASK = re.compile(
     r"^PERF_RECORD_(?P<kind>FORK|EXIT)\((?P<pid>-?\d+):(?P<tid>-?\d+)\):"
@@ -182,7 +183,7 @@ def _time_ns(match: re.Match) -> int:
 
 def _frame(match: re.Match) -> _Frame:
     symbol = match["sym"]
-    dso = match["dso"]
+    dso = match["dso"].removesuffix(" (deleted)")
     return _Frame(int(match["ip"], 16),
                   None if symbol == "[unknown]" else symbol,
                   None if dso == "[unknown]" else dso)
@@ -262,17 +263,35 @@ def _pair_srclines(text: str, samples: list[_Sample]) -> str | None:
     if len(lines) != 2 * len(samples):
         return "export_failed"
     pairs = []
+    leaves = []
     for sample, (ip_line, source_line) in zip(
             samples, zip(lines[0::2], lines[1::2])):
         ip = _IP_LINE.match(ip_line)
-        leaf = sample.frames[0].ip if sample.frames else None
-        if ip is None or int(ip["ip"], 16) != leaf:
+        if ip is None:
             return "export_failed"
+        address = int(ip["ip"], 16)
+        if sample.frames and sample.frames[0].ip != address:
+            return "export_failed"
+        name = ip_line[ip.end():].strip()
+        leaves.append((address, None if name in ("", "[unknown]")
+                       else name))
         source = _SRCLINE.match(source_line.strip())
         pairs.append(None if source is None or source["file"].startswith("??")
                      else (source["file"], int(source["line"])))
-    for sample, source in zip(samples, pairs):
+    for sample, source, (address, symbol) in zip(samples, pairs, leaves):
         sample.source = source
+        if not sample.frames:
+            # perf prints no frame when unwinding cannot start; the second
+            # pass still has the sampled address.
+            sample.frames = (_Frame(address, symbol,
+                                    _mapped_path(sample.process, address)),)
+    return None
+
+
+def _mapped_path(process: "_Process", address: int) -> str | None:
+    for path, start, size, _ in reversed(process.mappings):
+        if start <= address < start + size:
+            return path
     return None
 
 
@@ -451,7 +470,12 @@ def _function(frame: _Frame, by_path: dict) -> tuple[str | None, str | None]:
 def _hotspots(samples: list[_Sample], by_path: dict, limit: int) -> dict:
     rows: dict[tuple, _Row] = defaultdict(_Row)
     for sample in samples:
-        if not sample.frames:
+        if not sample.frames:  # an unknown function in an unknown module
+            row = rows[(None, None)]
+            row.self_samples += 1
+            row.self_weight_ns += sample.weight_ns
+            row.inclusive_samples += 1
+            row.inclusive_weight_ns += sample.weight_ns
             continue
         leaf = rows[_function(sample.frames[0], by_path)]
         leaf.self_samples += 1
