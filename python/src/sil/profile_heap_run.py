@@ -40,10 +40,10 @@ from sil.diagnostics_run import (
     EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_USAGE, RunRequest, ToolMissing,
     command_error, execute, find_native_tools,
 )
-from sil.diagnostics_format import format_bytes
 from sil.profile_heap import HeapAnalysis, HeapDecodeError, normalize_heap
 from sil.profile_modules import ModuleLocator, elf_identity
 from sil.profile_report import validate_profile_report
+from sil.profile_summary import format_summary
 from sil.profile_run import (
     PROG, STDERR_TAIL_BYTES, CaptureRun, HeapRequest, _host, _identity,
     _tool_environment, artifact_rows, resolve_exit, run_record,
@@ -602,55 +602,3 @@ def _publish(request: HeapRequest, layout: HeapLayout, cwd: Path,
                          f"{error}\n")
         return None
     return report
-
-
-# --- terminal summary -------------------------------------------------------
-
-
-def format_summary(report: dict, path: Path) -> str:
-    run = report["run"]
-    capture = report["capture"]
-    state = capture["status"] + (f" ({', '.join(capture['reasons'])})"
-                                 if capture["reasons"] else "")
-    exit_text = (f"exit code {run['exit_code']}" if run["exit_code"]
-                 is not None else f"signal {run['signal']}"
-                 if run["signal"] else "no exit code")
-    scope = capture["scope"]
-    where = ("the runner process (every Native participant)"
-             if scope["kind"] == "runner"
-             else f"Process participant '{scope['participant']}'")
-    lines = [f"profile: {path}", f"run: {run['status']}, {exit_text}",
-             f"capture: heap, {state}",
-             f"scope: {where}, {capture['backend']['version'] or 'Heaptrack'}",
-             "activation correlation: unavailable (Heaptrack's timestamps "
-             "have no validated mapping to host time)"]
-    analysis = capture["analysis"]
-    if analysis is None:
-        return "\n".join(lines) + "\n"
-    totals = analysis["totals"]
-    lines += [
-        f"allocations: {totals['allocations']} calls, "
-        f"{format_bytes(totals['allocated_bytes'])} allocated; "
-        f"{totals['temporary_allocations']} temporary",
-        f"at capture end: {totals['outstanding_allocations']} outstanding, "
-        f"{format_bytes(totals['outstanding_bytes'])} (not a leak verdict); "
-        f"peak tracked heap {format_bytes(totals['peak_tracked_bytes'])} "
-        "(not RSS)"]
-    coverage = analysis["coverage"]
-    unknown = coverage["allocations_unknown_module"] + \
-        coverage["allocations_unknown_symbol"]
-    if unknown:
-        lines.append(f"symbols: {unknown} of {totals['allocations']} "
-                     "allocations have no function name")
-    modules = {m["id"]: m["path"] for m in analysis["modules"]}
-    rows = analysis["hotspots"]["self"][:10]
-    if rows:
-        lines.append("top allocation sites (innermost frame, bytes "
-                     "allocated):")
-        for row in rows:
-            name = row["symbol"] or "[unknown function]"
-            module = Path(modules.get(row["module"]) or "[unknown module]")
-            lines.append(f"  {format_bytes(row['allocated_bytes']):>10}  "
-                         f"{row['allocations']:>8} calls  {name} "
-                         f"({module.name})")
-    return "\n".join(lines) + "\n"
