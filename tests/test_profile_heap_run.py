@@ -266,11 +266,12 @@ def test_a_process_scope_traces_that_participant_only(tools, heaptrack,
 
 
 @needs_linux
-def test_a_launcher_failure_is_reported_on_stderr(tools, heaptrack,
-                                                  tmp_path):
-    # A runner that the launcher cannot execute: no Run takes place. A
-    # profile directory on a noexec file system fails the same way, at the
-    # launch adapter.
+def test_a_runner_that_cannot_start_is_named_on_stderr(tools, heaptrack,
+                                                       tmp_path):
+    # A runner that cannot be executed: the launch adapter execs it, so the
+    # adapter's shell names it. (On a noexec profile directory the launcher
+    # cannot start the adapter itself and says so; test_profile_run.py
+    # tests that report.)
     manifest = mixed_period_manifest(tmp_path)
     runner = tools / "sil-run-diagnostics"
     runner.unlink()
@@ -280,8 +281,7 @@ def test_a_launcher_failure_is_reported_on_stderr(tools, heaptrack,
     proc = sil(heap(manifest, "--runner"), tools, tmp_path, heaptrack)
 
     assert proc.returncode == 127
-    assert "no Run took place" in proc.stderr
-    assert profile(tmp_path / "prof")["run"]["status"] == "not_started"
+    assert "sil-run-diagnostics" in proc.stderr
 
 
 HEAPTRACK_VARIABLES = {"LD_PRELOAD", "DUMP_HEAPTRACK_OUTPUT"}
