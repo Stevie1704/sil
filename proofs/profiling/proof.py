@@ -16,9 +16,10 @@ the evidence:
 | perf-fp | perf record, cpu-clock:u, frame pointers |
 | heaptrack-runner | Heaptrack preloaded into sil-run, matching debug file |
 | heaptrack-runner-mismatched | the same, with a mismatched debug file |
-| heaptrack-process | Heaptrack in the Process participant (live) and |
-|                   | in the FMU participant (raw, interpreted later) |
-| heaptrack-process-sleep-immediate | the same, shim sleep "immediate" |
+| heaptrack-fmu | Heaptrack in the unshimmed FMU participant (live) |
+| heaptrack-shimmed-process | Heaptrack in the shimmed Process participant |
+| heaptrack-shimmed-process-sleep-immediate | the same, shim sleep |
+|   | "immediate"; the FMU participant raw, interpreted after the Run |
 
 It needs on PATH: sil-run, perf, objcopy, readelf, cc, and this Python with
 the sil package. Heaptrack's preload library and interpreter are found under
@@ -804,76 +805,108 @@ def _heaptrack_runs(out, manifest_path, artifacts, preload, interpret,
                         sites["silproof_native_alloc_site"]["calls"] == 0,
                         sites["silproof_native_alloc_site"])
 
-    _heaptrack_process(out, artifacts, preload, interpret, ordinary,
-                       checks, finish, "heaptrack-process", "reject")
-    # The same Run with the shim's other sleep policy. The workload never
-    # sleeps; Heaptrack's own threads do. Findings only.
-    _heaptrack_process(out, artifacts, preload, interpret, ordinary,
-                       checks, finish, "heaptrack-process-sleep-immediate",
-                       "immediate")
+    # The FMU group's Process participant, unshimmed: the qualified
+    # Process scope.
+    _heaptrack_scope(out, artifacts, preload, interpret, ordinary, checks,
+                     finish, "heaptrack-fmu", live=["fmu"], raw=[],
+                     sleep="reject", qualified=True)
+    # The shimmed Process participant, with the shim's default and other
+    # sleep policy. The workload never sleeps; Heaptrack's own threads do.
+    # Findings only: this scope is not qualified. The second Run also
+    # records the FMU raw and interprets it after the Run.
+    _heaptrack_scope(out, artifacts, preload, interpret, ordinary, checks,
+                     finish, "heaptrack-shimmed-process", live=["process"],
+                     raw=[], sleep="reject", qualified=False)
+    _heaptrack_scope(out, artifacts, preload, interpret, ordinary, checks,
+                     finish, "heaptrack-shimmed-process-sleep-immediate",
+                     live=["process"], raw=["fmu"], sleep="immediate",
+                     qualified=False)
 
 
-def _heaptrack_process(out, artifacts, preload, interpret, ordinary, checks,
-                       finish, name, sleep) -> None:
-    gate = checks.gate if sleep == "reject" else checks.finding
+# The allocation site of each Process participant's own code.
+PARTICIPANT_SITES = {"process": "silproof_process_alloc_site",
+                     "fmu": "silproof_fmu_alloc_site"}
+
+
+def _heaptrack_scope(out, artifacts, preload, interpret, ordinary, checks,
+                     finish, name, *, live, raw, sleep, qualified) -> None:
+    """One Run with Heaptrack launched into the named Process
+    participants: `live` through a FIFO and a driver-owned interpreter,
+    `raw` to a file that the driver interprets after the Run."""
+    gate = checks.gate if qualified else checks.finding
     run = Run(out, name)
-    wrapped = workload.manifest(artifacts, process_sleep=sleep, launch_prefix={
-        "process": [str(LAUNCH), "live", "process"],
-        "fmu": [str(LAUNCH), "raw", "fmu"]}).write(
-            run.dir / "manifest.json")
-    collectors = Interpreters(interpret, run.dir, ["process"])
+    prefix = {n: [str(LAUNCH), "live", n] for n in live}
+    prefix.update({n: [str(LAUNCH), "raw", n] for n in raw})
+    wrapped = workload.manifest(artifacts, process_sleep=sleep,
+                                launch_prefix=prefix).write(
+                                    run.dir / "manifest.json")
+    collectors = Interpreters(interpret, run.dir, live)
     code = run.execute(sil_run_command(wrapped.path, run), _clean_env(
         SILPROOF_SIDECAR_DIR=str(run.sidecar),
         SILPROOF_HEAPTRACK_DIR=str(run.dir),
         SILPROOF_HEAPTRACK_PRELOAD=str(preload)))
     run.result["collectors"] = collectors.finish()
     run.result["process_sleep"] = sleep
-    raw = run.dir / "fmu.raw"
-    run.result["fmu_raw_bytes"] = raw.stat().st_size if raw.exists() \
-        else None
-    run.result["fmu_late_interpret_returncode"] = interpret_raw(
-        interpret, raw, run.dir / "fmu.heaptrack") if raw.exists() else None
-    finish(run, code, exit_gate=sleep == "reject")
+    run.result["scopes"] = {"live": live, "raw": raw}
+    late = {}
+    for n in raw:
+        file = run.dir / f"{n}.raw"
+        late[n] = {"raw_bytes": file.stat().st_size if file.exists()
+                   else None, "interpret_returncode": interpret_raw(
+                       interpret, file, run.dir / f"{n}.heaptrack")
+                   if file.exists() else None}
+    run.result["late_interpretation"] = late
+    finish(run, code, exit_gate=qualified)
+    stderr = (run.dir / "stderr.txt").read_text(errors="replace")
+    run.result["stderr_tail"] = stderr[-2000:]
     comparison = compare_recordings(ordinary.recording, run.recording) \
         if run.recording.exists() else {"messages": [None, 0],
                                         "identical": False, "differing": {}}
     run.result["recording"] = comparison
-    shim_fields = {k: v for k, v in comparison["differing"].items()
-                   if k != "proof.process.child_clock_ns"}
-    gate(f"{name}: Recording equals the ordinary Recording except the "
-         "child's clock reading",
-         comparison["messages"][0] == comparison["messages"][1]
-         and not shim_fields, comparison)
-    checks.finding(f"{name}: the short-lived child keeps the Clock shim",
-                   comparison["identical"], comparison["differing"])
+    if "process" in live + raw:
+        shim_fields = {k: v for k, v in comparison["differing"].items()
+                       if k != "proof.process.child_clock_ns"}
+        gate(f"{name}: Recording equals the ordinary Recording except the "
+             "child's clock reading",
+             comparison["messages"][0] == comparison["messages"][1]
+             and not shim_fields, comparison)
+        checks.finding(f"{name}: the short-lived child keeps the Clock shim",
+                       comparison["identical"], comparison["differing"])
+    else:
+        gate(f"{name}: Recording equals the ordinary Recording",
+             comparison["identical"], comparison)
     gate(f"{name}: the interpreter exits 0",
-         run.result["collectors"] == {"process": 0},
+         run.result["collectors"] == {n: 0 for n in live},
          run.result["collectors"])
-    process = heap_summary(run.dir / "process.heaptrack",
-                           run.result["wall_ns"])
-    fmu = heap_summary(run.dir / "fmu.heaptrack", run.result["wall_ns"])
-    run.result["heaptrack"] = {"process": process, "fmu_late": fmu}
-    site = process["sites"]["silproof_process_alloc_site"]
-    gate(f"{name}: silproof_process_alloc_site has its exact calls and size",
-         site["calls"] == site["expected_calls"]
-         and site["sizes"] == [site["expected_size"]], site)
-    gate(f"{name}: no Native allocation is in the Process capture",
-         process["sites"]["silproof_native_alloc_site"]["calls"] == 0,
-         process["sites"]["silproof_native_alloc_site"])
-    checks.finding(f"{name}: the FMU site resolves when its raw data is "
-                   "interpreted after the Run directory is gone",
-                   fmu["sites"]["silproof_fmu_alloc_site"]["calls"] > 0,
-                   fmu["sites"]["silproof_fmu_alloc_site"])
-    gate(f"{name}: the late FMU capture keeps every 4096-byte allocation",
-         fmu["allocations_by_size"]["4096"]
-         >= workload.ALLOCATION_SITES["silproof_fmu_alloc_site"][0],
-         fmu["allocations_by_size"])
-    checks.finding(f"{name}: the shimmed participant's Heaptrack timestamps "
-                   "can be host time",
-                   process["timestamps"]["host_time_plausible"],
-                   process["timestamps"])
-    stderr = (run.dir / "stderr.txt").read_text(errors="replace")
-    run.result["stderr_tail"] = stderr[-2000:]
+    summaries = {}
+    for n in live:
+        heap = heap_summary(run.dir / f"{n}.heaptrack", run.result["wall_ns"])
+        summaries[n] = heap
+        site = heap["sites"][PARTICIPANT_SITES[n]]
+        gate(f"{name}: {PARTICIPANT_SITES[n]} has its exact calls and size",
+             site["calls"] == site["expected_calls"]
+             and site["sizes"] == [site["expected_size"]], site)
+        others = [s for s in workload.ALLOCATION_SITES
+                  if s != PARTICIPANT_SITES[n]]
+        gate(f"{name}: no other participant's allocation is in the {n} "
+             "capture", all(heap["sites"][s]["calls"] == 0 for s in others),
+             {s: heap["sites"][s]["calls"] for s in others})
+        checks.finding(f"{name}: the {n} participant's Heaptrack timestamps "
+                       "can be host time",
+                       heap["timestamps"]["host_time_plausible"],
+                       heap["timestamps"])
+    for n in raw:
+        heap = heap_summary(run.dir / f"{n}.heaptrack", run.result["wall_ns"])
+        summaries[f"{n}_late"] = heap
+        site = PARTICIPANT_SITES[n]
+        calls, size = workload.ALLOCATION_SITES[site]
+        checks.finding(f"{name}: {site} resolves when the raw data is "
+                       "interpreted after the Run directory is gone",
+                       heap["sites"][site]["calls"] > 0, heap["sites"][site])
+        gate(f"{name}: the late {n} capture keeps every {size}-byte "
+             "allocation", heap["allocations_by_size"][str(size)] >= calls,
+             heap["allocations_by_size"])
+    run.result["heaptrack"] = summaries
 
 
 def main(argv: list[str]) -> int:
