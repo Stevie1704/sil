@@ -1,0 +1,2481 @@
+{
+  "host": {
+    "packages": [
+      "binutils=2.42-4ubuntu2.10",
+      "gcc=4:13.2.0-7ubuntu1",
+      "heaptrack=1.5.0+dfsg1-2ubuntu3",
+      "linux-tools-6.17.0-1022-azure=6.17.0-1022.22",
+      "linux-tools-azure=6.17.0-1022.22",
+      "linux-tools-common=6.8.0-147.147"
+    ],
+    "uname": {
+      "system": "Linux",
+      "node": "runnervm8k3b6",
+      "release": "6.17.0-1022-azure",
+      "version": "#22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026",
+      "machine": "x86_64",
+      "processor": "x86_64"
+    },
+    "libc": "glibc 2.39",
+    "python": "3.12.3",
+    "in_container": false,
+    "uid": 1001,
+    "perf_event_paranoid": "2",
+    "perf_event_max_sample_rate": "100000",
+    "kptr_restrict": "1",
+    "status": {
+      "CapEff": "0000000000000000",
+      "CapPrm": "0000000000000000",
+      "Seccomp": "0",
+      "NSpid": "6944"
+    },
+    "tools": {
+      "perf": "perf version 6.17.13",
+      "heaptrack": "heaptrack 1.5.0",
+      "heaptrack_preload": "/usr/lib/heaptrack/libheaptrack_preload.so",
+      "heaptrack_interpret": "/usr/lib/heaptrack/libexec/heaptrack_interpret",
+      "cc": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "objcopy": "GNU objcopy (GNU Binutils for Ubuntu) 2.42",
+      "sil-run": "0.2.1"
+    }
+  },
+  "probes": {
+    "perf_user": {
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock:u",
+        "-F",
+        "99",
+        "-k",
+        "monotonic",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/probe/perf-user.data",
+        "--",
+        "true"
+      ],
+      "returncode": 0,
+      "stderr": "[ perf record: Woken up 1 times to write data ]\n[ perf record: Captured and wrote 0.001 MB /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/probe/perf-user.data ]\n",
+      "outcome": "available"
+    },
+    "perf_user_dwarf": {
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock:u",
+        "-F",
+        "99",
+        "-k",
+        "monotonic",
+        "--call-graph",
+        "dwarf,8192",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/probe/perf-dwarf.data",
+        "--",
+        "true"
+      ],
+      "returncode": 0,
+      "stderr": "[ perf record: Woken up 1 times to write data ]\n[ perf record: Captured and wrote 0.003 MB /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/probe/perf-dwarf.data ]\n",
+      "outcome": "available"
+    },
+    "perf_kernel": {
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock",
+        "-F",
+        "99",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/probe/perf-kernel.data",
+        "--",
+        "true"
+      ],
+      "returncode": 0,
+      "stderr": "[ perf record: Woken up 1 times to write data ]\n[ perf record: Captured and wrote 0.001 MB /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/probe/perf-kernel.data ]\n",
+      "outcome": "available"
+    },
+    "heaptrack_preload": {
+      "returncode": 0,
+      "stderr": "",
+      "outcome": "available"
+    }
+  },
+  "settings": {
+    "event": "cpu-clock:u",
+    "frequency_hz": 999,
+    "clock": "monotonic",
+    "dwarf_stack_bytes": 8192,
+    "participant_timeout_ms": 60000,
+    "cflags": [
+      "-O2",
+      "-g"
+    ],
+    "duration_ns": 1000000000,
+    "period_ns": 10000000
+  },
+  "artifacts": {
+    "native (stripped, loaded)": {
+      "path": "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_native.so",
+      "sha256": "1b607f40c8a3b700c66da8fe265ca6c897b0c7329e425a2554d415ab31dee3ac",
+      "bytes": 14592,
+      "build_id": "bcd7e6ac947d4fcecfca3af39c6c952a2e2e72a2"
+    },
+    "native (before strip)": {
+      "path": "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/full/libsilproof_native.so",
+      "sha256": "d4c8fa0f0845218aa50694a7bdc783891b81012be98c0620f4a583409ccc0531",
+      "bytes": 26424,
+      "build_id": "bcd7e6ac947d4fcecfca3af39c6c952a2e2e72a2"
+    },
+    "native matching debug": {
+      "path": "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/debug/matching/libsilproof_native.so.debug",
+      "sha256": "9c87dbddda3b25d1693364a7dff1db4a937b99d5f61400e0b6c5017be1fb0c64",
+      "bytes": 14792,
+      "build_id": "bcd7e6ac947d4fcecfca3af39c6c952a2e2e72a2"
+    },
+    "native mismatched debug": {
+      "path": "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/debug/mismatched/libsilproof_native.so.debug",
+      "sha256": "844e27cc951fb1aabb9c7eb0473587b33990a078087f9d4a67f2a4fbec693b80",
+      "bytes": 14792,
+      "build_id": "652ffa58f0a5d6496ec46982223afc21c90433dd"
+    },
+    "process library": {
+      "path": "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_process.so",
+      "sha256": "07e463c410580f286f9be30ba829a6213c0032e642340661ec7971923f286d4f",
+      "bytes": 23056,
+      "build_id": "e3016ebb4644e991b76c6f094343f22049d71675"
+    },
+    "child": {
+      "path": "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/bin/silproof_child",
+      "sha256": "2c32dbebb9275a1eccff16223bb30851f9177a2bfdae2abacbd762ba3ce9e54c",
+      "bytes": 24184,
+      "build_id": "1a2bf19593cc4c0ea6fcfcae75ad6a4d5c52c4e7"
+    },
+    "fmu archive": {
+      "path": "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/EgoMotion.fmu",
+      "sha256": "a0488c3659933cf2c8f396bfccb9257e859701c8a4439a7ff6d1cebf4d1ffdd0",
+      "bytes": 10247,
+      "build_id": null
+    },
+    "fmu library": {
+      "path": "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/full/EgoMotion.so",
+      "sha256": "d2755764638578db9cf8a8115cbdec59bcdaceefca58ae1204d75c40f3d01d9c",
+      "bytes": 27312,
+      "build_id": "243704ef884fedb46634fd686ff00c8e2c243ad8"
+    }
+  },
+  "manifest_sha256": "e6b62b9be13f6bbadaf147cf07d592ef11e59f127bfce6a3e44d77085f4d257d",
+  "runs": {
+    "ordinary": {
+      "name": "ordinary",
+      "command": [
+        "sil-run",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/manifest.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/ordinary/run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "wall_ns": 2791035416,
+      "returncode": 0,
+      "recording_bytes": 28039,
+      "leftover_processes": []
+    },
+    "perf-dwarf": {
+      "name": "perf-dwarf",
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock:u",
+        "-F",
+        "999",
+        "-k",
+        "monotonic",
+        "--call-graph",
+        "dwarf,8192",
+        "--buildid-mmap",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-dwarf/perf.data",
+        "--",
+        "sil-run",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/manifest.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-dwarf/run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "wall_ns": 2838329577,
+      "returncode": 0,
+      "recording_bytes": 28039,
+      "leftover_processes": [],
+      "recording": {
+        "messages": [
+          400,
+          400
+        ],
+        "identical": true,
+        "differing": {}
+      },
+      "perf": {
+        "perf_data_bytes": 23171896,
+        "perf_data_sha256": "d96690749268cb0e59403ef541a0f25e8be2ae6fb0d127c813867ce00d73bf9d",
+        "build_ids": {
+          "native": {
+            "expected": "bcd7e6ac947d4fcecfca3af39c6c952a2e2e72a2",
+            "recorded_paths": [
+              "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_native.so"
+            ]
+          },
+          "process": {
+            "expected": "e3016ebb4644e991b76c6f094343f22049d71675",
+            "recorded_paths": [
+              "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_process.so"
+            ]
+          },
+          "child": {
+            "expected": "1a2bf19593cc4c0ea6fcfcae75ad6a4d5c52c4e7",
+            "recorded_paths": [
+              "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/bin/silproof_child"
+            ]
+          },
+          "fmu": {
+            "expected": "243704ef884fedb46634fd686ff00c8e2c243ad8",
+            "recorded_paths": [
+              "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-dwarf/.sil-run-YmEbdj/participant-666d75/sil-fmu-ihrk_xi5/binaries/x86_64-linux/EgoMotion.so"
+            ]
+          }
+        },
+        "fmu_mapped_paths": [
+          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-dwarf/.sil-run-YmEbdj/participant-666d75/sil-fmu-ihrk_xi5/binaries/x86_64-linux/EgoMotion.so"
+        ],
+        "recorded_layout": {
+          "samples": 2737,
+          "leaf_counts": {
+            "silproof_native_spin_even": 0,
+            "silproof_native_spin_odd": 0,
+            "silproof_process_spin": 770,
+            "silproof_child_spin": 203,
+            "silproof_fmu_spin": 0
+          },
+          "dso_coverage": {
+            "_ctypes.cpython-312-x86_64-linux-gnu.so": {
+              "samples": 1,
+              "unknown": 1
+            },
+            "ld-linux-x86-64.so.2": {
+              "samples": 2,
+              "unknown": 2
+            },
+            "libc.so.6": {
+              "samples": 18,
+              "unknown": 8
+            },
+            "libcrypto.so.3": {
+              "samples": 2,
+              "unknown": 2
+            },
+            "libsilproof_native.so": {
+              "samples": 773,
+              "unknown": 773
+            },
+            "libsilproof_process.so": {
+              "samples": 770
+            },
+            "libz.so.1.3": {
+              "samples": 1,
+              "unknown": 1
+            },
+            "python3.12": {
+              "samples": 144,
+              "unknown": 78
+            },
+            "sil-run": {
+              "samples": 64
+            },
+            "silproof_child": {
+              "samples": 203
+            }
+          }
+        },
+        "matching_debug_source_lines": 773,
+        "matching_debug_layout": {
+          "samples": 2737,
+          "leaf_counts": {
+            "silproof_native_spin_even": 385,
+            "silproof_native_spin_odd": 388,
+            "silproof_process_spin": 770,
+            "silproof_child_spin": 203,
+            "silproof_fmu_spin": 758
+          },
+          "dso_coverage": {
+            "EgoMotion.so": {
+              "samples": 759
+            },
+            "_ctypes.cpython-312-x86_64-linux-gnu.so": {
+              "samples": 1,
+              "unknown": 1
+            },
+            "ld-linux-x86-64.so.2": {
+              "samples": 2,
+              "unknown": 2
+            },
+            "libc.so.6": {
+              "samples": 18,
+              "unknown": 8
+            },
+            "libcrypto.so.3": {
+              "samples": 2,
+              "unknown": 2
+            },
+            "libsilproof_native.so": {
+              "samples": 773
+            },
+            "libsilproof_process.so": {
+              "samples": 770
+            },
+            "libz.so.1.3": {
+              "samples": 1,
+              "unknown": 1
+            },
+            "python3.12": {
+              "samples": 144,
+              "unknown": 78
+            },
+            "sil-run": {
+              "samples": 64
+            },
+            "silproof_child": {
+              "samples": 203
+            }
+          }
+        },
+        "mismatched_debug_source_lines": 0,
+        "mismatched_debug_layout": {
+          "samples": 2737,
+          "leaf_counts": {
+            "silproof_native_spin_even": 0,
+            "silproof_native_spin_odd": 0,
+            "silproof_process_spin": 770,
+            "silproof_child_spin": 203,
+            "silproof_fmu_spin": 758
+          },
+          "dso_coverage": {
+            "EgoMotion.so": {
+              "samples": 759
+            },
+            "_ctypes.cpython-312-x86_64-linux-gnu.so": {
+              "samples": 1,
+              "unknown": 1
+            },
+            "ld-linux-x86-64.so.2": {
+              "samples": 2,
+              "unknown": 2
+            },
+            "libc.so.6": {
+              "samples": 18,
+              "unknown": 8
+            },
+            "libcrypto.so.3": {
+              "samples": 2,
+              "unknown": 2
+            },
+            "libsilproof_native.so": {
+              "samples": 773,
+              "unknown": 773
+            },
+            "libsilproof_process.so": {
+              "samples": 770
+            },
+            "libz.so.1.3": {
+              "samples": 1,
+              "unknown": 1
+            },
+            "python3.12": {
+              "samples": 144,
+              "unknown": 78
+            },
+            "sil-run": {
+              "samples": 64
+            },
+            "silproof_child": {
+              "samples": 203
+            }
+          }
+        },
+        "fmu_after_explicit_cache": {
+          "silproof_fmu_spin": 758
+        },
+        "callers": {
+          "silproof_native_spin_even": {
+            "samples": 385,
+            "with_caller_outside_module": 385,
+            "with_direct_caller": 385
+          },
+          "silproof_native_spin_odd": {
+            "samples": 388,
+            "with_caller_outside_module": 388,
+            "with_direct_caller": 388
+          },
+          "silproof_process_spin": {
+            "samples": 770,
+            "with_caller_outside_module": 770,
+            "with_direct_caller": 770
+          },
+          "silproof_child_spin": {
+            "samples": 203,
+            "with_caller_outside_module": 203,
+            "with_direct_caller": 203
+          },
+          "silproof_fmu_spin": {
+            "samples": 758,
+            "with_caller_outside_module": 758,
+            "with_direct_caller": 758
+          }
+        },
+        "join": {
+          "silproof_child_spin": {
+            "inside": 203,
+            "outside": 0,
+            "inside_other_function": 0
+          },
+          "silproof_fmu_spin": {
+            "inside": 758,
+            "outside": 0,
+            "inside_other_function": 0
+          },
+          "silproof_native_spin_even": {
+            "inside": 385,
+            "outside": 0,
+            "inside_other_function": 0
+          },
+          "silproof_native_spin_odd": {
+            "inside": 388,
+            "outside": 0,
+            "inside_other_function": 0
+          },
+          "silproof_process_spin": {
+            "inside": 770,
+            "outside": 0,
+            "inside_other_function": 0
+          }
+        },
+        "pids": {
+          "child:7025": 51,
+          "child:7026": 51,
+          "child:7027": 51,
+          "child:7028": 50,
+          "fmu:7022": 856,
+          "native:7021": 840,
+          "process:7024": 838
+        },
+        "comms": {
+          "python": 1694,
+          "sil-run": 840,
+          "silproof_child": 203
+        },
+        "dwarf": true,
+        "buildid_mmap": true
+      }
+    },
+    "perf-fp": {
+      "name": "perf-fp",
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock:u",
+        "-F",
+        "999",
+        "-k",
+        "monotonic",
+        "--call-graph",
+        "fp",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-fp/perf.data",
+        "--",
+        "sil-run",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/manifest.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-fp/run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "wall_ns": 2823583478,
+      "returncode": 0,
+      "recording_bytes": 28039,
+      "leftover_processes": [],
+      "recording": {
+        "messages": [
+          400,
+          400
+        ],
+        "identical": true,
+        "differing": {}
+      },
+      "perf": {
+        "perf_data_bytes": 247304,
+        "perf_data_sha256": "b4a20091d5a8fee5d991d749cfdd24be8787c1f963b4a98603532e4123d7f26c",
+        "build_ids": {
+          "native": {
+            "expected": "bcd7e6ac947d4fcecfca3af39c6c952a2e2e72a2",
+            "recorded_paths": [
+              "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_native.so"
+            ]
+          },
+          "process": {
+            "expected": "e3016ebb4644e991b76c6f094343f22049d71675",
+            "recorded_paths": [
+              "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_process.so"
+            ]
+          },
+          "child": {
+            "expected": "1a2bf19593cc4c0ea6fcfcae75ad6a4d5c52c4e7",
+            "recorded_paths": [
+              "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/bin/silproof_child"
+            ]
+          },
+          "fmu": {
+            "expected": "243704ef884fedb46634fd686ff00c8e2c243ad8",
+            "recorded_paths": [
+              "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-fp/.sil-run-hGXqH9/participant-666d75/sil-fmu-2n47get4/binaries/x86_64-linux/EgoMotion.so"
+            ]
+          }
+        },
+        "fmu_mapped_paths": [
+          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-fp/.sil-run-hGXqH9/participant-666d75/sil-fmu-2n47get4/binaries/x86_64-linux/EgoMotion.so"
+        ],
+        "recorded_layout": {
+          "samples": 2726,
+          "leaf_counts": {
+            "silproof_native_spin_even": 0,
+            "silproof_native_spin_odd": 0,
+            "silproof_process_spin": 776,
+            "silproof_child_spin": 202,
+            "silproof_fmu_spin": 762
+          },
+          "dso_coverage": {
+            "EgoMotion.so": {
+              "samples": 762
+            },
+            "ld-linux-x86-64.so.2": {
+              "samples": 2,
+              "unknown": 2
+            },
+            "libc.so.6": {
+              "samples": 12,
+              "unknown": 10
+            },
+            "libsilproof_native.so": {
+              "samples": 776,
+              "unknown": 776
+            },
+            "libsilproof_process.so": {
+              "samples": 776
+            },
+            "python3.12": {
+              "samples": 132,
+              "unknown": 69
+            },
+            "sil-run": {
+              "samples": 64
+            },
+            "silproof_child": {
+              "samples": 202
+            }
+          }
+        },
+        "matching_debug_source_lines": 776,
+        "matching_debug_layout": {
+          "samples": 2726,
+          "leaf_counts": {
+            "silproof_native_spin_even": 389,
+            "silproof_native_spin_odd": 387,
+            "silproof_process_spin": 776,
+            "silproof_child_spin": 202,
+            "silproof_fmu_spin": 762
+          },
+          "dso_coverage": {
+            "EgoMotion.so": {
+              "samples": 762
+            },
+            "ld-linux-x86-64.so.2": {
+              "samples": 2,
+              "unknown": 2
+            },
+            "libc.so.6": {
+              "samples": 12,
+              "unknown": 10
+            },
+            "libsilproof_native.so": {
+              "samples": 776
+            },
+            "libsilproof_process.so": {
+              "samples": 776
+            },
+            "python3.12": {
+              "samples": 132,
+              "unknown": 69
+            },
+            "sil-run": {
+              "samples": 64
+            },
+            "silproof_child": {
+              "samples": 202
+            }
+          }
+        },
+        "mismatched_debug_source_lines": 0,
+        "mismatched_debug_layout": {
+          "samples": 2726,
+          "leaf_counts": {
+            "silproof_native_spin_even": 0,
+            "silproof_native_spin_odd": 0,
+            "silproof_process_spin": 776,
+            "silproof_child_spin": 202,
+            "silproof_fmu_spin": 762
+          },
+          "dso_coverage": {
+            "EgoMotion.so": {
+              "samples": 762
+            },
+            "ld-linux-x86-64.so.2": {
+              "samples": 2,
+              "unknown": 2
+            },
+            "libc.so.6": {
+              "samples": 12,
+              "unknown": 10
+            },
+            "libsilproof_native.so": {
+              "samples": 776,
+              "unknown": 776
+            },
+            "libsilproof_process.so": {
+              "samples": 776
+            },
+            "python3.12": {
+              "samples": 132,
+              "unknown": 69
+            },
+            "sil-run": {
+              "samples": 64
+            },
+            "silproof_child": {
+              "samples": 202
+            }
+          }
+        },
+        "fmu_after_explicit_cache": {
+          "silproof_fmu_spin": 762
+        },
+        "callers": {
+          "silproof_native_spin_even": {
+            "samples": 389,
+            "with_caller_outside_module": 0,
+            "with_direct_caller": 0
+          },
+          "silproof_native_spin_odd": {
+            "samples": 387,
+            "with_caller_outside_module": 0,
+            "with_direct_caller": 0
+          },
+          "silproof_process_spin": {
+            "samples": 776,
+            "with_caller_outside_module": 776,
+            "with_direct_caller": 0
+          },
+          "silproof_child_spin": {
+            "samples": 202,
+            "with_caller_outside_module": 202,
+            "with_direct_caller": 0
+          },
+          "silproof_fmu_spin": {
+            "samples": 762,
+            "with_caller_outside_module": 0,
+            "with_direct_caller": 0
+          }
+        },
+        "join": {
+          "silproof_child_spin": {
+            "inside": 202,
+            "outside": 0,
+            "inside_other_function": 0
+          },
+          "silproof_fmu_spin": {
+            "inside": 762,
+            "outside": 0,
+            "inside_other_function": 0
+          },
+          "silproof_native_spin_even": {
+            "inside": 389,
+            "outside": 0,
+            "inside_other_function": 0
+          },
+          "silproof_native_spin_odd": {
+            "inside": 387,
+            "outside": 0,
+            "inside_other_function": 0
+          },
+          "silproof_process_spin": {
+            "inside": 776,
+            "outside": 0,
+            "inside_other_function": 0
+          }
+        },
+        "pids": {
+          "child:7085": 50,
+          "child:7086": 51,
+          "child:7087": 50,
+          "child:7088": 51,
+          "fmu:7082": 845,
+          "native:7081": 844,
+          "process:7084": 835
+        },
+        "comms": {
+          "python": 1680,
+          "sil-run": 844,
+          "silproof_child": 202
+        },
+        "dwarf": false,
+        "buildid_mmap": false
+      }
+    },
+    "heaptrack-runner": {
+      "name": "heaptrack-runner",
+      "command": [
+        "/home/runner/work/sil/sil/proofs/profiling/heaptrack-launch.sh",
+        "live",
+        "runner",
+        "sil-run",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/manifest.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-runner/run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "wall_ns": 2819388264,
+      "returncode": 0,
+      "recording_bytes": 28039,
+      "collectors": {
+        "runner": 0
+      },
+      "leftover_processes": [],
+      "recording": {
+        "messages": [
+          400,
+          400
+        ],
+        "identical": true,
+        "differing": {}
+      },
+      "heaptrack": {
+        "runner": {
+          "bytes": 360786,
+          "sha256": "e4a62b177fd8581460e2a8a685d2460fb45db0ad362b78a70a1fc509ab5fc736",
+          "file_version": 3,
+          "exe": "sil-run /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/manifest.json -o /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-runner/run.mcap --participant-timeout-ms 60000",
+          "modules": [
+            "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_native.so"
+          ],
+          "sites": {
+            "silproof_native_alloc_site": {
+              "calls": 1600,
+              "bytes": 1638400,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [
+                1024
+              ],
+              "expected_calls": 1600,
+              "expected_size": 1024
+            },
+            "silproof_native_retain_site": {
+              "calls": 1,
+              "bytes": 65536,
+              "outstanding_calls": 1,
+              "outstanding_bytes": 65536,
+              "sizes": [
+                65536
+              ],
+              "expected_calls": 1,
+              "expected_size": 65536
+            },
+            "silproof_process_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 800,
+              "expected_size": 2048
+            },
+            "silproof_fmu_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 400,
+              "expected_size": 4096
+            }
+          },
+          "timestamps": {
+            "count": 280,
+            "first_ms": 10,
+            "last_ms": 2816,
+            "distinct": 280,
+            "negative": 0,
+            "host_time_plausible": true
+          },
+          "rss_samples": 280,
+          "run_wall_ms": 2819,
+          "allocations_by_size": {
+            "1024": 1604,
+            "2048": 4,
+            "4096": 3,
+            "65536": 1
+          }
+        }
+      }
+    },
+    "heaptrack-runner-mismatched": {
+      "name": "heaptrack-runner-mismatched",
+      "command": [
+        "/home/runner/work/sil/sil/proofs/profiling/heaptrack-launch.sh",
+        "live",
+        "runner",
+        "sil-run",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/manifest.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-runner-mismatched/run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "wall_ns": 2814391550,
+      "returncode": 0,
+      "recording_bytes": 28039,
+      "collectors": {
+        "runner": 0
+      },
+      "leftover_processes": [],
+      "recording": {
+        "messages": [
+          400,
+          400
+        ],
+        "identical": true,
+        "differing": {}
+      },
+      "heaptrack": {
+        "runner": {
+          "bytes": 360560,
+          "sha256": "ef84bf601d47ac9d429f61aef177561bcb67e474f78734564c3f8be5f994f1fd",
+          "file_version": 3,
+          "exe": "sil-run /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/manifest.json -o /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-runner-mismatched/run.mcap --participant-timeout-ms 60000",
+          "modules": [
+            "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_native.so"
+          ],
+          "sites": {
+            "silproof_native_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 1600,
+              "expected_size": 1024
+            },
+            "silproof_native_retain_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 1,
+              "expected_size": 65536
+            },
+            "silproof_process_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 800,
+              "expected_size": 2048
+            },
+            "silproof_fmu_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 400,
+              "expected_size": 4096
+            }
+          },
+          "timestamps": {
+            "count": 279,
+            "first_ms": 10,
+            "last_ms": 2811,
+            "distinct": 279,
+            "negative": 0,
+            "host_time_plausible": true
+          },
+          "rss_samples": 279,
+          "run_wall_ms": 2814,
+          "allocations_by_size": {
+            "1024": 1604,
+            "2048": 4,
+            "4096": 3,
+            "65536": 1
+          }
+        }
+      }
+    },
+    "heaptrack-fmu": {
+      "name": "heaptrack-fmu",
+      "command": [
+        "sil-run",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-fmu/manifest.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-fmu/run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "wall_ns": 2853721212,
+      "returncode": 0,
+      "recording_bytes": 28039,
+      "collectors": {
+        "fmu": 0
+      },
+      "process_sleep": "reject",
+      "scopes": {
+        "live": [
+          "fmu"
+        ],
+        "raw": []
+      },
+      "late_interpretation": {},
+      "leftover_processes": [],
+      "stderr_tail": "manifest_hash 6e7b0f0fd1d7140672538c2132e3aa1b8170d56461af3bdac51f0ffcc3d63061\n",
+      "recording": {
+        "messages": [
+          400,
+          400
+        ],
+        "identical": true,
+        "differing": {}
+      },
+      "heaptrack": {
+        "fmu": {
+          "bytes": 710836,
+          "sha256": "afd3eb01107a3351568d71293cce74df4ddc17537d54e54b7246ce06b088fc8a",
+          "file_version": 3,
+          "exe": "/home/runner/work/_temp/sil/python/bin/python -m sil.fmi /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/EgoMotion.fmu",
+          "modules": [
+            "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-fmu/.sil-run-cmXult/participant-666d75/sil-fmu-uk2w1bcq/binaries/x86_64-linux/EgoMotion.so"
+          ],
+          "sites": {
+            "silproof_native_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 1600,
+              "expected_size": 1024
+            },
+            "silproof_native_retain_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 1,
+              "expected_size": 65536
+            },
+            "silproof_process_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 800,
+              "expected_size": 2048
+            },
+            "silproof_fmu_alloc_site": {
+              "calls": 400,
+              "bytes": 1638400,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [
+                4096
+              ],
+              "expected_calls": 400,
+              "expected_size": 4096
+            }
+          },
+          "timestamps": {
+            "count": 272,
+            "first_ms": 12,
+            "last_ms": 2747,
+            "distinct": 272,
+            "negative": 0,
+            "host_time_plausible": true
+          },
+          "rss_samples": 272,
+          "run_wall_ms": 2853,
+          "allocations_by_size": {
+            "1024": 237,
+            "2048": 36,
+            "4096": 522,
+            "65536": 1
+          }
+        }
+      }
+    },
+    "heaptrack-shimmed-process": {
+      "name": "heaptrack-shimmed-process",
+      "command": [
+        "sil-run",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-shimmed-process/manifest.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-shimmed-process/run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "wall_ns": 203477309,
+      "returncode": 1,
+      "recording_bytes": 1069,
+      "collectors": {
+        "process": 0
+      },
+      "process_sleep": "reject",
+      "scopes": {
+        "live": [
+          "process"
+        ],
+        "raw": []
+      },
+      "late_interpretation": {},
+      "leftover_processes": [],
+      "stderr_tail": "Exception ignored error evaluating path:\nTraceback (most recent call last):\n  File \"<frozen getpath>\", line 490, in <module>\nOSError: [Errno 38] Function not implemented\nFatal Python error: error evaluating path\nPython runtime state: core initialized\n\nCurrent thread 0x00007f611de26780 (most recent call first):\n  <no Python frame>\nsil-run: participant 'process' exited unexpectedly with status 1 during initialization\n",
+      "recording": {
+        "messages": [
+          400,
+          0
+        ],
+        "identical": false,
+        "differing": {}
+      },
+      "heaptrack": {
+        "process": {
+          "bytes": 203026,
+          "sha256": "de0c49433694a7ac5b66135d95d5a7a6e283e1f5fa6c74b790dacd820b86c654",
+          "file_version": 3,
+          "exe": "/home/runner/work/_temp/sil/python/bin/python /home/runner/work/sil/sil/proofs/profiling/workload/process_adapter.py /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_process.so /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/bin/silproof_child",
+          "modules": [],
+          "sites": {
+            "silproof_native_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 1600,
+              "expected_size": 1024
+            },
+            "silproof_native_retain_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 1,
+              "expected_size": 65536
+            },
+            "silproof_process_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 800,
+              "expected_size": 2048
+            },
+            "silproof_fmu_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 400,
+              "expected_size": 4096
+            }
+          },
+          "timestamps": {
+            "count": 3606,
+            "first_ms": 18446744073709258669,
+            "last_ms": 18446744073709258669,
+            "distinct": 1,
+            "negative": 3606,
+            "host_time_plausible": false
+          },
+          "rss_samples": 3606,
+          "run_wall_ms": 203,
+          "allocations_by_size": {
+            "1024": 3,
+            "2048": 3,
+            "4096": 3,
+            "65536": 1
+          }
+        }
+      }
+    },
+    "heaptrack-shimmed-process-sleep-immediate": {
+      "name": "heaptrack-shimmed-process-sleep-immediate",
+      "command": [
+        "sil-run",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-shimmed-process-sleep-immediate/manifest.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-shimmed-process-sleep-immediate/run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "wall_ns": 3234157278,
+      "returncode": 0,
+      "recording_bytes": 28039,
+      "collectors": {
+        "process": 0
+      },
+      "process_sleep": "immediate",
+      "scopes": {
+        "live": [
+          "process"
+        ],
+        "raw": [
+          "fmu"
+        ]
+      },
+      "late_interpretation": {
+        "fmu": {
+          "raw_bytes": 1030771,
+          "interpret_returncode": 0
+        }
+      },
+      "leftover_processes": [],
+      "stderr_tail": "manifest_hash b7a465c882d99f2aed28397dc240681d8b28b115926d0cff621072ddc7e87596\n",
+      "recording": {
+        "messages": [
+          400,
+          400
+        ],
+        "identical": false,
+        "differing": {
+          "proof.process.child_clock_ns": 4
+        }
+      },
+      "heaptrack": {
+        "process": {
+          "bytes": 35792716,
+          "sha256": "cedf80664c6052cec8b163cd646dce94d2c20925f767435186f4206d9ebf6a03",
+          "file_version": 3,
+          "exe": "/home/runner/work/_temp/sil/python/bin/python /home/runner/work/sil/sil/proofs/profiling/workload/process_adapter.py /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_process.so /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/bin/silproof_child",
+          "modules": [
+            "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_process.so"
+          ],
+          "sites": {
+            "silproof_native_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 1600,
+              "expected_size": 1024
+            },
+            "silproof_native_retain_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 1,
+              "expected_size": 65536
+            },
+            "silproof_process_alloc_site": {
+              "calls": 800,
+              "bytes": 1638400,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [
+                2048
+              ],
+              "expected_calls": 800,
+              "expected_size": 2048
+            },
+            "silproof_fmu_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 400,
+              "expected_size": 4096
+            }
+          },
+          "timestamps": {
+            "count": 1355424,
+            "first_ms": 18446744073709258311,
+            "last_ms": 18446744073709259301,
+            "distinct": 100,
+            "negative": 1355424,
+            "host_time_plausible": false
+          },
+          "rss_samples": 1355424,
+          "run_wall_ms": 3234,
+          "allocations_by_size": {
+            "1024": 101,
+            "2048": 825,
+            "4096": 102,
+            "65536": 1
+          }
+        },
+        "fmu_late": {
+          "bytes": 711216,
+          "sha256": "8c2e773c0aeac8f4e5a1f3c78763e05e05256caf1c289caa49226fd105ce3f65",
+          "file_version": 3,
+          "exe": "/home/runner/work/_temp/sil/python/bin/python -m sil.fmi /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/EgoMotion.fmu",
+          "modules": [
+            "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-shimmed-process-sleep-immediate/.sil-run-6ft48t/participant-666d75/sil-fmu-mbxlgoj0/binaries/x86_64-linux/EgoMotion.so"
+          ],
+          "sites": {
+            "silproof_native_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 1600,
+              "expected_size": 1024
+            },
+            "silproof_native_retain_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 1,
+              "expected_size": 65536
+            },
+            "silproof_process_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 800,
+              "expected_size": 2048
+            },
+            "silproof_fmu_alloc_site": {
+              "calls": 0,
+              "bytes": 0,
+              "outstanding_calls": 0,
+              "outstanding_bytes": 0,
+              "sizes": [],
+              "expected_calls": 400,
+              "expected_size": 4096
+            }
+          },
+          "timestamps": {
+            "count": 304,
+            "first_ms": 10,
+            "last_ms": 3067,
+            "distinct": 304,
+            "negative": 0,
+            "host_time_plausible": true
+          },
+          "rss_samples": 304,
+          "run_wall_ms": 3234,
+          "allocations_by_size": {
+            "1024": 237,
+            "2048": 36,
+            "4096": 522,
+            "65536": 1
+          }
+        }
+      }
+    }
+  },
+  "checks": [
+    {
+      "name": "ordinary: Run exits 0",
+      "kind": "check",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "ordinary: no process is left",
+      "kind": "check",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "ordinary: one interval per hot call",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "silproof_child_spin": 4,
+        "silproof_fmu_spin": 100,
+        "silproof_native_spin_even": 50,
+        "silproof_native_spin_odd": 50,
+        "silproof_process_spin": 100
+      }
+    },
+    {
+      "name": "perf-dwarf: Run exits 0",
+      "kind": "check",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "perf-dwarf: no process is left",
+      "kind": "check",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "perf-dwarf: Recording equals the ordinary Recording",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "messages": [
+          400,
+          400
+        ],
+        "identical": true,
+        "differing": {}
+      }
+    },
+    {
+      "name": "perf-dwarf: samples name silproof_native_spin_even (matching debug file)",
+      "kind": "check",
+      "passed": true,
+      "detail": 385
+    },
+    {
+      "name": "perf-dwarf: samples name silproof_native_spin_odd (matching debug file)",
+      "kind": "check",
+      "passed": true,
+      "detail": 388
+    },
+    {
+      "name": "perf-dwarf: samples name silproof_process_spin (matching debug file)",
+      "kind": "check",
+      "passed": true,
+      "detail": 770
+    },
+    {
+      "name": "perf-dwarf: samples name silproof_child_spin (matching debug file)",
+      "kind": "check",
+      "passed": true,
+      "detail": 203
+    },
+    {
+      "name": "perf-dwarf: samples name silproof_fmu_spin (matching debug file)",
+      "kind": "check",
+      "passed": true,
+      "detail": 758
+    },
+    {
+      "name": "perf-dwarf: the matching debug file gives source lines",
+      "kind": "check",
+      "passed": true,
+      "detail": 773
+    },
+    {
+      "name": "perf-dwarf: a mismatched debug file gives no source line",
+      "kind": "check",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "perf-dwarf: a mismatched debug file names no stripped function",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "silproof_native_spin_even": 0,
+        "silproof_native_spin_odd": 0
+      }
+    },
+    {
+      "name": "perf-dwarf: the stripped library alone names its static functions",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "silproof_native_spin_even": 0,
+        "silproof_native_spin_odd": 0
+      }
+    },
+    {
+      "name": "perf-dwarf: every silproof_child_spin sample lies in one of its own host intervals",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "inside": 203,
+        "outside": 0,
+        "inside_other_function": 0
+      }
+    },
+    {
+      "name": "perf-dwarf: every silproof_fmu_spin sample lies in one of its own host intervals",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "inside": 758,
+        "outside": 0,
+        "inside_other_function": 0
+      }
+    },
+    {
+      "name": "perf-dwarf: every silproof_native_spin_even sample lies in one of its own host intervals",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "inside": 385,
+        "outside": 0,
+        "inside_other_function": 0
+      }
+    },
+    {
+      "name": "perf-dwarf: every silproof_native_spin_odd sample lies in one of its own host intervals",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "inside": 388,
+        "outside": 0,
+        "inside_other_function": 0
+      }
+    },
+    {
+      "name": "perf-dwarf: every silproof_process_spin sample lies in one of its own host intervals",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "inside": 770,
+        "outside": 0,
+        "inside_other_function": 0
+      }
+    },
+    {
+      "name": "perf-dwarf: every workload process has samples under its own PID",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "child:7025": 51,
+        "child:7026": 51,
+        "child:7027": 51,
+        "child:7028": 50,
+        "fmu:7022": 856,
+        "native:7021": 840,
+        "process:7024": 838
+      }
+    },
+    {
+      "name": "perf-dwarf: perf recorded the native build ID",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "expected": "bcd7e6ac947d4fcecfca3af39c6c952a2e2e72a2",
+        "recorded_paths": [
+          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_native.so"
+        ]
+      }
+    },
+    {
+      "name": "perf-dwarf: perf recorded the process build ID",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "expected": "e3016ebb4644e991b76c6f094343f22049d71675",
+        "recorded_paths": [
+          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_process.so"
+        ]
+      }
+    },
+    {
+      "name": "perf-dwarf: perf recorded the child build ID",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "expected": "1a2bf19593cc4c0ea6fcfcae75ad6a4d5c52c4e7",
+        "recorded_paths": [
+          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/bin/silproof_child"
+        ]
+      }
+    },
+    {
+      "name": "perf-dwarf: perf recorded the fmu build ID",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "expected": "243704ef884fedb46634fd686ff00c8e2c243ad8",
+        "recorded_paths": [
+          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-dwarf/.sil-run-YmEbdj/participant-666d75/sil-fmu-ihrk_xi5/binaries/x86_64-linux/EgoMotion.so"
+        ]
+      }
+    },
+    {
+      "name": "perf-dwarf: the FMU library resolves after the Run directory is gone, with no explicit capture",
+      "kind": "finding",
+      "holds": false,
+      "detail": 0
+    },
+    {
+      "name": "perf-dwarf: the FMU library resolves after an explicit build-ID cache capture",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "silproof_fmu_spin": 758
+      }
+    },
+    {
+      "name": "perf-dwarf: silproof_native_spin_even samples unwind past their module",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "samples": 385,
+        "with_caller_outside_module": 385,
+        "with_direct_caller": 385
+      }
+    },
+    {
+      "name": "perf-dwarf: silproof_native_spin_even samples show its source caller native_task",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "samples": 385,
+        "with_caller_outside_module": 385,
+        "with_direct_caller": 385
+      }
+    },
+    {
+      "name": "perf-dwarf: every silproof_native_spin_even sample shows its source caller",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "samples": 385,
+        "with_caller_outside_module": 385,
+        "with_direct_caller": 385
+      }
+    },
+    {
+      "name": "perf-dwarf: silproof_native_spin_odd samples unwind past their module",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "samples": 388,
+        "with_caller_outside_module": 388,
+        "with_direct_caller": 388
+      }
+    },
+    {
+      "name": "perf-dwarf: silproof_native_spin_odd samples show its source caller native_task",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "samples": 388,
+        "with_caller_outside_module": 388,
+        "with_direct_caller": 388
+      }
+    },
+    {
+      "name": "perf-dwarf: every silproof_native_spin_odd sample shows its source caller",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "samples": 388,
+        "with_caller_outside_module": 388,
+        "with_direct_caller": 388
+      }
+    },
+    {
+      "name": "perf-dwarf: silproof_process_spin samples unwind past their module",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "samples": 770,
+        "with_caller_outside_module": 770,
+        "with_direct_caller": 770
+      }
+    },
+    {
+      "name": "perf-dwarf: silproof_process_spin samples show its source caller silproof_process_step",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "samples": 770,
+        "with_caller_outside_module": 770,
+        "with_direct_caller": 770
+      }
+    },
+    {
+      "name": "perf-dwarf: every silproof_process_spin sample shows its source caller",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "samples": 770,
+        "with_caller_outside_module": 770,
+        "with_direct_caller": 770
+      }
+    },
+    {
+      "name": "perf-dwarf: silproof_child_spin samples unwind past their module",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "samples": 203,
+        "with_caller_outside_module": 203,
+        "with_direct_caller": 203
+      }
+    },
+    {
+      "name": "perf-dwarf: silproof_child_spin samples show its source caller main",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "samples": 203,
+        "with_caller_outside_module": 203,
+        "with_direct_caller": 203
+      }
+    },
+    {
+      "name": "perf-dwarf: every silproof_child_spin sample shows its source caller",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "samples": 203,
+        "with_caller_outside_module": 203,
+        "with_direct_caller": 203
+      }
+    },
+    {
+      "name": "perf-dwarf: silproof_fmu_spin samples unwind past their module",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "samples": 758,
+        "with_caller_outside_module": 758,
+        "with_direct_caller": 758
+      }
+    },
+    {
+      "name": "perf-dwarf: silproof_fmu_spin samples show its source caller fmi3DoStep",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "samples": 758,
+        "with_caller_outside_module": 758,
+        "with_direct_caller": 758
+      }
+    },
+    {
+      "name": "perf-dwarf: every silproof_fmu_spin sample shows its source caller",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "samples": 758,
+        "with_caller_outside_module": 758,
+        "with_direct_caller": 758
+      }
+    },
+    {
+      "name": "perf-fp: Run exits 0",
+      "kind": "check",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "perf-fp: no process is left",
+      "kind": "check",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "perf-fp: Recording equals the ordinary Recording",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "messages": [
+          400,
+          400
+        ],
+        "identical": true,
+        "differing": {}
+      }
+    },
+    {
+      "name": "perf-fp: samples name silproof_native_spin_even (matching debug file)",
+      "kind": "check",
+      "passed": true,
+      "detail": 389
+    },
+    {
+      "name": "perf-fp: samples name silproof_native_spin_odd (matching debug file)",
+      "kind": "check",
+      "passed": true,
+      "detail": 387
+    },
+    {
+      "name": "perf-fp: samples name silproof_process_spin (matching debug file)",
+      "kind": "check",
+      "passed": true,
+      "detail": 776
+    },
+    {
+      "name": "perf-fp: samples name silproof_child_spin (matching debug file)",
+      "kind": "check",
+      "passed": true,
+      "detail": 202
+    },
+    {
+      "name": "perf-fp: samples name silproof_fmu_spin (matching debug file)",
+      "kind": "finding",
+      "holds": true,
+      "detail": 762
+    },
+    {
+      "name": "perf-fp: the matching debug file gives source lines",
+      "kind": "check",
+      "passed": true,
+      "detail": 776
+    },
+    {
+      "name": "perf-fp: a mismatched debug file gives no source line",
+      "kind": "check",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "perf-fp: a mismatched debug file names no stripped function",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "silproof_native_spin_even": 0,
+        "silproof_native_spin_odd": 0
+      }
+    },
+    {
+      "name": "perf-fp: the stripped library alone names its static functions",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "silproof_native_spin_even": 0,
+        "silproof_native_spin_odd": 0
+      }
+    },
+    {
+      "name": "perf-fp: every silproof_child_spin sample lies in one of its own host intervals",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "inside": 202,
+        "outside": 0,
+        "inside_other_function": 0
+      }
+    },
+    {
+      "name": "perf-fp: every silproof_fmu_spin sample lies in one of its own host intervals",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "inside": 762,
+        "outside": 0,
+        "inside_other_function": 0
+      }
+    },
+    {
+      "name": "perf-fp: every silproof_native_spin_even sample lies in one of its own host intervals",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "inside": 389,
+        "outside": 0,
+        "inside_other_function": 0
+      }
+    },
+    {
+      "name": "perf-fp: every silproof_native_spin_odd sample lies in one of its own host intervals",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "inside": 387,
+        "outside": 0,
+        "inside_other_function": 0
+      }
+    },
+    {
+      "name": "perf-fp: every silproof_process_spin sample lies in one of its own host intervals",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "inside": 776,
+        "outside": 0,
+        "inside_other_function": 0
+      }
+    },
+    {
+      "name": "perf-fp: every workload process has samples under its own PID",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "child:7085": 50,
+        "child:7086": 51,
+        "child:7087": 50,
+        "child:7088": 51,
+        "fmu:7082": 845,
+        "native:7081": 844,
+        "process:7084": 835
+      }
+    },
+    {
+      "name": "perf-fp: perf recorded the native build ID",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "expected": "bcd7e6ac947d4fcecfca3af39c6c952a2e2e72a2",
+        "recorded_paths": [
+          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_native.so"
+        ]
+      }
+    },
+    {
+      "name": "perf-fp: perf recorded the process build ID",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "expected": "e3016ebb4644e991b76c6f094343f22049d71675",
+        "recorded_paths": [
+          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_process.so"
+        ]
+      }
+    },
+    {
+      "name": "perf-fp: perf recorded the child build ID",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "expected": "1a2bf19593cc4c0ea6fcfcae75ad6a4d5c52c4e7",
+        "recorded_paths": [
+          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/bin/silproof_child"
+        ]
+      }
+    },
+    {
+      "name": "perf-fp: perf recorded the fmu build ID",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "expected": "243704ef884fedb46634fd686ff00c8e2c243ad8",
+        "recorded_paths": [
+          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-fp/.sil-run-hGXqH9/participant-666d75/sil-fmu-2n47get4/binaries/x86_64-linux/EgoMotion.so"
+        ]
+      }
+    },
+    {
+      "name": "perf-fp: the FMU library resolves after the Run directory is gone, with no explicit capture",
+      "kind": "finding",
+      "holds": true,
+      "detail": 762
+    },
+    {
+      "name": "perf-fp: the FMU library resolves after an explicit build-ID cache capture",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "silproof_fmu_spin": 762
+      }
+    },
+    {
+      "name": "perf-fp: silproof_native_spin_even samples unwind past their module",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "samples": 389,
+        "with_caller_outside_module": 0,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "perf-fp: silproof_native_spin_even samples show its source caller native_task",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "samples": 389,
+        "with_caller_outside_module": 0,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "perf-fp: every silproof_native_spin_even sample shows its source caller",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "samples": 389,
+        "with_caller_outside_module": 0,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "perf-fp: silproof_native_spin_odd samples unwind past their module",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "samples": 387,
+        "with_caller_outside_module": 0,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "perf-fp: silproof_native_spin_odd samples show its source caller native_task",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "samples": 387,
+        "with_caller_outside_module": 0,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "perf-fp: every silproof_native_spin_odd sample shows its source caller",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "samples": 387,
+        "with_caller_outside_module": 0,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "perf-fp: silproof_process_spin samples unwind past their module",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "samples": 776,
+        "with_caller_outside_module": 776,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "perf-fp: silproof_process_spin samples show its source caller silproof_process_step",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "samples": 776,
+        "with_caller_outside_module": 776,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "perf-fp: every silproof_process_spin sample shows its source caller",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "samples": 776,
+        "with_caller_outside_module": 776,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "perf-fp: silproof_child_spin samples unwind past their module",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "samples": 202,
+        "with_caller_outside_module": 202,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "perf-fp: silproof_child_spin samples show its source caller main",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "samples": 202,
+        "with_caller_outside_module": 202,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "perf-fp: every silproof_child_spin sample shows its source caller",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "samples": 202,
+        "with_caller_outside_module": 202,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "perf-fp: silproof_fmu_spin samples unwind past their module",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "samples": 762,
+        "with_caller_outside_module": 0,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "perf-fp: silproof_fmu_spin samples show its source caller fmi3DoStep",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "samples": 762,
+        "with_caller_outside_module": 0,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "perf-fp: every silproof_fmu_spin sample shows its source caller",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "samples": 762,
+        "with_caller_outside_module": 0,
+        "with_direct_caller": 0
+      }
+    },
+    {
+      "name": "heaptrack-runner: Run exits 0",
+      "kind": "check",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "heaptrack-runner: no process is left",
+      "kind": "check",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "heaptrack-runner: Recording equals the ordinary Recording",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "messages": [
+          400,
+          400
+        ],
+        "identical": true,
+        "differing": {}
+      }
+    },
+    {
+      "name": "heaptrack-runner: the interpreter exits 0",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "runner": 0
+      }
+    },
+    {
+      "name": "heaptrack-runner: the runner capture holds 1024-byte allocations from the Native library",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "1024": 1604,
+        "2048": 4,
+        "4096": 3,
+        "65536": 1
+      }
+    },
+    {
+      "name": "heaptrack-runner: silproof_native_alloc_site has its exact calls and size",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "calls": 1600,
+        "bytes": 1638400,
+        "outstanding_calls": 0,
+        "outstanding_bytes": 0,
+        "sizes": [
+          1024
+        ],
+        "expected_calls": 1600,
+        "expected_size": 1024
+      }
+    },
+    {
+      "name": "heaptrack-runner: silproof_native_retain_site has its exact calls and size",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "calls": 1,
+        "bytes": 65536,
+        "outstanding_calls": 1,
+        "outstanding_bytes": 65536,
+        "sizes": [
+          65536
+        ],
+        "expected_calls": 1,
+        "expected_size": 65536
+      }
+    },
+    {
+      "name": "heaptrack-runner: the runner's Heaptrack timestamps can be host time",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "count": 280,
+        "first_ms": 10,
+        "last_ms": 2816,
+        "distinct": 280,
+        "negative": 0,
+        "host_time_plausible": true
+      }
+    },
+    {
+      "name": "heaptrack-runner: the retained block is outstanding at capture end",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "calls": 1,
+        "bytes": 65536,
+        "outstanding_calls": 1,
+        "outstanding_bytes": 65536,
+        "sizes": [
+          65536
+        ],
+        "expected_calls": 1,
+        "expected_size": 65536
+      }
+    },
+    {
+      "name": "heaptrack-runner: no Process participant allocation is in the runner capture",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "silproof_process_alloc_site": 0,
+        "silproof_fmu_alloc_site": 0
+      }
+    },
+    {
+      "name": "heaptrack-runner-mismatched: Run exits 0",
+      "kind": "check",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "heaptrack-runner-mismatched: no process is left",
+      "kind": "check",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "heaptrack-runner-mismatched: Recording equals the ordinary Recording",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "messages": [
+          400,
+          400
+        ],
+        "identical": true,
+        "differing": {}
+      }
+    },
+    {
+      "name": "heaptrack-runner-mismatched: the interpreter exits 0",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "runner": 0
+      }
+    },
+    {
+      "name": "heaptrack-runner-mismatched: the runner capture holds 1024-byte allocations from the Native library",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "1024": 1604,
+        "2048": 4,
+        "4096": 3,
+        "65536": 1
+      }
+    },
+    {
+      "name": "heaptrack-runner-mismatched: a mismatched debug file names no stripped allocation site",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "calls": 0,
+        "bytes": 0,
+        "outstanding_calls": 0,
+        "outstanding_bytes": 0,
+        "sizes": [],
+        "expected_calls": 1600,
+        "expected_size": 1024
+      }
+    },
+    {
+      "name": "heaptrack-fmu: Run exits 0",
+      "kind": "check",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "heaptrack-fmu: no process is left",
+      "kind": "check",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "heaptrack-fmu: Recording equals the ordinary Recording",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "messages": [
+          400,
+          400
+        ],
+        "identical": true,
+        "differing": {}
+      }
+    },
+    {
+      "name": "heaptrack-fmu: the interpreter exits 0",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "fmu": 0
+      }
+    },
+    {
+      "name": "heaptrack-fmu: silproof_fmu_alloc_site has its exact calls and size",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "calls": 400,
+        "bytes": 1638400,
+        "outstanding_calls": 0,
+        "outstanding_bytes": 0,
+        "sizes": [
+          4096
+        ],
+        "expected_calls": 400,
+        "expected_size": 4096
+      }
+    },
+    {
+      "name": "heaptrack-fmu: no other participant's allocation is in the fmu capture",
+      "kind": "check",
+      "passed": true,
+      "detail": {
+        "silproof_native_alloc_site": 0,
+        "silproof_native_retain_site": 0,
+        "silproof_process_alloc_site": 0
+      }
+    },
+    {
+      "name": "heaptrack-fmu: the fmu participant's Heaptrack timestamps can be host time",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "count": 272,
+        "first_ms": 12,
+        "last_ms": 2747,
+        "distinct": 272,
+        "negative": 0,
+        "host_time_plausible": true
+      }
+    },
+    {
+      "name": "heaptrack-shimmed-process: Run exits 0",
+      "kind": "finding",
+      "holds": false,
+      "detail": 1
+    },
+    {
+      "name": "heaptrack-shimmed-process: no process is left",
+      "kind": "check",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "heaptrack-shimmed-process: Recording equals the ordinary Recording except the child's clock reading",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "messages": [
+          400,
+          0
+        ],
+        "identical": false,
+        "differing": {}
+      }
+    },
+    {
+      "name": "heaptrack-shimmed-process: the short-lived child keeps the Clock shim",
+      "kind": "finding",
+      "holds": false,
+      "detail": {}
+    },
+    {
+      "name": "heaptrack-shimmed-process: the interpreter exits 0",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "process": 0
+      }
+    },
+    {
+      "name": "heaptrack-shimmed-process: silproof_process_alloc_site has its exact calls and size",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "calls": 0,
+        "bytes": 0,
+        "outstanding_calls": 0,
+        "outstanding_bytes": 0,
+        "sizes": [],
+        "expected_calls": 800,
+        "expected_size": 2048
+      }
+    },
+    {
+      "name": "heaptrack-shimmed-process: no other participant's allocation is in the process capture",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "silproof_native_alloc_site": 0,
+        "silproof_native_retain_site": 0,
+        "silproof_fmu_alloc_site": 0
+      }
+    },
+    {
+      "name": "heaptrack-shimmed-process: the process participant's Heaptrack timestamps can be host time",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "count": 3606,
+        "first_ms": 18446744073709258669,
+        "last_ms": 18446744073709258669,
+        "distinct": 1,
+        "negative": 3606,
+        "host_time_plausible": false
+      }
+    },
+    {
+      "name": "heaptrack-shimmed-process-sleep-immediate: Run exits 0",
+      "kind": "finding",
+      "holds": true,
+      "detail": 0
+    },
+    {
+      "name": "heaptrack-shimmed-process-sleep-immediate: no process is left",
+      "kind": "check",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "heaptrack-shimmed-process-sleep-immediate: Recording equals the ordinary Recording except the child's clock reading",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "messages": [
+          400,
+          400
+        ],
+        "identical": false,
+        "differing": {
+          "proof.process.child_clock_ns": 4
+        }
+      }
+    },
+    {
+      "name": "heaptrack-shimmed-process-sleep-immediate: the short-lived child keeps the Clock shim",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "proof.process.child_clock_ns": 4
+      }
+    },
+    {
+      "name": "heaptrack-shimmed-process-sleep-immediate: the interpreter exits 0",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "process": 0
+      }
+    },
+    {
+      "name": "heaptrack-shimmed-process-sleep-immediate: silproof_process_alloc_site has its exact calls and size",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "calls": 800,
+        "bytes": 1638400,
+        "outstanding_calls": 0,
+        "outstanding_bytes": 0,
+        "sizes": [
+          2048
+        ],
+        "expected_calls": 800,
+        "expected_size": 2048
+      }
+    },
+    {
+      "name": "heaptrack-shimmed-process-sleep-immediate: no other participant's allocation is in the process capture",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "silproof_native_alloc_site": 0,
+        "silproof_native_retain_site": 0,
+        "silproof_fmu_alloc_site": 0
+      }
+    },
+    {
+      "name": "heaptrack-shimmed-process-sleep-immediate: the process participant's Heaptrack timestamps can be host time",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "count": 1355424,
+        "first_ms": 18446744073709258311,
+        "last_ms": 18446744073709259301,
+        "distinct": 100,
+        "negative": 1355424,
+        "host_time_plausible": false
+      }
+    },
+    {
+      "name": "heaptrack-shimmed-process-sleep-immediate: silproof_fmu_alloc_site resolves when the raw data is interpreted after the Run directory is gone",
+      "kind": "finding",
+      "holds": false,
+      "detail": {
+        "calls": 0,
+        "bytes": 0,
+        "outstanding_calls": 0,
+        "outstanding_bytes": 0,
+        "sizes": [],
+        "expected_calls": 400,
+        "expected_size": 4096
+      }
+    },
+    {
+      "name": "heaptrack-shimmed-process-sleep-immediate: the late fmu capture keeps every 4096-byte allocation",
+      "kind": "finding",
+      "holds": true,
+      "detail": {
+        "1024": 237,
+        "2048": 36,
+        "4096": 522,
+        "65536": 1
+      }
+    }
+  ],
+  "failed_checks": []
+}

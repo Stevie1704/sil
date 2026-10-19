@@ -1,0 +1,5 @@
+./src/interpret/heaptrack_interpret.cpp:339 ERROR:Failed to create backtrace state for module /work/evidence/runs/heaptrack-shimmed-process-sleep-immediate/.sil-run-wLQR0s/participant-666d75/sil-fmu-9rxv0to3/binaries/x86_64-linux/EgoMotion.so: /work/evidence/runs/heaptrack-shimmed-process-sleep-immediate/.sil-run-wLQR0s/participant-666d75/sil-fmu-9rxv0to3/binaries/x86_64-linux/EgoMotion.so / No such file or directory (error code 2)
+heaptrack stats:
+	allocations:          	20955
+	leaked allocations:   	154
+	temporary allocations:	4876

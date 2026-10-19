@@ -1,0 +1,2 @@
+--cap-add
+PERFMON

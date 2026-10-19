@@ -1,0 +1,104 @@
+{
+  "host": {
+    "packages": [
+      "binutils=2.40-2",
+      "gcc=4:12.2.0-3",
+      "heaptrack=1.4.0-2",
+      "linux-perf=6.1.176-1"
+    ],
+    "uname": {
+      "system": "Linux",
+      "node": "7fe7c5618598",
+      "release": "6.17.0-1022-azure",
+      "version": "#22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026",
+      "machine": "x86_64",
+      "processor": ""
+    },
+    "libc": "glibc 2.36",
+    "python": "3.13.7",
+    "in_container": true,
+    "uid": 0,
+    "perf_event_paranoid": "4",
+    "perf_event_max_sample_rate": "100000",
+    "kptr_restrict": "1",
+    "status": {
+      "CapEff": "00000000a80425fb",
+      "CapPrm": "00000000a80425fb",
+      "Seccomp": "0",
+      "NSpid": "7"
+    },
+    "tools": {
+      "perf": "perf version 6.1.176",
+      "heaptrack": "heaptrack 1.4.0",
+      "heaptrack_preload": "/usr/lib/heaptrack/libheaptrack_preload.so",
+      "heaptrack_interpret": "/usr/lib/heaptrack/libexec/heaptrack_interpret",
+      "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+      "objcopy": "GNU objcopy (GNU Binutils for Debian) 2.40",
+      "sil-run": "0.2.1"
+    }
+  },
+  "probes": {
+    "perf_user": {
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock:u",
+        "-F",
+        "99",
+        "-k",
+        "monotonic",
+        "-o",
+        "/work/evidence/perf-user.data",
+        "--",
+        "true"
+      ],
+      "returncode": 255,
+      "stderr": "Error:\nAccess to performance monitoring and observability operations is limited.\nConsider adjusting /proc/sys/kernel/perf_event_paranoid setting to open\naccess to performance monitoring and observability operations for processes\nwithout CAP_PERFMON, CAP_SYS_PTRACE or CAP_SYS_ADMIN Linux capability.\nMore information can be found at 'Perf events and tool security' document:\nhttps://www.kernel.org/doc/html/latest/admin-guide/perf-security.html\nperf_event_paranoid setting is 4:\n  -1: Allow use of (almost) all events by all users\n      Ignore mlock limit after perf_event_mlock_kb without CAP_IPC_LOCK\n>= 0: Disallow raw and ftrace function tracepoint access\n>= 1: Disallow CPU event access\n>= 2: Disallow kernel profiling\nTo make the adjusted perf_event_paranoid setting permanent preserve it\nin /etc/sysctl.conf (e.g. kernel.perf_event_paranoid = <setting>)\n",
+      "outcome": "permission-denied"
+    },
+    "perf_user_dwarf": {
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock:u",
+        "-F",
+        "99",
+        "-k",
+        "monotonic",
+        "--call-graph",
+        "dwarf,8192",
+        "-o",
+        "/work/evidence/perf-dwarf.data",
+        "--",
+        "true"
+      ],
+      "returncode": 255,
+      "stderr": "Error:\nAccess to performance monitoring and observability operations is limited.\nConsider adjusting /proc/sys/kernel/perf_event_paranoid setting to open\naccess to performance monitoring and observability operations for processes\nwithout CAP_PERFMON, CAP_SYS_PTRACE or CAP_SYS_ADMIN Linux capability.\nMore information can be found at 'Perf events and tool security' document:\nhttps://www.kernel.org/doc/html/latest/admin-guide/perf-security.html\nperf_event_paranoid setting is 4:\n  -1: Allow use of (almost) all events by all users\n      Ignore mlock limit after perf_event_mlock_kb without CAP_IPC_LOCK\n>= 0: Disallow raw and ftrace function tracepoint access\n>= 1: Disallow CPU event access\n>= 2: Disallow kernel profiling\nTo make the adjusted perf_event_paranoid setting permanent preserve it\nin /etc/sysctl.conf (e.g. kernel.perf_event_paranoid = <setting>)\n",
+      "outcome": "permission-denied"
+    },
+    "perf_kernel": {
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock",
+        "-F",
+        "99",
+        "-o",
+        "/work/evidence/perf-kernel.data",
+        "--",
+        "true"
+      ],
+      "returncode": 255,
+      "stderr": "Error:\nAccess to performance monitoring and observability operations is limited.\nConsider adjusting /proc/sys/kernel/perf_event_paranoid setting to open\naccess to performance monitoring and observability operations for processes\nwithout CAP_PERFMON, CAP_SYS_PTRACE or CAP_SYS_ADMIN Linux capability.\nMore information can be found at 'Perf events and tool security' document:\nhttps://www.kernel.org/doc/html/latest/admin-guide/perf-security.html\nperf_event_paranoid setting is 4:\n  -1: Allow use of (almost) all events by all users\n      Ignore mlock limit after perf_event_mlock_kb without CAP_IPC_LOCK\n>= 0: Disallow raw and ftrace function tracepoint access\n>= 1: Disallow CPU event access\n>= 2: Disallow kernel profiling\nTo make the adjusted perf_event_paranoid setting permanent preserve it\nin /etc/sysctl.conf (e.g. kernel.perf_event_paranoid = <setting>)\n",
+      "outcome": "permission-denied"
+    },
+    "heaptrack_preload": {
+      "returncode": 0,
+      "stderr": "",
+      "outcome": "available"
+    }
+  }
+}
