@@ -108,8 +108,8 @@ ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
                                "repeat fresh diagnostics Runs of a Manifest "
                                "and summarize them"),
     "profile": ModuleCommand("sil.profile_run",
-                             "capture a CPU profile of one fresh Run with "
-                             "Linux perf"),
+                             "capture a CPU (Linux perf) or heap "
+                             "(Heaptrack) profile of one fresh Run"),
     "diagnostics": Group("present saved diagnostics reports", {
         "render": ModuleCommand("sil.diagnostics_render",
                                 "write the standalone HTML report of a "

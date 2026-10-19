@@ -1,5 +1,8 @@
 """`sil profile`: one CPU profile of one fresh Run (#315).
 
+The heap collector (#317) is sil.profile_heap_run; this module parses the
+command line of both and runs the CPU collector.
+
 docs/profile-report.md is the contract: the command, its exit codes, the
 profile directory and `sil_profile_report` v1. In short: the command checks
 its outputs and the host's perf before anything starts, runs
@@ -49,6 +52,7 @@ EVENT = "cpu-clock:u"
 FREQUENCY_HZ = 999
 STACK_BYTES = 8192
 MAX_CAPTURE_BYTES = 1 << 30
+HEAP_MAX_CAPTURE_BYTES = 256 << 20
 SYMBOLIZATION_TIMEOUT_S = 600
 MAX_ACTIVATION_BYTES = 64 << 20
 POLL_S = 0.1
@@ -81,6 +85,20 @@ class ProfileRequest:
     modules_from: tuple[Path, ...] = ()
     activations: bool = False
     max_activation_bytes: int = MAX_ACTIVATION_BYTES
+
+
+@dataclass(frozen=True)
+class HeapRequest:
+    """`--collector heap`: sil.profile_heap_run runs it."""
+
+    manifest: Path
+    out: Path
+    recording: Path | None  # None: --no-recording
+    provenance: Path | None
+    guards: Guards
+    participant: str | None  # None: --runner
+    max_capture_bytes: int = HEAP_MAX_CAPTURE_BYTES
+    interpreter_timeout_s: int = SYMBOLIZATION_TIMEOUT_S
 
 
 @dataclass(frozen=True)
@@ -150,17 +168,20 @@ def _positive(text: str) -> int:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=PROG, allow_abbrev=False,
-        description="Capture one CPU profile of one fresh Run with Linux "
-                    "perf into a new directory (docs/profile-report.md).")
+        description="Capture one CPU profile (Linux perf) or one heap "
+                    "profile (Heaptrack) of one fresh Run into a new "
+                    "directory (docs/profile-report.md).")
     parser.add_argument("manifest", type=Path)
     parser.add_argument("--out", type=Path, required=True, action=GivenOnce,
                         metavar="DIR", help="the new profile directory")
     parser.add_argument("--collector", required=True, action=GivenOnce,
-                        help="cpu (heap is reserved)")
+                        help="cpu or heap")
     parser.add_argument("--participant", action=GivenOnce, metavar="NAME",
-                        help="reserved for the heap collector")
+                        help="heap scope: one Process participant that "
+                             "does not use the Clock shim")
     parser.add_argument("--runner", action="store_true",
-                        help="reserved for the heap collector")
+                        help="heap scope: the runner process, with every "
+                             "Native participant")
     parser.add_argument("-o", dest="recording", type=Path, action=GivenOnce,
                         metavar="OUT.mcap",
                         help="the Recording (default DIR/run.mcap)")
@@ -174,7 +195,8 @@ def _parser() -> argparse.ArgumentParser:
                         metavar="N", help=f"default {STACK_BYTES}")
     parser.add_argument("--max-capture-bytes", type=_positive,
                         action=GivenOnce, metavar="N",
-                        help=f"default {MAX_CAPTURE_BYTES}")
+                        help=f"default {MAX_CAPTURE_BYTES} (cpu), "
+                             f"{HEAP_MAX_CAPTURE_BYTES} (heap)")
     parser.add_argument("--symbolization-timeout-s", type=_positive,
                         action=GivenOnce, metavar="N",
                         help=f"default {SYMBOLIZATION_TIMEOUT_S}")
@@ -192,29 +214,29 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def request_from_arguments(argv: list[str]) -> ProfileRequest:
+CPU_ONLY = ("frequency_hz", "stack_bytes", "modules_from",
+            "max_activation_bytes")
+
+
+def request_from_arguments(argv: list[str]) -> ProfileRequest | HeapRequest:
     parser = _parser()
     args = parser.parse_args(argv)
     if args.collector == "heap":
-        parser.error("the heap collector is reserved (#317); this version "
-                     "captures --collector cpu only")
+        return _heap_request(parser, args)
     if args.collector != "cpu":
-        parser.error(f"unknown collector {args.collector!r}; use cpu")
+        parser.error(f"unknown collector {args.collector!r}; use cpu or heap")
     if args.runner:
         parser.error("--runner selects a heap scope; the cpu collector "
                      "samples the runner and all its descendants")
     if args.participant is not None:
         parser.error("--participant selects a heap scope; the cpu collector "
                      "samples the runner and all its descendants")
-    if args.no_recording and args.recording is not None:
-        parser.error("-o and --no-recording exclude each other")
     if args.max_activation_bytes is not None and not args.activations:
         parser.error("--max-activation-bytes needs --activations")
-    recording = None if args.no_recording else (
-        args.recording or args.out / "run.mcap")
-    provenance = args.provenance
-    if provenance is None and args.no_recording:
-        provenance = args.out / "run.provenance.json"
+    try:
+        recording, provenance = _outputs(args)
+    except ValueError as error:
+        parser.error(str(error))
     return ProfileRequest(
         args.manifest, args.out, recording, provenance, guards_from(args),
         args.frequency_hz or FREQUENCY_HZ, args.stack_bytes or STACK_BYTES,
@@ -224,7 +246,43 @@ def request_from_arguments(argv: list[str]) -> ProfileRequest:
         args.max_activation_bytes or MAX_ACTIVATION_BYTES)
 
 
-def preflight(request: ProfileRequest, cwd: Path) -> list[str]:
+def _outputs(args) -> tuple[Path | None, Path | None]:
+    if args.no_recording and args.recording is not None:
+        raise ValueError("-o and --no-recording exclude each other")
+    recording = None if args.no_recording else (
+        args.recording or args.out / "run.mcap")
+    provenance = args.provenance
+    if provenance is None and args.no_recording:
+        provenance = args.out / "run.provenance.json"
+    return recording, provenance
+
+
+def _heap_request(parser: argparse.ArgumentParser, args) -> HeapRequest:
+    if args.activations:
+        parser.error("Activation correlation is unavailable for the heap "
+                     "collector: Heaptrack's timestamps have no validated "
+                     "mapping to host time (docs/profile-report.md)")
+    for name in CPU_ONLY:
+        if getattr(args, name):
+            option = "--" + name.replace("_", "-")
+            parser.error(f"{option} is an option of the cpu collector")
+    if args.runner and args.participant is not None:
+        parser.error("--runner and --participant exclude each other")
+    if not args.runner and args.participant is None:
+        parser.error("--collector heap needs one scope: --runner or "
+                     "--participant NAME")
+    try:
+        recording, provenance = _outputs(args)
+    except ValueError as error:
+        parser.error(str(error))
+    return HeapRequest(
+        args.manifest, args.out, recording, provenance, guards_from(args),
+        args.participant, args.max_capture_bytes or HEAP_MAX_CAPTURE_BYTES,
+        args.symbolization_timeout_s or SYMBOLIZATION_TIMEOUT_S)
+
+
+def preflight(request: ProfileRequest | HeapRequest,
+              cwd: Path) -> list[str]:
     problems = []
     out = cwd / request.out
     if os.path.lexists(out):
@@ -233,7 +291,7 @@ def preflight(request: ProfileRequest, cwd: Path) -> list[str]:
     elif not Path(os.path.realpath(out)).parent.is_dir():
         problems.append(f"the profile directory '{request.out}': its parent "
                         "directory does not exist")
-    for source in request.modules_from:
+    for source in getattr(request, "modules_from", ()):
         if not (cwd / source).exists():
             problems.append(f"--modules-from '{source}' does not exist")
     if request.recording is not None and _same(
@@ -664,17 +722,23 @@ def _sha256(path: Path) -> str:
 
 
 def _artifacts(layout: Layout, request: ProfileRequest, cwd: Path) -> list:
-    candidates = [("diagnostics_report", layout.diagnostics)]
+    return artifact_rows(layout.out, request, cwd, [
+        ("perf_data", layout.perf_data), ("cpu_samples", layout.samples),
+        ("activation_observations", layout.observations),
+        ("activation_correlation", layout.correlation)])
+
+
+def artifact_rows(out: Path, request, cwd: Path, collected: list) -> list:
+    """`{role, path, bytes, sha256}` of every existing file in `out`: the
+    diagnostics report, the Recording and the collector's files."""
+    candidates = [("diagnostics_report", out / "run.diagnostics.json")]
     if request.recording is not None:
         candidates.append(("recording", cwd / request.recording))
-    candidates += [("perf_data", layout.perf_data),
-                   ("cpu_samples", layout.samples),
-                   ("activation_observations", layout.observations),
-                   ("activation_correlation", layout.correlation)]
+    candidates += collected
     rows = []
     for role, path in candidates:
         try:
-            relative = Path(os.path.realpath(path)).relative_to(layout.out)
+            relative = Path(os.path.realpath(path)).relative_to(out)
         except ValueError:
             continue  # outside the profile directory: not part of it
         if path.is_file():
@@ -960,6 +1024,10 @@ def main(argv: list[str] | None = None) -> int:
         for problem in problems:
             command_error(PROG, problem, EXIT_USAGE)
         return EXIT_USAGE
+    if isinstance(request, HeapRequest):
+        # Imported here: the heap collector reuses this module's helpers.
+        from sil.profile_heap_run import run_heap
+        return run_heap(request, cwd)
     try:
         find_native_tools()
     except ToolMissing as error:

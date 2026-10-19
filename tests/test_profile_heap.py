@@ -191,6 +191,12 @@ def test_the_allocations_file_holds_every_allocation_info_and_its_stack():
                                                        "line": 10}
 
 
+def test_the_interpreter_trailer_is_not_an_undecodable_record():
+    record = analysis(DATA + "\n# strings: 8\n# ips: 6\n").record
+
+    assert record["coverage"]["undecodable_records"] == 0
+
+
 def test_a_cut_last_record_is_reported_and_skipped():
     record = analysis(DATA + "+ 3").record
 

@@ -93,6 +93,9 @@ def _records(data: bytes):
     position, end = 0, len(data)
     while position < end:
         mode = data[position]
+        if mode == ord("\n"):  # heaptrack_interpret ends with an empty line
+            position += 1
+            continue
         if mode == ord("s") and data.startswith(b"s ", position):
             space = data.find(b" ", position + 2)
             try:

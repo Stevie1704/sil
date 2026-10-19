@@ -32,7 +32,8 @@ RUN_STATUSES = {"succeeded", "run_failure", "configuration_error",
 CAPTURE_STATUSES = {"complete", "partial", "interrupted", "failed",
                     "not_started"}
 HEAP_STATUSES = CAPTURE_STATUSES | {"unavailable"}
-HEAP_REASONS = {"capture_limit_reached", "data_truncated", "interrupted",
+HEAP_REASONS = {"capture_limit_reached", "data_truncated",
+                "data_may_be_incomplete", "interrupted",
                 "backend_failed", "export_failed", "no_data",
                 "run_not_started", "unsupported_scope", "reserved"}
 HEAP_METRICS = ("allocations", "allocated_bytes", "temporary_allocations",

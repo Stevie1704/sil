@@ -212,7 +212,9 @@ class RunOutcome:
 def execute(request: RunRequest, tools: NativeTools, *,
             cwd: Path | None = None,
             stdout: BinaryIO | int | None = None,
-            stderr: BinaryIO | None = None) -> RunOutcome:
+            stderr: BinaryIO | None = None,
+            launch_prefix: tuple[str, ...] = (),
+            extra_arguments: tuple[str, ...] = ()) -> RunOutcome:
     """Run one diagnostics Run to its end and read its report.
 
     The runner's stdout goes to `stdout` (inherited when None). Its stderr is
@@ -221,12 +223,15 @@ def execute(request: RunRequest, tools: NativeTools, *,
     the runner and its Participants never inherit, so no Run output can pose
     as one. SIGINT, SIGTERM and SIGHUP sent to this process are forwarded to
     the launcher, which forwards them to the runner; the Run then ends
-    through its own cleanup.
+    through its own cleanup. `launch_prefix` is an exec-preserving adapter
+    that the launcher starts instead of the runner, with the runner command
+    as its arguments; `extra_arguments` go to the runner (`sil profile`).
     """
     sink = stderr if stderr is not None else sys.stderr.buffer
     status_read, status_write = os.pipe()
     command = [str(tools.launcher), "--status-fd", str(status_write),
-               str(tools.runner), *request.runner_arguments()]
+               *launch_prefix, str(tools.runner), *request.runner_arguments(),
+               *extra_arguments]
     sys.stdout.flush()
     sys.stderr.flush()
     received: list[int] = []
