@@ -31,6 +31,12 @@ RUN_STATUSES = {"succeeded", "run_failure", "configuration_error",
                 "interrupted", "ended_by_signal", "not_started"}
 CAPTURE_STATUSES = {"complete", "partial", "interrupted", "failed",
                     "not_started"}
+HEAP_STATUSES = CAPTURE_STATUSES | {"unavailable"}
+HEAP_REASONS = {"capture_limit_reached", "data_truncated", "interrupted",
+                "backend_failed", "export_failed", "no_data",
+                "run_not_started", "unsupported_scope", "reserved"}
+HEAP_METRICS = ("allocations", "allocated_bytes", "temporary_allocations",
+                "outstanding_allocations", "outstanding_bytes")
 CPU_REASONS = {"lost_samples", "capture_limit_reached", "interrupted",
                "backend_failed", "export_failed", "run_not_started"}
 DEBUG_STATUSES = {"embedded", "separate_matching", "separate_mismatched",
@@ -149,11 +155,41 @@ HEAP_SCOPE = variant({
     "process_participant": members({"participant": TEXT}),
     "unsupported": members({"requested": TEXT, "reason": TEXT}),
 })
+HEAP_COSTS = {metric: COUNT for metric in HEAP_METRICS}
+HEAP_ROW = members({"module": maybe(TEXT), "symbol": maybe(TEXT),
+                    **HEAP_COSTS,
+                    "source_lines": items(members({
+                        "file": TEXT, "line": COUNT, "allocations": COUNT}))})
+HEAP_ANALYSIS = reasoned({
+    "file_version": COUNT, "heaptrack_version": TEXT,
+    "totals": members({**HEAP_COSTS, "frees": COUNT,
+                       "peak_tracked_bytes": COUNT}),
+    "coverage": members({"allocations_unknown_module": COUNT,
+                         "allocations_unknown_symbol": COUNT,
+                         "allocations_with_caller": COUNT,
+                         "undecodable_records": COUNT, "truncated": FLAG}),
+    "modules": items(reasoned(
+        {"id": TEXT, "path": TEXT, "allocations_leaf": COUNT,
+         "allocations_unknown_symbol": COUNT}, {"build_id": TEXT})),
+    "hotspots": members({"limit": COUNT, "self": items(HEAP_ROW),
+                         "self_remainder": members(HEAP_COSTS),
+                         "inclusive": items(HEAP_ROW)}),
+}, {"traced_executable": TEXT, "allocations_file": TEXT})
+# The members after `raw` and `analysis` came with #317: a v1 document of
+# #315 (a reserved heap capture) has none of them and stays valid.
 HEAP_CAPTURE = reasoned(
-    {"kind": TEXT, **STATUS_AND_REASONS,
-     "backend": reasoned({"name": TEXT}, {"version": TEXT}),
+    {"kind": TEXT, **STATUS_AND_REASONS, "status": one_of(HEAP_STATUSES),
+     "backend": reasoned({"name": TEXT}, {"version": TEXT},
+                         {"preload": TEXT, "interpreter": TEXT,
+                          "interpreter_exit_code": maybe(INTEGER)}),
      "scope": HEAP_SCOPE},
-    {"raw": TEXT, "analysis": members({})})
+    {"raw": TEXT, "analysis": HEAP_ANALYSIS},
+    {"launch": members({"method": TEXT, "adapter": TEXT, "wrapped": TEXT}),
+     "limits": members({"max_capture_bytes": COUNT, "capture_bytes": COUNT,
+                        "limit_reached": FLAG,
+                        "interpreter_timeout_s": COUNT}),
+     "activation_correlation": members({"status": one_of({"unavailable"}),
+                                        "reason": TEXT})})
 COUNTS = members(SAMPLE_TOTALS)
 ACTIVATION_SUMMARY = members({
     "interval": one_of({"half_open"}),
@@ -270,9 +306,8 @@ def validate_profile_report(document: Any) -> list[str]:
     _check_status(capture, "capture", errors)
     if capture["kind"] == "cpu":
         _check_cpu(capture, errors)
-    elif capture["analysis"] is not None:
-        errors.append("capture.analysis is reserved and must be null in "
-                      "version 1")
+    else:
+        _check_heap(capture, errors)
     correlation = document["activation_correlation"]
     if correlation["kind"] == "activation":
         _check_status(correlation, "activation_correlation", errors)
@@ -456,3 +491,59 @@ def _check_hotspot(row: dict, where: str, totals: dict, modules: dict,
         if status not in SOURCE_DEBUG_STATUSES:
             errors.append(f"{where}: source lines from module {module!r} "
                           f"whose debug status is {status!r}")
+
+
+def _check_heap(capture: dict, errors: list[str]) -> None:
+    unknown = set(capture["reasons"]) - HEAP_REASONS
+    if unknown:
+        errors.append(f"capture.reasons: unknown reasons {sorted(unknown)}")
+    analysis = capture["analysis"]
+    if capture["status"] in ("complete", "partial") and analysis is None:
+        errors.append(f"capture: status {capture['status']!r} without an "
+                      "analysis")
+    if analysis is None:
+        return
+    where = "capture.analysis"
+    totals = analysis["totals"]
+    if totals["frees"] != totals["allocations"] - \
+            totals["outstanding_allocations"]:
+        errors.append(f"{where}.totals: frees {totals['frees']} is not "
+                      f"allocations {totals['allocations']} minus "
+                      "outstanding_allocations "
+                      f"{totals['outstanding_allocations']}")
+    for part, whole in (("outstanding_bytes", "allocated_bytes"),
+                        ("temporary_allocations", "frees")):
+        if totals[part] > totals[whole]:
+            errors.append(f"{where}.totals: {part} above {whole}")
+    if totals["peak_tracked_bytes"] < totals["outstanding_bytes"]:
+        errors.append(f"{where}.totals: peak_tracked_bytes "
+                      f"{totals['peak_tracked_bytes']} is below "
+                      f"outstanding_bytes {totals['outstanding_bytes']}")
+    modules = _identities(analysis["modules"], "analysis.modules", errors)
+    leaf = (sum(m["allocations_leaf"] for m in analysis["modules"])
+            + analysis["coverage"]["allocations_unknown_module"])
+    if leaf != totals["allocations"]:
+        errors.append(f"{where}.modules: leaf allocations add up to {leaf}, "
+                      f"totals.allocations is {totals['allocations']}")
+    hotspots = analysis["hotspots"]
+    for metric in HEAP_METRICS:
+        added = (sum(row[metric] for row in hotspots["self"])
+                 + hotspots["self_remainder"][metric])
+        if added != totals[metric]:
+            unit = "" if metric == "allocations" else f" ({metric})"
+            errors.append(f"{where}.hotspots: self rows and self_remainder "
+                          f"add up to {added} allocations{unit}, "
+                          f"totals.{metric} is {totals[metric]}")
+    for name in ("self", "inclusive"):
+        rows = hotspots[name]
+        if len(rows) > hotspots["limit"] * 4:
+            errors.append(f"{where}.hotspots.{name}: more rows than four "
+                          "times the limit")
+        for index, row in enumerate(rows):
+            if row["module"] is not None and row["module"] not in modules:
+                errors.append(f"{where}.hotspots.{name}[{index}].module: "
+                              f"unknown module {row['module']!r}")
+            if row["outstanding_allocations"] > row["allocations"] or \
+                    row["allocations"] > totals["allocations"]:
+                errors.append(f"{where}.hotspots.{name}[{index}]: "
+                              "allocation counts out of range")

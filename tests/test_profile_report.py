@@ -30,7 +30,9 @@ def test_every_documented_case_has_a_fixture():
             "cpu-runner-killed", "heap-reserved-runner",
             "heap-reserved-process", "heap-unsupported-scope",
             "activation-reserved", "activation-complete",
-            "activation-partial-truncated"} <= names
+            "activation-partial-truncated", "heap-complete-runner",
+            "heap-complete-process", "heap-partial-limit",
+            "heap-failed-no-data", "heap-interrupted"} <= names
 
 
 @pytest.mark.parametrize("path", VALID, ids=lambda p: p.stem)
@@ -76,8 +78,20 @@ EXPECTED_VIOLATION = {
                                          "status is 'separate_mismatched'",
     "cpu-weight-called-duration": "capture.sampling.weight_unit: unknown "
                                   "value 'duration_ns'",
-    "heap-analysis-invented": "capture.analysis is reserved and must be null "
-                              "in version 1",
+    "heap-analysis-invented": "missing member 'capture.analysis.totals'",
+    "heap-self-rows-do-not-add-up":
+        "capture.analysis.hotspots: self rows and self_remainder add up to "
+        "9 allocations, totals.allocations is 8",
+    "heap-frees-do-not-match-outstanding":
+        "capture.analysis.totals: frees 4 is not allocations 8 minus "
+        "outstanding_allocations 3",
+    "heap-complete-without-analysis":
+        "capture: status 'complete' without an analysis",
+    "heap-unknown-reason": "capture.reasons: unknown reasons "
+                           "['rss_too_high']",
+    "heap-peak-below-outstanding":
+        "capture.analysis.totals: peak_tracked_bytes 100 is below "
+        "outstanding_bytes 65560",
     "heap-unknown-scope-kind": "capture.scope.kind: unknown kind "
                                "'native_participant'",
     "activation-classes-do-not-add-up":
