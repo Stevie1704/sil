@@ -20,7 +20,6 @@ jobs:
     timeout-minutes: 90
     env:
       EVIDENCE: ${{ github.workspace }}/build/profiling-evidence
-      SIL_PREFIX: ${{ runner.temp }}/sil
     steps:
       - uses: actions/checkout@v4
 
@@ -28,12 +27,12 @@ jobs:
         run: proofs/profiling/container.sh image "$EVIDENCE/container"
 
       - name: Native setup (apt perf and Heaptrack, SiL build)
-        run: proofs/profiling/native-setup.sh "$SIL_PREFIX"
+        run: proofs/profiling/native-setup.sh "$RUNNER_TEMP/sil"
 
       # Host state as the runner provides it: no setup change yet.
       - name: Probe native, unprivileged user, host default paranoid
         run: |
-          export PATH="$SIL_PREFIX/python/bin:$SIL_PREFIX/native/bin:$PATH"
+          export PATH="$RUNNER_TEMP/sil/python/bin:$RUNNER_TEMP/sil/native/bin:$PATH"
           python proofs/profiling/proof.py probe "$EVIDENCE/native/probe-host-default"
 
       - name: Probe the container options, host default paranoid
@@ -62,14 +61,14 @@ jobs:
       - name: Probe native and the default container, paranoid 2
         if: ${{ !cancelled() }}
         run: |
-          export PATH="$SIL_PREFIX/python/bin:$SIL_PREFIX/native/bin:$PATH"
+          export PATH="$RUNNER_TEMP/sil/python/bin:$RUNNER_TEMP/sil/native/bin:$PATH"
           python proofs/profiling/proof.py probe "$EVIDENCE/native/probe-paranoid-2"
           proofs/profiling/container.sh probe "$EVIDENCE/container" probe-paranoid-2-default-caps
 
       - name: Full native proof, unprivileged user, paranoid 2
         if: ${{ !cancelled() }}
         run: |
-          export PATH="$SIL_PREFIX/python/bin:$SIL_PREFIX/native/bin:$PATH"
+          export PATH="$RUNNER_TEMP/sil/python/bin:$RUNNER_TEMP/sil/native/bin:$PATH"
           python proofs/profiling/proof.py run "$EVIDENCE/native/run-paranoid-2"
 
       - uses: actions/upload-artifact@v4
