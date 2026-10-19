@@ -1,0 +1,3 @@
+manifest_hash e6b62b9be13f6bbadaf147cf07d592ef11e59f127bfce6a3e44d77085f4d257d
+[ perf record: Woken up 87 times to write data ]
+[ perf record: Captured and wrote 22.095 MB /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-dwarf/perf.data ]

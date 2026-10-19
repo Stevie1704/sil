@@ -1,0 +1,139 @@
+          python    77/77      224.525652913: PERF_RECORD_MMAP2 77/77: [0x7f25cd1d1000(0x5000) @ 0 <ce21052ae7560fc1949185599328adb6e3d33758>]: r--p /work/evidence/runs/perf-dwarf/.sil-run-olSzqC/participant-666d75/sil-fmu-16rwrkh5/binaries/x86_64-linux/EgoMotion.so
+          python    77/77      224.525663953: PERF_RECORD_MMAP2 77/77: [0x7f25cd1d2000(0x1000) @ 0x1000 <ce21052ae7560fc1949185599328adb6e3d33758>]: r-xp /work/evidence/runs/perf-dwarf/.sil-run-olSzqC/participant-666d75/sil-fmu-16rwrkh5/binaries/x86_64-linux/EgoMotion.so
+          python    77/77      224.525674583: PERF_RECORD_MMAP2 77/77: [0x7f25cd1d3000(0x1000) @ 0x2000 <ce21052ae7560fc1949185599328adb6e3d33758>]: r--p /work/evidence/runs/perf-dwarf/.sil-run-olSzqC/participant-666d75/sil-fmu-16rwrkh5/binaries/x86_64-linux/EgoMotion.so
+          python    77/77      224.525680274: PERF_RECORD_MMAP2 77/77: [0x7f25cd1d4000(0x2000) @ 0x2000 <ce21052ae7560fc1949185599328adb6e3d33758>]: rw-p /work/evidence/runs/perf-dwarf/.sil-run-olSzqC/participant-666d75/sil-fmu-16rwrkh5/binaries/x86_64-linux/EgoMotion.so
+          python    77/77      224.525713186: PERF_RECORD_MMAP2 77/77: [0x7f25cd1d4000(0x1000) @ 0x2000 <ce21052ae7560fc1949185599328adb6e3d33758>]: r--p /work/evidence/runs/perf-dwarf/.sil-run-olSzqC/participant-666d75/sil-fmu-16rwrkh5/binaries/x86_64-linux/EgoMotion.so
+         sil-run    75/75      224.526062739: PERF_RECORD_MMAP2 75/75: [0x7fe05b732000(0x5000) @ 0 <745df11205d09f5372ea719abf112b3e6866820a>]: r--p /work/evidence/build/lib/libsilproof_native.so
+         sil-run    75/75      224.526075193: PERF_RECORD_MMAP2 75/75: [0x7fe05b733000(0x1000) @ 0x1000 <745df11205d09f5372ea719abf112b3e6866820a>]: r-xp /work/evidence/build/lib/libsilproof_native.so
+         sil-run    75/75      224.526108034: PERF_RECORD_MMAP2 75/75: [0x7fe05b734000(0x1000) @ 0x2000 <745df11205d09f5372ea719abf112b3e6866820a>]: r--p /work/evidence/build/lib/libsilproof_native.so
+         sil-run    75/75      224.526116320: PERF_RECORD_MMAP2 75/75: [0x7fe05b735000(0x2000) @ 0x2000 <745df11205d09f5372ea719abf112b3e6866820a>]: rw-p /work/evidence/build/lib/libsilproof_native.so
+         sil-run    75/75      224.526150094: PERF_RECORD_MMAP2 75/75: [0x7fe05b735000(0x1000) @ 0x2000 <745df11205d09f5372ea719abf112b3e6866820a>]: r--p /work/evidence/build/lib/libsilproof_native.so
+          python    79/79      224.591657539: PERF_RECORD_MMAP2 79/79: [0x7f34cbb84000(0x5000) @ 0 <20a5fe19078933a4c8de5909947ec72ee5eec1d5>]: r--p /work/evidence/build/lib/libsilproof_process.so
+          python    79/79      224.591668119: PERF_RECORD_MMAP2 79/79: [0x7f34cbb85000(0x1000) @ 0x1000 <20a5fe19078933a4c8de5909947ec72ee5eec1d5>]: r-xp /work/evidence/build/lib/libsilproof_process.so
+          python    79/79      224.591677607: PERF_RECORD_MMAP2 79/79: [0x7f34cbb86000(0x1000) @ 0x2000 <20a5fe19078933a4c8de5909947ec72ee5eec1d5>]: r--p /work/evidence/build/lib/libsilproof_process.so
+          python    79/79      224.591682977: PERF_RECORD_MMAP2 79/79: [0x7f34cbb87000(0x2000) @ 0x2000 <20a5fe19078933a4c8de5909947ec72ee5eec1d5>]: rw-p /work/evidence/build/lib/libsilproof_process.so
+          python    79/79      224.591709006: PERF_RECORD_MMAP2 79/79: [0x7f34cbb87000(0x1000) @ 0x2000 <20a5fe19078933a4c8de5909947ec72ee5eec1d5>]: r--p /work/evidence/build/lib/libsilproof_process.so
+  silproof_child    80/80      224.607795447: PERF_RECORD_MMAP2 80/80: [0x7fffffffe000(0x1000) @ 0x7fffffffe000 00:00 0 0]: rw-p //anon
+  silproof_child    80/80      224.607804795: PERF_RECORD_MMAP2 80/80: [0x7ffe08124000(0x21000) @ 0x7ffffffde000 00:00 0 0]: rw-p [stack]
+  silproof_child    80/80      224.607813181: PERF_RECORD_MMAP2 80/80: [0x55feac74f000(0x5000) @ 0 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r--p /work/evidence/build/bin/silproof_child
+  silproof_child    80/80      224.607821897: PERF_RECORD_MMAP2 80/80: [0x55feac750000(0x1000) @ 0x1000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r-xp /work/evidence/build/bin/silproof_child
+  silproof_child    80/80      224.607825614: PERF_RECORD_MMAP2 80/80: [0x55feac751000(0x1000) @ 0x2000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r--p /work/evidence/build/bin/silproof_child
+  silproof_child    80/80      224.607829922: PERF_RECORD_MMAP2 80/80: [0x55feac752000(0x2000) @ 0x2000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: rw-p /work/evidence/build/bin/silproof_child
+  silproof_child    80/80      224.607841474: PERF_RECORD_MMAP2 80/80: [0x7f641915d000(0x35000) @ 0 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    80/80      224.607848918: PERF_RECORD_MMAP2 80/80: [0x7f641915e000(0x26000) @ 0x1000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r-xp /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    80/80      224.607852565: PERF_RECORD_MMAP2 80/80: [0x7f6419184000(0xa000) @ 0x27000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    80/80      224.607856152: PERF_RECORD_MMAP2 80/80: [0x7f641918e000(0x4000) @ 0x31000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: rw-p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    80/80      224.607864898: PERF_RECORD_MMAP2 80/80: [0x7f641915b000(0x2000) @ 0 00:00 0 0]: r-xp [vdso]
+  silproof_child    80/80      224.607867002: PERF_RECORD_MMAP2 80/80: [0x7f6419155000(0x4000) @ 0 00:00 0 0]: r--p [vvar]
+  silproof_child    80/80      224.607868435: PERF_RECORD_MMAP2 80/80: [0x7f6419159000(0x2000) @ 0 00:00 0 0]: r--p [vvar_vclock]
+  silproof_child    80/80      224.607948766: PERF_RECORD_MMAP2 80/80: [0x7f6419153000(0x2000) @ 0x7f6419153000 00:00 0 0]: rw-p //anon
+  silproof_child    80/80      224.607979874: PERF_RECORD_MMAP2 80/80: [0x7f641914e000(0x5000) @ 0 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r--p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    80/80      224.607988300: PERF_RECORD_MMAP2 80/80: [0x7f641914f000(0x1000) @ 0x1000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r-xp /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    80/80      224.607994392: PERF_RECORD_MMAP2 80/80: [0x7f6419150000(0x1000) @ 0x2000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r--p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    80/80      224.607999371: PERF_RECORD_MMAP2 80/80: [0x7f6419151000(0x2000) @ 0x2000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: rw-p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    80/80      224.608072499: PERF_RECORD_MMAP2 80/80: [0x7f641914b000(0x3000) @ 0 00:31 8956906 0]: r--p /etc/ld.so.cache
+  silproof_child    80/80      224.608098317: PERF_RECORD_MMAP2 80/80: [0x7f6418f69000(0x1e2000) @ 0 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    80/80      224.608110350: PERF_RECORD_MMAP2 80/80: [0x7f6418f8f000(0x156000) @ 0x26000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r-xp /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    80/80      224.608117063: PERF_RECORD_MMAP2 80/80: [0x7f64190e5000(0x53000) @ 0x17c000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    80/80      224.608123725: PERF_RECORD_MMAP2 80/80: [0x7f6419138000(0x6000) @ 0x1cf000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: rw-p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    80/80      224.608132061: PERF_RECORD_MMAP2 80/80: [0x7f641913e000(0xd000) @ 0x7f641913e000 00:00 0 0]: rw-p //anon
+  silproof_child    80/80      224.608152309: PERF_RECORD_MMAP2 80/80: [0x7f6418f66000(0x3000) @ 0x7f6418f66000 00:00 0 0]: rw-p //anon
+  silproof_child    80/80      224.608215388: PERF_RECORD_MMAP2 80/80: [0x7f6419138000(0x4000) @ 0x1cf000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    80/80      224.608221599: PERF_RECORD_MMAP2 80/80: [0x7f6419151000(0x1000) @ 0x2000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r--p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    80/80      224.608227410: PERF_RECORD_MMAP2 80/80: [0x55feac752000(0x1000) @ 0x2000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r--p /work/evidence/build/bin/silproof_child
+  silproof_child    80/80      224.608239503: PERF_RECORD_MMAP2 80/80: [0x7f641918e000(0x2000) @ 0x31000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    80/80      224.608286712: PERF_RECORD_MMAP2 80/80: [0x7f641914d000(0x1000) @ 0 00:31 9176453 0]: r--s /tmp/sil_clock_FuJeIu
+  silproof_child    80/80      224.658763955: PERF_RECORD_MMAP2 80/80: [0x55fec446e000(0x21000) @ 0x55fec446e000 00:00 0 0]: rw-p //anon
+  silproof_child    81/81      225.247441512: PERF_RECORD_MMAP2 81/81: [0x7fffffffe000(0x1000) @ 0x7fffffffe000 00:00 0 0]: rw-p //anon
+  silproof_child    81/81      225.247463654: PERF_RECORD_MMAP2 81/81: [0x7ffde7c89000(0x21000) @ 0x7ffffffde000 00:00 0 0]: rw-p [stack]
+  silproof_child    81/81      225.247474695: PERF_RECORD_MMAP2 81/81: [0x55baac6fa000(0x5000) @ 0 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r--p /work/evidence/build/bin/silproof_child
+  silproof_child    81/81      225.247488170: PERF_RECORD_MMAP2 81/81: [0x55baac6fb000(0x1000) @ 0x1000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r-xp /work/evidence/build/bin/silproof_child
+  silproof_child    81/81      225.247492909: PERF_RECORD_MMAP2 81/81: [0x55baac6fc000(0x1000) @ 0x2000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r--p /work/evidence/build/bin/silproof_child
+  silproof_child    81/81      225.247498009: PERF_RECORD_MMAP2 81/81: [0x55baac6fd000(0x2000) @ 0x2000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: rw-p /work/evidence/build/bin/silproof_child
+  silproof_child    81/81      225.247513337: PERF_RECORD_MMAP2 81/81: [0x7fe15e911000(0x35000) @ 0 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    81/81      225.247522334: PERF_RECORD_MMAP2 81/81: [0x7fe15e912000(0x26000) @ 0x1000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r-xp /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    81/81      225.247527013: PERF_RECORD_MMAP2 81/81: [0x7fe15e938000(0xa000) @ 0x27000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    81/81      225.247531402: PERF_RECORD_MMAP2 81/81: [0x7fe15e942000(0x4000) @ 0x31000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: rw-p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    81/81      225.247541481: PERF_RECORD_MMAP2 81/81: [0x7fe15e90f000(0x2000) @ 0 00:00 0 0]: r-xp [vdso]
+  silproof_child    81/81      225.247543755: PERF_RECORD_MMAP2 81/81: [0x7fe15e909000(0x4000) @ 0 00:00 0 0]: r--p [vvar]
+  silproof_child    81/81      225.247545628: PERF_RECORD_MMAP2 81/81: [0x7fe15e90d000(0x2000) @ 0 00:00 0 0]: r--p [vvar_vclock]
+  silproof_child    81/81      225.247659192: PERF_RECORD_MMAP2 81/81: [0x7fe15e907000(0x2000) @ 0x7fe15e907000 00:00 0 0]: rw-p //anon
+  silproof_child    81/81      225.247708765: PERF_RECORD_MMAP2 81/81: [0x7fe15e902000(0x5000) @ 0 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r--p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    81/81      225.247722040: PERF_RECORD_MMAP2 81/81: [0x7fe15e903000(0x1000) @ 0x1000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r-xp /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    81/81      225.247731207: PERF_RECORD_MMAP2 81/81: [0x7fe15e904000(0x1000) @ 0x2000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r--p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    81/81      225.247738621: PERF_RECORD_MMAP2 81/81: [0x7fe15e905000(0x2000) @ 0x2000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: rw-p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    81/81      225.247773647: PERF_RECORD_MMAP2 81/81: [0x7fe15e8ff000(0x3000) @ 0 00:31 8956906 0]: r--p /etc/ld.so.cache
+  silproof_child    81/81      225.247800638: PERF_RECORD_MMAP2 81/81: [0x7fe15e71d000(0x1e2000) @ 0 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    81/81      225.247816909: PERF_RECORD_MMAP2 81/81: [0x7fe15e743000(0x156000) @ 0x26000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r-xp /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    81/81      225.247823591: PERF_RECORD_MMAP2 81/81: [0x7fe15e899000(0x53000) @ 0x17c000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    81/81      225.247837197: PERF_RECORD_MMAP2 81/81: [0x7fe15e8ec000(0x6000) @ 0x1cf000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: rw-p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    81/81      225.247849450: PERF_RECORD_MMAP2 81/81: [0x7fe15e8f2000(0xd000) @ 0x7fe15e8f2000 00:00 0 0]: rw-p //anon
+  silproof_child    81/81      225.247881270: PERF_RECORD_MMAP2 81/81: [0x7fe15e71a000(0x3000) @ 0x7fe15e71a000 00:00 0 0]: rw-p //anon
+  silproof_child    81/81      225.247952694: PERF_RECORD_MMAP2 81/81: [0x7fe15e8ec000(0x4000) @ 0x1cf000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    81/81      225.247959187: PERF_RECORD_MMAP2 81/81: [0x7fe15e905000(0x1000) @ 0x2000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r--p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    81/81      225.247964998: PERF_RECORD_MMAP2 81/81: [0x55baac6fd000(0x1000) @ 0x2000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r--p /work/evidence/build/bin/silproof_child
+  silproof_child    81/81      225.247976990: PERF_RECORD_MMAP2 81/81: [0x7fe15e942000(0x2000) @ 0x31000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    81/81      225.248075966: PERF_RECORD_MMAP2 81/81: [0x7fe15e901000(0x1000) @ 0 00:31 9176453 0]: r--s /tmp/sil_clock_FuJeIu
+  silproof_child    81/81      225.298461218: PERF_RECORD_MMAP2 81/81: [0x55badf002000(0x21000) @ 0x55badf002000 00:00 0 0]: rw-p //anon
+  silproof_child    82/82      225.886694856: PERF_RECORD_MMAP2 82/82: [0x7fffffffe000(0x1000) @ 0x7fffffffe000 00:00 0 0]: rw-p //anon
+  silproof_child    82/82      225.886710365: PERF_RECORD_MMAP2 82/82: [0x7ffd83750000(0x21000) @ 0x7ffffffde000 00:00 0 0]: rw-p [stack]
+  silproof_child    82/82      225.886718621: PERF_RECORD_MMAP2 82/82: [0x55dea1aa9000(0x5000) @ 0 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r--p /work/evidence/build/bin/silproof_child
+  silproof_child    82/82      225.886730203: PERF_RECORD_MMAP2 82/82: [0x55dea1aaa000(0x1000) @ 0x1000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r-xp /work/evidence/build/bin/silproof_child
+  silproof_child    82/82      225.886735402: PERF_RECORD_MMAP2 82/82: [0x55dea1aab000(0x1000) @ 0x2000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r--p /work/evidence/build/bin/silproof_child
+  silproof_child    82/82      225.886739981: PERF_RECORD_MMAP2 82/82: [0x55dea1aac000(0x2000) @ 0x2000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: rw-p /work/evidence/build/bin/silproof_child
+  silproof_child    82/82      225.886754649: PERF_RECORD_MMAP2 82/82: [0x7fae7b312000(0x35000) @ 0 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    82/82      225.886763545: PERF_RECORD_MMAP2 82/82: [0x7fae7b313000(0x26000) @ 0x1000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r-xp /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    82/82      225.886768184: PERF_RECORD_MMAP2 82/82: [0x7fae7b339000(0xa000) @ 0x27000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    82/82      225.886772652: PERF_RECORD_MMAP2 82/82: [0x7fae7b343000(0x4000) @ 0x31000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: rw-p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    82/82      225.886782862: PERF_RECORD_MMAP2 82/82: [0x7fae7b310000(0x2000) @ 0 00:00 0 0]: r-xp [vdso]
+  silproof_child    82/82      225.886785196: PERF_RECORD_MMAP2 82/82: [0x7fae7b30a000(0x4000) @ 0 00:00 0 0]: r--p [vvar]
+  silproof_child    82/82      225.886787059: PERF_RECORD_MMAP2 82/82: [0x7fae7b30e000(0x2000) @ 0 00:00 0 0]: r--p [vvar_vclock]
+  silproof_child    82/82      225.886885815: PERF_RECORD_MMAP2 82/82: [0x7fae7b308000(0x2000) @ 0x7fae7b308000 00:00 0 0]: rw-p //anon
+  silproof_child    82/82      225.886923146: PERF_RECORD_MMAP2 82/82: [0x7fae7b303000(0x5000) @ 0 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r--p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    82/82      225.886934146: PERF_RECORD_MMAP2 82/82: [0x7fae7b304000(0x1000) @ 0x1000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r-xp /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    82/82      225.886942051: PERF_RECORD_MMAP2 82/82: [0x7fae7b305000(0x1000) @ 0x2000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r--p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    82/82      225.886948373: PERF_RECORD_MMAP2 82/82: [0x7fae7b306000(0x2000) @ 0x2000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: rw-p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    82/82      225.886980153: PERF_RECORD_MMAP2 82/82: [0x7fae7b300000(0x3000) @ 0 00:31 8956906 0]: r--p /etc/ld.so.cache
+  silproof_child    82/82      225.887045556: PERF_RECORD_MMAP2 82/82: [0x7fae7b11e000(0x1e2000) @ 0 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    82/82      225.887066225: PERF_RECORD_MMAP2 82/82: [0x7fae7b144000(0x156000) @ 0x26000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r-xp /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    82/82      225.887077416: PERF_RECORD_MMAP2 82/82: [0x7fae7b29a000(0x53000) @ 0x17c000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    82/82      225.887089579: PERF_RECORD_MMAP2 82/82: [0x7fae7b2ed000(0x6000) @ 0x1cf000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: rw-p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    82/82      225.887101571: PERF_RECORD_MMAP2 82/82: [0x7fae7b2f3000(0xd000) @ 0x7fae7b2f3000 00:00 0 0]: rw-p //anon
+  silproof_child    82/82      225.887128653: PERF_RECORD_MMAP2 82/82: [0x7fae7b11b000(0x3000) @ 0x7fae7b11b000 00:00 0 0]: rw-p //anon
+  silproof_child    82/82      225.887204645: PERF_RECORD_MMAP2 82/82: [0x7fae7b2ed000(0x4000) @ 0x1cf000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    82/82      225.887212520: PERF_RECORD_MMAP2 82/82: [0x7fae7b306000(0x1000) @ 0x2000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r--p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    82/82      225.887219613: PERF_RECORD_MMAP2 82/82: [0x55dea1aac000(0x1000) @ 0x2000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r--p /work/evidence/build/bin/silproof_child
+  silproof_child    82/82      225.887233911: PERF_RECORD_MMAP2 82/82: [0x7fae7b343000(0x2000) @ 0x31000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    82/82      225.887288794: PERF_RECORD_MMAP2 82/82: [0x7fae7b302000(0x1000) @ 0 00:31 9176453 0]: r--s /tmp/sil_clock_FuJeIu
+  silproof_child    82/82      225.937814300: PERF_RECORD_MMAP2 82/82: [0x55dea963c000(0x21000) @ 0x55dea963c000 00:00 0 0]: rw-p //anon
+  silproof_child    83/83      226.525072136: PERF_RECORD_MMAP2 83/83: [0x7fffffffe000(0x1000) @ 0x7fffffffe000 00:00 0 0]: rw-p //anon
+  silproof_child    83/83      226.525081634: PERF_RECORD_MMAP2 83/83: [0x7fffd9980000(0x21000) @ 0x7ffffffde000 00:00 0 0]: rw-p [stack]
+  silproof_child    83/83      226.525088977: PERF_RECORD_MMAP2 83/83: [0x562185bdd000(0x5000) @ 0 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r--p /work/evidence/build/bin/silproof_child
+  silproof_child    83/83      226.525098154: PERF_RECORD_MMAP2 83/83: [0x562185bde000(0x1000) @ 0x1000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r-xp /work/evidence/build/bin/silproof_child
+  silproof_child    83/83      226.525102022: PERF_RECORD_MMAP2 83/83: [0x562185bdf000(0x1000) @ 0x2000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r--p /work/evidence/build/bin/silproof_child
+  silproof_child    83/83      226.525105799: PERF_RECORD_MMAP2 83/83: [0x562185be0000(0x2000) @ 0x2000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: rw-p /work/evidence/build/bin/silproof_child
+  silproof_child    83/83      226.525119244: PERF_RECORD_MMAP2 83/83: [0x7f4b430cc000(0x35000) @ 0 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    83/83      226.525126538: PERF_RECORD_MMAP2 83/83: [0x7f4b430cd000(0x26000) @ 0x1000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r-xp /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    83/83      226.525130135: PERF_RECORD_MMAP2 83/83: [0x7f4b430f3000(0xa000) @ 0x27000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    83/83      226.525133882: PERF_RECORD_MMAP2 83/83: [0x7f4b430fd000(0x4000) @ 0x31000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: rw-p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    83/83      226.525143199: PERF_RECORD_MMAP2 83/83: [0x7f4b430ca000(0x2000) @ 0 00:00 0 0]: r-xp [vdso]
+  silproof_child    83/83      226.525145073: PERF_RECORD_MMAP2 83/83: [0x7f4b430c4000(0x4000) @ 0 00:00 0 0]: r--p [vvar]
+  silproof_child    83/83      226.525146536: PERF_RECORD_MMAP2 83/83: [0x7f4b430c8000(0x2000) @ 0 00:00 0 0]: r--p [vvar_vclock]
+  silproof_child    83/83      226.525231415: PERF_RECORD_MMAP2 83/83: [0x7f4b430c2000(0x2000) @ 0x7f4b430c2000 00:00 0 0]: rw-p //anon
+  silproof_child    83/83      226.525264928: PERF_RECORD_MMAP2 83/83: [0x7f4b430bd000(0x5000) @ 0 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r--p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    83/83      226.525273144: PERF_RECORD_MMAP2 83/83: [0x7f4b430be000(0x1000) @ 0x1000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r-xp /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    83/83      226.525280107: PERF_RECORD_MMAP2 83/83: [0x7f4b430bf000(0x1000) @ 0x2000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r--p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    83/83      226.525285116: PERF_RECORD_MMAP2 83/83: [0x7f4b430c0000(0x2000) @ 0x2000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: rw-p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    83/83      226.525311776: PERF_RECORD_MMAP2 83/83: [0x7f4b430ba000(0x3000) @ 0 00:31 8956906 0]: r--p /etc/ld.so.cache
+  silproof_child    83/83      226.525336723: PERF_RECORD_MMAP2 83/83: [0x7f4b42ed8000(0x1e2000) @ 0 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    83/83      226.525347824: PERF_RECORD_MMAP2 83/83: [0x7f4b42efe000(0x156000) @ 0x26000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r-xp /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    83/83      226.525354216: PERF_RECORD_MMAP2 83/83: [0x7f4b43054000(0x53000) @ 0x17c000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    83/83      226.525360458: PERF_RECORD_MMAP2 83/83: [0x7f4b430a7000(0x6000) @ 0x1cf000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: rw-p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    83/83      226.525369034: PERF_RECORD_MMAP2 83/83: [0x7f4b430ad000(0xd000) @ 0x7f4b430ad000 00:00 0 0]: rw-p //anon
+  silproof_child    83/83      226.525390855: PERF_RECORD_MMAP2 83/83: [0x7f4b42ed5000(0x3000) @ 0x7f4b42ed5000 00:00 0 0]: rw-p //anon
+  silproof_child    83/83      226.525458352: PERF_RECORD_MMAP2 83/83: [0x7f4b430a7000(0x4000) @ 0x1cf000 <93ac61ec5a8eb1396f9fbd350e3169a558528a40>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+  silproof_child    83/83      226.525464865: PERF_RECORD_MMAP2 83/83: [0x7f4b430c0000(0x1000) @ 0x2000 <5c6ffe23118cf1983db1515bdf9f29d596a232c3>]: r--p /opt/sil/native/lib/libsil_clock_shim.so
+  silproof_child    83/83      226.525470756: PERF_RECORD_MMAP2 83/83: [0x562185be0000(0x1000) @ 0x2000 <0be80e53e9216cd300c332435dbc2f4be655c48d>]: r--p /work/evidence/build/bin/silproof_child
+  silproof_child    83/83      226.525481676: PERF_RECORD_MMAP2 83/83: [0x7f4b430fd000(0x2000) @ 0x31000 <7ebc65e52f2bbea498b4040fa92f7238377aaba9>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+  silproof_child    83/83      226.525529146: PERF_RECORD_MMAP2 83/83: [0x7f4b430bc000(0x1000) @ 0 00:31 9176453 0]: r--s /tmp/sil_clock_FuJeIu
+  silproof_child    83/83      226.575893728: PERF_RECORD_MMAP2 83/83: [0x5621a64e9000(0x21000) @ 0x5621a64e9000 00:00 0 0]: rw-p //anon

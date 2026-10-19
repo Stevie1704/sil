@@ -1,0 +1,16 @@
+
+Aggregated stats:
+           TOTAL events:       2802
+            COMM events:          9  ( 0.3%)
+            EXIT events:          8  ( 0.3%)
+            FORK events:          7  ( 0.2%)
+          SAMPLE events:       2676  (95.5%)
+           MMAP2 events:         95  ( 3.4%)
+  FINISHED_ROUND events:          1  ( 0.0%)
+        ID_INDEX events:          1  ( 0.0%)
+      THREAD_MAP events:          1  ( 0.0%)
+         CPU_MAP events:          1  ( 0.0%)
+    EVENT_UPDATE events:          2  ( 0.1%)
+   FINISHED_INIT events:          1  ( 0.0%)
+cpu-clock:u stats:
+          SAMPLE events:       2676

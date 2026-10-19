@@ -1,0 +1,104 @@
+{
+  "host": {
+    "packages": [
+      "binutils=2.40-2",
+      "gcc=4:12.2.0-3",
+      "heaptrack=1.4.0-2",
+      "linux-perf=6.1.176-1"
+    ],
+    "uname": {
+      "system": "Linux",
+      "node": "a88967751529",
+      "release": "6.17.0-1022-azure",
+      "version": "#22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026",
+      "machine": "x86_64",
+      "processor": ""
+    },
+    "libc": "glibc 2.36",
+    "python": "3.13.7",
+    "in_container": true,
+    "uid": 0,
+    "perf_event_paranoid": "4",
+    "perf_event_max_sample_rate": "100000",
+    "kptr_restrict": "1",
+    "status": {
+      "CapEff": "00000000a80425fb",
+      "CapPrm": "00000000a80425fb",
+      "Seccomp": "2",
+      "NSpid": "7"
+    },
+    "tools": {
+      "perf": "perf version 6.1.176",
+      "heaptrack": "heaptrack 1.4.0",
+      "heaptrack_preload": "/usr/lib/heaptrack/libheaptrack_preload.so",
+      "heaptrack_interpret": "/usr/lib/heaptrack/libexec/heaptrack_interpret",
+      "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+      "objcopy": "GNU objcopy (GNU Binutils for Debian) 2.40",
+      "sil-run": "0.2.1"
+    }
+  },
+  "probes": {
+    "perf_user": {
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock:u",
+        "-F",
+        "99",
+        "-k",
+        "monotonic",
+        "-o",
+        "/work/evidence/perf-user.data",
+        "--",
+        "true"
+      ],
+      "returncode": 255,
+      "stderr": "perf_event_open(..., PERF_FLAG_FD_CLOEXEC) failed with unexpected error 1 (Operation not permitted)\nperf_event_open(..., 0) failed unexpectedly with error 1 (Operation not permitted)\nError:\nNo permission to enable cpu-clock:u event.\n\n\n",
+      "outcome": "permission-denied"
+    },
+    "perf_user_dwarf": {
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock:u",
+        "-F",
+        "99",
+        "-k",
+        "monotonic",
+        "--call-graph",
+        "dwarf,8192",
+        "-o",
+        "/work/evidence/perf-dwarf.data",
+        "--",
+        "true"
+      ],
+      "returncode": 255,
+      "stderr": "perf_event_open(..., PERF_FLAG_FD_CLOEXEC) failed with unexpected error 1 (Operation not permitted)\nperf_event_open(..., 0) failed unexpectedly with error 1 (Operation not permitted)\nError:\nNo permission to enable cpu-clock:u event.\n\n\n",
+      "outcome": "permission-denied"
+    },
+    "perf_kernel": {
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock",
+        "-F",
+        "99",
+        "-o",
+        "/work/evidence/perf-kernel.data",
+        "--",
+        "true"
+      ],
+      "returncode": 255,
+      "stderr": "perf_event_open(..., PERF_FLAG_FD_CLOEXEC) failed with unexpected error 1 (Operation not permitted)\nperf_event_open(..., 0) failed unexpectedly with error 1 (Operation not permitted)\nError:\nNo permission to enable cpu-clock event.\n\n\n",
+      "outcome": "permission-denied"
+    },
+    "heaptrack_preload": {
+      "returncode": 0,
+      "stderr": "",
+      "outcome": "available"
+    }
+  }
+}
