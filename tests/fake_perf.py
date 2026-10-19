@@ -135,6 +135,9 @@ def script(arguments: list[str]) -> int:
 
 def main() -> int:
     arguments = sys.argv[1:]
+    cache = None
+    if arguments[:1] == ["--buildid-dir"]:
+        cache, arguments = Path(arguments[1]), arguments[2:]
     if arguments == ["--version"]:
         print("perf version 6.99.0-fake")
         return 0
@@ -148,7 +151,6 @@ def main() -> int:
             text_file("FAKE_PERF_BUILDIDS"), rest))
         return 0
     if command == "buildid-cache":
-        cache = Path(os.environ["PERF_BUILDID_DIR"])
         cache.mkdir(parents=True, exist_ok=True)
         added = Path(option(rest, "-a"))
         if os.environ.get("FAKE_PERF_CACHE_FAIL"):

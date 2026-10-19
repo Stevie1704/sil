@@ -284,14 +284,19 @@ def perf_version(perf: Path) -> str:
     return done.stdout.strip() or "unknown"
 
 
-def _tool_environment(cache: Path | None = None) -> dict:
+def _tool_environment() -> dict:
     """The environment of perf's own analysis commands, not of the Run:
-    no debuginfod network lookup, and the profile's build-ID cache."""
+    no debuginfod network lookup."""
     env = dict(os.environ)
     env.pop("DEBUGINFOD_URLS", None)
-    if cache is not None:
-        env["PERF_BUILDID_DIR"] = str(cache)
     return env
+
+
+def _analysis(perf: Path, cache: Path, *arguments: str) -> list[str]:
+    """A perf analysis command on the profile's own build-ID cache. perf
+    reads the cache location from --buildid-dir only; it sets
+    PERF_BUILDID_DIR for its children but does not read it."""
+    return [str(perf), "--buildid-dir", str(cache), *arguments]
 
 
 # --- the Run ----------------------------------------------------------------
@@ -478,9 +483,10 @@ def _perf_text(perf: Path, arguments: list[str], cache: Path, cwd: Path,
                timeout: int, stderr_file: Path | None = None):
     """stdout of one perf analysis command, or None with a reason."""
     try:
-        done = subprocess.run([str(perf), *arguments], capture_output=True,
+        done = subprocess.run(_analysis(perf, cache, *arguments),
+                              capture_output=True,
                               cwd=cwd, timeout=timeout,
-                              env=_tool_environment(cache))
+                              env=_tool_environment())
     except subprocess.TimeoutExpired as expired:
         if stderr_file is not None:
             stderr_file.write_bytes((expired.stderr or b"")[-STDERR_TAIL_BYTES:])
@@ -499,9 +505,9 @@ def _add_to_cache(perf: Path, copy: Path, cache: Path, cwd: Path,
     """`perf buildid-cache -a`; its stderr goes to the log."""
     try:
         done = subprocess.run(
-            [str(perf), "buildid-cache", "-v", "-a", str(copy)],
+            _analysis(perf, cache, "buildid-cache", "-v", "-a", str(copy)),
             capture_output=True, cwd=cwd, timeout=timeout,
-            env=_tool_environment(cache))
+            env=_tool_environment())
     except (OSError, subprocess.TimeoutExpired) as error:
         log.write(f"{copy}: {error}\n".encode())
         return False

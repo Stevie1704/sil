@@ -92,7 +92,7 @@ Run, retry, change the collector or the event, or change a host setting.
    --show-task-events --show-mmap-events --show-lost-events`), and a
    second pass gives the source line of each leaf frame (`-G -F
    ip,sym,srcline`). The analysis commands use
-   `PERF_BUILDID_DIR=DIR/cpu/buildid-cache` and run without
+   `perf --buildid-dir DIR/cpu/buildid-cache` and run without
    `DEBUGINFOD_URLS`, so no symbol is fetched from the network.
 6. **Publish.** It writes `cpu/samples.json`, then `profile.json` through
    a temporary sibling and a hard link, so a reader never sees a partial
