@@ -1,0 +1,845 @@
+"""`sil profile`: one CPU profile of one fresh Run (#315).
+
+docs/profile-report.md is the contract: the command, its exit codes, the
+profile directory and `sil_profile_report` v1. In short: the command checks
+its outputs and the host's perf before anything starts, runs
+`perf record ... -- sil-diagnostics-launcher ... sil-run-diagnostics ...` in
+a new session, keeps `perf.data` within its limit by disabling sampling (the
+Run continues), captures the modules from the Run working directory that the
+runner retained, exports and normalizes the samples, and publishes
+`profile.json` last.
+
+The Run outcome and the capture outcome are separate. A capture problem never
+replaces a nonzero Run exit code; after a successful Run it gives exit 1.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import platform
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+
+from sil.build_info import __version__ as SIL_VERSION
+from sil.diagnostics_format import format_duration_ns
+from sil.diagnostics_report import ReportError, load_report, write_new_file
+from sil.diagnostics_run import (
+    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE, FORWARDED_SIGNALS,
+    STDERR_DRAIN_S, GivenOnce, Guards, RunRequest, ToolMissing,
+    _read_status, _StderrCopy, add_guard_arguments, command_error,
+    find_native_tools, guards_from,
+)
+from sil.profile_cpu import CpuAnalysis, ModuleFacts, normalize_cpu
+from sil.profile_modules import ModuleLocator
+from sil.profile_report import validate_profile_report
+
+PROG = "sil profile"
+EVENT = "cpu-clock:u"
+FREQUENCY_HZ = 999
+STACK_BYTES = 8192
+MAX_CAPTURE_BYTES = 1 << 30
+SYMBOLIZATION_TIMEOUT_S = 600
+POLL_S = 0.1
+STDERR_TAIL_BYTES = 64 * 1024
+RUN_STATUSES = {0: "succeeded", 1: "run_failure", 2: "configuration_error"}
+LIMITATIONS = ["cpu_samples_estimate_on_cpu_time", "user_space_only",
+               "scope_is_runner_and_descendants", "host_build_only"]
+SCRIPT_FIELDS = ["-F", "comm,pid,tid,time,period,ip,sym,dso", "--ns",
+                 "--no-inline", "--show-task-events", "--show-mmap-events",
+                 "--show-lost-events"]
+SRCLINE_FIELDS = ["-G", "-F", "ip,sym,srcline"]
+PERMISSION_HINT = (
+    "an unprivileged user needs kernel.perf_event_paranoid 2 or less "
+    "(now {paranoid}); a container needs CAP_PERFMON (docker run "
+    "--cap-add PERFMON). sil profile does not change host settings; see "
+    "docs/profile-report.md")
+
+
+@dataclass(frozen=True)
+class ProfileRequest:
+    manifest: Path
+    out: Path
+    recording: Path | None  # None: --no-recording
+    provenance: Path | None
+    guards: Guards
+    frequency_hz: int = FREQUENCY_HZ
+    stack_bytes: int = STACK_BYTES
+    max_capture_bytes: int = MAX_CAPTURE_BYTES
+    symbolization_timeout_s: int = SYMBOLIZATION_TIMEOUT_S
+
+
+@dataclass(frozen=True)
+class Layout:
+    """The paths of one profile directory, absolute."""
+
+    out: Path
+
+    @property
+    def cpu(self) -> Path:
+        return self.out / "cpu"
+
+    @property
+    def perf_data(self) -> Path:
+        return self.cpu / "perf.data"
+
+    @property
+    def control(self) -> Path:
+        return self.cpu / ".control"
+
+    @property
+    def retained(self) -> Path:
+        return self.cpu / ".run-directory"
+
+    @property
+    def cache(self) -> Path:
+        return self.cpu / "buildid-cache"
+
+    @property
+    def samples(self) -> Path:
+        return self.cpu / "samples.json"
+
+    @property
+    def diagnostics(self) -> Path:
+        return self.out / "run.diagnostics.json"
+
+    @property
+    def profile(self) -> Path:
+        return self.out / "profile.json"
+
+
+# --- command line -----------------------------------------------------------
+
+
+def _positive(text: str) -> int:
+    if not (text.isascii() and text.isdigit()) or int(text) == 0:
+        raise argparse.ArgumentTypeError(f"{text!r} is not a positive integer")
+    return int(text)
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog=PROG, allow_abbrev=False,
+        description="Capture one CPU profile of one fresh Run with Linux "
+                    "perf into a new directory (docs/profile-report.md).")
+    parser.add_argument("manifest", type=Path)
+    parser.add_argument("--out", type=Path, required=True, action=GivenOnce,
+                        metavar="DIR", help="the new profile directory")
+    parser.add_argument("--collector", required=True, action=GivenOnce,
+                        help="cpu (heap is reserved)")
+    parser.add_argument("--participant", action=GivenOnce, metavar="NAME",
+                        help="reserved for the heap collector")
+    parser.add_argument("--runner", action="store_true",
+                        help="reserved for the heap collector")
+    parser.add_argument("-o", dest="recording", type=Path, action=GivenOnce,
+                        metavar="OUT.mcap",
+                        help="the Recording (default DIR/run.mcap)")
+    parser.add_argument("--no-recording", action="store_true")
+    parser.add_argument("--provenance", type=Path, action=GivenOnce,
+                        metavar="PATH")
+    add_guard_arguments(parser)
+    parser.add_argument("--frequency-hz", type=_positive, action=GivenOnce,
+                        metavar="N", help=f"default {FREQUENCY_HZ}")
+    parser.add_argument("--stack-bytes", type=_positive, action=GivenOnce,
+                        metavar="N", help=f"default {STACK_BYTES}")
+    parser.add_argument("--max-capture-bytes", type=_positive,
+                        action=GivenOnce, metavar="N",
+                        help=f"default {MAX_CAPTURE_BYTES}")
+    parser.add_argument("--symbolization-timeout-s", type=_positive,
+                        action=GivenOnce, metavar="N",
+                        help=f"default {SYMBOLIZATION_TIMEOUT_S}")
+    return parser
+
+
+def request_from_arguments(argv: list[str]) -> ProfileRequest:
+    parser = _parser()
+    args = parser.parse_args(argv)
+    if args.collector == "heap":
+        parser.error("the heap collector is reserved (#317); this version "
+                     "captures --collector cpu only")
+    if args.collector != "cpu":
+        parser.error(f"unknown collector {args.collector!r}; use cpu")
+    if args.runner:
+        parser.error("--runner selects a heap scope; the cpu collector "
+                     "samples the runner and all its descendants")
+    if args.participant is not None:
+        parser.error("--participant selects a heap scope; the cpu collector "
+                     "samples the runner and all its descendants")
+    if args.no_recording and args.recording is not None:
+        parser.error("-o and --no-recording exclude each other")
+    recording = None if args.no_recording else (
+        args.recording or args.out / "run.mcap")
+    provenance = args.provenance
+    if provenance is None and args.no_recording:
+        provenance = args.out / "run.provenance.json"
+    return ProfileRequest(
+        args.manifest, args.out, recording, provenance, guards_from(args),
+        args.frequency_hz or FREQUENCY_HZ, args.stack_bytes or STACK_BYTES,
+        args.max_capture_bytes or MAX_CAPTURE_BYTES,
+        args.symbolization_timeout_s or SYMBOLIZATION_TIMEOUT_S)
+
+
+def preflight(request: ProfileRequest, cwd: Path) -> list[str]:
+    problems = []
+    out = cwd / request.out
+    if os.path.lexists(out):
+        problems.append(f"the profile directory '{request.out}' already "
+                        "exists; earlier evidence is never replaced")
+    elif not Path(os.path.realpath(out)).parent.is_dir():
+        problems.append(f"the profile directory '{request.out}': its parent "
+                        "directory does not exist")
+    if request.recording is not None and _same(
+            cwd / request.recording, cwd / request.manifest):
+        problems.append(f"the Recording '{request.recording}' is the "
+                        "Manifest")
+    return problems
+
+
+def _same(a: Path, b: Path) -> bool:
+    if os.path.realpath(a) == os.path.realpath(b):
+        return True
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
+
+
+# --- perf -------------------------------------------------------------------
+
+
+class PerfUnavailable(RuntimeError):
+    """perf, its event or the permission to use it is missing."""
+
+
+def _sampling_options(request: ProfileRequest) -> list[str]:
+    return ["-e", EVENT, "-F", str(request.frequency_hz), "-k", "monotonic",
+            "--call-graph", f"dwarf,{request.stack_bytes}", "--buildid-mmap",
+            "-q"]
+
+
+def _paranoid() -> int | None:
+    try:
+        return int(Path("/proc/sys/kernel/perf_event_paranoid").read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def find_perf() -> Path:
+    found = shutil.which("perf")
+    if found is None:
+        raise PerfUnavailable(
+            "cannot find perf on PATH; install the perf of the running "
+            "kernel (Debian: linux-perf, Ubuntu: linux-tools-$(uname -r))")
+    return Path(found)
+
+
+def probe_perf(perf: Path, request: ProfileRequest) -> None:
+    """Record `true` with the exact event and options, or raise."""
+    true = shutil.which("true") or "/bin/true"
+    with tempfile.TemporaryDirectory(prefix="sil-profile-probe-") as probe:
+        data = Path(probe) / "probe.data"
+        try:
+            done = subprocess.run(
+                [str(perf), "record", *_sampling_options(request), "-o",
+                 str(data), "--", true], capture_output=True, text=True,
+                timeout=60, env=_tool_environment())
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise PerfUnavailable(f"cannot run perf: {error}") from error
+        if done.returncode == 0 and data.is_file():
+            return
+    detail = " ".join(done.stderr.split())[-400:]
+    paranoid = _paranoid()
+    raise PerfUnavailable(
+        f"perf cannot sample {EVENT} with DWARF call graphs: {detail}; "
+        + PERMISSION_HINT.format(
+            paranoid="unknown" if paranoid is None else paranoid))
+
+
+def perf_version(perf: Path) -> str:
+    done = subprocess.run([str(perf), "--version"], capture_output=True,
+                          text=True, env=_tool_environment())
+    return done.stdout.strip() or "unknown"
+
+
+def _tool_environment(cache: Path | None = None) -> dict:
+    """The environment of perf's own analysis commands, not of the Run:
+    no debuginfod network lookup, and the profile's build-ID cache."""
+    env = dict(os.environ)
+    env.pop("DEBUGINFOD_URLS", None)
+    if cache is not None:
+        env["PERF_BUILDID_DIR"] = str(cache)
+    return env
+
+
+# --- the Run ----------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CaptureRun:
+    """What perf, the launcher and the runner left."""
+
+    command: list[str]
+    perf_status: int  # perf's exit code, or -N when signal N ended it
+    launcher_error: str | None
+    supervisor_signal: int | None
+    limit_reached: bool
+    report: dict | None
+
+
+def record_command(perf: Path, request: ProfileRequest, layout: Layout,
+                   status_fd: int) -> list[str]:
+    tools = find_native_tools()
+    run = RunRequest(request.manifest, layout.diagnostics, request.recording,
+                     request.provenance, request.guards)
+    return [str(perf), "record", *_sampling_options(request), "--control",
+            f"fifo:{layout.control}", "-o", str(layout.perf_data), "--",
+            str(tools.launcher), "--status-fd", str(status_fd),
+            str(tools.runner), *run.runner_arguments(),
+            "--retain-run-directory", str(layout.retained)]
+
+
+class _SessionForwarder:
+    """Forwards termination signals to the Run's whole session.
+
+    The runner records the first one and cleans up as without a profiler;
+    perf stops sampling and finalizes its file. perf runs with SIGHUP
+    ignored, so a hang-up cannot end it before the Run."""
+
+    def __init__(self, received: list[int]):
+        self._received = received
+        self._sent = 0
+        self._group: int | None = None
+
+    def install(self) -> dict:
+        return {number: signal.signal(number, self._on_signal)
+                for number in FORWARDED_SIGNALS}
+
+    def attach(self, process: subprocess.Popen) -> None:
+        self._group = process.pid
+        self._flush()
+
+    def _on_signal(self, number, _frame) -> None:
+        self._received.append(number)
+        self._flush()
+
+    def _flush(self) -> None:
+        while self._group is not None and self._sent < len(self._received):
+            number = self._received[self._sent]
+            self._sent += 1
+            try:
+                os.killpg(self._group, number)
+            except OSError:
+                pass
+
+
+def _ignore_hangup() -> None:
+    signal.signal(signal.SIGHUP, signal.SIG_IGN)
+
+
+def execute(perf: Path, request: ProfileRequest, layout: Layout,
+            cwd: Path) -> CaptureRun:
+    os.mkfifo(layout.control, 0o600)
+    status_read, status_write = os.pipe()
+    command = record_command(perf, request, layout, status_write)
+    received: list[int] = []
+    forwarder = _SessionForwarder(received)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    previous = forwarder.install()
+    try:
+        try:
+            process = subprocess.Popen(
+                command, cwd=cwd, stderr=subprocess.PIPE,
+                pass_fds=(status_write,), start_new_session=True,
+                preexec_fn=_ignore_hangup)
+        except BaseException:
+            os.close(status_read)
+            raise
+        finally:
+            os.close(status_write)
+        forwarder.attach(process)
+        copier = _StderrCopy(process.stderr, sys.stderr.buffer)
+        copier.start()
+        limit_reached = _wait_within_limit(process, layout,
+                                           request.max_capture_bytes)
+        copier.finish(STDERR_DRAIN_S)
+    finally:
+        for number, handler in previous.items():
+            signal.signal(number, handler)
+    return CaptureRun(command, process.returncode, _read_status(status_read),
+                      received[0] if received else None, limit_reached,
+                      _diagnostics_report(layout.diagnostics))
+
+
+def _wait_within_limit(process: subprocess.Popen, layout: Layout,
+                       limit: int) -> bool:
+    """Wait for perf; at the limit, disable sampling once. The Run goes on."""
+    reached = False
+    while True:
+        try:
+            process.wait(timeout=POLL_S)
+            return reached
+        except subprocess.TimeoutExpired:
+            pass
+        if not reached and _size(layout.perf_data) > limit:
+            reached = True
+            _send_control(layout.control, b"disable\n")
+
+
+def _size(path: Path) -> int:
+    try:
+        return path.stat().st_size
+    except OSError:
+        return 0
+
+
+def _send_control(fifo: Path, command: bytes) -> None:
+    try:
+        descriptor = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
+    except OSError:
+        return  # perf has no reader open: it cannot be stopped this way
+    try:
+        os.write(descriptor, command)
+    except OSError:
+        pass
+    finally:
+        os.close(descriptor)
+
+
+def _diagnostics_report(path: Path) -> dict | None:
+    if not path.is_file():
+        return None
+    try:
+        return load_report(path)
+    except ReportError:
+        return None
+
+
+def run_record(run: CaptureRun) -> dict:
+    """The `run` member: the Run's own outcome, never the capture's."""
+    record = {"status": None, "exit_code": None, "signal": None,
+              "failure": None, "diagnostics_report": None,
+              "supervisor_signal": run.supervisor_signal}
+    if run.report is not None:
+        outcome = run.report["run"]
+        failure = outcome["failure"]
+        record.update(status=outcome["status"],
+                      exit_code=outcome["exit_code"],
+                      diagnostics_report="run.diagnostics.json",
+                      failure=None if failure is None else {
+                          "message": failure["message"],
+                          "category": failure["category"]})
+    elif run.launcher_error is not None:
+        record["status"] = "not_started"
+    elif run.perf_status < 0:
+        record.update(status="ended_by_signal", signal=-run.perf_status)
+    elif run.perf_status in RUN_STATUSES:
+        # No report: the runner could not write it; perf ends as the Run.
+        record.update(status=RUN_STATUSES[run.perf_status],
+                      exit_code=run.perf_status)
+    else:
+        record["status"] = "not_started"  # perf failed before the Run
+    return record
+
+
+# --- export and normalization -----------------------------------------------
+
+
+@dataclass(frozen=True)
+class Export:
+    analysis: CpuAnalysis | None
+    problem: str | None  # export_failed, or None
+
+
+def _perf_text(perf: Path, arguments: list[str], cache: Path, cwd: Path,
+               timeout: int, stderr_file: Path | None = None):
+    """stdout of one perf analysis command, or None with a reason."""
+    try:
+        done = subprocess.run([str(perf), *arguments], capture_output=True,
+                              cwd=cwd, timeout=timeout,
+                              env=_tool_environment(cache))
+    except subprocess.TimeoutExpired as expired:
+        if stderr_file is not None:
+            stderr_file.write_bytes((expired.stderr or b"")[-STDERR_TAIL_BYTES:])
+        return None, "symbolization_timeout"
+    except OSError:
+        return None, "export_failed"
+    if stderr_file is not None:
+        stderr_file.write_bytes(done.stderr[-STDERR_TAIL_BYTES:])
+    if done.returncode != 0:
+        return None, "export_failed"
+    return done.stdout.decode(errors="replace"), None
+
+
+def _lost_sample_records(stats: str | None) -> int:
+    match = re.search(r"LOST_SAMPLES events:\s*(\d+)", stats or "")
+    return int(match[1]) if match else 0
+
+
+def export(perf: Path, request: ProfileRequest, layout: Layout,
+           cwd: Path) -> Export:
+    """Capture the retained modules, then export and normalize."""
+    layout.cache.mkdir(exist_ok=True)
+    timeout = request.symbolization_timeout_s
+    data = ["-i", str(layout.perf_data)]
+    locator = ModuleLocator(cwd=cwd, retained=layout.retained)
+    known: dict[tuple, ModuleFacts] = {}
+
+    def facts(path: str, build_id: str | None) -> ModuleFacts:
+        if (path, build_id) not in known:
+            known[path, build_id] = locator.facts(path, build_id)
+        return known[path, build_id]
+
+    listing, _ = _perf_text(perf, ["buildid-list", *data], layout.cache, cwd,
+                            timeout)
+    for line in (listing or "").splitlines():
+        build_id, _, path = line.strip().partition(" ")
+        if path:
+            facts(path, build_id)
+    for copy in locator.retained_files().values():
+        _perf_text(perf, ["buildid-cache", "-a", str(copy)], layout.cache,
+                   cwd, timeout)
+    stats, _ = _perf_text(perf, ["report", *data, "--stats"], layout.cache,
+                          cwd, timeout)
+    script, problem = _perf_text(perf, ["script", *data, *SCRIPT_FIELDS],
+                                 layout.cache, cwd, timeout,
+                                 layout.cpu / "perf-script.stderr.txt")
+    srclines, srcline_problem = _perf_text(
+        perf, ["script", *data, *SRCLINE_FIELDS], layout.cache, cwd, timeout,
+        layout.cpu / "perf-srcline.stderr.txt")
+    if script is None:
+        return Export(None, "export_failed")
+    analysis = normalize_cpu(script, srclines=srclines, facts=facts,
+                             lost_sample_records=_lost_sample_records(stats),
+                             srcline_problem=srcline_problem)
+    return Export(analysis, problem)
+
+
+# --- the report -------------------------------------------------------------
+
+
+def capture_status(run: dict, capture_run: CaptureRun, layout: Layout,
+                   exported: Export | None) -> tuple[str, list[str]]:
+    if run["status"] == "not_started":
+        return "not_started", ["run_not_started"]
+    reasons = []
+    expected = (-run["signal"] if run["status"] == "ended_by_signal"
+                else run["exit_code"])
+    if _size(layout.perf_data) == 0 or (
+            capture_run.supervisor_signal is None
+            and capture_run.perf_status != expected):
+        reasons.append("backend_failed")
+    if exported is None or exported.problem is not None:
+        reasons.append("export_failed")
+    if capture_run.supervisor_signal is not None:
+        reasons.append("interrupted")
+    if exported is not None and exported.analysis is not None:
+        totals = exported.analysis.totals
+        if totals["lost_samples"] is None or totals["lost_samples"] > 0:
+            reasons.append("lost_samples")
+    if capture_run.limit_reached:
+        reasons.append("capture_limit_reached")
+    if {"backend_failed", "export_failed"} & set(reasons):
+        return "failed", reasons
+    if "interrupted" in reasons:
+        return "interrupted", reasons
+    return ("partial" if reasons else "complete"), reasons
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _artifacts(layout: Layout, request: ProfileRequest, cwd: Path) -> list:
+    candidates = [("diagnostics_report", layout.diagnostics)]
+    if request.recording is not None:
+        candidates.append(("recording", cwd / request.recording))
+    candidates += [("perf_data", layout.perf_data),
+                   ("cpu_samples", layout.samples)]
+    rows = []
+    for role, path in candidates:
+        try:
+            relative = Path(os.path.realpath(path)).relative_to(layout.out)
+        except ValueError:
+            continue  # outside the profile directory: not part of it
+        if path.is_file():
+            rows.append({"role": role, "path": relative.as_posix(),
+                         "bytes": path.stat().st_size,
+                         "sha256": _sha256(path)})
+    return rows
+
+
+def _identity(request: ProfileRequest, report: dict | None) -> dict:
+    keys = ("manifest_hash", "sil_version", "source_repository",
+            "source_revision")
+    if report is None:
+        return {"manifest_path": str(request.manifest),
+                **{key: None for key in keys},
+                "unavailable": {key: "no_diagnostics_report" for key in keys}}
+    source = report["identity"]
+    identity = {"manifest_path": str(request.manifest),
+                **{key: source.get(key) for key in keys}}
+    identity["unavailable"] = {key: source.get("unavailable", {}).get(
+        key, "not_reported") for key in keys if identity[key] is None}
+    return identity
+
+
+def _host() -> dict:
+    paranoid = _paranoid()
+    uname = platform.uname()
+    return {"os": uname.system, "kernel_release": uname.release,
+            "architecture": uname.machine, "perf_event_paranoid": paranoid,
+            "unavailable": {} if paranoid is not None else {
+                "perf_event_paranoid": "not_reported_by_os"}}
+
+
+def _empty_analysis(reason: str) -> dict:
+    return {
+        "time_origin_ns": None, "samples_file": None,
+        "totals": {"samples": 0, "weight_ns": 0, "samples_unknown_module": 0,
+                   "samples_unknown_symbol": 0, "samples_with_caller": 0,
+                   "lost_samples": None, "lost_records": 0,
+                   "unavailable": {"lost_samples": reason}},
+        "symbolization": {
+            "function_names": {"samples_with_name": 0},
+            "call_frame_unwinding": {"method": "dwarf",
+                                     "samples_with_caller": 0},
+            "source_lines": {"status": "unavailable", "scope": "leaf_frames",
+                             "samples_with_line": None,
+                             "unavailable": {"samples_with_line": reason}},
+            "inlined_frames": {"status": "not_requested"}},
+        "processes": [], "threads": [], "modules": [],
+        "hotspots": {"limit": 50, "self": [], "inclusive": [],
+                     "self_remainder": {"samples": 0, "weight_ns": 0}},
+        "unavailable": {"time_origin_ns": reason, "samples_file": reason},
+    }
+
+
+def _analysis_members(analysis: CpuAnalysis, samples_file: str | None,
+                      reason: str) -> dict:
+    unavailable = {}
+    if analysis.time_origin_ns is None:
+        unavailable["time_origin_ns"] = "no_samples"
+    if samples_file is None:
+        unavailable["samples_file"] = reason
+    return {"time_origin_ns": analysis.time_origin_ns,
+            "samples_file": samples_file, "totals": analysis.totals,
+            "symbolization": analysis.symbolization,
+            "processes": analysis.processes, "threads": analysis.threads,
+            "modules": analysis.modules, "hotspots": analysis.hotspots,
+            "unavailable": unavailable}
+
+
+def build_report(request: ProfileRequest, layout: Layout, cwd: Path,
+                 capture_run: CaptureRun, exported: Export | None,
+                 version: str, samples_file: str | None) -> dict:
+    run = run_record(capture_run)
+    status, reasons = capture_status(run, capture_run, layout, exported)
+    if exported is not None and exported.analysis is not None:
+        members = _analysis_members(exported.analysis, samples_file,
+                                    "export_failed")
+    else:
+        members = _empty_analysis("run_not_started" if status == "not_started"
+                                  else "export_failed")
+    perf_status = capture_run.perf_status
+    guards = request.guards
+    return {
+        "sil_profile_report": 1,
+        "producer": {"name": PROG, "sil_version": SIL_VERSION},
+        "identity": _identity(request, capture_run.report),
+        "host": _host(),
+        "configuration": {
+            "collector": "cpu",
+            "recording": None if request.recording is None
+            else str(request.recording),
+            "participant_timeout_ms": guards.participant_timeout_ms,
+            "max_protocol_line_bytes": guards.max_protocol_line_bytes,
+            "max_step_output_messages": guards.max_step_output_messages,
+            "max_step_inline_payload_bytes":
+                guards.max_step_inline_payload_bytes,
+            "cwd": str(cwd)},
+        "run": run,
+        "capture": {
+            "kind": "cpu", "status": status, "reasons": reasons,
+            "backend": {"name": "perf", "version": version,
+                        "command": capture_run.command,
+                        "exit_code": perf_status if perf_status >= 0
+                        else None,
+                        "signal": -perf_status if perf_status < 0 else None},
+            "sampling": {"event": EVENT, "event_type": "software",
+                         "privilege": "user", "mode": "frequency",
+                         "frequency_hz": request.frequency_hz,
+                         "weight": "period", "weight_unit": "cpu_clock_ns",
+                         "clock": "host_monotonic"},
+            "call_graph": {"method": "dwarf",
+                           "stack_bytes": request.stack_bytes},
+            "scope": {"kind": "runner_and_descendants", "inherit": True,
+                      "pid_namespace": "collector"},
+            "limits": {"max_capture_bytes": request.max_capture_bytes,
+                       "capture_bytes": _size(layout.perf_data),
+                       "limit_reached": capture_run.limit_reached,
+                       "symbolization_timeout_s":
+                           request.symbolization_timeout_s},
+            **members,
+        },
+        "activation_correlation": {"kind": "not_requested"},
+        "artifacts": _artifacts(layout, request, cwd),
+        "limitations": list(LIMITATIONS),
+    }
+
+
+def resolve_exit(report: dict | None, capture_run: CaptureRun) -> int:
+    """A Run failure is never replaced; a capture problem gives 1."""
+    run = run_record(capture_run)
+    if run["status"] == "not_started":
+        return EXIT_NOT_FOUND if capture_run.perf_status == EXIT_NOT_FOUND \
+            else EXIT_FAILURE
+    if run["status"] == "ended_by_signal":
+        return 128 + run["signal"]
+    if run["exit_code"] != EXIT_OK:
+        return run["exit_code"]
+    if report is None or report["capture"]["status"] != "complete":
+        return EXIT_FAILURE
+    return EXIT_OK
+
+
+# --- terminal summary -------------------------------------------------------
+
+
+def _share(part: int, whole: int) -> str:
+    return f"{100 * part / whole:5.1f}%" if whole else "    -"
+
+
+def format_summary(report: dict, path: Path) -> str:
+    run = report["run"]
+    capture = report["capture"]
+    totals = capture["totals"]
+    state = capture["status"] + (f" ({', '.join(capture['reasons'])})"
+                                 if capture["reasons"] else "")
+    exit_text = (f"exit code {run['exit_code']}" if run["exit_code"]
+                 is not None else f"signal {run['signal']}"
+                 if run["signal"] else "no exit code")
+    sampling = capture["sampling"]
+    lines = [
+        f"profile: {path}",
+        f"run: {run['status']}, {exit_text}",
+        f"capture: cpu, {state}",
+        f"sampling: perf {sampling['event']} at {sampling['frequency_hz']} "
+        f"Hz, DWARF call graph ({capture['call_graph']['stack_bytes']} "
+        "bytes), the runner and all its descendants",
+    ]
+    lost = totals["lost_samples"]
+    lines.append(
+        f"samples: {totals['samples']}, weight "
+        f"{format_duration_ns(totals['weight_ns'])} of sampled on-CPU time "
+        "(an estimate, not a duration); lost "
+        + ("unknown" if lost is None else str(lost)))
+    if totals["samples"] == 0:
+        lines.append("no sample: this is not evidence that no CPU time was "
+                     "used")
+    observed = capture["processes"]
+    lines.append(f"processes: {len(observed)} observed, "
+                 f"{sum(1 for p in observed if p['samples'])} with samples")
+    names = capture["symbolization"]["function_names"]["samples_with_name"]
+    source = capture["symbolization"]["source_lines"]
+    with_line = source["samples_with_line"]
+    lines.append(
+        f"symbols: function names for {names} of {totals['samples']} "
+        "samples; source lines "
+        + (f"for {with_line} (leaf frames)" if with_line is not None else
+           f"unavailable ({next(iter(source['unavailable'].values()))})"))
+    modules = {m["id"]: m["path"] for m in capture["modules"]}
+    rows = capture["hotspots"]["self"][:10]
+    if rows:
+        lines.append("top self weight (share of all sample weight):")
+        for row in rows:
+            name = row["symbol"] or "[unknown function]"
+            module = Path(modules.get(row["module"]) or "[unknown module]")
+            lines.append(f"  {_share(row['self_weight_ns'], totals['weight_ns'])}"
+                         f"  {name} ({module.name})")
+        rest = totals["weight_ns"] - sum(r["self_weight_ns"] for r in rows)
+        if rest:
+            lines.append(f"  {_share(rest, totals['weight_ns'])}  "
+                         "all other functions")
+    return "\n".join(lines) + "\n"
+
+
+# --- main -------------------------------------------------------------------
+
+
+def main(argv: list[str] | None = None) -> int:
+    request = request_from_arguments(sys.argv[1:] if argv is None else argv)
+    cwd = Path.cwd()
+    problems = preflight(request, cwd)
+    if problems:
+        for problem in problems:
+            command_error(PROG, problem, EXIT_USAGE)
+        return EXIT_USAGE
+    try:
+        find_native_tools()
+    except ToolMissing as error:
+        return command_error(PROG, str(error), EXIT_NOT_FOUND)
+    try:
+        perf = find_perf()
+        probe_perf(perf, request)
+    except PerfUnavailable as error:
+        return command_error(PROG, str(error), EXIT_FAILURE)
+    version = perf_version(perf)
+    layout = Layout(Path(os.path.realpath(cwd / request.out)))
+    layout.cpu.mkdir(parents=True)
+    capture_run = execute(perf, request, layout, cwd)
+    report = _finish(perf, request, layout, cwd, capture_run, version)
+    if report is not None:
+        sys.stdout.write(format_summary(report, request.out / "profile.json"))
+        sys.stdout.flush()
+    return resolve_exit(report, capture_run)
+
+
+def _finish(perf: Path, request: ProfileRequest, layout: Layout, cwd: Path,
+            capture_run: CaptureRun, version: str) -> dict | None:
+    """Export, normalize and publish; the report, or None if not written."""
+    exported = None
+    samples_file = None
+    try:
+        if run_record(capture_run)["status"] != "not_started" and \
+                _size(layout.perf_data) > 0:
+            exported = export(perf, request, layout, cwd)
+        if exported is not None and exported.analysis is not None:
+            write_new_file(layout.samples, json.dumps(
+                exported.analysis.samples_document, separators=(",", ":"))
+                + "\n")
+            samples_file = "cpu/samples.json"
+    finally:
+        shutil.rmtree(layout.retained, ignore_errors=True)
+        layout.control.unlink(missing_ok=True)
+    report = build_report(request, layout, cwd, capture_run, exported,
+                          version, samples_file)
+    errors = validate_profile_report(report)
+    if errors:
+        sys.stderr.write(f"{PROG}: the profile report is not valid, so it "
+                         f"is not written: {'; '.join(errors)}\n")
+        return None
+    try:
+        write_new_file(layout.profile,
+                       json.dumps(report, indent=2, sort_keys=True) + "\n")
+    except OSError as error:
+        sys.stderr.write(f"{PROG}: cannot write '{layout.profile}': "
+                         f"{error}\n")
+        return None
+    return report
+
+
+if __name__ == "__main__":
+    sys.exit(main())
