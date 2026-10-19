@@ -306,7 +306,7 @@
             "start": "0x7f6c4a4ee000"
           }
         ],
-        "material": "retained",
+        "material": "captured_modules_from",
         "path": "/work/.sil-run-hGXqH9/participant-666d75/sil-fmu-2n47get4/binaries/x86_64-linux/EgoMotion.so",
         "samples_leaf": 2,
         "samples_unknown_symbol": 0,

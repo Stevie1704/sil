@@ -26,6 +26,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -75,6 +76,7 @@ class ProfileRequest:
     stack_bytes: int = STACK_BYTES
     max_capture_bytes: int = MAX_CAPTURE_BYTES
     symbolization_timeout_s: int = SYMBOLIZATION_TIMEOUT_S
+    modules_from: tuple[Path, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -98,6 +100,10 @@ class Layout:
     @property
     def retained(self) -> Path:
         return self.cpu / ".run-directory"
+
+    @property
+    def unpacked(self) -> Path:
+        return self.cpu / ".modules-from"
 
     @property
     def cache(self) -> Path:
@@ -156,6 +162,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--symbolization-timeout-s", type=_positive,
                         action=GivenOnce, metavar="N",
                         help=f"default {SYMBOLIZATION_TIMEOUT_S}")
+    parser.add_argument("--modules-from", type=Path, action="append",
+                        default=[], metavar="PATH",
+                        help="a directory, ELF file or FMU/zip archive with "
+                             "copies of modules that are gone after the Run "
+                             "(repeatable)")
     return parser
 
 
@@ -184,7 +195,8 @@ def request_from_arguments(argv: list[str]) -> ProfileRequest:
         args.manifest, args.out, recording, provenance, guards_from(args),
         args.frequency_hz or FREQUENCY_HZ, args.stack_bytes or STACK_BYTES,
         args.max_capture_bytes or MAX_CAPTURE_BYTES,
-        args.symbolization_timeout_s or SYMBOLIZATION_TIMEOUT_S)
+        args.symbolization_timeout_s or SYMBOLIZATION_TIMEOUT_S,
+        tuple(args.modules_from))
 
 
 def preflight(request: ProfileRequest, cwd: Path) -> list[str]:
@@ -196,6 +208,9 @@ def preflight(request: ProfileRequest, cwd: Path) -> list[str]:
     elif not Path(os.path.realpath(out)).parent.is_dir():
         problems.append(f"the profile directory '{request.out}': its parent "
                         "directory does not exist")
+    for source in request.modules_from:
+        if not (cwd / source).exists():
+            problems.append(f"--modules-from '{source}' does not exist")
     if request.recording is not None and _same(
             cwd / request.recording, cwd / request.manifest):
         problems.append(f"the Recording '{request.recording}' is the "
@@ -484,13 +499,35 @@ def _lost_sample_records(stats: str | None) -> int:
     return int(match[1]) if match else 0
 
 
+def _module_sources(request: ProfileRequest, layout: Layout,
+                    cwd: Path) -> tuple[Path, ...]:
+    """The --modules-from paths; an archive is unpacked under the profile
+    directory, and removed with the other temporary files."""
+    sources = []
+    for index, source in enumerate(request.modules_from):
+        path = cwd / source
+        if path.is_file() and zipfile.is_zipfile(path):
+            target = layout.unpacked / str(index)
+            try:
+                with zipfile.ZipFile(path) as archive:
+                    archive.extractall(target)  # strips absolute and ..
+            except (OSError, zipfile.BadZipFile) as error:
+                sys.stderr.write(f"{PROG}: cannot read --modules-from "
+                                 f"'{source}': {error}\n")
+                continue
+            path = target
+        sources.append(path)
+    return tuple(sources)
+
+
 def export(perf: Path, request: ProfileRequest, layout: Layout,
            cwd: Path) -> Export:
     """Capture the retained modules, then export and normalize."""
     layout.cache.mkdir(exist_ok=True)
     timeout = request.symbolization_timeout_s
     data = ["-i", str(layout.perf_data)]
-    locator = ModuleLocator(cwd=cwd, retained=layout.retained)
+    locator = ModuleLocator(cwd=cwd, retained=layout.retained,
+                            sources=_module_sources(request, layout, cwd))
     known: dict[tuple, ModuleFacts] = {}
 
     def facts(path: str, build_id: str | None) -> ModuleFacts:
@@ -500,11 +537,13 @@ def export(perf: Path, request: ProfileRequest, layout: Layout,
 
     listing, _ = _perf_text(perf, ["buildid-list", *data], layout.cache, cwd,
                             timeout)
+    build_ids = {}
     for line in (listing or "").splitlines():
         build_id, _, path = line.strip().partition(" ")
         if path:
+            build_ids[path] = build_id
             facts(path, build_id)
-    for copy in locator.retained_files().values():
+    for copy in locator.captured_files().values():
         _perf_text(perf, ["buildid-cache", "-a", str(copy)], layout.cache,
                    cwd, timeout)
     stats, _ = _perf_text(perf, ["report", *data, "--stats"], layout.cache,
@@ -519,7 +558,8 @@ def export(perf: Path, request: ProfileRequest, layout: Layout,
         return Export(None, "export_failed")
     analysis = normalize_cpu(script, srclines=srclines, facts=facts,
                              lost_sample_records=_lost_sample_records(stats),
-                             srcline_problem=srcline_problem)
+                             srcline_problem=srcline_problem,
+                             build_ids=build_ids)
     return Export(analysis, problem)
 
 
@@ -760,6 +800,14 @@ def format_summary(report: dict, path: Path) -> str:
         "samples; source lines "
         + (f"for {with_line} (leaf frames)" if with_line is not None else
            f"unavailable ({next(iter(source['unavailable'].values()))})"))
+    missing = [m for m in capture["modules"] if m["material"] ==
+               "unavailable" and not m["path"].startswith("[")]
+    if missing:
+        lines.append(
+            f"modules: {len(missing)} of {len(capture['modules'])} have no "
+            "file with their build ID, so their samples have no function "
+            "name; name a copy with --modules-from (for example the FMU "
+            "archive)")
     modules = {m["id"]: m["path"] for m in capture["modules"]}
     rows = capture["hotspots"]["self"][:10]
     if rows:
@@ -823,6 +871,7 @@ def _finish(perf: Path, request: ProfileRequest, layout: Layout, cwd: Path,
             samples_file = "cpu/samples.json"
     finally:
         shutil.rmtree(layout.retained, ignore_errors=True)
+        shutil.rmtree(layout.unpacked, ignore_errors=True)
         layout.control.unlink(missing_ok=True)
     report = build_report(request, layout, cwd, capture_run, exported,
                           version, samples_file)

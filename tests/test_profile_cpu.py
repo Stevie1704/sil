@@ -124,7 +124,7 @@ ffffffff81000000 [unknown]
 FACTS = {
     RUNNER: ModuleFacts("host_file", "not_found", None),
     NATIVE: ModuleFacts("host_file", "separate_matching", NATIVE + ".debug"),
-    FMU: ModuleFacts("retained", "embedded", None),
+    FMU: ModuleFacts("captured_modules_from", "embedded", None),
     # A mismatched debug file: perf printed a line, the contract drops it.
     STRIPPED: ModuleFacts("host_file", "separate_mismatched", None),
     CHILD: ModuleFacts("host_file", "embedded", None),
@@ -193,7 +193,7 @@ def test_modules_keep_build_ids_executable_mappings_and_facts(analysis):
     assert native["debug"] == {"status": "separate_matching",
                                "path": NATIVE + ".debug"}
     assert (native["samples_leaf"], native["samples_unknown_symbol"]) == (2, 0)
-    assert modules[FMU]["material"] == "retained"
+    assert modules[FMU]["material"] == "captured_modules_from"
     assert (modules[STRIPPED]["samples_leaf"],
             modules[STRIPPED]["samples_unknown_symbol"]) == (1, 1)
 

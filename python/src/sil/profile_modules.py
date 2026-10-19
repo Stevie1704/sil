@@ -101,11 +101,14 @@ class ModuleLocator:
 
     def __init__(self, *, cwd: Path | None = None,
                  retained: Path | None = None,
+                 sources: tuple[Path, ...] = (),
                  debug_root: Path = DEBUG_ROOT):
         self.cwd = Path(os.path.realpath(cwd or Path.cwd()))
         self.retained = retained
+        self.sources = sources
         self.debug_root = debug_root
-        self._retained: dict[str, Path] = {}
+        self._captured: dict[str, Path] = {}
+        self._by_build_id: dict[str, Path] | None = None
 
     def facts(self, path: str, build_id: str | None) -> ModuleFacts:
         if path.startswith("["):  # [vdso], [anon] and the like
@@ -119,22 +122,42 @@ class ModuleLocator:
         status, debug = self._debug(file, identity, build_id)
         return ModuleFacts(material, status, debug)
 
-    def retained_files(self) -> dict[str, Path]:
-        """Each module path whose retained copy has its build ID."""
-        return dict(self._retained)
+    def captured_files(self) -> dict[str, Path]:
+        """Each module path and the copy with its build ID that was found
+        in the retained Run directory or in a --modules-from source."""
+        return dict(self._captured)
 
     def _material(self, path: str, build_id: str | None):
         identity = elf_identity(Path(path))
         if identity is not None and (build_id is None
                                      or identity.build_id == build_id):
             return "host_file", Path(path)
+        if build_id is None:
+            return "unavailable", None
         copy = self._retained_copy(path)
-        if copy is not None and build_id is not None:
-            copied = elf_identity(copy)
-            if copied is not None and copied.build_id == build_id:
-                self._retained[path] = copy
-                return "retained", copy
+        copied = elf_identity(copy) if copy is not None else None
+        if copied is not None and copied.build_id == build_id:
+            self._captured[path] = copy
+            return "captured_run_directory", copy
+        copy = self._source_index().get(build_id)
+        if copy is not None:
+            self._captured[path] = copy
+            return "captured_modules_from", copy
         return "unavailable", None
+
+    def _source_index(self) -> dict[str, Path]:
+        """Build ID to file, over every ELF file of the sources."""
+        if self._by_build_id is None:
+            self._by_build_id = {}
+            for source in self.sources:
+                files = [source] if source.is_file() else sorted(
+                    source.rglob("*"))
+                for file in files:
+                    identity = (elf_identity(file) if file.is_file()
+                                and not file.is_symlink() else None)
+                    if identity is not None and identity.build_id:
+                        self._by_build_id.setdefault(identity.build_id, file)
+        return self._by_build_id
 
     def _retained_copy(self, path: str) -> Path | None:
         """The path under the retained tree of a Run-directory module."""

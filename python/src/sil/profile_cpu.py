@@ -56,7 +56,7 @@ _IP_LINE = re.compile(r"^\s*(?P<ip>[0-9a-f]+)(\s|$)")
 class ModuleFacts:
     """What the command found about one module file after the Run."""
 
-    material: str  # host_file, retained or unavailable
+    material: str  # one of profile_report.MATERIALS
     debug_status: str  # one of profile_report.DEBUG_STATUSES
     debug_path: str | None
 
@@ -307,15 +307,19 @@ def normalize_cpu(script: str, *, srclines: str | None,
                   facts: Callable[[str, str | None], ModuleFacts],
                   lost_sample_records: int,
                   srcline_problem: str | None = None,
+                  build_ids: dict[str, str] | None = None,
                   hotspot_limit: int = HOTSPOT_LIMIT) -> CpuAnalysis:
     """The normalized capture of one `perf script` export.
 
     `srclines` is the second pass, or None with `srcline_problem` as the
     reason. `lost_sample_records` counts PERF_RECORD_LOST_SAMPLES records
     (`perf report --stats`); perf script prints no count for them, so any
-    makes the lost-sample count unknown.
+    makes the lost-sample count unknown. `build_ids` (`perf buildid-list`)
+    names a module's build ID when its mmap record has none.
     """
     capture = _parse(script)
+    for path, build_id in (build_ids or {}).items():
+        capture.build_ids.setdefault(path, build_id)
     if srclines is not None and capture.samples:
         srcline_problem = _pair_srclines(srclines, capture.samples)
     elif not capture.samples:

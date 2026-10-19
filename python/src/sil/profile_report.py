@@ -34,7 +34,8 @@ DEBUG_STATUSES = {"embedded", "separate_matching", "separate_mismatched",
                   "not_found", "unverifiable", "module_unavailable"}
 # Only these debug states can give a source line (docs/profile-report.md).
 SOURCE_DEBUG_STATUSES = {"embedded", "separate_matching"}
-MATERIALS = {"host_file", "retained", "unavailable"}
+MATERIALS = {"host_file", "captured_run_directory", "captured_modules_from",
+             "unavailable"}
 PROCESS_ROLES = {"launcher", "runner", "descendant"}
 SOURCE_LINE_STATUSES = {"available", "partial", "unavailable"}
 

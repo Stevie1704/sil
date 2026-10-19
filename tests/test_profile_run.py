@@ -13,6 +13,7 @@ import json
 import os
 import signal
 import subprocess
+import zipfile
 import sys
 from pathlib import Path
 
@@ -346,24 +347,79 @@ def test_a_symbolization_timeout_degrades_source_lines_only(
         "samples_with_line": "symbolization_timeout"}
 
 
-def test_a_module_from_the_run_directory_is_retained_for_symbolization(
-        tools, exports, tmp_path):
-    """A Process participant writes a library into its working directory,
-    as the FMI importer does with an FMU binary."""
-    library = elf(tmp_path / "built" / "fmu.so", build_id=BUILD_ID,
-                  debug_lines=True)
+def writer_manifest(tmp_path: Path, library: Path, *, remove: bool) -> Path:
+    """A Process participant that copies a library into its working
+    directory and, as the FMI importer does at shutdown, can remove it."""
+    shutdown = "Path('fmu.so').unlink()\n" if remove else ""
     m = toy_manifest(duration_ns=10 * MS)
     m.add_process("writer", command=[
         sys.executable, "-c",
-        "import json, shutil, sys\n"
+        "import json, shutil, sys\nfrom pathlib import Path\n"
         f"shutil.copy({str(library)!r}, 'fmu.so')\n"
         "for line in sys.stdin:\n"
         "    op = json.loads(line)['op']\n"
         "    if op == 'init': print(json.dumps({'op': 'ready'}), flush=True)\n"
         "    elif op == 'step': print(json.dumps({'op': 'step_done', "
         "'out': []}), flush=True)\n"
-        "    else: break\n"], step_period_ns=10 * MS)
-    manifest = m.write(tmp_path / "writer.json").path
+        "    else: break\n" + shutdown], step_period_ns=10 * MS)
+    return m.write(tmp_path / "writer.json").path
+
+
+def test_a_removed_module_is_captured_from_a_named_archive(
+        tools, exports, tmp_path):
+    library = elf(tmp_path / "built" / "fmu.so", build_id=BUILD_ID,
+                  debug_lines=True)
+    archive = tmp_path / "Model.fmu"
+    with zipfile.ZipFile(archive, "w") as packed:
+        packed.write(library, "binaries/x86_64-linux/fmu.so")
+    manifest = writer_manifest(tmp_path, library, remove=True)
+    removed = f"{os.path.realpath(tmp_path)}/.sil-run-x/p/fmu.so"
+    buildids = tmp_path / "buildids.txt"
+    buildids.write_text(f"{BUILD_ID} {removed}\n")
+    script = tmp_path / "removed-script.txt"
+    script.write_text(
+        "          python3   200/200   10.000100000:    1001001 \n"
+        f"\t    7f0000000100 fmu_spin ({removed})\n")
+    srclines = tmp_path / "removed-srclines.txt"
+    srclines.write_text("    7f0000000100 fmu_spin\n  fmu.c:3\n")
+    env = {**exports, "FAKE_PERF_BUILDIDS": str(buildids),
+           "FAKE_PERF_SCRIPT": str(script),
+           "FAKE_PERF_SRCLINES": str(srclines)}
+
+    without = sil([str(manifest), "--out", "first", "--collector", "cpu"],
+                  tools, tmp_path, env)
+    named = sil([str(manifest), "--out", "second", "--collector", "cpu",
+                 "--modules-from", str(archive)], tools, tmp_path, env)
+
+    assert without.returncode == 0, without.stderr
+    module, = profile(tmp_path / "first")["capture"]["modules"]
+    assert module["material"] == "unavailable"
+    assert "--modules-from" in without.stdout
+    assert named.returncode == 0, named.stderr
+    module, = profile(tmp_path / "second")["capture"]["modules"]
+    assert module["material"] == "captured_modules_from"
+    assert (tmp_path / "second" / "cpu" / "buildid-cache" / "fmu.so").exists()
+    assert not (tmp_path / "second" / "cpu" / ".modules-from").exists()
+
+
+def test_a_missing_modules_from_source_is_a_usage_error(tools, exports,
+                                                        tmp_path):
+    manifest = mixed_period_manifest(tmp_path)
+
+    proc = sil([str(manifest), "--out", "prof", "--collector", "cpu",
+                "--modules-from", "absent.fmu"], tools, tmp_path, exports)
+
+    assert proc.returncode == 2
+    assert "--modules-from 'absent.fmu' does not exist" in proc.stderr
+
+
+def test_a_module_from_the_run_directory_is_retained_for_symbolization(
+        tools, exports, tmp_path):
+    """A participant that leaves a library in its working directory: the
+    runner retains the tree, so the library is captured."""
+    library = elf(tmp_path / "built" / "fmu.so", build_id=BUILD_ID,
+                  debug_lines=True)
+    manifest = writer_manifest(tmp_path, library, remove=False)
     retained_name = "{RETAINED:fmu.so}"
     buildids = tmp_path / "buildids.txt"
     buildids.write_text(f"{BUILD_ID} {retained_name}\n")
@@ -385,7 +441,7 @@ def test_a_module_from_the_run_directory_is_retained_for_symbolization(
     assert proc.returncode == 0, proc.stderr
     report = profile(tmp_path / "prof")
     module, = report["capture"]["modules"]
-    assert module["material"] == "retained"
+    assert module["material"] == "captured_run_directory"
     assert module["debug"]["status"] == "embedded"
     assert (tmp_path / "prof" / "cpu" / "buildid-cache" / "fmu.so").exists()
     assert not (tmp_path / "prof" / "cpu" / ".run-directory").exists()

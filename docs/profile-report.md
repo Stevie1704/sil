@@ -26,19 +26,20 @@ sil profile MANIFEST --out DIR --collector cpu
     [--participant-timeout-ms N] [--max-protocol-line-bytes N]
     [--max-step-output-messages N] [--max-step-inline-payload-bytes N]
     [--frequency-hz N] [--stack-bytes N] [--max-capture-bytes N]
-    [--symbolization-timeout-s N]
+    [--symbolization-timeout-s N] [--modules-from PATH]...
 ```
 
 | Option | Default | Meaning |
 | --- | --- | --- |
 | `--out DIR` | required | The profile directory. It must not exist; its parent must exist. |
 | `--collector` | required | `cpu`. `heap` is reserved for #317 and is rejected (exit 2). |
-| `-o`, `--no-recording`, `--provenance` | `DIR/run.mcap` | As `sil run`. A relative path resolves against the current directory. |
+| `-o`, `--no-recording`, `--provenance` | `DIR/run.mcap` | As `sil run`. A relative path resolves against the current directory. With `--no-recording` the provenance record is `DIR/run.provenance.json`; a failure report is `out.mcap.failure.json` in the current directory, as with `sil run`. |
 | the four guards | as `sil run` | Passed to the runner unchanged and recorded. |
 | `--frequency-hz` | 999 | perf sampling frequency (`-F`). |
 | `--stack-bytes` | 8192 | User stack bytes that perf copies per sample for DWARF unwinding. |
 | `--max-capture-bytes` | 1073741824 (1 GiB) | Limit for `perf.data`. |
 | `--symbolization-timeout-s` | 600 | Limit for each `perf script` pass. |
+| `--modules-from PATH` | none | A directory, an ELF file or a zip archive (an FMU) with copies of modules that are gone after the Run. Repeatable. |
 
 `--participant NAME` and `--runner` are reserved for the heap collector.
 With `--collector cpu` they are a usage error.
@@ -64,8 +65,8 @@ Run, retry, change the collector or the event, or change a host setting.
        --retain-run-directory DIR/cpu/.run-directory [guards]
    ```
 
-   in a new session, in the current directory, with the current
-   environment except `DEBUGINFOD_URLS`. perf follows every descendant of
+   in a new session, in the current directory, with the environment of the
+   command unchanged. perf follows every descendant of
    the runner (`inherit`), so the scope is the runner and all its
    descendants. The Manifest bytes, the working directory, the Participant
    commands and their environment do not change.
@@ -74,15 +75,23 @@ Run, retry, change the collector or the event, or change a host setting.
    control FIFO: sampling stops, the Run continues. The file can be larger
    than the limit by the data of one interval.
 4. **Modules.** When the Run ends, the runner moves its Run working
-   directory to `DIR/cpu/.run-directory`. For every module that perf
-   recorded with a build ID, and whose file is gone or changed, the command
-   adds a retained copy with the same build ID to the build-ID cache
-   `DIR/cpu/buildid-cache`. Then it removes `.run-directory`.
+   directory to `DIR/cpu/.run-directory` instead of removing it. For every
+   module that perf recorded with a build ID (`perf buildid-list`), and
+   whose file is gone or has another build ID, the command looks for a copy
+   with the same build ID: first in `.run-directory`, then in the
+   `--modules-from` sources. It adds each copy to the build-ID cache
+   `DIR/cpu/buildid-cache`, then removes `.run-directory` and the unpacked
+   archives. A Participant that removes its own files at shutdown leaves no
+   copy: the FMI importer removes its extracted FMU, so name the FMU archive
+   with `--modules-from`. Without a copy, the samples of a module keep its
+   path, build ID and module offsets, and have no function name.
 5. **Export.** `perf script` writes the samples, the task, mmap and lost
    events (`-F comm,pid,tid,time,period,ip,sym,dso --ns --no-inline
    --show-task-events --show-mmap-events --show-lost-events`), and a
    second pass gives the source line of each leaf frame (`-G -F
-   ip,srcline`). Both use `PERF_BUILDID_DIR=DIR/cpu/buildid-cache`.
+   ip,sym,srcline`). The analysis commands use
+   `PERF_BUILDID_DIR=DIR/cpu/buildid-cache` and run without
+   `DEBUGINFOD_URLS`, so no symbol is fetched from the network.
 6. **Publish.** It writes `cpu/samples.json`, then `profile.json` through
    a temporary sibling and a hard link, so a reader never sees a partial
    summary and nothing is replaced. It prints a summary on stdout.
@@ -119,7 +128,7 @@ is a `complete` capture; it is not evidence that no CPU time was used.
 | `run.diagnostics.json` | The `sil_run_diagnostics` v1 report of the Run ([contract](diagnostics-report.md)). |
 | `run.mcap`, `run.mcap.provenance.json` | The Recording and its provenance record, when not moved by `-o`, `--no-recording` or `--provenance`. |
 | `cpu/perf.data` | Raw perf capture: authoritative. It contains copies of user stacks: process memory. |
-| `cpu/buildid-cache/` | perf build-ID cache with the retained modules from the Run working directory. |
+| `cpu/buildid-cache/` | perf build-ID cache with the captured modules. |
 | `cpu/samples.json` | Normalized samples: the offline input for reports (below). |
 | `cpu/perf-script.stderr.txt`, `cpu/perf-srcline.stderr.txt` | The last 64 KiB of each export's stderr. |
 
@@ -128,7 +137,7 @@ Raw stack copies can hold any data that was on a stack, also secrets. Share
 `profile.json` hold no stack bytes, no environment variable and no Message
 payload. A copy of `profile.json` and `cpu/samples.json` is sufficient for an
 offline report. Re-symbolization needs `perf.data` and the modules: the
-retained ones are in `cpu/buildid-cache`, the others stay on the host and
+captured ones are in `cpu/buildid-cache`, the others stay on the host and
 are identified by path and build ID only.
 
 ## Conventions
@@ -274,7 +283,7 @@ A `modules` row:
 | --- | --- |
 | `id`, `path` | Identity and the path perf recorded |
 | `build_id` | GNU build ID (hexadecimal), or null |
-| `material` | `host_file` (the file at `path` has the build ID), `retained` (a copy from the Run working directory is in `cpu/buildid-cache`), `unavailable` |
+| `material` | `host_file` (the file at `path` has the build ID), `captured_run_directory` or `captured_modules_from` (a copy with the build ID, from the retained Run working directory or a `--modules-from` source, is in `cpu/buildid-cache`), `unavailable` |
 | `debug` | `status` (`embedded`, `separate_matching`, `separate_mismatched`, `not_found`, `unverifiable`, `module_unavailable`) and `path` of the matching debug file or null |
 | `mappings` | Executable mappings: `{process, start, size, file_offset}`, addresses as hexadecimal strings |
 | `samples_leaf`, `samples_unknown_symbol` | Leaf-frame samples in the module, and those without a function name |

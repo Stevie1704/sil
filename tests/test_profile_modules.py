@@ -149,8 +149,8 @@ def test_a_module_from_the_run_directory_is_found_in_the_retained_tree(
     found = locator(tmp_path, cwd=tmp_path / "work", retained=retained)
 
     assert found.facts(str(original), BUILD_ID) == ModuleFacts(
-        "retained", "embedded", None)
-    assert found.retained_files() == {str(original): copy}
+        "captured_run_directory", "embedded", None)
+    assert found.captured_files() == {str(original): copy}
 
 
 def test_a_gone_module_without_a_retained_copy_is_unavailable(tmp_path):
@@ -160,7 +160,24 @@ def test_a_gone_module_without_a_retained_copy_is_unavailable(tmp_path):
 
     assert found.facts(str(gone), BUILD_ID) == ModuleFacts(
         "unavailable", "module_unavailable", None)
-    assert found.retained_files() == {}
+    assert found.captured_files() == {}
+
+
+def test_a_gone_module_is_found_by_build_id_in_a_modules_from_source(
+        tmp_path):
+    """The FMI importer removes its extracted FMU at shutdown, so the FMU
+    archive is the copy to name."""
+    gone = tmp_path / "work" / ".sil-run-abc123" / "x" / "fmu.so"
+    source = tmp_path / "unpacked-fmu"
+    elf(source / "binaries" / "other.so", build_id=OTHER_ID)
+    copy = elf(source / "binaries" / "x86_64-linux" / "fmu.so",
+               build_id=BUILD_ID, debug_lines=True)
+    found = locator(tmp_path, cwd=tmp_path / "work",
+                    retained=tmp_path / "absent", sources=(source,))
+
+    assert found.facts(str(gone), BUILD_ID) == ModuleFacts(
+        "captured_modules_from", "embedded", None)
+    assert found.captured_files() == {str(gone): copy}
 
 
 def test_a_pseudo_module_is_unavailable(tmp_path):
