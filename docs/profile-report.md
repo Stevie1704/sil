@@ -11,7 +11,10 @@ Status: the CPU collector (Linux perf) is implemented (#315), and so is
 the optional Activation correlation of its samples (#316). The heap
 collector (Heaptrack) is implemented (#317): see
 [Heap collector](#heap-collector). `sil profile render` presents a saved
-profile offline (#318): see [Offline report](#offline-report).
+profile offline (#318): see [Offline report](#offline-report). The
+[#319 qualification](../proofs/profiling-qualification/README.md) qualified
+the installed native and the documented container workflows on Linux
+x86-64; `sil docs support` names the qualified tool versions.
 
 Valid and invalid examples of every case are in
 [tests/fixtures/profile/](../tests/fixtures/profile/).

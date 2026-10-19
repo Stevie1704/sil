@@ -32,6 +32,18 @@ The activation of a participant that is opaque to the kernel, carrying the
 current virtual time `t` and the elapsed `dt` since its previous step.
 _Avoid_: tick, update, advance
 
+**Process Step**:
+The Step of a Process participant as the runner measures it: one Activation
+from the preparation of its inputs to the routing of its outputs, so it
+includes IPC and waiting, not only the participant's own work.
+_Avoid_: process tick, step time (for the algorithm alone)
+
+**Profile**:
+The evidence of one `sil profile` capture of one fresh Run: CPU samples
+(perf) or the allocations of one scope (Heaptrack), summarized in a
+`sil_profile_report`. It describes the host build that ran, not a target ECU.
+_Avoid_: trace, benchmark
+
 **Duration**:
 The length of virtual time a run covers, after which the kernel stops.
 _Avoid_: runtime, horizon, end time
