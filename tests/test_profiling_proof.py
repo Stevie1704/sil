@@ -9,6 +9,7 @@ hand-written fixture, not from the code under test.
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import struct
 import subprocess
@@ -21,12 +22,20 @@ from conftest import ROOT
 from sil.recording import read_records
 
 PROOF_DIR = ROOT / "proofs" / "profiling"
-sys.path.insert(0, str(PROOF_DIR))
-try:
-    import analyze
-    import workload
-finally:
-    sys.path.remove(str(PROOF_DIR))
+
+
+def _load(name: str, path):
+    """Other proofs have a workload module too, so these get their own
+    names. Dataclasses need the module in sys.modules."""
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+analyze = _load("profiling_analyze", PROOF_DIR / "analyze.py")
+workload = _load("profiling_workload", PROOF_DIR / "workload.py")
 
 
 @pytest.fixture(scope="module")
