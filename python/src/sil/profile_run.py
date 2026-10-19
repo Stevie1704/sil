@@ -39,6 +39,7 @@ from sil.diagnostics_run import (
     _read_status, _StderrCopy, add_guard_arguments, command_error,
     find_native_tools, guards_from,
 )
+from sil.profile_activation import correlate
 from sil.profile_cpu import CpuAnalysis, ModuleFacts, normalize_cpu
 from sil.profile_modules import ModuleLocator
 from sil.profile_report import validate_profile_report
@@ -49,6 +50,7 @@ FREQUENCY_HZ = 999
 STACK_BYTES = 8192
 MAX_CAPTURE_BYTES = 1 << 30
 SYMBOLIZATION_TIMEOUT_S = 600
+MAX_ACTIVATION_BYTES = 64 << 20
 POLL_S = 0.1
 STDERR_TAIL_BYTES = 64 * 1024
 RUN_STATUSES = {0: "succeeded", 1: "run_failure", 2: "configuration_error"}
@@ -77,6 +79,8 @@ class ProfileRequest:
     max_capture_bytes: int = MAX_CAPTURE_BYTES
     symbolization_timeout_s: int = SYMBOLIZATION_TIMEOUT_S
     modules_from: tuple[Path, ...] = ()
+    activations: bool = False
+    max_activation_bytes: int = MAX_ACTIVATION_BYTES
 
 
 @dataclass(frozen=True)
@@ -112,6 +116,18 @@ class Layout:
     @property
     def samples(self) -> Path:
         return self.cpu / "samples.json"
+
+    @property
+    def activation(self) -> Path:
+        return self.out / "activation"
+
+    @property
+    def observations(self) -> Path:
+        return self.activation / "observations.jsonl"
+
+    @property
+    def correlation(self) -> Path:
+        return self.activation / "correlation.json"
 
     @property
     def diagnostics(self) -> Path:
@@ -167,6 +183,12 @@ def _parser() -> argparse.ArgumentParser:
                         help="a directory, ELF file or FMU/zip archive with "
                              "copies of modules that are gone after the Run "
                              "(repeatable)")
+    parser.add_argument("--activations", action="store_true",
+                        help="also record Activation intervals and join "
+                             "them with the samples")
+    parser.add_argument("--max-activation-bytes", type=_positive,
+                        action=GivenOnce, metavar="N",
+                        help=f"default {MAX_ACTIVATION_BYTES}")
     return parser
 
 
@@ -186,6 +208,8 @@ def request_from_arguments(argv: list[str]) -> ProfileRequest:
                      "samples the runner and all its descendants")
     if args.no_recording and args.recording is not None:
         parser.error("-o and --no-recording exclude each other")
+    if args.max_activation_bytes is not None and not args.activations:
+        parser.error("--max-activation-bytes needs --activations")
     recording = None if args.no_recording else (
         args.recording or args.out / "run.mcap")
     provenance = args.provenance
@@ -196,7 +220,8 @@ def request_from_arguments(argv: list[str]) -> ProfileRequest:
         args.frequency_hz or FREQUENCY_HZ, args.stack_bytes or STACK_BYTES,
         args.max_capture_bytes or MAX_CAPTURE_BYTES,
         args.symbolization_timeout_s or SYMBOLIZATION_TIMEOUT_S,
-        tuple(args.modules_from))
+        tuple(args.modules_from), args.activations,
+        args.max_activation_bytes or MAX_ACTIVATION_BYTES)
 
 
 def preflight(request: ProfileRequest, cwd: Path) -> list[str]:
@@ -323,7 +348,16 @@ def record_command(perf: Path, request: ProfileRequest, layout: Layout,
             f"fifo:{layout.control}", "-o", str(layout.perf_data), "--",
             str(tools.launcher), "--status-fd", str(status_fd),
             str(tools.runner), *run.runner_arguments(),
-            "--retain-run-directory", str(layout.retained)]
+            "--retain-run-directory", str(layout.retained),
+            *_activation_arguments(request, layout)]
+
+
+def _activation_arguments(request: ProfileRequest, layout: Layout) -> list:
+    if not request.activations:
+        return []
+    return ["--activation-observations", str(layout.observations),
+            "--activation-observations-limit-bytes",
+            str(request.max_activation_bytes)]
 
 
 class _SessionForwarder:
@@ -634,7 +668,9 @@ def _artifacts(layout: Layout, request: ProfileRequest, cwd: Path) -> list:
     if request.recording is not None:
         candidates.append(("recording", cwd / request.recording))
     candidates += [("perf_data", layout.perf_data),
-                   ("cpu_samples", layout.samples)]
+                   ("cpu_samples", layout.samples),
+                   ("activation_observations", layout.observations),
+                   ("activation_correlation", layout.correlation)]
     rows = []
     for role, path in candidates:
         try:
@@ -768,7 +804,8 @@ def build_report(request: ProfileRequest, layout: Layout, cwd: Path,
 
 
 def resolve_exit(report: dict | None, capture_run: CaptureRun) -> int:
-    """A Run failure is never replaced; a capture problem gives 1."""
+    """A Run failure is never replaced; a capture problem gives 1, and so
+    does a requested Activation correlation that is not complete."""
     run = run_record(capture_run)
     if run["status"] == "not_started":
         return EXIT_NOT_FOUND if capture_run.perf_status == EXIT_NOT_FOUND \
@@ -778,6 +815,10 @@ def resolve_exit(report: dict | None, capture_run: CaptureRun) -> int:
     if run["exit_code"] != EXIT_OK:
         return run["exit_code"]
     if report is None or report["capture"]["status"] != "complete":
+        return EXIT_FAILURE
+    correlation = report["activation_correlation"]
+    if correlation["kind"] == "activation" and \
+            correlation["status"] != "complete":
         return EXIT_FAILURE
     return EXIT_OK
 
@@ -835,6 +876,7 @@ def format_summary(report: dict, path: Path) -> str:
             "file with their build ID, so their samples have no function "
             "name; name a copy with --modules-from (for example the FMU "
             "archive)")
+    lines += _activation_lines(report["activation_correlation"])
     modules = {m["id"]: m["path"] for m in capture["modules"]}
     rows = capture["hotspots"]["self"][:10]
     if rows:
@@ -849,6 +891,62 @@ def format_summary(report: dict, path: Path) -> str:
             lines.append(f"  {_share(rest, totals['weight_ns'])}  "
                          "all other functions")
     return "\n".join(lines) + "\n"
+
+
+def _activation_lines(correlation: dict) -> list[str]:
+    if correlation["kind"] != "activation":
+        return []
+    lines = [f"activations: {correlation['status']}"
+             + (f" ({', '.join(correlation['reasons'])})"
+                if correlation["reasons"] else "")]
+    summary = correlation["summary"]
+    if summary is None:
+        lines.append("  no sample is related to an Activation: the join of "
+                     "the two clocks or processes is not proven")
+        return lines
+    samples = summary["samples"]
+    total = samples["total"]["samples"]
+    lines.append(
+        f"  of {total} samples: {samples['execution_context']['samples']} "
+        "in an Activation's execution context (runner thread), "
+        f"{samples['window_associated']['samples']} in a Process Step "
+        "window (associated, not proven to be Step work), "
+        f"{samples['lifecycle']['samples']} lifecycle, "
+        f"{samples['replay']['samples']} Replay, "
+        f"{samples['unattributed']['samples']} unattributed")
+    silent = sum(t["without_samples"] for t in summary["tasks"])
+    if silent:
+        lines.append(f"  {silent} Activations have no sample: that is not "
+                     "evidence that they used no CPU time")
+    return lines
+
+
+def _pid_namespace() -> dict | None:
+    """The PID namespace of this command, and so of perf (Linux)."""
+    try:
+        status = os.stat("/proc/self/ns/pid")
+    except OSError:
+        return None
+    return {"device": status.st_dev, "inode": status.st_ino}
+
+
+def _correlate(layout: Layout, report: dict,
+               exported: Export | None) -> dict | None:
+    """The `activation_correlation` member; writes correlation.json."""
+    try:
+        observations = layout.observations.read_text(encoding="utf-8",
+                                                     errors="replace")
+    except OSError:
+        observations = None
+    samples = (exported.analysis.samples_document
+               if exported is not None and exported.analysis is not None
+               else None)
+    result = correlate(observations, report["capture"], samples,
+                       pid_namespace=_pid_namespace())
+    if result.document is not None:
+        write_new_file(layout.correlation, json.dumps(
+            result.document, separators=(",", ":")) + "\n")
+    return result.record
 
 
 # --- main -------------------------------------------------------------------
@@ -874,6 +972,8 @@ def main(argv: list[str] | None = None) -> int:
     version = perf_version(perf)
     layout = Layout(Path(os.path.realpath(cwd / request.out)))
     layout.cpu.mkdir(parents=True)
+    if request.activations:
+        layout.activation.mkdir()
     capture_run = execute(perf, request, layout, cwd)
     report = _finish(perf, request, layout, cwd, capture_run, version)
     if report is not None:
@@ -902,6 +1002,15 @@ def _finish(perf: Path, request: ProfileRequest, layout: Layout, cwd: Path,
         layout.control.unlink(missing_ok=True)
     report = build_report(request, layout, cwd, capture_run, exported,
                           version, samples_file)
+    if request.activations:
+        try:
+            report["activation_correlation"] = _correlate(layout, report,
+                                                          exported)
+        except OSError as error:
+            sys.stderr.write(f"{PROG}: cannot write '{layout.correlation}': "
+                             f"{error}\n")
+            return None
+        report["artifacts"] = _artifacts(layout, request, cwd)
     errors = validate_profile_report(report)
     if errors:
         sys.stderr.write(f"{PROG}: the profile report is not valid, so it "

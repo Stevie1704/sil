@@ -7,10 +7,11 @@ directory. The summary of that directory is one versioned JSON document,
 `{"sil_profile_report": 1, ...}`, in `profile.json`. This page defines the
 command, the directory and the document.
 
-Status: the CPU collector (Linux perf) is implemented (#315). The heap
-collector (#317) and Activation correlation (#316) are reserved: this
-contract fixes their discriminated shapes, and the fixtures show them, but
-no command produces them yet. The offline HTML view is #318.
+Status: the CPU collector (Linux perf) is implemented (#315), and so is
+the optional Activation correlation of its samples (#316). The heap
+collector (#317) is reserved: this contract fixes its discriminated shape,
+and the fixtures show it, but no command produces it yet. The offline HTML
+view is #318.
 
 Valid and invalid examples of every case are in
 [tests/fixtures/profile/](../tests/fixtures/profile/).
@@ -27,6 +28,7 @@ sil profile MANIFEST --out DIR --collector cpu
     [--max-step-output-messages N] [--max-step-inline-payload-bytes N]
     [--frequency-hz N] [--stack-bytes N] [--max-capture-bytes N]
     [--symbolization-timeout-s N] [--modules-from PATH]...
+    [--activations [--max-activation-bytes N]]
 ```
 
 | Option | Default | Meaning |
@@ -40,6 +42,8 @@ sil profile MANIFEST --out DIR --collector cpu
 | `--max-capture-bytes` | 1073741824 (1 GiB) | Limit for `perf.data`. |
 | `--symbolization-timeout-s` | 600 | Limit for each `perf script` pass. |
 | `--modules-from PATH` | none | A directory, an ELF file or a zip archive (an FMU) with copies of modules that are gone after the Run. Repeatable. |
+| `--activations` | off | Also record the host interval of each Activation and join it with the samples ([Activation correlation](#activation-correlation)). |
+| `--max-activation-bytes` | 67108864 (64 MiB) | Storage limit of the observation stream. Only with `--activations`. |
 
 `--participant NAME` and `--runner` are reserved for the heap collector.
 With `--collector cpu` they are a usage error.
@@ -62,7 +66,9 @@ Run, retry, change the collector or the event, or change a host setting.
        --control fifo:DIR/cpu/.control -o DIR/cpu/perf.data -- \
      sil-diagnostics-launcher --status-fd N sil-run-diagnostics MANIFEST \
        -o RECORDING --diagnostics-out DIR/run.diagnostics.json \
-       --retain-run-directory DIR/cpu/.run-directory [guards]
+       --retain-run-directory DIR/cpu/.run-directory [guards] \
+       [--activation-observations DIR/activation/observations.jsonl \
+        --activation-observations-limit-bytes N]
    ```
 
    in a new session, in the current directory, with the environment of the
@@ -94,7 +100,9 @@ Run, retry, change the collector or the event, or change a host setting.
    ip,sym,srcline`). The analysis commands use
    `perf --buildid-dir DIR/cpu/buildid-cache` and run without
    `DEBUGINFOD_URLS`, so no symbol is fetched from the network.
-6. **Publish.** It writes `cpu/samples.json`, then `profile.json` through
+6. **Join.** With `--activations`, it joins the observation stream with
+   the samples (below) and writes `activation/correlation.json`.
+7. **Publish.** It writes `cpu/samples.json`, then `profile.json` through
    a temporary sibling and a hard link, so a reader never sees a partial
    summary and nothing is replaced. It prints a summary on stdout.
 
@@ -116,6 +124,7 @@ replaces a Run failure.
 | The runner ended by signal N | 128+N | written |
 | The Run succeeded, capture `complete` | 0 | written |
 | The Run succeeded, capture `partial`, `failed` or `interrupted` | 1 | written |
+| The Run succeeded, capture `complete`, `--activations` correlation not `complete` | 1 | written |
 | The Run succeeded, the summary cannot be written | 1 | not written |
 | Hard crash or SIGKILL of the command | signal status | not written; raw files can remain |
 
@@ -132,13 +141,16 @@ is a `complete` capture; it is not evidence that no CPU time was used.
 | `cpu/perf.data` | Raw perf capture: authoritative. It contains copies of user stacks: process memory. |
 | `cpu/buildid-cache/` | perf build-ID cache with the captured modules. |
 | `cpu/samples.json` | Normalized samples: the offline input for reports (below). |
+| `activation/observations.jsonl` | With `--activations`: the runner's observation stream (below). Authoritative. |
+| `activation/correlation.json` | With `--activations`, when the join is proven: the class of each sample and each Activation's interval and counts (below). |
 | `cpu/perf-script.stderr.txt`, `cpu/perf-srcline.stderr.txt`, `cpu/perf-buildid-cache.stderr.txt` | The last 64 KiB of each export's output on stderr; for the cache, of each `perf buildid-cache -a`. A copy that perf did not add is not captured. |
 
 Raw stack copies can hold any data that was on a stack, also secrets. Share
 `perf.data` only as you would share a core dump. `samples.json` and
 `profile.json` hold no stack bytes, no environment variable and no Message
 payload. A copy of `profile.json` and `cpu/samples.json` is sufficient for an
-offline report. Re-symbolization needs `perf.data` and the modules: the
+offline report; with `--activations`, also `activation/correlation.json`.
+Re-symbolization needs `perf.data` and the modules: the
 captured ones are in `cpu/buildid-cache`, the others stay on the host and
 are identified by path and build ID only.
 
@@ -178,6 +190,23 @@ Reasons in v1, in addition to the diagnostics reasons:
 | `no_samples` | The capture has no sample to describe |
 | `not_requested` | The option or collector was not requested |
 | `reserved` | Reserved for a later ticket; not measured by this version |
+
+Reasons of `activation_correlation` (#316):
+
+| Reason | Meaning |
+| --- | --- |
+| `observations_missing` | The runner wrote no observation stream (the Run did not start) |
+| `observations_corrupt` | The stream has no valid header, or a line that does not decode in a stream that reports no write failure |
+| `observations_truncated` | The storage limit stopped the stream; later records are dropped |
+| `observations_write_failed` | A write to the stream failed; later records are dropped |
+| `observations_dropped` | A record could not be made (no memory) |
+| `observations_unterminated` | The stream has no end line: the runner did not end normally |
+| `clock_mismatch` | The stream or the capture is not host `CLOCK_MONOTONIC`, or an observation lies outside the runner's lifetime as perf saw it |
+| `runner_not_observed` | The capture has no runner process with the PID that the stream names |
+| `pid_namespace_mismatch` | The runner and the command are in different PID namespaces |
+| `pid_namespace_unverified` | The PID namespace of the runner or of the command is unknown (not Linux) |
+| `no_samples_file` | The capture has samples, but `cpu/samples.json` was not written |
+| `process_unmapped` | A Process participant's spawn has no unique perf process |
 
 ## `sil_profile_report` v1
 
@@ -332,11 +361,19 @@ version changes.
 
 ### `activation_correlation`
 
-- `{"kind": "not_requested"}`: the CPU collector of #315 always writes this.
-- kind `activation` (reserved, #316): `status` (`complete`, `partial`,
-  `unavailable`, `failed`), `reasons`, `clock` (`host_monotonic` or null),
-  `observations` (sidecar path or null), `summary` (null in v1) and
-  `unavailable`. #316 defines `summary` and the sidecar.
+- `{"kind": "not_requested"}`: the command without `--activations`.
+- kind `activation`: `status` (`complete`, `partial`, `unavailable`,
+  `failed`), `reasons`, `clock` (`host_monotonic`, or null when the join is
+  not proven), `observations` (`activation/observations.jsonl`, or null),
+  `summary` (below, or null) and `unavailable`.
+
+`complete` and `partial` have a summary; `unavailable` and `failed` have
+none, and then no sample is related to an Activation. `partial` names what is
+missing: a cut stream or an unmapped process. Sampling and observation have
+separate completeness: a `complete` correlation of a `partial` capture
+relates only the samples that perf kept.
+
+See [Activation correlation](#activation-correlation) for the join.
 
 ### `limitations`
 
@@ -348,6 +385,113 @@ The CPU capture always lists:
 - `scope_is_runner_and_descendants`: other processes are not sampled.
 - `host_build_only`: the profile describes this host build, not a target ECU
   or a worst-case execution time.
+
+## Activation correlation
+
+`--activations` makes `sil-run-diagnostics` stream observation records
+(only that build has the hooks; `sil-run` rejects the option). The command
+joins them with the samples after the Run. The observations never change
+the Run: not its Recording, its exit code, its stdout or a scheduling
+decision.
+
+### The join
+
+The join is made only when it is proven:
+
+- **Clock.** The runner reads `std::chrono::steady_clock`, which is
+  `CLOCK_MONOTONIC` on Linux, and perf records with `-k monotonic`. The
+  join checks that both state `host_monotonic` and that every observation
+  lies inside the runner's lifetime in the capture. The Clock shim does not
+  change these clocks: the runner is never shimmed, and perf takes its
+  timestamps in the kernel. The intervals of a Process Step come from the
+  runner, never from the shimmed participant.
+- **PID namespace.** The runner records the identity of its PID namespace
+  (`/proc/self/ns/pid`), the command compares it with its own. perf runs in
+  the command's namespace.
+- **Process identity.** A Process participant is the one perf process that
+  the runner forked with the spawn record's PID between the spawn and the
+  reap. A reused PID is a different perf identity, so it does not match. Its
+  descendants belong to it through their parent chain; an `exec` does not
+  change the identity.
+
+Intervals are half open, `[begin_ns, end_ns)`. Each sample is in exactly one
+class:
+
+| Class | Sample | Meaning |
+| --- | --- | --- |
+| `execution_context` | runner thread, inside a Native activation or a Process Step | The code ran in that Activation, inclusive: routing and Recording work that the Task called is part of it. For a Process Step it is the runner's side of the Step exchange. |
+| `window_associated` | a Process participant's process tree, inside one of its Steps | It ran while the runner waited for that Step. It is not proven to be the Step's own work. |
+| `lifecycle` | runner thread, in a lifecycle phase, outside every Activation | Preflight, setup, Slot scheduling, shutdown, Recording close. |
+| `replay` | runner thread, in a Replay publication Slot | Replay work, not a Task. |
+| `unattributed` | everything else, with a reason | See below. |
+
+Unattributed reasons: `process_outside_step` (a Process participant's
+process between its Steps: start-up, shutdown or asynchronous work),
+`runner_other_thread` (a runner thread that runs no Activation, for example
+a Native participant's own thread), `runner_outside_intervals` (the runner
+thread before the first or after the last phase), `unmapped_process` (a
+descendant of the runner that is not in a mapped participant's tree),
+`launcher`, and `observations_incomplete` (a runner-thread or Run-descendant
+sample at or after the last kept record of a cut stream).
+
+No identity comes from a symbol: a Native library that two Participants
+share is told apart by the runner's interval only. An FMU group is one
+Process participant; no sample is related to one FMU instance. No class is
+an exclusive, causal or ownership attribution, and a sample weight is not an
+Activation's duration. An Activation can have no sample: it is listed with
+`samples` 0, which is not evidence that it used no CPU time.
+
+### Observation stream: `activation/observations.jsonl`
+
+One JSON object per line. Host times (`*_ns` except `virtual_time_ns`) are
+decimal strings of host `CLOCK_MONOTONIC`.
+
+| `kind` | Members |
+| --- | --- |
+| header (first line) | `sil_activation_observations` (1), `clock` (`host_monotonic`), `runner_pid`, `runner_tid`, `limit_bytes`, `pid_namespace` (`{device, inode}` or null) |
+| `activation` | `participant`, `task`, `task_kind` (`native_task`, `process_step`), `index` (zero-based per Task), `virtual_time_ns`, `begin_ns`, `end_ns`, `outcome` (`completed`, `failed`, `interrupted`), `tid` |
+| `replay` | As `activation`, without `task` and `task_kind`: one Replay publication Slot |
+| `phase` | `phase` (`preflight`, `setup`, `scheduled_execution`, `shutdown`, `recording_finalization`), `begin_ns`, `end_ns` |
+| `spawn` | `participant`, `pid`, `at_ns` (just before the fork) |
+| `reap` | `participant`, `pid`, `reaped`, `at_ns` (after the reap) |
+| `end` (last line) | `records`, `dropped`, `truncated`, `write_failed`, `bytes` |
+
+A record is written when its interval closes, so the stream is in order of
+end time. The runner keeps records in a 64 KiB buffer and writes it when it
+is full and at the end of the Run. The file holds at most `limit_bytes` of
+lines before the end line. Policy: the first record that does not fit, or
+the first failed write, stops the stream; every later record is only
+counted in `dropped`. The runner does not retry, and it never waits for a
+reader: the file is a new regular file. The end line is the one line past
+the limit. A stream without it is from a runner that did not end normally:
+its last Activation can be missing.
+
+### Correlation file: `activation/correlation.json`
+
+`{"sil_profile_activation_correlation": 1, ...}`:
+
+| Member | Content |
+| --- | --- |
+| `activations` | Every kept activation record in stream order: `participant`, `task`, `kind`, `index`, `virtual_time_ns`, `begin_ns`, `end_ns`, `outcome`, `samples`, `weight_ns` (of both `execution_context` and `window_associated`) |
+| `replays` | Every kept Replay record, with `samples`, `weight_ns` |
+| `phases` | `phase`, `begin_ns`, `end_ns` |
+| `samples` | One `[class, ref]` per row of `cpu/samples.json`, in the same order. `ref` is the index in `activations` (`execution_context`, `window_associated`), in `replays` (`replay`), the phase name (`lifecycle`) or the reason (`unattributed`) |
+
+### `summary`
+
+| Member | Content |
+| --- | --- |
+| `interval` | `half_open` |
+| `correlation_file` | `activation/correlation.json` |
+| `stream` | `records`, `dropped` (null without an end line), `truncated`, `write_failed`, `terminated`, `limit_bytes`, `undecodable_lines` |
+| `intervals` | Kept intervals: `activations` (Native), `process_steps`, `replay`, `phases` |
+| `processes` | Per spawn: `participant`, `pid`, `process` (perf identity or null), `mapping` (`verified`, `not_observed`, `ambiguous`) |
+| `samples` | `total` (equals `capture.totals`), one `{samples, weight_ns}` per class; `unattributed` also has `reasons` |
+| `tasks` | Per Task: `participant`, `task`, `kind`, `activations`, `completed`, `failed`, `interrupted`, `with_samples`, `without_samples`, `execution_context`, `window_associated` |
+| `lifecycle` | Per kept phase: `phase`, `samples`, `weight_ns` |
+
+The classes add up to `total`, the reasons to `unattributed`, the Tasks to
+their classes, and the phases to `lifecycle`.
 
 ## Normalized samples: `cpu/samples.json`
 
@@ -361,5 +505,5 @@ The CPU capture always lists:
 | `samples` | List of `[offset_ns, process, thread, weight_ns, stack]` in capture order |
 
 Rows refer to the identities of `profile.json`. The file is the offline
-input for reports and for the Activation join of #316; it does not
-reconstruct chronology from sorted values.
+input for reports and for the Activation join; it does not reconstruct
+chronology from sorted values.

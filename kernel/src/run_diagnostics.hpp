@@ -13,6 +13,7 @@
 // monotonic clock, which the Participant Clock shim never interposes.
 
 #include <sys/resource.h>
+#include <sys/types.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -81,10 +82,28 @@ void participant(const std::string &name, ParticipantKind kind) noexcept;
 Id task(const std::string &participant, const std::string &task,
         TaskKind kind, uint64_t period_ns, uint64_t offset_ns) noexcept;
 Id replay(const std::string &participant) noexcept;
+// The host time just before a Process participant's fork.
+class SpawnTime {
+ public:
+  SpawnTime() noexcept;
+  uint64_t ns() const { return ns_; }
+
+ private:
+  uint64_t ns_;
+};
+// A Process participant's child was forked as `pid` at `forked`.
+void process_spawned(const std::string &participant, pid_t pid,
+                     const SpawnTime &forked) noexcept;
 // A Process participant's child was reaped: `usage` is what wait4 reported
 // for it and its waited descendants, or null when the reap failed.
-void process_reaped(const std::string &participant,
+void process_reaped(const std::string &participant, pid_t pid,
                     const rusage *usage) noexcept;
+
+// Streams Activation observations (#316) to `path`, a new file, with at most
+// `limit_bytes` of records (docs/profile-report.md). Call before start_run.
+// False with `error` when the file cannot be made; the Run has not started.
+bool observe_activations(const std::filesystem::path &path,
+                         uint64_t limit_bytes, std::string &error);
 
 // Writes the report as a new file through a temporary sibling. Throws on any
 // write error; the caller reports it without changing the Run's exit code.
@@ -159,7 +178,11 @@ inline Id task(const std::string &, const std::string &, TaskKind, uint64_t,
   return {};
 }
 inline Id replay(const std::string &) noexcept { return {}; }
-inline void process_reaped(const std::string &, const rusage *) noexcept {}
+class SpawnTime {};
+inline void process_spawned(const std::string &, pid_t,
+                            const SpawnTime &) noexcept {}
+inline void process_reaped(const std::string &, pid_t,
+                           const rusage *) noexcept {}
 
 class Activation {
  public:

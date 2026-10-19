@@ -250,6 +250,32 @@ class TestDiagnosticsRunnerIsInert:
         document = json.loads(report.read_text())
         assert document["run"]["exit_code"] == ordinary.returncode
 
+    @pytest.mark.parametrize("name", sorted(DIAGNOSTICS_FIXTURES))
+    def test_activation_observations_do_not_change_the_run(
+        self, name, sil_run, sil_run_diagnostics, tmp_path
+    ):
+        """The observation sidecar of #316, also with a limit that cuts
+        it, is outside the Run: same exit code, Recording and stdout."""
+        fixture = DIAGNOSTICS_FIXTURES[name]
+        ref = fixture.build(tmp_path)
+
+        ordinary = run_manifest(sil_run, ref.path, tmp_path / "ordinary.mcap")
+        observed = subprocess.run(
+            [str(sil_run_diagnostics), str(ref.path),
+             "-o", str(tmp_path / "observed.mcap"),
+             "--activation-observations", str(tmp_path / "obs.jsonl"),
+             "--activation-observations-limit-bytes", "2048"],
+            capture_output=True, text=True,
+        )
+
+        assert observed.returncode == ordinary.returncode == fixture.exit_code
+        assert (tmp_path / "observed.mcap").read_bytes() == (
+            tmp_path / "ordinary.mcap"
+        ).read_bytes()
+        assert observed.stdout == ordinary.stdout
+        last = (tmp_path / "obs.jsonl").read_text().splitlines()[-1]
+        assert json.loads(last)["kind"] == "end"
+
     def test_reservoir_sampling_was_exercised(
         self, sil_run_diagnostics, tmp_path
     ):

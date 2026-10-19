@@ -483,3 +483,58 @@ def test_a_signal_interrupts_the_run_and_the_capture(
     assert f"run interrupted by {name}" in report["run"]["failure"]["message"]
     assert report["capture"]["status"] == "interrupted"
     assert "capture: cpu, interrupted (interrupted)" in stdout
+
+
+# --- Activation correlation (#316) -------------------------------------------
+
+
+def test_activations_stream_observations_beside_the_capture(
+        tools, exports, tmp_path, sil_run):
+    manifest = mixed_period_manifest(tmp_path)
+
+    proc = sil([str(manifest), "--out", "prof", "--collector", "cpu",
+                "--activations", "--max-activation-bytes", "100000"], tools,
+               tmp_path, exports)
+
+    out = tmp_path / "prof"
+    report = profile(out)
+    assert report["run"]["status"] == "succeeded"
+    record = perf_log(exports)[0]["record"]
+    assert record[record.index("--activation-observations") + 1] == str(
+        out / "activation" / "observations.jsonl")
+    assert record[record.index("--activation-observations-limit-bytes")
+                  + 1] == "100000"
+    lines = (out / "activation" / "observations.jsonl").read_text() \
+        .splitlines()
+    assert json.loads(lines[0])["limit_bytes"] == 100000
+    assert json.loads(lines[-1])["kind"] == "end"
+    roles = {a["role"]: a["path"] for a in report["artifacts"]}
+    assert roles["activation_observations"] == "activation/observations.jsonl"
+    correlation = report["activation_correlation"]
+    assert correlation["kind"] == "activation"
+    assert correlation["observations"] == "activation/observations.jsonl"
+    # The fake perf saw no process of this Run, so the join is not proven:
+    # it is never shown as correlated, and the command says so.
+    assert correlation["status"] == "unavailable"
+    assert correlation["reasons"][0] in ("runner_not_observed",
+                                         "pid_namespace_unverified")
+    assert correlation["summary"] is None
+    assert proc.returncode == 1
+    assert "activations: unavailable" in proc.stdout
+    ordinary = subprocess.run([str(sil_run), str(manifest), "-o",
+                               str(tmp_path / "ordinary.mcap")],
+                              capture_output=True, cwd=tmp_path)
+    assert (out / "run.mcap").read_bytes() == \
+        (tmp_path / "ordinary.mcap").read_bytes()
+
+
+def test_an_activation_limit_without_activations_is_a_usage_error(
+        tools, exports, tmp_path):
+    manifest = mixed_period_manifest(tmp_path)
+
+    proc = sil([str(manifest), "--out", "prof", "--collector", "cpu",
+                "--max-activation-bytes", "100000"], tools, tmp_path, exports)
+
+    assert proc.returncode == 2
+    assert "--max-activation-bytes needs --activations" in proc.stderr
+    assert not (tmp_path / "prof").exists()
