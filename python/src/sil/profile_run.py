@@ -353,15 +353,22 @@ def probe_perf(perf: Path, request: ProfileRequest) -> None:
                  str(data), "--", true], capture_output=True, text=True,
                 timeout=60, env=_tool_environment())
         except (OSError, subprocess.TimeoutExpired) as error:
-            raise PerfUnavailable(f"cannot run perf: {error}") from error
+            # A perf with the file capability CAP_PERFMON cannot start in a
+            # container without it: exec gives EPERM.
+            raise PerfUnavailable(f"cannot run perf: {error}; "
+                                  + _permission_hint()) from error
         if done.returncode == 0 and data.is_file():
             return
     detail = " ".join(done.stderr.split())[-400:]
-    paranoid = _paranoid()
     raise PerfUnavailable(
         f"perf cannot sample {EVENT} with DWARF call graphs: {detail}; "
-        + PERMISSION_HINT.format(
-            paranoid="unknown" if paranoid is None else paranoid))
+        + _permission_hint())
+
+
+def _permission_hint() -> str:
+    paranoid = _paranoid()
+    return PERMISSION_HINT.format(
+        paranoid="unknown" if paranoid is None else paranoid)
 
 
 def perf_version(perf: Path) -> str:
@@ -401,13 +408,14 @@ class CaptureRun:
 
 
 def record_command(perf: Path, request: ProfileRequest, layout: Layout,
-                   status_fd: int) -> list[str]:
+                   status_fd: int, environment_fd: int) -> list[str]:
     tools = find_native_tools()
     run = RunRequest(request.manifest, layout.diagnostics, request.recording,
                      request.provenance, request.guards)
     return [str(perf), "record", *_sampling_options(request), "--control",
             f"fifo:{layout.control}", "-o", str(layout.perf_data), "--",
             str(tools.launcher), "--status-fd", str(status_fd),
+            "--environment-fd", str(environment_fd),
             str(tools.runner), *run.runner_arguments(),
             "--retain-run-directory", str(layout.retained),
             *_activation_arguments(request, layout)]
@@ -455,6 +463,17 @@ class _SessionForwarder:
                 pass
 
 
+def _environment_file():
+    """This command's environment for the launcher (--environment-fd): perf
+    changes the environment of the command it starts, and the Run must get
+    the one an ordinary Run gets."""
+    environment = tempfile.TemporaryFile()
+    environment.write(b"".join(
+        key + b"=" + value + b"\0" for key, value in os.environb.items()))
+    environment.seek(0)
+    return environment
+
+
 def _ignore_hangup() -> None:
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
@@ -462,8 +481,10 @@ def _ignore_hangup() -> None:
 def execute(perf: Path, request: ProfileRequest, layout: Layout,
             cwd: Path) -> CaptureRun:
     os.mkfifo(layout.control, 0o600)
+    environment = _environment_file()
     status_read, status_write = os.pipe()
-    command = record_command(perf, request, layout, status_write)
+    command = record_command(perf, request, layout, status_write,
+                             environment.fileno())
     received: list[int] = []
     forwarder = _SessionForwarder(received)
     sys.stdout.flush()
@@ -473,13 +494,14 @@ def execute(perf: Path, request: ProfileRequest, layout: Layout,
         try:
             process = subprocess.Popen(
                 command, cwd=cwd, stderr=subprocess.PIPE,
-                pass_fds=(status_write,), start_new_session=True,
-                preexec_fn=_ignore_hangup)
+                pass_fds=(status_write, environment.fileno()),
+                start_new_session=True, preexec_fn=_ignore_hangup)
         except BaseException:
             os.close(status_read)
             raise
         finally:
             os.close(status_write)
+            environment.close()
         forwarder.attach(process)
         copier = _StderrCopy(process.stderr, sys.stderr.buffer)
         copier.start()

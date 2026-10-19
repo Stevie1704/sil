@@ -197,6 +197,14 @@ no Run output can pose as a launcher failure. A supervisor that has a large
 resident size, such as a Python process, starts `sil-run-diagnostics` through
 it; `sil run` and `sil benchmark` pass `--status-fd`.
 
+With `--environment-fd M` (after `--status-fd`, when both are given), RUNNER
+gets the environment that the open file descriptor M holds, NUL-terminated
+`NAME=VALUE` entries to its end, instead of the launcher's own. RUNNER does
+not inherit M. An unreadable descriptor, or one with more than 16 MiB or
+without a final NUL, is exit 2. `sil profile --collector cpu` passes its own
+environment this way, because perf changes the environment of the command it
+starts.
+
 ## Benchmark report: `sil_benchmark_report` v1
 
 [benchmark-complete.json](../tests/fixtures/diagnostics/benchmark-complete.json)

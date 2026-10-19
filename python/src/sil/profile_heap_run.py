@@ -31,6 +31,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -227,12 +228,20 @@ def probe_heaptrack(tools: Heaptrack) -> None:
         f"probe process: {detail or 'no message'}")
 
 
-def adapter_text(tools: Heaptrack, fifo: Path) -> str:
+def adapter_text(tools: Heaptrack, fifo: Path,
+                 environment: Mapping[str, str]) -> str:
+    """The adapter. `environment` is that of the profiling command, which
+    the Run inherits: sh sets PWD when it starts, so the adapter sets it
+    back to that value, or removes it."""
+    pwd = environment.get("PWD")
+    restore = ("unset PWD\n" if pwd is None else
+               f"PWD={shlex.quote(pwd)}\nexport PWD\n")
     return (
         "#!/bin/sh\n"
         "# sil profile --collector heap (#317): preload Heaptrack into this\n"
         "# one process, then exec the command. The process keeps its PID,\n"
         "# pipes, working directory, arguments and other environment.\n"
+        + restore +
         f"DUMP_HEAPTRACK_OUTPUT={shlex.quote(str(fifo))}\n"
         "export DUMP_HEAPTRACK_OUTPUT\n"
         f"LD_PRELOAD={shlex.quote(str(tools.preload))}"
@@ -367,7 +376,8 @@ def run_heap(request: HeapRequest, cwd: Path) -> int:
         return command_error(PROG, str(error), EXIT_FAILURE)
     layout = HeapLayout(Path(os.path.realpath(cwd / request.out)))
     layout.heap.mkdir(parents=True)
-    layout.adapter.write_text(adapter_text(tools, layout.fifo))
+    layout.adapter.write_text(adapter_text(tools, layout.fifo,
+                                           os.environ))
     layout.adapter.chmod(0o700)
     interpreter = Interpreter(tools, layout, request.max_capture_bytes)
     try:

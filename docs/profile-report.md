@@ -73,15 +73,19 @@ Run, retry, change the collector or the event, or change a host setting.
    perf record -e cpu-clock:u -F 999 -k monotonic \
        --call-graph dwarf,8192 --buildid-mmap -N -q \
        --control fifo:DIR/cpu/.control -o DIR/cpu/perf.data -- \
-     sil-diagnostics-launcher --status-fd N sil-run-diagnostics MANIFEST \
+     sil-diagnostics-launcher --status-fd N --environment-fd M \
+       sil-run-diagnostics MANIFEST \
        -o RECORDING --diagnostics-out DIR/run.diagnostics.json \
        --retain-run-directory DIR/cpu/.run-directory [guards] \
        [--activation-observations DIR/activation/observations.jsonl \
         --activation-observations-limit-bytes N]
    ```
 
-   in a new session, in the current directory, with the environment of the
-   command unchanged. `-N` keeps perf from filling the user's build-ID
+   in a new session, in the current directory. perf changes the environment
+   of the command it starts (perf 6.x sets `PERF_BUILDID_DIR` and `PREFIX`,
+   empties `DEBUGINFOD_URLS` and puts its own directory first on `PATH`), so
+   the command passes its own environment to the launcher on descriptor M,
+   and the runner gets that environment unchanged. `-N` keeps perf from filling the user's build-ID
    cache (`~/.debug`): the profile depends on no file outside `DIR` except
    the host modules it names. perf follows every descendant of
    the runner (`inherit`), so the scope is the runner and all its
@@ -496,7 +500,9 @@ start with another environment.
    and a probe: `true` with the preload library must write data.
 2. **Adapter.** It writes `DIR/heap/launch-adapter.sh`. The adapter sets
    `DUMP_HEAPTRACK_OUTPUT` to the FIFO `DIR/heap/.fifo`, puts the preload
-   library before any `LD_PRELOAD`, and execs its arguments. The process
+   library before any `LD_PRELOAD`, sets `PWD` back to the value of the
+   command's environment (or removes it, as `sh` sets it when it starts),
+   and execs its arguments. The process
    keeps its PID, pipes, working directory, arguments and all other
    environment.
 3. **Interpreter.** It starts `heaptrack_interpret < DIR/heap/.fifo` in a

@@ -135,8 +135,31 @@ def test_usage_error_exits_2(sil_diagnostics_launcher):
         [str(sil_diagnostics_launcher)], capture_output=True, text=True
     )
     assert proc.returncode == 2
-    assert ("usage: sil-diagnostics-launcher [--status-fd N] RUNNER "
-            "[ARG...]") in proc.stderr
+    assert ("usage: sil-diagnostics-launcher [--status-fd N] "
+            "[--environment-fd M] RUNNER [ARG...]") in proc.stderr
+
+
+def test_the_runner_gets_the_environment_of_the_descriptor(
+        sil_diagnostics_launcher, tmp_path):
+    environment = tmp_path / "environment"
+    environment.write_bytes(b"ONLY=this\0PATH=/usr/bin:/bin\0")
+    with environment.open("rb") as stream:
+        proc = subprocess.run(
+            [str(sil_diagnostics_launcher), "--environment-fd",
+             str(stream.fileno()), "/usr/bin/env"],
+            capture_output=True, text=True, pass_fds=(stream.fileno(),),
+            env={**os.environ, "DROPPED": "1"})
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.splitlines() == ["ONLY=this", "PATH=/usr/bin:/bin"]
+
+
+def test_an_unreadable_environment_descriptor_is_a_usage_error(
+        sil_diagnostics_launcher):
+    proc = subprocess.run(
+        [str(sil_diagnostics_launcher), "--environment-fd", "999",
+         "/usr/bin/true"], capture_output=True, text=True)
+    assert proc.returncode == 2
+    assert "cannot read the environment" in proc.stderr
 
 
 @pytest.mark.parametrize("signal_number", [signal.SIGINT, signal.SIGTERM])

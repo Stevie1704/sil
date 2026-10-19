@@ -75,7 +75,14 @@ def record(arguments: list[str]) -> int:
 
     for number in (signal.SIGINT, signal.SIGTERM):
         signal.signal(number, on_signal)
-    child = subprocess.Popen(workload, close_fds=False)
+    # perf 6.x changes the environment of the workload it starts: it sets
+    # PERF_BUILDID_DIR and PREFIX, empties DEBUGINFOD_URLS, puts its exec
+    # path first on PATH, and the workload lost TMPDIR in the #319 run.
+    workload_env = {**os.environ, "PERF_BUILDID_DIR": "/fake/.debug",
+                    "PREFIX": "/usr", "DEBUGINFOD_URLS": "",
+                    "PATH": "/usr/libexec/perf-core:" + os.environ["PATH"]}
+    workload_env.pop("TMPDIR", None)
+    child = subprocess.Popen(workload, close_fds=False, env=workload_env)
     grow = 0 if probe else int(os.environ.get("FAKE_PERF_GROW", "0"))
     state = {"disabled": False}
     with out.open("wb") as data:

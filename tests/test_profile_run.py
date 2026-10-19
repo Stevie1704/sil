@@ -168,13 +168,42 @@ def test_the_run_keeps_its_command_and_environment(tools, exports,
         f"fifo:{os.path.realpath(tmp_path)}/prof/cpu/.control"]
     workload = arguments[arguments.index("--") + 1:]
     assert Path(workload[0]).name == "sil-diagnostics-launcher"
-    assert Path(workload[3]).name == "sil-run-diagnostics"
-    assert workload[4:6] == [str(manifest), "-o"]
+    assert workload[1] == "--status-fd" and workload[3] == "--environment-fd"
+    assert Path(workload[5]).name == "sil-run-diagnostics"
+    assert workload[6:8] == [str(manifest), "-o"]
     assert "--participant-timeout-ms" in workload
     assert "--retain-run-directory" in workload
     assert "PERF_BUILDID_DIR" not in record["env"]
     report = profile(tmp_path / "prof")
     assert report["configuration"]["participant_timeout_ms"] == 60000
+
+
+ENV_MARKER = ROOT / "tests" / "participants" / "env_marker.py"
+
+
+def test_participants_get_the_environment_of_an_ordinary_run(
+        tools, exports, tmp_path, sil_run):
+    # perf changes the environment of the command it starts (fake_perf.py
+    # does as perf 6.x does); the Participants must not see that.
+    m = toy_manifest(duration_ns=20 * MS)
+    m.add_process("marker", command=[sys.executable, str(ENV_MARKER),
+                                     str(tmp_path / "marker.json")],
+                  step_period_ns=10 * MS)
+    manifest = m.write(tmp_path / "marker.json.manifest").path
+    env = {**os.environ, **exports, "TMPDIR": str(tmp_path),
+           "PATH": os.pathsep.join([str(tools), "/usr/bin:/bin"])}
+    ordinary = subprocess.run([str(sil_run), str(manifest), "-o", "o.mcap"],
+                              capture_output=True, text=True, cwd=tmp_path,
+                              env=env)
+    assert ordinary.returncode == 0, ordinary.stderr
+    expected = json.loads((tmp_path / "marker.json").read_text())
+
+    proc = sil([str(manifest), "--out", "prof", "--collector", "cpu"], tools,
+               tmp_path, {**exports, "TMPDIR": str(tmp_path)})
+
+    assert proc.returncode == 0, proc.stderr
+    profiled = json.loads((tmp_path / "marker.json").read_text())
+    assert profiled["environment"] == expected["environment"]
 
 
 @pytest.mark.parametrize("argv, message", [

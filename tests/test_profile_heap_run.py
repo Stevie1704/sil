@@ -265,6 +265,61 @@ def test_a_process_scope_traces_that_participant_only(tools, heaptrack,
         ordinary_recording(sil_run, manifest, tmp_path)
 
 
+HEAPTRACK_VARIABLES = {"LD_PRELOAD", "DUMP_HEAPTRACK_OUTPUT"}
+
+
+@needs_linux
+@pytest.mark.parametrize("scope", [("--runner",),
+                                   ("--participant", "scoped")])
+def test_participants_get_the_environment_of_an_ordinary_run(
+        tools, heaptrack, tmp_path, sil_run, scope):
+    manifest, markers = marker_manifest(tmp_path)
+    # The environment that sil() gives the profiling command.
+    environment = {key: value for key, value in os.environ.items()
+                   if key != "LD_PRELOAD"}
+    environment["PATH"] = os.pathsep.join([str(tools), "/usr/bin:/bin"])
+    done = subprocess.run([str(sil_run), str(manifest), "-o", "o.mcap"],
+                          capture_output=True, text=True, cwd=tmp_path,
+                          env={**environment, **heaptrack})
+    assert done.returncode == 0, done.stderr
+    expected = {name: marker(markers, name)["environment"]
+                for name in ("scoped", "sibling")}
+
+    proc = sil(heap(manifest, *scope), tools, tmp_path, heaptrack)
+
+    assert proc.returncode == 0, proc.stderr
+    for name in ("scoped", "sibling"):
+        seen = {key: value for key, value in
+                marker(markers, name)["environment"].items()
+                if key not in HEAPTRACK_VARIABLES}
+        assert seen == expected[name], name
+
+
+def test_the_launch_adapter_keeps_the_working_directory_variable(
+        tmp_path):
+    # sh sets PWD when it starts; the adapter must give the command the
+    # PWD of the profiling command, or none when it had none.
+    from sil.profile_heap_run import Heaptrack, adapter_text
+    tools = Heaptrack(Path("/x/heaptrack"), Path("/x/preload.so"),
+                      Path("/x/interpret"), None)
+    for pwd in (None, "/stale/directory"):
+        environment = {key: value for key, value in os.environ.items()
+                       if key != "PWD"}
+        if pwd is not None:
+            environment["PWD"] = pwd
+        adapter = tmp_path / f"adapter-{pwd is None}.sh"
+        adapter.write_text(adapter_text(tools, tmp_path / "fifo",
+                                        environment))
+        adapter.chmod(0o700)
+        done = subprocess.run([str(adapter), "/usr/bin/env"],
+                              capture_output=True, text=True,
+                              env=environment, cwd=tmp_path)
+        assert done.returncode == 0, done.stderr
+        seen = dict(line.split("=", 1) for line in done.stdout.splitlines()
+                    if "=" in line)
+        assert seen.get("PWD") == pwd
+
+
 @needs_linux
 def test_the_clock_shim_of_a_runner_scope_participant_is_kept(
         tools, heaptrack, tmp_path, sil_run):

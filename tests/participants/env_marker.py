@@ -2,7 +2,8 @@
 
 argv[1] is the marker path. The marker is JSON: `pid`, `ld_preload` and
 `dump_heaptrack_output` (null when unset), so a test can tell which process
-a profiler adapter reached.
+a profiler adapter reached, and `environment`, the whole environment, so a
+test can compare it with that of an ordinary Run.
 """
 
 import json
@@ -16,6 +17,7 @@ Path(sys.argv[1]).write_text(json.dumps({
     "pid": os.getpid(),
     "ld_preload": os.environ.get("LD_PRELOAD"),
     "dump_heaptrack_output": os.environ.get("DUMP_HEAPTRACK_OUTPUT"),
+    "environment": dict(os.environ),
 }))
 
 
