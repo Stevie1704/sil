@@ -45,6 +45,7 @@ target_link_libraries(sil-run-instrumented
 # docs/adr/0004-opt-in-run-diagnostics-runner.md.
 add_executable(sil-run-diagnostics
   ${SIL_KERNEL_SOURCES} src/run_diagnostics.cpp src/diagnostics_stats.cpp
+  src/observation_log.cpp
   src/resource_usage.cpp)
 target_include_directories(sil-run-diagnostics PRIVATE ${PROJECT_SOURCE_DIR}/include)
 target_compile_definitions(sil-run-diagnostics PRIVATE SIL_RUN_DIAGNOSTICS)

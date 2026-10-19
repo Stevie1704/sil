@@ -48,7 +48,9 @@ using sil::kExitRunFailure;
 #ifdef SIL_RUN_DIAGNOSTICS
 #define SIL_RUNNER_NAME "sil-run-diagnostics"
 #define SIL_DIAGNOSTICS_USAGE \
-  " [--diagnostics-out <report.json>] [--retain-run-directory <path>]"
+  " [--diagnostics-out <report.json>] [--retain-run-directory <path>]" \
+  " [--activation-observations <path>" \
+  " [--activation-observations-limit-bytes <N>]]"
 #else
 #define SIL_RUNNER_NAME "sil-run"
 #define SIL_DIAGNOSTICS_USAGE ""
@@ -297,6 +299,10 @@ int run(int argc, char **argv) {
 #ifdef SIL_RUN_DIAGNOSTICS
   const char *diagnostics_path_arg = nullptr;
   const char *retention_path_arg = nullptr;
+  const char *observations_path_arg = nullptr;
+  // 64 MiB of records by default (docs/profile-report.md).
+  size_t observations_limit_bytes = size_t(64) << 20;
+  bool observations_limit_given = false;
 #endif
   // Running without a Recording is what separates the cost of routing to
   // subscribers from the cost of Recording I/O (issue #61). The engine already
@@ -366,6 +372,26 @@ int run(int argc, char **argv) {
         return kExitConfigError;
       }
       retention_path_arg = argv[++i];
+    } else if (std::strcmp(argv[i], "--activation-observations") == 0 &&
+               i + 1 < argc) {
+      if (observations_path_arg) {
+        usage();
+        return kExitConfigError;
+      }
+      observations_path_arg = argv[++i];
+    } else if (std::strcmp(argv[i], "--activation-observations-limit-bytes") ==
+               0) {
+      if (observations_limit_given || i + 1 >= argc) {
+        usage();
+        return kExitConfigError;
+      }
+      if (!parse_positive_size(argv[++i], observations_limit_bytes)) {
+        std::cerr << SIL_RUNNER_NAME
+            ": --activation-observations-limit-bytes must be a positive "
+            "integer representable as a size_t\n";
+        return kExitConfigError;
+      }
+      observations_limit_given = true;
 #endif
     } else if (std::strcmp(argv[i], "--no-recording") == 0) {
       recording = false;
@@ -413,6 +439,28 @@ int run(int argc, char **argv) {
     }
     sil::OwnedDirectory::retain_next_unique_at(
         std::filesystem::absolute(retention_path_arg));
+  }
+  if (observations_limit_given && !observations_path_arg) {
+    usage();
+    return kExitConfigError;
+  }
+  if (observations_path_arg) {
+    // A profiler joins these host intervals with its samples (#316). The
+    // file is new, so earlier evidence is never replaced.
+    std::error_code error;
+    if (std::filesystem::symlink_status(observations_path_arg, error).type() !=
+        std::filesystem::file_type::not_found) {
+      std::cerr << SIL_RUNNER_NAME ": --activation-observations '"
+                << observations_path_arg << "' already exists\n";
+      return kExitConfigError;
+    }
+    std::string problem;
+    if (!sil::diagnostics::observe_activations(
+            observations_path_arg, observations_limit_bytes, problem)) {
+      std::cerr << SIL_RUNNER_NAME ": cannot create --activation-observations '"
+                << observations_path_arg << "': " << problem << "\n";
+      return kExitConfigError;
+    }
   }
 #endif
 
