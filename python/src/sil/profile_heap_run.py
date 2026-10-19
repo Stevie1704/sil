@@ -47,7 +47,8 @@ from sil.profile_report import validate_profile_report
 from sil.profile_summary import format_summary
 from sil.profile_run import (
     PROG, STDERR_TAIL_BYTES, CaptureRun, HeapRequest, _host, _identity,
-    _tool_environment, artifact_rows, resolve_exit, run_record,
+    _tool_environment, artifact_rows, report_launcher_error, resolve_exit,
+    run_record,
 )
 
 SHIM_FOLLOW_UP = "https://github.com/Stevie1704/sil/issues/330"
@@ -422,7 +423,8 @@ def _execute(request: HeapRequest, layout: HeapLayout, native,
     command = [str(native.launcher), *prefix, str(native.runner),
                *run.runner_arguments(), "--retain-run-directory",
                str(layout.retained), *extra]
-    return CaptureRun(command, status, outcome.launcher_error,
+    return CaptureRun(command, status,
+                      report_launcher_error(outcome.launcher_error),
                       outcome.supervisor_signal, False, outcome.report)
 
 

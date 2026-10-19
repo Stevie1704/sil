@@ -294,6 +294,23 @@ def test_a_missing_runner_is_not_found(tools, exports, tmp_path):
     assert "sil-run-diagnostics" in proc.stderr
 
 
+def test_a_launcher_failure_is_reported_on_stderr(tools, exports, tmp_path):
+    # A runner that the launcher cannot execute: no Run takes place.
+    manifest = mixed_period_manifest(tmp_path)
+    runner = tools / "sil-run-diagnostics"
+    runner.unlink()
+    runner.write_text("#!/nonexistent/interpreter\n")
+    runner.chmod(0o755)
+
+    proc = sil([str(manifest), "--out", "prof", "--collector", "cpu"], tools,
+               tmp_path, exports)
+
+    assert proc.returncode == 127
+    assert "no Run took place" in proc.stderr
+    assert "cannot run" in proc.stderr
+    assert profile(tmp_path / "prof")["run"]["status"] == "not_started"
+
+
 def test_a_failed_run_keeps_its_exit_code_and_first_diagnostic(
         tools, exports, tmp_path):
     manifest = failing_step_manifest(tmp_path)

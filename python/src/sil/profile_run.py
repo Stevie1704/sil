@@ -511,9 +511,20 @@ def execute(perf: Path, request: ProfileRequest, layout: Layout,
     finally:
         for number, handler in previous.items():
             signal.signal(number, handler)
-    return CaptureRun(command, process.returncode, _read_status(status_read),
+    launcher_error = report_launcher_error(_read_status(status_read))
+    return CaptureRun(command, process.returncode, launcher_error,
                       received[0] if received else None, limit_reached,
                       _diagnostics_report(layout.diagnostics))
+
+
+def report_launcher_error(error: str | None) -> str | None:
+    """Say on stderr that the launcher failed and no Run took place."""
+    if error is not None:
+        sys.stderr.write(f"{PROG}: sil-diagnostics-launcher failed, so no "
+                         f"Run took place: "
+                         f"{error.removeprefix('sil-diagnostics-launcher: ')}"
+                         "\n")
+    return error
 
 
 def _wait_within_limit(process: subprocess.Popen, layout: Layout,

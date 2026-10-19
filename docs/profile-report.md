@@ -94,7 +94,11 @@ Run, retry, change the collector or the event, or change a host setting.
 3. **Limit.** While the Run executes, the command reads the size of
    `perf.data` every 100 ms. At the limit it sends `disable` to perf's
    control FIFO: sampling stops, the Run continues. The file can be larger
-   than the limit by the data of one interval.
+   than the limit by the data of one interval. The limit does not look at
+   the free space: when the file system of `DIR` is full before the limit,
+   perf stops and ends its command with SIGTERM, so the Run is interrupted,
+   and `profile.json` cannot be written either (#319 qualification). Keep
+   `--max-capture-bytes` below the free space of `DIR`.
 4. **Modules.** When the Run ends, the runner moves its Run working
    directory to `DIR/cpu/.run-directory` instead of removing it. For every
    module that perf recorded with a build ID (`perf buildid-list`), and
@@ -504,7 +508,10 @@ start with another environment.
    command's environment (or removes it, as `sh` sets it when it starts),
    and execs its arguments. The process
    keeps its PID, pipes, working directory, arguments and all other
-   environment.
+   environment. The runner executes the adapter from `DIR/heap`, so `DIR`
+   must be on a file system that allows execution: on a `noexec` mount the
+   launcher (runner scope) or the runner (Process scope) cannot start it,
+   and no Run takes place.
 3. **Interpreter.** It starts `heaptrack_interpret < DIR/heap/.fifo` in a
    session of its own, outside the Run, without `DEBUGINFOD_URLS`. Its output
    goes to `DIR/heap/heaptrack.data` up to `--max-capture-bytes`. The command
