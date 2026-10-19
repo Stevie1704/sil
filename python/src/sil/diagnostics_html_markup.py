@@ -128,8 +128,12 @@ def number(value: Any, unit: str) -> Html:
 def table(id_: str, caption: str, headers: Sequence[tuple[str, bool]],
           rows: Sequence[Sequence[Any]], *, filterable: bool = True,
           row_ids: Sequence[str | None] | None = None,
-          row_classes: Sequence[str | None] | None = None) -> Html:
-    """A table; a cell is markup, or (markup, sort key) for sorting."""
+          row_classes: Sequence[str | None] | None = None,
+          footer: Sequence[Sequence[Any]] = ()) -> Html:
+    """A table; a cell is markup, or (markup, sort key) for sorting.
+
+    `footer` rows (a remainder, a total) stay last: sorting and filtering
+    change the body only."""
     head = tag("tr", *(tag("th", label, scope="col",
                            class_="numeric" if numeric else None)
                        for label, numeric in headers))
@@ -164,7 +168,11 @@ def table(id_: str, caption: str, headers: Sequence[tuple[str, bool]],
         hint,
         tag("div",
             tag("table", tag("caption", caption), tag("thead", head),
-                tag("tbody", *body_rows), id=id_,
+                tag("tbody", *body_rows),
+                tag("tfoot", *(tag("tr", *(
+                    tag("td", cell, class_="numeric" if numeric else None)
+                    for (_, numeric), cell in zip(headers, row)))
+                    for row in footer)) if footer else None, id=id_,
                 data_sortable="true" if len(rows) > 1 else None),
             class_="table-wrap", tabindex="0", role="region",
             aria_label=caption),

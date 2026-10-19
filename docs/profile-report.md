@@ -10,7 +10,8 @@ command, the directory and the document.
 Status: the CPU collector (Linux perf) is implemented (#315), and so is
 the optional Activation correlation of its samples (#316). The heap
 collector (Heaptrack) is implemented (#317): see
-[Heap collector](#heap-collector). The offline HTML view is #318.
+[Heap collector](#heap-collector). `sil profile render` presents a saved
+profile offline (#318): see [Offline report](#offline-report).
 
 Valid and invalid examples of every case are in
 [tests/fixtures/profile/](../tests/fixtures/profile/).
@@ -158,7 +159,8 @@ Raw stack copies can hold any data that was on a stack, also secrets. Share
 `perf.data` only as you would share a core dump. `samples.json` and
 `profile.json` hold no stack bytes, no environment variable and no Message
 payload. A copy of `profile.json` and `cpu/samples.json` is sufficient for an
-offline report; with `--activations`, also `activation/correlation.json`.
+offline report; with `--activations`, also `activation/correlation.json`
+([Offline report](#offline-report)).
 Re-symbolization needs `perf.data` and the modules: the
 captured ones are in `cpu/buildid-cache`, the others stay on the host and
 are identified by path and build ID only.
@@ -547,7 +549,8 @@ gives exit 1.
 | `heap/interpret.stderr.txt` | The last 64 KiB of the interpreter's stderr. |
 
 A copy of `profile.json` and `heap/allocations.json` is sufficient for an
-offline report. It needs neither Heaptrack nor the profiled binaries.
+offline report ([Offline report](#offline-report)). It needs neither
+Heaptrack nor the profiled binaries.
 
 ### Metrics and their boundaries
 
@@ -714,6 +717,137 @@ its last Activation can be missing.
 
 The classes add up to `total`, the reasons to `unattributed`, the Tasks to
 their classes, and the phases to `lifecycle`.
+
+## Offline report
+
+```sh
+sil profile render DIR/profile.json [--html OUTPUT.html]
+```
+
+The command reads `profile.json` and the normalized files that it names. It
+prints the terminal summary of `sil profile` again and, with `--html`, writes
+one standalone HTML file. It executes nothing: no Run, no profiled binary, no
+perf and no Heaptrack. It never opens `perf.data`, `heaptrack.data`, a module
+or a source file.
+
+### Portable artifact set
+
+Copy these files with their paths relative to `profile.json`:
+
+| Profile | Files |
+| --- | --- |
+| CPU | `profile.json`, `cpu/samples.json` |
+| CPU with `--activations` | also `activation/correlation.json` |
+| Heap | `profile.json`, `heap/allocations.json` |
+
+A file is needed only when `profile.json` names it (`capture.samples_file`,
+`activation_correlation.summary.correlation_file`,
+`capture.analysis.allocations_file`). A capture without such a file (for
+example a Run that did not start) renders from `profile.json` alone. The raw
+files (`perf.data`, `heaptrack.data`), the build-ID cache, the Recording and
+the diagnostics report are not needed; keep them for re-analysis.
+
+The command checks the set before it writes anything: each named file must
+exist, have the size and SHA-256 that `artifacts` records, have version 1,
+refer only to identities of `profile.json` and add up to its totals (sample
+count and weight; allocation count and bytes; one class per sample).
+
+### Exit codes
+
+| Situation | Exit code |
+| --- | --- |
+| The summary was printed and the HTML report, if requested, was written | 0 |
+| The HTML report cannot be written: the output path exists (also the input itself) or its directory does not exist | 1 |
+| Invalid usage; `profile.json` or a named file is missing, corrupt, of another version, of another profile or inconsistent | 2 |
+
+The input is checked first, so invalid input is always exit 2. An existing
+file is never replaced.
+
+### Example
+
+```console
+$ sil profile render prof/profile.json --html prof.html
+profile: prof/profile.json
+run: succeeded, exit code 0
+capture: cpu, complete
+sampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants
+samples: 10, weight 10.010 ms of sampled on-CPU time (an estimate, not a duration); lost 0
+processes: 4 observed, 3 with samples
+symbols: function names for 9 of 10 samples; source lines for 8 (leaf frames)
+activations: complete
+  of 10 samples: 5 in an Activation's execution context (runner thread), 3 in a Process Step window (associated, not proven to be Step work), 1 lifecycle, 0 Replay, 1 unattributed
+  2 Activations have no sample: that is not evidence that they used no CPU time
+top self weight (share of all sample weight):
+   30.0%  silproof_native_spin_even (libsilproof_native.so)
+   20.0%  silproof_fmu_spin (EgoMotion.so)
+   ...
+HTML report: prof.html
+```
+
+### The HTML report
+
+The page opens from `file://` with no other file, no network request and no
+server. Its policy allows only its own inline style and script. Sections, in
+order:
+
+1. **Status.** The Run outcome, the capture outcome and the Activation
+   correlation, each with its reasons, and the first failure of the Run.
+   They are independent: a capture problem never replaces the Run's exit
+   code.
+2. **What was measured.** Manifest and build identity, host, collector and
+   version, event, sampling, weight unit, clock, call graph, scope, limits
+   (heap: scope, launch, preload library, interpreter, data file version).
+3. **Coverage and loss** (CPU). The denominators (samples, sampled weight),
+   lost samples, unknown modules and functions, unwinding and source lines.
+   Zero samples is stated as no evidence of zero CPU use.
+4. **Limitations.** The `limitations` of the report, as text.
+5. **Results.** CPU: functions by self and by inclusive weight (top 50 of
+   `profile.json`, with the remainder and the total in the table footer),
+   the top-down caller tree of `cpu/samples.json`, the Activation evidence
+   (samples by class, unattributed reasons, Tasks, lifecycle phases,
+   participant-to-process mapping, the observation stream and the first 500
+   Activations, also those with no sample), processes, threads and modules.
+   Heap: totals with their boundaries, allocation sites by bytes, churn
+   (temporary allocations) and retention (outstanding bytes at capture end),
+   each top 25 with the remainder and the total, sites by inclusive bytes,
+   the allocation caller tree and the modules.
+
+Bounds: the caller tree shows a node only with at least 0.5% of the tree's
+weight, at most 20 children per node, 64 levels and 1500 nodes. The other
+nodes of a level are one visible remainder line with their count and weight,
+so each level still adds up. Recursion gives deeper nodes; no sample counts
+twice in one node.
+
+**Without JavaScript** every status, table and the caller tree of all
+samples are complete. **With JavaScript**, a CPU page adds filters by
+process and thread, and, when the correlation is `complete` or `partial`,
+by class, Participant/Task and Virtual time. The filters recompute the
+caller tree and the self and inclusive rankings of the selection (top 50,
+with the remainder and the selection total), and show only the matching
+Activations. Participant, Task and Virtual time select the samples that the
+correlation relates to an Activation: `execution_context` and
+`window_associated`. Virtual time is the Activation's, as the half-open range
+[from, to), in nanoseconds; the page compares it as an exact integer
+(BigInt), also above 2^53. When the correlation is `not_requested`,
+`unavailable` or `failed`, the page offers no Activation filter and shows
+no Activation table: it says why. A heap profile has no Activation view:
+its correlation is always unavailable. The filters are not offered for a
+capture with more than 200000 distinct (stack, thread, class) rows; the
+static tables and tree still show all samples.
+
+The keyboard reaches every control: the tree nodes are `<details>` elements
+(Tab, then Enter), the filters are native form controls, and the tables sort
+and filter as in the [diagnostics report](running.md#html-reports). The page
+follows the light or dark system theme; the Theme button overrides it.
+
+**Content.** The page holds names, paths, identities, counts and weights of
+the set. It holds no stack bytes, no source text, no environment variable
+and no Message payload. All report text is escaped. The filter data is one
+inert `application/json` block in which `<`, `>`, `&` and every character
+outside ASCII (U+2028 and U+2029 too) are `\u` escapes, so no name can end
+the block or become markup. A source line is text; only an absolute path is
+also a link, a `file:` URL that the page builds from the path. No report
+value becomes a URL. "Download JSON" saves `profile.json` byte for byte.
 
 ## Normalized samples: `cpu/samples.json`
 
