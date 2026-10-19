@@ -150,7 +150,7 @@ def test_the_run_keeps_its_command_and_environment(tools, exports,
 
 
 @pytest.mark.parametrize("argv, message", [
-    (["--collector", "heap"], "the heap collector is reserved"),
+    (["--collector", "gpu"], "unknown collector 'gpu'; use cpu or heap"),
     (["--collector", "cpu", "--runner"], "--runner selects a heap scope"),
     (["--collector", "cpu", "--participant", "x"],
      "--participant selects a heap scope"),

@@ -944,6 +944,30 @@ ReplayWork::~ReplayWork() {
                 publications_ - publications_before_, outcome);
 }
 
+namespace {
+
+struct LaunchWrapper {
+  std::string participant;
+  std::string path;
+};
+
+std::optional<LaunchWrapper> &launch_wrapper_setting() {
+  static std::optional<LaunchWrapper> setting;
+  return setting;
+}
+
+}  // namespace
+
+void wrap_launch(const std::string &participant, const fs::path &wrapper) {
+  launch_wrapper_setting() = LaunchWrapper{participant, wrapper.string()};
+}
+
+const std::string *launch_wrapper(const std::string &participant) noexcept {
+  const auto &setting = launch_wrapper_setting();
+  if (!setting || setting->participant != participant) return nullptr;
+  return &setting->path;
+}
+
 }  // namespace sil::diagnostics
 
 #endif

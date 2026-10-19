@@ -134,7 +134,7 @@ class ModuleLocator:
             return "host_file", Path(path)
         if build_id is None:
             return "unavailable", None
-        copy = self._retained_copy(path)
+        copy = self.retained_copy(path)
         copied = elf_identity(copy) if copy is not None else None
         if copied is not None and copied.build_id == build_id:
             self._captured[path] = copy
@@ -159,7 +159,7 @@ class ModuleLocator:
                         self._by_build_id.setdefault(identity.build_id, file)
         return self._by_build_id
 
-    def _retained_copy(self, path: str) -> Path | None:
+    def retained_copy(self, path: str) -> Path | None:
         """The path under the retained tree of a Run-directory module."""
         if self.retained is None:
             return None

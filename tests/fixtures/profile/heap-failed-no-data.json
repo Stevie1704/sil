@@ -1,0 +1,106 @@
+{
+  "activation_correlation": {
+    "kind": "not_requested"
+  },
+  "artifacts": [
+    {
+      "bytes": 11800,
+      "path": "run.diagnostics.json",
+      "role": "diagnostics_report",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "bytes": 28039,
+      "path": "run.mcap",
+      "role": "recording",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ],
+  "capture": {
+    "activation_correlation": {
+      "reason": "no_validated_clock_mapping",
+      "status": "unavailable"
+    },
+    "analysis": null,
+    "backend": {
+      "interpreter": "/usr/lib/x86_64-linux-gnu/heaptrack/libexec/heaptrack_interpret",
+      "interpreter_exit_code": 0,
+      "name": "heaptrack",
+      "preload": "/usr/lib/x86_64-linux-gnu/heaptrack/libheaptrack_preload.so",
+      "unavailable": {},
+      "version": "heaptrack 1.5.0"
+    },
+    "kind": "heap",
+    "launch": {
+      "adapter": "heap/launch-adapter.sh",
+      "method": "preload_exec_adapter",
+      "wrapped": "process_participant"
+    },
+    "limits": {
+      "capture_bytes": 0,
+      "interpreter_timeout_s": 600,
+      "limit_reached": false,
+      "max_capture_bytes": 268435456
+    },
+    "raw": null,
+    "reasons": [
+      "no_data"
+    ],
+    "scope": {
+      "kind": "process_participant",
+      "participant": "fmu"
+    },
+    "status": "failed",
+    "unavailable": {
+      "analysis": "no_data",
+      "raw": "no_data"
+    }
+  },
+  "configuration": {
+    "collector": "heap",
+    "cwd": "/work",
+    "max_protocol_line_bytes": null,
+    "max_step_inline_payload_bytes": null,
+    "max_step_output_messages": null,
+    "participant_timeout_ms": 60000,
+    "recording": "/work/profile/run.mcap"
+  },
+  "host": {
+    "architecture": "x86_64",
+    "kernel_release": "6.17.0-1022-azure",
+    "os": "Linux",
+    "perf_event_paranoid": 2,
+    "unavailable": {}
+  },
+  "identity": {
+    "manifest_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "manifest_path": "manifest.json",
+    "sil_version": "0.2.0",
+    "source_repository": "https://github.com/Stevie1704/sil",
+    "source_revision": "d59dffb",
+    "unavailable": {}
+  },
+  "limitations": [
+    "heap_tracks_allocation_calls_only",
+    "outstanding_is_not_a_leak_verdict",
+    "allocation_origin_is_not_ownership",
+    "activation_correlation_unavailable",
+    "host_build_only"
+  ],
+  "producer": {
+    "name": "sil profile",
+    "sil_version": "0.2.0"
+  },
+  "run": {
+    "diagnostics_report": "run.diagnostics.json",
+    "exit_code": 1,
+    "failure": {
+      "category": "spawn",
+      "message": "participant 'fmu': exec failed"
+    },
+    "signal": null,
+    "status": "run_failure",
+    "supervisor_signal": null
+  },
+  "sil_profile_report": 1
+}

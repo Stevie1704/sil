@@ -593,6 +593,10 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
       }
       if (shimmed) inject_shim_env();
       std::vector<char *> argv;
+      // A profiler's launch adapter (sil-run-diagnostics only; null in
+      // sil-run). It execs the command, so the PID stays this child's.
+      if (const std::string *wrapper = diagnostics::launch_wrapper(name))
+        argv.push_back(const_cast<char *>(wrapper->c_str()));
       for (const std::string &arg : command)
         argv.push_back(const_cast<char *>(arg.c_str()));
       argv.push_back(nullptr);
