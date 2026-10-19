@@ -20,6 +20,7 @@
 #include "exit_codes.hpp"
 #include "failure_report.hpp"
 #include "manifest.hpp"
+#include "owned_directory.hpp"
 #include "provenance.hpp"
 #include "recording_sink.hpp"
 #include "run_diagnostics.hpp"
@@ -46,7 +47,8 @@ using sil::kExitRunFailure;
 
 #ifdef SIL_RUN_DIAGNOSTICS
 #define SIL_RUNNER_NAME "sil-run-diagnostics"
-#define SIL_DIAGNOSTICS_USAGE " [--diagnostics-out <report.json>]"
+#define SIL_DIAGNOSTICS_USAGE \
+  " [--diagnostics-out <report.json>] [--retain-run-directory <path>]"
 #else
 #define SIL_RUNNER_NAME "sil-run"
 #define SIL_DIAGNOSTICS_USAGE ""
@@ -294,6 +296,7 @@ int run(int argc, char **argv) {
   const char *provenance_path_arg = nullptr;
 #ifdef SIL_RUN_DIAGNOSTICS
   const char *diagnostics_path_arg = nullptr;
+  const char *retention_path_arg = nullptr;
 #endif
   // Running without a Recording is what separates the cost of routing to
   // subscribers from the cost of Recording I/O (issue #61). The engine already
@@ -356,6 +359,13 @@ int run(int argc, char **argv) {
         return kExitConfigError;
       }
       diagnostics_path_arg = argv[++i];
+    } else if (std::strcmp(argv[i], "--retain-run-directory") == 0 &&
+               i + 1 < argc) {
+      if (retention_path_arg) {
+        usage();
+        return kExitConfigError;
+      }
+      retention_path_arg = argv[++i];
 #endif
     } else if (std::strcmp(argv[i], "--no-recording") == 0) {
       recording = false;
@@ -390,6 +400,20 @@ int run(int argc, char **argv) {
   if (!diagnostics_path_is_new(diagnostics_path, out_path, recording,
                                provenance_path))
     return kExitConfigError;
+  if (retention_path_arg) {
+    // A profiler captures the modules a Run loads from its Run working
+    // directory before that directory is gone (#315). The path must be new,
+    // so an earlier tree is never merged or replaced.
+    std::error_code error;
+    if (std::filesystem::symlink_status(retention_path_arg, error).type() !=
+        std::filesystem::file_type::not_found) {
+      std::cerr << SIL_RUNNER_NAME ": --retain-run-directory '"
+                << retention_path_arg << "' already exists\n";
+      return kExitConfigError;
+    }
+    sil::OwnedDirectory::retain_next_unique_at(
+        std::filesystem::absolute(retention_path_arg));
+  }
 #endif
 
   sil::diagnostics::start_run();
