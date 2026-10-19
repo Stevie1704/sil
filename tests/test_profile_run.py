@@ -123,6 +123,34 @@ def test_a_successful_capture_writes_the_profile_directory(
         (tmp_path / "ordinary.mcap").read_bytes()
 
 
+def test_a_copied_portable_set_renders_without_the_tools(tools, exports,
+                                                         tmp_path):
+    """#318: profile.json and cpu/samples.json alone render offline, with
+    neither perf, the runner nor any profiled binary on PATH."""
+    manifest = mixed_period_manifest(tmp_path)
+    proc = sil([str(manifest), "--out", "prof", "--collector", "cpu"], tools,
+               tmp_path, exports)
+    assert proc.returncode == 0, proc.stderr
+    copy = tmp_path / "elsewhere"
+    copy.mkdir()
+    for relative in ("profile.json", "cpu/samples.json"):
+        (copy / relative).parent.mkdir(parents=True, exist_ok=True)
+        (copy / relative).write_bytes((tmp_path / "prof" / relative)
+                                      .read_bytes())
+
+    rendered = subprocess.run(
+        [sys.executable, "-m", "sil.cli", "profile", "render",
+         "profile.json", "--html", "report.html"],
+        capture_output=True, text=True, cwd=copy,
+        env={**os.environ, "PATH": "/nonexistent"})
+
+    assert rendered.returncode == 0, rendered.stderr
+    assert "capture: cpu, complete" in rendered.stdout
+    html = (copy / "report.html").read_text()
+    assert "Capture complete" in html
+    assert 'id="profile-data"' in html  # the filters have their data
+
+
 def test_the_run_keeps_its_command_and_environment(tools, exports,
                                                    tmp_path):
     manifest = mixed_period_manifest(tmp_path)

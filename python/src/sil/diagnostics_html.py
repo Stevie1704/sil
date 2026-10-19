@@ -45,7 +45,7 @@ def render(text: str) -> str:
         title, body = "SiL benchmark report", benchmark_page(document)
     else:
         title, body = "SiL Run diagnostics", run_page(document)
-    return _page(title, body, text)
+    return page(title, body, text)
 
 
 def write_html(text: str, path: Path) -> str | None:
@@ -72,8 +72,17 @@ def _digest(text: str) -> str:
     return base64.b64encode(hashlib.sha256(text.encode()).digest()).decode()
 
 
-def _page(title: str, body: Html, source: str) -> str:
-    style, script = _asset("report.css"), _asset("report.js")
+def page(title: str, body: Html, source: str, *,
+         styles: tuple[str, ...] = ("report.css",),
+         scripts: tuple[str, ...] = ("report.js",),
+         download_name: str = "report.json", data: Html | None = None) -> str:
+    """The standalone page around `body`; `source` is the download.
+
+    `styles` and `scripts` name inline assets, joined into one block each so
+    the policy names one hash for each. `data` is an inert JSON block that a
+    script reads; it must be escaped by its maker (sil.profile_html)."""
+    style = "".join(_asset(name) for name in styles)
+    script = "".join(_asset(name) for name in scripts)
     policy = ("default-src 'none'; img-src data:; "
               f"style-src 'sha256-{_digest(style)}'; "
               f"script-src 'sha256-{_digest(script)}'")
@@ -81,7 +90,7 @@ def _page(title: str, body: Html, source: str) -> str:
         source.encode("utf-8")).decode("ascii")
     toolbar = tag(
         "div",
-        tag("a", "Download JSON", href=download, download="report.json",
+        tag("a", "Download JSON", href=download, download=download_name,
             class_="button", id="download"),
         tag("button", "Theme: auto", type="button", id="theme", hidden=True,
             aria_label="Switch between automatic, light and dark theme"),
@@ -103,5 +112,6 @@ def _page(title: str, body: Html, source: str) -> str:
                               toolbar, class_="topbar"),
                 class_="site"),
             tag("main", body, id="main"),
+            data,
             Html(f"<script>{script}</script>")),
         lang="en") + "\n")
