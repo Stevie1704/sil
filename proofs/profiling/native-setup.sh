@@ -16,7 +16,7 @@ prefix=$1
 # Heaptrack is pinned to the Ubuntu 24.04 package. perf must match the
 # running kernel, so its package version is the kernel's; the proof records
 # it.
-heaptrack_version=${SIL_PROFILING_HEAPTRACK_VERSION:-}
+heaptrack_version=${SIL_PROFILING_HEAPTRACK_VERSION:-1.5.0+dfsg1-2ubuntu3}
 sudo apt-get update
 heaptrack_package=heaptrack${heaptrack_version:+=$heaptrack_version}
 sudo apt-get install -y --no-install-recommends \

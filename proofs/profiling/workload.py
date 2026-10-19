@@ -148,9 +148,12 @@ def build(out: Path) -> Artifacts:
 
 
 def manifest(artifacts: Artifacts, *, python: str = sys.executable,
-             launch_prefix: dict[str, list[str]] | None = None) -> Manifest:
+             launch_prefix: dict[str, list[str]] | None = None,
+             process_sleep: str = "reject") -> Manifest:
     """The proof Run. `launch_prefix` maps a Process participant name to
-    the command words put before its command."""
+    the command words put before its command. `process_sleep` is the
+    shimmed participant's sleep policy; the workload never sleeps, so only
+    a collector inside it can see the difference."""
     prefix = launch_prefix or {}
     m = Manifest(duration_ns=DURATION_NS)
     m.add_schemas(SCHEMAS)
@@ -164,7 +167,8 @@ def manifest(artifacts: Artifacts, *, python: str = sys.executable,
         "process",
         command=[*prefix.get("process", []), python, str(artifacts.adapter),
                  str(artifacts.process), str(artifacts.child)],
-        step_period_ns=PERIOD_NS, publishes=["proof.process"], shim=True)
+        step_period_ns=PERIOD_NS, publishes=["proof.process"], shim=True,
+        sleep=process_sleep)
     m.add_process(
         "fmu",
         command=[*prefix.get("fmu", []), python, "-m", "sil.fmi",

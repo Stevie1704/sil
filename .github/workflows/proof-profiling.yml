@@ -64,6 +64,7 @@ jobs:
           export PATH="$RUNNER_TEMP/sil/python/bin:$RUNNER_TEMP/sil/native/bin:$PATH"
           python proofs/profiling/proof.py probe "$EVIDENCE/native/probe-paranoid-2"
           proofs/profiling/container.sh probe "$EVIDENCE/container" probe-paranoid-2-default-caps
+          proofs/profiling/container.sh probe "$EVIDENCE/container" probe-paranoid-2-seccomp-unconfined --security-opt seccomp=unconfined
 
       - name: Full native proof, unprivileged user, paranoid 2
         if: ${{ !cancelled() }}

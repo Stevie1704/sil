@@ -18,6 +18,7 @@ the evidence:
 | heaptrack-runner-mismatched | the same, with a mismatched debug file |
 | heaptrack-process | Heaptrack in the Process participant (live) and |
 |                   | in the FMU participant (raw, interpreted later) |
+| heaptrack-process-sleep-immediate | the same, shim sleep "immediate" |
 
 It needs on PATH: sil-run, perf, objcopy, readelf, cc, and this Python with
 the sil package. Heaptrack's preload library and interpreter are found under
@@ -495,6 +496,7 @@ class Interpreters:
     """heaptrack_interpret processes that the driver owns, one per FIFO."""
 
     def __init__(self, interpret: Path, directory: Path, names: list[str]):
+        self.directory = directory
         self.procs = {}
         for name in names:
             fifo = directory / f"{name}.fifo"
@@ -507,12 +509,20 @@ class Interpreters:
     def finish(self) -> dict[str, int | str]:
         status = {}
         for name, proc in self.procs.items():
+            fifo = self.directory / f"{name}.fifo"
+            # A participant that never started leaves the interpreter in
+            # open(); a write end that opens and closes ends it.
+            try:
+                os.close(os.open(fifo, os.O_WRONLY | os.O_NONBLOCK))
+            except OSError:
+                pass
             try:
                 status[name] = proc.wait(timeout=COLLECTOR_WAIT_S)
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait()
                 status[name] = "killed after timeout"
+            fifo.unlink()
         return status
 
 
@@ -605,10 +615,11 @@ def run_proof(out: Path) -> dict:
                str(out / "manifest.json"), "heaptrack_interpret",
                "silproof_child"]
 
-    def finish(run: Run, code: int) -> None:
+    def finish(run: Run, code: int, exit_gate: bool = True) -> None:
         run.result["leftover_processes"] = _leftovers(markers)
         results["runs"][run.name] = run.result
-        checks.gate(f"{run.name}: Run exits 0", code == 0, code)
+        (checks.gate if exit_gate else checks.finding)(
+            f"{run.name}: Run exits 0", code == 0, code)
         checks.gate(f"{run.name}: no process is left", not
                     run.result["leftover_processes"],
                     run.result["leftover_processes"])
@@ -793,8 +804,20 @@ def _heaptrack_runs(out, manifest_path, artifacts, preload, interpret,
                         sites["silproof_native_alloc_site"]["calls"] == 0,
                         sites["silproof_native_alloc_site"])
 
-    run = Run(out, "heaptrack-process")
-    wrapped = workload.manifest(artifacts, launch_prefix={
+    _heaptrack_process(out, artifacts, preload, interpret, ordinary,
+                       checks, finish, "heaptrack-process", "reject")
+    # The same Run with the shim's other sleep policy. The workload never
+    # sleeps; Heaptrack's own threads do. Findings only.
+    _heaptrack_process(out, artifacts, preload, interpret, ordinary,
+                       checks, finish, "heaptrack-process-sleep-immediate",
+                       "immediate")
+
+
+def _heaptrack_process(out, artifacts, preload, interpret, ordinary, checks,
+                       finish, name, sleep) -> None:
+    gate = checks.gate if sleep == "reject" else checks.finding
+    run = Run(out, name)
+    wrapped = workload.manifest(artifacts, process_sleep=sleep, launch_prefix={
         "process": [str(LAUNCH), "live", "process"],
         "fmu": [str(LAUNCH), "raw", "fmu"]}).write(
             run.dir / "manifest.json")
@@ -804,50 +827,53 @@ def _heaptrack_runs(out, manifest_path, artifacts, preload, interpret,
         SILPROOF_HEAPTRACK_DIR=str(run.dir),
         SILPROOF_HEAPTRACK_PRELOAD=str(preload)))
     run.result["collectors"] = collectors.finish()
+    run.result["process_sleep"] = sleep
     raw = run.dir / "fmu.raw"
     run.result["fmu_raw_bytes"] = raw.stat().st_size if raw.exists() \
         else None
     run.result["fmu_late_interpret_returncode"] = interpret_raw(
         interpret, raw, run.dir / "fmu.heaptrack") if raw.exists() else None
-    finish(run, code)
-    comparison = compare_recordings(ordinary.recording, run.recording)
+    finish(run, code, exit_gate=sleep == "reject")
+    comparison = compare_recordings(ordinary.recording, run.recording) \
+        if run.recording.exists() else {"messages": [None, 0],
+                                        "identical": False, "differing": {}}
     run.result["recording"] = comparison
     shim_fields = {k: v for k, v in comparison["differing"].items()
                    if k != "proof.process.child_clock_ns"}
-    checks.gate("heaptrack-process: Recording equals the ordinary Recording "
-                "except the child's clock reading",
-                comparison["messages"][0] == comparison["messages"][1]
-                and not shim_fields, comparison)
-    checks.finding("heaptrack-process: the short-lived child keeps the "
-                   "Clock shim", "proof.process.child_clock_ns"
-                   not in comparison["differing"], comparison["differing"])
-    checks.gate("heaptrack-process: the interpreter exits 0",
-                run.result["collectors"] == {"process": 0},
-                run.result["collectors"])
+    gate(f"{name}: Recording equals the ordinary Recording except the "
+         "child's clock reading",
+         comparison["messages"][0] == comparison["messages"][1]
+         and not shim_fields, comparison)
+    checks.finding(f"{name}: the short-lived child keeps the Clock shim",
+                   comparison["identical"], comparison["differing"])
+    gate(f"{name}: the interpreter exits 0",
+         run.result["collectors"] == {"process": 0},
+         run.result["collectors"])
     process = heap_summary(run.dir / "process.heaptrack",
                            run.result["wall_ns"])
     fmu = heap_summary(run.dir / "fmu.heaptrack", run.result["wall_ns"])
     run.result["heaptrack"] = {"process": process, "fmu_late": fmu}
     site = process["sites"]["silproof_process_alloc_site"]
-    checks.gate("heaptrack-process: silproof_process_alloc_site has its "
-                "exact calls and size", site["calls"] == site["expected_calls"]
-                and site["sizes"] == [site["expected_size"]], site)
-    checks.gate("heaptrack-process: no Native allocation is in the Process "
-                "capture", process["sites"]["silproof_native_alloc_site"][
-                    "calls"] == 0, process["sites"][
-                        "silproof_native_alloc_site"])
-    checks.finding("heaptrack-process: the FMU site resolves when its raw "
-                   "data is interpreted after the Run directory is gone",
+    gate(f"{name}: silproof_process_alloc_site has its exact calls and size",
+         site["calls"] == site["expected_calls"]
+         and site["sizes"] == [site["expected_size"]], site)
+    gate(f"{name}: no Native allocation is in the Process capture",
+         process["sites"]["silproof_native_alloc_site"]["calls"] == 0,
+         process["sites"]["silproof_native_alloc_site"])
+    checks.finding(f"{name}: the FMU site resolves when its raw data is "
+                   "interpreted after the Run directory is gone",
                    fmu["sites"]["silproof_fmu_alloc_site"]["calls"] > 0,
                    fmu["sites"]["silproof_fmu_alloc_site"])
-    checks.gate("heaptrack-process: the late FMU capture keeps every "
-                "4096-byte allocation", fmu["allocations_by_size"]["4096"]
-                >= workload.ALLOCATION_SITES["silproof_fmu_alloc_site"][0],
-                fmu["allocations_by_size"])
-    checks.finding("heaptrack-process: the shimmed participant's Heaptrack "
-                   "timestamps can be host time",
+    gate(f"{name}: the late FMU capture keeps every 4096-byte allocation",
+         fmu["allocations_by_size"]["4096"]
+         >= workload.ALLOCATION_SITES["silproof_fmu_alloc_site"][0],
+         fmu["allocations_by_size"])
+    checks.finding(f"{name}: the shimmed participant's Heaptrack timestamps "
+                   "can be host time",
                    process["timestamps"]["host_time_plausible"],
                    process["timestamps"])
+    stderr = (run.dir / "stderr.txt").read_text(errors="replace")
+    run.result["stderr_tail"] = stderr[-2000:]
 
 
 def main(argv: list[str]) -> int:
