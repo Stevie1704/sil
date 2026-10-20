@@ -18,6 +18,8 @@ stops = []
 def evaluate(expression):
     try:
         value = gdb.parse_and_eval(expression)
+        if value.type.code == gdb.TYPE_CODE_VOID:
+            return {"value": None, "reason": "unset"}
         if value.is_optimized_out:
             return {"value": None, "reason": "optimized_out"}
         return {"value": str(value), "reason": None}
@@ -83,7 +85,9 @@ gdb.execute("set confirm off")
 gdb.execute("set breakpoint pending on")
 gdb.execute("set print elements 32")
 gdb.execute("set debuginfod enabled off")
-gdb.execute("set startup-with-shell off")
+# The pinned GDB's --args quotes whitespace/JSON for its startup shell.
+# Switching that shell off after argument parsing loses the adapter argv.
+gdb.execute("set startup-with-shell on")
 gdb.execute("set disable-randomization off")
 gdb.execute("handle SIGTERM nostop print pass")
 gdb.execute("handle SIGPIPE nostop print pass")

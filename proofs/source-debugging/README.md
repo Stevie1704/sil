@@ -94,6 +94,10 @@ Process PID to the inferior by coincidence. The proof saves actual process
 identities and checks they differ from the runner. The hook is diagnostics-only;
 ordinary Runs have no wrapper. GDB output goes to its own log while inferior
 stdin/stdout remain the Step protocol's pipes.
+The pinned GDB uses its normal startup shell to interpret the quoting it
+constructs for `--args`; disabling that shell after argument parsing split
+the Process adapter's JSON argument in the qualification control. This proof
+leaves startup-with-shell on, preserving the Manifest's actual argument vector.
 
 The named ADAS FMU currently runs through the **single-FMU importer**. The
 group importer requires FMI BUS terminals and a BUS profile; the ADAS FMU has

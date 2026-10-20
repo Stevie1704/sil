@@ -207,8 +207,10 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
         log = (dest / "gdb.txt").read_text()
         if action == "debugger-error" and "deliberate debugger failure" not in log + stderr:
             raise ValueError("missing deliberate debugger failure diagnostic")
-        if action == "signal" and form != "native" and "SIGTERM" not in log:
-            raise ValueError("SIGTERM did not reach the inferior")
+        if action == "signal" and form != "native":
+            debugger_outcome = json.loads((dest / "debugger-outcome.json").read_text())
+            if debugger_outcome["exit_signal"]["value"] != "15":
+                raise ValueError("inferior did not terminate with SIGTERM")
         if action == "kill" and "killed" not in log:
             raise ValueError("GDB did not report killing the inferior")
         failure = result["run_outcome"].get("failure") or {}
