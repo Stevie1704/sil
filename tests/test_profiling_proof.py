@@ -288,3 +288,57 @@ class TestBuildIds:
             "[kernel.kallsyms]": "0011aa",
             "/r/a b/fmu/binaries/x86_64-linux/E.so": "ffee00",
         }
+
+
+proof = _load("profiling_proof", PROOF_DIR / "proof.py")
+report = _load("profiling_report", PROOF_DIR / "report.py")
+
+
+class TestBackendGate:
+    """A backend that cannot run qualifies nothing: the proof fails."""
+
+    def probes(self, outcome):
+        return {"perf_user_dwarf": {"outcome": outcome}}
+
+    def test_an_unavailable_backend_fails_the_proof_and_skips_its_runs(self):
+        checks, runs = proof.Checks(), {}
+
+        available = proof.require_backend(
+            checks, runs, self.probes("permission-denied"),
+            "perf_user_dwarf", ["perf-dwarf", "perf-fp"])
+
+        assert available is False
+        assert checks.failed() == ["perf_user_dwarf: the backend is "
+                                   "available, so its Runs are made"]
+        assert runs == {
+            "perf-dwarf": {"skipped": "perf_user_dwarf probe outcome "
+                                      "permission-denied"},
+            "perf-fp": {"skipped": "perf_user_dwarf probe outcome "
+                                   "permission-denied"}}
+
+    def test_an_available_backend_passes_its_gate(self):
+        checks, runs = proof.Checks(), {}
+
+        assert proof.require_backend(checks, runs, self.probes("available"),
+                                     "perf_user_dwarf", ["perf-dwarf"])
+        assert checks.failed() == []
+        assert checks.items[0]["passed"] is True
+        assert runs == {}
+
+    def test_the_report_names_a_skipped_backend_as_a_failure(self):
+        checks, runs = proof.Checks(), {}
+        proof.require_backend(checks, runs, self.probes("permission-denied"),
+                              "perf_user_dwarf", ["perf-dwarf"])
+        host = {"uname": {"release": "6.17", "machine": "x86_64"},
+                "libc": "glibc 2.39", "in_container": False, "uid": 1001,
+                "perf_event_paranoid": 4, "tools": {},
+                "status": {"CapEff": "0", "Seccomp": "0", "NSpid": "1"}}
+        results = {"host": host, "probes": {}, "runs": runs,
+                   "checks": checks.items,
+                   "failed_checks": checks.failed()}
+
+        text = report.markdown(results)
+
+        assert "| perf-dwarf | skipped | perf_user_dwarf probe outcome " \
+               "permission-denied |" in text
+        assert "**Failed checks: 1.** The proof does not qualify" in text
