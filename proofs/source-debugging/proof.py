@@ -143,17 +143,21 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
     env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env.get("PATH", "")
     if selector:
         commands = dest / "session.gdb"
+        logging = dest / "logging.gdb"
         # Redirect GDB's own output while preserving inferior protocol stdout.
-        commands.write_text(
+        # Initial commands run before loading executable symbols/startup output.
+        logging.write_text(
             f"set logging file {dest / 'gdb.txt'}\nset logging overwrite on\n"
-            "set logging redirect on\nset logging enabled on\n"
-            f"source {HERE / 'session.py'}\n")
+            "set logging redirect on\nset logging enabled on\n")
+        commands.write_text(f"source {HERE / 'session.py'}\n")
         env.update(SIL_DEBUG_DEST=str(dest), SIL_DEBUG_SELECTOR=selector,
                    SIL_DEBUG_ACTION=action, SIL_DEBUG_COMMANDS=str(commands),
+                   SIL_DEBUG_LOGGING=str(logging),
                    SIL_DEBUG_SOURCE=str(out / "sources/adas_reference.c"))
         if form == "native":
             child_result = [] if action == "detach" else ["--return-child-result"]
-            command = ["gdb", *child_result, "-nx", "-q", "-batch", "-x", commands, "--args", *command]
+            command = ["gdb", *child_result, "-nx", "-q", "-batch", "-ix", logging,
+                       "-x", commands, "--args", *command]
         else:
             command += ["--launch-wrapper", "hazard", HERE / "launch.sh"]
     started = time.monotonic_ns()
