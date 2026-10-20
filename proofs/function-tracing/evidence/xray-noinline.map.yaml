@@ -1,0 +1,10 @@
+---
+- { id: 1, address: 0x1AE0, function: 0x1AE0, kind: function-enter, always-instrument: true, function-name: select_lead, version: 2 }
+- { id: 1, address: 0x1BCE, function: 0x1AE0, kind: function-exit, always-instrument: true, function-name: select_lead, version: 2 }
+- { id: 2, address: 0x1BE0, function: 0x1BE0, kind: function-enter, always-instrument: true, function-name: check_object, version: 2 }
+- { id: 2, address: 0x1F5C, function: 0x1BE0, kind: function-exit, always-instrument: true, function-name: check_object, version: 2 }
+- { id: 3, address: 0x1F70, function: 0x1F70, kind: function-enter, always-instrument: true, function-name: confirmed, version: 2 }
+- { id: 3, address: 0x200A, function: 0x1F70, kind: function-exit, always-instrument: true, function-name: confirmed, version: 2 }
+- { id: 4, address: 0x2020, function: 0x2020, kind: function-enter, always-instrument: true, function-name: confirms, version: 2 }
+- { id: 4, address: 0x20D8, function: 0x2020, kind: function-exit, always-instrument: true, function-name: confirms, version: 2 }
+...
