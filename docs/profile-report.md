@@ -785,6 +785,9 @@ one standalone HTML file. It executes nothing: no Run, no profiled binary, no
 perf and no Heaptrack. It never opens `perf.data`, `heaptrack.data`, a module
 or a source file.
 
+The first argument `render` selects this command. To capture a profile of a
+Manifest file with the name `render`, write it as `./render`.
+
 ### Portable artifact set
 
 Copy these files with their paths relative to `profile.json`:
