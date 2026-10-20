@@ -298,10 +298,12 @@ def experiment(out, build):
             write(out / "report.json", report)
     # Test the ticket's grouped-ADAS premise without expanding the product.
     def group_controller(m, name, routes):
-        m.add_process(name, command=[sys.executable, "-m", "sil.fmi", "--instance", "adas",
+        command = [sys.executable, "-m", "sil.fmi", "--instance", "adas",
             str(out / "AdasReference.fmu"), "--instance", "peer", str(out / "AdasReference.fmu"),
-            "--bus-profile", "application/org.fmi-standard.fmi-ls-bus.can",
-            "--bind", "hazard.radar:sample_time_ns=adas.radar.sample_time_ns"], step_period_ns=10_000_000,
+            "--bus-profile", "application/org.fmi-standard.fmi-ls-bus.can"]
+        for role in ("radar", "camera", "ego", "command"):
+            command += ["--bind", f"hazard.{role}:sample_time_ns=adas.{role}.sample_time_ns"]
+        m.add_process(name, command=command, step_period_ns=10_000_000,
             subscribes=routes, publishes=["hazard.command"])
     group = manifest.reference_manifest(inputs, library, maneuvers=("hazard",),
                                        controller=group_controller)
