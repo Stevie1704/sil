@@ -252,6 +252,24 @@ def test_a_recording_that_is_the_manifest_is_a_usage_error(tools, exports,
     assert "is the Manifest" in proc.stderr
 
 
+@pytest.mark.parametrize("alias, other", [
+    ("manifest", "Manifest"), ("rec.mcap", "Recording"),
+    ("rec.mcap.failure.json", "failure report")])
+def test_a_provenance_record_that_aliases_an_input_is_a_usage_error(
+        tools, exports, tmp_path, alias, other):
+    manifest = mixed_period_manifest(tmp_path)
+    alias = str(manifest) if alias == "manifest" else alias
+    before = manifest.read_bytes()
+
+    proc = sil([str(manifest), "--out", "prof", "--collector", "cpu", "-o",
+                "rec.mcap", "--provenance", alias], tools, tmp_path, exports)
+
+    assert proc.returncode == 2
+    assert f"provenance record '{alias}' is also the {other}" in proc.stderr
+    assert not (tmp_path / "prof").exists()
+    assert manifest.read_bytes() == before
+
+
 def test_missing_perf_is_an_actionable_preflight_error(tools, exports,
                                                        tmp_path):
     manifest = mixed_period_manifest(tmp_path)

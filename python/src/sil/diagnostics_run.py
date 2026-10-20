@@ -157,12 +157,28 @@ def preflight(request: RunRequest,
     if request.recording is not None and _same(
             absolute(request.recording), absolute(request.manifest)):
         problems.append(f"the Recording '{request.recording}' is the Manifest")
-    seen: list[tuple[str, Path]] = []
+    fresh = []
     for label, path in outputs:
         problem = new_path_problem(label, path, base)
-        if problem is not None:
+        if problem is None:
+            fresh.append((label, path))
+        else:
             problems.append(problem)
-            continue
+    return problems + alias_problems(fresh, others, base)
+
+
+def alias_problems(outputs: Sequence[tuple[str, Path]],
+                   others: Sequence[tuple[str, Path]],
+                   base: Path) -> list[str]:
+    """Each (label, path) output that is also one of `others` or an earlier
+    output, relative to `base`."""
+
+    def absolute(path: Path) -> Path:
+        return Path(os.path.realpath(base / path))
+
+    problems: list[str] = []
+    seen: list[tuple[str, Path]] = []
+    for label, path in outputs:
         target = absolute(path)
         for other_label, other in [*others, *seen]:
             if _same(target, absolute(other)):
