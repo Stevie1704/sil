@@ -10,11 +10,12 @@ import os
 import platform
 import re
 import shutil
+import statistics
 import subprocess
 import time
 from pathlib import Path
 
-from analyze import FUNCTIONS, analyze
+from analyze import EVENT, FUNCTIONS, analyze
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -23,6 +24,8 @@ EXAMPLE = ROOT / "examples/adas-reference"
 
 def load(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise ValueError(f"cannot load example module: {path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -38,6 +41,19 @@ def run(command, *, env=None, timeout=60):
 
 def write(path, value):
     path.write_text(json.dumps(value, indent=2) + "\n")
+
+
+def capture(path):
+    """Verify storage and clock independently of any function ID mapping."""
+    raw = path.read_bytes()
+    meta = json.loads(Path(str(path) + ".json").read_text())
+    before, libc, after = meta["clock_bracket_ns"]
+    if (meta["clock"] != "host_monotonic" or meta["clock_errors"] or
+            not before <= libc <= after or
+            len(raw) != meta["records"] * EVENT.size or
+            len(raw) != meta["bytes_written"]):
+        raise ValueError(f"invalid clock/storage: {path}")
+    return meta, list(EVENT.iter_unpack(raw))
 
 
 def build(out):
@@ -111,7 +127,7 @@ def build(out):
     command = ["clang++-18", "-O2", "-g", "-fxray-instrument",
                "-fxray-instruction-threshold=1",
                f"-fxray-attr-list={control_attrs}", "-Wl,--export-dynamic",
-               sources / "control.cpp", "-pthread", "-o", out / "control"]
+               sources / "control.cpp", "-pthread", "-ldl", "-o", out / "control"]
     commands.append([str(x) for x in command])
     run(command)
     write(out / "build-commands.json", commands)
@@ -158,7 +174,7 @@ def experiment(out, gcc_build, xray_build):
                 env.update(LD_PRELOAD=str(out / "observer.so"), SIL_FUNCTION_XRAY="1")
             if mode == "loss":
                 env["SIL_FUNCTION_TRACE_LIMIT"] = "7"
-            build_dir = xray_build if mode.startswith("xray") else gcc_build
+            build_dir = xray_build if mode.startswith("xray") or mode == "clang" else gcc_build
             command = [build_dir / ("sil-run" if mode == "ordinary" else "sil-run-diagnostics"),
                        manifest_path, "-o", dest / "recording.mcap", "--participant-timeout-ms", "10000"]
             if mode != "ordinary":
@@ -178,14 +194,21 @@ def experiment(out, gcc_build, xray_build):
                    "library_sha256": hashlib.sha256(active.read_bytes()).hexdigest(),
                    "runner_sha256": hashlib.sha256(Path(command[0]).read_bytes()).hexdigest(),
                    "recording_equal": True, "recording_sha256": hashlib.sha256(recording).hexdigest()}
-            if (dest / "events.bin").exists():
-                metadata = json.loads((dest / "events.bin.json").read_text())
+            if mode in ("explicit", "loss", "xray", "xray-noinline"):
+                metadata, _ = capture(dest / "events.bin")
                 row["trace"] = metadata
+                if mode.startswith("xray") and metadata["records"]:
+                    raise ValueError("XRay DSO coverage detected: qualify its map before deciding")
+                if mode.startswith("xray") and (metadata["xray_max_function_id"] != 0 or
+                                                metadata["xray_patch_status"] != 0 or
+                                                metadata["dropped"]):
+                    raise ValueError("XRay unavailable for a reason other than missing DSO registration")
                 if mode in ("explicit", "loss"):
                     report = analyze(dest / "events.bin", dest / "observations.jsonl")
                     write(dest / "calls.json", report)
                     if mode == "explicit":
-                        if report["status"] != "complete" or report["unattributed"]:
+                        if (report["status"] != "complete" or report["unattributed"] or
+                                len(report["activations"]) != 40):
                             raise ValueError("incomplete source probe capture")
                         for a in report["activations"]:
                             n = counts[a["participant"]]
@@ -193,18 +216,69 @@ def experiment(out, gcc_build, xray_build):
                                         "confirms": n*(n+1)//2, "select_lead": 1}
                             if a["counts"] != expected:
                                 raise ValueError(f"incorrect call counts: {a}")
+                            order = ["check_object"] * (2*n) + ["select_lead"]
+                            for i in range(n):
+                                order += ["confirmed"] + ["confirms"] * (i+1)
+                            if a["call_order"] != order:
+                                raise ValueError(f"incorrect call order: {a}")
                     elif report["status"] != "partial" or not metadata["dropped"]:
                         raise ValueError("loss was not explicit")
             results["runs"].append(row)
             write(out / "results.json", results)
     env = {**os.environ, "LD_PRELOAD": str(out / "observer.so"),
            "SIL_FUNCTION_TRACE": str(out / "control.bin"), "SIL_FUNCTION_XRAY": "1"}
-    (out / "control.txt").write_text(run([out / "control"], env=env))
-    write(out / "control.metadata.json", json.loads((out / "control.bin.json").read_text()))
+    text = run([out / "control"], env=env)
+    (out / "control.txt").write_text(text)
+    control_meta, control_events = capture(out / "control.bin")
+    if control_meta["dropped"] or control_meta["xray_patch_status"] != 1:
+        raise ValueError("XRay executable control incomplete or not patched")
+    symbols = {int(line.split()[0]): line.split()[1] for line in text.splitlines()
+               if re.match(r"^\d+ ", line)}
+    control_summary = {"metadata": control_meta, "functions": {}}
+    for name in ("control_leaf", "control_tail", "control_throw"):
+        ids = [identity for identity, symbol in symbols.items() if name in symbol]
+        if len(ids) != 1:
+            raise ValueError(f"missing control symbol identity: {name}")
+        selected = [e for e in control_events if e[2] == ids[0]]
+        entries = [e for e in selected if e[3] == 0]
+        exits = [e for e in selected if e[3] == 1]
+        tails = [e for e in selected if e[3] == 2]
+        control_summary["functions"][name] = {
+            "entries": len(entries), "returns": len(exits), "tail_exits": len(tails),
+            "tids": sorted({e[1] for e in selected}), "symbol": symbols[ids[0]]}
+    leaf = control_summary["functions"]["control_leaf"]
+    if leaf["entries"] != 9 or len(leaf["tids"]) != 2 or leaf["returns"] != 9:
+        raise ValueError("XRay control did not observe recursive calls on both threads")
+    if control_summary["functions"]["control_tail"]["tail_exits"] != 1:
+        raise ValueError("XRay control did not observe the tail exit")
+    thrown = control_summary["functions"]["control_throw"]
+    if thrown["entries"] != 1 or thrown["returns"] or thrown["tail_exits"]:
+        raise ValueError("unexpected XRay exception-unwind behavior")
+    write(out / "control.metadata.json", control_summary)
     (out / "control.map.yaml").write_text(run([
         "llvm-xray-18", "extract", "--symbolize", out / "control"]))
-    if not json.loads((out / "control.bin.json").read_text())["records"]:
-        raise ValueError("XRay executable positive control produced no events")
+    summary: dict = {"modes": {}, "maneuvers": {}}
+    for mode in sorted({r["mode"] for r in results["runs"]}):
+        rows = [r for r in results["runs"] if r["mode"] == mode]
+        summary["modes"][mode] = {
+            "wall_host_ns": [r["elapsed_host_ns"] for r in rows],
+            "median_wall_host_ns": statistics.median(r["elapsed_host_ns"] for r in rows),
+            "event_records": [r.get("trace", {}).get("records") for r in rows],
+            "event_bytes": [r.get("trace", {}).get("bytes_written") for r in rows]}
+    calls = json.loads((out / "explicit-0/calls.json").read_text())
+    for maneuver in counts:
+        activations = [a for a in calls["activations"] if a["participant"] == maneuver]
+        summary["maneuvers"][maneuver] = {
+            "activations": len(activations), "counts_per_activation": activations[0]["counts"],
+            "first_call_order": activations[0]["call_order"], "functions": {}}
+        for name in FUNCTIONS.values():
+            durations = [c["elapsed_host_ns"] for a in activations for c in a["calls"]
+                         if c["function"] == name]
+            summary["maneuvers"][maneuver]["functions"][name] = {
+                "calls": len(durations), "min_elapsed_host_ns": min(durations),
+                "median_elapsed_host_ns": statistics.median(durations),
+                "max_elapsed_host_ns": max(durations)}
+    write(out / "summary.json", summary)
     digests = []
     for path in sorted(out.rglob("*")):
         if path.is_file():
@@ -218,6 +292,7 @@ if __name__ == "__main__":
     parser.add_argument("--gcc-build", type=Path, required=True)
     parser.add_argument("--xray-build", type=Path, required=True)
     args = parser.parse_args()
-    if platform.system() != "Linux" or platform.machine() != "x86_64":
+    if (platform.system() != "Linux" or platform.machine() != "x86_64" or
+            platform.libc_ver()[0] != "glibc"):
         parser.error("real evidence requires Linux x86-64/glibc (ubuntu-24.04)")
     experiment(args.out.resolve(), args.gcc_build.resolve(), args.xray_build.resolve())
