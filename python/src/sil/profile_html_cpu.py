@@ -24,7 +24,7 @@ from sil.diagnostics_html_markup import (
 from sil.profile_html_parts import (
     CORRELATION_LABELS, TreeLimits, banner, build_tree, function_cell,
     identity_section, limitations_section, reason_text, reasons_list,
-    render_tree, share, source_cell,
+    render_tree, share, source_cell, unlisted_note,
 )
 from sil.profile_set import ProfileSet
 
@@ -61,7 +61,7 @@ def cpu_body(profile: ProfileSet) -> Html:
         identity_section(report, _method(capture)),
         _coverage(capture),
         limitations_section(report),
-        _hotspots(capture),
+        _hotspots(capture, profile.samples),
         _tree_section(profile),
         _activations(profile),
         _processes(capture),
@@ -178,7 +178,7 @@ HOTSPOT_HEADERS = [("#", True), ("Function and module", False),
                    ("Inclusive share", True), ("Leaf source lines", False)]
 
 
-def _hotspots(capture: dict) -> Html:
+def _hotspots(capture: dict, samples: dict | None) -> Html:
     hotspots, totals = capture["hotspots"], capture["totals"]
     modules = _modules_by_id(capture)
     total = totals["weight_ns"]
@@ -206,6 +206,8 @@ def _hotspots(capture: dict) -> Html:
         table("inclusive-table", f"Functions by inclusive weight, top "
               f"{hotspots['limit']}", HOTSPOT_HEADERS,
               _hotspot_rows(hotspots["inclusive"], modules, total)),
+        tag("p", unlisted_note(samples, len(hotspots["inclusive"])),
+            class_="note"),
         note="Shares are of all sample weight ("
              f"{weight(total)} in {totals['samples']} samples). A weight is "
              "a sampled estimate of on-CPU time, never an exact duration.")

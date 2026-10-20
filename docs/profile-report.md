@@ -132,7 +132,11 @@ Run, retry, change the collector or the event, or change a host setting.
    the samples (below) and writes `activation/correlation.json`.
 7. **Publish.** It writes `cpu/samples.json`. It writes `profile.json`
    through a temporary sibling and a hard link. Thus a reader never sees a
-   partial summary, and nothing is replaced. It prints a summary on stdout.
+   partial summary, and nothing is replaced. It prints a summary on stdout:
+   the statuses, the identities, the scope and method, the coverage and
+   loss, the limitations, and then the top 10 rows with the remainder. A
+   control character in a report value is printed as its escape
+   (`\x1b`), so a name cannot change the terminal.
 
 SIGINT, SIGTERM and SIGHUP go to the whole session. The runner records the
 interruption and cleans up as without a profiler. perf stops sampling and
@@ -882,8 +886,11 @@ order:
    Zero samples is stated as no evidence of zero CPU use.
 4. **Limitations.** The `limitations` of the report, as text.
 5. **Results.** CPU:
-   - functions by self and by inclusive weight: the top 50 of
-     `profile.json`, with the remainder and the total in the table footer;
+   - functions by self weight: the top 50 of `profile.json`, with the
+     remainder and the total in the table footer;
+   - functions by inclusive weight: the top 50, and the number of
+     functions that are not listed. Inclusive rows overlap, so this table
+     has no remainder row and no total;
    - the top-down caller tree of `cpu/samples.json`;
    - the Activation evidence: samples by class, unattributed reasons,
      Tasks, lifecycle phases, participant-to-process mapping, the
@@ -896,7 +903,9 @@ order:
    - allocation sites by bytes, churn (temporary allocations) and
      retention (outstanding bytes at capture end), each the top 25 with
      the remainder and the total;
-   - sites by inclusive bytes, the allocation caller tree and the modules.
+   - sites by inclusive bytes, with the number of functions that are not
+     listed and no remainder row (the rows overlap);
+   - the allocation caller tree and the modules.
 
 Bounds: the caller tree shows a node only with at least 0.5% of the weight
 of the tree. It shows at most 20 children per node, 64 levels and 1500

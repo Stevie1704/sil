@@ -367,3 +367,17 @@ def render_tree(root: _Node, label: Callable[[int], Html],
     return tag("ul", tag("li", tag("details", tag("summary", join([
         tag("strong", "All"), " ", numbers(root)])), tag("ul", *children(
             root, 0)), open=True)), class_="tree", role="list")
+
+
+def unlisted_note(document: dict | None, listed: int) -> str:
+    """The note under an inclusive ranking: how many functions of the
+    normalized file it does not list. Inclusive rows overlap, so the rows
+    that are not listed have no remainder row."""
+    if document is None:
+        count = "The other functions are not listed"
+    else:
+        functions = {(f["module"], f["symbol"]) for f in document["frames"]}
+        count = (f"{max(0, len(functions) - listed)} other functions are "
+                 "not listed")
+    return (f"{count}. Inclusive values overlap, so there is no remainder "
+            "row and no total.")
