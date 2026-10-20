@@ -168,13 +168,42 @@ def test_the_run_keeps_its_command_and_environment(tools, exports,
         f"fifo:{os.path.realpath(tmp_path)}/prof/cpu/.control"]
     workload = arguments[arguments.index("--") + 1:]
     assert Path(workload[0]).name == "sil-diagnostics-launcher"
-    assert Path(workload[3]).name == "sil-run-diagnostics"
-    assert workload[4:6] == [str(manifest), "-o"]
+    assert workload[1] == "--status-fd" and workload[3] == "--environment-fd"
+    assert Path(workload[5]).name == "sil-run-diagnostics"
+    assert workload[6:8] == [str(manifest), "-o"]
     assert "--participant-timeout-ms" in workload
     assert "--retain-run-directory" in workload
     assert "PERF_BUILDID_DIR" not in record["env"]
     report = profile(tmp_path / "prof")
     assert report["configuration"]["participant_timeout_ms"] == 60000
+
+
+ENV_MARKER = ROOT / "tests" / "participants" / "env_marker.py"
+
+
+def test_participants_get_the_environment_of_an_ordinary_run(
+        tools, exports, tmp_path, sil_run):
+    # perf changes the environment of the command it starts (fake_perf.py
+    # does as perf 6.x does); the Participants must not see that.
+    m = toy_manifest(duration_ns=20 * MS)
+    m.add_process("marker", command=[sys.executable, str(ENV_MARKER),
+                                     str(tmp_path / "marker.json")],
+                  step_period_ns=10 * MS)
+    manifest = m.write(tmp_path / "marker.json.manifest").path
+    env = {**os.environ, **exports, "TMPDIR": str(tmp_path),
+           "PATH": os.pathsep.join([str(tools), "/usr/bin:/bin"])}
+    ordinary = subprocess.run([str(sil_run), str(manifest), "-o", "o.mcap"],
+                              capture_output=True, text=True, cwd=tmp_path,
+                              env=env)
+    assert ordinary.returncode == 0, ordinary.stderr
+    expected = json.loads((tmp_path / "marker.json").read_text())
+
+    proc = sil([str(manifest), "--out", "prof", "--collector", "cpu"], tools,
+               tmp_path, {**exports, "TMPDIR": str(tmp_path)})
+
+    assert proc.returncode == 0, proc.stderr
+    profiled = json.loads((tmp_path / "marker.json").read_text())
+    assert profiled["environment"] == expected["environment"]
 
 
 @pytest.mark.parametrize("argv, message", [
@@ -265,6 +294,23 @@ def test_a_missing_runner_is_not_found(tools, exports, tmp_path):
     assert "sil-run-diagnostics" in proc.stderr
 
 
+def test_a_launcher_failure_is_reported_on_stderr(tools, exports, tmp_path):
+    # A runner that the launcher cannot execute: no Run takes place.
+    manifest = mixed_period_manifest(tmp_path)
+    runner = tools / "sil-run-diagnostics"
+    runner.unlink()
+    runner.write_text("#!/nonexistent/interpreter\n")
+    runner.chmod(0o755)
+
+    proc = sil([str(manifest), "--out", "prof", "--collector", "cpu"], tools,
+               tmp_path, exports)
+
+    assert proc.returncode == 127
+    assert "no Run took place" in proc.stderr
+    assert "cannot run" in proc.stderr
+    assert profile(tmp_path / "prof")["run"]["status"] == "not_started"
+
+
 def test_a_failed_run_keeps_its_exit_code_and_first_diagnostic(
         tools, exports, tmp_path):
     manifest = failing_step_manifest(tmp_path)
@@ -324,6 +370,28 @@ def test_an_export_failure_keeps_the_raw_capture(tools, exports, tmp_path):
     assert report["capture"]["samples_file"] is None
     assert (tmp_path / "prof" / "cpu" / "perf.data").exists()
     assert "failed to process sample" in (
+        tmp_path / "prof" / "cpu" / "perf-script.stderr.txt").read_text()
+
+
+def test_an_export_above_its_limit_fails_the_capture_not_the_run(
+        tools, exports, tmp_path):
+    # docs/profile-report.md: each perf script pass may write at most twice
+    # --max-capture-bytes. The canned export is larger than 2 x 200 bytes;
+    # the fake perf.data is smaller than 200 bytes.
+    assert Path(exports["FAKE_PERF_SCRIPT"]).stat().st_size > 400
+    manifest = mixed_period_manifest(tmp_path)
+
+    proc = sil([str(manifest), "--out", "prof", "--collector", "cpu",
+                "--max-capture-bytes", "200"], tools, tmp_path, exports)
+
+    assert proc.returncode == 1
+    report = profile(tmp_path / "prof")
+    assert report["run"]["status"] == "succeeded"
+    assert report["capture"]["status"] == "failed"
+    assert report["capture"]["reasons"] == ["export_failed"]
+    assert report["capture"]["samples_file"] is None
+    assert (tmp_path / "prof" / "cpu" / "perf.data").exists()
+    assert "export limit of 400 bytes" in (
         tmp_path / "prof" / "cpu" / "perf-script.stderr.txt").read_text()
 
 

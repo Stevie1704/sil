@@ -1,0 +1,1072 @@
+{
+  "environment": "offline-render",
+  "facts": {
+    "hardware_pmu": false,
+    "heaptrack_version": null,
+    "in_container": true,
+    "libc": "glibc 2.36",
+    "packages": [],
+    "perf_capabilities": null,
+    "perf_event_paranoid": "2",
+    "perf_version": null,
+    "python": "3.13.7",
+    "sil_build_info": "{\"license\":\"Apache-2.0\",\"source_repository\":\"https://github.com/Stevie1704/sil\",\"source_revision\":\"dc711f9a1b276843b4c128fdc87c77a67a4fcff3\",\"version\":\"0.2.1\"}",
+    "sil_package": "/opt/sil/python/lib/python3.13/site-packages/sil",
+    "sil_version": "0.2.1",
+    "status": {
+      "CapBnd": "00000000a80425fb",
+      "CapEff": "0000000000000000",
+      "NSpid": "1",
+      "Seccomp": "2"
+    },
+    "tools": {
+      "heaptrack": null,
+      "perf": null,
+      "sil": "/opt/sil/python/bin/sil",
+      "sil-diagnostics-launcher": "/usr/local/bin/sil-diagnostics-launcher",
+      "sil-run": "/usr/local/bin/sil-run",
+      "sil-run-diagnostics": "/usr/local/bin/sil-run-diagnostics"
+    },
+    "uid": 1001,
+    "uname": {
+      "machine": "x86_64",
+      "node": "83291b28667e",
+      "processor": "",
+      "release": "7.0.0-1017-azure",
+      "system": "Linux",
+      "version": "#17~24.04.1-Ubuntu SMP PREEMPT Thu Sep 24 18:46:57 UTC 2026"
+    }
+  },
+  "failed_checks": 0,
+  "perf": "none",
+  "scenarios": [
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "render",
+        "/sets/container-cap-perfmon-cpu-activation-limit/profile.json",
+        "--html",
+        "/evidence/result-work/runs/offline-render/container-cap-perfmon-cpu-activation-limit.html"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "HTML written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no network reference in the page",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "summary printed",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/evidence/result-work/runs/offline-render/scenarios/render-container-cap-perfmon-cpu-activation-limit",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "render-container-cap-perfmon-cpu-activation-limit",
+      "new_entries": [],
+      "observations": {
+        "html_bytes": 449405,
+        "set_bytes": {
+          "activation/correlation.json": 133129,
+          "cpu/samples.json": 340418,
+          "profile.json": 72808
+        },
+        "wall_ms": 440
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "profile: /sets/container-cap-perfmon-cpu-activation-limit/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 3135, weight 3.138 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 2594 of 3135 samples; source lines unavailable (export_failed)\nmodules: 1 of 43 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: partial (observations_truncated)\n  of 3135 samples: 47 in an Activation's execution context (runner thread), 137 in a Process Step window (associated, not proven to be Step work), 5 lifecycle, 0 Replay, 2946 unattributed\ntop self weight (share of all sample weight):\n   24.5%  silproof_process_spin (libsilproof_process.so)\n   24.3%  silproof_fmu_spin (EgoMotion.so)\n   15.8%  [unknown function] (libpython3.13.so.1.0)\n   12.4%  silproof_native_spin_odd (libsilproof_native.so)\n   12.2%  silproof_native_spin_even (libsilproof_native.so)\n    6.5%  silproof_child_spin (silproof_child)\n    1.3%  [unknown function] (libc.so.6)\n    0.9%  _PyEval_EvalFrameDefault (libpython3.13.so.1.0)\n    0.4%  __tls_get_addr (ld-linux-x86-64.so.2)\n    0.2%  _PyArena_AddPyObject (libpython3.13.so.1.0)\n    1.5%  all other functions\nHTML report: /evidence/result-work/runs/offline-render/container-cap-perfmon-cpu-activation-limit.html\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 440
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "render",
+        "/sets/container-cap-perfmon-cpu-capture-limit/profile.json",
+        "--html",
+        "/evidence/result-work/runs/offline-render/container-cap-perfmon-cpu-capture-limit.html"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "HTML written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no network reference in the page",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "summary printed",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/evidence/result-work/runs/offline-render/scenarios/render-container-cap-perfmon-cpu-capture-limit",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "render-container-cap-perfmon-cpu-capture-limit",
+      "new_entries": [],
+      "observations": {
+        "html_bytes": 661713,
+        "set_bytes": {
+          "cpu/samples.json": 151232,
+          "profile.json": 55834
+        },
+        "wall_ms": 432
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "profile: /sets/container-cap-perfmon-cpu-capture-limit/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, partial (capture_limit_reached)\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 336, weight 336.336 ms of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 5 observed, 3 with samples\nsymbols: function names for 52 of 336 samples; source lines unavailable (export_failed)\nmodules: 1 of 41 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   79.5%  [unknown function] (libpython3.13.so.1.0)\n    3.9%  [unknown function] (libc.so.6)\n    2.7%  _PyEval_EvalFrameDefault (libpython3.13.so.1.0)\n    1.5%  __tls_get_addr (ld-linux-x86-64.so.2)\n    1.5%  sil::sha256_file (sil-run-diagnostics)\n    1.2%  _PyArena_AddPyObject (libpython3.13.so.1.0)\n    0.9%  [unknown function] (ld-linux-x86-64.so.2)\n    0.9%  PyLong_AsLongAndOverflow (libpython3.13.so.1.0)\n    0.6%  _PyCode_ConstantKey (libpython3.13.so.1.0)\n    0.6%  __tls_get_addr@plt (libpython3.13.so.1.0)\n    6.8%  all other functions\nHTML report: /evidence/result-work/runs/offline-render/container-cap-perfmon-cpu-capture-limit.html\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 432
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "render",
+        "/sets/container-cap-perfmon-cpu-main-matching-activations/profile.json",
+        "--html",
+        "/evidence/result-work/runs/offline-render/container-cap-perfmon-cpu-main-matching-activations.html"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "HTML written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no network reference in the page",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "summary printed",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/evidence/result-work/runs/offline-render/scenarios/render-container-cap-perfmon-cpu-main-matching-activations",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "render-container-cap-perfmon-cpu-main-matching-activations",
+      "new_entries": [],
+      "observations": {
+        "html_bytes": 631992,
+        "set_bytes": {
+          "activation/correlation.json": 150713,
+          "cpu/samples.json": 345740,
+          "profile.json": 74282
+        },
+        "wall_ms": 454
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "profile: /sets/container-cap-perfmon-cpu-main-matching-activations/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 3150, weight 3.153 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 2592 of 3150 samples; source lines unavailable (export_failed)\nmodules: 1 of 43 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 3150 samples: 774 in an Activation's execution context (runner thread), 1757 in a Process Step window (associated, not proven to be Step work), 6 lifecycle, 0 Replay, 613 unattributed\ntop self weight (share of all sample weight):\n   24.5%  silproof_process_spin (libsilproof_process.so)\n   24.4%  silproof_fmu_spin (EgoMotion.so)\n   16.2%  [unknown function] (libpython3.13.so.1.0)\n   12.3%  silproof_native_spin_odd (libsilproof_native.so)\n   12.2%  silproof_native_spin_even (libsilproof_native.so)\n    6.4%  silproof_child_spin (silproof_child)\n    1.4%  [unknown function] (libc.so.6)\n    0.6%  _PyEval_EvalFrameDefault (libpython3.13.so.1.0)\n    0.3%  __tls_get_addr (ld-linux-x86-64.so.2)\n    0.1%  [unknown function] (ld-linux-x86-64.so.2)\n    1.5%  all other functions\nHTML report: /evidence/result-work/runs/offline-render/container-cap-perfmon-cpu-main-matching-activations.html\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 454
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "render",
+        "/sets/container-cap-perfmon-cpu-mixed-activations/profile.json",
+        "--html",
+        "/evidence/result-work/runs/offline-render/container-cap-perfmon-cpu-mixed-activations.html"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "HTML written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no network reference in the page",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "summary printed",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/evidence/result-work/runs/offline-render/scenarios/render-container-cap-perfmon-cpu-mixed-activations",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "render-container-cap-perfmon-cpu-mixed-activations",
+      "new_entries": [],
+      "observations": {
+        "html_bytes": 837819,
+        "set_bytes": {
+          "activation/correlation.json": 134967,
+          "cpu/samples.json": 456809,
+          "profile.json": 81091
+        },
+        "wall_ms": 498
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "profile: /sets/container-cap-perfmon-cpu-mixed-activations/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2134, weight 2.136 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 5 with samples\nsymbols: function names for 968 of 2134 samples; source lines unavailable (export_failed)\nmodules: 1 of 42 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 2134 samples: 3 in an Activation's execution context (runner thread), 947 in a Process Step window (associated, not proven to be Step work), 9 lifecycle, 0 Replay, 1175 unattributed\n  91 Activations have no sample: that is not evidence that they used no CPU time\ntop self weight (share of all sample weight):\n   50.9%  [unknown function] (libpython3.13.so.1.0)\n   35.7%  silproof_fmu_spin (EgoMotion.so)\n    3.0%  [unknown function] (libc.so.6)\n    2.4%  _PyEval_EvalFrameDefault (libpython3.13.so.1.0)\n    1.8%  __tls_get_addr (ld-linux-x86-64.so.2)\n    0.6%  PyErr_CheckSignals (libpython3.13.so.1.0)\n    0.4%  [unknown function] (ld-linux-x86-64.so.2)\n    0.4%  _PyArena_AddPyObject (libpython3.13.so.1.0)\n    0.4%  _PyLong_New (libpython3.13.so.1.0)\n    0.3%  _PyCode_ConstantKey (libpython3.13.so.1.0)\n    4.1%  all other functions\nHTML report: /evidence/result-work/runs/offline-render/container-cap-perfmon-cpu-mixed-activations.html\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 498
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "render",
+        "/sets/container-cap-perfmon-heap-capture-limit/profile.json",
+        "--html",
+        "/evidence/result-work/runs/offline-render/container-cap-perfmon-heap-capture-limit.html"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "HTML written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no network reference in the page",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "summary printed",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/evidence/result-work/runs/offline-render/scenarios/render-container-cap-perfmon-heap-capture-limit",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "render-container-cap-perfmon-heap-capture-limit",
+      "new_entries": [],
+      "observations": {
+        "html_bytes": 67975,
+        "set_bytes": {
+          "heap/allocations.json": 47771,
+          "profile.json": 7556
+        },
+        "wall_ms": 322
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "profile: /sets/container-cap-perfmon-heap-capture-limit/profile.json\nrun: succeeded, exit code 0\ncapture: heap, partial (capture_limit_reached, data_truncated)\nscope: the runner process (every Native participant), heaptrack 1.4.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 974 calls, 256.445 KiB allocated; 13 temporary\nat capture end: 161 outstanding, 90.394 KiB (not a leak verdict); peak tracked heap 97.944 KiB (not RSS)\nsymbols: 974 of 974 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n  234.743 KiB       943 calls  [unknown function] (libstdc++.so.6)\n  21.702 KiB        31 calls  [unknown function] (libc.so.6)\nHTML report: /evidence/result-work/runs/offline-render/container-cap-perfmon-heap-capture-limit.html\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 322
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "render",
+        "/sets/container-cap-perfmon-heap-mixed-group/profile.json",
+        "--html",
+        "/evidence/result-work/runs/offline-render/container-cap-perfmon-heap-mixed-group.html"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "HTML written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no network reference in the page",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "summary printed",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/evidence/result-work/runs/offline-render/scenarios/render-container-cap-perfmon-heap-mixed-group",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "render-container-cap-perfmon-heap-mixed-group",
+      "new_entries": [],
+      "observations": {
+        "html_bytes": 175907,
+        "set_bytes": {
+          "heap/allocations.json": 6050532,
+          "profile.json": 21726
+        },
+        "wall_ms": 1903
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "profile: /sets/container-cap-perfmon-heap-mixed-group/profile.json\nrun: succeeded, exit code 0\ncapture: heap, complete\nscope: Process participant 'group', heaptrack 1.4.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 84211 calls, 254.249 MiB allocated; 19129 temporary\nat capture end: 164 outstanding, 436.775 KiB (not a leak verdict); peak tracked heap 7.104 MiB (not RSS)\nsymbols: 84211 of 84211 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n  252.711 MiB     78977 calls  [unknown function] (libpython3.13.so.1.0)\n   1.211 MiB        85 calls  [unknown function] (libc.so.6)\n  195.978 KiB      4977 calls  [unknown function] (libcrypto.so.3)\n  71.000 KiB         1 calls  [unknown function] (libstdc++.so.6)\n  50.506 KiB       168 calls  [unknown function] (ld-linux-x86-64.so.2)\n  17.367 KiB         3 calls  [unknown function] (libffi.so.8)\nHTML report: /evidence/result-work/runs/offline-render/container-cap-perfmon-heap-mixed-group.html\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 1903
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "render",
+        "/sets/container-cap-perfmon-heap-runner-debug-matching/profile.json",
+        "--html",
+        "/evidence/result-work/runs/offline-render/container-cap-perfmon-heap-runner-debug-matching.html"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "HTML written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no network reference in the page",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "summary printed",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/evidence/result-work/runs/offline-render/scenarios/render-container-cap-perfmon-heap-runner-debug-matching",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "render-container-cap-perfmon-heap-runner-debug-matching",
+      "new_entries": [],
+      "observations": {
+        "html_bytes": 79712,
+        "set_bytes": {
+          "heap/allocations.json": 175491,
+          "profile.json": 11022
+        },
+        "wall_ms": 363
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "profile: /sets/container-cap-perfmon-heap-runner-debug-matching/profile.json\nrun: succeeded, exit code 0\ncapture: heap, complete\nscope: the runner process (every Native participant), heaptrack 1.4.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 22869 calls, 2.964 MiB allocated; 2312 temporary\nat capture end: 3 outstanding, 70.250 KiB (not a leak verdict); peak tracked heap 250.639 KiB (not RSS)\nsymbols: 21268 of 22869 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n   1.562 MiB      1600 calls  silproof_native_alloc_site (libsilproof_native.so)\n   1.305 MiB     21223 calls  [unknown function] (libstdc++.so.6)\n  64.000 KiB         1 calls  silproof_native_retain_site (libsilproof_native.so)\n  31.211 KiB        38 calls  [unknown function] (libc.so.6)\n   3.713 KiB         7 calls  [unknown function] (ld-linux-x86-64.so.2)\nHTML report: /evidence/result-work/runs/offline-render/container-cap-perfmon-heap-runner-debug-matching.html\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 363
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "render",
+        "/sets/native-paranoid-2-cpu-activation-limit/profile.json",
+        "--html",
+        "/evidence/result-work/runs/offline-render/native-paranoid-2-cpu-activation-limit.html"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "HTML written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no network reference in the page",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "summary printed",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/evidence/result-work/runs/offline-render/scenarios/render-native-paranoid-2-cpu-activation-limit",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "render-native-paranoid-2-cpu-activation-limit",
+      "new_entries": [],
+      "observations": {
+        "html_bytes": 271075,
+        "set_bytes": {
+          "activation/correlation.json": 115239,
+          "cpu/samples.json": 182163,
+          "profile.json": 64699
+        },
+        "wall_ms": 380
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "profile: /sets/native-paranoid-2-cpu-activation-limit/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2708, weight 2.711 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 2616 of 2708 samples; source lines for 2507 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: partial (observations_truncated)\n  of 2708 samples: 45 in an Activation's execution context (runner thread), 136 in a Process Step window (associated, not proven to be Step work), 66 lifecycle, 0 Replay, 2461 unattributed\ntop self weight (share of all sample weight):\n   28.6%  silproof_process_spin (libsilproof_process.so)\n   28.0%  silproof_fmu_spin (EgoMotion.so)\n   14.4%  silproof_native_spin_even (libsilproof_native.so)\n   14.1%  silproof_native_spin_odd (libsilproof_native.so)\n    7.5%  silproof_child_spin (silproof_child)\n    3.0%  [unknown function] (python3.12)\n    2.4%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    0.4%  _PyEval_EvalFrameDefault (python3.12)\n    0.3%  [unknown function] (libc.so.6)\n    0.1%  _PyCode_New (python3.12)\n    1.1%  all other functions\nHTML report: /evidence/result-work/runs/offline-render/native-paranoid-2-cpu-activation-limit.html\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 380
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "render",
+        "/sets/native-paranoid-2-cpu-capture-limit/profile.json",
+        "--html",
+        "/evidence/result-work/runs/offline-render/native-paranoid-2-cpu-capture-limit.html"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "HTML written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no network reference in the page",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "summary printed",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/evidence/result-work/runs/offline-render/scenarios/render-native-paranoid-2-cpu-capture-limit",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "render-native-paranoid-2-cpu-capture-limit",
+      "new_entries": [],
+      "observations": {
+        "html_bytes": 368643,
+        "set_bytes": {
+          "cpu/samples.json": 79582,
+          "profile.json": 55872
+        },
+        "wall_ms": 364
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "profile: /sets/native-paranoid-2-cpu-capture-limit/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, partial (capture_limit_reached)\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 346, weight 346.346 ms of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 6 observed, 4 with samples\nsymbols: function names for 290 of 346 samples; source lines for 179 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   18.5%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n   14.5%  silproof_child_spin (silproof_child)\n   14.5%  [unknown function] (python3.12)\n   12.7%  silproof_process_spin (libsilproof_process.so)\n   11.3%  silproof_fmu_spin (EgoMotion.so)\n    6.6%  silproof_native_spin_even (libsilproof_native.so)\n    6.6%  silproof_native_spin_odd (libsilproof_native.so)\n    5.5%  _PyEval_EvalFrameDefault (python3.12)\n    1.2%  [unknown function] (libc.so.6)\n    0.6%  PyObject_Malloc (python3.12)\n    8.1%  all other functions\nHTML report: /evidence/result-work/runs/offline-render/native-paranoid-2-cpu-capture-limit.html\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 364
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "render",
+        "/sets/native-paranoid-2-cpu-main-matching-activations/profile.json",
+        "--html",
+        "/evidence/result-work/runs/offline-render/native-paranoid-2-cpu-main-matching-activations.html"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "HTML written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no network reference in the page",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "summary printed",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/evidence/result-work/runs/offline-render/scenarios/render-native-paranoid-2-cpu-main-matching-activations",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "render-native-paranoid-2-cpu-main-matching-activations",
+      "new_entries": [],
+      "observations": {
+        "html_bytes": 455728,
+        "set_bytes": {
+          "activation/correlation.json": 132661,
+          "cpu/samples.json": 181790,
+          "profile.json": 68024
+        },
+        "wall_ms": 404
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "profile: /sets/native-paranoid-2-cpu-main-matching-activations/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2719, weight 2.722 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 2651 of 2719 samples; source lines for 2518 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 2719 samples: 777 in an Activation's execution context (runner thread), 1750 in a Process Step window (associated, not proven to be Step work), 67 lifecycle, 0 Replay, 125 unattributed\ntop self weight (share of all sample weight):\n   28.4%  silproof_process_spin (libsilproof_process.so)\n   28.2%  silproof_fmu_spin (EgoMotion.so)\n   14.3%  silproof_native_spin_odd (libsilproof_native.so)\n   14.3%  silproof_native_spin_even (libsilproof_native.so)\n    7.4%  silproof_child_spin (silproof_child)\n    2.4%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    1.9%  [unknown function] (python3.12)\n    0.9%  _PyEval_EvalFrameDefault (python3.12)\n    0.3%  [unknown function] (libc.so.6)\n    0.2%  PyObject_Malloc (python3.12)\n    1.7%  all other functions\nHTML report: /evidence/result-work/runs/offline-render/native-paranoid-2-cpu-main-matching-activations.html\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 404
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "render",
+        "/sets/native-paranoid-2-cpu-mixed-activations/profile.json",
+        "--html",
+        "/evidence/result-work/runs/offline-render/native-paranoid-2-cpu-mixed-activations.html"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "HTML written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no network reference in the page",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "summary printed",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/evidence/result-work/runs/offline-render/scenarios/render-native-paranoid-2-cpu-mixed-activations",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "render-native-paranoid-2-cpu-mixed-activations",
+      "new_entries": [],
+      "observations": {
+        "html_bytes": 475616,
+        "set_bytes": {
+          "activation/correlation.json": 98977,
+          "cpu/samples.json": 179642,
+          "profile.json": 69798
+        },
+        "wall_ms": 390
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "profile: /sets/native-paranoid-2-cpu-mixed-activations/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 1252, weight 1.253 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 6 with samples\nsymbols: function names for 1035 of 1252 samples; source lines for 756 (leaf frames)\nmodules: 1 of 29 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 1252 samples: 2 in an Activation's execution context (runner thread), 881 in a Process Step window (associated, not proven to be Step work), 128 lifecycle, 0 Replay, 241 unattributed\n  93 Activations have no sample: that is not evidence that they used no CPU time\ntop self weight (share of all sample weight):\n   60.4%  silproof_fmu_spin (EgoMotion.so)\n   15.6%  [unknown function] (python3.12)\n   10.0%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    3.8%  _PyEval_EvalFrameDefault (python3.12)\n    2.2%  PyObject_Malloc (python3.12)\n    1.4%  [unknown function] (libc.so.6)\n    1.0%  PyObject_Free (python3.12)\n    0.5%  PyErr_CheckSignals (python3.12)\n    0.5%  PyThread_get_thread_ident (python3.12)\n    0.5%  _PyDict_GetItem_KnownHash (python3.12)\n    4.2%  all other functions\nHTML report: /evidence/result-work/runs/offline-render/native-paranoid-2-cpu-mixed-activations.html\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 390
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "render",
+        "/sets/native-paranoid-default-heap-capture-limit/profile.json",
+        "--html",
+        "/evidence/result-work/runs/offline-render/native-paranoid-default-heap-capture-limit.html"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "HTML written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no network reference in the page",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "summary printed",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/evidence/result-work/runs/offline-render/scenarios/render-native-paranoid-default-heap-capture-limit",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "render-native-paranoid-default-heap-capture-limit",
+      "new_entries": [],
+      "observations": {
+        "html_bytes": 68056,
+        "set_bytes": {
+          "heap/allocations.json": 47596,
+          "profile.json": 7777
+        },
+        "wall_ms": 323
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "profile: /sets/native-paranoid-default-heap-capture-limit/profile.json\nrun: succeeded, exit code 0\ncapture: heap, partial (capture_limit_reached, data_truncated)\nscope: the runner process (every Native participant), heaptrack 1.5.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 986 calls, 279.443 KiB allocated; 13 temporary\nat capture end: 157 outstanding, 89.349 KiB (not a leak verdict); peak tracked heap 100.385 KiB (not RSS)\nsymbols: 986 of 986 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n  261.416 KiB       956 calls  [unknown function] (libstdc++.so.6)\n  18.027 KiB        30 calls  [unknown function] (libc.so.6)\nHTML report: /evidence/result-work/runs/offline-render/native-paranoid-default-heap-capture-limit.html\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 323
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "render",
+        "/sets/native-paranoid-default-heap-mixed-group/profile.json",
+        "--html",
+        "/evidence/result-work/runs/offline-render/native-paranoid-default-heap-mixed-group.html"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "HTML written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no network reference in the page",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "summary printed",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/evidence/result-work/runs/offline-render/scenarios/render-native-paranoid-default-heap-mixed-group",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "render-native-paranoid-default-heap-mixed-group",
+      "new_entries": [],
+      "observations": {
+        "html_bytes": 155491,
+        "set_bytes": {
+          "heap/allocations.json": 1491491,
+          "profile.json": 15699
+        },
+        "wall_ms": 703
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "profile: /sets/native-paranoid-default-heap-mixed-group/profile.json\nrun: succeeded, exit code 0\ncapture: heap, complete\nscope: Process participant 'group', heaptrack 1.5.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 18176 calls, 23.963 MiB allocated; 3685 temporary\nat capture end: 305 outstanding, 630.348 KiB (not a leak verdict); peak tracked heap 3.469 MiB (not RSS)\nsymbols: 18176 of 18176 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n  22.405 MiB     12974 calls  [unknown function] (python3.12)\n   1.252 MiB        90 calls  [unknown function] (libc.so.6)\n  197.450 KiB      5030 calls  [unknown function] (libcrypto.so.3)\n  72.000 KiB         1 calls  [unknown function] (libstdc++.so.6)\n  26.527 KiB        78 calls  [unknown function] (ld-linux-x86-64.so.2)\n  17.367 KiB         3 calls  [unknown function] (libffi.so.8)\nHTML report: /evidence/result-work/runs/offline-render/native-paranoid-default-heap-mixed-group.html\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 703
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "render",
+        "/sets/native-paranoid-default-heap-runner-debug-matching/profile.json",
+        "--html",
+        "/evidence/result-work/runs/offline-render/native-paranoid-default-heap-runner-debug-matching.html"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "HTML written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no network reference in the page",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "summary printed",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/evidence/result-work/runs/offline-render/scenarios/render-native-paranoid-default-heap-runner-debug-matching",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "render-native-paranoid-default-heap-runner-debug-matching",
+      "new_entries": [],
+      "observations": {
+        "html_bytes": 81592,
+        "set_bytes": {
+          "heap/allocations.json": 176867,
+          "profile.json": 11316
+        },
+        "wall_ms": 363
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "profile: /sets/native-paranoid-default-heap-runner-debug-matching/profile.json\nrun: succeeded, exit code 0\ncapture: heap, complete\nscope: the runner process (every Native participant), heaptrack 1.5.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 22896 calls, 2.999 MiB allocated; 2312 temporary\nat capture end: 3 outstanding, 70.250 KiB (not a leak verdict); peak tracked heap 252.888 KiB (not RSS)\nsymbols: 21295 of 22896 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n   1.562 MiB      1600 calls  silproof_native_alloc_site (libsilproof_native.so)\n   1.339 MiB     21250 calls  [unknown function] (libstdc++.so.6)\n  64.000 KiB         1 calls  silproof_native_retain_site (libsilproof_native.so)\n  31.597 KiB        38 calls  [unknown function] (libc.so.6)\n   3.863 KiB         7 calls  [unknown function] (ld-linux-x86-64.so.2)\nHTML report: /evidence/result-work/runs/offline-render/native-paranoid-default-heap-runner-debug-matching.html\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 363
+    }
+  ]
+}

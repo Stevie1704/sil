@@ -1,0 +1,4 @@
+--cap-add
+PERFMON
+--tmpfs
+/small:rw,exec,size=16m,mode=1777

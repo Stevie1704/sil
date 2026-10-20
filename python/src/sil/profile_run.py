@@ -29,6 +29,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -352,15 +353,22 @@ def probe_perf(perf: Path, request: ProfileRequest) -> None:
                  str(data), "--", true], capture_output=True, text=True,
                 timeout=60, env=_tool_environment())
         except (OSError, subprocess.TimeoutExpired) as error:
-            raise PerfUnavailable(f"cannot run perf: {error}") from error
+            # A perf with the file capability CAP_PERFMON cannot start in a
+            # container without it: exec gives EPERM.
+            raise PerfUnavailable(f"cannot run perf: {error}; "
+                                  + _permission_hint()) from error
         if done.returncode == 0 and data.is_file():
             return
     detail = " ".join(done.stderr.split())[-400:]
-    paranoid = _paranoid()
     raise PerfUnavailable(
         f"perf cannot sample {EVENT} with DWARF call graphs: {detail}; "
-        + PERMISSION_HINT.format(
-            paranoid="unknown" if paranoid is None else paranoid))
+        + _permission_hint())
+
+
+def _permission_hint() -> str:
+    paranoid = _paranoid()
+    return PERMISSION_HINT.format(
+        paranoid="unknown" if paranoid is None else paranoid)
 
 
 def perf_version(perf: Path) -> str:
@@ -400,13 +408,14 @@ class CaptureRun:
 
 
 def record_command(perf: Path, request: ProfileRequest, layout: Layout,
-                   status_fd: int) -> list[str]:
+                   status_fd: int, environment_fd: int) -> list[str]:
     tools = find_native_tools()
     run = RunRequest(request.manifest, layout.diagnostics, request.recording,
                      request.provenance, request.guards)
     return [str(perf), "record", *_sampling_options(request), "--control",
             f"fifo:{layout.control}", "-o", str(layout.perf_data), "--",
             str(tools.launcher), "--status-fd", str(status_fd),
+            "--environment-fd", str(environment_fd),
             str(tools.runner), *run.runner_arguments(),
             "--retain-run-directory", str(layout.retained),
             *_activation_arguments(request, layout)]
@@ -454,6 +463,17 @@ class _SessionForwarder:
                 pass
 
 
+def _environment_file():
+    """This command's environment for the launcher (--environment-fd): perf
+    changes the environment of the command it starts, and the Run must get
+    the one an ordinary Run gets."""
+    environment = tempfile.TemporaryFile()
+    environment.write(b"".join(
+        key + b"=" + value + b"\0" for key, value in os.environb.items()))
+    environment.seek(0)
+    return environment
+
+
 def _ignore_hangup() -> None:
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
@@ -461,8 +481,10 @@ def _ignore_hangup() -> None:
 def execute(perf: Path, request: ProfileRequest, layout: Layout,
             cwd: Path) -> CaptureRun:
     os.mkfifo(layout.control, 0o600)
+    environment = _environment_file()
     status_read, status_write = os.pipe()
-    command = record_command(perf, request, layout, status_write)
+    command = record_command(perf, request, layout, status_write,
+                             environment.fileno())
     received: list[int] = []
     forwarder = _SessionForwarder(received)
     sys.stdout.flush()
@@ -472,13 +494,14 @@ def execute(perf: Path, request: ProfileRequest, layout: Layout,
         try:
             process = subprocess.Popen(
                 command, cwd=cwd, stderr=subprocess.PIPE,
-                pass_fds=(status_write,), start_new_session=True,
-                preexec_fn=_ignore_hangup)
+                pass_fds=(status_write, environment.fileno()),
+                start_new_session=True, preexec_fn=_ignore_hangup)
         except BaseException:
             os.close(status_read)
             raise
         finally:
             os.close(status_write)
+            environment.close()
         forwarder.attach(process)
         copier = _StderrCopy(process.stderr, sys.stderr.buffer)
         copier.start()
@@ -488,9 +511,20 @@ def execute(perf: Path, request: ProfileRequest, layout: Layout,
     finally:
         for number, handler in previous.items():
             signal.signal(number, handler)
-    return CaptureRun(command, process.returncode, _read_status(status_read),
+    launcher_error = report_launcher_error(_read_status(status_read))
+    return CaptureRun(command, process.returncode, launcher_error,
                       received[0] if received else None, limit_reached,
                       _diagnostics_report(layout.diagnostics))
+
+
+def report_launcher_error(error: str | None) -> str | None:
+    """Say on stderr that the launcher failed and no Run took place."""
+    if error is not None:
+        sys.stderr.write(f"{PROG}: sil-diagnostics-launcher failed, so no "
+                         f"Run took place: "
+                         f"{error.removeprefix('sil-diagnostics-launcher: ')}"
+                         "\n")
+    return error
 
 
 def _wait_within_limit(process: subprocess.Popen, layout: Layout,
@@ -574,24 +608,63 @@ class Export:
 
 
 def _perf_text(perf: Path, arguments: list[str], cache: Path, cwd: Path,
-               timeout: int, stderr_file: Path | None = None):
-    """stdout of one perf analysis command, or None with a reason."""
-    try:
-        done = subprocess.run(_analysis(perf, cache, *arguments),
-                              capture_output=True,
-                              cwd=cwd, timeout=timeout,
-                              env=_tool_environment())
-    except subprocess.TimeoutExpired as expired:
+               timeout: int, limit: int, stderr_file: Path | None = None):
+    """stdout of one perf analysis command, or None with a reason. The
+    output is read up to `limit` bytes; above it the command is stopped, so
+    the export holds a bounded text in memory."""
+    with tempfile.TemporaryFile() as errors:
+        try:
+            process = subprocess.Popen(
+                _analysis(perf, cache, *arguments), stdout=subprocess.PIPE,
+                stderr=errors, cwd=cwd, env=_tool_environment())
+        except OSError:
+            return None, "export_failed"
+        reader = _BoundedRead(process, limit)
+        reader.start()
+        try:
+            process.wait(timeout=timeout)
+            problem = None
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+            problem = "symbolization_timeout"
+        reader.join()
+        if reader.overflow:
+            errors.write(f"\n{PROG}: the output is larger than the export "
+                         f"limit of {limit} bytes; it was stopped\n".encode())
         if stderr_file is not None:
-            stderr_file.write_bytes((expired.stderr or b"")[-STDERR_TAIL_BYTES:])
-        return None, "symbolization_timeout"
-    except OSError:
+            errors.seek(max(0, errors.tell() - STDERR_TAIL_BYTES))
+            stderr_file.write_bytes(errors.read())
+    if problem is not None:
+        return None, problem
+    if reader.overflow or process.returncode != 0:
         return None, "export_failed"
-    if stderr_file is not None:
-        stderr_file.write_bytes(done.stderr[-STDERR_TAIL_BYTES:])
-    if done.returncode != 0:
-        return None, "export_failed"
-    return done.stdout.decode(errors="replace"), None
+    return b"".join(reader.chunks).decode(errors="replace"), None
+
+
+class _BoundedRead(threading.Thread):
+    """Reads a process's stdout up to a limit; at the limit it stops the
+    process and drops the rest."""
+
+    def __init__(self, process: subprocess.Popen, limit: int):
+        super().__init__(daemon=True)
+        self._process = process
+        self._limit = limit
+        self.chunks: list[bytes] = []
+        self.overflow = False
+
+    def run(self) -> None:
+        size = 0
+        stream = self._process.stdout
+        for chunk in iter(lambda: stream.read(1 << 16), b""):
+            size += len(chunk)
+            if size > self._limit:
+                self.overflow = True
+                self.chunks.clear()
+                self._process.kill()
+                break
+            self.chunks.append(chunk)
+        stream.close()
 
 
 def _add_to_cache(perf: Path, copy: Path, cache: Path, cwd: Path,
@@ -635,11 +708,19 @@ def _module_sources(request: ProfileRequest, layout: Layout,
     return tuple(sources)
 
 
+def export_limit(request: ProfileRequest) -> int:
+    """The output limit of each perf analysis pass: twice the capture
+    limit. perf's text of a sample is smaller than its stack copy in
+    perf.data, so the limit only stops an export out of proportion."""
+    return 2 * request.max_capture_bytes
+
+
 def export(perf: Path, request: ProfileRequest, layout: Layout,
            cwd: Path) -> Export:
     """Capture the retained modules, then export and normalize."""
     layout.cache.mkdir(exist_ok=True)
     timeout = request.symbolization_timeout_s
+    limit = export_limit(request)
     data = ["-i", str(layout.perf_data)]
     locator = ModuleLocator(cwd=cwd, retained=layout.retained,
                             sources=_module_sources(request, layout, cwd))
@@ -651,7 +732,7 @@ def export(perf: Path, request: ProfileRequest, layout: Layout,
         return known[path, build_id]
 
     listing, _ = _perf_text(perf, ["buildid-list", *data], layout.cache, cwd,
-                            timeout)
+                            timeout, limit)
     build_ids = {}
     for line in (listing or "").splitlines():
         build_id, _, path = line.strip().partition(" ")
@@ -668,13 +749,13 @@ def export(perf: Path, request: ProfileRequest, layout: Layout,
                 known[key] = ModuleFacts("unavailable", "module_unavailable",
                                          None)
     stats, _ = _perf_text(perf, ["report", *data, "--stats"], layout.cache,
-                          cwd, timeout)
+                          cwd, timeout, limit)
     script, problem = _perf_text(perf, ["script", *data, *SCRIPT_FIELDS],
-                                 layout.cache, cwd, timeout,
+                                 layout.cache, cwd, timeout, limit,
                                  layout.cpu / "perf-script.stderr.txt")
     srclines, srcline_problem = _perf_text(
         perf, ["script", *data, *SRCLINE_FIELDS], layout.cache, cwd, timeout,
-        layout.cpu / "perf-srcline.stderr.txt")
+        limit, layout.cpu / "perf-srcline.stderr.txt")
     if script is None:
         return Export(None, "export_failed")
     analysis = normalize_cpu(script, srclines=srclines, facts=facts,

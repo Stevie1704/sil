@@ -11,7 +11,10 @@ Status: the CPU collector (Linux perf) is implemented (#315), and so is
 the optional Activation correlation of its samples (#316). The heap
 collector (Heaptrack) is implemented (#317): see
 [Heap collector](#heap-collector). `sil profile render` presents a saved
-profile offline (#318): see [Offline report](#offline-report).
+profile offline (#318): see [Offline report](#offline-report). The
+[#319 qualification](../proofs/profiling-qualification/README.md) qualified
+the installed native and the documented container workflows on Linux
+x86-64; `sil docs support` names the qualified tool versions.
 
 Valid and invalid examples of every case are in
 [tests/fixtures/profile/](../tests/fixtures/profile/).
@@ -73,15 +76,19 @@ Run, retry, change the collector or the event, or change a host setting.
    perf record -e cpu-clock:u -F 999 -k monotonic \
        --call-graph dwarf,8192 --buildid-mmap -N -q \
        --control fifo:DIR/cpu/.control -o DIR/cpu/perf.data -- \
-     sil-diagnostics-launcher --status-fd N sil-run-diagnostics MANIFEST \
+     sil-diagnostics-launcher --status-fd N --environment-fd M \
+       sil-run-diagnostics MANIFEST \
        -o RECORDING --diagnostics-out DIR/run.diagnostics.json \
        --retain-run-directory DIR/cpu/.run-directory [guards] \
        [--activation-observations DIR/activation/observations.jsonl \
         --activation-observations-limit-bytes N]
    ```
 
-   in a new session, in the current directory, with the environment of the
-   command unchanged. `-N` keeps perf from filling the user's build-ID
+   in a new session, in the current directory. perf changes the environment
+   of the command it starts (perf 6.x sets `PERF_BUILDID_DIR` and `PREFIX`,
+   empties `DEBUGINFOD_URLS` and puts its own directory first on `PATH`), so
+   the command passes its own environment to the launcher on descriptor M,
+   and the runner gets that environment unchanged. `-N` keeps perf from filling the user's build-ID
    cache (`~/.debug`): the profile depends on no file outside `DIR` except
    the host modules it names. perf follows every descendant of
    the runner (`inherit`), so the scope is the runner and all its
@@ -90,7 +97,11 @@ Run, retry, change the collector or the event, or change a host setting.
 3. **Limit.** While the Run executes, the command reads the size of
    `perf.data` every 100 ms. At the limit it sends `disable` to perf's
    control FIFO: sampling stops, the Run continues. The file can be larger
-   than the limit by the data of one interval.
+   than the limit by the data of one interval. The limit does not look at
+   the free space: when the file system of `DIR` is full before the limit,
+   perf stops and ends its command with SIGTERM, so the Run is interrupted,
+   and `profile.json` cannot be written either (#319 qualification). Keep
+   `--max-capture-bytes` below the free space of `DIR`.
 4. **Modules.** When the Run ends, the runner moves its Run working
    directory to `DIR/cpu/.run-directory` instead of removing it. For every
    module that perf recorded with a build ID (`perf buildid-list`), and
@@ -108,7 +119,14 @@ Run, retry, change the collector or the event, or change a host setting.
    second pass gives the source line of each leaf frame (`-G -F
    ip,sym,srcline`). The analysis commands use
    `perf --buildid-dir DIR/cpu/buildid-cache` and run without
-   `DEBUGINFOD_URLS`, so no symbol is fetched from the network.
+   `DEBUGINFOD_URLS`, so no symbol is fetched from the network. Each pass
+   runs alone (no parallel symbolization), for at most
+   `--symbolization-timeout-s`, and its output is read up to the export
+   limit: twice `--max-capture-bytes`. Above that limit the pass is
+   stopped. For the sample pass that is `export_failed` (no
+   `samples.json`; `perf.data` stays); for the source-line pass, the
+   samples have no source lines. The command holds this text and its
+   normalized form in memory.
 6. **Join.** With `--activations`, it joins the observation stream with
    the samples (below) and writes `activation/correlation.json`.
 7. **Publish.** It writes `cpu/samples.json`, then `profile.json` through
@@ -197,7 +215,7 @@ Reasons in v1, in addition to the diagnostics reasons:
 | `debug_file_not_found` | No debug file with the module's build ID was found |
 | `unverifiable_debug_file` | The module has no build ID, so a separate debug file cannot be matched |
 | `symbolization_timeout` | A `perf script` pass took longer than the limit |
-| `export_failed` | A `perf script` pass failed or its output did not decode |
+| `export_failed` | A `perf script` pass failed, its output did not decode, or it was larger than the export limit |
 | `no_samples` | The capture has no sample to describe |
 | `not_requested` | The option or collector was not requested |
 | `reserved` | Reserved for a later ticket; not measured by this version |
@@ -380,7 +398,7 @@ Heap reasons:
 | Reason | Meaning |
 | --- | --- |
 | `capture_limit_reached` | The data reached `--max-capture-bytes`; later data is dropped |
-| `data_truncated` | The last record of the data is cut |
+| `data_truncated` | The last record of the data is cut, or the data file could not be written (a full disk): the rest of the data is dropped and the Run goes on |
 | `data_may_be_incomplete` | Heaptrack writes its last data at normal process exit. The runner ended by a signal (runner scope), or the Run did not succeed and the runner stopped the participant (Process scope) |
 | `backend_failed` | The interpreter failed, or did not end within its time limit |
 | `export_failed` | The data is not Heaptrack's interpreted file version 3, or its stacks do not resolve |
@@ -489,9 +507,14 @@ start with another environment.
    and a probe: `true` with the preload library must write data.
 2. **Adapter.** It writes `DIR/heap/launch-adapter.sh`. The adapter sets
    `DUMP_HEAPTRACK_OUTPUT` to the FIFO `DIR/heap/.fifo`, puts the preload
-   library before any `LD_PRELOAD`, and execs its arguments. The process
+   library before any `LD_PRELOAD`, sets `PWD` back to the value of the
+   command's environment (or removes it, as `sh` sets it when it starts),
+   and execs its arguments. The process
    keeps its PID, pipes, working directory, arguments and all other
-   environment.
+   environment. The runner executes the adapter from `DIR/heap`, so `DIR`
+   must be on a file system that allows execution: on a `noexec` mount the
+   launcher (runner scope) or the runner (Process scope) cannot start it,
+   and no Run takes place.
 3. **Interpreter.** It starts `heaptrack_interpret < DIR/heap/.fifo` in a
    session of its own, outside the Run, without `DEBUGINFOD_URLS`. Its output
    goes to `DIR/heap/heaptrack.data` up to `--max-capture-bytes`. The command
@@ -751,6 +774,13 @@ The command checks the set before it writes anything: each named file must
 exist, have the size and SHA-256 that `artifacts` records, have version 1,
 refer only to identities of `profile.json` and add up to its totals (sample
 count and weight; allocation count and bytes; one class per sample).
+
+Each file of the set has a render limit of 268435456 bytes (256 MiB). A
+larger file is refused before it is read (exit 2). The command holds each
+file and its decoded document in memory, so its memory use grows with the
+files; a capture within the default limits gives files far below 256 MiB
+(the [#319 qualification](../proofs/profiling-qualification/README.md) records the
+sizes of named workloads).
 
 ### Exit codes
 

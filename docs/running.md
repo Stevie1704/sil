@@ -499,13 +499,87 @@ contract of each value. Read these limits before you compare numbers.
   Participant.
 - **Not measured.** Hardware counters, instructions, cycles, TOPS and FLOPS,
   algorithm-only time, memory history and leak detection, the memory of a
-  process tree at one time, flame graphs and full activation traces.
+  process tree at one time and full activation traces. For hot functions
+  and allocation sites, use [`sil profile`](#profile-a-run).
 - **Cost of measuring.** Diagnostics-runner values include the collector's
   own cost. They are not a timing of `sil-run`, and no correction is
   subtracted. [docs/bench/diagnostics-overhead.md](bench/diagnostics-overhead.md)
   keeps one comparison of the two runners on a named machine.
 - **No determinism verdict.** Timing does not show whether a Run is
   deterministic. Use `sil check` for that.
+
+## Profile a Run
+
+`sil profile` captures one profile of one fresh Run of the diagnostics
+runner: CPU samples with Linux perf, or the allocations of one process with
+Heaptrack. [docs/profile-report.md](profile-report.md) is the contract of the
+command, its exit codes and the `sil_profile_report` (version 1) that it
+writes. Use it after diagnostics show which Task or Process Step is
+expensive.
+
+```sh
+sil profile manifest.json --out prof --collector cpu --activations \
+  --modules-from model.fmu
+sil profile manifest.json --out heap --collector heap --runner
+sil profile manifest.json --out heap-fmu --collector heap --participant fmu
+sil profile render prof/profile.json --html prof.html
+```
+
+- **Host.** Linux x86-64/glibc only. SiL does not ship perf or Heaptrack:
+  install them on the host or in the image (see [Profiling tools](#profiling-tools)).
+  Without a tool or a permission, the command stops before any Participant
+  starts (exit `1`) and says what is missing. It never changes a host
+  setting.
+- **One Run, one collector.** No repeat, retry or fallback to another event
+  or collector. `--out DIR` must not exist; its parent must exist.
+- **The Run does not change.** The Manifest bytes, its hash, the working
+  directory, the Participant commands, arguments and environment and the
+  Clock shim stay as for `sil run`. The Recording is that of `sil run` for a
+  deterministic Run with generous response deadlines. A collector adds work,
+  so a Run that only just meets `--participant-timeout-ms` can miss it.
+- **CPU scope** (`--collector cpu`): the runner and all its descendants.
+  `--activations` relates each sample to a Native activation, a Process Step
+  window, a lifecycle phase or Replay work, or says why it is unattributed.
+  An FMU archive that the FMI Importer extracts into the Run directory needs
+  `--modules-from ARCHIVE` for function names.
+- **Heap scope** (`--collector heap`): `--runner` (all Native participants
+  together) or `--participant NAME` (one unshimmed Process participant or
+  FMU group). A Native participant by name and a Process participant with
+  `shim: true` are rejected (exit `2`). There is no per-Step allocation
+  history.
+- **Limits.** `--max-capture-bytes` (1 GiB for CPU, 256 MiB for heap) and
+  `--max-activation-bytes` (64 MiB) stop the capture, not the Run: the
+  profile is `partial` and the exit is `1` after a successful Run.
+- **Run first, capture second.** A failed Run keeps its own exit code; a
+  capture problem after a successful Run gives exit `1`. `profile.json`
+  states both outcomes separately.
+- **Offline report.** `sil profile render` needs only `profile.json` and the
+  normalized files it names (`cpu/samples.json`, with `--activations` also
+  `activation/correlation.json`; heap: `heap/allocations.json`). Copy them to
+  another host: it needs no perf, no Heaptrack, no profiled binary and no
+  network.
+- **Sensitive data.** `cpu/perf.data` holds copies of user stacks. Share it
+  only as you would share a core dump. The normalized files and the HTML
+  page hold no stack bytes, environment variable or Message payload.
+
+A sample is an estimate of on-CPU time, not a function duration or a call
+count. Zero samples is not evidence of zero CPU use. An allocation that is
+outstanding at capture end is not a leak verdict. A profile describes this
+host build, not a target ECU or a worst-case execution time.
+
+### Profiling tools
+
+| Tool | Qualified versions | Install | Permission |
+| --- | --- | --- | --- |
+| perf | 6.1.176 (Debian bookworm `linux-perf`), 6.17.13 and 7.0.14 (Ubuntu 24.04 `linux-tools-$(uname -r)`) | the package of the running kernel | `cpu-clock:u` needs `kernel.perf_event_paranoid` 2 or less for an unprivileged user, or `CAP_PERFMON`. No hardware counter is used. |
+| Heaptrack | 1.4.0 (Debian bookworm), 1.5.0 (Ubuntu 24.04) | the distribution package `heaptrack` | none |
+
+`sil profile` does not change `perf_event_paranoid`. Ubuntu sets it to 4; to
+allow an unprivileged user, the host owner can set the upstream default 2
+(`sudo sysctl -w kernel.perf_event_paranoid=2`). In a container, give
+`CAP_PERFMON` to perf and the container instead: see
+[docs/container.md](container.md#profile-in-a-container). That needs no host
+change.
 
 ## Reading a Recording
 

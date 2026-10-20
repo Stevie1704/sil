@@ -266,6 +266,109 @@ def test_a_process_scope_traces_that_participant_only(tools, heaptrack,
 
 
 @needs_linux
+def test_a_runner_that_cannot_start_is_named_on_stderr(tools, heaptrack,
+                                                       tmp_path):
+    # A runner that cannot be executed: the launch adapter execs it, so the
+    # adapter's shell names it. (On a noexec profile directory the launcher
+    # cannot start the adapter itself and says so; test_profile_run.py
+    # tests that report.)
+    manifest = mixed_period_manifest(tmp_path)
+    runner = tools / "sil-run-diagnostics"
+    runner.unlink()
+    runner.write_text("#!/nonexistent/interpreter\n")
+    runner.chmod(0o755)
+
+    proc = sil(heap(manifest, "--runner"), tools, tmp_path, heaptrack)
+
+    assert proc.returncode == 127
+    assert "sil-run-diagnostics" in proc.stderr
+
+
+@pytest.mark.skipif(not Path("/dev/full").exists(), reason="needs /dev/full")
+def test_a_full_disk_never_blocks_the_interpreter():
+    # #319: when the data file cannot be written (ENOSPC), the copy must go
+    # on reading and dropping, or the interpreter and then the traced Run
+    # block on a full pipe. /dev/full fails every write with ENOSPC.
+    import io
+    from sil.profile_heap_run import _Copy
+    source = io.BufferedReader(io.BytesIO(b"x" * (1 << 20)))
+    copy = _Copy(source, Path("/dev/full"), 1 << 30, False)
+    copy.start()
+    copy.join(timeout=10)
+    assert not copy.is_alive()
+    assert copy.write_failed
+    assert source.read() == b""
+
+
+def test_a_data_file_that_cannot_be_made_never_blocks_the_interpreter(
+        tmp_path):
+    import io
+    from sil.profile_heap_run import _Copy
+    source = io.BufferedReader(io.BytesIO(b"x" * (1 << 20)))
+    copy = _Copy(source, tmp_path / "missing" / "data", 1 << 30, False)
+    copy.start()
+    copy.join(timeout=10)
+    assert not copy.is_alive()
+    assert copy.write_failed
+    assert source.read() == b""
+
+
+HEAPTRACK_VARIABLES = {"LD_PRELOAD", "DUMP_HEAPTRACK_OUTPUT"}
+
+
+@needs_linux
+@pytest.mark.parametrize("scope", [("--runner",),
+                                   ("--participant", "scoped")])
+def test_participants_get_the_environment_of_an_ordinary_run(
+        tools, heaptrack, tmp_path, sil_run, scope):
+    manifest, markers = marker_manifest(tmp_path)
+    # The environment that sil() gives the profiling command.
+    environment = {key: value for key, value in os.environ.items()
+                   if key != "LD_PRELOAD"}
+    environment["PATH"] = os.pathsep.join([str(tools), "/usr/bin:/bin"])
+    done = subprocess.run([str(sil_run), str(manifest), "-o", "o.mcap"],
+                          capture_output=True, text=True, cwd=tmp_path,
+                          env={**environment, **heaptrack})
+    assert done.returncode == 0, done.stderr
+    expected = {name: marker(markers, name)["environment"]
+                for name in ("scoped", "sibling")}
+
+    proc = sil(heap(manifest, *scope), tools, tmp_path, heaptrack)
+
+    assert proc.returncode == 0, proc.stderr
+    for name in ("scoped", "sibling"):
+        seen = {key: value for key, value in
+                marker(markers, name)["environment"].items()
+                if key not in HEAPTRACK_VARIABLES}
+        assert seen == expected[name], name
+
+
+def test_the_launch_adapter_keeps_the_working_directory_variable(
+        tmp_path):
+    # sh sets PWD when it starts; the adapter must give the command the
+    # PWD of the profiling command, or none when it had none.
+    from sil.profile_heap_run import Heaptrack, adapter_text
+    tools = Heaptrack(Path("/x/heaptrack"), Path("/x/preload.so"),
+                      Path("/x/interpret"), None)
+    for pwd in (None, "/stale/directory"):
+        environment = {key: value for key, value in os.environ.items()
+                       if key != "PWD"}
+        if pwd is not None:
+            environment["PWD"] = pwd
+        adapter = tmp_path / f"adapter-{pwd is None}.sh"
+        adapter.write_text(adapter_text(tools, tmp_path / "fifo",
+                                        environment))
+        adapter.chmod(0o700)
+        done = subprocess.run([str(adapter), "/usr/bin/env"],
+                              capture_output=True, text=True,
+                              env=environment, cwd=tmp_path)
+        assert done.returncode == 0, done.stderr
+        seen = dict(line.split("=", 1) for line in done.stdout.splitlines()
+                    if "=" in line)
+        assert seen.get("PWD") == pwd
+
+
+@needs_linux
 def test_the_clock_shim_of_a_runner_scope_participant_is_kept(
         tools, heaptrack, tmp_path, sil_run):
     manifest, markers = marker_manifest(tmp_path, shim=True)
