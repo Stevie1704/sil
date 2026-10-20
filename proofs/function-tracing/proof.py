@@ -12,6 +12,7 @@ import re
 import shutil
 import statistics
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -62,6 +63,8 @@ def build(out):
     shutil.copytree(EXAMPLE, sources)
     for name in ("probe.c", "probe.h", "control.cpp", "xray_attach.c"):
         shutil.copy2(HERE / name, sources / name)
+    run([sys.executable, ROOT / "tools/silschema.py", sources / "schemas.json",
+         sources / "adas_messages.h"])
     original = (sources / "adas_reference.c").read_text()
     instrumented = '#include "probe.h"\n' + original
     for identity, name in FUNCTIONS.items():
@@ -83,7 +86,7 @@ def build(out):
     attrs += "[never]\nsrc:*sil_adapter.c\n" + "".join(f"fun:{n}\n" for n in names
                                   if n not in FUNCTIONS.values())
     (sources / "xray.txt").write_text(attrs)
-    flags = ["-O2", "-g", "-fPIC", "-ffp-contract=off", "-I", ROOT / "include",
+    flags = ["-std=c11", "-O2", "-g", "-fPIC", "-ffp-contract=off", "-I", ROOT / "include",
              "-I", sources, "-Wl,--build-id=sha1"]
     commands = []
     variants = {"gcc": ("gcc-12", "adas_reference.c"),
