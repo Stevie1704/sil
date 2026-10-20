@@ -571,7 +571,7 @@ host build, not a target ECU or a worst-case execution time.
 
 | Tool | Qualified versions | Install | Permission |
 | --- | --- | --- | --- |
-| perf | 6.1.176 (Debian bookworm `linux-perf`), 6.17.13 and 7.0.14 (Ubuntu 24.04 `linux-tools-$(uname -r)`) | the package of the running kernel | `cpu-clock:u` needs `kernel.perf_event_paranoid` 2 or less for an unprivileged user, or `CAP_PERFMON`. No hardware counter is used. |
+| perf | 6.1.176 (Debian bookworm `linux-perf`), 6.17.13 (Ubuntu 24.04 `linux-tools-$(uname -r)`) | the package of the running kernel | `cpu-clock:u` needs `kernel.perf_event_paranoid` 2 or less for an unprivileged user, or `CAP_PERFMON`. No hardware counter is used. |
 | Heaptrack | 1.4.0 (Debian bookworm), 1.5.0 (Ubuntu 24.04) | the distribution package `heaptrack` | none |
 
 `sil profile` does not change `perf_event_paranoid`. Ubuntu sets it to 4; to

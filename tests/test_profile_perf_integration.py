@@ -25,6 +25,7 @@ import json
 import os
 import platform
 import shutil
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -33,6 +34,7 @@ import pytest
 
 from conftest import ROOT
 from sil.profile_report import validate_profile_report
+from sil.recording import read_records
 
 MODE = os.environ.get("SIL_PROFILE_PERF")
 pytestmark = pytest.mark.skipif(
@@ -227,6 +229,31 @@ def test_dwarf_unwinding_reaches_the_source_caller(matching):
     assert "native_task" in callers
 
 
+def test_inlined_frames_are_marked_and_belong_to_their_physical_frame(
+        matching):
+    cwd, _ = matching
+    report = json.loads((cwd / "prof" / "profile.json").read_text())
+    inlined = report["capture"]["symbolization"]["inlined_frames"]
+    document = samples_document(cwd / "prof")
+    frames = document["frames"]
+
+    assert inlined["status"] == "available"
+    with_inlined = 0
+    for row in document["samples"]:
+        stack = [frames[index] for index in document["stacks"][row[4]]]
+        with_inlined += any(f.get("inlined") for f in stack)
+        for position, frame in enumerate(stack):
+            following = stack[position + 1] if position + 1 < len(stack) \
+                else None
+            if frame.get("inlined") and following is not None and \
+                    following["address"] == frame["address"]:
+                # The functions of one address share its module.
+                assert following["module"] == frame["module"]
+            if frame.get("inlined"):
+                assert frame["module"] is not None
+    assert with_inlined == inlined["samples_with_inlined_frames"]
+
+
 def test_the_profiled_recording_equals_the_ordinary_one(matching, build_dir):
     cwd, _ = matching
     ordinary = subprocess.run(
@@ -352,6 +379,36 @@ def test_process_samples_are_window_associated_with_their_step(correlated):
     assert found["silproof_child_spin"]
     assert {kind for kind, _ in found["silproof_child_spin"]} <= {
         "window_associated", "unattributed"}
+
+
+def test_samples_are_host_time_and_the_recording_is_virtual_time(
+        correlated, workload):
+    # The two clocks of one shimmed Run: each sample of the shimmed
+    # participant has a host CLOCK_MONOTONIC time inside one of the runner's
+    # host Step intervals, while the participant's own clock reading in the
+    # Recording is the Virtual time of its Step.
+    cwd, _ = correlated
+    out = cwd / "prof"
+    document = samples_document(out)
+    correlation = json.loads(
+        (out / "activation" / "correlation.json").read_text())
+    origin = int(document["time_origin_ns"])
+    steps = correlation["activations"]
+    for sample, (kind, ref) in zip(document["samples"],
+                                   correlation["samples"]):
+        frame = document["frames"][document["stacks"][sample[4]][0]]
+        if frame["symbol"] not in HOT["process"]:
+            continue
+        step = steps[ref]
+        assert kind == "window_associated"
+        assert int(step["begin_ns"]) <= origin + sample[0] < \
+            int(step["end_ns"])
+        # A host interval is not the Step's Virtual time.
+        assert int(step["begin_ns"]) != step["virtual_time_ns"]
+    readings = [(t, struct.unpack("<4Q", data)[1]) for _, t, data in
+                read_records(out / "run.mcap", channels=["proof.process"])]
+    assert readings and all(clock == t for t, clock in readings)
+    assert max(t for t, _ in readings) < workload.DURATION_NS
 
 
 def test_participant_time_stays_virtual_with_activations(correlated,

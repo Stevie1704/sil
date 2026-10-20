@@ -130,6 +130,12 @@ def script(arguments: list[str]) -> int:
     if os.environ.get("FAKE_PERF_SCRIPT_FAIL"):
         sys.stderr.write("perf script: failed to process sample\n")
         return 1
+    if os.environ.get("FAKE_PERF_INLINE_FAIL") and "--inline" in arguments:
+        # perf 6.1: its addr2line helper ends, and a write to it ends perf.
+        sys.stderr.write("addr2line /x/elf: could not read first record\n")
+        sys.stderr.flush()
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+        os.kill(os.getpid(), signal.SIGPIPE)
     if "-G" in arguments:
         if os.environ.get("FAKE_PERF_SRCLINE_SLEEP"):
             time.sleep(float(os.environ["FAKE_PERF_SRCLINE_SLEEP"]))

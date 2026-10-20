@@ -325,10 +325,33 @@ def test_a_truncated_stream_is_partial_and_its_gap_is_unattributed():
     assert summary["stream"]["truncated"] is True
     # After the last kept record (2200), no runner-thread or Run-descendant
     # sample is attributed, also not to the proc_a Step that was dropped.
-    # The other runner thread and the launcher do not depend on the stream.
-    assert reasons(summary)["observations_incomplete"] == 7
+    # Nor is the runner sample at 60: outside every kept interval, a
+    # dropped one can hold it. The other runner thread and the launcher do
+    # not depend on the stream.
+    assert reasons(summary)["observations_incomplete"] == 8
     assert reasons(summary)["runner_other_thread"] == 1
     assert bucket(summary, "window_associated") == (0, 0)
+
+
+def test_a_truncated_stream_never_calls_a_dropped_interval_a_gap():
+    # Kept up to nat/tick#1 (ends 3100). The phase scheduled_execution
+    # (1900-9500) is written at its end, so it was dropped: the runner
+    # sample at 2900 can be inside it, before the last kept record.
+    kept = RECORDS[:8]
+
+    result = run(stream(kept, dropped=5, truncated=True))
+
+    contexts = result.document["samples"]
+    assert contexts[SAMPLES.index((2900, "p2", "t2", 1))] == [
+        "unattributed", "observations_incomplete"]
+    assert contexts[SAMPLES.index((60, "p2", "t2", 1))] == [
+        "unattributed", "observations_incomplete"]
+    # A kept interval still classifies its samples.
+    assert contexts[SAMPLES.index((1500, "p2", "t2", 1))] == [
+        "lifecycle", "setup"]
+    assert contexts[0] == ["execution_context", 0]
+    assert "runner_outside_intervals" not in reasons(
+        result.record["summary"])
 
 
 def test_a_stream_without_its_end_line_is_partial():
@@ -392,3 +415,20 @@ def test_replay_slots_are_their_own_class():
 
     assert bucket(summary, "replay") == (1, 1)
     assert summary["intervals"]["replay"] == 1
+
+
+def test_an_exec_keeps_the_process_identity_and_its_mapping():
+    # proc_a's process execs twice (a shell wrapper, then python3): perf
+    # keeps one process for it, and the join still maps it.
+    members, document = capture([(2300, "p3", "t4", 7)])
+    p3 = next(p for p in members["processes"] if p["id"] == "p3")
+    p3.update(commands=["sil-run-diagnos", "sh", "python3"], execs=2)
+
+    result = correlate(stream(RECORDS), members, document,
+                       pid_namespace=NS)
+
+    mapping = {p["participant"]: p for p in result.record["summary"][
+        "processes"]}
+    assert mapping["proc_a"] == {"participant": "proc_a", "pid": 200,
+                                 "process": "p3", "mapping": "verified"}
+    assert result.document["samples"] == [["window_associated", 2]]

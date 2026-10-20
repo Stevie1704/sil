@@ -27,7 +27,7 @@
       "CapEff": "0000000000000000",
       "CapPrm": "0000000000000000",
       "Seccomp": "0",
-      "NSpid": "6944"
+      "NSpid": "7072"
     },
     "tools": {
       "perf": "perf version 6.17.13",
@@ -178,7 +178,7 @@
         "--participant-timeout-ms",
         "60000"
       ],
-      "wall_ns": 2791035416,
+      "wall_ns": 2744710671,
       "returncode": 0,
       "recording_bytes": 28039,
       "leftover_processes": []
@@ -207,7 +207,7 @@
         "--participant-timeout-ms",
         "60000"
       ],
-      "wall_ns": 2838329577,
+      "wall_ns": 2780935157,
       "returncode": 0,
       "recording_bytes": 28039,
       "leftover_processes": [],
@@ -220,8 +220,8 @@
         "differing": {}
       },
       "perf": {
-        "perf_data_bytes": 23171896,
-        "perf_data_sha256": "d96690749268cb0e59403ef541a0f25e8be2ae6fb0d127c813867ce00d73bf9d",
+        "perf_data_bytes": 22783632,
+        "perf_data_sha256": "829cb98a612ed37f7345b2344ede9c7f57e18cfcc06bad6461834ac9ad8e5822",
         "build_ids": {
           "native": {
             "expected": "bcd7e6ac947d4fcecfca3af39c6c952a2e2e72a2",
@@ -244,237 +244,219 @@
           "fmu": {
             "expected": "243704ef884fedb46634fd686ff00c8e2c243ad8",
             "recorded_paths": [
-              "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-dwarf/.sil-run-YmEbdj/participant-666d75/sil-fmu-ihrk_xi5/binaries/x86_64-linux/EgoMotion.so"
+              "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-dwarf/.sil-run-XZioUf/participant-666d75/sil-fmu-9au0khei/binaries/x86_64-linux/EgoMotion.so"
             ]
           }
         },
         "fmu_mapped_paths": [
-          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-dwarf/.sil-run-YmEbdj/participant-666d75/sil-fmu-ihrk_xi5/binaries/x86_64-linux/EgoMotion.so"
+          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-dwarf/.sil-run-XZioUf/participant-666d75/sil-fmu-9au0khei/binaries/x86_64-linux/EgoMotion.so"
         ],
         "recorded_layout": {
-          "samples": 2737,
+          "samples": 2691,
           "leaf_counts": {
             "silproof_native_spin_even": 0,
             "silproof_native_spin_odd": 0,
-            "silproof_process_spin": 770,
-            "silproof_child_spin": 203,
+            "silproof_process_spin": 759,
+            "silproof_child_spin": 202,
             "silproof_fmu_spin": 0
           },
           "dso_coverage": {
-            "_ctypes.cpython-312-x86_64-linux-gnu.so": {
-              "samples": 1,
-              "unknown": 1
-            },
-            "ld-linux-x86-64.so.2": {
-              "samples": 2,
-              "unknown": 2
+            "_bz2.cpython-312-x86_64-linux-gnu.so": {
+              "samples": 1
             },
             "libc.so.6": {
-              "samples": 18,
-              "unknown": 8
+              "samples": 12,
+              "unknown": 7
             },
             "libcrypto.so.3": {
-              "samples": 2,
-              "unknown": 2
-            },
-            "libsilproof_native.so": {
-              "samples": 773,
-              "unknown": 773
-            },
-            "libsilproof_process.so": {
-              "samples": 770
-            },
-            "libz.so.1.3": {
               "samples": 1,
               "unknown": 1
             },
+            "libsilproof_native.so": {
+              "samples": 768,
+              "unknown": 768
+            },
+            "libsilproof_process.so": {
+              "samples": 760
+            },
+            "libstdc++.so.6.0.33": {
+              "samples": 1
+            },
             "python3.12": {
-              "samples": 144,
-              "unknown": 78
+              "samples": 114,
+              "unknown": 68
             },
             "sil-run": {
-              "samples": 64
+              "samples": 68
             },
             "silproof_child": {
-              "samples": 203
+              "samples": 202
             }
           }
         },
-        "matching_debug_source_lines": 773,
+        "matching_debug_source_lines": 768,
         "matching_debug_layout": {
-          "samples": 2737,
+          "samples": 2691,
           "leaf_counts": {
-            "silproof_native_spin_even": 385,
-            "silproof_native_spin_odd": 388,
-            "silproof_process_spin": 770,
-            "silproof_child_spin": 203,
-            "silproof_fmu_spin": 758
+            "silproof_native_spin_even": 383,
+            "silproof_native_spin_odd": 385,
+            "silproof_process_spin": 759,
+            "silproof_child_spin": 202,
+            "silproof_fmu_spin": 764
           },
           "dso_coverage": {
             "EgoMotion.so": {
-              "samples": 759
+              "samples": 764
             },
-            "_ctypes.cpython-312-x86_64-linux-gnu.so": {
-              "samples": 1,
-              "unknown": 1
-            },
-            "ld-linux-x86-64.so.2": {
-              "samples": 2,
-              "unknown": 2
+            "_bz2.cpython-312-x86_64-linux-gnu.so": {
+              "samples": 1
             },
             "libc.so.6": {
-              "samples": 18,
-              "unknown": 8
+              "samples": 12,
+              "unknown": 7
             },
             "libcrypto.so.3": {
-              "samples": 2,
-              "unknown": 2
-            },
-            "libsilproof_native.so": {
-              "samples": 773
-            },
-            "libsilproof_process.so": {
-              "samples": 770
-            },
-            "libz.so.1.3": {
               "samples": 1,
               "unknown": 1
             },
+            "libsilproof_native.so": {
+              "samples": 768
+            },
+            "libsilproof_process.so": {
+              "samples": 760
+            },
+            "libstdc++.so.6.0.33": {
+              "samples": 1
+            },
             "python3.12": {
-              "samples": 144,
-              "unknown": 78
+              "samples": 114,
+              "unknown": 68
             },
             "sil-run": {
-              "samples": 64
+              "samples": 68
             },
             "silproof_child": {
-              "samples": 203
+              "samples": 202
             }
           }
         },
         "mismatched_debug_source_lines": 0,
         "mismatched_debug_layout": {
-          "samples": 2737,
+          "samples": 2691,
           "leaf_counts": {
             "silproof_native_spin_even": 0,
             "silproof_native_spin_odd": 0,
-            "silproof_process_spin": 770,
-            "silproof_child_spin": 203,
-            "silproof_fmu_spin": 758
+            "silproof_process_spin": 759,
+            "silproof_child_spin": 202,
+            "silproof_fmu_spin": 764
           },
           "dso_coverage": {
             "EgoMotion.so": {
-              "samples": 759
+              "samples": 764
             },
-            "_ctypes.cpython-312-x86_64-linux-gnu.so": {
-              "samples": 1,
-              "unknown": 1
-            },
-            "ld-linux-x86-64.so.2": {
-              "samples": 2,
-              "unknown": 2
+            "_bz2.cpython-312-x86_64-linux-gnu.so": {
+              "samples": 1
             },
             "libc.so.6": {
-              "samples": 18,
-              "unknown": 8
+              "samples": 12,
+              "unknown": 7
             },
             "libcrypto.so.3": {
-              "samples": 2,
-              "unknown": 2
-            },
-            "libsilproof_native.so": {
-              "samples": 773,
-              "unknown": 773
-            },
-            "libsilproof_process.so": {
-              "samples": 770
-            },
-            "libz.so.1.3": {
               "samples": 1,
               "unknown": 1
             },
+            "libsilproof_native.so": {
+              "samples": 768,
+              "unknown": 768
+            },
+            "libsilproof_process.so": {
+              "samples": 760
+            },
+            "libstdc++.so.6.0.33": {
+              "samples": 1
+            },
             "python3.12": {
-              "samples": 144,
-              "unknown": 78
+              "samples": 114,
+              "unknown": 68
             },
             "sil-run": {
-              "samples": 64
+              "samples": 68
             },
             "silproof_child": {
-              "samples": 203
+              "samples": 202
             }
           }
         },
         "fmu_after_explicit_cache": {
-          "silproof_fmu_spin": 758
+          "silproof_fmu_spin": 764
         },
         "callers": {
           "silproof_native_spin_even": {
+            "samples": 383,
+            "with_caller_outside_module": 383,
+            "with_direct_caller": 383
+          },
+          "silproof_native_spin_odd": {
             "samples": 385,
             "with_caller_outside_module": 385,
             "with_direct_caller": 385
           },
-          "silproof_native_spin_odd": {
-            "samples": 388,
-            "with_caller_outside_module": 388,
-            "with_direct_caller": 388
-          },
           "silproof_process_spin": {
-            "samples": 770,
-            "with_caller_outside_module": 770,
-            "with_direct_caller": 770
+            "samples": 759,
+            "with_caller_outside_module": 759,
+            "with_direct_caller": 759
           },
           "silproof_child_spin": {
-            "samples": 203,
-            "with_caller_outside_module": 203,
-            "with_direct_caller": 203
+            "samples": 202,
+            "with_caller_outside_module": 202,
+            "with_direct_caller": 202
           },
           "silproof_fmu_spin": {
-            "samples": 758,
-            "with_caller_outside_module": 758,
-            "with_direct_caller": 758
+            "samples": 764,
+            "with_caller_outside_module": 764,
+            "with_direct_caller": 764
           }
         },
         "join": {
           "silproof_child_spin": {
-            "inside": 203,
+            "inside": 202,
             "outside": 0,
             "inside_other_function": 0
           },
           "silproof_fmu_spin": {
-            "inside": 758,
+            "inside": 764,
             "outside": 0,
             "inside_other_function": 0
           },
           "silproof_native_spin_even": {
-            "inside": 385,
+            "inside": 383,
             "outside": 0,
             "inside_other_function": 0
           },
           "silproof_native_spin_odd": {
-            "inside": 388,
+            "inside": 385,
             "outside": 0,
             "inside_other_function": 0
           },
           "silproof_process_spin": {
-            "inside": 770,
+            "inside": 759,
             "outside": 0,
             "inside_other_function": 0
           }
         },
         "pids": {
-          "child:7025": 51,
-          "child:7026": 51,
-          "child:7027": 51,
-          "child:7028": 50,
-          "fmu:7022": 856,
-          "native:7021": 840,
-          "process:7024": 838
+          "child:7151": 51,
+          "child:7152": 50,
+          "child:7153": 50,
+          "child:7154": 51,
+          "fmu:7148": 839,
+          "native:7147": 838,
+          "process:7150": 812
         },
         "comms": {
-          "python": 1694,
-          "sil-run": 840,
-          "silproof_child": 203
+          "python": 1651,
+          "sil-run": 838,
+          "silproof_child": 202
         },
         "dwarf": true,
         "buildid_mmap": true
@@ -503,7 +485,7 @@
         "--participant-timeout-ms",
         "60000"
       ],
-      "wall_ns": 2823583478,
+      "wall_ns": 2790656952,
       "returncode": 0,
       "recording_bytes": 28039,
       "leftover_processes": [],
@@ -516,8 +498,8 @@
         "differing": {}
       },
       "perf": {
-        "perf_data_bytes": 247304,
-        "perf_data_sha256": "b4a20091d5a8fee5d991d749cfdd24be8787c1f963b4a98603532e4123d7f26c",
+        "perf_data_bytes": 244280,
+        "perf_data_sha256": "f899948e935fe6acb135312b77f804022ae2031f8109cbff842f9b8f1ece2777",
         "build_ids": {
           "native": {
             "expected": "bcd7e6ac947d4fcecfca3af39c6c952a2e2e72a2",
@@ -540,204 +522,229 @@
           "fmu": {
             "expected": "243704ef884fedb46634fd686ff00c8e2c243ad8",
             "recorded_paths": [
-              "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-fp/.sil-run-hGXqH9/participant-666d75/sil-fmu-2n47get4/binaries/x86_64-linux/EgoMotion.so"
+              "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-fp/.sil-run-kG9CWu/participant-666d75/sil-fmu-evqvrrry/binaries/x86_64-linux/EgoMotion.so"
             ]
           }
         },
         "fmu_mapped_paths": [
-          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-fp/.sil-run-hGXqH9/participant-666d75/sil-fmu-2n47get4/binaries/x86_64-linux/EgoMotion.so"
+          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-fp/.sil-run-kG9CWu/participant-666d75/sil-fmu-evqvrrry/binaries/x86_64-linux/EgoMotion.so"
         ],
         "recorded_layout": {
-          "samples": 2726,
+          "samples": 2704,
           "leaf_counts": {
             "silproof_native_spin_even": 0,
             "silproof_native_spin_odd": 0,
-            "silproof_process_spin": 776,
-            "silproof_child_spin": 202,
-            "silproof_fmu_spin": 762
+            "silproof_process_spin": 773,
+            "silproof_child_spin": 200,
+            "silproof_fmu_spin": 760
           },
           "dso_coverage": {
             "EgoMotion.so": {
-              "samples": 762
+              "samples": 760
             },
             "ld-linux-x86-64.so.2": {
               "samples": 2,
               "unknown": 2
             },
+            "ldconfig.real": {
+              "samples": 1,
+              "unknown": 1
+            },
             "libc.so.6": {
               "samples": 12,
-              "unknown": 10
+              "unknown": 9
+            },
+            "libcrypto.so.3": {
+              "samples": 1,
+              "unknown": 1
             },
             "libsilproof_native.so": {
-              "samples": 776,
-              "unknown": 776
+              "samples": 769,
+              "unknown": 769
             },
             "libsilproof_process.so": {
-              "samples": 776
+              "samples": 773
             },
             "python3.12": {
-              "samples": 132,
+              "samples": 117,
               "unknown": 69
             },
             "sil-run": {
-              "samples": 64
+              "samples": 69
             },
             "silproof_child": {
-              "samples": 202
+              "samples": 200
             }
           }
         },
-        "matching_debug_source_lines": 776,
+        "matching_debug_source_lines": 769,
         "matching_debug_layout": {
-          "samples": 2726,
+          "samples": 2704,
           "leaf_counts": {
-            "silproof_native_spin_even": 389,
-            "silproof_native_spin_odd": 387,
-            "silproof_process_spin": 776,
-            "silproof_child_spin": 202,
-            "silproof_fmu_spin": 762
+            "silproof_native_spin_even": 384,
+            "silproof_native_spin_odd": 384,
+            "silproof_process_spin": 773,
+            "silproof_child_spin": 200,
+            "silproof_fmu_spin": 760
           },
           "dso_coverage": {
             "EgoMotion.so": {
-              "samples": 762
+              "samples": 760
             },
             "ld-linux-x86-64.so.2": {
               "samples": 2,
               "unknown": 2
             },
+            "ldconfig.real": {
+              "samples": 1,
+              "unknown": 1
+            },
             "libc.so.6": {
               "samples": 12,
-              "unknown": 10
+              "unknown": 9
+            },
+            "libcrypto.so.3": {
+              "samples": 1,
+              "unknown": 1
             },
             "libsilproof_native.so": {
-              "samples": 776
+              "samples": 769
             },
             "libsilproof_process.so": {
-              "samples": 776
+              "samples": 773
             },
             "python3.12": {
-              "samples": 132,
+              "samples": 117,
               "unknown": 69
             },
             "sil-run": {
-              "samples": 64
+              "samples": 69
             },
             "silproof_child": {
-              "samples": 202
+              "samples": 200
             }
           }
         },
         "mismatched_debug_source_lines": 0,
         "mismatched_debug_layout": {
-          "samples": 2726,
+          "samples": 2704,
           "leaf_counts": {
             "silproof_native_spin_even": 0,
             "silproof_native_spin_odd": 0,
-            "silproof_process_spin": 776,
-            "silproof_child_spin": 202,
-            "silproof_fmu_spin": 762
+            "silproof_process_spin": 773,
+            "silproof_child_spin": 200,
+            "silproof_fmu_spin": 760
           },
           "dso_coverage": {
             "EgoMotion.so": {
-              "samples": 762
+              "samples": 760
             },
             "ld-linux-x86-64.so.2": {
               "samples": 2,
               "unknown": 2
             },
+            "ldconfig.real": {
+              "samples": 1,
+              "unknown": 1
+            },
             "libc.so.6": {
               "samples": 12,
-              "unknown": 10
+              "unknown": 9
+            },
+            "libcrypto.so.3": {
+              "samples": 1,
+              "unknown": 1
             },
             "libsilproof_native.so": {
-              "samples": 776,
-              "unknown": 776
+              "samples": 769,
+              "unknown": 769
             },
             "libsilproof_process.so": {
-              "samples": 776
+              "samples": 773
             },
             "python3.12": {
-              "samples": 132,
+              "samples": 117,
               "unknown": 69
             },
             "sil-run": {
-              "samples": 64
+              "samples": 69
             },
             "silproof_child": {
-              "samples": 202
+              "samples": 200
             }
           }
         },
         "fmu_after_explicit_cache": {
-          "silproof_fmu_spin": 762
+          "silproof_fmu_spin": 760
         },
         "callers": {
           "silproof_native_spin_even": {
-            "samples": 389,
+            "samples": 384,
             "with_caller_outside_module": 0,
             "with_direct_caller": 0
           },
           "silproof_native_spin_odd": {
-            "samples": 387,
+            "samples": 384,
             "with_caller_outside_module": 0,
             "with_direct_caller": 0
           },
           "silproof_process_spin": {
-            "samples": 776,
-            "with_caller_outside_module": 776,
+            "samples": 773,
+            "with_caller_outside_module": 773,
             "with_direct_caller": 0
           },
           "silproof_child_spin": {
-            "samples": 202,
-            "with_caller_outside_module": 202,
+            "samples": 200,
+            "with_caller_outside_module": 200,
             "with_direct_caller": 0
           },
           "silproof_fmu_spin": {
-            "samples": 762,
+            "samples": 760,
             "with_caller_outside_module": 0,
             "with_direct_caller": 0
           }
         },
         "join": {
           "silproof_child_spin": {
-            "inside": 202,
+            "inside": 200,
             "outside": 0,
             "inside_other_function": 0
           },
           "silproof_fmu_spin": {
-            "inside": 762,
+            "inside": 760,
             "outside": 0,
             "inside_other_function": 0
           },
           "silproof_native_spin_even": {
-            "inside": 389,
+            "inside": 384,
             "outside": 0,
             "inside_other_function": 0
           },
           "silproof_native_spin_odd": {
-            "inside": 387,
+            "inside": 384,
             "outside": 0,
             "inside_other_function": 0
           },
           "silproof_process_spin": {
-            "inside": 776,
+            "inside": 773,
             "outside": 0,
             "inside_other_function": 0
           }
         },
         "pids": {
-          "child:7085": 50,
-          "child:7086": 51,
-          "child:7087": 50,
-          "child:7088": 51,
-          "fmu:7082": 845,
-          "native:7081": 844,
-          "process:7084": 835
+          "child:7213": 50,
+          "child:7214": 50,
+          "child:7215": 50,
+          "child:7216": 50,
+          "fmu:7210": 839,
+          "native:7209": 841,
+          "process:7212": 823
         },
         "comms": {
-          "python": 1680,
-          "sil-run": 844,
-          "silproof_child": 202
+          "python": 1662,
+          "sil-run": 841,
+          "silproof_child": 200,
+          "ldconfig.real": 1
         },
         "dwarf": false,
         "buildid_mmap": false
@@ -756,7 +763,7 @@
         "--participant-timeout-ms",
         "60000"
       ],
-      "wall_ns": 2819388264,
+      "wall_ns": 2754128405,
       "returncode": 0,
       "recording_bytes": 28039,
       "collectors": {
@@ -773,8 +780,8 @@
       },
       "heaptrack": {
         "runner": {
-          "bytes": 360786,
-          "sha256": "e4a62b177fd8581460e2a8a685d2460fb45db0ad362b78a70a1fc509ab5fc736",
+          "bytes": 360702,
+          "sha256": "180a1156bbb0578afa85fe2bedd54914f87417ca42cb3cd3ac0aa8e1d82e5c78",
           "file_version": 3,
           "exe": "sil-run /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/manifest.json -o /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-runner/run.mcap --participant-timeout-ms 60000",
           "modules": [
@@ -823,15 +830,15 @@
             }
           },
           "timestamps": {
-            "count": 280,
+            "count": 273,
             "first_ms": 10,
-            "last_ms": 2816,
-            "distinct": 280,
+            "last_ms": 2751,
+            "distinct": 273,
             "negative": 0,
             "host_time_plausible": true
           },
-          "rss_samples": 280,
-          "run_wall_ms": 2819,
+          "rss_samples": 273,
+          "run_wall_ms": 2754,
           "allocations_by_size": {
             "1024": 1604,
             "2048": 4,
@@ -854,7 +861,7 @@
         "--participant-timeout-ms",
         "60000"
       ],
-      "wall_ns": 2814391550,
+      "wall_ns": 2762692786,
       "returncode": 0,
       "recording_bytes": 28039,
       "collectors": {
@@ -871,8 +878,8 @@
       },
       "heaptrack": {
         "runner": {
-          "bytes": 360560,
-          "sha256": "ef84bf601d47ac9d429f61aef177561bcb67e474f78734564c3f8be5f994f1fd",
+          "bytes": 360500,
+          "sha256": "9f0a86cc3f2957449780ea4b2e8097ec80ee5e9f71e8dd6272094c27cbbd8dbb",
           "file_version": 3,
           "exe": "sil-run /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/manifest.json -o /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-runner-mismatched/run.mcap --participant-timeout-ms 60000",
           "modules": [
@@ -917,15 +924,15 @@
             }
           },
           "timestamps": {
-            "count": 279,
+            "count": 274,
             "first_ms": 10,
-            "last_ms": 2811,
-            "distinct": 279,
+            "last_ms": 2760,
+            "distinct": 274,
             "negative": 0,
             "host_time_plausible": true
           },
-          "rss_samples": 279,
-          "run_wall_ms": 2814,
+          "rss_samples": 274,
+          "run_wall_ms": 2762,
           "allocations_by_size": {
             "1024": 1604,
             "2048": 4,
@@ -945,7 +952,7 @@
         "--participant-timeout-ms",
         "60000"
       ],
-      "wall_ns": 2853721212,
+      "wall_ns": 2809462438,
       "returncode": 0,
       "recording_bytes": 28039,
       "collectors": {
@@ -971,12 +978,12 @@
       },
       "heaptrack": {
         "fmu": {
-          "bytes": 710836,
-          "sha256": "afd3eb01107a3351568d71293cce74df4ddc17537d54e54b7246ce06b088fc8a",
+          "bytes": 710797,
+          "sha256": "5b723a0050d145684734c4233631d405f6bc021d003432139abb6a9ad1182e4c",
           "file_version": 3,
           "exe": "/home/runner/work/_temp/sil/python/bin/python -m sil.fmi /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/EgoMotion.fmu",
           "modules": [
-            "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-fmu/.sil-run-cmXult/participant-666d75/sil-fmu-uk2w1bcq/binaries/x86_64-linux/EgoMotion.so"
+            "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-fmu/.sil-run-YMrCDT/participant-666d75/sil-fmu-rriasg5z/binaries/x86_64-linux/EgoMotion.so"
           ],
           "sites": {
             "silproof_native_alloc_site": {
@@ -1019,15 +1026,15 @@
             }
           },
           "timestamps": {
-            "count": 272,
-            "first_ms": 12,
-            "last_ms": 2747,
-            "distinct": 272,
+            "count": 269,
+            "first_ms": 11,
+            "last_ms": 2703,
+            "distinct": 269,
             "negative": 0,
             "host_time_plausible": true
           },
-          "rss_samples": 272,
-          "run_wall_ms": 2853,
+          "rss_samples": 269,
+          "run_wall_ms": 2809,
           "allocations_by_size": {
             "1024": 237,
             "2048": 36,
@@ -1047,7 +1054,7 @@
         "--participant-timeout-ms",
         "60000"
       ],
-      "wall_ns": 203477309,
+      "wall_ns": 190998334,
       "returncode": 1,
       "recording_bytes": 1069,
       "collectors": {
@@ -1062,7 +1069,7 @@
       },
       "late_interpretation": {},
       "leftover_processes": [],
-      "stderr_tail": "Exception ignored error evaluating path:\nTraceback (most recent call last):\n  File \"<frozen getpath>\", line 490, in <module>\nOSError: [Errno 38] Function not implemented\nFatal Python error: error evaluating path\nPython runtime state: core initialized\n\nCurrent thread 0x00007f611de26780 (most recent call first):\n  <no Python frame>\nsil-run: participant 'process' exited unexpectedly with status 1 during initialization\n",
+      "stderr_tail": "Exception ignored error evaluating path:\nTraceback (most recent call last):\n  File \"<frozen getpath>\", line 490, in <module>\nOSError: [Errno 38] Function not implemented\nFatal Python error: error evaluating path\nPython runtime state: core initialized\n\nCurrent thread 0x00007f7099850780 (most recent call first):\n  <no Python frame>\nsil-run: participant 'process' exited unexpectedly with status 1 during initialization\n",
       "recording": {
         "messages": [
           400,
@@ -1073,8 +1080,8 @@
       },
       "heaptrack": {
         "process": {
-          "bytes": 203026,
-          "sha256": "de0c49433694a7ac5b66135d95d5a7a6e283e1f5fa6c74b790dacd820b86c654",
+          "bytes": 219876,
+          "sha256": "d2e985b1e99ab3d7c536270d563f1f555384d770021afe7979da5b7a4a5265f7",
           "file_version": 3,
           "exe": "/home/runner/work/_temp/sil/python/bin/python /home/runner/work/sil/sil/proofs/profiling/workload/process_adapter.py /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_process.so /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/bin/silproof_child",
           "modules": [],
@@ -1117,15 +1124,15 @@
             }
           },
           "timestamps": {
-            "count": 3606,
-            "first_ms": 18446744073709258669,
-            "last_ms": 18446744073709258669,
+            "count": 4280,
+            "first_ms": 18446744073708963968,
+            "last_ms": 18446744073708963968,
             "distinct": 1,
-            "negative": 3606,
+            "negative": 4280,
             "host_time_plausible": false
           },
-          "rss_samples": 3606,
-          "run_wall_ms": 203,
+          "rss_samples": 4280,
+          "run_wall_ms": 190,
           "allocations_by_size": {
             "1024": 3,
             "2048": 3,
@@ -1145,7 +1152,7 @@
         "--participant-timeout-ms",
         "60000"
       ],
-      "wall_ns": 3234157278,
+      "wall_ns": 2992937851,
       "returncode": 0,
       "recording_bytes": 28039,
       "collectors": {
@@ -1162,7 +1169,7 @@
       },
       "late_interpretation": {
         "fmu": {
-          "raw_bytes": 1030771,
+          "raw_bytes": 994819,
           "interpret_returncode": 0
         }
       },
@@ -1180,8 +1187,8 @@
       },
       "heaptrack": {
         "process": {
-          "bytes": 35792716,
-          "sha256": "cedf80664c6052cec8b163cd646dce94d2c20925f767435186f4206d9ebf6a03",
+          "bytes": 33542701,
+          "sha256": "c58203345a5f35af168f40796a03287e04059c65fb7df43e87c1e8e1568b5abe",
           "file_version": 3,
           "exe": "/home/runner/work/_temp/sil/python/bin/python /home/runner/work/sil/sil/proofs/profiling/workload/process_adapter.py /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/lib/libsilproof_process.so /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/bin/silproof_child",
           "modules": [
@@ -1228,15 +1235,15 @@
             }
           },
           "timestamps": {
-            "count": 1355424,
-            "first_ms": 18446744073709258311,
-            "last_ms": 18446744073709259301,
+            "count": 1268352,
+            "first_ms": 18446744073708963632,
+            "last_ms": 18446744073708964622,
             "distinct": 100,
-            "negative": 1355424,
+            "negative": 1268352,
             "host_time_plausible": false
           },
-          "rss_samples": 1355424,
-          "run_wall_ms": 3234,
+          "rss_samples": 1268352,
+          "run_wall_ms": 2992,
           "allocations_by_size": {
             "1024": 101,
             "2048": 825,
@@ -1245,12 +1252,12 @@
           }
         },
         "fmu_late": {
-          "bytes": 711216,
-          "sha256": "8c2e773c0aeac8f4e5a1f3c78763e05e05256caf1c289caa49226fd105ce3f65",
+          "bytes": 710930,
+          "sha256": "d3100b5371ec1ff54ea940826a854f11c11d88ae442499e69868f8c949778179",
           "file_version": 3,
           "exe": "/home/runner/work/_temp/sil/python/bin/python -m sil.fmi /home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/build/EgoMotion.fmu",
           "modules": [
-            "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-shimmed-process-sleep-immediate/.sil-run-6ft48t/participant-666d75/sil-fmu-mbxlgoj0/binaries/x86_64-linux/EgoMotion.so"
+            "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/heaptrack-shimmed-process-sleep-immediate/.sil-run-uhLAo5/participant-666d75/sil-fmu-3802to4k/binaries/x86_64-linux/EgoMotion.so"
           ],
           "sites": {
             "silproof_native_alloc_site": {
@@ -1291,15 +1298,15 @@
             }
           },
           "timestamps": {
-            "count": 304,
+            "count": 282,
             "first_ms": 10,
-            "last_ms": 3067,
-            "distinct": 304,
+            "last_ms": 2841,
+            "distinct": 282,
             "negative": 0,
             "host_time_plausible": true
           },
-          "rss_samples": 304,
-          "run_wall_ms": 3234,
+          "rss_samples": 282,
+          "run_wall_ms": 2992,
           "allocations_by_size": {
             "1024": 237,
             "2048": 36,
@@ -1336,6 +1343,12 @@
       }
     },
     {
+      "name": "perf_user_dwarf: the backend is available, so its Runs are made",
+      "kind": "check",
+      "passed": true,
+      "detail": "available"
+    },
+    {
       "name": "perf-dwarf: Run exits 0",
       "kind": "check",
       "passed": true,
@@ -1364,37 +1377,37 @@
       "name": "perf-dwarf: samples name silproof_native_spin_even (matching debug file)",
       "kind": "check",
       "passed": true,
-      "detail": 385
+      "detail": 383
     },
     {
       "name": "perf-dwarf: samples name silproof_native_spin_odd (matching debug file)",
       "kind": "check",
       "passed": true,
-      "detail": 388
+      "detail": 385
     },
     {
       "name": "perf-dwarf: samples name silproof_process_spin (matching debug file)",
       "kind": "check",
       "passed": true,
-      "detail": 770
+      "detail": 759
     },
     {
       "name": "perf-dwarf: samples name silproof_child_spin (matching debug file)",
       "kind": "check",
       "passed": true,
-      "detail": 203
+      "detail": 202
     },
     {
       "name": "perf-dwarf: samples name silproof_fmu_spin (matching debug file)",
       "kind": "check",
       "passed": true,
-      "detail": 758
+      "detail": 764
     },
     {
       "name": "perf-dwarf: the matching debug file gives source lines",
       "kind": "check",
       "passed": true,
-      "detail": 773
+      "detail": 768
     },
     {
       "name": "perf-dwarf: a mismatched debug file gives no source line",
@@ -1425,7 +1438,7 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "inside": 203,
+        "inside": 202,
         "outside": 0,
         "inside_other_function": 0
       }
@@ -1435,7 +1448,7 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "inside": 758,
+        "inside": 764,
         "outside": 0,
         "inside_other_function": 0
       }
@@ -1445,7 +1458,7 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "inside": 385,
+        "inside": 383,
         "outside": 0,
         "inside_other_function": 0
       }
@@ -1455,7 +1468,7 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "inside": 388,
+        "inside": 385,
         "outside": 0,
         "inside_other_function": 0
       }
@@ -1465,7 +1478,7 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "inside": 770,
+        "inside": 759,
         "outside": 0,
         "inside_other_function": 0
       }
@@ -1475,13 +1488,13 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "child:7025": 51,
-        "child:7026": 51,
-        "child:7027": 51,
-        "child:7028": 50,
-        "fmu:7022": 856,
-        "native:7021": 840,
-        "process:7024": 838
+        "child:7151": 51,
+        "child:7152": 50,
+        "child:7153": 50,
+        "child:7154": 51,
+        "fmu:7148": 839,
+        "native:7147": 838,
+        "process:7150": 812
       }
     },
     {
@@ -1524,7 +1537,7 @@
       "detail": {
         "expected": "243704ef884fedb46634fd686ff00c8e2c243ad8",
         "recorded_paths": [
-          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-dwarf/.sil-run-YmEbdj/participant-666d75/sil-fmu-ihrk_xi5/binaries/x86_64-linux/EgoMotion.so"
+          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-dwarf/.sil-run-XZioUf/participant-666d75/sil-fmu-9au0khei/binaries/x86_64-linux/EgoMotion.so"
         ]
       }
     },
@@ -1539,7 +1552,7 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "silproof_fmu_spin": 758
+        "silproof_fmu_spin": 764
       }
     },
     {
@@ -1547,9 +1560,9 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "samples": 385,
-        "with_caller_outside_module": 385,
-        "with_direct_caller": 385
+        "samples": 383,
+        "with_caller_outside_module": 383,
+        "with_direct_caller": 383
       }
     },
     {
@@ -1557,9 +1570,9 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "samples": 385,
-        "with_caller_outside_module": 385,
-        "with_direct_caller": 385
+        "samples": 383,
+        "with_caller_outside_module": 383,
+        "with_direct_caller": 383
       }
     },
     {
@@ -1567,9 +1580,9 @@
       "kind": "finding",
       "holds": true,
       "detail": {
-        "samples": 385,
-        "with_caller_outside_module": 385,
-        "with_direct_caller": 385
+        "samples": 383,
+        "with_caller_outside_module": 383,
+        "with_direct_caller": 383
       }
     },
     {
@@ -1577,9 +1590,9 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "samples": 388,
-        "with_caller_outside_module": 388,
-        "with_direct_caller": 388
+        "samples": 385,
+        "with_caller_outside_module": 385,
+        "with_direct_caller": 385
       }
     },
     {
@@ -1587,9 +1600,9 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "samples": 388,
-        "with_caller_outside_module": 388,
-        "with_direct_caller": 388
+        "samples": 385,
+        "with_caller_outside_module": 385,
+        "with_direct_caller": 385
       }
     },
     {
@@ -1597,9 +1610,9 @@
       "kind": "finding",
       "holds": true,
       "detail": {
-        "samples": 388,
-        "with_caller_outside_module": 388,
-        "with_direct_caller": 388
+        "samples": 385,
+        "with_caller_outside_module": 385,
+        "with_direct_caller": 385
       }
     },
     {
@@ -1607,9 +1620,9 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "samples": 770,
-        "with_caller_outside_module": 770,
-        "with_direct_caller": 770
+        "samples": 759,
+        "with_caller_outside_module": 759,
+        "with_direct_caller": 759
       }
     },
     {
@@ -1617,9 +1630,9 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "samples": 770,
-        "with_caller_outside_module": 770,
-        "with_direct_caller": 770
+        "samples": 759,
+        "with_caller_outside_module": 759,
+        "with_direct_caller": 759
       }
     },
     {
@@ -1627,9 +1640,9 @@
       "kind": "finding",
       "holds": true,
       "detail": {
-        "samples": 770,
-        "with_caller_outside_module": 770,
-        "with_direct_caller": 770
+        "samples": 759,
+        "with_caller_outside_module": 759,
+        "with_direct_caller": 759
       }
     },
     {
@@ -1637,9 +1650,9 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "samples": 203,
-        "with_caller_outside_module": 203,
-        "with_direct_caller": 203
+        "samples": 202,
+        "with_caller_outside_module": 202,
+        "with_direct_caller": 202
       }
     },
     {
@@ -1647,9 +1660,9 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "samples": 203,
-        "with_caller_outside_module": 203,
-        "with_direct_caller": 203
+        "samples": 202,
+        "with_caller_outside_module": 202,
+        "with_direct_caller": 202
       }
     },
     {
@@ -1657,9 +1670,9 @@
       "kind": "finding",
       "holds": true,
       "detail": {
-        "samples": 203,
-        "with_caller_outside_module": 203,
-        "with_direct_caller": 203
+        "samples": 202,
+        "with_caller_outside_module": 202,
+        "with_direct_caller": 202
       }
     },
     {
@@ -1667,9 +1680,9 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "samples": 758,
-        "with_caller_outside_module": 758,
-        "with_direct_caller": 758
+        "samples": 764,
+        "with_caller_outside_module": 764,
+        "with_direct_caller": 764
       }
     },
     {
@@ -1677,9 +1690,9 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "samples": 758,
-        "with_caller_outside_module": 758,
-        "with_direct_caller": 758
+        "samples": 764,
+        "with_caller_outside_module": 764,
+        "with_direct_caller": 764
       }
     },
     {
@@ -1687,9 +1700,9 @@
       "kind": "finding",
       "holds": true,
       "detail": {
-        "samples": 758,
-        "with_caller_outside_module": 758,
-        "with_direct_caller": 758
+        "samples": 764,
+        "with_caller_outside_module": 764,
+        "with_direct_caller": 764
       }
     },
     {
@@ -1721,37 +1734,37 @@
       "name": "perf-fp: samples name silproof_native_spin_even (matching debug file)",
       "kind": "check",
       "passed": true,
-      "detail": 389
+      "detail": 384
     },
     {
       "name": "perf-fp: samples name silproof_native_spin_odd (matching debug file)",
       "kind": "check",
       "passed": true,
-      "detail": 387
+      "detail": 384
     },
     {
       "name": "perf-fp: samples name silproof_process_spin (matching debug file)",
       "kind": "check",
       "passed": true,
-      "detail": 776
+      "detail": 773
     },
     {
       "name": "perf-fp: samples name silproof_child_spin (matching debug file)",
       "kind": "check",
       "passed": true,
-      "detail": 202
+      "detail": 200
     },
     {
       "name": "perf-fp: samples name silproof_fmu_spin (matching debug file)",
       "kind": "finding",
       "holds": true,
-      "detail": 762
+      "detail": 760
     },
     {
       "name": "perf-fp: the matching debug file gives source lines",
       "kind": "check",
       "passed": true,
-      "detail": 776
+      "detail": 769
     },
     {
       "name": "perf-fp: a mismatched debug file gives no source line",
@@ -1782,7 +1795,7 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "inside": 202,
+        "inside": 200,
         "outside": 0,
         "inside_other_function": 0
       }
@@ -1792,7 +1805,7 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "inside": 762,
+        "inside": 760,
         "outside": 0,
         "inside_other_function": 0
       }
@@ -1802,7 +1815,7 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "inside": 389,
+        "inside": 384,
         "outside": 0,
         "inside_other_function": 0
       }
@@ -1812,7 +1825,7 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "inside": 387,
+        "inside": 384,
         "outside": 0,
         "inside_other_function": 0
       }
@@ -1822,7 +1835,7 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "inside": 776,
+        "inside": 773,
         "outside": 0,
         "inside_other_function": 0
       }
@@ -1832,13 +1845,13 @@
       "kind": "check",
       "passed": true,
       "detail": {
-        "child:7085": 50,
-        "child:7086": 51,
-        "child:7087": 50,
-        "child:7088": 51,
-        "fmu:7082": 845,
-        "native:7081": 844,
-        "process:7084": 835
+        "child:7213": 50,
+        "child:7214": 50,
+        "child:7215": 50,
+        "child:7216": 50,
+        "fmu:7210": 839,
+        "native:7209": 841,
+        "process:7212": 823
       }
     },
     {
@@ -1881,7 +1894,7 @@
       "detail": {
         "expected": "243704ef884fedb46634fd686ff00c8e2c243ad8",
         "recorded_paths": [
-          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-fp/.sil-run-hGXqH9/participant-666d75/sil-fmu-2n47get4/binaries/x86_64-linux/EgoMotion.so"
+          "/home/runner/work/sil/sil/build/profiling-evidence/native/run-paranoid-2/runs/perf-fp/.sil-run-kG9CWu/participant-666d75/sil-fmu-evqvrrry/binaries/x86_64-linux/EgoMotion.so"
         ]
       }
     },
@@ -1889,14 +1902,14 @@
       "name": "perf-fp: the FMU library resolves after the Run directory is gone, with no explicit capture",
       "kind": "finding",
       "holds": true,
-      "detail": 762
+      "detail": 760
     },
     {
       "name": "perf-fp: the FMU library resolves after an explicit build-ID cache capture",
       "kind": "finding",
       "holds": true,
       "detail": {
-        "silproof_fmu_spin": 762
+        "silproof_fmu_spin": 760
       }
     },
     {
@@ -1904,7 +1917,7 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "samples": 389,
+        "samples": 384,
         "with_caller_outside_module": 0,
         "with_direct_caller": 0
       }
@@ -1914,7 +1927,7 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "samples": 389,
+        "samples": 384,
         "with_caller_outside_module": 0,
         "with_direct_caller": 0
       }
@@ -1924,7 +1937,7 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "samples": 389,
+        "samples": 384,
         "with_caller_outside_module": 0,
         "with_direct_caller": 0
       }
@@ -1934,7 +1947,7 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "samples": 387,
+        "samples": 384,
         "with_caller_outside_module": 0,
         "with_direct_caller": 0
       }
@@ -1944,7 +1957,7 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "samples": 387,
+        "samples": 384,
         "with_caller_outside_module": 0,
         "with_direct_caller": 0
       }
@@ -1954,7 +1967,7 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "samples": 387,
+        "samples": 384,
         "with_caller_outside_module": 0,
         "with_direct_caller": 0
       }
@@ -1964,8 +1977,8 @@
       "kind": "finding",
       "holds": true,
       "detail": {
-        "samples": 776,
-        "with_caller_outside_module": 776,
+        "samples": 773,
+        "with_caller_outside_module": 773,
         "with_direct_caller": 0
       }
     },
@@ -1974,8 +1987,8 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "samples": 776,
-        "with_caller_outside_module": 776,
+        "samples": 773,
+        "with_caller_outside_module": 773,
         "with_direct_caller": 0
       }
     },
@@ -1984,8 +1997,8 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "samples": 776,
-        "with_caller_outside_module": 776,
+        "samples": 773,
+        "with_caller_outside_module": 773,
         "with_direct_caller": 0
       }
     },
@@ -1994,8 +2007,8 @@
       "kind": "finding",
       "holds": true,
       "detail": {
-        "samples": 202,
-        "with_caller_outside_module": 202,
+        "samples": 200,
+        "with_caller_outside_module": 200,
         "with_direct_caller": 0
       }
     },
@@ -2004,8 +2017,8 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "samples": 202,
-        "with_caller_outside_module": 202,
+        "samples": 200,
+        "with_caller_outside_module": 200,
         "with_direct_caller": 0
       }
     },
@@ -2014,8 +2027,8 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "samples": 202,
-        "with_caller_outside_module": 202,
+        "samples": 200,
+        "with_caller_outside_module": 200,
         "with_direct_caller": 0
       }
     },
@@ -2024,7 +2037,7 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "samples": 762,
+        "samples": 760,
         "with_caller_outside_module": 0,
         "with_direct_caller": 0
       }
@@ -2034,7 +2047,7 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "samples": 762,
+        "samples": 760,
         "with_caller_outside_module": 0,
         "with_direct_caller": 0
       }
@@ -2044,10 +2057,16 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "samples": 762,
+        "samples": 760,
         "with_caller_outside_module": 0,
         "with_direct_caller": 0
       }
+    },
+    {
+      "name": "heaptrack_preload: the backend is available, so its Runs are made",
+      "kind": "check",
+      "passed": true,
+      "detail": "available"
     },
     {
       "name": "heaptrack-runner: Run exits 0",
@@ -2130,10 +2149,10 @@
       "kind": "finding",
       "holds": true,
       "detail": {
-        "count": 280,
+        "count": 273,
         "first_ms": 10,
-        "last_ms": 2816,
-        "distinct": 280,
+        "last_ms": 2751,
+        "distinct": 273,
         "negative": 0,
         "host_time_plausible": true
       }
@@ -2285,10 +2304,10 @@
       "kind": "finding",
       "holds": true,
       "detail": {
-        "count": 272,
-        "first_ms": 12,
-        "last_ms": 2747,
-        "distinct": 272,
+        "count": 269,
+        "first_ms": 11,
+        "last_ms": 2703,
+        "distinct": 269,
         "negative": 0,
         "host_time_plausible": true
       }
@@ -2361,11 +2380,11 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "count": 3606,
-        "first_ms": 18446744073709258669,
-        "last_ms": 18446744073709258669,
+        "count": 4280,
+        "first_ms": 18446744073708963968,
+        "last_ms": 18446744073708963968,
         "distinct": 1,
-        "negative": 3606,
+        "negative": 4280,
         "host_time_plausible": false
       }
     },
@@ -2443,11 +2462,11 @@
       "kind": "finding",
       "holds": false,
       "detail": {
-        "count": 1355424,
-        "first_ms": 18446744073709258311,
-        "last_ms": 18446744073709259301,
+        "count": 1268352,
+        "first_ms": 18446744073708963632,
+        "last_ms": 18446744073708964622,
         "distinct": 100,
-        "negative": 1355424,
+        "negative": 1268352,
         "host_time_plausible": false
       }
     },

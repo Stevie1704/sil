@@ -32,14 +32,14 @@
 
 | Run | Exit | Wall ms | Recording bytes | Collector bytes |
 | --- | --- | --- | --- | --- |
-| ordinary | 0 | 2736 | 28039 | None |
-| perf-dwarf | 0 | 3022 | 28039 | 22870760 |
-| perf-fp | 0 | 3018 | 28039 | 264084 |
-| heaptrack-runner | 0 | 2721 | 28039 | runner 358053 |
-| heaptrack-runner-mismatched | 0 | 2742 | 28039 | runner 357884 |
-| heaptrack-fmu | 0 | 2874 | 28039 | fmu 1032568 |
-| heaptrack-shimmed-process | 0 | 5122 | 28039 | process 48566508 |
-| heaptrack-shimmed-process-sleep-immediate | 0 | 4383 | 28039 | process 42893303, fmu_late 1034561 |
+| ordinary | 0 | 2722 | 28039 | None |
+| perf-dwarf | 0 | 3024 | 28039 | 22727272 |
+| perf-fp | 0 | 3021 | 28039 | 262632 |
+| heaptrack-runner | 0 | 2709 | 28039 | runner 358041 |
+| heaptrack-runner-mismatched | 0 | 2713 | 28039 | runner 357848 |
+| heaptrack-fmu | 0 | 2810 | 28039 | fmu 1032466 |
+| heaptrack-shimmed-process | 0 | 4066 | 28039 | process 41318835 |
+| heaptrack-shimmed-process-sleep-immediate | 0 | 5090 | 28039 | process 45956646, fmu_late 1035598 |
 
 ## Checks and findings
 
@@ -48,6 +48,7 @@
 | check | pass | ordinary: Run exits 0 |
 | check | pass | ordinary: no process is left |
 | check | pass | ordinary: one interval per hot call |
+| check | pass | perf_user_dwarf: the backend is available, so its Runs are made |
 | check | pass | perf-dwarf: Run exits 0 |
 | check | pass | perf-dwarf: no process is left |
 | check | pass | perf-dwarf: Recording equals the ordinary Recording |
@@ -126,6 +127,7 @@
 | finding | does not hold | perf-fp: silproof_fmu_spin samples unwind past their module |
 | finding | does not hold | perf-fp: silproof_fmu_spin samples show its source caller fmi3DoStep |
 | finding | does not hold | perf-fp: every silproof_fmu_spin sample shows its source caller |
+| check | pass | heaptrack_preload: the backend is available, so its Runs are made |
 | check | pass | heaptrack-runner: Run exits 0 |
 | check | pass | heaptrack-runner: no process is left |
 | check | pass | heaptrack-runner: Recording equals the ordinary Recording |

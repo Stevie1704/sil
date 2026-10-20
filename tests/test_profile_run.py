@@ -252,6 +252,24 @@ def test_a_recording_that_is_the_manifest_is_a_usage_error(tools, exports,
     assert "is the Manifest" in proc.stderr
 
 
+@pytest.mark.parametrize("alias, other", [
+    ("manifest", "Manifest"), ("rec.mcap", "Recording"),
+    ("rec.mcap.failure.json", "failure report")])
+def test_a_provenance_record_that_aliases_an_input_is_a_usage_error(
+        tools, exports, tmp_path, alias, other):
+    manifest = mixed_period_manifest(tmp_path)
+    alias = str(manifest) if alias == "manifest" else alias
+    before = manifest.read_bytes()
+
+    proc = sil([str(manifest), "--out", "prof", "--collector", "cpu", "-o",
+                "rec.mcap", "--provenance", alias], tools, tmp_path, exports)
+
+    assert proc.returncode == 2
+    assert f"provenance record '{alias}' is also the {other}" in proc.stderr
+    assert not (tmp_path / "prof").exists()
+    assert manifest.read_bytes() == before
+
+
 def test_missing_perf_is_an_actionable_preflight_error(tools, exports,
                                                        tmp_path):
     manifest = mixed_period_manifest(tmp_path)
@@ -371,6 +389,52 @@ def test_an_export_failure_keeps_the_raw_capture(tools, exports, tmp_path):
     assert (tmp_path / "prof" / "cpu" / "perf.data").exists()
     assert "failed to process sample" in (
         tmp_path / "prof" / "cpu" / "perf-script.stderr.txt").read_text()
+
+
+def test_a_samples_file_that_cannot_be_written_fails_the_capture(
+        tools, exports, tmp_path):
+    manifest = mixed_period_manifest(tmp_path)
+    # The write of cpu/samples.json fails as on a full disk.
+    prelude = ("import errno, sys, sil.profile_run as r; w = r.write_new_file\n"
+               "def fail(path, text):\n"
+               "    if path.name == 'samples.json':\n"
+               "        raise OSError(errno.ENOSPC, 'No space left on device')\n"
+               "    w(path, text)\n"
+               "r.write_new_file = fail\n"
+               "from sil.cli import main; sys.exit(main(sys.argv[1:]))")
+    environment = {**os.environ, **exports,
+                   "PATH": os.pathsep.join([str(tools), "/usr/bin:/bin"])}
+
+    proc = subprocess.run(
+        [sys.executable, "-c", prelude, "profile", str(manifest), "--out",
+         "prof", "--collector", "cpu"], capture_output=True, text=True,
+        cwd=tmp_path, env=environment)
+
+    assert proc.returncode == 1, proc.stderr
+    report = profile(tmp_path / "prof")
+    assert report["run"]["status"] == "succeeded"
+    capture = report["capture"]
+    assert (capture["status"], capture["reasons"]) == ("failed",
+                                                       ["export_failed"])
+    assert capture["samples_file"] is None
+    assert capture["unavailable"]["samples_file"] == "export_failed"
+
+
+def test_a_failed_inline_export_is_repeated_without_inlined_frames(
+        tools, exports, tmp_path):
+    manifest = mixed_period_manifest(tmp_path)
+
+    proc = sil([str(manifest), "--out", "prof", "--collector", "cpu"], tools,
+               tmp_path, {**exports, "FAKE_PERF_INLINE_FAIL": "1"})
+
+    assert proc.returncode == 0, proc.stderr
+    capture = profile(tmp_path / "prof")["capture"]
+    assert capture["status"] == "complete"
+    assert capture["totals"]["samples"] == 7
+    assert capture["symbolization"]["inlined_frames"] == {
+        "status": "unavailable", "samples_with_inlined_frames": None,
+        "unavailable": {"samples_with_inlined_frames":
+                        "inlined_frames_failed"}}
 
 
 def test_an_export_above_its_limit_fails_the_capture_not_the_run(

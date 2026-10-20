@@ -47,8 +47,12 @@ def markdown(results: dict) -> str:
             lines.append(_row(name, run["returncode"],
                               run["wall_ns"] // 1_000_000,
                               run["recording_bytes"], collector))
-        lines += ["", "## Checks and findings", "",
-                  _row("Kind", "Result", "Name"), _row("---", "---", "---")]
+        lines += ["", "## Checks and findings", ""]
+        failed = results["failed_checks"]
+        if failed:
+            lines += [f"**Failed checks: {len(failed)}.** The proof does not "
+                      "qualify a backend with a failed check.", ""]
+        lines += [_row("Kind", "Result", "Name"), _row("---", "---", "---")]
         for c in results["checks"]:
             state = ("pass" if c["passed"] else "**FAIL**") \
                 if c["kind"] == "check" else \

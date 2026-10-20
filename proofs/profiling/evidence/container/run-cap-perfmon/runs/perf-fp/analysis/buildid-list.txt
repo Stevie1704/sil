@@ -1,12 +1,9 @@
-31910c27387b1e7203777786863099e05c75d9a0 /opt/sil/native/bin/sil-run
+f8a328eebfb063795781edba104c082e61632c51 /opt/sil/native/bin/sil-run
 7ebc65e52f2bbea498b4040fa92f7238377aaba9 /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
 93ac61ec5a8eb1396f9fbd350e3169a558528a40 /usr/lib/x86_64-linux-gnu/libc.so.6
 09938a49f846d09793d275c5194432cbd91b5ca5 /usr/local/lib/libpython3.13.so.1.0
 66a66c4c9197099f2cc8c874ee3c077b13c4db40 /usr/lib/x86_64-linux-gnu/libcrypto.so.3
-edbf49db4b67508dd65e8c9b4ca451257e6a409c /usr/local/lib/python3.13/lib-dynload/_json.cpython-313-x86_64-linux-gnu.so
-4b5ef0d8f602b880c279f15ed3b07bf6686ea09b /usr/lib/x86_64-linux-gnu/libffi.so.8.1.2
 745df11205d09f5372ea719abf112b3e6866820a /work/evidence/build/lib/libsilproof_native.so
-5c6ffe23118cf1983db1515bdf9f29d596a232c3 /opt/sil/native/lib/libsil_clock_shim.so
 20a5fe19078933a4c8de5909947ec72ee5eec1d5 /work/evidence/build/lib/libsilproof_process.so
 0be80e53e9216cd300c332435dbc2f4be655c48d /work/evidence/build/bin/silproof_child
-                                         /work/evidence/runs/perf-fp/.sil-run-IK65S4/participant-666d75/sil-fmu-fa3u3wni/binaries/x86_64-linux/EgoMotion.so
+                                         /work/evidence/runs/perf-fp/.sil-run-qheMkz/participant-666d75/sil-fmu-57rxw1kr/binaries/x86_64-linux/EgoMotion.so

@@ -62,9 +62,11 @@ MAX_ACTIVATION_BYTES = 64 << 20
 LIMITATIONS = ["cpu_samples_estimate_on_cpu_time", "user_space_only",
                "scope_is_runner_and_descendants", "host_build_only"]
 SCRIPT_FIELDS = ["-F", "comm,pid,tid,time,period,ip,sym,dso", "--ns",
-                 "--no-inline", "--show-task-events", "--show-mmap-events",
+                 "--show-task-events", "--show-mmap-events",
                  "--show-lost-events"]
-SRCLINE_FIELDS = ["-G", "-F", "ip,sym,srcline"]
+# The leaf line pass prints no inlined frame, so it stays one pair of lines
+# per sample.
+SRCLINE_FIELDS = ["-G", "-F", "ip,sym,srcline", "--no-inline"]
 PERMISSION_HINT = (
     "an unprivileged user needs kernel.perf_event_paranoid 2 or less "
     "(now {paranoid}); a container needs CAP_PERFMON (docker run "
@@ -518,64 +520,72 @@ class Export:
     problem: str | None  # export_failed, or None
 
 
+class _PerfPass:
+    """One perf analysis command whose stdout is read line by line, up to
+    `limit` bytes and for at most `timeout` seconds. Above the limit or the
+    time the command is stopped; `problem` then tells why."""
+
+    def __init__(self, perf: Path, arguments: list[str], cache: Path,
+                 cwd: Path, timeout: int, limit: int,
+                 stderr_file: Path | None = None):
+        self._command = _analysis(perf, cache, *arguments)
+        self._cwd = cwd
+        self._timeout = timeout
+        self._limit = limit
+        self._stderr_file = stderr_file
+        self.problem: str | None = "export_failed"  # until the end is read
+
+    def lines(self):
+        with tempfile.TemporaryFile() as errors:
+            try:
+                process = subprocess.Popen(
+                    self._command, stdout=subprocess.PIPE, stderr=errors,
+                    cwd=self._cwd, env=tool_environment())
+            except OSError:
+                return
+            expired = threading.Event()
+
+            def expire() -> None:
+                expired.set()
+                process.kill()
+
+            timer = threading.Timer(self._timeout, expire)
+            timer.start()
+            size, overflow, complete = 0, False, False
+            try:
+                for raw in process.stdout:
+                    size += len(raw)
+                    if size > self._limit:
+                        overflow = True
+                        break
+                    yield raw.decode(errors="replace")
+                complete = not overflow
+            finally:
+                timer.cancel()
+                if not complete and process.poll() is None:
+                    process.kill()
+                process.stdout.close()
+                process.wait()
+                if overflow:
+                    errors.write(f"\n{PROG}: the output is larger than the "
+                                 f"export limit of {self._limit} bytes; it "
+                                 "was stopped\n".encode())
+                if self._stderr_file is not None:
+                    errors.seek(max(0, errors.tell() - STDERR_TAIL_BYTES))
+                    self._stderr_file.write_bytes(errors.read())
+            if expired.is_set():
+                self.problem = "symbolization_timeout"
+            elif complete and process.returncode == 0:
+                self.problem = None
+
+
 def _perf_text(perf: Path, arguments: list[str], cache: Path, cwd: Path,
                timeout: int, limit: int, stderr_file: Path | None = None):
-    """stdout of one perf analysis command, or None with a reason. The
-    output is read up to `limit` bytes; above it the command is stopped, so
-    the export holds a bounded text in memory."""
-    with tempfile.TemporaryFile() as errors:
-        try:
-            process = subprocess.Popen(
-                _analysis(perf, cache, *arguments), stdout=subprocess.PIPE,
-                stderr=errors, cwd=cwd, env=tool_environment())
-        except OSError:
-            return None, "export_failed"
-        reader = _BoundedRead(process, limit)
-        reader.start()
-        try:
-            process.wait(timeout=timeout)
-            problem = None
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait()
-            problem = "symbolization_timeout"
-        reader.join()
-        if reader.overflow:
-            errors.write(f"\n{PROG}: the output is larger than the export "
-                         f"limit of {limit} bytes; it was stopped\n".encode())
-        if stderr_file is not None:
-            errors.seek(max(0, errors.tell() - STDERR_TAIL_BYTES))
-            stderr_file.write_bytes(errors.read())
-    if problem is not None:
-        return None, problem
-    if reader.overflow or process.returncode != 0:
-        return None, "export_failed"
-    return b"".join(reader.chunks).decode(errors="replace"), None
-
-
-class _BoundedRead(threading.Thread):
-    """Reads a process's stdout up to a limit; at the limit it stops the
-    process and drops the rest."""
-
-    def __init__(self, process: subprocess.Popen, limit: int):
-        super().__init__(daemon=True)
-        self._process = process
-        self._limit = limit
-        self.chunks: list[bytes] = []
-        self.overflow = False
-
-    def run(self) -> None:
-        size = 0
-        stream = self._process.stdout
-        for chunk in iter(lambda: stream.read(1 << 16), b""):
-            size += len(chunk)
-            if size > self._limit:
-                self.overflow = True
-                self.chunks.clear()
-                self._process.kill()
-                break
-            self.chunks.append(chunk)
-        stream.close()
+    """stdout of one perf analysis command, or None with a reason."""
+    analysis = _PerfPass(perf, arguments, cache, cwd, timeout, limit,
+                         stderr_file)
+    text = "".join(analysis.lines())
+    return (None, analysis.problem) if analysis.problem else (text, None)
 
 
 def _add_to_cache(perf: Path, copy: Path, cache: Path, cwd: Path,
@@ -661,26 +671,38 @@ def export(perf: Path, request: CpuRequest, layout: Layout,
                                          None)
     stats, _ = _perf_text(perf, ["report", *data, "--stats"], layout.cache,
                           cwd, timeout, limit)
-    script, problem = _perf_text(perf, ["script", *data, *SCRIPT_FIELDS],
-                                 layout.cache, cwd, timeout, limit,
-                                 layout.cpu / "perf-script.stderr.txt")
     srclines, srcline_problem = _perf_text(
         perf, ["script", *data, *SRCLINE_FIELDS], layout.cache, cwd, timeout,
         limit, layout.cpu / "perf-srcline.stderr.txt")
-    if script is None:
+    def normalized(inline: str, inlined_problem: str | None):
+        # The sample pass is the large one: it is normalized as it comes,
+        # so its text is never held in memory.
+        script = _PerfPass(perf, ["script", *data, *SCRIPT_FIELDS, inline],
+                           layout.cache, cwd, timeout, limit,
+                           layout.cpu / "perf-script.stderr.txt")
+        analysis = normalize_cpu(
+            script.lines(), srclines=srclines, facts=facts,
+            lost_sample_records=_lost_sample_records(stats),
+            srcline_problem=srcline_problem, build_ids=build_ids,
+            inlined_problem=inlined_problem)
+        return analysis, script.problem
+
+    analysis, problem = normalized("--inline", None)
+    if problem == "export_failed":
+        # perf 6.1 can end with SIGPIPE from its addr2line helper when it
+        # resolves inlined functions. Without them the export can work.
+        analysis, problem = normalized("--no-inline", "inlined_frames_failed")
+    if problem is not None:
         return Export(None, "export_failed")
-    analysis = normalize_cpu(script, srclines=srclines, facts=facts,
-                             lost_sample_records=_lost_sample_records(stats),
-                             srcline_problem=srcline_problem,
-                             build_ids=build_ids)
-    return Export(analysis, problem)
+    return Export(analysis, None)
 
 
 # --- the report -------------------------------------------------------------
 
 
 def capture_status(run: dict, capture_run: CaptureRun, layout: Layout,
-                   exported: Export | None) -> tuple[str, list[str]]:
+                   exported: Export | None,
+                   samples_file: str | None) -> tuple[str, list[str]]:
     if run["status"] == "not_started":
         return "not_started", ["run_not_started"]
     reasons = []
@@ -690,7 +712,9 @@ def capture_status(run: dict, capture_run: CaptureRun, layout: Layout,
             capture_run.supervisor_signal is None
             and capture_run.perf_status != expected):
         reasons.append("backend_failed")
-    if exported is None or exported.problem is not None:
+    if exported is None or exported.problem is not None or (
+            exported.analysis is not None and samples_file is None):
+        # A capture without its samples file has lost its sample rows.
         reasons.append("export_failed")
     if capture_run.supervisor_signal is not None:
         reasons.append("interrupted")
@@ -726,7 +750,7 @@ def _empty_analysis(reason: str) -> dict:
             "source_lines": {"status": "unavailable", "scope": "leaf_frames",
                              "samples_with_line": None,
                              "unavailable": {"samples_with_line": reason}},
-            "inlined_frames": {"status": "not_requested"}},
+            "inlined_frames": {"status": "unavailable"}},
         "processes": [], "threads": [], "modules": [],
         "hotspots": {"limit": HOTSPOT_LIMIT, "self": [], "inclusive": [],
                      "self_remainder": {"samples": 0, "weight_ns": 0}},
@@ -753,7 +777,8 @@ def build_report(request: CpuRequest, layout: Layout, cwd: Path,
                  capture_run: CaptureRun, exported: Export | None,
                  version: str, samples_file: str | None) -> dict:
     run = run_record(capture_run)
-    status, reasons = capture_status(run, capture_run, layout, exported)
+    status, reasons = capture_status(run, capture_run, layout, exported,
+                                     samples_file)
     if exported is not None and exported.analysis is not None:
         members = _analysis_members(exported.analysis, samples_file,
                                     "export_failed")

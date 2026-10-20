@@ -113,9 +113,10 @@ Run, retry, change the collector or the event, or change a host setting.
    with `--modules-from`. Without a copy, the samples of a module keep its
    path, build ID and module offsets, and have no function name.
 5. **Export.** `perf script` writes the samples and the task, mmap and lost
-   events (`-F comm,pid,tid,time,period,ip,sym,dso --ns --no-inline
+   events (`-F comm,pid,tid,time,period,ip,sym,dso --ns --inline
    --show-task-events --show-mmap-events --show-lost-events`). A second
-   pass gives the source line of each leaf frame (`-G -F ip,sym,srcline`). The analysis commands use
+   pass gives the source line of each leaf frame
+   (`-G -F ip,sym,srcline --no-inline`). The analysis commands use
    `perf --buildid-dir DIR/cpu/buildid-cache` and run without
    `DEBUGINFOD_URLS`, so no symbol is fetched from the network. Each pass
    runs alone (no parallel symbolization), for at most
@@ -123,13 +124,19 @@ Run, retry, change the collector or the event, or change a host setting.
    limit: twice `--max-capture-bytes`. Above that limit the pass is
    stopped. For the sample pass that is `export_failed` (no
    `samples.json`; `perf.data` stays); for the source-line pass, the
-   samples have no source lines. The command holds this text and its
-   normalized form in memory.
+   samples have no source lines. The command reads the sample pass line
+   by line into its normalized form, so it does not keep that text. It
+   keeps the text of the source-line pass, and the normalized form, in
+   memory.
 6. **Join.** With `--activations`, it joins the observation stream with
    the samples (below) and writes `activation/correlation.json`.
 7. **Publish.** It writes `cpu/samples.json`. It writes `profile.json`
    through a temporary sibling and a hard link. Thus a reader never sees a
-   partial summary, and nothing is replaced. It prints a summary on stdout.
+   partial summary, and nothing is replaced. It prints a summary on stdout:
+   the statuses, the identities, the scope and method, the coverage and
+   loss, the limitations, and then the top 10 rows with the remainder. A
+   control character in a report value is printed as its escape
+   (`\x1b`), so a name cannot change the terminal.
 
 SIGINT, SIGTERM and SIGHUP go to the whole session. The runner records the
 interruption and cleans up as without a profiler. perf stops sampling and
@@ -236,9 +243,10 @@ Reasons in v1, in addition to the diagnostics reasons:
 | `module_unavailable` | No file with the recorded build ID was available |
 | `debug_file_mismatched` | A debug file was found with another build ID; it is not used |
 | `debug_file_not_found` | No debug file with the module's build ID was found |
-| `unverifiable_debug_file` | The module has no build ID, so a separate debug file cannot be matched |
+| `unverifiable_debug_file` | The module has no recorded build ID, so no debug data can be matched to it |
 | `symbolization_timeout` | A `perf script` pass took longer than the limit |
-| `export_failed` | A `perf script` pass failed, its output did not decode, or it was larger than the export limit |
+| `inlined_frames_failed` | `perf script --inline` failed (perf 6.1 can end on its `addr2line` helper). The sample pass ran again with `--no-inline`, so an inlined function is part of its caller's frame |
+| `export_failed` | A `perf script` pass failed, its output did not decode, or it was larger than the export limit. Or `cpu/samples.json` could not be written |
 | `no_samples` | The capture has no sample to describe |
 | `not_requested` | The option or collector was not requested |
 | `reserved` | Reserved for a later ticket; not measured by this version |
@@ -307,7 +315,7 @@ execute the runner, or perf could not start its workload.
 | `symbolization` | Below |
 | `processes`, `threads`, `modules` | Below |
 | `hotspots` | Below |
-| `samples_file` | `cpu/samples.json`, or null |
+| `samples_file` | `cpu/samples.json`, or null. A `complete` or `partial` capture always has the file. When the file cannot be written, the capture is `failed` with `export_failed` |
 | `unavailable` | Reasons for null members |
 
 **Weights.** Each sample has the weight `period`: the `cpu-clock` time in
@@ -322,7 +330,7 @@ have no samples.
 | --- | --- |
 | `samples`, `weight_ns` | All samples and the sum of their weights: the denominators of every share |
 | `samples_unknown_module`, `samples_unknown_symbol` | Samples whose leaf frame has no module, or a module and no function name |
-| `samples_with_caller` | Samples with at least two frames: the unwinder found a caller |
+| `samples_with_caller` | Samples with at least two physical frames: the unwinder found a caller |
 | `lost_samples` | Samples that perf reports lost (`PERF_RECORD_LOST`, `PERF_RECORD_LOST_SAMPLES`); null when a lost record has no count |
 | `lost_records` | The number of lost records |
 
@@ -333,7 +341,14 @@ have no samples.
 | `function_names` | `samples_with_name`: leaf frames with a function name |
 | `call_frame_unwinding` | `method` (`dwarf`), `samples_with_caller` |
 | `source_lines` | `status` (`available`, `partial`, `unavailable`), `scope` (`leaf_frames`), `samples_with_line` (null for `unavailable`), `unavailable` |
-| `inlined_frames` | `status` `not_requested`: the export uses `--no-inline`, so an inlined function is part of its caller's frame and no sample counts twice |
+| `inlined_frames` | `status` `available`: the export uses `--inline`. `samples_with_inlined_frames` counts the samples with at least one inlined frame. `unavailable` with `inlined_frames_failed` when the inline export failed and the samples come from a `--no-inline` export. `unavailable` when there is no export. A version 1 report of an earlier version can have `not_requested` |
+
+An inlined function is its own frame: it has the address and the module of
+its physical frame and the mark `inlined`. In a stack, the inlined frames
+come before their physical frame, innermost first. perf can mark every function of an address as inlined; then the module is the one mapped at that address. A `self` row gives the
+sample to the innermost frame. An `inclusive` row counts a function once per
+sample. So no total counts a sample twice. `samples_with_caller` counts
+addresses only: an inlined function is not a caller.
 
 Function names and DWARF call frames are separate capabilities. A module
 can unwind and have no names (a stripped library). A module can also have
@@ -347,7 +362,7 @@ A `processes` row:
 | `parent` | Identity of the parent, or null when the parent is outside the capture |
 | `role` | `launcher` (perf's workload), `runner` (the launcher's child), `descendant` |
 | `commands` | The command names (`comm`, at most 15 bytes each) in order; an `exec` adds one |
-| `execs` | Number of `exec` events |
+| `execs` | Number of `exec` events. An `exec` keeps the process identity and its Activation mapping |
 | `start_offset_ns`, `end_offset_ns` | First and last record of the process, relative to `time_origin_ns` |
 | `forked`, `exited` | Whether the capture has the fork and the exit event |
 | `samples`, `weight_ns` | Samples of all its threads |
@@ -366,8 +381,8 @@ A `modules` row:
 | --- | --- |
 | `id`, `path` | Identity and the path perf recorded |
 | `build_id` | GNU build ID (hexadecimal), or null |
-| `material` | `host_file`: the file at `path` has the build ID. `captured_run_directory` or `captured_modules_from`: `cpu/buildid-cache` has a copy with the build ID. The copy is from the retained Run working directory or from a `--modules-from` source. `unavailable`: no file with the build ID. |
-| `debug` | `status` (`embedded`, `separate_matching`, `separate_mismatched`, `not_found`, `unverifiable`, `module_unavailable`) and `path` of the matching debug file or null |
+| `material` | `host_file`: the file at `path` has the build ID. Without a recorded build ID, it is the file at `path`, and nothing verifies that it is the module that ran. `captured_run_directory` or `captured_modules_from`: `cpu/buildid-cache` has a copy with the build ID. The copy is from the retained Run working directory or from a `--modules-from` source. `unavailable`: no file with the build ID. |
+| `debug` | `status` (`embedded`, `separate_matching`, `separate_mismatched`, `not_found`, `unverifiable`, `module_unavailable`) and `path` of the matching debug file or null. A module without a recorded build ID is always `unverifiable`: its debug data gives no source line |
 | `mappings` | Executable mappings: `{process, start, size, file_offset}`, addresses as hexadecimal strings |
 | `samples_leaf`, `samples_unknown_symbol` | Leaf-frame samples in the module, and those without a function name |
 | `unavailable` | Reasons for null members |
@@ -398,7 +413,7 @@ add up.
 | --- | --- |
 | `kind` | `heap` |
 | `status` | `complete`, `partial`, `interrupted`, `failed`, `not_started`, `unavailable` |
-| `reasons` | Subset of `capture_limit_reached`, `storage_reserve_reached`, `data_truncated`, `data_may_be_incomplete`, `interrupted`, `backend_failed`, `export_failed`, `no_data`, `run_not_started`, `unsupported_scope`, `reserved` |
+| `reasons` | Subset of `capture_limit_reached`, `storage_reserve_reached`, `data_truncated`, `data_may_be_incomplete`, `interrupted`, `backend_failed`, `export_failed`, `no_data`, `run_not_started`, `unsupported_scope`, `reserved`. This version never writes `unsupported_scope` or `reserved`; they are valid in documents of other versions |
 | `backend` | `name` (`heaptrack`), `version` (`heaptrack --version`, or null), `preload` and `interpreter` (the paths used), `interpreter_exit_code` (null when the command stopped it) |
 | `scope` | `kind` `runner`; or `kind` `process_participant` with `participant`; or `kind` `unsupported` with `requested` and `reason` |
 | `launch` | `method` (`preload_exec_adapter`), `adapter` (`heap/launch-adapter.sh`), `wrapped` (`runner` or `process_participant`) |
@@ -425,7 +440,7 @@ Heap reasons:
 | `data_truncated` | The last record of the data is cut, or the data file could not be written (a full disk). The rest of the data is dropped, and the Run goes on. |
 | `data_may_be_incomplete` | Heaptrack writes its last data at normal process exit. The runner ended by a signal (runner scope), or the Run did not succeed and the runner stopped the participant (Process scope) |
 | `backend_failed` | The interpreter failed, or did not end within its time limit |
-| `export_failed` | The data is not Heaptrack's interpreted file version 3, or its stacks do not resolve |
+| `export_failed` | The data is not Heaptrack's interpreted file version 3, a record is malformed, or its stacks do not resolve. Or `heap/allocations.json` could not be written |
 | `no_data` | Heaptrack wrote no data: the scope process did not start |
 
 `analysis`:
@@ -435,10 +450,10 @@ Heap reasons:
 | `file_version` | 3 |
 | `heaptrack_version` | The version in the data file, for example `1.5.0` |
 | `traced_executable` | The command line that Heaptrack recorded for the traced process; it shows which process the data is from |
-| `allocations_file` | `heap/allocations.json`, or null |
+| `allocations_file` | `heap/allocations.json`, or null. A `complete` or `partial` capture always has the file |
 | `totals` | Below |
 | `coverage` | `allocations_unknown_module`, `allocations_unknown_symbol` (the innermost frame has a module and no function name), `allocations_with_caller` (two or more frames), `undecodable_records`, `truncated` |
-| `modules` | `id`, `path`, `build_id` (or null), `allocations_leaf` (allocations whose innermost frame is in the module), `allocations_unknown_symbol`, `unavailable` |
+| `modules` | `id`, `path`, `build_id` (or null), `debug`, `allocations_leaf` (allocations whose innermost frame is in the module), `allocations_unknown_symbol`, `unavailable`. `debug` is null with `not_reported_by_backend`: Heaptrack does not report which debug file it used. A report of an earlier version can omit `debug` |
 | `hotspots` | `limit` (50), `self`, `self_remainder`, `inclusive` (below) |
 
 A `hotspots` row: `module` (identity or null), `symbol` (or null),
@@ -697,7 +712,7 @@ class:
 
 | Class | Sample | Meaning |
 | --- | --- | --- |
-| `execution_context` | runner thread, inside a Native activation or a Process Step | The code ran in that Activation, inclusive: routing and Recording work that the Task called is part of it. For a Process Step it is the runner's side of the Step exchange. |
+| `execution_context` | runner thread, inside a Native activation or a Process Step | The code ran in that Activation, inclusive: routing and Recording work that the Task called is part of it. For a Process Step it is the runner's own side of the Step exchange, inclusive. It is never the work of the participant's process. |
 | `window_associated` | a Process participant's process tree, inside one of its Steps | It ran while the runner waited for that Step. It is not proven to be the Step's own work. |
 | `lifecycle` | runner thread, in a lifecycle phase, outside every Activation | Preflight, setup, Slot scheduling, shutdown, Recording close. |
 | `replay` | runner thread, in a Replay publication Slot | Replay work, not a Task. |
@@ -712,7 +727,7 @@ Unattributed reasons:
 | `runner_outside_intervals` | The runner thread before the first phase or after the last phase |
 | `unmapped_process` | A descendant of the runner that is not in the process tree of a mapped participant |
 | `launcher` | The launcher process |
-| `observations_incomplete` | A sample of the runner thread or a Run descendant at or after the last kept record of a cut stream |
+| `observations_incomplete` | A sample of the runner thread or a Run descendant at or after the last kept record of a cut stream. Or, in a cut stream, a runner-thread sample outside every kept interval: the runner writes a record at its end, so a dropped interval can begin earlier |
 
 No identity comes from a symbol: a Native library that two Participants
 share is told apart by the runner's interval only. An FMU group is one
@@ -872,8 +887,11 @@ order:
    Zero samples is stated as no evidence of zero CPU use.
 4. **Limitations.** The `limitations` of the report, as text.
 5. **Results.** CPU:
-   - functions by self and by inclusive weight: the top 50 of
-     `profile.json`, with the remainder and the total in the table footer;
+   - functions by self weight: the top 50 of `profile.json`, with the
+     remainder and the total in the table footer;
+   - functions by inclusive weight: the top 50, and the number of
+     functions that are not listed. Inclusive rows overlap, so this table
+     has no remainder row and no total;
    - the top-down caller tree of `cpu/samples.json`;
    - the Activation evidence: samples by class, unattributed reasons,
      Tasks, lifecycle phases, participant-to-process mapping, the
@@ -886,7 +904,9 @@ order:
    - allocation sites by bytes, churn (temporary allocations) and
      retention (outstanding bytes at capture end), each the top 25 with
      the remainder and the total;
-   - sites by inclusive bytes, the allocation caller tree and the modules.
+   - sites by inclusive bytes, with the number of functions that are not
+     listed and no remainder row (the rows overlap);
+   - the allocation caller tree and the modules.
 
 Bounds: the caller tree shows a node only with at least 0.5% of the weight
 of the tree. It shows at most 20 children per node, 64 levels and 1500
@@ -933,7 +953,7 @@ value becomes a URL. "Download JSON" saves `profile.json` byte for byte.
 | Member | Content |
 | --- | --- |
 | `time_origin_ns` | As in `profile.json` |
-| `frames` | List of `{module, symbol, address, module_offset, source}`; `module_offset` is the file offset (`address - start + file_offset`), `source` is `{file, line}` or null |
+| `frames` | List of `{module, symbol, address, module_offset, source}`; `module_offset` is the file offset (`address - start + file_offset`), `source` is `{file, line}` or null. An inlined frame also has `inlined` true |
 | `stacks` | List of frame index lists, leaf first |
 | `samples` | List of `[offset_ns, process, thread, weight_ns, stack]` in capture order |
 

@@ -53,6 +53,9 @@ REASONS = {
     "unverifiable_debug_file":
         "The module has no build ID, so no debug file can be matched",
     "symbolization_timeout": "A perf script pass took longer than its limit",
+    "inlined_frames_failed":
+        "perf script --inline failed; the samples come from an export "
+        "without inlined frames",
     "export_failed": "An export failed or its output did not decode",
     "no_samples": "The capture has no sample to describe",
     "not_requested": "Not requested",
@@ -367,3 +370,17 @@ def render_tree(root: _Node, label: Callable[[int], Html],
     return tag("ul", tag("li", tag("details", tag("summary", join([
         tag("strong", "All"), " ", numbers(root)])), tag("ul", *children(
             root, 0)), open=True)), class_="tree", role="list")
+
+
+def unlisted_note(document: dict | None, listed: int) -> str:
+    """The note under an inclusive ranking: how many functions of the
+    normalized file it does not list. Inclusive rows overlap, so the rows
+    that are not listed have no remainder row."""
+    if document is None:
+        count = "The other functions are not listed"
+    else:
+        functions = {(f["module"], f["symbol"]) for f in document["frames"]}
+        count = (f"{max(0, len(functions) - listed)} other functions are "
+                 "not listed")
+    return (f"{count}. Inclusive values overlap, so there is no remainder "
+            "row and no total.")

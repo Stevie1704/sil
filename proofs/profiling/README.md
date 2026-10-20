@@ -41,9 +41,23 @@ artifact. [`retain.py`](retain.py) copies the retained part into
 To repeat it: push a change under `proofs/profiling/` in a pull request, or
 start the workflow on a branch where it exists. Locally, on an x86-64 Linux
 host with Docker: `container.sh image DIR`, then
-`container.sh run DIR NAME --cap-add PERFMON`. Natively:
-`native-setup.sh PREFIX`, put `PREFIX/python/bin` and `PREFIX/native/bin` on
-`PATH`, then `python proof.py run DIR`. No other setup is necessary.
+`container.sh run DIR NAME --cap-add PERFMON`. This needs no host change.
+Natively:
+
+1. Run `native-setup.sh PREFIX`.
+2. Run `sudo sysctl -w kernel.perf_event_paranoid=2`. An unprivileged user
+   needs 2 or less for perf; Ubuntu sets 4.
+3. Put `PREFIX/python/bin` and `PREFIX/native/bin` on `PATH`.
+4. Run `python proof.py run DIR`.
+
+At a paranoid value above 2, the perf probe is not available. Then the
+proof fails: a backend that cannot run is a failed check.
+
+The native setup pins Heaptrack to an Ubuntu archive version
+(`1.5.0+dfsg1-2ubuntu3`). When the archive drops that version, the setup
+fails; set `SIL_PROFILING_HEAPTRACK_VERSION` to the new version. Native perf
+comes from `linux-tools-$(uname -r)`, so its version follows the runner
+kernel. `results.json` records both versions of each run.
 
 ## The workload
 
@@ -99,13 +113,21 @@ the driver interprets after the Run.
 [`proof.py`](proof.py) exits 1 when a check fails. A **finding** is
 recorded with its result and does not fail. No check uses a timing, a sample
 percentage, an RSS value or an overhead threshold. A presence check needs at
-least one sample; each hot function got 200 or more in each proof.
+least one sample. In `perf-dwarf`, each hot function got 200 or more
+samples in each proof. In the container `perf-fp` Run, `silproof_fmu_spin`
+got none: perf 6.1 without `--buildid-mmap` cannot resolve the removed FMU
+library (see "Module identity").
+
+A backend whose probe is not available fails the proof: the check
+"the backend is available, so its Runs are made" fails, and its Runs are
+skipped. Thus a skipped backend is never reported as qualified.
 
 Both proofs (native and container) passed every check in the retained run.
 The full lists are in `evidence/*/run-*/results.md`.
 
 | Check | perf-dwarf | heaptrack |
 | --- | --- | --- |
+| the probe found the backend available, so its Runs were made | yes | yes |
 | Run exits 0, no process is left, Recording equals the ordinary Recording | yes | yes (runner, FMU scope) |
 | each known function or site is in the evidence | 5 of 5 hot functions | exact calls and size for each site |
 | matching separate debug file gives names (perf: and source lines) | yes | yes |
@@ -198,9 +220,15 @@ Process Step must come from the runner, not from the participant.
 
 **Heaptrack timestamps.** Heaptrack writes milliseconds since its tracker
 started, every 10 ms, with no absolute time. They cannot be joined to host
-Activation intervals with a validated mapping. In a shimmed participant they
-are Virtual time minus a host start time, so they are negative (an unsigned
-value above 2^63) and have one value per Step.
+Activation intervals with a validated mapping. The proof checks only a
+plausibility bound: no timestamp is negative, none decreases, and none is
+after the Run's wall time. The finding "the Heaptrack timestamps can be host time" holds for the
+runner and the FMU scope, in both environments. A plausibility bound does
+not validate a mapping: it does not give the tracker's start in host time,
+so a timestamp cannot be put inside an Activation interval. In a shimmed
+participant the finding does not hold. There the timestamps are Virtual
+time minus a host start time, so they are negative (an unsigned value
+above 2^63) and have one value per Step.
 
 **Heaptrack in a shimmed Process participant.** Four findings:
 
@@ -211,9 +239,9 @@ value above 2^63) and have one value per Step.
    `ENOSYS` that the shim's `reject` policy gives a sleep call, and
    Heaptrack's own threads sleep. The proof does not show the exact call.
 2. Heaptrack's timer thread sleeps 10 ms between records. The shim returns
-   at once, so the thread runs without a stop. It wrote 1.4 to 1.8 million
-   timestamp records (36 to 49 MB) in a 1 s Run, against about 280
-   (0.4 MB) for the runner scope.
+   at once, so the thread runs without a stop. It wrote 1.3 to 1.7 million
+   timestamp records (34 to 46 MB) in a 1 s Run, against about 270
+   (0.36 MB) for the runner scope.
 3. Heaptrack removes `LD_PRELOAD` from its process environment. The
    participant's children then start without the Clock shim, and the
    child's clock reading in the Recording changes.
@@ -231,13 +259,13 @@ prediction for another host.
 
 | Run | container wall ms | native wall ms | capture bytes |
 | --- | --- | --- | --- |
-| ordinary | 2736 | 2791 | Recording 28039 |
-| perf-dwarf | 3022 | 2838 | perf.data 22.9 MB (container), 23.2 MB (native) |
-| perf-fp | 3018 | 2823 | perf.data 0.26 MB, 0.25 MB |
-| heaptrack-runner | 2721 | 2819 | 0.36 MB |
-| heaptrack-fmu | 2874 | 2853 | 1.0 MB, 0.7 MB |
-| heaptrack-shimmed-process | 5122 | 203 (failed) | 48.6 MB, 0.2 MB |
-| heaptrack-shimmed-process-sleep-immediate | 4383 | 3234 | 42.9 MB, 35.8 MB |
+| ordinary | 2722 | 2744 | Recording 28039 |
+| perf-dwarf | 3024 | 2780 | perf.data 22.7 MB (container), 22.8 MB (native) |
+| perf-fp | 3021 | 2790 | perf.data 0.26 MB, 0.24 MB |
+| heaptrack-runner | 2709 | 2754 | 0.36 MB |
+| heaptrack-fmu | 2810 | 2809 | 1.0 MB, 0.7 MB |
+| heaptrack-shimmed-process | 4066 | 190 (failed) | 41.3 MB, 0.2 MB |
+| heaptrack-shimmed-process-sleep-immediate | 5090 | 2992 | 46.0 MB, 33.5 MB |
 
 perf with DWARF writes about 8.5 KB per sample: at 999 Hz that is about
 8.5 MB per second for each busy thread. A production capture needs a
@@ -281,8 +309,8 @@ The spec must decide these before #315 and #317 start:
 ## Evidence
 
 [`evidence/`](evidence/) holds the retained output of workflow run
-[39219821315](https://github.com/Stevie1704/sil/actions/runs/39219821315)
-at commit `4e0e651`:
+[39389165972](https://github.com/Stevie1704/sil/actions/runs/39389165972)
+at commit `c26bd9b`:
 
 | Path | Content |
 | --- | --- |

@@ -137,9 +137,13 @@ def test_modules_carry_path_build_id_and_leaf_counts():
     assert native["build_id"] == "abcd01"
     assert (native["allocations_leaf"],
             native["allocations_unknown_symbol"]) == (7, 1)
+    # Heaptrack does not report which debug file it used, if any.
+    assert native["debug"] is None
+    assert native["unavailable"] == {"debug": "not_reported_by_backend"}
     app = modules["/w/sil-run"]
     assert app["build_id"] is None
-    assert app["unavailable"] == {"build_id": "module_unavailable"}
+    assert app["unavailable"] == {"build_id": "module_unavailable",
+                                  "debug": "not_reported_by_backend"}
     assert app["allocations_leaf"] == 0
     coverage = record["coverage"]
     assert (coverage["allocations_unknown_module"],
@@ -212,6 +216,23 @@ def test_an_unknown_allocation_index_is_counted_not_trusted():
     assert record["coverage"]["undecodable_records"] == 2
     assert record["totals"]["frees"] == 6
     assert record["totals"]["outstanding_bytes"] == 65544
+
+
+def test_a_string_cut_by_the_end_of_the_data_is_a_truncation():
+    # The string of 5 bytes would need 3 more bytes and its newline.
+    record = analysis(DATA + "s 5 xy\n").record
+
+    assert record["coverage"]["truncated"] is True
+    assert record["totals"]["allocations"] == 8
+
+
+@pytest.mark.parametrize("bad", ["s 2 abc", "s zz abc", "s 3abc"])
+def test_a_malformed_string_record_does_not_decode(bad):
+    # A lost string moves every later string index: no symbol is trusted.
+    text = DATA.replace("s 4 main", bad, 1)
+
+    with pytest.raises(HeapDecodeError, match="string record"):
+        analysis(text)
 
 
 @pytest.mark.parametrize("header", ["v 10500 2", "", "x"])

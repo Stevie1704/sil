@@ -18,7 +18,7 @@ from sil.diagnostics_html_markup import Html, card, code, join, plain, \
 from sil.profile_html_parts import (
     TreeLimits, banner, build_tree, function_cell, identity_section,
     limitations_section, reason_text, reasons_list, render_tree, share,
-    source_cell,
+    source_cell, unlisted_note,
 )
 from sil.profile_report import HEAP_METRICS
 from sil.profile_set import ProfileSet
@@ -50,7 +50,7 @@ def heap_body(profile: ProfileSet) -> Html:
         _no_analysis(capture) if analysis is None else join([
             _totals(analysis),
             *(_ranking(analysis, *ranking) for ranking in RANKINGS),
-            _inclusive(analysis),
+            _inclusive(analysis, profile.allocations),
             _tree(profile),
             _modules(analysis),
         ]),
@@ -195,12 +195,13 @@ def _ranking(analysis: dict, id_: str, metric: str, title: str) -> Html:
         level=3)
 
 
-def _inclusive(analysis: dict) -> Html:
+def _inclusive(analysis: dict, allocations: dict | None) -> Html:
+    rows = analysis["hotspots"]["inclusive"]
     return section(
         "heap-inclusive", "Sites by inclusive bytes",
         table("heap-inclusive-table", "Functions anywhere in the allocation "
-              "stack", HEADERS, _rows(analysis["hotspots"]["inclusive"],
-                                      _modules_by_id(analysis))),
+              "stack", HEADERS, _rows(rows, _modules_by_id(analysis))),
+        tag("p", unlisted_note(allocations, len(rows)), class_="note"),
         note="Inclusive: each function anywhere in an allocation's stack, "
              "once per allocation. Inclusive values overlap and are never "
              "totals.", level=3)

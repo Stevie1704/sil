@@ -16,7 +16,7 @@ from pathlib import Path
 
 from sil.bundle import file_sha256
 from sil.diagnostics_run import (
-    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, Guards, RunRequest,
+    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, Guards, RunRequest, alias_problems,
 )
 
 PROG = "sil profile"
@@ -57,6 +57,14 @@ def preflight(target: RunTarget, cwd: Path) -> list[str]:
             cwd / target.recording, cwd / target.manifest):
         problems.append(f"the Recording '{target.recording}' is the "
                         "Manifest")
+    if target.provenance is not None:
+        recording = target.run_request(out).recording_path
+        others = [("Manifest", target.manifest),
+                  ("failure report", Path(f"{recording}.failure.json"))]
+        if target.recording is not None:
+            others.append(("Recording", target.recording))
+        problems += alias_problems(
+            [("provenance record", target.provenance)], others, cwd)
     return problems
 
 

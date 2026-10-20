@@ -8,6 +8,7 @@ report content never becomes markup, and that the page needs no other file.
 """
 
 import base64
+import hashlib
 import json
 import os
 import re
@@ -280,6 +281,21 @@ def test_the_download_is_the_source_json_byte_for_byte(name):
     assert links[0]["href"].startswith(prefix)
     assert base64.b64decode(links[0]["href"][len(prefix):]) == \
         source.encode("utf-8")
+
+
+PAGE_DIGESTS = json.loads(
+    (ROOT / "tests" / "fixtures" / "diagnostics-html-sha256.json")
+    .read_text())
+
+
+@pytest.mark.parametrize("name", ALL_FIXTURES)
+def test_the_page_stays_byte_identical(name):
+    # The digests are of the pages that main rendered before the profile
+    # report shared page(), the footer and the assets (#318). A change to
+    # the diagnostics page must update them on purpose.
+    page_bytes = render(fixture_text(name)).encode("utf-8")
+
+    assert hashlib.sha256(page_bytes).hexdigest() == PAGE_DIGESTS[name]
 
 
 def test_invalid_input_raises_a_report_error():

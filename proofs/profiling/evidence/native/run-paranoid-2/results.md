@@ -10,7 +10,7 @@
 | perf_event_paranoid | 2 |
 | CapEff | 0000000000000000 |
 | Seccomp | 0 |
-| NSpid | 6944 |
+| NSpid | 7072 |
 | perf | perf version 6.17.13 |
 | heaptrack | heaptrack 1.5.0 |
 | heaptrack_preload | /usr/lib/heaptrack/libheaptrack_preload.so |
@@ -32,14 +32,14 @@
 
 | Run | Exit | Wall ms | Recording bytes | Collector bytes |
 | --- | --- | --- | --- | --- |
-| ordinary | 0 | 2791 | 28039 | None |
-| perf-dwarf | 0 | 2838 | 28039 | 23171896 |
-| perf-fp | 0 | 2823 | 28039 | 247304 |
-| heaptrack-runner | 0 | 2819 | 28039 | runner 360786 |
-| heaptrack-runner-mismatched | 0 | 2814 | 28039 | runner 360560 |
-| heaptrack-fmu | 0 | 2853 | 28039 | fmu 710836 |
-| heaptrack-shimmed-process | 1 | 203 | 1069 | process 203026 |
-| heaptrack-shimmed-process-sleep-immediate | 0 | 3234 | 28039 | process 35792716, fmu_late 711216 |
+| ordinary | 0 | 2744 | 28039 | None |
+| perf-dwarf | 0 | 2780 | 28039 | 22783632 |
+| perf-fp | 0 | 2790 | 28039 | 244280 |
+| heaptrack-runner | 0 | 2754 | 28039 | runner 360702 |
+| heaptrack-runner-mismatched | 0 | 2762 | 28039 | runner 360500 |
+| heaptrack-fmu | 0 | 2809 | 28039 | fmu 710797 |
+| heaptrack-shimmed-process | 1 | 190 | 1069 | process 219876 |
+| heaptrack-shimmed-process-sleep-immediate | 0 | 2992 | 28039 | process 33542701, fmu_late 710930 |
 
 ## Checks and findings
 
@@ -48,6 +48,7 @@
 | check | pass | ordinary: Run exits 0 |
 | check | pass | ordinary: no process is left |
 | check | pass | ordinary: one interval per hot call |
+| check | pass | perf_user_dwarf: the backend is available, so its Runs are made |
 | check | pass | perf-dwarf: Run exits 0 |
 | check | pass | perf-dwarf: no process is left |
 | check | pass | perf-dwarf: Recording equals the ordinary Recording |
@@ -126,6 +127,7 @@
 | finding | does not hold | perf-fp: silproof_fmu_spin samples unwind past their module |
 | finding | does not hold | perf-fp: silproof_fmu_spin samples show its source caller fmi3DoStep |
 | finding | does not hold | perf-fp: every silproof_fmu_spin sample shows its source caller |
+| check | pass | heaptrack_preload: the backend is available, so its Runs are made |
 | check | pass | heaptrack-runner: Run exits 0 |
 | check | pass | heaptrack-runner: no process is left |
 | check | pass | heaptrack-runner: Recording equals the ordinary Recording |

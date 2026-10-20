@@ -9,6 +9,7 @@ JavaScript would. The browser checks are test_profile_html_browser.py.
 
 from __future__ import annotations
 
+import base64
 import json
 import subprocess
 import sys
@@ -46,6 +47,22 @@ def test_render_prints_the_summary_and_writes_the_html(tmp_path):
     page = Page((tmp_path / "report.html").read_text())
     assert "Run succeeded" in page.text
     assert "Capture complete" in page.text
+
+
+def test_the_download_is_profile_json_byte_for_byte(tmp_path):
+    profile = artifact_set(tmp_path / "set", "cpu-complete.json")
+    # CRLF line ends are valid JSON whitespace; a text read would drop them.
+    data = profile.read_bytes().replace(b"\n", b"\r\n")
+    profile.write_bytes(data)
+
+    proc = render([str(profile), "--html", "report.html"], tmp_path)
+
+    assert proc.returncode == 0, proc.stderr
+    html = (tmp_path / "report.html").read_text()
+    prefix = 'href="data:application/json;base64,'
+    start = html.index(prefix) + len(prefix)
+    encoded = html[start:html.index('"', start)]
+    assert base64.b64decode(encoded) == data
 
 
 VALID = sorted(p.name for p in
@@ -113,6 +130,30 @@ def test_hotspot_tables_keep_the_remainder_and_the_total(tmp_path):
         f"{totals['samples'] - kept['self_samples']}" in rest
     assert f"All samples {totals['samples']}" in rest
     assert "100.0%" in rest
+
+
+@pytest.mark.parametrize("name, table_id, document", [
+    ("cpu-complete.json", "inclusive-table", "samples"),
+    ("heap-complete-runner.json", "heap-inclusive-table", "allocations")])
+def test_an_inclusive_table_names_its_unlisted_rows_without_a_sum(
+        tmp_path, name, table_id, document):
+    report = fixture(name)
+    capture = report["capture"]
+    hotspots = (capture["analysis"] if "analysis" in capture
+                else capture)["hotspots"]
+    hotspots["inclusive"] = hotspots["inclusive"][:1]
+    html = html_of(tmp_path, name, report=report)
+    sidecar = json.loads(next((tmp_path / "set").rglob(
+        "samples.json" if document == "samples" else "allocations.json"))
+        .read_text())
+    functions = {(f["module"], f["symbol"]) for f in sidecar["frames"]}
+
+    after = Page(html[html.index(f'id="{table_id}"'):]).text
+
+    assert f"{len(functions) - 1} other functions are not listed" in after
+    assert "no remainder row" in after
+    assert "<tfoot>" not in html[html.index(f'id="{table_id}"'):].split(
+        "</table>")[0]
 
 
 def test_a_heap_profile_shows_bounded_rankings_and_their_boundaries(tmp_path):
@@ -192,6 +233,76 @@ def test_the_summary_reads_every_fixture(tmp_path, name):
 
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.startswith(f"profile: {profile}\n")
+
+
+@pytest.mark.parametrize("name", ["cpu-complete.json",
+                                  "heap-complete-runner.json"])
+def test_the_summary_states_identity_and_limits_before_hotspots(tmp_path,
+                                                                name):
+    profile = artifact_set(tmp_path / "set", name)
+    report = fixture(name)
+
+    lines = render([str(profile)], tmp_path).stdout.splitlines()
+
+    identity = report["identity"]
+    manifest = next(i for i, line in enumerate(lines)
+                    if line.startswith("manifest: "))
+    assert lines[manifest] == (f"manifest: {identity['manifest_path']} "
+                               f"({identity['manifest_hash']})")
+    assert f"sil: {identity['sil_version']}, " \
+           f"{identity['source_revision']}" in lines
+    limits = next(i for i, line in enumerate(lines)
+                  if line.startswith("limitations: "))
+    assert lines[limits] == ("limitations: "
+                             + ", ".join(report["limitations"]))
+    top = next(i for i, line in enumerate(lines) if line.startswith("top "))
+    assert manifest < limits < top
+
+
+def test_the_cpu_summary_names_the_recorded_call_graph(tmp_path):
+    report = fixture("cpu-complete.json")
+    report["capture"]["call_graph"]["method"] = "fp"
+    profile = artifact_set(tmp_path / "set", "cpu-complete.json",
+                           report=report)
+
+    text = render([str(profile)], tmp_path).stdout
+
+    assert "frame-pointer call graph" in text
+    assert "DWARF" not in text
+
+
+def test_the_heap_summary_keeps_the_remainder_of_its_top_rows(tmp_path):
+    report = fixture("heap-complete-runner.json")
+    hotspots = report["capture"]["analysis"]["hotspots"]
+    first, *rest = hotspots["self"]
+    hotspots["self"] = [first]
+    hotspots["self_remainder"] = {
+        metric: hotspots["self_remainder"][metric]
+        + sum(row[metric] for row in rest)
+        for metric in hotspots["self_remainder"]}
+    profile = artifact_set(tmp_path / "set", "heap-complete-runner.json",
+                           report=report)
+    remainder = hotspots["self_remainder"]
+
+    text = render([str(profile)], tmp_path).stdout
+
+    assert f"{remainder['allocations']:>8} calls  all other sites" in text
+
+
+def test_the_terminal_summary_never_prints_control_characters(tmp_path):
+    report = fixture("cpu-complete.json")
+    capture = report["capture"]
+    capture["hotspots"]["self"][0]["symbol"] = "\x1b[2J\x1b]0;owned\x07spin"
+    capture["modules"][0]["path"] = "/opt/\x1b[31mred\nlib.so"
+    report["identity"]["manifest_path"] = "m\x1b[1m.json"
+    profile = artifact_set(tmp_path / "set", "cpu-complete.json",
+                           report=report)
+
+    text = render([str(profile)], tmp_path).stdout
+
+    assert "\x1b" not in text and "\x07" not in text
+    assert "\\x1b[2J\\x1b]0;owned\\x07spin" in text
+    assert "m\\x1b[1m.json" in text
 
 
 # --- input and output errors -------------------------------------------------

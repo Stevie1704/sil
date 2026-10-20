@@ -81,6 +81,8 @@ EXPECTED_VIOLATION = {
     "self-remainder-does-not-add-up": "capture.hotspots: self rows and "
                                       "self_remainder add up to 11 samples, "
                                       "totals.samples is 10",
+    "cpu-complete-without-samples-file":
+        "capture: status 'complete' without a samples file",
     "complete-with-reasons": "capture: status 'complete' with reasons",
     "partial-without-reasons": "capture: status 'partial' without a reason",
     "timestamp-not-a-string": "capture.time_origin_ns is not a decimal "
@@ -107,6 +109,8 @@ EXPECTED_VIOLATION = {
     "heap-frees-do-not-match-outstanding":
         "capture.analysis.totals: frees 4 is not allocations 8 minus "
         "outstanding_allocations 3",
+    "heap-complete-without-allocations-file":
+        "capture: status 'complete' without an allocations file",
     "heap-complete-without-analysis":
         "capture: status 'complete' without an analysis",
     "heap-unknown-reason": "capture.reasons: unknown reasons "

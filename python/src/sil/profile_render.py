@@ -58,8 +58,8 @@ def main(argv: list[str] | None = None) -> int:
             f"present: {error}", EXIT_USAGE)
     page = None
     if args.html is not None:
-        source = args.profile.read_text(encoding="utf-8")
-        page = render_profile(profile, source)
+        # The download is the validated bytes, not a second read.
+        page = render_profile(profile, profile.source)
     sys.stdout.write(format_summary(profile.report, args.profile))
     if page is not None:
         try:

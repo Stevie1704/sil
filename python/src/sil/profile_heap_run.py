@@ -650,6 +650,8 @@ def _publish(request: HeapRequest, layout: HeapLayout, cwd: Path,
     except OSError as error:
         sys.stderr.write(f"{PROG}: cannot write '{layout.allocations}': "
                          f"{error}\n")
+        layout.allocations.unlink(missing_ok=True)
+        problem = "export_failed"  # the analysis has lost its rows
     finally:
         shutil.rmtree(layout.retained, ignore_errors=True)
     report = build_report(request, layout, cwd, tools, capture_run, result,

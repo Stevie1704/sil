@@ -25,8 +25,9 @@ It needs on PATH: sil-run, perf, objcopy, readelf, cc, and this Python with
 the sil package. Heaptrack's preload library and interpreter are found under
 /usr/lib or named by SILPROOF_HEAPTRACK_PRELOAD and
 SILPROOF_HEAPTRACK_INTERPRET. A check failure exits 1; a finding is
-recorded and does not fail. No check uses a timing, a sample percentage or
-an overhead threshold.
+recorded and does not fail. A backend that its probe finds unavailable is a
+failed check: its Runs are skipped and nothing about it is qualified. No
+check uses a timing, a sample percentage or an overhead threshold.
 """
 
 from __future__ import annotations
@@ -593,6 +594,25 @@ class Checks:
                 if c["kind"] == "check" and not c["passed"]]
 
 
+HEAPTRACK_RUNS = ["heaptrack-runner", "heaptrack-runner-mismatched",
+                  "heaptrack-fmu", "heaptrack-shimmed-process",
+                  "heaptrack-shimmed-process-sleep-immediate"]
+
+
+def require_backend(checks: Checks, runs: dict, probes: dict, probe_name: str,
+                    names: list[str]) -> bool:
+    """A backend that its probe found unavailable qualifies nothing, so the
+    proof fails: its Runs are skipped with the probe outcome."""
+    outcome = probes[probe_name]["outcome"]
+    available = outcome == "available"
+    checks.gate(f"{probe_name}: the backend is available, so its Runs are "
+                "made", available, outcome)
+    if not available:
+        for name in names:
+            runs[name] = {"skipped": f"{probe_name} probe outcome {outcome}"}
+    return available
+
+
 def run_proof(out: Path) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     facts = probe(out / "probe")
@@ -637,8 +657,9 @@ def run_proof(out: Path) -> dict:
         "silproof_fmu_spin": workload.ACTIVATIONS,
         "silproof_child_spin": workload.CHILDREN}, dict(expected_intervals))
 
-    perf_available = facts["probes"]["perf_user_dwarf"]["outcome"] == \
-        "available"
+    perf_available = require_backend(checks, results["runs"],
+                                     facts["probes"], "perf_user_dwarf",
+                                     ["perf-dwarf", "perf-fp"])
     # perf-dwarf records build IDs in the mmap events (--buildid-mmap);
     # perf-fp keeps perf's default, which reads them from the files when
     # the recording ends.
@@ -646,9 +667,6 @@ def run_proof(out: Path) -> dict:
             ("perf-dwarf", f"dwarf,{DWARF_STACK}", True, ["--buildid-mmap"]),
             ("perf-fp", "fp", False, [])):
         if not perf_available:
-            results["runs"][name] = {"skipped": "perf probe outcome "
-                                     + facts["probes"]["perf_user_dwarf"][
-                                         "outcome"]}
             continue
         run = Run(out, name)
         env = _clean_env(SILPROOF_SIDECAR_DIR=str(run.sidecar),
@@ -669,15 +687,10 @@ def run_proof(out: Path) -> dict:
         run.result["perf"] = perf
         _perf_checks(checks, name, perf, dwarf)
 
-    heap_available = facts["probes"]["heaptrack_preload"]["outcome"] == \
-        "available"
-    if heap_available:
+    if require_backend(checks, results["runs"], facts["probes"],
+                       "heaptrack_preload", HEAPTRACK_RUNS):
         _heaptrack_runs(out, manifest.path, artifacts, preload, interpret,
                         ordinary, results, checks, finish)
-    else:
-        results["runs"]["heaptrack"] = {"skipped": "heaptrack probe outcome "
-                                        + facts["probes"][
-                                            "heaptrack_preload"]["outcome"]}
     results["checks"] = checks.items
     results["failed_checks"] = checks.failed()
     (out / "results.json").write_text(json.dumps(results, indent=2) + "\n")

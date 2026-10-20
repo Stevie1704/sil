@@ -248,7 +248,7 @@ def test_symbolization_reports_names_and_unwinding_separately(analysis):
     assert analysis.symbolization["call_frame_unwinding"] == {
         "method": "dwarf", "samples_with_caller": 4}
     assert analysis.symbolization["inlined_frames"] == {
-        "status": "not_requested"}
+        "status": "available", "samples_with_inlined_frames": 0}
 
 
 def test_samples_document_keeps_chronology_and_module_offsets(analysis):
@@ -375,3 +375,101 @@ def test_a_frameless_sample_without_a_leaf_stays_in_the_totals():
         "self_weight_ns": 1000000, "inclusive_samples": 1,
         "inclusive_weight_ns": 1000000, "source_lines": []}]
     assert result.samples_document["stacks"] == [[]]
+
+
+# perf script --inline: an inlined function is a line with the physical
+# frame's address, marked "(inlined)" and without a module, innermost first,
+# before its physical frame.
+INLINED = "\n".join([
+    mmap("sil-run-diagnos", 101, 0, "0x7f0000000000", "0x4000", "0x1000",
+         "bb" * 20, NATIVE),
+    f"{header('sil-run-diagnos', 101, 101, 100)} {1000000:>10} ",
+    "\t    7f0000001400 mix (inlined)",
+    "\t    7f0000001400 square (inlined)",
+    f"\t    7f0000001400 spin ({NATIVE})",
+    f"\t    7f0000001200 native_task ({NATIVE})",
+    "",
+    # One physical frame: an inlined function is no caller.
+    f"{header('sil-run-diagnos', 101, 101, 200)} {1000000:>10} ",
+    "\t    7f0000001400 square (inlined)",
+    f"\t    7f0000001400 spin ({NATIVE})",
+    "",
+]) + "\n"
+
+
+def test_inlined_frames_are_own_functions_counted_once_per_sample():
+    srclines = ("    7f0000001400 spin\n  native.c:7\n"
+                "    7f0000001400 spin\n  native.c:8\n")
+    result = normalize_cpu(INLINED, srclines=srclines, facts=facts,
+                           lost_sample_records=0)
+
+    native = result.module_id(NATIVE)
+    rows = {r["symbol"]: r for r in result.hotspots["inclusive"]}
+    assert {s: (r["self_samples"], r["inclusive_samples"])
+            for s, r in rows.items()} == {
+        "mix": (1, 1), "square": (1, 2), "spin": (0, 2),
+        "native_task": (0, 1)}
+    assert all(r["module"] == native for r in rows.values())
+    assert result.totals["samples_with_caller"] == 1
+    assert result.symbolization["inlined_frames"] == {
+        "status": "available", "samples_with_inlined_frames": 2}
+    document = result.samples_document
+    leaf = document["frames"][document["stacks"][0][0]]
+    assert leaf == {"module": native, "symbol": "mix", "inlined": True,
+                    "address": "0x7f0000001400", "module_offset": "0x2400",
+                    "source": {"file": "native.c", "line": 7}}
+    physical = document["frames"][document["stacks"][0][2]]
+    assert physical["symbol"] == "spin" and "inlined" not in physical
+    assert [len(stack) for stack in document["stacks"]] == [4, 2]
+
+
+# perf 6.17 marks every function of an address "(inlined)" when the
+# function name of the debug data differs from the symbol (for example a
+# .constprop clone): then no physical frame line follows.
+ALL_INLINED = "\n".join([
+    mmap("sil-run-diagnos", 101, 0, "0x7f0000000000", "0x4000", "0x1000",
+         "bb" * 20, NATIVE),
+    f"{header('sil-run-diagnos', 101, 101, 100)} {1000000:>10} ",
+    "\t    7f0000001400 square (inlined)",
+    "\t    7f0000001400 spin (inlined)",
+    f"\t    7f0000001200 native_task ({NATIVE})",
+    "",
+]) + "\n"
+
+
+def test_an_address_of_inlined_frames_only_takes_its_mapped_module():
+    result = normalize_cpu(ALL_INLINED, srclines=None, facts=facts,
+                           lost_sample_records=0,
+                           srcline_problem="symbolization_timeout")
+
+    native = result.module_id(NATIVE)
+    document = result.samples_document
+    stack = [document["frames"][i] for i in document["stacks"][0]]
+    assert [(f["symbol"], f["module"], f.get("inlined", False))
+            for f in stack] == [("square", native, True),
+                                ("spin", native, True),
+                                ("native_task", native, False)]
+    # Two addresses: native_task is the one caller.
+    assert result.totals["samples_with_caller"] == 1
+    assert result.totals["samples_unknown_module"] == 0
+
+
+def test_a_failed_inline_export_names_its_reason():
+    result = normalize_cpu(SCRIPT, srclines=SRCLINES, facts=facts,
+                           lost_sample_records=0,
+                           inlined_problem="inlined_frames_failed")
+
+    assert result.symbolization["inlined_frames"] == {
+        "status": "unavailable", "samples_with_inlined_frames": None,
+        "unavailable": {"samples_with_inlined_frames":
+                        "inlined_frames_failed"}}
+
+
+def test_the_export_can_be_normalized_line_by_line(analysis):
+    # sil profile streams the perf script pass: it never holds its text.
+    lines = iter(SCRIPT.splitlines(keepends=True))
+
+    streamed = normalize_cpu(lines, srclines=SRCLINES, facts=facts,
+                             lost_sample_records=0)
+
+    assert streamed == analysis

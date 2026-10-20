@@ -116,6 +116,10 @@ class ModuleLocator:
         material, file = self._material(path, build_id)
         if file is None:
             return UNAVAILABLE
+        if build_id is None:
+            # Nothing proves that this file is the module that ran, so no
+            # debug data of it may give a source line.
+            return ModuleFacts(material, "unverifiable", None)
         identity = elf_identity(file)
         if identity.has_debug_lines:
             return ModuleFacts(material, "embedded", None)
@@ -173,11 +177,9 @@ class ModuleLocator:
         return self.retained.joinpath(*relative.parts[1:])
 
     def _debug(self, file: Path, identity: ElfIdentity,
-               build_id: str | None) -> tuple[str, str | None]:
-        candidates = []
-        if build_id:
-            candidates.append(self.debug_root / ".build-id" / build_id[:2]
-                              / f"{build_id[2:]}.debug")
+               build_id: str) -> tuple[str, str | None]:
+        candidates = [self.debug_root / ".build-id" / build_id[:2]
+                      / f"{build_id[2:]}.debug"]
         if identity.debuglink:
             directory = file.parent
             candidates += [directory / identity.debuglink,
@@ -188,8 +190,6 @@ class ModuleLocator:
         found = [(c, i) for c, i in found if i is not None and c != file]
         if not found:
             return "not_found", None
-        if build_id is None:
-            return "unverifiable", None
         for candidate, debug in found:
             if debug.build_id == build_id:
                 return "separate_matching", str(candidate)

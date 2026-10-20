@@ -176,7 +176,10 @@ HEAP_ANALYSIS = reasoned({
                          "undecodable_records": COUNT, "truncated": FLAG}),
     "modules": items(reasoned(
         {"id": TEXT, "path": TEXT, "allocations_leaf": COUNT,
-         "allocations_unknown_symbol": COUNT}, {"build_id": TEXT})),
+         "allocations_unknown_symbol": COUNT}, {"build_id": TEXT},
+        # Added after the first v1 heap capture: optional.
+        {"debug": maybe(members({"status": one_of(DEBUG_STATUSES),
+                                 "path": maybe(TEXT)}))})),
     "hotspots": members({"limit": COUNT, "self": items(HEAP_ROW),
                          "self_remainder": members(HEAP_COSTS),
                          "inclusive": items(HEAP_ROW)}),
@@ -417,6 +420,10 @@ def _check_cpu(capture: dict, errors: list[str]) -> None:
     unknown = set(capture["reasons"]) - CPU_REASONS
     if unknown:
         errors.append(f"capture.reasons: unknown reasons {sorted(unknown)}")
+    if capture["status"] in ("complete", "partial") and \
+            capture["samples_file"] is None:
+        errors.append(f"capture: status {capture['status']!r} without a "
+                      "samples file")
     totals = capture["totals"]
     processes = _identities(capture["processes"], "processes", errors)
     _identities(capture["threads"], "threads", errors)
@@ -509,6 +516,10 @@ def _check_heap(capture: dict, errors: list[str]) -> None:
                       "analysis")
     if analysis is None:
         return
+    if capture["status"] in ("complete", "partial") and \
+            analysis["allocations_file"] is None:
+        errors.append(f"capture: status {capture['status']!r} without an "
+                      "allocations file")
     where = "capture.analysis"
     totals = analysis["totals"]
     if totals["frees"] != totals["allocations"] - \

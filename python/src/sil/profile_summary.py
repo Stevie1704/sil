@@ -6,6 +6,7 @@ again from the saved `profile.json`. It reads the report only.
 
 from __future__ import annotations
 
+import unicodedata
 from pathlib import Path
 
 from sil.diagnostics_format import format_bytes, format_duration_ns
@@ -16,6 +17,30 @@ def format_summary(report: dict, path: Path) -> str:
     if report["capture"]["kind"] == "heap":
         return _heap_summary(report, path)
     return _cpu_summary(report, path)
+
+
+def _clean(text) -> str:
+    """Report text for a terminal: a control character (an ANSI escape, a
+    newline) is written as its escape, so it cannot act on the terminal."""
+    return "".join(f"\\x{ord(c):02x}" if unicodedata.category(c) == "Cc"
+                   else c for c in str(text))
+
+
+def _identity_lines(report: dict) -> list[str]:
+    identity = report["identity"]
+
+    def known(key: str) -> str:
+        value = identity.get(key)
+        return "unknown" if value is None else _clean(value)
+
+    return [f"manifest: {_clean(identity['manifest_path'])} "
+            f"({known('manifest_hash')})",
+            f"sil: {known('sil_version')}, {known('source_revision')}"]
+
+
+def _limitations_line(report: dict) -> str:
+    return "limitations: " + ", ".join(_clean(item) for item in
+                                       report["limitations"])
 
 
 def _share(part: int, whole: int) -> str:
@@ -32,13 +57,17 @@ def _cpu_summary(report: dict, path: Path) -> str:
                  is not None else f"signal {run['signal']}"
                  if run["signal"] else "no exit code")
     sampling = capture["sampling"]
+    call_graph = capture["call_graph"]
+    method = (f"DWARF call graph ({call_graph['stack_bytes']} bytes)"
+              if call_graph["method"] == "dwarf"
+              else "frame-pointer call graph")
     lines = [
-        f"profile: {path}",
+        f"profile: {_clean(path)}",
         f"run: {run['status']}, {exit_text}",
         f"capture: cpu, {state}",
+        *_identity_lines(report),
         f"sampling: perf {sampling['event']} at {sampling['frequency_hz']} "
-        f"Hz, DWARF call graph ({capture['call_graph']['stack_bytes']} "
-        "bytes), the runner and all its descendants",
+        f"Hz, {method}, the runner and all its descendants",
     ]
     lost = totals["lost_samples"]
     lines.append(
@@ -69,15 +98,16 @@ def _cpu_summary(report: dict, path: Path) -> str:
             "name; name a copy with --modules-from (for example the FMU "
             "archive)")
     lines += _activation_lines(report["activation_correlation"])
+    lines.append(_limitations_line(report))
     modules = {m["id"]: m["path"] for m in capture["modules"]}
     rows = capture["hotspots"]["self"][:10]
     if rows:
         lines.append("top self weight (share of all sample weight):")
         for row in rows:
-            name = row["symbol"] or "[unknown function]"
+            name = _clean(row["symbol"] or "[unknown function]")
             module = Path(modules.get(row["module"]) or "[unknown module]")
             lines.append(f"  {_share(row['self_weight_ns'], totals['weight_ns'])}"
-                         f"  {name} ({module.name})")
+                         f"  {name} ({_clean(module.name)})")
         rest = totals["weight_ns"] - sum(r["self_weight_ns"] for r in rows)
         if rest:
             lines.append(f"  {_share(rest, totals['weight_ns'])}  "
@@ -129,13 +159,15 @@ def _heap_summary(report: dict, path: Path) -> str:
     else:
         where = (f"unsupported '{scope['requested']}' "
                  f"({scope['reason']})")
-    lines = [f"profile: {path}", f"run: {run['status']}, {exit_text}",
-             f"capture: heap, {state}",
-             f"scope: {where}, {capture['backend']['version'] or 'Heaptrack'}",
+    lines = [f"profile: {_clean(path)}", f"run: {run['status']}, {exit_text}",
+             f"capture: heap, {state}", *_identity_lines(report),
+             f"scope: {_clean(where)}, "
+             f"{_clean(capture['backend']['version'] or 'Heaptrack')}",
              "activation correlation: unavailable (Heaptrack's timestamps "
              "have no validated mapping to host time)"]
     analysis = capture["analysis"]
     if analysis is None:
+        lines.append(_limitations_line(report))
         return "\n".join(lines) + "\n"
     totals = analysis["totals"]
     lines += [
@@ -152,15 +184,22 @@ def _heap_summary(report: dict, path: Path) -> str:
     if unknown:
         lines.append(f"symbols: {unknown} of {totals['allocations']} "
                      "allocations have no function name")
+    lines.append(_limitations_line(report))
     modules = {m["id"]: m["path"] for m in analysis["modules"]}
     rows = analysis["hotspots"]["self"][:10]
     if rows:
         lines.append("top allocation sites (innermost frame, bytes "
                      "allocated):")
         for row in rows:
-            name = row["symbol"] or "[unknown function]"
+            name = _clean(row["symbol"] or "[unknown function]")
             module = Path(modules.get(row["module"]) or "[unknown module]")
             lines.append(f"  {format_bytes(row['allocated_bytes']):>10}  "
                          f"{row['allocations']:>8} calls  {name} "
-                         f"({module.name})")
+                         f"({_clean(module.name)})")
+        calls = totals["allocations"] - sum(r["allocations"] for r in rows)
+        size = totals["allocated_bytes"] - sum(r["allocated_bytes"]
+                                               for r in rows)
+        if calls or size:
+            lines.append(f"  {format_bytes(size):>10}  {calls:>8} calls  "
+                         "all other sites")
     return "\n".join(lines) + "\n"

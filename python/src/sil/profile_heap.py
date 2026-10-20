@@ -103,15 +103,14 @@ def _records(data: bytes):
             except ValueError:
                 length = -1
             start = space + 1
-            if space < 0 or length < 0 or start + length >= end \
-                    or data[start + length] != ord("\n"):
-                newline = data.find(b"\n", position)
-                if newline < 0:
-                    yield None, None
-                    return
-                yield "bad", None
-                position = newline + 1
-                continue
+            if space >= 0 and length >= 0 and start + length >= end or \
+                    space < 0 and data.find(b"\n", position) < 0:
+                yield None, None  # the data ends inside the string
+                return
+            if space < 0 or length < 0 or data[start + length] != ord("\n"):
+                # A lost string moves every later string index.
+                raise HeapDecodeError(
+                    f"malformed string record at byte {position}")
             yield "s", data[start:start + length]
             position = start + length + 1
             continue
@@ -208,9 +207,11 @@ class _Frames:
             return None
         if path not in self.modules:
             found, reason = self.build_id(path)
-            self.modules[path] = {
-                "path": path, "build_id": found,
-                "unavailable": {} if found else {"build_id": reason}}
+            unavailable = {} if found else {"build_id": reason}
+            # The interpreter does not say which debug file it used.
+            unavailable["debug"] = "not_reported_by_backend"
+            self.modules[path] = {"path": path, "build_id": found,
+                                  "debug": None, "unavailable": unavailable}
         return path
 
     def ip_frames(self, ip_index: int) -> list[int]:

@@ -496,6 +496,39 @@ def test_low_free_space_drops_the_data_and_keeps_the_run_outcome(
 
 
 @needs_linux
+def test_an_allocations_file_that_cannot_be_written_fails_the_capture(
+        tools, heaptrack, tmp_path):
+    manifest, _ = marker_manifest(tmp_path)
+    # The write of heap/allocations.json fails as on a full disk.
+    prelude = ("import errno, sys, sil.profile_heap_run as r\n"
+               "w = r.write_new_file\n"
+               "def fail(path, text):\n"
+               "    if path.name == 'allocations.json':\n"
+               "        raise OSError(errno.ENOSPC, 'No space left on device')\n"
+               "    w(path, text)\n"
+               "r.write_new_file = fail\n"
+               "from sil.cli import main; sys.exit(main(sys.argv[1:]))")
+    environment = {key: value for key, value in os.environ.items()
+                   if key != "LD_PRELOAD"}
+    environment.update(heaptrack)
+    environment["PATH"] = os.pathsep.join([str(tools), "/usr/bin:/bin"])
+
+    proc = subprocess.run(
+        [sys.executable, "-c", prelude, "profile",
+         *heap(manifest, "--runner")],
+        capture_output=True, text=True, cwd=tmp_path, env=environment)
+
+    assert proc.returncode == 1, proc.stderr
+    report = profile(tmp_path / "prof")
+    assert report["run"]["status"] == "succeeded"
+    capture = report["capture"]
+    assert (capture["status"], capture["reasons"]) == ("failed",
+                                                       ["export_failed"])
+    assert capture["analysis"]["allocations_file"] is None
+    assert capture["raw"] == "heap/heaptrack.data"
+
+
+@needs_linux
 def test_undecodable_data_fails_the_capture_and_keeps_the_raw_file(
         tools, heaptrack, tmp_path):
     manifest, _ = marker_manifest(tmp_path)
