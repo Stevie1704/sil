@@ -5,6 +5,7 @@ on:
     paths:
       - 'proofs/source-debugging/**'
       - 'examples/adas-reference/**'
+      - 'tests/test_source_debugging_proof.py'
       - '.github/workflows/proof-source-debugging.yml'
   workflow_dispatch:
 

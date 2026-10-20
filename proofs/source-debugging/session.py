@@ -113,6 +113,7 @@ while gdb.selected_inferior().pid:
     if action == "debugger-error":
         raise gdb.GdbError("deliberate debugger failure")
     if action == "signal":
+        entry.enabled = False
         gdb.execute("signal SIGTERM")
         break
     if action == "deadline":

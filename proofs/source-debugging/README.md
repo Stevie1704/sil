@@ -40,6 +40,9 @@ bash proofs/source-debugging/run-proof.sh \
   "$PWD/build/source-debugging-evidence" "$PWD/build/source-debugging-build"
 # Local workload regressions:
 .venv/bin/python -m pytest tests/test_example_adas_reference.py tests/test_adas_process_adapter.py
+# Offline evidence tests and validation (no GDB or executable loading):
+.venv/bin/python -m pytest tests/test_source_debugging_proof.py
+.venv/bin/python proofs/source-debugging/validate.py CAPTURE_DIR native
 ```
 
 `-O2 -g -ffp-contract=off` is the main result. There is no `-O0` substitute,

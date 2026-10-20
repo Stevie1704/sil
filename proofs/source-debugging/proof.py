@@ -23,6 +23,8 @@ from sil.profile_modules import ModuleLocator, elf_identity
 from sil.recording import read_records
 from sil.schema import MessageType
 
+from validate import validate_capture
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 EXAMPLE = ROOT / "examples/adas-reference"
@@ -229,34 +231,7 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
     elif process.returncode == 0:
         raise ValueError(f"negative control unexpectedly succeeded: {dest}")
     if selector and action == "resume":
-        observations = [json.loads(line) for line in
-                        (dest / "observations.jsonl").read_text().splitlines()]
-        activations = [r for r in observations if r.get("kind") == "activation"
-                       and r["participant"] == "hazard"]
-        if len(stops) != 6:
-            raise ValueError(f"expected entry/decision/return for two Activations: {dest}")
-        for index, t, sequence, previous, limited in (
-                (4, 40_000_000, 5, "-2", "-2.5"),
-                (5, 50_000_000, 6, "-2.5", "-3")):
-            before, decision, after = [s for s in stops if s["hit"] == index]
-            activation = next(a for a in activations if a["index"] == index)
-            if activation["virtual_time_ns"] != t or before["virtual_time_ns"] != t:
-                raise ValueError("Activation index / Virtual time mismatch")
-            if not int(activation["begin_ns"]) <= before["host_monotonic_ns"] < int(activation["end_ns"]):
-                raise ValueError("debugger stop outside observed Activation")
-            if before["values"]["previous_command"]["value"] != previous:
-                raise ValueError("previous command differs from enumerated fixture")
-            for name, expected in {"sequence": str(sequence), "sample_time_ns": str(t + 10_000_000),
-                                   "limited_result": limited, "selected": "12", "mode": "1",
-                                   "target": "-3"}.items():
-                if after["values"][name]["value"] != expected:
-                    raise ValueError(f"{dest}: {name}: {after['values'][name]}")
-            if form != "native" and before["pid"] == observations[0]["runner_pid"]:
-                raise ValueError("Process inferior incorrectly identified as runner")
-            if form == "native" and before["pid"] != observations[0]["runner_pid"]:
-                raise ValueError("Native inferior is not runner")
-            if form == "shim" and before["shim_virtual_time"]["value"] != str(t):
-                raise ValueError("shim Virtual time differs from Activation")
+        validate_capture(dest, form)
         result["activation_stops_verified"] = True
     write(dest / "result.json", result)
     return result
