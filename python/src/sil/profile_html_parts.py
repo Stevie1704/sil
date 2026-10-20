@@ -13,7 +13,8 @@ from pathlib import PurePosixPath
 from typing import Any, Callable, Iterable, Sequence
 
 from sil.diagnostics_html_markup import (
-    ICONS, Html, code, definition_list, join, plain, section, tag,
+    ICONS, Html, code, definition_list, identity_value, join, plain, section,
+    tag,
 )
 
 RUN_LABELS = {
@@ -198,14 +199,6 @@ def banner(report: dict, kind_label: str,
         class_=f"banner tone-{tone}", aria_label="Status")
 
 
-def value_or_reason(record: dict, key: str) -> Html:
-    if record.get(key) is not None:
-        return code(record[key])
-    reason = record.get("unavailable", {}).get(key)
-    return tag("span", "unknown", join([" (", tag("code", reason), ")"])
-               if reason else None, class_="na")
-
-
 def identity_section(report: dict, method: Sequence[tuple[str, Any]]) -> Html:
     identity, host = report["identity"], report["host"]
     configuration = report["configuration"]
@@ -219,12 +212,12 @@ def identity_section(report: dict, method: Sequence[tuple[str, Any]]) -> Html:
         tag("div",
             tag("div", tag("h3", "Run and build"), definition_list([
                 ("Manifest", code(identity["manifest_path"])),
-                ("Manifest hash", value_or_reason(identity, "manifest_hash")),
-                ("SiL version", value_or_reason(identity, "sil_version")),
+                ("Manifest hash", identity_value(identity, "manifest_hash")),
+                ("SiL version", identity_value(identity, "sil_version")),
                 ("Source revision",
-                 value_or_reason(identity, "source_revision")),
+                 identity_value(identity, "source_revision")),
                 ("Source repository",
-                 value_or_reason(identity, "source_repository")),
+                 identity_value(identity, "source_repository")),
                 ("Recording", plain(configuration["recording"],
                                     "none (--no-recording)")),
                 ("Working directory", code(configuration["cwd"])),
@@ -236,7 +229,7 @@ def identity_section(report: dict, method: Sequence[tuple[str, Any]]) -> Html:
                 ("OS", host["os"]), ("Kernel", code(host["kernel_release"])),
                 ("Architecture", host["architecture"]),
                 ("perf_event_paranoid",
-                 value_or_reason(host, "perf_event_paranoid")),
+                 identity_value(host, "perf_event_paranoid")),
             ]), tag("h3", "Method"), definition_list(method)),
             class_="grid-2"))
 

@@ -19,7 +19,6 @@ replaces a nonzero Run exit code; after a successful Run it gives exit 1.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import platform
@@ -35,6 +34,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from sil.build_info import __version__ as SIL_VERSION
+from sil.bundle import file_sha256
 from sil.diagnostics_report import ReportError, load_report, write_new_file
 from sil.diagnostics_run import (
     EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE, FORWARDED_SIGNALS,
@@ -812,14 +812,6 @@ def capture_status(run: dict, capture_run: CaptureRun, layout: Layout,
     return ("partial" if reasons else "complete"), reasons
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1 << 20), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
 def _artifacts(layout: Layout, request: ProfileRequest, cwd: Path) -> list:
     return artifact_rows(layout.out, request, cwd, [
         ("perf_data", layout.perf_data), ("cpu_samples", layout.samples),
@@ -843,7 +835,7 @@ def artifact_rows(out: Path, request, cwd: Path, collected: list) -> list:
         if path.is_file():
             rows.append({"role": role, "path": relative.as_posix(),
                          "bytes": path.stat().st_size,
-                         "sha256": _sha256(path)})
+                         "sha256": file_sha256(path)})
     return rows
 
 
