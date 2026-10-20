@@ -152,6 +152,27 @@
       }
     ]
   },
+  "cpu-complete-without-samples-file": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "samples_file"
+        ],
+        "value": null
+      },
+      {
+        "path": [
+          "capture",
+          "unavailable"
+        ],
+        "value": {
+          "samples_file": "export_failed"
+        }
+      }
+    ]
+  },
   "cpu-weight-called-duration": {
     "base": "cpu-complete",
     "changes": [

@@ -81,6 +81,8 @@ EXPECTED_VIOLATION = {
     "self-remainder-does-not-add-up": "capture.hotspots: self rows and "
                                       "self_remainder add up to 11 samples, "
                                       "totals.samples is 10",
+    "cpu-complete-without-samples-file":
+        "capture: status 'complete' without a samples file",
     "complete-with-reasons": "capture: status 'complete' with reasons",
     "partial-without-reasons": "capture: status 'partial' without a reason",
     "timestamp-not-a-string": "capture.time_origin_ns is not a decimal "

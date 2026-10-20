@@ -680,7 +680,8 @@ def export(perf: Path, request: CpuRequest, layout: Layout,
 
 
 def capture_status(run: dict, capture_run: CaptureRun, layout: Layout,
-                   exported: Export | None) -> tuple[str, list[str]]:
+                   exported: Export | None,
+                   samples_file: str | None) -> tuple[str, list[str]]:
     if run["status"] == "not_started":
         return "not_started", ["run_not_started"]
     reasons = []
@@ -690,7 +691,9 @@ def capture_status(run: dict, capture_run: CaptureRun, layout: Layout,
             capture_run.supervisor_signal is None
             and capture_run.perf_status != expected):
         reasons.append("backend_failed")
-    if exported is None or exported.problem is not None:
+    if exported is None or exported.problem is not None or (
+            exported.analysis is not None and samples_file is None):
+        # A capture without its samples file has lost its sample rows.
         reasons.append("export_failed")
     if capture_run.supervisor_signal is not None:
         reasons.append("interrupted")
@@ -753,7 +756,8 @@ def build_report(request: CpuRequest, layout: Layout, cwd: Path,
                  capture_run: CaptureRun, exported: Export | None,
                  version: str, samples_file: str | None) -> dict:
     run = run_record(capture_run)
-    status, reasons = capture_status(run, capture_run, layout, exported)
+    status, reasons = capture_status(run, capture_run, layout, exported,
+                                     samples_file)
     if exported is not None and exported.analysis is not None:
         members = _analysis_members(exported.analysis, samples_file,
                                     "export_failed")

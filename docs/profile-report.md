@@ -238,7 +238,7 @@ Reasons in v1, in addition to the diagnostics reasons:
 | `debug_file_not_found` | No debug file with the module's build ID was found |
 | `unverifiable_debug_file` | The module has no build ID, so a separate debug file cannot be matched |
 | `symbolization_timeout` | A `perf script` pass took longer than the limit |
-| `export_failed` | A `perf script` pass failed, its output did not decode, or it was larger than the export limit |
+| `export_failed` | A `perf script` pass failed, its output did not decode, or it was larger than the export limit. Or `cpu/samples.json` could not be written |
 | `no_samples` | The capture has no sample to describe |
 | `not_requested` | The option or collector was not requested |
 | `reserved` | Reserved for a later ticket; not measured by this version |
@@ -307,7 +307,7 @@ execute the runner, or perf could not start its workload.
 | `symbolization` | Below |
 | `processes`, `threads`, `modules` | Below |
 | `hotspots` | Below |
-| `samples_file` | `cpu/samples.json`, or null |
+| `samples_file` | `cpu/samples.json`, or null. A `complete` or `partial` capture always has the file. When the file cannot be written, the capture is `failed` with `export_failed` |
 | `unavailable` | Reasons for null members |
 
 **Weights.** Each sample has the weight `period`: the `cpu-clock` time in

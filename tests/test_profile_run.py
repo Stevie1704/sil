@@ -373,6 +373,35 @@ def test_an_export_failure_keeps_the_raw_capture(tools, exports, tmp_path):
         tmp_path / "prof" / "cpu" / "perf-script.stderr.txt").read_text()
 
 
+def test_a_samples_file_that_cannot_be_written_fails_the_capture(
+        tools, exports, tmp_path):
+    manifest = mixed_period_manifest(tmp_path)
+    # The write of cpu/samples.json fails as on a full disk.
+    prelude = ("import errno, sys, sil.profile_run as r; w = r.write_new_file\n"
+               "def fail(path, text):\n"
+               "    if path.name == 'samples.json':\n"
+               "        raise OSError(errno.ENOSPC, 'No space left on device')\n"
+               "    w(path, text)\n"
+               "r.write_new_file = fail\n"
+               "from sil.cli import main; sys.exit(main(sys.argv[1:]))")
+    environment = {**os.environ, **exports,
+                   "PATH": os.pathsep.join([str(tools), "/usr/bin:/bin"])}
+
+    proc = subprocess.run(
+        [sys.executable, "-c", prelude, "profile", str(manifest), "--out",
+         "prof", "--collector", "cpu"], capture_output=True, text=True,
+        cwd=tmp_path, env=environment)
+
+    assert proc.returncode == 1, proc.stderr
+    report = profile(tmp_path / "prof")
+    assert report["run"]["status"] == "succeeded"
+    capture = report["capture"]
+    assert (capture["status"], capture["reasons"]) == ("failed",
+                                                       ["export_failed"])
+    assert capture["samples_file"] is None
+    assert capture["unavailable"]["samples_file"] == "export_failed"
+
+
 def test_an_export_above_its_limit_fails_the_capture_not_the_run(
         tools, exports, tmp_path):
     # docs/profile-report.md: each perf script pass may write at most twice

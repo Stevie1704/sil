@@ -417,6 +417,10 @@ def _check_cpu(capture: dict, errors: list[str]) -> None:
     unknown = set(capture["reasons"]) - CPU_REASONS
     if unknown:
         errors.append(f"capture.reasons: unknown reasons {sorted(unknown)}")
+    if capture["status"] in ("complete", "partial") and \
+            capture["samples_file"] is None:
+        errors.append(f"capture: status {capture['status']!r} without a "
+                      "samples file")
     totals = capture["totals"]
     processes = _identities(capture["processes"], "processes", errors)
     _identities(capture["threads"], "threads", errors)
