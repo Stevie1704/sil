@@ -12,6 +12,7 @@ cmake --build "$work/gcc" --target sil-run sil-run-diagnostics -j2
 # The executable owns the XRay runtime; selected sleds reside in a dlopen DSO.
 cmake -S "$root" -B "$work/xray" -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 \
+  "-DCMAKE_PROJECT_INCLUDE=$root/proofs/function-tracing/xray-bridge.cmake" \
   '-DCMAKE_EXE_LINKER_FLAGS=-fxray-instrument -Wl,--export-dynamic'
 cmake --build "$work/xray" --target sil-run-diagnostics -j2
 PYTHONPATH="$root/python/src" "$root/.venv/bin/python" \

@@ -61,7 +61,7 @@ def build(out):
     """Retain exact copied sources, commands, maps and inline diagnostics."""
     sources = out / "sources"
     shutil.copytree(EXAMPLE, sources)
-    for name in ("probe.c", "probe.h", "control.cpp", "xray_attach.c"):
+    for name in ("probe.c", "probe.h", "control.cpp", "xray_attach.c", "xray_bridge.cpp"):
         shutil.copy2(HERE / name, sources / name)
     run([sys.executable, ROOT / "tools/silschema.py", sources / "schemas.json",
          sources / "adas_messages.h"])
@@ -128,9 +128,10 @@ def build(out):
     control_attrs = sources / "control.txt"
     control_attrs.write_text("[always]\nfun:*control*\n[never]\nfun:main\n")
     command = ["clang++-18", "-O2", "-g", "-fxray-instrument",
-               "-fxray-instruction-threshold=1",
+               "-fxray-instruction-threshold=100000", "-fxray-ignore-loops",
                f"-fxray-attr-list={control_attrs}", "-Wl,--export-dynamic",
-               sources / "control.cpp", "-pthread", "-ldl", "-o", out / "control"]
+               sources / "control.cpp", sources / "xray_bridge.cpp",
+               "-pthread", "-ldl", "-o", out / "control"]
     commands.append([str(x) for x in command])
     run(command)
     write(out / "build-commands.json", commands)

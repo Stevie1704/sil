@@ -71,15 +71,12 @@ static void xray_event(int32_t function, int edge) {
 
 void trace_xray_attach(void) {
   if (getenv("SIL_FUNCTION_XRAY")) {
-    void (*init)(void) = dlsym(RTLD_DEFAULT, "__xray_init");
-    if (init) init();
-    size_t (*maximum)(void) = dlsym(RTLD_DEFAULT, "__xray_max_function_id");
-    int (*handler)(void (*)(int32_t, int)) =
-        dlsym(RTLD_DEFAULT, "__xray_set_handler");
-    int (*patch)(void) = dlsym(RTLD_DEFAULT, "__xray_patch");
-    if (maximum && handler && patch) {
+    size_t (*maximum)(void) = dlsym(RTLD_DEFAULT, "sil_proof_xray_max");
+    int (*attach)(void (*)(int32_t, int)) =
+        dlsym(RTLD_DEFAULT, "sil_proof_xray_attach");
+    if (maximum && attach) {
+      patch_status = attach(xray_event);
       xray_max = (int)maximum();
-      if (handler(xray_event)) patch_status = patch();
     }
   }
 }
