@@ -208,6 +208,29 @@
       }
     ]
   },
+  "heap-complete-without-allocations-file": {
+    "base": "heap-complete-runner",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "analysis",
+          "allocations_file"
+        ],
+        "value": null
+      },
+      {
+        "path": [
+          "capture",
+          "analysis",
+          "unavailable"
+        ],
+        "value": {
+          "allocations_file": "export_failed"
+        }
+      }
+    ]
+  },
   "heap-complete-without-analysis": {
     "base": "heap-complete-process",
     "changes": [

@@ -425,7 +425,7 @@ Heap reasons:
 | `data_truncated` | The last record of the data is cut, or the data file could not be written (a full disk). The rest of the data is dropped, and the Run goes on. |
 | `data_may_be_incomplete` | Heaptrack writes its last data at normal process exit. The runner ended by a signal (runner scope), or the Run did not succeed and the runner stopped the participant (Process scope) |
 | `backend_failed` | The interpreter failed, or did not end within its time limit |
-| `export_failed` | The data is not Heaptrack's interpreted file version 3, or its stacks do not resolve |
+| `export_failed` | The data is not Heaptrack's interpreted file version 3, a record is malformed, or its stacks do not resolve. Or `heap/allocations.json` could not be written |
 | `no_data` | Heaptrack wrote no data: the scope process did not start |
 
 `analysis`:
@@ -435,7 +435,7 @@ Heap reasons:
 | `file_version` | 3 |
 | `heaptrack_version` | The version in the data file, for example `1.5.0` |
 | `traced_executable` | The command line that Heaptrack recorded for the traced process; it shows which process the data is from |
-| `allocations_file` | `heap/allocations.json`, or null |
+| `allocations_file` | `heap/allocations.json`, or null. A `complete` or `partial` capture always has the file |
 | `totals` | Below |
 | `coverage` | `allocations_unknown_module`, `allocations_unknown_symbol` (the innermost frame has a module and no function name), `allocations_with_caller` (two or more frames), `undecodable_records`, `truncated` |
 | `modules` | `id`, `path`, `build_id` (or null), `allocations_leaf` (allocations whose innermost frame is in the module), `allocations_unknown_symbol`, `unavailable` |

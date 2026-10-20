@@ -513,6 +513,10 @@ def _check_heap(capture: dict, errors: list[str]) -> None:
                       "analysis")
     if analysis is None:
         return
+    if capture["status"] in ("complete", "partial") and \
+            analysis["allocations_file"] is None:
+        errors.append(f"capture: status {capture['status']!r} without an "
+                      "allocations file")
     where = "capture.analysis"
     totals = analysis["totals"]
     if totals["frees"] != totals["allocations"] - \

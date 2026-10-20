@@ -109,6 +109,8 @@ EXPECTED_VIOLATION = {
     "heap-frees-do-not-match-outstanding":
         "capture.analysis.totals: frees 4 is not allocations 8 minus "
         "outstanding_allocations 3",
+    "heap-complete-without-allocations-file":
+        "capture: status 'complete' without an allocations file",
     "heap-complete-without-analysis":
         "capture: status 'complete' without an analysis",
     "heap-unknown-reason": "capture.reasons: unknown reasons "
