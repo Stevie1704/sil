@@ -235,7 +235,7 @@ and of #319, with its evidence or an explicit revised-scope decision.
 | D7 | A full profile file system: qualified for "no hang, explicit failure, nothing unrelated changed". For the CPU collector perf ends the Run (SIGTERM); the documented mitigation is `--max-capture-bytes` below the free space. |
 | D8 | The native install uses the release's `install.sh` on a local mirror of release files built from this commit, not a published release. |
 | D9 | Equivalence holds for deterministic fixtures with generous deadlines; timing-edge workloads are not covered. |
-| D10 | `sil profile render` keeps the exit codes of `sil diagnostics render` (an existing output is exit 1). The capture command gives exit 2 for an existing `--out`, as #313 requires. |
+| D10 | An output collision is a usage error (exit 2), as #313 requires: an existing `--out` for the capture command and an existing or homeless `--html` for `sil profile render`. `sil profile render` checks the output path before it reads the set. Exit 1 is kept for a write that fails. |
 | D11 | Linux x86-64/glibc only; arm64 (#311) and macOS make no profiling claim. A Process participant written in C is not a separate case: native code in Process participants is covered by the ctypes library, the child and the FMUs. |
 
 ## Evidence

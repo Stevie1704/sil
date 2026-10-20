@@ -787,11 +787,12 @@ sizes of named workloads).
 | Situation | Exit code |
 | --- | --- |
 | The summary was printed and the HTML report, if requested, was written | 0 |
-| The HTML report cannot be written: the output path exists (also the input itself) or its directory does not exist | 1 |
-| Invalid usage; `profile.json` or a named file is missing, corrupt, of another version, of another profile or inconsistent | 2 |
+| The HTML report cannot be written, for example because the disk is full | 1 |
+| Invalid usage; the output path exists (also the input itself) or its directory does not exist | 2 |
+| `profile.json` or a named file is missing, corrupt, of another version, of another profile or inconsistent | 2 |
 
-The input is checked first, so invalid input is always exit 2. An existing
-file is never replaced.
+The command checks the output path first. It reads and renders nothing when
+the path is not usable. An existing file is never replaced.
 
 ### Example
 

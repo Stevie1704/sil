@@ -267,14 +267,15 @@ def test_samples_that_do_not_add_up_are_a_usage_error(tmp_path):
     assert "profile.json has 10 of 10010000 ns" in proc.stderr
 
 
-def test_an_existing_output_is_never_replaced(tmp_path):
+def test_an_existing_output_is_a_usage_error(tmp_path):
     profile = artifact_set(tmp_path / "set", "cpu-complete.json")
     (tmp_path / "report.html").write_text("keep")
 
     proc = render([str(profile), "--html", "report.html"], tmp_path)
 
-    assert proc.returncode == 1
+    assert proc.returncode == 2
     assert "already exists" in proc.stderr
+    assert proc.stdout == ""
     assert (tmp_path / "report.html").read_text() == "keep"
 
 
@@ -284,8 +285,17 @@ def test_the_input_itself_is_never_the_output(tmp_path):
 
     proc = render([str(profile), "--html", str(profile)], tmp_path)
 
-    assert proc.returncode == 1
+    assert proc.returncode == 2
     assert profile.read_bytes() == before
+
+
+def test_an_output_without_a_directory_is_a_usage_error(tmp_path):
+    profile = artifact_set(tmp_path / "set", "cpu-complete.json")
+
+    proc = render([str(profile), "--html", "missing/report.html"], tmp_path)
+
+    assert proc.returncode == 2
+    assert proc.stdout == ""
 
 
 # --- hostile content, embedded data and precision ---------------------------
