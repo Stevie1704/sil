@@ -1,12 +1,14 @@
 """The `sil_profile_report` v1 contract (#315): its fixtures validate.
 
-Every valid fixture is one case of docs/profile-report.md; every invalid one
-breaks exactly one rule of it. The fixtures are hand-written data, so they
+Every valid fixture is one case of docs/profile-report.md. Every invalid
+case breaks exactly one rule of it: invalid/mutations.json names a valid
+fixture and the members to change. The fixtures are hand-written data, so they
 pin the contract independently of the code that writes a report.
 """
 
 from __future__ import annotations
 
+import copy
 import json
 
 import pytest
@@ -19,7 +21,24 @@ from sil.profile_report import (
 
 FIXTURES = ROOT / "tests" / "fixtures" / "profile"
 VALID = sorted(FIXTURES.glob("*.json"))
-INVALID = sorted((FIXTURES / "invalid").glob("*.json"))
+MUTATIONS = json.loads((FIXTURES / "invalid" / "mutations.json").read_text())
+
+
+def invalid_document(name):
+    """The valid base fixture of `name` with its listed members changed."""
+    mutation = MUTATIONS[name]
+    document = copy.deepcopy(
+        json.loads((FIXTURES / f"{mutation['base']}.json").read_text()))
+    for change in mutation["changes"]:
+        *parents, member = change["path"]
+        target = document
+        for key in parents:
+            target = target[key]
+        if change.get("delete"):
+            del target[member]
+        else:
+            target[member] = change["value"]
+    return document
 
 
 def test_every_documented_case_has_a_fixture():
@@ -41,8 +60,11 @@ def test_valid_fixture_has_no_violation(path):
     assert load_profile_report(path)["sil_profile_report"] == 1
 
 
-@pytest.mark.parametrize("path", INVALID, ids=lambda p: p.stem)
-def test_invalid_fixture_is_rejected(path):
+@pytest.mark.parametrize("name", sorted(MUTATIONS))
+def test_invalid_fixture_is_rejected(name, tmp_path):
+    path = tmp_path / f"{name}.json"
+    path.write_text(json.dumps(invalid_document(name)))
+
     with pytest.raises(ProfileReportError):
         load_profile_report(path)
 
@@ -113,18 +135,18 @@ EXPECTED_VIOLATION = {
 
 @pytest.mark.parametrize("name", sorted(EXPECTED_VIOLATION))
 def test_invalid_fixture_names_its_violation(name):
-    document = json.loads((FIXTURES / "invalid" / f"{name}.json").read_text())
-
-    assert EXPECTED_VIOLATION[name] in validate_profile_report(document)
+    assert EXPECTED_VIOLATION[name] in validate_profile_report(
+        invalid_document(name))
 
 
 def test_every_invalid_fixture_has_an_expected_violation():
-    assert {p.stem for p in INVALID} == set(EXPECTED_VIOLATION) | {
-        "not-finite"}
+    assert set(MUTATIONS) == set(EXPECTED_VIOLATION)
 
 
 def test_not_finite_json_is_rejected_by_the_parser():
-    text = (FIXTURES / "invalid" / "not-finite.json").read_text()
+    document = json.loads((FIXTURES / "cpu-complete.json").read_text())
+    document["capture"]["sampling"]["frequency_hz"] = float("nan")
+    text = json.dumps(document)
 
     with pytest.raises(ProfileReportError, match="NaN"):
         parse_profile_report(text)
