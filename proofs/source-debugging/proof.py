@@ -209,8 +209,10 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
             raise ValueError("missing deliberate debugger failure diagnostic")
         if action == "signal" and form != "native":
             debugger_outcome = json.loads((dest / "debugger-outcome.json").read_text())
-            if debugger_outcome["exit_signal"]["value"] != "15":
-                raise ValueError("inferior did not terminate with SIGTERM")
+            # sil.participant installs a handler that unwinds Python and exits 1.
+            if (debugger_outcome["exit_code"]["value"] != "1" or
+                    "participant terminated by signal 15" not in stderr):
+                raise ValueError("SIGTERM did not unwind the Python participant")
         if action == "kill" and "killed" not in log:
             raise ValueError("GDB did not report killing the inferior")
         failure = result["run_outcome"].get("failure") or {}
@@ -221,6 +223,9 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
             raise ValueError("deadline control did not fail the selected Step response")
         if action == "signal" and form == "native" and failure.get("category") != "interrupted":
             raise ValueError("Native SIGTERM did not produce an interrupted Run")
+        if action == "signal" and form != "native" and (
+                failure.get("category") != "exit" or failure.get("virtual_time_ns") != 40_000_000):
+            raise ValueError("Python SIGTERM did not fail the selected Step")
     # A reaped process must have no surviving observed inferior, including detach.
     for pid in {row["pid"] for row in stops}:
         if Path(f"/proc/{pid}").exists():

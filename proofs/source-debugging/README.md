@@ -130,7 +130,7 @@ CPU-time clocks are outside this shimmed wall-clock claim.
 | Continue / resume | Complete and byte-compare Recording with ordinary Run |
 | Detach | GDB releases and resumes inferior; Run completes and compares equal |
 | Kill inferior | Native runner dies, or Process exchange fails; no successful Run |
-| SIGTERM to inferior | Passed through; Native runner handles interruption, or Process exits and Run fails |
+| SIGTERM to inferior | Native runner reports interruption; Python Process/FMU handler unwinds with exit 1 and the Step exchange fails |
 | Debugger script error | Batch debugger exits; inferior is killed; Run fails |
 | Hold beyond explicit Process deadline | Runner fails response exchange and cleans child group |
 | Outer supervisor timeout | Kill supervised group and observed inferior group; retain partial evidence, fail proof |
@@ -142,6 +142,10 @@ that no observed inferior PID survives cleanup, including detached Runs.
 Raw stderr, debugger logs, diagnostics and independent command status remain
 available for failed controls. Hard debugger/host SIGKILL before the first
 saved stop is not qualified as recoverable capture.
+GDB's default batch exit code reports command-script success, even when its
+inferior exits 1. The Process wrapper can therefore exit 0 while the adapter
+fails; the Step exchange still fails. `debugger-outcome.json` preserves the
+inferior's actual exit separately from the runner report's wrapper status.
 
 ## Decision and retained evidence
 
