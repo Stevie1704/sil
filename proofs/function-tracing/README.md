@@ -50,8 +50,10 @@ bash proofs/function-tracing/run-proof.sh \
 .venv/bin/python -m pytest tests/test_function_tracing_proof.py
 ```
 
-Compiler generations are pinned to GCC 12 and Clang/LLVM 18; exact distro
-package versions, tool version strings, glibc and kernel are retained.
+The workflow pins GCC 12.4.0 (`12.4.0-2ubuntu1~24.04.1`) and Clang/LLVM
+18.1.3 (`1:18.1.3-1ubuntu1`) Ubuntu packages. Tool version strings, the complete
+package inventory, glibc and kernel are retained. A missing pinned package
+fails setup rather than silently switching compiler versions.
 The workload always uses `-O2 -g -ffp-contract=off`, never fast math. This
 differs from the GCC 12-only ADAS cost proof: the XRay candidate requires
 Clang plus compiler-rt and a proof-only executable link against XRay.
@@ -119,7 +121,21 @@ library. This variant changes call boundaries and is not a timing proxy for
 the unmodified optimized workload. The executable positive control is also
 separate from ADAS measurements. Runtime patch status and maximum function ID
 are retained even when no events occur; an empty capture does not mean no
-calls ran.
+calls ran. This compiler-rt build localizes its own API symbols, so
+`xray_bridge.cpp` exports proof-owned wrappers from the executable. CMake's
+project-include/deferred target source mechanism adds them only in the proof
+build, with no source edit to the kernel. The Native DSO retries attachment
+after loading. A missing bridge is an error, distinct from a working bridge
+whose runtime has no registered DSO map.
+
+The executable control uses a high default instruction threshold and disables
+loop-based selection; its attribute list explicitly selects the three
+`control_*` functions. That keeps unrelated C++ thread helpers out of the
+control. The ADAS candidate uses the requested threshold of one. Runtime IDs
+are resolved through the actual executable's address table and dynamic
+symbols; the control checks nine recursive leaf entries/returns on two TIDs,
+one tail-exit event and an unmatched throwing-function entry. Unwinding does
+not become a synthesized return.
 
 The observer preallocates 65,536 records (1 MiB) per process. A single try-lock
 protects append order; contention/full capacity increments a dropped counter.
@@ -150,9 +166,82 @@ equivalence here establishes no deadline-edge guarantee.
 
 ## Candidate decisions
 
-Qualification pending the first Linux workflow capture. This draft must stay
-draft until the evidence-backed build/defer/no-change decisions are recorded.
-No supported tracing capability is proposed by this implementation.
+[Linux qualification run 39466725936](https://github.com/Stevie1704/sil/actions/runs/39466725936)
+passed on source revision `9718afe5a55f6178f4499b729d41fbe63ca9ae9a`.
+The host was Ubuntu 24.04, Linux 6.17.0-1022-azure x86-64 and glibc 2.39.
+[Retained evidence](evidence/README.md) includes raw events, observations,
+compiler remarks, maps, identities and offline summaries. Later commits add
+documentation/evidence only; the source revision above identifies the build
+that actually ran.
+
+**Explicit scopes: build, as a separately specified source-owner opt-in.**
+All three captures had 2,640 events / 42,240 bytes, no loss and 40 completed
+Activation joins. Counts and entry order matched the worked example above in
+every Activation. GCC inlined `confirmed` and `confirms` even with scopes;
+their logical source calls stayed observable. `check_object` and `select_lead`
+remained outlined in the instrumented library. The uninstrumented GCC build
+also inlined `select_lead` into `adas_ref_advance`. Thus these are durations of
+the actual instrumented scopes, not reconstructed durations of the baseline's
+machine functions. See the [separate spec proposal](proposed-spec.md); it
+requires source ownership, a separate API/contract decision and new tickets.
+Nothing is shipped by this result.
+
+First explicit Run, twenty Activations per maneuver (inclusive elapsed host
+nanoseconds; medians across calls, with raw per-call values retained):
+
+| Function | Calls per Activation, one / eight | Median ns, one / eight |
+| --- | --- | --- |
+| check_object | 2 / 16 | 740.5 / 702 |
+| confirmed | 1 / 8 | 1,059 / 3,818 |
+| confirms | 1 / 36 | 353.5 / 348 |
+| select_lead | 1 / 1 | 1,773 / 31,033 |
+
+Object count increases the nested search work; it does not imply a uniform
+increase in the duration of every individual call. For example the eight-object
+`confirms` maximum was 8,080 ns, although its median was 348 ns. No scheduler
+or CPU-time cause is inferred from that elapsed-time outlier.
+
+**LLVM XRay 18.1.3: defer for this loaded Native library.** Clang inlined
+`check_object`, `confirmed` and `confirms`; only `select_lead` had surviving
+sleds in the optimized DSO. The noinline variant had sleds for all four
+functions. Both variants loaded and ran with equal Recordings, but all six
+captures had zero events, zero registered runtime function IDs and patch
+status NOT_INITIALIZED (0), including the retry after loading. This is
+missing runtime registration for the DSO map, not proof that no calls ran.
+The same bridge in the executable control successfully patched three mapped
+functions and captured 21 events with no loss: nine recursive leaf calls on
+two threads, one tail exit and a throwing entry with no matching return.
+This qualifies the runtime/control path while demonstrating the Native DSO
+boundary. The pinned runtime's
+[initialization source](https://github.com/llvm/llvm-project/blob/llvmorg-18.1.3/compiler-rt/lib/xray/xray_init.cpp)
+also explicitly leaves DSO maps unsupported. Upgrading LLVM, static-linking
+the application into a new runner, or implementing map registration would
+need a separate investigation; none answers this workload unchanged.
+
+Observed median whole-Run wall time across three fresh Runs:
+
+| Mode | Host ms | Raw function events / bytes per Run |
+| --- | ---: | ---: |
+| ordinary GCC | 7.457 | no collector |
+| diagnostics GCC | 10.106 | no function collector |
+| explicit GCC | 10.420 | 2,640 / 42,240 |
+| Clang baseline with XRay runtime link | 12.183 | no function collector |
+| XRay optimized DSO | 12.093 | 0 / 0 |
+| XRay noinline DSO | 12.057 | 0 / 0 |
+
+Whole-Run measurements include startup, Recording, flush and shutdown. The
+first diagnostics/explicit Runs' median inclusive Activation durations were
+1,951.5 / 5,645.5 ns for `one` and 7,160.5 / 50,795.5 ns for `eight`.
+Those paired observations show substantial local perturbation despite the
+small whole-Run difference. They establish no timing threshold or overhead
+correction for an uninstrumented function. Unpatched XRay DSO measurements
+are not measurements of active XRay tracing overhead.
+
+The seven-record exhaustion Run retained 112 bytes and reported 2,633 dropped
+events, with partial analysis and no exact Activation attribution. All 19
+Runs, including loss and both XRay variants, had Recording SHA-256
+`a5bd9ce5fdf45dcaf15286e2f424c3b3206ba20995eb2028d24518e18055a9fb`.
+The PR stays draft and #320 stays open, as requested by the ticket.
 
 Primary references: [LLVM XRay](https://llvm.org/docs/XRay.html),
 [XRay API and sled implementation](https://github.com/llvm/llvm-project/tree/llvmorg-18.1.8/compiler-rt/lib/xray),

@@ -1,0 +1,266 @@
+{
+  "modes": {
+    "clang": {
+      "wall_host_ns": [
+        12478105,
+        12183176,
+        12148844
+      ],
+      "median_wall_host_ns": 12183176,
+      "event_records": [
+        null,
+        null,
+        null
+      ],
+      "event_bytes": [
+        null,
+        null,
+        null
+      ]
+    },
+    "diagnostics": {
+      "wall_host_ns": [
+        10405689,
+        10106329,
+        9134077
+      ],
+      "median_wall_host_ns": 10106329,
+      "event_records": [
+        null,
+        null,
+        null
+      ],
+      "event_bytes": [
+        null,
+        null,
+        null
+      ]
+    },
+    "explicit": {
+      "wall_host_ns": [
+        10104342,
+        10636238,
+        10419560
+      ],
+      "median_wall_host_ns": 10419560,
+      "event_records": [
+        2640,
+        2640,
+        2640
+      ],
+      "event_bytes": [
+        42240,
+        42240,
+        42240
+      ]
+    },
+    "loss": {
+      "wall_host_ns": [
+        9353384
+      ],
+      "median_wall_host_ns": 9353384,
+      "event_records": [
+        7
+      ],
+      "event_bytes": [
+        112
+      ]
+    },
+    "ordinary": {
+      "wall_host_ns": [
+        7817560,
+        7380736,
+        7457435
+      ],
+      "median_wall_host_ns": 7457435,
+      "event_records": [
+        null,
+        null,
+        null
+      ],
+      "event_bytes": [
+        null,
+        null,
+        null
+      ]
+    },
+    "xray": {
+      "wall_host_ns": [
+        12609985,
+        12092855,
+        12086981
+      ],
+      "median_wall_host_ns": 12092855,
+      "event_records": [
+        0,
+        0,
+        0
+      ],
+      "event_bytes": [
+        0,
+        0,
+        0
+      ]
+    },
+    "xray-noinline": {
+      "wall_host_ns": [
+        12056783,
+        12023466,
+        13810670
+      ],
+      "median_wall_host_ns": 12056783,
+      "event_records": [
+        0,
+        0,
+        0
+      ],
+      "event_bytes": [
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  "maneuvers": {
+    "one": {
+      "activations": 20,
+      "counts_per_activation": {
+        "check_object": 2,
+        "select_lead": 1,
+        "confirmed": 1,
+        "confirms": 1
+      },
+      "first_call_order": [
+        "check_object",
+        "check_object",
+        "select_lead",
+        "confirmed",
+        "confirms"
+      ],
+      "functions": {
+        "check_object": {
+          "calls": 40,
+          "min_elapsed_host_ns": 696,
+          "median_elapsed_host_ns": 740.5,
+          "max_elapsed_host_ns": 788
+        },
+        "confirmed": {
+          "calls": 20,
+          "min_elapsed_host_ns": 1049,
+          "median_elapsed_host_ns": 1059.0,
+          "max_elapsed_host_ns": 1069
+        },
+        "confirms": {
+          "calls": 20,
+          "min_elapsed_host_ns": 350,
+          "median_elapsed_host_ns": 353.5,
+          "max_elapsed_host_ns": 363
+        },
+        "select_lead": {
+          "calls": 20,
+          "min_elapsed_host_ns": 1759,
+          "median_elapsed_host_ns": 1773.0,
+          "max_elapsed_host_ns": 1793
+        }
+      }
+    },
+    "eight": {
+      "activations": 20,
+      "counts_per_activation": {
+        "check_object": 16,
+        "select_lead": 1,
+        "confirmed": 8,
+        "confirms": 36
+      },
+      "first_call_order": [
+        "check_object",
+        "check_object",
+        "check_object",
+        "check_object",
+        "check_object",
+        "check_object",
+        "check_object",
+        "check_object",
+        "check_object",
+        "check_object",
+        "check_object",
+        "check_object",
+        "check_object",
+        "check_object",
+        "check_object",
+        "check_object",
+        "select_lead",
+        "confirmed",
+        "confirms",
+        "confirmed",
+        "confirms",
+        "confirms",
+        "confirmed",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirmed",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirmed",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirmed",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirmed",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirmed",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms",
+        "confirms"
+      ],
+      "functions": {
+        "check_object": {
+          "calls": 320,
+          "min_elapsed_host_ns": 660,
+          "median_elapsed_host_ns": 702.0,
+          "max_elapsed_host_ns": 5152
+        },
+        "confirmed": {
+          "calls": 160,
+          "min_elapsed_host_ns": 1035,
+          "median_elapsed_host_ns": 3818.0,
+          "max_elapsed_host_ns": 10279
+        },
+        "confirms": {
+          "calls": 720,
+          "min_elapsed_host_ns": 342,
+          "median_elapsed_host_ns": 348.0,
+          "max_elapsed_host_ns": 8080
+        },
+        "select_lead": {
+          "calls": 20,
+          "min_elapsed_host_ns": 30936,
+          "median_elapsed_host_ns": 31033.0,
+          "max_elapsed_host_ns": 40284
+        }
+      }
+    }
+  }
+}

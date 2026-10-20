@@ -1,0 +1,7 @@
+---
+- { id: 1, address: 0x238F0, function: 0x238F0, kind: function-enter, always-instrument: true, function-name: 'control_leaf(int)', version: 2 }
+- { id: 1, address: 0x23914, function: 0x238F0, kind: function-exit, always-instrument: true, function-name: 'control_leaf(int)', version: 2 }
+- { id: 2, address: 0x23920, function: 0x23920, kind: function-enter, always-instrument: true, function-name: 'control_throw()', version: 2 }
+- { id: 3, address: 0x23980, function: 0x23980, kind: function-enter, always-instrument: true, function-name: 'control_tail(int)', version: 2 }
+- { id: 3, address: 0x2398C, function: 0x23980, kind: tail-exit, always-instrument: true, function-name: 'control_tail(int)', version: 2 }
+...

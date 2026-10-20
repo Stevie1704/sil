@@ -1,0 +1,5 @@
+---
+- { id: 1, address: 0x1E70, function: 0x1E70, kind: function-enter, always-instrument: true, function-name: select_lead, version: 2 }
+- { id: 1, address: 0x2028, function: 0x1E70, kind: function-exit, always-instrument: true, function-name: select_lead, version: 2 }
+- { id: 1, address: 0x2036, function: 0x1E70, kind: function-exit, always-instrument: true, function-name: select_lead, version: 2 }
+...
