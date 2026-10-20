@@ -284,6 +284,35 @@ def test_a_runner_that_cannot_start_is_named_on_stderr(tools, heaptrack,
     assert "sil-run-diagnostics" in proc.stderr
 
 
+@pytest.mark.skipif(not Path("/dev/full").exists(), reason="needs /dev/full")
+def test_a_full_disk_never_blocks_the_interpreter():
+    # #319: when the data file cannot be written (ENOSPC), the copy must go
+    # on reading and dropping, or the interpreter and then the traced Run
+    # block on a full pipe. /dev/full fails every write with ENOSPC.
+    import io
+    from sil.profile_heap_run import _Copy
+    source = io.BufferedReader(io.BytesIO(b"x" * (1 << 20)))
+    copy = _Copy(source, Path("/dev/full"), 1 << 30, False)
+    copy.start()
+    copy.join(timeout=10)
+    assert not copy.is_alive()
+    assert copy.write_failed
+    assert source.read() == b""
+
+
+def test_a_data_file_that_cannot_be_made_never_blocks_the_interpreter(
+        tmp_path):
+    import io
+    from sil.profile_heap_run import _Copy
+    source = io.BufferedReader(io.BytesIO(b"x" * (1 << 20)))
+    copy = _Copy(source, tmp_path / "missing" / "data", 1 << 30, False)
+    copy.start()
+    copy.join(timeout=10)
+    assert not copy.is_alive()
+    assert copy.write_failed
+    assert source.read() == b""
+
+
 HEAPTRACK_VARIABLES = {"LD_PRELOAD", "DUMP_HEAPTRACK_OUTPUT"}
 
 

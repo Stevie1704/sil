@@ -933,6 +933,12 @@ def storage(q: Qualification, runs: Runs, small: Path) -> None:
             recording.is_file() and sha256(recording) ==
             runs.outcomes.get("ordinary-main", {}).get("recording"))
         record["observations"]["exit_code"] = record["exit_code"]
+        if collector[0] == "heap":
+            # The interpreter is outside the Run and drops what it cannot
+            # write; the Run goes on. (perf instead ends its command: the
+            # CPU case is an observation, see README.)
+            q.check(record, "the Run goes on: Recording equals the ordinary "
+                    "Run", record["observations"]["recording_equals_ordinary"])
         if report is not None:
             q.check(record, "profile not complete",
                     report["capture"]["status"] != "complete")

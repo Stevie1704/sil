@@ -256,7 +256,8 @@ def adapter_text(tools: Heaptrack, fifo: Path,
 
 class _Copy(threading.Thread):
     """Copies a stream into a file up to a limit; it reads on after the
-    limit and drops the rest, so the writer never blocks on the reader."""
+    limit, or after a failed write (a full disk), and drops the rest, so the
+    writer never blocks on the reader."""
 
     def __init__(self, source, sink: Path, limit: int, keep_tail: bool):
         super().__init__(daemon=True)
@@ -264,29 +265,50 @@ class _Copy(threading.Thread):
         self.limit, self.keep_tail = limit, keep_tail
         self.written = 0
         self.limit_reached = False
+        self.write_failed = False
 
     def run(self) -> None:
+        try:
+            sink = open(self.sink, "wb", buffering=0)
+        except OSError as error:
+            self._failed(error)
+            sink = open(os.devnull, "wb", buffering=0)
+        with sink:
+            self._copy(sink)
+
+    def _copy(self, sink) -> None:
         tail = b""
-        with open(self.sink, "wb") as sink:
-            for block in iter(lambda: self.source.read1(CHUNK), b""):
-                if self.keep_tail:
-                    tail = (tail + block)[-self.limit:]
-                    continue
-                room = self.limit - self.written
-                if len(block) > room:
-                    self.limit_reached = True
-                    block = block[:room]
-                if block:
-                    sink.write(block)
-                    self.written += len(block)
+        for block in iter(lambda: self.source.read1(CHUNK), b""):
             if self.keep_tail:
-                sink.write(tail)
+                tail = (tail + block)[-self.limit:]
+                continue
+            room = self.limit - self.written
+            if len(block) > room:
+                self.limit_reached = True
+                block = block[:room]
+            if block and not self.write_failed:
+                self._write(sink, block)
+        if self.keep_tail and not self.write_failed:
+            self._write(sink, tail)
+
+    def _write(self, sink, block: bytes) -> None:
+        try:
+            sink.write(block)
+            self.written += len(block)
+        except OSError as error:
+            self._failed(error)
+
+    def _failed(self, error: OSError) -> None:
+        self.write_failed = True
+        sys.stderr.write(f"{PROG}: cannot write '{self.sink}': {error}; "
+                         "the rest of the data is dropped\n")
 
 
 @dataclass(frozen=True)
 class InterpreterResult:
     exit_code: int | None  # None: killed after the timeout or a signal
     limit_reached: bool
+    write_failed: bool = False  # the data file could not be written
 
 
 class Interpreter:
@@ -328,7 +350,8 @@ class Interpreter:
         self.errors.join()
         self.layout.fifo.unlink(missing_ok=True)
         return InterpreterResult(None if killed else self.process.returncode,
-                                 self.data.limit_reached)
+                                 self.data.limit_reached,
+                                 self.data.write_failed)
 
 
 def _release_reader(fifo: Path) -> None:
@@ -486,7 +509,8 @@ def capture_status(run: dict, result: InterpreterResult,
         reasons.append("interrupted")
     if result.limit_reached:
         reasons.append("capture_limit_reached")
-    if analysis is not None and analysis.record["coverage"]["truncated"]:
+    if result.write_failed or (
+            analysis is not None and analysis.record["coverage"]["truncated"]):
         reasons.append("data_truncated")
     if _scope_may_have_ended_early(run, process_scope):
         reasons.append("data_may_be_incomplete")
