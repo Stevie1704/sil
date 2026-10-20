@@ -182,6 +182,17 @@ from [`container/requirements.lock`](container/requirements.lock). The
 retained evidence holds digests, inspection results and comparison results
 only.
 
+## Selected function tracing feasibility (#320)
+
+[proofs/function-tracing/](proofs/function-tracing/) uses Ubuntu 24.04's
+Clang/LLVM 18 tools and compiler-rt XRay runtime
+([upstream](https://github.com/llvm/llvm-project), Apache-2.0 WITH LLVM-exception).
+The proof-only executable links the XRay runtime; no LLVM source or binary
+is vendored or added to a SiL distribution. GCC 12 is the baseline/compiler
+for explicit probes. Exact package versions and binary/source digests are
+retained with the experiment. These are development/qualification tools,
+not new dependencies of the installed SiL runtime.
+
 ## Python wheel and source distribution
 
 The wheel and the source distribution contain SiL code and the editable
