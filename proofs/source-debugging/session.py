@@ -100,6 +100,10 @@ while gdb.selected_inferior().pid:
         "previous_command": "instance->acceleration_mps2",
         "activation_count": "instance->activations", "t_ns": "t_ns",
     })
+    if action != "resume":
+        (dest / "action.json").write_text(json.dumps({"action": action,
+            "inferior_pid": gdb.selected_inferior().pid, "index": entry.index,
+            "virtual_time_ns": entry.t}) + "\n")
     if action == "detach":
         gdb.execute("detach")
         break
@@ -112,7 +116,7 @@ while gdb.selected_inferior().pid:
         gdb.execute("signal SIGTERM")
         break
     if action == "deadline":
-        time.sleep(1)
+        time.sleep(3)
         gdb.execute("continue")
         break
     # Source anchors deliberately fail when this named workload changes.
@@ -145,3 +149,7 @@ while gdb.selected_inferior().pid:
     })
     entry.enabled = True
     gdb.execute("continue")
+
+(dest / "debugger-outcome.json").write_text(json.dumps({
+    "exit_code": evaluate("$_exitcode"), "exit_signal": evaluate("$_exitsignal"),
+    "action": action}) + "\n")

@@ -28,6 +28,7 @@ ROOT = HERE.parents[1]
 EXAMPLE = ROOT / "examples/adas-reference"
 DEADLINE_MS = 30_000
 RUN_LIMIT_S = 60
+SHORT_DEADLINE_MS = 2_000
 
 
 def load(name, path):
@@ -132,13 +133,14 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
     diagnostic = selector is not None or label == "observations"
     command = [out / ("sil-run-diagnostics" if diagnostic else "sil-run"), manifest,
                "-o", dest / "recording.mcap", "--participant-timeout-ms",
-               str(500 if action == "deadline" else DEADLINE_MS)]
+               str(SHORT_DEADLINE_MS if action == "deadline" else DEADLINE_MS)]
     if diagnostic:
         command += ["--diagnostics-out", dest / "diagnostics.json",
                     "--activation-observations", dest / "observations.jsonl",
                     "--activation-observations-limit-bytes", str(1 << 20)]
     env = dict(os.environ)
     env.pop("LD_PRELOAD", None)
+    env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env.get("PATH", "")
     if selector:
         commands = dest / "session.gdb"
         # Redirect GDB's own output while preserving inferior protocol stdout.
@@ -155,12 +157,14 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
         else:
             command += ["--launch-wrapper", "hazard", HERE / "launch.sh"]
     started = time.monotonic_ns()
+    timed_out = False
     with subprocess.Popen([str(x) for x in command], env=env,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           text=True, start_new_session=True) as process:
         try:
             stdout, stderr = process.communicate(timeout=RUN_LIMIT_S)
         except subprocess.TimeoutExpired:
+            timed_out = True
             os.killpg(process.pid, signal.SIGKILL)
             # A Process participant owns a separate process group.
             stops_file = dest / "stops.json"
@@ -170,19 +174,45 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
                         os.killpg(row["pgid"], signal.SIGKILL)
                     except ProcessLookupError:
                         pass
-            process.communicate(timeout=5)
-            raise
+            stdout, stderr = process.communicate(timeout=5)
     (dest / "stdout.txt").write_text(stdout)
     (dest / "stderr.txt").write_text(stderr)
     result = {"form": form, "label": label, "selector": selector, "action": action,
               "command": [str(x) for x in command], "exit_code": process.returncode,
               "elapsed_host_ns": time.monotonic_ns() - started,
-              "deadline_ms": 500 if action == "deadline" else DEADLINE_MS,
+              "deadline_ms": SHORT_DEADLINE_MS if action == "deadline" else DEADLINE_MS,
               "manifest_sha256": digest(manifest)}
+    result["supervisor_timeout"] = timed_out
+    write(dest / "result.json", result)
+    if timed_out:
+        raise TimeoutError(f"supervisor timeout; partial evidence retained: {dest}")
     stops_file = dest / "stops.json"
     stops = json.loads(stops_file.read_text()) if stops_file.exists() else []
     if selector and (not stops or stops[0]["stage"] != "entry"):
         raise ValueError(f"no selected-Activation debugger evidence: {dest}")
+    diagnostics_path = dest / "diagnostics.json"
+    result["run_outcome"] = (json.loads(diagnostics_path.read_text())["run"]
+                             if diagnostics_path.exists() else
+                             {"exit_code": None, "reason": "runner report unavailable"})
+    if selector and action != "resume":
+        marker = json.loads((dest / "action.json").read_text())
+        if marker["action"] != action or marker["index"] != 4:
+            raise ValueError("control action did not reach the selected Activation")
+        log = (dest / "gdb.txt").read_text()
+        if action == "debugger-error" and "deliberate debugger failure" not in log + stderr:
+            raise ValueError("missing deliberate debugger failure diagnostic")
+        if action == "signal" and "SIGTERM" not in log:
+            raise ValueError("SIGTERM did not reach the inferior")
+        if action == "kill" and "killed" not in log:
+            raise ValueError("GDB did not report killing the inferior")
+        failure = result["run_outcome"].get("failure") or {}
+        if not isinstance(failure, dict):
+            raise ValueError("invalid Run failure evidence")
+        if action == "deadline" and (failure.get("category") != "timeout" or
+                failure.get("virtual_time_ns") != 40_000_000):
+            raise ValueError("deadline control did not fail the selected Step response")
+        if action == "signal" and form == "native" and failure.get("category") != "interrupted":
+            raise ValueError("Native SIGTERM did not produce an interrupted Run")
     # A reaped process must have no surviving observed inferior, including detach.
     for pid in {row["pid"] for row in stops}:
         if Path(f"/proc/{pid}").exists():
@@ -283,12 +313,17 @@ def experiment(out, build):
     # Test the ticket's grouped-ADAS premise without expanding the product.
     def group_controller(m, name, routes):
         m.add_process(name, command=[sys.executable, "-m", "sil.fmi", "--instance", "adas",
-            str(out / "AdasReference.fmu")], step_period_ns=10_000_000,
+            str(out / "AdasReference.fmu"), "--instance", "peer", str(out / "AdasReference.fmu"),
+            "--bus-profile", "application/org.fmi-standard.fmi-ls-bus.can",
+            "--bind", "hazard.radar:sample_time_ns=adas.radar.sample_time_ns"], step_period_ns=10_000_000,
             subscribes=routes, publishes=["hazard.command"])
     group = manifest.reference_manifest(inputs, library, maneuvers=("hazard",),
                                        controller=group_controller)
     group.write(out / "group.json")
     row = capture(out, out / "group.json", "group", "unsupported", action="reject")
+    group_error = (out / "runs/group-unsupported/stderr.txt").read_text()
+    if row["exit_code"] != 2 or "member of a terminal" not in group_error:
+        raise ValueError("group failed for a reason other than missing BUS terminals")
     report["grouped_adas"] = row
     report["decision"] = "no-change: external scripts suffice for qualified forms; grouped ADAS deferred"
     write(out / "report.json", report)

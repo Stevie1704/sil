@@ -108,7 +108,7 @@ not permission for an indefinite human stop. The outer supervisor bounds
 each Run at 60 s and the CI job at 25 minutes. Native callbacks are synchronous:
 a Participant response timeout cannot interrupt a stopped runner. Process
 and FMU Stops consume the runner's host response deadline. A separate control
-uses an explicit 500 ms deadline and holds the debugger for 1 s; Run failure
+uses an explicit 2 s deadline and holds the debugger for 3 s; Run failure
 is the expected result. No equivalence is claimed at a deadline edge.
 
 The shim case uses the same Process adapter with `shim=True`. The launch
