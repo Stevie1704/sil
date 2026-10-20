@@ -37,8 +37,8 @@ def analyze(events: Path, observations: Path) -> dict:
         problems.append("short_event_file")
     if meta["dropped"]:
         problems.append("dropped_events")
-    if (footer.get("kind") != "end" or footer.get("dropped", 0) or
-            footer.get("truncated") or footer.get("write_failed") or
+    if (footer.get("kind") != "end" or footer.get("dropped") != 0 or
+            footer.get("truncated") is not False or footer.get("write_failed") is not False or
             footer.get("records") != len(rows) - 2):
         problems.append("incomplete_activations")
     activations = [{**a, "calls": [], "call_order": [], "counts": {}}

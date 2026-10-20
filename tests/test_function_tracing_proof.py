@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def analyze(tmp_path, events, activations, **metadata):
+def analyze(tmp_path, events, activations, *, observation_footer=None, **metadata):
     raw = b"".join(struct.pack("<QIHH", *event) for event in events)
     (tmp_path / "events.bin").write_bytes(raw)
     (tmp_path / "events.bin.json").write_text(json.dumps({
@@ -17,6 +17,7 @@ def analyze(tmp_path, events, activations, **metadata):
         "clock_errors": 0, "clock_bracket_ns": [90, 91, 92], **metadata}))
     rows = [{"sil_activation_observations": 1, "clock": "host_monotonic",
              "runner_pid": 42, "runner_tid": 42}, *activations,
+            observation_footer if observation_footer is not None else
             {"kind": "end", "records": len(activations), "dropped": 0,
              "truncated": False, "write_failed": False}]
     (tmp_path / "observations.jsonl").write_text(
@@ -84,3 +85,11 @@ def test_unclosed_call_reports_partial_without_inventing_a_duration(tmp_path):
     assert report["status"] == "partial"
     assert report["problems"] == ["unclosed_calls"]
     assert report["unattributed"][0]["elapsed_host_ns"] is None
+
+
+def test_missing_loss_accounting_cannot_claim_a_complete_capture(tmp_path):
+    report = analyze(tmp_path, [(101, 42, 1, 0), (105, 42, 1, 1)],
+                     [activation()], observation_footer={"kind": "end", "records": 1})
+    assert report["status"] == "partial"
+    assert report["problems"] == ["incomplete_activations"]
+    assert report["activations"][0]["counts"] == {}
