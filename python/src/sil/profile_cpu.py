@@ -3,8 +3,9 @@
 The input is the text of two `perf script` passes over one `perf.data`
 (docs/profile-report.md, "What the command does"):
 
-- the records: `-F comm,pid,tid,time,period,ip,sym,dso --ns --no-inline
-  --show-task-events --show-mmap-events --show-lost-events`;
+- the records: `-F comm,pid,tid,time,period,ip,sym,dso --ns --inline
+  --show-task-events --show-mmap-events --show-lost-events`; an inlined
+  function is its own frame, marked `inlined`, before its physical frame;
 - the leaf source lines: `-G -F ip,sym,srcline`, one pair of lines per
   sample, in the same order.
 
@@ -34,6 +35,9 @@ _HEADER = re.compile(
 _FRAME = re.compile(
     r"^\s*(?P<ip>[0-9a-f]+)\s+(?P<sym>.*?)\s+"
     r"\((?P<dso>[^()]*(?:\([^()]*\)[^()]*)?)\)\s*$")
+# An inlined function: the address of its physical frame, no module.
+_INLINED = re.compile(
+    r"^\s*(?P<ip>[0-9a-f]+)\s+(?P<sym>.*?)\s+\(inlined\)\s*$")
 _PERIOD = re.compile(r"^\s*(?P<period>\d+)\s*(?P<frame>.*)$")
 _TASK = re.compile(
     r"^PERF_RECORD_(?P<kind>FORK|EXIT)\((?P<pid>-?\d+):(?P<tid>-?\d+)\):"
@@ -66,6 +70,7 @@ class _Frame:
     ip: int
     symbol: str | None
     dso: str | None
+    inlined: bool = False
 
 
 @dataclass
@@ -196,9 +201,8 @@ def _parse(script: str) -> _Capture:
             continue
         header = _HEADER.match(line)
         if header is None:
-            frame = _FRAME.match(line)
-            if sample is not None and frame is not None:
-                sample.frames += (_frame(frame),)
+            if sample is not None:
+                _add_frame(sample, line)
             continue
         sample = None
         time_ns = _time_ns(header)
@@ -206,6 +210,30 @@ def _parse(script: str) -> _Capture:
             capture.origin_ns = time_ns
         sample = _record(capture, header, time_ns)
     return capture
+
+
+def _add_frame(sample: _Sample, line: str) -> None:
+    """Add one call-chain line. An inlined function comes before its
+    physical frame, innermost first, and gets that frame's module."""
+    if (inlined := _INLINED.match(line)) is not None:
+        sample.frames += (_Frame(int(inlined["ip"], 16), inlined["sym"],
+                                 None, inlined=True),)
+        return
+    if (match := _FRAME.match(line)) is None:
+        return
+    frame = _frame(match)
+    frames = list(sample.frames)
+    index = len(frames)
+    while index and frames[index - 1].inlined and \
+            frames[index - 1].ip == frame.ip and frames[index - 1].dso is None:
+        index -= 1
+        frames[index] = _Frame(frame.ip, frames[index].symbol, frame.dso,
+                               inlined=True)
+    sample.frames = (*frames, frame)
+
+
+def _physical_frames(sample: _Sample) -> int:
+    return sum(1 for frame in sample.frames if not frame.inlined)
 
 
 def _record(capture: _Capture, header: re.Match,
@@ -408,7 +436,8 @@ def _totals(capture: _Capture, lost_sample_records: int) -> dict:
         "samples_unknown_symbol": sum(1 for f in leaves
                                       if f is not None and f.dso is not None
                                       and f.symbol is None),
-        "samples_with_caller": sum(1 for s in samples if len(s.frames) > 1),
+        "samples_with_caller": sum(1 for s in samples
+                                   if _physical_frames(s) > 1),
         "lost_samples": None if unknown_count else capture.lost_samples,
         "lost_records": capture.lost_records + lost_sample_records,
         "unavailable": ({"lost_samples": "not_reported_by_backend"}
@@ -431,12 +460,14 @@ def _symbolization(samples: list[_Sample], problem: str | None) -> dict:
         if lines == 0:
             source.update(samples_with_line=None, unavailable={
                 "samples_with_line": "debug_file_not_found"})
-    with_caller = sum(1 for s in samples if len(s.frames) > 1)
+    with_caller = sum(1 for s in samples if _physical_frames(s) > 1)
+    inlined = sum(1 for s in samples if any(f.inlined for f in s.frames))
     return {"function_names": {"samples_with_name": named},
             "call_frame_unwinding": {"method": "dwarf",
                                      "samples_with_caller": with_caller},
             "source_lines": source,
-            "inlined_frames": {"status": "not_requested"}}
+            "inlined_frames": {"status": "available",
+                               "samples_with_inlined_frames": inlined}}
 
 
 def _offset(time_ns: int, origin: int | None) -> int | None:
@@ -546,9 +577,11 @@ def _samples_document(capture: _Capture, by_path: dict) -> dict:
                 "module_offset": None if offset is None else hex(offset),
                 "source": ({"file": source[0], "line": source[1]}
                            if source else None)}
+            if frame.inlined:
+                record["inlined"] = True
             key = (record["module"], record["module_offset"], record["symbol"],
                    record["address"] if offset is None else None,
-                   source)
+                   source, frame.inlined)
             if key not in frame_index:
                 frame_index[key] = len(frames)
                 frames.append(record)

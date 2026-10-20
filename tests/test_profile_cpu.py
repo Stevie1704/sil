@@ -248,7 +248,7 @@ def test_symbolization_reports_names_and_unwinding_separately(analysis):
     assert analysis.symbolization["call_frame_unwinding"] == {
         "method": "dwarf", "samples_with_caller": 4}
     assert analysis.symbolization["inlined_frames"] == {
-        "status": "not_requested"}
+        "status": "available", "samples_with_inlined_frames": 0}
 
 
 def test_samples_document_keeps_chronology_and_module_offsets(analysis):
@@ -375,3 +375,49 @@ def test_a_frameless_sample_without_a_leaf_stays_in_the_totals():
         "self_weight_ns": 1000000, "inclusive_samples": 1,
         "inclusive_weight_ns": 1000000, "source_lines": []}]
     assert result.samples_document["stacks"] == [[]]
+
+
+# perf script --inline: an inlined function is a line with the physical
+# frame's address, marked "(inlined)" and without a module, innermost first,
+# before its physical frame.
+INLINED = "\n".join([
+    mmap("sil-run-diagnos", 101, 0, "0x7f0000000000", "0x4000", "0x1000",
+         "bb" * 20, NATIVE),
+    f"{header('sil-run-diagnos', 101, 101, 100)} {1000000:>10} ",
+    "\t    7f0000001400 mix (inlined)",
+    "\t    7f0000001400 square (inlined)",
+    f"\t    7f0000001400 spin ({NATIVE})",
+    f"\t    7f0000001200 native_task ({NATIVE})",
+    "",
+    # One physical frame: an inlined function is no caller.
+    f"{header('sil-run-diagnos', 101, 101, 200)} {1000000:>10} ",
+    "\t    7f0000001400 square (inlined)",
+    f"\t    7f0000001400 spin ({NATIVE})",
+    "",
+]) + "\n"
+
+
+def test_inlined_frames_are_own_functions_counted_once_per_sample():
+    srclines = ("    7f0000001400 spin\n  native.c:7\n"
+                "    7f0000001400 spin\n  native.c:8\n")
+    result = normalize_cpu(INLINED, srclines=srclines, facts=facts,
+                           lost_sample_records=0)
+
+    native = result.module_id(NATIVE)
+    rows = {r["symbol"]: r for r in result.hotspots["inclusive"]}
+    assert {s: (r["self_samples"], r["inclusive_samples"])
+            for s, r in rows.items()} == {
+        "mix": (1, 1), "square": (1, 2), "spin": (0, 2),
+        "native_task": (0, 1)}
+    assert all(r["module"] == native for r in rows.values())
+    assert result.totals["samples_with_caller"] == 1
+    assert result.symbolization["inlined_frames"] == {
+        "status": "available", "samples_with_inlined_frames": 2}
+    document = result.samples_document
+    leaf = document["frames"][document["stacks"][0][0]]
+    assert leaf == {"module": native, "symbol": "mix", "inlined": True,
+                    "address": "0x7f0000001400", "module_offset": "0x2400",
+                    "source": {"file": "native.c", "line": 7}}
+    physical = document["frames"][document["stacks"][0][2]]
+    assert physical["symbol"] == "spin" and "inlined" not in physical
+    assert [len(stack) for stack in document["stacks"]] == [4, 2]

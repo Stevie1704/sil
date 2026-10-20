@@ -113,9 +113,10 @@ Run, retry, change the collector or the event, or change a host setting.
    with `--modules-from`. Without a copy, the samples of a module keep its
    path, build ID and module offsets, and have no function name.
 5. **Export.** `perf script` writes the samples and the task, mmap and lost
-   events (`-F comm,pid,tid,time,period,ip,sym,dso --ns --no-inline
+   events (`-F comm,pid,tid,time,period,ip,sym,dso --ns --inline
    --show-task-events --show-mmap-events --show-lost-events`). A second
-   pass gives the source line of each leaf frame (`-G -F ip,sym,srcline`). The analysis commands use
+   pass gives the source line of each leaf frame
+   (`-G -F ip,sym,srcline --no-inline`). The analysis commands use
    `perf --buildid-dir DIR/cpu/buildid-cache` and run without
    `DEBUGINFOD_URLS`, so no symbol is fetched from the network. Each pass
    runs alone (no parallel symbolization), for at most
@@ -322,7 +323,7 @@ have no samples.
 | --- | --- |
 | `samples`, `weight_ns` | All samples and the sum of their weights: the denominators of every share |
 | `samples_unknown_module`, `samples_unknown_symbol` | Samples whose leaf frame has no module, or a module and no function name |
-| `samples_with_caller` | Samples with at least two frames: the unwinder found a caller |
+| `samples_with_caller` | Samples with at least two physical frames: the unwinder found a caller |
 | `lost_samples` | Samples that perf reports lost (`PERF_RECORD_LOST`, `PERF_RECORD_LOST_SAMPLES`); null when a lost record has no count |
 | `lost_records` | The number of lost records |
 
@@ -333,7 +334,14 @@ have no samples.
 | `function_names` | `samples_with_name`: leaf frames with a function name |
 | `call_frame_unwinding` | `method` (`dwarf`), `samples_with_caller` |
 | `source_lines` | `status` (`available`, `partial`, `unavailable`), `scope` (`leaf_frames`), `samples_with_line` (null for `unavailable`), `unavailable` |
-| `inlined_frames` | `status` `not_requested`: the export uses `--no-inline`, so an inlined function is part of its caller's frame and no sample counts twice |
+| `inlined_frames` | `status` `available`: the export uses `--inline`. `samples_with_inlined_frames` counts the samples with at least one inlined frame. `unavailable` when there is no export. A version 1 report of an earlier version can have `not_requested` |
+
+An inlined function is its own frame: it has the address and the module of
+its physical frame and the mark `inlined`. In a stack, the inlined frames
+come before their physical frame, innermost first. A `self` row gives the
+sample to the innermost frame. An `inclusive` row counts a function once per
+sample. So no total counts a sample twice. `samples_with_caller` counts
+physical frames only: an inlined function is not a caller.
 
 Function names and DWARF call frames are separate capabilities. A module
 can unwind and have no names (a stripped library). A module can also have
@@ -933,7 +941,7 @@ value becomes a URL. "Download JSON" saves `profile.json` byte for byte.
 | Member | Content |
 | --- | --- |
 | `time_origin_ns` | As in `profile.json` |
-| `frames` | List of `{module, symbol, address, module_offset, source}`; `module_offset` is the file offset (`address - start + file_offset`), `source` is `{file, line}` or null |
+| `frames` | List of `{module, symbol, address, module_offset, source}`; `module_offset` is the file offset (`address - start + file_offset`), `source` is `{file, line}` or null. An inlined frame also has `inlined` true |
 | `stacks` | List of frame index lists, leaf first |
 | `samples` | List of `[offset_ns, process, thread, weight_ns, stack]` in capture order |
 

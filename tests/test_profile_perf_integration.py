@@ -227,6 +227,29 @@ def test_dwarf_unwinding_reaches_the_source_caller(matching):
     assert "native_task" in callers
 
 
+def test_inlined_frames_are_marked_and_belong_to_their_physical_frame(
+        matching):
+    cwd, _ = matching
+    report = json.loads((cwd / "prof" / "profile.json").read_text())
+    inlined = report["capture"]["symbolization"]["inlined_frames"]
+    document = samples_document(cwd / "prof")
+    frames = document["frames"]
+
+    assert inlined["status"] == "available"
+    with_inlined = 0
+    for row in document["samples"]:
+        stack = [frames[index] for index in document["stacks"][row[4]]]
+        with_inlined += any(f.get("inlined") for f in stack)
+        for position, frame in enumerate(stack):
+            if frame.get("inlined"):
+                # The next physical frame has the same address and module.
+                physical = next(f for f in stack[position:]
+                                if not f.get("inlined"))
+                assert (frame["address"], frame["module"]) == (
+                    physical["address"], physical["module"])
+    assert with_inlined == inlined["samples_with_inlined_frames"]
+
+
 def test_the_profiled_recording_equals_the_ordinary_one(matching, build_dir):
     cwd, _ = matching
     ordinary = subprocess.run(

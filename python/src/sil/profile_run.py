@@ -62,9 +62,11 @@ MAX_ACTIVATION_BYTES = 64 << 20
 LIMITATIONS = ["cpu_samples_estimate_on_cpu_time", "user_space_only",
                "scope_is_runner_and_descendants", "host_build_only"]
 SCRIPT_FIELDS = ["-F", "comm,pid,tid,time,period,ip,sym,dso", "--ns",
-                 "--no-inline", "--show-task-events", "--show-mmap-events",
+                 "--inline", "--show-task-events", "--show-mmap-events",
                  "--show-lost-events"]
-SRCLINE_FIELDS = ["-G", "-F", "ip,sym,srcline"]
+# The leaf line pass prints no inlined frame, so it stays one pair of lines
+# per sample.
+SRCLINE_FIELDS = ["-G", "-F", "ip,sym,srcline", "--no-inline"]
 PERMISSION_HINT = (
     "an unprivileged user needs kernel.perf_event_paranoid 2 or less "
     "(now {paranoid}); a container needs CAP_PERFMON (docker run "
@@ -729,7 +731,7 @@ def _empty_analysis(reason: str) -> dict:
             "source_lines": {"status": "unavailable", "scope": "leaf_frames",
                              "samples_with_line": None,
                              "unavailable": {"samples_with_line": reason}},
-            "inlined_frames": {"status": "not_requested"}},
+            "inlined_frames": {"status": "unavailable"}},
         "processes": [], "threads": [], "modules": [],
         "hotspots": {"limit": HOTSPOT_LIMIT, "self": [], "inclusive": [],
                      "self_remainder": {"samples": 0, "weight_ns": 0}},
