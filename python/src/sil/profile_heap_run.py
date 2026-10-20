@@ -38,7 +38,7 @@ from pathlib import Path
 from sil.build_info import __version__ as SIL_VERSION
 from sil.diagnostics_report import write_new_file
 from sil.diagnostics_run import (
-    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_USAGE, Guards, RunRequest, ToolMissing,
+    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_USAGE, RunRequest, ToolMissing,
     command_error, execute, find_native_tools,
 )
 from sil.profile_heap import HeapAnalysis, HeapDecodeError, normalize_heap
@@ -48,7 +48,7 @@ from sil.profile_storage import reserve_reached, space_warning
 from sil.profile_summary import format_summary
 from sil.profile_common import (
     PROG, POLL_S, STDERR_TAIL_BYTES, SYMBOLIZATION_TIMEOUT_S, CaptureRun,
-    artifact_rows, capture_outcome, file_size, host, identity,
+    RunTarget, artifact_rows, capture_outcome, file_size, host, identity,
     report_launcher_error, resolve_exit, run_record, tool_environment,
 )
 
@@ -67,14 +67,17 @@ FAILING = {"backend_failed", "no_data", "export_failed"}
 class HeapRequest:
     """`--collector heap`: one Heaptrack capture of one scope."""
 
-    manifest: Path
-    out: Path
-    recording: Path | None  # None: --no-recording
-    provenance: Path | None
-    guards: Guards
+    target: RunTarget
     participant: str | None  # None: --runner
     max_capture_bytes: int = HEAP_MAX_CAPTURE_BYTES
     interpreter_timeout_s: int = SYMBOLIZATION_TIMEOUT_S
+
+    def problems(self, cwd: Path) -> list[str]:
+        """No option problem: run_heap checks the scope."""
+        return []
+
+    def capture(self, cwd: Path) -> int:
+        return run_heap(self, cwd)
 
 
 
@@ -130,11 +133,11 @@ def scope_problem(request: HeapRequest, cwd: Path) -> str | None:
         return None
     name = request.participant
     try:
-        manifest = json.loads((cwd / request.manifest).read_text())
+        manifest = json.loads((cwd / request.target.manifest).read_text())
         participant = manifest["participants"].get(name)
     except (OSError, ValueError, KeyError, AttributeError, TypeError) as error:
-        return (f"cannot read the Manifest '{request.manifest}' to check "
-                f"--participant: {error}")
+        return (f"cannot read the Manifest '{request.target.manifest}' to "
+                f"check --participant: {error}")
     if not isinstance(participant, dict):
         return f"the Manifest has no participant '{name}'"
     kind = participant.get("type")
@@ -407,8 +410,7 @@ def _kill_session(process: subprocess.Popen) -> None:
 
 
 def _run_request(request: HeapRequest, layout: HeapLayout) -> RunRequest:
-    return RunRequest(request.manifest, layout.diagnostics, request.recording,
-                      request.provenance, request.guards)
+    return request.target.run_request(layout.diagnostics)
 
 
 def run_heap(request: HeapRequest, cwd: Path) -> int:
@@ -430,7 +432,7 @@ def run_heap(request: HeapRequest, cwd: Path) -> int:
         probe_heaptrack(tools)
     except HeaptrackUnavailable as error:
         return command_error(PROG, str(error), EXIT_FAILURE)
-    layout = HeapLayout(Path(os.path.realpath(cwd / request.out)))
+    layout = HeapLayout(Path(os.path.realpath(cwd / request.target.out)))
     layout.heap.mkdir(parents=True)
     warning = space_warning(layout.heap, request.max_capture_bytes)
     if warning is not None:
@@ -445,7 +447,8 @@ def run_heap(request: HeapRequest, cwd: Path) -> int:
         result = _finish_interpreter(interpreter, request)
     report = _publish(request, layout, cwd, tools, capture_run, result)
     if report is not None:
-        sys.stdout.write(format_summary(report, request.out / "profile.json"))
+        sys.stdout.write(format_summary(
+            report, request.target.out / "profile.json"))
         sys.stdout.flush()
     return resolve_exit(report, capture_run)
 
@@ -578,18 +581,18 @@ def build_report(request: HeapRequest, layout: HeapLayout, cwd: Path,
     else:
         unavailable["analysis"] = problem or (reasons[0] if reasons
                                               else "no_data")
-    guards = request.guards
+    guards = request.target.guards
     scope = {"kind": "runner"} if request.participant is None else {
         "kind": "process_participant", "participant": request.participant}
     return {
         "sil_profile_report": 1,
         "producer": {"name": PROG, "sil_version": SIL_VERSION},
-        "identity": identity(request, capture_run.report),
+        "identity": identity(request.target, capture_run.report),
         "host": host(),
         "configuration": {
             "collector": "heap",
-            "recording": None if request.recording is None
-            else str(request.recording),
+            "recording": None if request.target.recording is None
+            else str(request.target.recording),
             "participant_timeout_ms": guards.participant_timeout_ms,
             "max_protocol_line_bytes": guards.max_protocol_line_bytes,
             "max_step_output_messages": guards.max_step_output_messages,
@@ -617,7 +620,7 @@ def build_report(request: HeapRequest, layout: HeapLayout, cwd: Path,
             "raw": raw, "analysis": record, "unavailable": unavailable,
         },
         "activation_correlation": {"kind": "not_requested"},
-        "artifacts": artifact_rows(layout.out, request, cwd, [
+        "artifacts": artifact_rows(request.target, cwd, [
             ("heap_launch_adapter", layout.adapter),
             ("heaptrack_data", layout.data),
             ("heap_allocations", layout.allocations)]),

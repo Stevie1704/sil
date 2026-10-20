@@ -15,13 +15,58 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from sil.bundle import file_sha256
-from sil.diagnostics_run import EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK
+from sil.diagnostics_run import (
+    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, Guards, RunRequest,
+)
 
 PROG = "sil profile"
 SYMBOLIZATION_TIMEOUT_S = 600
 POLL_S = 0.1
 STDERR_TAIL_BYTES = 64 * 1024
 RUN_STATUSES = {0: "succeeded", 1: "run_failure", 2: "configuration_error"}
+
+
+@dataclass(frozen=True)
+class RunTarget:
+    """The Run that a collector profiles, and where its files go: what
+    the requests of both collectors share."""
+
+    manifest: Path
+    out: Path  # the profile directory
+    recording: Path | None  # None: --no-recording
+    provenance: Path | None
+    guards: Guards
+
+    def run_request(self, diagnostics: Path) -> RunRequest:
+        """The diagnostics Run of this target."""
+        return RunRequest(self.manifest, diagnostics, self.recording,
+                          self.provenance, self.guards)
+
+
+def preflight(target: RunTarget, cwd: Path) -> list[str]:
+    """The usage problems of the outputs, before anything starts."""
+    problems = []
+    out = cwd / target.out
+    if os.path.lexists(out):
+        problems.append(f"the profile directory '{target.out}' already "
+                        "exists; earlier evidence is never replaced")
+    elif not Path(os.path.realpath(out)).parent.is_dir():
+        problems.append(f"the profile directory '{target.out}': its parent "
+                        "directory does not exist")
+    if target.recording is not None and _same(
+            cwd / target.recording, cwd / target.manifest):
+        problems.append(f"the Recording '{target.recording}' is the "
+                        "Manifest")
+    return problems
+
+
+def _same(a: Path, b: Path) -> bool:
+    if os.path.realpath(a) == os.path.realpath(b):
+        return True
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
 
 
 @dataclass(frozen=True)
@@ -94,16 +139,16 @@ def resolve_exit(report: dict | None, capture_run: CaptureRun) -> int:
     return EXIT_OK
 
 
-def identity(request, report: dict | None) -> dict:
+def identity(target: RunTarget, report: dict | None) -> dict:
     """The `identity` member: from the diagnostics report of the Run."""
     keys = ("manifest_hash", "sil_version", "source_repository",
             "source_revision")
     if report is None:
-        return {"manifest_path": str(request.manifest),
+        return {"manifest_path": str(target.manifest),
                 **{key: None for key in keys},
                 "unavailable": {key: "no_diagnostics_report" for key in keys}}
     source = report["identity"]
-    identity = {"manifest_path": str(request.manifest),
+    identity = {"manifest_path": str(target.manifest),
                 **{key: source.get(key) for key in keys}}
     identity["unavailable"] = {key: source.get("unavailable", {}).get(
         key, "not_reported") for key in keys if identity[key] is None}
@@ -134,12 +179,13 @@ def tool_environment() -> dict:
     return env
 
 
-def artifact_rows(out: Path, request, cwd: Path, collected: list) -> list:
+def artifact_rows(target: RunTarget, cwd: Path, collected: list) -> list:
     """`{role, path, bytes, sha256}` of every existing file in `out`: the
     diagnostics report, the Recording and the collector's files."""
+    out = Path(os.path.realpath(cwd / target.out))
     candidates = [("diagnostics_report", out / "run.diagnostics.json")]
-    if request.recording is not None:
-        candidates.append(("recording", cwd / request.recording))
+    if target.recording is not None:
+        candidates.append(("recording", cwd / target.recording))
     candidates += collected
     rows = []
     for role, path in candidates:

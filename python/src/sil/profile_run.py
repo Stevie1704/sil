@@ -36,19 +36,19 @@ from sil.build_info import __version__ as SIL_VERSION
 from sil.diagnostics_report import ReportError, load_report, write_new_file
 from sil.diagnostics_run import (
     EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_USAGE, FORWARDED_SIGNALS,
-    STDERR_DRAIN_S, GivenOnce, Guards, RunRequest, ToolMissing,
+    STDERR_DRAIN_S, GivenOnce, ToolMissing,
     _read_status, _StderrCopy, add_guard_arguments, command_error,
     find_native_tools, guards_from,
 )
 from sil.profile_activation import correlate
 from sil.profile_common import (
     PROG, POLL_S, STDERR_TAIL_BYTES, SYMBOLIZATION_TIMEOUT_S, CaptureRun,
-    artifact_rows, capture_outcome, file_size, host, identity,
+    RunTarget, artifact_rows, capture_outcome, file_size, host, identity,
     perf_event_paranoid, report_launcher_error, resolve_exit, run_record,
-    tool_environment,
+    preflight, tool_environment,
 )
 from sil.profile_cpu import CpuAnalysis, ModuleFacts, normalize_cpu
-from sil.profile_heap_run import HEAP_MAX_CAPTURE_BYTES, HeapRequest, run_heap
+from sil.profile_heap_run import HEAP_MAX_CAPTURE_BYTES, HeapRequest
 from sil.profile_modules import ModuleLocator
 from sil.profile_report import HOTSPOT_LIMIT, validate_profile_report
 from sil.profile_storage import reserve_reached, space_warning
@@ -73,12 +73,11 @@ PERMISSION_HINT = (
 
 
 @dataclass(frozen=True)
-class ProfileRequest:
-    manifest: Path
-    out: Path
-    recording: Path | None  # None: --no-recording
-    provenance: Path | None
-    guards: Guards
+class CpuRequest:
+    """`--collector cpu`: one perf capture of the runner and all its
+    descendants."""
+
+    target: RunTarget
     frequency_hz: int = FREQUENCY_HZ
     stack_bytes: int = STACK_BYTES
     max_capture_bytes: int = MAX_CAPTURE_BYTES
@@ -86,6 +85,15 @@ class ProfileRequest:
     modules_from: tuple[Path, ...] = ()
     activations: bool = False
     max_activation_bytes: int = MAX_ACTIVATION_BYTES
+
+    def problems(self, cwd: Path) -> list[str]:
+        """The usage problems of the CPU options."""
+        return [f"--modules-from '{source}' does not exist"
+                for source in self.modules_from
+                if not (cwd / source).exists()]
+
+    def capture(self, cwd: Path) -> int:
+        return run_cpu(self, cwd)
 
 
 @dataclass(frozen=True)
@@ -207,7 +215,7 @@ CPU_ONLY = ("frequency_hz", "stack_bytes", "modules_from",
             "max_activation_bytes")
 
 
-def request_from_arguments(argv: list[str]) -> ProfileRequest | HeapRequest:
+def request_from_arguments(argv: list[str]) -> CpuRequest | HeapRequest:
     parser = _parser()
     args = parser.parse_args(argv)
     if args.collector == "heap":
@@ -226,13 +234,19 @@ def request_from_arguments(argv: list[str]) -> ProfileRequest | HeapRequest:
         recording, provenance = _outputs(args)
     except ValueError as error:
         parser.error(str(error))
-    return ProfileRequest(
-        args.manifest, args.out, recording, provenance, guards_from(args),
+    return CpuRequest(
+        _target(args, recording, provenance),
         args.frequency_hz or FREQUENCY_HZ, args.stack_bytes or STACK_BYTES,
         args.max_capture_bytes or MAX_CAPTURE_BYTES,
         args.symbolization_timeout_s or SYMBOLIZATION_TIMEOUT_S,
         tuple(args.modules_from), args.activations,
         args.max_activation_bytes or MAX_ACTIVATION_BYTES)
+
+
+def _target(args, recording: Path | None,
+            provenance: Path | None) -> RunTarget:
+    return RunTarget(args.manifest, args.out, recording, provenance,
+                     guards_from(args))
 
 
 def _outputs(args) -> tuple[Path | None, Path | None]:
@@ -265,38 +279,9 @@ def _heap_request(parser: argparse.ArgumentParser, args) -> HeapRequest:
     except ValueError as error:
         parser.error(str(error))
     return HeapRequest(
-        args.manifest, args.out, recording, provenance, guards_from(args),
-        args.participant, args.max_capture_bytes or HEAP_MAX_CAPTURE_BYTES,
+        _target(args, recording, provenance), args.participant,
+        args.max_capture_bytes or HEAP_MAX_CAPTURE_BYTES,
         args.symbolization_timeout_s or SYMBOLIZATION_TIMEOUT_S)
-
-
-def preflight(request: ProfileRequest | HeapRequest,
-              cwd: Path) -> list[str]:
-    problems = []
-    out = cwd / request.out
-    if os.path.lexists(out):
-        problems.append(f"the profile directory '{request.out}' already "
-                        "exists; earlier evidence is never replaced")
-    elif not Path(os.path.realpath(out)).parent.is_dir():
-        problems.append(f"the profile directory '{request.out}': its parent "
-                        "directory does not exist")
-    for source in getattr(request, "modules_from", ()):
-        if not (cwd / source).exists():
-            problems.append(f"--modules-from '{source}' does not exist")
-    if request.recording is not None and _same(
-            cwd / request.recording, cwd / request.manifest):
-        problems.append(f"the Recording '{request.recording}' is the "
-                        "Manifest")
-    return problems
-
-
-def _same(a: Path, b: Path) -> bool:
-    if os.path.realpath(a) == os.path.realpath(b):
-        return True
-    try:
-        return os.path.samefile(a, b)
-    except OSError:
-        return False
 
 
 # --- perf -------------------------------------------------------------------
@@ -306,7 +291,7 @@ class PerfUnavailable(RuntimeError):
     """perf, its event or the permission to use it is missing."""
 
 
-def _sampling_options(request: ProfileRequest) -> list[str]:
+def _sampling_options(request: CpuRequest) -> list[str]:
     return ["-e", EVENT, "-F", str(request.frequency_hz), "-k", "monotonic",
             "--call-graph", f"dwarf,{request.stack_bytes}", "--buildid-mmap",
             "-N", "-q"]
@@ -321,7 +306,7 @@ def find_perf() -> Path:
     return Path(found)
 
 
-def probe_perf(perf: Path, request: ProfileRequest) -> None:
+def probe_perf(perf: Path, request: CpuRequest) -> None:
     """Record `true` with the exact event and options, or raise."""
     true = shutil.which("true") or "/bin/true"
     with tempfile.TemporaryDirectory(prefix="sil-profile-probe-") as probe:
@@ -366,11 +351,10 @@ def _analysis(perf: Path, cache: Path, *arguments: str) -> list[str]:
 # --- the Run ----------------------------------------------------------------
 
 
-def record_command(perf: Path, request: ProfileRequest, layout: Layout,
+def record_command(perf: Path, request: CpuRequest, layout: Layout,
                    status_fd: int, environment_fd: int) -> list[str]:
     tools = find_native_tools()
-    run = RunRequest(request.manifest, layout.diagnostics, request.recording,
-                     request.provenance, request.guards)
+    run = request.target.run_request(layout.diagnostics)
     return [str(perf), "record", *_sampling_options(request), "--control",
             f"fifo:{layout.control}", "-o", str(layout.perf_data), "--",
             str(tools.launcher), "--status-fd", str(status_fd),
@@ -380,7 +364,7 @@ def record_command(perf: Path, request: ProfileRequest, layout: Layout,
             *_activation_arguments(request, layout)]
 
 
-def _activation_arguments(request: ProfileRequest, layout: Layout) -> list:
+def _activation_arguments(request: CpuRequest, layout: Layout) -> list:
     if not request.activations:
         return []
     return ["--activation-observations", str(layout.observations),
@@ -437,7 +421,7 @@ def _ignore_hangup() -> None:
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
 
-def execute(perf: Path, request: ProfileRequest, layout: Layout,
+def execute(perf: Path, request: CpuRequest, layout: Layout,
             cwd: Path) -> CaptureRun:
     os.mkfifo(layout.control, 0o600)
     environment = _environment_file()
@@ -614,7 +598,7 @@ def _lost_sample_records(stats: str | None) -> int:
     return int(match[1]) if match else 0
 
 
-def _module_sources(request: ProfileRequest, layout: Layout,
+def _module_sources(request: CpuRequest, layout: Layout,
                     cwd: Path) -> tuple[Path, ...]:
     """The --modules-from paths; an archive is unpacked under the profile
     directory, and removed with the other temporary files."""
@@ -635,14 +619,14 @@ def _module_sources(request: ProfileRequest, layout: Layout,
     return tuple(sources)
 
 
-def export_limit(request: ProfileRequest) -> int:
+def export_limit(request: CpuRequest) -> int:
     """The output limit of each perf analysis pass: twice the capture
     limit. perf's text of a sample is smaller than its stack copy in
     perf.data, so the limit only stops an export out of proportion."""
     return 2 * request.max_capture_bytes
 
 
-def export(perf: Path, request: ProfileRequest, layout: Layout,
+def export(perf: Path, request: CpuRequest, layout: Layout,
            cwd: Path) -> Export:
     """Capture the retained modules, then export and normalize."""
     layout.cache.mkdir(exist_ok=True)
@@ -721,8 +705,8 @@ def capture_status(run: dict, capture_run: CaptureRun, layout: Layout,
     return capture_outcome(reasons, {"backend_failed", "export_failed"})
 
 
-def _artifacts(layout: Layout, request: ProfileRequest, cwd: Path) -> list:
-    return artifact_rows(layout.out, request, cwd, [
+def _artifacts(layout: Layout, request: CpuRequest, cwd: Path) -> list:
+    return artifact_rows(request.target, cwd, [
         ("perf_data", layout.perf_data), ("cpu_samples", layout.samples),
         ("activation_observations", layout.observations),
         ("activation_correlation", layout.correlation)])
@@ -765,7 +749,7 @@ def _analysis_members(analysis: CpuAnalysis, samples_file: str | None,
             "unavailable": unavailable}
 
 
-def build_report(request: ProfileRequest, layout: Layout, cwd: Path,
+def build_report(request: CpuRequest, layout: Layout, cwd: Path,
                  capture_run: CaptureRun, exported: Export | None,
                  version: str, samples_file: str | None) -> dict:
     run = run_record(capture_run)
@@ -777,16 +761,16 @@ def build_report(request: ProfileRequest, layout: Layout, cwd: Path,
         members = _empty_analysis("run_not_started" if status == "not_started"
                                   else "export_failed")
     perf_status = capture_run.perf_status
-    guards = request.guards
+    guards = request.target.guards
     return {
         "sil_profile_report": 1,
         "producer": {"name": PROG, "sil_version": SIL_VERSION},
-        "identity": identity(request, capture_run.report),
+        "identity": identity(request.target, capture_run.report),
         "host": host(),
         "configuration": {
             "collector": "cpu",
-            "recording": None if request.recording is None
-            else str(request.recording),
+            "recording": None if request.target.recording is None
+            else str(request.target.recording),
             "participant_timeout_ms": guards.participant_timeout_ms,
             "max_protocol_line_bytes": guards.max_protocol_line_bytes,
             "max_step_output_messages": guards.max_step_output_messages,
@@ -857,13 +841,16 @@ def _correlate(layout: Layout, report: dict,
 def main(argv: list[str] | None = None) -> int:
     request = request_from_arguments(sys.argv[1:] if argv is None else argv)
     cwd = Path.cwd()
-    problems = preflight(request, cwd)
+    problems = preflight(request.target, cwd) + request.problems(cwd)
     if problems:
         for problem in problems:
             command_error(PROG, problem, EXIT_USAGE)
         return EXIT_USAGE
-    if isinstance(request, HeapRequest):
-        return run_heap(request, cwd)
+    return request.capture(cwd)
+
+
+def run_cpu(request: CpuRequest, cwd: Path) -> int:
+    """The CPU collector after the usage checks."""
     try:
         find_native_tools()
     except ToolMissing as error:
@@ -874,7 +861,7 @@ def main(argv: list[str] | None = None) -> int:
     except PerfUnavailable as error:
         return command_error(PROG, str(error), EXIT_FAILURE)
     version = perf_version(perf)
-    layout = Layout(Path(os.path.realpath(cwd / request.out)))
+    layout = Layout(Path(os.path.realpath(cwd / request.target.out)))
     layout.cpu.mkdir(parents=True)
     warning = space_warning(layout.cpu, request.max_capture_bytes)
     if warning is not None:
@@ -884,7 +871,8 @@ def main(argv: list[str] | None = None) -> int:
     capture_run = execute(perf, request, layout, cwd)
     report = _finish(perf, request, layout, cwd, capture_run, version)
     if report is not None:
-        sys.stdout.write(format_summary(report, request.out / "profile.json"))
+        sys.stdout.write(format_summary(
+            report, request.target.out / "profile.json"))
         sys.stdout.flush()
     return resolve_exit(report, capture_run)
 
@@ -903,7 +891,7 @@ def _write_samples(layout: Layout, analysis: CpuAnalysis) -> str | None:
     return "cpu/samples.json"
 
 
-def _finish(perf: Path, request: ProfileRequest, layout: Layout, cwd: Path,
+def _finish(perf: Path, request: CpuRequest, layout: Layout, cwd: Path,
             capture_run: CaptureRun, version: str) -> dict | None:
     """Export, normalize and publish; the report, or None if not written."""
     exported = None
