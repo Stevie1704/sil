@@ -1,6 +1,7 @@
 /* sil-diagnostics-launcher: start the diagnostics runner from a small process.
  *
- *     sil-diagnostics-launcher [--status-fd N] RUNNER [ARG...]
+ *     sil-diagnostics-launcher [--status-fd N] [--environment-fd M]
+ *                              RUNNER [ARG...]
  *
  * Runs RUNNER with ARG... as its own child and ends as RUNNER ended: with its
  * exit code, or by the signal that ended it. SIGINT, SIGTERM and SIGHUP sent
@@ -12,6 +13,13 @@
  * --status-fd. RUNNER does not inherit N, so nothing the Run writes can
  * appear there: a supervisor reads N to tell a launcher failure from a Run
  * whose stderr happens to contain the same text.
+ *
+ * With --environment-fd, RUNNER gets the environment read from the open
+ * file descriptor M (NUL-terminated NAME=VALUE entries, to its end) instead
+ * of the launcher's own. A profiler that starts the launcher can change the
+ * environment of its command (perf sets PERF_BUILDID_DIR, PREFIX and PATH);
+ * the supervisor passes the environment it had, so the Run gets that one.
+ * RUNNER does not inherit M.
  *
  * Why: on Linux, ru_maxrss survives execve. A runner forked directly from a
  * large Python supervisor reports at least the supervisor's resident size as
@@ -42,13 +50,16 @@ static void forward(int signal_number) {
   if (runner_pid > 0) kill((pid_t)runner_pid, signal_number);
 }
 
+extern char **environ;
+
 static void usage(void) {
   fprintf(stderr,
-          "usage: sil-diagnostics-launcher [--status-fd N] RUNNER [ARG...]\n");
+          "usage: sil-diagnostics-launcher [--status-fd N] "
+          "[--environment-fd M] RUNNER [ARG...]\n");
 }
 
 /* An open descriptor, marked close-on-exec so RUNNER never inherits it. */
-static int parse_status_fd(const char *text) {
+static int parse_descriptor(const char *text) {
   char *end;
   errno = 0;
   const long value = strtol(text, &end, 10);
@@ -57,6 +68,46 @@ static int parse_status_fd(const char *text) {
     return -1;
   if (fcntl((int)value, F_SETFD, FD_CLOEXEC) == -1) return -1;
   return (int)value;
+}
+
+/* The environment in descriptor `fd`: NUL-terminated entries to its end.
+ * NULL when it cannot be read or holds more than kEnvironmentLimit bytes. */
+enum { kEnvironmentLimit = 16 * 1024 * 1024 };
+
+static char **read_environment(int fd) {
+  size_t size = 0, capacity = 4096;
+  char *text = malloc(capacity);
+  if (text == NULL) return NULL;
+  for (;;) {
+    if (size == capacity) {
+      if (capacity >= kEnvironmentLimit) goto fail;
+      capacity *= 2;
+      char *grown = realloc(text, capacity);
+      if (grown == NULL) goto fail;
+      text = grown;
+    }
+    const ssize_t got = read(fd, text + size, capacity - size);
+    if (got == 0) break;
+    if (got < 0) {
+      if (errno == EINTR) continue;
+      goto fail;
+    }
+    size += (size_t)got;
+  }
+  if (size > 0 && text[size - 1] != '\0') goto fail;
+  size_t count = 0;
+  for (size_t i = 0; i < size; i++) count += text[i] == '\0';
+  char **entries = calloc(count + 1, sizeof *entries);
+  if (entries == NULL) goto fail;
+  for (size_t i = 0, n = 0; n < count; n++) {
+    entries[n] = text + i;
+    i += strlen(text + i) + 1;
+  }
+  close(fd);
+  return entries;
+fail:
+  free(text);
+  return NULL;
 }
 
 /* Ends this process the way the runner ended. */
@@ -76,12 +127,24 @@ int main(int argc, char **argv) {
   int status_fd = STDERR_FILENO;
   int first = 1;
   if (argc >= 2 && strcmp(argv[1], "--status-fd") == 0) {
-    status_fd = argc >= 3 ? parse_status_fd(argv[2]) : -1;
+    status_fd = argc >= 3 ? parse_descriptor(argv[2]) : -1;
     if (status_fd < 0) {
       usage();
       return 2;
     }
     first = 3;
+  }
+  char **runner_environment = environ;
+  if (argc > first + 1 && strcmp(argv[first], "--environment-fd") == 0) {
+    const int fd = parse_descriptor(argv[first + 1]);
+    runner_environment = fd < 0 ? NULL : read_environment(fd);
+    if (runner_environment == NULL) {
+      dprintf(status_fd,
+              "sil-diagnostics-launcher: cannot read the environment from "
+              "descriptor '%s'\n", argv[first + 1]);
+      return 2;
+    }
+    first += 2;
   }
   if (argc <= first) {
     usage();
@@ -112,6 +175,7 @@ int main(int argc, char **argv) {
   if (pid == 0) {
     /* exec resets the handlers; the runner gets the supervisor's mask. */
     sigprocmask(SIG_SETMASK, &previous, NULL);
+    environ = runner_environment;
     execvp(argv[first], argv + first);
     dprintf(status_fd, "sil-diagnostics-launcher: cannot run '%s': %s\n",
             argv[first], strerror(errno));

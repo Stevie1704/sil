@@ -1,0 +1,181 @@
+{
+  "activation_correlation": {
+    "kind": "not_requested"
+  },
+  "artifacts": [
+    {
+      "bytes": 11800,
+      "path": "run.diagnostics.json",
+      "role": "diagnostics_report",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "bytes": 28039,
+      "path": "run.mcap",
+      "role": "recording",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ],
+  "capture": {
+    "backend": {
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock:u",
+        "-F",
+        "999",
+        "-k",
+        "monotonic",
+        "--call-graph",
+        "dwarf,8192",
+        "--buildid-mmap",
+        "-q",
+        "--control",
+        "fifo:/work/profile/cpu/.control",
+        "-o",
+        "/work/profile/cpu/perf.data",
+        "--",
+        "/opt/sil/bin/sil-diagnostics-launcher",
+        "--status-fd",
+        "5",
+        "/opt/sil/bin/sil-run-diagnostics",
+        "manifest.json",
+        "-o",
+        "/work/profile/run.mcap",
+        "--participant-timeout-ms",
+        "60000",
+        "--diagnostics-out",
+        "/work/profile/run.diagnostics.json",
+        "--retain-run-directory",
+        "/work/profile/cpu/.run-directory"
+      ],
+      "exit_code": 255,
+      "name": "perf",
+      "signal": null,
+      "version": "perf version 6.17.13"
+    },
+    "call_graph": {
+      "method": "dwarf",
+      "stack_bytes": 8192
+    },
+    "hotspots": {
+      "inclusive": [],
+      "limit": 50,
+      "self": [],
+      "self_remainder": {
+        "samples": 0,
+        "weight_ns": 0
+      }
+    },
+    "kind": "cpu",
+    "limits": {
+      "capture_bytes": 0,
+      "limit_reached": false,
+      "max_capture_bytes": 1073741824,
+      "symbolization_timeout_s": 600
+    },
+    "modules": [],
+    "processes": [],
+    "reasons": [
+      "backend_failed",
+      "export_failed"
+    ],
+    "samples_file": null,
+    "sampling": {
+      "clock": "host_monotonic",
+      "event": "cpu-clock:u",
+      "event_type": "software",
+      "frequency_hz": 999,
+      "mode": "frequency",
+      "privilege": "user",
+      "weight": "period",
+      "weight_unit": "cpu_clock_ns"
+    },
+    "scope": {
+      "inherit": true,
+      "kind": "runner_and_descendants",
+      "pid_namespace": "collector"
+    },
+    "status": "failed",
+    "symbolization": {
+      "call_frame_unwinding": {
+        "method": "dwarf",
+        "samples_with_caller": 0
+      },
+      "function_names": {
+        "samples_with_name": 0
+      },
+      "inlined_frames": {
+        "status": "not_requested"
+      },
+      "source_lines": {
+        "samples_with_line": null,
+        "scope": "leaf_frames",
+        "status": "unavailable",
+        "unavailable": {
+          "samples_with_line": "no_samples"
+        }
+      }
+    },
+    "threads": [],
+    "time_origin_ns": null,
+    "totals": {
+      "lost_records": 0,
+      "lost_samples": 0,
+      "samples": 0,
+      "samples_unknown_module": 0,
+      "samples_unknown_symbol": 0,
+      "samples_with_caller": 0,
+      "unavailable": {},
+      "weight_ns": 0
+    },
+    "unavailable": {
+      "samples_file": "export_failed",
+      "time_origin_ns": "export_failed"
+    }
+  },
+  "configuration": {
+    "collector": "cpu",
+    "cwd": "/work",
+    "max_protocol_line_bytes": null,
+    "max_step_inline_payload_bytes": null,
+    "max_step_output_messages": null,
+    "participant_timeout_ms": 60000,
+    "recording": "/work/profile/run.mcap"
+  },
+  "host": {
+    "architecture": "x86_64",
+    "kernel_release": "6.17.0-1022-azure",
+    "os": "Linux",
+    "perf_event_paranoid": 2,
+    "unavailable": {}
+  },
+  "identity": {
+    "manifest_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "manifest_path": "manifest.json",
+    "sil_version": "0.2.0",
+    "source_repository": "https://github.com/Stevie1704/sil",
+    "source_revision": "d59dffb",
+    "unavailable": {}
+  },
+  "limitations": [
+    "cpu_samples_estimate_on_cpu_time",
+    "user_space_only",
+    "scope_is_runner_and_descendants",
+    "host_build_only"
+  ],
+  "producer": {
+    "name": "sil profile",
+    "sil_version": "0.2.0"
+  },
+  "run": {
+    "diagnostics_report": "run.diagnostics.json",
+    "exit_code": 0,
+    "failure": null,
+    "signal": null,
+    "status": "succeeded",
+    "supervisor_signal": null
+  },
+  "sil_profile_report": 1
+}

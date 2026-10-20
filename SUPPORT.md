@@ -89,6 +89,21 @@ covers it. macOS and Windows are not supported; the Clock shim is a
 x86-64 release in WSL2 or the runtime image in Docker
 ([docs/getting-started.md](docs/getting-started.md#windows-and-macos)).
 
+### Optional profiling backends
+
+`sil profile` uses host tools that SiL does not ship. Ordinary `sil run`,
+`sil-run` and the runtime image need neither tool nor any privilege.
+
+| Backend | Qualified | Needs |
+| --- | --- | --- |
+| Linux perf, CPU collector | perf 6.17.13 (Ubuntu 24.04, the `linux-tools` of the runner kernel, natively) and 6.1.176 (Debian bookworm, in the documented profiling image) on Linux x86-64/glibc, software event `cpu-clock:u`; no hardware counter. Inlined frames with perf 6.17.13 only: with perf 6.1.176 the report gives `inlined_frames_failed` | `kernel.perf_event_paranoid` 2 or less for an unprivileged user, or `CAP_PERFMON` (`docker run --cap-add PERFMON`, [docs/container.md](docs/container.md#profile-in-a-container)) |
+| Heaptrack, heap collector | Heaptrack 1.5.0 (Ubuntu 24.04) and 1.4.0 (Debian bookworm), runner scope and unshimmed Process participants | no privilege |
+
+Qualified means the [#319 qualification](proofs/profiling-qualification/README.md)
+passed with that version on that host. Other versions, arm64, macOS, perf
+outside the Run's PID namespace, kernel samples, hardware events and Heaptrack
+in a shimmed Process participant are not supported.
+
 ## Covered by the compatibility policy
 
 These are the interfaces a consumer is expected to depend on. A change that
@@ -104,7 +119,9 @@ carries it.
 | Runner command line | `sil-run` (also started as `sil run`), `sil-run --version`, `sil-run --build-info`, and the exit codes `0` ok, `1` run or test failure, `2` Manifest error, `3` determinism violation | as shipped |
 | Diagnostics runner | `sil-run-diagnostics`: the `sil-run` command line plus `--diagnostics-out PATH` (default `<recording>.diagnostics.json`), the same exit codes, and `2` when the report path exists or is another artifact of the Run ([decision](docs/adr/0004-opt-in-run-diagnostics-runner.md)) | as shipped |
 | Diagnostics command line | `sil run MANIFEST --diagnostics`, `--diagnostics-out PATH` and `--html PATH`: the `sil-run` options, a new report path checked before the Run, and the exit codes of [docs/running.md](docs/running.md#measure-a-run). The stdout summary text is not covered. | as shipped |
-| Diagnostics launcher | `sil-diagnostics-launcher RUNNER [ARG...]`: runs the runner as its child, forwards SIGINT, SIGTERM and SIGHUP, and ends with the runner's exit code or signal; exit `2` usage, `1` fork or wait failure, `127` runner not executable ([contract](docs/diagnostics-report.md#launcher)) | as shipped |
+| Diagnostics launcher | `sil-diagnostics-launcher [--status-fd N] [--environment-fd M] RUNNER [ARG...]`: runs the runner as its child, with the environment of descriptor M when given, forwards SIGINT, SIGTERM and SIGHUP, and ends with the runner's exit code or signal; exit `2` usage, `1` fork or wait failure, `127` runner not executable ([contract](docs/diagnostics-report.md#launcher)) | as shipped |
+| Profile command line | `sil profile MANIFEST --out DIR --collector cpu` or `heap` with the options, preflight, output rules and exit codes of [docs/profile-report.md](docs/profile-report.md#command), and `sil profile render DIR/profile.json [--html PATH]` with its exit codes. The stdout summary text and the HTML layout are not covered. | as shipped |
+| Profile report | the members, statuses, reasons and null reasons of `sil_profile_report` in `DIR/profile.json`, and the normalized files `sil_profile_cpu_samples`, `sil_profile_activation_correlation`, `sil_profile_heap_allocations` ([docs/profile-report.md](docs/profile-report.md)). Measured values, sample counts and the cost of profiling are not covered. | `sil_profile_report` 1 |
 | Benchmark command line | `sil benchmark MANIFEST --out DIR` with `--repeats N`, `--warmup N`, `--no-recording`, `--html PATH` and the guard options of `sil run`: serial fresh Runs, a new `--out` checked before the first Run, the per-Run directory layout and the exit codes of [docs/running.md](docs/running.md#benchmark-repeated-runs). The stdout summary text is not covered. | as shipped |
 | HTML report | `sil diagnostics render INPUT.json --html OUTPUT.html` and `--html` of `sil run` and `sil benchmark`: one offline page from a saved report, a new output path, and the exit codes of [docs/running.md](docs/running.md#html-reports). The page layout and text are not covered. | as shipped |
 | Run diagnostics report | the members, units, null reasons and timing scopes of `sil_run_diagnostics` ([docs/diagnostics-report.md](docs/diagnostics-report.md)). Measured values, and the cost of measuring them, are not covered. | `sil_run_diagnostics` 1 |

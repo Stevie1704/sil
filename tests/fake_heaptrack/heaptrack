@@ -1,0 +1,12 @@
+#!/bin/sh
+# A stand-in for Heaptrack's `heaptrack` script: `sil profile` reads the two
+# relative paths below to find the preload library and the interpreter, as
+# the real script does, and runs `heaptrack --version`.
+LIB_REL_PATH="lib/heaptrack"
+LIBEXEC_REL_PATH="lib/heaptrack/libexec"
+if [ "$1" = "--version" ]; then
+    echo "heaptrack 1.5.0"
+    exit 0
+fi
+echo "fake heaptrack: only --version is implemented" >&2
+exit 2

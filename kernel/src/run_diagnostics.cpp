@@ -3,7 +3,11 @@
 #ifdef SIL_RUN_DIAGNOSTICS
 
 #include <fcntl.h>
+#include <pthread.h>
 #include <sys/stat.h>
+#ifdef __linux__
+#include <sys/syscall.h>
+#endif
 #include <sys/utsname.h>
 #include <unistd.h>
 #ifdef __APPLE__
@@ -17,6 +21,7 @@
 #include <cmath>
 #include <cstring>
 #include <fstream>
+#include <memory>
 #include <stdexcept>
 #include <thread>
 #include <utility>
@@ -25,6 +30,7 @@
 #include <nlohmann/json.hpp>
 
 #include "diagnostics_stats.hpp"
+#include "observation_log.hpp"
 #include "resource_usage.hpp"
 #include "replayer.hpp"
 #include "run_signal.hpp"
@@ -57,6 +63,10 @@ const char *const kPhaseNames[] = {
 };
 static_assert(sizeof kPhaseNames / sizeof *kPhaseNames ==
               size_t(Phase::kCount));
+const char *const kPhaseRecordNames[] = {
+    "preflight", "setup", "scheduled_execution", "shutdown",
+    "recording_finalization",
+};
 
 uint64_t now_ns() {
   return uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -64,7 +74,36 @@ uint64_t now_ns() {
                       .count());
 }
 
+// The kernel thread id: the TID that perf records on Linux.
+uint64_t thread_id() {
+#if defined(__linux__)
+  return uint64_t(syscall(SYS_gettid));
+#elif defined(__APPLE__)
+  uint64_t id = 0;
+  pthread_threadid_np(nullptr, &id);
+  return id;
+#else
+  return 0;
+#endif
+}
+
+// A host time in an observation record: a decimal string, because it can be
+// above 2^53 (docs/profile-report.md, Conventions).
+std::string host_ns(uint64_t ns) { return std::to_string(ns); }
+
 enum class Outcome { Completed, Failed, Interrupted };
+
+const char *outcome_record_name(Outcome outcome) {
+  switch (outcome) {
+    case Outcome::Completed:
+      return "completed";
+    case Outcome::Failed:
+      return "failed";
+    case Outcome::Interrupted:
+      break;
+  }
+  return "interrupted";
+}
 
 struct FailedActivation {
   uint64_t activation_index;
@@ -133,11 +172,30 @@ struct Collector {
   std::vector<ReplayRecord> replays;
   uint64_t next_seed = kBaseSeed;
   bool lost_measurement = false;
+  // The Activation observation sidecar (#316), when requested.
+  std::unique_ptr<ObservationLog> log;
+
+  // A record that cannot be made is counted as dropped, never thrown.
+  void observe(const json &record) noexcept {
+    if (!log) return;
+    try {
+      log->append(record.dump(-1, ' ', false,
+                              json::error_handler_t::replace) +
+                  "\n");
+    } catch (...) {
+      log->drop();
+    }
+  }
 
   void close_phase(uint64_t at_ns) {
     if (!current_phase) return;
     std::optional<uint64_t> &total = phase_ns[size_t(*current_phase)];
     total = total.value_or(0) + (at_ns - phase_start_ns);
+    if (log)
+      observe({{"kind", "phase"},
+               {"phase", kPhaseRecordNames[size_t(*current_phase)]},
+               {"begin_ns", host_ns(phase_start_ns)},
+               {"end_ns", host_ns(at_ns)}});
     current_phase.reset();
   }
 
@@ -173,6 +231,28 @@ const char *task_kind_name(TaskKind kind) {
 const char *timing_scope(TaskKind kind) {
   return kind == TaskKind::NativeTask ? "inclusive_native_activation"
                                       : "inclusive_process_step";
+}
+
+// One closed interval of a Task activation or a Replay publication Slot.
+// `index` is the zero-based attempt of that Task or Replay participant.
+void observe_work(Collector &c, const char *kind,
+                  const std::string &participant, const std::string *task,
+                  const char *task_kind, uint64_t index, uint64_t slot_ns,
+                  uint64_t begin_ns, uint64_t end_ns, Outcome outcome) {
+  if (!c.log) return;
+  json record = {{"kind", kind},
+                 {"participant", participant},
+                 {"index", index},
+                 {"virtual_time_ns", slot_ns},
+                 {"begin_ns", host_ns(begin_ns)},
+                 {"end_ns", host_ns(end_ns)},
+                 {"outcome", outcome_record_name(outcome)},
+                 {"tid", thread_id()}};
+  if (task) {
+    record["task"] = *task;
+    record["task_kind"] = task_kind;
+  }
+  c.observe(record);
 }
 
 const char *participant_kind_name(ParticipantKind kind) {
@@ -699,6 +779,47 @@ void end_run() noexcept {
     c.run_end_ns = at;
     rusage usage;
     if (getrusage(RUSAGE_SELF, &usage) == 0) c.runner_usage = usage;
+    if (c.log) c.log->close();
+  });
+}
+
+bool observe_activations(const fs::path &path, uint64_t limit_bytes,
+                         std::string &error) {
+  const int fd = ::open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC,
+                        0666);
+  if (fd < 0) {
+    error = errno_text(errno);
+    return false;
+  }
+  Collector &c = collector();
+  c.log = std::make_unique<ObservationLog>(fd, limit_bytes);
+  json header = {{"sil_activation_observations", 1},
+                 {"clock", "host_monotonic"},
+                 {"runner_pid", getpid()},
+                 {"runner_tid", thread_id()},
+                 {"limit_bytes", limit_bytes},
+                 {"pid_namespace", nullptr}};
+#ifdef __linux__
+  // perf records PIDs of its own PID namespace; the reader compares this
+  // identity with the collector's before it joins by PID.
+  struct stat ns;
+  if (::stat("/proc/self/ns/pid", &ns) == 0)
+    header["pid_namespace"] = {{"device", uint64_t(ns.st_dev)},
+                               {"inode", uint64_t(ns.st_ino)}};
+#endif
+  c.observe(header);
+  return true;
+}
+
+SpawnTime::SpawnTime() noexcept : ns_(now_ns()) {}
+
+void process_spawned(const std::string &participant, pid_t pid,
+                     const SpawnTime &forked) noexcept {
+  guarded([&](Collector &c) {
+    c.observe({{"kind", "spawn"},
+               {"participant", participant},
+               {"pid", pid},
+               {"at_ns", host_ns(forked.ns())}});
   });
 }
 
@@ -717,9 +838,14 @@ Id task(const std::string &participant, const std::string &task,
   return id;
 }
 
-void process_reaped(const std::string &participant,
+void process_reaped(const std::string &participant, pid_t pid,
                     const rusage *usage) noexcept {
   guarded([&](Collector &c) {
+    c.observe({{"kind", "reap"},
+               {"participant", participant},
+               {"pid", pid},
+               {"reaped", usage != nullptr},
+               {"at_ns", host_ns(now_ns())}});
     for (ParticipantRecord &p : c.participants)
       if (p.name == participant)
         p.reaped = usage ? std::optional<rusage>(*usage)
@@ -747,24 +873,49 @@ void write_report(const fs::path &path, const RunFacts &facts) {
 Activation::Activation(Id task, uint64_t slot_ns) noexcept
     : task_(task), slot_ns_(slot_ns), start_ns_(now_ns()) {}
 
-void Activation::completed() noexcept {
-  const uint64_t wall = now_ns() - start_ns_;
-  done_ = true;
+namespace {
+
+void record_activation(Id task, uint64_t slot_ns, uint64_t start_ns,
+                       uint64_t end_ns, Outcome outcome) noexcept {
   guarded([&](Collector &c) {
-    c.observe_slot(slot_ns_);
-    c.tasks.at(task_).work.record(slot_ns_, wall, Outcome::Completed);
+    c.observe_slot(slot_ns);
+    TaskRecord &t = c.tasks.at(task);
+    const uint64_t index = t.work.attempted;
+    t.work.record(slot_ns, end_ns - start_ns, outcome);
+    observe_work(c, "activation", t.participant, &t.task,
+                 task_kind_name(t.kind), index, slot_ns, start_ns, end_ns,
+                 outcome);
   });
+}
+
+void record_replay(Id replay, uint64_t slot_ns, uint64_t start_ns,
+                   uint64_t end_ns, uint64_t published,
+                   Outcome outcome) noexcept {
+  guarded([&](Collector &c) {
+    c.observe_slot(slot_ns);
+    ReplayRecord &r = c.replays.at(replay);
+    const uint64_t index = r.work.attempted;
+    r.publications += published;
+    r.work.record(slot_ns, end_ns - start_ns, outcome);
+    observe_work(c, "replay", r.participant, nullptr, nullptr, index,
+                 slot_ns, start_ns, end_ns, outcome);
+  });
+}
+
+}  // namespace
+
+void Activation::completed() noexcept {
+  const uint64_t end = now_ns();
+  done_ = true;
+  record_activation(task_, slot_ns_, start_ns_, end, Outcome::Completed);
 }
 
 Activation::~Activation() {
   if (done_) return;
-  const uint64_t wall = now_ns() - start_ns_;
+  const uint64_t end = now_ns();
   const Outcome outcome =
       run_interrupted() ? Outcome::Interrupted : Outcome::Failed;
-  guarded([&](Collector &c) {
-    c.observe_slot(slot_ns_);
-    c.tasks.at(task_).work.record(slot_ns_, wall, outcome);
-  });
+  record_activation(task_, slot_ns_, start_ns_, end, outcome);
 }
 
 ReplayWork::ReplayWork(Id replay, const Replayer &replayer,
@@ -778,27 +929,43 @@ ReplayWork::ReplayWork(Id replay, const Replayer &replayer,
 
 void ReplayWork::completed() noexcept {
   if (!due_) return;
-  const uint64_t wall = now_ns() - start_ns_;
+  const uint64_t end = now_ns();
   done_ = true;
-  guarded([&](Collector &c) {
-    c.observe_slot(slot_ns_);
-    ReplayRecord &r = c.replays.at(replay_);
-    r.publications += publications_ - publications_before_;
-    r.work.record(slot_ns_, wall, Outcome::Completed);
-  });
+  record_replay(replay_, slot_ns_, start_ns_, end,
+                publications_ - publications_before_, Outcome::Completed);
 }
 
 ReplayWork::~ReplayWork() {
   if (!due_ || done_) return;
-  const uint64_t wall = now_ns() - start_ns_;
+  const uint64_t end = now_ns();
   const Outcome outcome =
       run_interrupted() ? Outcome::Interrupted : Outcome::Failed;
-  guarded([&](Collector &c) {
-    c.observe_slot(slot_ns_);
-    ReplayRecord &r = c.replays.at(replay_);
-    r.publications += publications_ - publications_before_;
-    r.work.record(slot_ns_, wall, outcome);
-  });
+  record_replay(replay_, slot_ns_, start_ns_, end,
+                publications_ - publications_before_, outcome);
+}
+
+namespace {
+
+struct LaunchWrapper {
+  std::string participant;
+  std::string path;
+};
+
+std::optional<LaunchWrapper> &launch_wrapper_setting() {
+  static std::optional<LaunchWrapper> setting;
+  return setting;
+}
+
+}  // namespace
+
+void wrap_launch(const std::string &participant, const fs::path &wrapper) {
+  launch_wrapper_setting() = LaunchWrapper{participant, wrapper.string()};
+}
+
+const std::string *launch_wrapper(const std::string &participant) noexcept {
+  const auto &setting = launch_wrapper_setting();
+  if (!setting || setting->participant != participant) return nullptr;
+  return &setting->path;
 }
 
 }  // namespace sil::diagnostics

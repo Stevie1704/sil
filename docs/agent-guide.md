@@ -174,6 +174,46 @@ measurements mean", and the contract in `sil docs diagnostics-report`.
 6. **Report** each value with its unit, its scope, the host from the report
    `host` member, and the number of measured Runs.
 
+## Profile a Run
+
+Use these steps when the user asks which function or allocation site inside
+a Participant is expensive, after "Measure a Run" named the Task or Step.
+Read `sil docs running`, section "Profile a Run", and the contract in
+`sil docs profile-report`.
+
+1. **Check the host.** Linux x86-64/glibc with perf (CPU) or Heaptrack
+   (heap) installed. If `sil profile` stops in preflight (exit `1`), report
+   the missing tool or permission that stderr names. The host owner decides
+   a host change; `sil profile` makes none.
+2. **Select one collector and one scope.**
+   - CPU: `sil profile MANIFEST --out DIR --collector cpu --activations`.
+     Add `--modules-from ARCHIVE` for each FMU archive, or its functions
+     have no names.
+   - Heap: `--collector heap --runner` for Native participants (all in one
+     scope), or `--participant NAME` for one unshimmed Process participant
+     or FMU group.
+3. **Read `DIR/profile.json`.** Check the exit code, then `run.status` and
+   `capture.status` separately: a Run failure keeps its own exit code. A
+   capture that is not `complete` has partial evidence; its `reasons` say
+   why.
+4. **Find the values for the question.**
+
+   | Question | Member |
+   | --- | --- |
+   | Which function uses CPU? | `capture.hotspots.self` and `inclusive` (sample weights, an estimate) |
+   | Which Task or Step ran the samples? | `activation_correlation.summary.tasks` and `samples` (classes) |
+   | Which site allocates or churns? | `capture.analysis.hotspots.self`: `allocations`, `allocated_bytes`, `temporary_allocations` |
+   | Are names and lines trustworthy? | `capture.modules[].debug.status`, `capture.symbolization` |
+
+5. **State these limits with the result.** A sample weight is not a function
+   duration. `window_associated` is not proven Step work. Outstanding bytes
+   at capture end are not a leak. There is no allocation history per Step
+   and no total per Native participant or FMU instance. A profile describes
+   this host build.
+6. **Hand over** `profile.json` with the normalized files that it names, or
+   the HTML of `sil profile render`. Share `cpu/perf.data` only as a core
+   dump: it holds copies of stacks.
+
 ## Machine-readable output
 
 Use exit codes, not message text. Message text can change in any release.
@@ -193,6 +233,7 @@ Use exit codes, not message text. Message text can change in any release.
 | `sil run`, on a failed Run | the `<recording>.failure.json` report: which Participant failed, how, at which Step and virtual time, and its stderr tail (`sil docs running`) |
 | `sil run --diagnostics` | the `sil_run_diagnostics` report, `<recording>.diagnostics.json` by default, and a summary on stdout (`sil docs running`, `sil docs diagnostics-report`) |
 | `sil benchmark --out DIR` | `DIR/summary.json`, a `sil_benchmark_report` with every Run report embedded, a directory of evidence per Run, and a summary on stdout (`sil docs running`, `sil docs diagnostics-report`) |
+| `sil profile --out DIR` | `DIR/profile.json`, a `sil_profile_report`, with the raw capture and the normalized files it names, and a summary on stdout (`sil docs profile-report`) |
 | every command | the exit code: `sil docs running` lists those of a Run |
 
 `sil docs support` says which interfaces and report versions are stable, and

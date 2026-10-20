@@ -1,0 +1,10 @@
+Exception ignored error evaluating path:
+Traceback (most recent call last):
+  File "<frozen getpath>", line 490, in <module>
+OSError: [Errno 38] Function not implemented
+Fatal Python error: error evaluating path
+Python runtime state: core initialized
+
+Current thread 0x00007f7099850780 (most recent call first):
+  <no Python frame>
+sil-run: participant 'process' exited unexpectedly with status 1 during initialization

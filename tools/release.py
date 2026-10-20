@@ -102,6 +102,9 @@ PACKAGED_DOCS = {
                 "measure and benchmark Runs"),
     "diagnostics-report": ("docs/diagnostics-report.md",
                            "the Run diagnostics and benchmark report contracts"),
+    "profile-report": ("docs/profile-report.md",
+                       "sil profile: CPU and heap capture, the profile report "
+                       "contract, offline render"),
     "step-protocol": ("docs/step-protocol.md",
                       "the JSON-lines protocol of a Process participant"),
     "fmi": ("docs/fmi.md",

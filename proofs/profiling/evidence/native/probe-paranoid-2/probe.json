@@ -1,0 +1,106 @@
+{
+  "host": {
+    "packages": [
+      "binutils=2.42-4ubuntu2.10",
+      "gcc=4:13.2.0-7ubuntu1",
+      "heaptrack=1.5.0+dfsg1-2ubuntu3",
+      "linux-tools-6.17.0-1022-azure=6.17.0-1022.22",
+      "linux-tools-azure=6.17.0-1022.22",
+      "linux-tools-common=6.8.0-147.147"
+    ],
+    "uname": {
+      "system": "Linux",
+      "node": "runnervm8k3b6",
+      "release": "6.17.0-1022-azure",
+      "version": "#22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026",
+      "machine": "x86_64",
+      "processor": "x86_64"
+    },
+    "libc": "glibc 2.39",
+    "python": "3.12.3",
+    "in_container": false,
+    "uid": 1001,
+    "perf_event_paranoid": "2",
+    "perf_event_max_sample_rate": "100000",
+    "kptr_restrict": "1",
+    "status": {
+      "CapEff": "0000000000000000",
+      "CapPrm": "0000000000000000",
+      "Seccomp": "0",
+      "NSpid": "6796"
+    },
+    "tools": {
+      "perf": "perf version 6.17.13",
+      "heaptrack": "heaptrack 1.5.0",
+      "heaptrack_preload": "/usr/lib/heaptrack/libheaptrack_preload.so",
+      "heaptrack_interpret": "/usr/lib/heaptrack/libexec/heaptrack_interpret",
+      "cc": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "objcopy": "GNU objcopy (GNU Binutils for Ubuntu) 2.42",
+      "sil-run": "0.2.1"
+    }
+  },
+  "probes": {
+    "perf_user": {
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock:u",
+        "-F",
+        "99",
+        "-k",
+        "monotonic",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/probe-paranoid-2/perf-user.data",
+        "--",
+        "true"
+      ],
+      "returncode": 0,
+      "stderr": "[ perf record: Woken up 1 times to write data ]\n[ perf record: Captured and wrote 0.001 MB /home/runner/work/sil/sil/build/profiling-evidence/native/probe-paranoid-2/perf-user.data ]\n",
+      "outcome": "available"
+    },
+    "perf_user_dwarf": {
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock:u",
+        "-F",
+        "99",
+        "-k",
+        "monotonic",
+        "--call-graph",
+        "dwarf,8192",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/probe-paranoid-2/perf-dwarf.data",
+        "--",
+        "true"
+      ],
+      "returncode": 0,
+      "stderr": "[ perf record: Woken up 1 times to write data ]\n[ perf record: Captured and wrote 0.003 MB /home/runner/work/sil/sil/build/profiling-evidence/native/probe-paranoid-2/perf-dwarf.data ]\n",
+      "outcome": "available"
+    },
+    "perf_kernel": {
+      "command": [
+        "perf",
+        "record",
+        "-e",
+        "cpu-clock",
+        "-F",
+        "99",
+        "-o",
+        "/home/runner/work/sil/sil/build/profiling-evidence/native/probe-paranoid-2/perf-kernel.data",
+        "--",
+        "true"
+      ],
+      "returncode": 0,
+      "stderr": "[ perf record: Woken up 1 times to write data ]\n[ perf record: Captured and wrote 0.001 MB /home/runner/work/sil/sil/build/profiling-evidence/native/probe-paranoid-2/perf-kernel.data ]\n",
+      "outcome": "available"
+    },
+    "heaptrack_preload": {
+      "returncode": 0,
+      "stderr": "",
+      "outcome": "available"
+    }
+  }
+}

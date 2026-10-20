@@ -1,0 +1,538 @@
+{
+  "activation-classes-do-not-add-up": {
+    "base": "activation-complete",
+    "changes": [
+      {
+        "path": [
+          "activation_correlation",
+          "summary",
+          "samples",
+          "execution_context",
+          "samples"
+        ],
+        "value": 6
+      },
+      {
+        "path": [
+          "activation_correlation",
+          "summary",
+          "samples",
+          "execution_context",
+          "weight_ns"
+        ],
+        "value": 6006000
+      }
+    ]
+  },
+  "activation-complete-without-summary": {
+    "base": "activation-complete",
+    "changes": [
+      {
+        "path": [
+          "activation_correlation",
+          "summary"
+        ],
+        "value": null
+      },
+      {
+        "path": [
+          "activation_correlation",
+          "unavailable",
+          "summary"
+        ],
+        "value": "reserved"
+      }
+    ]
+  },
+  "activation-task-windows-do-not-add-up": {
+    "base": "activation-complete",
+    "changes": [
+      {
+        "path": [
+          "activation_correlation",
+          "summary",
+          "tasks",
+          1,
+          "execution_context",
+          "samples"
+        ],
+        "value": 2
+      },
+      {
+        "path": [
+          "activation_correlation",
+          "summary",
+          "tasks",
+          1,
+          "execution_context",
+          "weight_ns"
+        ],
+        "value": 2002000
+      },
+      {
+        "path": [
+          "activation_correlation",
+          "summary",
+          "tasks",
+          1,
+          "window_associated",
+          "samples"
+        ],
+        "value": 2
+      },
+      {
+        "path": [
+          "activation_correlation",
+          "summary",
+          "tasks",
+          1,
+          "window_associated",
+          "weight_ns"
+        ],
+        "value": 2002000
+      }
+    ]
+  },
+  "activation-unknown-process": {
+    "base": "activation-complete",
+    "changes": [
+      {
+        "path": [
+          "activation_correlation",
+          "summary",
+          "processes",
+          0,
+          "process"
+        ],
+        "value": "p9"
+      }
+    ]
+  },
+  "activation-unknown-unattributed-reason": {
+    "base": "activation-complete",
+    "changes": [
+      {
+        "path": [
+          "activation_correlation",
+          "summary",
+          "samples",
+          "unattributed",
+          "reasons",
+          0,
+          "reason"
+        ],
+        "value": "probably_the_fmu"
+      }
+    ]
+  },
+  "artifact-outside-directory": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "artifacts",
+          0,
+          "path"
+        ],
+        "value": "../run.diagnostics.json"
+      }
+    ]
+  },
+  "complete-with-reasons": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "reasons"
+        ],
+        "value": [
+          "lost_samples"
+        ]
+      }
+    ]
+  },
+  "cpu-complete-without-samples-file": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "samples_file"
+        ],
+        "value": null
+      },
+      {
+        "path": [
+          "capture",
+          "unavailable"
+        ],
+        "value": {
+          "samples_file": "export_failed"
+        }
+      }
+    ]
+  },
+  "cpu-weight-called-duration": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "sampling",
+          "weight_unit"
+        ],
+        "value": "duration_ns"
+      }
+    ]
+  },
+  "heap-analysis-invented": {
+    "base": "heap-reserved-runner",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "analysis"
+        ],
+        "value": {
+          "allocations": 1600
+        }
+      },
+      {
+        "path": [
+          "capture",
+          "unavailable",
+          "analysis"
+        ],
+        "delete": true
+      }
+    ]
+  },
+  "heap-complete-without-allocations-file": {
+    "base": "heap-complete-runner",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "analysis",
+          "allocations_file"
+        ],
+        "value": null
+      },
+      {
+        "path": [
+          "capture",
+          "analysis",
+          "unavailable"
+        ],
+        "value": {
+          "allocations_file": "export_failed"
+        }
+      }
+    ]
+  },
+  "heap-complete-without-analysis": {
+    "base": "heap-complete-process",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "analysis"
+        ],
+        "value": null
+      },
+      {
+        "path": [
+          "capture",
+          "unavailable",
+          "analysis"
+        ],
+        "value": "export_failed"
+      }
+    ]
+  },
+  "heap-frees-do-not-match-outstanding": {
+    "base": "heap-complete-process",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "analysis",
+          "totals",
+          "frees"
+        ],
+        "value": 4
+      }
+    ]
+  },
+  "heap-peak-below-outstanding": {
+    "base": "heap-complete-process",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "analysis",
+          "totals",
+          "leaked_bytes"
+        ],
+        "value": 65560
+      },
+      {
+        "path": [
+          "capture",
+          "analysis",
+          "totals",
+          "peak_tracked_bytes"
+        ],
+        "value": 100
+      }
+    ]
+  },
+  "heap-self-rows-do-not-add-up": {
+    "base": "heap-complete-process",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "analysis",
+          "hotspots",
+          "self",
+          0,
+          "allocations"
+        ],
+        "value": 2
+      }
+    ]
+  },
+  "heap-unknown-reason": {
+    "base": "heap-complete-process",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "reasons"
+        ],
+        "value": [
+          "rss_too_high"
+        ]
+      },
+      {
+        "path": [
+          "capture",
+          "status"
+        ],
+        "value": "partial"
+      }
+    ]
+  },
+  "heap-unknown-scope-kind": {
+    "base": "heap-reserved-process",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "scope",
+          "kind"
+        ],
+        "value": "native_participant"
+      },
+      {
+        "path": [
+          "capture",
+          "scope",
+          "participant"
+        ],
+        "value": "native"
+      }
+    ]
+  },
+  "inclusive-below-self": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "hotspots",
+          "inclusive",
+          2,
+          "inclusive_samples"
+        ],
+        "value": 2
+      }
+    ]
+  },
+  "missing-sampling": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "sampling"
+        ],
+        "delete": true
+      }
+    ]
+  },
+  "null-without-reason": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "totals",
+          "lost_samples"
+        ],
+        "value": null
+      }
+    ]
+  },
+  "partial-without-reasons": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "status"
+        ],
+        "value": "partial"
+      }
+    ]
+  },
+  "process-samples-do-not-add-up": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "processes",
+          1,
+          "samples"
+        ],
+        "value": 7
+      }
+    ]
+  },
+  "self-remainder-does-not-add-up": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "hotspots",
+          "self_remainder",
+          "samples"
+        ],
+        "value": 1
+      }
+    ]
+  },
+  "source-line-from-mismatched-debug": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "hotspots",
+          "self",
+          5,
+          "source_lines"
+        ],
+        "value": [
+          {
+            "file": "silproof_process.c",
+            "line": 9,
+            "samples": 1
+          }
+        ]
+      }
+    ]
+  },
+  "succeeded-with-nonzero-exit": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "run",
+          "exit_code"
+        ],
+        "value": 1
+      }
+    ]
+  },
+  "timestamp-not-a-string": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "time_origin_ns"
+        ],
+        "value": 272755902035
+      }
+    ]
+  },
+  "unknown-capture-kind": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "kind"
+        ],
+        "value": "gpu"
+      }
+    ]
+  },
+  "unknown-correlation-kind": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "activation_correlation",
+          "kind"
+        ],
+        "value": "guess"
+      }
+    ]
+  },
+  "unknown-debug-status": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "modules",
+          3,
+          "debug",
+          "status"
+        ],
+        "value": "probably"
+      }
+    ]
+  },
+  "unknown-process-reference": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "capture",
+          "threads",
+          0,
+          "process"
+        ],
+        "value": "p9"
+      }
+    ]
+  },
+  "unsupported-version": {
+    "base": "cpu-complete",
+    "changes": [
+      {
+        "path": [
+          "sil_profile_report"
+        ],
+        "value": 2
+      }
+    ]
+  }
+}

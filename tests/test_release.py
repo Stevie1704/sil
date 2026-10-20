@@ -264,6 +264,8 @@ def test_stamped_docs_link_each_other_and_the_release_for_the_rest(docs: Path):
     assert "](step-protocol.md)" in running
     # The diagnostics report contract ships with the commands that write it.
     assert "](diagnostics-report.md)" in running
+    # So does the profile report contract of `sil profile`.
+    assert "](profile-report.md" in running
     assert f"](https://github.com/Stevie1704/sil/blob/v{VERSION}/README.md)" in running
     library = (docs / "library.md").read_text()
     assert "](../_examples/library/)" in library

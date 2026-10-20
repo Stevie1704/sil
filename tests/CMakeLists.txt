@@ -248,3 +248,12 @@ foreach(toy toy_producer toy_accumulator toy_thrower toy_multitask)
   # Platform-neutral name so the same manifest works on macOS and Linux.
   set_target_properties(${toy} PROPERTIES PREFIX "" SUFFIX ".silp")
 endforeach()
+
+# The Activation observation writer (#316) bounds its storage and drops
+# records on a write failure; both are pinned on a pipe, without a Run.
+add_executable(sil_observation_log_test
+  observation_log_test.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/observation_log.cpp)
+target_include_directories(sil_observation_log_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src)
+add_test(NAME sil_observation_log COMMAND sil_observation_log_test
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})

@@ -157,12 +157,28 @@ def preflight(request: RunRequest,
     if request.recording is not None and _same(
             absolute(request.recording), absolute(request.manifest)):
         problems.append(f"the Recording '{request.recording}' is the Manifest")
-    seen: list[tuple[str, Path]] = []
+    fresh = []
     for label, path in outputs:
         problem = new_path_problem(label, path, base)
-        if problem is not None:
+        if problem is None:
+            fresh.append((label, path))
+        else:
             problems.append(problem)
-            continue
+    return problems + alias_problems(fresh, others, base)
+
+
+def alias_problems(outputs: Sequence[tuple[str, Path]],
+                   others: Sequence[tuple[str, Path]],
+                   base: Path) -> list[str]:
+    """Each (label, path) output that is also one of `others` or an earlier
+    output, relative to `base`."""
+
+    def absolute(path: Path) -> Path:
+        return Path(os.path.realpath(base / path))
+
+    problems: list[str] = []
+    seen: list[tuple[str, Path]] = []
+    for label, path in outputs:
         target = absolute(path)
         for other_label, other in [*others, *seen]:
             if _same(target, absolute(other)):
@@ -212,7 +228,9 @@ class RunOutcome:
 def execute(request: RunRequest, tools: NativeTools, *,
             cwd: Path | None = None,
             stdout: BinaryIO | int | None = None,
-            stderr: BinaryIO | None = None) -> RunOutcome:
+            stderr: BinaryIO | None = None,
+            launch_prefix: tuple[str, ...] = (),
+            extra_arguments: tuple[str, ...] = ()) -> RunOutcome:
     """Run one diagnostics Run to its end and read its report.
 
     The runner's stdout goes to `stdout` (inherited when None). Its stderr is
@@ -221,12 +239,15 @@ def execute(request: RunRequest, tools: NativeTools, *,
     the runner and its Participants never inherit, so no Run output can pose
     as one. SIGINT, SIGTERM and SIGHUP sent to this process are forwarded to
     the launcher, which forwards them to the runner; the Run then ends
-    through its own cleanup.
+    through its own cleanup. `launch_prefix` is an exec-preserving adapter
+    that the launcher starts instead of the runner, with the runner command
+    as its arguments; `extra_arguments` go to the runner (`sil profile`).
     """
     sink = stderr if stderr is not None else sys.stderr.buffer
     status_read, status_write = os.pipe()
     command = [str(tools.launcher), "--status-fd", str(status_write),
-               str(tools.runner), *request.runner_arguments()]
+               *launch_prefix, str(tools.runner), *request.runner_arguments(),
+               *extra_arguments]
     sys.stdout.flush()
     sys.stderr.flush()
     received: list[int] = []

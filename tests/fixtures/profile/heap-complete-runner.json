@@ -1,0 +1,309 @@
+{
+  "activation_correlation": {
+    "kind": "not_requested"
+  },
+  "artifacts": [
+    {
+      "bytes": 11800,
+      "path": "run.diagnostics.json",
+      "role": "diagnostics_report",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "bytes": 28039,
+      "path": "run.mcap",
+      "role": "recording",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    {
+      "bytes": 260,
+      "path": "heap/launch-adapter.sh",
+      "role": "heap_launch_adapter",
+      "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    },
+    {
+      "bytes": 2310,
+      "path": "heap/heaptrack.data",
+      "role": "heaptrack_data",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    {
+      "bytes": 1270,
+      "path": "heap/allocations.json",
+      "role": "heap_allocations",
+      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  ],
+  "capture": {
+    "activation_correlation": {
+      "reason": "no_validated_clock_mapping",
+      "status": "unavailable"
+    },
+    "analysis": {
+      "allocations_file": "heap/allocations.json",
+      "coverage": {
+        "allocations_unknown_module": 1,
+        "allocations_unknown_symbol": 1,
+        "allocations_with_caller": 8,
+        "truncated": false,
+        "undecodable_records": 0
+      },
+      "file_version": 3,
+      "heaptrack_version": "1.5.0",
+      "hotspots": {
+        "inclusive": [
+          {
+            "allocated_bytes": 68696,
+            "allocations": 8,
+            "module": "m2",
+            "outstanding_allocations": 3,
+            "outstanding_bytes": 65560,
+            "source_lines": [],
+            "symbol": "main",
+            "temporary_allocations": 4
+          },
+          {
+            "allocated_bytes": 65536,
+            "allocations": 1,
+            "module": "m1",
+            "outstanding_allocations": 1,
+            "outstanding_bytes": 65536,
+            "source_lines": [],
+            "symbol": "retain_site",
+            "temporary_allocations": 0
+          },
+          {
+            "allocated_bytes": 3080,
+            "allocations": 4,
+            "module": "m1",
+            "outstanding_allocations": 1,
+            "outstanding_bytes": 8,
+            "source_lines": [],
+            "symbol": "alloc_site",
+            "temporary_allocations": 2
+          },
+          {
+            "allocated_bytes": 64,
+            "allocations": 2,
+            "module": "m1",
+            "outstanding_allocations": 0,
+            "outstanding_bytes": 0,
+            "source_lines": [],
+            "symbol": "churn_site(int, char)",
+            "temporary_allocations": 2
+          },
+          {
+            "allocated_bytes": 64,
+            "allocations": 2,
+            "module": "m1",
+            "outstanding_allocations": 0,
+            "outstanding_bytes": 0,
+            "source_lines": [],
+            "symbol": "inlined_helper",
+            "temporary_allocations": 2
+          },
+          {
+            "allocated_bytes": 16,
+            "allocations": 1,
+            "module": null,
+            "outstanding_allocations": 1,
+            "outstanding_bytes": 16,
+            "source_lines": [],
+            "symbol": null,
+            "temporary_allocations": 0
+          },
+          {
+            "allocated_bytes": 8,
+            "allocations": 1,
+            "module": "m1",
+            "outstanding_allocations": 1,
+            "outstanding_bytes": 8,
+            "source_lines": [],
+            "symbol": null,
+            "temporary_allocations": 0
+          }
+        ],
+        "limit": 50,
+        "self": [
+          {
+            "allocated_bytes": 65536,
+            "allocations": 1,
+            "module": "m1",
+            "outstanding_allocations": 1,
+            "outstanding_bytes": 65536,
+            "source_lines": [
+              {
+                "allocations": 1,
+                "file": "native.c",
+                "line": 20
+              }
+            ],
+            "symbol": "retain_site",
+            "temporary_allocations": 0
+          },
+          {
+            "allocated_bytes": 3072,
+            "allocations": 3,
+            "module": "m1",
+            "outstanding_allocations": 0,
+            "outstanding_bytes": 0,
+            "source_lines": [
+              {
+                "allocations": 3,
+                "file": "native.c",
+                "line": 10
+              }
+            ],
+            "symbol": "alloc_site",
+            "temporary_allocations": 2
+          },
+          {
+            "allocated_bytes": 64,
+            "allocations": 2,
+            "module": "m1",
+            "outstanding_allocations": 0,
+            "outstanding_bytes": 0,
+            "source_lines": [
+              {
+                "allocations": 2,
+                "file": "native.c",
+                "line": 30
+              }
+            ],
+            "symbol": "inlined_helper",
+            "temporary_allocations": 2
+          },
+          {
+            "allocated_bytes": 16,
+            "allocations": 1,
+            "module": null,
+            "outstanding_allocations": 1,
+            "outstanding_bytes": 16,
+            "source_lines": [],
+            "symbol": null,
+            "temporary_allocations": 0
+          },
+          {
+            "allocated_bytes": 8,
+            "allocations": 1,
+            "module": "m1",
+            "outstanding_allocations": 1,
+            "outstanding_bytes": 8,
+            "source_lines": [],
+            "symbol": null,
+            "temporary_allocations": 0
+          }
+        ],
+        "self_remainder": {
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "outstanding_allocations": 0,
+          "outstanding_bytes": 0,
+          "temporary_allocations": 0
+        }
+      },
+      "modules": [
+        {
+          "allocations_leaf": 7,
+          "allocations_unknown_symbol": 1,
+          "build_id": "abcd01",
+          "id": "m1",
+          "path": "/w/libnative.so",
+          "unavailable": {}
+        },
+        {
+          "allocations_leaf": 0,
+          "allocations_unknown_symbol": 0,
+          "build_id": null,
+          "id": "m2",
+          "path": "/w/sil-run",
+          "unavailable": {
+            "build_id": "module_unavailable"
+          }
+        }
+      ],
+      "totals": {
+        "allocated_bytes": 68696,
+        "allocations": 8,
+        "frees": 5,
+        "outstanding_allocations": 3,
+        "outstanding_bytes": 65560,
+        "peak_tracked_bytes": 67584,
+        "temporary_allocations": 4
+      },
+      "traced_executable": "/w/sil-run-diagnostics manifest.json -o run.mcap",
+      "unavailable": {}
+    },
+    "backend": {
+      "interpreter": "/usr/lib/x86_64-linux-gnu/heaptrack/libexec/heaptrack_interpret",
+      "interpreter_exit_code": 0,
+      "name": "heaptrack",
+      "preload": "/usr/lib/x86_64-linux-gnu/heaptrack/libheaptrack_preload.so",
+      "unavailable": {},
+      "version": "heaptrack 1.5.0"
+    },
+    "kind": "heap",
+    "launch": {
+      "adapter": "heap/launch-adapter.sh",
+      "method": "preload_exec_adapter",
+      "wrapped": "runner"
+    },
+    "limits": {
+      "capture_bytes": 2310,
+      "interpreter_timeout_s": 600,
+      "limit_reached": false,
+      "max_capture_bytes": 268435456
+    },
+    "raw": "heap/heaptrack.data",
+    "reasons": [],
+    "scope": {
+      "kind": "runner"
+    },
+    "status": "complete",
+    "unavailable": {}
+  },
+  "configuration": {
+    "collector": "heap",
+    "cwd": "/work",
+    "max_protocol_line_bytes": null,
+    "max_step_inline_payload_bytes": null,
+    "max_step_output_messages": null,
+    "participant_timeout_ms": 60000,
+    "recording": "/work/profile/run.mcap"
+  },
+  "host": {
+    "architecture": "x86_64",
+    "kernel_release": "6.17.0-1022-azure",
+    "os": "Linux",
+    "perf_event_paranoid": 2,
+    "unavailable": {}
+  },
+  "identity": {
+    "manifest_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "manifest_path": "manifest.json",
+    "sil_version": "0.2.0",
+    "source_repository": "https://github.com/Stevie1704/sil",
+    "source_revision": "d59dffb",
+    "unavailable": {}
+  },
+  "limitations": [
+    "heap_tracks_allocation_calls_only",
+    "outstanding_is_not_a_leak_verdict",
+    "allocation_origin_is_not_ownership",
+    "activation_correlation_unavailable",
+    "host_build_only"
+  ],
+  "producer": {
+    "name": "sil profile",
+    "sil_version": "0.2.0"
+  },
+  "run": {
+    "diagnostics_report": "run.diagnostics.json",
+    "exit_code": 0,
+    "failure": null,
+    "signal": null,
+    "status": "succeeded",
+    "supervisor_signal": null
+  },
+  "sil_profile_report": 1
+}

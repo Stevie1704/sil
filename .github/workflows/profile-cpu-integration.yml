@@ -1,0 +1,91 @@
+name: profile-cpu-integration
+
+# `sil profile --collector cpu` with the real Linux perf (#315), also with
+# the Activation join (#316), on the supported machine class, Linux
+# x86-64/glibc, natively as the unprivileged runner user. It needs apt for
+# perf and one disclosed host change (kernel.perf_event_paranoid), so it
+# sits outside the general push gate. It
+# runs for PRs that touch the profiler and on demand. Its checks are
+# presence and identity checks; no check uses a time or a sample share.
+
+on:
+  pull_request:
+    paths:
+      - 'python/src/sil/profile_*.py'
+      - 'python/src/sil/diagnostics_run.py'
+      - 'kernel/src/main.cpp'
+      - 'kernel/src/run_diagnostics.*'
+      - 'kernel/src/observation_log.*'
+      - 'kernel/src/process_participant.cpp'
+      - 'kernel/src/engine.cpp'
+      - 'kernel/src/owned_directory.*'
+      - 'kernel/src/diagnostics_launcher.c'
+      - 'proofs/profiling/workload.py'
+      - 'proofs/profiling/workload/**'
+      - 'tests/test_profile_*.py'
+      - 'tests/fake_perf.py'
+      - '.github/workflows/profile-cpu-integration.yml'
+  workflow_dispatch:
+
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      EVIDENCE: ${{ github.workspace }}/build/profile-evidence
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install perf of the running kernel and the build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            "linux-tools-$(uname -r)" linux-tools-common binutils \
+            build-essential cmake
+          mkdir -p "$EVIDENCE"
+          { uname -a; perf --version; cc --version | head -1;
+            objcopy --version | head -1; } | tee "$EVIDENCE/host.txt"
+
+      - name: Set up Python environment
+        run: |
+          uv venv .venv
+          uv pip install -p .venv/bin/python -e "python/[dev]"
+
+      - name: Build kernel
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j
+
+      # Host state as the runner provides it: Ubuntu sets 4, so an
+      # unprivileged user cannot use perf. The command must say so in
+      # preflight, before any Participant starts.
+      - name: Permission-denied outcome, host default paranoid
+        env:
+          SIL_PROFILE_PERF: denied
+          SIL_SKIP_BUILD: '1'
+        run: |
+          cat /proc/sys/kernel/perf_event_paranoid | tee "$EVIDENCE/paranoid-before.txt"
+          .venv/bin/python -m pytest tests/test_profile_perf_integration.py -v -rs
+
+      # The disclosed native setup of the #314 proof: the upstream kernel
+      # default 2 allows an unprivileged user to sample its own processes in
+      # user space.
+      - name: Disclosed host setup, kernel.perf_event_paranoid=2
+        run: sudo sysctl -w kernel.perf_event_paranoid=2
+
+      - name: Full capture, unprivileged user, paranoid 2
+        env:
+          SIL_PROFILE_PERF: available
+          SIL_SKIP_BUILD: '1'
+          SIL_PROFILE_EVIDENCE: ${{ env.EVIDENCE }}
+        run: .venv/bin/python -m pytest tests/test_profile_perf_integration.py tests/test_profile_run.py tests/test_profile_activation.py tests/test_activation_observations.py tests/test_run_directory_retention.py -v -rs
+
+      # perf.data holds copies of user stacks; the workload holds no secret,
+      # and the artifact is kept as the evidence of this run.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: profile-cpu-evidence
+          path: build/profile-evidence/

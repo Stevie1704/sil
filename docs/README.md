@@ -46,7 +46,9 @@ agent.
   [terminal replay timing](adr/0002-a-replayed-terminal-lands-on-its-own-instant.md),
   [maintained CAN models](adr/0003-maintained-can-model-at-the-edge.md)
   and the [opt-in diagnostics runner](adr/0004-opt-in-run-diagnostics-runner.md),
-  whose [report contracts](diagnostics-report.md) are versioned.
+  whose [report contracts](diagnostics-report.md) are versioned. The
+  [profile report contract](profile-report.md) is the versioned evidence of
+  `sil profile` (#313; Linux x86-64 with perf).
   Record new architectural decisions here; consult the applicable ADR and its
   status when an older design statement differs.
 - [docs/decisions/](decisions/) retains the historical

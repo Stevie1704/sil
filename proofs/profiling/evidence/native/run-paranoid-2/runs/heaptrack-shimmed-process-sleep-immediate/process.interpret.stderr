@@ -1,0 +1,4 @@
+heaptrack stats:
+	allocations:          	14501
+	leaked allocations:   	189
+	temporary allocations:	3330

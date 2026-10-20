@@ -1,0 +1,79 @@
+name: proof-profiling
+
+# The perf and Heaptrack feasibility proof (issue #314) on the supported
+# machine class, Linux x86-64/glibc. It needs network for apt and the image
+# build, and one disclosed host change (kernel.perf_event_paranoid), so it
+# sits outside the general push gate. It runs for PRs that touch the proof
+# and on demand. Its checks gate the job; timings and sizes are observations.
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/profiling/**'
+      - 'tests/test_profiling_proof.py'
+      - '.github/workflows/proof-profiling.yml'
+  workflow_dispatch:
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      EVIDENCE: ${{ github.workspace }}/build/profiling-evidence
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the container image (pinned Debian snapshot)
+        run: proofs/profiling/container.sh image "$EVIDENCE/container"
+
+      - name: Native setup (apt perf and Heaptrack, SiL build)
+        run: proofs/profiling/native-setup.sh "$RUNNER_TEMP/sil"
+
+      # Host state as the runner provides it: no setup change yet.
+      - name: Probe native, unprivileged user, host default paranoid
+        run: |
+          export PATH="$RUNNER_TEMP/sil/python/bin:$RUNNER_TEMP/sil/native/bin:$PATH"
+          python proofs/profiling/proof.py probe "$EVIDENCE/native/probe-host-default"
+
+      - name: Probe the container options, host default paranoid
+        if: ${{ !cancelled() }}
+        run: |
+          c=proofs/profiling/container.sh
+          $c probe "$EVIDENCE/container" probe-host-default-default-caps
+          $c probe "$EVIDENCE/container" probe-host-default-cap-perfmon --cap-add PERFMON
+          $c probe "$EVIDENCE/container" probe-host-default-seccomp-unconfined --security-opt seccomp=unconfined
+
+      # The documented container setup: CAP_PERFMON for the container, no
+      # host change.
+      - name: Full proof in the container with CAP_PERFMON, host default paranoid
+        if: ${{ !cancelled() }}
+        run: proofs/profiling/container.sh run "$EVIDENCE/container" run-cap-perfmon --cap-add PERFMON
+
+      # The disclosed native setup: the upstream kernel default 2, which
+      # allows an unprivileged user to sample its own processes in user
+      # space. Ubuntu ships a stricter value.
+      - name: Disclosed host setup, kernel.perf_event_paranoid=2
+        if: ${{ !cancelled() }}
+        run: |
+          cat /proc/sys/kernel/perf_event_paranoid > "$EVIDENCE/host-paranoid-before.txt"
+          sudo sysctl -w kernel.perf_event_paranoid=2
+
+      - name: Probe native and the default container, paranoid 2
+        if: ${{ !cancelled() }}
+        run: |
+          export PATH="$RUNNER_TEMP/sil/python/bin:$RUNNER_TEMP/sil/native/bin:$PATH"
+          python proofs/profiling/proof.py probe "$EVIDENCE/native/probe-paranoid-2"
+          proofs/profiling/container.sh probe "$EVIDENCE/container" probe-paranoid-2-default-caps
+          proofs/profiling/container.sh probe "$EVIDENCE/container" probe-paranoid-2-seccomp-unconfined --security-opt seccomp=unconfined
+
+      - name: Full native proof, unprivileged user, paranoid 2
+        if: ${{ !cancelled() }}
+        run: |
+          export PATH="$RUNNER_TEMP/sil/python/bin:$RUNNER_TEMP/sil/native/bin:$PATH"
+          python proofs/profiling/proof.py run "$EVIDENCE/native/run-paranoid-2"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: profiling-evidence
+          path: build/profiling-evidence/

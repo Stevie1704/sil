@@ -1,4 +1,5 @@
 #include <signal.h>
+#include <unistd.h>
 
 #include <charconv>
 #include <chrono>
@@ -20,6 +21,7 @@
 #include "exit_codes.hpp"
 #include "failure_report.hpp"
 #include "manifest.hpp"
+#include "owned_directory.hpp"
 #include "provenance.hpp"
 #include "recording_sink.hpp"
 #include "run_diagnostics.hpp"
@@ -46,7 +48,11 @@ using sil::kExitRunFailure;
 
 #ifdef SIL_RUN_DIAGNOSTICS
 #define SIL_RUNNER_NAME "sil-run-diagnostics"
-#define SIL_DIAGNOSTICS_USAGE " [--diagnostics-out <report.json>]"
+#define SIL_DIAGNOSTICS_USAGE \
+  " [--diagnostics-out <report.json>] [--retain-run-directory <path>]" \
+  " [--activation-observations <path>" \
+  " [--activation-observations-limit-bytes <N>]]" \
+  " [--launch-wrapper <participant> <executable>]"
 #else
 #define SIL_RUNNER_NAME "sil-run"
 #define SIL_DIAGNOSTICS_USAGE ""
@@ -263,6 +269,17 @@ sil::diagnostics::RunFacts run_facts(
   return facts;
 }
 
+// The launch wrapper names one Process participant; any other name is a
+// usage error before a Participant starts.
+void require_process(const sil::Manifest &manifest, const char *name) {
+  for (const sil::ParticipantSpec &participant : manifest.participants)
+    if (participant.name == name &&
+        std::holds_alternative<sil::ProcessSpec>(participant.impl))
+      return;
+  throw sil::ManifestError(
+      std::string("--launch-wrapper: no Process participant '") + name + "'");
+}
+
 void write_diagnostics(const std::filesystem::path &path,
                        const sil::diagnostics::RunFacts &facts) {
   try {
@@ -294,6 +311,13 @@ int run(int argc, char **argv) {
   const char *provenance_path_arg = nullptr;
 #ifdef SIL_RUN_DIAGNOSTICS
   const char *diagnostics_path_arg = nullptr;
+  const char *retention_path_arg = nullptr;
+  const char *observations_path_arg = nullptr;
+  // 64 MiB of records by default (docs/profile-report.md).
+  size_t observations_limit_bytes = size_t(64) << 20;
+  bool observations_limit_given = false;
+  const char *wrapped_participant_arg = nullptr;
+  const char *launch_wrapper_arg = nullptr;
 #endif
   // Running without a Recording is what separates the cost of routing to
   // subscribers from the cost of Recording I/O (issue #61). The engine already
@@ -356,6 +380,41 @@ int run(int argc, char **argv) {
         return kExitConfigError;
       }
       diagnostics_path_arg = argv[++i];
+    } else if (std::strcmp(argv[i], "--retain-run-directory") == 0 &&
+               i + 1 < argc) {
+      if (retention_path_arg) {
+        usage();
+        return kExitConfigError;
+      }
+      retention_path_arg = argv[++i];
+    } else if (std::strcmp(argv[i], "--activation-observations") == 0 &&
+               i + 1 < argc) {
+      if (observations_path_arg) {
+        usage();
+        return kExitConfigError;
+      }
+      observations_path_arg = argv[++i];
+    } else if (std::strcmp(argv[i], "--activation-observations-limit-bytes") ==
+               0) {
+      if (observations_limit_given || i + 1 >= argc) {
+        usage();
+        return kExitConfigError;
+      }
+      if (!parse_positive_size(argv[++i], observations_limit_bytes)) {
+        std::cerr << SIL_RUNNER_NAME
+            ": --activation-observations-limit-bytes must be a positive "
+            "integer representable as a size_t\n";
+        return kExitConfigError;
+      }
+      observations_limit_given = true;
+    } else if (std::strcmp(argv[i], "--launch-wrapper") == 0 &&
+               i + 2 < argc) {
+      if (launch_wrapper_arg) {
+        usage();
+        return kExitConfigError;
+      }
+      wrapped_participant_arg = argv[++i];
+      launch_wrapper_arg = argv[++i];
 #endif
     } else if (std::strcmp(argv[i], "--no-recording") == 0) {
       recording = false;
@@ -390,6 +449,56 @@ int run(int argc, char **argv) {
   if (!diagnostics_path_is_new(diagnostics_path, out_path, recording,
                                provenance_path))
     return kExitConfigError;
+  if (retention_path_arg) {
+    // A profiler captures the modules a Run loads from its Run working
+    // directory before that directory is gone (#315). The path must be new,
+    // so an earlier tree is never merged or replaced.
+    std::error_code error;
+    if (std::filesystem::symlink_status(retention_path_arg, error).type() !=
+        std::filesystem::file_type::not_found) {
+      std::cerr << SIL_RUNNER_NAME ": --retain-run-directory '"
+                << retention_path_arg << "' already exists\n";
+      return kExitConfigError;
+    }
+    sil::OwnedDirectory::retain_next_unique_at(
+        std::filesystem::absolute(retention_path_arg));
+  }
+  if (launch_wrapper_arg) {
+    // A profiler's adapter for one Process participant (#317). The runner
+    // checks the file here and the participant after preparation, both
+    // before any Participant starts.
+    std::error_code error;
+    const auto wrapper = std::filesystem::absolute(launch_wrapper_arg, error);
+    if (error || !std::filesystem::is_regular_file(wrapper, error) ||
+        ::access(wrapper.c_str(), X_OK) != 0) {
+      std::cerr << SIL_RUNNER_NAME ": --launch-wrapper '"
+                << launch_wrapper_arg << "' is not an executable file\n";
+      return kExitConfigError;
+    }
+    sil::diagnostics::wrap_launch(wrapped_participant_arg, wrapper);
+  }
+  if (observations_limit_given && !observations_path_arg) {
+    usage();
+    return kExitConfigError;
+  }
+  if (observations_path_arg) {
+    // A profiler joins these host intervals with its samples (#316). The
+    // file is new, so earlier evidence is never replaced.
+    std::error_code error;
+    if (std::filesystem::symlink_status(observations_path_arg, error).type() !=
+        std::filesystem::file_type::not_found) {
+      std::cerr << SIL_RUNNER_NAME ": --activation-observations '"
+                << observations_path_arg << "' already exists\n";
+      return kExitConfigError;
+    }
+    std::string problem;
+    if (!sil::diagnostics::observe_activations(
+            observations_path_arg, observations_limit_bytes, problem)) {
+      std::cerr << SIL_RUNNER_NAME ": cannot create --activation-observations '"
+                << observations_path_arg << "': " << problem << "\n";
+      return kExitConfigError;
+    }
+  }
 #endif
 
   sil::diagnostics::start_run();
@@ -410,6 +519,10 @@ int run(int argc, char **argv) {
     // spawn a Process participant. Preparation keeps the resolved execution
     // data separate from the authored Manifest.
     prepared.emplace(sil::prepare_run(manifest.value(), *provenance));
+#ifdef SIL_RUN_DIAGNOSTICS
+    if (wrapped_participant_arg)
+      require_process(*manifest, wrapped_participant_arg);
+#endif
 
     // Selecting the recording format is a manifest/config concern: an
     // unrecognized output extension is a Manifest error (exit 2) and must reject

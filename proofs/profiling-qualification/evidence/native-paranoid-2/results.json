@@ -1,0 +1,4006 @@
+{
+  "environment": "native-paranoid-2",
+  "facts": {
+    "hardware_pmu": false,
+    "heaptrack_version": "heaptrack 1.5.0",
+    "in_container": false,
+    "libc": "glibc 2.39",
+    "packages": [
+      "heaptrack=1.5.0+dfsg1-2ubuntu3",
+      "libcap2-bin=1:2.66-5ubuntu2.4",
+      "linux-tools-6.17.0-1022-azure=6.17.0-1022.22",
+      "linux-tools-common=6.8.0-147.147"
+    ],
+    "perf_capabilities": null,
+    "perf_event_paranoid": "2",
+    "perf_version": "perf version 6.17.13",
+    "python": "3.12.3",
+    "sil_build_info": "{\"license\":\"Apache-2.0\",\"source_repository\":\"https://github.com/Stevie1704/sil\",\"source_revision\":\"c9a03c17ceac5194def0587abddf2f63af3550a0\",\"version\":\"0.2.1\"}",
+    "sil_package": "/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil",
+    "sil_version": "0.2.1",
+    "status": {
+      "CapBnd": "000001ffffffffff",
+      "CapEff": "0000000000000000",
+      "NSpid": "13823",
+      "Seccomp": "0"
+    },
+    "tools": {
+      "heaptrack": "/usr/bin/heaptrack",
+      "perf": "/usr/bin/perf",
+      "sil": "/home/runner/work/_temp/sil/current/venv/bin/sil",
+      "sil-diagnostics-launcher": "/home/runner/work/_temp/sil/current/native/bin/sil-diagnostics-launcher",
+      "sil-run": "/home/runner/work/_temp/sil/current/native/bin/sil-run",
+      "sil-run-diagnostics": "/home/runner/work/_temp/sil/current/native/bin/sil-run-diagnostics"
+    },
+    "uid": 1001,
+    "uname": {
+      "machine": "x86_64",
+      "node": "runnervm8k3b6",
+      "processor": "x86_64",
+      "release": "6.17.0-1022-azure",
+      "system": "Linux",
+      "version": "#22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026"
+    }
+  },
+  "failed_checks": 0,
+  "groups": [
+    "equivalence",
+    "cpu",
+    "storage"
+  ],
+  "perf": "available",
+  "scenarios": [
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/ordinary-main",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "ordinary-main",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": null,
+        "exit_code": 0,
+        "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb",
+        "wall_ms": 2810
+      },
+      "participants_started": [
+        "child-13871.tsv",
+        "child-13872.tsv",
+        "child-13874.tsv",
+        "child-13875.tsv",
+        "fmu-13868.tsv",
+        "native-13867.tsv",
+        "process-13870.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 2810
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000",
+        "--diagnostics"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.diagnostics.json",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "diagnostics outcome equals ordinary",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/diagnostics-main",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "diagnostics-main",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.diagnostics.json",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": null,
+        "exit_code": 0,
+        "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb",
+        "wall_ms": 2834
+      },
+      "participants_started": [
+        "child-13883.tsv",
+        "child-13884.tsv",
+        "child-13885.tsv",
+        "child-13886.tsv",
+        "fmu-13880.tsv",
+        "native-13879.tsv",
+        "process-13882.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\ndiagnostics report: run.mcap.diagnostics.json\nrun: succeeded, exit code 0, complete\nrun wall time: 2.755 s (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 66.017 ms, setup 131.631 ms, scheduled execution 2.513 s, shutdown 44.452 ms, recording finalization 88.264 us, unattributed 0 ns\nVirtual-time speed: scheduled 0.40x, end-to-end 0.36x\nthroughput per second of scheduled execution (2.513 s): 100 Native Activations, 39.80/s; 200 Process Steps, 79.60/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 100 of 100 completed, mean 7.652 ms, p50 7.639 ms, p95 7.703 ms, p99 7.877 ms, max 7.983 ms\n  native/hot native_task: 100 of 100 completed, mean 7.645 ms, p50 7.631 ms, p95 7.767 ms, p99 7.820 ms, max 7.863 ms\n  process/step process_step: 100 of 100 completed, mean 9.827 ms, p50 7.795 ms, p95 7.890 ms, p99 59.215 ms, max 59.258 ms\nresources (peak RSS is per process and never summed):\n  runner: user CPU 833.637 ms, system CPU 6.996 ms, peak RSS 4.984 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 832.123 ms, system CPU 20.675 ms, peak RSS 21.949 MiB (largest_process_peak_rss; includes waited descendants)\n  process process: user CPU 1.025 s, system CPU 18.015 ms, peak RSS 19.973 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 2.691 s, system 45.686 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; process peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 2834
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/mixed.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "0000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/ordinary-mixed",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "ordinary-mixed",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": null,
+        "exit_code": 0,
+        "recording": "630378ee83985b0c7a7278a1369e6375f9ad320150e37eaa48917701162df9a4",
+        "wall_ms": 1461
+      },
+      "participants_started": [
+        "fmu-13888.tsv",
+        "probe-13893.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py"
+          ],
+          "environment": {
+            "ACCEPT_EULA": "18f5384d58bcb1bb",
+            "ACTIONS_ORCHESTRATION_ID": "71db7b5ea4bddad1",
+            "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
+            "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
+            "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
+            "ANDROID_HOME": "e507a12011d2294b",
+            "ANDROID_NDK": "fa2c5ab6b942d244",
+            "ANDROID_NDK_HOME": "fa2c5ab6b942d244",
+            "ANDROID_NDK_LATEST_HOME": "0acc37f53069db75",
+            "ANDROID_NDK_ROOT": "fa2c5ab6b942d244",
+            "ANDROID_SDK_ROOT": "e507a12011d2294b",
+            "ANT_HOME": "e95496397e98130a",
+            "AZURE_EXTENSION_DIR": "78b3ec8b79173c8d",
+            "BOOTSTRAP_HASKELL_NONINTERACTIVE": "6b86b273ff34fce1",
+            "CHROMEWEBDRIVER": "e4279f084798caf9",
+            "CHROME_BIN": "3c9b42ef6def3761",
+            "CI": "b5bea41b6c623f7c",
+            "CONDA": "51ae8eb5543eea37",
+            "DEBIAN_FRONTEND": "c73ccf8def7006f3",
+            "DOTNET_MULTILEVEL_LOOKUP": "5feceb66ffc86f38",
+            "DOTNET_NOLOGO": "6b86b273ff34fce1",
+            "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "6b86b273ff34fce1",
+            "EDGEWEBDRIVER": "3c20c50ef44fa0ee",
+            "ENABLE_RUNNER_TRACING": "b5bea41b6c623f7c",
+            "EVIDENCE": "757ce4a95163abc8",
+            "GECKOWEBDRIVER": "84bc9499d87644dd",
+            "GHCUP_INSTALL_BASE_PREFIX": "0885fcf5b23ee3ef",
+            "GITHUB_ACTION": "b88980b1e4318a45",
+            "GITHUB_ACTIONS": "b5bea41b6c623f7c",
+            "GITHUB_ACTION_REF": "e3b0c44298fc1c14",
+            "GITHUB_ACTION_REPOSITORY": "e3b0c44298fc1c14",
+            "GITHUB_ACTOR": "6f72f03e9527d036",
+            "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
+            "GITHUB_API_URL": "b2fd47bfbc5a4de1",
+            "GITHUB_ARTIFACTS": "0b11a18e05d7d173",
+            "GITHUB_ARTIFACTS_LIST": "c33be2af0ab63dbc",
+            "GITHUB_BASE_REF": "15ded80916997446",
+            "GITHUB_ENV": "265ddee1e51ae382",
+            "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
+            "GITHUB_EVENT_PATH": "02503339a55110de",
+            "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
+            "GITHUB_HEAD_REF": "a1ede3db9057a904",
+            "GITHUB_JOB": "e48cfe4f6f37ec01",
+            "GITHUB_OUTPUT": "06e9075cf476bd4b",
+            "GITHUB_PATH": "0fa6ed055b3d8e4d",
+            "GITHUB_REF": "5bd79fb5da0e28c5",
+            "GITHUB_REF_NAME": "8993c575f3356612",
+            "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
+            "GITHUB_REF_TYPE": "f38c764c8aa00b65",
+            "GITHUB_REPOSITORY": "d9af7d8d741acc92",
+            "GITHUB_REPOSITORY_ID": "60912c5df723bae4",
+            "GITHUB_REPOSITORY_OWNER": "6f72f03e9527d036",
+            "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
+            "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
+            "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
+            "GITHUB_RUN_ID": "26bc1a51cbd1da5d",
+            "GITHUB_RUN_NUMBER": "6b51d431df5d7f14",
+            "GITHUB_SERVER_URL": "996e1f714b08e971",
+            "GITHUB_SHA": "82cbdf4df96e15a6",
+            "GITHUB_STATE": "e2a4d615fde545ff",
+            "GITHUB_STEP_SUMMARY": "eb5465cb4a28c0ca",
+            "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
+            "GITHUB_WORKFLOW": "423b805186b0a246",
+            "GITHUB_WORKFLOW_REF": "e5870f4c390b33c3",
+            "GITHUB_WORKFLOW_SHA": "82cbdf4df96e15a6",
+            "GITHUB_WORKSPACE": "d10122a7d55cc72c",
+            "GOROOT_1_24_X64": "dad7e7c7884916c8",
+            "GOROOT_1_25_X64": "4de37c06a108f1d7",
+            "GOROOT_1_26_X64": "6c8c1a18945b3f25",
+            "GRADLE_HOME": "1421d02e730fe96d",
+            "HCA_CLOUD_PROVIDER": "79f43c3b9c23fbdf",
+            "HOME": "b1cbc5f347543a03",
+            "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
+            "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
+            "INVOCATION_ID": "11c9b575105d7ac8",
+            "ImageOS": "1a6338a16abf65e3",
+            "ImageVersion": "ced8a89c6b2a78f6",
+            "JAVA_HOME": "9b2eaca78448dd7a",
+            "JAVA_HOME_11_X64": "1ec0fc371ce27771",
+            "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
+            "JAVA_HOME_21_X64": "c701517cd1ca359a",
+            "JAVA_HOME_25_X64": "3331df6d48d9ba51",
+            "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
+            "JOURNAL_STREAM": "a2b14c7008d82a44",
+            "LANG": "99fed2d548c2eb10",
+            "LOGNAME": "527aa9f431539da8",
+            "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
+            "MEMORY_PRESSURE_WRITE": "8eb3235eca7e3191",
+            "NVM_DIR": "f1c14865fbf0df4c",
+            "PATH": "d9f2e47de92bac9d",
+            "PIPX_BIN_DIR": "9ba4f54eb098394a",
+            "PIPX_HOME": "aa57010a38327b23",
+            "POWERSHELL_DISTRIBUTION_CHANNEL": "fae424fd0c4f84f6",
+            "PSModulePath": "61c7aa79c46b28e4",
+            "PWD": "d10122a7d55cc72c",
+            "Q": "ca9f307d738f5512",
+            "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
+            "RUNNER_ENVIRONMENT": "ac592027e68479fc",
+            "RUNNER_NAME": "e4f6459165fa24d6",
+            "RUNNER_OS": "4828e60247c1636f",
+            "RUNNER_TEMP": "a9fd2b6f1129349e",
+            "RUNNER_TOOL_CACHE": "40963d3114e769b6",
+            "RUNNER_TRACKING_ID": "4eac367709934dda",
+            "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
+            "SELENIUM_JAR_PATH": "15f9049d64d77584",
+            "SGX_AESM_ADDR": "6b86b273ff34fce1",
+            "SHELL": "b1fd29aea4dad2af",
+            "SHLVL": "6b86b273ff34fce1",
+            "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
+            "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
+            "SIL_SOURCE_REVISION": "680498987808e5b0",
+            "SWIFT_PATH": "fb8c6698dca20671",
+            "SYSTEMD_EXEC_PID": "374224fbb80782ef",
+            "TMPDIR": "c93abdaab0147fef",
+            "USER": "527aa9f431539da8",
+            "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
+            "UV_CACHE_DIR": "b94adbc135302640",
+            "VCPKG_INSTALLATION_ROOT": "50906157014ea796",
+            "XDG_CONFIG_HOME": "e2ff4a7c39c2d65a",
+            "XDG_RUNTIME_DIR": "57f2ee9cc4db14db",
+            "_": "848514551c4ea810"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+      "stdout_tail": "manifest_hash f9bbc0ac5f77bf1bca76a054943d80a74098911c28c873f33bf6b76300d6dd3a\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 1461
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/mixed.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000",
+        "--diagnostics"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "0000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.diagnostics.json",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "diagnostics outcome equals ordinary",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "630378ee83985b0c7a7278a1369e6375f9ad320150e37eaa48917701162df9a4"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "630378ee83985b0c7a7278a1369e6375f9ad320150e37eaa48917701162df9a4"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/diagnostics-mixed",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "diagnostics-mixed",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.diagnostics.json",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": null,
+        "exit_code": 0,
+        "recording": "630378ee83985b0c7a7278a1369e6375f9ad320150e37eaa48917701162df9a4",
+        "wall_ms": 1480
+      },
+      "participants_started": [
+        "fmu-13898.tsv",
+        "probe-13903.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py"
+          ],
+          "environment": {
+            "ACCEPT_EULA": "18f5384d58bcb1bb",
+            "ACTIONS_ORCHESTRATION_ID": "71db7b5ea4bddad1",
+            "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
+            "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
+            "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
+            "ANDROID_HOME": "e507a12011d2294b",
+            "ANDROID_NDK": "fa2c5ab6b942d244",
+            "ANDROID_NDK_HOME": "fa2c5ab6b942d244",
+            "ANDROID_NDK_LATEST_HOME": "0acc37f53069db75",
+            "ANDROID_NDK_ROOT": "fa2c5ab6b942d244",
+            "ANDROID_SDK_ROOT": "e507a12011d2294b",
+            "ANT_HOME": "e95496397e98130a",
+            "AZURE_EXTENSION_DIR": "78b3ec8b79173c8d",
+            "BOOTSTRAP_HASKELL_NONINTERACTIVE": "6b86b273ff34fce1",
+            "CHROMEWEBDRIVER": "e4279f084798caf9",
+            "CHROME_BIN": "3c9b42ef6def3761",
+            "CI": "b5bea41b6c623f7c",
+            "CONDA": "51ae8eb5543eea37",
+            "DEBIAN_FRONTEND": "c73ccf8def7006f3",
+            "DOTNET_MULTILEVEL_LOOKUP": "5feceb66ffc86f38",
+            "DOTNET_NOLOGO": "6b86b273ff34fce1",
+            "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "6b86b273ff34fce1",
+            "EDGEWEBDRIVER": "3c20c50ef44fa0ee",
+            "ENABLE_RUNNER_TRACING": "b5bea41b6c623f7c",
+            "EVIDENCE": "757ce4a95163abc8",
+            "GECKOWEBDRIVER": "84bc9499d87644dd",
+            "GHCUP_INSTALL_BASE_PREFIX": "0885fcf5b23ee3ef",
+            "GITHUB_ACTION": "b88980b1e4318a45",
+            "GITHUB_ACTIONS": "b5bea41b6c623f7c",
+            "GITHUB_ACTION_REF": "e3b0c44298fc1c14",
+            "GITHUB_ACTION_REPOSITORY": "e3b0c44298fc1c14",
+            "GITHUB_ACTOR": "6f72f03e9527d036",
+            "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
+            "GITHUB_API_URL": "b2fd47bfbc5a4de1",
+            "GITHUB_ARTIFACTS": "0b11a18e05d7d173",
+            "GITHUB_ARTIFACTS_LIST": "c33be2af0ab63dbc",
+            "GITHUB_BASE_REF": "15ded80916997446",
+            "GITHUB_ENV": "265ddee1e51ae382",
+            "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
+            "GITHUB_EVENT_PATH": "02503339a55110de",
+            "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
+            "GITHUB_HEAD_REF": "a1ede3db9057a904",
+            "GITHUB_JOB": "e48cfe4f6f37ec01",
+            "GITHUB_OUTPUT": "06e9075cf476bd4b",
+            "GITHUB_PATH": "0fa6ed055b3d8e4d",
+            "GITHUB_REF": "5bd79fb5da0e28c5",
+            "GITHUB_REF_NAME": "8993c575f3356612",
+            "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
+            "GITHUB_REF_TYPE": "f38c764c8aa00b65",
+            "GITHUB_REPOSITORY": "d9af7d8d741acc92",
+            "GITHUB_REPOSITORY_ID": "60912c5df723bae4",
+            "GITHUB_REPOSITORY_OWNER": "6f72f03e9527d036",
+            "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
+            "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
+            "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
+            "GITHUB_RUN_ID": "26bc1a51cbd1da5d",
+            "GITHUB_RUN_NUMBER": "6b51d431df5d7f14",
+            "GITHUB_SERVER_URL": "996e1f714b08e971",
+            "GITHUB_SHA": "82cbdf4df96e15a6",
+            "GITHUB_STATE": "e2a4d615fde545ff",
+            "GITHUB_STEP_SUMMARY": "eb5465cb4a28c0ca",
+            "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
+            "GITHUB_WORKFLOW": "423b805186b0a246",
+            "GITHUB_WORKFLOW_REF": "e5870f4c390b33c3",
+            "GITHUB_WORKFLOW_SHA": "82cbdf4df96e15a6",
+            "GITHUB_WORKSPACE": "d10122a7d55cc72c",
+            "GOROOT_1_24_X64": "dad7e7c7884916c8",
+            "GOROOT_1_25_X64": "4de37c06a108f1d7",
+            "GOROOT_1_26_X64": "6c8c1a18945b3f25",
+            "GRADLE_HOME": "1421d02e730fe96d",
+            "HCA_CLOUD_PROVIDER": "79f43c3b9c23fbdf",
+            "HOME": "b1cbc5f347543a03",
+            "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
+            "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
+            "INVOCATION_ID": "11c9b575105d7ac8",
+            "ImageOS": "1a6338a16abf65e3",
+            "ImageVersion": "ced8a89c6b2a78f6",
+            "JAVA_HOME": "9b2eaca78448dd7a",
+            "JAVA_HOME_11_X64": "1ec0fc371ce27771",
+            "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
+            "JAVA_HOME_21_X64": "c701517cd1ca359a",
+            "JAVA_HOME_25_X64": "3331df6d48d9ba51",
+            "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
+            "JOURNAL_STREAM": "a2b14c7008d82a44",
+            "LANG": "99fed2d548c2eb10",
+            "LOGNAME": "527aa9f431539da8",
+            "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
+            "MEMORY_PRESSURE_WRITE": "8eb3235eca7e3191",
+            "NVM_DIR": "f1c14865fbf0df4c",
+            "PATH": "d9f2e47de92bac9d",
+            "PIPX_BIN_DIR": "9ba4f54eb098394a",
+            "PIPX_HOME": "aa57010a38327b23",
+            "POWERSHELL_DISTRIBUTION_CHANNEL": "fae424fd0c4f84f6",
+            "PSModulePath": "61c7aa79c46b28e4",
+            "PWD": "d10122a7d55cc72c",
+            "Q": "ca9f307d738f5512",
+            "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
+            "RUNNER_ENVIRONMENT": "ac592027e68479fc",
+            "RUNNER_NAME": "e4f6459165fa24d6",
+            "RUNNER_OS": "4828e60247c1636f",
+            "RUNNER_TEMP": "a9fd2b6f1129349e",
+            "RUNNER_TOOL_CACHE": "40963d3114e769b6",
+            "RUNNER_TRACKING_ID": "4eac367709934dda",
+            "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
+            "SELENIUM_JAR_PATH": "15f9049d64d77584",
+            "SGX_AESM_ADDR": "6b86b273ff34fce1",
+            "SHELL": "b1fd29aea4dad2af",
+            "SHLVL": "6b86b273ff34fce1",
+            "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
+            "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
+            "SIL_SOURCE_REVISION": "680498987808e5b0",
+            "SWIFT_PATH": "fb8c6698dca20671",
+            "SYSTEMD_EXEC_PID": "374224fbb80782ef",
+            "TMPDIR": "c93abdaab0147fef",
+            "USER": "527aa9f431539da8",
+            "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
+            "UV_CACHE_DIR": "b94adbc135302640",
+            "VCPKG_INSTALLATION_ROOT": "50906157014ea796",
+            "XDG_CONFIG_HOME": "e2ff4a7c39c2d65a",
+            "XDG_RUNTIME_DIR": "57f2ee9cc4db14db",
+            "_": "848514551c4ea810"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+      "stdout_tail": "manifest_hash f9bbc0ac5f77bf1bca76a054943d80a74098911c28c873f33bf6b76300d6dd3a\ndiagnostics report: run.mcap.diagnostics.json\nrun: succeeded, exit code 0, complete\nrun wall time: 1.403 s (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 126.768 ms, setup 271.612 ms, scheduled execution 914.519 ms, shutdown 89.688 ms, recording finalization 119.953 us, unattributed 0 ns\nVirtual-time speed: scheduled 1.09x, end-to-end 0.71x\nthroughput per second of scheduled execution (914.519 ms): 0 Native Activations, 0.00/s; 234 Process Steps, 255.87/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 100 of 100 completed, mean 7.667 ms, p50 7.663 ms, p95 7.728 ms, p99 7.813 ms, max 7.901 ms\n  group/step process_step: 50 of 50 completed, mean 223.770 us, p50 173.983 us, p95 677.689 us, p99 unavailable (insufficient_samples), max 858.154 us\n  observer/step process_step: 50 of 50 completed, mean 118.307 us, p50 88.936 us, p95 315.326 us, p99 unavailable (insufficient_samples), max 327.829 us\n  probe/step process_step: 34 of 34 completed, mean 3.827 ms, p50 3.830 ms, p95 3.961 ms, p99 unavailable (insufficient_samples), max 3.980 ms\n  replay replay: 100 Messages; publication Slots 100 of 100 completed, mean 4.001 us, p50 3.647 us, p95 6.452 us, p99 12.213 us, max 14.286 us\nresources (peak RSS is per process and never summed):\n  runner: user CPU 139.511 ms, system CPU 3.295 ms, peak RSS 4.988 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 834.827 ms, system CPU 19.424 ms, peak RSS 21.961 MiB (largest_process_peak_rss; includes waited descendants)\n  process group: user CPU 94.830 ms, system CPU 14.215 ms, peak RSS 22.086 MiB (largest_process_peak_rss; includes waited descendants)\n  process observer: user CPU 52.729 ms, system CPU 10.140 ms, peak RSS 19.109 MiB (largest_process_peak_rss; includes waited descendants)\n  process probe: user CPU 185.005 ms, system CPU 8.904 ms, peak RSS 19.934 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 1.307 s, system 55.978 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; group peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; observer peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; probe peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 1480
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/failure.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.failure.json",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/ordinary-failure",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "ordinary-failure",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.failure.json",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": "participant",
+        "exit_code": 1,
+        "recording": "744de75670ec718fea6e913bccbeb47e2db753b73f3abbedfbc3f7a7582f34aa",
+        "wall_ms": 726
+      },
+      "participants_started": [
+        "fmu-13905.tsv",
+        "probe-13910.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py",
+            "--fail-at-step",
+            "7"
+          ],
+          "environment": {
+            "ACCEPT_EULA": "18f5384d58bcb1bb",
+            "ACTIONS_ORCHESTRATION_ID": "71db7b5ea4bddad1",
+            "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
+            "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
+            "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
+            "ANDROID_HOME": "e507a12011d2294b",
+            "ANDROID_NDK": "fa2c5ab6b942d244",
+            "ANDROID_NDK_HOME": "fa2c5ab6b942d244",
+            "ANDROID_NDK_LATEST_HOME": "0acc37f53069db75",
+            "ANDROID_NDK_ROOT": "fa2c5ab6b942d244",
+            "ANDROID_SDK_ROOT": "e507a12011d2294b",
+            "ANT_HOME": "e95496397e98130a",
+            "AZURE_EXTENSION_DIR": "78b3ec8b79173c8d",
+            "BOOTSTRAP_HASKELL_NONINTERACTIVE": "6b86b273ff34fce1",
+            "CHROMEWEBDRIVER": "e4279f084798caf9",
+            "CHROME_BIN": "3c9b42ef6def3761",
+            "CI": "b5bea41b6c623f7c",
+            "CONDA": "51ae8eb5543eea37",
+            "DEBIAN_FRONTEND": "c73ccf8def7006f3",
+            "DOTNET_MULTILEVEL_LOOKUP": "5feceb66ffc86f38",
+            "DOTNET_NOLOGO": "6b86b273ff34fce1",
+            "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "6b86b273ff34fce1",
+            "EDGEWEBDRIVER": "3c20c50ef44fa0ee",
+            "ENABLE_RUNNER_TRACING": "b5bea41b6c623f7c",
+            "EVIDENCE": "757ce4a95163abc8",
+            "GECKOWEBDRIVER": "84bc9499d87644dd",
+            "GHCUP_INSTALL_BASE_PREFIX": "0885fcf5b23ee3ef",
+            "GITHUB_ACTION": "b88980b1e4318a45",
+            "GITHUB_ACTIONS": "b5bea41b6c623f7c",
+            "GITHUB_ACTION_REF": "e3b0c44298fc1c14",
+            "GITHUB_ACTION_REPOSITORY": "e3b0c44298fc1c14",
+            "GITHUB_ACTOR": "6f72f03e9527d036",
+            "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
+            "GITHUB_API_URL": "b2fd47bfbc5a4de1",
+            "GITHUB_ARTIFACTS": "0b11a18e05d7d173",
+            "GITHUB_ARTIFACTS_LIST": "c33be2af0ab63dbc",
+            "GITHUB_BASE_REF": "15ded80916997446",
+            "GITHUB_ENV": "265ddee1e51ae382",
+            "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
+            "GITHUB_EVENT_PATH": "02503339a55110de",
+            "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
+            "GITHUB_HEAD_REF": "a1ede3db9057a904",
+            "GITHUB_JOB": "e48cfe4f6f37ec01",
+            "GITHUB_OUTPUT": "06e9075cf476bd4b",
+            "GITHUB_PATH": "0fa6ed055b3d8e4d",
+            "GITHUB_REF": "5bd79fb5da0e28c5",
+            "GITHUB_REF_NAME": "8993c575f3356612",
+            "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
+            "GITHUB_REF_TYPE": "f38c764c8aa00b65",
+            "GITHUB_REPOSITORY": "d9af7d8d741acc92",
+            "GITHUB_REPOSITORY_ID": "60912c5df723bae4",
+            "GITHUB_REPOSITORY_OWNER": "6f72f03e9527d036",
+            "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
+            "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
+            "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
+            "GITHUB_RUN_ID": "26bc1a51cbd1da5d",
+            "GITHUB_RUN_NUMBER": "6b51d431df5d7f14",
+            "GITHUB_SERVER_URL": "996e1f714b08e971",
+            "GITHUB_SHA": "82cbdf4df96e15a6",
+            "GITHUB_STATE": "e2a4d615fde545ff",
+            "GITHUB_STEP_SUMMARY": "eb5465cb4a28c0ca",
+            "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
+            "GITHUB_WORKFLOW": "423b805186b0a246",
+            "GITHUB_WORKFLOW_REF": "e5870f4c390b33c3",
+            "GITHUB_WORKFLOW_SHA": "82cbdf4df96e15a6",
+            "GITHUB_WORKSPACE": "d10122a7d55cc72c",
+            "GOROOT_1_24_X64": "dad7e7c7884916c8",
+            "GOROOT_1_25_X64": "4de37c06a108f1d7",
+            "GOROOT_1_26_X64": "6c8c1a18945b3f25",
+            "GRADLE_HOME": "1421d02e730fe96d",
+            "HCA_CLOUD_PROVIDER": "79f43c3b9c23fbdf",
+            "HOME": "b1cbc5f347543a03",
+            "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
+            "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
+            "INVOCATION_ID": "11c9b575105d7ac8",
+            "ImageOS": "1a6338a16abf65e3",
+            "ImageVersion": "ced8a89c6b2a78f6",
+            "JAVA_HOME": "9b2eaca78448dd7a",
+            "JAVA_HOME_11_X64": "1ec0fc371ce27771",
+            "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
+            "JAVA_HOME_21_X64": "c701517cd1ca359a",
+            "JAVA_HOME_25_X64": "3331df6d48d9ba51",
+            "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
+            "JOURNAL_STREAM": "a2b14c7008d82a44",
+            "LANG": "99fed2d548c2eb10",
+            "LOGNAME": "527aa9f431539da8",
+            "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
+            "MEMORY_PRESSURE_WRITE": "8eb3235eca7e3191",
+            "NVM_DIR": "f1c14865fbf0df4c",
+            "PATH": "d9f2e47de92bac9d",
+            "PIPX_BIN_DIR": "9ba4f54eb098394a",
+            "PIPX_HOME": "aa57010a38327b23",
+            "POWERSHELL_DISTRIBUTION_CHANNEL": "fae424fd0c4f84f6",
+            "PSModulePath": "61c7aa79c46b28e4",
+            "PWD": "d10122a7d55cc72c",
+            "Q": "ca9f307d738f5512",
+            "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
+            "RUNNER_ENVIRONMENT": "ac592027e68479fc",
+            "RUNNER_NAME": "e4f6459165fa24d6",
+            "RUNNER_OS": "4828e60247c1636f",
+            "RUNNER_TEMP": "a9fd2b6f1129349e",
+            "RUNNER_TOOL_CACHE": "40963d3114e769b6",
+            "RUNNER_TRACKING_ID": "4eac367709934dda",
+            "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
+            "SELENIUM_JAR_PATH": "15f9049d64d77584",
+            "SGX_AESM_ADDR": "6b86b273ff34fce1",
+            "SHELL": "b1fd29aea4dad2af",
+            "SHLVL": "6b86b273ff34fce1",
+            "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
+            "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
+            "SIL_SOURCE_REVISION": "680498987808e5b0",
+            "SWIFT_PATH": "fb8c6698dca20671",
+            "SYSTEMD_EXEC_PID": "374224fbb80782ef",
+            "TMPDIR": "c93abdaab0147fef",
+            "USER": "527aa9f431539da8",
+            "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
+            "UV_CACHE_DIR": "b94adbc135302640",
+            "VCPKG_INSTALLATION_ROOT": "50906157014ea796",
+            "XDG_CONFIG_HOME": "e2ff4a7c39c2d65a",
+            "XDG_RUNTIME_DIR": "57f2ee9cc4db14db",
+            "_": "848514551c4ea810"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 726
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/failure.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000",
+        "--diagnostics"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run-diagnostics: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.diagnostics.json",
+            "run.mcap.failure.json",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "diagnostics outcome equals ordinary",
+          "detail": [
+            {
+              "category": "participant",
+              "exit_code": 1,
+              "recording": "744de75670ec718fea6e913bccbeb47e2db753b73f3abbedfbc3f7a7582f34aa"
+            },
+            {
+              "category": "participant",
+              "exit_code": 1,
+              "recording": "744de75670ec718fea6e913bccbeb47e2db753b73f3abbedfbc3f7a7582f34aa"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/diagnostics-failure",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "diagnostics-failure",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.diagnostics.json",
+        "run.mcap.failure.json",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": "participant",
+        "exit_code": 1,
+        "recording": "744de75670ec718fea6e913bccbeb47e2db753b73f3abbedfbc3f7a7582f34aa",
+        "wall_ms": 749
+      },
+      "participants_started": [
+        "fmu-13915.tsv",
+        "probe-13920.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py",
+            "--fail-at-step",
+            "7"
+          ],
+          "environment": {
+            "ACCEPT_EULA": "18f5384d58bcb1bb",
+            "ACTIONS_ORCHESTRATION_ID": "71db7b5ea4bddad1",
+            "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
+            "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
+            "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
+            "ANDROID_HOME": "e507a12011d2294b",
+            "ANDROID_NDK": "fa2c5ab6b942d244",
+            "ANDROID_NDK_HOME": "fa2c5ab6b942d244",
+            "ANDROID_NDK_LATEST_HOME": "0acc37f53069db75",
+            "ANDROID_NDK_ROOT": "fa2c5ab6b942d244",
+            "ANDROID_SDK_ROOT": "e507a12011d2294b",
+            "ANT_HOME": "e95496397e98130a",
+            "AZURE_EXTENSION_DIR": "78b3ec8b79173c8d",
+            "BOOTSTRAP_HASKELL_NONINTERACTIVE": "6b86b273ff34fce1",
+            "CHROMEWEBDRIVER": "e4279f084798caf9",
+            "CHROME_BIN": "3c9b42ef6def3761",
+            "CI": "b5bea41b6c623f7c",
+            "CONDA": "51ae8eb5543eea37",
+            "DEBIAN_FRONTEND": "c73ccf8def7006f3",
+            "DOTNET_MULTILEVEL_LOOKUP": "5feceb66ffc86f38",
+            "DOTNET_NOLOGO": "6b86b273ff34fce1",
+            "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "6b86b273ff34fce1",
+            "EDGEWEBDRIVER": "3c20c50ef44fa0ee",
+            "ENABLE_RUNNER_TRACING": "b5bea41b6c623f7c",
+            "EVIDENCE": "757ce4a95163abc8",
+            "GECKOWEBDRIVER": "84bc9499d87644dd",
+            "GHCUP_INSTALL_BASE_PREFIX": "0885fcf5b23ee3ef",
+            "GITHUB_ACTION": "b88980b1e4318a45",
+            "GITHUB_ACTIONS": "b5bea41b6c623f7c",
+            "GITHUB_ACTION_REF": "e3b0c44298fc1c14",
+            "GITHUB_ACTION_REPOSITORY": "e3b0c44298fc1c14",
+            "GITHUB_ACTOR": "6f72f03e9527d036",
+            "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
+            "GITHUB_API_URL": "b2fd47bfbc5a4de1",
+            "GITHUB_ARTIFACTS": "0b11a18e05d7d173",
+            "GITHUB_ARTIFACTS_LIST": "c33be2af0ab63dbc",
+            "GITHUB_BASE_REF": "15ded80916997446",
+            "GITHUB_ENV": "265ddee1e51ae382",
+            "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
+            "GITHUB_EVENT_PATH": "02503339a55110de",
+            "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
+            "GITHUB_HEAD_REF": "a1ede3db9057a904",
+            "GITHUB_JOB": "e48cfe4f6f37ec01",
+            "GITHUB_OUTPUT": "06e9075cf476bd4b",
+            "GITHUB_PATH": "0fa6ed055b3d8e4d",
+            "GITHUB_REF": "5bd79fb5da0e28c5",
+            "GITHUB_REF_NAME": "8993c575f3356612",
+            "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
+            "GITHUB_REF_TYPE": "f38c764c8aa00b65",
+            "GITHUB_REPOSITORY": "d9af7d8d741acc92",
+            "GITHUB_REPOSITORY_ID": "60912c5df723bae4",
+            "GITHUB_REPOSITORY_OWNER": "6f72f03e9527d036",
+            "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
+            "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
+            "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
+            "GITHUB_RUN_ID": "26bc1a51cbd1da5d",
+            "GITHUB_RUN_NUMBER": "6b51d431df5d7f14",
+            "GITHUB_SERVER_URL": "996e1f714b08e971",
+            "GITHUB_SHA": "82cbdf4df96e15a6",
+            "GITHUB_STATE": "e2a4d615fde545ff",
+            "GITHUB_STEP_SUMMARY": "eb5465cb4a28c0ca",
+            "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
+            "GITHUB_WORKFLOW": "423b805186b0a246",
+            "GITHUB_WORKFLOW_REF": "e5870f4c390b33c3",
+            "GITHUB_WORKFLOW_SHA": "82cbdf4df96e15a6",
+            "GITHUB_WORKSPACE": "d10122a7d55cc72c",
+            "GOROOT_1_24_X64": "dad7e7c7884916c8",
+            "GOROOT_1_25_X64": "4de37c06a108f1d7",
+            "GOROOT_1_26_X64": "6c8c1a18945b3f25",
+            "GRADLE_HOME": "1421d02e730fe96d",
+            "HCA_CLOUD_PROVIDER": "79f43c3b9c23fbdf",
+            "HOME": "b1cbc5f347543a03",
+            "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
+            "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
+            "INVOCATION_ID": "11c9b575105d7ac8",
+            "ImageOS": "1a6338a16abf65e3",
+            "ImageVersion": "ced8a89c6b2a78f6",
+            "JAVA_HOME": "9b2eaca78448dd7a",
+            "JAVA_HOME_11_X64": "1ec0fc371ce27771",
+            "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
+            "JAVA_HOME_21_X64": "c701517cd1ca359a",
+            "JAVA_HOME_25_X64": "3331df6d48d9ba51",
+            "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
+            "JOURNAL_STREAM": "a2b14c7008d82a44",
+            "LANG": "99fed2d548c2eb10",
+            "LOGNAME": "527aa9f431539da8",
+            "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
+            "MEMORY_PRESSURE_WRITE": "8eb3235eca7e3191",
+            "NVM_DIR": "f1c14865fbf0df4c",
+            "PATH": "d9f2e47de92bac9d",
+            "PIPX_BIN_DIR": "9ba4f54eb098394a",
+            "PIPX_HOME": "aa57010a38327b23",
+            "POWERSHELL_DISTRIBUTION_CHANNEL": "fae424fd0c4f84f6",
+            "PSModulePath": "61c7aa79c46b28e4",
+            "PWD": "d10122a7d55cc72c",
+            "Q": "ca9f307d738f5512",
+            "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
+            "RUNNER_ENVIRONMENT": "ac592027e68479fc",
+            "RUNNER_NAME": "e4f6459165fa24d6",
+            "RUNNER_OS": "4828e60247c1636f",
+            "RUNNER_TEMP": "a9fd2b6f1129349e",
+            "RUNNER_TOOL_CACHE": "40963d3114e769b6",
+            "RUNNER_TRACKING_ID": "4eac367709934dda",
+            "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
+            "SELENIUM_JAR_PATH": "15f9049d64d77584",
+            "SGX_AESM_ADDR": "6b86b273ff34fce1",
+            "SHELL": "b1fd29aea4dad2af",
+            "SHLVL": "6b86b273ff34fce1",
+            "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
+            "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
+            "SIL_SOURCE_REVISION": "680498987808e5b0",
+            "SWIFT_PATH": "fb8c6698dca20671",
+            "SYSTEMD_EXEC_PID": "374224fbb80782ef",
+            "TMPDIR": "c93abdaab0147fef",
+            "USER": "527aa9f431539da8",
+            "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
+            "UV_CACHE_DIR": "b94adbc135302640",
+            "VCPKG_INSTALLATION_ROOT": "50906157014ea796",
+            "XDG_CONFIG_HOME": "e2ff4a7c39c2d65a",
+            "XDG_RUNTIME_DIR": "57f2ee9cc4db14db",
+            "_": "848514551c4ea810"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run-diagnostics: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
+      "stdout_tail": "diagnostics report: run.mcap.diagnostics.json\nrun: run_failure, exit code 1, partial (run_failure)\nfailure: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose (participant, Participant probe, Virtual time 210.000 ms)\nlast Virtual time: 210.000 ms of Duration 1.000 s\nrun wall time: 673.027 ms (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 126.674 ms, setup 265.707 ms, scheduled execution 193.554 ms, shutdown 87.005 ms, recording finalization 87.392 us, unattributed 0 ns\nVirtual-time speed: scheduled unavailable (run_not_successful), end-to-end unavailable (run_not_successful)\nthroughput per second of scheduled execution (193.554 ms): 0 Native Activations, 0.00/s; 50 Process Steps, 258.33/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 21 of 21 completed, mean 7.719 ms, p50 7.695 ms, p95 7.810 ms, p99 unavailable (insufficient_samples), max 7.870 ms\n  group/step process_step: 11 of 11 completed, mean 195.927 us, p50 178.201 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 459.313 us\n  observer/step process_step: 11 of 11 completed, mean 124.317 us, p50 99.726 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 290.169 us\n  probe/step process_step: 7 of 8 completed, 1 failed (first at Activation 7, Virtual time 210.000 ms), mean 3.921 ms, p50 3.884 ms, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 4.297 ms\n  replay replay: 22 Messages; publication Slots 22 of 22 completed, mean 4.228 us, p50 3.707 us, p95 5.620 us, p99 unavailable (insufficient_samples), max 11.381 us\nresources (peak RSS is per process and never summed):\n  runner: user CPU 122.141 ms, system CPU 12.013 ms, peak RSS 5.105 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 239.623 ms, system CPU 12.709 ms, peak RSS 22.062 MiB (largest_process_peak_rss; includes waited descendants)\n  process group: user CPU 76.721 ms, system CPU 21.003 ms, peak RSS 22.105 MiB (largest_process_peak_rss; includes waited descendants)\n  process observer: user CPU 49.126 ms, system CPU 10.025 ms, peak RSS 19.102 MiB (largest_process_peak_rss; includes waited descendants)\n  process probe: user CPU 81.104 ms, system CPU 10.138 ms, peak RSS 20.070 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 568.715 ms, system 65.888 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; group peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; observer peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; probe peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 749
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/deadline.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "1000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\nException ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns\n",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.failure.json",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/ordinary-deadline",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "ordinary-deadline",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.failure.json",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": "timeout",
+        "exit_code": 1,
+        "recording": "0fbed01b8f64aec84be3351012d0b598f5f0cbc49dfbb8e4702d565607ee2844",
+        "wall_ms": 3573
+      },
+      "participants_started": [
+        "fmu-13922.tsv",
+        "probe-13927.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py",
+            "--sleep-at-step",
+            "3",
+            "--sleep-ms",
+            "3000"
+          ],
+          "environment": {
+            "ACCEPT_EULA": "18f5384d58bcb1bb",
+            "ACTIONS_ORCHESTRATION_ID": "71db7b5ea4bddad1",
+            "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
+            "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
+            "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
+            "ANDROID_HOME": "e507a12011d2294b",
+            "ANDROID_NDK": "fa2c5ab6b942d244",
+            "ANDROID_NDK_HOME": "fa2c5ab6b942d244",
+            "ANDROID_NDK_LATEST_HOME": "0acc37f53069db75",
+            "ANDROID_NDK_ROOT": "fa2c5ab6b942d244",
+            "ANDROID_SDK_ROOT": "e507a12011d2294b",
+            "ANT_HOME": "e95496397e98130a",
+            "AZURE_EXTENSION_DIR": "78b3ec8b79173c8d",
+            "BOOTSTRAP_HASKELL_NONINTERACTIVE": "6b86b273ff34fce1",
+            "CHROMEWEBDRIVER": "e4279f084798caf9",
+            "CHROME_BIN": "3c9b42ef6def3761",
+            "CI": "b5bea41b6c623f7c",
+            "CONDA": "51ae8eb5543eea37",
+            "DEBIAN_FRONTEND": "c73ccf8def7006f3",
+            "DOTNET_MULTILEVEL_LOOKUP": "5feceb66ffc86f38",
+            "DOTNET_NOLOGO": "6b86b273ff34fce1",
+            "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "6b86b273ff34fce1",
+            "EDGEWEBDRIVER": "3c20c50ef44fa0ee",
+            "ENABLE_RUNNER_TRACING": "b5bea41b6c623f7c",
+            "EVIDENCE": "757ce4a95163abc8",
+            "GECKOWEBDRIVER": "84bc9499d87644dd",
+            "GHCUP_INSTALL_BASE_PREFIX": "0885fcf5b23ee3ef",
+            "GITHUB_ACTION": "b88980b1e4318a45",
+            "GITHUB_ACTIONS": "b5bea41b6c623f7c",
+            "GITHUB_ACTION_REF": "e3b0c44298fc1c14",
+            "GITHUB_ACTION_REPOSITORY": "e3b0c44298fc1c14",
+            "GITHUB_ACTOR": "6f72f03e9527d036",
+            "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
+            "GITHUB_API_URL": "b2fd47bfbc5a4de1",
+            "GITHUB_ARTIFACTS": "0b11a18e05d7d173",
+            "GITHUB_ARTIFACTS_LIST": "c33be2af0ab63dbc",
+            "GITHUB_BASE_REF": "15ded80916997446",
+            "GITHUB_ENV": "265ddee1e51ae382",
+            "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
+            "GITHUB_EVENT_PATH": "02503339a55110de",
+            "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
+            "GITHUB_HEAD_REF": "a1ede3db9057a904",
+            "GITHUB_JOB": "e48cfe4f6f37ec01",
+            "GITHUB_OUTPUT": "06e9075cf476bd4b",
+            "GITHUB_PATH": "0fa6ed055b3d8e4d",
+            "GITHUB_REF": "5bd79fb5da0e28c5",
+            "GITHUB_REF_NAME": "8993c575f3356612",
+            "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
+            "GITHUB_REF_TYPE": "f38c764c8aa00b65",
+            "GITHUB_REPOSITORY": "d9af7d8d741acc92",
+            "GITHUB_REPOSITORY_ID": "60912c5df723bae4",
+            "GITHUB_REPOSITORY_OWNER": "6f72f03e9527d036",
+            "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
+            "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
+            "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
+            "GITHUB_RUN_ID": "26bc1a51cbd1da5d",
+            "GITHUB_RUN_NUMBER": "6b51d431df5d7f14",
+            "GITHUB_SERVER_URL": "996e1f714b08e971",
+            "GITHUB_SHA": "82cbdf4df96e15a6",
+            "GITHUB_STATE": "e2a4d615fde545ff",
+            "GITHUB_STEP_SUMMARY": "eb5465cb4a28c0ca",
+            "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
+            "GITHUB_WORKFLOW": "423b805186b0a246",
+            "GITHUB_WORKFLOW_REF": "e5870f4c390b33c3",
+            "GITHUB_WORKFLOW_SHA": "82cbdf4df96e15a6",
+            "GITHUB_WORKSPACE": "d10122a7d55cc72c",
+            "GOROOT_1_24_X64": "dad7e7c7884916c8",
+            "GOROOT_1_25_X64": "4de37c06a108f1d7",
+            "GOROOT_1_26_X64": "6c8c1a18945b3f25",
+            "GRADLE_HOME": "1421d02e730fe96d",
+            "HCA_CLOUD_PROVIDER": "79f43c3b9c23fbdf",
+            "HOME": "b1cbc5f347543a03",
+            "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
+            "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
+            "INVOCATION_ID": "11c9b575105d7ac8",
+            "ImageOS": "1a6338a16abf65e3",
+            "ImageVersion": "ced8a89c6b2a78f6",
+            "JAVA_HOME": "9b2eaca78448dd7a",
+            "JAVA_HOME_11_X64": "1ec0fc371ce27771",
+            "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
+            "JAVA_HOME_21_X64": "c701517cd1ca359a",
+            "JAVA_HOME_25_X64": "3331df6d48d9ba51",
+            "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
+            "JOURNAL_STREAM": "a2b14c7008d82a44",
+            "LANG": "99fed2d548c2eb10",
+            "LOGNAME": "527aa9f431539da8",
+            "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
+            "MEMORY_PRESSURE_WRITE": "8eb3235eca7e3191",
+            "NVM_DIR": "f1c14865fbf0df4c",
+            "PATH": "d9f2e47de92bac9d",
+            "PIPX_BIN_DIR": "9ba4f54eb098394a",
+            "PIPX_HOME": "aa57010a38327b23",
+            "POWERSHELL_DISTRIBUTION_CHANNEL": "fae424fd0c4f84f6",
+            "PSModulePath": "61c7aa79c46b28e4",
+            "PWD": "d10122a7d55cc72c",
+            "Q": "ca9f307d738f5512",
+            "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
+            "RUNNER_ENVIRONMENT": "ac592027e68479fc",
+            "RUNNER_NAME": "e4f6459165fa24d6",
+            "RUNNER_OS": "4828e60247c1636f",
+            "RUNNER_TEMP": "a9fd2b6f1129349e",
+            "RUNNER_TOOL_CACHE": "40963d3114e769b6",
+            "RUNNER_TRACKING_ID": "4eac367709934dda",
+            "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
+            "SELENIUM_JAR_PATH": "15f9049d64d77584",
+            "SGX_AESM_ADDR": "6b86b273ff34fce1",
+            "SHELL": "b1fd29aea4dad2af",
+            "SHLVL": "6b86b273ff34fce1",
+            "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
+            "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
+            "SIL_SOURCE_REVISION": "680498987808e5b0",
+            "SWIFT_PATH": "fb8c6698dca20671",
+            "SYSTEMD_EXEC_PID": "374224fbb80782ef",
+            "TMPDIR": "c93abdaab0147fef",
+            "USER": "527aa9f431539da8",
+            "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
+            "UV_CACHE_DIR": "b94adbc135302640",
+            "VCPKG_INSTALLATION_ROOT": "50906157014ea796",
+            "XDG_CONFIG_HOME": "e2ff4a7c39c2d65a",
+            "XDG_RUNTIME_DIR": "57f2ee9cc4db14db",
+            "_": "848514551c4ea810"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nTraceback (most recent call last):\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 297, in run\n    send({\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py\", line 125, in <module>\n    main()\n  File \"/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py\", line 121, in main\n    run(Probe(parser.parse_args()))\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 302, in run\n    send({\"op\": \"fail\", \"reason\": _reason(e)})\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\nException ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3573
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/deadline.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "1000",
+        "--diagnostics"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\nException ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns\n",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.diagnostics.json",
+            "run.mcap.failure.json",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "diagnostics outcome equals ordinary",
+          "detail": [
+            {
+              "category": "timeout",
+              "exit_code": 1,
+              "recording": "0fbed01b8f64aec84be3351012d0b598f5f0cbc49dfbb8e4702d565607ee2844"
+            },
+            {
+              "category": "timeout",
+              "exit_code": 1,
+              "recording": "0fbed01b8f64aec84be3351012d0b598f5f0cbc49dfbb8e4702d565607ee2844"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/diagnostics-deadline",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "diagnostics-deadline",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.diagnostics.json",
+        "run.mcap.failure.json",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": "timeout",
+        "exit_code": 1,
+        "recording": "0fbed01b8f64aec84be3351012d0b598f5f0cbc49dfbb8e4702d565607ee2844",
+        "wall_ms": 3582
+      },
+      "participants_started": [
+        "fmu-13933.tsv",
+        "probe-13938.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py",
+            "--sleep-at-step",
+            "3",
+            "--sleep-ms",
+            "3000"
+          ],
+          "environment": {
+            "ACCEPT_EULA": "18f5384d58bcb1bb",
+            "ACTIONS_ORCHESTRATION_ID": "71db7b5ea4bddad1",
+            "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
+            "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
+            "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
+            "ANDROID_HOME": "e507a12011d2294b",
+            "ANDROID_NDK": "fa2c5ab6b942d244",
+            "ANDROID_NDK_HOME": "fa2c5ab6b942d244",
+            "ANDROID_NDK_LATEST_HOME": "0acc37f53069db75",
+            "ANDROID_NDK_ROOT": "fa2c5ab6b942d244",
+            "ANDROID_SDK_ROOT": "e507a12011d2294b",
+            "ANT_HOME": "e95496397e98130a",
+            "AZURE_EXTENSION_DIR": "78b3ec8b79173c8d",
+            "BOOTSTRAP_HASKELL_NONINTERACTIVE": "6b86b273ff34fce1",
+            "CHROMEWEBDRIVER": "e4279f084798caf9",
+            "CHROME_BIN": "3c9b42ef6def3761",
+            "CI": "b5bea41b6c623f7c",
+            "CONDA": "51ae8eb5543eea37",
+            "DEBIAN_FRONTEND": "c73ccf8def7006f3",
+            "DOTNET_MULTILEVEL_LOOKUP": "5feceb66ffc86f38",
+            "DOTNET_NOLOGO": "6b86b273ff34fce1",
+            "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "6b86b273ff34fce1",
+            "EDGEWEBDRIVER": "3c20c50ef44fa0ee",
+            "ENABLE_RUNNER_TRACING": "b5bea41b6c623f7c",
+            "EVIDENCE": "757ce4a95163abc8",
+            "GECKOWEBDRIVER": "84bc9499d87644dd",
+            "GHCUP_INSTALL_BASE_PREFIX": "0885fcf5b23ee3ef",
+            "GITHUB_ACTION": "b88980b1e4318a45",
+            "GITHUB_ACTIONS": "b5bea41b6c623f7c",
+            "GITHUB_ACTION_REF": "e3b0c44298fc1c14",
+            "GITHUB_ACTION_REPOSITORY": "e3b0c44298fc1c14",
+            "GITHUB_ACTOR": "6f72f03e9527d036",
+            "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
+            "GITHUB_API_URL": "b2fd47bfbc5a4de1",
+            "GITHUB_ARTIFACTS": "0b11a18e05d7d173",
+            "GITHUB_ARTIFACTS_LIST": "c33be2af0ab63dbc",
+            "GITHUB_BASE_REF": "15ded80916997446",
+            "GITHUB_ENV": "265ddee1e51ae382",
+            "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
+            "GITHUB_EVENT_PATH": "02503339a55110de",
+            "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
+            "GITHUB_HEAD_REF": "a1ede3db9057a904",
+            "GITHUB_JOB": "e48cfe4f6f37ec01",
+            "GITHUB_OUTPUT": "06e9075cf476bd4b",
+            "GITHUB_PATH": "0fa6ed055b3d8e4d",
+            "GITHUB_REF": "5bd79fb5da0e28c5",
+            "GITHUB_REF_NAME": "8993c575f3356612",
+            "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
+            "GITHUB_REF_TYPE": "f38c764c8aa00b65",
+            "GITHUB_REPOSITORY": "d9af7d8d741acc92",
+            "GITHUB_REPOSITORY_ID": "60912c5df723bae4",
+            "GITHUB_REPOSITORY_OWNER": "6f72f03e9527d036",
+            "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
+            "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
+            "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
+            "GITHUB_RUN_ID": "26bc1a51cbd1da5d",
+            "GITHUB_RUN_NUMBER": "6b51d431df5d7f14",
+            "GITHUB_SERVER_URL": "996e1f714b08e971",
+            "GITHUB_SHA": "82cbdf4df96e15a6",
+            "GITHUB_STATE": "e2a4d615fde545ff",
+            "GITHUB_STEP_SUMMARY": "eb5465cb4a28c0ca",
+            "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
+            "GITHUB_WORKFLOW": "423b805186b0a246",
+            "GITHUB_WORKFLOW_REF": "e5870f4c390b33c3",
+            "GITHUB_WORKFLOW_SHA": "82cbdf4df96e15a6",
+            "GITHUB_WORKSPACE": "d10122a7d55cc72c",
+            "GOROOT_1_24_X64": "dad7e7c7884916c8",
+            "GOROOT_1_25_X64": "4de37c06a108f1d7",
+            "GOROOT_1_26_X64": "6c8c1a18945b3f25",
+            "GRADLE_HOME": "1421d02e730fe96d",
+            "HCA_CLOUD_PROVIDER": "79f43c3b9c23fbdf",
+            "HOME": "b1cbc5f347543a03",
+            "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
+            "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
+            "INVOCATION_ID": "11c9b575105d7ac8",
+            "ImageOS": "1a6338a16abf65e3",
+            "ImageVersion": "ced8a89c6b2a78f6",
+            "JAVA_HOME": "9b2eaca78448dd7a",
+            "JAVA_HOME_11_X64": "1ec0fc371ce27771",
+            "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
+            "JAVA_HOME_21_X64": "c701517cd1ca359a",
+            "JAVA_HOME_25_X64": "3331df6d48d9ba51",
+            "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
+            "JOURNAL_STREAM": "a2b14c7008d82a44",
+            "LANG": "99fed2d548c2eb10",
+            "LOGNAME": "527aa9f431539da8",
+            "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
+            "MEMORY_PRESSURE_WRITE": "8eb3235eca7e3191",
+            "NVM_DIR": "f1c14865fbf0df4c",
+            "PATH": "d9f2e47de92bac9d",
+            "PIPX_BIN_DIR": "9ba4f54eb098394a",
+            "PIPX_HOME": "aa57010a38327b23",
+            "POWERSHELL_DISTRIBUTION_CHANNEL": "fae424fd0c4f84f6",
+            "PSModulePath": "61c7aa79c46b28e4",
+            "PWD": "d10122a7d55cc72c",
+            "Q": "ca9f307d738f5512",
+            "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
+            "RUNNER_ENVIRONMENT": "ac592027e68479fc",
+            "RUNNER_NAME": "e4f6459165fa24d6",
+            "RUNNER_OS": "4828e60247c1636f",
+            "RUNNER_TEMP": "a9fd2b6f1129349e",
+            "RUNNER_TOOL_CACHE": "40963d3114e769b6",
+            "RUNNER_TRACKING_ID": "4eac367709934dda",
+            "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
+            "SELENIUM_JAR_PATH": "15f9049d64d77584",
+            "SGX_AESM_ADDR": "6b86b273ff34fce1",
+            "SHELL": "b1fd29aea4dad2af",
+            "SHLVL": "6b86b273ff34fce1",
+            "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
+            "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
+            "SIL_SOURCE_REVISION": "680498987808e5b0",
+            "SWIFT_PATH": "fb8c6698dca20671",
+            "SYSTEMD_EXEC_PID": "374224fbb80782ef",
+            "TMPDIR": "c93abdaab0147fef",
+            "USER": "527aa9f431539da8",
+            "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
+            "UV_CACHE_DIR": "b94adbc135302640",
+            "VCPKG_INSTALLATION_ROOT": "50906157014ea796",
+            "XDG_CONFIG_HOME": "e2ff4a7c39c2d65a",
+            "XDG_RUNTIME_DIR": "57f2ee9cc4db14db",
+            "_": "848514551c4ea810"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nTraceback (most recent call last):\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 297, in run\n    send({\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py\", line 125, in <module>\n    main()\n  File \"/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py\", line 121, in main\n    run(Probe(parser.parse_args()))\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 302, in run\n    send({\"op\": \"fail\", \"reason\": _reason(e)})\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\nException ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns\n",
+      "stdout_tail": "diagnostics report: run.mcap.diagnostics.json\nrun: run_failure, exit code 1, partial (run_failure)\nfailure: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns (timeout, Participant probe, Virtual time 90.000 ms)\nlast Virtual time: 90.000 ms of Duration 1.000 s\nrun wall time: 3.507 s (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 126.411 ms, setup 262.637 ms, scheduled execution 1.082 s, shutdown 2.035 s, recording finalization 67.225 us, unattributed 0 ns\nVirtual-time speed: scheduled unavailable (run_not_successful), end-to-end unavailable (run_not_successful)\nthroughput per second of scheduled execution (1.082 s): 0 Native Activations, 0.00/s; 22 Process Steps, 20.33/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 9 of 9 completed, mean 7.674 ms, p50 7.647 ms, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 7.881 ms\n  group/step process_step: 5 of 5 completed, mean 195.297 us, p50 147.153 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 399.151 us\n  observer/step process_step: 5 of 5 completed, mean 129.975 us, p50 87.793 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 280.742 us\n  probe/step process_step: 3 of 4 completed, 1 failed (first at Activation 3, Virtual time 90.000 ms), mean 3.696 ms, p50 3.756 ms, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 3.839 ms\n  replay replay: 10 Messages; publication Slots 10 of 10 completed, mean 3.649 us, p50 2.605 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 11.782 us\nresources (peak RSS is per process and never summed):\n  runner: user CPU 131.532 ms, system CPU 6.313 ms, peak RSS 5.395 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 140.648 ms, system CPU 17.496 ms, peak RSS 22.188 MiB (largest_process_peak_rss; includes waited descendants)\n  process group: user CPU 73.816 ms, system CPU 22.467 ms, peak RSS 22.152 MiB (largest_process_peak_rss; includes waited descendants)\n  process observer: user CPU 48.771 ms, system CPU 10.948 ms, peak RSS 19.098 MiB (largest_process_peak_rss; includes waited descendants)\n  process probe: user CPU 69.319 ms, system CPU 11.380 ms, peak RSS 20.020 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 464.086 ms, system 68.604 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; group peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; observer peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; probe peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3582
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--activations",
+        "--modules-from",
+        "/home/runner/work/_temp/work-native/workload/main/EgoMotion.fmu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+            }
+          ],
+          "ok": true
+        },
+        {
+          "check": "Manifest bytes unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "profile identity is the Run's Manifest hash",
+          "detail": [
+            "2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a",
+            [
+              "2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a"
+            ]
+          ],
+          "ok": true
+        },
+        {
+          "check": "native hot function silproof_native_spin_even named",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "native hot function silproof_native_spin_odd named",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "process hot function silproof_process_spin named",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "child hot function silproof_child_spin named",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "fmu hot function silproof_fmu_spin named",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "stripped Native library: matching debug file used",
+          "detail": {
+            "path": "/home/runner/work/_temp/work-native/workload/main/lib/libsilproof_native.so.debug",
+            "status": "separate_matching"
+          },
+          "ok": true
+        },
+        {
+          "check": "FMU extracted into the Run directory is named",
+          "detail": "captured_modules_from",
+          "ok": true
+        },
+        {
+          "check": "4 short-lived children, each its own identity with samples",
+          "detail": [
+            [
+              "p6",
+              13957,
+              50
+            ],
+            [
+              "p7",
+              13958,
+              51
+            ],
+            [
+              "p8",
+              13959,
+              51
+            ],
+            [
+              "p9",
+              13960,
+              50
+            ]
+          ],
+          "ok": true
+        },
+        {
+          "check": "correlation complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Native samples are in their Task's execution context",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Process samples are window-associated with their Step",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "every Process mapping verified (one PID namespace)",
+          "detail": [
+            {
+              "mapping": "verified",
+              "participant": "fmu",
+              "pid": 13954,
+              "process": "p3"
+            },
+            {
+              "mapping": "verified",
+              "participant": "process",
+              "pid": 13956,
+              "process": "p5"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-matching-activations",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "cpu-main-matching-activations",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "activation/correlation.json": 132730,
+          "activation/observations.jsonl": 63256,
+          "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-matching-activations/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/elf": 27312,
+          "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-matching-activations/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/probes": 0,
+          "cpu/perf-buildid-cache.stderr.txt": 228,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 0,
+          "cpu/perf.data": 23023104,
+          "cpu/samples.json": 179551,
+          "profile.json": 66294,
+          "run.diagnostics.json": 23630,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2541
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "correlation": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "activation/observations.jsonl": "575fac7e89ce13920aadfa9c0a5ff3d124939d2ee83a1d5640f99aac61010e6d",
+          "cpu/perf.data": "cdb23f51ab30a00a88526d9600eaf387784a39a098cfb5ac240a10684de8ae7f",
+          "run.mcap": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+        },
+        "run": "succeeded",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 2719,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 79,
+          "samples_with_caller": 2654,
+          "unavailable": {},
+          "weight_ns": 2721721719
+        },
+        "wall_ms": 4185
+      },
+      "participants_started": [
+        "child-13957.tsv",
+        "child-13958.tsv",
+        "child-13959.tsv",
+        "child-13960.tsv",
+        "fmu-13954.tsv",
+        "native-13953.tsv",
+        "process-13956.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nmanifest: /home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json (2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a)\nsil: 0.2.1, c9a03c17ceac5194def0587abddf2f63af3550a0\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2719, weight 2.722 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 2640 of 2719 samples; source lines for 2509 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 2719 samples: 777 in an Activation's execution context (runner thread), 1746 in a Process Step window (associated, not proven to be Step work), 65 lifecycle, 0 Replay, 131 unattributed\nlimitations: cpu_samples_estimate_on_cpu_time, user_space_only, scope_is_runner_and_descendants, host_build_only\ntop self weight (share of all sample weight):\n   28.4%  silproof_process_spin (libsilproof_process.so)\n   28.0%  silproof_fmu_spin (EgoMotion.so)\n   14.3%  silproof_native_spin_even (libsilproof_native.so)\n   14.2%  silproof_native_spin_odd (libsilproof_native.so)\n    7.4%  silproof_child_spin (silproof_child)\n    2.6%  [unknown function] (python3.12)\n    2.4%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    0.7%  _PyEval_EvalFrameDefault (python3.12)\n    0.3%  [unknown function] (libc.so.6)\n    0.2%  PyObject_Malloc (python3.12)\n    1.6%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 4185
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--modules-from",
+        "/home/runner/work/_temp/work-native/workload/main/EgoMotion.fmu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "debug file missing: status not_found",
+          "detail": {
+            "path": null,
+            "status": "not_found"
+          },
+          "ok": true
+        },
+        {
+          "check": "static Native functions have no name",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Native samples stay in the module",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "other hot functions still named",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-debug-missing",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "cpu-main-debug-missing",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-debug-missing/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/elf": 27312,
+          "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-debug-missing/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/probes": 0,
+          "cpu/perf-buildid-cache.stderr.txt": 221,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 0,
+          "cpu/perf.data": 23132680,
+          "cpu/samples.json": 185293,
+          "profile.json": 60673,
+          "run.diagnostics.json": 23651,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2541
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "cpu/perf.data": "1afd46b7018193dc0e19c59edca7ff5f49dfbf8af0440110f8d463afd10d3530",
+          "run.mcap": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+        },
+        "run": "succeeded",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 2732,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 863,
+          "samples_with_caller": 2666,
+          "unavailable": {},
+          "weight_ns": 2734734732
+        },
+        "wall_ms": 4062
+      },
+      "participants_started": [
+        "child-14008.tsv",
+        "child-14009.tsv",
+        "child-14010.tsv",
+        "child-14011.tsv",
+        "fmu-14005.tsv",
+        "native-14004.tsv",
+        "process-14007.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nmanifest: /home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json (2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a)\nsil: 0.2.1, c9a03c17ceac5194def0587abddf2f63af3550a0\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2732, weight 2.735 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 1869 of 2732 samples; source lines for 1745 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nlimitations: cpu_samples_estimate_on_cpu_time, user_space_only, scope_is_runner_and_descendants, host_build_only\ntop self weight (share of all sample weight):\n   28.3%  silproof_fmu_spin (EgoMotion.so)\n   28.2%  [unknown function] (libsilproof_native.so)\n   28.2%  silproof_process_spin (libsilproof_process.so)\n    7.4%  silproof_child_spin (silproof_child)\n    2.7%  [unknown function] (python3.12)\n    2.4%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    0.7%  _PyEval_EvalFrameDefault (python3.12)\n    0.4%  [unknown function] (libc.so.6)\n    0.1%  PyDict_SetDefault (python3.12)\n    0.1%  _PyDict_GetItem_KnownHash (python3.12)\n    1.5%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 4062
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--modules-from",
+        "/home/runner/work/_temp/work-native/workload/main/EgoMotion.fmu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "debug file mismatched: status separate_mismatched",
+          "detail": {
+            "path": null,
+            "status": "separate_mismatched"
+          },
+          "ok": true
+        },
+        {
+          "check": "static Native functions have no name",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Native samples stay in the module",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "other hot functions still named",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-debug-mismatched",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "cpu-main-debug-mismatched",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-debug-mismatched/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/elf": 27312,
+          "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-debug-mismatched/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/probes": 0,
+          "cpu/perf-buildid-cache.stderr.txt": 224,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 0,
+          "cpu/perf.data": 23208648,
+          "cpu/samples.json": 184923,
+          "profile.json": 62093,
+          "run.diagnostics.json": 23641,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2541
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "cpu/perf.data": "c079cf1b6d11749747c3b1dd6962f0d3ab09f7216b6c9685c2cd1dee4c8cf596",
+          "run.mcap": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+        },
+        "run": "succeeded",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 2741,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 871,
+          "samples_with_caller": 2676,
+          "unavailable": {},
+          "weight_ns": 2743743741
+        },
+        "wall_ms": 4037
+      },
+      "participants_started": [
+        "child-14056.tsv",
+        "child-14057.tsv",
+        "child-14058.tsv",
+        "child-14060.tsv",
+        "fmu-14053.tsv",
+        "native-14052.tsv",
+        "process-14055.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nmanifest: /home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json (2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a)\nsil: 0.2.1, c9a03c17ceac5194def0587abddf2f63af3550a0\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2741, weight 2.744 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 1870 of 2741 samples; source lines for 1744 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nlimitations: cpu_samples_estimate_on_cpu_time, user_space_only, scope_is_runner_and_descendants, host_build_only\ntop self weight (share of all sample weight):\n   28.4%  [unknown function] (libsilproof_native.so)\n   28.2%  silproof_fmu_spin (EgoMotion.so)\n   28.1%  silproof_process_spin (libsilproof_process.so)\n    7.3%  silproof_child_spin (silproof_child)\n    3.0%  [unknown function] (python3.12)\n    2.4%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    0.6%  _PyEval_EvalFrameDefault (python3.12)\n    0.2%  [unknown function] (libc.so.6)\n    0.1%  PyUnicode_FromKindAndData (python3.12)\n    0.1%  _Py_hashtable_get (python3.12)\n    1.5%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 4037
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/mixed.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--activations",
+        "--modules-from",
+        "/home/runner/work/_temp/work-native/workload/main/EgoMotion.fmu",
+        "--modules-from",
+        "/home/runner/work/_temp/work-native/workload/can/node.fmu",
+        "--modules-from",
+        "/home/runner/work/_temp/work-native/workload/can/bus.fmu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "630378ee83985b0c7a7278a1369e6375f9ad320150e37eaa48917701162df9a4"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "630378ee83985b0c7a7278a1369e6375f9ad320150e37eaa48917701162df9a4"
+            }
+          ],
+          "ok": true
+        },
+        {
+          "check": "correlation complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "fmu: 100 completed Steps (10 ms Period)",
+          "detail": {
+            "activations": 100,
+            "completed": 100
+          },
+          "ok": true
+        },
+        {
+          "check": "group: 50 completed Steps (20 ms Period)",
+          "detail": {
+            "activations": 50,
+            "completed": 50
+          },
+          "ok": true
+        },
+        {
+          "check": "observer: 50 completed Steps (20 ms Period)",
+          "detail": {
+            "activations": 50,
+            "completed": 50
+          },
+          "ok": true
+        },
+        {
+          "check": "probe: 34 completed Steps (30 ms Period)",
+          "detail": {
+            "activations": 34,
+            "completed": 34
+          },
+          "ok": true
+        },
+        {
+          "check": "Replay Slots are separate intervals",
+          "detail": {
+            "activations": 0,
+            "phases": 5,
+            "process_steps": 234,
+            "replay": 100
+          },
+          "ok": true
+        },
+        {
+          "check": "FMU group has window-associated samples",
+          "detail": null,
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-mixed-activations",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "cpu-mixed-activations",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "activation/correlation.json": 100783,
+          "activation/observations.jsonl": 66264,
+          "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-mixed-activations/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/elf": 27312,
+          "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-mixed-activations/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/probes": 0,
+          "cpu/perf-buildid-cache.stderr.txt": 220,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 0,
+          "cpu/perf.data": 11125256,
+          "cpu/samples.json": 195144,
+          "profile.json": 71510,
+          "run.diagnostics.json": 33508,
+          "run.mcap": 59788,
+          "run.mcap.provenance.json": 3327
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "correlation": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "activation/observations.jsonl": "04bf7479163ee85b60bcb8c8cbfb729f56c0fd64234ad7002ba13eaef4fde166",
+          "cpu/perf.data": "fe6dfdf19a056d5c3188d041110089a64b05d8dffdd36cfee7e7af4447e5eb6f",
+          "run.mcap": "630378ee83985b0c7a7278a1369e6375f9ad320150e37eaa48917701162df9a4"
+        },
+        "run": "succeeded",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 1307,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 224,
+          "samples_with_caller": 1181,
+          "unavailable": {},
+          "weight_ns": 1308308307
+        },
+        "wall_ms": 2201
+      },
+      "participants_started": [
+        "fmu-14102.tsv",
+        "probe-14108.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py"
+          ],
+          "environment": {
+            "ACCEPT_EULA": "18f5384d58bcb1bb",
+            "ACTIONS_ORCHESTRATION_ID": "71db7b5ea4bddad1",
+            "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
+            "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
+            "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
+            "ANDROID_HOME": "e507a12011d2294b",
+            "ANDROID_NDK": "fa2c5ab6b942d244",
+            "ANDROID_NDK_HOME": "fa2c5ab6b942d244",
+            "ANDROID_NDK_LATEST_HOME": "0acc37f53069db75",
+            "ANDROID_NDK_ROOT": "fa2c5ab6b942d244",
+            "ANDROID_SDK_ROOT": "e507a12011d2294b",
+            "ANT_HOME": "e95496397e98130a",
+            "AZURE_EXTENSION_DIR": "78b3ec8b79173c8d",
+            "BOOTSTRAP_HASKELL_NONINTERACTIVE": "6b86b273ff34fce1",
+            "CHROMEWEBDRIVER": "e4279f084798caf9",
+            "CHROME_BIN": "3c9b42ef6def3761",
+            "CI": "b5bea41b6c623f7c",
+            "CONDA": "51ae8eb5543eea37",
+            "DEBIAN_FRONTEND": "c73ccf8def7006f3",
+            "DOTNET_MULTILEVEL_LOOKUP": "5feceb66ffc86f38",
+            "DOTNET_NOLOGO": "6b86b273ff34fce1",
+            "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "6b86b273ff34fce1",
+            "EDGEWEBDRIVER": "3c20c50ef44fa0ee",
+            "ENABLE_RUNNER_TRACING": "b5bea41b6c623f7c",
+            "EVIDENCE": "757ce4a95163abc8",
+            "GECKOWEBDRIVER": "84bc9499d87644dd",
+            "GHCUP_INSTALL_BASE_PREFIX": "0885fcf5b23ee3ef",
+            "GITHUB_ACTION": "b88980b1e4318a45",
+            "GITHUB_ACTIONS": "b5bea41b6c623f7c",
+            "GITHUB_ACTION_REF": "e3b0c44298fc1c14",
+            "GITHUB_ACTION_REPOSITORY": "e3b0c44298fc1c14",
+            "GITHUB_ACTOR": "6f72f03e9527d036",
+            "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
+            "GITHUB_API_URL": "b2fd47bfbc5a4de1",
+            "GITHUB_ARTIFACTS": "0b11a18e05d7d173",
+            "GITHUB_ARTIFACTS_LIST": "c33be2af0ab63dbc",
+            "GITHUB_BASE_REF": "15ded80916997446",
+            "GITHUB_ENV": "265ddee1e51ae382",
+            "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
+            "GITHUB_EVENT_PATH": "02503339a55110de",
+            "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
+            "GITHUB_HEAD_REF": "a1ede3db9057a904",
+            "GITHUB_JOB": "e48cfe4f6f37ec01",
+            "GITHUB_OUTPUT": "06e9075cf476bd4b",
+            "GITHUB_PATH": "0fa6ed055b3d8e4d",
+            "GITHUB_REF": "5bd79fb5da0e28c5",
+            "GITHUB_REF_NAME": "8993c575f3356612",
+            "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
+            "GITHUB_REF_TYPE": "f38c764c8aa00b65",
+            "GITHUB_REPOSITORY": "d9af7d8d741acc92",
+            "GITHUB_REPOSITORY_ID": "60912c5df723bae4",
+            "GITHUB_REPOSITORY_OWNER": "6f72f03e9527d036",
+            "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
+            "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
+            "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
+            "GITHUB_RUN_ID": "26bc1a51cbd1da5d",
+            "GITHUB_RUN_NUMBER": "6b51d431df5d7f14",
+            "GITHUB_SERVER_URL": "996e1f714b08e971",
+            "GITHUB_SHA": "82cbdf4df96e15a6",
+            "GITHUB_STATE": "e2a4d615fde545ff",
+            "GITHUB_STEP_SUMMARY": "eb5465cb4a28c0ca",
+            "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
+            "GITHUB_WORKFLOW": "423b805186b0a246",
+            "GITHUB_WORKFLOW_REF": "e5870f4c390b33c3",
+            "GITHUB_WORKFLOW_SHA": "82cbdf4df96e15a6",
+            "GITHUB_WORKSPACE": "d10122a7d55cc72c",
+            "GOROOT_1_24_X64": "dad7e7c7884916c8",
+            "GOROOT_1_25_X64": "4de37c06a108f1d7",
+            "GOROOT_1_26_X64": "6c8c1a18945b3f25",
+            "GRADLE_HOME": "1421d02e730fe96d",
+            "HCA_CLOUD_PROVIDER": "79f43c3b9c23fbdf",
+            "HOME": "b1cbc5f347543a03",
+            "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
+            "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
+            "INVOCATION_ID": "11c9b575105d7ac8",
+            "ImageOS": "1a6338a16abf65e3",
+            "ImageVersion": "ced8a89c6b2a78f6",
+            "JAVA_HOME": "9b2eaca78448dd7a",
+            "JAVA_HOME_11_X64": "1ec0fc371ce27771",
+            "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
+            "JAVA_HOME_21_X64": "c701517cd1ca359a",
+            "JAVA_HOME_25_X64": "3331df6d48d9ba51",
+            "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
+            "JOURNAL_STREAM": "a2b14c7008d82a44",
+            "LANG": "99fed2d548c2eb10",
+            "LOGNAME": "527aa9f431539da8",
+            "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
+            "MEMORY_PRESSURE_WRITE": "8eb3235eca7e3191",
+            "NVM_DIR": "f1c14865fbf0df4c",
+            "PATH": "d9f2e47de92bac9d",
+            "PIPX_BIN_DIR": "9ba4f54eb098394a",
+            "PIPX_HOME": "aa57010a38327b23",
+            "POWERSHELL_DISTRIBUTION_CHANNEL": "fae424fd0c4f84f6",
+            "PSModulePath": "61c7aa79c46b28e4",
+            "PWD": "d10122a7d55cc72c",
+            "Q": "ca9f307d738f5512",
+            "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
+            "RUNNER_ENVIRONMENT": "ac592027e68479fc",
+            "RUNNER_NAME": "e4f6459165fa24d6",
+            "RUNNER_OS": "4828e60247c1636f",
+            "RUNNER_TEMP": "a9fd2b6f1129349e",
+            "RUNNER_TOOL_CACHE": "40963d3114e769b6",
+            "RUNNER_TRACKING_ID": "4eac367709934dda",
+            "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
+            "SELENIUM_JAR_PATH": "15f9049d64d77584",
+            "SGX_AESM_ADDR": "6b86b273ff34fce1",
+            "SHELL": "b1fd29aea4dad2af",
+            "SHLVL": "6b86b273ff34fce1",
+            "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
+            "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
+            "SIL_SOURCE_REVISION": "680498987808e5b0",
+            "SWIFT_PATH": "fb8c6698dca20671",
+            "SYSTEMD_EXEC_PID": "374224fbb80782ef",
+            "TMPDIR": "c93abdaab0147fef",
+            "USER": "527aa9f431539da8",
+            "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
+            "UV_CACHE_DIR": "b94adbc135302640",
+            "VCPKG_INSTALLATION_ROOT": "50906157014ea796",
+            "XDG_CONFIG_HOME": "e2ff4a7c39c2d65a",
+            "XDG_RUNTIME_DIR": "57f2ee9cc4db14db",
+            "_": "848514551c4ea810"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+      "stdout_tail": "manifest_hash f9bbc0ac5f77bf1bca76a054943d80a74098911c28c873f33bf6b76300d6dd3a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nmanifest: /home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/mixed.json (f9bbc0ac5f77bf1bca76a054943d80a74098911c28c873f33bf6b76300d6dd3a)\nsil: 0.2.1, c9a03c17ceac5194def0587abddf2f63af3550a0\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 1307, weight 1.308 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 5 with samples\nsymbols: function names for 1083 of 1307 samples; source lines for 758 (leaf frames)\nmodules: 1 of 29 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 1307 samples: 5 in an Activation's execution context (runner thread), 907 in a Process Step window (associated, not proven to be Step work), 126 lifecycle, 0 Replay, 269 unattributed\n  90 Activations have no sample: that is not evidence that they used no CPU time\nlimitations: cpu_samples_estimate_on_cpu_time, user_space_only, scope_is_runner_and_descendants, host_build_only\ntop self weight (share of all sample weight):\n   58.0%  silproof_fmu_spin (EgoMotion.so)\n   15.4%  [unknown function] (python3.12)\n    9.5%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    4.3%  _PyEval_EvalFrameDefault (python3.12)\n    2.6%  PyObject_Malloc (python3.12)\n    1.6%  PyObject_Free (python3.12)\n    1.2%  [unknown function] (libc.so.6)\n    1.1%  PyErr_CheckSignals (python3.12)\n    0.4%  _PyDict_GetItem_KnownHash (python3.12)\n    0.3%  _PyType_Lookup (python3.12)\n    5.6%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 2201
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/failure.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run-diagnostics: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status run_failure",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 1,
+            "failure": {
+              "category": "participant",
+              "message": "participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose"
+            },
+            "signal": null,
+            "status": "run_failure",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": "participant",
+              "exit_code": 1,
+              "recording": "744de75670ec718fea6e913bccbeb47e2db753b73f3abbedfbc3f7a7582f34aa"
+            },
+            {
+              "category": "participant",
+              "exit_code": 1,
+              "recording": "744de75670ec718fea6e913bccbeb47e2db753b73f3abbedfbc3f7a7582f34aa"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-failure",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "cpu-failure",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "cpu/perf-buildid-cache.stderr.txt": 0,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 0,
+          "cpu/perf.data": 4955240,
+          "cpu/samples.json": 138296,
+          "profile.json": 64159,
+          "run.diagnostics.json": 24572,
+          "run.mcap": 9906,
+          "run.mcap.failure.json": 262,
+          "run.mcap.provenance.json": 3348
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "cpu/perf.data": "25c2f3ded36d1455037f83b56977a710d64720309c9a88cf025a0ca309866f0f",
+          "run.mcap": "744de75670ec718fea6e913bccbeb47e2db753b73f3abbedfbc3f7a7582f34aa"
+        },
+        "run": "run_failure",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 576,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 329,
+          "samples_with_caller": 290,
+          "unavailable": {},
+          "weight_ns": 576576576
+        },
+        "wall_ms": 1095
+      },
+      "participants_started": [
+        "fmu-14144.tsv",
+        "probe-14149.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py",
+            "--fail-at-step",
+            "7"
+          ],
+          "environment": {
+            "ACCEPT_EULA": "18f5384d58bcb1bb",
+            "ACTIONS_ORCHESTRATION_ID": "71db7b5ea4bddad1",
+            "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
+            "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
+            "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
+            "ANDROID_HOME": "e507a12011d2294b",
+            "ANDROID_NDK": "fa2c5ab6b942d244",
+            "ANDROID_NDK_HOME": "fa2c5ab6b942d244",
+            "ANDROID_NDK_LATEST_HOME": "0acc37f53069db75",
+            "ANDROID_NDK_ROOT": "fa2c5ab6b942d244",
+            "ANDROID_SDK_ROOT": "e507a12011d2294b",
+            "ANT_HOME": "e95496397e98130a",
+            "AZURE_EXTENSION_DIR": "78b3ec8b79173c8d",
+            "BOOTSTRAP_HASKELL_NONINTERACTIVE": "6b86b273ff34fce1",
+            "CHROMEWEBDRIVER": "e4279f084798caf9",
+            "CHROME_BIN": "3c9b42ef6def3761",
+            "CI": "b5bea41b6c623f7c",
+            "CONDA": "51ae8eb5543eea37",
+            "DEBIAN_FRONTEND": "c73ccf8def7006f3",
+            "DOTNET_MULTILEVEL_LOOKUP": "5feceb66ffc86f38",
+            "DOTNET_NOLOGO": "6b86b273ff34fce1",
+            "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "6b86b273ff34fce1",
+            "EDGEWEBDRIVER": "3c20c50ef44fa0ee",
+            "ENABLE_RUNNER_TRACING": "b5bea41b6c623f7c",
+            "EVIDENCE": "757ce4a95163abc8",
+            "GECKOWEBDRIVER": "84bc9499d87644dd",
+            "GHCUP_INSTALL_BASE_PREFIX": "0885fcf5b23ee3ef",
+            "GITHUB_ACTION": "b88980b1e4318a45",
+            "GITHUB_ACTIONS": "b5bea41b6c623f7c",
+            "GITHUB_ACTION_REF": "e3b0c44298fc1c14",
+            "GITHUB_ACTION_REPOSITORY": "e3b0c44298fc1c14",
+            "GITHUB_ACTOR": "6f72f03e9527d036",
+            "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
+            "GITHUB_API_URL": "b2fd47bfbc5a4de1",
+            "GITHUB_ARTIFACTS": "0b11a18e05d7d173",
+            "GITHUB_ARTIFACTS_LIST": "c33be2af0ab63dbc",
+            "GITHUB_BASE_REF": "15ded80916997446",
+            "GITHUB_ENV": "265ddee1e51ae382",
+            "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
+            "GITHUB_EVENT_PATH": "02503339a55110de",
+            "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
+            "GITHUB_HEAD_REF": "a1ede3db9057a904",
+            "GITHUB_JOB": "e48cfe4f6f37ec01",
+            "GITHUB_OUTPUT": "06e9075cf476bd4b",
+            "GITHUB_PATH": "0fa6ed055b3d8e4d",
+            "GITHUB_REF": "5bd79fb5da0e28c5",
+            "GITHUB_REF_NAME": "8993c575f3356612",
+            "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
+            "GITHUB_REF_TYPE": "f38c764c8aa00b65",
+            "GITHUB_REPOSITORY": "d9af7d8d741acc92",
+            "GITHUB_REPOSITORY_ID": "60912c5df723bae4",
+            "GITHUB_REPOSITORY_OWNER": "6f72f03e9527d036",
+            "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
+            "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
+            "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
+            "GITHUB_RUN_ID": "26bc1a51cbd1da5d",
+            "GITHUB_RUN_NUMBER": "6b51d431df5d7f14",
+            "GITHUB_SERVER_URL": "996e1f714b08e971",
+            "GITHUB_SHA": "82cbdf4df96e15a6",
+            "GITHUB_STATE": "e2a4d615fde545ff",
+            "GITHUB_STEP_SUMMARY": "eb5465cb4a28c0ca",
+            "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
+            "GITHUB_WORKFLOW": "423b805186b0a246",
+            "GITHUB_WORKFLOW_REF": "e5870f4c390b33c3",
+            "GITHUB_WORKFLOW_SHA": "82cbdf4df96e15a6",
+            "GITHUB_WORKSPACE": "d10122a7d55cc72c",
+            "GOROOT_1_24_X64": "dad7e7c7884916c8",
+            "GOROOT_1_25_X64": "4de37c06a108f1d7",
+            "GOROOT_1_26_X64": "6c8c1a18945b3f25",
+            "GRADLE_HOME": "1421d02e730fe96d",
+            "HCA_CLOUD_PROVIDER": "79f43c3b9c23fbdf",
+            "HOME": "b1cbc5f347543a03",
+            "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
+            "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
+            "INVOCATION_ID": "11c9b575105d7ac8",
+            "ImageOS": "1a6338a16abf65e3",
+            "ImageVersion": "ced8a89c6b2a78f6",
+            "JAVA_HOME": "9b2eaca78448dd7a",
+            "JAVA_HOME_11_X64": "1ec0fc371ce27771",
+            "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
+            "JAVA_HOME_21_X64": "c701517cd1ca359a",
+            "JAVA_HOME_25_X64": "3331df6d48d9ba51",
+            "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
+            "JOURNAL_STREAM": "a2b14c7008d82a44",
+            "LANG": "99fed2d548c2eb10",
+            "LOGNAME": "527aa9f431539da8",
+            "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
+            "MEMORY_PRESSURE_WRITE": "8eb3235eca7e3191",
+            "NVM_DIR": "f1c14865fbf0df4c",
+            "PATH": "d9f2e47de92bac9d",
+            "PIPX_BIN_DIR": "9ba4f54eb098394a",
+            "PIPX_HOME": "aa57010a38327b23",
+            "POWERSHELL_DISTRIBUTION_CHANNEL": "fae424fd0c4f84f6",
+            "PSModulePath": "61c7aa79c46b28e4",
+            "PWD": "d10122a7d55cc72c",
+            "Q": "ca9f307d738f5512",
+            "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
+            "RUNNER_ENVIRONMENT": "ac592027e68479fc",
+            "RUNNER_NAME": "e4f6459165fa24d6",
+            "RUNNER_OS": "4828e60247c1636f",
+            "RUNNER_TEMP": "a9fd2b6f1129349e",
+            "RUNNER_TOOL_CACHE": "40963d3114e769b6",
+            "RUNNER_TRACKING_ID": "4eac367709934dda",
+            "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
+            "SELENIUM_JAR_PATH": "15f9049d64d77584",
+            "SGX_AESM_ADDR": "6b86b273ff34fce1",
+            "SHELL": "b1fd29aea4dad2af",
+            "SHLVL": "6b86b273ff34fce1",
+            "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
+            "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
+            "SIL_SOURCE_REVISION": "680498987808e5b0",
+            "SWIFT_PATH": "fb8c6698dca20671",
+            "SYSTEMD_EXEC_PID": "374224fbb80782ef",
+            "TMPDIR": "c93abdaab0147fef",
+            "USER": "527aa9f431539da8",
+            "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
+            "UV_CACHE_DIR": "b94adbc135302640",
+            "VCPKG_INSTALLATION_ROOT": "50906157014ea796",
+            "XDG_CONFIG_HOME": "e2ff4a7c39c2d65a",
+            "XDG_RUNTIME_DIR": "57f2ee9cc4db14db",
+            "_": "848514551c4ea810"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run-diagnostics: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
+      "stdout_tail": "profile: prof/profile.json\nrun: run_failure, exit code 1\ncapture: cpu, complete\nmanifest: /home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/failure.json (cdbca144bd5c34e9f24b054f3f312f65474544b1ec374d6756954b17c8d3044c)\nsil: 0.2.1, c9a03c17ceac5194def0587abddf2f63af3550a0\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 576, weight 576.577 ms of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 5 with samples\nsymbols: function names for 247 of 576 samples; source lines unavailable (debug_file_not_found)\nmodules: 5 of 29 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nlimitations: cpu_samples_estimate_on_cpu_time, user_space_only, scope_is_runner_and_descendants, host_build_only\ntop self weight (share of all sample weight):\n   27.4%  [unknown function] (EgoMotion.so)\n   26.2%  [unknown function] (python3.12)\n   21.9%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    8.2%  _PyEval_EvalFrameDefault (python3.12)\n    2.6%  [unknown function] (libc.so.6)\n    1.6%  PyObject_Malloc (python3.12)\n    0.7%  PyObject_Free (python3.12)\n    0.7%  _PyType_Lookup (python3.12)\n    0.7%  _Py_hashtable_get (python3.12)\n    0.5%  PyErr_CheckSignals (python3.12)\n    9.5%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 1095
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/deadline.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--participant-timeout-ms",
+        "1000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": ".parse_args()))\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 302, in run\n    send({\"op\": \"fail\", \"reason\": _reason(e)})\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\nException ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status run_failure",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 1,
+            "failure": {
+              "category": "timeout",
+              "message": "participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns"
+            },
+            "signal": null,
+            "status": "run_failure",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": "timeout",
+              "exit_code": 1,
+              "recording": "0fbed01b8f64aec84be3351012d0b598f5f0cbc49dfbb8e4702d565607ee2844"
+            },
+            {
+              "category": "timeout",
+              "exit_code": 1,
+              "recording": "0fbed01b8f64aec84be3351012d0b598f5f0cbc49dfbb8e4702d565607ee2844"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-deadline",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "cpu-deadline",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "cpu/perf-buildid-cache.stderr.txt": 0,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 0,
+          "cpu/perf.data": 4060616,
+          "cpu/samples.json": 132890,
+          "profile.json": 64140,
+          "run.diagnostics.json": 18576,
+          "run.mcap": 8110,
+          "run.mcap.failure.json": 282,
+          "run.mcap.provenance.json": 3369
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "cpu/perf.data": "f414251ceaa2db798315d261a34567739d42fc051f0da68110935130d7de11ab",
+          "run.mcap": "0fbed01b8f64aec84be3351012d0b598f5f0cbc49dfbb8e4702d565607ee2844"
+        },
+        "run": "run_failure",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 470,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 229,
+          "samples_with_caller": 277,
+          "unavailable": {},
+          "weight_ns": 470470470
+        },
+        "wall_ms": 3908
+      },
+      "participants_started": [
+        "fmu-14180.tsv",
+        "probe-14185.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py",
+            "--sleep-at-step",
+            "3",
+            "--sleep-ms",
+            "3000"
+          ],
+          "environment": {
+            "ACCEPT_EULA": "18f5384d58bcb1bb",
+            "ACTIONS_ORCHESTRATION_ID": "71db7b5ea4bddad1",
+            "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
+            "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
+            "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
+            "ANDROID_HOME": "e507a12011d2294b",
+            "ANDROID_NDK": "fa2c5ab6b942d244",
+            "ANDROID_NDK_HOME": "fa2c5ab6b942d244",
+            "ANDROID_NDK_LATEST_HOME": "0acc37f53069db75",
+            "ANDROID_NDK_ROOT": "fa2c5ab6b942d244",
+            "ANDROID_SDK_ROOT": "e507a12011d2294b",
+            "ANT_HOME": "e95496397e98130a",
+            "AZURE_EXTENSION_DIR": "78b3ec8b79173c8d",
+            "BOOTSTRAP_HASKELL_NONINTERACTIVE": "6b86b273ff34fce1",
+            "CHROMEWEBDRIVER": "e4279f084798caf9",
+            "CHROME_BIN": "3c9b42ef6def3761",
+            "CI": "b5bea41b6c623f7c",
+            "CONDA": "51ae8eb5543eea37",
+            "DEBIAN_FRONTEND": "c73ccf8def7006f3",
+            "DOTNET_MULTILEVEL_LOOKUP": "5feceb66ffc86f38",
+            "DOTNET_NOLOGO": "6b86b273ff34fce1",
+            "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "6b86b273ff34fce1",
+            "EDGEWEBDRIVER": "3c20c50ef44fa0ee",
+            "ENABLE_RUNNER_TRACING": "b5bea41b6c623f7c",
+            "EVIDENCE": "757ce4a95163abc8",
+            "GECKOWEBDRIVER": "84bc9499d87644dd",
+            "GHCUP_INSTALL_BASE_PREFIX": "0885fcf5b23ee3ef",
+            "GITHUB_ACTION": "b88980b1e4318a45",
+            "GITHUB_ACTIONS": "b5bea41b6c623f7c",
+            "GITHUB_ACTION_REF": "e3b0c44298fc1c14",
+            "GITHUB_ACTION_REPOSITORY": "e3b0c44298fc1c14",
+            "GITHUB_ACTOR": "6f72f03e9527d036",
+            "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
+            "GITHUB_API_URL": "b2fd47bfbc5a4de1",
+            "GITHUB_ARTIFACTS": "0b11a18e05d7d173",
+            "GITHUB_ARTIFACTS_LIST": "c33be2af0ab63dbc",
+            "GITHUB_BASE_REF": "15ded80916997446",
+            "GITHUB_ENV": "265ddee1e51ae382",
+            "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
+            "GITHUB_EVENT_PATH": "02503339a55110de",
+            "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
+            "GITHUB_HEAD_REF": "a1ede3db9057a904",
+            "GITHUB_JOB": "e48cfe4f6f37ec01",
+            "GITHUB_OUTPUT": "06e9075cf476bd4b",
+            "GITHUB_PATH": "0fa6ed055b3d8e4d",
+            "GITHUB_REF": "5bd79fb5da0e28c5",
+            "GITHUB_REF_NAME": "8993c575f3356612",
+            "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
+            "GITHUB_REF_TYPE": "f38c764c8aa00b65",
+            "GITHUB_REPOSITORY": "d9af7d8d741acc92",
+            "GITHUB_REPOSITORY_ID": "60912c5df723bae4",
+            "GITHUB_REPOSITORY_OWNER": "6f72f03e9527d036",
+            "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
+            "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
+            "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
+            "GITHUB_RUN_ID": "26bc1a51cbd1da5d",
+            "GITHUB_RUN_NUMBER": "6b51d431df5d7f14",
+            "GITHUB_SERVER_URL": "996e1f714b08e971",
+            "GITHUB_SHA": "82cbdf4df96e15a6",
+            "GITHUB_STATE": "e2a4d615fde545ff",
+            "GITHUB_STEP_SUMMARY": "eb5465cb4a28c0ca",
+            "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
+            "GITHUB_WORKFLOW": "423b805186b0a246",
+            "GITHUB_WORKFLOW_REF": "e5870f4c390b33c3",
+            "GITHUB_WORKFLOW_SHA": "82cbdf4df96e15a6",
+            "GITHUB_WORKSPACE": "d10122a7d55cc72c",
+            "GOROOT_1_24_X64": "dad7e7c7884916c8",
+            "GOROOT_1_25_X64": "4de37c06a108f1d7",
+            "GOROOT_1_26_X64": "6c8c1a18945b3f25",
+            "GRADLE_HOME": "1421d02e730fe96d",
+            "HCA_CLOUD_PROVIDER": "79f43c3b9c23fbdf",
+            "HOME": "b1cbc5f347543a03",
+            "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
+            "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
+            "INVOCATION_ID": "11c9b575105d7ac8",
+            "ImageOS": "1a6338a16abf65e3",
+            "ImageVersion": "ced8a89c6b2a78f6",
+            "JAVA_HOME": "9b2eaca78448dd7a",
+            "JAVA_HOME_11_X64": "1ec0fc371ce27771",
+            "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
+            "JAVA_HOME_21_X64": "c701517cd1ca359a",
+            "JAVA_HOME_25_X64": "3331df6d48d9ba51",
+            "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
+            "JOURNAL_STREAM": "a2b14c7008d82a44",
+            "LANG": "99fed2d548c2eb10",
+            "LOGNAME": "527aa9f431539da8",
+            "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
+            "MEMORY_PRESSURE_WRITE": "8eb3235eca7e3191",
+            "NVM_DIR": "f1c14865fbf0df4c",
+            "PATH": "d9f2e47de92bac9d",
+            "PIPX_BIN_DIR": "9ba4f54eb098394a",
+            "PIPX_HOME": "aa57010a38327b23",
+            "POWERSHELL_DISTRIBUTION_CHANNEL": "fae424fd0c4f84f6",
+            "PSModulePath": "61c7aa79c46b28e4",
+            "PWD": "d10122a7d55cc72c",
+            "Q": "ca9f307d738f5512",
+            "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
+            "RUNNER_ENVIRONMENT": "ac592027e68479fc",
+            "RUNNER_NAME": "e4f6459165fa24d6",
+            "RUNNER_OS": "4828e60247c1636f",
+            "RUNNER_TEMP": "a9fd2b6f1129349e",
+            "RUNNER_TOOL_CACHE": "40963d3114e769b6",
+            "RUNNER_TRACKING_ID": "4eac367709934dda",
+            "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
+            "SELENIUM_JAR_PATH": "15f9049d64d77584",
+            "SGX_AESM_ADDR": "6b86b273ff34fce1",
+            "SHELL": "b1fd29aea4dad2af",
+            "SHLVL": "6b86b273ff34fce1",
+            "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
+            "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
+            "SIL_SOURCE_REVISION": "680498987808e5b0",
+            "SWIFT_PATH": "fb8c6698dca20671",
+            "SYSTEMD_EXEC_PID": "374224fbb80782ef",
+            "TMPDIR": "c93abdaab0147fef",
+            "USER": "527aa9f431539da8",
+            "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
+            "UV_CACHE_DIR": "b94adbc135302640",
+            "VCPKG_INSTALLATION_ROOT": "50906157014ea796",
+            "XDG_CONFIG_HOME": "e2ff4a7c39c2d65a",
+            "XDG_RUNTIME_DIR": "57f2ee9cc4db14db",
+            "_": "848514551c4ea810"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nTraceback (most recent call last):\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 297, in run\n    send({\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py\", line 125, in <module>\n    main()\n  File \"/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py\", line 121, in main\n    run(Probe(parser.parse_args()))\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 302, in run\n    send({\"op\": \"fail\", \"reason\": _reason(e)})\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\nException ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns\n",
+      "stdout_tail": "profile: prof/profile.json\nrun: run_failure, exit code 1\ncapture: cpu, complete\nmanifest: /home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/deadline.json (86fd33fd633f315f0bd888d616f9bf63dfa53901f1d9004934863710c03e087e)\nsil: 0.2.1, c9a03c17ceac5194def0587abddf2f63af3550a0\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 470, weight 470.470 ms of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 6 with samples\nsymbols: function names for 241 of 470 samples; source lines unavailable (debug_file_not_found)\nmodules: 5 of 29 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nlimitations: cpu_samples_estimate_on_cpu_time, user_space_only, scope_is_runner_and_descendants, host_build_only\ntop self weight (share of all sample weight):\n   30.4%  [unknown function] (python3.12)\n   26.6%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n   14.3%  [unknown function] (EgoMotion.so)\n    6.6%  _PyEval_EvalFrameDefault (python3.12)\n    2.6%  PyObject_Malloc (python3.12)\n    2.3%  [unknown function] (libc.so.6)\n    1.7%  _Py_hashtable_get (python3.12)\n    1.3%  PyObject_Free (python3.12)\n    0.9%  _PyCode_New (python3.12)\n    0.9%  [unknown function] (libcrypto.so.3)\n   12.6%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3908
+    },
+    {
+      "action": {
+        "probe_started": true,
+        "signal": "SIGINT"
+      },
+      "argv": [
+        "sil",
+        "profile",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/long.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--activations",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "0000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nsil-run-diagnostics: run interrupted by SIGINT\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status interrupted",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 1,
+            "failure": {
+              "category": "interrupted",
+              "message": "run interrupted by SIGINT"
+            },
+            "signal": null,
+            "status": "interrupted",
+            "supervisor_signal": 2
+          },
+          "ok": true
+        },
+        {
+          "check": "capture interrupted",
+          "detail": [
+            "interrupted"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "raw perf.data kept",
+          "detail": null,
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-interrupted",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "cpu-interrupted",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "activation/correlation.json": 90595,
+          "activation/observations.jsonl": 60011,
+          "cpu/perf-buildid-cache.stderr.txt": 0,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 0,
+          "cpu/perf.data": 10002344,
+          "cpu/samples.json": 172106,
+          "profile.json": 70440,
+          "run.diagnostics.json": 33490,
+          "run.mcap": 49863,
+          "run.mcap.failure.json": 208,
+          "run.mcap.provenance.json": 3356
+        },
+        "capture": [
+          "interrupted",
+          [
+            "interrupted"
+          ]
+        ],
+        "correlation": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "activation/observations.jsonl": "8f323f61a46098f9bd66188e0a6b324e4a337c30f78cb4d5f12027a233b236e3",
+          "cpu/perf.data": "d1ea4bdc5a956ac97baf7dc12ee206517f76a4adf5eab6c0907c178c09f63eaf",
+          "run.mcap": "e038d2aa1b55d66ac7d7a3c1af97bbda2316c966c589812b4e0e2189bc3322a0"
+        },
+        "run": "interrupted",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 1174,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 861,
+          "samples_with_caller": 365,
+          "unavailable": {},
+          "weight_ns": 1175175174
+        },
+        "wall_ms": 3038
+      },
+      "participants_started": [
+        "fmu-14216.tsv",
+        "probe-14221.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py",
+            "--sleep-every-step-ms",
+            "40"
+          ],
+          "environment": {
+            "ACCEPT_EULA": "18f5384d58bcb1bb",
+            "ACTIONS_ORCHESTRATION_ID": "71db7b5ea4bddad1",
+            "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
+            "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
+            "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
+            "ANDROID_HOME": "e507a12011d2294b",
+            "ANDROID_NDK": "fa2c5ab6b942d244",
+            "ANDROID_NDK_HOME": "fa2c5ab6b942d244",
+            "ANDROID_NDK_LATEST_HOME": "0acc37f53069db75",
+            "ANDROID_NDK_ROOT": "fa2c5ab6b942d244",
+            "ANDROID_SDK_ROOT": "e507a12011d2294b",
+            "ANT_HOME": "e95496397e98130a",
+            "AZURE_EXTENSION_DIR": "78b3ec8b79173c8d",
+            "BOOTSTRAP_HASKELL_NONINTERACTIVE": "6b86b273ff34fce1",
+            "CHROMEWEBDRIVER": "e4279f084798caf9",
+            "CHROME_BIN": "3c9b42ef6def3761",
+            "CI": "b5bea41b6c623f7c",
+            "CONDA": "51ae8eb5543eea37",
+            "DEBIAN_FRONTEND": "c73ccf8def7006f3",
+            "DOTNET_MULTILEVEL_LOOKUP": "5feceb66ffc86f38",
+            "DOTNET_NOLOGO": "6b86b273ff34fce1",
+            "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "6b86b273ff34fce1",
+            "EDGEWEBDRIVER": "3c20c50ef44fa0ee",
+            "ENABLE_RUNNER_TRACING": "b5bea41b6c623f7c",
+            "EVIDENCE": "757ce4a95163abc8",
+            "GECKOWEBDRIVER": "84bc9499d87644dd",
+            "GHCUP_INSTALL_BASE_PREFIX": "0885fcf5b23ee3ef",
+            "GITHUB_ACTION": "b88980b1e4318a45",
+            "GITHUB_ACTIONS": "b5bea41b6c623f7c",
+            "GITHUB_ACTION_REF": "e3b0c44298fc1c14",
+            "GITHUB_ACTION_REPOSITORY": "e3b0c44298fc1c14",
+            "GITHUB_ACTOR": "6f72f03e9527d036",
+            "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
+            "GITHUB_API_URL": "b2fd47bfbc5a4de1",
+            "GITHUB_ARTIFACTS": "0b11a18e05d7d173",
+            "GITHUB_ARTIFACTS_LIST": "c33be2af0ab63dbc",
+            "GITHUB_BASE_REF": "15ded80916997446",
+            "GITHUB_ENV": "265ddee1e51ae382",
+            "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
+            "GITHUB_EVENT_PATH": "02503339a55110de",
+            "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
+            "GITHUB_HEAD_REF": "a1ede3db9057a904",
+            "GITHUB_JOB": "e48cfe4f6f37ec01",
+            "GITHUB_OUTPUT": "06e9075cf476bd4b",
+            "GITHUB_PATH": "0fa6ed055b3d8e4d",
+            "GITHUB_REF": "5bd79fb5da0e28c5",
+            "GITHUB_REF_NAME": "8993c575f3356612",
+            "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
+            "GITHUB_REF_TYPE": "f38c764c8aa00b65",
+            "GITHUB_REPOSITORY": "d9af7d8d741acc92",
+            "GITHUB_REPOSITORY_ID": "60912c5df723bae4",
+            "GITHUB_REPOSITORY_OWNER": "6f72f03e9527d036",
+            "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
+            "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
+            "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
+            "GITHUB_RUN_ID": "26bc1a51cbd1da5d",
+            "GITHUB_RUN_NUMBER": "6b51d431df5d7f14",
+            "GITHUB_SERVER_URL": "996e1f714b08e971",
+            "GITHUB_SHA": "82cbdf4df96e15a6",
+            "GITHUB_STATE": "e2a4d615fde545ff",
+            "GITHUB_STEP_SUMMARY": "eb5465cb4a28c0ca",
+            "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
+            "GITHUB_WORKFLOW": "423b805186b0a246",
+            "GITHUB_WORKFLOW_REF": "e5870f4c390b33c3",
+            "GITHUB_WORKFLOW_SHA": "82cbdf4df96e15a6",
+            "GITHUB_WORKSPACE": "d10122a7d55cc72c",
+            "GOROOT_1_24_X64": "dad7e7c7884916c8",
+            "GOROOT_1_25_X64": "4de37c06a108f1d7",
+            "GOROOT_1_26_X64": "6c8c1a18945b3f25",
+            "GRADLE_HOME": "1421d02e730fe96d",
+            "HCA_CLOUD_PROVIDER": "79f43c3b9c23fbdf",
+            "HOME": "b1cbc5f347543a03",
+            "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
+            "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
+            "INVOCATION_ID": "11c9b575105d7ac8",
+            "ImageOS": "1a6338a16abf65e3",
+            "ImageVersion": "ced8a89c6b2a78f6",
+            "JAVA_HOME": "9b2eaca78448dd7a",
+            "JAVA_HOME_11_X64": "1ec0fc371ce27771",
+            "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
+            "JAVA_HOME_21_X64": "c701517cd1ca359a",
+            "JAVA_HOME_25_X64": "3331df6d48d9ba51",
+            "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
+            "JOURNAL_STREAM": "a2b14c7008d82a44",
+            "LANG": "99fed2d548c2eb10",
+            "LOGNAME": "527aa9f431539da8",
+            "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
+            "MEMORY_PRESSURE_WRITE": "8eb3235eca7e3191",
+            "NVM_DIR": "f1c14865fbf0df4c",
+            "PATH": "d9f2e47de92bac9d",
+            "PIPX_BIN_DIR": "9ba4f54eb098394a",
+            "PIPX_HOME": "aa57010a38327b23",
+            "POWERSHELL_DISTRIBUTION_CHANNEL": "fae424fd0c4f84f6",
+            "PSModulePath": "61c7aa79c46b28e4",
+            "PWD": "d10122a7d55cc72c",
+            "Q": "ca9f307d738f5512",
+            "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
+            "RUNNER_ENVIRONMENT": "ac592027e68479fc",
+            "RUNNER_NAME": "e4f6459165fa24d6",
+            "RUNNER_OS": "4828e60247c1636f",
+            "RUNNER_TEMP": "a9fd2b6f1129349e",
+            "RUNNER_TOOL_CACHE": "40963d3114e769b6",
+            "RUNNER_TRACKING_ID": "4eac367709934dda",
+            "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
+            "SELENIUM_JAR_PATH": "15f9049d64d77584",
+            "SGX_AESM_ADDR": "6b86b273ff34fce1",
+            "SHELL": "b1fd29aea4dad2af",
+            "SHLVL": "6b86b273ff34fce1",
+            "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
+            "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
+            "SIL_SOURCE_REVISION": "680498987808e5b0",
+            "SWIFT_PATH": "fb8c6698dca20671",
+            "SYSTEMD_EXEC_PID": "374224fbb80782ef",
+            "TMPDIR": "c93abdaab0147fef",
+            "USER": "527aa9f431539da8",
+            "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
+            "UV_CACHE_DIR": "b94adbc135302640",
+            "VCPKG_INSTALLATION_ROOT": "50906157014ea796",
+            "XDG_CONFIG_HOME": "e2ff4a7c39c2d65a",
+            "XDG_RUNTIME_DIR": "57f2ee9cc4db14db",
+            "_": "848514551c4ea810"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nsil-run-diagnostics: run interrupted by SIGINT\n",
+      "stdout_tail": "profile: prof/profile.json\nrun: interrupted, exit code 1\ncapture: cpu, interrupted (interrupted)\nmanifest: /home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/long.json (d029c00d978c0f9d2fd13fdc9122e4c2593b34a74cdb8c086a52e52940b63401)\nsil: 0.2.1, c9a03c17ceac5194def0587abddf2f63af3550a0\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 1174, weight 1.175 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 5 with samples\nsymbols: function names for 313 of 1174 samples; source lines unavailable (debug_file_not_found)\nmodules: 5 of 29 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 1174 samples: 5 in an Activation's execution context (runner thread), 822 in a Process Step window (associated, not proven to be Step work), 126 lifecycle, 0 Replay, 221 unattributed\n  79 Activations have no sample: that is not evidence that they used no CPU time\nlimitations: cpu_samples_estimate_on_cpu_time, user_space_only, scope_is_runner_and_descendants, host_build_only\ntop self weight (share of all sample weight):\n   58.1%  [unknown function] (EgoMotion.so)\n   13.9%  [unknown function] (python3.12)\n   10.6%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    5.2%  _PyEval_EvalFrameDefault (python3.12)\n    1.9%  PyObject_Malloc (python3.12)\n    1.4%  PyObject_Free (python3.12)\n    0.9%  PyErr_CheckSignals (python3.12)\n    0.8%  [unknown function] (libc.so.6)\n    0.7%  _Py_hashtable_get (python3.12)\n    0.5%  PyThread_get_thread_ident (python3.12)\n    6.0%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3038
+    },
+    {
+      "action": {
+        "found": 1,
+        "killed": "perf record",
+        "probe_started": true
+      },
+      "argv": [
+        "sil",
+        "profile",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/long.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "00000000c00000001000000\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500480000 ns 200000000c00000001000000\nobserver: 1520000000 ns event 1500480000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 200000000c00000001000000\nsil run: stopped copying the Run's stderr: a process that outlived the runner still holds it open\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture failed",
+          "detail": [
+            "backend_failed",
+            "export_failed"
+          ],
+          "ok": true
+        },
+        {
+          "check": "capture reasons include ['backend_failed']",
+          "detail": [
+            "backend_failed",
+            "export_failed"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-collector-killed",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "cpu-collector-killed",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "cpu/perf-buildid-cache.stderr.txt": 0,
+          "cpu/perf-script.stderr.txt": 222,
+          "cpu/perf-srcline.stderr.txt": 222,
+          "cpu/perf.data": 9812744,
+          "profile.json": 5294,
+          "run.diagnostics.json": 43130,
+          "run.mcap": 158648,
+          "run.mcap.provenance.json": 3356
+        },
+        "capture": [
+          "failed",
+          [
+            "backend_failed",
+            "export_failed"
+          ]
+        ],
+        "raw_sha256": {
+          "cpu/perf.data": "c4af05ca5fb84c3d0859380c3abf26163c539b5e9d7f675cc3ad5b431c34f451",
+          "run.mcap": "2564c61167f13996b9f15b2a3523283b464eea889ca8a4ebfc248955e2851c05"
+        },
+        "run": "succeeded",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": null,
+          "samples": 0,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 0,
+          "samples_with_caller": 0,
+          "unavailable": {
+            "lost_samples": "export_failed"
+          },
+          "weight_ns": 0
+        },
+        "wall_ms": 7570
+      },
+      "participants_started": [
+        "fmu-14252.tsv",
+        "probe-14257.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py",
+            "--sleep-every-step-ms",
+            "40"
+          ],
+          "environment": {
+            "ACCEPT_EULA": "18f5384d58bcb1bb",
+            "ACTIONS_ORCHESTRATION_ID": "71db7b5ea4bddad1",
+            "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
+            "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
+            "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
+            "ANDROID_HOME": "e507a12011d2294b",
+            "ANDROID_NDK": "fa2c5ab6b942d244",
+            "ANDROID_NDK_HOME": "fa2c5ab6b942d244",
+            "ANDROID_NDK_LATEST_HOME": "0acc37f53069db75",
+            "ANDROID_NDK_ROOT": "fa2c5ab6b942d244",
+            "ANDROID_SDK_ROOT": "e507a12011d2294b",
+            "ANT_HOME": "e95496397e98130a",
+            "AZURE_EXTENSION_DIR": "78b3ec8b79173c8d",
+            "BOOTSTRAP_HASKELL_NONINTERACTIVE": "6b86b273ff34fce1",
+            "CHROMEWEBDRIVER": "e4279f084798caf9",
+            "CHROME_BIN": "3c9b42ef6def3761",
+            "CI": "b5bea41b6c623f7c",
+            "CONDA": "51ae8eb5543eea37",
+            "DEBIAN_FRONTEND": "c73ccf8def7006f3",
+            "DOTNET_MULTILEVEL_LOOKUP": "5feceb66ffc86f38",
+            "DOTNET_NOLOGO": "6b86b273ff34fce1",
+            "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "6b86b273ff34fce1",
+            "EDGEWEBDRIVER": "3c20c50ef44fa0ee",
+            "ENABLE_RUNNER_TRACING": "b5bea41b6c623f7c",
+            "EVIDENCE": "757ce4a95163abc8",
+            "GECKOWEBDRIVER": "84bc9499d87644dd",
+            "GHCUP_INSTALL_BASE_PREFIX": "0885fcf5b23ee3ef",
+            "GITHUB_ACTION": "b88980b1e4318a45",
+            "GITHUB_ACTIONS": "b5bea41b6c623f7c",
+            "GITHUB_ACTION_REF": "e3b0c44298fc1c14",
+            "GITHUB_ACTION_REPOSITORY": "e3b0c44298fc1c14",
+            "GITHUB_ACTOR": "6f72f03e9527d036",
+            "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
+            "GITHUB_API_URL": "b2fd47bfbc5a4de1",
+            "GITHUB_ARTIFACTS": "0b11a18e05d7d173",
+            "GITHUB_ARTIFACTS_LIST": "c33be2af0ab63dbc",
+            "GITHUB_BASE_REF": "15ded80916997446",
+            "GITHUB_ENV": "265ddee1e51ae382",
+            "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
+            "GITHUB_EVENT_PATH": "02503339a55110de",
+            "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
+            "GITHUB_HEAD_REF": "a1ede3db9057a904",
+            "GITHUB_JOB": "e48cfe4f6f37ec01",
+            "GITHUB_OUTPUT": "06e9075cf476bd4b",
+            "GITHUB_PATH": "0fa6ed055b3d8e4d",
+            "GITHUB_REF": "5bd79fb5da0e28c5",
+            "GITHUB_REF_NAME": "8993c575f3356612",
+            "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
+            "GITHUB_REF_TYPE": "f38c764c8aa00b65",
+            "GITHUB_REPOSITORY": "d9af7d8d741acc92",
+            "GITHUB_REPOSITORY_ID": "60912c5df723bae4",
+            "GITHUB_REPOSITORY_OWNER": "6f72f03e9527d036",
+            "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
+            "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
+            "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
+            "GITHUB_RUN_ID": "26bc1a51cbd1da5d",
+            "GITHUB_RUN_NUMBER": "6b51d431df5d7f14",
+            "GITHUB_SERVER_URL": "996e1f714b08e971",
+            "GITHUB_SHA": "82cbdf4df96e15a6",
+            "GITHUB_STATE": "e2a4d615fde545ff",
+            "GITHUB_STEP_SUMMARY": "eb5465cb4a28c0ca",
+            "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
+            "GITHUB_WORKFLOW": "423b805186b0a246",
+            "GITHUB_WORKFLOW_REF": "e5870f4c390b33c3",
+            "GITHUB_WORKFLOW_SHA": "82cbdf4df96e15a6",
+            "GITHUB_WORKSPACE": "d10122a7d55cc72c",
+            "GOROOT_1_24_X64": "dad7e7c7884916c8",
+            "GOROOT_1_25_X64": "4de37c06a108f1d7",
+            "GOROOT_1_26_X64": "6c8c1a18945b3f25",
+            "GRADLE_HOME": "1421d02e730fe96d",
+            "HCA_CLOUD_PROVIDER": "79f43c3b9c23fbdf",
+            "HOME": "b1cbc5f347543a03",
+            "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
+            "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
+            "INVOCATION_ID": "11c9b575105d7ac8",
+            "ImageOS": "1a6338a16abf65e3",
+            "ImageVersion": "ced8a89c6b2a78f6",
+            "JAVA_HOME": "9b2eaca78448dd7a",
+            "JAVA_HOME_11_X64": "1ec0fc371ce27771",
+            "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
+            "JAVA_HOME_21_X64": "c701517cd1ca359a",
+            "JAVA_HOME_25_X64": "3331df6d48d9ba51",
+            "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
+            "JOURNAL_STREAM": "a2b14c7008d82a44",
+            "LANG": "99fed2d548c2eb10",
+            "LOGNAME": "527aa9f431539da8",
+            "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
+            "MEMORY_PRESSURE_WRITE": "8eb3235eca7e3191",
+            "NVM_DIR": "f1c14865fbf0df4c",
+            "PATH": "d9f2e47de92bac9d",
+            "PIPX_BIN_DIR": "9ba4f54eb098394a",
+            "PIPX_HOME": "aa57010a38327b23",
+            "POWERSHELL_DISTRIBUTION_CHANNEL": "fae424fd0c4f84f6",
+            "PSModulePath": "61c7aa79c46b28e4",
+            "PWD": "d10122a7d55cc72c",
+            "Q": "ca9f307d738f5512",
+            "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
+            "RUNNER_ENVIRONMENT": "ac592027e68479fc",
+            "RUNNER_NAME": "e4f6459165fa24d6",
+            "RUNNER_OS": "4828e60247c1636f",
+            "RUNNER_TEMP": "a9fd2b6f1129349e",
+            "RUNNER_TOOL_CACHE": "40963d3114e769b6",
+            "RUNNER_TRACKING_ID": "4eac367709934dda",
+            "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
+            "SELENIUM_JAR_PATH": "15f9049d64d77584",
+            "SGX_AESM_ADDR": "6b86b273ff34fce1",
+            "SHELL": "b1fd29aea4dad2af",
+            "SHLVL": "6b86b273ff34fce1",
+            "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
+            "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
+            "SIL_SOURCE_REVISION": "680498987808e5b0",
+            "SWIFT_PATH": "fb8c6698dca20671",
+            "SYSTEMD_EXEC_PID": "374224fbb80782ef",
+            "TMPDIR": "c93abdaab0147fef",
+            "USER": "527aa9f431539da8",
+            "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
+            "UV_CACHE_DIR": "b94adbc135302640",
+            "VCPKG_INSTALLATION_ROOT": "50906157014ea796",
+            "XDG_CONFIG_HOME": "e2ff4a7c39c2d65a",
+            "XDG_RUNTIME_DIR": "57f2ee9cc4db14db",
+            "_": "848514551c4ea810"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\nobserver: 1200000000 ns event 1200000000 ns 1000000014000000010000000000040001020304\nobserver: 1200000000 ns event 1200000000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200480000 ns 200000000c00000001000000\nobserver: 1220000000 ns event 1200480000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200960000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200960000 ns 200000000c00000001000000\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500480000 ns 200000000c00000001000000\nobserver: 1520000000 ns event 1500480000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 200000000c00000001000000\nsil run: stopped copying the Run's stderr: a process that outlived the runner still holds it open\n",
+      "stdout_tail": "manifest_hash d029c00d978c0f9d2fd13fdc9122e4c2593b34a74cdb8c086a52e52940b63401\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, failed (backend_failed, export_failed)\nmanifest: /home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/long.json (d029c00d978c0f9d2fd13fdc9122e4c2593b34a74cdb8c086a52e52940b63401)\nsil: 0.2.1, c9a03c17ceac5194def0587abddf2f63af3550a0\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 0, weight 0 ns of sampled on-CPU time (an estimate, not a duration); lost unknown\nno sample: this is not evidence that no CPU time was used\nprocesses: 0 observed, 0 with samples\nsymbols: function names for 0 of 0 samples; source lines unavailable (export_failed)\nlimitations: cpu_samples_estimate_on_cpu_time, user_space_only, scope_is_runner_and_descendants, host_build_only\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 7570
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--max-capture-bytes",
+        "2000000",
+        "--modules-from",
+        "/home/runner/work/_temp/work-native/workload/main/EgoMotion.fmu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture partial",
+          "detail": [
+            "capture_limit_reached"
+          ],
+          "ok": true
+        },
+        {
+          "check": "capture reasons include ['capture_limit_reached']",
+          "detail": [
+            "capture_limit_reached"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-capture-limit",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "cpu-capture-limit",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-capture-limit/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/elf": 27312,
+          "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-capture-limit/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/probes": 0,
+          "cpu/perf-buildid-cache.stderr.txt": 216,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 0,
+          "cpu/perf.data": 2255192,
+          "cpu/samples.json": 79998,
+          "profile.json": 56343,
+          "run.diagnostics.json": 23634,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2541
+        },
+        "capture": [
+          "partial",
+          [
+            "capture_limit_reached"
+          ]
+        ],
+        "raw_sha256": {
+          "cpu/perf.data": "64bc887cb7a5b5100751f03fd3e317ac87c7d8e60a319a3bc7144253a98a21fa",
+          "run.mcap": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+        },
+        "run": "succeeded",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 260,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 64,
+          "samples_with_caller": 197,
+          "unavailable": {},
+          "weight_ns": 260260260
+        },
+        "wall_ms": 3167
+      },
+      "participants_started": [
+        "child-14297.tsv",
+        "child-14298.tsv",
+        "child-14299.tsv",
+        "child-14300.tsv",
+        "fmu-14294.tsv",
+        "native-14293.tsv",
+        "process-14296.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, partial (capture_limit_reached)\nmanifest: /home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json (2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a)\nsil: 0.2.1, c9a03c17ceac5194def0587abddf2f63af3550a0\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 260, weight 260.260 ms of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 6 observed, 4 with samples\nsymbols: function names for 196 of 260 samples; source lines for 87 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nlimitations: cpu_samples_estimate_on_cpu_time, user_space_only, scope_is_runner_and_descendants, host_build_only\ntop self weight (share of all sample weight):\n   24.2%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n   20.0%  [unknown function] (python3.12)\n   19.6%  silproof_child_spin (silproof_child)\n    4.6%  silproof_process_spin (libsilproof_process.so)\n    4.6%  _PyEval_EvalFrameDefault (python3.12)\n    3.1%  silproof_fmu_spin (EgoMotion.so)\n    3.1%  silproof_native_spin_even (libsilproof_native.so)\n    3.1%  silproof_native_spin_odd (libsilproof_native.so)\n    2.3%  [unknown function] (libc.so.6)\n    1.9%  PyObject_Malloc (python3.12)\n   13.5%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3167
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--activations",
+        "--max-activation-bytes",
+        "4096",
+        "--modules-from",
+        "/home/runner/work/_temp/work-native/workload/main/EgoMotion.fmu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "correlation partial, stream truncated",
+          "detail": [
+            "partial",
+            [
+              "observations_truncated"
+            ]
+          ],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-activation-limit",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "cpu-activation-limit",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "activation/correlation.json": 115851,
+          "activation/observations.jsonl": 4052,
+          "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-activation-limit/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/elf": 27312,
+          "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-activation-limit/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/probes": 0,
+          "cpu/perf-buildid-cache.stderr.txt": 219,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 0,
+          "cpu/perf.data": 23039920,
+          "cpu/samples.json": 189115,
+          "profile.json": 67430,
+          "run.diagnostics.json": 23641,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2541
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "correlation": [
+          "partial",
+          [
+            "observations_truncated"
+          ]
+        ],
+        "raw_sha256": {
+          "activation/observations.jsonl": "a18cf4030bb3c50fcbfe0753605c65387ef3e9e112914f97c212f9775b977c33",
+          "cpu/perf.data": "7d1a60c44cb6774b4bcf0b47011a30d85684f7b645c2920c6406a6caf73976eb",
+          "run.mcap": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
+        },
+        "run": "succeeded",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 2721,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 83,
+          "samples_with_caller": 2658,
+          "unavailable": {},
+          "weight_ns": 2723723721
+        },
+        "wall_ms": 4064
+      },
+      "participants_started": [
+        "child-14348.tsv",
+        "child-14349.tsv",
+        "child-14350.tsv",
+        "child-14351.tsv",
+        "fmu-14345.tsv",
+        "native-14344.tsv",
+        "process-14347.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nmanifest: /home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json (2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a)\nsil: 0.2.1, c9a03c17ceac5194def0587abddf2f63af3550a0\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2721, weight 2.724 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 2638 of 2721 samples; source lines for 2512 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: partial (observations_truncated)\n  of 2721 samples: 47 in an Activation's execution context (runner thread), 134 in a Process Step window (associated, not proven to be Step work), 62 lifecycle, 0 Replay, 2478 unattributed\nlimitations: cpu_samples_estimate_on_cpu_time, user_space_only, scope_is_runner_and_descendants, host_build_only\ntop self weight (share of all sample weight):\n   28.5%  silproof_process_spin (libsilproof_process.so)\n   28.2%  silproof_fmu_spin (EgoMotion.so)\n   14.1%  silproof_native_spin_even (libsilproof_native.so)\n   14.1%  silproof_native_spin_odd (libsilproof_native.so)\n    7.4%  silproof_child_spin (silproof_child)\n    2.8%  [unknown function] (python3.12)\n    2.3%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    0.6%  _PyEval_EvalFrameDefault (python3.12)\n    0.3%  PyObject_Malloc (python3.12)\n    0.2%  [unknown function] (libc.so.6)\n    1.7%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 4064
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json",
+        "--out",
+        "/mnt/sil-small/storage-exhausted-cpu",
+        "--collector",
+        "cpu",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "command ends, not exit 0",
+          "detail": [
+            1,
+            "sil profile: warning: '/mnt/sil-small/storage-exhausted-cpu/cpu' has 12582912 bytes free, less than --max-capture-bytes 1073741824 plus the reserve of 8388608 bytes for the reports; the capture stops when the free space falls below the reserve\n"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "the Run goes on: Recording equals the ordinary Run",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "profile.json keeps the Run outcome",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture not complete, reserve reached",
+          "detail": [
+            "storage_reserve_reached"
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/storage-exhausted-cpu",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "storage-exhausted-cpu",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "capture": [
+          "partial",
+          [
+            "storage_reserve_reached"
+          ]
+        ],
+        "exit_code": 1,
+        "profile_written": true,
+        "recording_equals_ordinary": true,
+        "run": {
+          "diagnostics_report": "run.diagnostics.json",
+          "exit_code": 0,
+          "failure": null,
+          "signal": null,
+          "status": "succeeded",
+          "supervisor_signal": null
+        },
+        "small_bytes": {
+          "cpu/perf-buildid-cache.stderr.txt": 0,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 0,
+          "cpu/perf.data": 5504736,
+          "cpu/samples.json": 92801,
+          "profile.json": 54488,
+          "run.diagnostics.json": 23625
+        },
+        "wall_ms": 3254
+      },
+      "participants_started": [
+        "child-14399.tsv",
+        "child-14400.tsv",
+        "child-14401.tsv",
+        "child-14402.tsv",
+        "fmu-14396.tsv",
+        "native-14395.tsv",
+        "process-14398.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "sil profile: warning: '/mnt/sil-small/storage-exhausted-cpu/cpu' has 12582912 bytes free, less than --max-capture-bytes 1073741824 plus the reserve of 8388608 bytes for the reports; the capture stops when the free space falls below the reserve\n",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: /mnt/sil-small/storage-exhausted-cpu/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, partial (storage_reserve_reached)\nmanifest: /home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json (2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a)\nsil: 0.2.1, c9a03c17ceac5194def0587abddf2f63af3550a0\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 645, weight 645.646 ms of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 6 observed, 4 with samples\nsymbols: function names for 447 of 645 samples; source lines for 337 (leaf frames)\nmodules: 2 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nlimitations: cpu_samples_estimate_on_cpu_time, user_space_only, scope_is_runner_and_descendants, host_build_only\ntop self weight (share of all sample weight):\n   22.2%  silproof_process_spin (libsilproof_process.so)\n   21.4%  [unknown function] (EgoMotion.so)\n   11.8%  silproof_native_spin_even (libsilproof_native.so)\n   10.5%  silproof_native_spin_odd (libsilproof_native.so)\n    9.6%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    8.2%  [unknown function] (python3.12)\n    7.8%  silproof_child_spin (silproof_child)\n    2.6%  _PyEval_EvalFrameDefault (python3.12)\n    0.6%  PyObject_Malloc (python3.12)\n    0.6%  _PyDict_GetItem_KnownHash (python3.12)\n    4.7%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3254
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json",
+        "--out",
+        "/mnt/sil-small/storage-exhausted-heap",
+        "--collector",
+        "heap",
+        "--runner",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "command ends, not exit 0",
+          "detail": [
+            1,
+            "sil profile: warning: '/mnt/sil-small/storage-exhausted-heap/heap' has 8454144 bytes free, less than --max-capture-bytes 268435456 plus the reserve of 8388608 bytes for the reports; the capture stops when the free space falls below the reserve\nsil profile: the free space of '/mnt/sil-small/storage-exhausted-heap/heap' is below the reserve for the reports; the rest of the data is dropped\n"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "the Run goes on: Recording equals the ordinary Run",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "profile.json keeps the Run outcome",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture not complete, reserve reached",
+          "detail": [
+            "storage_reserve_reached"
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/storage-exhausted-heap",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "storage-exhausted-heap",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "capture": [
+          "partial",
+          [
+            "storage_reserve_reached"
+          ]
+        ],
+        "exit_code": 1,
+        "profile_written": true,
+        "recording_equals_ordinary": true,
+        "run": {
+          "diagnostics_report": "run.diagnostics.json",
+          "exit_code": 0,
+          "failure": null,
+          "signal": null,
+          "status": "succeeded",
+          "supervisor_signal": null
+        },
+        "small_bytes": {
+          "heap/allocations.json": 45605,
+          "heap/heaptrack.data": 63474,
+          "heap/interpret.stderr.txt": 102,
+          "heap/launch-adapter.sh": 453,
+          "profile.json": 7775,
+          "run.diagnostics.json": 23616
+        },
+        "wall_ms": 2925
+      },
+      "participants_started": [
+        "child-14448.tsv",
+        "child-14449.tsv",
+        "child-14450.tsv",
+        "child-14451.tsv",
+        "fmu-14445.tsv",
+        "native-14443.tsv",
+        "process-14447.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "sil profile: warning: '/mnt/sil-small/storage-exhausted-heap/heap' has 8454144 bytes free, less than --max-capture-bytes 268435456 plus the reserve of 8388608 bytes for the reports; the capture stops when the free space falls below the reserve\nsil profile: the free space of '/mnt/sil-small/storage-exhausted-heap/heap' is below the reserve for the reports; the rest of the data is dropped\n",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: /mnt/sil-small/storage-exhausted-heap/profile.json\nrun: succeeded, exit code 0\ncapture: heap, partial (storage_reserve_reached)\nmanifest: /home/runner/work/_temp/work-native/runs/native-paranoid-2/manifests/main.json (2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a)\nsil: 0.2.1, c9a03c17ceac5194def0587abddf2f63af3550a0\nscope: the runner process (every Native participant), heaptrack 1.5.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 952 calls, 270.541 KiB allocated; 14 temporary\nat capture end: 147 outstanding, 87.197 KiB (not a leak verdict); peak tracked heap 99.421 KiB (not RSS)\nsymbols: 952 of 952 allocations have no function name\nlimitations: heap_tracks_allocation_calls_only, outstanding_is_not_a_leak_verdict, allocation_origin_is_not_ownership, activation_correlation_unavailable, host_build_only\ntop allocation sites (innermost frame, bytes allocated):\n  252.980 KiB       923 calls  [unknown function] (libstdc++.so.6)\n  17.561 KiB        29 calls  [unknown function] (libc.so.6)\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 2925
+    }
+  ]
+}

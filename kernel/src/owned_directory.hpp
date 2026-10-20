@@ -29,6 +29,15 @@ class OwnedDirectory {
                                      const std::string &name,
                                      std::string &error);
 
+#ifdef SIL_RUN_DIAGNOSTICS
+  // Diagnostics runner only (#315): the next directory made by create_unique
+  // is moved to `target` when it is released, instead of removed, so a
+  // profiler can capture modules loaded from it. Its children are then not
+  // removed one by one; they move with it. If the move fails, the tree is
+  // removed as without retention.
+  static void retain_next_unique_at(const std::filesystem::path &target);
+#endif
+
   explicit operator bool() const { return !path_.empty(); }
   const std::filesystem::path &path() const { return path_; }
 
@@ -36,6 +45,7 @@ class OwnedDirectory {
   void release() noexcept;
 
   std::filesystem::path path_;
+  bool retained_ = false;  // moves to the retention target on release
 };
 
 }  // namespace sil

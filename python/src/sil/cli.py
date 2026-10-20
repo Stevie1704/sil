@@ -77,11 +77,28 @@ class RunCommand:
 
 
 @dataclass(frozen=True)
+class ProfileCommand:
+    """`sil profile`: a capture, or `sil profile render` of a saved one.
+
+    A Manifest named `render` is still a capture as `./render`."""
+
+    capture: ModuleCommand
+    render: ModuleCommand
+    summary: str
+
+    def run(self, path: str, arguments: list[str]) -> int:
+        if arguments[:1] == ["render"]:
+            return self.render.run(f"{path} render", arguments[1:])
+        return self.capture.run(path, arguments)
+
+
+@dataclass(frozen=True)
 class Group:
     """Subcommands that belong together, under one name."""
 
     summary: str
-    commands: dict[str, ModuleCommand | NativeCommand | RunCommand | Group]
+    commands: dict[str, ModuleCommand | NativeCommand | RunCommand
+                   | ProfileCommand | Group]
 
 
 ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
@@ -107,6 +124,11 @@ ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
     "benchmark": ModuleCommand("sil.benchmark",
                                "repeat fresh diagnostics Runs of a Manifest "
                                "and summarize them"),
+    "profile": ProfileCommand(
+        ModuleCommand("sil.profile_run", ""),
+        ModuleCommand("sil.profile_render", ""),
+        "capture a CPU (Linux perf) or heap (Heaptrack) profile of one "
+        "fresh Run; 'sil profile render' presents a saved one"),
     "diagnostics": Group("present saved diagnostics reports", {
         "render": ModuleCommand("sil.diagnostics_render",
                                 "write the standalone HTML report of a "

@@ -562,6 +562,7 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     (void)fcntl(group_ready[0], F_SETFD, FD_CLOEXEC);
     (void)fcntl(group_ready[1], F_SETFD, FD_CLOEXEC);
 
+    const diagnostics::SpawnTime forked;
     pid_ = fork();
     if (pid_ < 0)
       throw failure(FailureCategory::Spawn,
@@ -592,6 +593,10 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
       }
       if (shimmed) inject_shim_env();
       std::vector<char *> argv;
+      // A profiler's launch adapter (sil-run-diagnostics only; null in
+      // sil-run). It execs the command, so the PID stays this child's.
+      if (const std::string *wrapper = diagnostics::launch_wrapper(name))
+        argv.push_back(const_cast<char *>(wrapper->c_str()));
       for (const std::string &arg : command)
         argv.push_back(const_cast<char *>(arg.c_str()));
       argv.push_back(nullptr);
@@ -626,6 +631,7 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     // runner's group.
     process_group_id_ = pid_;
     alive_ = true;
+    diagnostics::process_spawned(name, pid_, forked);
 
     const Manifest &m = engine.manifest();
     json channels = json::object();
@@ -1058,7 +1064,7 @@ int ProcessParticipant::terminate_child() {
     }
   });
   const int wait_status = group.terminate();
-  diagnostics::process_reaped(name_, group.usage());
+  diagnostics::process_reaped(name_, pid_, group.usage());
   // Whatever the child wrote before it exited is forwarded and kept here.
   // A descendant that escaped the group can hold the pipe open, so this read
   // does not wait for end of file.
