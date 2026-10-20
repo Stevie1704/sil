@@ -520,64 +520,72 @@ class Export:
     problem: str | None  # export_failed, or None
 
 
+class _PerfPass:
+    """One perf analysis command whose stdout is read line by line, up to
+    `limit` bytes and for at most `timeout` seconds. Above the limit or the
+    time the command is stopped; `problem` then tells why."""
+
+    def __init__(self, perf: Path, arguments: list[str], cache: Path,
+                 cwd: Path, timeout: int, limit: int,
+                 stderr_file: Path | None = None):
+        self._command = _analysis(perf, cache, *arguments)
+        self._cwd = cwd
+        self._timeout = timeout
+        self._limit = limit
+        self._stderr_file = stderr_file
+        self.problem: str | None = "export_failed"  # until the end is read
+
+    def lines(self):
+        with tempfile.TemporaryFile() as errors:
+            try:
+                process = subprocess.Popen(
+                    self._command, stdout=subprocess.PIPE, stderr=errors,
+                    cwd=self._cwd, env=tool_environment())
+            except OSError:
+                return
+            expired = threading.Event()
+
+            def expire() -> None:
+                expired.set()
+                process.kill()
+
+            timer = threading.Timer(self._timeout, expire)
+            timer.start()
+            size, overflow, complete = 0, False, False
+            try:
+                for raw in process.stdout:
+                    size += len(raw)
+                    if size > self._limit:
+                        overflow = True
+                        break
+                    yield raw.decode(errors="replace")
+                complete = not overflow
+            finally:
+                timer.cancel()
+                if not complete and process.poll() is None:
+                    process.kill()
+                process.stdout.close()
+                process.wait()
+                if overflow:
+                    errors.write(f"\n{PROG}: the output is larger than the "
+                                 f"export limit of {self._limit} bytes; it "
+                                 "was stopped\n".encode())
+                if self._stderr_file is not None:
+                    errors.seek(max(0, errors.tell() - STDERR_TAIL_BYTES))
+                    self._stderr_file.write_bytes(errors.read())
+            if expired.is_set():
+                self.problem = "symbolization_timeout"
+            elif complete and process.returncode == 0:
+                self.problem = None
+
+
 def _perf_text(perf: Path, arguments: list[str], cache: Path, cwd: Path,
                timeout: int, limit: int, stderr_file: Path | None = None):
-    """stdout of one perf analysis command, or None with a reason. The
-    output is read up to `limit` bytes; above it the command is stopped, so
-    the export holds a bounded text in memory."""
-    with tempfile.TemporaryFile() as errors:
-        try:
-            process = subprocess.Popen(
-                _analysis(perf, cache, *arguments), stdout=subprocess.PIPE,
-                stderr=errors, cwd=cwd, env=tool_environment())
-        except OSError:
-            return None, "export_failed"
-        reader = _BoundedRead(process, limit)
-        reader.start()
-        try:
-            process.wait(timeout=timeout)
-            problem = None
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait()
-            problem = "symbolization_timeout"
-        reader.join()
-        if reader.overflow:
-            errors.write(f"\n{PROG}: the output is larger than the export "
-                         f"limit of {limit} bytes; it was stopped\n".encode())
-        if stderr_file is not None:
-            errors.seek(max(0, errors.tell() - STDERR_TAIL_BYTES))
-            stderr_file.write_bytes(errors.read())
-    if problem is not None:
-        return None, problem
-    if reader.overflow or process.returncode != 0:
-        return None, "export_failed"
-    return b"".join(reader.chunks).decode(errors="replace"), None
-
-
-class _BoundedRead(threading.Thread):
-    """Reads a process's stdout up to a limit; at the limit it stops the
-    process and drops the rest."""
-
-    def __init__(self, process: subprocess.Popen, limit: int):
-        super().__init__(daemon=True)
-        self._process = process
-        self._limit = limit
-        self.chunks: list[bytes] = []
-        self.overflow = False
-
-    def run(self) -> None:
-        size = 0
-        stream = self._process.stdout
-        for chunk in iter(lambda: stream.read(1 << 16), b""):
-            size += len(chunk)
-            if size > self._limit:
-                self.overflow = True
-                self.chunks.clear()
-                self._process.kill()
-                break
-            self.chunks.append(chunk)
-        stream.close()
+    """stdout of one perf analysis command, or None with a reason."""
+    analysis = _PerfPass(perf, arguments, cache, cwd, timeout, limit,
+                         stderr_file)
+    text = "".join(analysis.lines())
+    return (None, analysis.problem) if analysis.problem else (text, None)
 
 
 def _add_to_cache(perf: Path, copy: Path, cache: Path, cwd: Path,
@@ -663,19 +671,21 @@ def export(perf: Path, request: CpuRequest, layout: Layout,
                                          None)
     stats, _ = _perf_text(perf, ["report", *data, "--stats"], layout.cache,
                           cwd, timeout, limit)
-    script, problem = _perf_text(perf, ["script", *data, *SCRIPT_FIELDS],
-                                 layout.cache, cwd, timeout, limit,
-                                 layout.cpu / "perf-script.stderr.txt")
     srclines, srcline_problem = _perf_text(
         perf, ["script", *data, *SRCLINE_FIELDS], layout.cache, cwd, timeout,
         limit, layout.cpu / "perf-srcline.stderr.txt")
-    if script is None:
-        return Export(None, "export_failed")
-    analysis = normalize_cpu(script, srclines=srclines, facts=facts,
+    # The sample pass is the large one: it is normalized as it comes, so
+    # its text is never held in memory.
+    script = _PerfPass(perf, ["script", *data, *SCRIPT_FIELDS], layout.cache,
+                       cwd, timeout, limit,
+                       layout.cpu / "perf-script.stderr.txt")
+    analysis = normalize_cpu(script.lines(), srclines=srclines, facts=facts,
                              lost_sample_records=_lost_sample_records(stats),
                              srcline_problem=srcline_problem,
                              build_ids=build_ids)
-    return Export(analysis, problem)
+    if script.problem is not None:
+        return Export(None, "export_failed")
+    return Export(analysis, None)
 
 
 # --- the report -------------------------------------------------------------

@@ -21,7 +21,7 @@ from __future__ import annotations
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Callable, Iterable
 
 from sil.profile_report import (
     HOTSPOT_LIMIT, SOURCE_DEBUG_STATUSES, SOURCE_LINES_PER_ROW,
@@ -193,10 +193,12 @@ def _frame(match: re.Match) -> _Frame:
                   None if dso == "[unknown]" else dso)
 
 
-def _parse(script: str) -> _Capture:
+def _parse(script: str | Iterable[str]) -> _Capture:
     capture = _Capture()
     sample: _Sample | None = None
-    for line in script.splitlines():
+    lines = script.splitlines() if isinstance(script, str) else (
+        line.rstrip("\r\n") for line in script)
+    for line in lines:
         if not line.strip():
             continue
         header = _HEADER.match(line)
@@ -349,13 +351,14 @@ class CpuAnalysis:
                     None)
 
 
-def normalize_cpu(script: str, *, srclines: str | None,
+def normalize_cpu(script: str | Iterable[str], *, srclines: str | None,
                   facts: Callable[[str, str | None], ModuleFacts],
                   lost_sample_records: int,
                   srcline_problem: str | None = None,
                   build_ids: dict[str, str] | None = None,
                   hotspot_limit: int = HOTSPOT_LIMIT) -> CpuAnalysis:
-    """The normalized capture of one `perf script` export.
+    """The normalized capture of one `perf script` export: its text, or
+    its lines as they come.
 
     `srclines` is the second pass, or None with `srcline_problem` as the
     reason. `lost_sample_records` counts PERF_RECORD_LOST_SAMPLES records

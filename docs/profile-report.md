@@ -124,8 +124,10 @@ Run, retry, change the collector or the event, or change a host setting.
    limit: twice `--max-capture-bytes`. Above that limit the pass is
    stopped. For the sample pass that is `export_failed` (no
    `samples.json`; `perf.data` stays); for the source-line pass, the
-   samples have no source lines. The command holds this text and its
-   normalized form in memory.
+   samples have no source lines. The command reads the sample pass line
+   by line into its normalized form, so it does not keep that text. It
+   keeps the text of the source-line pass, and the normalized form, in
+   memory.
 6. **Join.** With `--activations`, it joins the observation stream with
    the samples (below) and writes `activation/correlation.json`.
 7. **Publish.** It writes `cpu/samples.json`. It writes `profile.json`

@@ -421,3 +421,13 @@ def test_inlined_frames_are_own_functions_counted_once_per_sample():
     physical = document["frames"][document["stacks"][0][2]]
     assert physical["symbol"] == "spin" and "inlined" not in physical
     assert [len(stack) for stack in document["stacks"]] == [4, 2]
+
+
+def test_the_export_can_be_normalized_line_by_line(analysis):
+    # sil profile streams the perf script pass: it never holds its text.
+    lines = iter(SCRIPT.splitlines(keepends=True))
+
+    streamed = normalize_cpu(lines, srclines=SRCLINES, facts=facts,
+                             lost_sample_records=0)
+
+    assert streamed == analysis
