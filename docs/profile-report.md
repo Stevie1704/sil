@@ -65,11 +65,12 @@ Run, retry, change the collector or the event, or change a host setting.
 
 ### What the command does
 
-1. **Preflight.** It checks every output path (new, no alias of the
-   Manifest, the Recording, the provenance record or the failure report),
-   finds `sil-run-diagnostics`, `sil-diagnostics-launcher` and `perf` on
-   `PATH`, and probes perf with the exact event and options on `true`. A
-   failed probe stops the command before any Participant starts.
+1. **Preflight.** It checks every output path. Each path must be new and
+   must not be an alias of the Manifest, the Recording, the provenance
+   record or the failure report. It finds `sil-run-diagnostics`,
+   `sil-diagnostics-launcher` and `perf` on `PATH`. It probes perf with the
+   exact event and options on `true`. A failed probe stops the command
+   before any Participant starts.
 2. **Run.** It starts
 
    ```sh
@@ -85,14 +86,14 @@ Run, retry, change the collector or the event, or change a host setting.
    ```
 
    in a new session, in the current directory. perf changes the environment
-   of the command it starts (perf 6.x sets `PERF_BUILDID_DIR` and `PREFIX`,
-   empties `DEBUGINFOD_URLS` and puts its own directory first on `PATH`), so
-   the command passes its own environment to the launcher on descriptor M,
-   and the runner gets that environment unchanged. `-N` keeps perf from filling the user's build-ID
-   cache (`~/.debug`): the profile depends on no file outside `DIR` except
-   the host modules it names. perf follows every descendant of
-   the runner (`inherit`), so the scope is the runner and all its
-   descendants. The Manifest bytes, the working directory, the Participant
+   of the command it starts. perf 6.x sets `PERF_BUILDID_DIR` and `PREFIX`,
+   empties `DEBUGINFOD_URLS` and puts its own directory first on `PATH`.
+   Thus the command gives its own environment to the launcher on descriptor
+   M, and the runner gets that environment unchanged. `-N` keeps perf from
+   filling the build-ID cache of the user (`~/.debug`). Thus the profile
+   uses no file outside `DIR`, except the host modules that it names. perf
+   follows every descendant of the runner (`inherit`), so the scope is the
+   runner and all its descendants. The Manifest bytes, the working directory, the Participant
    commands and their environment do not change.
 3. **Limit.** While the Run executes, the command reads the size of
    `perf.data` and the free space of `DIR` every 100 ms. It sends `disable`
@@ -100,22 +101,21 @@ Run, retry, change the collector or the event, or change a host setting.
    below the reserve (see "Free-space reserve"). Sampling stops, and the
    Run continues. The file can be larger than the limit by the data of one
    interval.
-4. **Modules.** When the Run ends, the runner moves its Run working
-   directory to `DIR/cpu/.run-directory` instead of removing it. For every
-   module that perf recorded with a build ID (`perf buildid-list`), and
-   whose file is gone or has another build ID, the command looks for a copy
-   with the same build ID: first in `.run-directory`, then in the
-   `--modules-from` sources. It adds each copy to the build-ID cache
+4. **Modules.** At the end of the Run, the runner keeps its Run working
+   directory as `DIR/cpu/.run-directory`. perf
+   records modules with a build ID (`perf buildid-list`). When the file of
+   such a module is gone or has another build ID, the command looks for a
+   copy with the same build ID. It looks first in `.run-directory`, then in
+   the `--modules-from` sources. It adds each copy to the build-ID cache
    `DIR/cpu/buildid-cache`, then removes `.run-directory` and the unpacked
    archives. A Participant that removes its own files at shutdown leaves no
-   copy: the FMI importer removes its extracted FMU, so name the FMU archive
+   copy. The FMI importer removes its extracted FMU, so name the FMU archive
    with `--modules-from`. Without a copy, the samples of a module keep its
    path, build ID and module offsets, and have no function name.
-5. **Export.** `perf script` writes the samples, the task, mmap and lost
+5. **Export.** `perf script` writes the samples and the task, mmap and lost
    events (`-F comm,pid,tid,time,period,ip,sym,dso --ns --no-inline
-   --show-task-events --show-mmap-events --show-lost-events`), and a
-   second pass gives the source line of each leaf frame (`-G -F
-   ip,sym,srcline`). The analysis commands use
+   --show-task-events --show-mmap-events --show-lost-events`). A second
+   pass gives the source line of each leaf frame (`-G -F ip,sym,srcline`). The analysis commands use
    `perf --buildid-dir DIR/cpu/buildid-cache` and run without
    `DEBUGINFOD_URLS`, so no symbol is fetched from the network. Each pass
    runs alone (no parallel symbolization), for at most
@@ -127,12 +127,12 @@ Run, retry, change the collector or the event, or change a host setting.
    normalized form in memory.
 6. **Join.** With `--activations`, it joins the observation stream with
    the samples (below) and writes `activation/correlation.json`.
-7. **Publish.** It writes `cpu/samples.json`, then `profile.json` through
-   a temporary sibling and a hard link, so a reader never sees a partial
-   summary and nothing is replaced. It prints a summary on stdout.
+7. **Publish.** It writes `cpu/samples.json`. It writes `profile.json`
+   through a temporary sibling and a hard link. Thus a reader never sees a
+   partial summary, and nothing is replaced. It prints a summary on stdout.
 
-SIGINT, SIGTERM and SIGHUP go to the whole session: the runner records the
-interruption and cleans up as without a profiler; perf stops sampling and
+SIGINT, SIGTERM and SIGHUP go to the whole session. The runner records the
+interruption and cleans up as without a profiler. perf stops sampling and
 finalizes `perf.data`. perf ignores SIGHUP, so it cannot end before the Run.
 
 ### Free-space reserve
@@ -201,19 +201,20 @@ Raw stack copies can hold any data that was on a stack, also secrets. Share
 payload. A copy of `profile.json` and `cpu/samples.json` is sufficient for an
 offline report; with `--activations`, also `activation/correlation.json`
 ([Offline report](#offline-report)).
-Re-symbolization needs `perf.data` and the modules: the
-captured ones are in `cpu/buildid-cache`, the others stay on the host and
-are identified by path and build ID only.
+Re-symbolization needs `perf.data` and the modules. The captured modules
+are in `cpu/buildid-cache`. The other modules stay on the host, and only
+their path and build ID identify them.
 
 ## Conventions
 
 The conventions of the [diagnostics contracts](diagnostics-report.md#conventions)
-apply: units in member names, no NaN or infinity, null with a reason in an
-`unavailable` map, no Message payload or environment variable.
+apply. Member names have units. There is no NaN or infinity. A null has a
+reason in an `unavailable` map. There is no Message payload or environment
+variable.
 
-- A value that can be above 2^53 is a string: absolute timestamps
-  (`*_ns` that are host `CLOCK_MONOTONIC` values) are decimal strings,
-  addresses are `0x` hexadecimal strings. Times relative to
+- A value that can be above 2^53 is a string. Absolute timestamps
+  (`*_ns` that are host `CLOCK_MONOTONIC` values) are decimal strings.
+  Addresses are `0x` hexadecimal strings. Times relative to
   `time_origin_ns` (`*_offset_ns`) are integers.
 - Identities are local to one document: processes `p1`, `p2`, ...; threads
   `t1`, ...; modules `m1`, .... A PID or TID is not an identity, because the
@@ -334,9 +335,9 @@ have no samples.
 | `source_lines` | `status` (`available`, `partial`, `unavailable`), `scope` (`leaf_frames`), `samples_with_line` (null for `unavailable`), `unavailable` |
 | `inlined_frames` | `status` `not_requested`: the export uses `--no-inline`, so an inlined function is part of its caller's frame and no sample counts twice |
 
-Function names and DWARF call frames are separate capabilities: a module can
-unwind and have no names (a stripped library), or have names and no source
-lines.
+Function names and DWARF call frames are separate capabilities. A module
+can unwind and have no names (a stripped library). A module can also have
+names and no source lines.
 
 A `processes` row:
 
@@ -365,7 +366,7 @@ A `modules` row:
 | --- | --- |
 | `id`, `path` | Identity and the path perf recorded |
 | `build_id` | GNU build ID (hexadecimal), or null |
-| `material` | `host_file` (the file at `path` has the build ID), `captured_run_directory` or `captured_modules_from` (a copy with the build ID, from the retained Run working directory or a `--modules-from` source, is in `cpu/buildid-cache`), `unavailable` |
+| `material` | `host_file`: the file at `path` has the build ID. `captured_run_directory` or `captured_modules_from`: `cpu/buildid-cache` has a copy with the build ID. The copy is from the retained Run working directory or from a `--modules-from` source. `unavailable`: no file with the build ID. |
 | `debug` | `status` (`embedded`, `separate_matching`, `separate_mismatched`, `not_found`, `unverifiable`, `module_unavailable`) and `path` of the matching debug file or null |
 | `mappings` | Executable mappings: `{process, start, size, file_offset}`, addresses as hexadecimal strings |
 | `samples_leaf`, `samples_unknown_symbol` | Leaf-frame samples in the module, and those without a function name |
@@ -421,7 +422,7 @@ Heap reasons:
 | --- | --- |
 | `capture_limit_reached` | The data reached `--max-capture-bytes`; later data is dropped |
 | `storage_reserve_reached` | The free space of `DIR` fell below the reserve; later data is dropped |
-| `data_truncated` | The last record of the data is cut, or the data file could not be written (a full disk): the rest of the data is dropped and the Run goes on |
+| `data_truncated` | The last record of the data is cut, or the data file could not be written (a full disk). The rest of the data is dropped, and the Run goes on. |
 | `data_may_be_incomplete` | Heaptrack writes its last data at normal process exit. The runner ended by a signal (runner scope), or the Run did not succeed and the runner stopped the participant (Process scope) |
 | `backend_failed` | The interpreter failed, or did not end within its time limit |
 | `export_failed` | The data is not Heaptrack's interpreted file version 3, or its stacks do not resolve |
@@ -506,38 +507,38 @@ One command captures one scope:
 
 These selections are usage errors (exit 2) before the Run: an unknown name, a
 Native or Replay participant, and a Process participant with `shim: true`.
-Heaptrack in a shimmed participant is not qualified: it can stop the
-participant, it removes the shim from the participant's children and its
-timer writes data without bound (#314). Issue
+Heaptrack in a shimmed participant is not qualified (#314). It can stop the
+participant. It removes the shim from the children of the participant. Its
+timer writes data without a bound. Issue
 [#330](https://github.com/Stevie1704/sil/issues/330) investigates it. The
-Clock shim of the other participants is not affected: in the runner scope,
+Clock shim of the other participants is not affected. In the runner scope,
 the runner sets the shim of a shimmed participant itself, after Heaptrack.
 
 Heaptrack removes `LD_PRELOAD` and `DUMP_HEAPTRACK_OUTPUT` from the process
 it traces when it loads. Thus no child or sibling of the scope process is
 traced, and the allocations of a child are not in the capture. Heaptrack
-does not trace the copy of a process between `fork` and `exec`. Because
-Heaptrack removes all of `LD_PRELOAD`, the command stops in preflight (exit
-1) when `LD_PRELOAD` is set in its environment: the Run's processes would
-start with another environment.
+does not trace the copy of a process between `fork` and `exec`. Heaptrack
+removes all of `LD_PRELOAD`. Thus the command stops in preflight (exit 1)
+when `LD_PRELOAD` is set in its environment. If not, the processes of the
+Run would start with another environment.
 
 ### What the command does
 
-1. **Preflight.** It checks the output paths as for the CPU collector, the
-   scope against the Manifest (exit 2), and then the host (exit 1): Linux,
-   `heaptrack` on `PATH`, the preload library and the interpreter (from the
-   `LIB_REL_PATH` and `LIBEXEC_REL_PATH` lines of the `heaptrack` script),
-   and a probe: `true` with the preload library must write data.
+1. **Preflight.** It checks the output paths as for the CPU collector. It
+   checks the scope against the Manifest (exit 2). Then it checks the host
+   (exit 1). The host must be Linux and must have `heaptrack` on `PATH`. It
+   must have the preload library and the interpreter, from the
+   `LIB_REL_PATH` and `LIBEXEC_REL_PATH` lines of the `heaptrack` script.
+   Last, a probe: `true` with the preload library must write data.
 2. **Adapter.** It writes `DIR/heap/launch-adapter.sh`. The adapter sets
-   `DUMP_HEAPTRACK_OUTPUT` to the FIFO `DIR/heap/.fifo`, puts the preload
-   library before any `LD_PRELOAD`, sets `PWD` back to the value of the
-   command's environment (or removes it, as `sh` sets it when it starts),
-   and execs its arguments. The process
-   keeps its PID, pipes, working directory, arguments and all other
-   environment. The runner executes the adapter from `DIR/heap`, so `DIR`
-   must be on a file system that allows execution: on a `noexec` mount the
-   launcher (runner scope) or the runner (Process scope) cannot start it,
-   and no Run takes place.
+   `DUMP_HEAPTRACK_OUTPUT` to the FIFO `DIR/heap/.fifo`. It puts the preload
+   library before any `LD_PRELOAD`. `sh` sets `PWD` when it starts, so the
+   adapter sets `PWD` back to the value of the command, or removes it. Then
+   it execs its arguments. The process keeps its PID, pipes, working
+   directory, arguments and all other environment. The runner executes the
+   adapter from `DIR/heap`, so `DIR` must be on a file system that allows
+   execution. On a `noexec` mount, the launcher (runner scope) or the runner
+   (Process scope) cannot start it, and no Run takes place.
 3. **Interpreter.** It starts `heaptrack_interpret < DIR/heap/.fifo` in a
    session of its own, outside the Run, without `DEBUGINFOD_URLS`. Its output
    goes to `DIR/heap/heaptrack.data` up to `--max-capture-bytes`, and while
@@ -556,16 +557,17 @@ start with another environment.
    ```
 
    For a Process participant, the runner is not wrapped. It gets
-   `--launch-wrapper NAME DIR/heap/launch-adapter.sh`: the diagnostics
-   runner starts that participant as `ADAPTER COMMAND...` instead of
-   `COMMAND...`, in the child that it forked, after its own setup of the
-   process group, the pipes, the working directory and the environment. The
+   `--launch-wrapper NAME DIR/heap/launch-adapter.sh`. The diagnostics
+   runner then starts that participant as `ADAPTER COMMAND...` instead of
+   `COMMAND...`. It does this in the child that it forked, after its own
+   setup of the process group, the pipes, the working directory and the
+   environment. The
    option is in `sil-run-diagnostics` only; `sil-run` rejects it. The
    Manifest bytes, its hash, the Native ABI and the Step protocol do not
    change.
 5. **Data end.** When the Run ends, the command opens and closes the FIFO
-   for writing, so an interpreter whose scope process never started reads
-   the end of the data. It waits for the interpreter at most
+   for writing. Thus the interpreter reads the end of the data, also when
+   its scope process did not start. It waits for the interpreter at most
    `--symbolization-timeout-s`, and stops it after that.
 6. **Normalize.** It reads `heaptrack.data` (below) and writes
    `DIR/heap/allocations.json`. It reads the build ID of each module file:
@@ -580,10 +582,10 @@ profiler. The interpreter is not in the Run's session: it ends when the data
 ends. A signal while the command waits for the interpreter stops the
 interpreter.
 
-The exit codes are those of the CPU collector, with these additions: a scope
-that cannot be captured is exit 2; a host without Heaptrack, a failed probe,
-a host that is not Linux and a set `LD_PRELOAD` are exit 1 before any
-Participant starts. After a successful Run, a capture that is not `complete`
+The exit codes are those of the CPU collector, with these additions. A scope
+that cannot be captured is exit 2. These are exit 1 before any Participant
+starts: a host without Heaptrack, a failed probe, a host that is not Linux,
+and a set `LD_PRELOAD`. After a successful Run, a capture that is not `complete`
 gives exit 1.
 
 ### Heap files
@@ -601,8 +603,9 @@ Heaptrack nor the profiled binaries.
 
 ### Metrics and their boundaries
 
-The data covers the whole life of the scope process under Heaptrack: from
-the load of the preload library to the last data that Heaptrack wrote. For
+The data covers the whole life of the scope process under Heaptrack. It
+starts at the load of the preload library and ends at the last data that
+Heaptrack wrote. For
 the runner scope that is before the Manifest loads to after the Recording
 closes, so it includes setup, shutdown and Recording work. Each value counts
 each allocation event once.
@@ -616,26 +619,27 @@ each allocation event once.
 | `outstanding_allocations`, `outstanding_bytes` | Allocations not freed at the end of the data: a snapshot at capture end. They are not a leak verdict: the process can keep memory on purpose until it exits. |
 | `peak_tracked_bytes` | The largest sum of outstanding requested bytes at any record of the data. This is tracked heap: not RSS, not stack, not mapped pages, not allocator overhead. |
 
-A `self` row attributes each allocation to its innermost frame: the first
-frame that Heaptrack records, the function that called the allocation
-function (for C++ `new` it can be `operator new` in the C++ library). An
-inlined function is its own frame. An `inclusive` row counts each function
-that is anywhere in an allocation's stack once per allocation, also when it
-is in the stack more than one time (recursion). Inclusive values overlap and
+A `self` row gives each allocation to its innermost frame. That is the
+first frame that Heaptrack records: the function that called the
+allocation function. For C++ `new`, it can be `operator new` in the C++
+library. An inlined function is its own frame. An `inclusive` row counts
+each function in the stack of an allocation once per allocation. This is
+also true when the function is in the stack more than one time (recursion). Inclusive values overlap and
 are never totals.
 
 ### Coverage and limits
 
-- Only the interposed allocation functions are seen. A custom pool (an arena
-  allocator, a static buffer pool, Python's `pymalloc`) shows as its few
-  backing allocations; the logical allocations inside it are not seen.
+- Only the interposed allocation functions are seen. A custom pool shows
+  as its few backing allocations, for example an arena allocator, a static
+  buffer pool or `pymalloc` of Python. The logical allocations inside the
+  pool are not seen.
   A test with real Heaptrack shows this: an arena that takes one block
   from `malloc` and gives out 160 objects shows as one allocation.
   Direct `mmap`, `brk` and stack memory are not tracked.
 - An allocation site is where memory was allocated. It is not the owner of
   that memory now.
 - Symbols: the interpreter finds a separate debug file through its build ID
-  or `.gnu_debuglink`, as perf does, and refuses a debug file with another
+  or `.gnu_debuglink`, as perf does. It refuses a debug file with another
   build ID. Then the allocations stay in the evidence with an unknown
   function. A library without debug information gives names for its
   exported functions only.
@@ -699,14 +703,16 @@ class:
 | `replay` | runner thread, in a Replay publication Slot | Replay work, not a Task. |
 | `unattributed` | everything else, with a reason | See below. |
 
-Unattributed reasons: `process_outside_step` (a Process participant's
-process between its Steps: start-up, shutdown or asynchronous work),
-`runner_other_thread` (a runner thread that runs no Activation, for example
-a Native participant's own thread), `runner_outside_intervals` (the runner
-thread before the first or after the last phase), `unmapped_process` (a
-descendant of the runner that is not in a mapped participant's tree),
-`launcher`, and `observations_incomplete` (a runner-thread or Run-descendant
-sample at or after the last kept record of a cut stream).
+Unattributed reasons:
+
+| Reason | Meaning |
+| --- | --- |
+| `process_outside_step` | The process of a Process participant between its Steps: start-up, shutdown or asynchronous work |
+| `runner_other_thread` | A runner thread that runs no Activation, for example a thread of a Native participant |
+| `runner_outside_intervals` | The runner thread before the first phase or after the last phase |
+| `unmapped_process` | A descendant of the runner that is not in the process tree of a mapped participant |
+| `launcher` | The launcher process |
+| `observations_incomplete` | A sample of the runner thread or a Run descendant at or after the last kept record of a cut stream |
 
 No identity comes from a symbol: a Native library that two Participants
 share is told apart by the runner's interval only. An FMU group is one
@@ -796,17 +802,20 @@ example a Run that did not start) renders from `profile.json` alone. The raw
 files (`perf.data`, `heaptrack.data`), the build-ID cache, the Recording and
 the diagnostics report are not needed; keep them for re-analysis.
 
-The command checks the set before it writes anything: each named file must
-exist, have the size and SHA-256 that `artifacts` records, have version 1,
-refer only to identities of `profile.json` and add up to its totals (sample
-count and weight; allocation count and bytes; one class per sample).
+The command checks the set before it writes anything. Each named file must:
+
+- exist, with the size and SHA-256 that `artifacts` records;
+- have version 1;
+- refer only to identities of `profile.json`;
+- add up to its totals: sample count and weight, allocation count and
+  bytes, and one class per sample.
 
 Each file of the set has a render limit of 268435456 bytes (256 MiB). A
 larger file is refused before it is read (exit 2). The command holds each
 file and its decoded document in memory, so its memory use grows with the
-files; a capture within the default limits gives files far below 256 MiB
-(the [#319 qualification](../proofs/profiling-qualification/README.md) records the
-sizes of named workloads).
+files. A capture within the default limits gives files far below 256 MiB.
+The [#319 qualification](../proofs/profiling-qualification/README.md)
+records the sizes of named workloads.
 
 ### Exit codes
 
@@ -852,36 +861,44 @@ order:
    They are independent: a capture problem never replaces the Run's exit
    code.
 2. **What was measured.** Manifest and build identity, host, collector and
-   version, event, sampling, weight unit, clock, call graph, scope, limits
-   (heap: scope, launch, preload library, interpreter, data file version).
+   version, event, sampling, weight unit, clock, call graph, scope and
+   limits. Heap: scope, launch, preload library, interpreter and data file
+   version.
 3. **Coverage and loss** (CPU). The denominators (samples, sampled weight),
    lost samples, unknown modules and functions, unwinding and source lines.
    Zero samples is stated as no evidence of zero CPU use.
 4. **Limitations.** The `limitations` of the report, as text.
-5. **Results.** CPU: functions by self and by inclusive weight (top 50 of
-   `profile.json`, with the remainder and the total in the table footer),
-   the top-down caller tree of `cpu/samples.json`, the Activation evidence
-   (samples by class, unattributed reasons, Tasks, lifecycle phases,
-   participant-to-process mapping, the observation stream and the first 500
-   Activations, also those with no sample), processes, threads and modules.
-   Heap: totals with their boundaries, allocation sites by bytes, churn
-   (temporary allocations) and retention (outstanding bytes at capture end),
-   each top 25 with the remainder and the total, sites by inclusive bytes,
-   the allocation caller tree and the modules.
+5. **Results.** CPU:
+   - functions by self and by inclusive weight: the top 50 of
+     `profile.json`, with the remainder and the total in the table footer;
+   - the top-down caller tree of `cpu/samples.json`;
+   - the Activation evidence: samples by class, unattributed reasons,
+     Tasks, lifecycle phases, participant-to-process mapping, the
+     observation stream and the first 500 Activations, also those with no
+     sample;
+   - processes, threads and modules.
 
-Bounds: the caller tree shows a node only with at least 0.5% of the tree's
-weight, at most 20 children per node, 64 levels and 1500 nodes. The other
+   Heap:
+   - totals with their boundaries;
+   - allocation sites by bytes, churn (temporary allocations) and
+     retention (outstanding bytes at capture end), each the top 25 with
+     the remainder and the total;
+   - sites by inclusive bytes, the allocation caller tree and the modules.
+
+Bounds: the caller tree shows a node only with at least 0.5% of the weight
+of the tree. It shows at most 20 children per node, 64 levels and 1500
+nodes. The other
 nodes of a level are one visible remainder line with their count and weight,
 so each level still adds up. Recursion gives deeper nodes; no sample counts
 twice in one node.
 
-**Without JavaScript** every status, table and the caller tree of all
-samples are complete. **With JavaScript**, a CPU page adds filters by
-process and thread, and, when the correlation is `complete` or `partial`,
-by class, Participant/Task and Virtual time. The filters recompute the
-caller tree and the self and inclusive rankings of the selection (top 50,
-with the remainder and the selection total), and show only the matching
-Activations. Participant, Task and Virtual time select the samples that the
+**Without JavaScript**, every status, every table and the caller tree of
+all samples are complete. **With JavaScript**, a CPU page adds filters by
+process and thread. When the correlation is `complete` or `partial`, it
+also adds filters by class, Participant/Task and Virtual time. The filters
+recompute the caller tree and the self and inclusive rankings of the
+selection. The rankings show the top 50, the remainder and the selection
+total. The filters show only the matching Activations. Participant, Task and Virtual time select the samples that the
 correlation relates to an Activation: `execution_context` and
 `window_associated`. Virtual time is the Activation's, as the half-open range
 [from, to), in nanoseconds; the page compares it as an exact integer
@@ -889,20 +906,20 @@ correlation relates to an Activation: `execution_context` and
 `unavailable` or `failed`, the page offers no Activation filter and shows
 no Activation table: it says why. A heap profile has no Activation view:
 its correlation is always unavailable. The filters are not offered for a
-capture with more than 200000 distinct (stack, thread, class) rows; the
+capture with more than 200000 distinct (stack, thread, class) rows. The
 static tables and tree still show all samples.
 
-The keyboard reaches every control: the tree nodes are `<details>` elements
-(Tab, then Enter), the filters are native form controls, and the tables sort
+The keyboard reaches every control. The tree nodes are `<details>` elements
+(Tab, then Enter). The filters are native form controls. The tables sort
 and filter as in the [diagnostics report](running.md#html-reports). The page
 follows the light or dark system theme; the Theme button overrides it.
 
 **Content.** The page holds names, paths, identities, counts and weights of
 the set. It holds no stack bytes, no source text, no environment variable
 and no Message payload. All report text is escaped. The filter data is one
-inert `application/json` block in which `<`, `>`, `&` and every character
-outside ASCII (U+2028 and U+2029 too) are `\u` escapes, so no name can end
-the block or become markup. A source line is text; only an absolute path is
+inert `application/json` block. In it, `<`, `>`, `&` and every character
+outside ASCII (also U+2028 and U+2029) are `\u` escapes. Thus no name can
+end the block or become markup. A source line is text; only an absolute path is
 also a link, a `file:` URL that the page builds from the path. No report
 value becomes a URL. "Download JSON" saves `profile.json` byte for byte.
 
