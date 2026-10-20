@@ -43,10 +43,6 @@ CORRELATION_REASONS = {
 UNATTRIBUTED_REASONS = (
     "process_outside_step", "runner_other_thread", "runner_outside_intervals",
     "unmapped_process", "launcher", "observations_incomplete")
-# Reasons that leave no summary: the join is not proven.
-_UNAVAILABLE = {"observations_missing", "clock_mismatch",
-                "runner_not_observed", "pid_namespace_mismatch",
-                "pid_namespace_unverified", "no_samples_file"}
 
 
 @dataclass(frozen=True)

@@ -357,7 +357,7 @@ A `processes` row:
 | `parent` | Identity of the parent, or null when the parent is outside the capture |
 | `role` | `launcher` (perf's workload), `runner` (the launcher's child), `descendant` |
 | `commands` | The command names (`comm`, at most 15 bytes each) in order; an `exec` adds one |
-| `execs` | Number of `exec` events |
+| `execs` | Number of `exec` events. An `exec` keeps the process identity and its Activation mapping |
 | `start_offset_ns`, `end_offset_ns` | First and last record of the process, relative to `time_origin_ns` |
 | `forked`, `exited` | Whether the capture has the fork and the exit event |
 | `samples`, `weight_ns` | Samples of all its threads |
@@ -707,7 +707,7 @@ class:
 
 | Class | Sample | Meaning |
 | --- | --- | --- |
-| `execution_context` | runner thread, inside a Native activation or a Process Step | The code ran in that Activation, inclusive: routing and Recording work that the Task called is part of it. For a Process Step it is the runner's side of the Step exchange. |
+| `execution_context` | runner thread, inside a Native activation or a Process Step | The code ran in that Activation, inclusive: routing and Recording work that the Task called is part of it. For a Process Step it is the runner's own side of the Step exchange, inclusive. It is never the work of the participant's process. |
 | `window_associated` | a Process participant's process tree, inside one of its Steps | It ran while the runner waited for that Step. It is not proven to be the Step's own work. |
 | `lifecycle` | runner thread, in a lifecycle phase, outside every Activation | Preflight, setup, Slot scheduling, shutdown, Recording close. |
 | `replay` | runner thread, in a Replay publication Slot | Replay work, not a Task. |

@@ -415,3 +415,20 @@ def test_replay_slots_are_their_own_class():
 
     assert bucket(summary, "replay") == (1, 1)
     assert summary["intervals"]["replay"] == 1
+
+
+def test_an_exec_keeps_the_process_identity_and_its_mapping():
+    # proc_a's process execs twice (a shell wrapper, then python3): perf
+    # keeps one process for it, and the join still maps it.
+    members, document = capture([(2300, "p3", "t4", 7)])
+    p3 = next(p for p in members["processes"] if p["id"] == "p3")
+    p3.update(commands=["sil-run-diagnos", "sh", "python3"], execs=2)
+
+    result = correlate(stream(RECORDS), members, document,
+                       pid_namespace=NS)
+
+    mapping = {p["participant"]: p for p in result.record["summary"][
+        "processes"]}
+    assert mapping["proc_a"] == {"participant": "proc_a", "pid": 200,
+                                 "process": "p3", "mapping": "verified"}
+    assert result.document["samples"] == [["window_associated", 2]]
