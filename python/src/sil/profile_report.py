@@ -32,14 +32,16 @@ RUN_STATUSES = {"succeeded", "run_failure", "configuration_error",
 CAPTURE_STATUSES = {"complete", "partial", "interrupted", "failed",
                     "not_started"}
 HEAP_STATUSES = CAPTURE_STATUSES | {"unavailable"}
-HEAP_REASONS = {"capture_limit_reached", "data_truncated",
+HEAP_REASONS = {"capture_limit_reached", "storage_reserve_reached",
+                "data_truncated",
                 "data_may_be_incomplete", "interrupted",
                 "backend_failed", "export_failed", "no_data",
                 "run_not_started", "unsupported_scope", "reserved"}
 HEAP_METRICS = ("allocations", "allocated_bytes", "temporary_allocations",
                 "outstanding_allocations", "outstanding_bytes")
-CPU_REASONS = {"lost_samples", "capture_limit_reached", "interrupted",
-               "backend_failed", "export_failed", "run_not_started"}
+CPU_REASONS = {"lost_samples", "capture_limit_reached",
+               "storage_reserve_reached", "interrupted", "backend_failed",
+               "export_failed", "run_not_started"}
 DEBUG_STATUSES = {"embedded", "separate_matching", "separate_mismatched",
                   "not_found", "unverifiable", "module_unavailable"}
 # Only these debug states can give a source line (docs/profile-report.md).

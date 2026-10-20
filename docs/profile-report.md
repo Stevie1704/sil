@@ -95,13 +95,11 @@ Run, retry, change the collector or the event, or change a host setting.
    descendants. The Manifest bytes, the working directory, the Participant
    commands and their environment do not change.
 3. **Limit.** While the Run executes, the command reads the size of
-   `perf.data` every 100 ms. At the limit it sends `disable` to perf's
-   control FIFO: sampling stops, the Run continues. The file can be larger
-   than the limit by the data of one interval. The limit does not look at
-   the free space: when the file system of `DIR` is full before the limit,
-   perf stops and ends its command with SIGTERM, so the Run is interrupted,
-   and `profile.json` cannot be written either (#319 qualification). Keep
-   `--max-capture-bytes` below the free space of `DIR`.
+   `perf.data` and the free space of `DIR` every 100 ms. It sends `disable`
+   to perf's control FIFO at the size limit, or when the free space falls
+   below the reserve (see "Free-space reserve"). Sampling stops, and the
+   Run continues. The file can be larger than the limit by the data of one
+   interval.
 4. **Modules.** When the Run ends, the runner moves its Run working
    directory to `DIR/cpu/.run-directory` instead of removing it. For every
    module that perf recorded with a build ID (`perf buildid-list`), and
@@ -137,6 +135,27 @@ SIGINT, SIGTERM and SIGHUP go to the whole session: the runner records the
 interruption and cleans up as without a profiler; perf stops sampling and
 finalizes `perf.data`. perf ignores SIGHUP, so it cannot end before the Run.
 
+### Free-space reserve
+
+Both collectors keep a reserve of 8 MiB (8388608 bytes) of free space in
+`DIR`. The reserve is for the diagnostics report, `cpu/samples.json` or
+`heap/allocations.json`, and `profile.json`. When the free space of `DIR`
+falls below the reserve, the collector stops its raw data. The Run
+continues. The capture gets the reason `storage_reserve_reached`; it is
+`partial` or `failed`, and the command exits 1 after a successful Run.
+Thus a full disk does not stop the Run, and `profile.json` keeps the Run
+outcome.
+
+Before the Run, the command compares `--max-capture-bytes` with the free
+space of `DIR`. When the limit plus the reserve is more than the free
+space, it writes a warning on stderr. The capture then stops at the
+reserve, not at the limit.
+
+The reserve is not a quota. Another program that writes to the same file
+system can still fill it. When `profile.json` cannot be written, the
+command writes the error on stderr and exits 1, or with the Run's exit
+code when the Run failed.
+
 ### Exit codes
 
 The Run outcome and the capture outcome are separate. A capture failure never
@@ -154,6 +173,9 @@ replaces a Run failure.
 | The Run succeeded, capture `complete`, `--activations` correlation not `complete` | 1 | written |
 | The Run succeeded, the summary cannot be written | 1 | not written |
 | Hard crash or SIGKILL of the command | signal status | not written; raw files can remain |
+
+Exit 127 for a missing `sil-run-diagnostics` or launcher is the convention
+of `sil diagnostics run`: the shell code for "command not found".
 
 Unknown symbols or source lines alone do not fail a capture. Zero samples
 is a `complete` capture; it is not evidence that no CPU time was used.
@@ -273,7 +295,7 @@ execute the runner, or perf could not start its workload.
 | --- | --- |
 | `kind` | `cpu` |
 | `status` | `complete`, `partial`, `interrupted`, `failed`, `not_started` |
-| `reasons` | Subset of `lost_samples`, `capture_limit_reached`, `interrupted`, `backend_failed`, `export_failed`, `run_not_started` |
+| `reasons` | Subset of `lost_samples`, `capture_limit_reached`, `storage_reserve_reached`, `interrupted`, `backend_failed`, `export_failed`, `run_not_started` |
 | `backend` | `name` (`perf`), `version` (`perf --version`), `command` (the `perf record` argument list), `exit_code`, `signal` |
 | `sampling` | `event` (`cpu-clock:u`), `event_type` (`software`), `privilege` (`user`), `mode` (`frequency`), `frequency_hz`, `weight` (`period`), `weight_unit` (`cpu_clock_ns`), `clock` (`host_monotonic`) |
 | `call_graph` | `method` (`dwarf`), `stack_bytes` |
@@ -375,7 +397,7 @@ add up.
 | --- | --- |
 | `kind` | `heap` |
 | `status` | `complete`, `partial`, `interrupted`, `failed`, `not_started`, `unavailable` |
-| `reasons` | Subset of `capture_limit_reached`, `data_truncated`, `data_may_be_incomplete`, `interrupted`, `backend_failed`, `export_failed`, `no_data`, `run_not_started`, `unsupported_scope`, `reserved` |
+| `reasons` | Subset of `capture_limit_reached`, `storage_reserve_reached`, `data_truncated`, `data_may_be_incomplete`, `interrupted`, `backend_failed`, `export_failed`, `no_data`, `run_not_started`, `unsupported_scope`, `reserved` |
 | `backend` | `name` (`heaptrack`), `version` (`heaptrack --version`, or null), `preload` and `interpreter` (the paths used), `interpreter_exit_code` (null when the command stopped it) |
 | `scope` | `kind` `runner`; or `kind` `process_participant` with `participant`; or `kind` `unsupported` with `requested` and `reason` |
 | `launch` | `method` (`preload_exec_adapter`), `adapter` (`heap/launch-adapter.sh`), `wrapped` (`runner` or `process_participant`) |
@@ -398,6 +420,7 @@ Heap reasons:
 | Reason | Meaning |
 | --- | --- |
 | `capture_limit_reached` | The data reached `--max-capture-bytes`; later data is dropped |
+| `storage_reserve_reached` | The free space of `DIR` fell below the reserve; later data is dropped |
 | `data_truncated` | The last record of the data is cut, or the data file could not be written (a full disk): the rest of the data is dropped and the Run goes on |
 | `data_may_be_incomplete` | Heaptrack writes its last data at normal process exit. The runner ended by a signal (runner scope), or the Run did not succeed and the runner stopped the participant (Process scope) |
 | `backend_failed` | The interpreter failed, or did not end within its time limit |
@@ -517,8 +540,9 @@ start with another environment.
    and no Run takes place.
 3. **Interpreter.** It starts `heaptrack_interpret < DIR/heap/.fifo` in a
    session of its own, outside the Run, without `DEBUGINFOD_URLS`. Its output
-   goes to `DIR/heap/heaptrack.data` up to `--max-capture-bytes`. The command
-   reads and drops later data, so the traced process never waits for it. The
+   goes to `DIR/heap/heaptrack.data` up to `--max-capture-bytes`, and while
+   the free space of `DIR` is above the reserve. The command reads and drops
+   later data, so the traced process never waits for it. The
    last 64 KiB of its stderr go to `DIR/heap/interpret.stderr.txt`. It
    resolves symbols while the Run executes, so a module in the Run working
    directory (an extracted FMU) is named before it is gone.

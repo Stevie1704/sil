@@ -44,6 +44,7 @@ from sil.diagnostics_run import (
 from sil.profile_heap import HeapAnalysis, HeapDecodeError, normalize_heap
 from sil.profile_modules import ModuleLocator, elf_identity
 from sil.profile_report import validate_profile_report
+from sil.profile_storage import reserve_reached, space_warning
 from sil.profile_summary import format_summary
 from sil.profile_run import (
     PROG, STDERR_TAIL_BYTES, CaptureRun, HeapRequest, _host, _identity,
@@ -256,15 +257,19 @@ def adapter_text(tools: Heaptrack, fifo: Path,
 
 class _Copy(threading.Thread):
     """Copies a stream into a file up to a limit; it reads on after the
-    limit, or after a failed write (a full disk), and drops the rest, so the
+    limit, after the free-space reserve (sil.profile_storage) if it guards
+    it, or after a failed write (a full disk), and drops the rest, so the
     writer never blocks on the reader."""
 
-    def __init__(self, source, sink: Path, limit: int, keep_tail: bool):
+    def __init__(self, source, sink: Path, limit: int, keep_tail: bool,
+                 guard_reserve: bool = False):
         super().__init__(daemon=True)
         self.source, self.sink = source, sink
         self.limit, self.keep_tail = limit, keep_tail
+        self.guard_reserve = guard_reserve
         self.written = 0
         self.limit_reached = False
+        self.reserve_reached = False
         self.write_failed = False
 
     def run(self) -> None:
@@ -286,10 +291,19 @@ class _Copy(threading.Thread):
             if len(block) > room:
                 self.limit_reached = True
                 block = block[:room]
-            if block and not self.write_failed:
+            if block and not self.write_failed and not self._stopped():
                 self._write(sink, block)
         if self.keep_tail and not self.write_failed:
             self._write(sink, tail)
+
+    def _stopped(self) -> bool:
+        if self.guard_reserve and not self.reserve_reached and \
+                reserve_reached(self.sink.parent):
+            self.reserve_reached = True
+            sys.stderr.write(f"{PROG}: the free space of '{self.sink.parent}'"
+                             " is below the reserve for the reports; the rest"
+                             " of the data is dropped\n")
+        return self.reserve_reached
 
     def _write(self, sink, block: bytes) -> None:
         try:
@@ -309,6 +323,7 @@ class InterpreterResult:
     exit_code: int | None  # None: killed after the timeout or a signal
     limit_reached: bool
     write_failed: bool = False  # the data file could not be written
+    reserve_reached: bool = False  # the free-space reserve stopped the data
 
 
 class Interpreter:
@@ -324,7 +339,8 @@ class Interpreter:
              str(layout.fifo)], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, start_new_session=True,
             env=_tool_environment())
-        self.data = _Copy(self.process.stdout, layout.data, limit, False)
+        self.data = _Copy(self.process.stdout, layout.data, limit, False,
+                          guard_reserve=True)
         self.errors = _Copy(self.process.stderr, layout.interpreter_stderr,
                             STDERR_TAIL_BYTES, True)
         self.data.start()
@@ -351,7 +367,8 @@ class Interpreter:
         self.layout.fifo.unlink(missing_ok=True)
         return InterpreterResult(None if killed else self.process.returncode,
                                  self.data.limit_reached,
-                                 self.data.write_failed)
+                                 self.data.write_failed,
+                                 self.data.reserve_reached)
 
 
 def _release_reader(fifo: Path) -> None:
@@ -400,6 +417,9 @@ def run_heap(request: HeapRequest, cwd: Path) -> int:
         return command_error(PROG, str(error), EXIT_FAILURE)
     layout = HeapLayout(Path(os.path.realpath(cwd / request.out)))
     layout.heap.mkdir(parents=True)
+    warning = space_warning(layout.heap, request.max_capture_bytes)
+    if warning is not None:
+        sys.stderr.write(f"{PROG}: warning: {warning}\n")
     layout.adapter.write_text(adapter_text(tools, layout.fifo,
                                            os.environ))
     layout.adapter.chmod(0o700)
@@ -509,6 +529,8 @@ def capture_status(run: dict, result: InterpreterResult,
         reasons.append("interrupted")
     if result.limit_reached:
         reasons.append("capture_limit_reached")
+    if result.reserve_reached:
+        reasons.append("storage_reserve_reached")
     if result.write_failed or (
             analysis is not None and analysis.record["coverage"]["truncated"]):
         reasons.append("data_truncated")

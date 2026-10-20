@@ -59,6 +59,9 @@ REASONS = {
     "lost_samples": "perf reports lost samples: the totals miss them",
     "capture_limit_reached":
         "The capture reached its size limit; later data is not in it",
+    "storage_reserve_reached":
+        "The free space fell below the reserve for the reports; later data "
+        "is not in it",
     "interrupted": "The command was interrupted",
     "backend_failed": "The backend failed",
     "data_truncated": "The last record of the data is cut",

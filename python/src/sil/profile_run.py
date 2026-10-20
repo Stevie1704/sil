@@ -46,6 +46,7 @@ from sil.profile_activation import correlate
 from sil.profile_cpu import CpuAnalysis, ModuleFacts, normalize_cpu
 from sil.profile_modules import ModuleLocator
 from sil.profile_report import validate_profile_report
+from sil.profile_storage import reserve_reached, space_warning
 from sil.profile_summary import format_summary
 
 PROG = "sil profile"
@@ -405,6 +406,7 @@ class CaptureRun:
     supervisor_signal: int | None
     limit_reached: bool
     report: dict | None
+    reserve_reached: bool = False  # the free-space reserve stopped sampling
 
 
 def record_command(perf: Path, request: ProfileRequest, layout: Layout,
@@ -505,16 +507,16 @@ def execute(perf: Path, request: ProfileRequest, layout: Layout,
         forwarder.attach(process)
         copier = _StderrCopy(process.stderr, sys.stderr.buffer)
         copier.start()
-        limit_reached = _wait_within_limit(process, layout,
-                                           request.max_capture_bytes)
+        stopped = _wait_within_limit(process, layout,
+                                     request.max_capture_bytes)
         copier.finish(STDERR_DRAIN_S)
     finally:
         for number, handler in previous.items():
             signal.signal(number, handler)
     launcher_error = report_launcher_error(_read_status(status_read))
     return CaptureRun(command, process.returncode, launcher_error,
-                      received[0] if received else None, limit_reached,
-                      _diagnostics_report(layout.diagnostics))
+                      received[0] if received else None, stopped.limit,
+                      _diagnostics_report(layout.diagnostics), stopped.reserve)
 
 
 def report_launcher_error(error: str | None) -> str | None:
@@ -527,18 +529,30 @@ def report_launcher_error(error: str | None) -> str | None:
     return error
 
 
+@dataclass
+class _Stop:
+    """Why sampling was disabled: the size limit, the free-space reserve."""
+
+    limit: bool = False
+    reserve: bool = False
+
+
 def _wait_within_limit(process: subprocess.Popen, layout: Layout,
-                       limit: int) -> bool:
-    """Wait for perf; at the limit, disable sampling once. The Run goes on."""
-    reached = False
+                       limit: int) -> _Stop:
+    """Wait for perf; at the size limit or the free-space reserve, disable
+    sampling once. The Run goes on."""
+    stop = _Stop()
     while True:
         try:
             process.wait(timeout=POLL_S)
-            return reached
+            return stop
         except subprocess.TimeoutExpired:
             pass
-        if not reached and _size(layout.perf_data) > limit:
-            reached = True
+        if stop.limit or stop.reserve:
+            continue
+        stop.limit = _size(layout.perf_data) > limit
+        stop.reserve = not stop.limit and reserve_reached(layout.cpu)
+        if stop.limit or stop.reserve:
             _send_control(layout.control, b"disable\n")
 
 
@@ -789,6 +803,8 @@ def capture_status(run: dict, capture_run: CaptureRun, layout: Layout,
             reasons.append("lost_samples")
     if capture_run.limit_reached:
         reasons.append("capture_limit_reached")
+    if capture_run.reserve_reached:
+        reasons.append("storage_reserve_reached")
     if {"backend_failed", "export_failed"} & set(reasons):
         return "failed", reasons
     if "interrupted" in reasons:
@@ -1025,6 +1041,9 @@ def main(argv: list[str] | None = None) -> int:
     version = perf_version(perf)
     layout = Layout(Path(os.path.realpath(cwd / request.out)))
     layout.cpu.mkdir(parents=True)
+    warning = space_warning(layout.cpu, request.max_capture_bytes)
+    if warning is not None:
+        sys.stderr.write(f"{PROG}: warning: {warning}\n")
     if request.activations:
         layout.activation.mkdir()
     capture_run = execute(perf, request, layout, cwd)
@@ -1033,6 +1052,20 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write(format_summary(report, request.out / "profile.json"))
         sys.stdout.flush()
     return resolve_exit(report, capture_run)
+
+
+def _write_samples(layout: Layout, analysis: CpuAnalysis) -> str | None:
+    """Write cpu/samples.json; its name, or None when it cannot be written
+    (a full disk): the report then says the file is unavailable."""
+    try:
+        write_new_file(layout.samples, json.dumps(
+            analysis.samples_document, separators=(",", ":")) + "\n")
+    except OSError as error:
+        sys.stderr.write(f"{PROG}: cannot write '{layout.samples}': "
+                         f"{error}\n")
+        layout.samples.unlink(missing_ok=True)
+        return None
+    return "cpu/samples.json"
 
 
 def _finish(perf: Path, request: ProfileRequest, layout: Layout, cwd: Path,
@@ -1045,10 +1078,7 @@ def _finish(perf: Path, request: ProfileRequest, layout: Layout, cwd: Path,
                 _size(layout.perf_data) > 0:
             exported = export(perf, request, layout, cwd)
         if exported is not None and exported.analysis is not None:
-            write_new_file(layout.samples, json.dumps(
-                exported.analysis.samples_document, separators=(",", ":"))
-                + "\n")
-            samples_file = "cpu/samples.json"
+            samples_file = _write_samples(layout, exported.analysis)
     finally:
         shutil.rmtree(layout.retained, ignore_errors=True)
         shutil.rmtree(layout.unpacked, ignore_errors=True)

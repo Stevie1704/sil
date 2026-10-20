@@ -465,6 +465,37 @@ def test_the_capture_limit_keeps_the_run_and_marks_the_capture(
 
 
 @needs_linux
+def test_low_free_space_drops_the_data_and_keeps_the_run_outcome(
+        tools, heaptrack, tmp_path, sil_run):
+    manifest, _ = marker_manifest(tmp_path)
+    prelude = ("import sys, sil.profile_storage as s; s.RESERVE_BYTES = "
+               "1 << 62; from sil.cli import main; "
+               "sys.exit(main(sys.argv[1:]))")
+    environment = {key: value for key, value in os.environ.items()
+                   if key != "LD_PRELOAD"}
+    environment.update(heaptrack)
+    environment["PATH"] = os.pathsep.join([str(tools), "/usr/bin:/bin"])
+
+    proc = subprocess.run(
+        [sys.executable, "-c", prelude, "profile",
+         *heap(manifest, "--runner")],
+        capture_output=True, text=True, cwd=tmp_path, env=environment)
+
+    assert proc.returncode == 1, proc.stderr
+    assert "bytes free" in proc.stderr
+    report = profile(tmp_path / "prof")
+    assert report["run"]["status"] == "succeeded"
+    assert report["run"]["exit_code"] == 0
+    capture = report["capture"]
+    assert capture["status"] != "complete"
+    assert "storage_reserve_reached" in capture["reasons"]
+    assert (tmp_path / "prof" / "heap" / "heaptrack.data").stat().st_size \
+        == 0
+    assert (tmp_path / "prof" / "run.mcap").read_bytes() == \
+        ordinary_recording(sil_run, manifest, tmp_path)
+
+
+@needs_linux
 def test_undecodable_data_fails_the_capture_and_keeps_the_raw_file(
         tools, heaptrack, tmp_path):
     manifest, _ = marker_manifest(tmp_path)
