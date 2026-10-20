@@ -8,20 +8,20 @@
     "packages": [
       "heaptrack=1.5.0+dfsg1-2ubuntu3",
       "libcap2-bin=1:2.66-5ubuntu2.4",
-      "linux-tools-7.0.0-1017-azure=7.0.0-1017.17~24.04.1",
+      "linux-tools-6.17.0-1022-azure=6.17.0-1022.22",
       "linux-tools-common=6.8.0-147.147"
     ],
     "perf_capabilities": null,
     "perf_event_paranoid": "2",
-    "perf_version": "perf version 7.0.14",
+    "perf_version": "perf version 6.17.13",
     "python": "3.12.3",
-    "sil_build_info": "{\"license\":\"Apache-2.0\",\"source_repository\":\"https://github.com/Stevie1704/sil\",\"source_revision\":\"dc711f9a1b276843b4c128fdc87c77a67a4fcff3\",\"version\":\"0.2.1\"}",
+    "sil_build_info": "{\"license\":\"Apache-2.0\",\"source_repository\":\"https://github.com/Stevie1704/sil\",\"source_revision\":\"f5770eda4e79c37d6acb8e686d7ec4a794d6456e\",\"version\":\"0.2.1\"}",
     "sil_package": "/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil",
     "sil_version": "0.2.1",
     "status": {
       "CapBnd": "000001ffffffffff",
       "CapEff": "0000000000000000",
-      "NSpid": "13445",
+      "NSpid": "13890",
       "Seccomp": "0"
     },
     "tools": {
@@ -35,11 +35,11 @@
     "uid": 1001,
     "uname": {
       "machine": "x86_64",
-      "node": "runnervmxehtw",
+      "node": "runnervm8k3b6",
       "processor": "x86_64",
-      "release": "7.0.0-1017-azure",
+      "release": "6.17.0-1022-azure",
       "system": "Linux",
-      "version": "#17~24.04.1-Ubuntu SMP PREEMPT Thu Sep 24 18:46:57 UTC 2026"
+      "version": "#22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026"
     }
   },
   "failed_checks": 0,
@@ -103,23 +103,23 @@
         "category": null,
         "exit_code": 0,
         "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb",
-        "wall_ms": 2795
+        "wall_ms": 2799
       },
       "participants_started": [
-        "child-13471.tsv",
-        "child-13472.tsv",
-        "child-13473.tsv",
-        "child-13474.tsv",
-        "fmu-13468.tsv",
-        "native-13467.tsv",
-        "process-13470.tsv"
+        "child-13916.tsv",
+        "child-13917.tsv",
+        "child-13918.tsv",
+        "child-13919.tsv",
+        "fmu-13913.tsv",
+        "native-13912.tsv",
+        "process-13915.tsv"
       ],
       "sentinel_unchanged": true,
       "stderr_tail": "",
       "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 2795
+      "wall_ms": 2799
     },
     {
       "action": null,
@@ -193,23 +193,23 @@
         "category": null,
         "exit_code": 0,
         "recording": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb",
-        "wall_ms": 2829
+        "wall_ms": 2824
       },
       "participants_started": [
-        "child-13482.tsv",
-        "child-13483.tsv",
-        "child-13484.tsv",
-        "child-13485.tsv",
-        "fmu-13479.tsv",
-        "native-13478.tsv",
-        "process-13481.tsv"
+        "child-13927.tsv",
+        "child-13928.tsv",
+        "child-13929.tsv",
+        "child-13930.tsv",
+        "fmu-13924.tsv",
+        "native-13923.tsv",
+        "process-13926.tsv"
       ],
       "sentinel_unchanged": true,
       "stderr_tail": "",
-      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\ndiagnostics report: run.mcap.diagnostics.json\nrun: succeeded, exit code 0, complete\nrun wall time: 2.753 s (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 65.740 ms, setup 125.463 ms, scheduled execution 2.519 s, shutdown 42.810 ms, recording finalization 71.273 us, unattributed 0 ns\nVirtual-time speed: scheduled 0.40x, end-to-end 0.36x\nthroughput per second of scheduled execution (2.519 s): 100 Native Activations, 39.70/s; 200 Process Steps, 79.40/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 100 of 100 completed, mean 7.647 ms, p50 7.598 ms, p95 7.823 ms, p99 8.822 ms, max 8.902 ms\n  native/hot native_task: 100 of 100 completed, mean 7.673 ms, p50 7.639 ms, p95 7.746 ms, p99 8.453 ms, max 10.633 ms\n  process/step process_step: 100 of 100 completed, mean 9.867 ms, p50 7.801 ms, p95 8.113 ms, p99 59.056 ms, max 59.517 ms\nresources (peak RSS is per process and never summed):\n  runner: user CPU 834.837 ms, system CPU 6.956 ms, peak RSS 5.090 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 829.048 ms, system CPU 18.469 ms, peak RSS 21.992 MiB (largest_process_peak_rss; includes waited descendants)\n  process process: user CPU 1.029 s, system CPU 16.040 ms, peak RSS 19.973 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 2.693 s, system 41.465 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; process peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\ndiagnostics report: run.mcap.diagnostics.json\nrun: succeeded, exit code 0, complete\nrun wall time: 2.747 s (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 65.654 ms, setup 128.747 ms, scheduled execution 2.509 s, shutdown 44.140 ms, recording finalization 70.051 us, unattributed 0 ns\nVirtual-time speed: scheduled 0.40x, end-to-end 0.36x\nthroughput per second of scheduled execution (2.509 s): 100 Native Activations, 39.86/s; 200 Process Steps, 79.72/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 100 of 100 completed, mean 7.631 ms, p50 7.622 ms, p95 7.690 ms, p99 7.754 ms, max 7.835 ms\n  native/hot native_task: 100 of 100 completed, mean 7.627 ms, p50 7.629 ms, p95 7.673 ms, p99 7.767 ms, max 8.237 ms\n  process/step process_step: 100 of 100 completed, mean 9.829 ms, p50 7.804 ms, p95 7.858 ms, p99 58.970 ms, max 58.997 ms\nresources (peak RSS is per process and never summed):\n  runner: user CPU 829.064 ms, system CPU 8.108 ms, peak RSS 5.090 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 826.566 ms, system CPU 22.093 ms, peak RSS 22.180 MiB (largest_process_peak_rss; includes waited descendants)\n  process process: user CPU 1.029 s, system CPU 13.974 ms, peak RSS 19.973 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 2.685 s, system 44.175 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; process peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 2829
+      "wall_ms": 2824
     },
     {
       "action": null,
@@ -263,12 +263,12 @@
       "observations": {
         "category": null,
         "exit_code": 0,
-        "recording": "1177bbd2b31b41bff1ace7f92882f85fdf6210d0f2bd5463a76bb63c97fa4861",
-        "wall_ms": 1410
+        "recording": "3dbd099d91747c8b4eea0bac787d2cc327ed1350371f7ee911ca96991221f2b2",
+        "wall_ms": 1448
       },
       "participants_started": [
-        "fmu-13487.tsv",
-        "probe-13493.json"
+        "fmu-13932.tsv",
+        "probe-13937.json"
       ],
       "probe": [
         {
@@ -277,7 +277,7 @@
           ],
           "environment": {
             "ACCEPT_EULA": "18f5384d58bcb1bb",
-            "ACTIONS_ORCHESTRATION_ID": "1e3ccb14f312f7f4",
+            "ACTIONS_ORCHESTRATION_ID": "3382536ed70edc7a",
             "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
             "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
             "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
@@ -310,19 +310,19 @@
             "GITHUB_ACTOR": "6f72f03e9527d036",
             "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
             "GITHUB_API_URL": "b2fd47bfbc5a4de1",
-            "GITHUB_ARTIFACTS": "9d9946aca22a48fa",
-            "GITHUB_ARTIFACTS_LIST": "779229eb5d47b671",
+            "GITHUB_ARTIFACTS": "f63d7406a354b6d6",
+            "GITHUB_ARTIFACTS_LIST": "db4a87468a84fbcd",
             "GITHUB_BASE_REF": "15ded80916997446",
-            "GITHUB_ENV": "fd3044913003f032",
+            "GITHUB_ENV": "752f93c7151606dc",
             "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
             "GITHUB_EVENT_PATH": "02503339a55110de",
             "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
-            "GITHUB_HEAD_REF": "e5edf33f60d4cd89",
+            "GITHUB_HEAD_REF": "3a8b77bedd9f42d6",
             "GITHUB_JOB": "e48cfe4f6f37ec01",
-            "GITHUB_OUTPUT": "3e0388305a6bcae8",
-            "GITHUB_PATH": "c0edd2e04dcaa49f",
-            "GITHUB_REF": "a9d0f3e4792ad63b",
-            "GITHUB_REF_NAME": "b8afff641a57819d",
+            "GITHUB_OUTPUT": "6727c0007636b66e",
+            "GITHUB_PATH": "c4e2b1700061644e",
+            "GITHUB_REF": "d218dcf1bece7c20",
+            "GITHUB_REF_NAME": "1e98e6a08bf7a26c",
             "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
             "GITHUB_REF_TYPE": "f38c764c8aa00b65",
             "GITHUB_REPOSITORY": "d9af7d8d741acc92",
@@ -331,16 +331,16 @@
             "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
             "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
             "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
-            "GITHUB_RUN_ID": "f0d8cbd82e0b595c",
-            "GITHUB_RUN_NUMBER": "d4735e3a265e16ee",
+            "GITHUB_RUN_ID": "010fcddf7e2296a9",
+            "GITHUB_RUN_NUMBER": "4b227777d4dd1fc6",
             "GITHUB_SERVER_URL": "996e1f714b08e971",
-            "GITHUB_SHA": "85ef7ac37a0ad99c",
-            "GITHUB_STATE": "45223a78cffa3b7d",
-            "GITHUB_STEP_SUMMARY": "30d992b21bec5e0f",
+            "GITHUB_SHA": "3a93998b902416aa",
+            "GITHUB_STATE": "fc49cf83e6a51749",
+            "GITHUB_STEP_SUMMARY": "0b0008079444b334",
             "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
             "GITHUB_WORKFLOW": "423b805186b0a246",
-            "GITHUB_WORKFLOW_REF": "b60ae0c47fc7575c",
-            "GITHUB_WORKFLOW_SHA": "85ef7ac37a0ad99c",
+            "GITHUB_WORKFLOW_REF": "4277c5a6409d6f8a",
+            "GITHUB_WORKFLOW_SHA": "3a93998b902416aa",
             "GITHUB_WORKSPACE": "d10122a7d55cc72c",
             "GOROOT_1_24_X64": "dad7e7c7884916c8",
             "GOROOT_1_25_X64": "4de37c06a108f1d7",
@@ -350,16 +350,16 @@
             "HOME": "b1cbc5f347543a03",
             "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
             "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
-            "INVOCATION_ID": "039d3ef070652224",
+            "INVOCATION_ID": "094a5fa7d0141327",
             "ImageOS": "1a6338a16abf65e3",
-            "ImageVersion": "2a3c3fca2a0cf685",
+            "ImageVersion": "ced8a89c6b2a78f6",
             "JAVA_HOME": "9b2eaca78448dd7a",
             "JAVA_HOME_11_X64": "1ec0fc371ce27771",
             "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
             "JAVA_HOME_21_X64": "c701517cd1ca359a",
             "JAVA_HOME_25_X64": "3331df6d48d9ba51",
             "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
-            "JOURNAL_STREAM": "825c702481555234",
+            "JOURNAL_STREAM": "b5e2350b60f4229d",
             "LANG": "99fed2d548c2eb10",
             "LOGNAME": "527aa9f431539da8",
             "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
@@ -374,11 +374,11 @@
             "Q": "ca9f307d738f5512",
             "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
             "RUNNER_ENVIRONMENT": "ac592027e68479fc",
-            "RUNNER_NAME": "1e65566a891593b5",
+            "RUNNER_NAME": "f754740e9930873e",
             "RUNNER_OS": "4828e60247c1636f",
             "RUNNER_TEMP": "a9fd2b6f1129349e",
             "RUNNER_TOOL_CACHE": "40963d3114e769b6",
-            "RUNNER_TRACKING_ID": "8ec6c915f44f150e",
+            "RUNNER_TRACKING_ID": "60dd58b6b858d164",
             "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
             "SELENIUM_JAR_PATH": "15f9049d64d77584",
             "SGX_AESM_ADDR": "6b86b273ff34fce1",
@@ -386,9 +386,9 @@
             "SHLVL": "6b86b273ff34fce1",
             "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
             "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
-            "SIL_SOURCE_REVISION": "4aaf8eaa620549bf",
+            "SIL_SOURCE_REVISION": "93e0c2d6d244979c",
             "SWIFT_PATH": "fb8c6698dca20671",
-            "SYSTEMD_EXEC_PID": "1acc01f346b3fbaa",
+            "SYSTEMD_EXEC_PID": "2570ce03b300309d",
             "TMPDIR": "c93abdaab0147fef",
             "USER": "527aa9f431539da8",
             "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
@@ -406,7 +406,7 @@
       "stdout_tail": "manifest_hash f9bbc0ac5f77bf1bca76a054943d80a74098911c28c873f33bf6b76300d6dd3a\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 1410
+      "wall_ms": 1448
     },
     {
       "action": null,
@@ -456,12 +456,12 @@
             {
               "category": null,
               "exit_code": 0,
-              "recording": "1177bbd2b31b41bff1ace7f92882f85fdf6210d0f2bd5463a76bb63c97fa4861"
+              "recording": "3dbd099d91747c8b4eea0bac787d2cc327ed1350371f7ee911ca96991221f2b2"
             },
             {
               "category": null,
               "exit_code": 0,
-              "recording": "1177bbd2b31b41bff1ace7f92882f85fdf6210d0f2bd5463a76bb63c97fa4861"
+              "recording": "3dbd099d91747c8b4eea0bac787d2cc327ed1350371f7ee911ca96991221f2b2"
             }
           ],
           "ok": true
@@ -479,12 +479,12 @@
       "observations": {
         "category": null,
         "exit_code": 0,
-        "recording": "1177bbd2b31b41bff1ace7f92882f85fdf6210d0f2bd5463a76bb63c97fa4861",
-        "wall_ms": 1442
+        "recording": "3dbd099d91747c8b4eea0bac787d2cc327ed1350371f7ee911ca96991221f2b2",
+        "wall_ms": 1448
       },
       "participants_started": [
-        "fmu-13498.tsv",
-        "probe-13503.json"
+        "fmu-13942.tsv",
+        "probe-13947.json"
       ],
       "probe": [
         {
@@ -493,7 +493,7 @@
           ],
           "environment": {
             "ACCEPT_EULA": "18f5384d58bcb1bb",
-            "ACTIONS_ORCHESTRATION_ID": "1e3ccb14f312f7f4",
+            "ACTIONS_ORCHESTRATION_ID": "3382536ed70edc7a",
             "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
             "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
             "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
@@ -526,19 +526,19 @@
             "GITHUB_ACTOR": "6f72f03e9527d036",
             "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
             "GITHUB_API_URL": "b2fd47bfbc5a4de1",
-            "GITHUB_ARTIFACTS": "9d9946aca22a48fa",
-            "GITHUB_ARTIFACTS_LIST": "779229eb5d47b671",
+            "GITHUB_ARTIFACTS": "f63d7406a354b6d6",
+            "GITHUB_ARTIFACTS_LIST": "db4a87468a84fbcd",
             "GITHUB_BASE_REF": "15ded80916997446",
-            "GITHUB_ENV": "fd3044913003f032",
+            "GITHUB_ENV": "752f93c7151606dc",
             "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
             "GITHUB_EVENT_PATH": "02503339a55110de",
             "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
-            "GITHUB_HEAD_REF": "e5edf33f60d4cd89",
+            "GITHUB_HEAD_REF": "3a8b77bedd9f42d6",
             "GITHUB_JOB": "e48cfe4f6f37ec01",
-            "GITHUB_OUTPUT": "3e0388305a6bcae8",
-            "GITHUB_PATH": "c0edd2e04dcaa49f",
-            "GITHUB_REF": "a9d0f3e4792ad63b",
-            "GITHUB_REF_NAME": "b8afff641a57819d",
+            "GITHUB_OUTPUT": "6727c0007636b66e",
+            "GITHUB_PATH": "c4e2b1700061644e",
+            "GITHUB_REF": "d218dcf1bece7c20",
+            "GITHUB_REF_NAME": "1e98e6a08bf7a26c",
             "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
             "GITHUB_REF_TYPE": "f38c764c8aa00b65",
             "GITHUB_REPOSITORY": "d9af7d8d741acc92",
@@ -547,16 +547,16 @@
             "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
             "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
             "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
-            "GITHUB_RUN_ID": "f0d8cbd82e0b595c",
-            "GITHUB_RUN_NUMBER": "d4735e3a265e16ee",
+            "GITHUB_RUN_ID": "010fcddf7e2296a9",
+            "GITHUB_RUN_NUMBER": "4b227777d4dd1fc6",
             "GITHUB_SERVER_URL": "996e1f714b08e971",
-            "GITHUB_SHA": "85ef7ac37a0ad99c",
-            "GITHUB_STATE": "45223a78cffa3b7d",
-            "GITHUB_STEP_SUMMARY": "30d992b21bec5e0f",
+            "GITHUB_SHA": "3a93998b902416aa",
+            "GITHUB_STATE": "fc49cf83e6a51749",
+            "GITHUB_STEP_SUMMARY": "0b0008079444b334",
             "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
             "GITHUB_WORKFLOW": "423b805186b0a246",
-            "GITHUB_WORKFLOW_REF": "b60ae0c47fc7575c",
-            "GITHUB_WORKFLOW_SHA": "85ef7ac37a0ad99c",
+            "GITHUB_WORKFLOW_REF": "4277c5a6409d6f8a",
+            "GITHUB_WORKFLOW_SHA": "3a93998b902416aa",
             "GITHUB_WORKSPACE": "d10122a7d55cc72c",
             "GOROOT_1_24_X64": "dad7e7c7884916c8",
             "GOROOT_1_25_X64": "4de37c06a108f1d7",
@@ -566,16 +566,16 @@
             "HOME": "b1cbc5f347543a03",
             "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
             "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
-            "INVOCATION_ID": "039d3ef070652224",
+            "INVOCATION_ID": "094a5fa7d0141327",
             "ImageOS": "1a6338a16abf65e3",
-            "ImageVersion": "2a3c3fca2a0cf685",
+            "ImageVersion": "ced8a89c6b2a78f6",
             "JAVA_HOME": "9b2eaca78448dd7a",
             "JAVA_HOME_11_X64": "1ec0fc371ce27771",
             "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
             "JAVA_HOME_21_X64": "c701517cd1ca359a",
             "JAVA_HOME_25_X64": "3331df6d48d9ba51",
             "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
-            "JOURNAL_STREAM": "825c702481555234",
+            "JOURNAL_STREAM": "b5e2350b60f4229d",
             "LANG": "99fed2d548c2eb10",
             "LOGNAME": "527aa9f431539da8",
             "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
@@ -590,11 +590,11 @@
             "Q": "ca9f307d738f5512",
             "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
             "RUNNER_ENVIRONMENT": "ac592027e68479fc",
-            "RUNNER_NAME": "1e65566a891593b5",
+            "RUNNER_NAME": "f754740e9930873e",
             "RUNNER_OS": "4828e60247c1636f",
             "RUNNER_TEMP": "a9fd2b6f1129349e",
             "RUNNER_TOOL_CACHE": "40963d3114e769b6",
-            "RUNNER_TRACKING_ID": "8ec6c915f44f150e",
+            "RUNNER_TRACKING_ID": "60dd58b6b858d164",
             "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
             "SELENIUM_JAR_PATH": "15f9049d64d77584",
             "SGX_AESM_ADDR": "6b86b273ff34fce1",
@@ -602,9 +602,9 @@
             "SHLVL": "6b86b273ff34fce1",
             "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
             "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
-            "SIL_SOURCE_REVISION": "4aaf8eaa620549bf",
+            "SIL_SOURCE_REVISION": "93e0c2d6d244979c",
             "SWIFT_PATH": "fb8c6698dca20671",
-            "SYSTEMD_EXEC_PID": "1acc01f346b3fbaa",
+            "SYSTEMD_EXEC_PID": "2570ce03b300309d",
             "TMPDIR": "c93abdaab0147fef",
             "USER": "527aa9f431539da8",
             "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
@@ -619,10 +619,10 @@
       ],
       "sentinel_unchanged": true,
       "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
-      "stdout_tail": "manifest_hash f9bbc0ac5f77bf1bca76a054943d80a74098911c28c873f33bf6b76300d6dd3a\ndiagnostics report: run.mcap.diagnostics.json\nrun: succeeded, exit code 0, complete\nrun wall time: 1.368 s (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 125.339 ms, setup 252.564 ms, scheduled execution 905.134 ms, shutdown 84.669 ms, recording finalization 124.081 us, unattributed 0 ns\nVirtual-time speed: scheduled 1.10x, end-to-end 0.73x\nthroughput per second of scheduled execution (905.134 ms): 0 Native Activations, 0.00/s; 234 Process Steps, 258.53/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 100 of 100 completed, mean 7.722 ms, p50 7.625 ms, p95 8.309 ms, p99 9.396 ms, max 10.605 ms\n  group/step process_step: 50 of 50 completed, mean 154.286 us, p50 92.413 us, p95 529.008 us, p99 unavailable (insufficient_samples), max 1.040 ms\n  observer/step process_step: 50 of 50 completed, mean 86.419 us, p50 58.470 us, p95 247.573 us, p99 unavailable (insufficient_samples), max 322.713 us\n  probe/step process_step: 34 of 34 completed, mean 3.543 ms, p50 3.468 ms, p95 3.968 ms, p99 unavailable (insufficient_samples), max 4.023 ms\n  replay replay: 100 Messages; publication Slots 100 of 100 completed, mean 2.839 us, p50 2.514 us, p95 3.256 us, p99 10.319 us, max 26.459 us\nresources (peak RSS is per process and never summed):\n  runner: user CPU 131.372 ms, system CPU 7.184 ms, peak RSS 4.938 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 835.877 ms, system CPU 19.363 ms, peak RSS 22.141 MiB (largest_process_peak_rss; includes waited descendants)\n  process group: user CPU 80.226 ms, system CPU 16.977 ms, peak RSS 22.109 MiB (largest_process_peak_rss; includes waited descendants)\n  process observer: user CPU 50.372 ms, system CPU 8.889 ms, peak RSS 19.258 MiB (largest_process_peak_rss; includes waited descendants)\n  process probe: user CPU 170.298 ms, system CPU 10.076 ms, peak RSS 19.836 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 1.268 s, system 62.489 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; group peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; observer peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; probe peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
+      "stdout_tail": "manifest_hash f9bbc0ac5f77bf1bca76a054943d80a74098911c28c873f33bf6b76300d6dd3a\ndiagnostics report: run.mcap.diagnostics.json\nrun: succeeded, exit code 0, complete\nrun wall time: 1.373 s (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 126.183 ms, setup 256.202 ms, scheduled execution 906.436 ms, shutdown 83.879 ms, recording finalization 125.855 us, unattributed 0 ns\nVirtual-time speed: scheduled 1.10x, end-to-end 0.73x\nthroughput per second of scheduled execution (906.436 ms): 0 Native Activations, 0.00/s; 234 Process Steps, 258.15/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 100 of 100 completed, mean 7.662 ms, p50 7.657 ms, p95 7.734 ms, p99 7.806 ms, max 7.811 ms\n  group/step process_step: 50 of 50 completed, mean 208.155 us, p50 148.396 us, p95 649.892 us, p99 unavailable (insufficient_samples), max 842.381 us\n  observer/step process_step: 50 of 50 completed, mean 112.533 us, p50 87.683 us, p95 272.980 us, p99 unavailable (insufficient_samples), max 341.326 us\n  probe/step process_step: 34 of 34 completed, mean 3.637 ms, p50 3.624 ms, p95 3.753 ms, p99 unavailable (insufficient_samples), max 3.761 ms\n  replay replay: 100 Messages; publication Slots 100 of 100 completed, mean 3.761 us, p50 3.296 us, p95 6.703 us, p99 11.632 us, max 14.487 us\nresources (peak RSS is per process and never summed):\n  runner: user CPU 137.596 ms, system CPU 3.276 ms, peak RSS 5.215 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 828.723 ms, system CPU 19.059 ms, peak RSS 22.039 MiB (largest_process_peak_rss; includes waited descendants)\n  process group: user CPU 78.245 ms, system CPU 20.619 ms, peak RSS 22.113 MiB (largest_process_peak_rss; includes waited descendants)\n  process observer: user CPU 51.289 ms, system CPU 9.616 ms, peak RSS 19.109 MiB (largest_process_peak_rss; includes waited descendants)\n  process probe: user CPU 169.777 ms, system CPU 15.158 ms, peak RSS 19.852 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 1.266 s, system 67.728 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; group peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; observer peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; probe peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 1442
+      "wall_ms": 1448
     },
     {
       "action": null,
@@ -678,12 +678,12 @@
       "observations": {
         "category": "participant",
         "exit_code": 1,
-        "recording": "934b32a790ecd0152ebdf0f91efbef28e7794cd2a8034db1484aeab205cb191d",
-        "wall_ms": 709
+        "recording": "edcb86f3cf614adf586017b41f59a397deaff0973d1b349cb004f9d461fadc20",
+        "wall_ms": 710
       },
       "participants_started": [
-        "fmu-13505.tsv",
-        "probe-13510.json"
+        "fmu-13949.tsv",
+        "probe-13954.json"
       ],
       "probe": [
         {
@@ -694,7 +694,7 @@
           ],
           "environment": {
             "ACCEPT_EULA": "18f5384d58bcb1bb",
-            "ACTIONS_ORCHESTRATION_ID": "1e3ccb14f312f7f4",
+            "ACTIONS_ORCHESTRATION_ID": "3382536ed70edc7a",
             "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
             "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
             "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
@@ -727,19 +727,19 @@
             "GITHUB_ACTOR": "6f72f03e9527d036",
             "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
             "GITHUB_API_URL": "b2fd47bfbc5a4de1",
-            "GITHUB_ARTIFACTS": "9d9946aca22a48fa",
-            "GITHUB_ARTIFACTS_LIST": "779229eb5d47b671",
+            "GITHUB_ARTIFACTS": "f63d7406a354b6d6",
+            "GITHUB_ARTIFACTS_LIST": "db4a87468a84fbcd",
             "GITHUB_BASE_REF": "15ded80916997446",
-            "GITHUB_ENV": "fd3044913003f032",
+            "GITHUB_ENV": "752f93c7151606dc",
             "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
             "GITHUB_EVENT_PATH": "02503339a55110de",
             "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
-            "GITHUB_HEAD_REF": "e5edf33f60d4cd89",
+            "GITHUB_HEAD_REF": "3a8b77bedd9f42d6",
             "GITHUB_JOB": "e48cfe4f6f37ec01",
-            "GITHUB_OUTPUT": "3e0388305a6bcae8",
-            "GITHUB_PATH": "c0edd2e04dcaa49f",
-            "GITHUB_REF": "a9d0f3e4792ad63b",
-            "GITHUB_REF_NAME": "b8afff641a57819d",
+            "GITHUB_OUTPUT": "6727c0007636b66e",
+            "GITHUB_PATH": "c4e2b1700061644e",
+            "GITHUB_REF": "d218dcf1bece7c20",
+            "GITHUB_REF_NAME": "1e98e6a08bf7a26c",
             "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
             "GITHUB_REF_TYPE": "f38c764c8aa00b65",
             "GITHUB_REPOSITORY": "d9af7d8d741acc92",
@@ -748,16 +748,16 @@
             "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
             "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
             "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
-            "GITHUB_RUN_ID": "f0d8cbd82e0b595c",
-            "GITHUB_RUN_NUMBER": "d4735e3a265e16ee",
+            "GITHUB_RUN_ID": "010fcddf7e2296a9",
+            "GITHUB_RUN_NUMBER": "4b227777d4dd1fc6",
             "GITHUB_SERVER_URL": "996e1f714b08e971",
-            "GITHUB_SHA": "85ef7ac37a0ad99c",
-            "GITHUB_STATE": "45223a78cffa3b7d",
-            "GITHUB_STEP_SUMMARY": "30d992b21bec5e0f",
+            "GITHUB_SHA": "3a93998b902416aa",
+            "GITHUB_STATE": "fc49cf83e6a51749",
+            "GITHUB_STEP_SUMMARY": "0b0008079444b334",
             "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
             "GITHUB_WORKFLOW": "423b805186b0a246",
-            "GITHUB_WORKFLOW_REF": "b60ae0c47fc7575c",
-            "GITHUB_WORKFLOW_SHA": "85ef7ac37a0ad99c",
+            "GITHUB_WORKFLOW_REF": "4277c5a6409d6f8a",
+            "GITHUB_WORKFLOW_SHA": "3a93998b902416aa",
             "GITHUB_WORKSPACE": "d10122a7d55cc72c",
             "GOROOT_1_24_X64": "dad7e7c7884916c8",
             "GOROOT_1_25_X64": "4de37c06a108f1d7",
@@ -767,16 +767,16 @@
             "HOME": "b1cbc5f347543a03",
             "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
             "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
-            "INVOCATION_ID": "039d3ef070652224",
+            "INVOCATION_ID": "094a5fa7d0141327",
             "ImageOS": "1a6338a16abf65e3",
-            "ImageVersion": "2a3c3fca2a0cf685",
+            "ImageVersion": "ced8a89c6b2a78f6",
             "JAVA_HOME": "9b2eaca78448dd7a",
             "JAVA_HOME_11_X64": "1ec0fc371ce27771",
             "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
             "JAVA_HOME_21_X64": "c701517cd1ca359a",
             "JAVA_HOME_25_X64": "3331df6d48d9ba51",
             "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
-            "JOURNAL_STREAM": "825c702481555234",
+            "JOURNAL_STREAM": "b5e2350b60f4229d",
             "LANG": "99fed2d548c2eb10",
             "LOGNAME": "527aa9f431539da8",
             "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
@@ -791,11 +791,11 @@
             "Q": "ca9f307d738f5512",
             "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
             "RUNNER_ENVIRONMENT": "ac592027e68479fc",
-            "RUNNER_NAME": "1e65566a891593b5",
+            "RUNNER_NAME": "f754740e9930873e",
             "RUNNER_OS": "4828e60247c1636f",
             "RUNNER_TEMP": "a9fd2b6f1129349e",
             "RUNNER_TOOL_CACHE": "40963d3114e769b6",
-            "RUNNER_TRACKING_ID": "8ec6c915f44f150e",
+            "RUNNER_TRACKING_ID": "60dd58b6b858d164",
             "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
             "SELENIUM_JAR_PATH": "15f9049d64d77584",
             "SGX_AESM_ADDR": "6b86b273ff34fce1",
@@ -803,9 +803,9 @@
             "SHLVL": "6b86b273ff34fce1",
             "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
             "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
-            "SIL_SOURCE_REVISION": "4aaf8eaa620549bf",
+            "SIL_SOURCE_REVISION": "93e0c2d6d244979c",
             "SWIFT_PATH": "fb8c6698dca20671",
-            "SYSTEMD_EXEC_PID": "1acc01f346b3fbaa",
+            "SYSTEMD_EXEC_PID": "2570ce03b300309d",
             "TMPDIR": "c93abdaab0147fef",
             "USER": "527aa9f431539da8",
             "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
@@ -823,7 +823,7 @@
       "stdout_tail": "",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 709
+      "wall_ms": 710
     },
     {
       "action": null,
@@ -874,12 +874,12 @@
             {
               "category": "participant",
               "exit_code": 1,
-              "recording": "934b32a790ecd0152ebdf0f91efbef28e7794cd2a8034db1484aeab205cb191d"
+              "recording": "edcb86f3cf614adf586017b41f59a397deaff0973d1b349cb004f9d461fadc20"
             },
             {
               "category": "participant",
               "exit_code": 1,
-              "recording": "934b32a790ecd0152ebdf0f91efbef28e7794cd2a8034db1484aeab205cb191d"
+              "recording": "edcb86f3cf614adf586017b41f59a397deaff0973d1b349cb004f9d461fadc20"
             }
           ],
           "ok": true
@@ -898,12 +898,12 @@
       "observations": {
         "category": "participant",
         "exit_code": 1,
-        "recording": "934b32a790ecd0152ebdf0f91efbef28e7794cd2a8034db1484aeab205cb191d",
+        "recording": "edcb86f3cf614adf586017b41f59a397deaff0973d1b349cb004f9d461fadc20",
         "wall_ms": 723
       },
       "participants_started": [
-        "fmu-13515.tsv",
-        "probe-13520.json"
+        "fmu-13959.tsv",
+        "probe-13964.json"
       ],
       "probe": [
         {
@@ -914,7 +914,7 @@
           ],
           "environment": {
             "ACCEPT_EULA": "18f5384d58bcb1bb",
-            "ACTIONS_ORCHESTRATION_ID": "1e3ccb14f312f7f4",
+            "ACTIONS_ORCHESTRATION_ID": "3382536ed70edc7a",
             "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
             "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
             "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
@@ -947,19 +947,19 @@
             "GITHUB_ACTOR": "6f72f03e9527d036",
             "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
             "GITHUB_API_URL": "b2fd47bfbc5a4de1",
-            "GITHUB_ARTIFACTS": "9d9946aca22a48fa",
-            "GITHUB_ARTIFACTS_LIST": "779229eb5d47b671",
+            "GITHUB_ARTIFACTS": "f63d7406a354b6d6",
+            "GITHUB_ARTIFACTS_LIST": "db4a87468a84fbcd",
             "GITHUB_BASE_REF": "15ded80916997446",
-            "GITHUB_ENV": "fd3044913003f032",
+            "GITHUB_ENV": "752f93c7151606dc",
             "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
             "GITHUB_EVENT_PATH": "02503339a55110de",
             "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
-            "GITHUB_HEAD_REF": "e5edf33f60d4cd89",
+            "GITHUB_HEAD_REF": "3a8b77bedd9f42d6",
             "GITHUB_JOB": "e48cfe4f6f37ec01",
-            "GITHUB_OUTPUT": "3e0388305a6bcae8",
-            "GITHUB_PATH": "c0edd2e04dcaa49f",
-            "GITHUB_REF": "a9d0f3e4792ad63b",
-            "GITHUB_REF_NAME": "b8afff641a57819d",
+            "GITHUB_OUTPUT": "6727c0007636b66e",
+            "GITHUB_PATH": "c4e2b1700061644e",
+            "GITHUB_REF": "d218dcf1bece7c20",
+            "GITHUB_REF_NAME": "1e98e6a08bf7a26c",
             "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
             "GITHUB_REF_TYPE": "f38c764c8aa00b65",
             "GITHUB_REPOSITORY": "d9af7d8d741acc92",
@@ -968,16 +968,16 @@
             "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
             "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
             "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
-            "GITHUB_RUN_ID": "f0d8cbd82e0b595c",
-            "GITHUB_RUN_NUMBER": "d4735e3a265e16ee",
+            "GITHUB_RUN_ID": "010fcddf7e2296a9",
+            "GITHUB_RUN_NUMBER": "4b227777d4dd1fc6",
             "GITHUB_SERVER_URL": "996e1f714b08e971",
-            "GITHUB_SHA": "85ef7ac37a0ad99c",
-            "GITHUB_STATE": "45223a78cffa3b7d",
-            "GITHUB_STEP_SUMMARY": "30d992b21bec5e0f",
+            "GITHUB_SHA": "3a93998b902416aa",
+            "GITHUB_STATE": "fc49cf83e6a51749",
+            "GITHUB_STEP_SUMMARY": "0b0008079444b334",
             "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
             "GITHUB_WORKFLOW": "423b805186b0a246",
-            "GITHUB_WORKFLOW_REF": "b60ae0c47fc7575c",
-            "GITHUB_WORKFLOW_SHA": "85ef7ac37a0ad99c",
+            "GITHUB_WORKFLOW_REF": "4277c5a6409d6f8a",
+            "GITHUB_WORKFLOW_SHA": "3a93998b902416aa",
             "GITHUB_WORKSPACE": "d10122a7d55cc72c",
             "GOROOT_1_24_X64": "dad7e7c7884916c8",
             "GOROOT_1_25_X64": "4de37c06a108f1d7",
@@ -987,16 +987,16 @@
             "HOME": "b1cbc5f347543a03",
             "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
             "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
-            "INVOCATION_ID": "039d3ef070652224",
+            "INVOCATION_ID": "094a5fa7d0141327",
             "ImageOS": "1a6338a16abf65e3",
-            "ImageVersion": "2a3c3fca2a0cf685",
+            "ImageVersion": "ced8a89c6b2a78f6",
             "JAVA_HOME": "9b2eaca78448dd7a",
             "JAVA_HOME_11_X64": "1ec0fc371ce27771",
             "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
             "JAVA_HOME_21_X64": "c701517cd1ca359a",
             "JAVA_HOME_25_X64": "3331df6d48d9ba51",
             "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
-            "JOURNAL_STREAM": "825c702481555234",
+            "JOURNAL_STREAM": "b5e2350b60f4229d",
             "LANG": "99fed2d548c2eb10",
             "LOGNAME": "527aa9f431539da8",
             "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
@@ -1011,11 +1011,11 @@
             "Q": "ca9f307d738f5512",
             "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
             "RUNNER_ENVIRONMENT": "ac592027e68479fc",
-            "RUNNER_NAME": "1e65566a891593b5",
+            "RUNNER_NAME": "f754740e9930873e",
             "RUNNER_OS": "4828e60247c1636f",
             "RUNNER_TEMP": "a9fd2b6f1129349e",
             "RUNNER_TOOL_CACHE": "40963d3114e769b6",
-            "RUNNER_TRACKING_ID": "8ec6c915f44f150e",
+            "RUNNER_TRACKING_ID": "60dd58b6b858d164",
             "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
             "SELENIUM_JAR_PATH": "15f9049d64d77584",
             "SGX_AESM_ADDR": "6b86b273ff34fce1",
@@ -1023,9 +1023,9 @@
             "SHLVL": "6b86b273ff34fce1",
             "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
             "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
-            "SIL_SOURCE_REVISION": "4aaf8eaa620549bf",
+            "SIL_SOURCE_REVISION": "93e0c2d6d244979c",
             "SWIFT_PATH": "fb8c6698dca20671",
-            "SYSTEMD_EXEC_PID": "1acc01f346b3fbaa",
+            "SYSTEMD_EXEC_PID": "2570ce03b300309d",
             "TMPDIR": "c93abdaab0147fef",
             "USER": "527aa9f431539da8",
             "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
@@ -1040,7 +1040,7 @@
       ],
       "sentinel_unchanged": true,
       "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run-diagnostics: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
-      "stdout_tail": "diagnostics report: run.mcap.diagnostics.json\nrun: run_failure, exit code 1, partial (run_failure)\nfailure: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose (participant, Participant probe, Virtual time 210.000 ms)\nlast Virtual time: 210.000 ms of Duration 1.000 s\nrun wall time: 649.469 ms (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 126.453 ms, setup 252.857 ms, scheduled execution 186.264 ms, shutdown 83.803 ms, recording finalization 92.623 us, unattributed 0 ns\nVirtual-time speed: scheduled unavailable (run_not_successful), end-to-end unavailable (run_not_successful)\nthroughput per second of scheduled execution (186.264 ms): 0 Native Activations, 0.00/s; 50 Process Steps, 268.44/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 21 of 21 completed, mean 7.614 ms, p50 7.601 ms, p95 7.663 ms, p99 unavailable (insufficient_samples), max 7.761 ms\n  group/step process_step: 11 of 11 completed, mean 110.607 us, p50 86.391 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 314.728 us\n  observer/step process_step: 11 of 11 completed, mean 66.648 us, p50 48.671 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 200.725 us\n  probe/step process_step: 7 of 8 completed, 1 failed (first at Activation 7, Virtual time 210.000 ms), mean 3.440 ms, p50 3.443 ms, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 3.465 ms\n  replay replay: 22 Messages; publication Slots 22 of 22 completed, mean 2.642 us, p50 2.074 us, p95 3.767 us, p99 unavailable (insufficient_samples), max 10.459 us\nresources (peak RSS is per process and never summed):\n  runner: user CPU 128.004 ms, system CPU 4.000 ms, peak RSS 5.473 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 233.904 ms, system CPU 12.394 ms, peak RSS 22.129 MiB (largest_process_peak_rss; includes waited descendants)\n  process group: user CPU 73.320 ms, system CPU 17.668 ms, peak RSS 22.207 MiB (largest_process_peak_rss; includes waited descendants)\n  process observer: user CPU 44.948 ms, system CPU 11.725 ms, peak RSS 19.195 MiB (largest_process_peak_rss; includes waited descendants)\n  process probe: user CPU 71.633 ms, system CPU 13.928 ms, peak RSS 20.008 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 551.809 ms, system 59.715 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; group peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; observer peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; probe peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
+      "stdout_tail": "diagnostics report: run.mcap.diagnostics.json\nrun: run_failure, exit code 1, partial (run_failure)\nfailure: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose (participant, Participant probe, Virtual time 210.000 ms)\nlast Virtual time: 210.000 ms of Duration 1.000 s\nrun wall time: 648.009 ms (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 125.904 ms, setup 251.030 ms, scheduled execution 188.009 ms, shutdown 83.016 ms, recording finalization 50.734 us, unattributed 0 ns\nVirtual-time speed: scheduled unavailable (run_not_successful), end-to-end unavailable (run_not_successful)\nthroughput per second of scheduled execution (188.009 ms): 0 Native Activations, 0.00/s; 50 Process Steps, 265.95/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 21 of 21 completed, mean 7.649 ms, p50 7.647 ms, p95 7.715 ms, p99 unavailable (insufficient_samples), max 7.794 ms\n  group/step process_step: 11 of 11 completed, mean 129.252 us, p50 101.409 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 324.545 us\n  observer/step process_step: 11 of 11 completed, mean 83.195 us, p50 70.612 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 196.376 us\n  probe/step process_step: 7 of 8 completed, 1 failed (first at Activation 7, Virtual time 210.000 ms), mean 3.521 ms, p50 3.511 ms, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 3.592 ms\n  replay replay: 22 Messages; publication Slots 22 of 22 completed, mean 3.057 us, p50 2.735 us, p95 3.697 us, p99 unavailable (insufficient_samples), max 10.579 us\nresources (peak RSS is per process and never summed):\n  runner: user CPU 126.081 ms, system CPU 6.100 ms, peak RSS 5.410 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 227.796 ms, system CPU 17.172 ms, peak RSS 22.109 MiB (largest_process_peak_rss; includes waited descendants)\n  process group: user CPU 76.902 ms, system CPU 13.532 ms, peak RSS 22.078 MiB (largest_process_peak_rss; includes waited descendants)\n  process observer: user CPU 48.913 ms, system CPU 8.152 ms, peak RSS 19.109 MiB (largest_process_peak_rss; includes waited descendants)\n  process probe: user CPU 74.988 ms, system CPU 10.272 ms, peak RSS 20.020 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 554.680 ms, system 55.228 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; group peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; observer peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; probe peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
       "timed_out": false,
       "tmp_new_entries": [],
       "wall_ms": 723
@@ -1099,12 +1099,12 @@
       "observations": {
         "category": "timeout",
         "exit_code": 1,
-        "recording": "0f2214313ab7dcd8d413712b956858686f0a447992439520405893e9ba8bc66a",
-        "wall_ms": 3540
+        "recording": "b76aa46d18c8e143c911c486fb870602bd0d4341aa508c3912a5200c78f09ed7",
+        "wall_ms": 3551
       },
       "participants_started": [
-        "fmu-13522.tsv",
-        "probe-13527.json"
+        "fmu-13966.tsv",
+        "probe-13971.json"
       ],
       "probe": [
         {
@@ -1117,7 +1117,7 @@
           ],
           "environment": {
             "ACCEPT_EULA": "18f5384d58bcb1bb",
-            "ACTIONS_ORCHESTRATION_ID": "1e3ccb14f312f7f4",
+            "ACTIONS_ORCHESTRATION_ID": "3382536ed70edc7a",
             "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
             "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
             "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
@@ -1150,19 +1150,19 @@
             "GITHUB_ACTOR": "6f72f03e9527d036",
             "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
             "GITHUB_API_URL": "b2fd47bfbc5a4de1",
-            "GITHUB_ARTIFACTS": "9d9946aca22a48fa",
-            "GITHUB_ARTIFACTS_LIST": "779229eb5d47b671",
+            "GITHUB_ARTIFACTS": "f63d7406a354b6d6",
+            "GITHUB_ARTIFACTS_LIST": "db4a87468a84fbcd",
             "GITHUB_BASE_REF": "15ded80916997446",
-            "GITHUB_ENV": "fd3044913003f032",
+            "GITHUB_ENV": "752f93c7151606dc",
             "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
             "GITHUB_EVENT_PATH": "02503339a55110de",
             "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
-            "GITHUB_HEAD_REF": "e5edf33f60d4cd89",
+            "GITHUB_HEAD_REF": "3a8b77bedd9f42d6",
             "GITHUB_JOB": "e48cfe4f6f37ec01",
-            "GITHUB_OUTPUT": "3e0388305a6bcae8",
-            "GITHUB_PATH": "c0edd2e04dcaa49f",
-            "GITHUB_REF": "a9d0f3e4792ad63b",
-            "GITHUB_REF_NAME": "b8afff641a57819d",
+            "GITHUB_OUTPUT": "6727c0007636b66e",
+            "GITHUB_PATH": "c4e2b1700061644e",
+            "GITHUB_REF": "d218dcf1bece7c20",
+            "GITHUB_REF_NAME": "1e98e6a08bf7a26c",
             "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
             "GITHUB_REF_TYPE": "f38c764c8aa00b65",
             "GITHUB_REPOSITORY": "d9af7d8d741acc92",
@@ -1171,16 +1171,16 @@
             "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
             "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
             "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
-            "GITHUB_RUN_ID": "f0d8cbd82e0b595c",
-            "GITHUB_RUN_NUMBER": "d4735e3a265e16ee",
+            "GITHUB_RUN_ID": "010fcddf7e2296a9",
+            "GITHUB_RUN_NUMBER": "4b227777d4dd1fc6",
             "GITHUB_SERVER_URL": "996e1f714b08e971",
-            "GITHUB_SHA": "85ef7ac37a0ad99c",
-            "GITHUB_STATE": "45223a78cffa3b7d",
-            "GITHUB_STEP_SUMMARY": "30d992b21bec5e0f",
+            "GITHUB_SHA": "3a93998b902416aa",
+            "GITHUB_STATE": "fc49cf83e6a51749",
+            "GITHUB_STEP_SUMMARY": "0b0008079444b334",
             "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
             "GITHUB_WORKFLOW": "423b805186b0a246",
-            "GITHUB_WORKFLOW_REF": "b60ae0c47fc7575c",
-            "GITHUB_WORKFLOW_SHA": "85ef7ac37a0ad99c",
+            "GITHUB_WORKFLOW_REF": "4277c5a6409d6f8a",
+            "GITHUB_WORKFLOW_SHA": "3a93998b902416aa",
             "GITHUB_WORKSPACE": "d10122a7d55cc72c",
             "GOROOT_1_24_X64": "dad7e7c7884916c8",
             "GOROOT_1_25_X64": "4de37c06a108f1d7",
@@ -1190,16 +1190,16 @@
             "HOME": "b1cbc5f347543a03",
             "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
             "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
-            "INVOCATION_ID": "039d3ef070652224",
+            "INVOCATION_ID": "094a5fa7d0141327",
             "ImageOS": "1a6338a16abf65e3",
-            "ImageVersion": "2a3c3fca2a0cf685",
+            "ImageVersion": "ced8a89c6b2a78f6",
             "JAVA_HOME": "9b2eaca78448dd7a",
             "JAVA_HOME_11_X64": "1ec0fc371ce27771",
             "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
             "JAVA_HOME_21_X64": "c701517cd1ca359a",
             "JAVA_HOME_25_X64": "3331df6d48d9ba51",
             "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
-            "JOURNAL_STREAM": "825c702481555234",
+            "JOURNAL_STREAM": "b5e2350b60f4229d",
             "LANG": "99fed2d548c2eb10",
             "LOGNAME": "527aa9f431539da8",
             "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
@@ -1214,11 +1214,11 @@
             "Q": "ca9f307d738f5512",
             "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
             "RUNNER_ENVIRONMENT": "ac592027e68479fc",
-            "RUNNER_NAME": "1e65566a891593b5",
+            "RUNNER_NAME": "f754740e9930873e",
             "RUNNER_OS": "4828e60247c1636f",
             "RUNNER_TEMP": "a9fd2b6f1129349e",
             "RUNNER_TOOL_CACHE": "40963d3114e769b6",
-            "RUNNER_TRACKING_ID": "8ec6c915f44f150e",
+            "RUNNER_TRACKING_ID": "60dd58b6b858d164",
             "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
             "SELENIUM_JAR_PATH": "15f9049d64d77584",
             "SGX_AESM_ADDR": "6b86b273ff34fce1",
@@ -1226,9 +1226,9 @@
             "SHLVL": "6b86b273ff34fce1",
             "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
             "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
-            "SIL_SOURCE_REVISION": "4aaf8eaa620549bf",
+            "SIL_SOURCE_REVISION": "93e0c2d6d244979c",
             "SWIFT_PATH": "fb8c6698dca20671",
-            "SYSTEMD_EXEC_PID": "1acc01f346b3fbaa",
+            "SYSTEMD_EXEC_PID": "2570ce03b300309d",
             "TMPDIR": "c93abdaab0147fef",
             "USER": "527aa9f431539da8",
             "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
@@ -1246,7 +1246,7 @@
       "stdout_tail": "",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 3540
+      "wall_ms": 3551
     },
     {
       "action": null,
@@ -1297,12 +1297,12 @@
             {
               "category": "timeout",
               "exit_code": 1,
-              "recording": "0f2214313ab7dcd8d413712b956858686f0a447992439520405893e9ba8bc66a"
+              "recording": "b76aa46d18c8e143c911c486fb870602bd0d4341aa508c3912a5200c78f09ed7"
             },
             {
               "category": "timeout",
               "exit_code": 1,
-              "recording": "0f2214313ab7dcd8d413712b956858686f0a447992439520405893e9ba8bc66a"
+              "recording": "b76aa46d18c8e143c911c486fb870602bd0d4341aa508c3912a5200c78f09ed7"
             }
           ],
           "ok": true
@@ -1321,12 +1321,12 @@
       "observations": {
         "category": "timeout",
         "exit_code": 1,
-        "recording": "0f2214313ab7dcd8d413712b956858686f0a447992439520405893e9ba8bc66a",
-        "wall_ms": 3560
+        "recording": "b76aa46d18c8e143c911c486fb870602bd0d4341aa508c3912a5200c78f09ed7",
+        "wall_ms": 3568
       },
       "participants_started": [
-        "fmu-13533.tsv",
-        "probe-13538.json"
+        "fmu-13977.tsv",
+        "probe-13982.json"
       ],
       "probe": [
         {
@@ -1339,7 +1339,7 @@
           ],
           "environment": {
             "ACCEPT_EULA": "18f5384d58bcb1bb",
-            "ACTIONS_ORCHESTRATION_ID": "1e3ccb14f312f7f4",
+            "ACTIONS_ORCHESTRATION_ID": "3382536ed70edc7a",
             "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
             "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
             "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
@@ -1372,19 +1372,19 @@
             "GITHUB_ACTOR": "6f72f03e9527d036",
             "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
             "GITHUB_API_URL": "b2fd47bfbc5a4de1",
-            "GITHUB_ARTIFACTS": "9d9946aca22a48fa",
-            "GITHUB_ARTIFACTS_LIST": "779229eb5d47b671",
+            "GITHUB_ARTIFACTS": "f63d7406a354b6d6",
+            "GITHUB_ARTIFACTS_LIST": "db4a87468a84fbcd",
             "GITHUB_BASE_REF": "15ded80916997446",
-            "GITHUB_ENV": "fd3044913003f032",
+            "GITHUB_ENV": "752f93c7151606dc",
             "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
             "GITHUB_EVENT_PATH": "02503339a55110de",
             "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
-            "GITHUB_HEAD_REF": "e5edf33f60d4cd89",
+            "GITHUB_HEAD_REF": "3a8b77bedd9f42d6",
             "GITHUB_JOB": "e48cfe4f6f37ec01",
-            "GITHUB_OUTPUT": "3e0388305a6bcae8",
-            "GITHUB_PATH": "c0edd2e04dcaa49f",
-            "GITHUB_REF": "a9d0f3e4792ad63b",
-            "GITHUB_REF_NAME": "b8afff641a57819d",
+            "GITHUB_OUTPUT": "6727c0007636b66e",
+            "GITHUB_PATH": "c4e2b1700061644e",
+            "GITHUB_REF": "d218dcf1bece7c20",
+            "GITHUB_REF_NAME": "1e98e6a08bf7a26c",
             "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
             "GITHUB_REF_TYPE": "f38c764c8aa00b65",
             "GITHUB_REPOSITORY": "d9af7d8d741acc92",
@@ -1393,16 +1393,16 @@
             "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
             "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
             "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
-            "GITHUB_RUN_ID": "f0d8cbd82e0b595c",
-            "GITHUB_RUN_NUMBER": "d4735e3a265e16ee",
+            "GITHUB_RUN_ID": "010fcddf7e2296a9",
+            "GITHUB_RUN_NUMBER": "4b227777d4dd1fc6",
             "GITHUB_SERVER_URL": "996e1f714b08e971",
-            "GITHUB_SHA": "85ef7ac37a0ad99c",
-            "GITHUB_STATE": "45223a78cffa3b7d",
-            "GITHUB_STEP_SUMMARY": "30d992b21bec5e0f",
+            "GITHUB_SHA": "3a93998b902416aa",
+            "GITHUB_STATE": "fc49cf83e6a51749",
+            "GITHUB_STEP_SUMMARY": "0b0008079444b334",
             "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
             "GITHUB_WORKFLOW": "423b805186b0a246",
-            "GITHUB_WORKFLOW_REF": "b60ae0c47fc7575c",
-            "GITHUB_WORKFLOW_SHA": "85ef7ac37a0ad99c",
+            "GITHUB_WORKFLOW_REF": "4277c5a6409d6f8a",
+            "GITHUB_WORKFLOW_SHA": "3a93998b902416aa",
             "GITHUB_WORKSPACE": "d10122a7d55cc72c",
             "GOROOT_1_24_X64": "dad7e7c7884916c8",
             "GOROOT_1_25_X64": "4de37c06a108f1d7",
@@ -1412,16 +1412,16 @@
             "HOME": "b1cbc5f347543a03",
             "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
             "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
-            "INVOCATION_ID": "039d3ef070652224",
+            "INVOCATION_ID": "094a5fa7d0141327",
             "ImageOS": "1a6338a16abf65e3",
-            "ImageVersion": "2a3c3fca2a0cf685",
+            "ImageVersion": "ced8a89c6b2a78f6",
             "JAVA_HOME": "9b2eaca78448dd7a",
             "JAVA_HOME_11_X64": "1ec0fc371ce27771",
             "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
             "JAVA_HOME_21_X64": "c701517cd1ca359a",
             "JAVA_HOME_25_X64": "3331df6d48d9ba51",
             "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
-            "JOURNAL_STREAM": "825c702481555234",
+            "JOURNAL_STREAM": "b5e2350b60f4229d",
             "LANG": "99fed2d548c2eb10",
             "LOGNAME": "527aa9f431539da8",
             "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
@@ -1436,11 +1436,11 @@
             "Q": "ca9f307d738f5512",
             "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
             "RUNNER_ENVIRONMENT": "ac592027e68479fc",
-            "RUNNER_NAME": "1e65566a891593b5",
+            "RUNNER_NAME": "f754740e9930873e",
             "RUNNER_OS": "4828e60247c1636f",
             "RUNNER_TEMP": "a9fd2b6f1129349e",
             "RUNNER_TOOL_CACHE": "40963d3114e769b6",
-            "RUNNER_TRACKING_ID": "8ec6c915f44f150e",
+            "RUNNER_TRACKING_ID": "60dd58b6b858d164",
             "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
             "SELENIUM_JAR_PATH": "15f9049d64d77584",
             "SGX_AESM_ADDR": "6b86b273ff34fce1",
@@ -1448,9 +1448,9 @@
             "SHLVL": "6b86b273ff34fce1",
             "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
             "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
-            "SIL_SOURCE_REVISION": "4aaf8eaa620549bf",
+            "SIL_SOURCE_REVISION": "93e0c2d6d244979c",
             "SWIFT_PATH": "fb8c6698dca20671",
-            "SYSTEMD_EXEC_PID": "1acc01f346b3fbaa",
+            "SYSTEMD_EXEC_PID": "2570ce03b300309d",
             "TMPDIR": "c93abdaab0147fef",
             "USER": "527aa9f431539da8",
             "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
@@ -1465,10 +1465,10 @@
       ],
       "sentinel_unchanged": true,
       "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nTraceback (most recent call last):\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 297, in run\n    send({\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py\", line 125, in <module>\n    main()\n  File \"/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py\", line 121, in main\n    run(Probe(parser.parse_args()))\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 302, in run\n    send({\"op\": \"fail\", \"reason\": _reason(e)})\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\nException ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns\n",
-      "stdout_tail": "diagnostics report: run.mcap.diagnostics.json\nrun: run_failure, exit code 1, partial (run_failure)\nfailure: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns (timeout, Participant probe, Virtual time 90.000 ms)\nlast Virtual time: 90.000 ms of Duration 1.000 s\nrun wall time: 3.485 s (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 126.299 ms, setup 253.408 ms, scheduled execution 1.081 s, shutdown 2.025 s, recording finalization 56.034 us, unattributed 0 ns\nVirtual-time speed: scheduled unavailable (run_not_successful), end-to-end unavailable (run_not_successful)\nthroughput per second of scheduled execution (1.081 s): 0 Native Activations, 0.00/s; 22 Process Steps, 20.35/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 9 of 9 completed, mean 7.633 ms, p50 7.612 ms, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 7.749 ms\n  group/step process_step: 5 of 5 completed, mean 148.393 us, p50 100.728 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 337.210 us\n  observer/step process_step: 5 of 5 completed, mean 94.613 us, p50 60.553 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 224.539 us\n  probe/step process_step: 3 of 4 completed, 1 failed (first at Activation 3, Virtual time 90.000 ms), mean 3.562 ms, p50 3.562 ms, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 3.586 ms\n  replay replay: 10 Messages; publication Slots 10 of 10 completed, mean 3.236 us, p50 2.294 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 10.580 us\nresources (peak RSS is per process and never summed):\n  runner: user CPU 127.766 ms, system CPU 8.310 ms, peak RSS 5.473 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 137.704 ms, system CPU 15.923 ms, peak RSS 22.125 MiB (largest_process_peak_rss; includes waited descendants)\n  process group: user CPU 74.213 ms, system CPU 16.150 ms, peak RSS 22.250 MiB (largest_process_peak_rss; includes waited descendants)\n  process observer: user CPU 49.134 ms, system CPU 8.189 ms, peak RSS 19.262 MiB (largest_process_peak_rss; includes waited descendants)\n  process probe: user CPU 62.038 ms, system CPU 16.009 ms, peak RSS 20.020 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 450.855 ms, system 64.581 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; group peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; observer peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; probe peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
+      "stdout_tail": "diagnostics report: run.mcap.diagnostics.json\nrun: run_failure, exit code 1, partial (run_failure)\nfailure: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns (timeout, Participant probe, Virtual time 90.000 ms)\nlast Virtual time: 90.000 ms of Duration 1.000 s\nrun wall time: 3.492 s (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 126.058 ms, setup 260.674 ms, scheduled execution 1.081 s, shutdown 2.024 s, recording finalization 64.020 us, unattributed 0 ns\nVirtual-time speed: scheduled unavailable (run_not_successful), end-to-end unavailable (run_not_successful)\nthroughput per second of scheduled execution (1.081 s): 0 Native Activations, 0.00/s; 22 Process Steps, 20.34/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 9 of 9 completed, mean 7.679 ms, p50 7.673 ms, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 7.771 ms\n  group/step process_step: 5 of 5 completed, mean 178.046 us, p50 145.712 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 329.906 us\n  observer/step process_step: 5 of 5 completed, mean 119.036 us, p50 89.267 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 230.711 us\n  probe/step process_step: 3 of 4 completed, 1 failed (first at Activation 3, Virtual time 90.000 ms), mean 3.520 ms, p50 3.525 ms, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 3.528 ms\n  replay replay: 10 Messages; publication Slots 10 of 10 completed, mean 4.298 us, p50 3.667 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 11.692 us\nresources (peak RSS is per process and never summed):\n  runner: user CPU 131.941 ms, system CPU 5.320 ms, peak RSS 5.395 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 142.096 ms, system CPU 14.947 ms, peak RSS 22.117 MiB (largest_process_peak_rss; includes waited descendants)\n  process group: user CPU 72.952 ms, system CPU 20.373 ms, peak RSS 22.086 MiB (largest_process_peak_rss; includes waited descendants)\n  process observer: user CPU 51.584 ms, system CPU 7.080 ms, peak RSS 19.098 MiB (largest_process_peak_rss; includes waited descendants)\n  process probe: user CPU 67.025 ms, system CPU 10.155 ms, peak RSS 20.074 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 465.598 ms, system 57.875 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; group peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; observer peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; probe peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 3560
+      "wall_ms": 3568
     },
     {
       "action": null,
@@ -1610,23 +1610,23 @@
           "detail": [
             [
               "p6",
-              13556,
+              14001,
               50
             ],
             [
               "p7",
-              13557,
-              51
+              14002,
+              50
             ],
             [
               "p8",
-              13558,
+              14003,
               50
             ],
             [
               "p9",
-              13559,
-              51
+              14004,
+              50
             ]
           ],
           "ok": true
@@ -1652,13 +1652,13 @@
             {
               "mapping": "verified",
               "participant": "fmu",
-              "pid": 13553,
+              "pid": 13998,
               "process": "p3"
             },
             {
               "mapping": "verified",
               "participant": "process",
-              "pid": 13555,
+              "pid": 14000,
               "process": "p5"
             }
           ],
@@ -1674,17 +1674,17 @@
       ],
       "observations": {
         "bytes": {
-          "activation/correlation.json": 132661,
+          "activation/correlation.json": 132518,
           "activation/observations.jsonl": 63256,
           "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-matching-activations/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/elf": 27312,
           "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-matching-activations/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/probes": 0,
-          "cpu/perf-buildid-cache.stderr.txt": 306,
+          "cpu/perf-buildid-cache.stderr.txt": 228,
           "cpu/perf-script.stderr.txt": 0,
           "cpu/perf-srcline.stderr.txt": 0,
-          "cpu/perf.data": 22981440,
-          "cpu/samples.json": 181790,
-          "profile.json": 68024,
-          "run.diagnostics.json": 23644,
+          "cpu/perf.data": 22955568,
+          "cpu/samples.json": 181302,
+          "profile.json": 66510,
+          "run.diagnostics.json": 23631,
           "run.mcap": 28039,
           "run.mcap.provenance.json": 2541
         },
@@ -1697,38 +1697,38 @@
           []
         ],
         "raw_sha256": {
-          "activation/observations.jsonl": "0b622cd2365c4967deed76d537f65190dbe97264e41a6291819413d5b37b4430",
-          "cpu/perf.data": "81376ce0b3d14c42ef7c91fd7f21b79245e550d67016b609b225ac184a1fc67f",
+          "activation/observations.jsonl": "1f879d3b97c8e182814223c9ba05f3ce713d3e5d66325aa97e4d569ec614cb02",
+          "cpu/perf.data": "0e4510d0a0651ea1fe252af5f0e6c89abc55f4453ac6cf1b0e8ec92f0c04e043",
           "run.mcap": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
         },
         "run": "succeeded",
         "totals": {
           "lost_records": 0,
           "lost_samples": 0,
-          "samples": 2719,
+          "samples": 2711,
           "samples_unknown_module": 0,
-          "samples_unknown_symbol": 68,
-          "samples_with_caller": 2654,
+          "samples_unknown_symbol": 80,
+          "samples_with_caller": 2646,
           "unavailable": {},
-          "weight_ns": 2721721719
+          "weight_ns": 2713713711
         },
-        "wall_ms": 4093
+        "wall_ms": 4351
       },
       "participants_started": [
-        "child-13556.tsv",
-        "child-13557.tsv",
-        "child-13558.tsv",
-        "child-13559.tsv",
-        "fmu-13553.tsv",
-        "native-13552.tsv",
-        "process-13555.tsv"
+        "child-14001.tsv",
+        "child-14002.tsv",
+        "child-14003.tsv",
+        "child-14004.tsv",
+        "fmu-13998.tsv",
+        "native-13997.tsv",
+        "process-14000.tsv"
       ],
       "sentinel_unchanged": true,
       "stderr_tail": "",
-      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2719, weight 2.722 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 2651 of 2719 samples; source lines for 2518 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 2719 samples: 777 in an Activation's execution context (runner thread), 1750 in a Process Step window (associated, not proven to be Step work), 67 lifecycle, 0 Replay, 125 unattributed\ntop self weight (share of all sample weight):\n   28.4%  silproof_process_spin (libsilproof_process.so)\n   28.2%  silproof_fmu_spin (EgoMotion.so)\n   14.3%  silproof_native_spin_odd (libsilproof_native.so)\n   14.3%  silproof_native_spin_even (libsilproof_native.so)\n    7.4%  silproof_child_spin (silproof_child)\n    2.4%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    1.9%  [unknown function] (python3.12)\n    0.9%  _PyEval_EvalFrameDefault (python3.12)\n    0.3%  [unknown function] (libc.so.6)\n    0.2%  PyObject_Malloc (python3.12)\n    1.7%  all other functions\n",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2711, weight 2.714 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 8 with samples\nsymbols: function names for 2631 of 2711 samples; source lines for 2506 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 2711 samples: 775 in an Activation's execution context (runner thread), 1740 in a Process Step window (associated, not proven to be Step work), 65 lifecycle, 0 Replay, 131 unattributed\ntop self weight (share of all sample weight):\n   28.6%  silproof_process_spin (libsilproof_process.so)\n   27.9%  silproof_fmu_spin (EgoMotion.so)\n   14.3%  silproof_native_spin_even (libsilproof_native.so)\n   14.3%  silproof_native_spin_odd (libsilproof_native.so)\n    7.4%  silproof_child_spin (silproof_child)\n    2.7%  [unknown function] (python3.12)\n    2.4%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    0.6%  _PyEval_EvalFrameDefault (python3.12)\n    0.1%  _Py_hashtable_get (python3.12)\n    0.1%  PyObject_Malloc (python3.12)\n    1.7%  all other functions\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 4093
+      "wall_ms": 4351
     },
     {
       "action": null,
@@ -1846,13 +1846,13 @@
         "bytes": {
           "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-debug-missing/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/elf": 27312,
           "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-debug-missing/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/probes": 0,
-          "cpu/perf-buildid-cache.stderr.txt": 299,
+          "cpu/perf-buildid-cache.stderr.txt": 221,
           "cpu/perf-script.stderr.txt": 0,
           "cpu/perf-srcline.stderr.txt": 0,
-          "cpu/perf.data": 22972880,
-          "cpu/samples.json": 179499,
-          "profile.json": 60420,
-          "run.diagnostics.json": 23629,
+          "cpu/perf.data": 22803504,
+          "cpu/samples.json": 174171,
+          "profile.json": 59840,
+          "run.diagnostics.json": 23641,
           "run.mcap": 28039,
           "run.mcap.provenance.json": 2541
         },
@@ -1861,37 +1861,37 @@
           []
         ],
         "raw_sha256": {
-          "cpu/perf.data": "9fe20a7e5083c2b7dceed91d9a8142d536e16a313fd53bf01f83bb5d218c9810",
+          "cpu/perf.data": "dca23981d8c72d16eeb3a3ba346d757416165ed84f11fd522755f0fd8a7d0de3",
           "run.mcap": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
         },
         "run": "succeeded",
         "totals": {
           "lost_records": 0,
           "lost_samples": 0,
-          "samples": 2718,
+          "samples": 2693,
           "samples_unknown_module": 0,
-          "samples_unknown_symbol": 870,
-          "samples_with_caller": 2653,
+          "samples_unknown_symbol": 848,
+          "samples_with_caller": 2631,
           "unavailable": {},
-          "weight_ns": 2720720718
+          "weight_ns": 2695695693
         },
-        "wall_ms": 3666
+        "wall_ms": 4207
       },
       "participants_started": [
-        "child-13598.tsv",
-        "child-13599.tsv",
-        "child-13600.tsv",
-        "child-13601.tsv",
-        "fmu-13595.tsv",
-        "native-13594.tsv",
-        "process-13597.tsv"
+        "child-14048.tsv",
+        "child-14049.tsv",
+        "child-14050.tsv",
+        "child-14051.tsv",
+        "fmu-14045.tsv",
+        "native-14044.tsv",
+        "process-14047.tsv"
       ],
       "sentinel_unchanged": true,
       "stderr_tail": "",
-      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2718, weight 2.721 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 8 with samples\nsymbols: function names for 1848 of 2718 samples; source lines for 1731 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   28.6%  [unknown function] (libsilproof_native.so)\n   28.4%  silproof_process_spin (libsilproof_process.so)\n   27.9%  silproof_fmu_spin (EgoMotion.so)\n    7.5%  silproof_child_spin (silproof_child)\n    2.7%  [unknown function] (python3.12)\n    2.4%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    0.8%  _PyEval_EvalFrameDefault (python3.12)\n    0.3%  [unknown function] (libc.so.6)\n    0.2%  [unknown function] (ld-linux-x86-64.so.2)\n    0.1%  PyObject_Malloc (python3.12)\n    1.3%  all other functions\n",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2693, weight 2.696 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 8 with samples\nsymbols: function names for 1845 of 2693 samples; source lines for 1732 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   28.6%  [unknown function] (libsilproof_native.so)\n   28.6%  silproof_process_spin (libsilproof_process.so)\n   28.3%  silproof_fmu_spin (EgoMotion.so)\n    7.5%  silproof_child_spin (silproof_child)\n    2.6%  [unknown function] (python3.12)\n    2.3%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    0.7%  _PyEval_EvalFrameDefault (python3.12)\n    0.2%  PyObject_Malloc (python3.12)\n    0.1%  [unknown function] (libc.so.6)\n    0.1%  PyUnicode_FromKindAndData (python3.12)\n    1.2%  all other functions\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 3666
+      "wall_ms": 4207
     },
     {
       "action": null,
@@ -2009,13 +2009,13 @@
         "bytes": {
           "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-debug-mismatched/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/elf": 27312,
           "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-main-debug-mismatched/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/probes": 0,
-          "cpu/perf-buildid-cache.stderr.txt": 302,
+          "cpu/perf-buildid-cache.stderr.txt": 224,
           "cpu/perf-script.stderr.txt": 0,
           "cpu/perf-srcline.stderr.txt": 0,
-          "cpu/perf.data": 22728568,
-          "cpu/samples.json": 176812,
-          "profile.json": 60741,
-          "run.diagnostics.json": 23633,
+          "cpu/perf.data": 23132680,
+          "cpu/samples.json": 177204,
+          "profile.json": 61101,
+          "run.diagnostics.json": 23655,
           "run.mcap": 28039,
           "run.mcap.provenance.json": 2541
         },
@@ -2024,37 +2024,37 @@
           []
         ],
         "raw_sha256": {
-          "cpu/perf.data": "dc2fe163bee5f7d3f7321c5545266b93ea6f3b99ba8b0589355a30dc066b6a9b",
+          "cpu/perf.data": "49b269a74300609087d12ff9a24ebb9440ed00fa4e605e527957c3baa73a8611",
           "run.mcap": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
         },
         "run": "succeeded",
         "totals": {
           "lost_records": 0,
           "lost_samples": 0,
-          "samples": 2689,
+          "samples": 2732,
           "samples_unknown_module": 0,
-          "samples_unknown_symbol": 838,
-          "samples_with_caller": 2623,
+          "samples_unknown_symbol": 854,
+          "samples_with_caller": 2668,
           "unavailable": {},
-          "weight_ns": 2691691689
+          "weight_ns": 2734734732
         },
-        "wall_ms": 3655
+        "wall_ms": 4227
       },
       "participants_started": [
-        "child-13640.tsv",
-        "child-13641.tsv",
-        "child-13642.tsv",
-        "child-13643.tsv",
-        "fmu-13637.tsv",
-        "native-13635.tsv",
-        "process-13639.tsv"
+        "child-14093.tsv",
+        "child-14094.tsv",
+        "child-14095.tsv",
+        "child-14096.tsv",
+        "fmu-14090.tsv",
+        "native-14089.tsv",
+        "process-14092.tsv"
       ],
       "sentinel_unchanged": true,
       "stderr_tail": "",
-      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2689, weight 2.692 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 1851 of 2689 samples; source lines for 1728 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   28.5%  [unknown function] (libsilproof_native.so)\n   28.4%  silproof_process_spin (libsilproof_process.so)\n   28.3%  silproof_fmu_spin (EgoMotion.so)\n    7.5%  silproof_child_spin (silproof_child)\n    2.5%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    2.2%  [unknown function] (python3.12)\n    0.7%  _PyEval_EvalFrameDefault (python3.12)\n    0.3%  [unknown function] (libc.so.6)\n    0.1%  PyUnicode_FromKindAndData (python3.12)\n    0.1%  [unknown function] (ld-linux-x86-64.so.2)\n    1.3%  all other functions\n",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2732, weight 2.735 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 1878 of 2732 samples; source lines for 1761 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   28.8%  silproof_process_spin (libsilproof_process.so)\n   28.3%  [unknown function] (libsilproof_native.so)\n   28.3%  silproof_fmu_spin (EgoMotion.so)\n    7.4%  silproof_child_spin (silproof_child)\n    2.7%  [unknown function] (python3.12)\n    2.3%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    0.4%  _PyEval_EvalFrameDefault (python3.12)\n    0.2%  [unknown function] (libc.so.6)\n    0.1%  PyObject_Malloc (python3.12)\n    0.1%  _Py_hashtable_get (python3.12)\n    1.3%  all other functions\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 3655
+      "wall_ms": 4227
     },
     {
       "action": null,
@@ -2132,12 +2132,12 @@
             {
               "category": null,
               "exit_code": 0,
-              "recording": "1177bbd2b31b41bff1ace7f92882f85fdf6210d0f2bd5463a76bb63c97fa4861"
+              "recording": "3dbd099d91747c8b4eea0bac787d2cc327ed1350371f7ee911ca96991221f2b2"
             },
             {
               "category": null,
               "exit_code": 0,
-              "recording": "1177bbd2b31b41bff1ace7f92882f85fdf6210d0f2bd5463a76bb63c97fa4861"
+              "recording": "3dbd099d91747c8b4eea0bac787d2cc327ed1350371f7ee911ca96991221f2b2"
             }
           ],
           "ok": true
@@ -2204,17 +2204,17 @@
       ],
       "observations": {
         "bytes": {
-          "activation/correlation.json": 98977,
+          "activation/correlation.json": 100094,
           "activation/observations.jsonl": 66264,
           "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-mixed-activations/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/elf": 27312,
           "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-mixed-activations/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/probes": 0,
-          "cpu/perf-buildid-cache.stderr.txt": 298,
+          "cpu/perf-buildid-cache.stderr.txt": 220,
           "cpu/perf-script.stderr.txt": 0,
           "cpu/perf-srcline.stderr.txt": 0,
-          "cpu/perf.data": 10642880,
-          "cpu/samples.json": 179642,
-          "profile.json": 69798,
-          "run.diagnostics.json": 33394,
+          "cpu/perf.data": 10939592,
+          "cpu/samples.json": 194603,
+          "profile.json": 70288,
+          "run.diagnostics.json": 33427,
           "run.mcap": 59788,
           "run.mcap.provenance.json": 3327
         },
@@ -2227,26 +2227,26 @@
           []
         ],
         "raw_sha256": {
-          "activation/observations.jsonl": "b38659916c712ba8b90fa0dcbead6621886ea8f4af0e92021c463e8574a9ba05",
-          "cpu/perf.data": "75c4384979845c2bc9ceb282a22043f5ba9c477226015d93dbaf75ee866d4404",
-          "run.mcap": "1177bbd2b31b41bff1ace7f92882f85fdf6210d0f2bd5463a76bb63c97fa4861"
+          "activation/observations.jsonl": "1cca9fb13486442feb324a263d62d88d597aec45a8afb095f82e2c0e34cc9d39",
+          "cpu/perf.data": "7060f81496660faebf5f4a2700b7a7e79879bc0c0b95e3ccaba5cabf5d7fa0c3",
+          "run.mcap": "3dbd099d91747c8b4eea0bac787d2cc327ed1350371f7ee911ca96991221f2b2"
         },
         "run": "succeeded",
         "totals": {
           "lost_records": 0,
           "lost_samples": 0,
-          "samples": 1252,
+          "samples": 1285,
           "samples_unknown_module": 0,
-          "samples_unknown_symbol": 217,
-          "samples_with_caller": 1126,
+          "samples_unknown_symbol": 181,
+          "samples_with_caller": 1159,
           "unavailable": {},
-          "weight_ns": 1253253252
+          "weight_ns": 1286286285
         },
-        "wall_ms": 2136
+        "wall_ms": 2258
       },
       "participants_started": [
-        "fmu-13679.tsv",
-        "probe-13684.json"
+        "fmu-14135.tsv",
+        "probe-14140.json"
       ],
       "probe": [
         {
@@ -2255,7 +2255,7 @@
           ],
           "environment": {
             "ACCEPT_EULA": "18f5384d58bcb1bb",
-            "ACTIONS_ORCHESTRATION_ID": "1e3ccb14f312f7f4",
+            "ACTIONS_ORCHESTRATION_ID": "3382536ed70edc7a",
             "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
             "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
             "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
@@ -2288,19 +2288,19 @@
             "GITHUB_ACTOR": "6f72f03e9527d036",
             "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
             "GITHUB_API_URL": "b2fd47bfbc5a4de1",
-            "GITHUB_ARTIFACTS": "9d9946aca22a48fa",
-            "GITHUB_ARTIFACTS_LIST": "779229eb5d47b671",
+            "GITHUB_ARTIFACTS": "f63d7406a354b6d6",
+            "GITHUB_ARTIFACTS_LIST": "db4a87468a84fbcd",
             "GITHUB_BASE_REF": "15ded80916997446",
-            "GITHUB_ENV": "fd3044913003f032",
+            "GITHUB_ENV": "752f93c7151606dc",
             "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
             "GITHUB_EVENT_PATH": "02503339a55110de",
             "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
-            "GITHUB_HEAD_REF": "e5edf33f60d4cd89",
+            "GITHUB_HEAD_REF": "3a8b77bedd9f42d6",
             "GITHUB_JOB": "e48cfe4f6f37ec01",
-            "GITHUB_OUTPUT": "3e0388305a6bcae8",
-            "GITHUB_PATH": "c0edd2e04dcaa49f",
-            "GITHUB_REF": "a9d0f3e4792ad63b",
-            "GITHUB_REF_NAME": "b8afff641a57819d",
+            "GITHUB_OUTPUT": "6727c0007636b66e",
+            "GITHUB_PATH": "c4e2b1700061644e",
+            "GITHUB_REF": "d218dcf1bece7c20",
+            "GITHUB_REF_NAME": "1e98e6a08bf7a26c",
             "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
             "GITHUB_REF_TYPE": "f38c764c8aa00b65",
             "GITHUB_REPOSITORY": "d9af7d8d741acc92",
@@ -2309,16 +2309,16 @@
             "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
             "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
             "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
-            "GITHUB_RUN_ID": "f0d8cbd82e0b595c",
-            "GITHUB_RUN_NUMBER": "d4735e3a265e16ee",
+            "GITHUB_RUN_ID": "010fcddf7e2296a9",
+            "GITHUB_RUN_NUMBER": "4b227777d4dd1fc6",
             "GITHUB_SERVER_URL": "996e1f714b08e971",
-            "GITHUB_SHA": "85ef7ac37a0ad99c",
-            "GITHUB_STATE": "45223a78cffa3b7d",
-            "GITHUB_STEP_SUMMARY": "30d992b21bec5e0f",
+            "GITHUB_SHA": "3a93998b902416aa",
+            "GITHUB_STATE": "fc49cf83e6a51749",
+            "GITHUB_STEP_SUMMARY": "0b0008079444b334",
             "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
             "GITHUB_WORKFLOW": "423b805186b0a246",
-            "GITHUB_WORKFLOW_REF": "b60ae0c47fc7575c",
-            "GITHUB_WORKFLOW_SHA": "85ef7ac37a0ad99c",
+            "GITHUB_WORKFLOW_REF": "4277c5a6409d6f8a",
+            "GITHUB_WORKFLOW_SHA": "3a93998b902416aa",
             "GITHUB_WORKSPACE": "d10122a7d55cc72c",
             "GOROOT_1_24_X64": "dad7e7c7884916c8",
             "GOROOT_1_25_X64": "4de37c06a108f1d7",
@@ -2328,16 +2328,16 @@
             "HOME": "b1cbc5f347543a03",
             "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
             "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
-            "INVOCATION_ID": "039d3ef070652224",
+            "INVOCATION_ID": "094a5fa7d0141327",
             "ImageOS": "1a6338a16abf65e3",
-            "ImageVersion": "2a3c3fca2a0cf685",
+            "ImageVersion": "ced8a89c6b2a78f6",
             "JAVA_HOME": "9b2eaca78448dd7a",
             "JAVA_HOME_11_X64": "1ec0fc371ce27771",
             "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
             "JAVA_HOME_21_X64": "c701517cd1ca359a",
             "JAVA_HOME_25_X64": "3331df6d48d9ba51",
             "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
-            "JOURNAL_STREAM": "825c702481555234",
+            "JOURNAL_STREAM": "b5e2350b60f4229d",
             "LANG": "99fed2d548c2eb10",
             "LOGNAME": "527aa9f431539da8",
             "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
@@ -2352,11 +2352,11 @@
             "Q": "ca9f307d738f5512",
             "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
             "RUNNER_ENVIRONMENT": "ac592027e68479fc",
-            "RUNNER_NAME": "1e65566a891593b5",
+            "RUNNER_NAME": "f754740e9930873e",
             "RUNNER_OS": "4828e60247c1636f",
             "RUNNER_TEMP": "a9fd2b6f1129349e",
             "RUNNER_TOOL_CACHE": "40963d3114e769b6",
-            "RUNNER_TRACKING_ID": "8ec6c915f44f150e",
+            "RUNNER_TRACKING_ID": "60dd58b6b858d164",
             "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
             "SELENIUM_JAR_PATH": "15f9049d64d77584",
             "SGX_AESM_ADDR": "6b86b273ff34fce1",
@@ -2364,9 +2364,9 @@
             "SHLVL": "6b86b273ff34fce1",
             "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
             "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
-            "SIL_SOURCE_REVISION": "4aaf8eaa620549bf",
+            "SIL_SOURCE_REVISION": "93e0c2d6d244979c",
             "SWIFT_PATH": "fb8c6698dca20671",
-            "SYSTEMD_EXEC_PID": "1acc01f346b3fbaa",
+            "SYSTEMD_EXEC_PID": "2570ce03b300309d",
             "TMPDIR": "c93abdaab0147fef",
             "USER": "527aa9f431539da8",
             "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
@@ -2381,10 +2381,10 @@
       ],
       "sentinel_unchanged": true,
       "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
-      "stdout_tail": "manifest_hash f9bbc0ac5f77bf1bca76a054943d80a74098911c28c873f33bf6b76300d6dd3a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 1252, weight 1.253 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 6 with samples\nsymbols: function names for 1035 of 1252 samples; source lines for 756 (leaf frames)\nmodules: 1 of 29 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 1252 samples: 2 in an Activation's execution context (runner thread), 881 in a Process Step window (associated, not proven to be Step work), 128 lifecycle, 0 Replay, 241 unattributed\n  93 Activations have no sample: that is not evidence that they used no CPU time\ntop self weight (share of all sample weight):\n   60.4%  silproof_fmu_spin (EgoMotion.so)\n   15.6%  [unknown function] (python3.12)\n   10.0%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    3.8%  _PyEval_EvalFrameDefault (python3.12)\n    2.2%  PyObject_Malloc (python3.12)\n    1.4%  [unknown function] (libc.so.6)\n    1.0%  PyObject_Free (python3.12)\n    0.5%  PyErr_CheckSignals (python3.12)\n    0.5%  PyThread_get_thread_ident (python3.12)\n    0.5%  _PyDict_GetItem_KnownHash (python3.12)\n    4.2%  all other functions\n",
+      "stdout_tail": "manifest_hash f9bbc0ac5f77bf1bca76a054943d80a74098911c28c873f33bf6b76300d6dd3a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 1285, weight 1.286 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 5 with samples\nsymbols: function names for 1104 of 1285 samples; source lines for 759 (leaf frames)\nmodules: 1 of 29 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 1285 samples: 2 in an Activation's execution context (runner thread), 895 in a Process Step window (associated, not proven to be Step work), 128 lifecycle, 0 Replay, 260 unattributed\n  91 Activations have no sample: that is not evidence that they used no CPU time\ntop self weight (share of all sample weight):\n   59.1%  silproof_fmu_spin (EgoMotion.so)\n   12.5%  [unknown function] (python3.12)\n    9.6%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    6.2%  _PyEval_EvalFrameDefault (python3.12)\n    2.1%  PyObject_Malloc (python3.12)\n    1.5%  PyObject_Free (python3.12)\n    1.1%  [unknown function] (libc.so.6)\n    0.6%  PyErr_CheckSignals (python3.12)\n    0.4%  PyThread_get_thread_ident (python3.12)\n    0.3%  PyUnicode_FromKindAndData (python3.12)\n    6.6%  all other functions\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 2136
+      "wall_ms": 2258
     },
     {
       "action": null,
@@ -2458,12 +2458,12 @@
             {
               "category": "participant",
               "exit_code": 1,
-              "recording": "934b32a790ecd0152ebdf0f91efbef28e7794cd2a8034db1484aeab205cb191d"
+              "recording": "edcb86f3cf614adf586017b41f59a397deaff0973d1b349cb004f9d461fadc20"
             },
             {
               "category": "participant",
               "exit_code": 1,
-              "recording": "934b32a790ecd0152ebdf0f91efbef28e7794cd2a8034db1484aeab205cb191d"
+              "recording": "edcb86f3cf614adf586017b41f59a397deaff0973d1b349cb004f9d461fadc20"
             }
           ],
           "ok": true
@@ -2481,10 +2481,10 @@
           "cpu/perf-buildid-cache.stderr.txt": 0,
           "cpu/perf-script.stderr.txt": 0,
           "cpu/perf-srcline.stderr.txt": 0,
-          "cpu/perf.data": 4728848,
-          "cpu/samples.json": 131904,
-          "profile.json": 64171,
-          "run.diagnostics.json": 24539,
+          "cpu/perf.data": 4913040,
+          "cpu/samples.json": 145036,
+          "profile.json": 64068,
+          "run.diagnostics.json": 24558,
           "run.mcap": 9906,
           "run.mcap.failure.json": 262,
           "run.mcap.provenance.json": 3348
@@ -2494,25 +2494,25 @@
           []
         ],
         "raw_sha256": {
-          "cpu/perf.data": "cbd8d20d2694a97b2ec760794dcbf046970f34e6e148b3c59e983bdece2bb41b",
-          "run.mcap": "934b32a790ecd0152ebdf0f91efbef28e7794cd2a8034db1484aeab205cb191d"
+          "cpu/perf.data": "d0b5e51c44b7644ef14171ee6dd52280847a6ddc22910af211d042308df08b7c",
+          "run.mcap": "edcb86f3cf614adf586017b41f59a397deaff0973d1b349cb004f9d461fadc20"
         },
         "run": "run_failure",
         "totals": {
           "lost_records": 0,
           "lost_samples": 0,
-          "samples": 550,
+          "samples": 571,
           "samples_unknown_module": 0,
-          "samples_unknown_symbol": 317,
-          "samples_with_caller": 266,
+          "samples_unknown_symbol": 331,
+          "samples_with_caller": 285,
           "unavailable": {},
-          "weight_ns": 550550550
+          "weight_ns": 571571571
         },
-        "wall_ms": 1214
+        "wall_ms": 1235
       },
       "participants_started": [
-        "fmu-13718.tsv",
-        "probe-13723.json"
+        "fmu-14176.tsv",
+        "probe-14181.json"
       ],
       "probe": [
         {
@@ -2523,7 +2523,7 @@
           ],
           "environment": {
             "ACCEPT_EULA": "18f5384d58bcb1bb",
-            "ACTIONS_ORCHESTRATION_ID": "1e3ccb14f312f7f4",
+            "ACTIONS_ORCHESTRATION_ID": "3382536ed70edc7a",
             "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
             "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
             "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
@@ -2556,19 +2556,19 @@
             "GITHUB_ACTOR": "6f72f03e9527d036",
             "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
             "GITHUB_API_URL": "b2fd47bfbc5a4de1",
-            "GITHUB_ARTIFACTS": "9d9946aca22a48fa",
-            "GITHUB_ARTIFACTS_LIST": "779229eb5d47b671",
+            "GITHUB_ARTIFACTS": "f63d7406a354b6d6",
+            "GITHUB_ARTIFACTS_LIST": "db4a87468a84fbcd",
             "GITHUB_BASE_REF": "15ded80916997446",
-            "GITHUB_ENV": "fd3044913003f032",
+            "GITHUB_ENV": "752f93c7151606dc",
             "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
             "GITHUB_EVENT_PATH": "02503339a55110de",
             "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
-            "GITHUB_HEAD_REF": "e5edf33f60d4cd89",
+            "GITHUB_HEAD_REF": "3a8b77bedd9f42d6",
             "GITHUB_JOB": "e48cfe4f6f37ec01",
-            "GITHUB_OUTPUT": "3e0388305a6bcae8",
-            "GITHUB_PATH": "c0edd2e04dcaa49f",
-            "GITHUB_REF": "a9d0f3e4792ad63b",
-            "GITHUB_REF_NAME": "b8afff641a57819d",
+            "GITHUB_OUTPUT": "6727c0007636b66e",
+            "GITHUB_PATH": "c4e2b1700061644e",
+            "GITHUB_REF": "d218dcf1bece7c20",
+            "GITHUB_REF_NAME": "1e98e6a08bf7a26c",
             "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
             "GITHUB_REF_TYPE": "f38c764c8aa00b65",
             "GITHUB_REPOSITORY": "d9af7d8d741acc92",
@@ -2577,16 +2577,16 @@
             "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
             "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
             "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
-            "GITHUB_RUN_ID": "f0d8cbd82e0b595c",
-            "GITHUB_RUN_NUMBER": "d4735e3a265e16ee",
+            "GITHUB_RUN_ID": "010fcddf7e2296a9",
+            "GITHUB_RUN_NUMBER": "4b227777d4dd1fc6",
             "GITHUB_SERVER_URL": "996e1f714b08e971",
-            "GITHUB_SHA": "85ef7ac37a0ad99c",
-            "GITHUB_STATE": "45223a78cffa3b7d",
-            "GITHUB_STEP_SUMMARY": "30d992b21bec5e0f",
+            "GITHUB_SHA": "3a93998b902416aa",
+            "GITHUB_STATE": "fc49cf83e6a51749",
+            "GITHUB_STEP_SUMMARY": "0b0008079444b334",
             "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
             "GITHUB_WORKFLOW": "423b805186b0a246",
-            "GITHUB_WORKFLOW_REF": "b60ae0c47fc7575c",
-            "GITHUB_WORKFLOW_SHA": "85ef7ac37a0ad99c",
+            "GITHUB_WORKFLOW_REF": "4277c5a6409d6f8a",
+            "GITHUB_WORKFLOW_SHA": "3a93998b902416aa",
             "GITHUB_WORKSPACE": "d10122a7d55cc72c",
             "GOROOT_1_24_X64": "dad7e7c7884916c8",
             "GOROOT_1_25_X64": "4de37c06a108f1d7",
@@ -2596,16 +2596,16 @@
             "HOME": "b1cbc5f347543a03",
             "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
             "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
-            "INVOCATION_ID": "039d3ef070652224",
+            "INVOCATION_ID": "094a5fa7d0141327",
             "ImageOS": "1a6338a16abf65e3",
-            "ImageVersion": "2a3c3fca2a0cf685",
+            "ImageVersion": "ced8a89c6b2a78f6",
             "JAVA_HOME": "9b2eaca78448dd7a",
             "JAVA_HOME_11_X64": "1ec0fc371ce27771",
             "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
             "JAVA_HOME_21_X64": "c701517cd1ca359a",
             "JAVA_HOME_25_X64": "3331df6d48d9ba51",
             "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
-            "JOURNAL_STREAM": "825c702481555234",
+            "JOURNAL_STREAM": "b5e2350b60f4229d",
             "LANG": "99fed2d548c2eb10",
             "LOGNAME": "527aa9f431539da8",
             "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
@@ -2620,11 +2620,11 @@
             "Q": "ca9f307d738f5512",
             "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
             "RUNNER_ENVIRONMENT": "ac592027e68479fc",
-            "RUNNER_NAME": "1e65566a891593b5",
+            "RUNNER_NAME": "f754740e9930873e",
             "RUNNER_OS": "4828e60247c1636f",
             "RUNNER_TEMP": "a9fd2b6f1129349e",
             "RUNNER_TOOL_CACHE": "40963d3114e769b6",
-            "RUNNER_TRACKING_ID": "8ec6c915f44f150e",
+            "RUNNER_TRACKING_ID": "60dd58b6b858d164",
             "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
             "SELENIUM_JAR_PATH": "15f9049d64d77584",
             "SGX_AESM_ADDR": "6b86b273ff34fce1",
@@ -2632,9 +2632,9 @@
             "SHLVL": "6b86b273ff34fce1",
             "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
             "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
-            "SIL_SOURCE_REVISION": "4aaf8eaa620549bf",
+            "SIL_SOURCE_REVISION": "93e0c2d6d244979c",
             "SWIFT_PATH": "fb8c6698dca20671",
-            "SYSTEMD_EXEC_PID": "1acc01f346b3fbaa",
+            "SYSTEMD_EXEC_PID": "2570ce03b300309d",
             "TMPDIR": "c93abdaab0147fef",
             "USER": "527aa9f431539da8",
             "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
@@ -2649,10 +2649,10 @@
       ],
       "sentinel_unchanged": true,
       "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run-diagnostics: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
-      "stdout_tail": "profile: prof/profile.json\nrun: run_failure, exit code 1\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 550, weight 550.551 ms of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 5 with samples\nsymbols: function names for 233 of 550 samples; source lines unavailable (debug_file_not_found)\nmodules: 5 of 29 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   29.1%  [unknown function] (EgoMotion.so)\n   26.0%  [unknown function] (python3.12)\n   22.5%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    5.3%  _PyEval_EvalFrameDefault (python3.12)\n    2.2%  PyObject_Free (python3.12)\n    2.2%  [unknown function] (libc.so.6)\n    0.9%  PyObject_Malloc (python3.12)\n    0.7%  PyUnicode_FromKindAndData (python3.12)\n    0.5%  PyObject_GC_Del (python3.12)\n    0.5%  _PyCode_New (python3.12)\n   10.0%  all other functions\n",
+      "stdout_tail": "profile: prof/profile.json\nrun: run_failure, exit code 1\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 571, weight 571.572 ms of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 6 with samples\nsymbols: function names for 240 of 571 samples; source lines unavailable (debug_file_not_found)\nmodules: 5 of 29 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   27.8%  [unknown function] (EgoMotion.so)\n   25.9%  [unknown function] (python3.12)\n   22.2%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    5.8%  _PyEval_EvalFrameDefault (python3.12)\n    2.8%  [unknown function] (libc.so.6)\n    2.3%  PyObject_Malloc (python3.12)\n    0.9%  PyFunction_New (python3.12)\n    0.9%  PyObject_Free (python3.12)\n    0.9%  [unknown function] (ld-linux-x86-64.so.2)\n    0.7%  _PyCode_New (python3.12)\n    9.8%  all other functions\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 1214
+      "wall_ms": 1235
     },
     {
       "action": null,
@@ -2726,12 +2726,12 @@
             {
               "category": "timeout",
               "exit_code": 1,
-              "recording": "0f2214313ab7dcd8d413712b956858686f0a447992439520405893e9ba8bc66a"
+              "recording": "b76aa46d18c8e143c911c486fb870602bd0d4341aa508c3912a5200c78f09ed7"
             },
             {
               "category": "timeout",
               "exit_code": 1,
-              "recording": "0f2214313ab7dcd8d413712b956858686f0a447992439520405893e9ba8bc66a"
+              "recording": "b76aa46d18c8e143c911c486fb870602bd0d4341aa508c3912a5200c78f09ed7"
             }
           ],
           "ok": true
@@ -2749,10 +2749,10 @@
           "cpu/perf-buildid-cache.stderr.txt": 0,
           "cpu/perf-script.stderr.txt": 0,
           "cpu/perf-srcline.stderr.txt": 0,
-          "cpu/perf.data": 3861200,
-          "cpu/samples.json": 129669,
-          "profile.json": 64683,
-          "run.diagnostics.json": 18556,
+          "cpu/perf.data": 4018408,
+          "cpu/samples.json": 133356,
+          "profile.json": 64069,
+          "run.diagnostics.json": 18574,
           "run.mcap": 8110,
           "run.mcap.failure.json": 282,
           "run.mcap.provenance.json": 3369
@@ -2762,25 +2762,25 @@
           []
         ],
         "raw_sha256": {
-          "cpu/perf.data": "755ad6e7c3072ad2e97167dd193239dd0fce1fe31309decd29d027e0d6959ffc",
-          "run.mcap": "0f2214313ab7dcd8d413712b956858686f0a447992439520405893e9ba8bc66a"
+          "cpu/perf.data": "95dd40ce4312eccb0c49e1a7e5e811650b140f2f8f1d2b90d0d4b3a3e2ac6b38",
+          "run.mcap": "b76aa46d18c8e143c911c486fb870602bd0d4341aa508c3912a5200c78f09ed7"
         },
         "run": "run_failure",
         "totals": {
           "lost_records": 0,
           "lost_samples": 0,
-          "samples": 447,
+          "samples": 465,
           "samples_unknown_module": 0,
-          "samples_unknown_symbol": 220,
-          "samples_with_caller": 259,
+          "samples_unknown_symbol": 242,
+          "samples_with_caller": 276,
           "unavailable": {},
-          "weight_ns": 447447447
+          "weight_ns": 465465465
         },
-        "wall_ms": 4002
+        "wall_ms": 4012
       },
       "participants_started": [
-        "fmu-13754.tsv",
-        "probe-13759.json"
+        "fmu-14212.tsv",
+        "probe-14217.json"
       ],
       "probe": [
         {
@@ -2793,7 +2793,7 @@
           ],
           "environment": {
             "ACCEPT_EULA": "18f5384d58bcb1bb",
-            "ACTIONS_ORCHESTRATION_ID": "1e3ccb14f312f7f4",
+            "ACTIONS_ORCHESTRATION_ID": "3382536ed70edc7a",
             "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
             "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
             "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
@@ -2826,19 +2826,19 @@
             "GITHUB_ACTOR": "6f72f03e9527d036",
             "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
             "GITHUB_API_URL": "b2fd47bfbc5a4de1",
-            "GITHUB_ARTIFACTS": "9d9946aca22a48fa",
-            "GITHUB_ARTIFACTS_LIST": "779229eb5d47b671",
+            "GITHUB_ARTIFACTS": "f63d7406a354b6d6",
+            "GITHUB_ARTIFACTS_LIST": "db4a87468a84fbcd",
             "GITHUB_BASE_REF": "15ded80916997446",
-            "GITHUB_ENV": "fd3044913003f032",
+            "GITHUB_ENV": "752f93c7151606dc",
             "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
             "GITHUB_EVENT_PATH": "02503339a55110de",
             "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
-            "GITHUB_HEAD_REF": "e5edf33f60d4cd89",
+            "GITHUB_HEAD_REF": "3a8b77bedd9f42d6",
             "GITHUB_JOB": "e48cfe4f6f37ec01",
-            "GITHUB_OUTPUT": "3e0388305a6bcae8",
-            "GITHUB_PATH": "c0edd2e04dcaa49f",
-            "GITHUB_REF": "a9d0f3e4792ad63b",
-            "GITHUB_REF_NAME": "b8afff641a57819d",
+            "GITHUB_OUTPUT": "6727c0007636b66e",
+            "GITHUB_PATH": "c4e2b1700061644e",
+            "GITHUB_REF": "d218dcf1bece7c20",
+            "GITHUB_REF_NAME": "1e98e6a08bf7a26c",
             "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
             "GITHUB_REF_TYPE": "f38c764c8aa00b65",
             "GITHUB_REPOSITORY": "d9af7d8d741acc92",
@@ -2847,16 +2847,16 @@
             "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
             "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
             "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
-            "GITHUB_RUN_ID": "f0d8cbd82e0b595c",
-            "GITHUB_RUN_NUMBER": "d4735e3a265e16ee",
+            "GITHUB_RUN_ID": "010fcddf7e2296a9",
+            "GITHUB_RUN_NUMBER": "4b227777d4dd1fc6",
             "GITHUB_SERVER_URL": "996e1f714b08e971",
-            "GITHUB_SHA": "85ef7ac37a0ad99c",
-            "GITHUB_STATE": "45223a78cffa3b7d",
-            "GITHUB_STEP_SUMMARY": "30d992b21bec5e0f",
+            "GITHUB_SHA": "3a93998b902416aa",
+            "GITHUB_STATE": "fc49cf83e6a51749",
+            "GITHUB_STEP_SUMMARY": "0b0008079444b334",
             "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
             "GITHUB_WORKFLOW": "423b805186b0a246",
-            "GITHUB_WORKFLOW_REF": "b60ae0c47fc7575c",
-            "GITHUB_WORKFLOW_SHA": "85ef7ac37a0ad99c",
+            "GITHUB_WORKFLOW_REF": "4277c5a6409d6f8a",
+            "GITHUB_WORKFLOW_SHA": "3a93998b902416aa",
             "GITHUB_WORKSPACE": "d10122a7d55cc72c",
             "GOROOT_1_24_X64": "dad7e7c7884916c8",
             "GOROOT_1_25_X64": "4de37c06a108f1d7",
@@ -2866,16 +2866,16 @@
             "HOME": "b1cbc5f347543a03",
             "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
             "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
-            "INVOCATION_ID": "039d3ef070652224",
+            "INVOCATION_ID": "094a5fa7d0141327",
             "ImageOS": "1a6338a16abf65e3",
-            "ImageVersion": "2a3c3fca2a0cf685",
+            "ImageVersion": "ced8a89c6b2a78f6",
             "JAVA_HOME": "9b2eaca78448dd7a",
             "JAVA_HOME_11_X64": "1ec0fc371ce27771",
             "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
             "JAVA_HOME_21_X64": "c701517cd1ca359a",
             "JAVA_HOME_25_X64": "3331df6d48d9ba51",
             "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
-            "JOURNAL_STREAM": "825c702481555234",
+            "JOURNAL_STREAM": "b5e2350b60f4229d",
             "LANG": "99fed2d548c2eb10",
             "LOGNAME": "527aa9f431539da8",
             "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
@@ -2890,11 +2890,11 @@
             "Q": "ca9f307d738f5512",
             "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
             "RUNNER_ENVIRONMENT": "ac592027e68479fc",
-            "RUNNER_NAME": "1e65566a891593b5",
+            "RUNNER_NAME": "f754740e9930873e",
             "RUNNER_OS": "4828e60247c1636f",
             "RUNNER_TEMP": "a9fd2b6f1129349e",
             "RUNNER_TOOL_CACHE": "40963d3114e769b6",
-            "RUNNER_TRACKING_ID": "8ec6c915f44f150e",
+            "RUNNER_TRACKING_ID": "60dd58b6b858d164",
             "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
             "SELENIUM_JAR_PATH": "15f9049d64d77584",
             "SGX_AESM_ADDR": "6b86b273ff34fce1",
@@ -2902,9 +2902,9 @@
             "SHLVL": "6b86b273ff34fce1",
             "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
             "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
-            "SIL_SOURCE_REVISION": "4aaf8eaa620549bf",
+            "SIL_SOURCE_REVISION": "93e0c2d6d244979c",
             "SWIFT_PATH": "fb8c6698dca20671",
-            "SYSTEMD_EXEC_PID": "1acc01f346b3fbaa",
+            "SYSTEMD_EXEC_PID": "2570ce03b300309d",
             "TMPDIR": "c93abdaab0147fef",
             "USER": "527aa9f431539da8",
             "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
@@ -2919,10 +2919,10 @@
       ],
       "sentinel_unchanged": true,
       "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nTraceback (most recent call last):\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 297, in run\n    send({\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py\", line 125, in <module>\n    main()\n  File \"/home/runner/work/sil/sil/proofs/profiling-qualification/probe_participant.py\", line 121, in main\n    run(Probe(parser.parse_args()))\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 302, in run\n    send({\"op\": \"fail\", \"reason\": _reason(e)})\n  File \"/home/runner/work/_temp/sil/current/venv/lib/python3.12/site-packages/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\nException ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns\n",
-      "stdout_tail": "profile: prof/profile.json\nrun: run_failure, exit code 1\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 447, weight 447.447 ms of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 6 with samples\nsymbols: function names for 227 of 447 samples; source lines unavailable (debug_file_not_found)\nmodules: 5 of 29 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   31.5%  [unknown function] (python3.12)\n   27.1%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n   15.0%  [unknown function] (EgoMotion.so)\n    6.5%  _PyEval_EvalFrameDefault (python3.12)\n    2.9%  PyObject_Malloc (python3.12)\n    1.8%  [unknown function] (libc.so.6)\n    1.1%  PyObject_Free (python3.12)\n    0.9%  _PyDict_GetItem_KnownHash (python3.12)\n    0.4%  PyDict_GetItemWithError (python3.12)\n    0.4%  PyErr_CheckSignals (python3.12)\n   12.3%  all other functions\n",
+      "stdout_tail": "profile: prof/profile.json\nrun: run_failure, exit code 1\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 465, weight 465.465 ms of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 5 with samples\nsymbols: function names for 223 of 465 samples; source lines unavailable (debug_file_not_found)\nmodules: 5 of 29 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   32.0%  [unknown function] (python3.12)\n   25.6%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n   14.8%  [unknown function] (EgoMotion.so)\n    7.5%  _PyEval_EvalFrameDefault (python3.12)\n    2.8%  PyObject_Malloc (python3.12)\n    2.4%  [unknown function] (libc.so.6)\n    1.5%  _PyDict_GetItem_KnownHash (python3.12)\n    1.1%  PyUnicode_FromKindAndData (python3.12)\n    1.1%  [unknown function] (ld-linux-x86-64.so.2)\n    0.6%  _PyCode_New (python3.12)\n   10.5%  all other functions\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 4002
+      "wall_ms": 4012
     },
     {
       "action": {
@@ -3011,16 +3011,16 @@
       ],
       "observations": {
         "bytes": {
-          "activation/correlation.json": 89484,
-          "activation/observations.jsonl": 60011,
+          "activation/correlation.json": 90179,
+          "activation/observations.jsonl": 60217,
           "cpu/perf-buildid-cache.stderr.txt": 0,
           "cpu/perf-script.stderr.txt": 0,
           "cpu/perf-srcline.stderr.txt": 0,
-          "cpu/perf.data": 9673720,
-          "cpu/samples.json": 161264,
-          "profile.json": 68327,
-          "run.diagnostics.json": 33424,
-          "run.mcap": 49863,
+          "cpu/perf.data": 9858864,
+          "cpu/samples.json": 167916,
+          "profile.json": 69347,
+          "run.diagnostics.json": 33470,
+          "run.mcap": 49958,
           "run.mcap.failure.json": 208,
           "run.mcap.provenance.json": 3356
         },
@@ -3035,26 +3035,26 @@
           []
         ],
         "raw_sha256": {
-          "activation/observations.jsonl": "386c9654261681240d9d4c78d85cb683f6aa89c985b8d675a190dbdee8689ddf",
-          "cpu/perf.data": "29d86c161b8f127119b31672958984e973c1a0807b91cd38afc10f36942091d3",
-          "run.mcap": "a42669d475efbae54e3dcb68a14f7520208af56e960527b0c8a43cb9f8755c8b"
+          "activation/observations.jsonl": "0b6ce12266454cd753a166a7636f78f04a8dc9e621f83981dca60068bb94c89e",
+          "cpu/perf.data": "b51fd7bfbd49f6dd7b213c4c123985521434d09a7c55523c8e6dda5676ed9bd4",
+          "run.mcap": "1ccacaa9373f993b3e1cbbbb0379029c98fbf66d69f6257528b9b7e22e8a2b99"
         },
         "run": "interrupted",
         "totals": {
           "lost_records": 0,
           "lost_samples": 0,
-          "samples": 1137,
+          "samples": 1157,
           "samples_unknown_module": 0,
-          "samples_unknown_symbol": 869,
-          "samples_with_caller": 339,
+          "samples_unknown_symbol": 863,
+          "samples_with_caller": 343,
           "unavailable": {},
-          "weight_ns": 1138138137
+          "weight_ns": 1158158157
         },
-        "wall_ms": 3114
+        "wall_ms": 3168
       },
       "participants_started": [
-        "fmu-13791.tsv",
-        "probe-13796.json"
+        "fmu-14248.tsv",
+        "probe-14253.json"
       ],
       "probe": [
         {
@@ -3065,7 +3065,7 @@
           ],
           "environment": {
             "ACCEPT_EULA": "18f5384d58bcb1bb",
-            "ACTIONS_ORCHESTRATION_ID": "1e3ccb14f312f7f4",
+            "ACTIONS_ORCHESTRATION_ID": "3382536ed70edc7a",
             "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
             "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
             "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
@@ -3098,19 +3098,19 @@
             "GITHUB_ACTOR": "6f72f03e9527d036",
             "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
             "GITHUB_API_URL": "b2fd47bfbc5a4de1",
-            "GITHUB_ARTIFACTS": "9d9946aca22a48fa",
-            "GITHUB_ARTIFACTS_LIST": "779229eb5d47b671",
+            "GITHUB_ARTIFACTS": "f63d7406a354b6d6",
+            "GITHUB_ARTIFACTS_LIST": "db4a87468a84fbcd",
             "GITHUB_BASE_REF": "15ded80916997446",
-            "GITHUB_ENV": "fd3044913003f032",
+            "GITHUB_ENV": "752f93c7151606dc",
             "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
             "GITHUB_EVENT_PATH": "02503339a55110de",
             "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
-            "GITHUB_HEAD_REF": "e5edf33f60d4cd89",
+            "GITHUB_HEAD_REF": "3a8b77bedd9f42d6",
             "GITHUB_JOB": "e48cfe4f6f37ec01",
-            "GITHUB_OUTPUT": "3e0388305a6bcae8",
-            "GITHUB_PATH": "c0edd2e04dcaa49f",
-            "GITHUB_REF": "a9d0f3e4792ad63b",
-            "GITHUB_REF_NAME": "b8afff641a57819d",
+            "GITHUB_OUTPUT": "6727c0007636b66e",
+            "GITHUB_PATH": "c4e2b1700061644e",
+            "GITHUB_REF": "d218dcf1bece7c20",
+            "GITHUB_REF_NAME": "1e98e6a08bf7a26c",
             "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
             "GITHUB_REF_TYPE": "f38c764c8aa00b65",
             "GITHUB_REPOSITORY": "d9af7d8d741acc92",
@@ -3119,16 +3119,16 @@
             "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
             "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
             "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
-            "GITHUB_RUN_ID": "f0d8cbd82e0b595c",
-            "GITHUB_RUN_NUMBER": "d4735e3a265e16ee",
+            "GITHUB_RUN_ID": "010fcddf7e2296a9",
+            "GITHUB_RUN_NUMBER": "4b227777d4dd1fc6",
             "GITHUB_SERVER_URL": "996e1f714b08e971",
-            "GITHUB_SHA": "85ef7ac37a0ad99c",
-            "GITHUB_STATE": "45223a78cffa3b7d",
-            "GITHUB_STEP_SUMMARY": "30d992b21bec5e0f",
+            "GITHUB_SHA": "3a93998b902416aa",
+            "GITHUB_STATE": "fc49cf83e6a51749",
+            "GITHUB_STEP_SUMMARY": "0b0008079444b334",
             "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
             "GITHUB_WORKFLOW": "423b805186b0a246",
-            "GITHUB_WORKFLOW_REF": "b60ae0c47fc7575c",
-            "GITHUB_WORKFLOW_SHA": "85ef7ac37a0ad99c",
+            "GITHUB_WORKFLOW_REF": "4277c5a6409d6f8a",
+            "GITHUB_WORKFLOW_SHA": "3a93998b902416aa",
             "GITHUB_WORKSPACE": "d10122a7d55cc72c",
             "GOROOT_1_24_X64": "dad7e7c7884916c8",
             "GOROOT_1_25_X64": "4de37c06a108f1d7",
@@ -3138,16 +3138,16 @@
             "HOME": "b1cbc5f347543a03",
             "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
             "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
-            "INVOCATION_ID": "039d3ef070652224",
+            "INVOCATION_ID": "094a5fa7d0141327",
             "ImageOS": "1a6338a16abf65e3",
-            "ImageVersion": "2a3c3fca2a0cf685",
+            "ImageVersion": "ced8a89c6b2a78f6",
             "JAVA_HOME": "9b2eaca78448dd7a",
             "JAVA_HOME_11_X64": "1ec0fc371ce27771",
             "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
             "JAVA_HOME_21_X64": "c701517cd1ca359a",
             "JAVA_HOME_25_X64": "3331df6d48d9ba51",
             "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
-            "JOURNAL_STREAM": "825c702481555234",
+            "JOURNAL_STREAM": "b5e2350b60f4229d",
             "LANG": "99fed2d548c2eb10",
             "LOGNAME": "527aa9f431539da8",
             "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
@@ -3162,11 +3162,11 @@
             "Q": "ca9f307d738f5512",
             "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
             "RUNNER_ENVIRONMENT": "ac592027e68479fc",
-            "RUNNER_NAME": "1e65566a891593b5",
+            "RUNNER_NAME": "f754740e9930873e",
             "RUNNER_OS": "4828e60247c1636f",
             "RUNNER_TEMP": "a9fd2b6f1129349e",
             "RUNNER_TOOL_CACHE": "40963d3114e769b6",
-            "RUNNER_TRACKING_ID": "8ec6c915f44f150e",
+            "RUNNER_TRACKING_ID": "60dd58b6b858d164",
             "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
             "SELENIUM_JAR_PATH": "15f9049d64d77584",
             "SGX_AESM_ADDR": "6b86b273ff34fce1",
@@ -3174,9 +3174,9 @@
             "SHLVL": "6b86b273ff34fce1",
             "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
             "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
-            "SIL_SOURCE_REVISION": "4aaf8eaa620549bf",
+            "SIL_SOURCE_REVISION": "93e0c2d6d244979c",
             "SWIFT_PATH": "fb8c6698dca20671",
-            "SYSTEMD_EXEC_PID": "1acc01f346b3fbaa",
+            "SYSTEMD_EXEC_PID": "2570ce03b300309d",
             "TMPDIR": "c93abdaab0147fef",
             "USER": "527aa9f431539da8",
             "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
@@ -3191,10 +3191,10 @@
       ],
       "sentinel_unchanged": true,
       "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nsil-run-diagnostics: run interrupted by SIGINT\n",
-      "stdout_tail": "profile: prof/profile.json\nrun: interrupted, exit code 1\ncapture: cpu, interrupted (interrupted)\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 1137, weight 1.138 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 6 with samples\nsymbols: function names for 268 of 1137 samples; source lines unavailable (debug_file_not_found)\nmodules: 5 of 29 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 1137 samples: 0 in an Activation's execution context (runner thread), 803 in a Process Step window (associated, not proven to be Step work), 122 lifecycle, 0 Replay, 212 unattributed\n  86 Activations have no sample: that is not evidence that they used no CPU time\ntop self weight (share of all sample weight):\n   59.6%  [unknown function] (EgoMotion.so)\n   14.7%  [unknown function] (python3.12)\n   10.6%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    4.0%  _PyEval_EvalFrameDefault (python3.12)\n    1.7%  PyObject_Malloc (python3.12)\n    1.5%  [unknown function] (libc.so.6)\n    1.4%  PyObject_Free (python3.12)\n    1.0%  PyErr_CheckSignals (python3.12)\n    0.7%  _PyDict_GetItem_KnownHash (python3.12)\n    0.5%  _Py_hashtable_get (python3.12)\n    4.4%  all other functions\n",
+      "stdout_tail": "profile: prof/profile.json\nrun: interrupted, exit code 1\ncapture: cpu, interrupted (interrupted)\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 1157, weight 1.158 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 6 with samples\nsymbols: function names for 294 of 1157 samples; source lines unavailable (debug_file_not_found)\nmodules: 5 of 29 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 1157 samples: 0 in an Activation's execution context (runner thread), 820 in a Process Step window (associated, not proven to be Step work), 127 lifecycle, 0 Replay, 210 unattributed\n  83 Activations have no sample: that is not evidence that they used no CPU time\ntop self weight (share of all sample weight):\n   59.5%  [unknown function] (EgoMotion.so)\n   13.8%  [unknown function] (python3.12)\n   10.8%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    4.5%  _PyEval_EvalFrameDefault (python3.12)\n    2.1%  PyObject_Malloc (python3.12)\n    1.3%  PyObject_Free (python3.12)\n    1.0%  PyErr_CheckSignals (python3.12)\n    0.8%  [unknown function] (libc.so.6)\n    0.3%  PyNumber_Remainder (python3.12)\n    0.3%  PyUnicode_FromKindAndData (python3.12)\n    5.5%  all other functions\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 3114
+      "wall_ms": 3168
     },
     {
       "action": {
@@ -3216,7 +3216,7 @@
       "checks": [
         {
           "check": "exit 1",
-          "detail": "10000000000040001020304\nobserver: 1520000000 ns event 1500480000 ns 200000000c00000001000000\nobserver: 1520000000 ns event 1500480000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 200000000c00000001000000\nobserver: 1800000000 ns event 1800000000 ns 1000000014000000010000000000040001020304\nobserver: 1800000000 ns event 1800000000 ns 1000000014000000010000000000040001020304\nsil run: stopped copying the Run's stderr: a process that outlived the runner still holds it open\n",
+          "detail": "00000000c00000001000000\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500480000 ns 200000000c00000001000000\nobserver: 1520000000 ns event 1500480000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 200000000c00000001000000\nsil run: stopped copying the Run's stderr: a process that outlived the runner still holds it open\n",
           "ok": true
         },
         {
@@ -3287,9 +3287,9 @@
           "cpu/perf-buildid-cache.stderr.txt": 0,
           "cpu/perf-script.stderr.txt": 222,
           "cpu/perf-srcline.stderr.txt": 222,
-          "cpu/perf.data": 9499568,
-          "profile.json": 5294,
-          "run.diagnostics.json": 42938,
+          "cpu/perf.data": 9981544,
+          "profile.json": 5296,
+          "run.diagnostics.json": 43123,
           "run.mcap": 158648,
           "run.mcap.provenance.json": 3356
         },
@@ -3301,8 +3301,8 @@
           ]
         ],
         "raw_sha256": {
-          "cpu/perf.data": "3f5751004c9f78c64441d0049f88128fe8c53f244e2d6f021f349a6ae8d175f5",
-          "run.mcap": "463cc12413f4f4f06e53c6f9e16575c708d056ca700bd961ddf8131de05c9f10"
+          "cpu/perf.data": "87824f41217381fbaf8ad6c6594a24cae1ebb379c876750c195365d8d23cba01",
+          "run.mcap": "3c4c3ba66ec8a61e1bcf46e8f59ba8bdcc2b4ad8da097f7896bbfa8c1a540218"
         },
         "run": "succeeded",
         "totals": {
@@ -3317,11 +3317,11 @@
           },
           "weight_ns": 0
         },
-        "wall_ms": 7536
+        "wall_ms": 7598
       },
       "participants_started": [
-        "fmu-13827.tsv",
-        "probe-13832.json"
+        "fmu-14284.tsv",
+        "probe-14289.json"
       ],
       "probe": [
         {
@@ -3332,7 +3332,7 @@
           ],
           "environment": {
             "ACCEPT_EULA": "18f5384d58bcb1bb",
-            "ACTIONS_ORCHESTRATION_ID": "1e3ccb14f312f7f4",
+            "ACTIONS_ORCHESTRATION_ID": "3382536ed70edc7a",
             "ACTIONS_RUNNER_ACTION_ARCHIVE_CACHE": "b361a25fd5727e61",
             "ACTIONS_RUNNER_RETURN_JOB_RESULT_FOR_HOSTED": "6b86b273ff34fce1",
             "AGENT_TOOLSDIRECTORY": "40963d3114e769b6",
@@ -3365,19 +3365,19 @@
             "GITHUB_ACTOR": "6f72f03e9527d036",
             "GITHUB_ACTOR_ID": "10ef854d85bdeebc",
             "GITHUB_API_URL": "b2fd47bfbc5a4de1",
-            "GITHUB_ARTIFACTS": "9d9946aca22a48fa",
-            "GITHUB_ARTIFACTS_LIST": "779229eb5d47b671",
+            "GITHUB_ARTIFACTS": "f63d7406a354b6d6",
+            "GITHUB_ARTIFACTS_LIST": "db4a87468a84fbcd",
             "GITHUB_BASE_REF": "15ded80916997446",
-            "GITHUB_ENV": "fd3044913003f032",
+            "GITHUB_ENV": "752f93c7151606dc",
             "GITHUB_EVENT_NAME": "ffcfd72fad7954ae",
             "GITHUB_EVENT_PATH": "02503339a55110de",
             "GITHUB_GRAPHQL_URL": "92c040afcb93cfa0",
-            "GITHUB_HEAD_REF": "e5edf33f60d4cd89",
+            "GITHUB_HEAD_REF": "3a8b77bedd9f42d6",
             "GITHUB_JOB": "e48cfe4f6f37ec01",
-            "GITHUB_OUTPUT": "3e0388305a6bcae8",
-            "GITHUB_PATH": "c0edd2e04dcaa49f",
-            "GITHUB_REF": "a9d0f3e4792ad63b",
-            "GITHUB_REF_NAME": "b8afff641a57819d",
+            "GITHUB_OUTPUT": "6727c0007636b66e",
+            "GITHUB_PATH": "c4e2b1700061644e",
+            "GITHUB_REF": "d218dcf1bece7c20",
+            "GITHUB_REF_NAME": "1e98e6a08bf7a26c",
             "GITHUB_REF_PROTECTED": "fcbcf165908dd18a",
             "GITHUB_REF_TYPE": "f38c764c8aa00b65",
             "GITHUB_REPOSITORY": "d9af7d8d741acc92",
@@ -3386,16 +3386,16 @@
             "GITHUB_REPOSITORY_OWNER_ID": "10ef854d85bdeebc",
             "GITHUB_RETENTION_DAYS": "69f59c273b6e669a",
             "GITHUB_RUN_ATTEMPT": "6b86b273ff34fce1",
-            "GITHUB_RUN_ID": "f0d8cbd82e0b595c",
-            "GITHUB_RUN_NUMBER": "d4735e3a265e16ee",
+            "GITHUB_RUN_ID": "010fcddf7e2296a9",
+            "GITHUB_RUN_NUMBER": "4b227777d4dd1fc6",
             "GITHUB_SERVER_URL": "996e1f714b08e971",
-            "GITHUB_SHA": "85ef7ac37a0ad99c",
-            "GITHUB_STATE": "45223a78cffa3b7d",
-            "GITHUB_STEP_SUMMARY": "30d992b21bec5e0f",
+            "GITHUB_SHA": "3a93998b902416aa",
+            "GITHUB_STATE": "fc49cf83e6a51749",
+            "GITHUB_STEP_SUMMARY": "0b0008079444b334",
             "GITHUB_TRIGGERING_ACTOR": "6f72f03e9527d036",
             "GITHUB_WORKFLOW": "423b805186b0a246",
-            "GITHUB_WORKFLOW_REF": "b60ae0c47fc7575c",
-            "GITHUB_WORKFLOW_SHA": "85ef7ac37a0ad99c",
+            "GITHUB_WORKFLOW_REF": "4277c5a6409d6f8a",
+            "GITHUB_WORKFLOW_SHA": "3a93998b902416aa",
             "GITHUB_WORKSPACE": "d10122a7d55cc72c",
             "GOROOT_1_24_X64": "dad7e7c7884916c8",
             "GOROOT_1_25_X64": "4de37c06a108f1d7",
@@ -3405,16 +3405,16 @@
             "HOME": "b1cbc5f347543a03",
             "HOMEBREW_CLEANUP_PERIODIC_FULL_DAYS": "ae705b6c2f40c666",
             "HOMEBREW_NO_AUTO_UPDATE": "6b86b273ff34fce1",
-            "INVOCATION_ID": "039d3ef070652224",
+            "INVOCATION_ID": "094a5fa7d0141327",
             "ImageOS": "1a6338a16abf65e3",
-            "ImageVersion": "2a3c3fca2a0cf685",
+            "ImageVersion": "ced8a89c6b2a78f6",
             "JAVA_HOME": "9b2eaca78448dd7a",
             "JAVA_HOME_11_X64": "1ec0fc371ce27771",
             "JAVA_HOME_17_X64": "9b2eaca78448dd7a",
             "JAVA_HOME_21_X64": "c701517cd1ca359a",
             "JAVA_HOME_25_X64": "3331df6d48d9ba51",
             "JAVA_HOME_8_X64": "5a1c1843ceebc5d7",
-            "JOURNAL_STREAM": "825c702481555234",
+            "JOURNAL_STREAM": "b5e2350b60f4229d",
             "LANG": "99fed2d548c2eb10",
             "LOGNAME": "527aa9f431539da8",
             "MEMORY_PRESSURE_WATCH": "a39da2f9902a0403",
@@ -3429,11 +3429,11 @@
             "Q": "ca9f307d738f5512",
             "RUNNER_ARCH": "6b14b1fb8b7fe0c2",
             "RUNNER_ENVIRONMENT": "ac592027e68479fc",
-            "RUNNER_NAME": "1e65566a891593b5",
+            "RUNNER_NAME": "f754740e9930873e",
             "RUNNER_OS": "4828e60247c1636f",
             "RUNNER_TEMP": "a9fd2b6f1129349e",
             "RUNNER_TOOL_CACHE": "40963d3114e769b6",
-            "RUNNER_TRACKING_ID": "8ec6c915f44f150e",
+            "RUNNER_TRACKING_ID": "60dd58b6b858d164",
             "RUNNER_WORKSPACE": "fd59ce0c1f9dd7a1",
             "SELENIUM_JAR_PATH": "15f9049d64d77584",
             "SGX_AESM_ADDR": "6b86b273ff34fce1",
@@ -3441,9 +3441,9 @@
             "SHLVL": "6b86b273ff34fce1",
             "SILPROOF_SIDECAR_DIR": "9471a43c1533d409",
             "SILQUAL_SIDECAR_DIR": "9471a43c1533d409",
-            "SIL_SOURCE_REVISION": "4aaf8eaa620549bf",
+            "SIL_SOURCE_REVISION": "93e0c2d6d244979c",
             "SWIFT_PATH": "fb8c6698dca20671",
-            "SYSTEMD_EXEC_PID": "1acc01f346b3fbaa",
+            "SYSTEMD_EXEC_PID": "2570ce03b300309d",
             "TMPDIR": "c93abdaab0147fef",
             "USER": "527aa9f431539da8",
             "USE_BAZEL_FALLBACK_VERSION": "8b169b96e11cc15f",
@@ -3457,11 +3457,11 @@
         }
       ],
       "sentinel_unchanged": true,
-      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\nobserver: 1200000000 ns event 1200000000 ns 1000000014000000010000000000040001020304\nobserver: 1200000000 ns event 1200000000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200480000 ns 200000000c00000001000000\nobserver: 1220000000 ns event 1200480000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200960000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200960000 ns 200000000c00000001000000\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500480000 ns 200000000c00000001000000\nobserver: 1520000000 ns event 1500480000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 200000000c00000001000000\nobserver: 1800000000 ns event 1800000000 ns 1000000014000000010000000000040001020304\nobserver: 1800000000 ns event 1800000000 ns 1000000014000000010000000000040001020304\nsil run: stopped copying the Run's stderr: a process that outlived the runner still holds it open\n",
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\nobserver: 1200000000 ns event 1200000000 ns 1000000014000000010000000000040001020304\nobserver: 1200000000 ns event 1200000000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200480000 ns 200000000c00000001000000\nobserver: 1220000000 ns event 1200480000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200960000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200960000 ns 200000000c00000001000000\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500480000 ns 200000000c00000001000000\nobserver: 1520000000 ns event 1500480000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 200000000c00000001000000\nsil run: stopped copying the Run's stderr: a process that outlived the runner still holds it open\n",
       "stdout_tail": "manifest_hash d029c00d978c0f9d2fd13fdc9122e4c2593b34a74cdb8c086a52e52940b63401\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, failed (backend_failed, export_failed)\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 0, weight 0 ns of sampled on-CPU time (an estimate, not a duration); lost unknown\nno sample: this is not evidence that no CPU time was used\nprocesses: 0 observed, 0 with samples\nsymbols: function names for 0 of 0 samples; source lines unavailable (export_failed)\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 7536
+      "wall_ms": 7598
     },
     {
       "action": null,
@@ -3567,13 +3567,13 @@
         "bytes": {
           "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-capture-limit/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/elf": 27312,
           "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-capture-limit/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/probes": 0,
-          "cpu/perf-buildid-cache.stderr.txt": 294,
+          "cpu/perf-buildid-cache.stderr.txt": 216,
           "cpu/perf-script.stderr.txt": 0,
           "cpu/perf-srcline.stderr.txt": 0,
-          "cpu/perf.data": 2977376,
-          "cpu/samples.json": 79582,
-          "profile.json": 55872,
-          "run.diagnostics.json": 23625,
+          "cpu/perf.data": 2331160,
+          "cpu/samples.json": 80850,
+          "profile.json": 55542,
+          "run.diagnostics.json": 23633,
           "run.mcap": 28039,
           "run.mcap.provenance.json": 2541
         },
@@ -3584,37 +3584,37 @@
           ]
         ],
         "raw_sha256": {
-          "cpu/perf.data": "ede8e2fb05385ebff279c0f7f5a8dfebd5d0adb2326dac088098e4e66ed2fcd5",
+          "cpu/perf.data": "1b18a0f18bb8ee9a71728e02a1f8afcfedd352eebecedab4147c70670d6d3606",
           "run.mcap": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
         },
         "run": "succeeded",
         "totals": {
           "lost_records": 0,
           "lost_samples": 0,
-          "samples": 346,
+          "samples": 269,
           "samples_unknown_module": 0,
-          "samples_unknown_symbol": 56,
-          "samples_with_caller": 281,
+          "samples_unknown_symbol": 68,
+          "samples_with_caller": 206,
           "unavailable": {},
-          "weight_ns": 346346346
+          "weight_ns": 269269269
         },
-        "wall_ms": 3285
+        "wall_ms": 3192
       },
       "participants_started": [
-        "child-13866.tsv",
-        "child-13867.tsv",
-        "child-13868.tsv",
-        "child-13869.tsv",
-        "fmu-13863.tsv",
-        "native-13862.tsv",
-        "process-13865.tsv"
+        "child-14326.tsv",
+        "child-14327.tsv",
+        "child-14328.tsv",
+        "child-14329.tsv",
+        "fmu-14323.tsv",
+        "native-14322.tsv",
+        "process-14325.tsv"
       ],
       "sentinel_unchanged": true,
       "stderr_tail": "",
-      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, partial (capture_limit_reached)\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 346, weight 346.346 ms of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 6 observed, 4 with samples\nsymbols: function names for 290 of 346 samples; source lines for 179 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   18.5%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n   14.5%  silproof_child_spin (silproof_child)\n   14.5%  [unknown function] (python3.12)\n   12.7%  silproof_process_spin (libsilproof_process.so)\n   11.3%  silproof_fmu_spin (EgoMotion.so)\n    6.6%  silproof_native_spin_even (libsilproof_native.so)\n    6.6%  silproof_native_spin_odd (libsilproof_native.so)\n    5.5%  _PyEval_EvalFrameDefault (python3.12)\n    1.2%  [unknown function] (libc.so.6)\n    0.6%  PyObject_Malloc (python3.12)\n    8.1%  all other functions\n",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, partial (capture_limit_reached)\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 269, weight 269.269 ms of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 6 observed, 5 with samples\nsymbols: function names for 201 of 269 samples; source lines for 90 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   23.4%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n   22.3%  [unknown function] (python3.12)\n   18.6%  silproof_child_spin (silproof_child)\n    5.6%  silproof_process_spin (libsilproof_process.so)\n    3.7%  silproof_fmu_spin (EgoMotion.so)\n    3.7%  _PyEval_EvalFrameDefault (python3.12)\n    3.0%  silproof_native_spin_even (libsilproof_native.so)\n    2.6%  silproof_native_spin_odd (libsilproof_native.so)\n    1.9%  PyObject_Malloc (python3.12)\n    1.5%  PyUnicode_FromKindAndData (python3.12)\n   13.8%  all other functions\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 3285
+      "wall_ms": 3192
     },
     {
       "action": null,
@@ -3720,17 +3720,17 @@
       ],
       "observations": {
         "bytes": {
-          "activation/correlation.json": 115239,
+          "activation/correlation.json": 115091,
           "activation/observations.jsonl": 4052,
           "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-activation-limit/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/elf": 27312,
           "cpu/buildid-cache/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/cpu-activation-limit/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/243704ef884fedb46634fd686ff00c8e2c243ad8/probes": 0,
-          "cpu/perf-buildid-cache.stderr.txt": 297,
+          "cpu/perf-buildid-cache.stderr.txt": 219,
           "cpu/perf-script.stderr.txt": 0,
           "cpu/perf-srcline.stderr.txt": 0,
-          "cpu/perf.data": 22888720,
-          "cpu/samples.json": 182163,
-          "profile.json": 64699,
-          "run.diagnostics.json": 23639,
+          "cpu/perf.data": 22896448,
+          "cpu/samples.json": 182081,
+          "profile.json": 64997,
+          "run.diagnostics.json": 23624,
           "run.mcap": 28039,
           "run.mcap.provenance.json": 2541
         },
@@ -3745,38 +3745,38 @@
           ]
         ],
         "raw_sha256": {
-          "activation/observations.jsonl": "764d93a63e64f97e556c10b1e2e6e84af2ffb6c122e29ece5b49b51dee292225",
-          "cpu/perf.data": "526b983333d6e10a6941bd898f9220617f132494d8b8df3a8302cc21cda16335",
+          "activation/observations.jsonl": "6883148d0cbac1d7f9404a6238c8705bdf38dad68301b709426264c86232857f",
+          "cpu/perf.data": "d74c9b3a39377489c29e9467f9797df2956c9008440bac9a5bf2dbaf72a1c9e6",
           "run.mcap": "c7144d31da185b2bf71fd77db1772f5bfd83715db33ef30f3eeee1e1bda2f3cb"
         },
         "run": "succeeded",
         "totals": {
           "lost_records": 0,
           "lost_samples": 0,
-          "samples": 2708,
+          "samples": 2704,
           "samples_unknown_module": 0,
-          "samples_unknown_symbol": 92,
-          "samples_with_caller": 2643,
+          "samples_unknown_symbol": 82,
+          "samples_with_caller": 2642,
           "unavailable": {},
-          "weight_ns": 2710710708
+          "weight_ns": 2706706704
         },
-        "wall_ms": 3678
+        "wall_ms": 4282
       },
       "participants_started": [
-        "child-13907.tsv",
-        "child-13909.tsv",
-        "child-13911.tsv",
-        "child-13913.tsv",
-        "fmu-13904.tsv",
-        "native-13903.tsv",
-        "process-13906.tsv"
+        "child-14373.tsv",
+        "child-14374.tsv",
+        "child-14375.tsv",
+        "child-14376.tsv",
+        "fmu-14370.tsv",
+        "native-14369.tsv",
+        "process-14372.tsv"
       ],
       "sentinel_unchanged": true,
       "stderr_tail": "",
-      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2708, weight 2.711 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 2616 of 2708 samples; source lines for 2507 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: partial (observations_truncated)\n  of 2708 samples: 45 in an Activation's execution context (runner thread), 136 in a Process Step window (associated, not proven to be Step work), 66 lifecycle, 0 Replay, 2461 unattributed\ntop self weight (share of all sample weight):\n   28.6%  silproof_process_spin (libsilproof_process.so)\n   28.0%  silproof_fmu_spin (EgoMotion.so)\n   14.4%  silproof_native_spin_even (libsilproof_native.so)\n   14.1%  silproof_native_spin_odd (libsilproof_native.so)\n    7.5%  silproof_child_spin (silproof_child)\n    3.0%  [unknown function] (python3.12)\n    2.4%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    0.4%  _PyEval_EvalFrameDefault (python3.12)\n    0.3%  [unknown function] (libc.so.6)\n    0.1%  _PyCode_New (python3.12)\n    1.1%  all other functions\n",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2704, weight 2.707 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 2622 of 2704 samples; source lines for 2501 (leaf frames)\nmodules: 1 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: partial (observations_truncated)\n  of 2704 samples: 46 in an Activation's execution context (runner thread), 135 in a Process Step window (associated, not proven to be Step work), 64 lifecycle, 0 Replay, 2459 unattributed\ntop self weight (share of all sample weight):\n   28.4%  silproof_process_spin (libsilproof_process.so)\n   28.2%  silproof_fmu_spin (EgoMotion.so)\n   14.5%  silproof_native_spin_even (libsilproof_native.so)\n   14.0%  silproof_native_spin_odd (libsilproof_native.so)\n    7.4%  silproof_child_spin (silproof_child)\n    2.7%  [unknown function] (python3.12)\n    2.3%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n    0.7%  _PyEval_EvalFrameDefault (python3.12)\n    0.3%  PyObject_Free (python3.12)\n    0.2%  [unknown function] (libc.so.6)\n    1.4%  all other functions\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 3678
+      "wall_ms": 4282
     },
     {
       "action": null,
@@ -3798,7 +3798,7 @@
           "check": "command ends, not exit 0",
           "detail": [
             1,
-            "sil-run-diagnostics: run interrupted by SIGTERM\nsil-run-diagnostics: cannot write diagnostics report: cannot write '/mnt/sil-small/storage-exhausted-cpu/run.diagnostics.json.tmp-q82Fr8': No space left on device\nsil profile: cannot write '/mnt/sil-small/storage-exhausted-cpu/profile.json': [Errno 28] No space left on device\n"
+            "sil profile: warning: '/mnt/sil-small/storage-exhausted-cpu/cpu' has 12582912 bytes free, less than --max-capture-bytes 1073741824 plus the reserve of 8388608 bytes for the reports; the capture stops when the free space falls below the reserve\n"
           ],
           "ok": true
         },
@@ -3811,6 +3811,30 @@
           "check": "unrelated file unchanged",
           "detail": null,
           "ok": true
+        },
+        {
+          "check": "the Run goes on: Recording equals the ordinary Run",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "profile.json keeps the Run outcome",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture not complete, reserve reached",
+          "detail": [
+            "storage_reserve_reached"
+          ],
+          "ok": true
         }
       ],
       "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/storage-exhausted-cpu",
@@ -3819,32 +3843,52 @@
       "name": "storage-exhausted-cpu",
       "new_entries": [
         "run.mcap",
-        "run.mcap.failure.json",
         "run.mcap.provenance.json"
       ],
       "observations": {
-        "capture": null,
+        "capture": [
+          "partial",
+          [
+            "storage_reserve_reached"
+          ]
+        ],
         "exit_code": 1,
-        "profile_written": false,
-        "recording_equals_ordinary": false,
-        "run": null,
-        "small_bytes": {
-          "cpu/perf.data": 4194304
+        "profile_written": true,
+        "recording_equals_ordinary": true,
+        "run": {
+          "diagnostics_report": "run.diagnostics.json",
+          "exit_code": 0,
+          "failure": null,
+          "signal": null,
+          "status": "succeeded",
+          "supervisor_signal": null
         },
-        "wall_ms": 762
+        "small_bytes": {
+          "cpu/perf-buildid-cache.stderr.txt": 0,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 0,
+          "cpu/perf.data": 4846400,
+          "cpu/samples.json": 89981,
+          "profile.json": 56260,
+          "run.diagnostics.json": 23603
+        },
+        "wall_ms": 3331
       },
       "participants_started": [
-        "child-13951.tsv",
-        "fmu-13948.tsv",
-        "native-13947.tsv",
-        "process-13950.tsv"
+        "child-14420.tsv",
+        "child-14421.tsv",
+        "child-14422.tsv",
+        "child-14423.tsv",
+        "fmu-14417.tsv",
+        "native-14416.tsv",
+        "process-14419.tsv"
       ],
       "sentinel_unchanged": true,
-      "stderr_tail": "sil-run-diagnostics: run interrupted by SIGTERM\nsil-run-diagnostics: cannot write diagnostics report: cannot write '/mnt/sil-small/storage-exhausted-cpu/run.diagnostics.json.tmp-q82Fr8': No space left on device\nsil profile: cannot write '/mnt/sil-small/storage-exhausted-cpu/profile.json': [Errno 28] No space left on device\n",
-      "stdout_tail": "",
+      "stderr_tail": "sil profile: warning: '/mnt/sil-small/storage-exhausted-cpu/cpu' has 12582912 bytes free, less than --max-capture-bytes 1073741824 plus the reserve of 8388608 bytes for the reports; the capture stops when the free space falls below the reserve\n",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: /mnt/sil-small/storage-exhausted-cpu/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, partial (storage_reserve_reached)\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 567, weight 567.568 ms of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 6 observed, 5 with samples\nsymbols: function names for 401 of 567 samples; source lines for 284 (leaf frames)\nmodules: 2 of 30 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   20.5%  silproof_process_spin (libsilproof_process.so)\n   19.4%  [unknown function] (EgoMotion.so)\n   11.3%  sil::sha256_file(std::filesystem::__cxx11::path const&) (sil-run-diagnostics)\n   11.3%  silproof_native_spin_even (libsilproof_native.so)\n    9.3%  silproof_native_spin_odd (libsilproof_native.so)\n    9.0%  silproof_child_spin (silproof_child)\n    8.1%  [unknown function] (python3.12)\n    2.5%  _PyEval_EvalFrameDefault (python3.12)\n    1.2%  PyObject_Malloc (python3.12)\n    1.2%  [unknown function] (libc.so.6)\n    6.2%  all other functions\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 762
+      "wall_ms": 3331
     },
     {
       "action": null,
@@ -3867,7 +3911,7 @@
           "check": "command ends, not exit 0",
           "detail": [
             1,
-            "ce; the rest of the data is dropped\nsil-run-diagnostics: cannot write diagnostics report: cannot write '/mnt/sil-small/storage-exhausted-heap/run.diagnostics.json.tmp-UkLd30': No space left on device\nsil profile: cannot write '/mnt/sil-small/storage-exhausted-heap/heap/interpret.stderr.txt': [Errno 28] No space left on device; the rest of the data is dropped\nsil profile: cannot write '/mnt/sil-small/storage-exhausted-heap/heap/allocations.json': [Errno 28] No space left on device\nsil profile: cannot write '/mnt/sil-small/storage-exhausted-heap/profile.json': [Errno 28] No space left on device\n"
+            "sil profile: warning: '/mnt/sil-small/storage-exhausted-heap/heap' has 8454144 bytes free, less than --max-capture-bytes 268435456 plus the reserve of 8388608 bytes for the reports; the capture stops when the free space falls below the reserve\nsil profile: the free space of '/mnt/sil-small/storage-exhausted-heap/heap' is below the reserve for the reports; the rest of the data is dropped\n"
           ],
           "ok": true
         },
@@ -3885,6 +3929,25 @@
           "check": "the Run goes on: Recording equals the ordinary Run",
           "detail": null,
           "ok": true
+        },
+        {
+          "check": "profile.json keeps the Run outcome",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture not complete, reserve reached",
+          "detail": [
+            "storage_reserve_reached"
+          ],
+          "ok": true
         }
       ],
       "cwd": "/home/runner/work/_temp/work-native/runs/native-paranoid-2/scenarios/storage-exhausted-heap",
@@ -3896,33 +3959,48 @@
         "run.mcap.provenance.json"
       ],
       "observations": {
-        "capture": null,
+        "capture": [
+          "partial",
+          [
+            "storage_reserve_reached"
+          ]
+        ],
         "exit_code": 1,
-        "profile_written": false,
+        "profile_written": true,
         "recording_equals_ordinary": true,
-        "run": null,
-        "small_bytes": {
-          "heap/heaptrack.data": 61440,
-          "heap/interpret.stderr.txt": 0,
-          "heap/launch-adapter.sh": 453
+        "run": {
+          "diagnostics_report": "run.diagnostics.json",
+          "exit_code": 0,
+          "failure": null,
+          "signal": null,
+          "status": "succeeded",
+          "supervisor_signal": null
         },
-        "wall_ms": 2884
+        "small_bytes": {
+          "heap/allocations.json": 45605,
+          "heap/heaptrack.data": 63474,
+          "heap/interpret.stderr.txt": 102,
+          "heap/launch-adapter.sh": 453,
+          "profile.json": 7443,
+          "run.diagnostics.json": 23632
+        },
+        "wall_ms": 2927
       },
       "participants_started": [
-        "child-13969.tsv",
-        "child-13970.tsv",
-        "child-13971.tsv",
-        "child-13972.tsv",
-        "fmu-13966.tsv",
-        "native-13964.tsv",
-        "process-13968.tsv"
+        "child-14463.tsv",
+        "child-14464.tsv",
+        "child-14465.tsv",
+        "child-14466.tsv",
+        "fmu-14460.tsv",
+        "native-14458.tsv",
+        "process-14462.tsv"
       ],
       "sentinel_unchanged": true,
-      "stderr_tail": "sil profile: cannot write '/mnt/sil-small/storage-exhausted-heap/heap/heaptrack.data': [Errno 28] No space left on device; the rest of the data is dropped\nsil-run-diagnostics: cannot write diagnostics report: cannot write '/mnt/sil-small/storage-exhausted-heap/run.diagnostics.json.tmp-UkLd30': No space left on device\nsil profile: cannot write '/mnt/sil-small/storage-exhausted-heap/heap/interpret.stderr.txt': [Errno 28] No space left on device; the rest of the data is dropped\nsil profile: cannot write '/mnt/sil-small/storage-exhausted-heap/heap/allocations.json': [Errno 28] No space left on device\nsil profile: cannot write '/mnt/sil-small/storage-exhausted-heap/profile.json': [Errno 28] No space left on device\n",
-      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\n",
+      "stderr_tail": "sil profile: warning: '/mnt/sil-small/storage-exhausted-heap/heap' has 8454144 bytes free, less than --max-capture-bytes 268435456 plus the reserve of 8388608 bytes for the reports; the capture stops when the free space falls below the reserve\nsil profile: the free space of '/mnt/sil-small/storage-exhausted-heap/heap' is below the reserve for the reports; the rest of the data is dropped\n",
+      "stdout_tail": "manifest_hash 2e243d98831e53e64195ea3cd563dda5c510415ef6d4e5216f3acc895677c86a\nprofile: /mnt/sil-small/storage-exhausted-heap/profile.json\nrun: succeeded, exit code 0\ncapture: heap, partial (storage_reserve_reached)\nscope: the runner process (every Native participant), heaptrack 1.5.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 952 calls, 270.541 KiB allocated; 14 temporary\nat capture end: 147 outstanding, 87.197 KiB (not a leak verdict); peak tracked heap 99.421 KiB (not RSS)\nsymbols: 952 of 952 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n  252.980 KiB       923 calls  [unknown function] (libstdc++.so.6)\n  17.561 KiB        29 calls  [unknown function] (libc.so.6)\n",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 2884
+      "wall_ms": 2927
     }
   ]
 }

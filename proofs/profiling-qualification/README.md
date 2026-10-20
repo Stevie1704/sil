@@ -25,9 +25,9 @@ overhead. The retained run is listed in [Evidence](#evidence).
 [`proof-profiling-qualification`](../../.github/workflows/proof-profiling-qualification.yml)
 runs on a GitHub-hosted `ubuntu-24.04` runner (x86-64, glibc 2.39, no
 hardware PMU in the VM: `cpu-clock:u` is a software event). The retained
-run had kernel `7.0.0-1017-azure`; the first run (39341633342) had
-`6.17.0-1022-azure`, and its CPU, heap and render scenarios passed with
-perf 6.17.13 too. One job, in this order:
+run had kernel `6.17.0-1022-azure` and perf 6.17.13. Run 39373889739 had
+kernel `7.0.0-1017-azure`, and all its scenarios passed with that kernel
+too. One job, in this order:
 
 | Step | What |
 | --- | --- |
@@ -243,7 +243,7 @@ and of #319, with its evidence or an explicit revised-scope decision.
 ## Evidence
 
 [`evidence/`](evidence/) holds the retained output of workflow run
-[39373889739](https://github.com/Stevie1704/sil/actions/runs/39373889739) at commit `dc711f9`, copied by [`retain.py`](retain.py):
+[39378840955](https://github.com/Stevie1704/sil/actions/runs/39378840955) at commit `f5770ed`, copied by [`retain.py`](retain.py):
 
 | Path | Content |
 | --- | --- |
