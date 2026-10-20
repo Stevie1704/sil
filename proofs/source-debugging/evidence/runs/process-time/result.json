@@ -1,0 +1,36 @@
+{
+  "form": "process",
+  "label": "time",
+  "selector": "time",
+  "action": "resume",
+  "command": [
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/sil-run-diagnostics",
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/process.json",
+    "-o",
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/process-time/recording.mcap",
+    "--participant-timeout-ms",
+    "30000",
+    "--diagnostics-out",
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/process-time/diagnostics.json",
+    "--activation-observations",
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/process-time/observations.jsonl",
+    "--activation-observations-limit-bytes",
+    "1048576",
+    "--launch-wrapper",
+    "hazard",
+    "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
+  ],
+  "exit_code": 0,
+  "elapsed_host_ns": 277648391,
+  "deadline_ms": 30000,
+  "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
+  "supervisor_timeout": false,
+  "run_outcome": {
+    "exit_code": 0,
+    "failure": null,
+    "status": "succeeded"
+  },
+  "observed_inferiors_reaped": true,
+  "recording_sha256": "10ba6d1497733a2b715d7cc7c25fc1c82d9acb2a216f0604a137c87f45044030",
+  "activation_stops_verified": true
+}

@@ -1,0 +1,308 @@
+[
+  {
+    "stage": "entry",
+    "hit": 4,
+    "virtual_time_ns": 40000000,
+    "pid": 3554,
+    "pgid": 3554,
+    "ptid": [
+      3554,
+      3554,
+      0
+    ],
+    "host_monotonic_ns": 153172516020,
+    "source": "/home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c",
+    "line": 398,
+    "values": {
+      "instance": {
+        "value": "{config = {period_ns = 10000000, hazard_acceleration_mps2 = -3, max_change_mps2 = 0.5}, acceleration_mps2 = -2, activations = 4, ignored_observations = 0, radar_held = {present = 1, sequence = 4, origin_ns = 40000000, validity = 1 '\\001'}, camera_held = {present = 1, sequence = 4, origin_ns = 40000000, validity = 1 '\\001'}, ego_held = {present = 1, sequence = 4, origin_ns = 40000000, validity = 1 '\\001'}, radar = {sample_time_ns = 40000000, sensor_id = 1, frame_id = 1, sequence = 4, count = 1, validity = 1 '\\001', objects = {{id = 12, x_m = 29, y_m = 0, relative_vx_mps = -25, confidence = 0.875}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}}}, camera = {sample_time_ns = 40000000, sensor_id = 2, frame_id = 1, sequence = 4, count = 1, validity = 1 '\\001', objects = {{id = 4, x_m = 29.5, y_m = 0.125, relative_vx_mps = 0, confidence = 0.75}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}}}, ready = 1}",
+        "reason": null
+      },
+      "radar": {
+        "value": "{sample_time_ns = 40000000, sensor_id = 1, frame_id = 1, sequence = 4, count = 1, validity = 1 '\\001', objects = {{id = 12, x_m = 29, y_m = 0, relative_vx_mps = -25, confidence = 0.875}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}}}",
+        "reason": null
+      },
+      "camera": {
+        "value": "{sample_time_ns = 40000000, sensor_id = 2, frame_id = 1, sequence = 4, count = 1, validity = 1 '\\001', objects = {{id = 4, x_m = 29.5, y_m = 0.125, relative_vx_mps = 0, confidence = 0.75}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}}}",
+        "reason": null
+      },
+      "ego": {
+        "value": "{present = 1, sequence = 4, origin_ns = 40000000, validity = 1 '\\001'}",
+        "reason": null
+      },
+      "previous_command": {
+        "value": "-2",
+        "reason": null
+      },
+      "activation_count": {
+        "value": "4",
+        "reason": null
+      },
+      "t_ns": {
+        "value": "40000000",
+        "reason": null
+      }
+    },
+    "stack": "#0  adas_ref_advance (instance=0x7eff57cfac30, t_ns=40000000, output=0x7eff57bdd730, fault=0x7eff57bdb230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n#1  0x00007eff58a20b16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#2  0x00007eff58a1d3ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007eff58a200be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#4  0x00007eff583eb11c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#5  0x00007eff583e62af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#6  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#7  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#8  0x00000000005d55eb in PyEval_EvalCode ()\n#9  0x0000000000608852 in ?? ()\n#10 0x00000000006b50d3 in ?? ()\n#11 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#12 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#13 0x00000000006bccd5 in Py_RunMain ()\n#14 0x00000000006bc7bd in Py_BytesMain ()\n#15 0x00007eff5882a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n",
+    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7eff58bef080 (LWP 3554) \"python\" adas_ref_advance (instance=0x7eff57cfac30, t_ns=40000000, output=0x7eff57bdd730, fault=0x7eff57bdb230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n",
+    "locals": "mode = 1473227824\nselected = <optimized out>\nlead = <optimized out>\ntarget = <optimized out>\n",
+    "modules": "From                To                  Syms Read   Shared Object Library\n0x00007eff58d38000  0x00007eff58d62195  Yes (*)     /lib64/ld-linux-x86-64.so.2\n0x00007eff58c4a420  0x00007eff58cc83a6  Yes (*)     /lib/x86_64-linux-gnu/libm.so.6\n0x00007eff58c20260  0x00007eff58c31c60  Yes (*)     /lib/x86_64-linux-gnu/libz.so.1\n0x00007eff58bf4210  0x00007eff58c12473  Yes (*)     /lib/x86_64-linux-gnu/libexpat.so.1\n0x00007eff58828800  0x00007eff589b0039  Yes (*)     /lib/x86_64-linux-gnu/libc.so.6\n0x00007eff583e44c0  0x00007eff583f4575  Yes (*)     /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n0x00007eff58a1b460  0x00007eff58a2107a  Yes (*)     /lib/x86_64-linux-gnu/libffi.so.8\n0x00007eff586f56a0  0x00007eff586fb60d  Yes (*)     /usr/lib/python3.12/lib-dynload/_json.cpython-312-x86_64-linux-gnu.so\n0x00007eff583d0c80  0x00007eff583d5f80  Yes (*)     /usr/lib/python3.12/lib-dynload/_hashlib.cpython-312-x86_64-linux-gnu.so\n0x00007eff57eb5000  0x00007eff581e63a2  Yes (*)     /lib/x86_64-linux-gnu/libcrypto.so.3\n0x00007eff58a285c0  0x00007eff58a2a46f  Yes (*)     /usr/lib/python3.12/lib-dynload/_bz2.cpython-312-x86_64-linux-gnu.so\n0x00007eff5837d280  0x00007eff58389ff3  Yes (*)     /lib/x86_64-linux-gnu/libbz2.so.1.0\n0x00007eff58371940  0x00007eff58375379  Yes (*)     /usr/lib/python3.12/lib-dynload/_lzma.cpython-312-x86_64-linux-gnu.so\n0x00007eff5833f400  0x00007eff583605ef  Yes (*)     /lib/x86_64-linux-gnu/liblzma.so.5\n0x00007eff583926e0  0x00007eff58394917  Yes (*)     /usr/lib/python3.12/lib-dynload/mmap.cpython-312-x86_64-linux-gnu.so\n0x00007eff586ed240  0x00007eff586efe84  Yes         /home/runner/work/sil/sil/build/source-debugging-evidence/adas.so\n(*): Shared library is missing debugging information.\n",
+    "proc_status": "Name:\tpython\nUmask:\t0022\nState:\tt (tracing stop)\nTgid:\t3554\nNgid:\t0\nPid:\t3554\nPPid:\t3548\nTracerPid:\t3548\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t4 100 118 999 1001 \nNStgid:\t3554\nNSpid:\t3554\nNSpgid:\t3554\nNSsid:\t3547\nKthread:\t0\nVmPeak:\t   29772 kB\nVmSize:\t   29772 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t   20832 kB\nVmRSS:\t   20832 kB\nRssAnon:\t   10064 kB\nRssFile:\t   10768 kB\nRssShmem:\t       0 kB\nVmData:\t   10560 kB\nVmStk:\t     136 kB\nVmExe:\t    2956 kB\nVmLib:\t    6136 kB\nVmPTE:\t      92 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t1\nSigQ:\t0/63838\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000001001000\nSigCgt:\t0000000000004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tvulnerable\nSpeculationIndirectBranch:\talways enabled\nCpus_allowed:\tf\nCpus_allowed_list:\t0-3\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t32\nnonvoluntary_ctxt_switches:\t1\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "parent_pid": 3548
+  },
+  {
+    "stage": "decision",
+    "hit": 4,
+    "virtual_time_ns": 40000000,
+    "pid": 3554,
+    "pgid": 3554,
+    "ptid": [
+      3554,
+      3554,
+      0
+    ],
+    "host_monotonic_ns": 153176953883,
+    "source": "/home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c",
+    "line": 424,
+    "values": {
+      "lead": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "selected": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "mode": {
+        "value": "1",
+        "reason": null
+      },
+      "target": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "previous_command": {
+        "value": "-2",
+        "reason": null
+      }
+    },
+    "stack": "#0  limited (max_change=0.5, to=<optimized out>, from=-2) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:393\n#1  adas_ref_advance (instance=0x7eff57cfac30, t_ns=40000000, output=0x7eff57bdd730, fault=<optimized out>) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:424\n#2  0x00007eff58a20b16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007eff58a1d3ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#4  0x00007eff58a200be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#5  0x00007eff583eb11c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#6  0x00007eff583e62af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#7  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#8  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#9  0x00000000005d55eb in PyEval_EvalCode ()\n#10 0x0000000000608852 in ?? ()\n#11 0x00000000006b50d3 in ?? ()\n#12 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#13 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#14 0x00000000006bccd5 in Py_RunMain ()\n#15 0x00000000006bc7bd in Py_BytesMain ()\n",
+    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7eff58bef080 (LWP 3554) \"python\" limited (max_change=0.5, to=<optimized out>, from=-2) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:393\n",
+    "locals": "mode = 1\nselected = <optimized out>\nlead = <optimized out>\ntarget = <optimized out>\n",
+    "inline_values": {
+      "limited_from": {
+        "value": "-2",
+        "reason": null
+      },
+      "limited_to": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "limited_max_change": {
+        "value": "0.5",
+        "reason": null
+      }
+    }
+  },
+  {
+    "stage": "return",
+    "hit": 4,
+    "virtual_time_ns": 40000000,
+    "pid": 3554,
+    "pgid": 3554,
+    "ptid": [
+      3554,
+      3554,
+      0
+    ],
+    "host_monotonic_ns": 153178814701,
+    "source": null,
+    "line": 0,
+    "values": {
+      "output": {
+        "value": "{sample_time_ns = 50000000, sequence = 5, mode = 1, selected_object_id = 12, target_acceleration_mps2 = -3, acceleration_mps2 = -2.5, radar_age_ns = 0, camera_age_ns = 0, ego_age_ns = 0, ignored_observations = 0}",
+        "reason": null
+      },
+      "limited_result": {
+        "value": "-2.5",
+        "reason": null
+      },
+      "sequence": {
+        "value": "5",
+        "reason": null
+      },
+      "sample_time_ns": {
+        "value": "50000000",
+        "reason": null
+      },
+      "selected": {
+        "value": "12",
+        "reason": null
+      },
+      "mode": {
+        "value": "1",
+        "reason": null
+      },
+      "target": {
+        "value": "-3",
+        "reason": null
+      }
+    },
+    "stack": "#0  0x00007eff58a20b16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#1  0x00007eff58a1d3ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#2  0x00007eff58a200be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007eff583eb11c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#4  0x00007eff583e62af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#5  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#6  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#7  0x00000000005d55eb in PyEval_EvalCode ()\n#8  0x0000000000608852 in ?? ()\n#9  0x00000000006b50d3 in ?? ()\n#10 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#11 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#12 0x00000000006bccd5 in Py_RunMain ()\n#13 0x00000000006bc7bd in Py_BytesMain ()\n#14 0x00007eff5882a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n#15 0x00007eff5882a28b in __libc_start_main () from /lib/x86_64-linux-gnu/libc.so.6\n",
+    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7eff58bef080 (LWP 3554) \"python\" 0x00007eff58a20b16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n",
+    "locals": "No symbol table info available.\n"
+  },
+  {
+    "stage": "entry",
+    "hit": 5,
+    "virtual_time_ns": 50000000,
+    "pid": 3554,
+    "pgid": 3554,
+    "ptid": [
+      3554,
+      3554,
+      0
+    ],
+    "host_monotonic_ns": 153181671652,
+    "source": "/home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c",
+    "line": 398,
+    "values": {
+      "instance": {
+        "value": "{config = {period_ns = 10000000, hazard_acceleration_mps2 = -3, max_change_mps2 = 0.5}, acceleration_mps2 = -2.5, activations = 5, ignored_observations = 0, radar_held = {present = 1, sequence = 5, origin_ns = 50000000, validity = 1 '\\001'}, camera_held = {present = 1, sequence = 5, origin_ns = 50000000, validity = 1 '\\001'}, ego_held = {present = 1, sequence = 5, origin_ns = 50000000, validity = 1 '\\001'}, radar = {sample_time_ns = 50000000, sensor_id = 1, frame_id = 1, sequence = 5, count = 1, validity = 1 '\\001', objects = {{id = 12, x_m = 28.75, y_m = 0, relative_vx_mps = -25, confidence = 0.875}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}}}, camera = {sample_time_ns = 50000000, sensor_id = 2, frame_id = 1, sequence = 5, count = 1, validity = 1 '\\001', objects = {{id = 4, x_m = 29.25, y_m = 0.125, relative_vx_mps = 0, confidence = 0.75}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}}}, ready = 1}",
+        "reason": null
+      },
+      "radar": {
+        "value": "{sample_time_ns = 50000000, sensor_id = 1, frame_id = 1, sequence = 5, count = 1, validity = 1 '\\001', objects = {{id = 12, x_m = 28.75, y_m = 0, relative_vx_mps = -25, confidence = 0.875}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}}}",
+        "reason": null
+      },
+      "camera": {
+        "value": "{sample_time_ns = 50000000, sensor_id = 2, frame_id = 1, sequence = 5, count = 1, validity = 1 '\\001', objects = {{id = 4, x_m = 29.25, y_m = 0.125, relative_vx_mps = 0, confidence = 0.75}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}, {id = 0, x_m = 0, y_m = 0, relative_vx_mps = 0, confidence = 0}}}",
+        "reason": null
+      },
+      "ego": {
+        "value": "{present = 1, sequence = 5, origin_ns = 50000000, validity = 1 '\\001'}",
+        "reason": null
+      },
+      "previous_command": {
+        "value": "-2.5",
+        "reason": null
+      },
+      "activation_count": {
+        "value": "5",
+        "reason": null
+      },
+      "t_ns": {
+        "value": "50000000",
+        "reason": null
+      }
+    },
+    "stack": "#0  adas_ref_advance (instance=0x7eff57cfac30, t_ns=50000000, output=0x7eff57bdd730, fault=0x7eff57bdb230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n#1  0x00007eff58a20b16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#2  0x00007eff58a1d3ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007eff58a200be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#4  0x00007eff583eb11c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#5  0x00007eff583e62af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#6  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#7  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#8  0x00000000005d55eb in PyEval_EvalCode ()\n#9  0x0000000000608852 in ?? ()\n#10 0x00000000006b50d3 in ?? ()\n#11 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#12 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#13 0x00000000006bccd5 in Py_RunMain ()\n#14 0x00000000006bc7bd in Py_BytesMain ()\n#15 0x00007eff5882a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n",
+    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7eff58bef080 (LWP 3554) \"python\" adas_ref_advance (instance=0x7eff57cfac30, t_ns=50000000, output=0x7eff57bdd730, fault=0x7eff57bdb230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n",
+    "locals": "mode = 1473227824\nselected = <optimized out>\nlead = <optimized out>\ntarget = <optimized out>\n",
+    "modules": "From                To                  Syms Read   Shared Object Library\n0x00007eff58d38000  0x00007eff58d62195  Yes (*)     /lib64/ld-linux-x86-64.so.2\n0x00007eff58c4a420  0x00007eff58cc83a6  Yes (*)     /lib/x86_64-linux-gnu/libm.so.6\n0x00007eff58c20260  0x00007eff58c31c60  Yes (*)     /lib/x86_64-linux-gnu/libz.so.1\n0x00007eff58bf4210  0x00007eff58c12473  Yes (*)     /lib/x86_64-linux-gnu/libexpat.so.1\n0x00007eff58828800  0x00007eff589b0039  Yes (*)     /lib/x86_64-linux-gnu/libc.so.6\n0x00007eff583e44c0  0x00007eff583f4575  Yes (*)     /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n0x00007eff58a1b460  0x00007eff58a2107a  Yes (*)     /lib/x86_64-linux-gnu/libffi.so.8\n0x00007eff586f56a0  0x00007eff586fb60d  Yes (*)     /usr/lib/python3.12/lib-dynload/_json.cpython-312-x86_64-linux-gnu.so\n0x00007eff583d0c80  0x00007eff583d5f80  Yes (*)     /usr/lib/python3.12/lib-dynload/_hashlib.cpython-312-x86_64-linux-gnu.so\n0x00007eff57eb5000  0x00007eff581e63a2  Yes (*)     /lib/x86_64-linux-gnu/libcrypto.so.3\n0x00007eff58a285c0  0x00007eff58a2a46f  Yes (*)     /usr/lib/python3.12/lib-dynload/_bz2.cpython-312-x86_64-linux-gnu.so\n0x00007eff5837d280  0x00007eff58389ff3  Yes (*)     /lib/x86_64-linux-gnu/libbz2.so.1.0\n0x00007eff58371940  0x00007eff58375379  Yes (*)     /usr/lib/python3.12/lib-dynload/_lzma.cpython-312-x86_64-linux-gnu.so\n0x00007eff5833f400  0x00007eff583605ef  Yes (*)     /lib/x86_64-linux-gnu/liblzma.so.5\n0x00007eff583926e0  0x00007eff58394917  Yes (*)     /usr/lib/python3.12/lib-dynload/mmap.cpython-312-x86_64-linux-gnu.so\n0x00007eff586ed240  0x00007eff586efe84  Yes         /home/runner/work/sil/sil/build/source-debugging-evidence/adas.so\n(*): Shared library is missing debugging information.\n",
+    "proc_status": "Name:\tpython\nUmask:\t0022\nState:\tt (tracing stop)\nTgid:\t3554\nNgid:\t0\nPid:\t3554\nPPid:\t3548\nTracerPid:\t3548\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t4 100 118 999 1001 \nNStgid:\t3554\nNSpid:\t3554\nNSpgid:\t3554\nNSsid:\t3547\nKthread:\t0\nVmPeak:\t   29772 kB\nVmSize:\t   29772 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t   20832 kB\nVmRSS:\t   20832 kB\nRssAnon:\t   10076 kB\nRssFile:\t   10756 kB\nRssShmem:\t       0 kB\nVmData:\t   10560 kB\nVmStk:\t     136 kB\nVmExe:\t    2956 kB\nVmLib:\t    6136 kB\nVmPTE:\t      92 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t1\nSigQ:\t0/63838\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000001001000\nSigCgt:\t0000000000004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tvulnerable\nSpeculationIndirectBranch:\talways enabled\nCpus_allowed:\tf\nCpus_allowed_list:\t0-3\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t36\nnonvoluntary_ctxt_switches:\t1\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "parent_pid": 3548
+  },
+  {
+    "stage": "decision",
+    "hit": 5,
+    "virtual_time_ns": 50000000,
+    "pid": 3554,
+    "pgid": 3554,
+    "ptid": [
+      3554,
+      3554,
+      0
+    ],
+    "host_monotonic_ns": 153185287540,
+    "source": "/home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c",
+    "line": 424,
+    "values": {
+      "lead": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "selected": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "mode": {
+        "value": "1",
+        "reason": null
+      },
+      "target": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "previous_command": {
+        "value": "-2.5",
+        "reason": null
+      }
+    },
+    "stack": "#0  limited (max_change=0.5, to=<optimized out>, from=-2.5) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:393\n#1  adas_ref_advance (instance=0x7eff57cfac30, t_ns=50000000, output=0x7eff57bdd730, fault=<optimized out>) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:424\n#2  0x00007eff58a20b16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007eff58a1d3ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#4  0x00007eff58a200be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#5  0x00007eff583eb11c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#6  0x00007eff583e62af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#7  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#8  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#9  0x00000000005d55eb in PyEval_EvalCode ()\n#10 0x0000000000608852 in ?? ()\n#11 0x00000000006b50d3 in ?? ()\n#12 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#13 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#14 0x00000000006bccd5 in Py_RunMain ()\n#15 0x00000000006bc7bd in Py_BytesMain ()\n",
+    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7eff58bef080 (LWP 3554) \"python\" limited (max_change=0.5, to=<optimized out>, from=-2.5) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:393\n",
+    "locals": "mode = 1\nselected = <optimized out>\nlead = <optimized out>\ntarget = <optimized out>\n",
+    "inline_values": {
+      "limited_from": {
+        "value": "-2.5",
+        "reason": null
+      },
+      "limited_to": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "limited_max_change": {
+        "value": "0.5",
+        "reason": null
+      }
+    }
+  },
+  {
+    "stage": "return",
+    "hit": 5,
+    "virtual_time_ns": 50000000,
+    "pid": 3554,
+    "pgid": 3554,
+    "ptid": [
+      3554,
+      3554,
+      0
+    ],
+    "host_monotonic_ns": 153187358734,
+    "source": null,
+    "line": 0,
+    "values": {
+      "output": {
+        "value": "{sample_time_ns = 60000000, sequence = 6, mode = 1, selected_object_id = 12, target_acceleration_mps2 = -3, acceleration_mps2 = -3, radar_age_ns = 0, camera_age_ns = 0, ego_age_ns = 0, ignored_observations = 0}",
+        "reason": null
+      },
+      "limited_result": {
+        "value": "-3",
+        "reason": null
+      },
+      "sequence": {
+        "value": "6",
+        "reason": null
+      },
+      "sample_time_ns": {
+        "value": "60000000",
+        "reason": null
+      },
+      "selected": {
+        "value": "12",
+        "reason": null
+      },
+      "mode": {
+        "value": "1",
+        "reason": null
+      },
+      "target": {
+        "value": "-3",
+        "reason": null
+      }
+    },
+    "stack": "#0  0x00007eff58a20b16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#1  0x00007eff58a1d3ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#2  0x00007eff58a200be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007eff583eb11c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#4  0x00007eff583e62af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#5  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#6  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#7  0x00000000005d55eb in PyEval_EvalCode ()\n#8  0x0000000000608852 in ?? ()\n#9  0x00000000006b50d3 in ?? ()\n#10 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#11 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#12 0x00000000006bccd5 in Py_RunMain ()\n#13 0x00000000006bc7bd in Py_BytesMain ()\n#14 0x00007eff5882a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n#15 0x00007eff5882a28b in __libc_start_main () from /lib/x86_64-linux-gnu/libc.so.6\n",
+    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7eff58bef080 (LWP 3554) \"python\" 0x00007eff58a20b16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n",
+    "locals": "No symbol table info available.\n"
+  }
+]

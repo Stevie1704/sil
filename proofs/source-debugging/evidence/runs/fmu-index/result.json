@@ -1,0 +1,36 @@
+{
+  "form": "fmu",
+  "label": "index",
+  "selector": "index",
+  "action": "resume",
+  "command": [
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/sil-run-diagnostics",
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/fmu.json",
+    "-o",
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/fmu-index/recording.mcap",
+    "--participant-timeout-ms",
+    "30000",
+    "--diagnostics-out",
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/fmu-index/diagnostics.json",
+    "--activation-observations",
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/fmu-index/observations.jsonl",
+    "--activation-observations-limit-bytes",
+    "1048576",
+    "--launch-wrapper",
+    "hazard",
+    "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
+  ],
+  "exit_code": 0,
+  "elapsed_host_ns": 311527683,
+  "deadline_ms": 30000,
+  "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
+  "supervisor_timeout": false,
+  "run_outcome": {
+    "exit_code": 0,
+    "failure": null,
+    "status": "succeeded"
+  },
+  "observed_inferiors_reaped": true,
+  "recording_sha256": "5e8b5c61cd5e7ffd7fc81c1509a9dfa40934925f65b2aa1edc75fcad71471587",
+  "activation_stops_verified": true
+}

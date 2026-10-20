@@ -1,0 +1,13 @@
+{
+  "run_id": 39483103830,
+  "url": "https://github.com/Stevie1704/sil/actions/runs/39483103830",
+  "head_sha": "f5db290e91dab81fa991d5eb91d432dd495f79c2",
+  "conclusion": "success",
+  "artifact": {
+    "id": 12292571470,
+    "name": "source-debugging-evidence",
+    "size_in_bytes": 15780189,
+    "digest": "sha256:2d9dd938061d441b8c8ad3b3df0e303da9201abfe47be8fade73a4a00ec1d3e2",
+    "expires_at": "2026-11-19T19:26:06Z"
+  }
+}

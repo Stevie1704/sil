@@ -149,17 +149,63 @@ inferior's actual exit separately from the runner report's wrapper status.
 
 ## Decision and retained evidence
 
-**Decision pending Linux qualification.** External scripts are the candidate;
-recommend no new launch or pause hook unless real evidence demonstrates a
-gap. A build decision would require a separate spec with scope, stop semantics,
-timeouts, process ownership, cleanup, debug identities and unsupported state;
-this ticket alone authorizes none of those product changes.
+**No change to SiL's debugging hooks.**
+[Linux qualification run 39483103830](https://github.com/Stevie1704/sil/actions/runs/39483103830)
+passed for PR head `f5db290e91dab81fa991d5eb91d432dd495f79c2`, with checkout
+merge revision `a12963601c03fdad6247c6a466fa200d652d1452`. The host was Linux
+6.17.0-1022-azure x86-64/glibc 2.39. All 39 experiments over Native, Process,
+single-FMU and shimmed Process forms met their stop, outcome, cleanup and
+equivalence checks; the fortieth experiment established the grouped-ADAS
+BUS-terminal rejection. External scripts plus the existing diagnostics-only
+wrapper suffice for the qualified forms. No new launch or pause hook, ABI,
+protocol, Manifest field or ADR change is justified by this evidence.
+
+**Defer grouped ADAS qualification.** Even with two instances, an explicit BUS
+profile and every Channel bound, the group importer rejects the ADAS
+`camera.sample_time_ns`: it is no Tx_Data/Rx_Data member of a terminal. This
+is a workload/importer limit before execution, not debugger failure. A future
+supported multi-instance ADAS importer would need its own spec and tickets;
+the BUS group remains one shared process boundary and is unqualified here.
+
+At both selected Activations, every form exposed valid held observations,
+mode 1 (hazard), previous command and the output's selected radar ID 12,
+target −3 and limited result. At 40 ms the held radar object was at 29 m,
+relative speed −25 m/s, confidence 0.875; camera ID 4 confirmed it at 29.5 m,
+y = 0.125 m, confidence 0.75. At 50 ms their x positions were 28.75 and
+29.25 m. Held ego metadata had sequence 4/5 and origin 40/50 ms, validity 1;
+discarded ego speed remained unavailable. The inline `limited` frame exposed
+`from` = −2/−2.5 and `max_change` = 0.5. `lead`, local `selected`, local
+`target` and inline `to` were optimized out at that source stop in all four
+forms. They remain null with `optimized_out`; output values are separately
+labelled, never substituted for those locals. Process returns land in libffi
+without available caller source; the application entry/decision source and
+stack remain captured.
+
+The shim captures read the actual inferior region at 40,000,000 and
+50,000,000 ns while GDB's host timestamps remained inside the runner's
+Activation intervals. With ptrace_scope = 1 the sibling attach was refused
+(raw diagnostic retained); every launch-under-GDB case worked. No host
+security setting changed. Native SIGTERM produced an interrupted Run;
+Process/FMU SIGTERM unwound the Python handler, and each explicit 2 s
+deadline failed the selected Step at 40 ms. Every observed inferior was gone
+after cleanup, including detach and debugger-error controls.
+
+Within each form, two ordinary Runs, diagnostics-only, index-selected,
+time-selected and detached Runs all produced byte-identical Recordings.
+The saved files independently reproduce that comparison. The index/time
+captures used different fresh PIDs/TIDs (Native 3463/3472, Process 3544/3554,
+FMU 3623/3634, shim 3708/3718), host times and relocated stack addresses.
+These observations establish Message reproducibility, not matching internal
+thread history or instruction-level replay. No multithreaded application
+schedule is qualified by this single-threaded workload.
 
 The workflow uploads all binaries, separate debug files, sources, Manifests,
 Recordings, observations and logs for 30 days. `digests.txt` hashes saved files;
 `report.json` records the checkout revision, CI Run, tool/host versions, all
-Run results and equivalence checks. Selected durable evidence and the real
-Linux conclusion will be retained here after the draft PR triggers that Run.
+Run results and equivalence checks. [Retained evidence](evidence/README.md)
+includes all selected stops, observations, successful Recordings, identities,
+control evidence and digests. The complete binary/debug/source bundle is in
+the workflow artifact; its published digest and expiry are retained too.
 
 Repeated ordinary Runs must reproduce Messages; fresh processes, ASLR
 addresses, TIDs and host scheduling need not match. Stack/thread snapshots
