@@ -712,7 +712,7 @@ Unattributed reasons:
 | `runner_outside_intervals` | The runner thread before the first phase or after the last phase |
 | `unmapped_process` | A descendant of the runner that is not in the process tree of a mapped participant |
 | `launcher` | The launcher process |
-| `observations_incomplete` | A sample of the runner thread or a Run descendant at or after the last kept record of a cut stream |
+| `observations_incomplete` | A sample of the runner thread or a Run descendant at or after the last kept record of a cut stream. Or, in a cut stream, a runner-thread sample outside every kept interval: the runner writes a record at its end, so a dropped interval can begin earlier |
 
 No identity comes from a symbol: a Native library that two Participants
 share is told apart by the runner's interval only. An FMU group is one

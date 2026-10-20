@@ -362,6 +362,10 @@ class _Join:
             name = phases.find(time_ns)
             if name is not None:
                 return "lifecycle", name
+            if self.coverage_end is not None:
+                # A record is written at its end: a dropped interval can
+                # begin before the last kept record.
+                return "unattributed", "observations_incomplete"
             return "unattributed", "runner_outside_intervals"
         participant = owner.get(process)
         if participant is None:
