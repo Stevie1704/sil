@@ -53,6 +53,9 @@ REASONS = {
     "unverifiable_debug_file":
         "The module has no build ID, so no debug file can be matched",
     "symbolization_timeout": "A perf script pass took longer than its limit",
+    "inlined_frames_failed":
+        "perf script --inline failed; the samples come from an export "
+        "without inlined frames",
     "export_failed": "An export failed or its output did not decode",
     "no_samples": "The capture has no sample to describe",
     "not_requested": "Not requested",

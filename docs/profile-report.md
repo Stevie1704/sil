@@ -245,6 +245,7 @@ Reasons in v1, in addition to the diagnostics reasons:
 | `debug_file_not_found` | No debug file with the module's build ID was found |
 | `unverifiable_debug_file` | The module has no recorded build ID, so no debug data can be matched to it |
 | `symbolization_timeout` | A `perf script` pass took longer than the limit |
+| `inlined_frames_failed` | `perf script --inline` failed (perf 6.1 can end on its `addr2line` helper). The sample pass ran again with `--no-inline`, so an inlined function is part of its caller's frame |
 | `export_failed` | A `perf script` pass failed, its output did not decode, or it was larger than the export limit. Or `cpu/samples.json` could not be written |
 | `no_samples` | The capture has no sample to describe |
 | `not_requested` | The option or collector was not requested |
@@ -340,14 +341,14 @@ have no samples.
 | `function_names` | `samples_with_name`: leaf frames with a function name |
 | `call_frame_unwinding` | `method` (`dwarf`), `samples_with_caller` |
 | `source_lines` | `status` (`available`, `partial`, `unavailable`), `scope` (`leaf_frames`), `samples_with_line` (null for `unavailable`), `unavailable` |
-| `inlined_frames` | `status` `available`: the export uses `--inline`. `samples_with_inlined_frames` counts the samples with at least one inlined frame. `unavailable` when there is no export. A version 1 report of an earlier version can have `not_requested` |
+| `inlined_frames` | `status` `available`: the export uses `--inline`. `samples_with_inlined_frames` counts the samples with at least one inlined frame. `unavailable` with `inlined_frames_failed` when the inline export failed and the samples come from a `--no-inline` export. `unavailable` when there is no export. A version 1 report of an earlier version can have `not_requested` |
 
 An inlined function is its own frame: it has the address and the module of
 its physical frame and the mark `inlined`. In a stack, the inlined frames
-come before their physical frame, innermost first. A `self` row gives the
+come before their physical frame, innermost first. perf can mark every function of an address as inlined; then the module is the one mapped at that address. A `self` row gives the
 sample to the innermost frame. An `inclusive` row counts a function once per
 sample. So no total counts a sample twice. `samples_with_caller` counts
-physical frames only: an inlined function is not a caller.
+addresses only: an inlined function is not a caller.
 
 Function names and DWARF call frames are separate capabilities. A module
 can unwind and have no names (a stripped library). A module can also have

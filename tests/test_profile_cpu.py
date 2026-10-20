@@ -423,6 +423,48 @@ def test_inlined_frames_are_own_functions_counted_once_per_sample():
     assert [len(stack) for stack in document["stacks"]] == [4, 2]
 
 
+# perf 6.17 marks every function of an address "(inlined)" when the
+# function name of the debug data differs from the symbol (for example a
+# .constprop clone): then no physical frame line follows.
+ALL_INLINED = "\n".join([
+    mmap("sil-run-diagnos", 101, 0, "0x7f0000000000", "0x4000", "0x1000",
+         "bb" * 20, NATIVE),
+    f"{header('sil-run-diagnos', 101, 101, 100)} {1000000:>10} ",
+    "\t    7f0000001400 square (inlined)",
+    "\t    7f0000001400 spin (inlined)",
+    f"\t    7f0000001200 native_task ({NATIVE})",
+    "",
+]) + "\n"
+
+
+def test_an_address_of_inlined_frames_only_takes_its_mapped_module():
+    result = normalize_cpu(ALL_INLINED, srclines=None, facts=facts,
+                           lost_sample_records=0,
+                           srcline_problem="symbolization_timeout")
+
+    native = result.module_id(NATIVE)
+    document = result.samples_document
+    stack = [document["frames"][i] for i in document["stacks"][0]]
+    assert [(f["symbol"], f["module"], f.get("inlined", False))
+            for f in stack] == [("square", native, True),
+                                ("spin", native, True),
+                                ("native_task", native, False)]
+    # Two addresses: native_task is the one caller.
+    assert result.totals["samples_with_caller"] == 1
+    assert result.totals["samples_unknown_module"] == 0
+
+
+def test_a_failed_inline_export_names_its_reason():
+    result = normalize_cpu(SCRIPT, srclines=SRCLINES, facts=facts,
+                           lost_sample_records=0,
+                           inlined_problem="inlined_frames_failed")
+
+    assert result.symbolization["inlined_frames"] == {
+        "status": "unavailable", "samples_with_inlined_frames": None,
+        "unavailable": {"samples_with_inlined_frames":
+                        "inlined_frames_failed"}}
+
+
 def test_the_export_can_be_normalized_line_by_line(analysis):
     # sil profile streams the perf script pass: it never holds its text.
     lines = iter(SCRIPT.splitlines(keepends=True))

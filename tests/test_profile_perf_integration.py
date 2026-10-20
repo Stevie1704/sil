@@ -243,12 +243,14 @@ def test_inlined_frames_are_marked_and_belong_to_their_physical_frame(
         stack = [frames[index] for index in document["stacks"][row[4]]]
         with_inlined += any(f.get("inlined") for f in stack)
         for position, frame in enumerate(stack):
+            following = stack[position + 1] if position + 1 < len(stack) \
+                else None
+            if frame.get("inlined") and following is not None and \
+                    following["address"] == frame["address"]:
+                # The functions of one address share its module.
+                assert following["module"] == frame["module"]
             if frame.get("inlined"):
-                # The next physical frame has the same address and module.
-                physical = next(f for f in stack[position:]
-                                if not f.get("inlined"))
-                assert (frame["address"], frame["module"]) == (
-                    physical["address"], physical["module"])
+                assert frame["module"] is not None
     assert with_inlined == inlined["samples_with_inlined_frames"]
 
 

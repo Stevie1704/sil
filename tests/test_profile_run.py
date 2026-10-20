@@ -420,6 +420,23 @@ def test_a_samples_file_that_cannot_be_written_fails_the_capture(
     assert capture["unavailable"]["samples_file"] == "export_failed"
 
 
+def test_a_failed_inline_export_is_repeated_without_inlined_frames(
+        tools, exports, tmp_path):
+    manifest = mixed_period_manifest(tmp_path)
+
+    proc = sil([str(manifest), "--out", "prof", "--collector", "cpu"], tools,
+               tmp_path, {**exports, "FAKE_PERF_INLINE_FAIL": "1"})
+
+    assert proc.returncode == 0, proc.stderr
+    capture = profile(tmp_path / "prof")["capture"]
+    assert capture["status"] == "complete"
+    assert capture["totals"]["samples"] == 7
+    assert capture["symbolization"]["inlined_frames"] == {
+        "status": "unavailable", "samples_with_inlined_frames": None,
+        "unavailable": {"samples_with_inlined_frames":
+                        "inlined_frames_failed"}}
+
+
 def test_an_export_above_its_limit_fails_the_capture_not_the_run(
         tools, exports, tmp_path):
     # docs/profile-report.md: each perf script pass may write at most twice

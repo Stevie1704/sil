@@ -216,10 +216,14 @@ def _parse(script: str | Iterable[str]) -> _Capture:
 
 def _add_frame(sample: _Sample, line: str) -> None:
     """Add one call-chain line. An inlined function comes before its
-    physical frame, innermost first, and gets that frame's module."""
+    physical frame, innermost first, and gets that frame's module. perf
+    can also mark every function of an address inlined: then the module
+    is the one mapped at the address."""
     if (inlined := _INLINED.match(line)) is not None:
-        sample.frames += (_Frame(int(inlined["ip"], 16), inlined["sym"],
-                                 None, inlined=True),)
+        ip = int(inlined["ip"], 16)
+        sample.frames += (_Frame(ip, inlined["sym"],
+                                 _mapped_path(sample.process, ip),
+                                 inlined=True),)
         return
     if (match := _FRAME.match(line)) is None:
         return
@@ -227,7 +231,7 @@ def _add_frame(sample: _Sample, line: str) -> None:
     frames = list(sample.frames)
     index = len(frames)
     while index and frames[index - 1].inlined and \
-            frames[index - 1].ip == frame.ip and frames[index - 1].dso is None:
+            frames[index - 1].ip == frame.ip:
         index -= 1
         frames[index] = _Frame(frame.ip, frames[index].symbol, frame.dso,
                                inlined=True)
@@ -235,7 +239,11 @@ def _add_frame(sample: _Sample, line: str) -> None:
 
 
 def _physical_frames(sample: _Sample) -> int:
-    return sum(1 for frame in sample.frames if not frame.inlined)
+    """The addresses of the stack: the inlined functions of one address and
+    its physical frame are one frame of the unwinder."""
+    return sum(1 for index, frame in enumerate(sample.frames)
+               if index == 0 or sample.frames[index - 1].ip != frame.ip
+               or not sample.frames[index - 1].inlined)
 
 
 def _record(capture: _Capture, header: re.Match,
@@ -356,6 +364,7 @@ def normalize_cpu(script: str | Iterable[str], *, srclines: str | None,
                   lost_sample_records: int,
                   srcline_problem: str | None = None,
                   build_ids: dict[str, str] | None = None,
+                  inlined_problem: str | None = None,
                   hotspot_limit: int = HOTSPOT_LIMIT) -> CpuAnalysis:
     """The normalized capture of one `perf script` export: its text, or
     its lines as they come.
@@ -365,6 +374,7 @@ def normalize_cpu(script: str | Iterable[str], *, srclines: str | None,
     (`perf report --stats`); perf script prints no count for them, so any
     makes the lost-sample count unknown. `build_ids` (`perf buildid-list`)
     names a module's build ID when its mmap record has none.
+    `inlined_problem` is the reason why the export has no inlined frames.
     """
     capture = _parse(script)
     for path, build_id in (build_ids or {}).items():
@@ -392,7 +402,8 @@ def normalize_cpu(script: str | Iterable[str], *, srclines: str | None,
     return CpuAnalysis(
         time_origin_ns=None if origin is None else str(origin),
         totals=_totals(capture, lost_sample_records),
-        symbolization=_symbolization(capture.samples, srcline_problem),
+        symbolization=_symbolization(capture.samples, srcline_problem,
+                                     inlined_problem),
         processes=[_process_row(p, capture, origin)
                    for p in capture.processes],
         threads=[{"id": t.id, "process": t.process.id, "tid": t.tid,
@@ -448,7 +459,8 @@ def _totals(capture: _Capture, lost_sample_records: int) -> dict:
     }
 
 
-def _symbolization(samples: list[_Sample], problem: str | None) -> dict:
+def _symbolization(samples: list[_Sample], problem: str | None,
+                   inlined_problem: str | None) -> dict:
     named = sum(1 for s in samples if s.frames and s.frames[0].symbol)
     lines = sum(1 for s in samples if s.source)
     if problem is not None:
@@ -470,7 +482,11 @@ def _symbolization(samples: list[_Sample], problem: str | None) -> dict:
                                      "samples_with_caller": with_caller},
             "source_lines": source,
             "inlined_frames": {"status": "available",
-                               "samples_with_inlined_frames": inlined}}
+                               "samples_with_inlined_frames": inlined}
+            if inlined_problem is None else {
+                "status": "unavailable", "samples_with_inlined_frames": None,
+                "unavailable": {
+                    "samples_with_inlined_frames": inlined_problem}}}
 
 
 def _offset(time_ns: int, origin: int | None) -> int | None:

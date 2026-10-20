@@ -311,7 +311,8 @@ def test_the_removed_fmu_library_is_named_and_its_identity_is_unknown(
     fmu = [m for m in modules if m["path"].endswith("EgoMotion.so")]
     assert fmu and all(m["allocations_leaf"] for m in fmu)
     assert all(m["build_id"] is None and m["unavailable"] == {
-        "build_id": "module_unavailable"} for m in fmu)
+        "build_id": "module_unavailable",
+        "debug": "not_reported_by_backend"} for m in fmu)
     assert not list(cwd.glob(".sil-run-*"))
 
 

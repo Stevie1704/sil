@@ -62,7 +62,7 @@ MAX_ACTIVATION_BYTES = 64 << 20
 LIMITATIONS = ["cpu_samples_estimate_on_cpu_time", "user_space_only",
                "scope_is_runner_and_descendants", "host_build_only"]
 SCRIPT_FIELDS = ["-F", "comm,pid,tid,time,period,ip,sym,dso", "--ns",
-                 "--inline", "--show-task-events", "--show-mmap-events",
+                 "--show-task-events", "--show-mmap-events",
                  "--show-lost-events"]
 # The leaf line pass prints no inlined frame, so it stays one pair of lines
 # per sample.
@@ -674,16 +674,25 @@ def export(perf: Path, request: CpuRequest, layout: Layout,
     srclines, srcline_problem = _perf_text(
         perf, ["script", *data, *SRCLINE_FIELDS], layout.cache, cwd, timeout,
         limit, layout.cpu / "perf-srcline.stderr.txt")
-    # The sample pass is the large one: it is normalized as it comes, so
-    # its text is never held in memory.
-    script = _PerfPass(perf, ["script", *data, *SCRIPT_FIELDS], layout.cache,
-                       cwd, timeout, limit,
-                       layout.cpu / "perf-script.stderr.txt")
-    analysis = normalize_cpu(script.lines(), srclines=srclines, facts=facts,
-                             lost_sample_records=_lost_sample_records(stats),
-                             srcline_problem=srcline_problem,
-                             build_ids=build_ids)
-    if script.problem is not None:
+    def normalized(inline: str, inlined_problem: str | None):
+        # The sample pass is the large one: it is normalized as it comes,
+        # so its text is never held in memory.
+        script = _PerfPass(perf, ["script", *data, *SCRIPT_FIELDS, inline],
+                           layout.cache, cwd, timeout, limit,
+                           layout.cpu / "perf-script.stderr.txt")
+        analysis = normalize_cpu(
+            script.lines(), srclines=srclines, facts=facts,
+            lost_sample_records=_lost_sample_records(stats),
+            srcline_problem=srcline_problem, build_ids=build_ids,
+            inlined_problem=inlined_problem)
+        return analysis, script.problem
+
+    analysis, problem = normalized("--inline", None)
+    if problem == "export_failed":
+        # perf 6.1 can end with SIGPIPE from its addr2line helper when it
+        # resolves inlined functions. Without them the export can work.
+        analysis, problem = normalized("--no-inline", "inlined_frames_failed")
+    if problem is not None:
         return Export(None, "export_failed")
     return Export(analysis, None)
 
