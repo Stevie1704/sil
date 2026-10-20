@@ -9,6 +9,7 @@ JavaScript would. The browser checks are test_profile_html_browser.py.
 
 from __future__ import annotations
 
+import base64
 import json
 import subprocess
 import sys
@@ -46,6 +47,22 @@ def test_render_prints_the_summary_and_writes_the_html(tmp_path):
     page = Page((tmp_path / "report.html").read_text())
     assert "Run succeeded" in page.text
     assert "Capture complete" in page.text
+
+
+def test_the_download_is_profile_json_byte_for_byte(tmp_path):
+    profile = artifact_set(tmp_path / "set", "cpu-complete.json")
+    # CRLF line ends are valid JSON whitespace; a text read would drop them.
+    data = profile.read_bytes().replace(b"\n", b"\r\n")
+    profile.write_bytes(data)
+
+    proc = render([str(profile), "--html", "report.html"], tmp_path)
+
+    assert proc.returncode == 0, proc.stderr
+    html = (tmp_path / "report.html").read_text()
+    prefix = 'href="data:application/json;base64,'
+    start = html.index(prefix) + len(prefix)
+    encoded = html[start:html.index('"', start)]
+    assert base64.b64decode(encoded) == data
 
 
 VALID = sorted(p.name for p in

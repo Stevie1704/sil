@@ -48,6 +48,7 @@ class ProfileSet:
     """A valid `profile.json` and the normalized files it names."""
 
     report: dict
+    source: str  # the exact text of profile.json, as validated
     samples: dict | None = None
     correlation: dict | None = None
     allocations: dict | None = None
@@ -113,7 +114,7 @@ def load_profile_set(path: Path) -> ProfileSet:
                                digests)
         if allocations is not None:
             _check_allocations(allocations, analysis, name)
-        return ProfileSet(report, allocations=allocations)
+        return ProfileSet(report, text, allocations=allocations)
     name = capture["samples_file"]
     samples = _sidecar(directory, name, SAMPLES_KEY, SAMPLES, digests)
     if samples is not None:
@@ -129,7 +130,8 @@ def load_profile_set(path: Path) -> ProfileSet:
         correlation = _sidecar(directory, name, CORRELATION_KEY, CORRELATION,
                                digests)
         _check_correlation(correlation, samples, summary, name)
-    return ProfileSet(report, samples=samples, correlation=correlation)
+    return ProfileSet(report, text, samples=samples,
+                      correlation=correlation)
 
 
 def _sidecar(directory: Path, name: str | None, key: str, shape: Shape,
