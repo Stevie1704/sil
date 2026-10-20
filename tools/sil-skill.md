@@ -1,6 +1,6 @@
 ---
 name: sil
-description: Test a system under test (SUT) deterministically with SiL, the `sil` command. Use it to bring a SUT (an FMU, a C library or an executable) into a Run as a Participant. Use it to inspect or couple FMUs, or to write and validate a Manifest. Use it to execute a Run into a Recording, or to read and compare Recordings. Use it for a determinism check, or to find why a Run failed. Use it to measure the wall time, Task and Step times, CPU time or peak memory of a Run, or to benchmark repeated Runs. Use it when the user names SiL, a vECU, an FMU, a Manifest, a Recording, a determinism check, a Run failure, or a slow Run.
+description: Test a system under test (SUT) deterministically with SiL, the `sil` command. Use it to bring a SUT (an FMU, a C library or an executable) into a Run as a Participant. Use it to inspect or couple FMUs, or to write and validate a Manifest. Use it to execute a Run into a Recording, or to read and compare Recordings. Use it for a determinism check, or to find why a Run failed. Use it to measure the wall time, Task and Step times, CPU time or peak memory of a Run, or to benchmark repeated Runs. Use it to profile a Run on Linux: find a hot function with CPU samples or an allocation site with heap capture. Use it when the user names SiL, a vECU, an FMU, a Manifest, a Recording, a determinism check, a Run failure, a slow Run, or a profile.
 metadata:
   sil-version: "$version"
 ---
@@ -27,6 +27,9 @@ installed version.
    section "Investigate a failed Run".
 6. **Measure** run time, CPU time or memory: `sil docs agent-guide`, the
    section "Measure a Run", then `sil docs diagnostics-report`.
+7. **Profile** a slow Task or Step to find a hot function or an allocation
+   site (Linux only): `sil docs agent-guide`, the section "Profile a Run",
+   then `sil docs profile-report`.
 
 ## Rules
 
