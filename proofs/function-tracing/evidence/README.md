@@ -1,16 +1,28 @@
 # Retained Linux evidence
 
 Captured by [Actions run 39466725936](https://github.com/Stevie1704/sil/actions/runs/39466725936)
-from commit `9718afe5a55f6178f4499b729d41fbe63ca9ae9a` on ubuntu-24.04.
-`capture.json` identifies the run; `results.json` records all 19 fresh Runs,
-loaded-library/runner hashes and equal Recording hashes. `summary.json` gives
-observed counts, entry order and host durations without timing thresholds.
+for PR head `9718afe5a55f6178f4499b729d41fbe63ca9ae9a` on ubuntu-24.04.
+`report.json` consolidates the capture identity, actual checkout merge revision,
+all 19 Run outcomes/timings, Recording and binary hashes, build commands,
+source identities, relevant package versions and selected compiler remarks.
+Its GCC DWARF counts were extracted from the matching binaries identified
+by those hashes. The six XRay DSO outcomes, including zero events and
+NOT_INITIALIZED, remain in `results.runs[].trace`.
 
-The compact retained subset includes one complete explicit trace, the
-exhaustion trace, both loaded-DSO XRay outcomes, the executable control,
-Activation observations, compiler inline remarks/maps, complete package
-inventory and build/source identities. Raw records contain only function IDs,
-entry/exit kinds, host timestamps and TIDs. Decode a per-Activation report:
+Only the raw files needed to independently check the conclusions remain:
+
+- `explicit-0/`: one complete trace and its Activation join inputs; covers
+  both object counts, every call and all 40 Activations.
+- `loss-0/`: the seven-event trace, loss metadata and matching Activations;
+  the decoder regenerates the partial report.
+- `diagnostics-0/observations.jsonl`: the baseline for Activation overhead.
+- `control.bin`, its metadata and map: verify XRay recursion, threads, tail
+  exit and unmatched throw entry against actual function IDs.
+- The two XRay DSO maps: distinguish optimized inline coverage from the
+  noinline variant.
+
+Raw events contain only function IDs, entry/exit kinds, host timestamps and
+TIDs. Regenerate per-Activation counts, order and duration statistics:
 
 ```sh
 python3 proofs/function-tracing/analyze.py \
@@ -19,12 +31,11 @@ python3 proofs/function-tracing/analyze.py \
   build/function-tracing-calls.json
 ```
 
-`digests.txt` checks this retained subset. `full-capture-digests.txt` is the
-original full artifact's hash inventory, with paths relative to that capture;
-it is not a manifest of files present in this subset. The workflow artifact
-`function-tracing-evidence` retains the matching libraries, DWARF, copied
-instrumented sources, generated headers, input/output Recordings, remaining
-repeats and full normalized call reports for 30 days. This retained identity
-subset alone cannot re-symbolize an old binary after that artifact expires;
-the raw function IDs remain decodable with the proof's fixed source-scope map.
-Repeat the proof for a fresh complete executable/debug bundle.
+`digests.txt` checks every retained file. Derived summaries, empty XRay event
+files, redundant observation streams, the generated Manifest, full compiler
+logs and the complete host package inventory are omitted from Git. The full
+workflow artifact `function-tracing-evidence` retains them, the matching
+libraries/DWARF, copied sources and Recordings for 30 days. The retained
+identity subset alone cannot re-symbolize an old binary after that artifact
+expires; source-scope IDs remain decodable with the proof's fixed map. Repeat
+the proof for a fresh complete executable/debug bundle.

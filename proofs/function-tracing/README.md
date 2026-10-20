@@ -51,8 +51,9 @@ bash proofs/function-tracing/run-proof.sh \
 ```
 
 The workflow pins GCC 12.4.0 (`12.4.0-2ubuntu1~24.04.1`) and Clang/LLVM
-18.1.3 (`1:18.1.3-1ubuntu1`) Ubuntu packages. Tool version strings, the complete
-package inventory, glibc and kernel are retained. A missing pinned package
+18.1.3 (`1:18.1.3-1ubuntu1`) Ubuntu packages. Tool versions, relevant package
+versions, glibc and kernel are retained in `evidence/report.json`; the complete
+package inventory stays in the CI artifact. A missing pinned package
 fails setup rather than silently switching compiler versions.
 The workload always uses `-O2 -g -ffp-contract=off`, never fast math. This
 differs from the GCC 12-only ADAS cost proof: the XRay candidate requires
@@ -167,20 +168,21 @@ equivalence here establishes no deadline-edge guarantee.
 ## Candidate decisions
 
 [Linux qualification run 39466725936](https://github.com/Stevie1704/sil/actions/runs/39466725936)
-passed on source revision `9718afe5a55f6178f4499b729d41fbe63ca9ae9a`.
+passed for PR head `9718afe5a55f6178f4499b729d41fbe63ca9ae9a`; the actual
+checkout merge revision is recorded in `evidence/report.json`.
 The host was Ubuntu 24.04, Linux 6.17.0-1022-azure x86-64 and glibc 2.39.
 [Retained evidence](evidence/README.md) includes raw events, observations,
-compiler remarks, maps, identities and offline summaries. Later commits add
-documentation/evidence only; the source revision above identifies the build
-that actually ran.
+selected compiler evidence, maps and consolidated results/build identities.
+Derived summaries can be regenerated from the raw trace. Later commits add
+documentation/evidence only.
 
 **Explicit scopes: build, as a separately specified source-owner opt-in.**
 All three captures had 2,640 events / 42,240 bytes, no loss and 40 completed
 Activation joins. Counts and entry order matched the worked example above in
-every Activation. GCC inlined `confirmed` and `confirms` even with scopes;
-their logical source calls stayed observable. `check_object` and `select_lead`
-remained outlined in the instrumented library. The uninstrumented GCC build
-also inlined `select_lead` into `adas_ref_advance`. Thus these are durations of
+every Activation. The matching GCC binaries' DWARF records show all four
+selected functions inlined, with and without scopes; their logical source
+calls stayed observable. Selected compiler remarks and DWARF counts are kept
+in `evidence/report.json`. Thus these are durations of
 the actual instrumented scopes, not reconstructed durations of the baseline's
 machine functions. See the [separate spec proposal](proposed-spec.md); it
 requires source ownership, a separate API/contract decision and new tickets.

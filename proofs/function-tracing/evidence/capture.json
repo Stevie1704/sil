@@ -1,8 +1,0 @@
-{
-  "workflow_run_id": 39466725936,
-  "workflow_url": "https://github.com/Stevie1704/sil/actions/runs/39466725936",
-  "source_revision": "9718afe5a55f6178f4499b729d41fbe63ca9ae9a",
-  "artifact_name": "function-tracing-evidence",
-  "machine_class": "ubuntu-24.04 Linux x86-64/glibc",
-  "qualification": "passed"
-}
