@@ -193,6 +193,15 @@ for explicit probes. Exact package versions and binary/source digests are
 retained with the experiment. These are development/qualification tools,
 not new dependencies of the installed SiL runtime.
 
+## Source debugging feasibility (#321)
+
+[proofs/source-debugging/](proofs/source-debugging/) invokes the Ubuntu 24.04
+GDB package ([upstream](https://sourceware.org/gdb/), GPL-3.0-or-later) as an
+external qualification tool, with GCC 12 and GNU binutils. No debugger source
+or binary is vendored, linked into SiL, or added to a distributed runtime.
+Exact package versions, tool versions and binary/debug-file identities are
+retained with the experiment.
+
 ## Python wheel and source distribution
 
 The wheel and the source distribution contain SiL code and the editable

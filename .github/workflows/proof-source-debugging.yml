@@ -1,0 +1,38 @@
+name: proof-source-debugging
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/source-debugging/**'
+      - 'examples/adas-reference/**'
+      - '.github/workflows/proof-source-debugging.yml'
+  workflow_dispatch:
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install pinned debugger and compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            'gdb=15.0.50.20240403-0ubuntu1' \
+            'gcc-12=12.4.0-2ubuntu1~24.04.1' 'g++-12=12.4.0-2ubuntu1~24.04.1' \
+            cmake binutils
+          mkdir -p build/source-debugging-host
+          dpkg-query -W > build/source-debugging-host/packages.txt
+          uv venv .venv
+          uv pip install -p .venv/bin/python -r container/requirements.lock -e 'python/[dev]'
+      - name: Qualify batch source debugging
+        run: bash proofs/source-debugging/run-proof.sh "$PWD/build/source-debugging-evidence" "$RUNNER_TEMP/source-debugging-build"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-debugging-evidence
+          path: |
+            build/source-debugging-evidence/
+            build/source-debugging-host/
+          retention-days: 30

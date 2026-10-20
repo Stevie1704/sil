@@ -1,0 +1,169 @@
+# Source debugging at a selected Activation (#321)
+
+Phase 2 feasibility investigation under #313. All scripts are proof-owned;
+there is no supported debugger CLI, schema, ABI, protocol or kernel hook.
+The workload is the unchanged ADAS reference C application in
+`examples/adas-reference/`. Only its build and external debugger differ.
+
+## Question and reproducible experiment
+
+Can external GDB scripts explain the hazard controller's last two ramp Steps
+in its Native, Process and FMU forms? The expected trajectory is authored in
+`maneuvers/hazard.expected.csv`, independently of the implementation:
+
+| Output sequence | Activation index | Activation Virtual time | Output Sample time | Previous / limited command (m/s²) |
+| --- | --- | --- | --- | --- |
+| 5 | 4 | 40,000,000 ns | 50 ms | −2 / −2.5 |
+| 6 | 5 | 50,000,000 ns | 60 ms | −2.5 / −3 |
+
+The index is zero-based per Task/Process Step, not a global breakpoint count.
+`adas_ref_advance` increments `activations` and writes sequence = index + 1;
+the output Sample time is the end of `[t, t + Period]`. Recording publication
+timestamps and Activation observations carry the start, not that Sample time.
+The proof requires the breakpoint hit count and `t_ns` to agree with the
+actual `observations.jsonl` records. Two separate fresh Runs select by index
+and by Virtual time. This fixture has one application call per Activation;
+that relationship must be re-established for a different adapter/workload.
+
+Real qualification runs in `.github/workflows/proof-source-debugging.yml` on
+GitHub Actions `ubuntu-24.04`, Linux x86-64/glibc. macOS/arm64 can compile the
+Python scripts and run existing workload tests, but supplies no GDB evidence.
+The workflow pins GDB `15.0.50.20240403-0ubuntu1` and GCC 12
+`12.4.0-2ubuntu1~24.04.1`. Missing pinned packages fail setup. No sysctl,
+capability, seccomp or ptrace setting is changed. `attach.json` records
+`kernel.yama.ptrace_scope` and the actual result of a sibling-process attach;
+launch-under-GDB works without relying on sibling attach permission.
+
+```sh
+# On the workflow's Linux host, after installing its packages/Python deps:
+bash proofs/source-debugging/run-proof.sh \
+  "$PWD/build/source-debugging-evidence" "$PWD/build/source-debugging-build"
+# Local workload regressions:
+.venv/bin/python -m pytest tests/test_example_adas_reference.py tests/test_adas_process_adapter.py
+```
+
+`-O2 -g -ffp-contract=off` is the main result. There is no `-O0` substitute,
+source probe, noinline attribute, injected inferior call or variable mutation.
+`build-commands.json` and copied sources state exactly what was compiled.
+Every proof-owned runner, workload library and Clock shim has a separate
+debug file. `identities.json` records binary/debug SHA-256 and build IDs,
+`.gnu_debuglink`, and the existing profiler's matching result. The FMU archive
+includes the matching debug file beside its optimized library, so GDB can
+resolve it before the importer removes its extraction directory. The archive
+is a proof build, not the released example archive. It does not modify a
+Manifest to enable debugging.
+
+## Stops, ownership and values
+
+Each selected Activation has three observations:
+
+1. **Entry** to `adas_ref_advance`, after the adapter has delivered inputs,
+   before this call's algorithm/state update. Read `instance`, held radar and
+   camera lists, held ego metadata, previous command, `activations`, `t_ns`.
+2. **Decision**, at the optimized source location for `limited`: read `lead`,
+   `selected`, `mode`, `target` and the old command where DWARF makes them
+   available. Hazard is a function/decision, not a stored `hazard` variable;
+   mode 1 and output target −3 establish its result for this fixture. Inline
+   `limited` arguments may be unavailable. Source lines can move or combine
+   under optimization; the actual PC's source location and stack are saved.
+3. **Return** from the C API, before the caller publishes: read output memory,
+   limited result, sequence and Sample time. This does not mean a Message has
+   already been recorded; the resumed adapter still has to publish it.
+
+`stops.json` retains raw GDB locals, stack frames, source/line, loaded-module
+paths, inferior PID/PGID, TID, host stop time and expression-level values.
+Unavailable/optimized-out values stay null with a reason; no later output or
+hand calculation is relabelled as a historical local. The application does
+not retain ego speed in `adas_ref_instance`: `ego_held` contains validity,
+sequence and origin only. Reading the full ego observation would require a
+separate stop in `adas_ref_receive_ego`; this proof makes no claim to recover
+discarded speed from the advance frame. The unchanged source establishes
+that limitation.
+
+Native debugging launches the runner itself: its thread executes the Native
+Task and an all-stop breakpoint pauses the entire runner, including all
+Native participants. This fixture has only one Native controller. Process
+and FMU debugging uses `sil-run-diagnostics --launch-wrapper hazard ...`:
+the selected child execs GDB, which launches the real adapter as its inferior.
+The runner remains a different process waiting for a Step response. GDB owns
+the wrapper PID; the inferior has another PID. Do not join a profiler's
+Process PID to the inferior by coincidence. The proof saves actual process
+identities and checks they differ from the runner. The hook is diagnostics-only;
+ordinary Runs have no wrapper. GDB output goes to its own log while inferior
+stdin/stdout remain the Step protocol's pipes.
+
+The named ADAS FMU currently runs through the **single-FMU importer**. The
+group importer requires FMI BUS terminals and a BUS profile; the ADAS FMU has
+neither. `group.json` and its rejected Run retain that mismatch in the ticket's
+premise. This experiment does not manufacture a grouped ADAS implementation.
+A real BUS group shares one Process participant, so all-stop debugging its
+child would stop every instance together (ADR 0001); multi-instance source
+debugging is **unqualified** here, and PID alone cannot select an FMU instance.
+
+## Deadlines, Clock shim, signals and cleanup
+
+All ordinary and resumed Runs pass `--participant-timeout-ms 30000`
+explicitly. Defaults are unchanged. This is a finite, unattended batch policy,
+not permission for an indefinite human stop. The outer supervisor bounds
+each Run at 60 s and the CI job at 25 minutes. Native callbacks are synchronous:
+a Participant response timeout cannot interrupt a stopped runner. Process
+and FMU Stops consume the runner's host response deadline. A separate control
+uses an explicit 500 ms deadline and holds the debugger for 1 s; Run failure
+is the expected result. No equivalence is claimed at a deadline edge.
+
+The shim case uses the same Process adapter with `shim=True`. The launch
+script removes LD_PRELOAD from GDB and reinstates it only for the inferior.
+GDB's own Python monotonic time remains host time; GDB reads the inferior's
+actual `g_region->t`, frozen at 40/50 ms, and identifies its `clock_gettime`
+symbol. It does not inject a clock call that could alter program state.
+CPU-time clocks are outside this shimmed wall-clock claim.
+
+| Action/control | Intended effect on Run |
+| --- | --- |
+| Continue / resume | Complete and byte-compare Recording with ordinary Run |
+| Detach | GDB releases and resumes inferior; Run completes and compares equal |
+| Kill inferior | Native runner dies, or Process exchange fails; no successful Run |
+| SIGTERM to inferior | Passed through; Native runner handles interruption, or Process exits and Run fails |
+| Debugger script error | Batch debugger exits; inferior is killed; Run fails |
+| Hold beyond explicit Process deadline | Runner fails response exchange and cleans child group |
+| Outer supervisor timeout | Kill supervised group and observed inferior group; retain partial evidence, fail proof |
+
+GDB uses all-stop mode, no follow-fork debugging and a 16-frame stack bound.
+Signals are not swallowed to manufacture success. Detach is different from
+debugger failure: it deliberately releases a live process. The proof verifies
+that no observed inferior PID survives cleanup, including detached Runs.
+Raw stderr, debugger logs, diagnostics and independent command status remain
+available for failed controls. Hard debugger/host SIGKILL before the first
+saved stop is not qualified as recoverable capture.
+
+## Decision and retained evidence
+
+**Decision pending Linux qualification.** External scripts are the candidate;
+recommend no new launch or pause hook unless real evidence demonstrates a
+gap. A build decision would require a separate spec with scope, stop semantics,
+timeouts, process ownership, cleanup, debug identities and unsupported state;
+this ticket alone authorizes none of those product changes.
+
+The workflow uploads all binaries, separate debug files, sources, Manifests,
+Recordings, observations and logs for 30 days. `digests.txt` hashes saved files;
+`report.json` records the checkout revision, CI Run, tool/host versions, all
+Run results and equivalence checks. Selected durable evidence and the real
+Linux conclusion will be retained here after the draft PR triggers that Run.
+
+Repeated ordinary Runs must reproduce Messages; fresh processes, ASLR
+addresses, TIDs and host scheduling need not match. Stack/thread snapshots
+are observations, not instruction-level replay guarantees. There are no saved
+historical variables, arbitrary reverse execution, variable histories or
+checkpoints in an MCAP Recording. #196 owns checkpoint/resume. GDB's own
+record/replay is a separate debugger facility, not a SiL feature.
+
+No ABI, Step protocol, Manifest, report contract or ADR change is needed for
+the external-script candidate. ADR 0004's diagnostics boundary remains intact.
+The grouped-ADAS limitation would need a separately scoped importer/workload
+decision before it could be qualified.
+
+Primary references: [GDB optimized variables](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Variables.html),
+[separate debug files](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Separate-Debug-Files.html),
+[attach and detach](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Attach.html),
+[record/replay](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Process-Record-and-Replay.html),
+[pinned Ubuntu GDB package](https://packages.ubuntu.com/noble/gdb).
