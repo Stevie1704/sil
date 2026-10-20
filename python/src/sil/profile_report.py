@@ -176,7 +176,10 @@ HEAP_ANALYSIS = reasoned({
                          "undecodable_records": COUNT, "truncated": FLAG}),
     "modules": items(reasoned(
         {"id": TEXT, "path": TEXT, "allocations_leaf": COUNT,
-         "allocations_unknown_symbol": COUNT}, {"build_id": TEXT})),
+         "allocations_unknown_symbol": COUNT}, {"build_id": TEXT},
+        # Added after the first v1 heap capture: optional.
+        {"debug": maybe(members({"status": one_of(DEBUG_STATUSES),
+                                 "path": maybe(TEXT)}))})),
     "hotspots": members({"limit": COUNT, "self": items(HEAP_ROW),
                          "self_remainder": members(HEAP_COSTS),
                          "inclusive": items(HEAP_ROW)}),

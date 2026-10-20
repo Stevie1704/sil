@@ -207,9 +207,11 @@ class _Frames:
             return None
         if path not in self.modules:
             found, reason = self.build_id(path)
-            self.modules[path] = {
-                "path": path, "build_id": found,
-                "unavailable": {} if found else {"build_id": reason}}
+            unavailable = {} if found else {"build_id": reason}
+            # The interpreter does not say which debug file it used.
+            unavailable["debug"] = "not_reported_by_backend"
+            self.modules[path] = {"path": path, "build_id": found,
+                                  "debug": None, "unavailable": unavailable}
         return path
 
     def ip_frames(self, ip_index: int) -> list[int]:

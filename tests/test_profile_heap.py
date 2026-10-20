@@ -137,9 +137,13 @@ def test_modules_carry_path_build_id_and_leaf_counts():
     assert native["build_id"] == "abcd01"
     assert (native["allocations_leaf"],
             native["allocations_unknown_symbol"]) == (7, 1)
+    # Heaptrack does not report which debug file it used, if any.
+    assert native["debug"] is None
+    assert native["unavailable"] == {"debug": "not_reported_by_backend"}
     app = modules["/w/sil-run"]
     assert app["build_id"] is None
-    assert app["unavailable"] == {"build_id": "module_unavailable"}
+    assert app["unavailable"] == {"build_id": "module_unavailable",
+                                  "debug": "not_reported_by_backend"}
     assert app["allocations_leaf"] == 0
     coverage = record["coverage"]
     assert (coverage["allocations_unknown_module"],

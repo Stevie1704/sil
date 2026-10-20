@@ -408,7 +408,7 @@ add up.
 | --- | --- |
 | `kind` | `heap` |
 | `status` | `complete`, `partial`, `interrupted`, `failed`, `not_started`, `unavailable` |
-| `reasons` | Subset of `capture_limit_reached`, `storage_reserve_reached`, `data_truncated`, `data_may_be_incomplete`, `interrupted`, `backend_failed`, `export_failed`, `no_data`, `run_not_started`, `unsupported_scope`, `reserved` |
+| `reasons` | Subset of `capture_limit_reached`, `storage_reserve_reached`, `data_truncated`, `data_may_be_incomplete`, `interrupted`, `backend_failed`, `export_failed`, `no_data`, `run_not_started`, `unsupported_scope`, `reserved`. This version never writes `unsupported_scope` or `reserved`; they are valid in documents of other versions |
 | `backend` | `name` (`heaptrack`), `version` (`heaptrack --version`, or null), `preload` and `interpreter` (the paths used), `interpreter_exit_code` (null when the command stopped it) |
 | `scope` | `kind` `runner`; or `kind` `process_participant` with `participant`; or `kind` `unsupported` with `requested` and `reason` |
 | `launch` | `method` (`preload_exec_adapter`), `adapter` (`heap/launch-adapter.sh`), `wrapped` (`runner` or `process_participant`) |
@@ -448,7 +448,7 @@ Heap reasons:
 | `allocations_file` | `heap/allocations.json`, or null. A `complete` or `partial` capture always has the file |
 | `totals` | Below |
 | `coverage` | `allocations_unknown_module`, `allocations_unknown_symbol` (the innermost frame has a module and no function name), `allocations_with_caller` (two or more frames), `undecodable_records`, `truncated` |
-| `modules` | `id`, `path`, `build_id` (or null), `allocations_leaf` (allocations whose innermost frame is in the module), `allocations_unknown_symbol`, `unavailable` |
+| `modules` | `id`, `path`, `build_id` (or null), `debug`, `allocations_leaf` (allocations whose innermost frame is in the module), `allocations_unknown_symbol`, `unavailable`. `debug` is null with `not_reported_by_backend`: Heaptrack does not report which debug file it used. A report of an earlier version can omit `debug` |
 | `hotspots` | `limit` (50), `self`, `self_remainder`, `inclusive` (below) |
 
 A `hotspots` row: `module` (identity or null), `symbol` (or null),
