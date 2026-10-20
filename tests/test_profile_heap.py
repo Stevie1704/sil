@@ -220,3 +220,38 @@ def test_data_without_file_version_3_does_not_decode(header):
 
     with pytest.raises(HeapDecodeError):
         analysis(text)
+
+
+# A custom pool: arena_create takes one block from malloc, and arena_take
+# gives out objects from it with no allocation call. Heaptrack sees the
+# block only, so the analysis has one allocation of 65536 bytes and no row
+# for arena_take.
+ARENA = "\n".join([
+    "v 10500 3",
+    "X /w/sil-run-diagnostics manifest.json",
+    "I 1000 7a120",
+    "s a /w/sil-run",            # 1
+    "s f /w/libnative.so",       # 2
+    "s 4 main",                  # 3
+    "s c arena_create",          # 4
+    "s a arena_take",            # 5
+    "i 1000 1 3 0 0",            # ip 1: main
+    "i 2000 2 4 0 0",            # ip 2: arena_create
+    "i 3000 2 5 0 0",            # ip 3: arena_take
+    "t 1 0",                     # trace 1: main
+    "t 2 1",                     # trace 2: arena_create <- main
+    "t 3 1",                     # trace 3: arena_take <- main
+    "a 10000 2",
+    "+ 0",
+    "c a",
+]) + "\n"
+
+
+def test_a_custom_pool_shows_only_its_backing_allocation():
+    record = analysis(ARENA).record
+
+    assert (record["totals"]["allocations"],
+            record["totals"]["allocated_bytes"],
+            record["totals"]["outstanding_allocations"]) == (1, 65536, 1)
+    symbols = {r["symbol"] for r in record["hotspots"]["self"]}
+    assert symbols == {"arena_create"}

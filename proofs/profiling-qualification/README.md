@@ -25,9 +25,9 @@ overhead. The retained run is listed in [Evidence](#evidence).
 [`proof-profiling-qualification`](../../.github/workflows/proof-profiling-qualification.yml)
 runs on a GitHub-hosted `ubuntu-24.04` runner (x86-64, glibc 2.39, no
 hardware PMU in the VM: `cpu-clock:u` is a software event). The retained
-run had kernel `7.0.0-1017-azure`; the first run (39341633342) had
-`6.17.0-1022-azure`, and its CPU, heap and render scenarios passed with
-perf 6.17.13 too. One job, in this order:
+run had kernel `6.17.0-1022-azure` and perf 6.17.13. Run 39373889739 had
+kernel `7.0.0-1017-azure`, and all its scenarios passed with that kernel
+too. One job, in this order:
 
 | Step | What |
 | --- | --- |
@@ -93,7 +93,7 @@ command made only its requested outputs, and `TMPDIR` is unchanged.
 | heap | `--participant fmu` | exact calls and bytes of the FMU site; no Native site; Recording equals ordinary |
 | heap | `mixed`: `--participant group`, `--participant probe` | complete; Recording equals ordinary (also the probe's environment digest); the group scope is the importer of all three instances |
 | heap | `failure` runner; `long` with SIGINT; `long` with SIGKILL to `heaptrack_interpret`; `--max-capture-bytes 65536` | outcome equals ordinary; `interrupted`; not complete, exit 1, no hang; `partial` with the Recording equal to ordinary |
-| storage | `--out` on the full small file system, Recording elsewhere | command ends, exit not 0, no process left, sentinel unchanged; heap: the Run goes on (Recording equals ordinary) |
+| storage | `--out` on the small file system with the reserve plus 4 MiB (cpu) or 64 KiB (heap) free, Recording elsewhere | command ends, exit not 0, no process left, sentinel unchanged; the Run goes on (Recording equals ordinary); `profile.json` keeps the Run outcome `succeeded`; capture not complete with `storage_reserve_reached` |
 | render | each copied portable set | exit 0, HTML written, no network reference, summary printed; in an environment without perf, Heaptrack or the profiled binaries |
 
 ## Findings and the fixes they caused
@@ -122,11 +122,13 @@ permission hint.
 
 Observations, not defects of SiL:
 
-- **perf on a full disk ends the Run.** When the file system of `DIR` fills
-  before `--max-capture-bytes`, perf stops and sends SIGTERM to its command:
-  the Run is `interrupted` and `profile.json` cannot be written (exit 1, no
-  process left, no unrelated file touched). docs/profile-report.md says to
-  keep `--max-capture-bytes` below the free space.
+- **perf on a full disk ended the Run (fixed after review).** In run
+  39373889739, the file system of `DIR` filled before `--max-capture-bytes`.
+  perf stopped and sent SIGTERM to its command, so the Run did not complete
+  and `profile.json` was not written. Fix: both collectors keep a free-space
+  reserve of 8 MiB in `DIR` (docs/profile-report.md "Free-space reserve").
+  Below the reserve, perf gets `disable` and the heap copy drops its data.
+  The Run completes and `profile.json` keeps its outcome.
 - **A killed collector keeps the Run.** SIGKILL to perf or to the Heaptrack
   interpreter: the Run completes with its ordinary Recording; the capture is
   `failed` and the command exits 1.
@@ -231,17 +233,17 @@ and of #319, with its evidence or an explicit revised-scope decision.
 | D3 | Only perf in the Run's own PID namespace is qualified (native and inside the container). perf on a host that samples into a container is not supported; `pid_namespace_mismatch` is covered by synthetic tests only. |
 | D4 | PID reuse within one capture is covered by synthetic fixtures (#315, #316), not observed with a real backend. |
 | D5 | No hardware PMU is used. The qualified host has none (`facts.hardware_pmu` false): the "missing PMU" case is the qualified case, with the software event `cpu-clock:u`. Kernel samples and hardware events are out of scope. |
-| D6 | Custom allocator pools: the limit is documented (docs/profile-report.md "Coverage and limits"), not measured with a dedicated custom-pool workload. |
-| D7 | A full profile file system: qualified for "no hang, explicit failure, nothing unrelated changed". For the CPU collector perf ends the Run (SIGTERM); the documented mitigation is `--max-capture-bytes` below the free space. |
+| D6 | Custom allocator pools: an arena workload shows the limit. `tests/test_profile_heap.py` (the decoder) and `tests/test_profile_heap_integration.py` (real Heaptrack) count only the backing `malloc` of the arena, not the objects that the arena gives out. docs/profile-report.md "Coverage and limits" describes the limit. |
+| D7 | A full profile file system: both collectors stop their raw data at a free-space reserve of 8 MiB in `DIR`. The Run completes with its ordinary Recording, `profile.json` keeps the Run outcome, and the capture is not complete (`storage_reserve_reached`, exit 1). Another writer on the same file system can still fill the reserve. |
 | D8 | The native install uses the release's `install.sh` on a local mirror of release files built from this commit, not a published release. |
 | D9 | Equivalence holds for deterministic fixtures with generous deadlines; timing-edge workloads are not covered. |
-| D10 | `sil profile render` keeps the exit codes of `sil diagnostics render` (an existing output is exit 1). The capture command gives exit 2 for an existing `--out`, as #313 requires. |
+| D10 | An output collision is a usage error (exit 2), as #313 requires: an existing `--out` for the capture command and an existing or homeless `--html` for `sil profile render`. `sil profile render` checks the output path before it reads the set. Exit 1 is kept for a write that fails. |
 | D11 | Linux x86-64/glibc only; arm64 (#311) and macOS make no profiling claim. A Process participant written in C is not a separate case: native code in Process participants is covered by the ctypes library, the child and the FMUs. |
 
 ## Evidence
 
 [`evidence/`](evidence/) holds the retained output of workflow run
-[39373889739](https://github.com/Stevie1704/sil/actions/runs/39373889739) at commit `dc711f9`, copied by [`retain.py`](retain.py):
+[39378840955](https://github.com/Stevie1704/sil/actions/runs/39378840955) at commit `f5770ed`, copied by [`retain.py`](retain.py):
 
 | Path | Content |
 | --- | --- |

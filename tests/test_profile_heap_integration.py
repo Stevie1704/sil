@@ -354,3 +354,82 @@ def test_unsupported_scopes_stop_before_the_run(
     assert proc.returncode == 2, proc.stderr
     assert message in proc.stderr
     assert not (tmp_path / "prof").exists()
+
+
+# A custom pool in a Native participant: silarena_create takes one block of
+# ARENA_BYTES from malloc at init; each Activation then takes ARENA_OBJECTS
+# objects from it with silarena_take, which calls no allocation function.
+ARENA_OBJECTS, ARENA_OBJECT_BYTES = 16, 64
+ARENA_SOURCE = f"""
+#include <stdlib.h>
+#include <string.h>
+#include <sil/participant.h>
+
+#define OBJECTS {ARENA_OBJECTS}
+#define OBJECT_BYTES {ARENA_OBJECT_BYTES}
+#define ARENA_BYTES (OBJECTS * OBJECT_BYTES)
+
+typedef struct {{ unsigned char *arena; size_t used; }} State;
+static State g_state;
+volatile unsigned char g_sink;
+
+__attribute__((noinline, used)) unsigned char *silarena_create(size_t n) {{
+  return malloc(n);
+}}
+
+__attribute__((noinline, used)) void *silarena_take(State *s, size_t n) {{
+  if (s->used + n > ARENA_BYTES) return NULL;
+  void *object = s->arena + s->used;
+  s->used += n;
+  return object;
+}}
+
+static void arena_task(void *user, uint64_t now_ns) {{
+  (void)now_ns;
+  State *s = (State *)user;
+  s->used = 0;
+  for (int i = 0; i < OBJECTS; i++) {{
+    unsigned char *object = silarena_take(s, OBJECT_BYTES);
+    if (object) {{ memset(object, i, OBJECT_BYTES); g_sink = object[0]; }}
+  }}
+}}
+
+int sil_participant_init(const sil_api_v1 *api, const char *name,
+                         const char *config_json) {{
+  (void)name;
+  (void)config_json;
+  if (api->abi_version != SIL_ABI_VERSION) return SIL_ERR;
+  g_state.arena = silarena_create(ARENA_BYTES);
+  if (!g_state.arena) return SIL_ERR;
+  g_state.used = 0;
+  return api->register_task(api->ctx, "arena", 10000000ULL, 0, 0,
+                            arena_task, &g_state);
+}}
+"""
+
+
+def test_a_custom_pool_shows_only_its_backing_allocation(build_dir,
+                                                         tmp_path):
+    from sil.manifest import Manifest
+
+    source = tmp_path / "silarena.c"
+    source.write_text(ARENA_SOURCE)
+    library = tmp_path / "libsilarena.so"
+    subprocess.run(["cc", "-O0", "-g", "-shared", "-fPIC",
+                    f"-I{ROOT / 'include'}", "-o", str(library),
+                    str(source)], check=True)
+    m = Manifest(duration_ns=100_000_000)
+    m.add_native("arena", library=str(library))
+    manifest = m.write(tmp_path / "manifest.json").path
+    tools = tools_in(tmp_path, build_dir)
+
+    proc = profile_run(tools, tmp_path, manifest, "prof", "--runner")
+    keep(tmp_path / "prof", "arena")
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    found = allocations_by_function(tmp_path)
+    assert found["silarena_create"] == (
+        1, {ARENA_OBJECTS * ARENA_OBJECT_BYTES})
+    # 10 Activations took 160 objects from the arena; none is counted.
+    assert "silarena_take" not in found
+    assert "arena_task" not in found

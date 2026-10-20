@@ -44,15 +44,16 @@ from sil.diagnostics_run import (
 from sil.profile_heap import HeapAnalysis, HeapDecodeError, normalize_heap
 from sil.profile_modules import ModuleLocator, elf_identity
 from sil.profile_report import validate_profile_report
+from sil.profile_storage import reserve_reached, space_warning
 from sil.profile_summary import format_summary
-from sil.profile_run import (
-    PROG, STDERR_TAIL_BYTES, CaptureRun, HeapRequest, _host, _identity,
-    _tool_environment, artifact_rows, report_launcher_error, resolve_exit,
-    run_record,
+from sil.profile_common import (
+    PROG, POLL_S, STDERR_TAIL_BYTES, SYMBOLIZATION_TIMEOUT_S, CaptureRun,
+    RunTarget, artifact_rows, capture_outcome, file_size, host, identity,
+    report_launcher_error, resolve_exit, run_record, tool_environment,
 )
 
+HEAP_MAX_CAPTURE_BYTES = 256 << 20
 SHIM_FOLLOW_UP = "https://github.com/Stevie1704/sil/issues/330"
-POLL_S = 0.1
 CHUNK = 1 << 16
 LIMITATIONS = ["heap_tracks_allocation_calls_only",
                "outstanding_is_not_a_leak_verdict",
@@ -60,6 +61,24 @@ LIMITATIONS = ["heap_tracks_allocation_calls_only",
                "activation_correlation_unavailable", "host_build_only"]
 CORRELATION = {"status": "unavailable", "reason": "no_validated_clock_mapping"}
 FAILING = {"backend_failed", "no_data", "export_failed"}
+
+
+@dataclass(frozen=True)
+class HeapRequest:
+    """`--collector heap`: one Heaptrack capture of one scope."""
+
+    target: RunTarget
+    participant: str | None  # None: --runner
+    max_capture_bytes: int = HEAP_MAX_CAPTURE_BYTES
+    interpreter_timeout_s: int = SYMBOLIZATION_TIMEOUT_S
+
+    def problems(self, cwd: Path) -> list[str]:
+        """No option problem: run_heap checks the scope."""
+        return []
+
+    def capture(self, cwd: Path) -> int:
+        return run_heap(self, cwd)
+
 
 
 @dataclass(frozen=True)
@@ -114,11 +133,11 @@ def scope_problem(request: HeapRequest, cwd: Path) -> str | None:
         return None
     name = request.participant
     try:
-        manifest = json.loads((cwd / request.manifest).read_text())
+        manifest = json.loads((cwd / request.target.manifest).read_text())
         participant = manifest["participants"].get(name)
     except (OSError, ValueError, KeyError, AttributeError, TypeError) as error:
-        return (f"cannot read the Manifest '{request.manifest}' to check "
-                f"--participant: {error}")
+        return (f"cannot read the Manifest '{request.target.manifest}' to "
+                f"check --participant: {error}")
     if not isinstance(participant, dict):
         return f"the Manifest has no participant '{name}'"
     kind = participant.get("type")
@@ -213,7 +232,7 @@ def probe_heaptrack(tools: Heaptrack) -> None:
     true = shutil.which("true") or "/bin/true"
     with tempfile.TemporaryDirectory(prefix="sil-profile-probe-") as probe:
         raw = Path(probe) / "probe.raw"
-        env = {**_tool_environment(), "LD_PRELOAD": str(tools.preload),
+        env = {**tool_environment(), "LD_PRELOAD": str(tools.preload),
                "DUMP_HEAPTRACK_OUTPUT": str(raw)}
         try:
             done = subprocess.run([true], env=env, capture_output=True,
@@ -256,15 +275,19 @@ def adapter_text(tools: Heaptrack, fifo: Path,
 
 class _Copy(threading.Thread):
     """Copies a stream into a file up to a limit; it reads on after the
-    limit, or after a failed write (a full disk), and drops the rest, so the
+    limit, after the free-space reserve (sil.profile_storage) if it guards
+    it, or after a failed write (a full disk), and drops the rest, so the
     writer never blocks on the reader."""
 
-    def __init__(self, source, sink: Path, limit: int, keep_tail: bool):
+    def __init__(self, source, sink: Path, limit: int, keep_tail: bool,
+                 guard_reserve: bool = False):
         super().__init__(daemon=True)
         self.source, self.sink = source, sink
         self.limit, self.keep_tail = limit, keep_tail
+        self.guard_reserve = guard_reserve
         self.written = 0
         self.limit_reached = False
+        self.reserve_reached = False
         self.write_failed = False
 
     def run(self) -> None:
@@ -286,10 +309,19 @@ class _Copy(threading.Thread):
             if len(block) > room:
                 self.limit_reached = True
                 block = block[:room]
-            if block and not self.write_failed:
+            if block and not self.write_failed and not self._stopped():
                 self._write(sink, block)
         if self.keep_tail and not self.write_failed:
             self._write(sink, tail)
+
+    def _stopped(self) -> bool:
+        if self.guard_reserve and not self.reserve_reached and \
+                reserve_reached(self.sink.parent):
+            self.reserve_reached = True
+            sys.stderr.write(f"{PROG}: the free space of '{self.sink.parent}'"
+                             " is below the reserve for the reports; the rest"
+                             " of the data is dropped\n")
+        return self.reserve_reached
 
     def _write(self, sink, block: bytes) -> None:
         try:
@@ -309,6 +341,7 @@ class InterpreterResult:
     exit_code: int | None  # None: killed after the timeout or a signal
     limit_reached: bool
     write_failed: bool = False  # the data file could not be written
+    reserve_reached: bool = False  # the free-space reserve stopped the data
 
 
 class Interpreter:
@@ -323,8 +356,9 @@ class Interpreter:
             ["sh", "-c", 'exec "$0" < "$1"', str(tools.interpreter),
              str(layout.fifo)], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, start_new_session=True,
-            env=_tool_environment())
-        self.data = _Copy(self.process.stdout, layout.data, limit, False)
+            env=tool_environment())
+        self.data = _Copy(self.process.stdout, layout.data, limit, False,
+                          guard_reserve=True)
         self.errors = _Copy(self.process.stderr, layout.interpreter_stderr,
                             STDERR_TAIL_BYTES, True)
         self.data.start()
@@ -351,7 +385,8 @@ class Interpreter:
         self.layout.fifo.unlink(missing_ok=True)
         return InterpreterResult(None if killed else self.process.returncode,
                                  self.data.limit_reached,
-                                 self.data.write_failed)
+                                 self.data.write_failed,
+                                 self.data.reserve_reached)
 
 
 def _release_reader(fifo: Path) -> None:
@@ -375,8 +410,7 @@ def _kill_session(process: subprocess.Popen) -> None:
 
 
 def _run_request(request: HeapRequest, layout: HeapLayout) -> RunRequest:
-    return RunRequest(request.manifest, layout.diagnostics, request.recording,
-                      request.provenance, request.guards)
+    return request.target.run_request(layout.diagnostics)
 
 
 def run_heap(request: HeapRequest, cwd: Path) -> int:
@@ -398,8 +432,11 @@ def run_heap(request: HeapRequest, cwd: Path) -> int:
         probe_heaptrack(tools)
     except HeaptrackUnavailable as error:
         return command_error(PROG, str(error), EXIT_FAILURE)
-    layout = HeapLayout(Path(os.path.realpath(cwd / request.out)))
+    layout = HeapLayout(Path(os.path.realpath(cwd / request.target.out)))
     layout.heap.mkdir(parents=True)
+    warning = space_warning(layout.heap, request.max_capture_bytes)
+    if warning is not None:
+        sys.stderr.write(f"{PROG}: warning: {warning}\n")
     layout.adapter.write_text(adapter_text(tools, layout.fifo,
                                            os.environ))
     layout.adapter.chmod(0o700)
@@ -410,7 +447,8 @@ def run_heap(request: HeapRequest, cwd: Path) -> int:
         result = _finish_interpreter(interpreter, request)
     report = _publish(request, layout, cwd, tools, capture_run, result)
     if report is not None:
-        sys.stdout.write(format_summary(report, request.out / "profile.json"))
+        sys.stdout.write(format_summary(
+            report, request.target.out / "profile.json"))
         sys.stdout.flush()
     return resolve_exit(report, capture_run)
 
@@ -509,16 +547,14 @@ def capture_status(run: dict, result: InterpreterResult,
         reasons.append("interrupted")
     if result.limit_reached:
         reasons.append("capture_limit_reached")
+    if result.reserve_reached:
+        reasons.append("storage_reserve_reached")
     if result.write_failed or (
             analysis is not None and analysis.record["coverage"]["truncated"]):
         reasons.append("data_truncated")
     if _scope_may_have_ended_early(run, process_scope):
         reasons.append("data_may_be_incomplete")
-    if FAILING & set(reasons):
-        return "failed", reasons
-    if "interrupted" in reasons:
-        return "interrupted", reasons
-    return ("partial" if reasons else "complete"), reasons
+    return capture_outcome(reasons, FAILING)
 
 
 def build_report(request: HeapRequest, layout: HeapLayout, cwd: Path,
@@ -545,18 +581,18 @@ def build_report(request: HeapRequest, layout: HeapLayout, cwd: Path,
     else:
         unavailable["analysis"] = problem or (reasons[0] if reasons
                                               else "no_data")
-    guards = request.guards
+    guards = request.target.guards
     scope = {"kind": "runner"} if request.participant is None else {
         "kind": "process_participant", "participant": request.participant}
     return {
         "sil_profile_report": 1,
         "producer": {"name": PROG, "sil_version": SIL_VERSION},
-        "identity": _identity(request, capture_run.report),
-        "host": _host(),
+        "identity": identity(request.target, capture_run.report),
+        "host": host(),
         "configuration": {
             "collector": "heap",
-            "recording": None if request.recording is None
-            else str(request.recording),
+            "recording": None if request.target.recording is None
+            else str(request.target.recording),
             "participant_timeout_ms": guards.participant_timeout_ms,
             "max_protocol_line_bytes": guards.max_protocol_line_bytes,
             "max_step_output_messages": guards.max_step_output_messages,
@@ -576,7 +612,7 @@ def build_report(request: HeapRequest, layout: HeapLayout, cwd: Path,
                        "adapter": "heap/launch-adapter.sh",
                        "wrapped": scope["kind"]},
             "limits": {"max_capture_bytes": request.max_capture_bytes,
-                       "capture_bytes": _size(layout.data),
+                       "capture_bytes": file_size(layout.data),
                        "limit_reached": result.limit_reached,
                        "interpreter_timeout_s":
                            request.interpreter_timeout_s},
@@ -584,7 +620,7 @@ def build_report(request: HeapRequest, layout: HeapLayout, cwd: Path,
             "raw": raw, "analysis": record, "unavailable": unavailable,
         },
         "activation_correlation": {"kind": "not_requested"},
-        "artifacts": artifact_rows(layout.out, request, cwd, [
+        "artifacts": artifact_rows(request.target, cwd, [
             ("heap_launch_adapter", layout.adapter),
             ("heaptrack_data", layout.data),
             ("heap_allocations", layout.allocations)]),
@@ -600,13 +636,6 @@ def _backend_unavailable(tools: Heaptrack,
     if result.exit_code is None:
         unavailable["interpreter_exit_code"] = "interpreter_stopped"
     return unavailable
-
-
-def _size(path: Path) -> int:
-    try:
-        return path.stat().st_size
-    except OSError:
-        return 0
 
 
 def _publish(request: HeapRequest, layout: HeapLayout, cwd: Path,

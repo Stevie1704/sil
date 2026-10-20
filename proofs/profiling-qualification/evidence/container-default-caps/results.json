@@ -14,7 +14,7 @@
     "perf_event_paranoid": "4",
     "perf_version": null,
     "python": "3.13.7",
-    "sil_build_info": "{\"license\":\"Apache-2.0\",\"source_repository\":\"https://github.com/Stevie1704/sil\",\"source_revision\":\"dc711f9a1b276843b4c128fdc87c77a67a4fcff3\",\"version\":\"0.2.1\"}",
+    "sil_build_info": "{\"license\":\"Apache-2.0\",\"source_repository\":\"https://github.com/Stevie1704/sil\",\"source_revision\":\"f5770eda4e79c37d6acb8e686d7ec4a794d6456e\",\"version\":\"0.2.1\"}",
     "sil_package": "/opt/sil/python/lib/python3.13/site-packages/sil",
     "sil_version": "0.2.1",
     "status": {
@@ -34,11 +34,11 @@
     "uid": 1001,
     "uname": {
       "machine": "x86_64",
-      "node": "812a7711f701",
+      "node": "2a04dae3ff3b",
       "processor": "",
-      "release": "7.0.0-1017-azure",
+      "release": "6.17.0-1022-azure",
       "system": "Linux",
-      "version": "#17~24.04.1-Ubuntu SMP PREEMPT Thu Sep 24 18:46:57 UTC 2026"
+      "version": "#22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026"
     }
   },
   "failed_checks": 0,
@@ -114,7 +114,7 @@
       "stdout_tail": "",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 324
+      "wall_ms": 374
     },
     {
       "action": null,
@@ -184,7 +184,7 @@
       "stdout_tail": "",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 332
+      "wall_ms": 358
     },
     {
       "action": null,
@@ -248,7 +248,7 @@
       "stdout_tail": "",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 324
+      "wall_ms": 354
     },
     {
       "action": null,
@@ -309,7 +309,7 @@
       "stdout_tail": "",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 328
+      "wall_ms": 358
     },
     {
       "action": null,
@@ -370,7 +370,7 @@
       "stdout_tail": "",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 327
+      "wall_ms": 359
     },
     {
       "action": null,
@@ -421,7 +421,7 @@
       "stdout_tail": "",
       "timed_out": false,
       "tmp_new_entries": [],
-      "wall_ms": 325
+      "wall_ms": 361
     }
   ]
 }

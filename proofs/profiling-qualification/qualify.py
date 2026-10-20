@@ -902,11 +902,18 @@ def heap(q: Qualification, runs: Runs) -> None:
         _keep_set(q, record)
 
 
+STORAGE_RESERVE = 8 << 20  # sil.profile_storage.RESERVE_BYTES
+
+
 def storage(q: Qualification, runs: Runs, small: Path) -> None:
     """Real storage exhaustion: the profile directory on a small file
-    system, the Recording elsewhere, so only the capture runs out."""
+    system, the Recording elsewhere. The free space is a little above the
+    reserve of the reports, so the capture reaches the reserve while the
+    Run goes on."""
     main = str(runs.manifests["main"])
-    for collector, free in ((["cpu"], 4 << 20), (["heap", "--runner"], 64 << 10)):
+    for collector, free in ((["cpu"], STORAGE_RESERVE + (4 << 20)),
+                            (["heap", "--runner"],
+                             STORAGE_RESERVE + (64 << 10))):
         name = f"storage-exhausted-{collector[0]}"
         out = small / name
         filler = _fill(small, free)
@@ -933,15 +940,16 @@ def storage(q: Qualification, runs: Runs, small: Path) -> None:
             recording.is_file() and sha256(recording) ==
             runs.outcomes.get("ordinary-main", {}).get("recording"))
         record["observations"]["exit_code"] = record["exit_code"]
-        if collector[0] == "heap":
-            # The interpreter is outside the Run and drops what it cannot
-            # write; the Run goes on. (perf instead ends its command: the
-            # CPU case is an observation, see README.)
-            q.check(record, "the Run goes on: Recording equals the ordinary "
-                    "Run", record["observations"]["recording_equals_ordinary"])
+        q.check(record, "the Run goes on: Recording equals the ordinary "
+                "Run", record["observations"]["recording_equals_ordinary"])
+        q.check(record, "profile.json keeps the Run outcome",
+                report is not None and report["run"]["status"] == "succeeded",
+                report and report["run"])
         if report is not None:
-            q.check(record, "profile not complete",
-                    report["capture"]["status"] != "complete")
+            q.check(record, "capture not complete, reserve reached",
+                    report["capture"]["status"] != "complete" and
+                    "storage_reserve_reached" in report["capture"]["reasons"],
+                    report["capture"]["reasons"])
         shutil.rmtree(out, ignore_errors=True)
         filler.unlink()
 

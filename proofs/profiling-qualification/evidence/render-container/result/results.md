@@ -4,34 +4,34 @@ perf: none; failed checks: 0
 
 | Scenario | Exit | Wall ms | Checks | Failed |
 | --- | --- | --- | --- | --- |
-| render-container-cap-perfmon-cpu-activation-limit | 0 | 440 | 8 | - |
-| render-container-cap-perfmon-cpu-capture-limit | 0 | 432 | 8 | - |
-| render-container-cap-perfmon-cpu-main-matching-activations | 0 | 454 | 8 | - |
-| render-container-cap-perfmon-cpu-mixed-activations | 0 | 498 | 8 | - |
-| render-container-cap-perfmon-heap-capture-limit | 0 | 322 | 8 | - |
-| render-container-cap-perfmon-heap-mixed-group | 0 | 1903 | 8 | - |
-| render-container-cap-perfmon-heap-runner-debug-matching | 0 | 363 | 8 | - |
-| render-native-paranoid-2-cpu-activation-limit | 0 | 380 | 8 | - |
-| render-native-paranoid-2-cpu-capture-limit | 0 | 364 | 8 | - |
-| render-native-paranoid-2-cpu-main-matching-activations | 0 | 404 | 8 | - |
-| render-native-paranoid-2-cpu-mixed-activations | 0 | 390 | 8 | - |
-| render-native-paranoid-default-heap-capture-limit | 0 | 323 | 8 | - |
-| render-native-paranoid-default-heap-mixed-group | 0 | 703 | 8 | - |
-| render-native-paranoid-default-heap-runner-debug-matching | 0 | 363 | 8 | - |
+| render-container-cap-perfmon-cpu-activation-limit | 0 | 437 | 8 | - |
+| render-container-cap-perfmon-cpu-capture-limit | 0 | 429 | 8 | - |
+| render-container-cap-perfmon-cpu-main-matching-activations | 0 | 457 | 8 | - |
+| render-container-cap-perfmon-cpu-mixed-activations | 0 | 506 | 8 | - |
+| render-container-cap-perfmon-heap-capture-limit | 0 | 321 | 8 | - |
+| render-container-cap-perfmon-heap-mixed-group | 0 | 1883 | 8 | - |
+| render-container-cap-perfmon-heap-runner-debug-matching | 0 | 369 | 8 | - |
+| render-native-paranoid-2-cpu-activation-limit | 0 | 391 | 8 | - |
+| render-native-paranoid-2-cpu-capture-limit | 0 | 372 | 8 | - |
+| render-native-paranoid-2-cpu-main-matching-activations | 0 | 414 | 8 | - |
+| render-native-paranoid-2-cpu-mixed-activations | 0 | 403 | 8 | - |
+| render-native-paranoid-default-heap-capture-limit | 0 | 328 | 8 | - |
+| render-native-paranoid-default-heap-mixed-group | 0 | 728 | 8 | - |
+| render-native-paranoid-default-heap-runner-debug-matching | 0 | 378 | 8 | - |
 
 ## Observations
 
-- render-container-cap-perfmon-cpu-activation-limit: {"html_bytes": 449405, "set_bytes": {"activation/correlation.json": 133129, "cpu/samples.json": 340418, "profile.json": 72808}, "wall_ms": 440}
-- render-container-cap-perfmon-cpu-capture-limit: {"html_bytes": 661713, "set_bytes": {"cpu/samples.json": 151232, "profile.json": 55834}, "wall_ms": 432}
-- render-container-cap-perfmon-cpu-main-matching-activations: {"html_bytes": 631992, "set_bytes": {"activation/correlation.json": 150713, "cpu/samples.json": 345740, "profile.json": 74282}, "wall_ms": 454}
-- render-container-cap-perfmon-cpu-mixed-activations: {"html_bytes": 837819, "set_bytes": {"activation/correlation.json": 134967, "cpu/samples.json": 456809, "profile.json": 81091}, "wall_ms": 498}
-- render-container-cap-perfmon-heap-capture-limit: {"html_bytes": 67975, "set_bytes": {"heap/allocations.json": 47771, "profile.json": 7556}, "wall_ms": 322}
-- render-container-cap-perfmon-heap-mixed-group: {"html_bytes": 175907, "set_bytes": {"heap/allocations.json": 6050532, "profile.json": 21726}, "wall_ms": 1903}
-- render-container-cap-perfmon-heap-runner-debug-matching: {"html_bytes": 79712, "set_bytes": {"heap/allocations.json": 175491, "profile.json": 11022}, "wall_ms": 363}
-- render-native-paranoid-2-cpu-activation-limit: {"html_bytes": 271075, "set_bytes": {"activation/correlation.json": 115239, "cpu/samples.json": 182163, "profile.json": 64699}, "wall_ms": 380}
-- render-native-paranoid-2-cpu-capture-limit: {"html_bytes": 368643, "set_bytes": {"cpu/samples.json": 79582, "profile.json": 55872}, "wall_ms": 364}
-- render-native-paranoid-2-cpu-main-matching-activations: {"html_bytes": 455728, "set_bytes": {"activation/correlation.json": 132661, "cpu/samples.json": 181790, "profile.json": 68024}, "wall_ms": 404}
-- render-native-paranoid-2-cpu-mixed-activations: {"html_bytes": 475616, "set_bytes": {"activation/correlation.json": 98977, "cpu/samples.json": 179642, "profile.json": 69798}, "wall_ms": 390}
-- render-native-paranoid-default-heap-capture-limit: {"html_bytes": 68056, "set_bytes": {"heap/allocations.json": 47596, "profile.json": 7777}, "wall_ms": 323}
-- render-native-paranoid-default-heap-mixed-group: {"html_bytes": 155491, "set_bytes": {"heap/allocations.json": 1491491, "profile.json": 15699}, "wall_ms": 703}
-- render-native-paranoid-default-heap-runner-debug-matching: {"html_bytes": 81592, "set_bytes": {"heap/allocations.json": 176867, "profile.json": 11316}, "wall_ms": 363}
+- render-container-cap-perfmon-cpu-activation-limit: {"html_bytes": 492160, "set_bytes": {"activation/correlation.json": 135590, "cpu/samples.json": 358627, "profile.json": 74429}, "wall_ms": 437}
+- render-container-cap-perfmon-cpu-capture-limit: {"html_bytes": 592896, "set_bytes": {"cpu/samples.json": 123191, "profile.json": 43637}, "wall_ms": 429}
+- render-container-cap-perfmon-cpu-main-matching-activations: {"html_bytes": 625677, "set_bytes": {"activation/correlation.json": 149849, "cpu/samples.json": 340743, "profile.json": 71568}, "wall_ms": 457}
+- render-container-cap-perfmon-cpu-mixed-activations: {"html_bytes": 856294, "set_bytes": {"activation/correlation.json": 136829, "cpu/samples.json": 474857, "profile.json": 81117}, "wall_ms": 506}
+- render-container-cap-perfmon-heap-capture-limit: {"html_bytes": 67976, "set_bytes": {"heap/allocations.json": 47771, "profile.json": 7557}, "wall_ms": 321}
+- render-container-cap-perfmon-heap-mixed-group: {"html_bytes": 175912, "set_bytes": {"heap/allocations.json": 6050532, "profile.json": 21727}, "wall_ms": 1883}
+- render-container-cap-perfmon-heap-runner-debug-matching: {"html_bytes": 79717, "set_bytes": {"heap/allocations.json": 175491, "profile.json": 11023}, "wall_ms": 369}
+- render-native-paranoid-2-cpu-activation-limit: {"html_bytes": 279100, "set_bytes": {"activation/correlation.json": 115091, "cpu/samples.json": 182081, "profile.json": 64997}, "wall_ms": 391}
+- render-native-paranoid-2-cpu-capture-limit: {"html_bytes": 368641, "set_bytes": {"cpu/samples.json": 80850, "profile.json": 55542}, "wall_ms": 372}
+- render-native-paranoid-2-cpu-main-matching-activations: {"html_bytes": 452392, "set_bytes": {"activation/correlation.json": 132518, "cpu/samples.json": 181302, "profile.json": 66510}, "wall_ms": 414}
+- render-native-paranoid-2-cpu-mixed-activations: {"html_bytes": 494340, "set_bytes": {"activation/correlation.json": 100094, "cpu/samples.json": 194603, "profile.json": 70288}, "wall_ms": 403}
+- render-native-paranoid-default-heap-capture-limit: {"html_bytes": 68057, "set_bytes": {"heap/allocations.json": 47596, "profile.json": 7778}, "wall_ms": 328}
+- render-native-paranoid-default-heap-mixed-group: {"html_bytes": 155496, "set_bytes": {"heap/allocations.json": 1491491, "profile.json": 15700}, "wall_ms": 728}
+- render-native-paranoid-default-heap-runner-debug-matching: {"html_bytes": 81597, "set_bytes": {"heap/allocations.json": 176867, "profile.json": 11317}, "wall_ms": 378}

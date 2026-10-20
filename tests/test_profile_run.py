@@ -430,6 +430,44 @@ def test_the_capture_limit_stops_sampling_not_the_run(tools, exports,
     assert data.endswith(b'{"disabled": true}')
 
 
+def without_free_space(argv, tools: Path, cwd: Path, env: dict):
+    """`sil profile` with a free-space reserve above any free space: the
+    profile directory looks full from the start."""
+    prelude = ("import sys, sil.profile_storage as s; s.RESERVE_BYTES = "
+               "1 << 62; from sil.cli import main; "
+               "sys.exit(main(sys.argv[1:]))")
+    environment = {**os.environ, **env,
+                   "PATH": os.pathsep.join([str(tools), "/usr/bin:/bin"])}
+    return subprocess.run([sys.executable, "-c", prelude, "profile", *argv],
+                          capture_output=True, text=True, cwd=cwd,
+                          env=environment)
+
+
+def test_low_free_space_stops_sampling_not_the_run(tools, exports, tmp_path,
+                                                   sil_run):
+    manifest = mixed_period_manifest(tmp_path)
+
+    proc = without_free_space([str(manifest), "--out", "prof",
+                               "--collector", "cpu"], tools, tmp_path,
+                              {**exports, "FAKE_PERF_GROW": "1"})
+
+    assert proc.returncode == 1, proc.stderr
+    assert "bytes free" in proc.stderr
+    report = profile(tmp_path / "prof")
+    assert report["run"]["status"] == "succeeded"
+    capture = report["capture"]
+    assert capture["status"] == "partial"
+    assert "storage_reserve_reached" in capture["reasons"]
+    data = (tmp_path / "prof" / "cpu" / "perf.data").read_bytes()
+    assert data.endswith(b'{"disabled": true}')
+    ordinary = subprocess.run([str(sil_run), str(manifest), "-o",
+                               str(tmp_path / "ordinary.mcap")],
+                              capture_output=True, cwd=tmp_path)
+    assert ordinary.returncode == 0
+    assert (tmp_path / "prof" / "run.mcap").read_bytes() == \
+        (tmp_path / "ordinary.mcap").read_bytes()
+
+
 def test_a_symbolization_timeout_degrades_source_lines_only(
         tools, exports, tmp_path):
     manifest = mixed_period_manifest(tmp_path)
