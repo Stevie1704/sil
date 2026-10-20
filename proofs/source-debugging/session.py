@@ -29,7 +29,7 @@ def save():
     (dest / "stops.json").write_text(json.dumps(stops, indent=2) + "\n")
 
 
-def snapshot(stage, expressions):
+def snapshot(stage, expressions, *, inline_values=None):
     thread = gdb.selected_thread()
     frame = gdb.selected_frame()
     sal = frame.find_sal()
@@ -45,6 +45,8 @@ def snapshot(stage, expressions):
         "threads": gdb.execute("info threads", to_string=True),
         "locals": gdb.execute("info locals", to_string=True),
     }
+    if inline_values is not None:
+        row["inline_values"] = inline_values
     if stage == "entry":
         row["modules"] = gdb.execute("info sharedlibrary", to_string=True)
         row["proc_status"] = Path(f"/proc/{row['pid']}/status").read_text()
@@ -128,6 +130,9 @@ while gdb.selected_inferior().pid:
     decision = gdb.Breakpoint(f"{source}:{line}", temporary=True)
     entry.enabled = False
     gdb.execute("continue")
+    inline_values = {name: evaluate(expr) for name, expr in
+                     {"limited_from": "from", "limited_to": "to",
+                      "limited_max_change": "max_change"}.items()}
     frame = gdb.selected_frame()
     while frame and frame.name() != "adas_ref_advance":
         frame = frame.older()
@@ -135,8 +140,8 @@ while gdb.selected_inferior().pid:
         raise gdb.GdbError("decision breakpoint is outside adas_ref_advance")
     frame.select()
     snapshot("decision", {"lead": "lead", "selected": "selected", "mode": "mode",
-        "target": "target", "previous_command": "instance->acceleration_mps2",
-        "limited_from": "from", "limited_to": "to", "limited_max_change": "max_change"})
+        "target": "target", "previous_command": "instance->acceleration_mps2"},
+        inline_values=inline_values)
     # 'finish' stops after the C API returns, before adapter publication.
     gdb.execute("finish")
     snapshot("return", {
