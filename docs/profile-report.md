@@ -236,7 +236,7 @@ Reasons in v1, in addition to the diagnostics reasons:
 | `module_unavailable` | No file with the recorded build ID was available |
 | `debug_file_mismatched` | A debug file was found with another build ID; it is not used |
 | `debug_file_not_found` | No debug file with the module's build ID was found |
-| `unverifiable_debug_file` | The module has no build ID, so a separate debug file cannot be matched |
+| `unverifiable_debug_file` | The module has no recorded build ID, so no debug data can be matched to it |
 | `symbolization_timeout` | A `perf script` pass took longer than the limit |
 | `export_failed` | A `perf script` pass failed, its output did not decode, or it was larger than the export limit. Or `cpu/samples.json` could not be written |
 | `no_samples` | The capture has no sample to describe |
@@ -366,8 +366,8 @@ A `modules` row:
 | --- | --- |
 | `id`, `path` | Identity and the path perf recorded |
 | `build_id` | GNU build ID (hexadecimal), or null |
-| `material` | `host_file`: the file at `path` has the build ID. `captured_run_directory` or `captured_modules_from`: `cpu/buildid-cache` has a copy with the build ID. The copy is from the retained Run working directory or from a `--modules-from` source. `unavailable`: no file with the build ID. |
-| `debug` | `status` (`embedded`, `separate_matching`, `separate_mismatched`, `not_found`, `unverifiable`, `module_unavailable`) and `path` of the matching debug file or null |
+| `material` | `host_file`: the file at `path` has the build ID. Without a recorded build ID, it is the file at `path`, and nothing verifies that it is the module that ran. `captured_run_directory` or `captured_modules_from`: `cpu/buildid-cache` has a copy with the build ID. The copy is from the retained Run working directory or from a `--modules-from` source. `unavailable`: no file with the build ID. |
+| `debug` | `status` (`embedded`, `separate_matching`, `separate_mismatched`, `not_found`, `unverifiable`, `module_unavailable`) and `path` of the matching debug file or null. A module without a recorded build ID is always `unverifiable`: its debug data gives no source line |
 | `mappings` | Executable mappings: `{process, start, size, file_offset}`, addresses as hexadecimal strings |
 | `samples_leaf`, `samples_unknown_symbol` | Leaf-frame samples in the module, and those without a function name |
 | `unavailable` | Reasons for null members |

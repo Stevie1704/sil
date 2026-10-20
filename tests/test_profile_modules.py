@@ -12,6 +12,8 @@ from __future__ import annotations
 import struct
 from pathlib import Path
 
+import pytest
+
 from sil.profile_cpu import ModuleFacts
 from sil.profile_modules import ModuleLocator, elf_identity
 
@@ -127,6 +129,18 @@ def test_without_a_build_id_a_separate_debug_file_is_unverifiable(tmp_path):
     library = elf(tmp_path / "lib.so", build_id=None,
                   debuglink="lib.so.debug")
     elf(tmp_path / "lib.so.debug", build_id=None, debug_lines=True)
+
+    assert locator(tmp_path).facts(str(library), None) == ModuleFacts(
+        "host_file", "unverifiable", None)
+
+
+@pytest.mark.parametrize("debug_lines", [True, False])
+def test_without_a_recorded_build_id_the_host_file_is_unverifiable(
+        tmp_path, debug_lines):
+    # perf recorded no build ID, so the file at the path may not be the
+    # module that ran: its debug lines never give a source line.
+    library = elf(tmp_path / "lib.so", build_id=BUILD_ID,
+                  debug_lines=debug_lines)
 
     assert locator(tmp_path).facts(str(library), None) == ModuleFacts(
         "host_file", "unverifiable", None)
