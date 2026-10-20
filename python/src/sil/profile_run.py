@@ -21,7 +21,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import platform
 import re
 import shutil
 import signal
@@ -34,32 +33,32 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from sil.build_info import __version__ as SIL_VERSION
-from sil.bundle import file_sha256
 from sil.diagnostics_report import ReportError, load_report, write_new_file
 from sil.diagnostics_run import (
-    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE, FORWARDED_SIGNALS,
+    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_USAGE, FORWARDED_SIGNALS,
     STDERR_DRAIN_S, GivenOnce, Guards, RunRequest, ToolMissing,
     _read_status, _StderrCopy, add_guard_arguments, command_error,
     find_native_tools, guards_from,
 )
 from sil.profile_activation import correlate
+from sil.profile_common import (
+    PROG, POLL_S, STDERR_TAIL_BYTES, SYMBOLIZATION_TIMEOUT_S, CaptureRun,
+    artifact_rows, capture_outcome, file_size, host, identity,
+    perf_event_paranoid, report_launcher_error, resolve_exit, run_record,
+    tool_environment,
+)
 from sil.profile_cpu import CpuAnalysis, ModuleFacts, normalize_cpu
+from sil.profile_heap_run import HEAP_MAX_CAPTURE_BYTES, HeapRequest, run_heap
 from sil.profile_modules import ModuleLocator
 from sil.profile_report import HOTSPOT_LIMIT, validate_profile_report
 from sil.profile_storage import reserve_reached, space_warning
 from sil.profile_summary import format_summary
 
-PROG = "sil profile"
 EVENT = "cpu-clock:u"
 FREQUENCY_HZ = 999
 STACK_BYTES = 8192
 MAX_CAPTURE_BYTES = 1 << 30
-HEAP_MAX_CAPTURE_BYTES = 256 << 20
-SYMBOLIZATION_TIMEOUT_S = 600
 MAX_ACTIVATION_BYTES = 64 << 20
-POLL_S = 0.1
-STDERR_TAIL_BYTES = 64 * 1024
-RUN_STATUSES = {0: "succeeded", 1: "run_failure", 2: "configuration_error"}
 LIMITATIONS = ["cpu_samples_estimate_on_cpu_time", "user_space_only",
                "scope_is_runner_and_descendants", "host_build_only"]
 SCRIPT_FIELDS = ["-F", "comm,pid,tid,time,period,ip,sym,dso", "--ns",
@@ -87,20 +86,6 @@ class ProfileRequest:
     modules_from: tuple[Path, ...] = ()
     activations: bool = False
     max_activation_bytes: int = MAX_ACTIVATION_BYTES
-
-
-@dataclass(frozen=True)
-class HeapRequest:
-    """`--collector heap`: sil.profile_heap_run runs it."""
-
-    manifest: Path
-    out: Path
-    recording: Path | None  # None: --no-recording
-    provenance: Path | None
-    guards: Guards
-    participant: str | None  # None: --runner
-    max_capture_bytes: int = HEAP_MAX_CAPTURE_BYTES
-    interpreter_timeout_s: int = SYMBOLIZATION_TIMEOUT_S
 
 
 @dataclass(frozen=True)
@@ -327,13 +312,6 @@ def _sampling_options(request: ProfileRequest) -> list[str]:
             "-N", "-q"]
 
 
-def _paranoid() -> int | None:
-    try:
-        return int(Path("/proc/sys/kernel/perf_event_paranoid").read_text())
-    except (OSError, ValueError):
-        return None
-
-
 def find_perf() -> Path:
     found = shutil.which("perf")
     if found is None:
@@ -352,7 +330,7 @@ def probe_perf(perf: Path, request: ProfileRequest) -> None:
             done = subprocess.run(
                 [str(perf), "record", *_sampling_options(request), "-o",
                  str(data), "--", true], capture_output=True, text=True,
-                timeout=60, env=_tool_environment())
+                timeout=60, env=tool_environment())
         except (OSError, subprocess.TimeoutExpired) as error:
             # A perf with the file capability CAP_PERFMON cannot start in a
             # container without it: exec gives EPERM.
@@ -367,23 +345,15 @@ def probe_perf(perf: Path, request: ProfileRequest) -> None:
 
 
 def _permission_hint() -> str:
-    paranoid = _paranoid()
+    paranoid = perf_event_paranoid()
     return PERMISSION_HINT.format(
         paranoid="unknown" if paranoid is None else paranoid)
 
 
 def perf_version(perf: Path) -> str:
     done = subprocess.run([str(perf), "--version"], capture_output=True,
-                          text=True, env=_tool_environment())
+                          text=True, env=tool_environment())
     return done.stdout.strip() or "unknown"
-
-
-def _tool_environment() -> dict:
-    """The environment of perf's own analysis commands, not of the Run:
-    no debuginfod network lookup."""
-    env = dict(os.environ)
-    env.pop("DEBUGINFOD_URLS", None)
-    return env
 
 
 def _analysis(perf: Path, cache: Path, *arguments: str) -> list[str]:
@@ -394,19 +364,6 @@ def _analysis(perf: Path, cache: Path, *arguments: str) -> list[str]:
 
 
 # --- the Run ----------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class CaptureRun:
-    """What perf, the launcher and the runner left."""
-
-    command: list[str]
-    perf_status: int  # perf's exit code, or -N when signal N ended it
-    launcher_error: str | None
-    supervisor_signal: int | None
-    limit_reached: bool
-    report: dict | None
-    reserve_reached: bool = False  # the free-space reserve stopped sampling
 
 
 def record_command(perf: Path, request: ProfileRequest, layout: Layout,
@@ -519,16 +476,6 @@ def execute(perf: Path, request: ProfileRequest, layout: Layout,
                       _diagnostics_report(layout.diagnostics), stopped.reserve)
 
 
-def report_launcher_error(error: str | None) -> str | None:
-    """Say on stderr that the launcher failed and no Run took place."""
-    if error is not None:
-        sys.stderr.write(f"{PROG}: sil-diagnostics-launcher failed, so no "
-                         f"Run took place: "
-                         f"{error.removeprefix('sil-diagnostics-launcher: ')}"
-                         "\n")
-    return error
-
-
 @dataclass
 class _Stop:
     """Why sampling was disabled: the size limit, the free-space reserve."""
@@ -550,17 +497,10 @@ def _wait_within_limit(process: subprocess.Popen, layout: Layout,
             pass
         if stop.limit or stop.reserve:
             continue
-        stop.limit = _size(layout.perf_data) > limit
+        stop.limit = file_size(layout.perf_data) > limit
         stop.reserve = not stop.limit and reserve_reached(layout.cpu)
         if stop.limit or stop.reserve:
             _send_control(layout.control, b"disable\n")
-
-
-def _size(path: Path) -> int:
-    try:
-        return path.stat().st_size
-    except OSError:
-        return 0
 
 
 def _send_control(fifo: Path, command: bytes) -> None:
@@ -585,33 +525,6 @@ def _diagnostics_report(path: Path) -> dict | None:
         return None
 
 
-def run_record(run: CaptureRun) -> dict:
-    """The `run` member: the Run's own outcome, never the capture's."""
-    record = {"status": None, "exit_code": None, "signal": None,
-              "failure": None, "diagnostics_report": None,
-              "supervisor_signal": run.supervisor_signal}
-    if run.report is not None:
-        outcome = run.report["run"]
-        failure = outcome["failure"]
-        record.update(status=outcome["status"],
-                      exit_code=outcome["exit_code"],
-                      diagnostics_report="run.diagnostics.json",
-                      failure=None if failure is None else {
-                          "message": failure["message"],
-                          "category": failure["category"]})
-    elif run.launcher_error is not None:
-        record["status"] = "not_started"
-    elif run.perf_status < 0:
-        record.update(status="ended_by_signal", signal=-run.perf_status)
-    elif run.perf_status in RUN_STATUSES:
-        # No report: the runner could not write it; perf ends as the Run.
-        record.update(status=RUN_STATUSES[run.perf_status],
-                      exit_code=run.perf_status)
-    else:
-        record["status"] = "not_started"  # perf failed before the Run
-    return record
-
-
 # --- export and normalization -----------------------------------------------
 
 
@@ -630,7 +543,7 @@ def _perf_text(perf: Path, arguments: list[str], cache: Path, cwd: Path,
         try:
             process = subprocess.Popen(
                 _analysis(perf, cache, *arguments), stdout=subprocess.PIPE,
-                stderr=errors, cwd=cwd, env=_tool_environment())
+                stderr=errors, cwd=cwd, env=tool_environment())
         except OSError:
             return None, "export_failed"
         reader = _BoundedRead(process, limit)
@@ -688,7 +601,7 @@ def _add_to_cache(perf: Path, copy: Path, cache: Path, cwd: Path,
         done = subprocess.run(
             _analysis(perf, cache, "buildid-cache", "-v", "-a", str(copy)),
             capture_output=True, cwd=cwd, timeout=timeout,
-            env=_tool_environment())
+            env=tool_environment())
     except (OSError, subprocess.TimeoutExpired) as error:
         log.write(f"{copy}: {error}\n".encode())
         return False
@@ -789,7 +702,7 @@ def capture_status(run: dict, capture_run: CaptureRun, layout: Layout,
     reasons = []
     expected = (-run["signal"] if run["status"] == "ended_by_signal"
                 else run["exit_code"])
-    if _size(layout.perf_data) == 0 or (
+    if file_size(layout.perf_data) == 0 or (
             capture_run.supervisor_signal is None
             and capture_run.perf_status != expected):
         reasons.append("backend_failed")
@@ -805,11 +718,7 @@ def capture_status(run: dict, capture_run: CaptureRun, layout: Layout,
         reasons.append("capture_limit_reached")
     if capture_run.reserve_reached:
         reasons.append("storage_reserve_reached")
-    if {"backend_failed", "export_failed"} & set(reasons):
-        return "failed", reasons
-    if "interrupted" in reasons:
-        return "interrupted", reasons
-    return ("partial" if reasons else "complete"), reasons
+    return capture_outcome(reasons, {"backend_failed", "export_failed"})
 
 
 def _artifacts(layout: Layout, request: ProfileRequest, cwd: Path) -> list:
@@ -817,50 +726,6 @@ def _artifacts(layout: Layout, request: ProfileRequest, cwd: Path) -> list:
         ("perf_data", layout.perf_data), ("cpu_samples", layout.samples),
         ("activation_observations", layout.observations),
         ("activation_correlation", layout.correlation)])
-
-
-def artifact_rows(out: Path, request, cwd: Path, collected: list) -> list:
-    """`{role, path, bytes, sha256}` of every existing file in `out`: the
-    diagnostics report, the Recording and the collector's files."""
-    candidates = [("diagnostics_report", out / "run.diagnostics.json")]
-    if request.recording is not None:
-        candidates.append(("recording", cwd / request.recording))
-    candidates += collected
-    rows = []
-    for role, path in candidates:
-        try:
-            relative = Path(os.path.realpath(path)).relative_to(out)
-        except ValueError:
-            continue  # outside the profile directory: not part of it
-        if path.is_file():
-            rows.append({"role": role, "path": relative.as_posix(),
-                         "bytes": path.stat().st_size,
-                         "sha256": file_sha256(path)})
-    return rows
-
-
-def _identity(request: ProfileRequest, report: dict | None) -> dict:
-    keys = ("manifest_hash", "sil_version", "source_repository",
-            "source_revision")
-    if report is None:
-        return {"manifest_path": str(request.manifest),
-                **{key: None for key in keys},
-                "unavailable": {key: "no_diagnostics_report" for key in keys}}
-    source = report["identity"]
-    identity = {"manifest_path": str(request.manifest),
-                **{key: source.get(key) for key in keys}}
-    identity["unavailable"] = {key: source.get("unavailable", {}).get(
-        key, "not_reported") for key in keys if identity[key] is None}
-    return identity
-
-
-def _host() -> dict:
-    paranoid = _paranoid()
-    uname = platform.uname()
-    return {"os": uname.system, "kernel_release": uname.release,
-            "architecture": uname.machine, "perf_event_paranoid": paranoid,
-            "unavailable": {} if paranoid is not None else {
-                "perf_event_paranoid": "not_reported_by_os"}}
 
 
 def _empty_analysis(reason: str) -> dict:
@@ -916,8 +781,8 @@ def build_report(request: ProfileRequest, layout: Layout, cwd: Path,
     return {
         "sil_profile_report": 1,
         "producer": {"name": PROG, "sil_version": SIL_VERSION},
-        "identity": _identity(request, capture_run.report),
-        "host": _host(),
+        "identity": identity(request, capture_run.report),
+        "host": host(),
         "configuration": {
             "collector": "cpu",
             "recording": None if request.recording is None
@@ -946,7 +811,7 @@ def build_report(request: ProfileRequest, layout: Layout, cwd: Path,
             "scope": {"kind": "runner_and_descendants", "inherit": True,
                       "pid_namespace": "collector"},
             "limits": {"max_capture_bytes": request.max_capture_bytes,
-                       "capture_bytes": _size(layout.perf_data),
+                       "capture_bytes": file_size(layout.perf_data),
                        "limit_reached": capture_run.limit_reached,
                        "symbolization_timeout_s":
                            request.symbolization_timeout_s},
@@ -956,26 +821,6 @@ def build_report(request: ProfileRequest, layout: Layout, cwd: Path,
         "artifacts": _artifacts(layout, request, cwd),
         "limitations": list(LIMITATIONS),
     }
-
-
-def resolve_exit(report: dict | None, capture_run: CaptureRun) -> int:
-    """A Run failure is never replaced; a capture problem gives 1, and so
-    does a requested Activation correlation that is not complete."""
-    run = run_record(capture_run)
-    if run["status"] == "not_started":
-        return EXIT_NOT_FOUND if capture_run.perf_status == EXIT_NOT_FOUND \
-            else EXIT_FAILURE
-    if run["status"] == "ended_by_signal":
-        return 128 + run["signal"]
-    if run["exit_code"] != EXIT_OK:
-        return run["exit_code"]
-    if report is None or report["capture"]["status"] != "complete":
-        return EXIT_FAILURE
-    correlation = report["activation_correlation"]
-    if correlation["kind"] == "activation" and \
-            correlation["status"] != "complete":
-        return EXIT_FAILURE
-    return EXIT_OK
 
 
 def _pid_namespace() -> dict | None:
@@ -1018,8 +863,6 @@ def main(argv: list[str] | None = None) -> int:
             command_error(PROG, problem, EXIT_USAGE)
         return EXIT_USAGE
     if isinstance(request, HeapRequest):
-        # Imported here: the heap collector reuses this module's helpers.
-        from sil.profile_heap_run import run_heap
         return run_heap(request, cwd)
     try:
         find_native_tools()
@@ -1067,7 +910,7 @@ def _finish(perf: Path, request: ProfileRequest, layout: Layout, cwd: Path,
     samples_file = None
     try:
         if run_record(capture_run)["status"] != "not_started" and \
-                _size(layout.perf_data) > 0:
+                file_size(layout.perf_data) > 0:
             exported = export(perf, request, layout, cwd)
         if exported is not None and exported.analysis is not None:
             samples_file = _write_samples(layout, exported.analysis)

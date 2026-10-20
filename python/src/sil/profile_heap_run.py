@@ -38,7 +38,7 @@ from pathlib import Path
 from sil.build_info import __version__ as SIL_VERSION
 from sil.diagnostics_report import write_new_file
 from sil.diagnostics_run import (
-    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_USAGE, RunRequest, ToolMissing,
+    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_USAGE, Guards, RunRequest, ToolMissing,
     command_error, execute, find_native_tools,
 )
 from sil.profile_heap import HeapAnalysis, HeapDecodeError, normalize_heap
@@ -46,14 +46,14 @@ from sil.profile_modules import ModuleLocator, elf_identity
 from sil.profile_report import validate_profile_report
 from sil.profile_storage import reserve_reached, space_warning
 from sil.profile_summary import format_summary
-from sil.profile_run import (
-    PROG, STDERR_TAIL_BYTES, CaptureRun, HeapRequest, _host, _identity,
-    _tool_environment, artifact_rows, report_launcher_error, resolve_exit,
-    run_record,
+from sil.profile_common import (
+    PROG, POLL_S, STDERR_TAIL_BYTES, SYMBOLIZATION_TIMEOUT_S, CaptureRun,
+    artifact_rows, capture_outcome, file_size, host, identity,
+    report_launcher_error, resolve_exit, run_record, tool_environment,
 )
 
+HEAP_MAX_CAPTURE_BYTES = 256 << 20
 SHIM_FOLLOW_UP = "https://github.com/Stevie1704/sil/issues/330"
-POLL_S = 0.1
 CHUNK = 1 << 16
 LIMITATIONS = ["heap_tracks_allocation_calls_only",
                "outstanding_is_not_a_leak_verdict",
@@ -61,6 +61,21 @@ LIMITATIONS = ["heap_tracks_allocation_calls_only",
                "activation_correlation_unavailable", "host_build_only"]
 CORRELATION = {"status": "unavailable", "reason": "no_validated_clock_mapping"}
 FAILING = {"backend_failed", "no_data", "export_failed"}
+
+
+@dataclass(frozen=True)
+class HeapRequest:
+    """`--collector heap`: one Heaptrack capture of one scope."""
+
+    manifest: Path
+    out: Path
+    recording: Path | None  # None: --no-recording
+    provenance: Path | None
+    guards: Guards
+    participant: str | None  # None: --runner
+    max_capture_bytes: int = HEAP_MAX_CAPTURE_BYTES
+    interpreter_timeout_s: int = SYMBOLIZATION_TIMEOUT_S
+
 
 
 @dataclass(frozen=True)
@@ -214,7 +229,7 @@ def probe_heaptrack(tools: Heaptrack) -> None:
     true = shutil.which("true") or "/bin/true"
     with tempfile.TemporaryDirectory(prefix="sil-profile-probe-") as probe:
         raw = Path(probe) / "probe.raw"
-        env = {**_tool_environment(), "LD_PRELOAD": str(tools.preload),
+        env = {**tool_environment(), "LD_PRELOAD": str(tools.preload),
                "DUMP_HEAPTRACK_OUTPUT": str(raw)}
         try:
             done = subprocess.run([true], env=env, capture_output=True,
@@ -338,7 +353,7 @@ class Interpreter:
             ["sh", "-c", 'exec "$0" < "$1"', str(tools.interpreter),
              str(layout.fifo)], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, start_new_session=True,
-            env=_tool_environment())
+            env=tool_environment())
         self.data = _Copy(self.process.stdout, layout.data, limit, False,
                           guard_reserve=True)
         self.errors = _Copy(self.process.stderr, layout.interpreter_stderr,
@@ -536,11 +551,7 @@ def capture_status(run: dict, result: InterpreterResult,
         reasons.append("data_truncated")
     if _scope_may_have_ended_early(run, process_scope):
         reasons.append("data_may_be_incomplete")
-    if FAILING & set(reasons):
-        return "failed", reasons
-    if "interrupted" in reasons:
-        return "interrupted", reasons
-    return ("partial" if reasons else "complete"), reasons
+    return capture_outcome(reasons, FAILING)
 
 
 def build_report(request: HeapRequest, layout: HeapLayout, cwd: Path,
@@ -573,8 +584,8 @@ def build_report(request: HeapRequest, layout: HeapLayout, cwd: Path,
     return {
         "sil_profile_report": 1,
         "producer": {"name": PROG, "sil_version": SIL_VERSION},
-        "identity": _identity(request, capture_run.report),
-        "host": _host(),
+        "identity": identity(request, capture_run.report),
+        "host": host(),
         "configuration": {
             "collector": "heap",
             "recording": None if request.recording is None
@@ -598,7 +609,7 @@ def build_report(request: HeapRequest, layout: HeapLayout, cwd: Path,
                        "adapter": "heap/launch-adapter.sh",
                        "wrapped": scope["kind"]},
             "limits": {"max_capture_bytes": request.max_capture_bytes,
-                       "capture_bytes": _size(layout.data),
+                       "capture_bytes": file_size(layout.data),
                        "limit_reached": result.limit_reached,
                        "interpreter_timeout_s":
                            request.interpreter_timeout_s},
@@ -622,13 +633,6 @@ def _backend_unavailable(tools: Heaptrack,
     if result.exit_code is None:
         unavailable["interpreter_exit_code"] = "interpreter_stopped"
     return unavailable
-
-
-def _size(path: Path) -> int:
-    try:
-        return path.stat().st_size
-    except OSError:
-        return 0
 
 
 def _publish(request: HeapRequest, layout: HeapLayout, cwd: Path,
