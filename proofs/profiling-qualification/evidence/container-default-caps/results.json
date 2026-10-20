@@ -1,0 +1,427 @@
+{
+  "environment": "container-default-caps",
+  "facts": {
+    "hardware_pmu": false,
+    "heaptrack_version": "heaptrack 1.4.0",
+    "in_container": true,
+    "libc": "glibc 2.36",
+    "packages": [
+      "heaptrack=1.4.0-2",
+      "libcap2-bin=1:2.66-4+deb12u3+b1",
+      "linux-perf=6.1.176-1"
+    ],
+    "perf_capabilities": "/usr/bin/perf cap_perfmon=ep",
+    "perf_event_paranoid": "4",
+    "perf_version": null,
+    "python": "3.13.7",
+    "sil_build_info": "{\"license\":\"Apache-2.0\",\"source_repository\":\"https://github.com/Stevie1704/sil\",\"source_revision\":\"dc711f9a1b276843b4c128fdc87c77a67a4fcff3\",\"version\":\"0.2.1\"}",
+    "sil_package": "/opt/sil/python/lib/python3.13/site-packages/sil",
+    "sil_version": "0.2.1",
+    "status": {
+      "CapBnd": "00000000a80425fb",
+      "CapEff": "0000000000000000",
+      "NSpid": "1",
+      "Seccomp": "2"
+    },
+    "tools": {
+      "heaptrack": "/usr/bin/heaptrack",
+      "perf": "/usr/bin/perf",
+      "sil": "/opt/sil/python/bin/sil",
+      "sil-diagnostics-launcher": "/usr/local/bin/sil-diagnostics-launcher",
+      "sil-run": "/usr/local/bin/sil-run",
+      "sil-run-diagnostics": "/usr/local/bin/sil-run-diagnostics"
+    },
+    "uid": 1001,
+    "uname": {
+      "machine": "x86_64",
+      "node": "812a7711f701",
+      "processor": "",
+      "release": "7.0.0-1017-azure",
+      "system": "Linux",
+      "version": "#17~24.04.1-Ubuntu SMP PREEMPT Thu Sep 24 18:46:57 UTC 2026"
+    }
+  },
+  "failed_checks": 0,
+  "groups": [
+    "preflight"
+  ],
+  "perf": "denied",
+  "scenarios": [
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-default-caps/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "perf not on the tool-free PATH",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "exit 1 (actionable preflight error)",
+          "detail": "sil profile: error: cannot find perf on PATH; install the perf of the running kernel (Debian: linux-perf, Ubuntu: linux-tools-$(uname -r))\n",
+          "ok": true
+        },
+        {
+          "check": "stderr names perf",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no Participant started",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-default-caps/scenarios/preflight-cpu-no-perf",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "preflight-cpu-no-perf",
+      "new_entries": [],
+      "observations": {},
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "sil profile: error: cannot find perf on PATH; install the perf of the running kernel (Debian: linux-perf, Ubuntu: linux-tools-$(uname -r))\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 324
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-default-caps/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--runner",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "heaptrack not on the tool-free PATH",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "exit 1 (actionable preflight error)",
+          "detail": "sil profile: error: cannot find heaptrack on PATH; install Heaptrack from the distribution (Debian and Ubuntu: heaptrack)\n",
+          "ok": true
+        },
+        {
+          "check": "stderr names heaptrack",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no Participant started",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-default-caps/scenarios/preflight-heap-no-heaptrack",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "preflight-heap-no-heaptrack",
+      "new_entries": [],
+      "observations": {},
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "sil profile: error: cannot find heaptrack on PATH; install Heaptrack from the distribution (Debian and Ubuntu: heaptrack)\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 332
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-default-caps/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1 (actionable preflight error)",
+          "detail": "sil profile: error: cannot run perf: [Errno 1] Operation not permitted: '/usr/bin/perf'; an unprivileged user needs kernel.perf_event_paranoid 2 or less (now 4); a container needs CAP_PERFMON (docker run --cap-add PERFMON). sil profile does not change host settings; see docs/profile-report.md\n",
+          "ok": true
+        },
+        {
+          "check": "stderr names the permission",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no Participant started",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-default-caps/scenarios/preflight-cpu-permission-denied",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "preflight-cpu-permission-denied",
+      "new_entries": [],
+      "observations": {},
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "sil profile: error: cannot run perf: [Errno 1] Operation not permitted: '/usr/bin/perf'; an unprivileged user needs kernel.perf_event_paranoid 2 or less (now 4); a container needs CAP_PERFMON (docker run --cap-add PERFMON). sil profile does not change host settings; see docs/profile-report.md\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 324
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-default-caps/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--participant",
+        "process",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 2",
+          "detail": "sil profile: error: 'process' uses the Clock shim: Heaptrack in a shimmed participant is not qualified (it can stop the participant, removes the shim from its children and writes timestamps without bound; proofs/profiling/README.md). Use --runner, or see https://github.com/Stevie1704/sil/issues/330\n",
+          "ok": true
+        },
+        {
+          "check": "no Participant started",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-default-caps/scenarios/preflight-heap-shimmed-participant",
+      "exit_code": 2,
+      "leftover_processes": [],
+      "name": "preflight-heap-shimmed-participant",
+      "new_entries": [],
+      "observations": {},
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "sil profile: error: 'process' uses the Clock shim: Heaptrack in a shimmed participant is not qualified (it can stop the participant, removes the shim from its children and writes timestamps without bound; proofs/profiling/README.md). Use --runner, or see https://github.com/Stevie1704/sil/issues/330\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 328
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-default-caps/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--participant",
+        "native",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 2",
+          "detail": "sil profile: error: 'native' is a Native participant: it runs inside the runner process, so it cannot be a heap scope; use --runner and read its allocation sites by module and function\n",
+          "ok": true
+        },
+        {
+          "check": "no Participant started",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-default-caps/scenarios/preflight-heap-native-participant",
+      "exit_code": 2,
+      "leftover_processes": [],
+      "name": "preflight-heap-native-participant",
+      "new_entries": [],
+      "observations": {},
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "sil profile: error: 'native' is a Native participant: it runs inside the runner process, so it cannot be a heap scope; use --runner and read its allocation sites by module and function\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 327
+    },
+    {
+      "action": null,
+      "argv": [
+        "sh",
+        "-c",
+        "mkdir prof && echo keep > prof/keep && exec \"$@\"",
+        "sh",
+        "sil",
+        "profile",
+        "/work/runs/container-default-caps/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--runner",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 2 for an existing output directory",
+          "detail": "sil profile: error: the profile directory 'prof' already exists; earlier evidence is never replaced\n",
+          "ok": true
+        },
+        {
+          "check": "existing evidence unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no Participant started",
+          "detail": null,
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-default-caps/scenarios/preflight-existing-out",
+      "exit_code": 2,
+      "leftover_processes": [],
+      "name": "preflight-existing-out",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {},
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "sil profile: error: the profile directory 'prof' already exists; earlier evidence is never replaced\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 325
+    }
+  ]
+}

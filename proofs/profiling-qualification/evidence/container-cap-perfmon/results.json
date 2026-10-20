@@ -1,0 +1,4616 @@
+{
+  "environment": "container-cap-perfmon",
+  "facts": {
+    "hardware_pmu": false,
+    "heaptrack_version": "heaptrack 1.4.0",
+    "in_container": true,
+    "libc": "glibc 2.36",
+    "packages": [
+      "heaptrack=1.4.0-2",
+      "libcap2-bin=1:2.66-4+deb12u3+b1",
+      "linux-perf=6.1.176-1"
+    ],
+    "perf_capabilities": "/usr/bin/perf cap_perfmon=ep",
+    "perf_event_paranoid": "4",
+    "perf_version": "perf version 6.1.176",
+    "python": "3.13.7",
+    "sil_build_info": "{\"license\":\"Apache-2.0\",\"source_repository\":\"https://github.com/Stevie1704/sil\",\"source_revision\":\"dc711f9a1b276843b4c128fdc87c77a67a4fcff3\",\"version\":\"0.2.1\"}",
+    "sil_package": "/opt/sil/python/lib/python3.13/site-packages/sil",
+    "sil_version": "0.2.1",
+    "status": {
+      "CapBnd": "00000040a80425fb",
+      "CapEff": "0000000000000000",
+      "NSpid": "1",
+      "Seccomp": "2"
+    },
+    "tools": {
+      "heaptrack": "/usr/bin/heaptrack",
+      "perf": "/usr/bin/perf",
+      "sil": "/opt/sil/python/bin/sil",
+      "sil-diagnostics-launcher": "/usr/local/bin/sil-diagnostics-launcher",
+      "sil-run": "/usr/local/bin/sil-run",
+      "sil-run-diagnostics": "/usr/local/bin/sil-run-diagnostics"
+    },
+    "uid": 1001,
+    "uname": {
+      "machine": "x86_64",
+      "node": "d7067a1c3df0",
+      "processor": "",
+      "release": "7.0.0-1017-azure",
+      "system": "Linux",
+      "version": "#17~24.04.1-Ubuntu SMP PREEMPT Thu Sep 24 18:46:57 UTC 2026"
+    }
+  },
+  "failed_checks": 0,
+  "groups": [
+    "equivalence",
+    "preflight",
+    "cpu",
+    "heap",
+    "storage"
+  ],
+  "perf": "available",
+  "scenarios": [
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "perf not on the tool-free PATH",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "exit 1 (actionable preflight error)",
+          "detail": "sil profile: error: cannot find perf on PATH; install the perf of the running kernel (Debian: linux-perf, Ubuntu: linux-tools-$(uname -r))\n",
+          "ok": true
+        },
+        {
+          "check": "stderr names perf",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no Participant started",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/preflight-cpu-no-perf",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "preflight-cpu-no-perf",
+      "new_entries": [],
+      "observations": {},
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "sil profile: error: cannot find perf on PATH; install the perf of the running kernel (Debian: linux-perf, Ubuntu: linux-tools-$(uname -r))\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 329
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--runner",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "heaptrack not on the tool-free PATH",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "exit 1 (actionable preflight error)",
+          "detail": "sil profile: error: cannot find heaptrack on PATH; install Heaptrack from the distribution (Debian and Ubuntu: heaptrack)\n",
+          "ok": true
+        },
+        {
+          "check": "stderr names heaptrack",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no Participant started",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/preflight-heap-no-heaptrack",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "preflight-heap-no-heaptrack",
+      "new_entries": [],
+      "observations": {},
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "sil profile: error: cannot find heaptrack on PATH; install Heaptrack from the distribution (Debian and Ubuntu: heaptrack)\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 331
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--participant",
+        "process",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 2",
+          "detail": "sil profile: error: 'process' uses the Clock shim: Heaptrack in a shimmed participant is not qualified (it can stop the participant, removes the shim from its children and writes timestamps without bound; proofs/profiling/README.md). Use --runner, or see https://github.com/Stevie1704/sil/issues/330\n",
+          "ok": true
+        },
+        {
+          "check": "no Participant started",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/preflight-heap-shimmed-participant",
+      "exit_code": 2,
+      "leftover_processes": [],
+      "name": "preflight-heap-shimmed-participant",
+      "new_entries": [],
+      "observations": {},
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "sil profile: error: 'process' uses the Clock shim: Heaptrack in a shimmed participant is not qualified (it can stop the participant, removes the shim from its children and writes timestamps without bound; proofs/profiling/README.md). Use --runner, or see https://github.com/Stevie1704/sil/issues/330\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 327
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--participant",
+        "native",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 2",
+          "detail": "sil profile: error: 'native' is a Native participant: it runs inside the runner process, so it cannot be a heap scope; use --runner and read its allocation sites by module and function\n",
+          "ok": true
+        },
+        {
+          "check": "no Participant started",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/preflight-heap-native-participant",
+      "exit_code": 2,
+      "leftover_processes": [],
+      "name": "preflight-heap-native-participant",
+      "new_entries": [],
+      "observations": {},
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "sil profile: error: 'native' is a Native participant: it runs inside the runner process, so it cannot be a heap scope; use --runner and read its allocation sites by module and function\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 327
+    },
+    {
+      "action": null,
+      "argv": [
+        "sh",
+        "-c",
+        "mkdir prof && echo keep > prof/keep && exec \"$@\"",
+        "sh",
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--runner",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 2 for an existing output directory",
+          "detail": "sil profile: error: the profile directory 'prof' already exists; earlier evidence is never replaced\n",
+          "ok": true
+        },
+        {
+          "check": "existing evidence unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "no Participant started",
+          "detail": null,
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/preflight-existing-out",
+      "exit_code": 2,
+      "leftover_processes": [],
+      "name": "preflight-existing-out",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {},
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "sil profile: error: the profile directory 'prof' already exists; earlier evidence is never replaced\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 324
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/ordinary-main",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "ordinary-main",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": null,
+        "exit_code": 0,
+        "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36",
+        "wall_ms": 3414
+      },
+      "participants_started": [
+        "child-35.tsv",
+        "child-36.tsv",
+        "child-37.tsv",
+        "child-38.tsv",
+        "fmu-32.tsv",
+        "native-31.tsv",
+        "process-34.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3414
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000",
+        "--diagnostics"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.diagnostics.json",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "diagnostics outcome equals ordinary",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/diagnostics-main",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "diagnostics-main",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.diagnostics.json",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": null,
+        "exit_code": 0,
+        "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36",
+        "wall_ms": 3477
+      },
+      "participants_started": [
+        "child-46.tsv",
+        "child-47.tsv",
+        "child-48.tsv",
+        "child-49.tsv",
+        "fmu-43.tsv",
+        "native-42.tsv",
+        "process-45.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432\ndiagnostics report: run.mcap.diagnostics.json\nrun: succeeded, exit code 0, complete\nrun wall time: 3.168 s (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 5.534 ms, setup 612.819 ms, scheduled execution 2.503 s, shutdown 46.229 ms, recording finalization 75.481 us, unattributed 0 ns\nVirtual-time speed: scheduled 0.40x, end-to-end 0.32x\nthroughput per second of scheduled execution (2.503 s): 100 Native Activations, 39.95/s; 200 Process Steps, 79.89/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 100 of 100 completed, mean 7.638 ms, p50 7.632 ms, p95 7.697 ms, p99 7.795 ms, max 7.815 ms\n  native/hot native_task: 100 of 100 completed, mean 7.592 ms, p50 7.613 ms, p95 7.705 ms, p99 7.764 ms, max 7.891 ms\n  process/step process_step: 100 of 100 completed, mean 9.802 ms, p50 7.794 ms, p95 7.878 ms, p99 59.047 ms, max 59.191 ms\nresources (peak RSS is per process and never summed):\n  runner: user CPU 769.266 ms, system CPU 5.001 ms, peak RSS 4.379 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 1.092 s, system CPU 18.147 ms, peak RSS 26.762 MiB (largest_process_peak_rss; includes waited descendants)\n  process process: user CPU 1.241 s, system CPU 23.907 ms, peak RSS 25.676 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 3.103 s, system 47.055 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; process peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3477
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/work/runs/container-cap-perfmon/manifests/mixed.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "0000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/ordinary-mixed",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "ordinary-mixed",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": null,
+        "exit_code": 0,
+        "recording": "0fd230f0f4e974c2b9483291429e9ab390f75141a8327bcac65f6a1625aa904c",
+        "wall_ms": 2476
+      },
+      "participants_started": [
+        "fmu-51.tsv",
+        "probe-56.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+      "stdout_tail": "manifest_hash 59ab613636a96e8469ac01c30a0c321bac458e8e52d2503032f91afd9981a5b0\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 2476
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/work/runs/container-cap-perfmon/manifests/mixed.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000",
+        "--diagnostics"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "0000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.diagnostics.json",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "diagnostics outcome equals ordinary",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "0fd230f0f4e974c2b9483291429e9ab390f75141a8327bcac65f6a1625aa904c"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "0fd230f0f4e974c2b9483291429e9ab390f75141a8327bcac65f6a1625aa904c"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/diagnostics-mixed",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "diagnostics-mixed",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.diagnostics.json",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": null,
+        "exit_code": 0,
+        "recording": "0fd230f0f4e974c2b9483291429e9ab390f75141a8327bcac65f6a1625aa904c",
+        "wall_ms": 2556
+      },
+      "participants_started": [
+        "fmu-61.tsv",
+        "probe-66.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+      "stdout_tail": "manifest_hash 59ab613636a96e8469ac01c30a0c321bac458e8e52d2503032f91afd9981a5b0\ndiagnostics report: run.mcap.diagnostics.json\nrun: succeeded, exit code 0, complete\nrun wall time: 2.248 s (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 5.826 ms, setup 1.204 s, scheduled execution 948.265 ms, shutdown 89.545 ms, recording finalization 105.277 us, unattributed 0 ns\nVirtual-time speed: scheduled 1.05x, end-to-end 0.44x\nthroughput per second of scheduled execution (948.265 ms): 0 Native Activations, 0.00/s; 234 Process Steps, 246.77/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 100 of 100 completed, mean 7.633 ms, p50 7.627 ms, p95 7.678 ms, p99 7.744 ms, max 7.870 ms\n  group/step process_step: 50 of 50 completed, mean 164.561 us, p50 99.355 us, p95 606.484 us, p99 unavailable (insufficient_samples), max 795.958 us\n  observer/step process_step: 50 of 50 completed, mean 86.980 us, p50 57.738 us, p95 262.400 us, p99 unavailable (insufficient_samples), max 298.869 us\n  probe/step process_step: 34 of 34 completed, mean 5.059 ms, p50 5.021 ms, p95 5.209 ms, p99 unavailable (insufficient_samples), max 5.224 ms\n  replay replay: 100 Messages; publication Slots 100 of 100 completed, mean 2.655 us, p50 2.414 us, p95 3.847 us, p99 6.301 us, max 11.582 us\nresources (peak RSS is per process and never summed):\n  runner: user CPU 11.391 ms, system CPU 7.594 ms, peak RSS 4.516 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 1.087 s, system CPU 23.927 ms, peak RSS 26.633 MiB (largest_process_peak_rss; includes waited descendants)\n  process group: user CPU 338.716 ms, system CPU 24.921 ms, peak RSS 26.781 MiB (largest_process_peak_rss; includes waited descendants)\n  process observer: user CPU 246.262 ms, system CPU 14.894 ms, peak RSS 24.180 MiB (largest_process_peak_rss; includes waited descendants)\n  process probe: user CPU 431.283 ms, system CPU 23.068 ms, peak RSS 25.219 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 2.115 s, system 94.404 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; group peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; observer peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; probe peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 2556
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/work/runs/container-cap-perfmon/manifests/failure.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.failure.json",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/ordinary-failure",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "ordinary-failure",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.failure.json",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": "participant",
+        "exit_code": 1,
+        "recording": "4999e1fea902eb10f90569f84a69585458222409f045f93e249c9f13f8874fe0",
+        "wall_ms": 1732
+      },
+      "participants_started": [
+        "fmu-68.tsv",
+        "probe-73.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py",
+            "--fail-at-step",
+            "7"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 1732
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/work/runs/container-cap-perfmon/manifests/failure.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000",
+        "--diagnostics"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run-diagnostics: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.diagnostics.json",
+            "run.mcap.failure.json",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "diagnostics outcome equals ordinary",
+          "detail": [
+            {
+              "category": "participant",
+              "exit_code": 1,
+              "recording": "4999e1fea902eb10f90569f84a69585458222409f045f93e249c9f13f8874fe0"
+            },
+            {
+              "category": "participant",
+              "exit_code": 1,
+              "recording": "4999e1fea902eb10f90569f84a69585458222409f045f93e249c9f13f8874fe0"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/diagnostics-failure",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "diagnostics-failure",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.diagnostics.json",
+        "run.mcap.failure.json",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": "participant",
+        "exit_code": 1,
+        "recording": "4999e1fea902eb10f90569f84a69585458222409f045f93e249c9f13f8874fe0",
+        "wall_ms": 1798
+      },
+      "participants_started": [
+        "fmu-78.tsv",
+        "probe-83.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py",
+            "--fail-at-step",
+            "7"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run-diagnostics: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
+      "stdout_tail": "diagnostics report: run.mcap.diagnostics.json\nrun: run_failure, exit code 1, partial (run_failure)\nfailure: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose (participant, Participant probe, Virtual time 210.000 ms)\nlast Virtual time: 210.000 ms of Duration 1.000 s\nrun wall time: 1.489 s (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 5.812 ms, setup 1.196 s, scheduled execution 198.418 ms, shutdown 88.994 ms, recording finalization 73.517 us, unattributed 0 ns\nVirtual-time speed: scheduled unavailable (run_not_successful), end-to-end unavailable (run_not_successful)\nthroughput per second of scheduled execution (198.418 ms): 0 Native Activations, 0.00/s; 50 Process Steps, 251.99/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 21 of 21 completed, mean 7.634 ms, p50 7.620 ms, p95 7.723 ms, p99 unavailable (insufficient_samples), max 7.806 ms\n  group/step process_step: 11 of 11 completed, mean 131.854 us, p50 94.396 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 403.324 us\n  observer/step process_step: 11 of 11 completed, mean 83.480 us, p50 55.033 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 264.634 us\n  probe/step process_step: 7 of 8 completed, 1 failed (first at Activation 7, Virtual time 210.000 ms), mean 5.056 ms, p50 5.070 ms, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 5.167 ms\n  replay replay: 22 Messages; publication Slots 22 of 22 completed, mean 2.825 us, p50 2.044 us, p95 4.669 us, p99 unavailable (insufficient_samples), max 12.092 us\nresources (peak RSS is per process and never summed):\n  runner: user CPU 8.286 ms, system CPU 3.551 ms, peak RSS 4.625 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 487.295 ms, system CPU 18.711 ms, peak RSS 26.645 MiB (largest_process_peak_rss; includes waited descendants)\n  process group: user CPU 324.477 ms, system CPU 27.989 ms, peak RSS 26.582 MiB (largest_process_peak_rss; includes waited descendants)\n  process observer: user CPU 238.984 ms, system CPU 20.998 ms, peak RSS 24.324 MiB (largest_process_peak_rss; includes waited descendants)\n  process probe: user CPU 302.504 ms, system CPU 18.030 ms, peak RSS 25.090 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 1.362 s, system 89.279 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; group peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; observer peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; probe peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 1798
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/work/runs/container-cap-perfmon/manifests/deadline.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "1000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "fail\", \"reason\": _reason(e)})\n    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 238, in send\n    stdout.write(json.dumps(msg) + \"\\n\")\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns\n",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.failure.json",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/ordinary-deadline",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "ordinary-deadline",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.failure.json",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": "timeout",
+        "exit_code": 1,
+        "recording": "8303a73e7b5e03c749327f538602e6532592990ff6fbb71561a0a11681ea2ecb",
+        "wall_ms": 4543
+      },
+      "participants_started": [
+        "fmu-85.tsv",
+        "probe-90.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py",
+            "--sleep-at-step",
+            "3",
+            "--sleep-ms",
+            "3000"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nTraceback (most recent call last):\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 297, in run\n    send({\n    ~~~~^^\n        \"op\": \"step_done\",\n        ^^^^^^^^^^^^^^^^^^\n        \"out\": codec.encode_outputs(outputs),\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    })\n    ^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 238, in send\n    stdout.write(json.dumps(msg) + \"\\n\")\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\nBrokenPipeError: [Errno 32] Broken pipe\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/src/proofs/profiling-qualification/probe_participant.py\", line 125, in <module>\n    main()\n    ~~~~^^\n  File \"/src/proofs/profiling-qualification/probe_participant.py\", line 121, in main\n    run(Probe(parser.parse_args()))\n    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 302, in run\n    send({\"op\": \"fail\", \"reason\": _reason(e)})\n    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 238, in send\n    stdout.write(json.dumps(msg) + \"\\n\")\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 4543
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "run",
+        "/work/runs/container-cap-perfmon/manifests/deadline.json",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "1000",
+        "--diagnostics"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "on\": _reason(e)})\n    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 238, in send\n    stdout.write(json.dumps(msg) + \"\\n\")\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns\n",
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "run.mcap",
+            "run.mcap.diagnostics.json",
+            "run.mcap.failure.json",
+            "run.mcap.provenance.json"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "diagnostics outcome equals ordinary",
+          "detail": [
+            {
+              "category": "timeout",
+              "exit_code": 1,
+              "recording": "8303a73e7b5e03c749327f538602e6532592990ff6fbb71561a0a11681ea2ecb"
+            },
+            {
+              "category": "timeout",
+              "exit_code": 1,
+              "recording": "8303a73e7b5e03c749327f538602e6532592990ff6fbb71561a0a11681ea2ecb"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/diagnostics-deadline",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "diagnostics-deadline",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.diagnostics.json",
+        "run.mcap.failure.json",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "category": "timeout",
+        "exit_code": 1,
+        "recording": "8303a73e7b5e03c749327f538602e6532592990ff6fbb71561a0a11681ea2ecb",
+        "wall_ms": 4623
+      },
+      "participants_started": [
+        "fmu-95.tsv",
+        "probe-100.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py",
+            "--sleep-at-step",
+            "3",
+            "--sleep-ms",
+            "3000"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nTraceback (most recent call last):\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 297, in run\n    send({\n    ~~~~^^\n        \"op\": \"step_done\",\n        ^^^^^^^^^^^^^^^^^^\n        \"out\": codec.encode_outputs(outputs),\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    })\n    ^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 238, in send\n    stdout.write(json.dumps(msg) + \"\\n\")\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\nBrokenPipeError: [Errno 32] Broken pipe\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/src/proofs/profiling-qualification/probe_participant.py\", line 125, in <module>\n    main()\n    ~~~~^^\n  File \"/src/proofs/profiling-qualification/probe_participant.py\", line 121, in main\n    run(Probe(parser.parse_args()))\n    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 302, in run\n    send({\"op\": \"fail\", \"reason\": _reason(e)})\n    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 238, in send\n    stdout.write(json.dumps(msg) + \"\\n\")\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns\n",
+      "stdout_tail": "diagnostics report: run.mcap.diagnostics.json\nrun: run_failure, exit code 1, partial (run_failure)\nfailure: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns (timeout, Participant probe, Virtual time 90.000 ms)\nlast Virtual time: 90.000 ms of Duration 1.000 s\nrun wall time: 4.316 s (native runner start before Manifest load through Participant cleanup and Recording close)\nphases: preflight 5.733 ms, setup 1.196 s, scheduled execution 1.086 s, shutdown 2.028 s, recording finalization 56.675 us, unattributed 0 ns\nVirtual-time speed: scheduled unavailable (run_not_successful), end-to-end unavailable (run_not_successful)\nthroughput per second of scheduled execution (1.086 s): 0 Native Activations, 0.00/s; 22 Process Steps, 20.25/s\nTasks (inclusive wall time of completed Activations):\n  fmu/step process_step: 9 of 9 completed, mean 7.693 ms, p50 7.661 ms, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 7.852 ms\n  group/step process_step: 5 of 5 completed, mean 205.965 us, p50 160.800 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 407.070 us\n  observer/step process_step: 5 of 5 completed, mean 129.343 us, p50 95.378 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 291.464 us\n  probe/step process_step: 3 of 4 completed, 1 failed (first at Activation 3, Virtual time 90.000 ms), mean 5.108 ms, p50 5.120 ms, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 5.175 ms\n  replay replay: 10 Messages; publication Slots 10 of 10 completed, mean 4.069 us, p50 2.865 us, p95 unavailable (insufficient_samples), p99 unavailable (insufficient_samples), max 11.692 us\nresources (peak RSS is per process and never summed):\n  runner: user CPU 5.865 ms, system CPU 10.263 ms, peak RSS 4.730 MiB (process_peak_rss; Native participants run in the runner)\n  process fmu: user CPU 393.029 ms, system CPU 22.769 ms, peak RSS 26.684 MiB (largest_process_peak_rss; includes waited descendants)\n  process group: user CPU 331.495 ms, system CPU 21.802 ms, peak RSS 26.691 MiB (largest_process_peak_rss; includes waited descendants)\n  process observer: user CPU 237.976 ms, system CPU 21.086 ms, peak RSS 24.180 MiB (largest_process_peak_rss; includes waited descendants)\n  process probe: user CPU 285.116 ms, system CPU 22.009 ms, peak RSS 25.160 MiB (largest_process_peak_rss; includes waited descendants)\n  CPU total of runner and Process participants: user 1.253 s, system 97.929 ms\n  limitations: runner peak_includes_parent_rss_at_spawn; fmu peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; group peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; observer peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited; probe peak_includes_parent_rss_at_spawn, descendants_counted_only_when_waited\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 4623
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--activations",
+        "--modules-from",
+        "/work/workload/main/EgoMotion.fmu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            }
+          ],
+          "ok": true
+        },
+        {
+          "check": "Manifest bytes unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "profile identity is the Run's Manifest hash",
+          "detail": [
+            "2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432",
+            [
+              "2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432"
+            ]
+          ],
+          "ok": true
+        },
+        {
+          "check": "native hot function silproof_native_spin_even named",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "native hot function silproof_native_spin_odd named",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "process hot function silproof_process_spin named",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "child hot function silproof_child_spin named",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "fmu hot function silproof_fmu_spin named",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "stripped Native library: matching debug file used",
+          "detail": {
+            "path": "/work/workload/main/lib/libsilproof_native.so.debug",
+            "status": "separate_matching"
+          },
+          "ok": true
+        },
+        {
+          "check": "FMU extracted into the Run directory is named",
+          "detail": "captured_modules_from",
+          "ok": true
+        },
+        {
+          "check": "4 short-lived children, each its own identity with samples",
+          "detail": [
+            [
+              "p6",
+              114,
+              51
+            ],
+            [
+              "p7",
+              115,
+              50
+            ],
+            [
+              "p8",
+              116,
+              51
+            ],
+            [
+              "p9",
+              117,
+              50
+            ]
+          ],
+          "ok": true
+        },
+        {
+          "check": "correlation complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Native samples are in their Task's execution context",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Process samples are window-associated with their Step",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "every Process mapping verified (one PID namespace)",
+          "detail": [
+            {
+              "mapping": "verified",
+              "participant": "fmu",
+              "pid": 111,
+              "process": "p3"
+            },
+            {
+              "mapping": "verified",
+              "participant": "process",
+              "pid": 113,
+              "process": "p5"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/cpu-main-matching-activations",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "cpu-main-matching-activations",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "activation/correlation.json": 150713,
+          "activation/observations.jsonl": 62644,
+          "cpu/buildid-cache/work/runs/container-cap-perfmon/scenarios/cpu-main-matching-activations/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/c7f04727a7ed204159f910dd528af2d3ff28da68/elf": 25112,
+          "cpu/buildid-cache/work/runs/container-cap-perfmon/scenarios/cpu-main-matching-activations/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/c7f04727a7ed204159f910dd528af2d3ff28da68/probes": 0,
+          "cpu/perf-buildid-cache.stderr.txt": 202,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 74,
+          "cpu/perf.data": 26688452,
+          "cpu/samples.json": 345740,
+          "profile.json": 74282,
+          "run.diagnostics.json": 23615,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2189
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "correlation": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "activation/observations.jsonl": "d0e1d1d1269a1bd6724e1dc52f9d815de930f2ccb99eeb79ea9a6912a23030f9",
+          "cpu/perf.data": "627653864348cef85c6bb4d8200fb7bae6a77b248a160ff1ae49a164e3bf652d",
+          "run.mcap": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+        },
+        "run": "succeeded",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 3150,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 558,
+          "samples_with_caller": 3135,
+          "unavailable": {},
+          "weight_ns": 3153153150
+        },
+        "wall_ms": 6226
+      },
+      "participants_started": [
+        "child-114.tsv",
+        "child-115.tsv",
+        "child-116.tsv",
+        "child-117.tsv",
+        "fmu-111.tsv",
+        "native-110.tsv",
+        "process-113.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 3150, weight 3.153 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 2592 of 3150 samples; source lines unavailable (export_failed)\nmodules: 1 of 43 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 3150 samples: 774 in an Activation's execution context (runner thread), 1757 in a Process Step window (associated, not proven to be Step work), 6 lifecycle, 0 Replay, 613 unattributed\ntop self weight (share of all sample weight):\n   24.5%  silproof_process_spin (libsilproof_process.so)\n   24.4%  silproof_fmu_spin (EgoMotion.so)\n   16.2%  [unknown function] (libpython3.13.so.1.0)\n   12.3%  silproof_native_spin_odd (libsilproof_native.so)\n   12.2%  silproof_native_spin_even (libsilproof_native.so)\n    6.4%  silproof_child_spin (silproof_child)\n    1.4%  [unknown function] (libc.so.6)\n    0.6%  _PyEval_EvalFrameDefault (libpython3.13.so.1.0)\n    0.3%  __tls_get_addr (ld-linux-x86-64.so.2)\n    0.1%  [unknown function] (ld-linux-x86-64.so.2)\n    1.5%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 6226
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--modules-from",
+        "/work/workload/main/EgoMotion.fmu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "debug file missing: status not_found",
+          "detail": {
+            "path": null,
+            "status": "not_found"
+          },
+          "ok": true
+        },
+        {
+          "check": "static Native functions have no name",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Native samples stay in the module",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "other hot functions still named",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/cpu-main-debug-missing",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "cpu-main-debug-missing",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "cpu/buildid-cache/work/runs/container-cap-perfmon/scenarios/cpu-main-debug-missing/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/c7f04727a7ed204159f910dd528af2d3ff28da68/elf": 25112,
+          "cpu/buildid-cache/work/runs/container-cap-perfmon/scenarios/cpu-main-debug-missing/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/c7f04727a7ed204159f910dd528af2d3ff28da68/probes": 0,
+          "cpu/perf-buildid-cache.stderr.txt": 195,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 74,
+          "cpu/perf.data": 26527660,
+          "cpu/samples.json": 353844,
+          "profile.json": 67448,
+          "run.diagnostics.json": 23614,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2189
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "cpu/perf.data": "dfbf29543c80539559de4ec6861a1f7d099ae547c0800ba3cbbe991a9bd02d94",
+          "run.mcap": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+        },
+        "run": "succeeded",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 3131,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 1321,
+          "samples_with_caller": 3131,
+          "unavailable": {},
+          "weight_ns": 3134134131
+        },
+        "wall_ms": 6243
+      },
+      "participants_started": [
+        "child-141.tsv",
+        "child-142.tsv",
+        "child-143.tsv",
+        "child-144.tsv",
+        "fmu-138.tsv",
+        "native-137.tsv",
+        "process-140.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 3131, weight 3.134 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 1810 of 3131 samples; source lines unavailable (export_failed)\nmodules: 1 of 43 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   24.7%  silproof_process_spin (libsilproof_process.so)\n   24.6%  [unknown function] (libsilproof_native.so)\n   24.2%  silproof_fmu_spin (EgoMotion.so)\n   16.5%  [unknown function] (libpython3.13.so.1.0)\n    6.5%  silproof_child_spin (silproof_child)\n    1.0%  [unknown function] (libc.so.6)\n    0.6%  _PyEval_EvalFrameDefault (libpython3.13.so.1.0)\n    0.4%  __tls_get_addr (ld-linux-x86-64.so.2)\n    0.2%  __tls_get_addr@plt (libpython3.13.so.1.0)\n    0.2%  sil::sha256_file (sil-run-diagnostics)\n    1.2%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 6243
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--modules-from",
+        "/work/workload/main/EgoMotion.fmu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "debug file mismatched: status separate_mismatched",
+          "detail": {
+            "path": null,
+            "status": "separate_mismatched"
+          },
+          "ok": true
+        },
+        {
+          "check": "static Native functions have no name",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Native samples stay in the module",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "other hot functions still named",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/cpu-main-debug-mismatched",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "cpu-main-debug-mismatched",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "cpu/buildid-cache/work/runs/container-cap-perfmon/scenarios/cpu-main-debug-mismatched/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/c7f04727a7ed204159f910dd528af2d3ff28da68/elf": 25112,
+          "cpu/buildid-cache/work/runs/container-cap-perfmon/scenarios/cpu-main-debug-mismatched/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/c7f04727a7ed204159f910dd528af2d3ff28da68/probes": 0,
+          "cpu/perf-buildid-cache.stderr.txt": 198,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 160,
+          "cpu/perf.data": 26367284,
+          "cpu/samples.json": 340963,
+          "profile.json": 68754,
+          "run.diagnostics.json": 23601,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2189
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "cpu/perf.data": "726545e137529f7e18a680dc59f10d58502d76b9447d0b32ada74fa4fd231c36",
+          "run.mcap": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+        },
+        "run": "succeeded",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 3112,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 1294,
+          "samples_with_caller": 3112,
+          "unavailable": {},
+          "weight_ns": 3115115112
+        },
+        "wall_ms": 6199
+      },
+      "participants_started": [
+        "child-168.tsv",
+        "child-169.tsv",
+        "child-170.tsv",
+        "child-171.tsv",
+        "fmu-165.tsv",
+        "native-164.tsv",
+        "process-167.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 3112, weight 3.115 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 1818 of 3112 samples; source lines unavailable (export_failed)\nmodules: 1 of 43 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   24.8%  [unknown function] (libsilproof_native.so)\n   24.7%  silproof_process_spin (libsilproof_process.so)\n   24.5%  silproof_fmu_spin (EgoMotion.so)\n   15.5%  [unknown function] (libpython3.13.so.1.0)\n    6.5%  silproof_child_spin (silproof_child)\n    1.1%  [unknown function] (libc.so.6)\n    0.7%  _PyEval_EvalFrameDefault (libpython3.13.so.1.0)\n    0.4%  __tls_get_addr (ld-linux-x86-64.so.2)\n    0.3%  _PyType_LookupRef (libpython3.13.so.1.0)\n    0.2%  sil::sha256_file (sil-run-diagnostics)\n    1.5%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 6199
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/mixed.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--activations",
+        "--modules-from",
+        "/work/workload/main/EgoMotion.fmu",
+        "--modules-from",
+        "/work/workload/can/node.fmu",
+        "--modules-from",
+        "/work/workload/can/bus.fmu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "0fd230f0f4e974c2b9483291429e9ab390f75141a8327bcac65f6a1625aa904c"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "0fd230f0f4e974c2b9483291429e9ab390f75141a8327bcac65f6a1625aa904c"
+            }
+          ],
+          "ok": true
+        },
+        {
+          "check": "correlation complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "fmu: 100 completed Steps (10 ms Period)",
+          "detail": {
+            "activations": 100,
+            "completed": 100
+          },
+          "ok": true
+        },
+        {
+          "check": "group: 50 completed Steps (20 ms Period)",
+          "detail": {
+            "activations": 50,
+            "completed": 50
+          },
+          "ok": true
+        },
+        {
+          "check": "observer: 50 completed Steps (20 ms Period)",
+          "detail": {
+            "activations": 50,
+            "completed": 50
+          },
+          "ok": true
+        },
+        {
+          "check": "probe: 34 completed Steps (30 ms Period)",
+          "detail": {
+            "activations": 34,
+            "completed": 34
+          },
+          "ok": true
+        },
+        {
+          "check": "Replay Slots are separate intervals",
+          "detail": {
+            "activations": 0,
+            "phases": 5,
+            "process_steps": 234,
+            "replay": 100
+          },
+          "ok": true
+        },
+        {
+          "check": "FMU group has window-associated samples",
+          "detail": null,
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/cpu-mixed-activations",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "cpu-mixed-activations",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "activation/correlation.json": 134967,
+          "activation/observations.jsonl": 65576,
+          "cpu/buildid-cache/work/runs/container-cap-perfmon/scenarios/cpu-mixed-activations/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/c7f04727a7ed204159f910dd528af2d3ff28da68/elf": 25112,
+          "cpu/buildid-cache/work/runs/container-cap-perfmon/scenarios/cpu-mixed-activations/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/c7f04727a7ed204159f910dd528af2d3ff28da68/probes": 0,
+          "cpu/perf-buildid-cache.stderr.txt": 194,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 160,
+          "cpu/perf.data": 18155004,
+          "cpu/samples.json": 456809,
+          "profile.json": 81091,
+          "run.diagnostics.json": 33418,
+          "run.mcap": 59788,
+          "run.mcap.provenance.json": 2923
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "correlation": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "activation/observations.jsonl": "6c2fa7695450cf22c8844815d3fb09423a0ac1fe9dcaacdd937d62d607f55510",
+          "cpu/perf.data": "f4c94fa1b3cb5060a7fc7e34a85e639e2658ac0c496139a8b49e4b793167e769",
+          "run.mcap": "0fd230f0f4e974c2b9483291429e9ab390f75141a8327bcac65f6a1625aa904c"
+        },
+        "run": "succeeded",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 2134,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 1166,
+          "samples_with_caller": 2098,
+          "unavailable": {},
+          "weight_ns": 2136136134
+        },
+        "wall_ms": 5262
+      },
+      "participants_started": [
+        "fmu-193.tsv",
+        "probe-198.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+      "stdout_tail": "manifest_hash 59ab613636a96e8469ac01c30a0c321bac458e8e52d2503032f91afd9981a5b0\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 2134, weight 2.136 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 5 with samples\nsymbols: function names for 968 of 2134 samples; source lines unavailable (export_failed)\nmodules: 1 of 42 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 2134 samples: 3 in an Activation's execution context (runner thread), 947 in a Process Step window (associated, not proven to be Step work), 9 lifecycle, 0 Replay, 1175 unattributed\n  91 Activations have no sample: that is not evidence that they used no CPU time\ntop self weight (share of all sample weight):\n   50.9%  [unknown function] (libpython3.13.so.1.0)\n   35.7%  silproof_fmu_spin (EgoMotion.so)\n    3.0%  [unknown function] (libc.so.6)\n    2.4%  _PyEval_EvalFrameDefault (libpython3.13.so.1.0)\n    1.8%  __tls_get_addr (ld-linux-x86-64.so.2)\n    0.6%  PyErr_CheckSignals (libpython3.13.so.1.0)\n    0.4%  [unknown function] (ld-linux-x86-64.so.2)\n    0.4%  _PyArena_AddPyObject (libpython3.13.so.1.0)\n    0.4%  _PyLong_New (libpython3.13.so.1.0)\n    0.3%  _PyCode_ConstantKey (libpython3.13.so.1.0)\n    4.1%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 5262
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/failure.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run-diagnostics: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status run_failure",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 1,
+            "failure": {
+              "category": "participant",
+              "message": "participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose"
+            },
+            "signal": null,
+            "status": "run_failure",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": "participant",
+              "exit_code": 1,
+              "recording": "4999e1fea902eb10f90569f84a69585458222409f045f93e249c9f13f8874fe0"
+            },
+            {
+              "category": "participant",
+              "exit_code": 1,
+              "recording": "4999e1fea902eb10f90569f84a69585458222409f045f93e249c9f13f8874fe0"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/cpu-failure",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "cpu-failure",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "cpu/perf-buildid-cache.stderr.txt": 0,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 160,
+          "cpu/perf.data": 11909988,
+          "cpu/samples.json": 420866,
+          "profile.json": 74889,
+          "run.diagnostics.json": 24520,
+          "run.mcap": 9906,
+          "run.mcap.failure.json": 262,
+          "run.mcap.provenance.json": 2944
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "cpu/perf.data": "7fbec122841374cdc45920e892f5c2bf44c13237f034688ce3aea051dd9b8841",
+          "run.mcap": "4999e1fea902eb10f90569f84a69585458222409f045f93e249c9f13f8874fe0"
+        },
+        "run": "run_failure",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 1394,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 1240,
+          "samples_with_caller": 1212,
+          "unavailable": {},
+          "weight_ns": 1395395394
+        },
+        "wall_ms": 4087
+      },
+      "participants_started": [
+        "fmu-220.tsv",
+        "probe-225.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py",
+            "--fail-at-step",
+            "7"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run-diagnostics: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
+      "stdout_tail": "profile: prof/profile.json\nrun: run_failure, exit code 1\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 1394, weight 1.395 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 5 with samples\nsymbols: function names for 154 of 1394 samples; source lines unavailable (export_failed)\nmodules: 5 of 42 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   72.1%  [unknown function] (libpython3.13.so.1.0)\n   11.5%  [unknown function] (EgoMotion.so)\n    4.7%  [unknown function] (libc.so.6)\n    3.4%  _PyEval_EvalFrameDefault (libpython3.13.so.1.0)\n    1.9%  __tls_get_addr (ld-linux-x86-64.so.2)\n    0.6%  _PyArena_AddPyObject (libpython3.13.so.1.0)\n    0.6%  PyDict_GetItemRef (libpython3.13.so.1.0)\n    0.4%  sil::sha256_file (sil-run-diagnostics)\n    0.3%  [unknown function] (libcrypto.so.3)\n    0.3%  PyErr_CheckSignals (libpython3.13.so.1.0)\n    4.1%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 4087
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/deadline.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--participant-timeout-ms",
+        "1000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "in main\n    run(Probe(parser.parse_args()))\n    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 302, in run\n    send({\"op\": \"fail\", \"reason\": _reason(e)})\n    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 238, in send\n    stdout.write(json.dumps(msg) + \"\\n\")\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status run_failure",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 1,
+            "failure": {
+              "category": "timeout",
+              "message": "participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns"
+            },
+            "signal": null,
+            "status": "run_failure",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": "timeout",
+              "exit_code": 1,
+              "recording": "8303a73e7b5e03c749327f538602e6532592990ff6fbb71561a0a11681ea2ecb"
+            },
+            {
+              "category": "timeout",
+              "exit_code": 1,
+              "recording": "8303a73e7b5e03c749327f538602e6532592990ff6fbb71561a0a11681ea2ecb"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/cpu-deadline",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "cpu-deadline",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "cpu/perf-buildid-cache.stderr.txt": 0,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 160,
+          "cpu/perf.data": 11031916,
+          "cpu/samples.json": 418341,
+          "profile.json": 75488,
+          "run.diagnostics.json": 18550,
+          "run.mcap": 8110,
+          "run.mcap.failure.json": 282,
+          "run.mcap.provenance.json": 2965
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "cpu/perf.data": "f2cd4d16e521e4c6b5b99d94fa61791c074792d73b73a052afd196bc4717d835",
+          "run.mcap": "8303a73e7b5e03c749327f538602e6532592990ff6fbb71561a0a11681ea2ecb"
+        },
+        "run": "run_failure",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 1290,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 1130,
+          "samples_with_caller": 1195,
+          "unavailable": {},
+          "weight_ns": 1291291290
+        },
+        "wall_ms": 7088
+      },
+      "participants_started": [
+        "fmu-246.tsv",
+        "probe-251.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py",
+            "--sleep-at-step",
+            "3",
+            "--sleep-ms",
+            "3000"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nTraceback (most recent call last):\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 297, in run\n    send({\n    ~~~~^^\n        \"op\": \"step_done\",\n        ^^^^^^^^^^^^^^^^^^\n        \"out\": codec.encode_outputs(outputs),\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    })\n    ^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 238, in send\n    stdout.write(json.dumps(msg) + \"\\n\")\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\nBrokenPipeError: [Errno 32] Broken pipe\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/src/proofs/profiling-qualification/probe_participant.py\", line 125, in <module>\n    main()\n    ~~~~^^\n  File \"/src/proofs/profiling-qualification/probe_participant.py\", line 121, in main\n    run(Probe(parser.parse_args()))\n    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 302, in run\n    send({\"op\": \"fail\", \"reason\": _reason(e)})\n    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 238, in send\n    stdout.write(json.dumps(msg) + \"\\n\")\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: participant 'probe': timeout waiting for step_done response during Step at virtual time 90000000 ns\n",
+      "stdout_tail": "profile: prof/profile.json\nrun: run_failure, exit code 1\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 1290, weight 1.291 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 5 with samples\nsymbols: function names for 160 of 1290 samples; source lines unavailable (export_failed)\nmodules: 5 of 42 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   76.4%  [unknown function] (libpython3.13.so.1.0)\n    5.3%  [unknown function] (EgoMotion.so)\n    5.0%  [unknown function] (libc.so.6)\n    2.8%  _PyEval_EvalFrameDefault (libpython3.13.so.1.0)\n    1.2%  __tls_get_addr (ld-linux-x86-64.so.2)\n    1.1%  _PyArena_AddPyObject (libpython3.13.so.1.0)\n    0.7%  [unknown function] (ld-linux-x86-64.so.2)\n    0.7%  PyUnicode_New (libpython3.13.so.1.0)\n    0.5%  sil::sha256_file (sil-run-diagnostics)\n    0.5%  _PyType_LookupRef (libpython3.13.so.1.0)\n    5.8%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 7088
+    },
+    {
+      "action": {
+        "probe_started": true,
+        "signal": "SIGINT"
+      },
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/long.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--activations",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "0000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nsil-run-diagnostics: run interrupted by SIGINT\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status interrupted",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 1,
+            "failure": {
+              "category": "interrupted",
+              "message": "run interrupted by SIGINT"
+            },
+            "signal": null,
+            "status": "interrupted",
+            "supervisor_signal": 2
+          },
+          "ok": true
+        },
+        {
+          "check": "capture interrupted",
+          "detail": [
+            "interrupted"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "raw perf.data kept",
+          "detail": null,
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/cpu-interrupted",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "cpu-interrupted",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "activation/correlation.json": 124700,
+          "activation/observations.jsonl": 59387,
+          "cpu/perf-buildid-cache.stderr.txt": 0,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 74,
+          "cpu/perf.data": 16973932,
+          "cpu/samples.json": 442403,
+          "profile.json": 80514,
+          "run.diagnostics.json": 33409,
+          "run.mcap": 49863,
+          "run.mcap.failure.json": 208,
+          "run.mcap.provenance.json": 2952
+        },
+        "capture": [
+          "interrupted",
+          [
+            "interrupted"
+          ]
+        ],
+        "correlation": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "activation/observations.jsonl": "03e60661ee8b7595fce16cbc5a797ffed6036b9bea9750fe5a69f4111a467302",
+          "cpu/perf.data": "4f7d6e0be17ed8528105de866b86d4c546f4893d85e0c4151b834f54b721d7cf",
+          "run.mcap": "74a49bad2fae4904befc4d6145fbfeb1c92829c6d9fc81005b690787f8e50467"
+        },
+        "run": "interrupted",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 1994,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 1803,
+          "samples_with_caller": 1299,
+          "unavailable": {},
+          "weight_ns": 1995995994
+        },
+        "wall_ms": 6144
+      },
+      "participants_started": [
+        "fmu-272.tsv",
+        "probe-277.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py",
+            "--sleep-every-step-ms",
+            "40"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nsil-run-diagnostics: run interrupted by SIGINT\n",
+      "stdout_tail": "profile: prof/profile.json\nrun: interrupted, exit code 1\ncapture: cpu, interrupted (interrupted)\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 1994, weight 1.996 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 8 observed, 5 with samples\nsymbols: function names for 191 of 1994 samples; source lines unavailable (export_failed)\nmodules: 5 of 42 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: complete\n  of 1994 samples: 1 in an Activation's execution context (runner thread), 850 in a Process Step window (associated, not proven to be Step work), 7 lifecycle, 0 Replay, 1136 unattributed\n  83 Activations have no sample: that is not evidence that they used no CPU time\ntop self weight (share of all sample weight):\n   53.6%  [unknown function] (libpython3.13.so.1.0)\n   34.1%  [unknown function] (EgoMotion.so)\n    2.9%  _PyEval_EvalFrameDefault (libpython3.13.so.1.0)\n    2.5%  [unknown function] (libc.so.6)\n    1.3%  __tls_get_addr (ld-linux-x86-64.so.2)\n    0.8%  PyErr_CheckSignals (libpython3.13.so.1.0)\n    0.4%  _PyLong_New (libpython3.13.so.1.0)\n    0.3%  PyUnicode_New (libpython3.13.so.1.0)\n    0.3%  _PyArena_AddPyObject (libpython3.13.so.1.0)\n    0.3%  [unknown function] (ld-linux-x86-64.so.2)\n    3.8%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 6144
+    },
+    {
+      "action": {
+        "found": 1,
+        "killed": "perf record",
+        "probe_started": true
+      },
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/long.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "00000000c00000001000000\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500480000 ns 200000000c00000001000000\nobserver: 1520000000 ns event 1500480000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 200000000c00000001000000\nsil run: stopped copying the Run's stderr: a process that outlived the runner still holds it open\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture failed",
+          "detail": [
+            "backend_failed",
+            "export_failed"
+          ],
+          "ok": true
+        },
+        {
+          "check": "capture reasons include ['backend_failed']",
+          "detail": [
+            "backend_failed",
+            "export_failed"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/cpu-collector-killed",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "cpu-collector-killed",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "cpu/perf-buildid-cache.stderr.txt": 0,
+          "cpu/perf-script.stderr.txt": 196,
+          "cpu/perf-srcline.stderr.txt": 196,
+          "cpu/perf.data": 17017128,
+          "profile.json": 5051,
+          "run.diagnostics.json": 42972,
+          "run.mcap": 158648,
+          "run.mcap.provenance.json": 2952
+        },
+        "capture": [
+          "failed",
+          [
+            "backend_failed",
+            "export_failed"
+          ]
+        ],
+        "raw_sha256": {
+          "cpu/perf.data": "351f6ae64449dd9c9a4338fd4ab365abcf07b362892937dbc3a3f3b364e0c7e1",
+          "run.mcap": "49f873ace88bce77f6b435f348b1e500344659744dcd98dbcfd232ce90ae1cef"
+        },
+        "run": "succeeded",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": null,
+          "samples": 0,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 0,
+          "samples_with_caller": 0,
+          "unavailable": {
+            "lost_samples": "export_failed"
+          },
+          "weight_ns": 0
+        },
+        "wall_ms": 9841
+      },
+      "participants_started": [
+        "fmu-297.tsv",
+        "probe-302.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py",
+            "--sleep-every-step-ms",
+            "40"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\nobserver: 1200000000 ns event 1200000000 ns 1000000014000000010000000000040001020304\nobserver: 1200000000 ns event 1200000000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200480000 ns 200000000c00000001000000\nobserver: 1220000000 ns event 1200480000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200960000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200960000 ns 200000000c00000001000000\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500480000 ns 200000000c00000001000000\nobserver: 1520000000 ns event 1500480000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 200000000c00000001000000\nsil run: stopped copying the Run's stderr: a process that outlived the runner still holds it open\n",
+      "stdout_tail": "manifest_hash 1196912b5087cd679dc8d22f33520f5696830bedaae445480b1748247da4a5f3\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, failed (backend_failed, export_failed)\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 0, weight 0 ns of sampled on-CPU time (an estimate, not a duration); lost unknown\nno sample: this is not evidence that no CPU time was used\nprocesses: 0 observed, 0 with samples\nsymbols: function names for 0 of 0 samples; source lines unavailable (export_failed)\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 9841
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--max-capture-bytes",
+        "2000000",
+        "--modules-from",
+        "/work/workload/main/EgoMotion.fmu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture partial",
+          "detail": [
+            "capture_limit_reached"
+          ],
+          "ok": true
+        },
+        {
+          "check": "capture reasons include ['capture_limit_reached']",
+          "detail": [
+            "capture_limit_reached"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/cpu-capture-limit",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "cpu-capture-limit",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "cpu/perf-buildid-cache.stderr.txt": 0,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 160,
+          "cpu/perf.data": 2896348,
+          "cpu/samples.json": 151232,
+          "profile.json": 55834,
+          "run.diagnostics.json": 23595,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2189
+        },
+        "capture": [
+          "partial",
+          [
+            "capture_limit_reached"
+          ]
+        ],
+        "raw_sha256": {
+          "cpu/perf.data": "76e435dbe4b01d4689fba03331d0fb9ed85b464d8f168952d61222e5482afd9b",
+          "run.mcap": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+        },
+        "run": "succeeded",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 336,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 284,
+          "samples_with_caller": 335,
+          "unavailable": {},
+          "weight_ns": 336336336
+        },
+        "wall_ms": 5626
+      },
+      "participants_started": [
+        "child-324.tsv",
+        "child-325.tsv",
+        "child-326.tsv",
+        "child-327.tsv",
+        "fmu-321.tsv",
+        "native-320.tsv",
+        "process-323.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, partial (capture_limit_reached)\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 336, weight 336.336 ms of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 5 observed, 3 with samples\nsymbols: function names for 52 of 336 samples; source lines unavailable (export_failed)\nmodules: 1 of 41 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\ntop self weight (share of all sample weight):\n   79.5%  [unknown function] (libpython3.13.so.1.0)\n    3.9%  [unknown function] (libc.so.6)\n    2.7%  _PyEval_EvalFrameDefault (libpython3.13.so.1.0)\n    1.5%  __tls_get_addr (ld-linux-x86-64.so.2)\n    1.5%  sil::sha256_file (sil-run-diagnostics)\n    1.2%  _PyArena_AddPyObject (libpython3.13.so.1.0)\n    0.9%  [unknown function] (ld-linux-x86-64.so.2)\n    0.9%  PyLong_AsLongAndOverflow (libpython3.13.so.1.0)\n    0.6%  _PyCode_ConstantKey (libpython3.13.so.1.0)\n    0.6%  __tls_get_addr@plt (libpython3.13.so.1.0)\n    6.8%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 5626
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "cpu",
+        "--activations",
+        "--max-activation-bytes",
+        "4096",
+        "--modules-from",
+        "/work/workload/main/EgoMotion.fmu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "correlation partial, stream truncated",
+          "detail": [
+            "partial",
+            [
+              "observations_truncated"
+            ]
+          ],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/cpu-activation-limit",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "cpu-activation-limit",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "activation/correlation.json": 133129,
+          "activation/observations.jsonl": 4010,
+          "cpu/buildid-cache/work/runs/container-cap-perfmon/scenarios/cpu-activation-limit/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/c7f04727a7ed204159f910dd528af2d3ff28da68/elf": 25112,
+          "cpu/buildid-cache/work/runs/container-cap-perfmon/scenarios/cpu-activation-limit/prof/cpu/.modules-from/0/binaries/x86_64-linux/EgoMotion.so/c7f04727a7ed204159f910dd528af2d3ff28da68/probes": 0,
+          "cpu/perf-buildid-cache.stderr.txt": 193,
+          "cpu/perf-script.stderr.txt": 0,
+          "cpu/perf-srcline.stderr.txt": 74,
+          "cpu/perf.data": 26561820,
+          "cpu/samples.json": 340418,
+          "profile.json": 72808,
+          "run.diagnostics.json": 23613,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2189
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "correlation": [
+          "partial",
+          [
+            "observations_truncated"
+          ]
+        ],
+        "raw_sha256": {
+          "activation/observations.jsonl": "7b5567861c48a666afe0af97bc811476493f7f6942d5f46539286addfbc12047",
+          "cpu/perf.data": "0a2d71a4ce4717681a089b115110413430e04b6d633b25e48e43a6b896327bfe",
+          "run.mcap": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+        },
+        "run": "succeeded",
+        "totals": {
+          "lost_records": 0,
+          "lost_samples": 0,
+          "samples": 3135,
+          "samples_unknown_module": 0,
+          "samples_unknown_symbol": 541,
+          "samples_with_caller": 3116,
+          "unavailable": {},
+          "weight_ns": 3138138135
+        },
+        "wall_ms": 6249
+      },
+      "participants_started": [
+        "child-351.tsv",
+        "child-352.tsv",
+        "child-353.tsv",
+        "child-354.tsv",
+        "fmu-348.tsv",
+        "native-347.tsv",
+        "process-350.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: cpu, complete\nsampling: perf cpu-clock:u at 999 Hz, DWARF call graph (8192 bytes), the runner and all its descendants\nsamples: 3135, weight 3.138 s of sampled on-CPU time (an estimate, not a duration); lost 0\nprocesses: 9 observed, 7 with samples\nsymbols: function names for 2594 of 3135 samples; source lines unavailable (export_failed)\nmodules: 1 of 43 have no file with their build ID, so their samples have no function name; name a copy with --modules-from (for example the FMU archive)\nactivations: partial (observations_truncated)\n  of 3135 samples: 47 in an Activation's execution context (runner thread), 137 in a Process Step window (associated, not proven to be Step work), 5 lifecycle, 0 Replay, 2946 unattributed\ntop self weight (share of all sample weight):\n   24.5%  silproof_process_spin (libsilproof_process.so)\n   24.3%  silproof_fmu_spin (EgoMotion.so)\n   15.8%  [unknown function] (libpython3.13.so.1.0)\n   12.4%  silproof_native_spin_odd (libsilproof_native.so)\n   12.2%  silproof_native_spin_even (libsilproof_native.so)\n    6.5%  silproof_child_spin (silproof_child)\n    1.3%  [unknown function] (libc.so.6)\n    0.9%  _PyEval_EvalFrameDefault (libpython3.13.so.1.0)\n    0.4%  __tls_get_addr (ld-linux-x86-64.so.2)\n    0.2%  _PyArena_AddPyObject (libpython3.13.so.1.0)\n    1.5%  all other functions\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 6249
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--runner",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            }
+          ],
+          "ok": true
+        },
+        {
+          "check": "Activation correlation unavailable",
+          "detail": {
+            "reason": "no_validated_clock_mapping",
+            "status": "unavailable"
+          },
+          "ok": true
+        },
+        {
+          "check": "Manifest bytes unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "profile identity is the Run's Manifest hash",
+          "detail": [
+            "2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432",
+            [
+              "2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432"
+            ]
+          ],
+          "ok": true
+        },
+        {
+          "check": "silproof_native_alloc_site: exact calls and bytes",
+          "detail": [
+            1600,
+            1638400
+          ],
+          "ok": true
+        },
+        {
+          "check": "silproof_native_retain_site: exact calls and bytes",
+          "detail": [
+            1,
+            65536
+          ],
+          "ok": true
+        },
+        {
+          "check": "no Process participant allocation in the runner",
+          "detail": null,
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/heap-runner-debug-matching",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "heap-runner-debug-matching",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "heap/allocations.json": 175491,
+          "heap/heaptrack.data": 437835,
+          "heap/interpret.stderr.txt": 102,
+          "heap/launch-adapter.sh": 459,
+          "profile.json": 11022,
+          "run.diagnostics.json": 23598,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2189
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "heap/heaptrack.data": "ae1de991efd60b0ee8e5b9c6917c7ef9dd68fcebdd8cdb50fe10936a3b6b763b",
+          "run.mcap": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+        },
+        "run": "succeeded",
+        "totals": {
+          "allocated_bytes": 3108235,
+          "allocations": 22869,
+          "frees": 22866,
+          "outstanding_allocations": 3,
+          "outstanding_bytes": 71936,
+          "peak_tracked_bytes": 256654,
+          "temporary_allocations": 2312
+        },
+        "wall_ms": 3628
+      },
+      "participants_started": [
+        "child-382.tsv",
+        "child-383.tsv",
+        "child-384.tsv",
+        "child-385.tsv",
+        "fmu-379.tsv",
+        "native-377.tsv",
+        "process-381.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: heap, complete\nscope: the runner process (every Native participant), heaptrack 1.4.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 22869 calls, 2.964 MiB allocated; 2312 temporary\nat capture end: 3 outstanding, 70.250 KiB (not a leak verdict); peak tracked heap 250.639 KiB (not RSS)\nsymbols: 21268 of 22869 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n   1.562 MiB      1600 calls  silproof_native_alloc_site (libsilproof_native.so)\n   1.305 MiB     21223 calls  [unknown function] (libstdc++.so.6)\n  64.000 KiB         1 calls  silproof_native_retain_site (libsilproof_native.so)\n  31.211 KiB        38 calls  [unknown function] (libc.so.6)\n   3.713 KiB         7 calls  [unknown function] (ld-linux-x86-64.so.2)\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3628
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--runner",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            }
+          ],
+          "ok": true
+        },
+        {
+          "check": "Activation correlation unavailable",
+          "detail": {
+            "reason": "no_validated_clock_mapping",
+            "status": "unavailable"
+          },
+          "ok": true
+        },
+        {
+          "check": "stripped static sites have no name",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "allocation counts kept",
+          "detail": null,
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/heap-runner-debug-mismatched",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "heap-runner-debug-mismatched",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "heap/allocations.json": 174873,
+          "heap/heaptrack.data": 437668,
+          "heap/interpret.stderr.txt": 102,
+          "heap/launch-adapter.sh": 461,
+          "profile.json": 9337,
+          "run.diagnostics.json": 23609,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2189
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "heap/heaptrack.data": "a18d93cb23f1808c3ea74d88c4c5f5e4c2d4cc7f46387b3a149b11ea22623e55",
+          "run.mcap": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+        },
+        "run": "succeeded",
+        "totals": {
+          "allocated_bytes": 3108365,
+          "allocations": 22869,
+          "frees": 22866,
+          "outstanding_allocations": 3,
+          "outstanding_bytes": 71936,
+          "peak_tracked_bytes": 256662,
+          "temporary_allocations": 2312
+        },
+        "wall_ms": 3655
+      },
+      "participants_started": [
+        "child-403.tsv",
+        "child-404.tsv",
+        "child-405.tsv",
+        "child-406.tsv",
+        "fmu-400.tsv",
+        "native-398.tsv",
+        "process-402.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: heap, complete\nscope: the runner process (every Native participant), heaptrack 1.4.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 22869 calls, 2.964 MiB allocated; 2312 temporary\nat capture end: 3 outstanding, 70.250 KiB (not a leak verdict); peak tracked heap 250.646 KiB (not RSS)\nsymbols: 22869 of 22869 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n   1.625 MiB      1601 calls  [unknown function] (libsilproof_native.so)\n   1.305 MiB     21223 calls  [unknown function] (libstdc++.so.6)\n  31.219 KiB        38 calls  [unknown function] (libc.so.6)\n   3.713 KiB         7 calls  [unknown function] (ld-linux-x86-64.so.2)\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3655
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--runner",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            }
+          ],
+          "ok": true
+        },
+        {
+          "check": "Activation correlation unavailable",
+          "detail": {
+            "reason": "no_validated_clock_mapping",
+            "status": "unavailable"
+          },
+          "ok": true
+        },
+        {
+          "check": "stripped static sites have no name",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "allocation counts kept",
+          "detail": null,
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/heap-runner-debug-missing",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "heap-runner-debug-missing",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "heap/allocations.json": 174869,
+          "heap/heaptrack.data": 437238,
+          "heap/interpret.stderr.txt": 102,
+          "heap/launch-adapter.sh": 458,
+          "profile.json": 9328,
+          "run.diagnostics.json": 23611,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2189
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "heap/heaptrack.data": "1a0a0e7f87c18fd28fe219c55eb4cba9b9c063a5204e0133d660cb0952cca27d",
+          "run.mcap": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+        },
+        "run": "succeeded",
+        "totals": {
+          "allocated_bytes": 3108170,
+          "allocations": 22869,
+          "frees": 22866,
+          "outstanding_allocations": 3,
+          "outstanding_bytes": 71936,
+          "peak_tracked_bytes": 256650,
+          "temporary_allocations": 2312
+        },
+        "wall_ms": 3636
+      },
+      "participants_started": [
+        "child-424.tsv",
+        "child-425.tsv",
+        "child-426.tsv",
+        "child-427.tsv",
+        "fmu-421.tsv",
+        "native-419.tsv",
+        "process-423.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: heap, complete\nscope: the runner process (every Native participant), heaptrack 1.4.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 22869 calls, 2.964 MiB allocated; 2312 temporary\nat capture end: 3 outstanding, 70.250 KiB (not a leak verdict); peak tracked heap 250.635 KiB (not RSS)\nsymbols: 22869 of 22869 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n   1.625 MiB      1601 calls  [unknown function] (libsilproof_native.so)\n   1.305 MiB     21223 calls  [unknown function] (libstdc++.so.6)\n  31.207 KiB        38 calls  [unknown function] (libc.so.6)\n   3.713 KiB         7 calls  [unknown function] (ld-linux-x86-64.so.2)\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3636
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--participant",
+        "fmu",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "FMU site: exact calls and bytes",
+          "detail": [
+            400,
+            1638400
+          ],
+          "ok": true
+        },
+        {
+          "check": "no Native allocation in the FMU scope",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/heap-participant-fmu",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "heap-participant-fmu",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "heap/allocations.json": 6044071,
+          "heap/heaptrack.data": 4305948,
+          "heap/interpret.stderr.txt": 105,
+          "heap/launch-adapter.sh": 453,
+          "profile.json": 23682,
+          "run.diagnostics.json": 23616,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2189
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "heap/heaptrack.data": "31fdccbbd9e113cd42d65ffb753be0f80388448c1f5493eb57d8dcacbda398c0",
+          "run.mcap": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+        },
+        "run": "succeeded",
+        "totals": {
+          "allocated_bytes": 266358051,
+          "allocations": 84036,
+          "frees": 83882,
+          "outstanding_allocations": 154,
+          "outstanding_bytes": 443450,
+          "peak_tracked_bytes": 7442803,
+          "temporary_allocations": 19498
+        },
+        "wall_ms": 5198
+      },
+      "participants_started": [
+        "child-445.tsv",
+        "child-446.tsv",
+        "child-447.tsv",
+        "child-448.tsv",
+        "fmu-441.tsv",
+        "native-440.tsv",
+        "process-444.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: heap, complete\nscope: Process participant 'fmu', heaptrack 1.4.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 84036 calls, 254.019 MiB allocated; 19498 temporary\nat capture end: 154 outstanding, 433.057 KiB (not a leak verdict); peak tracked heap 7.098 MiB (not RSS)\nsymbols: 83636 of 84036 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n  251.364 MiB     78428 calls  [unknown function] (libpython3.13.so.1.0)\n   1.562 MiB       400 calls  silproof_fmu_alloc_site (EgoMotion.so)\n  727.065 KiB        69 calls  [unknown function] (libc.so.6)\n  195.978 KiB      4977 calls  [unknown function] (libcrypto.so.3)\n  77.984 KiB         4 calls  [unknown function] (libz.so.1)\n  71.000 KiB         1 calls  [unknown function] (libstdc++.so.6)\n  46.771 KiB       156 calls  [unknown function] (ld-linux-x86-64.so.2)\n        56 B         1 calls  [unknown function] (libffi.so.8)\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 5198
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/mixed.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--participant",
+        "group",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "0fd230f0f4e974c2b9483291429e9ab390f75141a8327bcac65f6a1625aa904c"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "0fd230f0f4e974c2b9483291429e9ab390f75141a8327bcac65f6a1625aa904c"
+            }
+          ],
+          "ok": true
+        },
+        {
+          "check": "one scope: the importer of all three FMU instances",
+          "detail": "/opt/sil/python/bin/python -m sil.fmi --instance node1 /work/workload/can/node.fmu --instance node2 /work/workload/can/node.fmu --instance bus /work/workload/can/bus.fmu --bus-profile application/org.fmi-standard.fmi-ls-bus.can --connect node1.CanChannel=bus.Node1 --connect node2.CanChannel=bus.Node2 --bind can.node1.Tx:data=node1.CanChannel.Tx_Data --bind can.node2.Tx:data=node2.CanChannel.Tx_Data --bind can.bus.Node1:data=bus.Node1.Tx_Data --bind can.bus.Node2:data=bus.Node2.Tx_Data --start bus.BusErrorProbability=0.0",
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/heap-mixed-group",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "heap-mixed-group",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "heap/allocations.json": 6050532,
+          "heap/heaptrack.data": 4310728,
+          "heap/interpret.stderr.txt": 105,
+          "heap/launch-adapter.sh": 449,
+          "profile.json": 21726,
+          "run.diagnostics.json": 33410,
+          "run.mcap": 59788,
+          "run.mcap.provenance.json": 2923
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "modules": [
+          "_blake2.cpython-313-x86_64-linux-gnu.so",
+          "_bz2.cpython-313-x86_64-linux-gnu.so",
+          "_ctypes.cpython-313-x86_64-linux-gnu.so",
+          "_decimal.cpython-313-x86_64-linux-gnu.so",
+          "_elementtree.cpython-313-x86_64-linux-gnu.so",
+          "_hashlib.cpython-313-x86_64-linux-gnu.so",
+          "_json.cpython-313-x86_64-linux-gnu.so",
+          "_lzma.cpython-313-x86_64-linux-gnu.so",
+          "_random.cpython-313-x86_64-linux-gnu.so",
+          "_struct.cpython-313-x86_64-linux-gnu.so",
+          "binascii.cpython-313-x86_64-linux-gnu.so",
+          "fcntl.cpython-313-x86_64-linux-gnu.so",
+          "grp.cpython-313-x86_64-linux-gnu.so",
+          "ld-linux-x86-64.so.2",
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libffi.so.8",
+          "libheaptrack_preload.so",
+          "libpython3.13.so.1.0",
+          "libstdc++.so.6",
+          "mmap.cpython-313-x86_64-linux-gnu.so",
+          "pyexpat.cpython-313-x86_64-linux-gnu.so",
+          "python3.13",
+          "select.cpython-313-x86_64-linux-gnu.so",
+          "zlib.cpython-313-x86_64-linux-gnu.so"
+        ],
+        "raw_sha256": {
+          "heap/heaptrack.data": "6ac86a23177751cf2a4e63e6550fedeec457ac9cce2ae485237ec4a6c7b230e3",
+          "run.mcap": "0fd230f0f4e974c2b9483291429e9ab390f75141a8327bcac65f6a1625aa904c"
+        },
+        "run": "succeeded",
+        "totals": {
+          "allocated_bytes": 266599385,
+          "allocations": 84211,
+          "frees": 84047,
+          "outstanding_allocations": 164,
+          "outstanding_bytes": 447258,
+          "peak_tracked_bytes": 7448827,
+          "temporary_allocations": 19129
+        },
+        "wall_ms": 4266
+      },
+      "participants_started": [
+        "fmu-462.tsv",
+        "probe-468.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+      "stdout_tail": "manifest_hash 59ab613636a96e8469ac01c30a0c321bac458e8e52d2503032f91afd9981a5b0\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: heap, complete\nscope: Process participant 'group', heaptrack 1.4.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 84211 calls, 254.249 MiB allocated; 19129 temporary\nat capture end: 164 outstanding, 436.775 KiB (not a leak verdict); peak tracked heap 7.104 MiB (not RSS)\nsymbols: 84211 of 84211 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n  252.711 MiB     78977 calls  [unknown function] (libpython3.13.so.1.0)\n   1.211 MiB        85 calls  [unknown function] (libc.so.6)\n  195.978 KiB      4977 calls  [unknown function] (libcrypto.so.3)\n  71.000 KiB         1 calls  [unknown function] (libstdc++.so.6)\n  50.506 KiB       168 calls  [unknown function] (ld-linux-x86-64.so.2)\n  17.367 KiB         3 calls  [unknown function] (libffi.so.8)\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 4266
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/mixed.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--participant",
+        "probe",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 0",
+          "detail": "000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "0fd230f0f4e974c2b9483291429e9ab390f75141a8327bcac65f6a1625aa904c"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "0fd230f0f4e974c2b9483291429e9ab390f75141a8327bcac65f6a1625aa904c"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/heap-mixed-probe",
+      "exit_code": 0,
+      "leftover_processes": [],
+      "name": "heap-mixed-probe",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "heap/allocations.json": 5043758,
+          "heap/heaptrack.data": 3653059,
+          "heap/interpret.stderr.txt": 105,
+          "heap/launch-adapter.sh": 449,
+          "profile.json": 16706,
+          "run.diagnostics.json": 33409,
+          "run.mcap": 59788,
+          "run.mcap.provenance.json": 2923
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "heap/heaptrack.data": "a2c3167d9e251396e9dc313ce4d62219cb89e6be873b6b5b5d7e65635869afb6",
+          "run.mcap": "0fd230f0f4e974c2b9483291429e9ab390f75141a8327bcac65f6a1625aa904c"
+        },
+        "run": "succeeded",
+        "totals": {
+          "allocated_bytes": 225403820,
+          "allocations": 70330,
+          "frees": 70222,
+          "outstanding_allocations": 108,
+          "outstanding_bytes": 428323,
+          "peak_tracked_bytes": 7772952,
+          "temporary_allocations": 15753
+        },
+        "wall_ms": 3993
+      },
+      "participants_started": [
+        "fmu-482.tsv",
+        "probe-487.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\n",
+      "stdout_tail": "manifest_hash 59ab613636a96e8469ac01c30a0c321bac458e8e52d2503032f91afd9981a5b0\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: heap, complete\nscope: Process participant 'probe', heaptrack 1.4.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 70330 calls, 214.962 MiB allocated; 15753 temporary\nat capture end: 108 outstanding, 418.284 KiB (not a leak verdict); peak tracked heap 7.413 MiB (not RSS)\nsymbols: 70330 of 70330 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n  214.174 MiB     65129 calls  [unknown function] (libpython3.13.so.1.0)\n  502.501 KiB        55 calls  [unknown function] (libc.so.6)\n  201.570 KiB      5044 calls  [unknown function] (libcrypto.so.3)\n  71.000 KiB         1 calls  [unknown function] (libstdc++.so.6)\n  31.874 KiB       101 calls  [unknown function] (ld-linux-x86-64.so.2)\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3993
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/failure.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--runner",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run-diagnostics: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status run_failure",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 1,
+            "failure": {
+              "category": "participant",
+              "message": "participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose"
+            },
+            "signal": null,
+            "status": "run_failure",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture complete",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": "participant",
+              "exit_code": 1,
+              "recording": "4999e1fea902eb10f90569f84a69585458222409f045f93e249c9f13f8874fe0"
+            },
+            {
+              "category": "participant",
+              "exit_code": 1,
+              "recording": "4999e1fea902eb10f90569f84a69585458222409f045f93e249c9f13f8874fe0"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/heap-failure",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "heap-failure",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "heap/allocations.json": 201829,
+          "heap/heaptrack.data": 318298,
+          "heap/interpret.stderr.txt": 101,
+          "heap/launch-adapter.sh": 445,
+          "profile.json": 7619,
+          "run.diagnostics.json": 24547,
+          "run.mcap": 9906,
+          "run.mcap.failure.json": 262,
+          "run.mcap.provenance.json": 2944
+        },
+        "capture": [
+          "complete",
+          []
+        ],
+        "raw_sha256": {
+          "heap/heaptrack.data": "5f1412ded21740685844f731f61ba56000938a5e239d7bae4abd996e6bc76a91",
+          "run.mcap": "4999e1fea902eb10f90569f84a69585458222409f045f93e249c9f13f8874fe0"
+        },
+        "run": "run_failure",
+        "totals": {
+          "allocated_bytes": 1151399,
+          "allocations": 10819,
+          "frees": 10819,
+          "outstanding_allocations": 0,
+          "outstanding_bytes": 0,
+          "peak_tracked_bytes": 206973,
+          "temporary_allocations": 112
+        },
+        "wall_ms": 1980
+      },
+      "participants_started": [
+        "fmu-503.tsv",
+        "probe-508.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py",
+            "--fail-at-step",
+            "7"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nsil-run-diagnostics: participant 'probe' failed: RuntimeError: probe fails at Step 7 on purpose\n",
+      "stdout_tail": "profile: prof/profile.json\nrun: run_failure, exit code 1\ncapture: heap, complete\nscope: the runner process (every Native participant), heaptrack 1.4.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 10819 calls, 1.098 MiB allocated; 112 temporary\nat capture end: 0 outstanding, 0 B (not a leak verdict); peak tracked heap 202.122 KiB (not RSS)\nsymbols: 10819 of 10819 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n   1.071 MiB     10779 calls  [unknown function] (libstdc++.so.6)\n  28.047 KiB        40 calls  [unknown function] (libc.so.6)\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 1980
+    },
+    {
+      "action": {
+        "probe_started": true,
+        "signal": "SIGINT"
+      },
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/long.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--runner",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "0000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nsil-run-diagnostics: run interrupted by SIGINT\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status interrupted",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 1,
+            "failure": {
+              "category": "interrupted",
+              "message": "run interrupted by SIGINT"
+            },
+            "signal": null,
+            "status": "interrupted",
+            "supervisor_signal": 2
+          },
+          "ok": true
+        },
+        {
+          "check": "capture interrupted",
+          "detail": [
+            "interrupted"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/heap-interrupted",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "heap-interrupted",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "heap/allocations.json": 202681,
+          "heap/heaptrack.data": 468003,
+          "heap/interpret.stderr.txt": 101,
+          "heap/launch-adapter.sh": 449,
+          "profile.json": 7602,
+          "run.diagnostics.json": 33251,
+          "run.mcap": 45204,
+          "run.mcap.failure.json": 208,
+          "run.mcap.provenance.json": 2952
+        },
+        "capture": [
+          "interrupted",
+          [
+            "interrupted"
+          ]
+        ],
+        "raw_sha256": {
+          "heap/heaptrack.data": "b1c2363ddc15d440d8412f82f35115140955458c9c8baf406842ddd94e5cf7a0",
+          "run.mcap": "476efef5b83c36a2499eb6a2e3fba2c8d396c2e3a654940d19db056d1dea2aac"
+        },
+        "run": "interrupted",
+        "totals": {
+          "allocated_bytes": 2503833,
+          "allocations": 23178,
+          "frees": 23178,
+          "outstanding_allocations": 0,
+          "outstanding_bytes": 0,
+          "peak_tracked_bytes": 296816,
+          "temporary_allocations": 363
+        },
+        "wall_ms": 3829
+      },
+      "participants_started": [
+        "fmu-523.tsv",
+        "probe-528.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py",
+            "--sleep-every-step-ms",
+            "40"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "observer: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 20000000 ns event 0 ns 400000000d00000001a0860100400000000a0000000401\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 300000000 ns event 300000000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nsil-run-diagnostics: run interrupted by SIGINT\n",
+      "stdout_tail": "profile: prof/profile.json\nrun: interrupted, exit code 1\ncapture: heap, interrupted (interrupted)\nscope: the runner process (every Native participant), heaptrack 1.4.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 23178 calls, 2.388 MiB allocated; 363 temporary\nat capture end: 0 outstanding, 0 B (not a leak verdict); peak tracked heap 289.859 KiB (not RSS)\nsymbols: 23178 of 23178 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n   2.360 MiB     23138 calls  [unknown function] (libstdc++.so.6)\n  28.062 KiB        40 calls  [unknown function] (libc.so.6)\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3829
+    },
+    {
+      "action": {
+        "found": 1,
+        "killed": "heaptrack_interpret",
+        "probe_started": true
+      },
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/long.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--participant",
+        "probe",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "command ends with exit 1 or the Run's failure",
+          "detail": "00960000 ns 1000000014000000010000000000040001020304\nobserver: 2420000000 ns event 2400960000 ns 200000000c00000001000000\nobserver: 2700000000 ns event 2700000000 ns 1000000014000000010000000000040001020304\nobserver: 2700000000 ns event 2700000000 ns 1000000014000000010000000000040001020304\nobserver: 2720000000 ns event 2700480000 ns 200000000c00000001000000\nobserver: 2720000000 ns event 2700480000 ns 1000000014000000010000000000040001020304\nobserver: 2720000000 ns event 2700960000 ns 1000000014000000010000000000040001020304\nobserver: 2720000000 ns event 2700960000 ns 200000000c00000001000000\n",
+          "ok": true
+        },
+        {
+          "check": "profile.json written",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "capture not complete",
+          "detail": [
+            "backend_failed"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/heap-collector-killed",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "heap-collector-killed",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "heap/allocations.json": 5042850,
+          "heap/heaptrack.data": 3608451,
+          "heap/interpret.stderr.txt": 0,
+          "heap/launch-adapter.sh": 454,
+          "profile.json": 16837,
+          "run.diagnostics.json": 42989,
+          "run.mcap": 158648,
+          "run.mcap.provenance.json": 2952
+        },
+        "capture": [
+          "failed",
+          [
+            "backend_failed"
+          ]
+        ],
+        "raw_sha256": {
+          "heap/heaptrack.data": "0e86ef486469846626b0ce091abe8578b3637ebc3c2dd3e2adc9716b45fbd9e3",
+          "run.mcap": "49f873ace88bce77f6b435f348b1e500344659744dcd98dbcfd232ce90ae1cef"
+        },
+        "run": "succeeded",
+        "run_after_kill": {
+          "diagnostics_report": "run.diagnostics.json",
+          "exit_code": 0,
+          "failure": null,
+          "signal": null,
+          "status": "succeeded",
+          "supervisor_signal": null
+        },
+        "totals": {
+          "allocated_bytes": 224995426,
+          "allocations": 70221,
+          "frees": 63626,
+          "outstanding_allocations": 6595,
+          "outstanding_bytes": 3575090,
+          "peak_tracked_bytes": 7773300,
+          "temporary_allocations": 15701
+        },
+        "wall_ms": 9941
+      },
+      "participants_started": [
+        "fmu-542.tsv",
+        "probe-547.json"
+      ],
+      "probe": [
+        {
+          "argv": [
+            "/src/proofs/profiling-qualification/probe_participant.py",
+            "--sleep-every-step-ms",
+            "40"
+          ],
+          "environment": {
+            "GPG_KEY": "6c3b7674b58d9f72",
+            "HOME": "e9671acd244849c5",
+            "HOSTNAME": "fb82acd05e144b94",
+            "LC_CTYPE": "99fed2d548c2eb10",
+            "PATH": "b3e47302cc7befe2",
+            "PYTHONDONTWRITEBYTECODE": "6b86b273ff34fce1",
+            "PYTHONNOUSERSITE": "6b86b273ff34fce1",
+            "PYTHONUNBUFFERED": "6b86b273ff34fce1",
+            "PYTHON_SHA256": "e3c162f6c3bdc5b3",
+            "PYTHON_VERSION": "b3ce40b7766e690d",
+            "SILPROOF_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "SILQUAL_SIDECAR_DIR": "a5d2482d6cc87a13",
+            "TMPDIR": "6c66e7e174c07c22"
+          },
+          "in_run_directory": 1
+        }
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "rver: 320000000 ns event 300480000 ns 200000000c00000001000000\nobserver: 320000000 ns event 300480000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 1000000014000000010000000000040001020304\nobserver: 320000000 ns event 300960000 ns 200000000c00000001000000\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 600000000 ns event 600000000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600480000 ns 200000000c00000001000000\nobserver: 620000000 ns event 600480000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 1000000014000000010000000000040001020304\nobserver: 620000000 ns event 600960000 ns 200000000c00000001000000\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 900000000 ns event 900000000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900480000 ns 200000000c00000001000000\nobserver: 920000000 ns event 900480000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 1000000014000000010000000000040001020304\nobserver: 920000000 ns event 900960000 ns 200000000c00000001000000\nobserver: 1200000000 ns event 1200000000 ns 1000000014000000010000000000040001020304\nobserver: 1200000000 ns event 1200000000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200480000 ns 200000000c00000001000000\nobserver: 1220000000 ns event 1200480000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200960000 ns 1000000014000000010000000000040001020304\nobserver: 1220000000 ns event 1200960000 ns 200000000c00000001000000\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1500000000 ns event 1500000000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500480000 ns 200000000c00000001000000\nobserver: 1520000000 ns event 1500480000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 1000000014000000010000000000040001020304\nobserver: 1520000000 ns event 1500960000 ns 200000000c00000001000000\nobserver: 1800000000 ns event 1800000000 ns 1000000014000000010000000000040001020304\nobserver: 1800000000 ns event 1800000000 ns 1000000014000000010000000000040001020304\nobserver: 1820000000 ns event 1800480000 ns 200000000c00000001000000\nobserver: 1820000000 ns event 1800480000 ns 1000000014000000010000000000040001020304\nobserver: 1820000000 ns event 1800960000 ns 1000000014000000010000000000040001020304\nobserver: 1820000000 ns event 1800960000 ns 200000000c00000001000000\nobserver: 2100000000 ns event 2100000000 ns 1000000014000000010000000000040001020304\nobserver: 2100000000 ns event 2100000000 ns 1000000014000000010000000000040001020304\nobserver: 2120000000 ns event 2100480000 ns 200000000c00000001000000\nobserver: 2120000000 ns event 2100480000 ns 1000000014000000010000000000040001020304\nobserver: 2120000000 ns event 2100960000 ns 1000000014000000010000000000040001020304\nobserver: 2120000000 ns event 2100960000 ns 200000000c00000001000000\nobserver: 2400000000 ns event 2400000000 ns 1000000014000000010000000000040001020304\nobserver: 2400000000 ns event 2400000000 ns 1000000014000000010000000000040001020304\nobserver: 2420000000 ns event 2400480000 ns 200000000c00000001000000\nobserver: 2420000000 ns event 2400480000 ns 1000000014000000010000000000040001020304\nobserver: 2420000000 ns event 2400960000 ns 1000000014000000010000000000040001020304\nobserver: 2420000000 ns event 2400960000 ns 200000000c00000001000000\nobserver: 2700000000 ns event 2700000000 ns 1000000014000000010000000000040001020304\nobserver: 2700000000 ns event 2700000000 ns 1000000014000000010000000000040001020304\nobserver: 2720000000 ns event 2700480000 ns 200000000c00000001000000\nobserver: 2720000000 ns event 2700480000 ns 1000000014000000010000000000040001020304\nobserver: 2720000000 ns event 2700960000 ns 1000000014000000010000000000040001020304\nobserver: 2720000000 ns event 2700960000 ns 200000000c00000001000000\n",
+      "stdout_tail": "manifest_hash 1196912b5087cd679dc8d22f33520f5696830bedaae445480b1748247da4a5f3\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: heap, failed (backend_failed)\nscope: Process participant 'probe', heaptrack 1.4.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 70221 calls, 214.572 MiB allocated; 15701 temporary\nat capture end: 6595 outstanding, 3.409 MiB (not a leak verdict); peak tracked heap 7.413 MiB (not RSS)\nsymbols: 70221 of 70221 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n  213.784 MiB     65021 calls  [unknown function] (libpython3.13.so.1.0)\n  502.501 KiB        55 calls  [unknown function] (libc.so.6)\n  201.516 KiB      5043 calls  [unknown function] (libcrypto.so.3)\n  71.000 KiB         1 calls  [unknown function] (libstdc++.so.6)\n  31.874 KiB       101 calls  [unknown function] (ld-linux-x86-64.so.2)\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 9941
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "prof",
+        "--collector",
+        "heap",
+        "--runner",
+        "--max-capture-bytes",
+        "65536",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "exit 1",
+          "detail": "",
+          "ok": true
+        },
+        {
+          "check": "profile.json written and valid",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "Run status succeeded",
+          "detail": {
+            "diagnostics_report": "run.diagnostics.json",
+            "exit_code": 0,
+            "failure": null,
+            "signal": null,
+            "status": "succeeded",
+            "supervisor_signal": null
+          },
+          "ok": true
+        },
+        {
+          "check": "capture partial",
+          "detail": [
+            "capture_limit_reached",
+            "data_truncated"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "only the requested outputs are new",
+          "detail": [
+            "prof"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no file left in TMPDIR",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "Run outcome and Recording equal the ordinary Run",
+          "detail": [
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            },
+            {
+              "category": null,
+              "exit_code": 0,
+              "recording": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+            }
+          ],
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/heap-capture-limit",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "heap-capture-limit",
+      "new_entries": [
+        "prof"
+      ],
+      "observations": {
+        "bytes": {
+          "heap/allocations.json": 47771,
+          "heap/heaptrack.data": 65536,
+          "heap/interpret.stderr.txt": 102,
+          "heap/launch-adapter.sh": 451,
+          "profile.json": 7556,
+          "run.diagnostics.json": 23575,
+          "run.mcap": 28039,
+          "run.mcap.provenance.json": 2189
+        },
+        "capture": [
+          "partial",
+          [
+            "capture_limit_reached",
+            "data_truncated"
+          ]
+        ],
+        "raw_sha256": {
+          "heap/heaptrack.data": "a168aec0568a1c7a0b5a4028b90de89d93ba88dcbaa9b617e124c7cb8b0efe88",
+          "run.mcap": "798130b7c83eadf7961bbc611ce8986059081db1b0ecdbc7d4c2c1aad79f4b36"
+        },
+        "run": "succeeded",
+        "totals": {
+          "allocated_bytes": 262600,
+          "allocations": 974,
+          "frees": 813,
+          "outstanding_allocations": 161,
+          "outstanding_bytes": 92563,
+          "peak_tracked_bytes": 100295,
+          "temporary_allocations": 13
+        },
+        "wall_ms": 3552
+      },
+      "participants_started": [
+        "child-566.tsv",
+        "child-567.tsv",
+        "child-568.tsv",
+        "child-569.tsv",
+        "fmu-563.tsv",
+        "native-561.tsv",
+        "process-565.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "",
+      "stdout_tail": "manifest_hash 2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432\nprofile: prof/profile.json\nrun: succeeded, exit code 0\ncapture: heap, partial (capture_limit_reached, data_truncated)\nscope: the runner process (every Native participant), heaptrack 1.4.0\nactivation correlation: unavailable (Heaptrack's timestamps have no validated mapping to host time)\nallocations: 974 calls, 256.445 KiB allocated; 13 temporary\nat capture end: 161 outstanding, 90.394 KiB (not a leak verdict); peak tracked heap 97.944 KiB (not RSS)\nsymbols: 974 of 974 allocations have no function name\ntop allocation sites (innermost frame, bytes allocated):\n  234.743 KiB       943 calls  [unknown function] (libstdc++.so.6)\n  21.702 KiB        31 calls  [unknown function] (libc.so.6)\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3552
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "/small/storage-exhausted-cpu",
+        "--collector",
+        "cpu",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "command ends, not exit 0",
+          "detail": [
+            1,
+            "ckages/sil/participant.py\", line 290, in run\n    send(ready)\n    ~~~~^^^^^^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 238, in send\n    stdout.write(json.dumps(msg) + \"\\n\")\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: run interrupted by SIGTERM\nsil-run-diagnostics: cannot write diagnostics report: cannot write '/small/storage-exhausted-cpu/run.diagnostics.json.tmp-rR4oMD': No space left on device\nsil profile: cannot write '/small/storage-exhausted-cpu/profile.json': [Errno 28] No space left on device\n"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/storage-exhausted-cpu",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "storage-exhausted-cpu",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.failure.json",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "capture": null,
+        "exit_code": 1,
+        "profile_written": false,
+        "recording_equals_ordinary": false,
+        "run": null,
+        "small_bytes": {
+          "cpu/perf.data": 4194304
+        },
+        "wall_ms": 2377
+      },
+      "participants_started": [],
+      "sentinel_unchanged": true,
+      "stderr_tail": "Traceback (most recent call last):\n  File \"/src/proofs/profiling/workload/process_adapter.py\", line 59, in <module>\n    run(ProofProcess(sys.argv[1], sys.argv[2]))\n    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 290, in run\n    send(ready)\n    ~~~~^^^^^^^\n  File \"/opt/sil/python/lib/python3.13/site-packages/sil/participant.py\", line 238, in send\n    stdout.write(json.dumps(msg) + \"\\n\")\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: run interrupted by SIGTERM\nsil-run-diagnostics: cannot write diagnostics report: cannot write '/small/storage-exhausted-cpu/run.diagnostics.json.tmp-rR4oMD': No space left on device\nsil profile: cannot write '/small/storage-exhausted-cpu/profile.json': [Errno 28] No space left on device\n",
+      "stdout_tail": "",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 2377
+    },
+    {
+      "action": null,
+      "argv": [
+        "sil",
+        "profile",
+        "/work/runs/container-cap-perfmon/manifests/main.json",
+        "--out",
+        "/small/storage-exhausted-heap",
+        "--collector",
+        "heap",
+        "--runner",
+        "-o",
+        "run.mcap",
+        "--participant-timeout-ms",
+        "60000"
+      ],
+      "checks": [
+        {
+          "check": "command ends, not exit 0",
+          "detail": [
+            1,
+            "[Errno 28] No space left on device; the rest of the data is dropped\nsil-run-diagnostics: cannot write diagnostics report: cannot write '/small/storage-exhausted-heap/run.diagnostics.json.tmp-p0gIhW': No space left on device\nsil profile: cannot write '/small/storage-exhausted-heap/heap/interpret.stderr.txt': [Errno 28] No space left on device; the rest of the data is dropped\nsil profile: cannot write '/small/storage-exhausted-heap/heap/allocations.json': [Errno 28] No space left on device\nsil profile: cannot write '/small/storage-exhausted-heap/profile.json': [Errno 28] No space left on device\n"
+          ],
+          "ok": true
+        },
+        {
+          "check": "no process left",
+          "detail": [],
+          "ok": true
+        },
+        {
+          "check": "unrelated file unchanged",
+          "detail": null,
+          "ok": true
+        },
+        {
+          "check": "the Run goes on: Recording equals the ordinary Run",
+          "detail": null,
+          "ok": true
+        }
+      ],
+      "cwd": "/work/runs/container-cap-perfmon/scenarios/storage-exhausted-heap",
+      "exit_code": 1,
+      "leftover_processes": [],
+      "name": "storage-exhausted-heap",
+      "new_entries": [
+        "run.mcap",
+        "run.mcap.provenance.json"
+      ],
+      "observations": {
+        "capture": null,
+        "exit_code": 1,
+        "profile_written": false,
+        "recording_equals_ordinary": true,
+        "run": null,
+        "small_bytes": {
+          "heap/heaptrack.data": 61440,
+          "heap/interpret.stderr.txt": 0,
+          "heap/launch-adapter.sh": 414
+        },
+        "wall_ms": 3542
+      },
+      "participants_started": [
+        "child-600.tsv",
+        "child-601.tsv",
+        "child-602.tsv",
+        "child-603.tsv",
+        "fmu-597.tsv",
+        "native-595.tsv",
+        "process-599.tsv"
+      ],
+      "sentinel_unchanged": true,
+      "stderr_tail": "sil profile: cannot write '/small/storage-exhausted-heap/heap/heaptrack.data': [Errno 28] No space left on device; the rest of the data is dropped\nsil-run-diagnostics: cannot write diagnostics report: cannot write '/small/storage-exhausted-heap/run.diagnostics.json.tmp-p0gIhW': No space left on device\nsil profile: cannot write '/small/storage-exhausted-heap/heap/interpret.stderr.txt': [Errno 28] No space left on device; the rest of the data is dropped\nsil profile: cannot write '/small/storage-exhausted-heap/heap/allocations.json': [Errno 28] No space left on device\nsil profile: cannot write '/small/storage-exhausted-heap/profile.json': [Errno 28] No space left on device\n",
+      "stdout_tail": "manifest_hash 2ef3c779fb5102f173857dacf58f2c5374d71769480e3642ceba6dacfe6b7432\n",
+      "timed_out": false,
+      "tmp_new_entries": [],
+      "wall_ms": 3542
+    }
+  ]
+}

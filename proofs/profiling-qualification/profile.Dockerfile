@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # The profiling image of docs/container.md ("Profile in a container"),
-# byte for byte the documented one except for this comment: the runtime image
+# the documented one; only the comments differ: the runtime image
 # plus perf and Heaptrack, pinned to one Debian snapshot. perf gets
 # CAP_PERFMON as a file capability, so the non-root image user can use it in
 # a container started with `--cap-add PERFMON`. No host setting changes.
