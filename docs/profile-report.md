@@ -629,6 +629,8 @@ are never totals.
 - Only the interposed allocation functions are seen. A custom pool (an arena
   allocator, a static buffer pool, Python's `pymalloc`) shows as its few
   backing allocations; the logical allocations inside it are not seen.
+  A test with real Heaptrack shows this: an arena that takes one block
+  from `malloc` and gives out 160 objects shows as one allocation.
   Direct `mmap`, `brk` and stack memory are not tracked.
 - An allocation site is where memory was allocated. It is not the owner of
   that memory now.
