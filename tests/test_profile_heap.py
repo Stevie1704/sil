@@ -214,6 +214,23 @@ def test_an_unknown_allocation_index_is_counted_not_trusted():
     assert record["totals"]["outstanding_bytes"] == 65544
 
 
+def test_a_string_cut_by_the_end_of_the_data_is_a_truncation():
+    # The string of 5 bytes would need 3 more bytes and its newline.
+    record = analysis(DATA + "s 5 xy\n").record
+
+    assert record["coverage"]["truncated"] is True
+    assert record["totals"]["allocations"] == 8
+
+
+@pytest.mark.parametrize("bad", ["s 2 abc", "s zz abc", "s 3abc"])
+def test_a_malformed_string_record_does_not_decode(bad):
+    # A lost string moves every later string index: no symbol is trusted.
+    text = DATA.replace("s 4 main", bad, 1)
+
+    with pytest.raises(HeapDecodeError, match="string record"):
+        analysis(text)
+
+
 @pytest.mark.parametrize("header", ["v 10500 2", "", "x"])
 def test_data_without_file_version_3_does_not_decode(header):
     text = DATA.replace("v 10500 3", header, 1)
