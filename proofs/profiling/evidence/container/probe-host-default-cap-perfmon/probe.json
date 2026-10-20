@@ -8,7 +8,7 @@
     ],
     "uname": {
       "system": "Linux",
-      "node": "14f6ace64a39",
+      "node": "a8a1d4b7106e",
       "release": "6.17.0-1022-azure",
       "version": "#22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026",
       "machine": "x86_64",
@@ -25,7 +25,7 @@
       "CapEff": "00000040a80425fb",
       "CapPrm": "00000040a80425fb",
       "Seccomp": "2",
-      "NSpid": "6"
+      "NSpid": "7"
     },
     "tools": {
       "perf": "perf version 6.1.176",

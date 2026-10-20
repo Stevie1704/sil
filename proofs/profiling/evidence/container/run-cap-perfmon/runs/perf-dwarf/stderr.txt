@@ -1,3 +1,3 @@
 manifest_hash f9423057ef8efd2ae3c1f9e2acc78e1886425240a2864310b324b4521473705a
-[ perf record: Woken up 87 times to write data ]
-[ perf record: Captured and wrote 21.807 MB /work/evidence/runs/perf-dwarf/perf.data ]
+[ perf record: Woken up 86 times to write data ]
+[ perf record: Captured and wrote 21.670 MB /work/evidence/runs/perf-dwarf/perf.data ]
