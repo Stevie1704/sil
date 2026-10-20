@@ -25,13 +25,12 @@ overhead. The retained run is listed in [Evidence](#evidence).
 [`proof-profiling-qualification`](../../.github/workflows/proof-profiling-qualification.yml)
 runs on a GitHub-hosted `ubuntu-24.04` runner (x86-64, glibc 2.39, no
 hardware PMU in the VM: `cpu-clock:u` is a software event). The retained
-run had kernel `6.17.0-1022-azure` and perf 6.17.13. Run 39373889739 had
-kernel `7.0.0-1017-azure`, and all its scenarios passed with that kernel
-too. One job, in this order:
+run had kernel `6.17.0-1022-azure` and perf 6.17.13. One job, in this
+order:
 
 | Step | What |
 | --- | --- |
-| tools | apt: `linux-tools-$(uname -r)` (perf 7.0.14 in the retained run), `heaptrack=1.5.0+dfsg1-2ubuntu3`, and a compiler for the workload only |
+| tools | apt: `linux-tools-$(uname -r)` (perf 6.17.13 in the retained run), `heaptrack=1.5.0+dfsg1-2ubuntu3`, and a compiler for the workload only |
 | native install | [`install-native.sh`](install-native.sh): the wheel and the native archive built as `release.yml` builds them, a local mirror of the release layout, and the release's `install.sh`. The Python package is imported from the installed venv, never from the checkout (`facts.sil_package`) |
 | images | [`container.sh images`](container.sh): the runtime image with the command of docs/container.md, the profiling image from [`profile.Dockerfile`](profile.Dockerfile) (the documented Dockerfile: `linux-perf=6.1.176-1`, `heaptrack=1.4.0-2`, `setcap cap_perfmon+ep` on perf, non-root user 10001), and a bookworm workload builder |
 | workloads | [`qualify.py build`](qualify.py): host compiler for native, the builder image for the container |
@@ -142,24 +141,24 @@ Single Runs on a shared CI VM, from the retained run. They are not gates,
 benchmarks or a prediction for another host. No overhead is subtracted.
 
 Wall time of the whole command in ms; sizes of the profile directory files.
-Native: release install on the runner (perf 7.0.14, Heaptrack 1.5.0, Python
+Native: release install on the runner (perf 6.17.13, Heaptrack 1.5.0, Python
 3.12); container: the documented image (perf 6.1.176, Heaptrack 1.4.0,
-Python 3.13). The native heap Runs ran at paranoid 4, the native CPU Runs
-at paranoid 2.
+Python 3.13). The native heap Runs ran at paranoid 4. The native `sil run`,
+`--diagnostics` and CPU Runs ran at paranoid 2.
 
 | Workload | Environment | `sil run` | `--diagnostics` | `--collector cpu --activations` | heap scope |
 | --- | --- | --- | --- | --- | --- |
-| `main` | native | 2795 | 2829 | 4093 | runner 2974, `fmu` 3217 |
-| `main` | container | 3414 | 3477 | 6226 | runner 3628, `fmu` 5198 |
-| `mixed` | native | 1410 | 1442 | 2136 | `group` 1820, `probe` 1739 |
-| `mixed` | container | 2476 | 2556 | 5262 | `group` 4266, `probe` 3993 |
+| `main` | native | 2810 | 2834 | 4185 | runner 3043, `fmu` 3235 |
+| `main` | container | 3439 | 3490 | 6340 | runner 3752, `fmu` 5300 |
+| `mixed` | native | 1461 | 1480 | 2201 | `group` 1833, `probe` 1758 |
+| `mixed` | container | 2504 | 2586 | 5366 | `group` 4383, `probe` 4183 |
 
 | Workload | Environment | `perf.data` | `samples.json` | `correlation.json` | `observations.jsonl` | samples |
 | --- | --- | --- | --- | --- | --- | --- |
-| `main` | native | 22.98 MB | 182 KB | 133 KB | 63 KB | 2719 |
-| `main` | container | 26.69 MB | 346 KB | 151 KB | 63 KB | 3150 |
-| `mixed` | native | 10.64 MB | 180 KB | 99 KB | 66 KB | 1252 |
-| `mixed` | container | 18.16 MB | 457 KB | 135 KB | 66 KB | 2134 |
+| `main` | native | 23.02 MB | 180 KB | 133 KB | 63 KB | 2719 |
+| `main` | container | 26.49 MB | 336 KB | 150 KB | 63 KB | 3127 |
+| `mixed` | native | 11.13 MB | 195 KB | 101 KB | 66 KB | 1307 |
+| `mixed` | container | 18.35 MB | 477 KB | 136 KB | 66 KB | 2157 |
 
 | Workload, scope | Environment | `heaptrack.data` | `allocations.json` | allocations |
 | --- | --- | --- | --- | --- |
@@ -169,11 +168,11 @@ at paranoid 2.
 
 The Python Process participants allocate more under Python 3.13 in the
 image than under 3.12 natively; the counts of the known C sites are exact in
-both. The HTML pages of the copied sets are 68 KB to 861 KB, rendered in 0.1
+both. The HTML pages of the copied sets are 69 KB to 875 KB, rendered in 0.1
 to 1.9 s.
 
 perf with DWARF stacks writes about 8.5 KB per sample; the normalized
-`samples.json` is 0.8 to 2.5 percent of `perf.data`. So at the default
+`samples.json` is 0.8 to 2.6 percent of `perf.data`. So at the default
 limits the render path (256 MiB per file) and the export (twice
 `--max-capture-bytes`) are far from their limits.
 
@@ -193,13 +192,13 @@ and of #319, with its evidence or an explicit revised-scope decision.
 | Q5 | Ordinary, diagnostics and profiled Recordings/outcomes equal on deterministic success and failure fixtures; deadlines, interruption, child/collector failure, storage limits, cleanup | `equivalence` group; `cpu-*` and `heap-*` "Run outcome and Recording equal the ordinary Run" for `main`, `mixed`, `failure`, `deadline`; `*-interrupted`, `*-collector-killed`, `*-limit`, `storage-*`; cleanup checks in every scenario |
 | Q6 | Overhead and output growth on named workloads and hosts, with bounds, no guessed subtraction | [Observations](#observations-overhead-and-output-growth) |
 | Q7 | Installed native and documented container workflows, version compatibility, offline rendering; guides for shipped capabilities | [Outcome](#outcome); perf 6.1/6.17, Heaptrack 1.4/1.5; `render-*`; SUPPORT.md, docs/running.md, docs/container.md, docs/agent-guide.md, docs/profile-report.md, GLOSSARY.md |
-| Q8 | `make build`, `make test`, determinism gate, plus qualified backend evidence | local gates on the branch (PR #335); this run |
+| Q8 | `make build`, `make test`, determinism gate, plus qualified backend evidence | This workflow runs no `make build`, `make test` or determinism gate. The `ci` workflow runs them on each pull request: run [39408756565](https://github.com/Stevie1704/sil/actions/runs/39408756565) at the commit of the retained run. Real-backend results: this workflow ([Evidence](#evidence)), `profile-cpu-integration` run [39408756453](https://github.com/Stevie1704/sil/actions/runs/39408756453) and `profile-heap-integration` run [39408756764](https://github.com/Stevie1704/sil/actions/runs/39408756764), at the same commit |
 
 ### #319 acceptance
 
 | # | Item | Evidence or decision |
 | --- | --- | --- |
-| A1 | Gates; real-backend results kept separately | Q8; [Evidence](#evidence) |
+| A1 | Gates; real-backend results kept separately | Q8; [Evidence](#evidence); decisions D12 and D13 |
 | A2 | Recordings/outcomes match; timing-edge limits documented | Q5; docs/running.md "Profile a Run" and docs/profile-report.md: a collector adds work, so a Run that only just meets its deadline can miss it (decision D9) |
 | A3 | No silent change of Manifest identity, process path/argument semantics, Clock-shim behavior or cleanup | Manifest SHA-256 and hash checks; probe digests of `argv`, environment and working directory inside the Recording; the shimmed participant's clock readings in the `main` Recording; cleanup checks. Fixed on this branch: perf's environment change and the adapter's `PWD` (Findings 1, 2) |
 | A4 | Finite buffer, storage and analysis limits with partial results; no unrelated file overwritten or deleted | `cpu-capture-limit`, `cpu-activation-limit`, `heap-capture-limit` (`partial`, Run unchanged); export limit and render limit (`tests/test_profile_run.py`, `tests/test_profile_render.py`); `storage-*`; sentinel, `TMPDIR` and `preflight-existing-out` checks |
@@ -239,11 +238,14 @@ and of #319, with its evidence or an explicit revised-scope decision.
 | D9 | Equivalence holds for deterministic fixtures with generous deadlines; timing-edge workloads are not covered. |
 | D10 | An output collision is a usage error (exit 2), as #313 requires: an existing `--out` for the capture command and an existing or homeless `--html` for `sil profile render`. `sil profile render` checks the output path before it reads the set. Exit 1 is kept for a write that fails. |
 | D11 | Linux x86-64/glibc only; arm64 (#311) and macOS make no profiling claim. A Process participant written in C is not a separate case: native code in Process participants is covered by the ctypes library, the child and the FMUs. |
+| D12 | The raw captures are not in git: `perf.data`, `heaptrack.data`, the observation streams and the Recordings. They are large (`perf.data` is about 23 MB per Run), and `perf.data` holds copies of user stacks. `results.json` keeps the SHA-256 of each one. The workflow artifact keeps the profile summaries, the portable sets and the HTML pages, with the SHA-256 of each in `digests.txt`. |
+| D13 | perf is not pinned. It comes from `linux-tools-$(uname -r)`, so its version follows the runner kernel, and `results.json` (`facts.perf_version`) records it for each run. Heaptrack is pinned (`heaptrack=1.5.0+dfsg1-2ubuntu3` natively, `heaptrack=1.4.0-2` in the documented image). A support claim names only the versions in the retained evidence. |
+| D14 | Inlined frames: the CPU export asks perf for them (`--inline`). With perf 6.17.13 (native) the export has them. With perf 6.1.176 (documented image) `perf script --inline` ends on its `addr2line` helper. The command then exports again without them and reports `inlined_frames_failed`. The retained `cpu-*` sets show both cases. |
 
 ## Evidence
 
 [`evidence/`](evidence/) holds the retained output of workflow run
-[39378840955](https://github.com/Stevie1704/sil/actions/runs/39378840955) at commit `f5770ed`, copied by [`retain.py`](retain.py):
+[39408756662](https://github.com/Stevie1704/sil/actions/runs/39408756662) at commit `c9a03c1`, copied by [`retain.py`](retain.py):
 
 | Path | Content |
 | --- | --- |

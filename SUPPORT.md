@@ -96,7 +96,7 @@ x86-64 release in WSL2 or the runtime image in Docker
 
 | Backend | Qualified | Needs |
 | --- | --- | --- |
-| Linux perf, CPU collector | perf 6.17.13 and 7.0.14 (Ubuntu 24.04, the `linux-tools` of the runner kernel, natively) and 6.1.176 (Debian bookworm, in the documented profiling image) on Linux x86-64/glibc, software event `cpu-clock:u`; no hardware counter | `kernel.perf_event_paranoid` 2 or less for an unprivileged user, or `CAP_PERFMON` (`docker run --cap-add PERFMON`, [docs/container.md](docs/container.md#profile-in-a-container)) |
+| Linux perf, CPU collector | perf 6.17.13 (Ubuntu 24.04, the `linux-tools` of the runner kernel, natively) and 6.1.176 (Debian bookworm, in the documented profiling image) on Linux x86-64/glibc, software event `cpu-clock:u`; no hardware counter. Inlined frames with perf 6.17.13 only: with perf 6.1.176 the report gives `inlined_frames_failed` | `kernel.perf_event_paranoid` 2 or less for an unprivileged user, or `CAP_PERFMON` (`docker run --cap-add PERFMON`, [docs/container.md](docs/container.md#profile-in-a-container)) |
 | Heaptrack, heap collector | Heaptrack 1.5.0 (Ubuntu 24.04) and 1.4.0 (Debian bookworm), runner scope and unshimmed Process participants | no privilege |
 
 Qualified means the [#319 qualification](proofs/profiling-qualification/README.md)
