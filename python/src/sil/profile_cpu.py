@@ -22,10 +22,9 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from typing import Callable
 
-from sil.profile_report import SOURCE_DEBUG_STATUSES
-
-HOTSPOT_LIMIT = 50
-SOURCE_LINES_PER_ROW = 5
+from sil.profile_report import (
+    HOTSPOT_LIMIT, SOURCE_DEBUG_STATUSES, SOURCE_LINES_PER_ROW,
+)
 
 # One record header: comm can contain spaces, so it is matched up to the
 # rightmost "pid/tid time:" that follows it.

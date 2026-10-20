@@ -29,11 +29,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
+from sil.profile_report import (
+    HEAP_METRICS, HOTSPOT_LIMIT, SOURCE_LINES_PER_ROW,
+)
+
 FILE_VERSION = 3
-HOTSPOT_LIMIT = 50
-SOURCE_LINES = 5
-METRICS = ("allocations", "allocated_bytes", "temporary_allocations",
-           "outstanding_allocations", "outstanding_bytes")
 # Each metric's top rows are kept; outstanding_allocations follows bytes.
 RANKED = ("allocated_bytes", "allocations", "temporary_allocations",
           "outstanding_bytes")
@@ -257,7 +257,7 @@ def _costs(info: _Info) -> dict:
 
 
 def _add(target: dict, costs: dict) -> None:
-    for key in METRICS:
+    for key in HEAP_METRICS:
         target[key] = target.get(key, 0) + costs[key]
 
 
@@ -278,7 +278,7 @@ def _select(rows: dict, limit: int) -> list[dict]:
 
 def _row(key: tuple, module_ids: dict) -> dict:
     return {"module": module_ids.get(key[0]), "symbol": key[1],
-            **{metric: 0 for metric in METRICS}, "source_lines": {}}
+            **{metric: 0 for metric in HEAP_METRICS}, "source_lines": {}}
 
 
 def _finish_rows(rows: list[dict]) -> list[dict]:
@@ -288,7 +288,7 @@ def _finish_rows(rows: list[dict]) -> list[dict]:
         row["source_lines"] = [{"file": file, "line": line,
                                 "allocations": count}
                                for (file, line), count in
-                               lines[:SOURCE_LINES]]
+                               lines[:SOURCE_LINES_PER_ROW]]
     return rows
 
 
@@ -308,7 +308,7 @@ def normalize_heap(data: bytes, *, build_id: BuildId,
                             info.temporary, info.allocations - info.frees])
     module_ids = {path: f"m{n}" for n, path in
                   enumerate(sorted(tables.modules), start=1)}
-    totals = {metric: 0 for metric in METRICS}
+    totals = {metric: 0 for metric in HEAP_METRICS}
     self_rows: dict[tuple, dict] = {}
     inclusive_rows: dict[tuple, dict] = {}
     leaf_counts = {path: [0, 0] for path in tables.modules}
@@ -338,13 +338,13 @@ def normalize_heap(data: bytes, *, build_id: BuildId,
                 place, 0) + info.allocations
         for key in {tables.keys[frame] for frame in frames}:
             _add(inclusive_rows.setdefault(key, _row(key, module_ids)), costs)
-    totals_record = {**{k: totals[k] for k in METRICS[:2]},
+    totals_record = {**{k: totals[k] for k in HEAP_METRICS[:2]},
                      "frees": parsed.frees,
-                     **{k: totals[k] for k in METRICS[2:]},
+                     **{k: totals[k] for k in HEAP_METRICS[2:]},
                      "peak_tracked_bytes": parsed.peak}
     kept = _finish_rows(_select(self_rows, limit))
     remainder = {metric: totals[metric] - sum(r[metric] for r in kept)
-                 for metric in METRICS}
+                 for metric in HEAP_METRICS}
     for frame in tables.frames:
         frame["module"] = module_ids.get(frame["module"])
     modules = [{"id": module_ids[path], **tables.modules[path],

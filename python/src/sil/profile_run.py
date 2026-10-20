@@ -45,7 +45,7 @@ from sil.diagnostics_run import (
 from sil.profile_activation import correlate
 from sil.profile_cpu import CpuAnalysis, ModuleFacts, normalize_cpu
 from sil.profile_modules import ModuleLocator
-from sil.profile_report import validate_profile_report
+from sil.profile_report import HOTSPOT_LIMIT, validate_profile_report
 from sil.profile_storage import reserve_reached, space_warning
 from sil.profile_summary import format_summary
 
@@ -879,7 +879,7 @@ def _empty_analysis(reason: str) -> dict:
                              "unavailable": {"samples_with_line": reason}},
             "inlined_frames": {"status": "not_requested"}},
         "processes": [], "threads": [], "modules": [],
-        "hotspots": {"limit": 50, "self": [], "inclusive": [],
+        "hotspots": {"limit": HOTSPOT_LIMIT, "self": [], "inclusive": [],
                      "self_remainder": {"samples": 0, "weight_ns": 0}},
         "unavailable": {"time_origin_ns": reason, "samples_file": reason},
     }

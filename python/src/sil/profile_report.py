@@ -37,6 +37,9 @@ HEAP_REASONS = {"capture_limit_reached", "storage_reserve_reached",
                 "data_may_be_incomplete", "interrupted",
                 "backend_failed", "export_failed", "no_data",
                 "run_not_started", "unsupported_scope", "reserved"}
+# The bounds of the v1 hotspot rankings, for both collectors.
+HOTSPOT_LIMIT = 50
+SOURCE_LINES_PER_ROW = 5
 HEAP_METRICS = ("allocations", "allocated_bytes", "temporary_allocations",
                 "outstanding_allocations", "outstanding_bytes")
 CPU_REASONS = {"lost_samples", "capture_limit_reached",
