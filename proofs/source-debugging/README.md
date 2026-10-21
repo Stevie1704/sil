@@ -45,6 +45,10 @@ bash proofs/source-debugging/run-proof.sh \
 .venv/bin/python proofs/source-debugging/validate.py CAPTURE_DIR native
 ```
 
+`CAPTURE_DIR` is a capture from a fresh Run or downloaded workflow artifact.
+The JSON, MCAP and log files described below are generated in the requested
+evidence directory; raw evidence is not committed to the repository.
+
 `-O2 -g -ffp-contract=off` is the main result. There is no `-O0` substitute,
 source probe, noinline attribute, injected inferior call or variable mutation.
 `build-commands.json` and copied sources state exactly what was compiled.
@@ -171,7 +175,7 @@ inferior exits 1. The Process wrapper can therefore exit 0 while the adapter
 fails; the Step exchange still fails. `debugger-outcome.json` preserves the
 inferior's actual exit separately from the runner report's wrapper status.
 
-## Decision and retained evidence
+## Decision and qualification results
 
 **No change to SiL's debugging hooks.**
 [Linux qualification run 39554858402](https://github.com/Stevie1704/sil/actions/runs/39554858402)
@@ -220,17 +224,16 @@ stack remain captured.
 The shim captures read the actual inferior region at 40,000,000 and
 50,000,000 ns while GDB's host timestamps remained inside the runner's
 Activation intervals. With ptrace_scope = 1 the sibling attach was refused
-(raw diagnostic retained); every launch-under-GDB case worked. No host
-security setting changed. Native SIGTERM produced an interrupted Run;
+(raw diagnostic in the workflow artifact); every launch-under-GDB case worked.
+No host security setting changed. Native SIGTERM produced an interrupted Run;
 Process/FMU SIGTERM unwound the Python handler, and each explicit 2 s
 deadline failed the selected Step at 40 ms. Every observed inferior was gone
 after cleanup, including detach and debugger-error controls.
 
 Within each form, two ordinary Runs, diagnostics-only, index-selected,
 time-selected and detached Runs all produced byte-identical Recordings.
-The full workflow artifact independently reproduces that comparison; the
-retained subset keeps the comparison hashes and one Recording per form. The index/time
-captures used different fresh PIDs/TIDs (Native 3256/3265, Process 3317/3327,
+The full workflow artifact contains the Recordings and comparison hashes.
+The index/time captures used different fresh PIDs/TIDs (Native 3256/3265, Process 3317/3327,
 FMU 3396/3407, shim 3481/3491), host times and relocated stack addresses.
 These observations establish Message reproducibility, not matching internal
 thread history or instruction-level replay. No multithreaded application
@@ -239,12 +242,14 @@ schedule is qualified by this single-threaded workload.
 The workflow uploads all binaries, separate debug files, sources, Manifests,
 Recordings, observations and logs for 30 days. `digests.txt` hashes saved files;
 `report.json` records the checkout revision, CI Run, tool/host versions, all
-Run results and equivalence checks. [Retained evidence](evidence/README.md)
-includes all selected stops, observations, one Recording per form, identities,
-control logs and a Run summary with comparison hashes. Duplicate Recordings,
-per-capture results, repeated command arrays and performance diagnostics are
-omitted. The complete binary/debug/source bundle and raw reports are in
-the workflow artifact; its published digest and expiry are retained too.
+Run results and equivalence checks. These generated files stay in the workflow
+artifact; this README retains the qualification results and limitations.
+The [qualification artifact](https://github.com/Stevie1704/sil/actions/runs/39554858402/artifacts/12325720879)
+is named `source-debugging-evidence` and expires on 2026-11-20 at 06:22:42 UTC.
+Its published SHA-256 is
+`d03e92d2bd8b056cf985b88786c9c865692918683c588994eb656520a2925ef9`.
+After expiry, rerun the workflow or the Linux command above to generate fresh
+evidence; the original raw results will no longer be available from Actions.
 
 Repeated ordinary Runs must reproduce Messages; fresh processes, ASLR
 addresses, TIDs and host scheduling need not match. Stack/thread snapshots

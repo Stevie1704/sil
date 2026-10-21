@@ -1,7 +1,0 @@
-{
-  "exit_code": 1,
-  "stdout": "Could not attach to process.  If your uid matches the uid of the target\nprocess, check the setting of /proc/sys/kernel/yama/ptrace_scope, or try\nagain as the root user.  For more details, see /etc/sysctl.d/10-ptrace.conf\n",
-  "stderr": "ptrace: Inappropriate ioctl for device.\nThe program is not being run.\n",
-  "ptrace_scope": "1",
-  "policy": "no sysctl, capability or security-policy change; launch regardless"
-}
