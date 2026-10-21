@@ -53,8 +53,10 @@ def inspect_selection(source, lines):
             for field in ("id", "x_m", "y_m", "relative_vx_mps", "confidence")}}
         ready = (all(evaluate(values[name])["value"] is not None
                      for name in ("selected", "lead.x_m", "lead.relative_vx_mps"))
-                 and inline["closing_mps"]["value"] is not None)
+                 and inline["closing_mps"]["value"] == "25")
         if instruction == 0 or ready:
+            if not ready:
+                inline["closing_mps"] = {"value": None, "reason": "before_hazard_computation"}
             snapshot("selection", values, inline_values=inline)
             selection_stops.append(stops.pop())
             (dest / "selection-stops.json").write_text(json.dumps(selection_stops, indent=2) + "\n")
