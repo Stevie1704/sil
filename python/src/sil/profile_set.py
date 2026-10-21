@@ -269,7 +269,17 @@ def _check_correlation(correlation: dict, samples: dict, summary: dict,
     class_weight: Counter = Counter()
     counts: Counter = Counter()
     weights: Counter = Counter()
+    origin = int(samples["time_origin_ns"] or 0)
     for (cls, ref), sample in zip(rows, samples["samples"]):
+        if cls in ("execution_context", "window_associated", "replay", "lifecycle"):
+            if cls == "lifecycle":
+                candidates = [p for p in correlation["phases"] if p["phase"] == ref]
+            else:
+                group = "replays" if cls == "replay" else "activations"
+                candidates = [correlation[group][ref]]
+            time = origin + sample[0]
+            if not any(int(p["begin_ns"]) <= time < int(p["end_ns"]) for p in candidates):
+                _fail(name, f"{cls} sample is outside its half-open host interval")
         class_count[cls] += 1
         class_weight[cls] += sample[3]
         counts[cls, ref] += 1

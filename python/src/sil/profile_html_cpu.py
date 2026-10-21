@@ -27,6 +27,7 @@ from sil.profile_html_parts import (
     render_tree, share, source_cell, unlisted_note,
 )
 from sil.profile_set import ProfileSet
+from sil.profile_analysis import profile_tasks
 from sil.profile_html_views import TASK_LIMIT, flame_section, task_drilldowns, timeline
 
 HOTSPOT_ROWS = 50
@@ -305,7 +306,7 @@ def _explorer_form(profile: ProfileSet) -> Html:
             _select("f-class", "Class", [(c, c) for c in CLASSES]),
             _select("f-task", "Participant / Task", [
                 (str(index), f"{p} / {t}")
-                for index, (p, t) in enumerate(_tasks(profile))]),
+                for index, (p, t) in enumerate(profile_tasks(profile))]),
             tag("label", "Virtual time from (ns, inclusive)",
                 void("input", id="f-vt-from", type="text",
                      inputmode="numeric", pattern="[0-9]*",
@@ -335,13 +336,6 @@ def _explorer_form(profile: ProfileSet) -> Html:
                    aria_live="polite"),
                tag("button", "Clear filters", type="reset", id="f-clear"),
                id="explorer", hidden=True)
-
-
-def _tasks(profile: ProfileSet) -> list[tuple[str, str]]:
-    """The (Participant, Task) pairs of the kept Activations, sorted."""
-    assert profile.correlation is not None
-    return sorted({(a["participant"], a["task"])
-                   for a in profile.correlation["activations"]})
 
 
 def _select(id_: str, label: str, options: list[tuple[str, str]]) -> Html:
@@ -382,7 +376,7 @@ def explorer_data(profile: ProfileSet) -> dict | None:
     activations = None
     if profile.correlation is not None:
         # Virtual times as decimal strings: the script compares BigInts.
-        tasks = {task: index for index, task in enumerate(_tasks(profile))}
+        tasks = {task: index for index, task in enumerate(profile_tasks(profile))}
         activations = [[tasks[a["participant"], a["task"]],
                         str(a["virtual_time_ns"])]
                        for a in profile.correlation["activations"]]
@@ -392,7 +386,7 @@ def explorer_data(profile: ProfileSet) -> dict | None:
         "paths": _paths(profile, frame_keys),
         "rows": rows,
         "threads": {t["id"]: t["process"] for t in capture["threads"]},
-        "tasks": [list(task) for task in _tasks(profile)]
+        "tasks": [list(task) for task in profile_tasks(profile)]
         if profile.correlation is not None else None,
         "activations": activations,
         "total": [capture["totals"]["samples"], capture["totals"]["weight_ns"]],
@@ -470,7 +464,7 @@ def _activations(profile: ProfileSet) -> Html:
 
 
 def _tasks_table(summary: dict, profile: ProfileSet) -> Html:
-    tasks = {task: i for i, task in enumerate(_tasks(profile))}
+    tasks = {task: i for i, task in enumerate(profile_tasks(profile))}
     rows = [[tag("span", t["participant"], class_="name"),
              tag("a", t["task"], href=f"#task-detail-{tasks[t['participant'], t['task']]}"
                  if tasks[t["participant"], t["task"]] < TASK_LIMIT else "#task-drilldowns"), code(t["kind"]),

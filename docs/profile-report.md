@@ -829,7 +829,9 @@ The command checks the set before it writes anything. Each named file must:
 - have version 1;
 - refer only to identities of `profile.json`;
 - add up to its totals: sample count and weight, allocation count and
-  bytes, and one class per sample.
+  bytes (including temporary and outstanding metrics), and one class per
+  sample. Correlated samples must lie inside their referenced half-open
+  host intervals; interval and Task counters must agree with those samples.
 
 Each file of the set has a render limit of 268435456 bytes (256 MiB). A
 larger file is refused before it is read (exit 2). The command holds each
@@ -941,6 +943,9 @@ absolute floating-point timestamps. Intervals are half-open. Sixteen bins
 inside each interval mark sample density (sample count, not duration), with
 exact counts, weight and class values in the table. Zero-sample intervals
 remain visible and explicitly supply no evidence of zero CPU use.
+The selection summary and each interval's accessible label also report the
+currently filtered sample count and weight; geometry and density retain the
+saved capture context.
 
 A partial observation stream carries a prominent gap notice: blank space
 may contain unobserved work. Samples classified `observations_incomplete`

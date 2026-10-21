@@ -6,7 +6,7 @@ from collections import defaultdict
 from typing import Callable
 
 from sil.diagnostics_html_markup import Html, code, join, section, table, tag, void
-from sil.profile_analysis import cpu_ranking, cpu_rows, function_paths
+from sil.profile_analysis import cpu_ranking, cpu_rows, function_paths, profile_tasks
 from sil.profile_html_parts import TreeLimits, build_tree, render_tree, share
 from sil.profile_set import ProfileSet
 
@@ -129,7 +129,7 @@ def task_drilldowns(profile: ProfileSet) -> Html:
             a = activations[row[3]]
             grouped_rows[(a["participant"], a["task"]), row[2]].append(row)
     blocks = []
-    tasks = sorted(groups)
+    tasks = profile_tasks(profile)
     for task_index, task in enumerate(tasks[:TASK_LIMIT]):
         refs = groups[task]
         zero = [activations[i] for i in refs if activations[i]["samples"] == 0]
@@ -210,7 +210,7 @@ def timeline(profile: ProfileSet) -> Html:
     shown = intervals[:INTERVAL_LIMIT]
     lanes = {name: index for index, name in enumerate(sorted({a["lane"] for a in shown}))}
     shapes = []
-    tasks = sorted({(a["participant"], a["task"]) for a in profile.correlation["activations"]})
+    tasks = profile_tasks(profile)
     task_ids = {t: i for i, t in enumerate(tasks)}
     for name, lane in lanes.items():
         shapes.append(tag("text", name[:40], tag("title", name), x="0", y=str(lane*38 + 18), class_="timeline-label"))
@@ -241,7 +241,7 @@ def timeline(profile: ProfileSet) -> Html:
                  + ("No sample is not evidence of no CPU use." if not count else ""))
         bins = [0] * 16
         for t in times:
-            bins[min(15, max(0, (t - b) * 16 // max(1, e - b)))] += 1
+            bins[(t - b) * 16 // (e - b)] += 1
         marks = [tag("rect", tag("title", f"{value} samples in host subinterval {i+1}/16"),
                      x=str(x + w*i/16), y=str(y+28 - 16*value/max(bins)),
                      width=str(w/16), height=str(16*value/max(bins)), class_="density-mark")
@@ -280,6 +280,13 @@ def timeline(profile: ProfileSet) -> Html:
                    tag("text", f"+{span*i//4} ns", x=str(x), y=str(axis_y+20),
                        class_="timeline-label", text_anchor="start" if i == 0 else "end" if i == 4 else "middle")]
     hidden = intervals[INTERVAL_LIMIT:]
+    hidden_refs = {(a["interval_kind"], a["phase"] if a["interval_kind"] == "lifecycle" else a["ref"])
+                   for a in hidden}
+    hidden_samples = hidden_weight = 0
+    for kind, ref in hidden_refs:
+        for cls in (("execution_context", "window_associated") if kind == "activation" else (kind,)):
+            hidden_samples += len(points[cls, ref])
+            hidden_weight += weights[cls, ref]
     return section("timeline", "Activation timeline",
                    tag("p", f"Host CLOCK_MONOTONIC axis: [{begin}, {end}) ns. "
                        "Intervals are half-open. Geometry uses exact integer differences "
@@ -299,6 +306,6 @@ def timeline(profile: ProfileSet) -> Html:
                    tag("p", f"{len(samples)} samples / "
                        f"{sum(s[3] for s in samples)} ns in the capture (all classes). "
                        f"{len(hidden)} other intervals not drawn; "
-                       f"{sum(a.get('samples',0) for a in hidden)} samples in their counters. "
+                       f"{hidden_samples} samples / {hidden_weight} ns in those intervals. "
                        "All samples remain in the global tables and flame graph; "
                        "lifecycle and unattributed classes remain in the class table."))

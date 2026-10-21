@@ -16,6 +16,13 @@ Function = tuple[str | None, str | None]
 UNKNOWN: Function = (None, None)
 
 
+def profile_tasks(profile: ProfileSet) -> list[tuple[str, str]]:
+    """Stable Task positions shared by filters, timeline links and details."""
+    assert profile.correlation is not None
+    return sorted({(a["participant"], a["task"])
+                   for a in profile.correlation["activations"]})
+
+
 def function_paths(profile: ProfileSet) -> tuple[list[Function], list[list[int]]]:
     capture = profile.report["capture"]
     document = profile.samples if capture["kind"] == "cpu" else profile.allocations

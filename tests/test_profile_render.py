@@ -252,6 +252,7 @@ def test_timeline_replay_lifecycle_and_incomplete_sample_extent(tmp_path):
                                "virtual_time_ns": 2**53 + 1, "begin_ns": str(origin),
                                "end_ns": str(origin+100), "outcome": "completed",
                                "samples": 1, "weight_ns": value}]
+    samples["samples"][index][0] = 1
     html = html_of(tmp_path, "activation-partial-truncated.json", report=report,
                    samples=samples, correlation=correlation)
     page = Page(html)
@@ -261,7 +262,8 @@ def test_timeline_replay_lifecycle_and_incomplete_sample_extent(tmp_path):
     assert "exact gap boundaries are not retained" in page.text
 
 
-@pytest.mark.parametrize("damage", ["negative-interval", "phase-shape", "unknown-task"])
+@pytest.mark.parametrize("damage", ["negative-interval", "phase-shape", "unknown-task",
+                                   "empty-interval", "exclusive-end"])
 def test_invalid_timeline_evidence_is_exit_two(tmp_path, damage):
     from profile_sets import correlation_document
     report = fixture("activation-complete.json")
@@ -271,8 +273,14 @@ def test_invalid_timeline_evidence_is_exit_two(tmp_path, damage):
         correlation["activations"][0]["end_ns"] = "0"
     elif damage == "phase-shape":
         correlation["phases"] = [42]
-    else:
+    elif damage == "unknown-task":
         correlation["activations"][0]["task"] = "absent"
+    elif damage == "empty-interval":
+        correlation["activations"][0]["begin_ns"] = "1"
+        correlation["activations"][0]["end_ns"] = "1"
+    else:
+        samples["samples"][0][0] = (int(correlation["activations"][0]["end_ns"]) -
+                                     int(samples["time_origin_ns"]))
     profile = artifact_set(tmp_path / "set", "activation-complete.json", report=report,
                            samples=samples, correlation=correlation)
     proc = render([str(profile), "--html", "report.html"], tmp_path)
@@ -301,6 +309,7 @@ def test_many_timeline_intervals_have_a_visible_remainder(tmp_path):
     page = Page(html)
     assert len(page.find("g", **{"data-interval-kind": "activation"})) == 500
     assert "13 other intervals not drawn" in page.text  # includes four lifecycle phases
+    assert "1 samples / 1001000 ns in those intervals" in page.text
     assert "10 samples / 10010000 ns in the capture" in page.text
 
 

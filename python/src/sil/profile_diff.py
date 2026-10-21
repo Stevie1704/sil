@@ -12,7 +12,7 @@ from sil.diagnostics_html import page
 from sil.diagnostics_html_markup import code, join, section, table, tag
 from sil.diagnostics_report import new_path_problem, write_new_file
 from sil.diagnostics_run import GivenOnce, command_error
-from sil.profile_analysis import cpu_ranking, cpu_rows, function_paths
+from sil.profile_analysis import cpu_ranking, cpu_rows, function_paths, profile_tasks
 from sil.profile_set import ProfileSet, ProfileSetError, load_profile_set
 
 PROG = "sil profile diff"
@@ -53,28 +53,28 @@ def _cpu_comparison(base: ProfileSet, new: ProfileSet, base_rows: list,
         rank = cpu_ranking(paths, rows)
         ranked.append((rank, {functions[k]: v[1] for k, v in rank.self.items()},
                        {functions[k]: v[1] for k, v in rank.inclusive.items()}))
-    (b, bs, bi), (n, ns, ni) = ranked
-    keys = bs.keys() | bi.keys() | ns.keys() | ni.keys()
+    (base_rank, base_self, base_inclusive), (new_rank, new_self, new_inclusive) = ranked
+    keys = base_self.keys() | base_inclusive.keys() | new_self.keys() | new_inclusive.keys()
     def change(key, before, after):
-        return 100 * (after.get(key, 0) / n.weight -
-                      before.get(key, 0) / b.weight) if b.weight and n.weight else 0
-    keys = sorted(keys, key=lambda k: (-max(abs(change(k, bs, ns)),
-                                           abs(change(k, bi, ni))), _name(k)))
+        return 100 * (after.get(key, 0) / new_rank.weight -
+                      before.get(key, 0) / base_rank.weight) if base_rank.weight and new_rank.weight else 0
+    keys = sorted(keys, key=lambda k: (-max(abs(change(k, base_self, new_self)),
+                                           abs(change(k, base_inclusive, new_inclusive))), _name(k)))
     rows = []
     for key in keys[:ROW_LIMIT]:
         values = [_name(key)]
-        for before, after in ((bs, ns), (bi, ni)):
-            values += [_share(before.get(key, 0), b.weight),
-                       _share(after.get(key, 0), n.weight),
+        for before, after in ((base_self, new_self), (base_inclusive, new_inclusive)):
+            values += [_share(before.get(key, 0), base_rank.weight),
+                       _share(after.get(key, 0), new_rank.weight),
                        f"{change(key, before, after):+.2f} pp"
-                       if b.weight and n.weight else "unavailable"]
+                       if base_rank.weight and new_rank.weight else "unavailable"]
         rows.append(values)
     hidden = keys[ROW_LIMIT:]
-    note = (f"Denominators: BASE {b.samples} samples / {b.weight} ns; "
-            f"NEW {n.samples} samples / {n.weight} ns. "
+    note = (f"Denominators: BASE {base_rank.samples} samples / {base_rank.weight} ns; "
+            f"NEW {new_rank.samples} samples / {new_rank.weight} ns. "
             f"{len(hidden)} other functions not listed; self remainder: "
-            f"BASE {sum(bs.get(k, 0) for k in hidden)} ns, "
-            f"NEW {sum(ns.get(k, 0) for k in hidden)} ns. "
+            f"BASE {sum(base_self.get(k, 0) for k in hidden)} ns, "
+            f"NEW {sum(new_self.get(k, 0) for k in hidden)} ns. "
             "Inclusive shares overlap and do not add up.")
     return rows, note
 
@@ -144,8 +144,7 @@ def compare(base: ProfileSet, new: ProfileSet) -> tuple[str, str]:
                        for p in (base, new))
         if complete:
             assert base.correlation is not None and new.correlation is not None
-            tasks = sorted({(a["participant"], a["task"])
-                            for c in (base.correlation, new.correlation) for a in c["activations"]})
+            tasks = sorted(set(profile_tasks(base)) | set(profile_tasks(new)))
             for index, task in enumerate(tasks[:TASK_LIMIT]):
                 for cls in ("execution_context", "window_associated"):
                     groups = []
@@ -163,6 +162,15 @@ def compare(base: ProfileSet, new: ProfileSet) -> tuple[str, str]:
                     text += [label, note, *(" | ".join(r) for r in rows)]
             remaining = tasks[TASK_LIMIT:]
             note = f"{len(remaining)} other Tasks not listed; global shares include their samples."
+            hidden = set(remaining)
+            for label, p, evidence in (("BASE", base, br), ("NEW", new, nr)):
+                assert p.correlation is not None
+                refs = {i for i, a in enumerate(p.correlation["activations"])
+                        if (a["participant"], a["task"]) in hidden}
+                for cls in ("execution_context", "window_associated"):
+                    omitted = [r for r in evidence if r[2] == cls and r[3] in refs]
+                    note += (f" {label} {cls}: {sum(r[4] for r in omitted)} samples / "
+                             f"{sum(r[5] for r in omitted)} ns in unexpanded Tasks.")
         else:
             note = "Per-Task diff unavailable: both sets need complete Activation correlation."
         content.append(tag("p", note))

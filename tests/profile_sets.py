@@ -64,9 +64,13 @@ def samples_document(report: dict) -> dict:
             thread = threads[len(rows) % len(threads)]
             rows.append([len(rows) * 1000, thread["process"], thread["id"],
                          part, len(stacks) - 1])
-    return {"sil_profile_cpu_samples": 1,
-            "time_origin_ns": capture["time_origin_ns"],
-            "frames": frames, "stacks": stacks or [[]], "samples": rows}
+    document = {"sil_profile_cpu_samples": 1,
+                "time_origin_ns": capture["time_origin_ns"],
+                "frames": frames, "stacks": stacks or [[]], "samples": rows}
+    if report["activation_correlation"].get("summary"):
+        # Keep the synthetic clocks consistent with the synthetic classes.
+        correlation_document(report, document)
+    return document
 
 
 def correlation_document(report: dict, samples: dict) -> dict:
@@ -104,6 +108,14 @@ def correlation_document(report: dict, samples: dict) -> dict:
             activations[ref]["weight_ns"] += row[3]
     phases = [{"phase": p["phase"], "begin_ns": str(origin),
                "end_ns": str(origin + 1)} for p in summary["lifecycle"]]
+    last_end = max((int(a["end_ns"]) for a in activations), default=origin)
+    for index, ((kind, ref), sample) in enumerate(zip(classes, samples["samples"])):
+        if kind in ("execution_context", "window_associated"):
+            sample[0] = int(activations[ref]["begin_ns"]) - origin + index
+        elif kind == "lifecycle":
+            sample[0] = 0
+        elif kind == "unattributed" and ref == "observations_incomplete":
+            sample[0] = last_end - origin + 1000 + index
     return {"sil_profile_activation_correlation": 1,
             "activations": activations, "replays": [], "phases": phases,
             "samples": classes}
