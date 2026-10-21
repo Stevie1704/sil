@@ -263,7 +263,7 @@ def test_timeline_replay_lifecycle_and_incomplete_sample_extent(tmp_path):
 
 
 @pytest.mark.parametrize("damage", ["negative-interval", "phase-shape", "unknown-task",
-                                   "empty-interval", "exclusive-end"])
+                                   "empty-interval", "exclusive-end", "duplicate-phase"])
 def test_invalid_timeline_evidence_is_exit_two(tmp_path, damage):
     from profile_sets import correlation_document
     report = fixture("activation-complete.json")
@@ -278,6 +278,9 @@ def test_invalid_timeline_evidence_is_exit_two(tmp_path, damage):
     elif damage == "empty-interval":
         correlation["activations"][0]["begin_ns"] = "1"
         correlation["activations"][0]["end_ns"] = "1"
+    elif damage == "duplicate-phase":
+        correlation["phases"].append({"phase": "setup", "begin_ns": "1", "end_ns": "2"})
+        report["activation_correlation"]["summary"]["intervals"]["phases"] += 1
     else:
         samples["samples"][0][0] = (int(correlation["activations"][0]["end_ns"]) -
                                      int(samples["time_origin_ns"]))
