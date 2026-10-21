@@ -44,6 +44,15 @@ def validate_capture(dest: Path, form: str) -> None:
             raise ValueError("Native thread ownership differs from Activation")
         if form == "shim" and before["shim_virtual_time"]["value"] != str(t):
             raise ValueError("shim Virtual time differs from Activation")
+    selection = dest / "selection-stops.json"
+    if selection.exists():
+        probes = json.loads(selection.read_text())
+        for index, x in ((4, "29"), (5, "28.75")):
+            if not any(p["hit"] == index and all(p["values"][name]["value"] == value
+                       for name, value in {"selected": "12", "lead.x_m": x,
+                                           "lead.relative_vx_mps": "-25"}.items())
+                       and p["inline_values"]["closing_mps"]["value"] == "25" for p in probes):
+                raise ValueError("live selected lead / hazard inputs differ from hazard fixture")
 
 
 def validate_group(stops: list[dict], observations: list[dict]) -> None:

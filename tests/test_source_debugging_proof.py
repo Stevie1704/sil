@@ -85,3 +85,16 @@ def test_three_fmus_share_one_stopped_group_process(tmp_path):
                             capture_output=True, text=True, timeout=10)
     assert result.returncode == 0, result.stderr
     assert "3 grouped FMU instances verified" in result.stdout
+
+
+def test_output_id_cannot_substitute_for_wrong_live_lead_state(tmp_path):
+    saved_capture(tmp_path)
+    probes = []
+    for index, x in ((4, "999"), (5, "28.75")):
+        probes.append({"hit": index, "values": {name: {"value": value, "reason": None}
+            for name, value in {"selected": "12", "lead.x_m": x, "lead.relative_vx_mps": "-25"}.items()},
+            "inline_values": {"closing_mps": {"value": "25", "reason": None}}})
+    (tmp_path / "selection-stops.json").write_text(json.dumps(probes))
+    result = validate(tmp_path)
+    assert result.returncode != 0
+    assert "live selected lead" in result.stderr
