@@ -1,8 +1,12 @@
-"""Saved GDB/Activation evidence at the proof's offline command boundary."""
+"""The proof's batch GDB workflow and offline saved-evidence boundary."""
 import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 VALIDATOR = ROOT / "proofs/source-debugging/validate.py"
@@ -98,3 +102,58 @@ def test_output_id_cannot_substitute_for_wrong_live_lead_state(tmp_path):
     result = validate(tmp_path)
     assert result.returncode != 0
     assert "live selected lead" in result.stderr
+
+
+@pytest.mark.skipif(sys.platform != "linux" or not shutil.which("gdb") or not shutil.which("cc"),
+                    reason="batch GDB cleanup requires Linux, GDB and a C compiler")
+def test_batch_detach_reaps_inferior_before_debugger_returns(tmp_path):
+    source = tmp_path / "controller.c"
+    source.write_text("""
+#define _POSIX_C_SOURCE 200809L
+#include "adas_reference.h"
+#include <time.h>
+int main(void) {
+    adas_ref_instance instance;
+    adas_ref_config config = {10000000, -3, 0.5};
+    adas_ref_output output;
+    adas_ref_fault fault;
+    adas_ref_init(&instance, &config, &fault);
+    for (int i = 0; i < 6; ++i)
+        adas_ref_advance(&instance, i * 10000000, &output, &fault);
+    struct timespec pause = {1, 0};
+    nanosleep(&pause, 0);
+    return 0;
+}
+""")
+    example = ROOT / "examples/adas-reference"
+    binary = tmp_path / "controller"
+    subprocess.run(["cc", "-std=c11", "-O2", "-g", "-ffp-contract=off", "-I", str(example),
+                    str(source), str(example / "adas_reference.c"), "-lm", "-o", str(binary)],
+                   check=True, capture_output=True, timeout=30)
+    env = {**os.environ, "SIL_DEBUG_DEST": str(tmp_path), "SIL_DEBUG_SELECTOR": "index",
+           "SIL_DEBUG_ACTION": "detach"}
+    env.pop("SIL_DEBUG_SHIM", None)
+    # Own orphaned children so init's reaping speed cannot mask this regression.
+    # The supervisor always reaps them, including when the assertion fails.
+    supervisor = """
+import ctypes, json, os, pathlib, subprocess, sys
+PR_SET_CHILD_SUBREAPER = 36
+assert ctypes.CDLL(None, use_errno=True).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) == 0
+dest = pathlib.Path(sys.argv[1])
+try:
+    with (dest / 'gdb.txt').open('w') as log:
+        result = subprocess.run(sys.argv[2:], stdout=log, stderr=subprocess.STDOUT, timeout=10)
+    assert result.returncode == 0, (dest / 'gdb.txt').read_text()
+    pid = json.loads((dest / 'action.json').read_text())['inferior_pid']
+    assert not pathlib.Path(f'/proc/{pid}').exists(), 'detached inferior survived debugger exit'
+finally:
+    while True:
+        try:
+            os.waitpid(-1, 0)
+        except ChildProcessError:
+            break
+"""
+    result = subprocess.run([sys.executable, "-c", supervisor, str(tmp_path),
+        "gdb", "-nx", "-q", "-batch", "-x", str(ROOT / "proofs/source-debugging/session.py"),
+        "--args", str(binary)], env=env, capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stdout + result.stderr

@@ -148,7 +148,13 @@ while gdb.selected_inferior().pid:
             "inferior_pid": gdb.selected_inferior().pid, "index": entry.index,
             "virtual_time_ns": entry.t}) + "\n")
     if action == "detach":
+        pid = gdb.selected_inferior().pid
         gdb.execute("detach")
+        # Detach releases ptrace, not GDB's responsibility to reap its child.
+        # Keep the wrapper alive until the resumed inferior has exited.
+        _, status = os.waitpid(pid, 0)
+        if os.waitstatus_to_exitcode(status) != 0:
+            raise gdb.GdbError(f"detached inferior failed: wait status {status}")
         break
     if action == "kill":
         gdb.execute("kill")

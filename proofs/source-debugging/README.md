@@ -167,6 +167,9 @@ GDB uses all-stop mode, no follow-fork debugging and a 16-frame stack bound.
 Signals are not swallowed to manufacture success. Detach is different from
 debugger failure: it deliberately releases a live process. The proof verifies
 that no observed inferior PID survives cleanup, including detached Runs.
+After detach, batch GDB waits as the resumed inferior's parent and reaps it
+before the wrapper exits, avoiding orphaned zombies and dependence on init's
+reaping speed. The existing outer supervisor still bounds the Run.
 Raw stderr, debugger logs, diagnostics and independent command status remain
 available for failed controls. Hard debugger/host SIGKILL before the first
 saved stop is not qualified as recoverable capture.
