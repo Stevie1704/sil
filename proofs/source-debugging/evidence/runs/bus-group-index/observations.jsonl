@@ -1,0 +1,13 @@
+{"clock":"host_monotonic","limit_bytes":1048576,"pid_namespace":{"device":5,"inode":4026531836},"runner_pid":3553,"runner_tid":3553,"sil_activation_observations":1}
+{"begin_ns":"118900640702","end_ns":"118930093880","kind":"phase","phase":"preflight"}
+{"at_ns":"118930243422","kind":"spawn","participant":"bus_group","pid":3554}
+{"begin_ns":"118930093880","end_ns":"119074702978","kind":"phase","phase":"setup"}
+{"begin_ns":"119074713383","end_ns":"119075523999","index":0,"kind":"activation","outcome":"completed","participant":"bus_group","task":"step","task_kind":"process_step","tid":3553,"virtual_time_ns":0}
+{"begin_ns":"119075532462","end_ns":"119076021659","index":1,"kind":"activation","outcome":"completed","participant":"bus_group","task":"step","task_kind":"process_step","tid":3553,"virtual_time_ns":100000000}
+{"begin_ns":"119076026206","end_ns":"119254219318","index":2,"kind":"activation","outcome":"completed","participant":"bus_group","task":"step","task_kind":"process_step","tid":3553,"virtual_time_ns":200000000}
+{"begin_ns":"119254236323","end_ns":"119254676899","index":3,"kind":"activation","outcome":"completed","participant":"bus_group","task":"step","task_kind":"process_step","tid":3553,"virtual_time_ns":300000000}
+{"begin_ns":"119074702978","end_ns":"119254682898","kind":"phase","phase":"scheduled_execution"}
+{"at_ns":"119285479750","kind":"reap","participant":"bus_group","pid":3554,"reaped":true}
+{"begin_ns":"119254682898","end_ns":"119285649403","kind":"phase","phase":"shutdown"}
+{"begin_ns":"119285649403","end_ns":"119285713768","kind":"phase","phase":"recording_finalization"}
+{"kind":"end","records":11,"dropped":0,"truncated":false,"write_failed":false,"bytes":1617}

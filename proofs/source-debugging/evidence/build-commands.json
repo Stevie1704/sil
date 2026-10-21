@@ -40,5 +40,40 @@
     "-lm",
     "-o",
     "/home/runner/work/sil/sil/build/source-debugging-evidence/AdasReference.so"
+  ],
+  [
+    "gcc-12",
+    "-std=c11",
+    "-O2",
+    "-g",
+    "-fPIC",
+    "-shared",
+    "-ffp-contract=off",
+    "-Wl,--build-id=sha1",
+    "-I",
+    "/home/runner/work/sil/sil/include",
+    "-I",
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/sources",
+    "-DFMI_CLOCK_ECHO_RX=0",
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/sources/fmi_clock.c",
+    "-o",
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/ClockedCanNodeOnABus.so"
+  ],
+  [
+    "gcc-12",
+    "-std=c11",
+    "-O2",
+    "-g",
+    "-fPIC",
+    "-shared",
+    "-ffp-contract=off",
+    "-Wl,--build-id=sha1",
+    "-I",
+    "/home/runner/work/sil/sil/include",
+    "-I",
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/sources",
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/sources/fmi_bus.c",
+    "-o",
+    "/home/runner/work/sil/sil/build/source-debugging-evidence/ClockedCanBus.so"
   ]
 ]

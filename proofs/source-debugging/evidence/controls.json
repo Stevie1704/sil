@@ -3,7 +3,7 @@
     "directory": "fmu-deadline",
     "files": {
       "result.json": {
-        "sha256": "f760436f200b9d2cc2e2f6b3e753484a6e51922cbf727ce6aa615f69975979ed",
+        "sha256": "5bd5effb2aeace94276ed4ab91be6057c9e6476baf7ebf58d004a468055a3477",
         "content": {
           "form": "fmu",
           "label": "deadline",
@@ -27,7 +27,7 @@
             "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
           ],
           "exit_code": 1,
-          "elapsed_host_ns": 3291553175,
+          "elapsed_host_ns": 3207858481,
           "deadline_ms": 2000,
           "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
           "supervisor_timeout": false,
@@ -45,10 +45,10 @@
         }
       },
       "action.json": {
-        "sha256": "0a33a9f5a71669214eacaf135d3a0d9cc59f05e0d96e2354be16d600e80c08ae",
+        "sha256": "01a855609e6414dd8e5a8882450441f31da0140f189384792175af91ba46a149",
         "content": {
           "action": "deadline",
-          "inferior_pid": 3690,
+          "inferior_pid": 3463,
           "index": 4,
           "virtual_time_ns": 40000000
         }
@@ -68,7 +68,7 @@
         }
       },
       "diagnostics.json": {
-        "sha256": "9b1aa0365c2581ba52934ab66f4ec79da0b0361c105cfd659a8e69a660d3f714",
+        "sha256": "4d601774046a5319341feb4e870db7fd997be03d23ab89668c9ab043cfe4d364",
         "content": {
           "artifacts": {
             "failure_report": "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/fmu-deadline/recording.mcap.failure.json",
@@ -142,10 +142,10 @@
           },
           "host": {
             "architecture": "x86_64",
-            "cpu_description": "AMD EPYC 7763 64-Core Processor",
+            "cpu_description": "AMD EPYC 9V45 96-Core Processor",
             "logical_cpu_count": 4,
             "os": "Linux",
-            "os_release": "6.17.0-1022-azure",
+            "os_release": "7.0.0-1017-azure",
             "unavailable": {}
           },
           "identity": {
@@ -158,11 +158,11 @@
           },
           "observational": {
             "phases": {
-              "preflight_ns": 40383906,
-              "recording_finalization_ns": 67687,
-              "scheduled_execution_ns": 2003738299,
-              "setup_ns": 201506997,
-              "shutdown_ns": 1043119062,
+              "preflight_ns": 30202404,
+              "recording_finalization_ns": 49163,
+              "scheduled_execution_ns": 2002410458,
+              "setup_ns": 135870340,
+              "shutdown_ns": 1036941165,
               "unattributed_ns": 0,
               "unavailable": {}
             },
@@ -172,10 +172,10 @@
                 "participant": "hazard_replay",
                 "timing": {
                   "completed": 5,
-                  "max_ns": 14417,
-                  "mean_ns": 6075.6,
-                  "min_ns": 3236,
-                  "p50_ns": 4028,
+                  "max_ns": 16274,
+                  "mean_ns": 4833.0,
+                  "min_ns": 1312,
+                  "p50_ns": 2353,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -192,42 +192,42 @@
                     "sample_count": 5
                   },
                   "samples_ns": [
-                    3236,
-                    3607,
-                    4028,
-                    5090,
-                    14417
+                    1312,
+                    1432,
+                    2353,
+                    2794,
+                    16274
                   ],
                   "scope": "inclusive_replay_publication_slot",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 14417
-                    },
-                    {
-                      "activation_index": 2,
-                      "virtual_time_ns": 20000000,
-                      "wall_ns": 5090
+                      "wall_ns": 16274
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 4028
+                      "wall_ns": 2794
+                    },
+                    {
+                      "activation_index": 2,
+                      "virtual_time_ns": 20000000,
+                      "wall_ns": 2353
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 3607
+                      "wall_ns": 1432
                     },
                     {
                       "activation_index": 4,
                       "virtual_time_ns": 40000000,
-                      "wall_ns": 3236
+                      "wall_ns": 1312
                     }
                   ],
-                  "stddev_ns": 4216.641820216652,
-                  "sum_ns": 30378,
+                  "stddev_ns": 5747.497612004724,
+                  "sum_ns": 24165,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -238,9 +238,9 @@
             "resources": {
               "cpu_total": {
                 "scope": "runner_and_process_participants",
-                "system_cpu_ns": 51783000,
+                "system_cpu_ns": 48862000,
                 "unavailable": {},
-                "user_cpu_ns": 247353000
+                "user_cpu_ns": 157524000
               },
               "native_participants": "shared_with_runner",
               "process_participants": [
@@ -253,12 +253,12 @@
                     "descendants_counted_only_when_waited"
                   ],
                   "participant": "hazard",
-                  "peak_rss_bytes": 48398336,
+                  "peak_rss_bytes": 48701440,
                   "peak_rss_kind": "largest_process_peak_rss",
                   "scope": "process_participant",
-                  "system_cpu_ns": 49571000,
+                  "system_cpu_ns": 44729000,
                   "unavailable": {},
-                  "user_cpu_ns": 203102000
+                  "user_cpu_ns": 127556000
                 }
               ],
               "runner": {
@@ -268,34 +268,34 @@
                 "limitations": [
                   "peak_includes_parent_rss_at_spawn"
                 ],
-                "peak_rss_bytes": 58146816,
+                "peak_rss_bytes": 72642560,
                 "peak_rss_kind": "process_peak_rss",
                 "scope": "runner_process",
-                "system_cpu_ns": 2212000,
+                "system_cpu_ns": 4133000,
                 "unavailable": {},
-                "user_cpu_ns": 44251000
+                "user_cpu_ns": 29968000
               }
             },
             "run_wall_time": {
               "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
               "unavailable": {},
-              "wall_ns": 3288815951
+              "wall_ns": 3205473530
             },
             "tasks": [
               {
                 "failed_activation": {
                   "activation_index": 4,
-                  "wall_ns": 2001203110
+                  "wall_ns": 2001177432
                 },
                 "kind": "process_step",
                 "participant": "hazard",
                 "task": "step",
                 "timing": {
                   "completed": 4,
-                  "max_ns": 757412,
-                  "mean_ns": 601571.75,
-                  "min_ns": 516129,
-                  "p50_ns": 565030,
+                  "max_ns": 477902,
+                  "mean_ns": 285430.25,
+                  "min_ns": 201801,
+                  "p50_ns": 209702,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -312,36 +312,36 @@
                     "sample_count": 4
                   },
                   "samples_ns": [
-                    516129,
-                    565030,
-                    567716,
-                    757412
+                    201801,
+                    209702,
+                    252316,
+                    477902
                   ],
                   "scope": "inclusive_process_step",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 757412
-                    },
-                    {
-                      "activation_index": 2,
-                      "virtual_time_ns": 20000000,
-                      "wall_ns": 567716
+                      "wall_ns": 477902
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 565030
+                      "wall_ns": 252316
+                    },
+                    {
+                      "activation_index": 2,
+                      "virtual_time_ns": 20000000,
+                      "wall_ns": 209702
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 516129
+                      "wall_ns": 201801
                     }
                   ],
-                  "stddev_ns": 92287.808442868,
-                  "sum_ns": 2406287,
+                  "stddev_ns": 112772.50042092487,
+                  "sum_ns": 1141721,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -354,8 +354,8 @@
               "completed_process_steps": 4,
               "denominator": "scheduled_execution_ns",
               "native_activations_per_s": 0.0,
-              "process_steps_per_s": 1.9962686754035037,
-              "scheduled_execution_ns": 2003738299,
+              "process_steps_per_s": 1.997592443656724,
+              "scheduled_execution_ns": 2002410458,
               "unavailable": {}
             },
             "virtual_time_speed": {
@@ -389,8 +389,8 @@
         "content": "Traceback (most recent call last):\n  File \"/home/runner/work/sil/sil/python/src/sil/participant.py\", line 297, in run\n    send({\n  File \"/home/runner/work/sil/sil/python/src/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/home/runner/work/sil/sil/python/src/sil/fmi/__main__.py\", line 5, in <module>\n    main()\n  File \"/home/runner/work/sil/sil/python/src/sil/fmi/cli.py\", line 139, in main\n    run(participant)\n  File \"/home/runner/work/sil/sil/python/src/sil/participant.py\", line 302, in run\n    send({\"op\": \"fail\", \"reason\": _reason(e)})\n  File \"/home/runner/work/sil/sil/python/src/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\nException ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: participant 'hazard': timeout waiting for step_done response during Step at virtual time 40000000 ns\n"
       },
       "gdb.txt": {
-        "sha256": "47b2d3839acf5028a978a605b317e8eff3dbf092edcc20d5bb8afacaf03b7473",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n[Detaching after vfork from child process 3694]\n\nBreakpoint 1, adas_ref_advance (instance=instance@entry=0xa44c630, t_ns=t_ns@entry=40000000, output=output@entry=0xa44c5b8, fault=fault@entry=0x7fffd4dfe360) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n[Inferior 1 (process 3690) exited with code 0170]\n"
+        "sha256": "a05714e06ed828ff2962792bad0893c5bb8d5b277ff9a247d9c4ada69dc7a29d",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n[Detaching after vfork from child process 3466]\n\nBreakpoint 1, adas_ref_advance (instance=instance@entry=0x85dd440, t_ns=t_ns@entry=40000000, output=output@entry=0x85dd3c8, fault=fault@entry=0x7fff9d382060) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n[Inferior 1 (process 3463) exited with code 0170]\n"
       }
     }
   },
@@ -398,7 +398,7 @@
     "directory": "fmu-debugger-error",
     "files": {
       "result.json": {
-        "sha256": "15ee7319130851b058f84d5aeb72ac2a589cddd145b9900f81dc999b9e8bf269",
+        "sha256": "21855af43186005d91e9c23989b3b4b5afca468084265def8fd1b34f662b322f",
         "content": {
           "form": "fmu",
           "label": "debugger-error",
@@ -422,7 +422,7 @@
             "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
           ],
           "exit_code": 1,
-          "elapsed_host_ns": 279577835,
+          "elapsed_host_ns": 202930427,
           "deadline_ms": 30000,
           "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
           "supervisor_timeout": false,
@@ -440,16 +440,16 @@
         }
       },
       "action.json": {
-        "sha256": "724ff42c52f208215c1f1500f39adc7cfc355ab410c6e57b4c49c713df14d1e9",
+        "sha256": "acf2a9cc4a4a2199f44d7dafe2cc1a6977119c03ca44a83f7461e980b0653bb9",
         "content": {
           "action": "debugger-error",
-          "inferior_pid": 3679,
+          "inferior_pid": 3452,
           "index": 4,
           "virtual_time_ns": 40000000
         }
       },
       "diagnostics.json": {
-        "sha256": "b8bc4862a861396f7f72760dac94c7fb05fce86eb826803002137c00fbc2212b",
+        "sha256": "a9e9063f7e5df1de66b45570739a21af0fdd7c4efe9e547a61797ae4cd99d161",
         "content": {
           "artifacts": {
             "failure_report": "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/fmu-debugger-error/recording.mcap.failure.json",
@@ -523,10 +523,10 @@
           },
           "host": {
             "architecture": "x86_64",
-            "cpu_description": "AMD EPYC 7763 64-Core Processor",
+            "cpu_description": "AMD EPYC 9V45 96-Core Processor",
             "logical_cpu_count": 4,
             "os": "Linux",
-            "os_release": "6.17.0-1022-azure",
+            "os_release": "7.0.0-1017-azure",
             "unavailable": {}
           },
           "identity": {
@@ -539,11 +539,11 @@
           },
           "observational": {
             "phases": {
-              "preflight_ns": 40311180,
-              "recording_finalization_ns": 55374,
-              "scheduled_execution_ns": 35351488,
-              "setup_ns": 201039088,
-              "shutdown_ns": 94377,
+              "preflight_ns": 29460039,
+              "recording_finalization_ns": 49975,
+              "scheduled_execution_ns": 30146581,
+              "setup_ns": 140737947,
+              "shutdown_ns": 79388,
               "unattributed_ns": 0,
               "unavailable": {}
             },
@@ -553,10 +553,10 @@
                 "participant": "hazard_replay",
                 "timing": {
                   "completed": 5,
-                  "max_ns": 12834,
-                  "mean_ns": 5516.4,
-                  "min_ns": 2966,
-                  "p50_ns": 3647,
+                  "max_ns": 15383,
+                  "mean_ns": 5810.6,
+                  "min_ns": 2323,
+                  "p50_ns": 3675,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -573,42 +573,42 @@
                     "sample_count": 5
                   },
                   "samples_ns": [
-                    2966,
-                    3235,
-                    3647,
-                    4900,
-                    12834
+                    2323,
+                    2754,
+                    3675,
+                    4918,
+                    15383
                   ],
                   "scope": "inclusive_replay_publication_slot",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 12834
+                      "wall_ns": 15383
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 4900
+                      "wall_ns": 4918
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 3647
+                      "wall_ns": 3675
                     },
                     {
                       "activation_index": 4,
                       "virtual_time_ns": 40000000,
-                      "wall_ns": 3235
+                      "wall_ns": 2754
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 2966
+                      "wall_ns": 2323
                     }
                   ],
-                  "stddev_ns": 3718.3652644677068,
-                  "sum_ns": 27582,
+                  "stddev_ns": 4868.152035423709,
+                  "sum_ns": 29053,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -619,9 +619,9 @@
             "resources": {
               "cpu_total": {
                 "scope": "runner_and_process_participants",
-                "system_cpu_ns": 44846000,
+                "system_cpu_ns": 44886000,
                 "unavailable": {},
-                "user_cpu_ns": 238121000
+                "user_cpu_ns": 155008000
               },
               "native_participants": "shared_with_runner",
               "process_participants": [
@@ -634,12 +634,12 @@
                     "descendants_counted_only_when_waited"
                   ],
                   "participant": "hazard",
-                  "peak_rss_bytes": 48959488,
+                  "peak_rss_bytes": 49233920,
                   "peak_rss_kind": "largest_process_peak_rss",
                   "scope": "process_participant",
-                  "system_cpu_ns": 44846000,
+                  "system_cpu_ns": 42867000,
                   "unavailable": {},
-                  "user_cpu_ns": 194766000
+                  "user_cpu_ns": 124722000
                 }
               ],
               "runner": {
@@ -649,34 +649,34 @@
                 "limitations": [
                   "peak_includes_parent_rss_at_spawn"
                 ],
-                "peak_rss_bytes": 58146816,
+                "peak_rss_bytes": 72642560,
                 "peak_rss_kind": "process_peak_rss",
                 "scope": "runner_process",
-                "system_cpu_ns": 0,
+                "system_cpu_ns": 2019000,
                 "unavailable": {},
-                "user_cpu_ns": 43355000
+                "user_cpu_ns": 30286000
               }
             },
             "run_wall_time": {
               "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
               "unavailable": {},
-              "wall_ns": 276851507
+              "wall_ns": 200473930
             },
             "tasks": [
               {
                 "failed_activation": {
                   "activation_index": 4,
-                  "wall_ns": 33209337
+                  "wall_ns": 28574340
                 },
                 "kind": "process_step",
                 "participant": "hazard",
                 "task": "step",
                 "timing": {
                   "completed": 4,
-                  "max_ns": 668976,
-                  "mean_ns": 506004.75,
-                  "min_ns": 430698,
-                  "p50_ns": 454574,
+                  "max_ns": 562968,
+                  "mean_ns": 368295.75,
+                  "min_ns": 286987,
+                  "p50_ns": 287077,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -693,36 +693,36 @@
                     "sample_count": 4
                   },
                   "samples_ns": [
-                    430698,
-                    454574,
-                    469771,
-                    668976
+                    286987,
+                    287077,
+                    336151,
+                    562968
                   ],
                   "scope": "inclusive_process_step",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 668976
-                    },
-                    {
-                      "activation_index": 2,
-                      "virtual_time_ns": 20000000,
-                      "wall_ns": 469771
+                      "wall_ns": 562968
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 454574
+                      "wall_ns": 336151
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 430698
+                      "wall_ns": 287077
+                    },
+                    {
+                      "activation_index": 2,
+                      "virtual_time_ns": 20000000,
+                      "wall_ns": 286987
                     }
                   ],
-                  "stddev_ns": 95116.69360153085,
-                  "sum_ns": 2024019,
+                  "stddev_ns": 114168.91876814592,
+                  "sum_ns": 1473183,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -735,8 +735,8 @@
               "completed_process_steps": 4,
               "denominator": "scheduled_execution_ns",
               "native_activations_per_s": 0.0,
-              "process_steps_per_s": 113.14940972215936,
-              "scheduled_execution_ns": 35351488,
+              "process_steps_per_s": 132.6850298546293,
+              "scheduled_execution_ns": 30146581,
               "unavailable": {}
             },
             "virtual_time_speed": {
@@ -770,8 +770,8 @@
         "content": "sil-run-diagnostics: participant 'hazard' exited unexpectedly with status 1 during Step 4 at virtual time 40000000 ns\n"
       },
       "gdb.txt": {
-        "sha256": "066ad26d2dd597976900b2c70b78122855a3566888cf5e4a8c69146f64ada78d",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n[Detaching after vfork from child process 3682]\n\nBreakpoint 1, adas_ref_advance (instance=instance@entry=0x2e8af630, t_ns=t_ns@entry=40000000, output=output@entry=0x2e8af5b8, fault=fault@entry=0x7ffc5155f980) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n/home/runner/work/sil/sil/build/source-debugging-evidence/runs/fmu-debugger-error/session.gdb:1: Error in sourced command file:\ndeliberate debugger failure\n"
+        "sha256": "621d8fba21dbd7cc75b13f954480aeae74b726e8fe24b18d8b9238667fd3725e",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n[Detaching after vfork from child process 3455]\n\nBreakpoint 1, adas_ref_advance (instance=instance@entry=0x14ed4440, t_ns=t_ns@entry=40000000, output=output@entry=0x14ed43c8, fault=fault@entry=0x7ffc8072f930) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n/home/runner/work/sil/sil/build/source-debugging-evidence/runs/fmu-debugger-error/session.gdb:1: Error in sourced command file:\ndeliberate debugger failure\n"
       }
     }
   },
@@ -779,7 +779,7 @@
     "directory": "fmu-kill",
     "files": {
       "result.json": {
-        "sha256": "c999652cefa8f9ad45c468b87c4a4bf78d351a58434e3af829a2e29a116f0f09",
+        "sha256": "8e5406bea3c4b3cbf65473773a8491d548b98860228296193e0ca965e6cee4e4",
         "content": {
           "form": "fmu",
           "label": "kill",
@@ -803,7 +803,7 @@
             "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
           ],
           "exit_code": 1,
-          "elapsed_host_ns": 272663760,
+          "elapsed_host_ns": 197218848,
           "deadline_ms": 30000,
           "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
           "supervisor_timeout": false,
@@ -821,10 +821,10 @@
         }
       },
       "action.json": {
-        "sha256": "03ab78c91b7fa8f8eb87ceb108dac3be6f78efb3ef2dcc638011efbdc32b390b",
+        "sha256": "a235d1e167f9a0a2dc3847283348b744af833c9fe835b2c77a7cf5a31ccec930",
         "content": {
           "action": "kill",
-          "inferior_pid": 3657,
+          "inferior_pid": 3429,
           "index": 4,
           "virtual_time_ns": 40000000
         }
@@ -844,7 +844,7 @@
         }
       },
       "diagnostics.json": {
-        "sha256": "e8f53cec5742116ce6f24430150d62d4a83a5b99407f15d1c8af67cef5c8d411",
+        "sha256": "1d4c13c8c79c4491a5124d5057a526f37b44e9189c32ce7374fa16554b17f02d",
         "content": {
           "artifacts": {
             "failure_report": "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/fmu-kill/recording.mcap.failure.json",
@@ -918,10 +918,10 @@
           },
           "host": {
             "architecture": "x86_64",
-            "cpu_description": "AMD EPYC 7763 64-Core Processor",
+            "cpu_description": "AMD EPYC 9V45 96-Core Processor",
             "logical_cpu_count": 4,
             "os": "Linux",
-            "os_release": "6.17.0-1022-azure",
+            "os_release": "7.0.0-1017-azure",
             "unavailable": {}
           },
           "identity": {
@@ -934,11 +934,11 @@
           },
           "observational": {
             "phases": {
-              "preflight_ns": 39980178,
-              "recording_finalization_ns": 44814,
-              "scheduled_execution_ns": 35566893,
-              "setup_ns": 194342912,
-              "shutdown_ns": 89608,
+              "preflight_ns": 30030168,
+              "recording_finalization_ns": 58488,
+              "scheduled_execution_ns": 20895159,
+              "setup_ns": 143576887,
+              "shutdown_ns": 81270,
               "unattributed_ns": 0,
               "unavailable": {}
             },
@@ -948,10 +948,10 @@
                 "participant": "hazard_replay",
                 "timing": {
                   "completed": 5,
-                  "max_ns": 12935,
-                  "mean_ns": 5336.6,
-                  "min_ns": 2896,
-                  "p50_ns": 3337,
+                  "max_ns": 15072,
+                  "mean_ns": 5415.8,
+                  "min_ns": 1582,
+                  "p50_ns": 4086,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -968,42 +968,42 @@
                     "sample_count": 5
                   },
                   "samples_ns": [
-                    2896,
-                    3086,
-                    3337,
-                    4429,
-                    12935
+                    1582,
+                    2213,
+                    4086,
+                    4126,
+                    15072
                   ],
                   "scope": "inclusive_replay_publication_slot",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 12935
-                    },
-                    {
-                      "activation_index": 2,
-                      "virtual_time_ns": 20000000,
-                      "wall_ns": 4429
-                    },
-                    {
-                      "activation_index": 4,
-                      "virtual_time_ns": 40000000,
-                      "wall_ns": 3337
+                      "wall_ns": 15072
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 3086
+                      "wall_ns": 4126
+                    },
+                    {
+                      "activation_index": 2,
+                      "virtual_time_ns": 20000000,
+                      "wall_ns": 4086
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 2896
+                      "wall_ns": 2213
+                    },
+                    {
+                      "activation_index": 4,
+                      "virtual_time_ns": 40000000,
+                      "wall_ns": 1582
                     }
                   ],
-                  "stddev_ns": 3836.1321457947715,
-                  "sum_ns": 26683,
+                  "stddev_ns": 4932.141538926067,
+                  "sum_ns": 27079,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -1014,9 +1014,9 @@
             "resources": {
               "cpu_total": {
                 "scope": "runner_and_process_participants",
-                "system_cpu_ns": 44330000,
+                "system_cpu_ns": 55553000,
                 "unavailable": {},
-                "user_cpu_ns": 231436000
+                "user_cpu_ns": 149046000
               },
               "native_participants": "shared_with_runner",
               "process_participants": [
@@ -1029,12 +1029,12 @@
                     "descendants_counted_only_when_waited"
                   ],
                   "participant": "hazard",
-                  "peak_rss_bytes": 48381952,
+                  "peak_rss_bytes": 48852992,
                   "peak_rss_kind": "largest_process_peak_rss",
                   "scope": "process_participant",
-                  "system_cpu_ns": 41339000,
+                  "system_cpu_ns": 53566000,
                   "unavailable": {},
-                  "user_cpu_ns": 191551000
+                  "user_cpu_ns": 118242000
                 }
               ],
               "runner": {
@@ -1044,34 +1044,34 @@
                 "limitations": [
                   "peak_includes_parent_rss_at_spawn"
                 ],
-                "peak_rss_bytes": 58146816,
+                "peak_rss_bytes": 72642560,
                 "peak_rss_kind": "process_peak_rss",
                 "scope": "runner_process",
-                "system_cpu_ns": 2991000,
+                "system_cpu_ns": 1987000,
                 "unavailable": {},
-                "user_cpu_ns": 39885000
+                "user_cpu_ns": 30804000
               }
             },
             "run_wall_time": {
               "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
               "unavailable": {},
-              "wall_ns": 270024405
+              "wall_ns": 194641972
             },
             "tasks": [
               {
                 "failed_activation": {
                   "activation_index": 4,
-                  "wall_ns": 33507296
+                  "wall_ns": 19572319
                 },
                 "kind": "process_step",
                 "participant": "hazard",
                 "task": "step",
                 "timing": {
                   "completed": 4,
-                  "max_ns": 600337,
-                  "mean_ns": 485469.0,
-                  "min_ns": 420900,
-                  "p50_ns": 432402,
+                  "max_ns": 536639,
+                  "mean_ns": 307685.5,
+                  "min_ns": 213588,
+                  "p50_ns": 213698,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -1088,36 +1088,36 @@
                     "sample_count": 4
                   },
                   "samples_ns": [
-                    420900,
-                    432402,
-                    488237,
-                    600337
+                    213588,
+                    213698,
+                    266817,
+                    536639
                   ],
                   "scope": "inclusive_process_step",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 600337
+                      "wall_ns": 536639
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 488237
+                      "wall_ns": 266817
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 432402
+                      "wall_ns": 213698
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 420900
+                      "wall_ns": 213588
                     }
                   ],
-                  "stddev_ns": 71041.50459062646,
-                  "sum_ns": 1941876,
+                  "stddev_ns": 133957.01653608892,
+                  "sum_ns": 1230742,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -1130,8 +1130,8 @@
               "completed_process_steps": 4,
               "denominator": "scheduled_execution_ns",
               "native_activations_per_s": 0.0,
-              "process_steps_per_s": 112.46413905201109,
-              "scheduled_execution_ns": 35566893,
+              "process_steps_per_s": 191.43190056605934,
+              "scheduled_execution_ns": 20895159,
               "unavailable": {}
             },
             "virtual_time_speed": {
@@ -1165,8 +1165,8 @@
         "content": "sil-run-diagnostics: participant 'hazard' exited unexpectedly with status 0 during Step 4 at virtual time 40000000 ns\n"
       },
       "gdb.txt": {
-        "sha256": "4991eb4d4546b3a5ddb32fbd990c36b07fd4073385764e2caa00b878f7d7763b",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n[Detaching after vfork from child process 3660]\n\nBreakpoint 1, adas_ref_advance (instance=instance@entry=0x37ade630, t_ns=t_ns@entry=40000000, output=output@entry=0x37ade5b8, fault=fault@entry=0x7ffed69f5150) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n[Inferior 1 (process 3657) killed]\n"
+        "sha256": "b9f381b8182e3c7a198980020587063701757e56d5933f97eef10fed6a74bf70",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n[Detaching after vfork from child process 3432]\n\nBreakpoint 1, adas_ref_advance (instance=instance@entry=0x25a67440, t_ns=t_ns@entry=40000000, output=output@entry=0x25a673c8, fault=fault@entry=0x7ffedc31e6c0) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n[Inferior 1 (process 3429) killed]\n"
       }
     }
   },
@@ -1174,7 +1174,7 @@
     "directory": "fmu-signal",
     "files": {
       "result.json": {
-        "sha256": "9295f725aca39659627e7db9dc1ebc360106b13eb82b4c5dd36ef05550755734",
+        "sha256": "c8d38263b62c9cefae1f6b07ccce7dac6ff363a10d0a6926db9d6b180999c441",
         "content": {
           "form": "fmu",
           "label": "signal",
@@ -1198,7 +1198,7 @@
             "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
           ],
           "exit_code": 1,
-          "elapsed_host_ns": 283551225,
+          "elapsed_host_ns": 210119415,
           "deadline_ms": 30000,
           "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
           "supervisor_timeout": false,
@@ -1216,10 +1216,10 @@
         }
       },
       "action.json": {
-        "sha256": "9721003fe50bf711cd3c2c81c93d2a49c2aa2f1f4963c965b9ba667223f29d79",
+        "sha256": "9f42ccf5752f0288b3514ba2abd407d2855a2d3886f21841029ccbddc644dd30",
         "content": {
           "action": "signal",
-          "inferior_pid": 3668,
+          "inferior_pid": 3441,
           "index": 4,
           "virtual_time_ns": 40000000
         }
@@ -1239,7 +1239,7 @@
         }
       },
       "diagnostics.json": {
-        "sha256": "2472d5bedc07b37f972fe8656a66e8fe4f1021509b2c0b8bb7d953da7bf4e5a2",
+        "sha256": "b7be44fd38ca088c2d6b4560e52f182b7656f0b98d5286ff019f27e07cec8f0f",
         "content": {
           "artifacts": {
             "failure_report": "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/fmu-signal/recording.mcap.failure.json",
@@ -1313,10 +1313,10 @@
           },
           "host": {
             "architecture": "x86_64",
-            "cpu_description": "AMD EPYC 7763 64-Core Processor",
+            "cpu_description": "AMD EPYC 9V45 96-Core Processor",
             "logical_cpu_count": 4,
             "os": "Linux",
-            "os_release": "6.17.0-1022-azure",
+            "os_release": "7.0.0-1017-azure",
             "unavailable": {}
           },
           "identity": {
@@ -1329,11 +1329,11 @@
           },
           "observational": {
             "phases": {
-              "preflight_ns": 40120983,
-              "recording_finalization_ns": 48401,
-              "scheduled_execution_ns": 46042188,
-              "setup_ns": 194533084,
-              "shutdown_ns": 93556,
+              "preflight_ns": 29445977,
+              "recording_finalization_ns": 56965,
+              "scheduled_execution_ns": 40204075,
+              "setup_ns": 137788896,
+              "shutdown_ns": 84856,
               "unattributed_ns": 0,
               "unavailable": {}
             },
@@ -1343,10 +1343,10 @@
                 "participant": "hazard_replay",
                 "timing": {
                   "completed": 5,
-                  "max_ns": 13886,
-                  "mean_ns": 5862.6,
-                  "min_ns": 3135,
-                  "p50_ns": 3947,
+                  "max_ns": 16334,
+                  "mean_ns": 7879.6,
+                  "min_ns": 1522,
+                  "p50_ns": 3766,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -1363,42 +1363,42 @@
                     "sample_count": 5
                   },
                   "samples_ns": [
-                    3135,
-                    3596,
-                    3947,
-                    4749,
-                    13886
+                    1522,
+                    3134,
+                    3766,
+                    14642,
+                    16334
                   ],
                   "scope": "inclusive_replay_publication_slot",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 13886
-                    },
-                    {
-                      "activation_index": 2,
-                      "virtual_time_ns": 20000000,
-                      "wall_ns": 4749
-                    },
-                    {
-                      "activation_index": 4,
-                      "virtual_time_ns": 40000000,
-                      "wall_ns": 3947
-                    },
-                    {
-                      "activation_index": 1,
-                      "virtual_time_ns": 10000000,
-                      "wall_ns": 3596
+                      "wall_ns": 16334
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 3135
+                      "wall_ns": 14642
+                    },
+                    {
+                      "activation_index": 2,
+                      "virtual_time_ns": 20000000,
+                      "wall_ns": 3766
+                    },
+                    {
+                      "activation_index": 1,
+                      "virtual_time_ns": 10000000,
+                      "wall_ns": 3134
+                    },
+                    {
+                      "activation_index": 4,
+                      "virtual_time_ns": 40000000,
+                      "wall_ns": 1522
                     }
                   ],
-                  "stddev_ns": 4046.2786162102084,
-                  "sum_ns": 29313,
+                  "stddev_ns": 6278.03209931265,
+                  "sum_ns": 39398,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -1409,9 +1409,9 @@
             "resources": {
               "cpu_total": {
                 "scope": "runner_and_process_participants",
-                "system_cpu_ns": 54755000,
+                "system_cpu_ns": 50661000,
                 "unavailable": {},
-                "user_cpu_ns": 232601000
+                "user_cpu_ns": 156231000
               },
               "native_participants": "shared_with_runner",
               "process_participants": [
@@ -1424,12 +1424,12 @@
                     "descendants_counted_only_when_waited"
                   ],
                   "participant": "hazard",
-                  "peak_rss_bytes": 48562176,
+                  "peak_rss_bytes": 48840704,
                   "peak_rss_kind": "largest_process_peak_rss",
                   "scope": "process_participant",
-                  "system_cpu_ns": 52760000,
+                  "system_cpu_ns": 47825000,
                   "unavailable": {},
-                  "user_cpu_ns": 191695000
+                  "user_cpu_ns": 126923000
                 }
               ],
               "runner": {
@@ -1439,34 +1439,34 @@
                 "limitations": [
                   "peak_includes_parent_rss_at_spawn"
                 ],
-                "peak_rss_bytes": 58146816,
+                "peak_rss_bytes": 72642560,
                 "peak_rss_kind": "process_peak_rss",
                 "scope": "runner_process",
-                "system_cpu_ns": 1995000,
+                "system_cpu_ns": 2836000,
                 "unavailable": {},
-                "user_cpu_ns": 40906000
+                "user_cpu_ns": 29308000
               }
             },
             "run_wall_time": {
               "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
               "unavailable": {},
-              "wall_ns": 280838212
+              "wall_ns": 207580769
             },
             "tasks": [
               {
                 "failed_activation": {
                   "activation_index": 4,
-                  "wall_ns": 43665768
+                  "wall_ns": 38986802
                 },
                 "kind": "process_step",
                 "participant": "hazard",
                 "task": "step",
                 "timing": {
                   "completed": 4,
-                  "max_ns": 654078,
-                  "mean_ns": 564680.5,
-                  "min_ns": 500720,
-                  "p50_ns": 530717,
+                  "max_ns": 450741,
+                  "mean_ns": 278414.75,
+                  "min_ns": 207589,
+                  "p50_ns": 208621,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -1483,36 +1483,36 @@
                     "sample_count": 4
                   },
                   "samples_ns": [
-                    500720,
-                    530717,
-                    573207,
-                    654078
+                    207589,
+                    208621,
+                    246708,
+                    450741
                   ],
                   "scope": "inclusive_process_step",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 654078
+                      "wall_ns": 450741
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 573207
+                      "wall_ns": 246708
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 530717
+                      "wall_ns": 208621
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 500720
+                      "wall_ns": 207589
                     }
                   ],
-                  "stddev_ns": 57682.4910631467,
-                  "sum_ns": 2258722,
+                  "stddev_ns": 100733.69450778374,
+                  "sum_ns": 1113659,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -1525,8 +1525,8 @@
               "completed_process_steps": 4,
               "denominator": "scheduled_execution_ns",
               "native_activations_per_s": 0.0,
-              "process_steps_per_s": 86.87684434110734,
-              "scheduled_execution_ns": 46042188,
+              "process_steps_per_s": 99.4924022005232,
+              "scheduled_execution_ns": 40204075,
               "unavailable": {}
             },
             "virtual_time_speed": {
@@ -1560,8 +1560,8 @@
         "content": "participant terminated by signal 15\nsil-run-diagnostics: participant 'hazard' exited unexpectedly with status 0 during Step 4 at virtual time 40000000 ns\n"
       },
       "gdb.txt": {
-        "sha256": "0d47b6ed53bb714f39a0b0631b1d91786bbe3b9390058dfa5bc43ee91608be67",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n[Detaching after vfork from child process 3671]\n\nBreakpoint 1, adas_ref_advance (instance=instance@entry=0x3d48630, t_ns=t_ns@entry=40000000, output=output@entry=0x3d485b8, fault=fault@entry=0x7ffcd16220a0) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n[Inferior 1 (process 3668) exited with code 01]\n"
+        "sha256": "be407a9ba4588f25f0d8e9b5066a1458e6d288f5db48b7f05e4f3c3dfeed97ff",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n[Detaching after vfork from child process 3444]\n\nBreakpoint 1, adas_ref_advance (instance=instance@entry=0x3619d440, t_ns=t_ns@entry=40000000, output=output@entry=0x3619d3c8, fault=fault@entry=0x7ffe8c42ba90) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n[Inferior 1 (process 3441) exited with code 01]\n"
       }
     }
   },
@@ -1569,7 +1569,7 @@
     "directory": "group-unsupported",
     "files": {
       "result.json": {
-        "sha256": "cb895f64bdb86109b442dc2bf5ea510c5d20a78d0c1ff90b1447fced34df0b38",
+        "sha256": "1f15c9352ccdac216c85661b512eb30ca25f5ec15d8ac26e1ddaa87c25d1e0c5",
         "content": {
           "form": "group",
           "label": "unsupported",
@@ -1584,7 +1584,7 @@
             "30000"
           ],
           "exit_code": 2,
-          "elapsed_host_ns": 135767705,
+          "elapsed_host_ns": 103094966,
           "deadline_ms": 30000,
           "manifest_sha256": "3b0624f30b63adc66dd7a746c6dbc08b7863243dba3e5d883f1358e896f8ebc6",
           "supervisor_timeout": false,
@@ -1609,7 +1609,7 @@
     "directory": "native-debugger-error",
     "files": {
       "result.json": {
-        "sha256": "8e4e2ebc0b185e759c99a75eddaeb11fd5917303c477fe822c1e4fbe9157561a",
+        "sha256": "7eabce5af4899dd1005b40649d29c4c5ca508916a9c443882c96e37c57c1436a",
         "content": {
           "form": "native",
           "label": "debugger-error",
@@ -1640,7 +1640,7 @@
             "1048576"
           ],
           "exit_code": 1,
-          "elapsed_host_ns": 661390090,
+          "elapsed_host_ns": 400284127,
           "deadline_ms": 30000,
           "manifest_sha256": "cfe041b8ec1f6bedc4ab2b74e132f07d315088628203226b2eb7673470ffd231",
           "supervisor_timeout": false,
@@ -1652,10 +1652,10 @@
         }
       },
       "action.json": {
-        "sha256": "096d90f12f9505628cc02d47776e23c2d56878f038537bfdc6c4b15bc72ec764",
+        "sha256": "327e542cd8a73fcff198245621d4bd1a66a363205bb6243d4be5eee7f16630ef",
         "content": {
           "action": "debugger-error",
-          "inferior_pid": 3528,
+          "inferior_pid": 3301,
           "index": 4,
           "virtual_time_ns": 40000000
         }
@@ -1669,8 +1669,8 @@
         "content": ""
       },
       "gdb.txt": {
-        "sha256": "ed34db8f74dfa4327ad02128460287956a8606d07902cc941765e8c26e840fa7",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=instance@entry=0x55b978a17f38, t_ns=t_ns@entry=40000000, output=output@entry=0x7ffea4f8d0e0, fault=fault@entry=0x7ffea4f8d120) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n/home/runner/work/sil/sil/build/source-debugging-evidence/runs/native-debugger-error/session.gdb:1: Error in sourced command file:\ndeliberate debugger failure\n"
+        "sha256": "7997528d8ddee057cca9e7893359345b05875d98d0a946b1ee36ba087c79dd00",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=instance@entry=0x55bde254cf38, t_ns=t_ns@entry=40000000, output=output@entry=0x7ffeb665df00, fault=fault@entry=0x7ffeb665df40) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n/home/runner/work/sil/sil/build/source-debugging-evidence/runs/native-debugger-error/session.gdb:1: Error in sourced command file:\ndeliberate debugger failure\n"
       }
     }
   },
@@ -1678,7 +1678,7 @@
     "directory": "native-kill",
     "files": {
       "result.json": {
-        "sha256": "3f7d9009348727193d2098801c7b16b5d765ac940997ef945c69003704476a62",
+        "sha256": "f318f0d3c7bec5df7b2a7d8ed198182d614cc0457d3e61bea9b96b8181e3c003",
         "content": {
           "form": "native",
           "label": "kill",
@@ -1709,7 +1709,7 @@
             "1048576"
           ],
           "exit_code": 255,
-          "elapsed_host_ns": 671606823,
+          "elapsed_host_ns": 388723572,
           "deadline_ms": 30000,
           "manifest_sha256": "cfe041b8ec1f6bedc4ab2b74e132f07d315088628203226b2eb7673470ffd231",
           "supervisor_timeout": false,
@@ -1721,10 +1721,10 @@
         }
       },
       "action.json": {
-        "sha256": "5ff854c5cc8ad0bcbb8be1deb51417d2a3517a5befb04228052b9eccea6e04b0",
+        "sha256": "04e2e3dc4edcf37362edb2520ff79bf6ff60e3540cc0c1fd2674a4ff07325ca3",
         "content": {
           "action": "kill",
-          "inferior_pid": 3509,
+          "inferior_pid": 3283,
           "index": 4,
           "virtual_time_ns": 40000000
         }
@@ -1752,8 +1752,8 @@
         "content": ""
       },
       "gdb.txt": {
-        "sha256": "40b72bb70b3819d0162043c5806eb5de8c936909ee11842d3e7779c67be02b87",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=instance@entry=0x55ed2c9eefe8, t_ns=t_ns@entry=40000000, output=output@entry=0x7ffd8f3c6ca0, fault=fault@entry=0x7ffd8f3c6ce0) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n[Inferior 1 (process 3509) killed]\n"
+        "sha256": "c0a069a9e0a102e070433876aa62a7a720d7f6f9506355b7ad0f54534311453d",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=instance@entry=0x5610f22ddfe8, t_ns=t_ns@entry=40000000, output=output@entry=0x7fff4a938c40, fault=fault@entry=0x7fff4a938c80) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n[Inferior 1 (process 3283) killed]\n"
       }
     }
   },
@@ -1761,7 +1761,7 @@
     "directory": "native-signal",
     "files": {
       "result.json": {
-        "sha256": "c548bd22185182a03ba5628b9c2a25edd4da2675b3cb5a35a4e756aca2aa7f22",
+        "sha256": "e9f2214ea89c88d41f91732c38b8317796c31c2e488b588848193838afda46fc",
         "content": {
           "form": "native",
           "label": "signal",
@@ -1792,7 +1792,7 @@
             "1048576"
           ],
           "exit_code": 1,
-          "elapsed_host_ns": 653842940,
+          "elapsed_host_ns": 390590803,
           "deadline_ms": 30000,
           "manifest_sha256": "cfe041b8ec1f6bedc4ab2b74e132f07d315088628203226b2eb7673470ffd231",
           "supervisor_timeout": false,
@@ -1810,10 +1810,10 @@
         }
       },
       "action.json": {
-        "sha256": "b3d726f94c05e89899a7b504eac6ebc6ffb05c0e9087fa91e1d98f00e60336d7",
+        "sha256": "42659d3a864cff8ea83126ccc751b918ba41965c84d4044d674c56ea470a7266",
         "content": {
           "action": "signal",
-          "inferior_pid": 3518,
+          "inferior_pid": 3292,
           "index": 4,
           "virtual_time_ns": 40000000
         }
@@ -1833,7 +1833,7 @@
         }
       },
       "diagnostics.json": {
-        "sha256": "0af5eb006262b5e78becb53b43684a41f428d2a6bc56ffe4483baa1d6eada136",
+        "sha256": "d101418c42ce62c51b6329416515a9c8297080ecb2cee29e6b7aac2a2b19dd86",
         "content": {
           "artifacts": {
             "failure_report": "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/native-signal/recording.mcap.failure.json",
@@ -1903,10 +1903,10 @@
           },
           "host": {
             "architecture": "x86_64",
-            "cpu_description": "AMD EPYC 7763 64-Core Processor",
+            "cpu_description": "AMD EPYC 9V45 96-Core Processor",
             "logical_cpu_count": 4,
             "os": "Linux",
-            "os_release": "6.17.0-1022-azure",
+            "os_release": "7.0.0-1017-azure",
             "unavailable": {}
           },
           "identity": {
@@ -1919,11 +1919,11 @@
           },
           "observational": {
             "phases": {
-              "preflight_ns": 5220091,
-              "recording_finalization_ns": 42429,
-              "scheduled_execution_ns": 329798461,
-              "setup_ns": 3385808,
-              "shutdown_ns": 689685,
+              "preflight_ns": 3929824,
+              "recording_finalization_ns": 46159,
+              "scheduled_execution_ns": 198819286,
+              "setup_ns": 2281939,
+              "shutdown_ns": 558011,
               "unattributed_ns": 0,
               "unavailable": {}
             },
@@ -1933,10 +1933,10 @@
                 "participant": "hazard_replay",
                 "timing": {
                   "completed": 5,
-                  "max_ns": 8897,
-                  "mean_ns": 3889.4,
-                  "min_ns": 2094,
-                  "p50_ns": 2585,
+                  "max_ns": 13310,
+                  "mean_ns": 3603.4,
+                  "min_ns": 881,
+                  "p50_ns": 1202,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -1953,42 +1953,42 @@
                     "sample_count": 5
                   },
                   "samples_ns": [
-                    2094,
-                    2244,
-                    2585,
-                    3627,
-                    8897
+                    881,
+                    1032,
+                    1202,
+                    1592,
+                    13310
                   ],
                   "scope": "inclusive_replay_publication_slot",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 8897
+                      "wall_ns": 13310
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 3627
+                      "wall_ns": 1592
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 2585
+                      "wall_ns": 1202
                     },
                     {
                       "activation_index": 4,
                       "virtual_time_ns": 40000000,
-                      "wall_ns": 2244
+                      "wall_ns": 1032
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 2094
+                      "wall_ns": 881
                     }
                   ],
-                  "stddev_ns": 2560.3583030505706,
-                  "sum_ns": 19447,
+                  "stddev_ns": 4859.096525075418,
+                  "sum_ns": 18017,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -1999,9 +1999,9 @@
             "resources": {
               "cpu_total": {
                 "scope": "runner_and_process_participants",
-                "system_cpu_ns": 2713000,
+                "system_cpu_ns": 2443000,
                 "unavailable": {},
-                "user_cpu_ns": 6332000
+                "user_cpu_ns": 4886000
               },
               "native_participants": "shared_with_runner",
               "process_participants": [],
@@ -2012,18 +2012,18 @@
                 "limitations": [
                   "peak_includes_parent_rss_at_spawn"
                 ],
-                "peak_rss_bytes": 62377984,
+                "peak_rss_bytes": 62922752,
                 "peak_rss_kind": "process_peak_rss",
                 "scope": "runner_process",
-                "system_cpu_ns": 2713000,
+                "system_cpu_ns": 2443000,
                 "unavailable": {},
-                "user_cpu_ns": 6332000
+                "user_cpu_ns": 4886000
               }
             },
             "run_wall_time": {
               "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
               "unavailable": {},
-              "wall_ns": 339136474
+              "wall_ns": 205635219
             },
             "tasks": [
               {
@@ -2033,10 +2033,10 @@
                 "task": "control",
                 "timing": {
                   "completed": 5,
-                  "max_ns": 328606193,
-                  "mean_ns": 65927329.6,
-                  "min_ns": 225653,
-                  "p50_ns": 259287,
+                  "max_ns": 198143329,
+                  "mean_ns": 39736077.6,
+                  "min_ns": 112688,
+                  "p50_ns": 122081,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -2053,42 +2053,42 @@
                     "sample_count": 5
                   },
                   "samples_ns": [
-                    225653,
-                    237737,
-                    259287,
-                    307778,
-                    328606193
+                    112688,
+                    114911,
+                    122081,
+                    187379,
+                    198143329
                   ],
                   "scope": "inclusive_native_activation",
                   "slowest": [
                     {
                       "activation_index": 4,
                       "virtual_time_ns": 40000000,
-                      "wall_ns": 328606193
+                      "wall_ns": 198143329
                     },
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 307778
-                    },
-                    {
-                      "activation_index": 2,
-                      "virtual_time_ns": 20000000,
-                      "wall_ns": 259287
+                      "wall_ns": 187379
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 237737
+                      "wall_ns": 122081
+                    },
+                    {
+                      "activation_index": 2,
+                      "virtual_time_ns": 20000000,
+                      "wall_ns": 114911
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 225653
+                      "wall_ns": 112688
                     }
                   ],
-                  "stddev_ns": 131339434.69668302,
-                  "sum_ns": 329636648,
+                  "stddev_ns": 79203630.50999568,
+                  "sum_ns": 198680388,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -2100,9 +2100,9 @@
               "completed_native_activations": 5,
               "completed_process_steps": 0,
               "denominator": "scheduled_execution_ns",
-              "native_activations_per_s": 15.160774203855366,
+              "native_activations_per_s": 25.148465727816767,
               "process_steps_per_s": 0.0,
-              "scheduled_execution_ns": 329798461,
+              "scheduled_execution_ns": 198819286,
               "unavailable": {}
             },
             "virtual_time_speed": {
@@ -2136,8 +2136,8 @@
         "content": "sil-run-diagnostics: run interrupted by SIGTERM\n"
       },
       "gdb.txt": {
-        "sha256": "070d0ca454807f358f50a034d004f72c349b404013471ee0c75421cf953fec99",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=instance@entry=0x55e0bdcb3f78, t_ns=t_ns@entry=40000000, output=output@entry=0x7ffe09cf6980, fault=fault@entry=0x7ffe09cf69c0) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\nwarning: Temporarily disabling breakpoints for unloaded shared library \"/home/runner/work/sil/sil/build/source-debugging-evidence/adas.so\"\n[Inferior 1 (process 3518) exited with code 01]\n"
+        "sha256": "5a9e1d24c52c4b739e73439bb822dac600c412d53ec56ce843911b71e501c863",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=instance@entry=0x55ff682dcf78, t_ns=t_ns@entry=40000000, output=output@entry=0x7ffdbb427930, fault=fault@entry=0x7ffdbb427970) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\nwarning: Temporarily disabling breakpoints for unloaded shared library \"/home/runner/work/sil/sil/build/source-debugging-evidence/adas.so\"\n[Inferior 1 (process 3292) exited with code 01]\n"
       }
     }
   },
@@ -2145,7 +2145,7 @@
     "directory": "process-deadline",
     "files": {
       "result.json": {
-        "sha256": "0ce0d833784a8e7ea94bdaff6765a4915af1eb7241b81b621d00b11691836711",
+        "sha256": "4d40c1e5a08aa73ec8a3ecedac748cdc718a1059a235e0b554ec2f07f97758c4",
         "content": {
           "form": "process",
           "label": "deadline",
@@ -2169,7 +2169,7 @@
             "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
           ],
           "exit_code": 1,
-          "elapsed_host_ns": 3260048592,
+          "elapsed_host_ns": 3189387127,
           "deadline_ms": 2000,
           "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
           "supervisor_timeout": false,
@@ -2187,10 +2187,10 @@
         }
       },
       "action.json": {
-        "sha256": "167b66f66732c7ed6b1e39a691c3143d0999c707df579dcfa51cdd9ed8d52193",
+        "sha256": "dd1b4edb7d8659f550d5d21e0d2c4687a2f2d9352d4ff48058beae57d338a0ce",
         "content": {
           "action": "deadline",
-          "inferior_pid": 3604,
+          "inferior_pid": 3377,
           "index": 4,
           "virtual_time_ns": 40000000
         }
@@ -2210,7 +2210,7 @@
         }
       },
       "diagnostics.json": {
-        "sha256": "dac3c125926be95ba0e161841d366c27a72a86bf52967afb2cbf02b2e096d4c1",
+        "sha256": "102449438afd4c8938c645162aadcaed38fe89f36c589210078ac7e54efc5db1",
         "content": {
           "artifacts": {
             "failure_report": "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/process-deadline/recording.mcap.failure.json",
@@ -2284,10 +2284,10 @@
           },
           "host": {
             "architecture": "x86_64",
-            "cpu_description": "AMD EPYC 7763 64-Core Processor",
+            "cpu_description": "AMD EPYC 9V45 96-Core Processor",
             "logical_cpu_count": 4,
             "os": "Linux",
-            "os_release": "6.17.0-1022-azure",
+            "os_release": "7.0.0-1017-azure",
             "unavailable": {}
           },
           "identity": {
@@ -2300,11 +2300,11 @@
           },
           "observational": {
             "phases": {
-              "preflight_ns": 39710935,
-              "recording_finalization_ns": 49553,
-              "scheduled_execution_ns": 2003115540,
-              "setup_ns": 174156928,
-              "shutdown_ns": 1040188405,
+              "preflight_ns": 29432038,
+              "recording_finalization_ns": 57906,
+              "scheduled_execution_ns": 2002305594,
+              "setup_ns": 119790062,
+              "shutdown_ns": 1035108898,
               "unattributed_ns": 0,
               "unavailable": {}
             },
@@ -2314,10 +2314,10 @@
                 "participant": "hazard_replay",
                 "timing": {
                   "completed": 5,
-                  "max_ns": 11441,
-                  "mean_ns": 5115.8,
-                  "min_ns": 3076,
-                  "p50_ns": 3297,
+                  "max_ns": 14481,
+                  "mean_ns": 4588.8,
+                  "min_ns": 1362,
+                  "p50_ns": 2293,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -2334,42 +2334,42 @@
                     "sample_count": 5
                   },
                   "samples_ns": [
-                    3076,
-                    3266,
-                    3297,
-                    4499,
-                    11441
+                    1362,
+                    1513,
+                    2293,
+                    3295,
+                    14481
                   ],
                   "scope": "inclusive_replay_publication_slot",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 11441
+                      "wall_ns": 14481
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 4499
+                      "wall_ns": 3295
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 3297
+                      "wall_ns": 2293
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 3266
+                      "wall_ns": 1513
                     },
                     {
                       "activation_index": 4,
                       "virtual_time_ns": 40000000,
-                      "wall_ns": 3076
+                      "wall_ns": 1362
                     }
                   ],
-                  "stddev_ns": 3202.4732567189376,
-                  "sum_ns": 25579,
+                  "stddev_ns": 4993.456133781491,
+                  "sum_ns": 22944,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -2380,9 +2380,9 @@
             "resources": {
               "cpu_total": {
                 "scope": "runner_and_process_participants",
-                "system_cpu_ns": 43538000,
+                "system_cpu_ns": 41382000,
                 "unavailable": {},
-                "user_cpu_ns": 222701000
+                "user_cpu_ns": 146809000
               },
               "native_participants": "shared_with_runner",
               "process_participants": [
@@ -2395,12 +2395,12 @@
                     "descendants_counted_only_when_waited"
                   ],
                   "participant": "hazard",
-                  "peak_rss_bytes": 47415296,
+                  "peak_rss_bytes": 48005120,
                   "peak_rss_kind": "largest_process_peak_rss",
                   "scope": "process_participant",
-                  "system_cpu_ns": 42422000,
+                  "system_cpu_ns": 38161000,
                   "unavailable": {},
-                  "user_cpu_ns": 178044000
+                  "user_cpu_ns": 115670000
                 }
               ],
               "runner": {
@@ -2410,34 +2410,34 @@
                 "limitations": [
                   "peak_includes_parent_rss_at_spawn"
                 ],
-                "peak_rss_bytes": 58146816,
+                "peak_rss_bytes": 72642560,
                 "peak_rss_kind": "process_peak_rss",
                 "scope": "runner_process",
-                "system_cpu_ns": 1116000,
+                "system_cpu_ns": 3221000,
                 "unavailable": {},
-                "user_cpu_ns": 44657000
+                "user_cpu_ns": 31139000
               }
             },
             "run_wall_time": {
               "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
               "unavailable": {},
-              "wall_ns": 3257221361
+              "wall_ns": 3186694498
             },
             "tasks": [
               {
                 "failed_activation": {
                   "activation_index": 4,
-                  "wall_ns": 2001187275
+                  "wall_ns": 2001191765
                 },
                 "kind": "process_step",
                 "participant": "hazard",
                 "task": "step",
                 "timing": {
                   "completed": 4,
-                  "max_ns": 555174,
-                  "mean_ns": 451531.75,
-                  "min_ns": 405573,
-                  "p50_ns": 415021,
+                  "max_ns": 399345,
+                  "mean_ns": 256299.25,
+                  "min_ns": 176733,
+                  "p50_ns": 201069,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -2454,36 +2454,36 @@
                     "sample_count": 4
                   },
                   "samples_ns": [
-                    405573,
-                    415021,
-                    430359,
-                    555174
+                    176733,
+                    201069,
+                    248050,
+                    399345
                   ],
                   "scope": "inclusive_process_step",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 555174
+                      "wall_ns": 399345
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 430359
+                      "wall_ns": 248050
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 415021
+                      "wall_ns": 201069
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 405573
+                      "wall_ns": 176733
                     }
                   ],
-                  "stddev_ns": 60488.103984895235,
-                  "sum_ns": 1806127,
+                  "stddev_ns": 86474.42594887518,
+                  "sum_ns": 1025197,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -2496,8 +2496,8 @@
               "completed_process_steps": 4,
               "denominator": "scheduled_execution_ns",
               "native_activations_per_s": 0.0,
-              "process_steps_per_s": 1.9968893057461878,
-              "scheduled_execution_ns": 2003115540,
+              "process_steps_per_s": 1.9976970608213762,
+              "scheduled_execution_ns": 2002305594,
               "unavailable": {}
             },
             "virtual_time_speed": {
@@ -2531,8 +2531,8 @@
         "content": "Traceback (most recent call last):\n  File \"/home/runner/work/sil/sil/python/src/sil/participant.py\", line 297, in run\n    send({\n  File \"/home/runner/work/sil/sil/python/src/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/home/runner/work/sil/sil/examples/adas-reference/process_adapter.py\", line 328, in <module>\n    main(sys.argv[1:])\n  File \"/home/runner/work/sil/sil/examples/adas-reference/process_adapter.py\", line 314, in main\n    run(Controller(library_path, config))\n  File \"/home/runner/work/sil/sil/python/src/sil/participant.py\", line 302, in run\n    send({\"op\": \"fail\", \"reason\": _reason(e)})\n  File \"/home/runner/work/sil/sil/python/src/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\nException ignored in: <_io.TextIOWrapper name=3 mode='w' encoding='UTF-8'>\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: participant 'hazard': timeout waiting for step_done response during Step at virtual time 40000000 ns\n"
       },
       "gdb.txt": {
-        "sha256": "70d7c0048acfa54f5cd1f100d4cab2c4e0ce76975d52ed5132a6d5ec9c39b1bc",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7f16c96fac30, t_ns=40000000, output=0x7f16c95dd730, fault=0x7f16c95db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n[Inferior 1 (process 3604) exited with code 0170]\n"
+        "sha256": "d021bb085c462035200ab3f48ff4bc7874963d0125fcdaa7b69afb986f166ab2",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7f3f8cdfec30, t_ns=40000000, output=0x7f3f8cca55b0, fault=0x7f3f8cca3230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n[Inferior 1 (process 3377) exited with code 0170]\n"
       }
     }
   },
@@ -2540,7 +2540,7 @@
     "directory": "process-debugger-error",
     "files": {
       "result.json": {
-        "sha256": "1696e307b18c4e593fa49b3dbc15eba38f2ae7df1cff18fb2fa86c110e1c0afa",
+        "sha256": "52f1686a25b84fc9a7c7ca23f56d14c828730badae894c7de7182af5bc92eef8",
         "content": {
           "form": "process",
           "label": "debugger-error",
@@ -2564,7 +2564,7 @@
             "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
           ],
           "exit_code": 1,
-          "elapsed_host_ns": 250325394,
+          "elapsed_host_ns": 173557124,
           "deadline_ms": 30000,
           "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
           "supervisor_timeout": false,
@@ -2582,16 +2582,16 @@
         }
       },
       "action.json": {
-        "sha256": "f756ed427f380bb9176cbb6ca299a8657df581a114b9420a42702149ded70288",
+        "sha256": "e559ad34593fea76ba8044b48da91d0a841e9dec51cae41ea09fdc890816719e",
         "content": {
           "action": "debugger-error",
-          "inferior_pid": 3594,
+          "inferior_pid": 3367,
           "index": 4,
           "virtual_time_ns": 40000000
         }
       },
       "diagnostics.json": {
-        "sha256": "22750c7fa1a52e2c069f6b73b77ca274a3bfc27be5c5743d1864ad3b09b6046e",
+        "sha256": "9fd9d549a8489d173cc307d73b68869aa7dfe367aa2c549c2fbe7644b399b2f5",
         "content": {
           "artifacts": {
             "failure_report": "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/process-debugger-error/recording.mcap.failure.json",
@@ -2665,10 +2665,10 @@
           },
           "host": {
             "architecture": "x86_64",
-            "cpu_description": "AMD EPYC 7763 64-Core Processor",
+            "cpu_description": "AMD EPYC 9V45 96-Core Processor",
             "logical_cpu_count": 4,
             "os": "Linux",
-            "os_release": "6.17.0-1022-azure",
+            "os_release": "7.0.0-1017-azure",
             "unavailable": {}
           },
           "identity": {
@@ -2681,11 +2681,11 @@
           },
           "observational": {
             "phases": {
-              "preflight_ns": 39618181,
-              "recording_finalization_ns": 76965,
-              "scheduled_execution_ns": 33536678,
-              "setup_ns": 174194591,
-              "shutdown_ns": 90710,
+              "preflight_ns": 29492087,
+              "recording_finalization_ns": 50636,
+              "scheduled_execution_ns": 17926525,
+              "setup_ns": 123516782,
+              "shutdown_ns": 81551,
               "unattributed_ns": 0,
               "unavailable": {}
             },
@@ -2695,10 +2695,10 @@
                 "participant": "hazard_replay",
                 "timing": {
                   "completed": 5,
-                  "max_ns": 11422,
-                  "mean_ns": 5282.0,
-                  "min_ns": 3146,
-                  "p50_ns": 3617,
+                  "max_ns": 15814,
+                  "mean_ns": 4526.6,
+                  "min_ns": 1222,
+                  "p50_ns": 1902,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -2715,42 +2715,42 @@
                     "sample_count": 5
                   },
                   "samples_ns": [
-                    3146,
-                    3607,
-                    3617,
-                    4618,
-                    11422
+                    1222,
+                    1362,
+                    1902,
+                    2333,
+                    15814
                   ],
                   "scope": "inclusive_replay_publication_slot",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 11422
+                      "wall_ns": 15814
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 4618
+                      "wall_ns": 2333
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 3617
+                      "wall_ns": 1902
                     },
                     {
                       "activation_index": 4,
                       "virtual_time_ns": 40000000,
-                      "wall_ns": 3607
+                      "wall_ns": 1362
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 3146
+                      "wall_ns": 1222
                     }
                   ],
-                  "stddev_ns": 3107.437593902732,
-                  "sum_ns": 26410,
+                  "stddev_ns": 5657.576852328211,
+                  "sum_ns": 22633,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -2761,9 +2761,9 @@
             "resources": {
               "cpu_total": {
                 "scope": "runner_and_process_participants",
-                "system_cpu_ns": 42413000,
+                "system_cpu_ns": 35697000,
                 "unavailable": {},
-                "user_cpu_ns": 210731000
+                "user_cpu_ns": 144306000
               },
               "native_participants": "shared_with_runner",
               "process_participants": [
@@ -2776,12 +2776,12 @@
                     "descendants_counted_only_when_waited"
                   ],
                   "participant": "hazard",
-                  "peak_rss_bytes": 47955968,
+                  "peak_rss_bytes": 48144384,
                   "peak_rss_kind": "largest_process_peak_rss",
                   "scope": "process_participant",
-                  "system_cpu_ns": 41402000,
+                  "system_cpu_ns": 33808000,
                   "unavailable": {},
-                  "user_cpu_ns": 169241000
+                  "user_cpu_ns": 114073000
                 }
               ],
               "runner": {
@@ -2791,34 +2791,34 @@
                 "limitations": [
                   "peak_includes_parent_rss_at_spawn"
                 ],
-                "peak_rss_bytes": 58146816,
+                "peak_rss_bytes": 72642560,
                 "peak_rss_kind": "process_peak_rss",
                 "scope": "runner_process",
-                "system_cpu_ns": 1011000,
+                "system_cpu_ns": 1889000,
                 "unavailable": {},
-                "user_cpu_ns": 41490000
+                "user_cpu_ns": 30233000
               }
             },
             "run_wall_time": {
               "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
               "unavailable": {},
-              "wall_ns": 247517125
+              "wall_ns": 171067581
             },
             "tasks": [
               {
                 "failed_activation": {
                   "activation_index": 4,
-                  "wall_ns": 31570351
+                  "wall_ns": 16820067
                 },
                 "kind": "process_step",
                 "participant": "hazard",
                 "task": "step",
                 "timing": {
                   "completed": 4,
-                  "max_ns": 548881,
-                  "mean_ns": 463350.75,
-                  "min_ns": 417685,
-                  "p50_ns": 419809,
+                  "max_ns": 379025,
+                  "mean_ns": 246399.75,
+                  "min_ns": 184575,
+                  "p50_ns": 200799,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -2835,36 +2835,36 @@
                     "sample_count": 4
                   },
                   "samples_ns": [
-                    417685,
-                    419809,
-                    467028,
-                    548881
+                    184575,
+                    200799,
+                    221200,
+                    379025
                   ],
                   "scope": "inclusive_process_step",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 548881
+                      "wall_ns": 379025
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 467028
+                      "wall_ns": 221200
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 419809
+                      "wall_ns": 200799
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 417685
+                      "wall_ns": 184575
                     }
                   ],
-                  "stddev_ns": 53174.68981750152,
-                  "sum_ns": 1853403,
+                  "stddev_ns": 77663.07431905784,
+                  "sum_ns": 985599,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -2877,8 +2877,8 @@
               "completed_process_steps": 4,
               "denominator": "scheduled_execution_ns",
               "native_activations_per_s": 0.0,
-              "process_steps_per_s": 119.2723978206786,
-              "scheduled_execution_ns": 33536678,
+              "process_steps_per_s": 223.1330388906941,
+              "scheduled_execution_ns": 17926525,
               "unavailable": {}
             },
             "virtual_time_speed": {
@@ -2912,8 +2912,8 @@
         "content": "sil-run-diagnostics: participant 'hazard' exited unexpectedly with status 1 during Step 4 at virtual time 40000000 ns\n"
       },
       "gdb.txt": {
-        "sha256": "4da119b5912a495952372f7e90c141f2dc4d47647ae0172ca03ec46b9432987f",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7faeb93fac30, t_ns=40000000, output=0x7faeb92dd730, fault=0x7faeb92db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n/home/runner/work/sil/sil/build/source-debugging-evidence/runs/process-debugger-error/session.gdb:1: Error in sourced command file:\ndeliberate debugger failure\n"
+        "sha256": "12bcb7b80cc9b6265e72cace4bc1e3b437761454db7082d93f790ef90f7e3eff",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7fabda8fac30, t_ns=40000000, output=0x7fabda7dd970, fault=0x7fabda7db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n/home/runner/work/sil/sil/build/source-debugging-evidence/runs/process-debugger-error/session.gdb:1: Error in sourced command file:\ndeliberate debugger failure\n"
       }
     }
   },
@@ -2921,7 +2921,7 @@
     "directory": "process-kill",
     "files": {
       "result.json": {
-        "sha256": "1a26713db19a4e56dedecb88119d855486452b2c2807459649317363d41198ed",
+        "sha256": "f9178e72e8dec82f9a28722422071da50dc5fb0b8dc69bb94dcc7da456098240",
         "content": {
           "form": "process",
           "label": "kill",
@@ -2945,7 +2945,7 @@
             "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
           ],
           "exit_code": 1,
-          "elapsed_host_ns": 250649393,
+          "elapsed_host_ns": 181720960,
           "deadline_ms": 30000,
           "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
           "supervisor_timeout": false,
@@ -2963,10 +2963,10 @@
         }
       },
       "action.json": {
-        "sha256": "db43ed7ceca7804d3a1c16ccc1fc62e44b54e041564ef789d2a26b916a34c25a",
+        "sha256": "426cd82a445e97afc03a0174b0f0dda5f6f0ce71f70b54c9fb758df256fa6e9c",
         "content": {
           "action": "kill",
-          "inferior_pid": 3574,
+          "inferior_pid": 3347,
           "index": 4,
           "virtual_time_ns": 40000000
         }
@@ -2986,7 +2986,7 @@
         }
       },
       "diagnostics.json": {
-        "sha256": "2201be3490bbc4c94a09655f538b02ff929c3194786aace004b4be6e32808b50",
+        "sha256": "53664f523d2d5c72342d3605c7983fd3f25e9053cbaa9bade21ae3a765585115",
         "content": {
           "artifacts": {
             "failure_report": "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/process-kill/recording.mcap.failure.json",
@@ -3060,10 +3060,10 @@
           },
           "host": {
             "architecture": "x86_64",
-            "cpu_description": "AMD EPYC 7763 64-Core Processor",
+            "cpu_description": "AMD EPYC 9V45 96-Core Processor",
             "logical_cpu_count": 4,
             "os": "Linux",
-            "os_release": "6.17.0-1022-azure",
+            "os_release": "7.0.0-1017-azure",
             "unavailable": {}
           },
           "identity": {
@@ -3076,11 +3076,11 @@
           },
           "observational": {
             "phases": {
-              "preflight_ns": 39568678,
-              "recording_finalization_ns": 47930,
-              "scheduled_execution_ns": 33183755,
-              "setup_ns": 174899395,
-              "shutdown_ns": 116689,
+              "preflight_ns": 31053392,
+              "recording_finalization_ns": 61261,
+              "scheduled_execution_ns": 28175437,
+              "setup_ns": 119807693,
+              "shutdown_ns": 80410,
               "unattributed_ns": 0,
               "unavailable": {}
             },
@@ -3090,10 +3090,10 @@
                 "participant": "hazard_replay",
                 "timing": {
                   "completed": 5,
-                  "max_ns": 11020,
-                  "mean_ns": 4915.0,
-                  "min_ns": 2895,
-                  "p50_ns": 3176,
+                  "max_ns": 15423,
+                  "mean_ns": 4819.2,
+                  "min_ns": 1402,
+                  "p50_ns": 2424,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -3110,42 +3110,42 @@
                     "sample_count": 5
                   },
                   "samples_ns": [
-                    2895,
-                    2935,
-                    3176,
-                    4549,
-                    11020
+                    1402,
+                    1722,
+                    2424,
+                    3125,
+                    15423
                   ],
                   "scope": "inclusive_replay_publication_slot",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 11020
+                      "wall_ns": 15423
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 4549
+                      "wall_ns": 3125
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 3176
-                    },
-                    {
-                      "activation_index": 3,
-                      "virtual_time_ns": 30000000,
-                      "wall_ns": 2935
+                      "wall_ns": 2424
                     },
                     {
                       "activation_index": 4,
                       "virtual_time_ns": 40000000,
-                      "wall_ns": 2895
+                      "wall_ns": 1722
+                    },
+                    {
+                      "activation_index": 3,
+                      "virtual_time_ns": 30000000,
+                      "wall_ns": 1402
                     }
                   ],
-                  "stddev_ns": 3112.2307755049274,
-                  "sum_ns": 24575,
+                  "stddev_ns": 5335.124643342459,
+                  "sum_ns": 24096,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -3156,9 +3156,9 @@
             "resources": {
               "cpu_total": {
                 "scope": "runner_and_process_participants",
-                "system_cpu_ns": 53421000,
+                "system_cpu_ns": 38725000,
                 "unavailable": {},
-                "user_cpu_ns": 199981000
+                "user_cpu_ns": 139480000
               },
               "native_participants": "shared_with_runner",
               "process_participants": [
@@ -3171,12 +3171,12 @@
                     "descendants_counted_only_when_waited"
                   ],
                   "participant": "hazard",
-                  "peak_rss_bytes": 47624192,
+                  "peak_rss_bytes": 47861760,
                   "peak_rss_kind": "largest_process_peak_rss",
                   "scope": "process_participant",
-                  "system_cpu_ns": 51444000,
+                  "system_cpu_ns": 34868000,
                   "unavailable": {},
-                  "user_cpu_ns": 159444000
+                  "user_cpu_ns": 109583000
                 }
               ],
               "runner": {
@@ -3186,34 +3186,34 @@
                 "limitations": [
                   "peak_includes_parent_rss_at_spawn"
                 ],
-                "peak_rss_bytes": 58146816,
+                "peak_rss_bytes": 72642560,
                 "peak_rss_kind": "process_peak_rss",
                 "scope": "runner_process",
-                "system_cpu_ns": 1977000,
+                "system_cpu_ns": 3857000,
                 "unavailable": {},
-                "user_cpu_ns": 40537000
+                "user_cpu_ns": 29897000
               }
             },
             "run_wall_time": {
               "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
               "unavailable": {},
-              "wall_ns": 247816447
+              "wall_ns": 179178193
             },
             "tasks": [
               {
                 "failed_activation": {
                   "activation_index": 4,
-                  "wall_ns": 31203822
+                  "wall_ns": 27045975
                 },
                 "kind": "process_step",
                 "participant": "hazard",
                 "task": "step",
                 "timing": {
                   "completed": 4,
-                  "max_ns": 583206,
-                  "mean_ns": 467170.75,
-                  "min_ns": 395734,
-                  "p50_ns": 439897,
+                  "max_ns": 408488,
+                  "mean_ns": 260678.0,
+                  "min_ns": 190994,
+                  "p50_ns": 210844,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -3230,36 +3230,36 @@
                     "sample_count": 4
                   },
                   "samples_ns": [
-                    395734,
-                    439897,
-                    449846,
-                    583206
+                    190994,
+                    210844,
+                    232386,
+                    408488
                   ],
                   "scope": "inclusive_process_step",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 583206
-                    },
-                    {
-                      "activation_index": 2,
-                      "virtual_time_ns": 20000000,
-                      "wall_ns": 449846
+                      "wall_ns": 408488
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 439897
+                      "wall_ns": 232386
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 395734
+                      "wall_ns": 210844
+                    },
+                    {
+                      "activation_index": 2,
+                      "virtual_time_ns": 20000000,
+                      "wall_ns": 190994
                     }
                   ],
-                  "stddev_ns": 70020.3414993636,
-                  "sum_ns": 1868683,
+                  "stddev_ns": 86584.52629656179,
+                  "sum_ns": 1042712,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -3272,8 +3272,8 @@
               "completed_process_steps": 4,
               "denominator": "scheduled_execution_ns",
               "native_activations_per_s": 0.0,
-              "process_steps_per_s": 120.54090924911903,
-              "scheduled_execution_ns": 33183755,
+              "process_steps_per_s": 141.96762946391922,
+              "scheduled_execution_ns": 28175437,
               "unavailable": {}
             },
             "virtual_time_speed": {
@@ -3307,8 +3307,8 @@
         "content": "sil-run-diagnostics: participant 'hazard' exited unexpectedly with status 0 during Step 4 at virtual time 40000000 ns\n"
       },
       "gdb.txt": {
-        "sha256": "e404a1c81885aa0921ed706bf85b8eed6d6fc39721fbe2f5784fb6fc5db321e8",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7f9ba03f6c30, t_ns=40000000, output=0x7f9ba02d94b0, fault=0x7f9ba02d7230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n[Inferior 1 (process 3574) killed]\n"
+        "sha256": "b44d642d5bd2625664f5cd9917ad8260645128268d2718cc267f894700007a36",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7fc32ddfec30, t_ns=40000000, output=0x7fc32dcb1630, fault=0x7fc32dcaf230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n[Inferior 1 (process 3347) killed]\n"
       }
     }
   },
@@ -3316,7 +3316,7 @@
     "directory": "process-signal",
     "files": {
       "result.json": {
-        "sha256": "2d1e5d2863d3d801af4d6fefdf7475067345fe4d157b57dbf2f32e396dc2505d",
+        "sha256": "6379e69beb106ec5abfd63592188a3251ff27792674b717c62e4e798c09d698d",
         "content": {
           "form": "process",
           "label": "signal",
@@ -3340,7 +3340,7 @@
             "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
           ],
           "exit_code": 1,
-          "elapsed_host_ns": 257028264,
+          "elapsed_host_ns": 188536985,
           "deadline_ms": 30000,
           "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
           "supervisor_timeout": false,
@@ -3358,10 +3358,10 @@
         }
       },
       "action.json": {
-        "sha256": "b706a37fa8a6681d170aaf4b4326df780a4aecbf11d5741ebb43e99cbbf0416a",
+        "sha256": "2c1297419dfaf1223759e3d4d3a59426a49e7eced71dc774e612939aa7042daf",
         "content": {
           "action": "signal",
-          "inferior_pid": 3584,
+          "inferior_pid": 3357,
           "index": 4,
           "virtual_time_ns": 40000000
         }
@@ -3381,7 +3381,7 @@
         }
       },
       "diagnostics.json": {
-        "sha256": "05f74f01f063828858193999a838e3a07aec6aba7f54021d31b5d6afd20a56cc",
+        "sha256": "2077ea86f127f2712bc189e7252913846a8fb2979ff04b86b7d51753760f7dee",
         "content": {
           "artifacts": {
             "failure_report": "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/process-signal/recording.mcap.failure.json",
@@ -3455,10 +3455,10 @@
           },
           "host": {
             "architecture": "x86_64",
-            "cpu_description": "AMD EPYC 7763 64-Core Processor",
+            "cpu_description": "AMD EPYC 9V45 96-Core Processor",
             "logical_cpu_count": 4,
             "os": "Linux",
-            "os_release": "6.17.0-1022-azure",
+            "os_release": "7.0.0-1017-azure",
             "unavailable": {}
           },
           "identity": {
@@ -3471,11 +3471,11 @@
           },
           "observational": {
             "phases": {
-              "preflight_ns": 39331041,
-              "recording_finalization_ns": 46187,
-              "scheduled_execution_ns": 42032354,
-              "setup_ns": 172763410,
-              "shutdown_ns": 90951,
+              "preflight_ns": 29575982,
+              "recording_finalization_ns": 54651,
+              "scheduled_execution_ns": 35283852,
+              "setup_ns": 121020755,
+              "shutdown_ns": 75463,
               "unattributed_ns": 0,
               "unavailable": {}
             },
@@ -3485,10 +3485,10 @@
                 "participant": "hazard_replay",
                 "timing": {
                   "completed": 5,
-                  "max_ns": 11371,
-                  "mean_ns": 5003.6,
-                  "min_ns": 2966,
-                  "p50_ns": 3226,
+                  "max_ns": 15433,
+                  "mean_ns": 5041.6,
+                  "min_ns": 1893,
+                  "p50_ns": 2484,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -3505,42 +3505,42 @@
                     "sample_count": 5
                   },
                   "samples_ns": [
-                    2966,
-                    3137,
-                    3226,
-                    4318,
-                    11371
+                    1893,
+                    2073,
+                    2484,
+                    3325,
+                    15433
                   ],
                   "scope": "inclusive_replay_publication_slot",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 11371
+                      "wall_ns": 15433
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 4318
-                    },
-                    {
-                      "activation_index": 4,
-                      "virtual_time_ns": 40000000,
-                      "wall_ns": 3226
+                      "wall_ns": 3325
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 3137
+                      "wall_ns": 2484
+                    },
+                    {
+                      "activation_index": 4,
+                      "virtual_time_ns": 40000000,
+                      "wall_ns": 2073
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 2966
+                      "wall_ns": 1893
                     }
                   ],
-                  "stddev_ns": 3218.9967753944707,
-                  "sum_ns": 25018,
+                  "stddev_ns": 5219.109027410713,
+                  "sum_ns": 25208,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -3551,9 +3551,9 @@
             "resources": {
               "cpu_total": {
                 "scope": "runner_and_process_participants",
-                "system_cpu_ns": 42888000,
+                "system_cpu_ns": 43131000,
                 "unavailable": {},
-                "user_cpu_ns": 216507000
+                "user_cpu_ns": 142402000
               },
               "native_participants": "shared_with_runner",
               "process_participants": [
@@ -3566,12 +3566,12 @@
                     "descendants_counted_only_when_waited"
                   ],
                   "participant": "hazard",
-                  "peak_rss_bytes": 47554560,
+                  "peak_rss_bytes": 47960064,
                   "peak_rss_kind": "largest_process_peak_rss",
                   "scope": "process_participant",
-                  "system_cpu_ns": 40833000,
+                  "system_cpu_ns": 39216000,
                   "unavailable": {},
-                  "user_cpu_ns": 176435000
+                  "user_cpu_ns": 114014000
                 }
               ],
               "runner": {
@@ -3581,34 +3581,34 @@
                 "limitations": [
                   "peak_includes_parent_rss_at_spawn"
                 ],
-                "peak_rss_bytes": 58146816,
+                "peak_rss_bytes": 72642560,
                 "peak_rss_kind": "process_peak_rss",
                 "scope": "runner_process",
-                "system_cpu_ns": 2055000,
+                "system_cpu_ns": 3915000,
                 "unavailable": {},
-                "user_cpu_ns": 40072000
+                "user_cpu_ns": 28388000
               }
             },
             "run_wall_time": {
               "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
               "unavailable": {},
-              "wall_ns": 254263943
+              "wall_ns": 186010703
             },
             "tasks": [
               {
                 "failed_activation": {
                   "activation_index": 4,
-                  "wall_ns": 40104179
+                  "wall_ns": 33916587
                 },
                 "kind": "process_step",
                 "participant": "hazard",
                 "task": "step",
                 "timing": {
                   "completed": 4,
-                  "max_ns": 555444,
-                  "mean_ns": 454256.5,
-                  "min_ns": 398449,
-                  "p50_ns": 425039,
+                  "max_ns": 444982,
+                  "mean_ns": 318802.0,
+                  "min_ns": 260748,
+                  "p50_ns": 271975,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -3625,36 +3625,36 @@
                     "sample_count": 4
                   },
                   "samples_ns": [
-                    398449,
-                    425039,
-                    438094,
-                    555444
+                    260748,
+                    271975,
+                    297503,
+                    444982
                   ],
                   "scope": "inclusive_process_step",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 555444
-                    },
-                    {
-                      "activation_index": 2,
-                      "virtual_time_ns": 20000000,
-                      "wall_ns": 438094
+                      "wall_ns": 444982
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 425039
+                      "wall_ns": 297503
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 398449
+                      "wall_ns": 271975
+                    },
+                    {
+                      "activation_index": 2,
+                      "virtual_time_ns": 20000000,
+                      "wall_ns": 260748
                     }
                   ],
-                  "stddev_ns": 60142.07330355348,
-                  "sum_ns": 1817026,
+                  "stddev_ns": 74057.53615601858,
+                  "sum_ns": 1275208,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -3667,8 +3667,8 @@
               "completed_process_steps": 4,
               "denominator": "scheduled_execution_ns",
               "native_activations_per_s": 0.0,
-              "process_steps_per_s": 95.16478663079398,
-              "scheduled_execution_ns": 42032354,
+              "process_steps_per_s": 113.36630705740406,
+              "scheduled_execution_ns": 35283852,
               "unavailable": {}
             },
             "virtual_time_speed": {
@@ -3702,8 +3702,8 @@
         "content": "participant terminated by signal 15\nsil-run-diagnostics: participant 'hazard' exited unexpectedly with status 0 during Step 4 at virtual time 40000000 ns\n"
       },
       "gdb.txt": {
-        "sha256": "4e927cd085cf40ac1142ad7d2f199c45f1d281d65e416857d6dc8a85a98e5087",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7f475b9fac30, t_ns=40000000, output=0x7f475b8dd730, fault=0x7f475b8db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n[Inferior 1 (process 3584) exited with code 01]\n"
+        "sha256": "cf222ae6518e6684ca132ebb339730c743ceff572fca1d12cc7b3b0c1555e4e8",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7f0acacfac30, t_ns=40000000, output=0x7f0acab360f0, fault=0x7f0acabdb230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n[Inferior 1 (process 3357) exited with code 01]\n"
       }
     }
   },
@@ -3711,7 +3711,7 @@
     "directory": "shim-deadline",
     "files": {
       "result.json": {
-        "sha256": "72623ce8dca9ca694dc67dd838b0538961b6972b002552e89e019c3368d12e22",
+        "sha256": "79a19b84aa2b1e44cb13fc8b31f3977ce8258a782ec934d57fd6179b12c568b3",
         "content": {
           "form": "shim",
           "label": "deadline",
@@ -3735,7 +3735,7 @@
             "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
           ],
           "exit_code": 1,
-          "elapsed_host_ns": 3261895784,
+          "elapsed_host_ns": 3195401829,
           "deadline_ms": 2000,
           "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
           "supervisor_timeout": false,
@@ -3753,10 +3753,10 @@
         }
       },
       "action.json": {
-        "sha256": "be46d4ba3dc7f9bb2f8d47458bac1c1cbee851651c5afcb80f7c29018592831c",
+        "sha256": "56a7b550e08333ca65a18a3ec6430fd4a6064d784e258547cf0c154f1d205df0",
         "content": {
           "action": "deadline",
-          "inferior_pid": 3768,
+          "inferior_pid": 3541,
           "index": 4,
           "virtual_time_ns": 40000000
         }
@@ -3776,7 +3776,7 @@
         }
       },
       "diagnostics.json": {
-        "sha256": "b9e6fbd4df21f121b9fa9008c18c44c76b08435c2a707eee74fad655281e3a2e",
+        "sha256": "8c51867363ada939642365d457dd2a0baa0aa081257565202da33b410ff51e9f",
         "content": {
           "artifacts": {
             "failure_report": "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/shim-deadline/recording.mcap.failure.json",
@@ -3850,10 +3850,10 @@
           },
           "host": {
             "architecture": "x86_64",
-            "cpu_description": "AMD EPYC 7763 64-Core Processor",
+            "cpu_description": "AMD EPYC 9V45 96-Core Processor",
             "logical_cpu_count": 4,
             "os": "Linux",
-            "os_release": "6.17.0-1022-azure",
+            "os_release": "7.0.0-1017-azure",
             "unavailable": {}
           },
           "identity": {
@@ -3866,11 +3866,11 @@
           },
           "observational": {
             "phases": {
-              "preflight_ns": 39354118,
-              "recording_finalization_ns": 62657,
-              "scheduled_execution_ns": 2003156151,
-              "setup_ns": 175061757,
-              "shutdown_ns": 1041547724,
+              "preflight_ns": 29473459,
+              "recording_finalization_ns": 74992,
+              "scheduled_execution_ns": 2002638856,
+              "setup_ns": 125638434,
+              "shutdown_ns": 1035102223,
               "unattributed_ns": 0,
               "unavailable": {}
             },
@@ -3880,10 +3880,10 @@
                 "participant": "hazard_replay",
                 "timing": {
                   "completed": 5,
-                  "max_ns": 11832,
-                  "mean_ns": 5911.2,
-                  "min_ns": 3586,
-                  "p50_ns": 4248,
+                  "max_ns": 15554,
+                  "mean_ns": 5736.8,
+                  "min_ns": 2574,
+                  "p50_ns": 3656,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -3900,42 +3900,42 @@
                     "sample_count": 5
                   },
                   "samples_ns": [
-                    3586,
-                    3808,
-                    4248,
-                    6082,
-                    11832
+                    2574,
+                    2704,
+                    3656,
+                    4196,
+                    15554
                   ],
                   "scope": "inclusive_replay_publication_slot",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 11832
+                      "wall_ns": 15554
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 6082
+                      "wall_ns": 4196
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 4248
-                    },
-                    {
-                      "activation_index": 3,
-                      "virtual_time_ns": 30000000,
-                      "wall_ns": 3808
+                      "wall_ns": 3656
                     },
                     {
                       "activation_index": 4,
                       "virtual_time_ns": 40000000,
-                      "wall_ns": 3586
+                      "wall_ns": 2704
+                    },
+                    {
+                      "activation_index": 3,
+                      "virtual_time_ns": 30000000,
+                      "wall_ns": 2574
                     }
                   ],
-                  "stddev_ns": 3088.0830558778694,
-                  "sum_ns": 29556,
+                  "stddev_ns": 4945.34910395616,
+                  "sum_ns": 28684,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -3946,9 +3946,9 @@
             "resources": {
               "cpu_total": {
                 "scope": "runner_and_process_participants",
-                "system_cpu_ns": 47273000,
+                "system_cpu_ns": 44520000,
                 "unavailable": {},
-                "user_cpu_ns": 221123000
+                "user_cpu_ns": 150652000
               },
               "native_participants": "shared_with_runner",
               "process_participants": [
@@ -3961,12 +3961,12 @@
                     "descendants_counted_only_when_waited"
                   ],
                   "participant": "hazard",
-                  "peak_rss_bytes": 47849472,
+                  "peak_rss_bytes": 48168960,
                   "peak_rss_kind": "largest_process_peak_rss",
                   "scope": "process_participant",
-                  "system_cpu_ns": 45097000,
+                  "system_cpu_ns": 39677000,
                   "unavailable": {},
-                  "user_cpu_ns": 177591000
+                  "user_cpu_ns": 120624000
                 }
               ],
               "runner": {
@@ -3976,34 +3976,34 @@
                 "limitations": [
                   "peak_includes_parent_rss_at_spawn"
                 ],
-                "peak_rss_bytes": 58146816,
+                "peak_rss_bytes": 72642560,
                 "peak_rss_kind": "process_peak_rss",
                 "scope": "runner_process",
-                "system_cpu_ns": 2176000,
+                "system_cpu_ns": 4843000,
                 "unavailable": {},
-                "user_cpu_ns": 43532000
+                "user_cpu_ns": 30028000
               }
             },
             "run_wall_time": {
               "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
               "unavailable": {},
-              "wall_ns": 3259182407
+              "wall_ns": 3192927964
             },
             "tasks": [
               {
                 "failed_activation": {
                   "activation_index": 4,
-                  "wall_ns": 2001187574
+                  "wall_ns": 2001216859
                 },
                 "kind": "process_step",
                 "participant": "hazard",
                 "task": "step",
                 "timing": {
                   "completed": 4,
-                  "max_ns": 572767,
-                  "mean_ns": 460469.75,
-                  "min_ns": 389725,
-                  "p50_ns": 431814,
+                  "max_ns": 460815,
+                  "mean_ns": 328483.5,
+                  "min_ns": 250232,
+                  "p50_ns": 275610,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -4020,36 +4020,36 @@
                     "sample_count": 4
                   },
                   "samples_ns": [
-                    389725,
-                    431814,
-                    447573,
-                    572767
+                    250232,
+                    275610,
+                    327277,
+                    460815
                   ],
                   "scope": "inclusive_process_step",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 572767
+                      "wall_ns": 460815
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 447573
+                      "wall_ns": 327277
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 431814
+                      "wall_ns": 275610
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 389725
+                      "wall_ns": 250232
                     }
                   ],
-                  "stddev_ns": 68196.35286939837,
-                  "sum_ns": 1841879,
+                  "stddev_ns": 81289.5838791785,
+                  "sum_ns": 1313934,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -4062,8 +4062,8 @@
               "completed_process_steps": 4,
               "denominator": "scheduled_execution_ns",
               "native_activations_per_s": 0.0,
-              "process_steps_per_s": 1.9968488217971179,
-              "scheduled_execution_ns": 2003156151,
+              "process_steps_per_s": 1.9973646211925893,
+              "scheduled_execution_ns": 2002638856,
               "unavailable": {}
             },
             "virtual_time_speed": {
@@ -4097,8 +4097,8 @@
         "content": "Traceback (most recent call last):\n  File \"/home/runner/work/sil/sil/python/src/sil/participant.py\", line 297, in run\n    send({\n  File \"/home/runner/work/sil/sil/python/src/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/home/runner/work/sil/sil/examples/adas-reference/process_adapter.py\", line 328, in <module>\n    main(sys.argv[1:])\n  File \"/home/runner/work/sil/sil/examples/adas-reference/process_adapter.py\", line 314, in main\n    run(Controller(library_path, config))\n  File \"/home/runner/work/sil/sil/python/src/sil/participant.py\", line 302, in run\n    send({\"op\": \"fail\", \"reason\": _reason(e)})\n  File \"/home/runner/work/sil/sil/python/src/sil/participant.py\", line 239, in send\n    stdout.flush()\nBrokenPipeError: [Errno 32] Broken pipe\nException ignored in: <_io.TextIOWrapper name=3 mode='w' encoding='UTF-8'>\nBrokenPipeError: [Errno 32] Broken pipe\nsil-run-diagnostics: participant 'hazard': timeout waiting for step_done response during Step at virtual time 40000000 ns\n"
       },
       "gdb.txt": {
-        "sha256": "146130e4a528e3a4e11cb16a7464864795e5ddb6424241d335db378842431889",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7f9dfbffac30, t_ns=40000000, output=0x7f9dfbedd770, fault=0x7f9dfbedb230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n[Inferior 1 (process 3768) exited with code 0170]\n"
+        "sha256": "cb18b1be496a03bf945e42b6e3f35fa2aa6ff4e98140be13f7eac12d401d13a4",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7f95f5ffec30, t_ns=40000000, output=0x7f95f5eb3230, fault=0x7f95f5eaf230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n\nProgram received signal SIGPIPE, Broken pipe.\n[Inferior 1 (process 3541) exited with code 0170]\n"
       }
     }
   },
@@ -4106,7 +4106,7 @@
     "directory": "shim-debugger-error",
     "files": {
       "result.json": {
-        "sha256": "1eb985db965b7879e1145d3c0318a5a16de0ff8515724c2f016d8b6d573512ac",
+        "sha256": "805e706e999f73758e1f92903c91526bc5c240c7c518343eff1cf0440567c6b4",
         "content": {
           "form": "shim",
           "label": "debugger-error",
@@ -4130,7 +4130,7 @@
             "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
           ],
           "exit_code": 1,
-          "elapsed_host_ns": 251769810,
+          "elapsed_host_ns": 183481834,
           "deadline_ms": 30000,
           "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
           "supervisor_timeout": false,
@@ -4148,16 +4148,16 @@
         }
       },
       "action.json": {
-        "sha256": "d2256eb67813c89790754b24738fae0cec936198777673b9ea03ba50bbcf9d1a",
+        "sha256": "2064511755b3c18d7d2ebee0d93817c5d907962ab5a16cfc303d26437b50ce02",
         "content": {
           "action": "debugger-error",
-          "inferior_pid": 3758,
+          "inferior_pid": 3531,
           "index": 4,
           "virtual_time_ns": 40000000
         }
       },
       "diagnostics.json": {
-        "sha256": "464d54592457bce41157e0f2f317684a690a0093aa171acadeb9d98a72628bf9",
+        "sha256": "2ca66b7f6459afff413d849734cdc18eb0494a2ace1f6b4be5d0b3c981929666",
         "content": {
           "artifacts": {
             "failure_report": "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/shim-debugger-error/recording.mcap.failure.json",
@@ -4231,10 +4231,10 @@
           },
           "host": {
             "architecture": "x86_64",
-            "cpu_description": "AMD EPYC 7763 64-Core Processor",
+            "cpu_description": "AMD EPYC 9V45 96-Core Processor",
             "logical_cpu_count": 4,
             "os": "Linux",
-            "os_release": "6.17.0-1022-azure",
+            "os_release": "7.0.0-1017-azure",
             "unavailable": {}
           },
           "identity": {
@@ -4247,11 +4247,11 @@
           },
           "observational": {
             "phases": {
-              "preflight_ns": 39785040,
-              "recording_finalization_ns": 56775,
-              "scheduled_execution_ns": 33265607,
-              "setup_ns": 175817679,
-              "shutdown_ns": 96771,
+              "preflight_ns": 29310435,
+              "recording_finalization_ns": 50976,
+              "scheduled_execution_ns": 29126757,
+              "setup_ns": 122369282,
+              "shutdown_ns": 81491,
               "unattributed_ns": 0,
               "unavailable": {}
             },
@@ -4261,10 +4261,10 @@
                 "participant": "hazard_replay",
                 "timing": {
                   "completed": 5,
-                  "max_ns": 33572,
-                  "mean_ns": 10946.4,
-                  "min_ns": 3046,
-                  "p50_ns": 3727,
+                  "max_ns": 14221,
+                  "mean_ns": 4368.4,
+                  "min_ns": 1162,
+                  "p50_ns": 2443,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -4281,42 +4281,42 @@
                     "sample_count": 5
                   },
                   "samples_ns": [
-                    3046,
-                    3186,
-                    3727,
-                    11201,
-                    33572
+                    1162,
+                    1292,
+                    2443,
+                    2724,
+                    14221
                   ],
                   "scope": "inclusive_replay_publication_slot",
                   "slowest": [
                     {
-                      "activation_index": 2,
-                      "virtual_time_ns": 20000000,
-                      "wall_ns": 33572
-                    },
-                    {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 11201
-                    },
-                    {
-                      "activation_index": 3,
-                      "virtual_time_ns": 30000000,
-                      "wall_ns": 3727
+                      "wall_ns": 14221
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 3186
+                      "wall_ns": 2724
+                    },
+                    {
+                      "activation_index": 2,
+                      "virtual_time_ns": 20000000,
+                      "wall_ns": 2443
+                    },
+                    {
+                      "activation_index": 3,
+                      "virtual_time_ns": 30000000,
+                      "wall_ns": 1292
                     },
                     {
                       "activation_index": 4,
                       "virtual_time_ns": 40000000,
-                      "wall_ns": 3046
+                      "wall_ns": 1162
                     }
                   ],
-                  "stddev_ns": 11719.577306370738,
-                  "sum_ns": 54732,
+                  "stddev_ns": 4964.477438764326,
+                  "sum_ns": 21842,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -4327,9 +4327,9 @@
             "resources": {
               "cpu_total": {
                 "scope": "runner_and_process_participants",
-                "system_cpu_ns": 53274000,
+                "system_cpu_ns": 50590000,
                 "unavailable": {},
-                "user_cpu_ns": 201325000
+                "user_cpu_ns": 129746000
               },
               "native_participants": "shared_with_runner",
               "process_participants": [
@@ -4342,12 +4342,12 @@
                     "descendants_counted_only_when_waited"
                   ],
                   "participant": "hazard",
-                  "peak_rss_bytes": 48455680,
+                  "peak_rss_bytes": 48422912,
                   "peak_rss_kind": "largest_process_peak_rss",
                   "scope": "process_participant",
-                  "system_cpu_ns": 51369000,
+                  "system_cpu_ns": 49555000,
                   "unavailable": {},
-                  "user_cpu_ns": 160356000
+                  "user_cpu_ns": 98667000
                 }
               ],
               "runner": {
@@ -4357,34 +4357,34 @@
                 "limitations": [
                   "peak_includes_parent_rss_at_spawn"
                 ],
-                "peak_rss_bytes": 58146816,
+                "peak_rss_bytes": 72642560,
                 "peak_rss_kind": "process_peak_rss",
                 "scope": "runner_process",
-                "system_cpu_ns": 1905000,
+                "system_cpu_ns": 1035000,
                 "unavailable": {},
-                "user_cpu_ns": 40969000
+                "user_cpu_ns": 31079000
               }
             },
             "run_wall_time": {
               "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
               "unavailable": {},
-              "wall_ns": 249021872
+              "wall_ns": 180938941
             },
             "tasks": [
               {
                 "failed_activation": {
                   "activation_index": 4,
-                  "wall_ns": 31347274
+                  "wall_ns": 28069524
                 },
                 "kind": "process_step",
                 "participant": "hazard",
                 "task": "step",
                 "timing": {
                   "completed": 4,
-                  "max_ns": 509920,
-                  "mean_ns": 434269.0,
-                  "min_ns": 401839,
-                  "p50_ns": 403131,
+                  "max_ns": 386465,
+                  "mean_ns": 244040.75,
+                  "min_ns": 174260,
+                  "p50_ns": 185025,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -4401,36 +4401,36 @@
                     "sample_count": 4
                   },
                   "samples_ns": [
-                    401839,
-                    403131,
-                    422186,
-                    509920
+                    174260,
+                    185025,
+                    230413,
+                    386465
                   ],
                   "scope": "inclusive_process_step",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 509920
+                      "wall_ns": 386465
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 422186
+                      "wall_ns": 230413
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 403131
+                      "wall_ns": 185025
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 401839
+                      "wall_ns": 174260
                     }
                   ],
-                  "stddev_ns": 44413.82846028926,
-                  "sum_ns": 1737076,
+                  "stddev_ns": 84886.09187721803,
+                  "sum_ns": 976163,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -4443,8 +4443,8 @@
               "completed_process_steps": 4,
               "denominator": "scheduled_execution_ns",
               "native_activations_per_s": 0.0,
-              "process_steps_per_s": 120.24431118903075,
-              "scheduled_execution_ns": 33265607,
+              "process_steps_per_s": 137.33077115313594,
+              "scheduled_execution_ns": 29126757,
               "unavailable": {}
             },
             "virtual_time_speed": {
@@ -4478,8 +4478,8 @@
         "content": "sil-run-diagnostics: participant 'hazard' exited unexpectedly with status 1 during Step 4 at virtual time 40000000 ns\n"
       },
       "gdb.txt": {
-        "sha256": "9e9b007fbc6f3f851789823159c8b50f39ad6ec58fee61b2644d5fd5b5d709a3",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7f8bd8ffac30, t_ns=40000000, output=0x7f8bd8eddb30, fault=0x7f8bd8edb230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n/home/runner/work/sil/sil/build/source-debugging-evidence/runs/shim-debugger-error/session.gdb:1: Error in sourced command file:\ndeliberate debugger failure\n"
+        "sha256": "dec7075b3a34d867c28454b48ba63ce279af134ca171088540dbb6aea64f6f55",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7f275a4fac30, t_ns=40000000, output=0x7f275a3dddf0, fault=0x7f275a3db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n/home/runner/work/sil/sil/build/source-debugging-evidence/runs/shim-debugger-error/session.gdb:1: Error in sourced command file:\ndeliberate debugger failure\n"
       }
     }
   },
@@ -4487,7 +4487,7 @@
     "directory": "shim-kill",
     "files": {
       "result.json": {
-        "sha256": "3a494734647c6ed8a77ca53acff4d69738586fea03e58fb13235a903be2529aa",
+        "sha256": "53fd02d308585982977fc18064cdeb3ff4424a84a567fdaaa07888319ca955c6",
         "content": {
           "form": "shim",
           "label": "kill",
@@ -4511,7 +4511,7 @@
             "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
           ],
           "exit_code": 1,
-          "elapsed_host_ns": 250660314,
+          "elapsed_host_ns": 188264590,
           "deadline_ms": 30000,
           "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
           "supervisor_timeout": false,
@@ -4529,10 +4529,10 @@
         }
       },
       "action.json": {
-        "sha256": "04a4fc4f4413d96c1deebfa4276edc687fd1859beb6ea18bac92caf30f19289c",
+        "sha256": "19e412aa9b0b10c332344d75c03a8b4dbdff1099d92bb42748618a6ce3f40ed0",
         "content": {
           "action": "kill",
-          "inferior_pid": 3738,
+          "inferior_pid": 3511,
           "index": 4,
           "virtual_time_ns": 40000000
         }
@@ -4552,7 +4552,7 @@
         }
       },
       "diagnostics.json": {
-        "sha256": "0fd94579433f3306e67e669f5fec58ed5fc88b8603356bc8c72a03de91a3cfd2",
+        "sha256": "cd38dfaf9d26bf8d80e6714391158a100f7b27a9dc9e01ececd8c4b90b8247d6",
         "content": {
           "artifacts": {
             "failure_report": "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/shim-kill/recording.mcap.failure.json",
@@ -4626,10 +4626,10 @@
           },
           "host": {
             "architecture": "x86_64",
-            "cpu_description": "AMD EPYC 7763 64-Core Processor",
+            "cpu_description": "AMD EPYC 9V45 96-Core Processor",
             "logical_cpu_count": 4,
             "os": "Linux",
-            "os_release": "6.17.0-1022-azure",
+            "os_release": "7.0.0-1017-azure",
             "unavailable": {}
           },
           "identity": {
@@ -4642,11 +4642,11 @@
           },
           "observational": {
             "phases": {
-              "preflight_ns": 39501435,
-              "recording_finalization_ns": 57567,
-              "scheduled_execution_ns": 34091131,
-              "setup_ns": 174150675,
-              "shutdown_ns": 96380,
+              "preflight_ns": 29067524,
+              "recording_finalization_ns": 57636,
+              "scheduled_execution_ns": 30294985,
+              "setup_ns": 126220752,
+              "shutdown_ns": 81891,
               "unattributed_ns": 0,
               "unavailable": {}
             },
@@ -4656,10 +4656,10 @@
                 "participant": "hazard_replay",
                 "timing": {
                   "completed": 5,
-                  "max_ns": 13185,
-                  "mean_ns": 6123.4,
-                  "min_ns": 3045,
-                  "p50_ns": 5210,
+                  "max_ns": 16175,
+                  "mean_ns": 5106.0,
+                  "min_ns": 1342,
+                  "p50_ns": 2805,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -4676,42 +4676,42 @@
                     "sample_count": 5
                   },
                   "samples_ns": [
-                    3045,
-                    3196,
-                    5210,
-                    5981,
-                    13185
+                    1342,
+                    1713,
+                    2805,
+                    3495,
+                    16175
                   ],
                   "scope": "inclusive_replay_publication_slot",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 13185
-                    },
-                    {
-                      "activation_index": 1,
-                      "virtual_time_ns": 10000000,
-                      "wall_ns": 5981
+                      "wall_ns": 16175
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 5210
+                      "wall_ns": 3495
                     },
                     {
-                      "activation_index": 3,
-                      "virtual_time_ns": 30000000,
-                      "wall_ns": 3196
+                      "activation_index": 1,
+                      "virtual_time_ns": 10000000,
+                      "wall_ns": 2805
                     },
                     {
                       "activation_index": 4,
                       "virtual_time_ns": 40000000,
-                      "wall_ns": 3045
+                      "wall_ns": 1713
+                    },
+                    {
+                      "activation_index": 3,
+                      "virtual_time_ns": 30000000,
+                      "wall_ns": 1342
                     }
                   ],
-                  "stddev_ns": 3708.55737989855,
-                  "sum_ns": 30617,
+                  "stddev_ns": 5587.357658142174,
+                  "sum_ns": 25530,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -4722,9 +4722,9 @@
             "resources": {
               "cpu_total": {
                 "scope": "runner_and_process_participants",
-                "system_cpu_ns": 52770000,
+                "system_cpu_ns": 48902000,
                 "unavailable": {},
-                "user_cpu_ns": 201049000
+                "user_cpu_ns": 136195000
               },
               "native_participants": "shared_with_runner",
               "process_participants": [
@@ -4737,12 +4737,12 @@
                     "descendants_counted_only_when_waited"
                   ],
                   "participant": "hazard",
-                  "peak_rss_bytes": 47771648,
+                  "peak_rss_bytes": 48324608,
                   "peak_rss_kind": "largest_process_peak_rss",
                   "scope": "process_participant",
-                  "system_cpu_ns": 49663000,
+                  "system_cpu_ns": 41165000,
                   "unavailable": {},
-                  "user_cpu_ns": 161686000
+                  "user_cpu_ns": 112017000
                 }
               ],
               "runner": {
@@ -4752,34 +4752,34 @@
                 "limitations": [
                   "peak_includes_parent_rss_at_spawn"
                 ],
-                "peak_rss_bytes": 58146816,
+                "peak_rss_bytes": 72642560,
                 "peak_rss_kind": "process_peak_rss",
                 "scope": "runner_process",
-                "system_cpu_ns": 3107000,
+                "system_cpu_ns": 7737000,
                 "unavailable": {},
-                "user_cpu_ns": 39363000
+                "user_cpu_ns": 24178000
               }
             },
             "run_wall_time": {
               "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
               "unavailable": {},
-              "wall_ns": 247897188
+              "wall_ns": 185722788
             },
             "tasks": [
               {
                 "failed_activation": {
                   "activation_index": 4,
-                  "wall_ns": 32103250
+                  "wall_ns": 29132275
                 },
                 "kind": "process_step",
                 "participant": "hazard",
                 "task": "step",
                 "timing": {
                   "completed": 4,
-                  "max_ns": 555014,
-                  "mean_ns": 465707.5,
-                  "min_ns": 406828,
-                  "p50_ns": 430963,
+                  "max_ns": 416861,
+                  "mean_ns": 269158.5,
+                  "min_ns": 196293,
+                  "p50_ns": 220258,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -4796,36 +4796,36 @@
                     "sample_count": 4
                   },
                   "samples_ns": [
-                    406828,
-                    430963,
-                    470025,
-                    555014
+                    196293,
+                    220258,
+                    243222,
+                    416861
                   ],
                   "scope": "inclusive_process_step",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 555014
+                      "wall_ns": 416861
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 470025
+                      "wall_ns": 243222
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 430963
+                      "wall_ns": 220258
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 406828
+                      "wall_ns": 196293
                     }
                   ],
-                  "stddev_ns": 56276.69932796343,
-                  "sum_ns": 1862830,
+                  "stddev_ns": 86875.44320606372,
+                  "sum_ns": 1076634,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -4838,8 +4838,8 @@
               "completed_process_steps": 4,
               "denominator": "scheduled_execution_ns",
               "native_activations_per_s": 0.0,
-              "process_steps_per_s": 117.33256957652712,
-              "scheduled_execution_ns": 34091131,
+              "process_steps_per_s": 132.03505464683346,
+              "scheduled_execution_ns": 30294985,
               "unavailable": {}
             },
             "virtual_time_speed": {
@@ -4873,8 +4873,8 @@
         "content": "sil-run-diagnostics: participant 'hazard' exited unexpectedly with status 0 during Step 4 at virtual time 40000000 ns\n"
       },
       "gdb.txt": {
-        "sha256": "cb2a3ae9e60458e557df25e3fca3919601c342531214c9b91a967a0cb6b6a77c",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7fdf894f6c30, t_ns=40000000, output=0x7fdf893db2f0, fault=0x7fdf893d7230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n[Inferior 1 (process 3738) killed]\n"
+        "sha256": "93cceaeec33ad3eedbe6d7428a8d0290024bae4a8e0cc7602fc1381702ddf0b8",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7f0e7b5fec30, t_ns=40000000, output=0x7f0e7b4e3230, fault=0x7f0e7b4df230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n[Inferior 1 (process 3511) killed]\n"
       }
     }
   },
@@ -4882,7 +4882,7 @@
     "directory": "shim-signal",
     "files": {
       "result.json": {
-        "sha256": "077c98f5536129e9de0a1addcfb74bf959193617782d86622e68d633e04f2338",
+        "sha256": "c14660fa30e6de9c233a9857997c596460ddd8709be6b35695e3baeca9957a16",
         "content": {
           "form": "shim",
           "label": "signal",
@@ -4906,7 +4906,7 @@
             "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
           ],
           "exit_code": 1,
-          "elapsed_host_ns": 261547423,
+          "elapsed_host_ns": 201689813,
           "deadline_ms": 30000,
           "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
           "supervisor_timeout": false,
@@ -4924,10 +4924,10 @@
         }
       },
       "action.json": {
-        "sha256": "8aa48ecfe13b9cef7ae25777bd3eae15d13a4c2f7b81240a4760a2f572dc340e",
+        "sha256": "e5f75854a624e0d03cbf71957ea7b76df243ea1de60af049b4ed2414fd664d65",
         "content": {
           "action": "signal",
-          "inferior_pid": 3748,
+          "inferior_pid": 3521,
           "index": 4,
           "virtual_time_ns": 40000000
         }
@@ -4947,7 +4947,7 @@
         }
       },
       "diagnostics.json": {
-        "sha256": "27767a6dd93a64546b209513fa64261fd06258ad8e8fc3780de7293df29dc58c",
+        "sha256": "ae67dc5c6509bc25b441023d1d269e9182707e86db2cb36d1cc6f52a55cabb24",
         "content": {
           "artifacts": {
             "failure_report": "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/shim-signal/recording.mcap.failure.json",
@@ -5021,10 +5021,10 @@
           },
           "host": {
             "architecture": "x86_64",
-            "cpu_description": "AMD EPYC 7763 64-Core Processor",
+            "cpu_description": "AMD EPYC 9V45 96-Core Processor",
             "logical_cpu_count": 4,
             "os": "Linux",
-            "os_release": "6.17.0-1022-azure",
+            "os_release": "7.0.0-1017-azure",
             "unavailable": {}
           },
           "identity": {
@@ -5037,11 +5037,11 @@
           },
           "observational": {
             "phases": {
-              "preflight_ns": 39703939,
-              "recording_finalization_ns": 59782,
-              "scheduled_execution_ns": 43188708,
-              "setup_ns": 175707627,
-              "shutdown_ns": 94917,
+              "preflight_ns": 29326058,
+              "recording_finalization_ns": 57436,
+              "scheduled_execution_ns": 40338402,
+              "setup_ns": 129316056,
+              "shutdown_ns": 81902,
               "unattributed_ns": 0,
               "unavailable": {}
             },
@@ -5051,10 +5051,10 @@
                 "participant": "hazard_replay",
                 "timing": {
                   "completed": 5,
-                  "max_ns": 11882,
-                  "mean_ns": 5287.8,
-                  "min_ns": 2956,
-                  "p50_ns": 3406,
+                  "max_ns": 15102,
+                  "mean_ns": 5019.4,
+                  "min_ns": 1873,
+                  "p50_ns": 2914,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -5071,42 +5071,42 @@
                     "sample_count": 5
                   },
                   "samples_ns": [
-                    2956,
-                    3116,
-                    3406,
-                    5079,
-                    11882
+                    1873,
+                    1923,
+                    2914,
+                    3285,
+                    15102
                   ],
                   "scope": "inclusive_replay_publication_slot",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 11882
+                      "wall_ns": 15102
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 5079
+                      "wall_ns": 3285
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 3406
-                    },
-                    {
-                      "activation_index": 4,
-                      "virtual_time_ns": 40000000,
-                      "wall_ns": 3116
+                      "wall_ns": 2914
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 2956
+                      "wall_ns": 1923
+                    },
+                    {
+                      "activation_index": 4,
+                      "virtual_time_ns": 40000000,
+                      "wall_ns": 1873
                     }
                   ],
-                  "stddev_ns": 3382.9646406665265,
-                  "sum_ns": 26439,
+                  "stddev_ns": 5071.236559262445,
+                  "sum_ns": 25097,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -5117,9 +5117,9 @@
             "resources": {
               "cpu_total": {
                 "scope": "runner_and_process_participants",
-                "system_cpu_ns": 43854000,
+                "system_cpu_ns": 39847000,
                 "unavailable": {},
-                "user_cpu_ns": 220526000
+                "user_cpu_ns": 159485000
               },
               "native_participants": "shared_with_runner",
               "process_participants": [
@@ -5132,12 +5132,12 @@
                     "descendants_counted_only_when_waited"
                   ],
                   "participant": "hazard",
-                  "peak_rss_bytes": 48058368,
+                  "peak_rss_bytes": 48275456,
                   "peak_rss_kind": "largest_process_peak_rss",
                   "scope": "process_participant",
-                  "system_cpu_ns": 40875000,
+                  "system_cpu_ns": 35944000,
                   "unavailable": {},
-                  "user_cpu_ns": 180806000
+                  "user_cpu_ns": 131183000
                 }
               ],
               "runner": {
@@ -5147,34 +5147,34 @@
                 "limitations": [
                   "peak_includes_parent_rss_at_spawn"
                 ],
-                "peak_rss_bytes": 58146816,
+                "peak_rss_bytes": 72642560,
                 "peak_rss_kind": "process_peak_rss",
                 "scope": "runner_process",
-                "system_cpu_ns": 2979000,
+                "system_cpu_ns": 3903000,
                 "unavailable": {},
-                "user_cpu_ns": 39720000
+                "user_cpu_ns": 28302000
               }
             },
             "run_wall_time": {
               "boundary": "native runner start before Manifest load through Participant cleanup and Recording close",
               "unavailable": {},
-              "wall_ns": 258754973
+              "wall_ns": 199119854
             },
             "tasks": [
               {
                 "failed_activation": {
                   "activation_index": 4,
-                  "wall_ns": 41280115
+                  "wall_ns": 39186689
                 },
                 "kind": "process_step",
                 "participant": "hazard",
                 "task": "step",
                 "timing": {
                   "completed": 4,
-                  "max_ns": 525689,
-                  "mean_ns": 447278.0,
-                  "min_ns": 382312,
-                  "p50_ns": 411256,
+                  "max_ns": 415398,
+                  "mean_ns": 265379.75,
+                  "min_ns": 184965,
+                  "p50_ns": 221049,
                   "p95_ns": null,
                   "p99_ns": null,
                   "quantiles": {
@@ -5191,36 +5191,36 @@
                     "sample_count": 4
                   },
                   "samples_ns": [
-                    382312,
-                    411256,
-                    469855,
-                    525689
+                    184965,
+                    221049,
+                    240107,
+                    415398
                   ],
                   "scope": "inclusive_process_step",
                   "slowest": [
                     {
                       "activation_index": 0,
                       "virtual_time_ns": 0,
-                      "wall_ns": 525689
+                      "wall_ns": 415398
                     },
                     {
                       "activation_index": 1,
                       "virtual_time_ns": 10000000,
-                      "wall_ns": 469855
+                      "wall_ns": 240107
                     },
                     {
                       "activation_index": 2,
                       "virtual_time_ns": 20000000,
-                      "wall_ns": 411256
+                      "wall_ns": 221049
                     },
                     {
                       "activation_index": 3,
                       "virtual_time_ns": 30000000,
-                      "wall_ns": 382312
+                      "wall_ns": 184965
                     }
                   ],
-                  "stddev_ns": 55172.84542689455,
-                  "sum_ns": 1789112,
+                  "stddev_ns": 88848.0931685509,
+                  "sum_ns": 1061519,
                   "unavailable": {
                     "p95_ns": "insufficient_samples",
                     "p99_ns": "insufficient_samples"
@@ -5233,8 +5233,8 @@
               "completed_process_steps": 4,
               "denominator": "scheduled_execution_ns",
               "native_activations_per_s": 0.0,
-              "process_steps_per_s": 92.61680159545408,
-              "scheduled_execution_ns": 43188708,
+              "process_steps_per_s": 99.16109220191717,
+              "scheduled_execution_ns": 40338402,
               "unavailable": {}
             },
             "virtual_time_speed": {
@@ -5268,8 +5268,8 @@
         "content": "participant terminated by signal 15\nsil-run-diagnostics: participant 'hazard' exited unexpectedly with status 0 during Step 4 at virtual time 40000000 ns\n"
       },
       "gdb.txt": {
-        "sha256": "6165fd68ffde886a2e22eb93617bc7299cf6cb387ccfa46ef01fd5a7f3313844",
-        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7fe1945fac30, t_ns=40000000, output=0x7fe1944df2b0, fault=0x7fe1944db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n[Inferior 1 (process 3748) exited with code 01]\n"
+        "sha256": "77d06b3d6ab07bd5d37c59b05fe34c9013e55dee66b8267f8d904119500efe3f",
+        "content": "Function \"adas_ref_advance\" not defined.\nBreakpoint 1 (adas_ref_advance) pending.\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n\nBreakpoint 1, adas_ref_advance (instance=0x7f3ed53fac30, t_ns=40000000, output=0x7f3ed52dd6f0, fault=0x7f3ed52db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n398\t                                 adas_ref_fault *fault) {\n[Inferior 1 (process 3521) exited with code 01]\n"
       }
     }
   }

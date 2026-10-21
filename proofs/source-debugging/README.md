@@ -58,21 +58,34 @@ Manifest to enable debugging.
 
 ## Stops, ownership and values
 
-Each selected Activation has three observations:
+Each selected ADAS Activation retains entry/decision/return observations,
+plus an earlier selection inspection:
 
 1. **Entry** to `adas_ref_advance`, after the adapter has delivered inputs,
    before this call's algorithm/state update. Read `instance`, held radar and
    camera lists, held ego metadata, previous command, `activations`, `t_ns`.
-2. **Decision**, at the optimized source location for `limited`: read `lead`,
+2. **Selection and hazard inputs**, before their last use: stop after
+   `select_lead` and inspect the selected ID and the fields of `lead`
+   individually. A source line may precede the `closing_mps` initializer, so
+   at most 32 `nexti` operations reach the known fixture's closing speed of
+   25 m/s. This is an explicit, workload-specific stop condition, independently
+   checked against the authored hazard fixture by the offline validator.
+   A pre-initialization read is unavailable with reason
+   `before_hazard_computation`. No variable or register is written.
+3. **Decision**, at the optimized source location for `limited`: read `lead`,
    `selected`, `mode`, `target` and the old command where DWARF makes them
    available. Hazard is a function/decision, not a stored `hazard` variable;
    mode 1 and output target −3 establish its result for this fixture. Inline
    `limited` arguments may be unavailable. Source lines can move or combine
    under optimization; the actual PC's source location and stack are saved.
-3. **Return** from the C API, before the caller publishes: read output memory,
+4. **Return** from the C API, before the caller publishes: read output memory,
    limited result, sequence and Sample time. This does not mean a Message has
    already been recorded; the resumed adapter still has to publish it.
 
+`selection-stops.json` retains the earlier live `selected`, `lead.x_m`,
+`lead.relative_vx_mps` and initialized `closing_mps`. These come from their
+own DWARF locations, independently of returned output or held observations.
+The aggregate `lead` and its other fields may still be optimized out.
 `stops.json` retains raw GDB locals, stack frames, source/line, loaded-module
 paths, inferior PID/PGID, TID, host stop time and expression-level values.
 Unavailable/optimized-out values stay null with a reason; no later output or
@@ -103,9 +116,20 @@ The named ADAS FMU currently runs through the **single-FMU importer**. The
 group importer requires FMI BUS terminals and a BUS profile; the ADAS FMU has
 neither. `group.json` and its rejected Run retain that mismatch in the ticket's
 premise. This experiment does not manufacture a grouped ADAS implementation.
-A real BUS group shares one Process participant, so all-stop debugging its
-child would stop every instance together (ADR 0001); multi-instance source
-debugging is **unqualified** here, and PID alone cannot select an FMU instance.
+A supplemental, runnable BUS group qualifies that shared boundary (ADR 0001):
+two CAN node instances and a bus instance, using the existing stand-ins in
+`tests/fixtures/fmi_clock.c` and `fmi_bus.c`, packaged by `tests/can_fixture.py`.
+This tests the real group importer without adding BUS terminals to ADAS.
+The group uses one Process participant with a 100 ms Period. Index 2 and
+Virtual time 200 ms select the same inclusive Step, which advances the group
+toward its first 300 ms transmission. GDB stops in each instance's
+`fmi3DoStep`, recording three distinct instance pointers and loaded module
+paths in one inferior PID, with the runner and wrapper PIDs recorded separately.
+Every inferior thread is stopped, the inspected state stays unchanged across
+a 50 ms host pause, and the inferior has no child FMU processes. Resuming each
+capture must reproduce the two ordinary group Recordings exactly. This is
+group-process boundary evidence, not a new CAN semantics qualification or
+an implementation of grouped ADAS. PID alone still cannot select an instance.
 
 ## Deadlines, Clock shim, signals and cleanup
 
@@ -150,34 +174,46 @@ inferior's actual exit separately from the runner report's wrapper status.
 ## Decision and retained evidence
 
 **No change to SiL's debugging hooks.**
-[Linux qualification run 39483103830](https://github.com/Stevie1704/sil/actions/runs/39483103830)
-passed for PR head `f5db290e91dab81fa991d5eb91d432dd495f79c2`, with checkout
-merge revision `a12963601c03fdad6247c6a466fa200d652d1452`. The host was Linux
-6.17.0-1022-azure x86-64/glibc 2.39. All 39 experiments over Native, Process,
-single-FMU and shimmed Process forms met their stop, outcome, cleanup and
-equivalence checks; the fortieth experiment established the grouped-ADAS
+[Linux qualification run 39554858402](https://github.com/Stevie1704/sil/actions/runs/39554858402)
+passed for PR head `78ee299b5f87b33c3c24cffe88631b8cb03c42af`, with checkout
+merge revision `e7628efd21cc1c12f0e8ab9dfb9a8e0331a9e63d`. The host was Linux
+7.0.0-1017-azure x86-64/glibc 2.39. All 43 experiments over Native, Process,
+single-FMU, shimmed Process and the supplemental BUS group met their stop,
+outcome, cleanup and equivalence checks; the forty-fourth established the grouped-ADAS
 BUS-terminal rejection. External scripts plus the existing diagnostics-only
 wrapper suffice for the qualified forms. No new launch or pause hook, ABI,
 protocol, Manifest field or ADR change is justified by this evidence.
 
-**Defer grouped ADAS qualification.** Even with two instances, an explicit BUS
+**The shared FMU group boundary is qualified.** Both group captures stopped
+three distinct instances in one inferior PID (3560 by index, 3571 by Virtual
+time), inside Activation 2 at 200 ms. The two node libraries and bus library
+were mapped into that same process. All threads were stopped, with no child
+FMU processes, and each inspected state stayed unchanged across a 50 ms
+host pause. All four group Recordings matched byte-for-byte.
+
+**Grouped ADAS remains unsupported by the current importer.** Even with two instances, an explicit BUS
 profile and every Channel bound, the group importer rejects the ADAS
 `camera.sample_time_ns`: it is no Tx_Data/Rx_Data member of a terminal. This
 is a workload/importer limit before execution, not debugger failure. A future
 supported multi-instance ADAS importer would need its own spec and tickets;
-the BUS group remains one shared process boundary and is unqualified here.
+this does not weaken the separately observed BUS group's shared process boundary.
 
-At both selected Activations, every form exposed valid held observations,
+At both selected ADAS Activations, every ADAS form exposed valid held observations,
 mode 1 (hazard), previous command and the output's selected radar ID 12,
 target −3 and limited result. At 40 ms the held radar object was at 29 m,
 relative speed −25 m/s, confidence 0.875; camera ID 4 confirmed it at 29.5 m,
 y = 0.125 m, confidence 0.75. At 50 ms their x positions were 28.75 and
 29.25 m. Held ego metadata had sequence 4/5 and origin 40/50 ms, validity 1;
 discarded ego speed remained unavailable. The inline `limited` frame exposed
-`from` = −2/−2.5 and `max_change` = 0.5. `lead`, local `selected`, local
-`target` and inline `to` were optimized out at that source stop in all four
-forms. They remain null with `optimized_out`; output values are separately
-labelled, never substituted for those locals. Process returns land in libffi
+`from` = −2/−2.5 and `max_change` = 0.5. At the earlier selection stop,
+the actual local `selected` was 12, `lead.x_m` was 29/28.75 and
+`lead.relative_vx_mps` was −25. After the initializer, the inlined hazard
+frame exposed `closing_mps` = 25. The aggregate `lead`, `lead.id`, `lead.y_m`
+and `lead.confidence` remained optimized out; they are never reconstructed
+from held inputs. At the later rate-limiter stop, `lead`, local `selected`,
+local `target` and inline `to` were optimized out in all four forms.
+Unavailable fields remain null with a reason; outputs are labelled separately.
+Process returns land in libffi
 without available caller source; the application entry/decision source and
 stack remain captured.
 
@@ -193,8 +229,8 @@ after cleanup, including detach and debugger-error controls.
 Within each form, two ordinary Runs, diagnostics-only, index-selected,
 time-selected and detached Runs all produced byte-identical Recordings.
 The saved files independently reproduce that comparison. The index/time
-captures used different fresh PIDs/TIDs (Native 3463/3472, Process 3544/3554,
-FMU 3623/3634, shim 3708/3718), host times and relocated stack addresses.
+captures used different fresh PIDs/TIDs (Native 3256/3265, Process 3317/3327,
+FMU 3396/3407, shim 3481/3491), host times and relocated stack addresses.
 These observations establish Message reproducibility, not matching internal
 thread history or instruction-level replay. No multithreaded application
 schedule is qualified by this single-threaded workload.

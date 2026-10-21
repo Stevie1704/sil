@@ -1,7 +1,7 @@
 {
-  "source_revision": "a12963601c03fdad6247c6a466fa200d652d1452",
-  "ci_run": "39483103830",
-  "host": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+  "source_revision": "e7628efd21cc1c12f0e8ab9dfb9a8e0331a9e63d",
+  "ci_run": "39554858402",
+  "host": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
   "gdb": "GNU gdb (Ubuntu 15.0.50.20240403-0ubuntu1) 15.0.50.20240403-git\nCopyright (C) 2024 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n",
   "compiler": "gcc-12 (Ubuntu 12.4.0-2ubuntu1~24.04.1) 12.4.0\nCopyright (C) 2022 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
   "glibc": "ldd (Ubuntu GLIBC 2.39-0ubuntu8.9) 2.39\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\nWritten by Roland McGrath and Ulrich Drepper.\n",
@@ -20,7 +20,7 @@
         "30000"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 7073350,
+      "elapsed_host_ns": 5597819,
       "deadline_ms": 30000,
       "manifest_sha256": "cfe041b8ec1f6bedc4ab2b74e132f07d315088628203226b2eb7673470ffd231",
       "supervisor_timeout": false,
@@ -46,7 +46,7 @@
         "30000"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 6522627,
+      "elapsed_host_ns": 5356509,
       "deadline_ms": 30000,
       "manifest_sha256": "cfe041b8ec1f6bedc4ab2b74e132f07d315088628203226b2eb7673470ffd231",
       "supervisor_timeout": false,
@@ -78,7 +78,7 @@
         "1048576"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 8441709,
+      "elapsed_host_ns": 6521384,
       "deadline_ms": 30000,
       "manifest_sha256": "cfe041b8ec1f6bedc4ab2b74e132f07d315088628203226b2eb7673470ffd231",
       "supervisor_timeout": false,
@@ -121,7 +121,7 @@
         "1048576"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 746599534,
+      "elapsed_host_ns": 426983173,
       "deadline_ms": 30000,
       "manifest_sha256": "cfe041b8ec1f6bedc4ab2b74e132f07d315088628203226b2eb7673470ffd231",
       "supervisor_timeout": false,
@@ -165,7 +165,7 @@
         "1048576"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 678551401,
+      "elapsed_host_ns": 414393569,
       "deadline_ms": 30000,
       "manifest_sha256": "cfe041b8ec1f6bedc4ab2b74e132f07d315088628203226b2eb7673470ffd231",
       "supervisor_timeout": false,
@@ -208,7 +208,7 @@
         "1048576"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 655812620,
+      "elapsed_host_ns": 392822623,
       "deadline_ms": 30000,
       "manifest_sha256": "cfe041b8ec1f6bedc4ab2b74e132f07d315088628203226b2eb7673470ffd231",
       "supervisor_timeout": false,
@@ -251,7 +251,7 @@
         "1048576"
       ],
       "exit_code": 255,
-      "elapsed_host_ns": 671606823,
+      "elapsed_host_ns": 388723572,
       "deadline_ms": 30000,
       "manifest_sha256": "cfe041b8ec1f6bedc4ab2b74e132f07d315088628203226b2eb7673470ffd231",
       "supervisor_timeout": false,
@@ -291,7 +291,7 @@
         "1048576"
       ],
       "exit_code": 1,
-      "elapsed_host_ns": 653842940,
+      "elapsed_host_ns": 390590803,
       "deadline_ms": 30000,
       "manifest_sha256": "cfe041b8ec1f6bedc4ab2b74e132f07d315088628203226b2eb7673470ffd231",
       "supervisor_timeout": false,
@@ -337,7 +337,7 @@
         "1048576"
       ],
       "exit_code": 1,
-      "elapsed_host_ns": 661390090,
+      "elapsed_host_ns": 400284127,
       "deadline_ms": 30000,
       "manifest_sha256": "cfe041b8ec1f6bedc4ab2b74e132f07d315088628203226b2eb7673470ffd231",
       "supervisor_timeout": false,
@@ -361,7 +361,7 @@
         "30000"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 159425518,
+      "elapsed_host_ns": 100789216,
       "deadline_ms": 30000,
       "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
       "supervisor_timeout": false,
@@ -387,7 +387,7 @@
         "30000"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 112631220,
+      "elapsed_host_ns": 86739085,
       "deadline_ms": 30000,
       "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
       "supervisor_timeout": false,
@@ -419,7 +419,7 @@
         "1048576"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 116528427,
+      "elapsed_host_ns": 90953181,
       "deadline_ms": 30000,
       "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
       "supervisor_timeout": false,
@@ -455,7 +455,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 278245148,
+      "elapsed_host_ns": 211617585,
       "deadline_ms": 30000,
       "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
       "supervisor_timeout": false,
@@ -492,7 +492,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 277648391,
+      "elapsed_host_ns": 209563195,
       "deadline_ms": 30000,
       "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
       "supervisor_timeout": false,
@@ -529,7 +529,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 240691783,
+      "elapsed_host_ns": 178715725,
       "deadline_ms": 30000,
       "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
       "supervisor_timeout": false,
@@ -565,7 +565,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 1,
-      "elapsed_host_ns": 250649393,
+      "elapsed_host_ns": 181720960,
       "deadline_ms": 30000,
       "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
       "supervisor_timeout": false,
@@ -604,7 +604,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 1,
-      "elapsed_host_ns": 257028264,
+      "elapsed_host_ns": 188536985,
       "deadline_ms": 30000,
       "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
       "supervisor_timeout": false,
@@ -643,7 +643,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 1,
-      "elapsed_host_ns": 250325394,
+      "elapsed_host_ns": 173557124,
       "deadline_ms": 30000,
       "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
       "supervisor_timeout": false,
@@ -682,7 +682,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 1,
-      "elapsed_host_ns": 3260048592,
+      "elapsed_host_ns": 3189387127,
       "deadline_ms": 2000,
       "manifest_sha256": "16bfd0b8999eff4e482b76ff06f7db41a9d5fec91762ffeeecb9a5ad1cbff265",
       "supervisor_timeout": false,
@@ -712,7 +712,7 @@
         "30000"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 169518713,
+      "elapsed_host_ns": 125918383,
       "deadline_ms": 30000,
       "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
       "supervisor_timeout": false,
@@ -738,7 +738,7 @@
         "30000"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 139044330,
+      "elapsed_host_ns": 107124223,
       "deadline_ms": 30000,
       "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
       "supervisor_timeout": false,
@@ -770,7 +770,7 @@
         "1048576"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 144989692,
+      "elapsed_host_ns": 110460000,
       "deadline_ms": 30000,
       "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
       "supervisor_timeout": false,
@@ -806,7 +806,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 311527683,
+      "elapsed_host_ns": 246425881,
       "deadline_ms": 30000,
       "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
       "supervisor_timeout": false,
@@ -843,7 +843,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 307502407,
+      "elapsed_host_ns": 242670035,
       "deadline_ms": 30000,
       "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
       "supervisor_timeout": false,
@@ -880,7 +880,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 263322639,
+      "elapsed_host_ns": 199359426,
       "deadline_ms": 30000,
       "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
       "supervisor_timeout": false,
@@ -916,7 +916,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 1,
-      "elapsed_host_ns": 272663760,
+      "elapsed_host_ns": 197218848,
       "deadline_ms": 30000,
       "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
       "supervisor_timeout": false,
@@ -955,7 +955,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 1,
-      "elapsed_host_ns": 283551225,
+      "elapsed_host_ns": 210119415,
       "deadline_ms": 30000,
       "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
       "supervisor_timeout": false,
@@ -994,7 +994,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 1,
-      "elapsed_host_ns": 279577835,
+      "elapsed_host_ns": 202930427,
       "deadline_ms": 30000,
       "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
       "supervisor_timeout": false,
@@ -1033,7 +1033,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 1,
-      "elapsed_host_ns": 3291553175,
+      "elapsed_host_ns": 3207858481,
       "deadline_ms": 2000,
       "manifest_sha256": "af1fa032d165cc897ea5cace20bcd35175ccc9fd8d35109dea8c1e86f6a55323",
       "supervisor_timeout": false,
@@ -1063,7 +1063,7 @@
         "30000"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 110745321,
+      "elapsed_host_ns": 83349605,
       "deadline_ms": 30000,
       "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
       "supervisor_timeout": false,
@@ -1089,7 +1089,7 @@
         "30000"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 110478068,
+      "elapsed_host_ns": 85365770,
       "deadline_ms": 30000,
       "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
       "supervisor_timeout": false,
@@ -1121,7 +1121,7 @@
         "1048576"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 114781157,
+      "elapsed_host_ns": 87889314,
       "deadline_ms": 30000,
       "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
       "supervisor_timeout": false,
@@ -1157,7 +1157,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 275296524,
+      "elapsed_host_ns": 216335712,
       "deadline_ms": 30000,
       "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
       "supervisor_timeout": false,
@@ -1194,7 +1194,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 266917732,
+      "elapsed_host_ns": 216647721,
       "deadline_ms": 30000,
       "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
       "supervisor_timeout": false,
@@ -1231,7 +1231,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 0,
-      "elapsed_host_ns": 254969462,
+      "elapsed_host_ns": 188955398,
       "deadline_ms": 30000,
       "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
       "supervisor_timeout": false,
@@ -1267,7 +1267,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 1,
-      "elapsed_host_ns": 250660314,
+      "elapsed_host_ns": 188264590,
       "deadline_ms": 30000,
       "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
       "supervisor_timeout": false,
@@ -1306,7 +1306,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 1,
-      "elapsed_host_ns": 261547423,
+      "elapsed_host_ns": 201689813,
       "deadline_ms": 30000,
       "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
       "supervisor_timeout": false,
@@ -1345,7 +1345,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 1,
-      "elapsed_host_ns": 251769810,
+      "elapsed_host_ns": 183481834,
       "deadline_ms": 30000,
       "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
       "supervisor_timeout": false,
@@ -1384,7 +1384,7 @@
         "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
       ],
       "exit_code": 1,
-      "elapsed_host_ns": 3261895784,
+      "elapsed_host_ns": 3195401829,
       "deadline_ms": 2000,
       "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
       "supervisor_timeout": false,
@@ -1399,6 +1399,132 @@
         "status": "run_failure"
       },
       "observed_inferiors_reaped": true
+    },
+    {
+      "form": "bus-group",
+      "label": "ordinary-0",
+      "selector": null,
+      "action": "resume",
+      "command": [
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/sil-run",
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/bus-group.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/bus-group-ordinary-0/recording.mcap",
+        "--participant-timeout-ms",
+        "30000"
+      ],
+      "exit_code": 0,
+      "elapsed_host_ns": 105896604,
+      "deadline_ms": 30000,
+      "manifest_sha256": "6c1ea8af0adf3cb62cc415f66bc95f36aaa270f1c8ffbd9ca01dfb060af9a8ef",
+      "supervisor_timeout": false,
+      "run_outcome": {
+        "exit_code": null,
+        "reason": "runner report unavailable"
+      },
+      "observed_inferiors_reaped": true,
+      "recording_sha256": "b5d3fae8987ae77100d4e8d69c1337da5e3a11e16b0f168d7f4e0a860041e2b7",
+      "recording_equal": true
+    },
+    {
+      "form": "bus-group",
+      "label": "ordinary-1",
+      "selector": null,
+      "action": "resume",
+      "command": [
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/sil-run",
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/bus-group.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/bus-group-ordinary-1/recording.mcap",
+        "--participant-timeout-ms",
+        "30000"
+      ],
+      "exit_code": 0,
+      "elapsed_host_ns": 109624701,
+      "deadline_ms": 30000,
+      "manifest_sha256": "6c1ea8af0adf3cb62cc415f66bc95f36aaa270f1c8ffbd9ca01dfb060af9a8ef",
+      "supervisor_timeout": false,
+      "run_outcome": {
+        "exit_code": null,
+        "reason": "runner report unavailable"
+      },
+      "observed_inferiors_reaped": true,
+      "recording_sha256": "b5d3fae8987ae77100d4e8d69c1337da5e3a11e16b0f168d7f4e0a860041e2b7",
+      "recording_equal": true
+    },
+    {
+      "form": "bus-group",
+      "label": "index",
+      "selector": "index",
+      "action": "resume",
+      "command": [
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/sil-run-diagnostics",
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/bus-group.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/bus-group-index/recording.mcap",
+        "--participant-timeout-ms",
+        "30000",
+        "--diagnostics-out",
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/bus-group-index/diagnostics.json",
+        "--activation-observations",
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/bus-group-index/observations.jsonl",
+        "--activation-observations-limit-bytes",
+        "1048576",
+        "--launch-wrapper",
+        "bus_group",
+        "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
+      ],
+      "exit_code": 0,
+      "elapsed_host_ns": 387630874,
+      "deadline_ms": 30000,
+      "manifest_sha256": "6c1ea8af0adf3cb62cc415f66bc95f36aaa270f1c8ffbd9ca01dfb060af9a8ef",
+      "supervisor_timeout": false,
+      "run_outcome": {
+        "exit_code": 0,
+        "failure": null,
+        "status": "succeeded"
+      },
+      "observed_inferiors_reaped": true,
+      "recording_sha256": "b5d3fae8987ae77100d4e8d69c1337da5e3a11e16b0f168d7f4e0a860041e2b7",
+      "activation_stops_verified": true,
+      "recording_equal": true
+    },
+    {
+      "form": "bus-group",
+      "label": "time",
+      "selector": "time",
+      "action": "resume",
+      "command": [
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/sil-run-diagnostics",
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/bus-group.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/bus-group-time/recording.mcap",
+        "--participant-timeout-ms",
+        "30000",
+        "--diagnostics-out",
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/bus-group-time/diagnostics.json",
+        "--activation-observations",
+        "/home/runner/work/sil/sil/build/source-debugging-evidence/runs/bus-group-time/observations.jsonl",
+        "--activation-observations-limit-bytes",
+        "1048576",
+        "--launch-wrapper",
+        "bus_group",
+        "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
+      ],
+      "exit_code": 0,
+      "elapsed_host_ns": 382356619,
+      "deadline_ms": 30000,
+      "manifest_sha256": "6c1ea8af0adf3cb62cc415f66bc95f36aaa270f1c8ffbd9ca01dfb060af9a8ef",
+      "supervisor_timeout": false,
+      "run_outcome": {
+        "exit_code": 0,
+        "failure": null,
+        "status": "succeeded"
+      },
+      "observed_inferiors_reaped": true,
+      "recording_sha256": "b5d3fae8987ae77100d4e8d69c1337da5e3a11e16b0f168d7f4e0a860041e2b7",
+      "activation_stops_verified": true,
+      "recording_equal": true
     }
   ],
   "grouped_adas": {
@@ -1415,7 +1541,7 @@
       "30000"
     ],
     "exit_code": 2,
-    "elapsed_host_ns": 135767705,
+    "elapsed_host_ns": 103094966,
     "deadline_ms": 30000,
     "manifest_sha256": "3b0624f30b63adc66dd7a746c6dbc08b7863243dba3e5d883f1358e896f8ebc6",
     "supervisor_timeout": false,

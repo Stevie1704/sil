@@ -40,6 +40,46 @@
     }
   },
   {
+    "path": "/home/runner/work/sil/sil/build/source-debugging-evidence/ClockedCanNodeOnABus.so",
+    "sha256": "2f4f6ea917394a5ea6ef827863868f30fc393bf8243c7a91dcb384ad7572c826",
+    "debug_sha256": "c4c5a873af32f73585837d5395399bb112464e918de086788937abdcbf5c3652",
+    "elf": {
+      "build_id": "a2a947b1ceb8a53d2b67735756ec5292be22ac79",
+      "has_debug_lines": false,
+      "debuglink": "ClockedCanNodeOnABus.so.debug"
+    },
+    "debug_elf": {
+      "build_id": "a2a947b1ceb8a53d2b67735756ec5292be22ac79",
+      "has_debug_lines": true,
+      "debuglink": null
+    },
+    "match": {
+      "material": "host_file",
+      "debug_status": "separate_matching",
+      "debug_path": "/home/runner/work/sil/sil/build/source-debugging-evidence/ClockedCanNodeOnABus.so.debug"
+    }
+  },
+  {
+    "path": "/home/runner/work/sil/sil/build/source-debugging-evidence/ClockedCanBus.so",
+    "sha256": "ddbe1df9060bdd2d12e66ab0edf735c846eea7420ed1aae3bb706b06d0829889",
+    "debug_sha256": "4045b634906748d1bcfd559778f4ed01398c7b789d25101c0f39955e40db4793",
+    "elf": {
+      "build_id": "6f7cb58149007bcd6d9e580ea383dc9edb96ae6a",
+      "has_debug_lines": false,
+      "debuglink": "ClockedCanBus.so.debug"
+    },
+    "debug_elf": {
+      "build_id": "6f7cb58149007bcd6d9e580ea383dc9edb96ae6a",
+      "has_debug_lines": true,
+      "debuglink": null
+    },
+    "match": {
+      "material": "host_file",
+      "debug_status": "separate_matching",
+      "debug_path": "/home/runner/work/sil/sil/build/source-debugging-evidence/ClockedCanBus.so.debug"
+    }
+  },
+  {
     "path": "/home/runner/work/sil/sil/build/source-debugging-evidence/sil-run",
     "sha256": "b017540360ab812c2af956f9f6634375398fdd1477dce99a75d5bd0d6b97ae0c",
     "debug_sha256": "e4ed96e7578197b33cd1fcac6114334443971dd9fe30e1d88c2c03889c770e3f",

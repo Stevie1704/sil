@@ -3,14 +3,14 @@
     "stage": "entry",
     "hit": 4,
     "virtual_time_ns": 40000000,
-    "pid": 3708,
-    "pgid": 3708,
+    "pid": 3481,
+    "pgid": 3481,
     "ptid": [
-      3708,
-      3708,
+      3481,
+      3481,
       0
     ],
-    "host_monotonic_ns": 163549485236,
+    "host_monotonic_ns": 114329698989,
     "source": "/home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c",
     "line": 398,
     "values": {
@@ -43,30 +43,30 @@
         "reason": null
       }
     },
-    "stack": "#0  adas_ref_advance (instance=0x7f8cd23fac30, t_ns=40000000, output=0x7f8cd22dd770, fault=0x7f8cd22db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n#1  0x00007f8cd321bb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#2  0x00007f8cd32183ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007f8cd321b0be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#4  0x00007f8cd2f8911c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#5  0x00007f8cd2f842af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#6  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#7  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#8  0x00000000005d55eb in PyEval_EvalCode ()\n#9  0x0000000000608852 in ?? ()\n#10 0x00000000006b50d3 in ?? ()\n#11 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#12 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#13 0x00000000006bccd5 in Py_RunMain ()\n#14 0x00000000006bc7bd in Py_BytesMain ()\n#15 0x00007f8cd302a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n",
-    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7f8cd3387740 (LWP 3708) \"python\" adas_ref_advance (instance=0x7f8cd23fac30, t_ns=40000000, output=0x7f8cd22dd770, fault=0x7f8cd22db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n",
-    "locals": "mode = 3527388208\nselected = <optimized out>\nlead = <optimized out>\ntarget = <optimized out>\n",
-    "modules": "From                To                  Syms Read   Shared Object Library\n0x00007f8cd34d9000  0x00007f8cd3503195  Yes (*)     /lib64/ld-linux-x86-64.so.2\n0x00007f8cd34ca160  0x00007f8cd34ca904  Yes         /home/runner/work/sil/sil/build/source-debugging-evidence/libsil_clock_shim.so\n0x00007f8cd33e6420  0x00007f8cd34643a6  Yes (*)     /lib/x86_64-linux-gnu/libm.so.6\n0x00007f8cd33bc260  0x00007f8cd33cdc60  Yes (*)     /lib/x86_64-linux-gnu/libz.so.1\n0x00007f8cd3390210  0x00007f8cd33ae473  Yes (*)     /lib/x86_64-linux-gnu/libexpat.so.1\n0x00007f8cd3028800  0x00007f8cd31b0039  Yes (*)     /lib/x86_64-linux-gnu/libc.so.6\n0x00007f8cd2f824c0  0x00007f8cd2f92575  Yes (*)     /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n0x00007f8cd3216460  0x00007f8cd321c07a  Yes (*)     /lib/x86_64-linux-gnu/libffi.so.8\n0x00007f8cd2f706a0  0x00007f8cd2f7660d  Yes (*)     /usr/lib/python3.12/lib-dynload/_json.cpython-312-x86_64-linux-gnu.so\n0x00007f8cd2f61c80  0x00007f8cd2f66f80  Yes (*)     /usr/lib/python3.12/lib-dynload/_hashlib.cpython-312-x86_64-linux-gnu.so\n0x00007f8cd24b5000  0x00007f8cd27e63a2  Yes (*)     /lib/x86_64-linux-gnu/libcrypto.so.3\n0x00007f8cd32235c0  0x00007f8cd322546f  Yes (*)     /usr/lib/python3.12/lib-dynload/_bz2.cpython-312-x86_64-linux-gnu.so\n0x00007f8cd2f0e280  0x00007f8cd2f1aff3  Yes (*)     /lib/x86_64-linux-gnu/libbz2.so.1.0\n0x00007f8cd2f02940  0x00007f8cd2f06379  Yes (*)     /usr/lib/python3.12/lib-dynload/_lzma.cpython-312-x86_64-linux-gnu.so\n0x00007f8cd29d1400  0x00007f8cd29f25ef  Yes (*)     /lib/x86_64-linux-gnu/liblzma.so.5\n0x00007f8cd2f236e0  0x00007f8cd2f25917  Yes (*)     /usr/lib/python3.12/lib-dynload/mmap.cpython-312-x86_64-linux-gnu.so\n0x00007f8cd2ef9240  0x00007f8cd2efbe84  Yes         /home/runner/work/sil/sil/build/source-debugging-evidence/adas.so\n(*): Shared library is missing debugging information.\n",
-    "proc_status": "Name:\tpython\nUmask:\t0022\nState:\tt (tracing stop)\nTgid:\t3708\nNgid:\t0\nPid:\t3708\nPPid:\t3702\nTracerPid:\t3702\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t4 100 118 999 1001 \nNStgid:\t3708\nNSpid:\t3708\nNSpgid:\t3708\nNSsid:\t3701\nKthread:\t0\nVmPeak:\t   29808 kB\nVmSize:\t   29808 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t   20824 kB\nVmRSS:\t   20824 kB\nRssAnon:\t   10076 kB\nRssFile:\t   10748 kB\nRssShmem:\t       0 kB\nVmData:\t   10576 kB\nVmStk:\t     136 kB\nVmExe:\t    2956 kB\nVmLib:\t    6140 kB\nVmPTE:\t      88 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t1\nSigQ:\t0/63838\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000001001000\nSigCgt:\t0000000000004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tvulnerable\nSpeculationIndirectBranch:\talways enabled\nCpus_allowed:\tf\nCpus_allowed_list:\t0-3\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t32\nnonvoluntary_ctxt_switches:\t0\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
-    "parent_pid": 3702,
+    "stack": "#0  adas_ref_advance (instance=0x7fa3f72fac30, t_ns=40000000, output=0x7fa3f71ddc30, fault=0x7fa3f71db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n#1  0x00007fa3f7cfbb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#2  0x00007fa3f7cf83ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007fa3f7cfb0be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#4  0x00007fa3f79eb11c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#5  0x00007fa3f79e62af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#6  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#7  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#8  0x00000000005d55eb in PyEval_EvalCode ()\n#9  0x0000000000608852 in ?? ()\n#10 0x00000000006b50d3 in ?? ()\n#11 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#12 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#13 0x00000000006bccd5 in Py_RunMain ()\n#14 0x00000000006bc7bd in Py_BytesMain ()\n#15 0x00007fa3f7e2a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n",
+    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7fa3f81e0740 (LWP 3481) \"python\" adas_ref_advance (instance=0x7fa3f72fac30, t_ns=40000000, output=0x7fa3f71ddc30, fault=0x7fa3f71db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n",
+    "locals": "mode = 4147096624\nselected = <optimized out>\nlead = <optimized out>\ntarget = <optimized out>\n",
+    "modules": "From                To                  Syms Read   Shared Object Library\n0x00007fa3f8332000  0x00007fa3f835c195  Yes (*)     /lib64/ld-linux-x86-64.so.2\n0x00007fa3f8323160  0x00007fa3f8323904  Yes         /home/runner/work/sil/sil/build/source-debugging-evidence/libsil_clock_shim.so\n0x00007fa3f823f420  0x00007fa3f82bd3a6  Yes (*)     /lib/x86_64-linux-gnu/libm.so.6\n0x00007fa3f8215260  0x00007fa3f8226c60  Yes (*)     /lib/x86_64-linux-gnu/libz.so.1\n0x00007fa3f81e9210  0x00007fa3f8207473  Yes (*)     /lib/x86_64-linux-gnu/libexpat.so.1\n0x00007fa3f7e28800  0x00007fa3f7fb0039  Yes (*)     /lib/x86_64-linux-gnu/libc.so.6\n0x00007fa3f79e44c0  0x00007fa3f79f4575  Yes (*)     /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n0x00007fa3f7cf6460  0x00007fa3f7cfc07a  Yes (*)     /lib/x86_64-linux-gnu/libffi.so.8\n0x00007fa3f80166a0  0x00007fa3f801c60d  Yes (*)     /usr/lib/python3.12/lib-dynload/_json.cpython-312-x86_64-linux-gnu.so\n0x00007fa3f79d0c80  0x00007fa3f79d5f80  Yes (*)     /usr/lib/python3.12/lib-dynload/_hashlib.cpython-312-x86_64-linux-gnu.so\n0x00007fa3f74b5000  0x00007fa3f77e63a2  Yes (*)     /lib/x86_64-linux-gnu/libcrypto.so.3\n0x00007fa3f7ced5c0  0x00007fa3f7cef46f  Yes (*)     /usr/lib/python3.12/lib-dynload/_bz2.cpython-312-x86_64-linux-gnu.so\n0x00007fa3f797d280  0x00007fa3f7989ff3  Yes (*)     /lib/x86_64-linux-gnu/libbz2.so.1.0\n0x00007fa3f7971940  0x00007fa3f7975379  Yes (*)     /usr/lib/python3.12/lib-dynload/_lzma.cpython-312-x86_64-linux-gnu.so\n0x00007fa3f793f400  0x00007fa3f79605ef  Yes (*)     /lib/x86_64-linux-gnu/liblzma.so.5\n0x00007fa3f79926e0  0x00007fa3f7994917  Yes (*)     /usr/lib/python3.12/lib-dynload/mmap.cpython-312-x86_64-linux-gnu.so\n0x00007fa3f7936240  0x00007fa3f7938e84  Yes         /home/runner/work/sil/sil/build/source-debugging-evidence/adas.so\n(*): Shared library is missing debugging information.\n",
+    "proc_status": "Name:\tpython\nUmask:\t0022\nState:\tt (tracing stop)\nTgid:\t3481\nNgid:\t0\nPid:\t3481\nPPid:\t3475\nTracerPid:\t3475\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t4 100 118 999 1001 \nNStgid:\t3481\nNSpid:\t3481\nNSpgid:\t3481\nNSsid:\t3474\nKthread:\t0\nVmPeak:\t   29832 kB\nVmSize:\t   29832 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t   20800 kB\nVmRSS:\t   20800 kB\nRssAnon:\t   10080 kB\nRssFile:\t   10720 kB\nRssShmem:\t       0 kB\nVmData:\t   10600 kB\nVmStk:\t     136 kB\nVmExe:\t    2956 kB\nVmLib:\t    6140 kB\nVmPTE:\t      88 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t1\nSigQ:\t0/58121\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000001001000\nSigCgt:\t0000000000004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tvulnerable\nSpeculationIndirectBranch:\talways enabled\nCpus_allowed:\tf\nCpus_allowed_list:\t0-3\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t32\nnonvoluntary_ctxt_switches:\t0\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "parent_pid": 3475,
     "shim_virtual_time": {
       "value": "40000000",
       "reason": null
     },
-    "shim_clock_symbol": "Symbol \"clock_gettime\" is a function at address 0x7f8cd34ca2d0.\n"
+    "shim_clock_symbol": "Symbol \"clock_gettime\" is a function at address 0x7fa3f83232d0.\n"
   },
   {
     "stage": "decision",
     "hit": 4,
     "virtual_time_ns": 40000000,
-    "pid": 3708,
-    "pgid": 3708,
+    "pid": 3481,
+    "pgid": 3481,
     "ptid": [
-      3708,
-      3708,
+      3481,
+      3481,
       0
     ],
-    "host_monotonic_ns": 163554792472,
+    "host_monotonic_ns": 114339757874,
     "source": "/home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c",
     "line": 424,
     "values": {
@@ -91,8 +91,8 @@
         "reason": null
       }
     },
-    "stack": "#0  limited (max_change=0.5, to=<optimized out>, from=-2) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:393\n#1  adas_ref_advance (instance=0x7f8cd23fac30, t_ns=40000000, output=0x7f8cd22dd770, fault=<optimized out>) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:424\n#2  0x00007f8cd321bb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007f8cd32183ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#4  0x00007f8cd321b0be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#5  0x00007f8cd2f8911c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#6  0x00007f8cd2f842af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#7  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#8  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#9  0x00000000005d55eb in PyEval_EvalCode ()\n#10 0x0000000000608852 in ?? ()\n#11 0x00000000006b50d3 in ?? ()\n#12 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#13 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#14 0x00000000006bccd5 in Py_RunMain ()\n#15 0x00000000006bc7bd in Py_BytesMain ()\n",
-    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7f8cd3387740 (LWP 3708) \"python\" limited (max_change=0.5, to=<optimized out>, from=-2) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:393\n",
+    "stack": "#0  limited (max_change=0.5, to=<optimized out>, from=-2) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:393\n#1  adas_ref_advance (instance=0x7fa3f72fac30, t_ns=40000000, output=0x7fa3f71ddc30, fault=<optimized out>) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:424\n#2  0x00007fa3f7cfbb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007fa3f7cf83ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#4  0x00007fa3f7cfb0be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#5  0x00007fa3f79eb11c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#6  0x00007fa3f79e62af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#7  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#8  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#9  0x00000000005d55eb in PyEval_EvalCode ()\n#10 0x0000000000608852 in ?? ()\n#11 0x00000000006b50d3 in ?? ()\n#12 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#13 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#14 0x00000000006bccd5 in Py_RunMain ()\n#15 0x00000000006bc7bd in Py_BytesMain ()\n",
+    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7fa3f81e0740 (LWP 3481) \"python\" limited (max_change=0.5, to=<optimized out>, from=-2) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:393\n",
     "locals": "mode = 1\nselected = <optimized out>\nlead = <optimized out>\ntarget = <optimized out>\n",
     "inline_values": {
       "limited_from": {
@@ -113,14 +113,14 @@
     "stage": "return",
     "hit": 4,
     "virtual_time_ns": 40000000,
-    "pid": 3708,
-    "pgid": 3708,
+    "pid": 3481,
+    "pgid": 3481,
     "ptid": [
-      3708,
-      3708,
+      3481,
+      3481,
       0
     ],
-    "host_monotonic_ns": 163556580343,
+    "host_monotonic_ns": 114340991699,
     "source": null,
     "line": 0,
     "values": {
@@ -153,22 +153,22 @@
         "reason": null
       }
     },
-    "stack": "#0  0x00007f8cd321bb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#1  0x00007f8cd32183ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#2  0x00007f8cd321b0be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007f8cd2f8911c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#4  0x00007f8cd2f842af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#5  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#6  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#7  0x00000000005d55eb in PyEval_EvalCode ()\n#8  0x0000000000608852 in ?? ()\n#9  0x00000000006b50d3 in ?? ()\n#10 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#11 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#12 0x00000000006bccd5 in Py_RunMain ()\n#13 0x00000000006bc7bd in Py_BytesMain ()\n#14 0x00007f8cd302a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n#15 0x00007f8cd302a28b in __libc_start_main () from /lib/x86_64-linux-gnu/libc.so.6\n",
-    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7f8cd3387740 (LWP 3708) \"python\" 0x00007f8cd321bb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n",
+    "stack": "#0  0x00007fa3f7cfbb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#1  0x00007fa3f7cf83ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#2  0x00007fa3f7cfb0be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007fa3f79eb11c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#4  0x00007fa3f79e62af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#5  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#6  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#7  0x00000000005d55eb in PyEval_EvalCode ()\n#8  0x0000000000608852 in ?? ()\n#9  0x00000000006b50d3 in ?? ()\n#10 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#11 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#12 0x00000000006bccd5 in Py_RunMain ()\n#13 0x00000000006bc7bd in Py_BytesMain ()\n#14 0x00007fa3f7e2a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n#15 0x00007fa3f7e2a28b in __libc_start_main () from /lib/x86_64-linux-gnu/libc.so.6\n",
+    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7fa3f81e0740 (LWP 3481) \"python\" 0x00007fa3f7cfbb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n",
     "locals": "No symbol table info available.\n"
   },
   {
     "stage": "entry",
     "hit": 5,
     "virtual_time_ns": 50000000,
-    "pid": 3708,
-    "pgid": 3708,
+    "pid": 3481,
+    "pgid": 3481,
     "ptid": [
-      3708,
-      3708,
+      3481,
+      3481,
       0
     ],
-    "host_monotonic_ns": 163559397398,
+    "host_monotonic_ns": 114342827300,
     "source": "/home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c",
     "line": 398,
     "values": {
@@ -201,30 +201,30 @@
         "reason": null
       }
     },
-    "stack": "#0  adas_ref_advance (instance=0x7f8cd23fac30, t_ns=50000000, output=0x7f8cd22dd770, fault=0x7f8cd22db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n#1  0x00007f8cd321bb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#2  0x00007f8cd32183ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007f8cd321b0be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#4  0x00007f8cd2f8911c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#5  0x00007f8cd2f842af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#6  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#7  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#8  0x00000000005d55eb in PyEval_EvalCode ()\n#9  0x0000000000608852 in ?? ()\n#10 0x00000000006b50d3 in ?? ()\n#11 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#12 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#13 0x00000000006bccd5 in Py_RunMain ()\n#14 0x00000000006bc7bd in Py_BytesMain ()\n#15 0x00007f8cd302a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n",
-    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7f8cd3387740 (LWP 3708) \"python\" adas_ref_advance (instance=0x7f8cd23fac30, t_ns=50000000, output=0x7f8cd22dd770, fault=0x7f8cd22db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n",
-    "locals": "mode = 3527388208\nselected = <optimized out>\nlead = <optimized out>\ntarget = <optimized out>\n",
-    "modules": "From                To                  Syms Read   Shared Object Library\n0x00007f8cd34d9000  0x00007f8cd3503195  Yes (*)     /lib64/ld-linux-x86-64.so.2\n0x00007f8cd34ca160  0x00007f8cd34ca904  Yes         /home/runner/work/sil/sil/build/source-debugging-evidence/libsil_clock_shim.so\n0x00007f8cd33e6420  0x00007f8cd34643a6  Yes (*)     /lib/x86_64-linux-gnu/libm.so.6\n0x00007f8cd33bc260  0x00007f8cd33cdc60  Yes (*)     /lib/x86_64-linux-gnu/libz.so.1\n0x00007f8cd3390210  0x00007f8cd33ae473  Yes (*)     /lib/x86_64-linux-gnu/libexpat.so.1\n0x00007f8cd3028800  0x00007f8cd31b0039  Yes (*)     /lib/x86_64-linux-gnu/libc.so.6\n0x00007f8cd2f824c0  0x00007f8cd2f92575  Yes (*)     /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n0x00007f8cd3216460  0x00007f8cd321c07a  Yes (*)     /lib/x86_64-linux-gnu/libffi.so.8\n0x00007f8cd2f706a0  0x00007f8cd2f7660d  Yes (*)     /usr/lib/python3.12/lib-dynload/_json.cpython-312-x86_64-linux-gnu.so\n0x00007f8cd2f61c80  0x00007f8cd2f66f80  Yes (*)     /usr/lib/python3.12/lib-dynload/_hashlib.cpython-312-x86_64-linux-gnu.so\n0x00007f8cd24b5000  0x00007f8cd27e63a2  Yes (*)     /lib/x86_64-linux-gnu/libcrypto.so.3\n0x00007f8cd32235c0  0x00007f8cd322546f  Yes (*)     /usr/lib/python3.12/lib-dynload/_bz2.cpython-312-x86_64-linux-gnu.so\n0x00007f8cd2f0e280  0x00007f8cd2f1aff3  Yes (*)     /lib/x86_64-linux-gnu/libbz2.so.1.0\n0x00007f8cd2f02940  0x00007f8cd2f06379  Yes (*)     /usr/lib/python3.12/lib-dynload/_lzma.cpython-312-x86_64-linux-gnu.so\n0x00007f8cd29d1400  0x00007f8cd29f25ef  Yes (*)     /lib/x86_64-linux-gnu/liblzma.so.5\n0x00007f8cd2f236e0  0x00007f8cd2f25917  Yes (*)     /usr/lib/python3.12/lib-dynload/mmap.cpython-312-x86_64-linux-gnu.so\n0x00007f8cd2ef9240  0x00007f8cd2efbe84  Yes         /home/runner/work/sil/sil/build/source-debugging-evidence/adas.so\n(*): Shared library is missing debugging information.\n",
-    "proc_status": "Name:\tpython\nUmask:\t0022\nState:\tt (tracing stop)\nTgid:\t3708\nNgid:\t0\nPid:\t3708\nPPid:\t3702\nTracerPid:\t3702\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t4 100 118 999 1001 \nNStgid:\t3708\nNSpid:\t3708\nNSpgid:\t3708\nNSsid:\t3701\nKthread:\t0\nVmPeak:\t   29808 kB\nVmSize:\t   29808 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t   20824 kB\nVmRSS:\t   20824 kB\nRssAnon:\t   10088 kB\nRssFile:\t   10736 kB\nRssShmem:\t       0 kB\nVmData:\t   10576 kB\nVmStk:\t     136 kB\nVmExe:\t    2956 kB\nVmLib:\t    6140 kB\nVmPTE:\t      88 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t1\nSigQ:\t0/63838\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000001001000\nSigCgt:\t0000000000004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tvulnerable\nSpeculationIndirectBranch:\talways enabled\nCpus_allowed:\tf\nCpus_allowed_list:\t0-3\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t36\nnonvoluntary_ctxt_switches:\t0\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
-    "parent_pid": 3702,
+    "stack": "#0  adas_ref_advance (instance=0x7fa3f72fac30, t_ns=50000000, output=0x7fa3f71ddc30, fault=0x7fa3f71db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n#1  0x00007fa3f7cfbb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#2  0x00007fa3f7cf83ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007fa3f7cfb0be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#4  0x00007fa3f79eb11c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#5  0x00007fa3f79e62af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#6  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#7  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#8  0x00000000005d55eb in PyEval_EvalCode ()\n#9  0x0000000000608852 in ?? ()\n#10 0x00000000006b50d3 in ?? ()\n#11 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#12 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#13 0x00000000006bccd5 in Py_RunMain ()\n#14 0x00000000006bc7bd in Py_BytesMain ()\n#15 0x00007fa3f7e2a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n",
+    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7fa3f81e0740 (LWP 3481) \"python\" adas_ref_advance (instance=0x7fa3f72fac30, t_ns=50000000, output=0x7fa3f71ddc30, fault=0x7fa3f71db230) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:398\n",
+    "locals": "mode = 4147096624\nselected = <optimized out>\nlead = <optimized out>\ntarget = <optimized out>\n",
+    "modules": "From                To                  Syms Read   Shared Object Library\n0x00007fa3f8332000  0x00007fa3f835c195  Yes (*)     /lib64/ld-linux-x86-64.so.2\n0x00007fa3f8323160  0x00007fa3f8323904  Yes         /home/runner/work/sil/sil/build/source-debugging-evidence/libsil_clock_shim.so\n0x00007fa3f823f420  0x00007fa3f82bd3a6  Yes (*)     /lib/x86_64-linux-gnu/libm.so.6\n0x00007fa3f8215260  0x00007fa3f8226c60  Yes (*)     /lib/x86_64-linux-gnu/libz.so.1\n0x00007fa3f81e9210  0x00007fa3f8207473  Yes (*)     /lib/x86_64-linux-gnu/libexpat.so.1\n0x00007fa3f7e28800  0x00007fa3f7fb0039  Yes (*)     /lib/x86_64-linux-gnu/libc.so.6\n0x00007fa3f79e44c0  0x00007fa3f79f4575  Yes (*)     /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n0x00007fa3f7cf6460  0x00007fa3f7cfc07a  Yes (*)     /lib/x86_64-linux-gnu/libffi.so.8\n0x00007fa3f80166a0  0x00007fa3f801c60d  Yes (*)     /usr/lib/python3.12/lib-dynload/_json.cpython-312-x86_64-linux-gnu.so\n0x00007fa3f79d0c80  0x00007fa3f79d5f80  Yes (*)     /usr/lib/python3.12/lib-dynload/_hashlib.cpython-312-x86_64-linux-gnu.so\n0x00007fa3f74b5000  0x00007fa3f77e63a2  Yes (*)     /lib/x86_64-linux-gnu/libcrypto.so.3\n0x00007fa3f7ced5c0  0x00007fa3f7cef46f  Yes (*)     /usr/lib/python3.12/lib-dynload/_bz2.cpython-312-x86_64-linux-gnu.so\n0x00007fa3f797d280  0x00007fa3f7989ff3  Yes (*)     /lib/x86_64-linux-gnu/libbz2.so.1.0\n0x00007fa3f7971940  0x00007fa3f7975379  Yes (*)     /usr/lib/python3.12/lib-dynload/_lzma.cpython-312-x86_64-linux-gnu.so\n0x00007fa3f793f400  0x00007fa3f79605ef  Yes (*)     /lib/x86_64-linux-gnu/liblzma.so.5\n0x00007fa3f79926e0  0x00007fa3f7994917  Yes (*)     /usr/lib/python3.12/lib-dynload/mmap.cpython-312-x86_64-linux-gnu.so\n0x00007fa3f7936240  0x00007fa3f7938e84  Yes         /home/runner/work/sil/sil/build/source-debugging-evidence/adas.so\n(*): Shared library is missing debugging information.\n",
+    "proc_status": "Name:\tpython\nUmask:\t0022\nState:\tt (tracing stop)\nTgid:\t3481\nNgid:\t0\nPid:\t3481\nPPid:\t3475\nTracerPid:\t3475\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t4 100 118 999 1001 \nNStgid:\t3481\nNSpid:\t3481\nNSpgid:\t3481\nNSsid:\t3474\nKthread:\t0\nVmPeak:\t   29832 kB\nVmSize:\t   29832 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t   20800 kB\nVmRSS:\t   20800 kB\nRssAnon:\t   10092 kB\nRssFile:\t   10708 kB\nRssShmem:\t       0 kB\nVmData:\t   10600 kB\nVmStk:\t     136 kB\nVmExe:\t    2956 kB\nVmLib:\t    6140 kB\nVmPTE:\t      88 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t1\nSigQ:\t0/58121\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000001001000\nSigCgt:\t0000000000004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tvulnerable\nSpeculationIndirectBranch:\talways enabled\nCpus_allowed:\tf\nCpus_allowed_list:\t0-3\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t47\nnonvoluntary_ctxt_switches:\t0\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "parent_pid": 3475,
     "shim_virtual_time": {
       "value": "50000000",
       "reason": null
     },
-    "shim_clock_symbol": "Symbol \"clock_gettime\" is a function at address 0x7f8cd34ca2d0.\n"
+    "shim_clock_symbol": "Symbol \"clock_gettime\" is a function at address 0x7fa3f83232d0.\n"
   },
   {
     "stage": "decision",
     "hit": 5,
     "virtual_time_ns": 50000000,
-    "pid": 3708,
-    "pgid": 3708,
+    "pid": 3481,
+    "pgid": 3481,
     "ptid": [
-      3708,
-      3708,
+      3481,
+      3481,
       0
     ],
-    "host_monotonic_ns": 163563080552,
+    "host_monotonic_ns": 114351528085,
     "source": "/home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c",
     "line": 424,
     "values": {
@@ -249,8 +249,8 @@
         "reason": null
       }
     },
-    "stack": "#0  limited (max_change=0.5, to=<optimized out>, from=-2.5) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:393\n#1  adas_ref_advance (instance=0x7f8cd23fac30, t_ns=50000000, output=0x7f8cd22dd770, fault=<optimized out>) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:424\n#2  0x00007f8cd321bb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007f8cd32183ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#4  0x00007f8cd321b0be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#5  0x00007f8cd2f8911c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#6  0x00007f8cd2f842af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#7  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#8  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#9  0x00000000005d55eb in PyEval_EvalCode ()\n#10 0x0000000000608852 in ?? ()\n#11 0x00000000006b50d3 in ?? ()\n#12 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#13 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#14 0x00000000006bccd5 in Py_RunMain ()\n#15 0x00000000006bc7bd in Py_BytesMain ()\n",
-    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7f8cd3387740 (LWP 3708) \"python\" limited (max_change=0.5, to=<optimized out>, from=-2.5) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:393\n",
+    "stack": "#0  limited (max_change=0.5, to=<optimized out>, from=-2.5) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:393\n#1  adas_ref_advance (instance=0x7fa3f72fac30, t_ns=50000000, output=0x7fa3f71ddc30, fault=<optimized out>) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:424\n#2  0x00007fa3f7cfbb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007fa3f7cf83ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#4  0x00007fa3f7cfb0be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#5  0x00007fa3f79eb11c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#6  0x00007fa3f79e62af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#7  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#8  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#9  0x00000000005d55eb in PyEval_EvalCode ()\n#10 0x0000000000608852 in ?? ()\n#11 0x00000000006b50d3 in ?? ()\n#12 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#13 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#14 0x00000000006bccd5 in Py_RunMain ()\n#15 0x00000000006bc7bd in Py_BytesMain ()\n",
+    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7fa3f81e0740 (LWP 3481) \"python\" limited (max_change=0.5, to=<optimized out>, from=-2.5) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:393\n",
     "locals": "mode = 1\nselected = <optimized out>\nlead = <optimized out>\ntarget = <optimized out>\n",
     "inline_values": {
       "limited_from": {
@@ -271,14 +271,14 @@
     "stage": "return",
     "hit": 5,
     "virtual_time_ns": 50000000,
-    "pid": 3708,
-    "pgid": 3708,
+    "pid": 3481,
+    "pgid": 3481,
     "ptid": [
-      3708,
-      3708,
+      3481,
+      3481,
       0
     ],
-    "host_monotonic_ns": 163565139602,
+    "host_monotonic_ns": 114352718215,
     "source": null,
     "line": 0,
     "values": {
@@ -311,8 +311,8 @@
         "reason": null
       }
     },
-    "stack": "#0  0x00007f8cd321bb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#1  0x00007f8cd32183ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#2  0x00007f8cd321b0be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007f8cd2f8911c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#4  0x00007f8cd2f842af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#5  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#6  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#7  0x00000000005d55eb in PyEval_EvalCode ()\n#8  0x0000000000608852 in ?? ()\n#9  0x00000000006b50d3 in ?? ()\n#10 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#11 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#12 0x00000000006bccd5 in Py_RunMain ()\n#13 0x00000000006bc7bd in Py_BytesMain ()\n#14 0x00007f8cd302a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n#15 0x00007f8cd302a28b in __libc_start_main () from /lib/x86_64-linux-gnu/libc.so.6\n",
-    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7f8cd3387740 (LWP 3708) \"python\" 0x00007f8cd321bb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n",
+    "stack": "#0  0x00007fa3f7cfbb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#1  0x00007fa3f7cf83ef in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n#2  0x00007fa3f7cfb0be in ffi_call () from /lib/x86_64-linux-gnu/libffi.so.8\n#3  0x00007fa3f79eb11c in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#4  0x00007fa3f79e62af in ?? () from /usr/lib/python3.12/lib-dynload/_ctypes.cpython-312-x86_64-linux-gnu.so\n#5  0x0000000000548fb5 in _PyObject_MakeTpCall ()\n#6  0x00000000005d710f in _PyEval_EvalFrameDefault ()\n#7  0x00000000005d55eb in PyEval_EvalCode ()\n#8  0x0000000000608852 in ?? ()\n#9  0x00000000006b50d3 in ?? ()\n#10 0x00000000006b4e3a in _PyRun_SimpleFileObject ()\n#11 0x00000000006b4c6f in _PyRun_AnyFileObject ()\n#12 0x00000000006bccd5 in Py_RunMain ()\n#13 0x00000000006bc7bd in Py_BytesMain ()\n#14 0x00007fa3f7e2a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n#15 0x00007fa3f7e2a28b in __libc_start_main () from /lib/x86_64-linux-gnu/libc.so.6\n",
+    "threads": "  Id   Target Id                                 Frame \n* 1    Thread 0x7fa3f81e0740 (LWP 3481) \"python\" 0x00007fa3f7cfbb16 in ?? () from /lib/x86_64-linux-gnu/libffi.so.8\n",
     "locals": "No symbol table info available.\n"
   }
 ]

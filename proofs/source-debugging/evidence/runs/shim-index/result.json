@@ -21,7 +21,7 @@
     "/home/runner/work/sil/sil/proofs/source-debugging/launch.sh"
   ],
   "exit_code": 0,
-  "elapsed_host_ns": 275296524,
+  "elapsed_host_ns": 216335712,
   "deadline_ms": 30000,
   "manifest_sha256": "dff3fe3a53430e4570a29aee3f9c88c86c0163298682029a48ce06825ac69341",
   "supervisor_timeout": false,

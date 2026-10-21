@@ -1,0 +1,234 @@
+[
+  {
+    "stage": "selection",
+    "hit": 4,
+    "virtual_time_ns": 40000000,
+    "pid": 3265,
+    "pgid": 3265,
+    "ptid": [
+      3265,
+      3265,
+      0
+    ],
+    "host_monotonic_ns": 102790916567,
+    "source": "/home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c",
+    "line": 418,
+    "values": {
+      "lead": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "selected": {
+        "value": "12",
+        "reason": null
+      },
+      "lead.id": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "lead.x_m": {
+        "value": "29",
+        "reason": null
+      },
+      "lead.y_m": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "lead.relative_vx_mps": {
+        "value": "-25",
+        "reason": null
+      },
+      "lead.confidence": {
+        "value": null,
+        "reason": "optimized_out"
+      }
+    },
+    "stack": "#0  hazard (radar=<synthetic pointer>) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:387\n#1  adas_ref_advance (instance=instance@entry=0x56430c54dfe8, t_ns=t_ns@entry=40000000, output=output@entry=0x7ffefe5b7180, fault=fault@entry=0x7ffefe5b71c0) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:418\n#2  0x00007fd1101fc347 in activate (user=0x56430c54dde0, t=40000000) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/sil_adapter.c:343\n#3  0x00005642dd160626 in sil::NativeApiBridge::run_task (now=<optimized out>, user=<optimized out>, fn=<optimized out>, site=..., p=0x56430c54bc30) at /home/runner/work/sil/sil/kernel/src/native_participant.cpp:50\n#4  sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}::operator()(unsigned long) const (now=<optimized out>, __closure=<optimized out>) at /home/runner/work/sil/sil/kernel/src/native_participant.cpp:70\n#5  std::__invoke_impl<void, sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long>(std::__invoke_other, sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long&&) (__f=...) at /usr/include/c++/12/bits/invoke.h:61\n#6  std::__invoke_r<void, sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long>(sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long&&) (__fn=...) at /usr/include/c++/12/bits/invoke.h:111\n#7  std::_Function_handler<void (unsigned long), sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}>::_M_invoke(std::_Any_data const&, unsigned long&&) (__functor=..., __args#0=<optimized out>) at /usr/include/c++/12/bits/std_function.h:290\n#8  0x00005642dd15486d in std::function<void (unsigned long)>::operator()(unsigned long) const (__args#0=40000000, this=0x56430c552f80) at /usr/include/c++/12/bits/std_function.h:591\n#9  sil::Engine::run (this=<optimized out>) at /home/runner/work/sil/sil/kernel/src/engine.cpp:267\n#10 0x00005642dd12f488 in (anonymous namespace)::run (argc=<optimized out>, argv=<optimized out>) at /home/runner/work/sil/sil/kernel/src/main.cpp:542\n#11 0x00007fd10fa2a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n#12 0x00007fd10fa2a28b in __libc_start_main () from /lib/x86_64-linux-gnu/libc.so.6\n#13 0x00005642dd12d505 in _start ()\n",
+    "threads": "  Id   Target Id                                          Frame \n* 1    Thread 0x7fd1100da740 (LWP 3265) \"sil-run-diagnos\" hazard (radar=<synthetic pointer>) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:387\n",
+    "locals": "mode = 206888956\nselected = 12\nlead = {x_m = 29, y_m = <optimized out>, relative_vx_mps = -25, confidence = <optimized out>, id = <optimized out>}\ntarget = <optimized out>\n",
+    "inline_values": {
+      "hazard_argument": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "closing_mps": {
+        "value": null,
+        "reason": "before_hazard_computation"
+      }
+    }
+  },
+  {
+    "stage": "selection",
+    "hit": 4,
+    "virtual_time_ns": 40000000,
+    "pid": 3265,
+    "pgid": 3265,
+    "ptid": [
+      3265,
+      3265,
+      0
+    ],
+    "host_monotonic_ns": 102795331182,
+    "source": "/home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c",
+    "line": 418,
+    "values": {
+      "lead": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "selected": {
+        "value": "12",
+        "reason": null
+      },
+      "lead.id": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "lead.x_m": {
+        "value": "29",
+        "reason": null
+      },
+      "lead.y_m": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "lead.relative_vx_mps": {
+        "value": "-25",
+        "reason": null
+      },
+      "lead.confidence": {
+        "value": null,
+        "reason": "optimized_out"
+      }
+    },
+    "stack": "#0  0x00007fd1101fb832 in hazard (radar=<synthetic pointer>) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:386\n#1  adas_ref_advance (instance=instance@entry=0x56430c54dfe8, t_ns=t_ns@entry=40000000, output=output@entry=0x7ffefe5b7180, fault=fault@entry=0x7ffefe5b71c0) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:418\n#2  0x00007fd1101fc347 in activate (user=0x56430c54dde0, t=40000000) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/sil_adapter.c:343\n#3  0x00005642dd160626 in sil::NativeApiBridge::run_task (now=<optimized out>, user=<optimized out>, fn=<optimized out>, site=..., p=0x56430c54bc30) at /home/runner/work/sil/sil/kernel/src/native_participant.cpp:50\n#4  sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}::operator()(unsigned long) const (now=<optimized out>, __closure=<optimized out>) at /home/runner/work/sil/sil/kernel/src/native_participant.cpp:70\n#5  std::__invoke_impl<void, sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long>(std::__invoke_other, sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long&&) (__f=...) at /usr/include/c++/12/bits/invoke.h:61\n#6  std::__invoke_r<void, sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long>(sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long&&) (__fn=...) at /usr/include/c++/12/bits/invoke.h:111\n#7  std::_Function_handler<void (unsigned long), sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}>::_M_invoke(std::_Any_data const&, unsigned long&&) (__functor=..., __args#0=<optimized out>) at /usr/include/c++/12/bits/std_function.h:290\n#8  0x00005642dd15486d in std::function<void (unsigned long)>::operator()(unsigned long) const (__args#0=40000000, this=0x56430c552f80) at /usr/include/c++/12/bits/std_function.h:591\n#9  sil::Engine::run (this=<optimized out>) at /home/runner/work/sil/sil/kernel/src/engine.cpp:267\n#10 0x00005642dd12f488 in (anonymous namespace)::run (argc=<optimized out>, argv=<optimized out>) at /home/runner/work/sil/sil/kernel/src/main.cpp:542\n#11 0x00007fd10fa2a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n#12 0x00007fd10fa2a28b in __libc_start_main () from /lib/x86_64-linux-gnu/libc.so.6\n#13 0x00005642dd12d505 in _start ()\n",
+    "threads": "  Id   Target Id                                          Frame \n* 1    Thread 0x7fd1100da740 (LWP 3265) \"sil-run-diagnos\" 0x00007fd1101fb832 in hazard (radar=<synthetic pointer>) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:386\n",
+    "locals": "mode = 206888956\nselected = 12\nlead = {x_m = 29, y_m = <optimized out>, relative_vx_mps = -25, confidence = <optimized out>, id = <optimized out>}\ntarget = <optimized out>\n",
+    "inline_values": {
+      "hazard_argument": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "closing_mps": {
+        "value": "25",
+        "reason": null
+      }
+    }
+  },
+  {
+    "stage": "selection",
+    "hit": 5,
+    "virtual_time_ns": 50000000,
+    "pid": 3265,
+    "pgid": 3265,
+    "ptid": [
+      3265,
+      3265,
+      0
+    ],
+    "host_monotonic_ns": 102803059534,
+    "source": "/home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c",
+    "line": 418,
+    "values": {
+      "lead": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "selected": {
+        "value": "12",
+        "reason": null
+      },
+      "lead.id": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "lead.x_m": {
+        "value": "28.75",
+        "reason": null
+      },
+      "lead.y_m": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "lead.relative_vx_mps": {
+        "value": "-25",
+        "reason": null
+      },
+      "lead.confidence": {
+        "value": null,
+        "reason": "optimized_out"
+      }
+    },
+    "stack": "#0  hazard (radar=<synthetic pointer>) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:387\n#1  adas_ref_advance (instance=instance@entry=0x56430c54dfe8, t_ns=t_ns@entry=50000000, output=output@entry=0x7ffefe5b7180, fault=fault@entry=0x7ffefe5b71c0) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:418\n#2  0x00007fd1101fc347 in activate (user=0x56430c54dde0, t=50000000) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/sil_adapter.c:343\n#3  0x00005642dd160626 in sil::NativeApiBridge::run_task (now=<optimized out>, user=<optimized out>, fn=<optimized out>, site=..., p=0x56430c54bc30) at /home/runner/work/sil/sil/kernel/src/native_participant.cpp:50\n#4  sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}::operator()(unsigned long) const (now=<optimized out>, __closure=<optimized out>) at /home/runner/work/sil/sil/kernel/src/native_participant.cpp:70\n#5  std::__invoke_impl<void, sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long>(std::__invoke_other, sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long&&) (__f=...) at /usr/include/c++/12/bits/invoke.h:61\n#6  std::__invoke_r<void, sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long>(sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long&&) (__fn=...) at /usr/include/c++/12/bits/invoke.h:111\n#7  std::_Function_handler<void (unsigned long), sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}>::_M_invoke(std::_Any_data const&, unsigned long&&) (__functor=..., __args#0=<optimized out>) at /usr/include/c++/12/bits/std_function.h:290\n#8  0x00005642dd15486d in std::function<void (unsigned long)>::operator()(unsigned long) const (__args#0=50000000, this=0x56430c552f80) at /usr/include/c++/12/bits/std_function.h:591\n#9  sil::Engine::run (this=<optimized out>) at /home/runner/work/sil/sil/kernel/src/engine.cpp:267\n#10 0x00005642dd12f488 in (anonymous namespace)::run (argc=<optimized out>, argv=<optimized out>) at /home/runner/work/sil/sil/kernel/src/main.cpp:542\n#11 0x00007fd10fa2a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n#12 0x00007fd10fa2a28b in __libc_start_main () from /lib/x86_64-linux-gnu/libc.so.6\n#13 0x00005642dd12d505 in _start ()\n",
+    "threads": "  Id   Target Id                                          Frame \n* 1    Thread 0x7fd1100da740 (LWP 3265) \"sil-run-diagnos\" hazard (radar=<synthetic pointer>) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:387\n",
+    "locals": "mode = 206888956\nselected = 12\nlead = {x_m = 28.75, y_m = <optimized out>, relative_vx_mps = -25, confidence = <optimized out>, id = <optimized out>}\ntarget = <optimized out>\n",
+    "inline_values": {
+      "hazard_argument": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "closing_mps": {
+        "value": null,
+        "reason": "before_hazard_computation"
+      }
+    }
+  },
+  {
+    "stage": "selection",
+    "hit": 5,
+    "virtual_time_ns": 50000000,
+    "pid": 3265,
+    "pgid": 3265,
+    "ptid": [
+      3265,
+      3265,
+      0
+    ],
+    "host_monotonic_ns": 102808489723,
+    "source": "/home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c",
+    "line": 418,
+    "values": {
+      "lead": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "selected": {
+        "value": "12",
+        "reason": null
+      },
+      "lead.id": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "lead.x_m": {
+        "value": "28.75",
+        "reason": null
+      },
+      "lead.y_m": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "lead.relative_vx_mps": {
+        "value": "-25",
+        "reason": null
+      },
+      "lead.confidence": {
+        "value": null,
+        "reason": "optimized_out"
+      }
+    },
+    "stack": "#0  0x00007fd1101fb832 in hazard (radar=<synthetic pointer>) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:386\n#1  adas_ref_advance (instance=instance@entry=0x56430c54dfe8, t_ns=t_ns@entry=50000000, output=output@entry=0x7ffefe5b7180, fault=fault@entry=0x7ffefe5b71c0) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:418\n#2  0x00007fd1101fc347 in activate (user=0x56430c54dde0, t=50000000) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/sil_adapter.c:343\n#3  0x00005642dd160626 in sil::NativeApiBridge::run_task (now=<optimized out>, user=<optimized out>, fn=<optimized out>, site=..., p=0x56430c54bc30) at /home/runner/work/sil/sil/kernel/src/native_participant.cpp:50\n#4  sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}::operator()(unsigned long) const (now=<optimized out>, __closure=<optimized out>) at /home/runner/work/sil/sil/kernel/src/native_participant.cpp:70\n#5  std::__invoke_impl<void, sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long>(std::__invoke_other, sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long&&) (__f=...) at /usr/include/c++/12/bits/invoke.h:61\n#6  std::__invoke_r<void, sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long>(sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}&, unsigned long&&) (__fn=...) at /usr/include/c++/12/bits/invoke.h:111\n#7  std::_Function_handler<void (unsigned long), sil::NativeApiBridge::register_task(void*, char const*, unsigned long, unsigned long, int, void (*)(void*, unsigned long), void*)::{lambda()#1}::operator()() const::{lambda(unsigned long)#1}>::_M_invoke(std::_Any_data const&, unsigned long&&) (__functor=..., __args#0=<optimized out>) at /usr/include/c++/12/bits/std_function.h:290\n#8  0x00005642dd15486d in std::function<void (unsigned long)>::operator()(unsigned long) const (__args#0=50000000, this=0x56430c552f80) at /usr/include/c++/12/bits/std_function.h:591\n#9  sil::Engine::run (this=<optimized out>) at /home/runner/work/sil/sil/kernel/src/engine.cpp:267\n#10 0x00005642dd12f488 in (anonymous namespace)::run (argc=<optimized out>, argv=<optimized out>) at /home/runner/work/sil/sil/kernel/src/main.cpp:542\n#11 0x00007fd10fa2a1ca in ?? () from /lib/x86_64-linux-gnu/libc.so.6\n#12 0x00007fd10fa2a28b in __libc_start_main () from /lib/x86_64-linux-gnu/libc.so.6\n#13 0x00005642dd12d505 in _start ()\n",
+    "threads": "  Id   Target Id                                          Frame \n* 1    Thread 0x7fd1100da740 (LWP 3265) \"sil-run-diagnos\" 0x00007fd1101fb832 in hazard (radar=<synthetic pointer>) at /home/runner/work/sil/sil/build/source-debugging-evidence/sources/adas_reference.c:386\n",
+    "locals": "mode = 206888956\nselected = 12\nlead = {x_m = 28.75, y_m = <optimized out>, relative_vx_mps = -25, confidence = <optimized out>, id = <optimized out>}\ntarget = <optimized out>\n",
+    "inline_values": {
+      "hazard_argument": {
+        "value": null,
+        "reason": "optimized_out"
+      },
+      "closing_mps": {
+        "value": "25",
+        "reason": null
+      }
+    }
+  }
+]

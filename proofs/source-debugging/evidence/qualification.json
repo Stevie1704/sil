@@ -1,13 +1,13 @@
 {
-  "run_id": 39483103830,
-  "url": "https://github.com/Stevie1704/sil/actions/runs/39483103830",
-  "head_sha": "f5db290e91dab81fa991d5eb91d432dd495f79c2",
+  "run_id": 39554858402,
+  "url": "https://github.com/Stevie1704/sil/actions/runs/39554858402",
+  "head_sha": "78ee299b5f87b33c3c24cffe88631b8cb03c42af",
   "conclusion": "success",
   "artifact": {
-    "id": 12292571470,
+    "id": 12325720879,
     "name": "source-debugging-evidence",
-    "size_in_bytes": 15780189,
-    "digest": "sha256:2d9dd938061d441b8c8ad3b3df0e303da9201abfe47be8fade73a4a00ec1d3e2",
-    "expires_at": "2026-11-19T19:26:06Z"
+    "size_in_bytes": 15887008,
+    "digest": "sha256:d03e92d2bd8b056cf985b88786c9c865692918683c588994eb656520a2925ef9",
+    "expires_at": "2026-11-20T06:22:42Z"
   }
 }

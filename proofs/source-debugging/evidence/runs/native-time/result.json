@@ -28,7 +28,7 @@
     "1048576"
   ],
   "exit_code": 0,
-  "elapsed_host_ns": 678551401,
+  "elapsed_host_ns": 414393569,
   "deadline_ms": 30000,
   "manifest_sha256": "cfe041b8ec1f6bedc4ab2b74e132f07d315088628203226b2eb7673470ffd231",
   "supervisor_timeout": false,

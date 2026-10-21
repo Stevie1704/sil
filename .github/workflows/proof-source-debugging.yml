@@ -6,6 +6,10 @@ on:
       - 'proofs/source-debugging/**'
       - 'examples/adas-reference/**'
       - 'tests/test_source_debugging_proof.py'
+      - 'tests/can_fixture.py'
+      - 'tests/fixtures/fmi_clock.c'
+      - 'tests/fixtures/fmi_bus.c'
+      - 'proofs/fmi-ls-bus/evidence/profile.json'
       - '.github/workflows/proof-source-debugging.yml'
   workflow_dispatch:
 
