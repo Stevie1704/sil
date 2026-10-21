@@ -81,6 +81,44 @@ for another workload. Timestamp origin can be initialized before the shim maps
 its region; later clock reads can be Virtual time. There is no validated host
 mapping. Equality of Recordings alone does not qualify the collector.
 
+## Native observations
+
+The [retained native run](https://github.com/Stevie1704/sil/actions/runs/39570810756)
+used Heaptrack **1.5.0+dfsg1-2ubuntu3**, GCC **12.4.0**, glibc **2.39**, and
+libstdc++ **14.2.0** on Linux **6.17.0-1022-azure**, x86-64, UID 1001. The source
+head was `b7fde1f`; the tested PR merge revision and artifact digest are in
+[`origin.json`](evidence/origin.json) and [`results.json`](evidence/results.json).
+
+| Sleep policy | Capture | Recording equal | Parent/child/grandchild clocks virtual | Raw bytes | Timestamp records | Wall ms |
+| --- | --- | --- | --- | ---: | ---: | ---: |
+| reject | preload | no | yes / no / no | 12,863,856 | 464,239 | 864 |
+| reject | preserve | yes | yes / yes / yes | 12,975,186 | 467,391 | 864 |
+| immediate | preload | no | yes / no / no | 12,813,709 | 462,304 | 884 |
+| immediate | preserve | yes | yes / yes / yes | 12,752,329 | 458,827 | 864 |
+
+All six Runs completed, including the ordinary baselines (844 and 783 ms).
+Participant sleep results matched both policies in every Run. Each capture
+resolved exactly **80 allocations of 2048 bytes** at the known site, with no
+undecodable records or truncated input. The Heaptrack 1.5 startup failure from
+#314 **did not reproduce** in this fixture; its absence here does not erase
+that earlier observation or qualify all shimmed Participants.
+
+The four captures grew at **14.5–15.0 MB per wall second** (decimal MB). Each
+had ten distinct timestamp values over a 900 ms range, while emitting hundreds
+of thousands of repeated records. All timestamp values exceeded 2^63. This is
+consistent with the mixed host-origin/Virtual-time subtraction explained in
+`candidates.md`, not a validated host-clock mapping. Neither a numerical growth
+threshold nor a percentile is a pass/fail criterion. These single Runs describe
+this fixture and host only.
+
+The experiment therefore isolates descendant preload repair as useful but
+insufficient: it restores the Recording, and Participant sleep calls match both policies
+with and without repair. The collector's timestamp clock and timer growth
+remain unsuitable. A separately
+specified profiler integration would have to solve those problems and cover
+initialization, allocation-thread calls and thread policy. This investigation
+**defers** that work and keeps the existing rejection.
+
 ## Evidence
 
 The workflow uploads `heaptrack-shim-evidence` for 30 days. `results.json`
@@ -88,8 +126,25 @@ contains host/tool identities, build commands, binary digests, the full matrix,
 Recording comparisons, clock and sleep checks, allocation checks, timestamp
 statistics and growth. Each Run retains its messages, stdout/stderr, Recording,
 provenance/failure/diagnostics sidecars and raw/interpreted Heaptrack data.
-`digests.json` inventories the complete artifact. Small results, decoded
+`digests.json` inventories the complete experiment output. Small results, Manifests, sidecars, decoded
 Messages and logs are copied into [`evidence/`](evidence/) after the native run;
 large captures stay in the workflow artifact and are identified by digest.
 An ARM64 Linux run with `--allow-other-machine` is only a smoke check and is
 never retained as x86-64 qualification evidence.
+
+To reproduce the retained subset after downloading the workflow artifact:
+
+```sh
+gh run download 39570810756 -R Stevie1704/sil \
+  -n heaptrack-shim-evidence -D build/heaptrack-shim-artifact
+python proofs/heaptrack-shim/retain.py \
+  build/heaptrack-shim-artifact/heaptrack-shim-evidence \
+  proofs/heaptrack-shim/evidence
+```
+
+The retention script verifies copied files against the original inventory.
+`tests/test_heaptrack_shim_proof.py` independently checks the retained matrix,
+clock/sleep observations, verdict consistency and integrity, including rejection
+of modified or truncated artifact files.
+`origin.json` separately identifies the workflow and compressed artifact; it
+is not part of the original experiment inventory.

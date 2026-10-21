@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'proofs/heaptrack-shim/**'
+      - 'tests/test_heaptrack_shim_proof.py'
       - '.github/workflows/proof-heaptrack-shim.yml'
   workflow_dispatch:
 
@@ -28,6 +29,10 @@ jobs:
           dpkg-query -W > build/heaptrack-shim-host/packages.txt
           uv venv .venv
           uv pip install -p .venv/bin/python -r container/requirements.lock -e 'python/[dev]'
+      - name: Validate retained evidence and retention integrity
+        env:
+          SIL_SKIP_BUILD: '1'
+        run: .venv/bin/python -m pytest tests/test_heaptrack_shim_proof.py -q
       - name: Investigate preload composition without changing host policy
         env:
           CC: gcc-12
