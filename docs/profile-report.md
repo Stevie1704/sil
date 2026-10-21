@@ -11,7 +11,9 @@ Status: the CPU collector (Linux perf) is implemented (#315), and so is
 the optional Activation correlation of its samples (#316). The heap
 collector (Heaptrack) is implemented (#317): see
 [Heap collector](#heap-collector). `sil profile render` presents a saved
-profile offline (#318): see [Offline report](#offline-report). The
+profile offline (#318), with CPU flame graphs, an Activation timeline and
+per-Task drill-downs (#339): see [Offline report](#offline-report).
+`sil profile diff` compares two saved sets: see [Profile diff](#profile-diff). The
 [#319 qualification](../proofs/profiling-qualification/README.md) qualified
 the installed native and the documented container workflows on Linux
 x86-64; `sil docs support` names the qualified tool versions.
@@ -800,8 +802,9 @@ one standalone HTML file. It executes nothing: no Run, no profiled binary, no
 perf and no Heaptrack. It never opens `perf.data`, `heaptrack.data`, a module
 or a source file.
 
-The first argument `render` selects this command. To capture a profile of a
-Manifest file with the name `render`, write it as `./render`.
+The first argument `render` selects this command, and `diff` selects the
+comparison command below. To capture a profile of a Manifest file with one
+of these names, write it as `./render` or `./diff`.
 
 ### Portable artifact set
 
@@ -892,11 +895,15 @@ order:
    - functions by inclusive weight: the top 50, and the number of
      functions that are not listed. Inclusive rows overlap, so this table
      has no remainder row and no total;
-   - the top-down caller tree of `cpu/samples.json`;
+   - the top-down caller tree and flame graph (icicle) of `cpu/samples.json`;
    - the Activation evidence: samples by class, unattributed reasons,
      Tasks, lifecycle phases, participant-to-process mapping, the
      observation stream and the first 500 Activations, also those with no
      sample;
+   - an Activation timeline, with Native activations, Process Steps, Replay
+     Slots and lifecycle phases in separate Participant/Task lanes;
+   - per-Task drill-downs with Activation counts, zero-sample Activations,
+     self/inclusive hotspots and a caller tree for each sample class;
    - processes, threads and modules.
 
    Heap:
@@ -915,12 +922,52 @@ nodes of a level are one visible remainder line with their count and weight,
 so each level still adds up. Recursion gives deeper nodes; no sample counts
 twice in one node.
 
+The flame graph uses the same node limits, with an additional visible box
+for a remainder or a stack ending (at most 4501 boxes including the root).
+An ending may be a cut-off stack: retained evidence cannot distinguish an
+unwinding limit from a true root. Unknown functions and empty stacks retain
+their weight. Each sample contributes its weight once to each caller-path
+node, including inlined frames. Width is sampled weight; the total and its
+denominator are printed above the graph. Click or focus a frame and press
+Enter/Space to zoom; reset returns to the whole selection. Search highlights
+visible matching function names and reports its bounded scope. Long names
+are shortened inside boxes; hover or focus gives the full name.
+
+The timeline shows at most 500 intervals and lanes belonging to them, with
+the omitted interval count and sample counters visible below it. The axis
+uses host CLOCK_MONOTONIC; its table and accessible labels give exact decimal
+host and Virtual time values. Geometry scales integer differences, never
+absolute floating-point timestamps. Intervals are half-open. Sixteen bins
+inside each interval mark sample density (sample count, not duration), with
+exact counts, weight and class values in the table. Zero-sample intervals
+remain visible and explicitly supply no evidence of zero CPU use.
+
+A partial observation stream carries a prominent gap notice: blank space
+may contain unobserved work. Samples classified `observations_incomplete`
+mark a shaded host-time extent; this is the extent of those samples, not a
+claim about the exact gap boundaries, which the saved correlation does not
+retain. An unavailable correlation gets an explanation instead of an empty
+timeline. Selecting an interval filters the explorer's tables, caller tree
+and flame graph to that interval's correlated samples. The selection prints
+each class separately. Lifecycle samples reference a phase name, so selecting
+a lifecycle interval selects the phase's samples.
+
+Links from the Task table and timeline open the Task's drill-down. At most
+50 Tasks are expanded; the remainder lists Activation count and sample count
+and weight separately for `execution_context` and `window_associated`.
+Each Task class has its own denominator, top 50 self and inclusive functions,
+a self remainder, and a caller tree limited to 100 nodes and 32 levels.
+At most 500 zero-sample Activations are listed per Task; omitted counts stay
+visible. The two classes are never added into a Task cost. Class links open
+the filtered flame graph. All these tables and caller trees work without
+JavaScript; interactive zoom, search and sample selection require it.
+
 **Without JavaScript**, every status, every table and the caller tree of
 all samples are complete. **With JavaScript**, a CPU page adds filters by
 process and thread. When the correlation is `complete` or `partial`, it
 also adds filters by class, Participant/Task and Virtual time. The filters
 recompute the caller tree and the self and inclusive rankings of the
-selection. The rankings show the top 50, the remainder and the selection
+selection, and the flame graph. The rankings show the top 50, the remainder and the selection
 total. The filters show only the matching Activations. Participant, Task and Virtual time select the samples that the
 correlation relates to an Activation: `execution_context` and
 `window_associated`. Virtual time is the Activation's, as the half-open range
@@ -931,6 +978,9 @@ no Activation table: it says why. A heap profile has no Activation view:
 its correlation is always unavailable. The filters are not offered for a
 capture with more than 200000 distinct (stack, thread, class) rows. The
 static tables and tree still show all samples.
+
+The 200000-row limit also disables interactive flame zoom/search and timeline
+selection; the static graphs, tables and explicit remainders remain available.
 
 The keyboard reaches every control. The tree nodes are `<details>` elements
 (Tab, then Enter). The filters are native form controls. The tables sort
@@ -945,6 +995,56 @@ outside ASCII (also U+2028 and U+2029) are `\u` escapes. Thus no name can
 end the block or become markup. A source line is text; only an absolute path is
 also a link, a `file:` URL that the page builds from the path. No report
 value becomes a URL. "Download JSON" saves `profile.json` byte for byte.
+
+## Profile diff
+
+```sh
+sil profile diff BASE/profile.json NEW/profile.json [--html OUTPUT.html]
+```
+
+Compare two portable artifact sets of the same collector, offline, using the
+same validation and file-size limits as `render`. Both need their normalized
+CPU samples or heap allocations; no raw capture, tool or binary is opened.
+The command prints a terminal summary and optionally writes a standalone
+HTML report, including usable tables without JavaScript, keyboard sorting,
+and the same dark/light theme controls as the profile report.
+
+Both sets' Manifest hash, SiL version, source revision, host, tool version,
+sampling settings, call graph and scope are shown. Differences produce a
+prominent warning; unknown identity values stay unknown. Run and capture
+statuses and reasons remain visible even when a partial set is compared.
+
+CPU: compare self and inclusive sampled-weight shares per function, with
+both sample-count and weight denominators and changes in percentage points.
+Doubling every sample leaves the shares unchanged. A zero-weight denominator
+has an unavailable share and change, never an invented zero percentage.
+Functions that appear or disappear have zero weight on the absent side of a
+nonzero denominator. Function identity is the exact module path and symbol,
+independent of local module IDs; a changed module path appears as a different
+function. Unknown functions remain explicit. Inclusive functions count once
+per sample, even in a recursive or inlined stack, and their shares overlap.
+Per-Task comparisons are available only when both sets have complete
+Activation correlation. Each Task's `execution_context` and
+`window_associated` classes have separate rankings and denominators.
+
+Heap: compare allocations, allocated bytes, temporary allocations,
+outstanding allocations and outstanding bytes per leaf site (module path
+and symbol). Each metric shows BASE, NEW and its signed change. Outstanding
+allocations at capture end are not a leak verdict.
+
+Rankings show at most 100 functions/sites; the self remainder gives omitted
+weight on both sides (heap: every metric), and inclusive rows are explicitly
+non-additive. At most 50 Tasks are expanded. Global rankings include all
+samples, also the Tasks that are not expanded. The diff compares one Run
+per set: it supplies no significance verdict, and small CPU share changes
+may be sampling noise. Weights remain estimates, never function durations
+or call counts.
+
+Exit codes: `0` means the summary and requested HTML were produced; `1`
+means an output write failed; `2` means invalid usage, missing/invalid or
+unsupported evidence, different collectors, an output collision, or a
+missing output directory. Output paths are checked first and existing files
+are never replaced. The HTML's JSON download holds both input summaries.
 
 ## Normalized samples: `cpu/samples.json`
 

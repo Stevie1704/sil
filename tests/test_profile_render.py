@@ -214,6 +214,96 @@ def test_activations_without_samples_stay_listed(tmp_path):
     assert "associated with the Step window only" in page.text
 
 
+def test_flame_timeline_and_task_views_share_the_saved_evidence(tmp_path):
+    html = html_of(tmp_path, "activation-complete.json")
+    page = Page(html)
+
+    assert page.find("svg", id="cpu-flame-svg")
+    assert "Flame graph" in page.text and "10010000 ns" in page.text
+    assert page.find("section", id="timeline")
+    assert len(page.find("g", **{"data-interval-kind": "activation"})) == 8
+    assert page.find("section", id="task-drilldowns")
+    assert page.find("table", id="task-0-execution_context-self")
+    assert page.find("table", id="task-0-window_associated-self")
+    assert "No sample is not evidence of no CPU use" in page.text
+    assert "Host CLOCK_MONOTONIC" in page.text
+
+
+def test_timeline_replay_lifecycle_and_incomplete_sample_extent(tmp_path):
+    from profile_sets import correlation_document
+    report = fixture("activation-partial-truncated.json")
+    samples = samples_document(report)
+    correlation = correlation_document(report, samples)
+    # An already unattributed sample is now retained as a Replay Slot.
+    index = next(i for i, r in enumerate(correlation["samples"]) if r[0] == "unattributed")
+    value = samples["samples"][index][3]
+    summary = report["activation_correlation"]["summary"]
+    counts = summary["samples"]
+    reason = next(r for r in counts["unattributed"]["reasons"] if r["samples"])
+    reason["samples"] -= 1
+    reason["weight_ns"] -= value
+    counts["unattributed"]["samples"] -= 1
+    counts["unattributed"]["weight_ns"] -= value
+    counts["replay"] = {"samples": 1, "weight_ns": value}
+    summary["intervals"]["replay"] = 1
+    correlation["samples"][index] = ["replay", 0]
+    origin = int(samples["time_origin_ns"])
+    correlation["replays"] = [{"participant": "replayer", "index": 0,
+                               "virtual_time_ns": 2**53 + 1, "begin_ns": str(origin),
+                               "end_ns": str(origin+100), "outcome": "completed",
+                               "samples": 1, "weight_ns": value}]
+    html = html_of(tmp_path, "activation-partial-truncated.json", report=report,
+                   samples=samples, correlation=correlation)
+    page = Page(html)
+    assert page.find("g", **{"data-interval-kind": "replay"})
+    assert page.find("g", **{"data-interval-kind": "lifecycle"})
+    assert "9007199254740993" in page.text
+    assert "exact gap boundaries are not retained" in page.text
+
+
+@pytest.mark.parametrize("damage", ["negative-interval", "phase-shape", "unknown-task"])
+def test_invalid_timeline_evidence_is_exit_two(tmp_path, damage):
+    from profile_sets import correlation_document
+    report = fixture("activation-complete.json")
+    samples = samples_document(report)
+    correlation = correlation_document(report, samples)
+    if damage == "negative-interval":
+        correlation["activations"][0]["end_ns"] = "0"
+    elif damage == "phase-shape":
+        correlation["phases"] = [42]
+    else:
+        correlation["activations"][0]["task"] = "absent"
+    profile = artifact_set(tmp_path / "set", "activation-complete.json", report=report,
+                           samples=samples, correlation=correlation)
+    proc = render([str(profile), "--html", "report.html"], tmp_path)
+    assert proc.returncode == 2
+    assert not (tmp_path / "report.html").exists()
+
+
+def test_many_timeline_intervals_have_a_visible_remainder(tmp_path):
+    from profile_sets import correlation_document
+    report = fixture("activation-complete.json")
+    samples = samples_document(report)
+    correlation = correlation_document(report, samples)
+    first = correlation["activations"][0]
+    for index in range(501):
+        correlation["activations"].append({**first, "index": index + 100,
+                                           "samples": 0, "weight_ns": 0})
+    summary = report["activation_correlation"]["summary"]
+    key = "activations" if first["kind"] == "native_task" else "process_steps"
+    summary["intervals"][key] += 501
+    task = next(t for t in summary["tasks"] if t["participant"] == first["participant"]
+                and t["task"] == first["task"])
+    for key in ("activations", "completed", "without_samples"):
+        task[key] += 501
+    html = html_of(tmp_path, "activation-complete.json", report=report,
+                   samples=samples, correlation=correlation)
+    page = Page(html)
+    assert len(page.find("g", **{"data-interval-kind": "activation"})) == 500
+    assert "13 other intervals not drawn" in page.text  # includes four lifecycle phases
+    assert "10 samples / 10010000 ns in the capture" in page.text
+
+
 def test_without_html_it_prints_the_summary_only(tmp_path):
     profile = artifact_set(tmp_path / "set", "heap-complete-runner.json")
 

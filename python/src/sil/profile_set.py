@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -87,7 +88,11 @@ CORRELATION = members({
         "participant": TEXT, "task": TEXT, "kind": TEXT, "index": COUNT,
         "virtual_time_ns": INTEGER, "begin_ns": _decimal, "end_ns": _decimal,
         "outcome": TEXT, "samples": COUNT, "weight_ns": COUNT})),
-    "replays": items(members({"samples": COUNT, "weight_ns": COUNT})),
+    "replays": items(members({"participant": TEXT, "index": COUNT,
+        "virtual_time_ns": INTEGER, "begin_ns": _decimal, "end_ns": _decimal,
+        "outcome": TEXT, "samples": COUNT, "weight_ns": COUNT})),
+    "phases": items(members({"phase": TEXT, "begin_ns": _decimal,
+                             "end_ns": _decimal})),
     "samples": items(_row(TEXT, _reference))})
 ALLOCATIONS = members({
     "frames": items(FRAME), "stacks": items(items(COUNT)),
@@ -113,6 +118,7 @@ def load_profile_set(path: Path) -> ProfileSet:
         allocations = _sidecar(directory, name, ALLOCATIONS_KEY, ALLOCATIONS,
                                digests)
         if allocations is not None:
+            assert name is not None
             _check_allocations(allocations, analysis, name)
         return ProfileSet(report, text, allocations=allocations)
     name = capture["samples_file"]
@@ -129,6 +135,8 @@ def load_profile_set(path: Path) -> ProfileSet:
         name = summary["correlation_file"]
         correlation = _sidecar(directory, name, CORRELATION_KEY, CORRELATION,
                                digests)
+        if correlation is None:
+            raise ProfileSetError("the summary needs a named correlation file")
         _check_correlation(correlation, samples, summary, name)
     return ProfileSet(report, text, samples=samples,
                       correlation=correlation)
@@ -247,6 +255,54 @@ def _check_correlation(correlation: dict, samples: dict, summary: dict,
     if activations != intervals["activations"] + intervals["process_steps"]:
         _fail(name, f"{activations} Activations; the summary keeps "
                     f"{intervals['activations'] + intervals['process_steps']}")
+    for group in ("activations", "replays", "phases"):
+        for row in correlation[group]:
+            if int(row["end_ns"]) < int(row["begin_ns"]):
+                _fail(name, f"{group}: host interval ends before it begins")
+    phases = {p["phase"] for p in correlation["phases"]}
+    tasks = {(t["participant"], t["task"]) for t in summary["tasks"]}
+    if {(a["participant"], a["task"]) for a in correlation["activations"]} != tasks:
+        _fail(name, "Activation Tasks do not match the summary")
+    if any(cls == "lifecycle" and ref not in phases for cls, ref in rows):
+        _fail(name, "lifecycle sample names a phase that is not listed")
+    class_count: Counter = Counter()
+    class_weight: Counter = Counter()
+    counts: Counter = Counter()
+    weights: Counter = Counter()
+    for (cls, ref), sample in zip(rows, samples["samples"]):
+        class_count[cls] += 1
+        class_weight[cls] += sample[3]
+        counts[cls, ref] += 1
+        weights[cls, ref] += sample[3]
+    for cls in CLASSES:
+        if (class_count[cls] != summary["samples"][cls]["samples"] or
+                class_weight[cls] != summary["samples"][cls]["weight_ns"]):
+            _fail(name, f"{cls} totals do not match the summary")
+    for group, classes in (("activations", ("execution_context", "window_associated")),
+                            ("replays", ("replay",))):
+        for index, row in enumerate(correlation[group]):
+            if (row["samples"] != sum(counts[cls, index] for cls in classes) or
+                    row["weight_ns"] != sum(weights[cls, index] for cls in classes)):
+                _fail(name, f"{group}[{index}] counters do not match its samples")
+    task_counts: Counter = Counter()
+    for index, row in enumerate(correlation["activations"]):
+        key = (row["participant"], row["task"])
+        task_counts[key, "activations"] += 1
+        task_counts[key, row["outcome"]] += 1
+        task_counts[key, "with_samples" if row["samples"] else "without_samples"] += 1
+        for cls in ("execution_context", "window_associated"):
+            task_counts[key, cls, "samples"] += counts[cls, index]
+            task_counts[key, cls, "weight_ns"] += weights[cls, index]
+    for task in summary["tasks"]:
+        key = (task["participant"], task["task"])
+        for field in ("activations", "completed", "failed", "interrupted",
+                      "with_samples", "without_samples"):
+            if task_counts[key, field] != task[field]:
+                _fail(name, f"Task {key!r} {field} differs from its Activations")
+        for cls in ("execution_context", "window_associated"):
+            for field in ("samples", "weight_ns"):
+                if task_counts[key, cls, field] != task[cls][field]:
+                    _fail(name, f"Task {key!r} {cls} differs from its samples")
 
 
 def _check_allocations(allocations: dict, analysis: dict, name: str) -> None:
@@ -260,3 +316,9 @@ def _check_allocations(allocations: dict, analysis: dict, name: str) -> None:
     if count != totals["allocations"] or size != totals["allocated_bytes"]:
         _fail(name, f"{count} allocations of {size} bytes; profile.json has "
                     f"{totals['allocations']} of {totals['allocated_bytes']}")
+    for metric, actual in (
+            ("temporary_allocations", sum(r[3] for r in allocations["allocations"])),
+            ("outstanding_allocations", sum(r[4] for r in allocations["allocations"])),
+            ("outstanding_bytes", sum(r[1] * r[4] for r in allocations["allocations"]))):
+        if actual != totals[metric]:
+            _fail(name, f"{metric} does not match the summary")

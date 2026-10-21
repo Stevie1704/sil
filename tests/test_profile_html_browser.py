@@ -210,7 +210,7 @@ def test_the_keyboard_opens_tree_nodes_and_sets_filters(chrome, pages):
     assert rows and set(rows) == {participant}
     selection = chrome.evaluate(
         "document.getElementById('selection').innerText")
-    assert selection.endswith(")") and " of 10 samples" in selection
+    assert " of 10 samples" in selection
     assert chrome.evaluate(
         "document.querySelectorAll('#selection-tables table').length") == 2
 
@@ -275,3 +275,72 @@ def test_an_unavailable_correlation_has_no_activation_filter(chrome, pages):
         "document.getElementById('explorer').offsetParent !== null")
     assert "No filter by Participant, Task or Virtual time" in \
         chrome.evaluate("document.getElementById('explorer').innerText")
+
+
+def test_flame_zoom_search_reset_and_keyboard(chrome, pages):
+    opened(chrome, pages["activations"])
+    chrome.evaluate("document.querySelector('#cpu-flame [data-flame-path=\"0\"]').focus()")
+    chrome.press("Enter", key_code=13, text="\r")
+    assert "Zoom:" in chrome.evaluate("document.getElementById('flame-total').innerText")
+    chrome.evaluate("(() => { const s = document.getElementById('flame-search');"
+                    "s.value='spin'; s.dispatchEvent(new Event('input')); })()")
+    assert chrome.evaluate("document.querySelectorAll('#cpu-flame .search-match').length") > 0
+    assert "matching" in chrome.evaluate("document.getElementById('flame-search-status').innerText")
+    chrome.evaluate("document.getElementById('flame-reset').click()")
+    assert "Zoom:" not in chrome.evaluate("document.getElementById('flame-total').innerText")
+    assert chrome.evaluate("document.getElementById('flame-search').value") == ""
+    assert chrome.console_errors == []
+
+
+def test_timeline_selection_and_task_link_share_filter_totals(chrome, pages):
+    opened(chrome, pages["activations"])
+    chrome.evaluate("document.querySelector('[data-interval-kind=activation]').focus()")
+    chrome.press("Enter", key_code=13, text="\r")
+    text = chrome.evaluate("document.getElementById('selection').innerText")
+    assert "interval activation 0" in text
+    assert "execution_context" in text and "window_associated" in text
+    selected_weight = chrome.evaluate("document.getElementById('cpu-flame-svg').dataset.weight")
+    assert selected_weight == "2002000"
+    assert "2 of 10 samples" in text
+    chrome.evaluate("document.querySelector('[data-task-filter][data-class-filter=execution_context]').click()")
+    assert chrome.evaluate("document.getElementById('f-class').value") == "execution_context"
+    assert chrome.evaluate("document.getElementById('f-task').value") == "0"
+    assert "interval activation" not in chrome.evaluate("document.getElementById('selection').innerText")
+    assert chrome.console_errors == []
+
+
+def test_bounded_flame_retains_all_weight_and_full_names_on_focus(chrome, pages):
+    opened(chrome, pages["deep"])
+    chrome.page("Page.bringToFront")
+    assert chrome.evaluate("document.querySelectorAll('#cpu-flame .flame-frame').length") <= 4501
+    assert "other / deeper callees not shown" in chrome.evaluate("document.getElementById('cpu-flame').textContent")
+    assert chrome.evaluate("document.getElementById('cpu-flame-svg').dataset.weight") == "10010000"
+    chrome.evaluate("document.querySelector('#cpu-flame [data-name^=\"ns::\"]').focus()")
+    assert LONG in chrome.evaluate("document.getElementById('flame-focus').textContent")
+    assert chrome.console_errors == []
+
+
+def test_zero_samples_and_unavailable_correlation_have_explicit_views(chrome, pages):
+    opened(chrome, pages["zero"])
+    assert "No sampled weight to draw" in chrome.evaluate("document.getElementById('cpu-flame').textContent")
+    assert "Timeline unavailable" in chrome.evaluate("document.getElementById('timeline').textContent")
+    opened(chrome, pages["unavailable"])
+    assert chrome.evaluate("document.getElementById('timeline-svg') === null")
+    assert chrome.evaluate("document.getElementById('task-drilldowns') === null")
+    assert chrome.console_errors == []
+
+
+@pytest.mark.parametrize("javascript", [True, False])
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_diff_opens_offline_with_safe_fallback_tables(chrome, tmp_path, javascript, scheme):
+    from test_profile_diff import diff
+    base = hostile_set(tmp_path / "base")
+    new = hostile_set(tmp_path / "new")
+    out = tmp_path / "diff.html"
+    proc = diff(tmp_path, base, new, "--html", str(out))
+    assert proc.returncode == 0, proc.stderr
+    opened(chrome, out, javascript=javascript, scheme=scheme)
+    assert chrome.evaluate("window.pwned === undefined")
+    assert chrome.evaluate("document.querySelector('#diff-functions').offsetParent !== null")
+    assert "sampling noise" in chrome.evaluate("document.body.innerText")
+    assert chrome.blocked_requests == [] and chrome.console_errors == []

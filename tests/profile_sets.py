@@ -125,16 +125,24 @@ def allocations_document(report: dict) -> dict:
                        "address": f"0x{0x2000 + len(frames):x}",
                        "source": None})
         stacks.append([len(frames) - 1, 0])
-        # One size per allocation info: a rest goes to a second info.
-        count, size = group["allocations"], group["allocated_bytes"]
-        share, rest = divmod(size, count)
-        parts = [(share, count)] if not rest else \
-            [(share, count - 1), (share + rest, 1)]
-        for index, (each, calls) in enumerate(p for p in parts if p[1]):
-            rows.append([len(stacks) - 1, each, calls,
-                         group["temporary_allocations"] if index == 0 else 0,
-                         group["outstanding_allocations"] if index == 0
-                         else 0])
+        # Retained and freed allocations can have different sizes. Preserve
+        # outstanding bytes too, including a merged summary remainder.
+        retained = group["outstanding_allocations"]
+        freed = group["allocations"] - retained
+        temporary = group["temporary_allocations"]
+        for count, size, outstanding in (
+                (retained, group["outstanding_bytes"], True),
+                (freed, group["allocated_bytes"] - group["outstanding_bytes"], False)):
+            if not count:
+                continue
+            share, rest = divmod(size, count)
+            parts = [(share, count)] if not rest else \
+                [(share, count - 1), (share + rest, 1)]
+            for each, calls in (p for p in parts if p[1]):
+                short = min(temporary, calls) if not outstanding else 0
+                temporary -= short
+                rows.append([len(stacks) - 1, each, calls, short,
+                             calls if outstanding else 0])
     return {"sil_profile_heap_allocations": 1, "frames": frames,
             "stacks": stacks, "allocations": rows}
 

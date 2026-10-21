@@ -27,6 +27,7 @@ from sil.profile_html_parts import (
     render_tree, share, source_cell, unlisted_note,
 )
 from sil.profile_set import ProfileSet
+from sil.profile_html_views import TASK_LIMIT, flame_section, task_drilldowns, timeline
 
 HOTSPOT_ROWS = 50
 ACTIVATION_ROWS = 500
@@ -64,6 +65,8 @@ def cpu_body(profile: ProfileSet) -> Html:
         _hotspots(capture, profile.samples),
         _tree_section(profile),
         _activations(profile),
+        timeline(profile),
+        task_drilldowns(profile),
         _processes(capture),
         _modules(capture),
     ])
@@ -218,16 +221,24 @@ def _hotspots(capture: dict, samples: dict | None) -> Html:
 
 def _function_keys(profile: ProfileSet) -> tuple[list, list]:
     """Each frame's function key (module, symbol), and the keys."""
+    assert profile.samples is not None
     keys: dict[tuple, int] = {}
     frame_keys = []
     for frame in profile.samples["frames"]:
         key = (frame["module"], frame["symbol"])
         frame_keys.append(keys.setdefault(key, len(keys)))
+    keys.setdefault((None, None), len(keys))
     return frame_keys, list(keys)
 
 
 def _paths(profile: ProfileSet, frame_keys: list) -> list[list[int]]:
-    return [[frame_keys[f] for f in reversed(stack)]
+    assert profile.samples is not None
+    unknown = len(set(frame_keys))
+    for index, frame in enumerate(profile.samples["frames"]):
+        if frame["module"] is None and frame["symbol"] is None:
+            unknown = frame_keys[index]
+            break
+    return [[frame_keys[f] for f in reversed(stack)] or [unknown]
             for stack in profile.samples["stacks"]]
 
 
@@ -265,6 +276,8 @@ def _tree_section(profile: ProfileSet) -> Html:
             id="cpu-tree", class_="tree-wrap", tabindex="0", role="region",
             aria_label="Caller tree"),
         tag("div", id="selection-tables"),
+        flame_section(tree, lambda key: f"{functions[key][1] or '[unknown function]'} "
+                      f"({modules.get(functions[key][0], '[unknown module]')})"),
         note="Top-down: each node is a function in its callers' context, "
              "with its inclusive weight, its share of the tree's weight and "
              "its self weight. Small nodes, many siblings and very deep "
@@ -274,6 +287,7 @@ def _tree_section(profile: ProfileSet) -> Html:
 
 
 def _explorer_form(profile: ProfileSet) -> Html:
+    assert profile.samples is not None
     capture = profile.report["capture"]
     correlation = profile.report["activation_correlation"]
     sampled = [p for p in capture["processes"] if p["samples"]]
@@ -325,6 +339,7 @@ def _explorer_form(profile: ProfileSet) -> Html:
 
 def _tasks(profile: ProfileSet) -> list[tuple[str, str]]:
     """The (Participant, Task) pairs of the kept Activations, sorted."""
+    assert profile.correlation is not None
     return sorted({(a["participant"], a["task"])
                    for a in profile.correlation["activations"]})
 
@@ -338,6 +353,7 @@ def _select(id_: str, label: str, options: list[tuple[str, str]]) -> Html:
 
 def _explorer_rows(profile: ProfileSet) -> list | None:
     """Samples with equal stack, thread and class in one row, or None."""
+    assert profile.samples is not None
     classes = (profile.correlation["samples"] if profile.correlation
                else None)
     rows: Counter = Counter()
@@ -354,7 +370,7 @@ def _explorer_rows(profile: ProfileSet) -> list | None:
 
 def explorer_data(profile: ProfileSet) -> dict | None:
     """What profile.js needs for the filters; None without samples."""
-    if profile.samples is None or not profile.samples["samples"]:
+    if profile.samples is None:
         return None
     rows = _explorer_rows(profile)
     if rows is None:
@@ -436,7 +452,7 @@ def _activations(profile: ProfileSet) -> Html:
             ("Reason", False), ("Samples", True), ("Weight", True)],
             [[reason_text(r["reason"]), str(r["samples"]),
               weight(r["weight_ns"])] for r in reasons], filterable=False),
-        _tasks_table(summary),
+        _tasks_table(summary, profile),
         table("lifecycle-table", "Lifecycle samples by phase", [
             ("Phase", False), ("Samples", True), ("Weight", True)],
             [[code(p["phase"]), str(p["samples"]), weight(p["weight_ns"])]
@@ -453,9 +469,11 @@ def _activations(profile: ProfileSet) -> Html:
     return section("activations", "Activations", *content)
 
 
-def _tasks_table(summary: dict) -> Html:
+def _tasks_table(summary: dict, profile: ProfileSet) -> Html:
+    tasks = {task: i for i, task in enumerate(_tasks(profile))}
     rows = [[tag("span", t["participant"], class_="name"),
-             tag("span", t["task"], class_="name"), code(t["kind"]),
+             tag("a", t["task"], href=f"#task-detail-{tasks[t['participant'], t['task']]}"
+                 if tasks[t["participant"], t["task"]] < TASK_LIMIT else "#task-drilldowns"), code(t["kind"]),
              str(t["activations"]),
              f"{t['completed']} / {t['failed']} / {t['interrupted']}",
              str(t["with_samples"]), str(t["without_samples"]),
@@ -463,14 +481,20 @@ def _tasks_table(summary: dict) -> Html:
              weight(t["execution_context"]["weight_ns"]),
              str(t["window_associated"]["samples"]),
              weight(t["window_associated"]["weight_ns"])]
-            for t in summary["tasks"]]
-    return table("tasks-table", "Tasks", [
+            for t in summary["tasks"][:ACTIVATION_ROWS]]
+    hidden = summary["tasks"][ACTIVATION_ROWS:]
+    return join([table("tasks-table", "Tasks", [
         ("Participant", False), ("Task", False), ("Kind", False),
         ("Activations", True), ("Completed / failed / interrupted", True),
         ("With samples", True), ("Without samples", True),
         ("Execution context samples", True), ("Execution context weight", True),
         ("Window-associated samples", True),
-        ("Window-associated weight", True)], rows)
+        ("Window-associated weight", True)], rows),
+        tag("p", f"{len(hidden)} other Tasks not listed; "
+            f"{sum(t['activations'] for t in hidden)} Activations; " + "; ".join(
+                f"{cls}: {sum(t[cls]['samples'] for t in hidden)} samples / "
+                f"{sum(t[cls]['weight_ns'] for t in hidden)} ns"
+                for cls in ("execution_context", "window_associated")), class_="note")])
 
 
 def _stream_facts(stream: dict) -> Html:
@@ -486,6 +510,7 @@ def _stream_facts(stream: dict) -> Html:
 
 
 def _activation_list(profile: ProfileSet) -> Html:
+    assert profile.correlation is not None
     activations = profile.correlation["activations"]
     origin = int(profile.report["capture"]["time_origin_ns"] or 0)
     shown = activations[:ACTIVATION_ROWS]
