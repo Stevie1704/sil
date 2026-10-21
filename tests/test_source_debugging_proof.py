@@ -67,3 +67,21 @@ def test_state_from_another_thread_cannot_complete_a_native_capture(tmp_path):
     result = validate(tmp_path)
     assert result.returncode != 0
     assert "thread ownership" in result.stderr
+
+
+def test_three_fmus_share_one_stopped_group_process(tmp_path):
+    stops = [{"stage": "entry", "instance": address, "pid": 77, "parent_pid": 66,
+              "virtual_time_ns": 200_000_000, "hit": 2, "host_monotonic_ns": host,
+              "all_threads_stopped": True, "state_unchanged_while_stopped": True,
+              "children": "", "module": module}
+             for address, host, module in (("0x1000", 110, "node1.so"),
+                ("0x2000", 120, "node2.so"), ("0x3000", 130, "bus.so"))]
+    (tmp_path / "stops.json").write_text(json.dumps(stops))
+    rows = [{"runner_pid": 42}, {"kind": "spawn", "participant": "bus_group", "pid": 66},
+            {"kind": "activation", "participant": "bus_group", "index": 2,
+             "virtual_time_ns": 200_000_000, "begin_ns": "100", "end_ns": "150"}]
+    (tmp_path / "observations.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    result = subprocess.run([sys.executable, str(VALIDATOR), str(tmp_path), "bus-group"],
+                            capture_output=True, text=True, timeout=10)
+    assert result.returncode == 0, result.stderr
+    assert "3 grouped FMU instances verified" in result.stdout

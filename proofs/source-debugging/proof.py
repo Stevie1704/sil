@@ -22,6 +22,7 @@ from pathlib import Path
 from sil.profile_modules import ModuleLocator, elf_identity
 from sil.recording import read_records
 from sil.schema import MessageType
+from sil.manifest import Manifest
 
 from validate import validate_capture
 
@@ -98,6 +99,24 @@ def build_workload(out, build):
         run(command)
     write(out / "build-commands.json", [[str(x) for x in c] for c in commands])
     identities = [separate(library), separate(fmu_library)]
+    # Existing CAN stand-ins qualify the actual BUS group importer boundary.
+    sys.path.insert(0, str(ROOT / "tests"))
+    fixtures = load("can_fixture", ROOT / "tests/can_fixture.py")
+    for name, source_name, defines, package in (
+            ("ClockedCanNodeOnABus", "fmi_clock.c", ["-DFMI_CLOCK_ECHO_RX=0"], fixtures.node_fmu),
+            ("ClockedCanBus", "fmi_bus.c", [], fixtures.bus_fmu)):
+        source = sources / source_name
+        shutil.copy2(ROOT / "tests/fixtures" / source_name, source)
+        binary = out / f"{name}.so"
+        command = [*flags, *defines, source, "-o", binary]
+        commands.append(command)
+        run(command)
+        identities.append(separate(binary))
+        archive_path = out / f"{name}.fmu"
+        package(archive_path, model_identifier=name, binary=binary, platform_directory="x86_64-linux")
+        with zipfile.ZipFile(archive_path, "a") as archive:
+            archive.write(Path(str(binary) + ".debug"), f"binaries/x86_64-linux/{name}.so.debug")
+    write(out / "build-commands.json", [[str(x) for x in c] for c in commands])
     # GDB resolves the extracted FMU's debuglink through this explicit path.
     with zipfile.ZipFile(out / "AdasReference.fmu", "w", zipfile.ZIP_STORED) as archive:
         archive.writestr("modelDescription.xml", (sources / "fmu/modelDescription.xml")
@@ -151,7 +170,8 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
         logging.write_text(
             f"set logging file {dest / 'gdb.txt'}\nset logging overwrite on\n"
             "set logging redirect on\nset logging enabled on\n")
-        commands.write_text(f"source {HERE / 'session.py'}\n")
+        session = "group_session.py" if form == "bus-group" else "session.py"
+        commands.write_text(f"source {HERE / session}\n")
         env.update(SIL_DEBUG_DEST=str(dest), SIL_DEBUG_SELECTOR=selector,
                    SIL_DEBUG_ACTION=action, SIL_DEBUG_COMMANDS=str(commands),
                    SIL_DEBUG_LOGGING=str(logging),
@@ -161,7 +181,8 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
             command = ["gdb", *child_result, "-nx", "-q", "-batch", "-ix", logging,
                        "-x", commands, "--args", *command]
         else:
-            command += ["--launch-wrapper", "hazard", HERE / "launch.sh"]
+            participant = "bus_group" if form == "bus-group" else "hazard"
+            command += ["--launch-wrapper", participant, HERE / "launch.sh"]
     started = time.monotonic_ns()
     timed_out = False
     with subprocess.Popen([str(x) for x in command], env=env,
@@ -313,6 +334,34 @@ def experiment(out, build):
     if row["exit_code"] != 2 or "member of a terminal" not in group_error:
         raise ValueError("group failed for a reason other than missing BUS terminals")
     report["grouped_adas"] = row
+    bus = Manifest(duration_ns=400_000_000)
+    bus.add_schemas({"can.Buffer": {"fields": [
+        {"name": "data_length", "type": "u16"}, {"name": "data", "type": "u8", "count": 2048},
+        {"name": "data_event_time_ns", "type": "u64"}]}})
+    command = [sys.executable, "-m", "sil.fmi"]
+    for name, archive in (("node1", "ClockedCanNodeOnABus"), ("node2", "ClockedCanNodeOnABus"),
+                          ("bus", "ClockedCanBus")):
+        command += ["--instance", name, str(out / f"{archive}.fmu")]
+    command += ["--bus-profile", "application/org.fmi-standard.fmi-ls-bus.can",
+                "--connect", "node1.CanChannel=bus.Node1", "--connect", "node2.CanChannel=bus.Node2"]
+    channels = []
+    for name, terminal in (("node1", "CanChannel"), ("node2", "CanChannel"),
+                           ("bus", "Node1"), ("bus", "Node2")):
+        channel = f"can.{name}.{terminal}"
+        bus.add_channel(channel, schema="can.Buffer")
+        channels.append(channel)
+        command += ["--bind", f"{channel}:data={name}.{terminal}.Tx_Data"]
+    bus.add_process("bus_group", command=command, step_period_ns=100_000_000, publishes=channels)
+    bus.write(out / "bus-group.json")
+    baseline = None
+    for label, selector in (("ordinary-0", None), ("ordinary-1", None), ("index", "index"), ("time", "time")):
+        row = capture(out, out / "bus-group.json", "bus-group", label, selector=selector)
+        baseline = baseline or row["recording_sha256"]
+        if row["recording_sha256"] != baseline:
+            raise ValueError("group Recording changed after debugging")
+        row["recording_equal"] = True
+        report["runs"].append(row)
+        write(out / "report.json", report)
     report["decision"] = "no-change: external scripts suffice for qualified forms; grouped ADAS deferred"
     write(out / "report.json", report)
     paths = sorted(p for p in out.rglob("*") if p.is_file())

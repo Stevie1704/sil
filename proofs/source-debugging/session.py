@@ -13,6 +13,7 @@ dest = Path(os.environ["SIL_DEBUG_DEST"])
 selector = os.environ["SIL_DEBUG_SELECTOR"]
 action = os.environ.get("SIL_DEBUG_ACTION", "resume")
 stops = []
+selection_stops = []
 
 
 def evaluate(expression):
@@ -29,6 +30,34 @@ def evaluate(expression):
 
 def save():
     (dest / "stops.json").write_text(json.dumps(stops, indent=2) + "\n")
+
+
+def inspect_selection(source, lines):
+    """Inspect locals before last use; never fill missing fields from inputs."""
+    anchors = ("      if (hazard(&lead)) mode = ADAS_REF_MODE_HAZARD;",
+               "  return radar->x_m < HAZARD_DISTANCE_M ||")
+    pending = [gdb.Breakpoint(f"{source}:{lines.index(text) + 1}", temporary=True)
+               for text in anchors]
+    for _ in anchors:
+        gdb.execute("continue")
+        inline = {name: evaluate(expr) for name, expr in
+                  {"hazard_argument": "*radar", "closing_mps": "closing_mps"}.items()}
+        frame = gdb.selected_frame()
+        while frame and frame.name() != "adas_ref_advance":
+            frame = frame.older()
+        if frame is None:
+            raise gdb.GdbError("selection breakpoint is outside adas_ref_advance")
+        frame.select()
+        snapshot("selection", {"lead": "lead", "selected": "selected", **{
+            "lead." + field: "lead." + field
+            for field in ("id", "x_m", "y_m", "relative_vx_mps", "confidence")}},
+            inline_values=inline)
+        selection_stops.append(stops.pop())
+        (dest / "selection-stops.json").write_text(json.dumps(selection_stops, indent=2) + "\n")
+        save()
+    for breakpoint in pending:
+        if breakpoint.is_valid():
+            breakpoint.delete()
 
 
 def snapshot(stage, expressions, *, inline_values=None):
@@ -131,8 +160,9 @@ while gdb.selected_inferior().pid:
     lines = source.read_text().splitlines()
     line = next(i + 1 for i, text in enumerate(lines)
                 if text == "  instance->acceleration_mps2 = limited(")
-    decision = gdb.Breakpoint(f"{source}:{line}", temporary=True)
     entry.enabled = False
+    inspect_selection(source, lines)
+    decision = gdb.Breakpoint(f"{source}:{line}", temporary=True)
     gdb.execute("continue")
     inline_values = {name: evaluate(expr) for name, expr in
                      {"limited_from": "from", "limited_to": "to",
