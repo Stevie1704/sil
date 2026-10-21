@@ -34,30 +34,36 @@ def save():
 
 def inspect_selection(source, lines):
     """Inspect locals before last use; never fill missing fields from inputs."""
-    anchors = ("      if (hazard(&lead)) mode = ADAS_REF_MODE_HAZARD;",
-               "  return radar->x_m < HAZARD_DISTANCE_M ||")
-    pending = [gdb.Breakpoint(f"{source}:{lines.index(text) + 1}", temporary=True)
-               for text in anchors]
-    for _ in anchors:
-        gdb.execute("continue")
+    anchor = "      if (hazard(&lead)) mode = ADAS_REF_MODE_HAZARD;"
+    gdb.Breakpoint(f"{source}:{lines.index(anchor) + 1}", temporary=True)
+    gdb.execute("continue")
+    for instruction in range(32):
+        newest = gdb.newest_frame()
+        newest.select()
         inline = {name: evaluate(expr) for name, expr in
                   {"hazard_argument": "*radar", "closing_mps": "closing_mps"}.items()}
-        frame = gdb.selected_frame()
+        frame = newest
         while frame and frame.name() != "adas_ref_advance":
             frame = frame.older()
         if frame is None:
-            raise gdb.GdbError("selection breakpoint is outside adas_ref_advance")
+            raise gdb.GdbError("selection inspection left adas_ref_advance")
         frame.select()
-        snapshot("selection", {"lead": "lead", "selected": "selected", **{
+        values = {"lead": "lead", "selected": "selected", **{
             "lead." + field: "lead." + field
-            for field in ("id", "x_m", "y_m", "relative_vx_mps", "confidence")}},
-            inline_values=inline)
-        selection_stops.append(stops.pop())
-        (dest / "selection-stops.json").write_text(json.dumps(selection_stops, indent=2) + "\n")
-        save()
-    for breakpoint in pending:
-        if breakpoint.is_valid():
-            breakpoint.delete()
+            for field in ("id", "x_m", "y_m", "relative_vx_mps", "confidence")}}
+        ready = (all(evaluate(values[name])["value"] is not None
+                     for name in ("selected", "lead.x_m", "lead.relative_vx_mps"))
+                 and inline["closing_mps"]["value"] is not None)
+        if instruction == 0 or ready:
+            snapshot("selection", values, inline_values=inline)
+            selection_stops.append(stops.pop())
+            (dest / "selection-stops.json").write_text(json.dumps(selection_stops, indent=2) + "\n")
+            save()
+        if ready:
+            return
+        newest.select()
+        gdb.execute("nexti")
+    raise gdb.GdbError("selected lead fields/hazard inputs unavailable within 32 instructions")
 
 
 def snapshot(stage, expressions, *, inline_values=None):
