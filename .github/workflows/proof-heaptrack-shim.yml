@@ -1,0 +1,48 @@
+name: proof-heaptrack-shim
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/heaptrack-shim/**'
+      - 'tests/test_heaptrack_shim_proof.py'
+      - '.github/workflows/proof-heaptrack-shim.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  investigate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install pinned Heaptrack and compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            'heaptrack=1.5.0+dfsg1-2ubuntu3' \
+            'gcc-12=12.4.0-2ubuntu1~24.04.1' 'g++-12=12.4.0-2ubuntu1~24.04.1' \
+            cmake binutils
+          mkdir -p build/heaptrack-shim-host
+          dpkg-query -W > build/heaptrack-shim-host/packages.txt
+          uv venv .venv
+          uv pip install -p .venv/bin/python -r container/requirements.lock -e 'python/[dev]'
+      - name: Validate retained evidence and retention integrity
+        env:
+          SIL_SKIP_BUILD: '1'
+        run: .venv/bin/python -m pytest tests/test_heaptrack_shim_proof.py -q
+      - name: Investigate preload composition without changing host policy
+        env:
+          CC: gcc-12
+          CXX: g++-12
+        run: bash proofs/heaptrack-shim/run-proof.sh "$PWD/build/heaptrack-shim-evidence" "$RUNNER_TEMP/heaptrack-shim-build"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: heaptrack-shim-evidence
+          path: |
+            build/heaptrack-shim-evidence/
+            build/heaptrack-shim-host/
+          retention-days: 30

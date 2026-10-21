@@ -1,0 +1,92 @@
+[
+  {
+    "child": 0,
+    "grandchild": 0,
+    "parent": 0,
+    "result": 28,
+    "sleep_errno": 0,
+    "sleep_status": 0,
+    "t_ns": 0
+  },
+  {
+    "child": 100000000,
+    "grandchild": 100000000,
+    "parent": 100000000,
+    "result": 36,
+    "sleep_errno": 0,
+    "sleep_status": 0,
+    "t_ns": 100000000
+  },
+  {
+    "child": 200000000,
+    "grandchild": 200000000,
+    "parent": 200000000,
+    "result": 44,
+    "sleep_errno": 0,
+    "sleep_status": 0,
+    "t_ns": 200000000
+  },
+  {
+    "child": 300000000,
+    "grandchild": 300000000,
+    "parent": 300000000,
+    "result": 52,
+    "sleep_errno": 0,
+    "sleep_status": 0,
+    "t_ns": 300000000
+  },
+  {
+    "child": 400000000,
+    "grandchild": 400000000,
+    "parent": 400000000,
+    "result": 60,
+    "sleep_errno": 0,
+    "sleep_status": 0,
+    "t_ns": 400000000
+  },
+  {
+    "child": 500000000,
+    "grandchild": 500000000,
+    "parent": 500000000,
+    "result": 68,
+    "sleep_errno": 0,
+    "sleep_status": 0,
+    "t_ns": 500000000
+  },
+  {
+    "child": 600000000,
+    "grandchild": 600000000,
+    "parent": 600000000,
+    "result": 76,
+    "sleep_errno": 0,
+    "sleep_status": 0,
+    "t_ns": 600000000
+  },
+  {
+    "child": 700000000,
+    "grandchild": 700000000,
+    "parent": 700000000,
+    "result": 84,
+    "sleep_errno": 0,
+    "sleep_status": 0,
+    "t_ns": 700000000
+  },
+  {
+    "child": 800000000,
+    "grandchild": 800000000,
+    "parent": 800000000,
+    "result": 92,
+    "sleep_errno": 0,
+    "sleep_status": 0,
+    "t_ns": 800000000
+  },
+  {
+    "child": 900000000,
+    "grandchild": 900000000,
+    "parent": 900000000,
+    "result": 100,
+    "sleep_errno": 0,
+    "sleep_status": 0,
+    "t_ns": 900000000
+  }
+]
