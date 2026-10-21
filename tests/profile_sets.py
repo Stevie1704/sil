@@ -64,9 +64,13 @@ def samples_document(report: dict) -> dict:
             thread = threads[len(rows) % len(threads)]
             rows.append([len(rows) * 1000, thread["process"], thread["id"],
                          part, len(stacks) - 1])
-    return {"sil_profile_cpu_samples": 1,
-            "time_origin_ns": capture["time_origin_ns"],
-            "frames": frames, "stacks": stacks or [[]], "samples": rows}
+    document = {"sil_profile_cpu_samples": 1,
+                "time_origin_ns": capture["time_origin_ns"],
+                "frames": frames, "stacks": stacks or [[]], "samples": rows}
+    if report["activation_correlation"].get("summary"):
+        # Keep the synthetic clocks consistent with the synthetic classes.
+        correlation_document(report, document)
+    return document
 
 
 def correlation_document(report: dict, samples: dict) -> dict:
@@ -104,6 +108,14 @@ def correlation_document(report: dict, samples: dict) -> dict:
             activations[ref]["weight_ns"] += row[3]
     phases = [{"phase": p["phase"], "begin_ns": str(origin),
                "end_ns": str(origin + 1)} for p in summary["lifecycle"]]
+    last_end = max((int(a["end_ns"]) for a in activations), default=origin)
+    for index, ((kind, ref), sample) in enumerate(zip(classes, samples["samples"])):
+        if kind in ("execution_context", "window_associated"):
+            sample[0] = int(activations[ref]["begin_ns"]) - origin + index
+        elif kind == "lifecycle":
+            sample[0] = 0
+        elif kind == "unattributed" and ref == "observations_incomplete":
+            sample[0] = last_end - origin + 1000 + index
     return {"sil_profile_activation_correlation": 1,
             "activations": activations, "replays": [], "phases": phases,
             "samples": classes}
@@ -125,16 +137,24 @@ def allocations_document(report: dict) -> dict:
                        "address": f"0x{0x2000 + len(frames):x}",
                        "source": None})
         stacks.append([len(frames) - 1, 0])
-        # One size per allocation info: a rest goes to a second info.
-        count, size = group["allocations"], group["allocated_bytes"]
-        share, rest = divmod(size, count)
-        parts = [(share, count)] if not rest else \
-            [(share, count - 1), (share + rest, 1)]
-        for index, (each, calls) in enumerate(p for p in parts if p[1]):
-            rows.append([len(stacks) - 1, each, calls,
-                         group["temporary_allocations"] if index == 0 else 0,
-                         group["outstanding_allocations"] if index == 0
-                         else 0])
+        # Retained and freed allocations can have different sizes. Preserve
+        # outstanding bytes too, including a merged summary remainder.
+        retained = group["outstanding_allocations"]
+        freed = group["allocations"] - retained
+        temporary = group["temporary_allocations"]
+        for count, size, outstanding in (
+                (retained, group["outstanding_bytes"], True),
+                (freed, group["allocated_bytes"] - group["outstanding_bytes"], False)):
+            if not count:
+                continue
+            share, rest = divmod(size, count)
+            parts = [(share, count)] if not rest else \
+                [(share, count - 1), (share + rest, 1)]
+            for each, calls in (p for p in parts if p[1]):
+                short = min(temporary, calls) if not outstanding else 0
+                temporary -= short
+                rows.append([len(stacks) - 1, each, calls, short,
+                             calls if outstanding else 0])
     return {"sil_profile_heap_allocations": 1, "frames": frames,
             "stacks": stacks, "allocations": rows}
 

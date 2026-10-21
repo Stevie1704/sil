@@ -78,17 +78,20 @@ class RunCommand:
 
 @dataclass(frozen=True)
 class ProfileCommand:
-    """`sil profile`: a capture, or `sil profile render` of a saved one.
+    """`sil profile`: capture, render a saved set, or diff two saved sets.
 
-    A Manifest named `render` is still a capture as `./render`."""
+    A Manifest named `render` or `diff` is a capture as `./render` or `./diff`."""
 
     capture: ModuleCommand
     render: ModuleCommand
+    diff: ModuleCommand
     summary: str
 
     def run(self, path: str, arguments: list[str]) -> int:
         if arguments[:1] == ["render"]:
             return self.render.run(f"{path} render", arguments[1:])
+        if arguments[:1] == ["diff"]:
+            return self.diff.run(f"{path} diff", arguments[1:])
         return self.capture.run(path, arguments)
 
 
@@ -127,8 +130,10 @@ ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
     "profile": ProfileCommand(
         ModuleCommand("sil.profile_run", ""),
         ModuleCommand("sil.profile_render", ""),
+        ModuleCommand("sil.profile_diff", ""),
         "capture a CPU (Linux perf) or heap (Heaptrack) profile of one "
-        "fresh Run; 'sil profile render' presents a saved one"),
+        "fresh Run; 'sil profile render' presents a saved one; "
+        "'sil profile diff' compares two saved sets"),
     "diagnostics": Group("present saved diagnostics reports", {
         "render": ModuleCommand("sil.diagnostics_render",
                                 "write the standalone HTML report of a "

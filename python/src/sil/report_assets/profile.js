@@ -18,6 +18,7 @@
   var selection = byId("selection"), treeBox = byId("cpu-tree"),
     tables = byId("selection-tables");
   var limits = data.limits;
+  var selectedInterval = null, flameZoom = [], currentTree = null;
   form.hidden = false;
 
   // --- formatting, as sil.diagnostics_format --------------------------------
@@ -88,6 +89,13 @@
     var process = fProcess ? fProcess.value : "";
     var thread = fThread ? fThread.value : "";
     return function (row) {  // [path, thread, class, ref, samples, weight]
+      if (selectedInterval) {
+        var kind = selectedInterval.kind;
+        if (kind === "activation") {
+          if ((row[2] !== "execution_context" && row[2] !== "window_associated") ||
+              row[3] !== selectedInterval.ref) return false;
+        } else if (row[2] !== kind || row[3] !== selectedInterval.ref) return false;
+      }
       if (cls !== "" && row[2] !== cls) return false;
       if (thread !== "" && row[1] !== thread) return false;
       if (process !== "" && data.threads[row[1]] !== process) return false;
@@ -258,6 +266,138 @@
         count, weight, null));
   }
 
+  // --- flame graph: widths partition weight, including self and remainders ---
+  function svgNode(name, attributes, text) {
+    var el = document.createElementNS("http://www.w3.org/2000/svg", name);
+    Object.keys(attributes || {}).forEach(function (key) {
+      el.setAttribute(key, String(attributes[key]));
+    });
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+  function functionName(key) {
+    var fn = data.functions[key];
+    return (fn[0] || "[unknown function]") + " (" +
+      (fn[1] || "[unknown module]") + ")";
+  }
+  function renderFlame() {
+    var container = byId("cpu-flame");
+    if (!container || !currentTree) return;
+    var root = currentTree, zoomName = "";
+    for (var key of flameZoom) {
+      if (!root.children.has(key)) { flameZoom = []; root = currentTree; break; }
+      root = root.children.get(key); zoomName = functionName(key);
+    }
+    byId("flame-total").textContent = "Total: " + currentTree.count + " samples / " +
+      currentTree.weight + " ns sampled weight. Denominator of the selection." +
+      (flameZoom.length ? " Zoom: " + zoomName + ", " + root.count + " samples / " +
+       root.weight + " ns; widths use zoom weight." : " Widths use this denominator.");
+    var svg = svgNode("svg", {id: "cpu-flame-svg", class: "flame-graph", role: "group",
+      "aria-label": "Flame graph: width is sample weight", "data-weight": root.weight});
+    var budget = limits.max_nodes, deepest = 0;
+    var query = byId("flame-search").value.trim().toLowerCase(), matches = 0;
+    function box(name, count, weight, x, depth, path) {
+      deepest = Math.max(deepest, depth);
+      var width = root.weight ? 1000 * weight / root.weight : 0;
+      var title = name + ": " + count + " samples, " + weight + " ns (" + share(weight, root.weight) + ")";
+      var matching = query && name.toLowerCase().includes(query);
+      if (matching) matches++;
+      var g = svgNode("g", {tabindex: "0", role: path === null ? "img" : "button",
+        "aria-label": title, "data-name": name, "data-weight": weight,
+        class: "flame-frame" + (matching ? " search-match" : "")});
+      if (path !== null) g.setAttribute("data-flame-path", path.join(","));
+      var characters = Math.max(0, Math.floor(width / 7) - 2);
+      var clip = "cpu-flame-clip-" + svg.children.length;
+      add(g, add(svgNode("defs"), add(svgNode("clipPath", {id:clip}),
+        svgNode("rect", {x:x+2,y:depth*28,width:Math.max(0,width-4),height:26}))),
+        svgNode("title", {}, title), svgNode("rect", {x: x, y: depth * 28,
+        width: width, height: 26, class: "flame-rect"}),
+        svgNode("text", {x: x+3, y: depth*28+18, class: "flame-label", "clip-path":"url(#"+clip+")"},
+          characters < 2 ? "" : name.length <= characters ? name :
+            name.slice(0, Math.max(0, characters-1)) + "…"));
+      svg.appendChild(g);
+    }
+    function walk(n, x, depth, path) {
+      var shown = [], hidden = [];
+      Array.from(n.children.entries()).sort(function (a,b) {
+        return b[1].weight-a[1].weight || a[0]-b[0];
+      }).forEach(function (entry) {
+        if (budget > 0 && depth < limits.max_depth && shown.length < limits.max_children &&
+            entry[1].weight >= Math.max(1, root.weight*limits.min_share)) {
+          budget--; shown.push(entry);
+        } else hidden.push(entry[1]);
+      });
+      shown.forEach(function (entry) {
+        var p = path.concat(entry[0]);
+        box(functionName(entry[0]), entry[1].count, entry[1].weight, x, depth+1, p);
+        walk(entry[1], x, depth+1, p);
+        x += 1000*entry[1].weight/root.weight;
+      });
+      if (hidden.length) {
+        var weight = hidden.reduce(function(s,n) { return s+n.weight; },0);
+        box(hidden.length + " other / deeper callees not shown",
+          hidden.reduce(function(s,n) { return s+n.count; },0), weight, x, depth+1, null);
+        x += 1000*weight/root.weight;
+      }
+      if (n.selfCount) box("[self / stack ends here; possibly cut off]",
+        n.selfCount, n.selfWeight, x, depth+1, null);
+    }
+    if (root.weight) {
+      box(flameZoom.length ? zoomName : "All samples", root.count, root.weight, 0,0, flameZoom);
+      walk(root,0,0,flameZoom);
+    }
+    svg.setAttribute("viewBox", "0 0 1000 " + ((deepest+1)*28));
+    container.replaceChildren(root.weight ? svg : node("p", "note",
+      "No sampled weight to draw. No sample is not evidence of no CPU use."));
+    byId("flame-search-status").textContent = query ? matches +
+      " matching visible frames; bounded remainders may contain more matches." : "";
+  }
+  if (byId("flame-controls")) {
+    byId("flame-controls").hidden = false;
+    byId("flame-search").addEventListener("input", renderFlame);
+    byId("flame-reset").addEventListener("click", function () {
+      flameZoom = []; byId("flame-search").value = ""; renderFlame();
+    });
+  }
+  function activateGraphic(event) {
+    if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
+    var frame = event.target.closest("[data-flame-path]");
+    if (frame && frame.closest("#cpu-flame")) {
+      event.preventDefault();
+      flameZoom = frame.dataset.flamePath === "" ? [] : frame.dataset.flamePath.split(",").map(Number);
+      renderFlame();
+      var focused = byId("cpu-flame").querySelector("[data-flame-path]");
+      if (focused) focused.focus();
+    }
+    var interval = event.target.closest("[data-interval-kind]");
+    if (interval) {
+      event.preventDefault(); form.reset();
+      var kind = interval.dataset.intervalKind;
+      selectedInterval = {kind: kind, ref: kind === "lifecycle" ?
+        interval.dataset.intervalPhase : +interval.dataset.intervalRef};
+      flameZoom = []; update();
+    }
+  }
+  document.addEventListener("click", activateGraphic);
+  document.addEventListener("keydown", activateGraphic);
+  document.addEventListener("focus", function(event) {
+    var frame = event.target.closest(".flame-frame");
+    if (frame && byId("flame-focus")) byId("flame-focus").textContent = frame.getAttribute("aria-label");
+  }, true);
+  document.querySelectorAll("a[href^='#task-detail-']").forEach(function (link) {
+    link.addEventListener("click", function () {
+      var target = document.querySelector(link.getAttribute("href"));
+      if (target) target.open = true;
+    });
+  });
+  document.querySelectorAll("[data-task-filter]").forEach(function (link) {
+    link.addEventListener("click", function () {
+      form.reset(); selectedInterval = null; flameZoom = [];
+      fTask.value = link.dataset.taskFilter; fClass.value = link.dataset.classFilter;
+      update();
+    });
+  });
+
   // --- update ----------------------------------------------------------------
   function update() {
     var byActivation = data.activations ? activationTest() : null;
@@ -274,8 +414,36 @@
       duration(weight) + " of " + duration(data.total[1]) +
       " sampled weight (" + share(weight, data.total[1]) +
       ")" + (count ? "" : ": no sample matches the filters");
+    if (selectedInterval) selection.textContent += "; interval " + selectedInterval.kind +
+      " " + selectedInterval.ref;
+    if (data.activations) selection.textContent += "; " +
+      ["execution_context", "window_associated", "lifecycle", "replay", "unattributed"].map(function (cls) {
+        var group = rows.filter(function(r) { return r[2] === cls; });
+        return cls + ": " + group.reduce(function(s,r) { return s+r[4]; },0) +
+          " samples / " + group.reduce(function(s,r) { return s+r[5]; },0) + " ns";
+      }).join("; ");
+    if (byId("timeline-selection")) byId("timeline-selection").textContent =
+      "Selected: " + selection.textContent + ". Geometry and density show the saved capture context.";
+    var intervalTotals = new Map();
+    rows.forEach(function(r) {
+      var kind = r[2] === "execution_context" || r[2] === "window_associated" ? "activation" : r[2];
+      var key = kind + ":" + r[3], sum = intervalTotals.get(key) || [0,0];
+      sum[0] += r[4]; sum[1] += r[5]; intervalTotals.set(key,sum);
+    });
+    document.querySelectorAll(".timeline-interval").forEach(function (interval) {
+      var kind = interval.dataset.intervalKind, ref = kind === "lifecycle" ?
+        interval.dataset.intervalPhase : +interval.dataset.intervalRef;
+      var sum = intervalTotals.get(kind + ":" + ref) || [0,0];
+      interval.dataset.selectedSamples = sum[0];
+      interval.dataset.selectedWeight = sum[1];
+      var saved = interval.querySelector("title").textContent;
+      interval.setAttribute("aria-label", saved + " Selected: " + interval.dataset.selectedSamples +
+        " samples / " + interval.dataset.selectedWeight + " ns.");
+    });
     treeBox.textContent = "";
-    treeBox.appendChild(renderTree(buildTree(rows)));
+    currentTree = buildTree(rows);
+    treeBox.appendChild(renderTree(currentTree));
+    renderFlame();
     renderTables(rows, count, weight);
     var table = byId("activation-table");
     if (table) {
@@ -285,9 +453,10 @@
       });
     }
   }
-  form.addEventListener("input", update);
-  form.addEventListener("change", update);
+  function filterChanged() { selectedInterval = null; flameZoom = []; update(); }
+  form.addEventListener("input", filterChanged);
+  form.addEventListener("change", filterChanged);
   form.addEventListener("submit", function (event) { event.preventDefault(); });
-  form.addEventListener("reset", function () { setTimeout(update, 0); });
+  form.addEventListener("reset", function () { selectedInterval = null; flameZoom = []; setTimeout(update, 0); });
   update();
 })();

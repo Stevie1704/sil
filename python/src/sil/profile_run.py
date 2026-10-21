@@ -169,7 +169,9 @@ def _parser() -> argparse.ArgumentParser:
                     "profile (Heaptrack) of one fresh Run into a new "
                     "directory (docs/profile-report.md). "
                     "'sil profile render DIR/profile.json [--html FILE]' "
-                    "presents a saved profile offline.")
+                    "presents a saved profile offline. "
+                    "'sil profile diff BASE/profile.json NEW/profile.json "
+                    "[--html FILE]' compares two saved sets.")
     parser.add_argument("manifest", type=Path)
     parser.add_argument("--out", type=Path, required=True, action=GivenOnce,
                         metavar="DIR", help="the new profile directory")

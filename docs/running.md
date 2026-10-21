@@ -557,7 +557,20 @@ sil profile render prof/profile.json --html prof.html
   normalized files it names (`cpu/samples.json`, with `--activations` also
   `activation/correlation.json`; heap: `heap/allocations.json`). Copy them to
   another host: it needs no perf, no Heaptrack, no profiled binary and no
-  network.
+  network. CPU reports include a searchable, zoomable flame graph; with
+  `--activations`, a timeline and per-Task drill-downs. Selecting an interval
+  filters its samples. Host and Virtual time stay exact; incomplete
+  observation regions, zero-sample Activations and unlisted remainders remain
+  visible. Execution context and window association stay separate.
+- **Compare saved profiles.** `sil profile diff BASE/profile.json
+  NEW/profile.json --html diff.html` compares the same collector: CPU self
+  and inclusive shares with both denominators (per Task only with complete
+  correlations on both sides), or heap site allocation metrics. It shows
+  both identities and warns about differences. One Run each gives no
+  significance verdict; small changes may be sampling noise. It uses the
+  same portable files as `render`. Exit `0`: rendered; `1`: output write
+  failed; `2`: invalid/missing evidence, mismatched collectors or output
+  collision. See [Profile diff](profile-report.md#profile-diff).
 - **Sensitive data.** `cpu/perf.data` holds copies of user stacks. Share it
   only as you would share a core dump. The normalized files and the HTML
   page hold no stack bytes, environment variable or Message payload.

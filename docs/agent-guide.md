@@ -210,7 +210,23 @@ Read `sil docs running`, section "Profile a Run", and the contract in
    at capture end are not a leak. There is no allocation history per Step
    and no total per Native participant or FMU instance. A profile describes
    this host build.
-6. **Hand over** `profile.json` with the normalized files that it names, or
+6. **Explore offline.** Run `sil profile render DIR/profile.json --html
+   profile.html`. The CPU flame graph uses sampled-weight widths, supports
+   zoom/search, and shares the explorer filters. With `--activations`, select
+   an interval in the timeline to inspect its samples; links from the Task
+   table and timeline open a Task drill-down. Keep `execution_context` and
+   `window_associated` separate. Read the denominators, zero-sample
+   Activations, incomplete observation regions and bounded remainders. The
+   exact gap boundaries are not retained; blank space is not idle CPU time.
+7. **Compare captures.** Use `sil profile diff BASE/profile.json
+   NEW/profile.json --html diff.html`, with both portable sets. Check the
+   identities and warnings first. CPU compares shares with both denominators;
+   per-Task shares require complete correlation on both sides. Heap compares
+   allocation metrics per site. One Run each supplies no significance
+   verdict, and small share changes may be sampling noise. Exit `0` means
+   rendered, `1` output write failed, `2` invalid/missing or mismatched input
+   or an output collision. Read `sil docs profile-report` for bounds.
+8. **Hand over** `profile.json` with the normalized files that it names, or
    the HTML of `sil profile render`. Share `cpu/perf.data` only as a core
    dump: it holds copies of stacks.
 
@@ -234,6 +250,7 @@ Use exit codes, not message text. Message text can change in any release.
 | `sil run --diagnostics` | the `sil_run_diagnostics` report, `<recording>.diagnostics.json` by default, and a summary on stdout (`sil docs running`, `sil docs diagnostics-report`) |
 | `sil benchmark --out DIR` | `DIR/summary.json`, a `sil_benchmark_report` with every Run report embedded, a directory of evidence per Run, and a summary on stdout (`sil docs running`, `sil docs diagnostics-report`) |
 | `sil profile --out DIR` | `DIR/profile.json`, a `sil_profile_report`, with the raw capture and the normalized files it names, and a summary on stdout (`sil docs profile-report`) |
+| `sil profile diff BASE/profile.json NEW/profile.json` | A terminal comparison, optionally standalone HTML with `--html`; shares, denominators, identities and warnings (`sil docs profile-report`). Message text is not a machine-readable contract. |
 | every command | the exit code: `sil docs running` lists those of a Run |
 
 `sil docs support` says which interfaces and report versions are stable, and
