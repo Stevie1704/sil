@@ -228,7 +228,8 @@ after cleanup, including detach and debugger-error controls.
 
 Within each form, two ordinary Runs, diagnostics-only, index-selected,
 time-selected and detached Runs all produced byte-identical Recordings.
-The saved files independently reproduce that comparison. The index/time
+The full workflow artifact independently reproduces that comparison; the
+retained subset keeps the comparison hashes and one Recording per form. The index/time
 captures used different fresh PIDs/TIDs (Native 3256/3265, Process 3317/3327,
 FMU 3396/3407, shim 3481/3491), host times and relocated stack addresses.
 These observations establish Message reproducibility, not matching internal
@@ -239,8 +240,10 @@ The workflow uploads all binaries, separate debug files, sources, Manifests,
 Recordings, observations and logs for 30 days. `digests.txt` hashes saved files;
 `report.json` records the checkout revision, CI Run, tool/host versions, all
 Run results and equivalence checks. [Retained evidence](evidence/README.md)
-includes all selected stops, observations, successful Recordings, identities,
-control evidence and digests. The complete binary/debug/source bundle is in
+includes all selected stops, observations, one Recording per form, identities,
+control logs and a Run summary with comparison hashes. Duplicate Recordings,
+per-capture results, repeated command arrays and performance diagnostics are
+omitted. The complete binary/debug/source bundle and raw reports are in
 the workflow artifact; its published digest and expiry are retained too.
 
 Repeated ordinary Runs must reproduce Messages; fresh processes, ASLR
