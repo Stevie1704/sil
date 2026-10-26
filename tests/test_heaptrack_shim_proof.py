@@ -61,12 +61,13 @@ def test_retained_recording_and_clock_verdicts_follow_the_observed_messages():
         assert heap["timestamps"]["host_mapping"] is None
 
 
-def test_every_retained_experiment_file_matches_the_original_inventory():
-    inventory = load(EVIDENCE / "digests.json")
-    for path in EVIDENCE.rglob("*"):
+@pytest.mark.parametrize("directory", [EVIDENCE, ROOT / "proofs/heaptrack-shim/evidence-failure"])
+def test_every_retained_experiment_file_matches_the_original_inventory(directory):
+    inventory = load(directory / "digests.json")
+    for path in directory.rglob("*"):
         if not path.is_file() or path.name in {"origin.json", "digests.json"}:
             continue
-        expected = inventory[str(path.relative_to(EVIDENCE))]
+        expected = inventory[str(path.relative_to(directory))]
         assert path.stat().st_size == expected["bytes"]
         assert hashlib.sha256(path.read_bytes()).hexdigest() == expected["sha256"]
 
@@ -82,3 +83,112 @@ def test_retention_rejects_a_changed_or_truncated_artifact(tmp_path, content):
         str(artifact), str(tmp_path / "retained")], capture_output=True, text=True, timeout=10)
     assert done.returncode != 0
     assert not (tmp_path / "retained/results.json").exists()
+
+
+@pytest.fixture
+def proof_module():
+    import runpy
+    from types import SimpleNamespace
+    return SimpleNamespace(**runpy.run_path(str(ROOT / "proofs/heaptrack-shim/proof.py")))
+
+
+def test_bounded_capture_is_incomplete_negative_evidence(proof_module):
+    # A valid bounded capture retains interpreted timestamps and completes
+    # runner cleanup; it must never become a successful/equal Run.
+    report = load(EVIDENCE / "results.json")
+    report["bounds"] = {"raw_bytes": 1024, "wall_seconds": 30}
+    row = next(r for r in report["runs"] if r["mode"] == "preserve")
+    row.update(stopped="raw_size_limit", exit_code=1, cleanup_completed=True,
+               raw_stable=True, recording_equal=False)
+    observations = proof_module.validate_evidence(report)
+    observation = next(o for o in observations
+                       if o["mode"] == row["mode"] and o["policy"] == row["policy"])
+    assert observation["status"] == "bounded"
+    assert observation["run_complete"] is False
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_capture_limit_allows_runner_to_reap_its_participant(
+        proof_module, build_dir, tmp_path):
+    import os
+    import signal
+    from sil.manifest import Manifest
+
+    writer = tmp_path / "writer.py"
+    raw = tmp_path / "heaptrack.raw"
+    pid_file = tmp_path / "participant.pid"
+    writer.write_text('''
+import os, pathlib, sys, time
+pathlib.Path(sys.argv[2]).write_text(str(os.getpid()))
+with open(sys.argv[1], "wb", buffering=0) as output:
+    while True:
+        output.write(b"x" * 8192)
+        time.sleep(0.01)
+''')
+    manifest = Manifest(duration_ns=1)
+    manifest.add_process("writer", command=[sys.executable, str(writer), str(raw),
+        str(pid_file)], step_period_ns=1)
+    path = manifest.write(tmp_path / "manifest.json").path
+    try:
+        outcome = proof_module.execute([str(build_dir / "sil-run"), str(path),
+            "-o", str(tmp_path / "run.mcap")], tmp_path, os.environ.copy(), raw,
+            raw_limit_bytes=4096)
+        assert outcome["stopped"] == "raw_size_limit"
+        assert outcome["exit_code"] == 1
+        assert outcome["cleanup_completed"]
+        with pytest.raises(ProcessLookupError):
+            os.killpg(int(pid_file.read_text()), 0)
+    finally:
+        if pid_file.exists():
+            try:
+                os.killpg(int(pid_file.read_text()), signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+
+
+@pytest.mark.parametrize("invalid", ["cleanup", "unstable", "equal", "empty", "decode"])
+def test_bounded_capture_cannot_hide_missing_or_inconsistent_evidence(proof_module, invalid):
+    report = load(EVIDENCE / "results.json")
+    report["bounds"]["raw_bytes"] = 1024
+    row = next(r for r in report["runs"] if r["mode"] == "preserve")
+    row.update(stopped="raw_size_limit", exit_code=1, cleanup_completed=True,
+               raw_stable=True, recording_equal=False)
+    if invalid == "cleanup":
+        row["cleanup_completed"] = False
+    elif invalid == "unstable":
+        row["raw_stable"] = False
+    elif invalid == "equal":
+        row["recording_equal"] = True
+    elif invalid == "empty":
+        row["heap"]["timestamps"]["count"] = 0
+    else:
+        row["analysis_error"] = "undecodable capture"
+    with pytest.raises(AssertionError):
+        proof_module.validate_evidence(report)
+
+
+def test_profiler_startup_failure_is_a_named_negative_observation(proof_module):
+    report = load(EVIDENCE / "results.json")
+    failed = load(ROOT / "proofs/heaptrack-shim/evidence-failure/results.json")
+    row = next(r for r in report["runs"] if r["mode"] == "preload")
+    original = next(r for r in failed["runs"] if r["mode"] == "preload")
+    row.update(exit_code=1, recording_equal=False, stderr_nonempty=True,
+               failure=load(ROOT / "proofs/heaptrack-shim/evidence-failure/reject-preload/run.mcap.failure.json"))
+    row["messages"] = original["messages"]
+    observation = next(o for o in proof_module.validate_evidence(report)
+                       if o["policy"] == row["policy"] and o["mode"] == row["mode"])
+    assert observation["status"] == "run_failed"
+    assert observation["run_complete"] is False
+
+
+def test_original_failed_run_is_not_accepted_as_clean_bounded_evidence(proof_module):
+    failed = load(ROOT / "proofs/heaptrack-shim/evidence-failure/results.json")
+    assert failed.get("complete") is not True
+    # Earlier failed rows must have a named failure before replaying validation.
+    for row in failed["runs"]:
+        if row["exit_code"] == 1:
+            directory = ROOT / "proofs/heaptrack-shim/evidence-failure" / f'{row["policy"]}-{row["mode"]}'
+            row["failure"] = load(directory / "run.mcap.failure.json")
+            row["stderr_nonempty"] = (directory / "stderr.txt").stat().st_size > 0
+    with pytest.raises(AssertionError):
+        proof_module.validate_evidence(failed)

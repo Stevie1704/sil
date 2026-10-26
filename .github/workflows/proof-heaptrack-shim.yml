@@ -29,20 +29,35 @@ jobs:
           dpkg-query -W > build/heaptrack-shim-host/packages.txt
           uv venv .venv
           uv pip install -p .venv/bin/python -r container/requirements.lock -e 'python/[dev]'
-      - name: Validate retained evidence and retention integrity
-        env:
-          SIL_SKIP_BUILD: '1'
-        run: .venv/bin/python -m pytest tests/test_heaptrack_shim_proof.py -q
       - name: Investigate preload composition without changing host policy
         env:
           CC: gcc-12
           CXX: g++-12
         run: bash proofs/heaptrack-shim/run-proof.sh "$PWD/build/heaptrack-shim-evidence" "$RUNNER_TEMP/heaptrack-shim-build"
+      - name: Validate retained evidence, bounded outcomes and Participant cleanup
+        env:
+          SIL_SKIP_BUILD: '1'
+          SIL_BUILD_DIR: ${{ runner.temp }}/heaptrack-shim-build
+        run: .venv/bin/python -m pytest tests/test_heaptrack_shim_proof.py -q
+      - name: Exercise bounded Heaptrack captures with a deliberate 1 MiB threshold
+        env:
+          CC: gcc-12
+          CXX: g++-12
+        run: |
+          bash proofs/heaptrack-shim/run-proof.sh "$PWD/build/heaptrack-shim-bounded" "$RUNNER_TEMP/heaptrack-shim-build" --raw-limit-bytes 1048576
+          .venv/bin/python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("build/heaptrack-shim-bounded/results.json").read_text())
+          assert report["complete"]
+          assert any(row["status"] == "bounded" for row in report["observations"]), "bounded path was not exercised"
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: heaptrack-shim-evidence
           path: |
             build/heaptrack-shim-evidence/
+            build/heaptrack-shim-bounded/
             build/heaptrack-shim-host/
           retention-days: 30

@@ -1,0 +1,42 @@
+{
+  "capture-stability.json": {
+    "bytes": 1421,
+    "sha256": "2b1164a185749c935b006f5aac7e3ab81b21e1be472a43416c8710f26f6aa274"
+  },
+  "immediate-baseline/stderr.txt": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "immediate-preload/stderr.txt": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "immediate-preserve/stderr.txt": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "reject-baseline/stderr.txt": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "reject-preload/run.mcap.failure.json": {
+    "bytes": 606,
+    "sha256": "7bf7aba3ea890ace61ec7ef8890ff95e39f766900850e41e1541c1e5e7c63823"
+  },
+  "reject-preload/stderr.txt": {
+    "bytes": 431,
+    "sha256": "c4e403af7b9c782466c5582dd4926668271e617320ef4773329a6b77ca47c6db"
+  },
+  "reject-preserve/run.mcap.failure.json": {
+    "bytes": 606,
+    "sha256": "32e2300c65cd7deeb67fea4ed16fa0e9686a7fffcfbf1de44731fb82cfd4ae1c"
+  },
+  "reject-preserve/stderr.txt": {
+    "bytes": 431,
+    "sha256": "8711021d3a329ff5083e20a256987de4bffcb4428c613ae0a791fa91980ff8d4"
+  },
+  "results.json": {
+    "bytes": 13837,
+    "sha256": "dfffc615433fe6d609a499f6b1b13566d32f8144cf8d7e008da99d800e74fdfc"
+  }
+}

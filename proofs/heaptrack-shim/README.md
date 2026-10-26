@@ -69,13 +69,31 @@ against the ordinary baseline, checks all three clock readings against each
 Message's Virtual time, and checks sleep policy results. It interprets the
 capture while fixture binaries still exist and independently checks the known
 allocation count and size through the production normalizer. Run failures are
-retained with stderr and failure sidecars; an incomplete Recording cannot count
-as equal. A usage/Manifest error fails the proof, as does a missing or
+retained with stderr and failure sidecars; an incomplete or bounded Recording
+cannot count as equal. A usage/Manifest error fails the proof, as does a missing or
 undecodable capture from a successful Run.
 
 Every capture has a 30 s wall limit and a 128 MiB raw-file stop threshold checked
-at 20 ms intervals (a threshold can be exceeded between checks). A limit hit
-fails evidence collection. Size, timestamp-record count/range, wall duration
+at 20 ms intervals. `--raw-limit-bytes N` overrides the size threshold for
+reproducing the bounded path. On a limit hit, the driver sends SIGTERM to the
+runner and gives it up to 10 s to clean up its separate Participant process
+groups. Data can grow between checks and during cleanup, so this is a stop
+threshold, not a hard storage cap. Only then does the driver interpret and hash
+the capture, verifying that the raw file stays unchanged during analysis.
+
+A bounded capture is **negative, incomplete Run evidence**, not a successful
+profile: its observation status is `bounded`, `run_complete` is false and
+`recording_equal` is false. It is accepted as collected evidence only with
+completed runner cleanup, a stable nonempty capture, interpretable timestamp
+records and a stop reason supported by the size/time measurements. A forced
+runner kill, unstable data, an empty/undecodable bounded capture, a broken
+baseline, or a usage/Manifest error still fails the proof. Completed captures
+still require exactly 80 known allocations, full Messages and untruncated data.
+`complete` reports that the investigation collected valid observations; it does
+not mean that every profiled Run completed. The workflow also runs a deliberate
+1 MiB threshold experiment to exercise this distinction on the native host.
+
+Size, timestamp-record count/range, wall duration
 and raw bytes per wall second are observations, not timing gates or a prediction
 for another workload. Timestamp origin can be initialized before the shim maps
 its region; later clock reads can be Virtual time. There is no validated host
@@ -100,8 +118,9 @@ All six Runs completed, including the ordinary baselines (844 and 783 ms).
 Participant sleep results matched both policies in every Run. Each capture
 resolved exactly **80 allocations of 2048 bytes** at the known site, with no
 undecodable records or truncated input. The Heaptrack 1.5 startup failure from
-#314 **did not reproduce** in this fixture; its absence here does not erase
-that earlier observation or qualify all shimmed Participants.
+#314 **did not reproduce in this first capture**, but returned in the repeat
+below. The successful restoration in this table does not establish reliable
+startup across Runs.
 
 The four captures grew at **14.5–15.0 MB per wall second** (decimal MB). Each
 had ten distinct timestamp values over a 900 ms range, while emitting hundreds
@@ -119,6 +138,39 @@ specified profiler integration would have to solve those problems and cover
 initialization, allocation-thread calls and thread policy. This investigation
 **defers** that work and keeps the existing rejection.
 
+## Failed repeat and proof correction
+
+The [repeat at `66c941c`](https://github.com/Stevie1704/sil/actions/runs/39571473041)
+failed the old proof gate despite matching the first capture's recorded kernel,
+Heaptrack, compiler, glibc and libstdc++ versions. Its retained
+[`results.json`](evidence-failure/results.json) and failure sidecars show:
+
+- Both ordinary baselines completed with ten Messages and virtual descendant
+  clocks.
+- Both `reject` captures failed during Python initialization with
+  `OSError: [Errno 38] Function not implemented` and `Fatal Python error: error
+  evaluating path`, before any workload Messages.
+- Both `immediate` captures remained in initialization and reached the 128 MiB
+  stop threshold after approximately ten wall seconds. Their partial data had
+  millions of repeated timestamps and zero known-site allocations. Neither
+  Recording was complete or equal to its baseline.
+
+The proof had two defects: it asserted that a stop threshold must never be
+reached, turning the behavior under investigation into a collection failure;
+and it used SIGKILL on the runner's group even though Participants have separate
+groups. The latter allowed capture writes to continue after raw digests were
+recorded. [`capture-stability.json`](evidence-failure/capture-stability.json)
+compares those recorded digests with the final artifact snapshots. The original
+failed capture is **not retroactively accepted** as stable evidence.
+
+The corrected proof records bounded experiments as incomplete negative
+observations and lets the runner clean up before finalizing captures. Regression
+tests cover the real runner/Participant group boundary and reject incomplete or
+inconsistent bounded evidence. The original first-run evidence remains intact.
+The support decision stays **defer**: restoration can preserve descendants when
+a Run completes, but this repeat demonstrates that it does not make startup or
+timer behavior reliable.
+
 ## Evidence
 
 The workflow uploads `heaptrack-shim-evidence` for 30 days. `results.json`
@@ -126,7 +178,8 @@ contains host/tool identities, build commands, binary digests, the full matrix,
 Recording comparisons, clock and sleep checks, allocation checks, timestamp
 statistics and growth. Each Run retains its messages, stdout/stderr, Recording,
 provenance/failure/diagnostics sidecars and raw/interpreted Heaptrack data.
-`digests.json` inventories the complete experiment output. Small results, Manifests, sidecars, decoded
+`digests.json` inventories the complete experiment output, even if final
+collection validation fails. Small results, Manifests, sidecars, decoded
 Messages and logs are copied into [`evidence/`](evidence/) after the native run;
 large captures stay in the workflow artifact and are identified by digest.
 An ARM64 Linux run with `--allow-other-machine` is only a smoke check and is
@@ -145,6 +198,8 @@ python proofs/heaptrack-shim/retain.py \
 The retention script verifies copied files against the original inventory.
 `tests/test_heaptrack_shim_proof.py` independently checks the retained matrix,
 clock/sleep observations, verdict consistency and integrity, including rejection
-of modified or truncated artifact files.
+of modified or truncated artifact files. `evidence-failure/` separately retains
+the failed repeat and its artifact identity; its own inventory covers those
+small snapshots, with `origin.json` identifying the original workflow artifact.
 `origin.json` separately identifies the workflow and compressed artifact; it
 is not part of the original experiment inventory.

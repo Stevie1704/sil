@@ -46,10 +46,11 @@ def command(args):
             "stdout": done.stdout, "stderr": done.stderr}
 
 
-def execute(args, directory, env, raw):
-    """Bound time and data growth; reap the whole proof process group."""
+def execute(args, directory, env, raw, *, raw_limit_bytes=CAP_BYTES):
+    """Bound captures while letting the runner clean up Participant groups."""
     began = time.monotonic_ns()
     stopped = None
+    cleanup_completed = True
     with (directory / "stdout.txt").open("wb") as stdout, \
             (directory / "stderr.txt").open("wb") as stderr:
         process = subprocess.Popen(list(map(str, args)), cwd=directory,
@@ -58,17 +59,27 @@ def execute(args, directory, env, raw):
             while process.poll() is None:
                 if time.monotonic_ns() - began > 30_000_000_000:
                     stopped = "wall_timeout"
-                elif raw.exists() and raw.stat().st_size > CAP_BYTES:
+                elif raw.exists() and raw.stat().st_size > raw_limit_bytes:
                     stopped = "raw_size_limit"
                 if stopped:
                     break
                 time.sleep(0.02)
         finally:
             if process.poll() is None:
-                os.killpg(process.pid, signal.SIGKILL)
+                # Participants have their own process groups. Killing just
+                # the runner leaves them writing after capture finalization.
+                # SIGTERM lets the runner interrupt its protocol wait and
+                # apply its existing group cleanup before it returns.
+                process.send_signal(signal.SIGTERM)
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    cleanup_completed = False
+                    os.killpg(process.pid, signal.SIGKILL)
             process.wait()
     return {"command": list(map(str, args)), "exit_code": process.returncode,
-            "wall_ns": time.monotonic_ns() - began, "stopped": stopped}
+            "wall_ns": time.monotonic_ns() - began, "stopped": stopped,
+            "cleanup_completed": cleanup_completed}
 
 
 def read_messages(path):
@@ -111,13 +122,71 @@ def analyze(raw, interpreter, directory):
     return result
 
 
+def validate_evidence(report):
+    """Validate collection, keeping negative experiments explicitly incomplete."""
+    expected = {(policy, mode) for policy in ("reject", "immediate")
+                for mode in ("baseline", "preload", "preserve")}
+    assert len(report["runs"]) == len(expected), "incomplete experiment matrix"
+    assert {(r["policy"], r["mode"]) for r in report["runs"]} == expected
+    for policy in ("reject", "immediate"):
+        assert len({r["manifest"]["sha256"] for r in report["runs"]
+                    if r["policy"] == policy}) == 1, "Manifest changed"
+    observations = []
+    for row in report["runs"]:
+        assert row["exit_code"] in (0, 1), row
+        if row["mode"] == "baseline":
+            assert row["stopped"] is None and row["exit_code"] == 0, row
+            assert row["messages"] == STEPS, row
+            assert all(row["clocks_match_virtual_time"].values()), row
+            assert row["sleep_matches_policy"], row
+            status = "completed"
+        elif row["stopped"] is not None:
+            assert row["stopped"] in {"raw_size_limit", "wall_timeout"}, row
+            assert row.get("cleanup_completed") is True, row
+            assert row.get("raw_stable") is True, row
+            assert row["recording_equal"] is False, row
+            assert row["raw"]["bytes"] > 0, row
+            if row["stopped"] == "raw_size_limit":
+                assert row["raw"]["bytes"] >= report["bounds"]["raw_bytes"], row
+            else:
+                assert row["wall_ns"] >= report["bounds"]["wall_seconds"] * 1e9, row
+            assert "analysis_error" not in row, row
+            assert row["heap"]["interpret_exit_code"] == 0, row
+            assert row["heap"]["timestamps"]["count"] > 0, row
+            assert row["heap"]["coverage"]["undecodable_records"] == 0, row
+            status = "bounded"
+        elif row["exit_code"] == 1:
+            assert row["recording_equal"] is False, row
+            assert row["failure"]["message"] and row["stderr_nonempty"], row
+            assert row.get("raw_stable", True), row
+            status = "run_failed"
+        else:
+            assert row.get("raw_stable", True), row
+            assert row["messages"] == STEPS, row
+            assert row["heap"]["interpret_exit_code"] == 0, row
+            assert "analysis_error" not in row, row
+            assert row["heap"]["coverage"]["undecodable_records"] == 0, row
+            assert not row["heap"]["coverage"]["truncated"], row
+            assert row["heap"]["known_site"] == {
+                "calls": 80, "sizes": [2048], "expected_calls": 80,
+                "expected_size": 2048}, row
+            status = "completed"
+        observations.append({"policy": row["policy"], "mode": row["mode"],
+                             "status": status, "run_complete": status == "completed"})
+    return observations
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("out", type=Path)
     parser.add_argument("--build", type=Path, required=True)
     parser.add_argument("--allow-other-machine", action="store_true",
                         help="smoke only; never qualification evidence")
+    parser.add_argument("--raw-limit-bytes", type=int, default=CAP_BYTES,
+                        help="raw-file stop threshold; lower it to exercise bounded capture")
     args = parser.parse_args()
+    if args.raw_limit_bytes <= 0:
+        parser.error("--raw-limit-bytes must be positive")
     qualified = (platform.system() == "Linux" and platform.machine() == "x86_64"
                  and platform.libc_ver()[0] == "glibc")
     if not qualified and not args.allow_other_machine:
@@ -131,7 +200,7 @@ def main():
         compiled.append(command([os.environ.get("CC", "cc"), "-shared", "-fPIC", "-O2", "-g",
             "-Wall", "-Wextra", "-o", out / f"{source}.so", HERE / f"{source}.c"]))
     assert all(c["exit_code"] == 0 for c in compiled), compiled
-    report = {"issue": 330, "qualified_machine": qualified,
+    report = {"issue": 330, "qualified_machine": qualified, "complete": False,
         "host": {"system": platform.platform(), "machine": platform.machine(),
                  "libc": platform.libc_ver(), "uid": os.getuid()},
         "tools": [command(["heaptrack", "--version"]), command([os.environ.get("CC", "cc"), "--version"]),
@@ -141,7 +210,7 @@ def main():
         "artifacts": {str(p): digest(p) for p in (
             tools.preload, tools.interpreter, build / "sil-run", build / "sil-run-diagnostics",
             build / "libsil_clock_shim.so", out / "preserve.so", out / "workload.so")},
-        "bounds": {"wall_seconds": 30, "raw_bytes": CAP_BYTES}, "runs": []}
+        "bounds": {"wall_seconds": 30, "raw_bytes": args.raw_limit_bytes}, "runs": []}
     save(out / "results.json", report)
     for policy in ("reject", "immediate"):
         manifest = Manifest(duration_ns=STEPS * 100_000_000)
@@ -169,7 +238,11 @@ def main():
             if mode != "baseline":
                 cmd += ["--launch-wrapper", "process", HERE / "launch.sh"]
             row = {"policy": policy, "mode": mode, "manifest": digest(path),
-                   **execute(cmd, directory, env, raw)}
+                   **execute(cmd, directory, env, raw, raw_limit_bytes=args.raw_limit_bytes)}
+            row["stderr_nonempty"] = (directory / "stderr.txt").stat().st_size > 0
+            failure = directory / "run.mcap.failure.json"
+            if failure.exists():
+                row["failure"] = json.loads(failure.read_text())
             if recording.exists():
                 row["recording"] = digest(recording)
                 try:
@@ -191,7 +264,7 @@ def main():
                 assert row["sleep_matches_policy"], row
                 baseline = recording.read_bytes()
             else:
-                row["recording_equal"] = (row["exit_code"] == 0 and
+                row["recording_equal"] = (row["stopped"] is None and row["exit_code"] == 0 and
                     recording.exists() and recording.read_bytes() == baseline)
                 if raw.exists():
                     row["raw"] = digest(raw)
@@ -201,26 +274,18 @@ def main():
                         row["heap"] = analyze(raw, tools.interpreter, directory)
                     except Exception as error:
                         row["analysis_error"] = str(error)
+                    row["raw_stable"] = digest(raw) == row["raw"]
             report["runs"].append(row)
             save(out / "results.json", report)
             print(policy, mode, row["exit_code"], row.get("recording_equal"), flush=True)
-    # A rejected hypothesis still needs interpretable evidence or a named
-    # Run failure. Never turn missing capture data into a successful finding.
-    for row in report["runs"]:
-        assert row["stopped"] is None, row
-        assert row["exit_code"] in (0, 1), row
-        if row["mode"] != "baseline" and row["exit_code"] == 0:
-            assert row["heap"]["interpret_exit_code"] == 0, row
-            assert "analysis_error" not in row, row
-            assert row["heap"]["coverage"]["undecodable_records"] == 0, row
-            assert row["heap"]["known_site"] == {
-                "calls": 80, "sizes": [2048], "expected_calls": 80,
-                "expected_size": 2048}, row
-    report["complete"] = True
-    save(out / "results.json", report)
-    # Inventory every retained input and output, including raw capture data.
-    save(out / "digests.json", {str(p.relative_to(out)): digest(p)
-        for p in sorted(out.rglob("*")) if p.is_file()})
+    try:
+        report["observations"] = validate_evidence(report)
+        report["complete"] = True
+    finally:
+        save(out / "results.json", report)
+        # Preserve an inventory even when collection validation fails.
+        save(out / "digests.json", {str(p.relative_to(out)): digest(p)
+            for p in sorted(out.rglob("*")) if p.is_file()})
     return 0
 
 
