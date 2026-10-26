@@ -1,2 +1,0 @@
-libc6:amd64	2.39-0ubuntu8.9
-libstdc++6:amd64	14.2.0-4ubuntu2~24.04.1

@@ -3,117 +3,25 @@
     "bytes": 8473,
     "sha256": "a9b0952ca67ec5a8986a4e4cbe4100650d3cf406cf149cb18caf726b729bc7a3"
   },
-  "heaptrack-shim-bpf-container/compiler-version.stdout.txt": {
-    "bytes": 249,
-    "sha256": "07ab3691df8c82c26447d541e92bb17461c4352d13726963cb16a27c28d72166"
-  },
-  "heaptrack-shim-bpf-container/current-user-baseline.stdout.txt": {
-    "bytes": 30,
-    "sha256": "049d37542201666beac9ce4e0de1c441bef4efd6f4ca8d47c9024aea8c22ef49"
-  },
   "heaptrack-shim-bpf-container/current-user-capture.stderr.txt": {
     "bytes": 953,
     "sha256": "4fd119c4aa3bba85176d90bbcbe495f75a4144598e59d9637e635fae1f7e4b76"
-  },
-  "heaptrack-shim-bpf-container/current-user-capture.stdout.txt": {
-    "bytes": 22,
-    "sha256": "1d95ae72c3fc9c58db711bf7bce1c51468436f8c2f8a9653bd26f941a1519223"
-  },
-  "heaptrack-shim-bpf-container/current-user-facts.stdout.txt": {
-    "bytes": 1050,
-    "sha256": "1157e322c45bb5441a994f8f1d89ae4d14a486de9cd5e26ff6757c4f35832d12"
   },
   "heaptrack-shim-bpf-container/image-id.txt": {
     "bytes": 71,
     "sha256": "a319a5c15b84cb91be99bf4b2fe4c15c562a65f43da946271abec79cff9b43cc"
   },
-  "heaptrack-shim-bpf-container/info.stderr.txt": {
-    "bytes": 960,
-    "sha256": "00fafe19bb68bd72b9d35710e5777de94f344b6b14aabb73964f4d7d276e0c8f"
-  },
-  "heaptrack-shim-bpf-container/ldd.stdout.txt": {
-    "bytes": 155,
-    "sha256": "72d27354cf469014d669c74800b6adf48158d0f886985cd08d136288fb6bd31e"
-  },
-  "heaptrack-shim-bpf-container/library-packages.stdout.txt": {
-    "bytes": 69,
-    "sha256": "e9ca604b6a650d7788a766b728bcf737a07955b7bfecf12eda675d310044d44f"
-  },
-  "heaptrack-shim-bpf-container/malloc-fixture.c": {
-    "bytes": 785,
-    "sha256": "8c68cce392adbda0e59a99f9384ea7e178259f7a45eab218fb18fb28ca772f1a"
-  },
-  "heaptrack-shim-bpf-container/malloc.bt": {
-    "bytes": 425,
-    "sha256": "4721c84eb2a5aa0d6762222b913a2fbfc3f9585b3eb4b5ee75b6df71fd4e1970"
-  },
-  "heaptrack-shim-bpf-container/package.stdout.txt": {
-    "bytes": 18,
-    "sha256": "ea1dcf5d5abd7739e32851f13ee0f14d0c425d435018e76deb2de04f98c7c307"
-  },
-  "heaptrack-shim-bpf-container/version.stdout.txt": {
-    "bytes": 17,
-    "sha256": "1b3367ced1282d1c49fb11169a6d2b17e0193c42157f1f20703c5b0504882214"
-  },
   "heaptrack-shim-bpf-native/availability.json": {
     "bytes": 12448,
     "sha256": "56253bc21e839202888d0a026323802c8020ad2292b4e88ebf3fc6623220ea01"
-  },
-  "heaptrack-shim-bpf-native/compiler-version.stdout.txt": {
-    "bytes": 249,
-    "sha256": "07ab3691df8c82c26447d541e92bb17461c4352d13726963cb16a27c28d72166"
-  },
-  "heaptrack-shim-bpf-native/current-user-baseline.stdout.txt": {
-    "bytes": 33,
-    "sha256": "099122353791244f40660d9ff419305080e841d356ae0ba26b1c972948b3836d"
   },
   "heaptrack-shim-bpf-native/current-user-capture.stderr.txt": {
     "bytes": 66,
     "sha256": "f2a819b71db011d8d45739f1c003158824ddef1a577c9b3fba90ea362b19afc3"
   },
-  "heaptrack-shim-bpf-native/current-user-facts.stdout.txt": {
-    "bytes": 1119,
-    "sha256": "8511fb341b67ea935fd0a08f82d5b4aa6b23db6aaf95b1b6c85cacf73e9b12dc"
-  },
-  "heaptrack-shim-bpf-native/info.stderr.txt": {
-    "bytes": 66,
-    "sha256": "f2a819b71db011d8d45739f1c003158824ddef1a577c9b3fba90ea362b19afc3"
-  },
-  "heaptrack-shim-bpf-native/ldd.stdout.txt": {
-    "bytes": 155,
-    "sha256": "73d71df7b9575cadcec908910927a800f1b57a99f29fb0aefd2a2c9c36322959"
-  },
-  "heaptrack-shim-bpf-native/library-packages.stdout.txt": {
-    "bytes": 69,
-    "sha256": "e9ca604b6a650d7788a766b728bcf737a07955b7bfecf12eda675d310044d44f"
-  },
-  "heaptrack-shim-bpf-native/malloc-fixture.c": {
-    "bytes": 785,
-    "sha256": "8c68cce392adbda0e59a99f9384ea7e178259f7a45eab218fb18fb28ca772f1a"
-  },
-  "heaptrack-shim-bpf-native/malloc.bt": {
-    "bytes": 511,
-    "sha256": "6952a6d63d196cfeeea0ac9e1b883e4bd41abcb635e79c69946c074e4d892aab"
-  },
-  "heaptrack-shim-bpf-native/package.stdout.txt": {
-    "bytes": 18,
-    "sha256": "ea1dcf5d5abd7739e32851f13ee0f14d0c425d435018e76deb2de04f98c7c307"
-  },
-  "heaptrack-shim-bpf-native/sudo-root-baseline.stdout.txt": {
-    "bytes": 30,
-    "sha256": "4e44144787ae7828a1728ee799d852a57d8bb88a8f1cb452273efd2e453a81ff"
-  },
   "heaptrack-shim-bpf-native/sudo-root-capture.stdout.txt": {
     "bytes": 225,
     "sha256": "5ddb57e190bae0220f3c22e41c19876579e7192a2bb40634082669f69e308027"
-  },
-  "heaptrack-shim-bpf-native/sudo-root-facts.stdout.txt": {
-    "bytes": 1013,
-    "sha256": "ae46b3ab7f65751f51a98332b29dfb66cc78bc797f350b992b37fd5477945d8c"
-  },
-  "heaptrack-shim-bpf-native/version.stdout.txt": {
-    "bytes": 17,
-    "sha256": "1b3367ced1282d1c49fb11169a6d2b17e0193c42157f1f20703c5b0504882214"
   },
   "heaptrack-shim-clock/results.json": {
     "bytes": 16840,
@@ -150,10 +58,6 @@
   "heaptrack-shim-clock/unshimmed/timestamp-records.json": {
     "bytes": 540,
     "sha256": "8d7969b38f741ee8b0494525419e19a11c30594c6c6df22467a3bc45156beeac"
-  },
-  "heaptrack-shim-evidence/results.json": {
-    "bytes": 22272,
-    "sha256": "93910b497372a3b35f1dbae60b6266651e1445c2ebb7f3996d6dc1ccdd08c971"
   },
   "heaptrack-shim-evidence/unshimmed-baseline/run.mcap": {
     "bytes": 2032,

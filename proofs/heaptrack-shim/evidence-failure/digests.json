@@ -10,9 +10,5 @@
   "reject-preserve/run.mcap.failure.json": {
     "bytes": 606,
     "sha256": "32e2300c65cd7deeb67fea4ed16fa0e9686a7fffcfbf1de44731fb82cfd4ae1c"
-  },
-  "results.json": {
-    "bytes": 13837,
-    "sha256": "dfffc615433fe6d609a499f6b1b13566d32f8144cf8d7e008da99d800e74fdfc"
   }
 }

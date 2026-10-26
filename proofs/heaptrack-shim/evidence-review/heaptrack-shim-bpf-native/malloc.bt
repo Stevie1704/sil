@@ -1,7 +1,0 @@
-uprobe:/home/runner/work/sil/sil/build/heaptrack-shim-bpf-native/malloc-fixture:proof_malloc_site /pid == cpid/ { @active[tid] = 1; }
-uretprobe:/home/runner/work/sil/sil/build/heaptrack-shim-bpf-native/malloc-fixture:proof_malloc_site /pid == cpid/ { delete(@active[tid]); }
-uprobe:/lib/x86_64-linux-gnu/libc.so.6:malloc /pid == cpid && @active[tid] && arg0 == 2048/ {
-  @calls = count(); @first = min(nsecs(monotonic)); @last = max(nsecs(monotonic));
-  @stacks[ustack(12)] = count();
-}
-END { clear(@active); }

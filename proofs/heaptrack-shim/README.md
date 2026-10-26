@@ -174,8 +174,9 @@ initialization, allocation-thread calls and thread policy. This investigation
 
 The [repeat at `66c941c`](https://github.com/Stevie1704/sil/actions/runs/39571473041)
 failed the old proof gate despite matching the first capture's recorded kernel,
-Heaptrack, compiler, glibc and libstdc++ versions. Its retained
-[`results.json`](evidence-failure/results.json) and failure sidecars show:
+Heaptrack, compiler, glibc and libstdc++ versions. Its
+[archived report](https://github.com/Stevie1704/sil/blob/d34226cb347d6568c8b7dde33ccb23227e960231/proofs/heaptrack-shim/evidence-failure/results.json)
+and retained failure sidecars show:
 
 - Both ordinary baselines completed with ten Messages and virtual descendant
   clocks.
@@ -198,7 +199,7 @@ failed capture is **not retroactively accepted** as stable evidence.
 The corrected proof records bounded experiments as incomplete negative
 observations and lets the runner clean up before finalizing captures. Regression
 tests cover the real runner/Participant group boundary and reject incomplete or
-inconsistent bounded evidence. The original first-run evidence remains intact.
+inconsistent bounded evidence. The first-run report and Recordings remain intact.
 The support decision stays **defer**: restoration can preserve descendants when
 a Run completes, but this repeat demonstrates that it does not make startup or
 timer behavior reliable.
@@ -206,11 +207,13 @@ timer behavior reliable.
 ## Native review follow-up
 
 The [extended native workflow](https://github.com/Stevie1704/sil/actions/runs/40291189216)
-at `3ef68cc` passed all Run, calibration and setup-probe gates. Compact source
-reports, raw clock audit records, timestamp projections and availability logs
+at `3ef68cc` passed all Run, calibration and setup-probe gates. Clock and
+availability reports, raw clock audit records, timestamp projections and capture outcomes
 are retained in [`evidence-review/`](evidence-review/). Its `origin.json`
 identifies the source artifact; its separate digest inventory covers the
-retained subset. The raw captures and full symbol tables remain in the artifact.
+retained subset. The
+[full comparison report](https://github.com/Stevie1704/sil/blob/d34226cb347d6568c8b7dde33ccb23227e960231/proofs/heaptrack-shim/evidence-review/heaptrack-shim-evidence/results.json)
+is archived in Git; raw captures and full symbol tables remain in the artifact.
 
 - **Clock measured:** both calibration processes called `CLOCK_MONOTONIC` from
   libstdc++'s `steady_clock::now`. In the shimmed process, the audit observed an
@@ -250,57 +253,46 @@ specification and qualification. The #330 conclusion remains **defer support**.
 
 ## Evidence
 
-The workflow uploads `heaptrack-shim-evidence` for 30 days. `results.json`
-contains host/tool identities, build commands, binary digests, the full matrix,
-Recording comparisons, clock and sleep checks, allocation checks, timestamp
-statistics and growth. Each Run retains its messages, stdout/stderr, Recording,
-provenance/failure/diagnostics sidecars and raw/interpreted Heaptrack data.
-`digests.json` inventories the complete experiment output, even if final
-collection validation fails. Small results, Manifests, sidecars, decoded
-Messages and logs are copied into [`evidence/`](evidence/) after the native run;
-The six small first-capture Recordings are retained for direct byte comparisons.
-Large raw captures stay in the workflow artifact and are identified by digest.
-The inventory checks establish copy integrity; separate checks derive Recording
-verdicts from bytes and clock/sleep verdicts from decoded Messages.
-An ARM64 Linux run with `--allow-other-machine` is only a smoke check and is
-never retained as x86-64 qualification evidence.
+The workflow uploads the complete experiment output as `heaptrack-shim-evidence`
+for 30 days: reports, tool identities, build commands, binary digests, Manifests,
+Recordings, sidecars, logs and raw/interpreted Heaptrack captures. Its
+`digests.json` inventories those files even if collection validation fails.
+An ARM64 run with `--allow-other-machine` is only a smoke check, not x86-64
+qualification evidence.
 
-To reproduce the retained subset after downloading the workflow artifact:
+The committed subset keeps evidence needed to inspect the conclusions:
+
+- [`evidence/`](evidence/): the first native matrix report and six Recordings.
+  Tests decode the Messages to check clocks and sleep behavior, and compare
+  Recording bytes directly. Decoded JSON copies, sidecars, Manifests and logs
+  are omitted.
+- [`evidence-failure/`](evidence-failure/): startup failure sidecars and the
+  before/after capture hashes exposing the old cleanup defect. The full failed
+  report is archived at the immutable link above; regression tests exercise
+  startup classification, bounded evidence validation and real process cleanup.
+- [`evidence-review/`](evidence-review/): the two unshimmed control Recordings,
+  clock calibration evidence, native/container availability reports and direct
+  capture outcomes. Repeated matrix reports, setup/version logs and generated
+  fixture sources are omitted.
+
+Each directory's `origin.json` identifies its workflow, compressed artifact and
+an immutable Git archive of the original retained files. Its `digests.json`
+covers exactly the current subset; these checks establish copy integrity,
+separately from the Recording and clock checks.
+
+While the workflow artifacts remain available, download their full output with:
 
 ```sh
 gh run download 39570810756 -R Stevie1704/sil \
   -n heaptrack-shim-evidence -D build/heaptrack-shim-artifact
-python proofs/heaptrack-shim/retain.py \
-  build/heaptrack-shim-artifact/heaptrack-shim-evidence \
-  proofs/heaptrack-shim/evidence
-```
-
-The retention script verifies copied files against the original inventory,
-including the small Recordings. Expected fixture values in tests deliberately
-remain independent of implementation constants, and the test checksum
-calculation independently verifies the shared runtime digest helper.
-`tests/test_heaptrack_shim_proof.py` independently checks the retained matrix,
-clock/sleep observations, verdict consistency and integrity, including rejection
-of modified or truncated artifact files. `evidence-failure/` separately retains
-the failed repeat and its artifact identity; its own inventory covers those
-small snapshots, with `origin.json` identifying the original workflow artifact.
-Empty stderr logs and stderr already captured in the failure sidecars are omitted.
-`origin.json` separately identifies the workflow and compressed artifact; it
-is not part of the original experiment inventory.
-
-The compact review subset can be reproduced after downloading the extended
-workflow artifact:
-
-```sh
 gh run download 40291189216 -R Stevie1704/sil \
   -n heaptrack-shim-evidence -D build/heaptrack-shim-review-artifact
-python proofs/heaptrack-shim/retain-review.py \
-  build/heaptrack-shim-review-artifact proofs/heaptrack-shim/evidence-review
 ```
 
-The clock projection retains every timestamp value and multiplicity needed by
-the origin model, with the original raw capture digest; order is omitted.
-Selected steady-clock symbol lines identify the observed callers without
-copying the complete library symbol table. Tests compare the audit bytes with
-the decoded samples and independently check their brackets, domains and
-arithmetic against every retained timestamp value.
+The clock projection keeps every timestamp value and multiplicity needed by
+its origin model, with the original raw capture digest; order is omitted.
+Selected steady-clock symbol lines identify callers without copying the entire
+library symbol table. Tests compare audit bytes with decoded samples and check
+their brackets, domains and arithmetic against every retained timestamp value.
+Expected values and checksum calculations in tests remain independent of the
+proof's constants and digest helper.
