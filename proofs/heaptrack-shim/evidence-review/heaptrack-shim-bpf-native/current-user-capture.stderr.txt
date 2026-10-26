@@ -1,0 +1,1 @@
+ERROR: bpftrace currently only supports running as the root user.

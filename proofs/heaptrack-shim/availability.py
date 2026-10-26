@@ -234,9 +234,14 @@ END {{ clear(@active); }}
             row[f"kernel_{field}_ns"] = int(timestamp[1]) if timestamp else None
         if row["kernel_first_ns"] is not None and row["kernel_last_ns"] is not None:
             row["clock"] = "host monotonic via bpf_ktime_get_ns; source-identified helper with observed values"
-        if complete and baseline_ns and row["fixture_baseline_uid"] == row["fixture_profiled_uid"]:
+        timing_comparable = (capture["returncode"] == 0 and count == ALLOCATIONS
+            and observed_ns is not None and baseline_ns is not None
+            and not diagnostic_error_or_loss
+            and row["fixture_baseline_uid"] == row["fixture_profiled_uid"])
+        row["loop_timing_comparable"] = timing_comparable
+        if timing_comparable and baseline_ns:
             row["single_run_loop_time_ratio"] = observed_ns / baseline_ns
-        elif complete:
+        elif observed_ns is not None:
             row["overhead_unavailable_reason"] = "baseline and profiled fixture contexts differ or baseline unavailable"
         report["attempts"].append(row)
         return row

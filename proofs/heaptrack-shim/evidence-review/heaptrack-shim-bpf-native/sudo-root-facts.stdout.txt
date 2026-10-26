@@ -1,0 +1,49 @@
+{
+  "system": "Linux",
+  "machine": "x86_64",
+  "kernel": "6.17.0-1022-azure",
+  "uid": 0,
+  "euid": 0,
+  "process_status": {
+    "Uid": "0\t0\t0\t0",
+    "Gid": "0\t0\t0\t0",
+    "CapInh": "0000000000000000",
+    "CapPrm": "000001ffffffffff",
+    "CapEff": "000001ffffffffff",
+    "CapBnd": "000001ffffffffff",
+    "CapAmb": "0000000000000000",
+    "NoNewPrivs": "0",
+    "Seccomp": "0",
+    "Seccomp_filters": "0"
+  },
+  "policy": {
+    "unprivileged_bpf_disabled": {
+      "value": "2"
+    },
+    "perf_event_paranoid": {
+      "value": "4"
+    },
+    "ptrace_scope": {
+      "value": "1"
+    },
+    "lockdown": {
+      "value": "[none] integrity confidentiality"
+    }
+  },
+  "interfaces": {
+    "/sys/kernel/btf/vmlinux": {
+      "present": true
+    },
+    "/sys/kernel/tracing": {
+      "present": true
+    },
+    "/sys/kernel/debug/tracing": {
+      "present": true
+    },
+    "/lib/modules/6.17.0-1022-azure": {
+      "present": true
+    }
+  },
+  "container_marker": false,
+  "bpftrace_environment": {}
+}

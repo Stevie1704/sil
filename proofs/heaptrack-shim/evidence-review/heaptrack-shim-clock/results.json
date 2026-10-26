@@ -1,0 +1,504 @@
+{
+  "artifacts": {
+    "/home/runner/work/_temp/heaptrack-shim-build/libsil_clock_shim.so": {
+      "bytes": 30280,
+      "sha256": "305b3f639b9b63c0d20146825d50adf022cf67a63fb3d3dc1410d94a4868392a"
+    },
+    "/home/runner/work/sil/sil/build/heaptrack-shim-clock/clock_audit.so": {
+      "bytes": 20360,
+      "sha256": "c494b21e006b47637ba03e82c0bb1eac2af225efed4791855f8f12ae86d9d34f"
+    },
+    "/home/runner/work/sil/sil/build/heaptrack-shim-clock/clock_probe": {
+      "bytes": 21568,
+      "sha256": "0aad44e2390b649935329fcae4d07b2d07934488c4a187ae53e803bdd9f607ed"
+    },
+    "/usr/lib/heaptrack/libheaptrack_preload.so": {
+      "bytes": 51608,
+      "sha256": "134760dbba8d9a2cd1b45f639c119f5c0cd779674a496fb7ed2b6baacac15ca9"
+    }
+  },
+  "bounds": {
+    "audit_records": 1024,
+    "raw_bytes": 33554432,
+    "wall_seconds": 5
+  },
+  "build_commands": [
+    {
+      "command": [
+        "gcc-12",
+        "-O2",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-shared",
+        "-fPIC",
+        "-o",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-clock/clock_audit.so",
+        "/home/runner/work/sil/sil/proofs/heaptrack-shim/clock_audit.c",
+        "-ldl"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": [
+        "gcc-12",
+        "-O2",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-I",
+        "/home/runner/work/sil/sil/include",
+        "-o",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-clock/clock_probe",
+        "/home/runner/work/sil/sil/proofs/heaptrack-shim/clock_probe.c"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": ""
+    }
+  ],
+  "complete": true,
+  "host": {
+    "machine": "x86_64",
+    "system": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39"
+  },
+  "inventory": {
+    "clock_audit.so": {
+      "bytes": 20360,
+      "sha256": "c494b21e006b47637ba03e82c0bb1eac2af225efed4791855f8f12ae86d9d34f"
+    },
+    "clock_probe": {
+      "bytes": 21568,
+      "sha256": "0aad44e2390b649935329fcae4d07b2d07934488c4a187ae53e803bdd9f607ed"
+    },
+    "shimmed/analysis.json": {
+      "bytes": 4236,
+      "sha256": "f4960cb9d985b2d5f18fe351b8de7054c2f882756ad3a12d63259604fb2fa21a"
+    },
+    "shimmed/audit.bin": {
+      "bytes": 448,
+      "sha256": "4557f3d82de3c79caf246da95a7906f71dc4a035c02a694cf1a04ec35bceac78"
+    },
+    "shimmed/caller-symbols.json": {
+      "bytes": 618127,
+      "sha256": "c1bb653983df5a1ccdcefe7a3874db6d063676bd9d94e85f6c32c5335b9a8ce3"
+    },
+    "shimmed/clock.region": {
+      "bytes": 32,
+      "sha256": "2b5a0f9231ddf029b1d3ba9ea886825a090c98bb0f8136e4d60097443377edd4"
+    },
+    "shimmed/heaptrack.raw": {
+      "bytes": 828826,
+      "sha256": "29013012878c4a8c0c6f5b4709ecd2c28260eaa28a60f741b4e92984e5d51492"
+    },
+    "shimmed/maps.txt": {
+      "bytes": 7917,
+      "sha256": "b8eac80b88377aecd0ba031d0a2ff62efd8879a8a954c88433991ae7cfdcb24c"
+    },
+    "shimmed/stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "shimmed/stdout.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "unshimmed/analysis.json": {
+      "bytes": 5798,
+      "sha256": "ef15c8cc61885c5e9dd3aae5201655cfce0ae80556f85e2b8ae3f390a6c37e4d"
+    },
+    "unshimmed/audit.bin": {
+      "bytes": 704,
+      "sha256": "bcc6209a7069befbc71c071abda2533662061904250df33d5d2cbf5c377875c5"
+    },
+    "unshimmed/caller-symbols.json": {
+      "bytes": 618127,
+      "sha256": "c1bb653983df5a1ccdcefe7a3874db6d063676bd9d94e85f6c32c5335b9a8ce3"
+    },
+    "unshimmed/clock.region": {
+      "bytes": 32,
+      "sha256": "2b5a0f9231ddf029b1d3ba9ea886825a090c98bb0f8136e4d60097443377edd4"
+    },
+    "unshimmed/heaptrack.raw": {
+      "bytes": 1643,
+      "sha256": "b16fc7a6f6b590f75a6341b5d2e024d2958d5abf959dd512428126440da9e8c9"
+    },
+    "unshimmed/maps.txt": {
+      "bytes": 7077,
+      "sha256": "5745d2b4bd50c483b897dce23117d5a70363d776c6971576ecc4ba40b96d8f7d"
+    },
+    "unshimmed/stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "unshimmed/stdout.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "runs": {
+    "shimmed": {
+      "audit_bound_reached": false,
+      "audit_samples": [
+        {
+          "caller_address": 139997362387335,
+          "clock_id": 1,
+          "domain": "host",
+          "host_after_ns": 167942298682,
+          "host_before_ns": 167942287070,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 167942298431,
+          "sequence": 0,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3747
+        },
+        {
+          "caller_address": 139997362387335,
+          "clock_id": 1,
+          "domain": "controlled_virtual",
+          "host_after_ns": 167952562050,
+          "host_before_ns": 167952558493,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 0,
+          "sequence": 1,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3748
+        },
+        {
+          "caller_address": 139997362387335,
+          "clock_id": 1,
+          "domain": "controlled_virtual",
+          "host_after_ns": 167962933725,
+          "host_before_ns": 167962933395,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 100000000,
+          "sequence": 2,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3748
+        },
+        {
+          "caller_address": 139997362387335,
+          "clock_id": 1,
+          "domain": "controlled_virtual",
+          "host_after_ns": 167983019236,
+          "host_before_ns": 167983018905,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 200000000,
+          "sequence": 3,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3748
+        },
+        {
+          "caller_address": 139997362387335,
+          "clock_id": 1,
+          "domain": "controlled_virtual",
+          "host_after_ns": 168003110256,
+          "host_before_ns": 168003109925,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 400000000,
+          "sequence": 4,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3748
+        },
+        {
+          "caller_address": 139997362387335,
+          "clock_id": 1,
+          "domain": "controlled_virtual",
+          "host_after_ns": 168023196908,
+          "host_before_ns": 168023196568,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 900000000,
+          "sequence": 5,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3748
+        },
+        {
+          "caller_address": 139997362387335,
+          "clock_id": 1,
+          "domain": "controlled_virtual",
+          "host_after_ns": 168043312900,
+          "host_before_ns": 168043312169,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 900000000,
+          "sequence": 6,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3747
+        }
+      ],
+      "backend": "CLOCK_MONOTONIC via libstdc++ steady_clock::now",
+      "controlled_virtual_values_observed_ns": [
+        0,
+        100000000,
+        200000000,
+        400000000,
+        900000000
+      ],
+      "exit_code": 0,
+      "host_mapping": null,
+      "host_mapping_reason": "this audit identifies backend and origin domain; it does not establish a host-time mapping for arbitrary Run captures",
+      "mapped_artifacts": {
+        "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33": {
+          "bytes": 2592224,
+          "sha256": "1fd75fe70354a416d75aef22bcae68c47bd25d20e2d0568c30b1a9838cf62f11"
+        }
+      },
+      "observed_clock_id": 1,
+      "origin_candidates_ns": [
+        167942298431
+      ],
+      "origin_domain_inferred_from_all_timestamp_records": "host",
+      "origin_inference": "observed clock values matched to every raw c record using signed duration_cast milliseconds and size_t conversion; not direct access to Heaptrack's private cached startTime",
+      "stopped": null,
+      "timestamp_count": 33087,
+      "timestamp_values_ms": [
+        18446744073709383674,
+        18446744073709383774,
+        18446744073709383874,
+        18446744073709384074,
+        18446744073709384574
+      ],
+      "wall_seconds": 0.10741450500000838
+    },
+    "unshimmed": {
+      "audit_bound_reached": false,
+      "audit_samples": [
+        {
+          "caller_address": 139653609814407,
+          "clock_id": 1,
+          "domain": "host",
+          "host_after_ns": 167065827063,
+          "host_before_ns": 167065818707,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 167065826842,
+          "sequence": 0,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3744
+        },
+        {
+          "caller_address": 139653609814407,
+          "clock_id": 1,
+          "domain": "host",
+          "host_after_ns": 167076124845,
+          "host_before_ns": 167076124014,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 167076124615,
+          "sequence": 1,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3745
+        },
+        {
+          "caller_address": 139653609814407,
+          "clock_id": 1,
+          "domain": "host",
+          "host_after_ns": 167086211377,
+          "host_before_ns": 167086210726,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 167086211147,
+          "sequence": 2,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3745
+        },
+        {
+          "caller_address": 139653609814407,
+          "clock_id": 1,
+          "domain": "host",
+          "host_after_ns": 167096289854,
+          "host_before_ns": 167096289183,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 167096289654,
+          "sequence": 3,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3745
+        },
+        {
+          "caller_address": 139653609814407,
+          "clock_id": 1,
+          "domain": "host",
+          "host_after_ns": 167106367950,
+          "host_before_ns": 167106367299,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 167106367750,
+          "sequence": 4,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3745
+        },
+        {
+          "caller_address": 139653609814407,
+          "clock_id": 1,
+          "domain": "host",
+          "host_after_ns": 167116452128,
+          "host_before_ns": 167116451406,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 167116451907,
+          "sequence": 5,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3745
+        },
+        {
+          "caller_address": 139653609814407,
+          "clock_id": 1,
+          "domain": "host",
+          "host_after_ns": 167126535383,
+          "host_before_ns": 167126534742,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 167126535123,
+          "sequence": 6,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3745
+        },
+        {
+          "caller_address": 139653609814407,
+          "clock_id": 1,
+          "domain": "host",
+          "host_after_ns": 167136617577,
+          "host_before_ns": 167136616976,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 167136617347,
+          "sequence": 7,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3745
+        },
+        {
+          "caller_address": 139653609814407,
+          "clock_id": 1,
+          "domain": "host",
+          "host_after_ns": 167146700813,
+          "host_before_ns": 167146699871,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 167146700583,
+          "sequence": 8,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3745
+        },
+        {
+          "caller_address": 139653609814407,
+          "clock_id": 1,
+          "domain": "host",
+          "host_after_ns": 167156790201,
+          "host_before_ns": 167156789449,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 167156789970,
+          "sequence": 9,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3745
+        },
+        {
+          "caller_address": 139653609814407,
+          "clock_id": 1,
+          "domain": "host",
+          "host_after_ns": 167166775458,
+          "host_before_ns": 167166774135,
+          "module": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+          "module_offset": 915847,
+          "returned_ns": 167166775097,
+          "sequence": 10,
+          "status": 0,
+          "symbol": "_ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19",
+          "tid": 3744
+        }
+      ],
+      "backend": "CLOCK_MONOTONIC via libstdc++ steady_clock::now",
+      "controlled_virtual_values_observed_ns": [],
+      "exit_code": 0,
+      "host_mapping": null,
+      "host_mapping_reason": "this audit identifies backend and origin domain; it does not establish a host-time mapping for arbitrary Run captures",
+      "mapped_artifacts": {
+        "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33": {
+          "bytes": 2592224,
+          "sha256": "1fd75fe70354a416d75aef22bcae68c47bd25d20e2d0568c30b1a9838cf62f11"
+        }
+      },
+      "observed_clock_id": 1,
+      "origin_candidates_ns": [
+        167065826842
+      ],
+      "origin_domain_inferred_from_all_timestamp_records": "host",
+      "origin_inference": "observed clock values matched to every raw c record using signed duration_cast milliseconds and size_t conversion; not direct access to Heaptrack's private cached startTime",
+      "stopped": null,
+      "timestamp_count": 10,
+      "timestamp_values_ms": [
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        80,
+        90,
+        100
+      ],
+      "wall_seconds": 0.10742447800001287
+    }
+  },
+  "status": "established",
+  "timestamp_clock_established_in_calibration": true,
+  "tools": [
+    {
+      "command": [
+        "heaptrack",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "heaptrack 1.5.0\n"
+    },
+    {
+      "command": [
+        "gcc-12",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "gcc-12 (Ubuntu 12.4.0-2ubuntu1~24.04.1) 12.4.0\nCopyright (C) 2022 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+    },
+    {
+      "command": [
+        "dpkg-query",
+        "-W",
+        "heaptrack",
+        "libstdc++6",
+        "libc6"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "heaptrack\t1.5.0+dfsg1-2ubuntu3\nlibc6:amd64\t2.39-0ubuntu8.9\nlibstdc++6:amd64\t14.2.0-4ubuntu2~24.04.1\n"
+    }
+  ]
+}

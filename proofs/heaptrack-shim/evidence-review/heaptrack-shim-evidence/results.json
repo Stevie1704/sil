@@ -1,0 +1,727 @@
+{
+  "artifacts": {
+    "/home/runner/work/_temp/heaptrack-shim-build/libsil_clock_shim.so": {
+      "bytes": 30280,
+      "sha256": "305b3f639b9b63c0d20146825d50adf022cf67a63fb3d3dc1410d94a4868392a"
+    },
+    "/home/runner/work/_temp/heaptrack-shim-build/sil-run": {
+      "bytes": 20109656,
+      "sha256": "1f1f1857aceb53c1260ff76de6319f45bcdc8ef14bd771177a72434145c8720e"
+    },
+    "/home/runner/work/_temp/heaptrack-shim-build/sil-run-diagnostics": {
+      "bytes": 23813608,
+      "sha256": "2cf2a880c4f6c9126ad06b699d89eed06d773ccebb6585ce1cd805f5697b63c9"
+    },
+    "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/preserve.so": {
+      "bytes": 17912,
+      "sha256": "ea29459ed9fc2b673f7b4c9adcfefa2eaaa82fee452f1ed9a5e05a1c48aad985"
+    },
+    "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/workload.so": {
+      "bytes": 18472,
+      "sha256": "7902c5ea54636ff8f1443efa8e47ac15beb7810cb642e034b31958cc2d73bbd9"
+    },
+    "/usr/lib/heaptrack/libexec/heaptrack_interpret": {
+      "bytes": 113056,
+      "sha256": "ad4e06cd5f43b4b4850a032a3d7abdaf557dba16eeb551668ce8122e3d7e3661"
+    },
+    "/usr/lib/heaptrack/libheaptrack_preload.so": {
+      "bytes": 51608,
+      "sha256": "134760dbba8d9a2cd1b45f639c119f5c0cd779674a496fb7ed2b6baacac15ca9"
+    }
+  },
+  "bounds": {
+    "raw_bytes": 134217728,
+    "wall_seconds": 30
+  },
+  "build_commands": [
+    {
+      "command": [
+        "gcc-12",
+        "-shared",
+        "-fPIC",
+        "-O2",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-o",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/workload.so",
+        "/home/runner/work/sil/sil/proofs/heaptrack-shim/workload.c"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": [
+        "gcc-12",
+        "-shared",
+        "-fPIC",
+        "-O2",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-o",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/preserve.so",
+        "/home/runner/work/sil/sil/proofs/heaptrack-shim/preserve.c"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": ""
+    }
+  ],
+  "complete": true,
+  "host": {
+    "libc": [
+      "glibc",
+      "2.39"
+    ],
+    "machine": "x86_64",
+    "system": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "uid": 1001
+  },
+  "issue": 330,
+  "observations": [
+    {
+      "mode": "baseline",
+      "policy": "reject",
+      "run_complete": true,
+      "status": "completed"
+    },
+    {
+      "mode": "preload",
+      "policy": "reject",
+      "run_complete": true,
+      "status": "completed"
+    },
+    {
+      "mode": "preserve",
+      "policy": "reject",
+      "run_complete": true,
+      "status": "completed"
+    },
+    {
+      "mode": "baseline",
+      "policy": "immediate",
+      "run_complete": true,
+      "status": "completed"
+    },
+    {
+      "mode": "preload",
+      "policy": "immediate",
+      "run_complete": true,
+      "status": "completed"
+    },
+    {
+      "mode": "preserve",
+      "policy": "immediate",
+      "run_complete": true,
+      "status": "completed"
+    }
+  ],
+  "qualified_machine": true,
+  "runs": [
+    {
+      "cleanup_completed": true,
+      "clocks_match_virtual_time": {
+        "child": true,
+        "grandchild": true,
+        "parent": true
+      },
+      "command": [
+        "/home/runner/work/_temp/heaptrack-shim-build/sil-run",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/reject.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/reject-baseline/run.mcap",
+        "--participant-timeout-ms",
+        "10000"
+      ],
+      "exit_code": 0,
+      "host_begin_ns": 141161323017,
+      "host_end_ns": 142328420748,
+      "manifest": {
+        "bytes": 686,
+        "sha256": "921e563eaf3b7a304f44aede646d8cb6aaf226e6a6fd2a535efc0e75c816a899"
+      },
+      "messages": 10,
+      "mode": "baseline",
+      "policy": "reject",
+      "recording": {
+        "bytes": 2032,
+        "sha256": "d811c62adfaf302bedbfda6bb0c50111980efd85847e53af65f869f6aa276f87"
+      },
+      "sleep_matches_policy": true,
+      "stderr_nonempty": false,
+      "stopped": null,
+      "wall_ns": 1167098122
+    },
+    {
+      "cleanup_completed": true,
+      "clocks_match_virtual_time": {
+        "child": false,
+        "grandchild": false,
+        "parent": true
+      },
+      "command": [
+        "/home/runner/work/_temp/heaptrack-shim-build/sil-run-diagnostics",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/reject.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/reject-preload/run.mcap",
+        "--participant-timeout-ms",
+        "10000",
+        "--launch-wrapper",
+        "process",
+        "/home/runner/work/sil/sil/proofs/heaptrack-shim/launch.sh"
+      ],
+      "exit_code": 0,
+      "heap": {
+        "allocation_totals": {
+          "allocated_bytes": 14551840,
+          "allocations": 13592,
+          "frees": 13403,
+          "outstanding_allocations": 189,
+          "outstanding_bytes": 540647,
+          "peak_tracked_bytes": 3341939,
+          "temporary_allocations": 2347
+        },
+        "coverage": {
+          "allocations_unknown_module": 0,
+          "allocations_unknown_symbol": 13512,
+          "allocations_with_caller": 13592,
+          "truncated": false,
+          "undecodable_records": 0
+        },
+        "interpret_exit_code": 0,
+        "interpreted": {
+          "bytes": 15138328,
+          "sha256": "7cb6f277fcb74c4db58b2f0ec9db28610922dbd6502b686d8c9faca392d3bcf2"
+        },
+        "known_site": {
+          "calls": 80,
+          "expected_calls": 80,
+          "expected_size": 2048,
+          "sizes": [
+            2048
+          ]
+        },
+        "timestamps": {
+          "clock": null,
+          "clock_assessment": "not_measured_in_this_capture",
+          "count": 561329,
+          "host_mapping": null,
+          "max_ms": 18446744073709410022,
+          "min_ms": 18446744073709409122,
+          "source_hypothesis": "Heaptrack steady_clock; see candidates.md and clock calibration",
+          "unique": 10
+        }
+      },
+      "host_begin_ns": 142354029408,
+      "host_end_ns": 143702296511,
+      "manifest": {
+        "bytes": 686,
+        "sha256": "921e563eaf3b7a304f44aede646d8cb6aaf226e6a6fd2a535efc0e75c816a899"
+      },
+      "messages": 10,
+      "mode": "preload",
+      "policy": "reject",
+      "raw": {
+        "bytes": 15369564,
+        "sha256": "dfda6addae954411100a6762f31955dc04586e7aed86c8620564443bb2d38cad"
+      },
+      "raw_bytes_per_wall_second": 11399490.521326944,
+      "raw_stable": true,
+      "recording": {
+        "bytes": 2032,
+        "sha256": "269ca3fbb81ad5ca8fefb39c6e34a5fecfcca33ce0ad90f8c623d864e25cc050"
+      },
+      "recording_equal": false,
+      "sleep_matches_policy": true,
+      "stderr_nonempty": false,
+      "stopped": null,
+      "wall_ns": 1348267624
+    },
+    {
+      "cleanup_completed": true,
+      "clocks_match_virtual_time": {
+        "child": true,
+        "grandchild": true,
+        "parent": true
+      },
+      "command": [
+        "/home/runner/work/_temp/heaptrack-shim-build/sil-run-diagnostics",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/reject.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/reject-preserve/run.mcap",
+        "--participant-timeout-ms",
+        "10000",
+        "--launch-wrapper",
+        "process",
+        "/home/runner/work/sil/sil/proofs/heaptrack-shim/launch.sh"
+      ],
+      "exit_code": 0,
+      "heap": {
+        "allocation_totals": {
+          "allocated_bytes": 14552866,
+          "allocations": 13596,
+          "frees": 13404,
+          "outstanding_allocations": 192,
+          "outstanding_bytes": 541748,
+          "peak_tracked_bytes": 3343040,
+          "temporary_allocations": 2348
+        },
+        "coverage": {
+          "allocations_unknown_module": 0,
+          "allocations_unknown_symbol": 13515,
+          "allocations_with_caller": 13596,
+          "truncated": false,
+          "undecodable_records": 0
+        },
+        "interpret_exit_code": 0,
+        "interpreted": {
+          "bytes": 14016445,
+          "sha256": "64b9f1522f98c3399953d99ad609f8dad59ab2a99cc571141aafdbc9f7f718c3"
+        },
+        "known_site": {
+          "calls": 80,
+          "expected_calls": 80,
+          "expected_size": 2048,
+          "sizes": [
+            2048
+          ]
+        },
+        "timestamps": {
+          "clock": null,
+          "clock_assessment": "not_measured_in_this_capture",
+          "count": 517827,
+          "host_mapping": null,
+          "max_ms": 18446744073709407400,
+          "min_ms": 18446744073709406500,
+          "source_hypothesis": "Heaptrack steady_clock; see candidates.md and clock calibration",
+          "unique": 10
+        }
+      },
+      "host_begin_ns": 144975118080,
+      "host_end_ns": 146243347061,
+      "manifest": {
+        "bytes": 686,
+        "sha256": "921e563eaf3b7a304f44aede646d8cb6aaf226e6a6fd2a535efc0e75c816a899"
+      },
+      "messages": 10,
+      "mode": "preserve",
+      "policy": "reject",
+      "raw": {
+        "bytes": 14276660,
+        "sha256": "fb7a1de0e2c4c922ab4fca94527ede6349acd78ed386bc0f2dda883cf1fa8965"
+      },
+      "raw_bytes_per_wall_second": 11257160.310319036,
+      "raw_stable": true,
+      "recording": {
+        "bytes": 2032,
+        "sha256": "d811c62adfaf302bedbfda6bb0c50111980efd85847e53af65f869f6aa276f87"
+      },
+      "recording_equal": true,
+      "sleep_matches_policy": true,
+      "stderr_nonempty": false,
+      "stopped": null,
+      "wall_ns": 1268229252
+    },
+    {
+      "cleanup_completed": true,
+      "clocks_match_virtual_time": {
+        "child": true,
+        "grandchild": true,
+        "parent": true
+      },
+      "command": [
+        "/home/runner/work/_temp/heaptrack-shim-build/sil-run",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/immediate.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/immediate-baseline/run.mcap",
+        "--participant-timeout-ms",
+        "10000"
+      ],
+      "exit_code": 0,
+      "host_begin_ns": 147427398149,
+      "host_end_ns": 148554209176,
+      "manifest": {
+        "bytes": 689,
+        "sha256": "3e4cadfafa1f5f62b47dc6d4c576b1792e6225bd970d8fc44beda6c08c0870b0"
+      },
+      "messages": 10,
+      "mode": "baseline",
+      "policy": "immediate",
+      "recording": {
+        "bytes": 2032,
+        "sha256": "aac23465c50fd8333ffdee45c306b4cf73c3a9028e91eaf5778f5df1a214c6d6"
+      },
+      "sleep_matches_policy": true,
+      "stderr_nonempty": false,
+      "stopped": null,
+      "wall_ns": 1126811197
+    },
+    {
+      "cleanup_completed": true,
+      "clocks_match_virtual_time": {
+        "child": false,
+        "grandchild": false,
+        "parent": true
+      },
+      "command": [
+        "/home/runner/work/_temp/heaptrack-shim-build/sil-run-diagnostics",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/immediate.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/immediate-preload/run.mcap",
+        "--participant-timeout-ms",
+        "10000",
+        "--launch-wrapper",
+        "process",
+        "/home/runner/work/sil/sil/proofs/heaptrack-shim/launch.sh"
+      ],
+      "exit_code": 0,
+      "heap": {
+        "allocation_totals": {
+          "allocated_bytes": 14551840,
+          "allocations": 13592,
+          "frees": 13403,
+          "outstanding_allocations": 189,
+          "outstanding_bytes": 540647,
+          "peak_tracked_bytes": 3341939,
+          "temporary_allocations": 2347
+        },
+        "coverage": {
+          "allocations_unknown_module": 0,
+          "allocations_unknown_symbol": 13512,
+          "allocations_with_caller": 13592,
+          "truncated": false,
+          "undecodable_records": 0
+        },
+        "interpret_exit_code": 0,
+        "interpreted": {
+          "bytes": 14919455,
+          "sha256": "a589bb3f9c0da8a7dd39c077c90773c6dcf138a9f4317e41cde32d2b5c12bad9"
+        },
+        "known_site": {
+          "calls": 80,
+          "expected_calls": 80,
+          "expected_size": 2048,
+          "sizes": [
+            2048
+          ]
+        },
+        "timestamps": {
+          "clock": null,
+          "clock_assessment": "not_measured_in_this_capture",
+          "count": 552863,
+          "host_mapping": null,
+          "max_ms": 18446744073709403820,
+          "min_ms": 18446744073709402920,
+          "source_hypothesis": "Heaptrack steady_clock; see candidates.md and clock calibration",
+          "unique": 10
+        }
+      },
+      "host_begin_ns": 148556338001,
+      "host_end_ns": 149924684371,
+      "manifest": {
+        "bytes": 689,
+        "sha256": "3e4cadfafa1f5f62b47dc6d4c576b1792e6225bd970d8fc44beda6c08c0870b0"
+      },
+      "messages": 10,
+      "mode": "preload",
+      "policy": "immediate",
+      "raw": {
+        "bytes": 15177674,
+        "sha256": "bdea6a873bca179c043df4f7d60da1143a92dc62d47d300b7f7dfc6ca62ad726"
+      },
+      "raw_bytes_per_wall_second": 11091981.048222031,
+      "raw_stable": true,
+      "recording": {
+        "bytes": 2032,
+        "sha256": "e8cebaf3b4dfc15b3ad5f274dabdfdb1099eb0cad20cae783f24182f91b1fe8a"
+      },
+      "recording_equal": false,
+      "sleep_matches_policy": true,
+      "stderr_nonempty": false,
+      "stopped": null,
+      "wall_ns": 1368346550
+    },
+    {
+      "cleanup_completed": true,
+      "clocks_match_virtual_time": {
+        "child": true,
+        "grandchild": true,
+        "parent": true
+      },
+      "command": [
+        "/home/runner/work/_temp/heaptrack-shim-build/sil-run-diagnostics",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/immediate.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/immediate-preserve/run.mcap",
+        "--participant-timeout-ms",
+        "10000",
+        "--launch-wrapper",
+        "process",
+        "/home/runner/work/sil/sil/proofs/heaptrack-shim/launch.sh"
+      ],
+      "exit_code": 0,
+      "heap": {
+        "allocation_totals": {
+          "allocated_bytes": 14552866,
+          "allocations": 13596,
+          "frees": 13404,
+          "outstanding_allocations": 192,
+          "outstanding_bytes": 541748,
+          "peak_tracked_bytes": 3343040,
+          "temporary_allocations": 2348
+        },
+        "coverage": {
+          "allocations_unknown_module": 0,
+          "allocations_unknown_symbol": 13515,
+          "allocations_with_caller": 13596,
+          "truncated": false,
+          "undecodable_records": 0
+        },
+        "interpret_exit_code": 0,
+        "interpreted": {
+          "bytes": 16531293,
+          "sha256": "59053f47efd91a6c1920bc2b47b927f0b3e7b296ddbb623e4a544ae49735ebec"
+        },
+        "known_site": {
+          "calls": 80,
+          "expected_calls": 80,
+          "expected_size": 2048,
+          "sizes": [
+            2048
+          ]
+        },
+        "timestamps": {
+          "clock": null,
+          "clock_assessment": "not_measured_in_this_capture",
+          "count": 615359,
+          "host_mapping": null,
+          "max_ms": 18446744073709401203,
+          "min_ms": 18446744073709400303,
+          "source_hypothesis": "Heaptrack steady_clock; see candidates.md and clock calibration",
+          "unique": 10
+        }
+      },
+      "host_begin_ns": 151173030676,
+      "host_end_ns": 152621949550,
+      "manifest": {
+        "bytes": 689,
+        "sha256": "3e4cadfafa1f5f62b47dc6d4c576b1792e6225bd970d8fc44beda6c08c0870b0"
+      },
+      "messages": 10,
+      "mode": "preserve",
+      "policy": "immediate",
+      "raw": {
+        "bytes": 16791508,
+        "sha256": "7b507d6171c4ed2dd1149307aba4192508f6b3791558173c9cb2cf423f8e0ee3"
+      },
+      "raw_bytes_per_wall_second": 11588988.105199132,
+      "raw_stable": true,
+      "recording": {
+        "bytes": 2032,
+        "sha256": "aac23465c50fd8333ffdee45c306b4cf73c3a9028e91eaf5778f5df1a214c6d6"
+      },
+      "recording_equal": true,
+      "sleep_matches_policy": true,
+      "stderr_nonempty": false,
+      "stopped": null,
+      "wall_ns": 1448919254
+    }
+  ],
+  "tools": [
+    {
+      "command": [
+        "heaptrack",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "heaptrack 1.5.0\n"
+    },
+    {
+      "command": [
+        "gcc-12",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "gcc-12 (Ubuntu 12.4.0-2ubuntu1~24.04.1) 12.4.0\nCopyright (C) 2022 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+    },
+    {
+      "command": [
+        "dpkg-query",
+        "-W",
+        "heaptrack",
+        "libc6",
+        "libstdc++6"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "heaptrack\t1.5.0+dfsg1-2ubuntu3\nlibc6:amd64\t2.39-0ubuntu8.9\nlibstdc++6:amd64\t14.2.0-4ubuntu2~24.04.1\n"
+    },
+    {
+      "command": [
+        "git",
+        "-C",
+        "/home/runner/work/sil/sil/proofs/heaptrack-shim",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "4f46bf8c42329bc89820703bc1eb68b928e7fceb\n"
+    }
+  ],
+  "unshimmed_control": {
+    "comparisons": [
+      {
+        "mode": "preload",
+        "policy": "reject",
+        "raw_bytes_ratio": 18.535099503867517,
+        "timestamp_records_ratio": 5397.3942307692305
+      },
+      {
+        "mode": "preserve",
+        "policy": "reject",
+        "raw_bytes_ratio": 17.217099566577506,
+        "timestamp_records_ratio": 4979.1057692307695
+      },
+      {
+        "mode": "preload",
+        "policy": "immediate",
+        "raw_bytes_ratio": 18.30368758848741,
+        "timestamp_records_ratio": 5315.990384615385
+      },
+      {
+        "mode": "preserve",
+        "policy": "immediate",
+        "raw_bytes_ratio": 20.249908949921252,
+        "timestamp_records_ratio": 5916.913461538462
+      }
+    ],
+    "non_clock_fields_equal": true,
+    "runs": [
+      {
+        "cleanup_completed": true,
+        "clocks_match_virtual_time": {
+          "child": false,
+          "grandchild": false,
+          "parent": false
+        },
+        "command": [
+          "/home/runner/work/_temp/heaptrack-shim-build/sil-run",
+          "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/unshimmed.json",
+          "-o",
+          "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/unshimmed-baseline/run.mcap",
+          "--participant-timeout-ms",
+          "10000"
+        ],
+        "exit_code": 0,
+        "host_begin_ns": 154008819609,
+        "host_end_ns": 155136010331,
+        "manifest": {
+          "bytes": 657,
+          "sha256": "8bb6447b578d5dd4fd4ec7025b95f48812355b11e630f5c062376117937d015a"
+        },
+        "messages": 10,
+        "mode": "baseline",
+        "policy": "immediate",
+        "recording": {
+          "bytes": 2032,
+          "sha256": "6a5d52e839186a0bf4dbcc29a7339a16a5108d7aa8057706d90037324492441f"
+        },
+        "sleep_matches_policy": true,
+        "stderr_nonempty": false,
+        "stopped": null,
+        "wall_ns": 1127191143
+      },
+      {
+        "cleanup_completed": true,
+        "clocks_match_virtual_time": {
+          "child": false,
+          "grandchild": false,
+          "parent": false
+        },
+        "command": [
+          "/home/runner/work/_temp/heaptrack-shim-build/sil-run-diagnostics",
+          "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/unshimmed.json",
+          "-o",
+          "/home/runner/work/sil/sil/build/heaptrack-shim-evidence/unshimmed-preload/run.mcap",
+          "--participant-timeout-ms",
+          "10000",
+          "--launch-wrapper",
+          "process",
+          "/home/runner/work/sil/sil/proofs/heaptrack-shim/launch.sh"
+        ],
+        "exit_code": 0,
+        "heap": {
+          "allocation_totals": {
+            "allocated_bytes": 14551840,
+            "allocations": 13592,
+            "frees": 13403,
+            "outstanding_allocations": 189,
+            "outstanding_bytes": 540647,
+            "peak_tracked_bytes": 3341939,
+            "temporary_allocations": 2347
+          },
+          "coverage": {
+            "allocations_unknown_module": 0,
+            "allocations_unknown_symbol": 13512,
+            "allocations_with_caller": 13592,
+            "truncated": false,
+            "undecodable_records": 0
+          },
+          "interpret_exit_code": 0,
+          "interpreted": {
+            "bytes": 573241,
+            "sha256": "5958f8fc06db71557990ed3d5343f2314ab3947bfdb779c9ee5534931a175e99"
+          },
+          "known_site": {
+            "calls": 80,
+            "expected_calls": 80,
+            "expected_size": 2048,
+            "sizes": [
+              2048
+            ]
+          },
+          "timestamps": {
+            "clock": null,
+            "clock_assessment": "not_measured_in_this_capture",
+            "count": 104,
+            "host_mapping": null,
+            "max_ms": 1039,
+            "min_ms": 10,
+            "source_hypothesis": "Heaptrack steady_clock; see candidates.md and clock calibration",
+            "unique": 104
+          }
+        },
+        "host_begin_ns": 155137506832,
+        "host_end_ns": 156345394755,
+        "manifest": {
+          "bytes": 657,
+          "sha256": "8bb6447b578d5dd4fd4ec7025b95f48812355b11e630f5c062376117937d015a"
+        },
+        "messages": 10,
+        "mode": "preload",
+        "policy": "immediate",
+        "raw": {
+          "bytes": 829214,
+          "sha256": "73d813091d143448e3e18f199c9d8a3571c7a406757a5046ee58395e23c76d2b"
+        },
+        "raw_bytes_per_wall_second": 686499.0202767988,
+        "raw_stable": true,
+        "recording": {
+          "bytes": 2032,
+          "sha256": "e93e3f37b7525bc477f5538876794f036ad52fc6d9117d982101ed0a64fa617e"
+        },
+        "recording_equal": false,
+        "sleep_matches_policy": true,
+        "stderr_nonempty": false,
+        "stopped": null,
+        "wall_ns": 1207888104
+      }
+    ],
+    "scope": "single captures of this workload; not an overhead benchmark"
+  }
+}

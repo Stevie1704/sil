@@ -37,7 +37,12 @@ def test_retained_verdicts_follow_recording_bytes_and_observed_messages():
     report = load(EVIDENCE / "results.json")
     for row in report["runs"]:
         assert row["exit_code"] == 0 and row["stopped"] is None
-        messages = load(EVIDENCE / f'{row["policy"]}-{row["mode"]}/messages.json')
+        from sil.recording import read_records, read_schemas
+        from sil.schema import MessageType
+        recording = EVIDENCE / f'{row["policy"]}-{row["mode"]}/run.mcap'
+        codec = MessageType("proof.Clock", read_schemas(recording)["proof.clock"])
+        messages = [{"t_ns": t, **codec.unpack(data)} for _, t, data in read_records(recording)]
+        assert messages == load(recording.with_name("messages.json"))
         assert len(messages) == row["messages"] == 10
         assert [m["t_ns"] for m in messages] == list(range(0, 1_000_000_000, 100_000_000))
         for field, verdict in row["clocks_match_virtual_time"].items():
@@ -63,7 +68,8 @@ def test_retained_verdicts_follow_recording_bytes_and_observed_messages():
         assert heap["timestamps"]["host_mapping"] is None
 
 
-@pytest.mark.parametrize("directory", [EVIDENCE, ROOT / "proofs/heaptrack-shim/evidence-failure"])
+@pytest.mark.parametrize("directory", [EVIDENCE, ROOT / "proofs/heaptrack-shim/evidence-failure",
+                                         ROOT / "proofs/heaptrack-shim/evidence-review"])
 def test_retained_files_match_the_capture_inventory(directory):
     inventory = load(directory / "digests.json")
     for path in directory.rglob("*"):
@@ -231,3 +237,45 @@ def test_bpf_setup_probe_records_inaccessible_interfaces(proof_module, monkeypat
     denied = facts["interfaces"]["/sys/kernel/debug/tracing"]
     assert denied["present"] is None
     assert "Permission denied" in denied["error"]
+
+
+
+def test_retained_clock_model_matches_audit_bytes_and_every_timestamp(proof_module):
+    import runpy
+    import struct
+    root = ROOT / "proofs/heaptrack-shim/evidence-review/heaptrack-shim-clock"
+    report = load(root / "results.json")
+    assert report["status"] == "established"
+    arithmetic = runpy.run_path(str(ROOT / "proofs/heaptrack-shim/clock_probe.py"))["_milliseconds"]
+    for mode, analysis in report["runs"].items():
+        symbols = [line.split() for line in load(root / mode / "steady-clock-symbols.json")["matches"]]
+        mappings = [line.split(maxsplit=5) for line in (root / mode / "maps.txt").read_text().splitlines()]
+        rows = list(struct.iter_unpack("<8Q", (root / mode / "audit.bin").read_bytes()))
+        assert len(rows) == len(analysis["audit_samples"])
+        for raw, sample in zip(sorted(rows), analysis["audit_samples"]):
+            assert list(raw) == [sample[key] for key in (
+                "sequence", "tid", "clock_id", "caller_address", "returned_ns",
+                "host_before_ns", "host_after_ns", "status")]
+            assert sample["clock_id"] == 1 and sample["status"] == 0
+            assert "steady_clock3now" in sample["symbol"]
+            assert any(int(symbol[0], 16) <= sample["module_offset"] < int(symbol[0], 16) + int(symbol[1], 16)
+                       and symbol[3] == sample["symbol"] for symbol in symbols)
+            mapping = next(m for m in mappings if len(m) == 6 and m[5] == sample["module"]
+                           and int(m[0].split("-")[0], 16) <= sample["caller_address"] < int(m[0].split("-")[1], 16))
+            assert sample["module_offset"] == (sample["caller_address"] -
+                int(mapping[0].split("-")[0], 16) + int(mapping[2], 16))
+            if sample["domain"] == "host":
+                assert sample["host_before_ns"] <= sample["returned_ns"] <= sample["host_after_ns"]
+            else:
+                assert sample["returned_ns"] in {0, 100_000_000, 200_000_000, 400_000_000, 900_000_000}
+        projected = load(root / mode / "timestamp-records.json")
+        assert sum(count for value, count in projected["counts_by_value_ms"]) == analysis["timestamp_count"]
+        assert {value for value, count in projected["counts_by_value_ms"]} == set(analysis["timestamp_values_ms"])
+        for origin in analysis["origin_candidates_ns"]:
+            reproduced = {arithmetic(sample["returned_ns"] - origin) for sample in analysis["audit_samples"]}
+            assert set(analysis["timestamp_values_ms"]) <= reproduced
+        domains = {sample["domain"] for sample in analysis["audit_samples"]
+                   if sample["returned_ns"] in analysis["origin_candidates_ns"]}
+        assert len(domains) == 1
+        assert analysis["origin_domain_inferred_from_all_timestamp_records"] == domains.pop()
+        assert analysis["host_mapping"] is None

@@ -1,0 +1,12 @@
+ERROR: Unknown error -1: couldn't set RLIMIT_MEMLOCK for bpftrace. If your program is not loading, you can try "ulimit -l 8192" to fix the problem
+ERROR: failed to create map: '@active': Operation not permitted
+ERROR: failed to create map: '@calls': Operation not permitted
+ERROR: failed to create map: '@first': Operation not permitted
+ERROR: failed to create map: '@last': Operation not permitted
+ERROR: failed to create map: '@stacks': Operation not permitted
+ERROR: failed to create stack id map: Operation not permitted
+ERROR: This might have happened because kernel.perf_event_max_stack is smaller than 12. Try to tweak this value with sysctl kernel.perf_event_max_stack=<new value>
+ERROR: failed to create  map: Operation not permitted
+Creation of the required BPF maps has failed.
+Make sure you have all the required permissions and are not confined (e.g. like
+snapcraft does). `dmesg` will likely have useful output for further troubleshooting

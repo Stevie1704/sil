@@ -1,0 +1,300 @@
+{
+  "attempts": [
+    {
+      "baseline": {
+        "argv": [
+          "/work/evidence/malloc-fixture"
+        ],
+        "returncode": 0,
+        "stderr": "current-user-baseline.stderr.txt",
+        "stdout": "current-user-baseline.stdout.txt",
+        "timed_out": false,
+        "wall_ns": 3639283
+      },
+      "capture": {
+        "argv": [
+          "/usr/bin/bpftrace",
+          "-k",
+          "/work/evidence/malloc.bt",
+          "-c",
+          "/work/evidence/malloc-fixture"
+        ],
+        "returncode": 1,
+        "stderr": "current-user-capture.stderr.txt",
+        "stdout": "current-user-capture.stdout.txt",
+        "timed_out": false,
+        "wall_ns": 114014736
+      },
+      "clock": null,
+      "configured_clock": "nsecs(monotonic), source maps to kernel bpf_ktime_get_ns",
+      "context": "current-user",
+      "diagnostic_error_or_loss": true,
+      "facts_command": {
+        "argv": [
+          "/usr/bin/python3",
+          "/proof/availability.py",
+          "--facts"
+        ],
+        "returncode": 0,
+        "stderr": "current-user-facts.stderr.txt",
+        "stdout": "current-user-facts.stdout.txt",
+        "timed_out": false,
+        "wall_ns": 63853198
+      },
+      "fixture_baseline_ns": 1985056,
+      "fixture_baseline_uid": 0,
+      "fixture_profiled_ns": null,
+      "fixture_profiled_uid": null,
+      "kernel_first_ns": null,
+      "kernel_last_ns": null,
+      "known_calls_expected": 50000,
+      "known_calls_observed": null,
+      "known_frame_resolved": false,
+      "output_bytes": 22,
+      "overhead_scope": "one loop timing per mode; no startup/attach time or statistical estimate",
+      "status": "capture_unavailable_or_incomplete"
+    }
+  ],
+  "commands": {
+    "compile": {
+      "argv": [
+        "/usr/bin/gcc-12",
+        "-O2",
+        "-g",
+        "-fno-omit-frame-pointer",
+        "-fno-inline",
+        "-fno-builtin-malloc",
+        "-fno-builtin-free",
+        "-rdynamic",
+        "/work/evidence/malloc-fixture.c",
+        "-o",
+        "/work/evidence/malloc-fixture"
+      ],
+      "returncode": 0,
+      "stderr": "compile.stderr.txt",
+      "stdout": "compile.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 63873033
+    },
+    "compiler_version": {
+      "argv": [
+        "/usr/bin/gcc-12",
+        "--version"
+      ],
+      "returncode": 0,
+      "stderr": "compiler-version.stderr.txt",
+      "stdout": "compiler-version.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 1702818
+    },
+    "info": {
+      "argv": [
+        "/usr/bin/bpftrace",
+        "--info"
+      ],
+      "returncode": 0,
+      "stderr": "info.stderr.txt",
+      "stdout": "info.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 63835275
+    },
+    "ldd": {
+      "argv": [
+        "ldd",
+        "/work/evidence/malloc-fixture"
+      ],
+      "returncode": 0,
+      "stderr": "ldd.stderr.txt",
+      "stdout": "ldd.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 7754128
+    },
+    "library_packages": {
+      "argv": [
+        "dpkg-query",
+        "-W",
+        "libc6",
+        "libstdc++6"
+      ],
+      "returncode": 0,
+      "stderr": "library-packages.stderr.txt",
+      "stdout": "library-packages.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 3581946
+    },
+    "package": {
+      "argv": [
+        "dpkg-query",
+        "-W",
+        "-f=${Version}\n",
+        "bpftrace"
+      ],
+      "returncode": 0,
+      "stderr": "package.stderr.txt",
+      "stdout": "package.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 3781909
+    },
+    "version": {
+      "argv": [
+        "/usr/bin/bpftrace",
+        "--version"
+      ],
+      "returncode": 0,
+      "stderr": "version.stderr.txt",
+      "stdout": "version.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 31872793
+    }
+  },
+  "expected_package": "0.20.2-1ubuntu4.3",
+  "facts": {
+    "bpftrace_environment": {},
+    "container_marker": true,
+    "euid": 0,
+    "interfaces": {
+      "/lib/modules/6.17.0-1022-azure": {
+        "present": false
+      },
+      "/sys/kernel/btf/vmlinux": {
+        "present": true
+      },
+      "/sys/kernel/debug/tracing": {
+        "present": false
+      },
+      "/sys/kernel/tracing": {
+        "present": true
+      }
+    },
+    "kernel": "6.17.0-1022-azure",
+    "machine": "x86_64",
+    "policy": {
+      "lockdown": {
+        "error": "[Errno 2] No such file or directory: '/sys/kernel/security/lockdown'"
+      },
+      "perf_event_paranoid": {
+        "value": "4"
+      },
+      "ptrace_scope": {
+        "value": "1"
+      },
+      "unprivileged_bpf_disabled": {
+        "value": "2"
+      }
+    },
+    "process_status": {
+      "CapAmb": "0000000000000000",
+      "CapBnd": "00000000a80425fb",
+      "CapEff": "00000000a80425fb",
+      "CapInh": "0000000000000000",
+      "CapPrm": "00000000a80425fb",
+      "Gid": "0\t0\t0\t0",
+      "NoNewPrivs": "0",
+      "Seccomp": "2",
+      "Seccomp_filters": "1",
+      "Uid": "0\t0\t0\t0"
+    },
+    "system": "Linux",
+    "uid": 0
+  },
+  "files": {
+    "compile.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "compile.stdout.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "compiler-version.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "compiler-version.stdout.txt": {
+      "bytes": 249,
+      "sha256": "07ab3691df8c82c26447d541e92bb17461c4352d13726963cb16a27c28d72166"
+    },
+    "current-user-baseline.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "current-user-baseline.stdout.txt": {
+      "bytes": 30,
+      "sha256": "049d37542201666beac9ce4e0de1c441bef4efd6f4ca8d47c9024aea8c22ef49"
+    },
+    "current-user-capture.stderr.txt": {
+      "bytes": 953,
+      "sha256": "4fd119c4aa3bba85176d90bbcbe495f75a4144598e59d9637e635fae1f7e4b76"
+    },
+    "current-user-capture.stdout.txt": {
+      "bytes": 22,
+      "sha256": "1d95ae72c3fc9c58db711bf7bce1c51468436f8c2f8a9653bd26f941a1519223"
+    },
+    "current-user-facts.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "current-user-facts.stdout.txt": {
+      "bytes": 1050,
+      "sha256": "1157e322c45bb5441a994f8f1d89ae4d14a486de9cd5e26ff6757c4f35832d12"
+    },
+    "info.stderr.txt": {
+      "bytes": 960,
+      "sha256": "00fafe19bb68bd72b9d35710e5777de94f344b6b14aabb73964f4d7d276e0c8f"
+    },
+    "info.stdout.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ldd.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ldd.stdout.txt": {
+      "bytes": 155,
+      "sha256": "72d27354cf469014d669c74800b6adf48158d0f886985cd08d136288fb6bd31e"
+    },
+    "library-packages.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "library-packages.stdout.txt": {
+      "bytes": 69,
+      "sha256": "e9ca604b6a650d7788a766b728bcf737a07955b7bfecf12eda675d310044d44f"
+    },
+    "malloc-fixture": {
+      "bytes": 19816,
+      "sha256": "99add20c5c5cd5dd264c30bb87ac852c1fea72ae2414cc5e8d9122c6491f99b8"
+    },
+    "malloc-fixture.c": {
+      "bytes": 785,
+      "sha256": "8c68cce392adbda0e59a99f9384ea7e178259f7a45eab218fb18fb28ca772f1a"
+    },
+    "malloc.bt": {
+      "bytes": 425,
+      "sha256": "4721c84eb2a5aa0d6762222b913a2fbfc3f9585b3eb4b5ee75b6df71fd4e1970"
+    },
+    "package.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "package.stdout.txt": {
+      "bytes": 18,
+      "sha256": "ea1dcf5d5abd7739e32851f13ee0f14d0c425d435018e76deb2de04f98c7c307"
+    },
+    "version.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "version.stdout.txt": {
+      "bytes": 17,
+      "sha256": "1b3367ced1282d1c49fb11169a6d2b17e0193c42157f1f20703c5b0504882214"
+    }
+  },
+  "package_matches_pin": true,
+  "qualification_machine": true,
+  "schema": 1,
+  "scope": "malloc fixture availability, not a SiL collector qualification",
+  "status": "observed",
+  "support_decision": "defer"
+}

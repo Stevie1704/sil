@@ -135,3 +135,26 @@ coverage guarantee. The existing
 explains why `memleak` outstanding-allocation output is not the existing
 Heaptrack event history. The support conclusion stays **defer**, with the
 shimmed-Process rejection retained.
+
+## Native and container observations
+
+The [extended x86-64 workflow](https://github.com/Stevie1704/sil/actions/runs/40291189216)
+retains [native results](evidence-review/heaptrack-shim-bpf-native/availability.json)
+and [default-container results](evidence-review/heaptrack-shim-bpf-container/availability.json).
+The ordinary UID 1001 invocation was rejected by this bpftrace version's root
+requirement. With existing sudo-root access it counted all 50,000 fixture calls
+and recorded monotonic values, but user-stack output contained raw addresses
+without a resolved `proof_malloc_site`; the capture remains incomplete.
+Both fixture UIDs were zero. Recorded loop durations of 1,821,610 ns and
+182,243,410 ns give a separately derived 100.05-times duration for that pair.
+The source report withheld its qualified-capture ratio because symbolization
+failed; current code treats comparable loop timing separately from symbol
+resolution. Neither form is a benchmark or a production overhead estimate.
+
+The default-capability root container had effective capability mask
+`00000000a80425fb`, seccomp mode 2, and failed BPF map creation with
+`Operation not permitted`. It supplies no observed allocation count, usable
+stack or profiled loop duration. Nothing in the experiment changed sysctls,
+mounts, container capabilities or seccomp. These setup-specific observations
+support the explicit rejection as a drop-in collector; they do not claim that
+all eBPF approaches or privileged deployments are impossible.

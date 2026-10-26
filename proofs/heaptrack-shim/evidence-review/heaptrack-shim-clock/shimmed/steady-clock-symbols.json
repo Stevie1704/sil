@@ -1,0 +1,16 @@
+{
+  "command": [
+    "nm",
+    "-D",
+    "-S",
+    "--defined-only",
+    "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33"
+  ],
+  "matches": [
+    "00000000000df960 0000000000000049 T _ZNSt6chrono3_V212steady_clock3nowEv@@GLIBCXX_3.4.19"
+  ],
+  "source": {
+    "bytes": 618127,
+    "sha256": "c1bb653983df5a1ccdcefe7a3874db6d063676bd9d94e85f6c32c5335b9a8ce3"
+  }
+}

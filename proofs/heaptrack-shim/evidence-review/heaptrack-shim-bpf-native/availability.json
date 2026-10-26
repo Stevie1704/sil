@@ -1,0 +1,409 @@
+{
+  "attempts": [
+    {
+      "baseline": {
+        "argv": [
+          "/home/runner/work/sil/sil/build/heaptrack-shim-bpf-native/malloc-fixture"
+        ],
+        "returncode": 0,
+        "stderr": "current-user-baseline.stderr.txt",
+        "stdout": "current-user-baseline.stdout.txt",
+        "timed_out": false,
+        "wall_ns": 3710235
+      },
+      "capture": {
+        "argv": [
+          "/usr/bin/bpftrace",
+          "-k",
+          "/home/runner/work/sil/sil/build/heaptrack-shim-bpf-native/malloc.bt",
+          "-c",
+          "/home/runner/work/sil/sil/build/heaptrack-shim-bpf-native/malloc-fixture"
+        ],
+        "returncode": 1,
+        "stderr": "current-user-capture.stderr.txt",
+        "stdout": "current-user-capture.stdout.txt",
+        "timed_out": false,
+        "wall_ns": 113988277
+      },
+      "clock": null,
+      "configured_clock": "nsecs(monotonic), source maps to kernel bpf_ktime_get_ns",
+      "context": "current-user",
+      "diagnostic_error_or_loss": true,
+      "facts_command": {
+        "argv": [
+          "/home/runner/work/sil/sil/.venv/bin/python",
+          "/home/runner/work/sil/sil/proofs/heaptrack-shim/availability.py",
+          "--facts"
+        ],
+        "returncode": 0,
+        "stderr": "current-user-facts.stderr.txt",
+        "stdout": "current-user-facts.stdout.txt",
+        "timed_out": false,
+        "wall_ns": 63805995
+      },
+      "fixture_baseline_ns": 2094671,
+      "fixture_baseline_uid": 1001,
+      "fixture_profiled_ns": null,
+      "fixture_profiled_uid": null,
+      "kernel_first_ns": null,
+      "kernel_last_ns": null,
+      "known_calls_expected": 50000,
+      "known_calls_observed": null,
+      "known_frame_resolved": false,
+      "output_bytes": 0,
+      "overhead_scope": "one loop timing per mode; no startup/attach time or statistical estimate",
+      "status": "capture_unavailable_or_incomplete"
+    },
+    {
+      "baseline": {
+        "argv": [
+          "sudo",
+          "-n",
+          "/home/runner/work/sil/sil/build/heaptrack-shim-bpf-native/malloc-fixture"
+        ],
+        "returncode": 0,
+        "stderr": "sudo-root-baseline.stderr.txt",
+        "stdout": "sudo-root-baseline.stdout.txt",
+        "timed_out": false,
+        "wall_ns": 15992778
+      },
+      "capture": {
+        "argv": [
+          "sudo",
+          "-n",
+          "timeout",
+          "--signal=TERM",
+          "--kill-after=5",
+          "35",
+          "/usr/bin/bpftrace",
+          "-k",
+          "/home/runner/work/sil/sil/build/heaptrack-shim-bpf-native/malloc.bt",
+          "-c",
+          "/home/runner/work/sil/sil/build/heaptrack-shim-bpf-native/malloc-fixture"
+        ],
+        "returncode": 0,
+        "stderr": "sudo-root-capture.stderr.txt",
+        "stdout": "sudo-root-capture.stdout.txt",
+        "timed_out": false,
+        "wall_ns": 3623925752
+      },
+      "clock": "host monotonic via bpf_ktime_get_ns; source-identified helper with observed values",
+      "configured_clock": "nsecs(monotonic), source maps to kernel bpf_ktime_get_ns",
+      "context": "sudo-root",
+      "diagnostic_error_or_loss": false,
+      "facts_command": {
+        "argv": [
+          "sudo",
+          "-n",
+          "/home/runner/work/sil/sil/.venv/bin/python",
+          "/home/runner/work/sil/sil/proofs/heaptrack-shim/availability.py",
+          "--facts"
+        ],
+        "returncode": 0,
+        "stderr": "sudo-root-facts.stderr.txt",
+        "stdout": "sudo-root-facts.stdout.txt",
+        "timed_out": false,
+        "wall_ns": 64028211
+      },
+      "fixture_baseline_ns": 1821610,
+      "fixture_baseline_uid": 0,
+      "fixture_profiled_ns": 182243410,
+      "fixture_profiled_uid": 0,
+      "kernel_first_ns": 172380334703,
+      "kernel_last_ns": 172562540023,
+      "known_calls_expected": 50000,
+      "known_calls_observed": 50000,
+      "known_frame_resolved": false,
+      "output_bytes": 225,
+      "overhead_scope": "one loop timing per mode; no startup/attach time or statistical estimate",
+      "status": "capture_unavailable_or_incomplete"
+    }
+  ],
+  "commands": {
+    "compile": {
+      "argv": [
+        "/usr/bin/gcc-12",
+        "-O2",
+        "-g",
+        "-fno-omit-frame-pointer",
+        "-fno-inline",
+        "-fno-builtin-malloc",
+        "-fno-builtin-free",
+        "-rdynamic",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-bpf-native/malloc-fixture.c",
+        "-o",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-bpf-native/malloc-fixture"
+      ],
+      "returncode": 0,
+      "stderr": "compile.stderr.txt",
+      "stdout": "compile.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 63995381
+    },
+    "compiler_version": {
+      "argv": [
+        "/usr/bin/gcc-12",
+        "--version"
+      ],
+      "returncode": 0,
+      "stderr": "compiler-version.stderr.txt",
+      "stdout": "compiler-version.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 1606337
+    },
+    "info": {
+      "argv": [
+        "/usr/bin/bpftrace",
+        "--info"
+      ],
+      "returncode": 1,
+      "stderr": "info.stderr.txt",
+      "stdout": "info.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 31790883
+    },
+    "ldd": {
+      "argv": [
+        "ldd",
+        "/home/runner/work/sil/sil/build/heaptrack-shim-bpf-native/malloc-fixture"
+      ],
+      "returncode": 0,
+      "stderr": "ldd.stderr.txt",
+      "stdout": "ldd.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 15872494
+    },
+    "library_packages": {
+      "argv": [
+        "dpkg-query",
+        "-W",
+        "libc6",
+        "libstdc++6"
+      ],
+      "returncode": 0,
+      "stderr": "library-packages.stderr.txt",
+      "stdout": "library-packages.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 15725558
+    },
+    "package": {
+      "argv": [
+        "dpkg-query",
+        "-W",
+        "-f=${Version}\n",
+        "bpftrace"
+      ],
+      "returncode": 0,
+      "stderr": "package.stderr.txt",
+      "stdout": "package.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 16156544
+    },
+    "sudo_check": {
+      "argv": [
+        "sudo",
+        "-n",
+        "true"
+      ],
+      "returncode": 0,
+      "stderr": "sudo-check.stderr.txt",
+      "stdout": "sudo-check.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 15943285
+    },
+    "version": {
+      "argv": [
+        "/usr/bin/bpftrace",
+        "--version"
+      ],
+      "returncode": 0,
+      "stderr": "version.stderr.txt",
+      "stdout": "version.stdout.txt",
+      "timed_out": false,
+      "wall_ns": 582900459
+    }
+  },
+  "expected_package": "0.20.2-1ubuntu4.3",
+  "facts": {
+    "bpftrace_environment": {},
+    "container_marker": false,
+    "euid": 1001,
+    "interfaces": {
+      "/lib/modules/6.17.0-1022-azure": {
+        "present": true
+      },
+      "/sys/kernel/btf/vmlinux": {
+        "present": true
+      },
+      "/sys/kernel/debug/tracing": {
+        "error": "[Errno 13] Permission denied: '/sys/kernel/debug/tracing'",
+        "present": null
+      },
+      "/sys/kernel/tracing": {
+        "present": true
+      }
+    },
+    "kernel": "6.17.0-1022-azure",
+    "machine": "x86_64",
+    "policy": {
+      "lockdown": {
+        "value": "[none] integrity confidentiality"
+      },
+      "perf_event_paranoid": {
+        "value": "4"
+      },
+      "ptrace_scope": {
+        "value": "1"
+      },
+      "unprivileged_bpf_disabled": {
+        "value": "2"
+      }
+    },
+    "process_status": {
+      "CapAmb": "0000000000000000",
+      "CapBnd": "000001ffffffffff",
+      "CapEff": "0000000000000000",
+      "CapInh": "0000000000000000",
+      "CapPrm": "0000000000000000",
+      "Gid": "1001\t1001\t1001\t1001",
+      "NoNewPrivs": "0",
+      "Seccomp": "0",
+      "Seccomp_filters": "0",
+      "Uid": "1001\t1001\t1001\t1001"
+    },
+    "system": "Linux",
+    "uid": 1001
+  },
+  "files": {
+    "compile.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "compile.stdout.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "compiler-version.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "compiler-version.stdout.txt": {
+      "bytes": 249,
+      "sha256": "07ab3691df8c82c26447d541e92bb17461c4352d13726963cb16a27c28d72166"
+    },
+    "current-user-baseline.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "current-user-baseline.stdout.txt": {
+      "bytes": 33,
+      "sha256": "099122353791244f40660d9ff419305080e841d356ae0ba26b1c972948b3836d"
+    },
+    "current-user-capture.stderr.txt": {
+      "bytes": 66,
+      "sha256": "f2a819b71db011d8d45739f1c003158824ddef1a577c9b3fba90ea362b19afc3"
+    },
+    "current-user-capture.stdout.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "current-user-facts.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "current-user-facts.stdout.txt": {
+      "bytes": 1119,
+      "sha256": "8511fb341b67ea935fd0a08f82d5b4aa6b23db6aaf95b1b6c85cacf73e9b12dc"
+    },
+    "info.stderr.txt": {
+      "bytes": 66,
+      "sha256": "f2a819b71db011d8d45739f1c003158824ddef1a577c9b3fba90ea362b19afc3"
+    },
+    "info.stdout.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ldd.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ldd.stdout.txt": {
+      "bytes": 155,
+      "sha256": "73d71df7b9575cadcec908910927a800f1b57a99f29fb0aefd2a2c9c36322959"
+    },
+    "library-packages.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "library-packages.stdout.txt": {
+      "bytes": 69,
+      "sha256": "e9ca604b6a650d7788a766b728bcf737a07955b7bfecf12eda675d310044d44f"
+    },
+    "malloc-fixture": {
+      "bytes": 19920,
+      "sha256": "edb7e7e20f6eb361a96e689faa7418a5e35b70b9d36db83ce446c9579bc4ba21"
+    },
+    "malloc-fixture.c": {
+      "bytes": 785,
+      "sha256": "8c68cce392adbda0e59a99f9384ea7e178259f7a45eab218fb18fb28ca772f1a"
+    },
+    "malloc.bt": {
+      "bytes": 511,
+      "sha256": "6952a6d63d196cfeeea0ac9e1b883e4bd41abcb635e79c69946c074e4d892aab"
+    },
+    "package.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "package.stdout.txt": {
+      "bytes": 18,
+      "sha256": "ea1dcf5d5abd7739e32851f13ee0f14d0c425d435018e76deb2de04f98c7c307"
+    },
+    "sudo-check.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "sudo-check.stdout.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "sudo-root-baseline.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "sudo-root-baseline.stdout.txt": {
+      "bytes": 30,
+      "sha256": "4e44144787ae7828a1728ee799d852a57d8bb88a8f1cb452273efd2e453a81ff"
+    },
+    "sudo-root-capture.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "sudo-root-capture.stdout.txt": {
+      "bytes": 225,
+      "sha256": "5ddb57e190bae0220f3c22e41c19876579e7192a2bb40634082669f69e308027"
+    },
+    "sudo-root-facts.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "sudo-root-facts.stdout.txt": {
+      "bytes": 1013,
+      "sha256": "ae46b3ab7f65751f51a98332b29dfb66cc78bc797f350b992b37fd5477945d8c"
+    },
+    "version.stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "version.stdout.txt": {
+      "bytes": 17,
+      "sha256": "1b3367ced1282d1c49fb11169a6d2b17e0193c42157f1f20703c5b0504882214"
+    }
+  },
+  "package_matches_pin": true,
+  "qualification_machine": true,
+  "schema": 1,
+  "scope": "malloc fixture availability, not a SiL collector qualification",
+  "status": "observed",
+  "support_decision": "defer"
+}

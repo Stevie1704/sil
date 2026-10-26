@@ -203,6 +203,51 @@ The support decision stays **defer**: restoration can preserve descendants when
 a Run completes, but this repeat demonstrates that it does not make startup or
 timer behavior reliable.
 
+## Native review follow-up
+
+The [extended native workflow](https://github.com/Stevie1704/sil/actions/runs/40291189216)
+at `3ef68cc` passed all Run, calibration and setup-probe gates. Compact source
+reports, raw clock audit records, timestamp projections and availability logs
+are retained in [`evidence-review/`](evidence-review/). Its `origin.json`
+identifies the source artifact; its separate digest inventory covers the
+retained subset. The raw captures and full symbol tables remain in the artifact.
+
+- **Clock measured:** both calibration processes called `CLOCK_MONOTONIC` from
+  libstdc++'s `steady_clock::now`. In the shimmed process, the audit observed an
+  initial host-domain reading and later exact controlled Virtual times. A host
+  origin reproduced all **33,087** raw timestamp records; the unshimmed process
+  produced **10** host-elapsed records. This establishes the backend and origin
+  domain in the calibration, not a host mapping for uninstrumented Runs.
+- **Same-workload control:** the unshimmed Process capture wrote **829,214 bytes
+  and 104 timestamp records**. The completed shimmed captures wrote
+  **14,276,660–16,791,508 bytes and 517,827–615,359 records**, about **17.2–20.2
+  times the data** and **4,979–5,917 times the timestamp records**. Both controls
+  completed, the known allocation count was 80, and non-clock workload fields
+  matched. Full Recordings differ when their host-clock payloads differ; the
+  report keeps that verdict separate. These are single captures, not estimates
+  of general timing overhead.
+- **Native BPF permission:** the pinned bpftrace rejected the ordinary runner
+  user (UID 1001) because that version requires root. The existing sudo-root
+  context captured exactly **50,000** allocator entries and kernel monotonic
+  timestamps, but rendered its user stacks as raw addresses: the known frame
+  was unresolved despite frame pointers and debug/exported symbols. The
+  capture is therefore marked incomplete. The recorded loop durations were
+  **1,821,610 ns ordinarily and 182,243,410 ns traced**, both at UID 0: a derived
+  **100.05-times loop duration** for these two observations. Symbol quality and
+  timing are separate properties; this does not qualify a collector or give
+  statistically representative overhead.
+- **Default container:** UID 0 had Docker's default capability mask
+  `00000000a80425fb` and seccomp mode 2. BPF map creation failed with
+  `Operation not permitted`. No count, stack quality or overhead was measured
+  there. The report retains all diagnostics without attributing the denial
+  to a single policy or changing the host/container configuration.
+
+The eBPF direction is rejected as an immediate replacement for the existing
+collector: the availability smoke has no full allocation history, lifetime
+accounting, descendant management or SiL Recording-equality result, and the
+observed stack/permission limitations remain. A new collector needs a separate
+specification and qualification. The #330 conclusion remains **defer support**.
+
 ## Evidence
 
 The workflow uploads `heaptrack-shim-evidence` for 30 days. `results.json`
@@ -242,3 +287,20 @@ small snapshots, with `origin.json` identifying the original workflow artifact.
 Empty stderr logs and stderr already captured in the failure sidecars are omitted.
 `origin.json` separately identifies the workflow and compressed artifact; it
 is not part of the original experiment inventory.
+
+The compact review subset can be reproduced after downloading the extended
+workflow artifact:
+
+```sh
+gh run download 40291189216 -R Stevie1704/sil \
+  -n heaptrack-shim-evidence -D build/heaptrack-shim-review-artifact
+python proofs/heaptrack-shim/retain-review.py \
+  build/heaptrack-shim-review-artifact proofs/heaptrack-shim/evidence-review
+```
+
+The clock projection retains every timestamp value and multiplicity needed by
+the origin model, with the original raw capture digest; order is omitted.
+Selected steady-clock symbol lines identify the observed callers without
+copying the complete library symbol table. Tests compare the audit bytes with
+the decoded samples and independently check their brackets, domains and
+arithmetic against every retained timestamp value.

@@ -81,3 +81,15 @@ to the measured binary. The repository's [Clock shim](../../shim/clock_shim.c)
 answers mapped monotonic clocks from the region's `t` and falls back to libc
 before mapping. Together these sources explain the measured origin mismatch,
 while the audit and raw timestamps establish that it actually occurred.
+
+## Native qualification observation
+
+The [native x86-64 run](https://github.com/Stevie1704/sil/actions/runs/40291189216)
+with Heaptrack 1.5 and the recorded libstdc++ build established the same backend
+and a host-domain origin in both processes. The shimmed process emitted 33,087
+raw timestamp records, the unshimmed process ten. Its audit bytes, maps,
+selected symbol ranges, timestamp-value projection and complete analysis are
+retained under [evidence-review](evidence-review/heaptrack-shim-clock/).
+The clock API, returned-value domains and origin model are measured in this
+calibration; the private cached origin is inferred by the stated arithmetic,
+and no continuous host mapping for arbitrary Run captures is claimed.

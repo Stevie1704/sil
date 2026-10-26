@@ -1,0 +1,72 @@
+556bf59a7000-556bf59a8000 r--p 00000000 08:01 9175404                    /home/runner/work/sil/sil/build/heaptrack-shim-clock/clock_probe
+556bf59a8000-556bf59a9000 r-xp 00001000 08:01 9175404                    /home/runner/work/sil/sil/build/heaptrack-shim-clock/clock_probe
+556bf59a9000-556bf59aa000 r--p 00002000 08:01 9175404                    /home/runner/work/sil/sil/build/heaptrack-shim-clock/clock_probe
+556bf59aa000-556bf59ab000 r--p 00002000 08:01 9175404                    /home/runner/work/sil/sil/build/heaptrack-shim-clock/clock_probe
+556bf59ab000-556bf59ac000 rw-p 00003000 08:01 9175404                    /home/runner/work/sil/sil/build/heaptrack-shim-clock/clock_probe
+556c2a2db000-556c2a2fc000 rw-p 00000000 00:00 0                          [heap]
+7f53abfff000-7f53ac000000 ---p 00000000 00:00 0 
+7f53ac000000-7f53ad000000 rw-p 00000000 00:00 0 
+7f53ad000000-7f53ad09d000 r--p 00000000 08:01 6449                       /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+7f53ad09d000-7f53ad1e5000 r-xp 0009d000 08:01 6449                       /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+7f53ad1e5000-7f53ad26c000 r--p 001e5000 08:01 6449                       /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+7f53ad26c000-7f53ad277000 r--p 0026b000 08:01 6449                       /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+7f53ad277000-7f53ad27a000 rw-p 00276000 08:01 6449                       /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+7f53ad27a000-7f53ad27e000 rw-p 00000000 00:00 0 
+7f53ad317000-7f53ad327000 r--p 00000000 08:01 34896                      /usr/lib/x86_64-linux-gnu/libm.so.6
+7f53ad327000-7f53ad3a6000 r-xp 00010000 08:01 34896                      /usr/lib/x86_64-linux-gnu/libm.so.6
+7f53ad3a6000-7f53ad3fe000 r--p 0008f000 08:01 34896                      /usr/lib/x86_64-linux-gnu/libm.so.6
+7f53ad3fe000-7f53ad3ff000 r--p 000e7000 08:01 34896                      /usr/lib/x86_64-linux-gnu/libm.so.6
+7f53ad3ff000-7f53ad400000 rw-p 000e8000 08:01 34896                      /usr/lib/x86_64-linux-gnu/libm.so.6
+7f53ad400000-7f53ad428000 r--p 00000000 08:01 34893                      /usr/lib/x86_64-linux-gnu/libc.so.6
+7f53ad428000-7f53ad5b1000 r-xp 00028000 08:01 34893                      /usr/lib/x86_64-linux-gnu/libc.so.6
+7f53ad5b1000-7f53ad600000 r--p 001b1000 08:01 34893                      /usr/lib/x86_64-linux-gnu/libc.so.6
+7f53ad600000-7f53ad604000 r--p 001ff000 08:01 34893                      /usr/lib/x86_64-linux-gnu/libc.so.6
+7f53ad604000-7f53ad606000 rw-p 00203000 08:01 34893                      /usr/lib/x86_64-linux-gnu/libc.so.6
+7f53ad606000-7f53ad613000 rw-p 00000000 00:00 0 
+7f53ad620000-7f53ad665000 rw-p 00000000 00:00 0 
+7f53ad665000-7f53ad668000 r--p 00000000 08:01 5098                       /usr/lib/x86_64-linux-gnu/liblzma.so.5.4.5
+7f53ad668000-7f53ad68a000 r-xp 00003000 08:01 5098                       /usr/lib/x86_64-linux-gnu/liblzma.so.5.4.5
+7f53ad68a000-7f53ad695000 r--p 00025000 08:01 5098                       /usr/lib/x86_64-linux-gnu/liblzma.so.5.4.5
+7f53ad695000-7f53ad696000 r--p 00030000 08:01 5098                       /usr/lib/x86_64-linux-gnu/liblzma.so.5.4.5
+7f53ad696000-7f53ad697000 rw-p 00031000 08:01 5098                       /usr/lib/x86_64-linux-gnu/liblzma.so.5.4.5
+7f53ad697000-7f53ad69b000 r--p 00000000 08:01 6451                       /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+7f53ad69b000-7f53ad6bf000 r-xp 00004000 08:01 6451                       /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+7f53ad6bf000-7f53ad6c3000 r--p 00028000 08:01 6451                       /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+7f53ad6c3000-7f53ad6c4000 r--p 0002b000 08:01 6451                       /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+7f53ad6c4000-7f53ad6c5000 rw-p 0002c000 08:01 6451                       /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+7f53ad6c5000-7f53ad6c7000 rw-p 00000000 00:00 0 
+7f53ad6c7000-7f53ad6ca000 r--p 00000000 08:01 7316                       /usr/lib/x86_64-linux-gnu/libunwind.so.8.0.1
+7f53ad6ca000-7f53ad6d4000 r-xp 00003000 08:01 7316                       /usr/lib/x86_64-linux-gnu/libunwind.so.8.0.1
+7f53ad6d4000-7f53ad6d6000 r--p 0000d000 08:01 7316                       /usr/lib/x86_64-linux-gnu/libunwind.so.8.0.1
+7f53ad6d6000-7f53ad6d7000 r--p 0000e000 08:01 7316                       /usr/lib/x86_64-linux-gnu/libunwind.so.8.0.1
+7f53ad6d7000-7f53ad6d8000 rw-p 0000f000 08:01 7316                       /usr/lib/x86_64-linux-gnu/libunwind.so.8.0.1
+7f53ad6d8000-7f53ad6e2000 rw-p 00000000 00:00 0 
+7f53ad6e7000-7f53ad6e8000 rw-s 00000000 08:01 9175415                    /home/runner/work/sil/sil/build/heaptrack-shim-clock/shimmed/clock.region
+7f53ad6e8000-7f53ad6e9000 r--s 00000000 08:01 9175415                    /home/runner/work/sil/sil/build/heaptrack-shim-clock/shimmed/clock.region
+7f53ad6e9000-7f53ad6ec000 rw-p 00000000 00:00 0 
+7f53ad6ec000-7f53ad6ed000 r--p 00000000 08:01 8945674                    /home/runner/work/_temp/heaptrack-shim-build/libsil_clock_shim.so
+7f53ad6ed000-7f53ad6ee000 r-xp 00001000 08:01 8945674                    /home/runner/work/_temp/heaptrack-shim-build/libsil_clock_shim.so
+7f53ad6ee000-7f53ad6ef000 r--p 00002000 08:01 8945674                    /home/runner/work/_temp/heaptrack-shim-build/libsil_clock_shim.so
+7f53ad6ef000-7f53ad6f0000 r--p 00002000 08:01 8945674                    /home/runner/work/_temp/heaptrack-shim-build/libsil_clock_shim.so
+7f53ad6f0000-7f53ad6f1000 rw-p 00003000 08:01 8945674                    /home/runner/work/_temp/heaptrack-shim-build/libsil_clock_shim.so
+7f53ad6f1000-7f53ad6f4000 r--p 00000000 08:01 8941743                    /usr/lib/heaptrack/libheaptrack_preload.so
+7f53ad6f4000-7f53ad6fb000 r-xp 00003000 08:01 8941743                    /usr/lib/heaptrack/libheaptrack_preload.so
+7f53ad6fb000-7f53ad6fd000 r--p 0000a000 08:01 8941743                    /usr/lib/heaptrack/libheaptrack_preload.so
+7f53ad6fd000-7f53ad6fe000 r--p 0000b000 08:01 8941743                    /usr/lib/heaptrack/libheaptrack_preload.so
+7f53ad6fe000-7f53ad6ff000 rw-p 0000c000 08:01 8941743                    /usr/lib/heaptrack/libheaptrack_preload.so
+7f53ad6ff000-7f53ad700000 r--p 00000000 08:01 9175403                    /home/runner/work/sil/sil/build/heaptrack-shim-clock/clock_audit.so
+7f53ad700000-7f53ad701000 r-xp 00001000 08:01 9175403                    /home/runner/work/sil/sil/build/heaptrack-shim-clock/clock_audit.so
+7f53ad701000-7f53ad702000 r--p 00002000 08:01 9175403                    /home/runner/work/sil/sil/build/heaptrack-shim-clock/clock_audit.so
+7f53ad702000-7f53ad703000 r--p 00002000 08:01 9175403                    /home/runner/work/sil/sil/build/heaptrack-shim-clock/clock_audit.so
+7f53ad703000-7f53ad704000 rw-p 00003000 08:01 9175403                    /home/runner/work/sil/sil/build/heaptrack-shim-clock/clock_audit.so
+7f53ad704000-7f53ad706000 rw-p 00000000 00:00 0 
+7f53ad706000-7f53ad70a000 r--p 00000000 00:00 0                          [vvar]
+7f53ad70a000-7f53ad70c000 r--p 00000000 00:00 0                          [vvar_vclock]
+7f53ad70c000-7f53ad70e000 r-xp 00000000 00:00 0                          [vdso]
+7f53ad70e000-7f53ad70f000 r--p 00000000 08:01 34890                      /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7f53ad70f000-7f53ad73a000 r-xp 00001000 08:01 34890                      /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7f53ad73a000-7f53ad744000 r--p 0002c000 08:01 34890                      /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7f53ad744000-7f53ad746000 r--p 00036000 08:01 34890                      /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7f53ad746000-7f53ad748000 rw-p 00038000 08:01 34890                      /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7ffffcbcb000-7ffffcbed000 rw-p 00000000 00:00 0                          [stack]
+ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0                  [vsyscall]
