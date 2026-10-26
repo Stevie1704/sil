@@ -33,7 +33,7 @@ def test_retained_native_evidence_is_complete_and_uses_the_pinned_tools():
         assert len({r["manifest"]["sha256"] for r in rows}) == 1
 
 
-def test_retained_recording_and_clock_verdicts_follow_the_observed_messages():
+def test_retained_verdicts_follow_recording_bytes_and_observed_messages():
     report = load(EVIDENCE / "results.json")
     for row in report["runs"]:
         assert row["exit_code"] == 0 and row["stopped"] is None
@@ -51,7 +51,9 @@ def test_retained_recording_and_clock_verdicts_follow_the_observed_messages():
         baseline = next(r for r in report["runs"]
                         if r["policy"] == row["policy"] and r["mode"] == "baseline")
         assert row["recording_equal"] == (row["recording"] == baseline["recording"])
-        assert row["recording_equal"] == (row["mode"] == "preserve")
+        captured_bytes = (EVIDENCE / f'{row["policy"]}-{row["mode"]}/run.mcap').read_bytes()
+        baseline_bytes = (EVIDENCE / f'{row["policy"]}-baseline/run.mcap').read_bytes()
+        assert row["recording_equal"] == (captured_bytes == baseline_bytes)
         heap = row["heap"]
         assert heap["known_site"]["calls"] == 80
         assert heap["known_site"]["sizes"] == [2048]
@@ -62,7 +64,7 @@ def test_retained_recording_and_clock_verdicts_follow_the_observed_messages():
 
 
 @pytest.mark.parametrize("directory", [EVIDENCE, ROOT / "proofs/heaptrack-shim/evidence-failure"])
-def test_every_retained_experiment_file_matches_the_original_inventory(directory):
+def test_retained_files_match_the_capture_inventory(directory):
     inventory = load(directory / "digests.json")
     for path in directory.rglob("*"):
         if not path.is_file() or path.name in {"origin.json", "digests.json"}:
@@ -86,9 +88,10 @@ def test_retention_rejects_a_changed_or_truncated_artifact(tmp_path, content):
 
 
 @pytest.fixture
-def proof_module():
+def proof_module(monkeypatch):
     import runpy
     from types import SimpleNamespace
+    monkeypatch.syspath_prepend(str(ROOT / "proofs/heaptrack-shim"))
     return SimpleNamespace(**runpy.run_path(str(ROOT / "proofs/heaptrack-shim/proof.py")))
 
 
@@ -192,3 +195,22 @@ def test_original_failed_run_is_not_accepted_as_clean_bounded_evidence(proof_mod
             row["stderr_nonempty"] = bool(row["failure"]["stderr_tail"])
     with pytest.raises(AssertionError):
         proof_module.validate_evidence(failed)
+
+
+def test_timestamp_statistics_do_not_invent_a_measured_clock(proof_module, tmp_path):
+    raw = tmp_path / "heaptrack.raw"
+    raw.write_bytes(b"v 10500 3\nc 4\nc 4\nc 68\n")
+    result = proof_module.analyze(raw, Path("/bin/cat"), tmp_path)
+    assert result["timestamps"]["count"] == 3
+    assert result["timestamps"]["unique"] == 2
+    assert result["timestamps"]["clock"] is None
+    assert result["timestamps"]["clock_assessment"] == "not_measured_in_this_capture"
+    assert result["timestamps"]["host_mapping"] is None
+
+
+@pytest.mark.parametrize("nanoseconds, expected", [
+    (-999_999, 0), (-1_000_001, (1 << 64) - 1), (1_000_001, 1)])
+def test_clock_calibration_uses_cpp_signed_duration_arithmetic(proof_module, nanoseconds, expected):
+    import runpy
+    clock = runpy.run_path(str(ROOT / "proofs/heaptrack-shim/clock_probe.py"))
+    assert clock["_milliseconds"](nanoseconds) == expected

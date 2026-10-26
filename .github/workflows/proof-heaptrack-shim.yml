@@ -22,18 +22,22 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            'heaptrack=1.5.0+dfsg1-2ubuntu3' \
+            'heaptrack=1.5.0+dfsg1-2ubuntu3' 'bpftrace=0.20.2-1ubuntu4.3' \
             'gcc-12=12.4.0-2ubuntu1~24.04.1' 'g++-12=12.4.0-2ubuntu1~24.04.1' \
             cmake binutils
           mkdir -p build/heaptrack-shim-host
           dpkg-query -W > build/heaptrack-shim-host/packages.txt
+          for package in heaptrack libheaptrack bpftrace; do
+            file="/usr/share/doc/$package/copyright"
+            if [ -f "$file" ]; then cp "$file" "build/heaptrack-shim-host/$package.copyright"; fi
+          done
           uv venv .venv
           uv pip install -p .venv/bin/python -r container/requirements.lock -e 'python/[dev]'
       - name: Investigate preload composition without changing host policy
         env:
           CC: gcc-12
           CXX: g++-12
-        run: bash proofs/heaptrack-shim/run-proof.sh "$PWD/build/heaptrack-shim-evidence" "$RUNNER_TEMP/heaptrack-shim-build"
+        run: bash proofs/heaptrack-shim/run-proof.sh "$PWD/build/heaptrack-shim-evidence" "$RUNNER_TEMP/heaptrack-shim-build" --unshimmed-control
       - name: Validate retained evidence, bounded outcomes and Participant cleanup
         env:
           SIL_SKIP_BUILD: '1'
@@ -52,6 +56,25 @@ jobs:
           assert report["complete"]
           assert any(row["status"] == "bounded" for row in report["observations"]), "bounded path was not exercised"
           PY
+      - name: Measure Heaptrack clock identity and origin in an isolated calibration
+        env:
+          CC: gcc-12
+          PYTHONPATH: ${{ github.workspace }}/python/src
+        run: .venv/bin/python proofs/heaptrack-shim/clock_probe.py "$PWD/build/heaptrack-shim-clock" --build "$RUNNER_TEMP/heaptrack-shim-build"
+      - name: Observe native allocator-probe permissions and available stack evidence
+        env:
+          CC: gcc-12
+        run: .venv/bin/python proofs/heaptrack-shim/availability.py "$PWD/build/heaptrack-shim-bpf-native"
+      - name: Observe default-capability container allocator-probe availability
+        run: |
+          mkdir -p build/heaptrack-shim-bpf-container
+          docker build -f proofs/heaptrack-shim/bpf-container.Dockerfile --iidfile build/heaptrack-shim-bpf-container/image-id.txt -t sil-330-bpf .
+          container=$(docker create --init --network none sil-330-bpf)
+          trap 'docker rm -f "$container" >/dev/null' EXIT
+          status=0
+          docker start -a "$container" || status=$?
+          docker cp "$container:/work/evidence/." build/heaptrack-shim-bpf-container/
+          exit "$status"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -60,4 +83,7 @@ jobs:
             build/heaptrack-shim-evidence/
             build/heaptrack-shim-bounded/
             build/heaptrack-shim-host/
+            build/heaptrack-shim-clock/
+            build/heaptrack-shim-bpf-native/
+            build/heaptrack-shim-bpf-container/
           retention-days: 30

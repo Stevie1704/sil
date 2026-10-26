@@ -193,6 +193,44 @@ for explicit probes. Exact package versions and binary/source digests are
 retained with the experiment. These are development/qualification tools,
 not new dependencies of the installed SiL runtime.
 
+## Heap profiling proof tools (#314, #319, #330)
+
+[Heaptrack](https://invent.kde.org/sdk/heaptrack) is installed from distribution
+packages by [proofs/profiling/](proofs/profiling/),
+[proofs/profiling-qualification/](proofs/profiling-qualification/) and
+[proofs/heaptrack-shim/](proofs/heaptrack-shim/). It is a proof tool, not a
+component of any published SiL artifact. Its preload library is loaded only
+into disposable proof processes; no Heaptrack code is vendored or compiled into
+SiL binaries.
+
+| Package | Component used | License |
+| --- | --- | --- |
+| Debian `1.4.0-2` | preload library and interpreter | LGPL-2.1-or-later |
+| Ubuntu `1.5.0+dfsg1-2ubuntu3` | preload library | LGPL-2.1-or-later |
+| Ubuntu `1.5.0+dfsg1-2ubuntu3` | interpreter, including its symbol-cache and DWARF sources | GPL-2.0-or-later |
+
+These assignments were checked against the exact packages' Debian copyright
+files, including the interpreter-specific override in 1.5. The installed
+notices remain at `/usr/share/doc/heaptrack/copyright` and the corresponding
+library package copyright path. The qualification workflow retains those
+files with the package inventory. Exact source-package links and checksums
+are in [the package evidence](proofs/heaptrack-shim/availability-notes.md#license-evidence).
+The GUI is not used by these proofs; this table is not an assertion that all
+Heaptrack files share one license.
+
+## eBPF availability proof tool (#330)
+
+[proofs/heaptrack-shim/](proofs/heaptrack-shim/) installs Ubuntu's
+`bpftrace=0.20.2-1ubuntu4.3` ([upstream](https://github.com/bpftrace/bpftrace))
+only to check native and container allocator-probe availability. Its Debian
+copyright file assigns Apache-2.0 to the main sources and tools, Expat/MIT
+to bundled `resources/*.h`, and BSD-3-Clause to `cmake/FindLibElf.cmake`.
+The exact package/source identities and copyright verification are in the
+[package evidence](proofs/heaptrack-shim/availability-notes.md#license-evidence).
+Installed copyright files and dependency package identities are retained
+with the experiment. Neither bpftrace nor its LLVM dependencies enter a
+published SiL artifact.
+
 ## Source debugging feasibility (#321)
 
 [proofs/source-debugging/](proofs/source-debugging/) invokes the Ubuntu 24.04

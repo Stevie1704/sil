@@ -93,7 +93,10 @@ shim falls back to libc until its constructor maps the region. An early
 allocation can therefore initialize Heaptrack with a host-clock origin before
 the shim constructor, followed by virtual-clock reads after mapping. That
 mixed-origin subtraction can become negative and appear as a large unsigned
-timestamp. This is a source-derived possibility, not a measured outcome.
+timestamp. Source analysis alone establishes only this possibility. The
+[isolated clock calibration](clock-evidence.md) now measures actual backend
+reads and matches their arithmetic to raw timestamp records, without
+retroactively labeling uninstrumented captures as measured clock evidence.
 If initialization occurs after mapping, both endpoints instead use Virtual
 time. Attach after mapping also starts with a virtual origin. In every case,
 a validated host-time mapping must be demonstrated rather than assumed.
@@ -126,12 +129,20 @@ patch with a reliable initialization order. Constructor ordering alone is
 insufficient to prove this because allocator interception can initialize
 Heaptrack before `main`. Keeping Heaptrack itself in descendants also needs
 separate output ownership. Neither environment repair nor swapping preload
-order solves the clock/sleep problem. These are source-based limits, not a
-measurement of a custom restoration interposer.
+order solves the clock/sleep problem. The shell-only export is rejected from source. The target-resident
+`preserve.c` constructor plus `launch.sh` is the separately tested variant
+in the [Run matrix](README.md#native-observations); its successful and failed
+Repeats do not qualify a generally reliable initialization order.
 
 ## Out-of-process allocation tracing
 
-**Source-based defer; no runtime eBPF availability or allocation capture test.**
+**Rejected as a drop-in collector; setup availability is probed separately.**
+The [availability follow-up](availability-notes.md) records pinned-package
+license checks and the runtime native/container probe. That probe attempts
+current-user and available sudo-root capture without changing host policy,
+and reports counts, stacks and a single-run loop ratio only when capture
+succeeds. A permission/setup failure leaves those values unknown. It is not
+a new SiL collector or evidence of Recording equality for one.
 BCC's pinned `memleak` attaches libc allocation entry/return probes for a
 specific PID. It records successful addresses, sizes, kernel-clock timestamps
 and user stack IDs in bounded maps, deleting tracked allocations on frees.

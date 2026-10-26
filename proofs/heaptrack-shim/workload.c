@@ -7,10 +7,13 @@
 #include <time.h>
 #include <unistd.h>
 
+#define ALLOCATIONS_PER_STEP 8
+#define ALLOCATION_BYTES 2048
+
 __attribute__((noinline)) uint64_t proof_alloc_site(unsigned seed) {
     uint64_t result = 0;
-    for (unsigned i = 0; i < 8; ++i) {
-        volatile unsigned char *p = malloc(2048);
+    for (unsigned i = 0; i < ALLOCATIONS_PER_STEP; ++i) {
+        volatile unsigned char *p = malloc(ALLOCATION_BYTES);
         p[0] = (unsigned char)(seed + i);
         result += p[0];
         free((void *)p);

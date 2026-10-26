@@ -19,16 +19,16 @@ work. No build is proposed by this investigation, and #317 is not widened.
 | --- | --- | --- |
 | Attach with `heaptrack -p PID` | Rejected from pinned source | Injection retains the same clock/sleep engine. Attaching after startup misses earlier allocations; pausing later cannot recover them. |
 | Exempt a profiler thread or caller in the shim | Rejected from pinned source for the existing contract | Timer-thread exemption misses initialization, shutdown and allocation-lock calls on application threads. Caller classification through libstdc++ needs a new specified boundary and has unmeasured cost. It also needs to account for the shim's thread policy. |
-| Restore the shim in descendants | Tested target-resident prototype; insufficient by itself | Force Heaptrack initialization, then restore only the shim in `LD_PRELOAD`. Compare child and grandchild clocks and the entire Recording. Clock and sleep interference remain independent requirements. |
-| Out-of-process allocator tracing | Deferred from pinned BCC/bpftrace source | A new collector needs allocator coverage, startup/descendant coverage, permission checks, stack qualification, loss accounting and a measured overhead/growth budget. `memleak` outstanding allocations are not a complete allocation history. |
+| Preserve the shim via launch adapter | Shell-only export rejected from source; `launch.sh` + target-resident `preserve.c` tested, insufficient | Force Heaptrack initialization, then restore only the shim in `LD_PRELOAD`. Compare child and grandchild clocks and the entire Recording. Clock and sleep interference remain independent requirements. |
+| Out-of-process allocator tracing | Rejected as a drop-in collector; native/container setup probe | The availability probe records permissions, counts/stacks and single-loop timing where capture works. It does not supply allocation lifetime/history, descendant coverage or a loss budget; `memleak` outstanding allocations are not the existing capture contract. A new collector remains deferred. |
 | Keep the Phase 1 rejection | Retained | Does not change the determinism or profiling contracts. Runner heap profiling covers Native participants; an explicitly unshimmed Process variant is a different experiment. |
 
 [`candidates.md`](candidates.md) records primary-source links and source commits
 for Heaptrack 1.4.0/1.5.0, bpftrace 0.21.0 and BCC 0.29.1. Source rejections are
 reasoned evaluations of these candidates on the supported Linux x86-64/glibc
-machine class, **not runtime tests** of attach, a modified shim or eBPF. No
-privilege, stack-quality or numerical-overhead claim is made for an untested
-BPF collector. The previous proof retains measured Heaptrack 1.4 and 1.5 results.
+machine class. Attach and a modified shim remain **source-only rejections**.
+The eBPF setup smoke is described in [availability-notes.md](availability-notes.md);
+failed loading/attachment provides no overhead or stack-quality result. The previous proof retains measured Heaptrack 1.4 and 1.5 results.
 
 ## Reproduce
 
@@ -98,6 +98,38 @@ and raw bytes per wall second are observations, not timing gates or a prediction
 for another workload. Timestamp origin can be initialized before the shim maps
 its region; later clock reads can be Virtual time. There is no validated host
 mapping. Equality of Recordings alone does not qualify the collector.
+
+## Clock identity, unshimmed control and coverage
+
+The isolated [clock calibration](clock-evidence.md) records actual
+`clock_gettime` arguments/results, direct host-syscall brackets and caller
+symbols. It tests every raw timestamp against observed origin candidates and
+keeps unknown/ambiguous outcomes inconclusive. Its installed backend/shim
+binary digests bind the observation to this experiment's tool build. A known
+backend or origin in that calibration is not a host mapping for an arbitrary
+Run. New workload captures use `clock: null` with
+`clock_assessment: not_measured_in_this_capture`; source-based hypotheses are
+separate metadata. The `clock` string in the immutable first-capture
+`results.json` predates this correction and is a source inference, **not** a
+measurement. Its original artifact digest is preserved.
+
+With `--unshimmed-control`, the same workload also runs twice without the
+Clock shim: ordinarily and under Heaptrack. The control checks host clock
+readings against the launch/end monotonic bracket, compares workload results
+and publication times, and requires all 80 known allocations. Its host-clock
+payloads can change, so full Recording equality is reported independently of
+the non-clock-field check. The report records raw sizes, timestamp counts and
+ratios against completed shimmed captures. This reproduces a same-workload
+growth comparison; it is not a benchmark or a claim that one timing predicts
+another workload. The original #314 comparison remains a separate experiment.
+
+Resolving the known allocation site does not establish general stack quality.
+The first captures also reported **13,302–13,305 allocations with unknown leaf
+symbols** and **13,382–13,386 allocations with caller frames**. Those are
+separate coverage counters, not one numerator and denominator. Python/runtime
+symbols dominate the unresolved evidence. The proof establishes exact counts
+at its known C site, not usable allocation-site names for every opaque binary.
+New captures retain allocation totals alongside those coverage counters.
 
 ## Native observations
 
@@ -181,7 +213,10 @@ provenance/failure/diagnostics sidecars and raw/interpreted Heaptrack data.
 `digests.json` inventories the complete experiment output, even if final
 collection validation fails. Small results, Manifests, sidecars, decoded
 Messages and logs are copied into [`evidence/`](evidence/) after the native run;
-large captures stay in the workflow artifact and are identified by digest.
+The six small first-capture Recordings are retained for direct byte comparisons.
+Large raw captures stay in the workflow artifact and are identified by digest.
+The inventory checks establish copy integrity; separate checks derive Recording
+verdicts from bytes and clock/sleep verdicts from decoded Messages.
 An ARM64 Linux run with `--allow-other-machine` is only a smoke check and is
 never retained as x86-64 qualification evidence.
 
@@ -195,7 +230,10 @@ python proofs/heaptrack-shim/retain.py \
   proofs/heaptrack-shim/evidence
 ```
 
-The retention script verifies copied files against the original inventory.
+The retention script verifies copied files against the original inventory,
+including the small Recordings. Expected fixture values in tests deliberately
+remain independent of implementation constants, and the test checksum
+calculation independently verifies the shared runtime digest helper.
 `tests/test_heaptrack_shim_proof.py` independently checks the retained matrix,
 clock/sleep observations, verdict consistency and integrity, including rejection
 of modified or truncated artifact files. `evidence-failure/` separately retains
