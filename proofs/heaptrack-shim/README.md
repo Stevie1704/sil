@@ -201,5 +201,6 @@ clock/sleep observations, verdict consistency and integrity, including rejection
 of modified or truncated artifact files. `evidence-failure/` separately retains
 the failed repeat and its artifact identity; its own inventory covers those
 small snapshots, with `origin.json` identifying the original workflow artifact.
+Empty stderr logs and stderr already captured in the failure sidecars are omitted.
 `origin.json` separately identifies the workflow and compressed artifact; it
 is not part of the original experiment inventory.

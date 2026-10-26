@@ -189,6 +189,6 @@ def test_original_failed_run_is_not_accepted_as_clean_bounded_evidence(proof_mod
         if row["exit_code"] == 1:
             directory = ROOT / "proofs/heaptrack-shim/evidence-failure" / f'{row["policy"]}-{row["mode"]}'
             row["failure"] = load(directory / "run.mcap.failure.json")
-            row["stderr_nonempty"] = (directory / "stderr.txt").stat().st_size > 0
+            row["stderr_nonempty"] = bool(row["failure"]["stderr_tail"])
     with pytest.raises(AssertionError):
         proof_module.validate_evidence(failed)
