@@ -91,7 +91,9 @@ excluding suspend. A failed capture has no observed timestamps. This is
 separate from shimmed userspace `clock_gettime` behavior.
 
 If capture succeeds, the report includes the fixture's monotonic loop duration
-with and without tracing in the **same privilege context**, and their ratio.
+with and without tracing, with the fixture UID recorded for each. A ratio is
+reported only when those UIDs match; a tracer that changes the command
+privilege context does not supply a comparable overhead ratio.
 These are one run per mode, with no stability, percentile or cross-workload
 claim. Tracer startup/attachment time is recorded separately as command wall
 time and is excluded from the loop ratio. If loading or attachment fails,

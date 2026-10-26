@@ -214,3 +214,20 @@ def test_clock_calibration_uses_cpp_signed_duration_arithmetic(proof_module, nan
     import runpy
     clock = runpy.run_path(str(ROOT / "proofs/heaptrack-shim/clock_probe.py"))
     assert clock["_milliseconds"](nanoseconds) == expected
+
+
+def test_bpf_setup_probe_records_inaccessible_interfaces(proof_module, monkeypatch):
+    import runpy
+    probe = runpy.run_path(str(ROOT / "proofs/heaptrack-shim/availability.py"))
+    original = Path.exists
+
+    def inaccessible(path):
+        if str(path) == "/sys/kernel/debug/tracing":
+            raise PermissionError(13, "Permission denied", str(path))
+        return original(path)
+
+    monkeypatch.setattr(Path, "exists", inaccessible)
+    facts = probe["facts"]()
+    denied = facts["interfaces"]["/sys/kernel/debug/tracing"]
+    assert denied["present"] is None
+    assert "Permission denied" in denied["error"]

@@ -267,6 +267,8 @@ def unshimmed_control(out, build, tools, report, raw_limit_bytes):
     capture = rows[1]
     assert messages[0] == messages[1], "unshimmed workload results changed"
     assert capture["raw_stable"] and "analysis_error" not in capture, capture
+    assert capture["heap"]["coverage"]["undecodable_records"] == 0, capture
+    assert not capture["heap"]["coverage"]["truncated"], capture
     assert capture["heap"]["known_site"]["calls"] == STEPS * ALLOCATIONS_PER_STEP, capture
     assert capture["heap"]["known_site"]["sizes"] == [ALLOCATION_BYTES], capture
     assert capture["heap"]["timestamps"]["count"] > 0, capture

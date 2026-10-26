@@ -57,6 +57,15 @@ def _read(path: str) -> dict:
         return {"error": str(exc)}
 
 
+def _presence(path: str) -> dict:
+    try:
+        return {"present": Path(path).exists()}
+    except OSError as exc:
+        # An unprivileged user may not stat debugfs at all. This is unknown
+        # availability, not an absent interface or a failed experiment.
+        return {"present": None, "error": str(exc)}
+
+
 def facts() -> dict:
     status = _read("/proc/self/status")
     selected = {}
@@ -75,7 +84,7 @@ def facts() -> dict:
             "ptrace_scope": "/proc/sys/kernel/yama/ptrace_scope",
             "lockdown": "/sys/kernel/security/lockdown",
         }.items()},
-        "interfaces": {path: Path(path).exists() for path in (
+        "interfaces": {path: _presence(path) for path in (
             "/sys/kernel/btf/vmlinux", "/sys/kernel/tracing",
             "/sys/kernel/debug/tracing", f"/lib/modules/{platform.release()}")},
         "container_marker": Path("/.dockerenv").exists(),
@@ -201,6 +210,8 @@ END {{ clear(@active); }}
         stack = bool(re.search(r"^\s+proof_malloc_site(?:\+|\s)", output, re.MULTILINE))
         observed_ns = _fixture_ns(out, capture)
         baseline_ns = _fixture_ns(out, baseline)
+        baseline_uid = re.search(r"FIXTURE_NS \d+ UID (\d+) RC 0", _text(out, baseline))
+        profiled_uid = re.search(r"FIXTURE_NS \d+ UID (\d+) RC 0", output)
         diagnostic_error_or_loss = bool(re.search(
             r"(?:ERROR:|WARNING: Failed|[Ll]ost \d+ events)", output))
         complete = (capture["returncode"] == 0 and count == ALLOCATIONS
@@ -212,6 +223,8 @@ END {{ clear(@active); }}
                "diagnostic_error_or_loss": diagnostic_error_or_loss,
                "status": "fixture_captured" if complete else "capture_unavailable_or_incomplete",
                "fixture_baseline_ns": baseline_ns, "fixture_profiled_ns": observed_ns,
+               "fixture_baseline_uid": int(baseline_uid[1]) if baseline_uid else None,
+               "fixture_profiled_uid": int(profiled_uid[1]) if profiled_uid else None,
                "output_bytes": (out / capture["stdout"]).stat().st_size,
                "clock": None,
                "configured_clock": "nsecs(monotonic), source maps to kernel bpf_ktime_get_ns",
@@ -221,8 +234,10 @@ END {{ clear(@active); }}
             row[f"kernel_{field}_ns"] = int(timestamp[1]) if timestamp else None
         if row["kernel_first_ns"] is not None and row["kernel_last_ns"] is not None:
             row["clock"] = "host monotonic via bpf_ktime_get_ns; source-identified helper with observed values"
-        if complete and baseline_ns:
+        if complete and baseline_ns and row["fixture_baseline_uid"] == row["fixture_profiled_uid"]:
             row["single_run_loop_time_ratio"] = observed_ns / baseline_ns
+        elif complete:
+            row["overhead_unavailable_reason"] = "baseline and profiled fixture contexts differ or baseline unavailable"
         report["attempts"].append(row)
         return row
 
@@ -233,6 +248,8 @@ END {{ clear(@active); }}
         commands["sudo_check"] = _run(["sudo", "-n", "true"], out, "sudo-check")
         if commands["sudo_check"]["returncode"] == 0:
             attempt("sudo-root", ["sudo", "-n"])
+    if any(row["fixture_baseline_ns"] is None for row in report["attempts"]):
+        return finish("fixture_baseline_failed")
     return finish("observed")
 
 
