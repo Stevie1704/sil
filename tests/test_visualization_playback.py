@@ -633,6 +633,56 @@ def test_the_queue_never_holds_more_than_its_bounds(tmp_path, clock):
     assert playback.status().status == "buffering"
 
 
+def stalled(tmp_path, clock):
+    """Playing and buffering: a full queue holds playback back."""
+    playback, source = make_playback(
+        tmp_path, burst_messages(), clock,
+        queue_limits=QueueLimits(max_messages=3))
+    play_all(playback)
+    clock.advance(10 * S)
+    for _ in range(5):
+        playback.pump()
+    assert playback.status().status == "buffering"
+    return playback, source
+
+
+def test_pause_while_buffering_holds_and_resume_loses_nothing(tmp_path, clock):
+    playback, source = stalled(tmp_path, clock)
+    records = reference_records(source)
+
+    paused = playback.configure("pause", playing=False)
+    delivered = playback.drain()
+    clock.advance(10 * S)
+    for _ in range(5):
+        playback.pump()
+    held = playback.status()
+    playback.configure("resume", playing=True)
+    for _ in range(100):
+        clock.advance(10 * S)
+        playback.pump()
+        delivered += playback.drain()
+
+    assert (paused.status, paused.playing) == ("paused", False)
+    assert (held.status, held.cursor_ns) == ("paused", paused.cursor_ns)
+    assert records_of(delivered, Message) == ordered(
+        records, "ab", BEFORE_START, 2 * S)
+    assert playback.status().status == "ended"
+
+
+def test_close_while_buffering_drops_the_queue_and_stops(tmp_path, clock):
+    playback, _ = stalled(tmp_path, clock)
+
+    playback.close()
+    playback.pump()
+    left = playback.drain()
+
+    assert kinds(left) == ["StateChanged"]
+    assert left[0].state.status == "closed"
+    assert playback.status().status == "closed"
+    with pytest.raises(InvalidCommand, match="closed"):
+        playback.configure("play", playing=True)
+
+
 FOUR = {name: "e.Event" for name in "abcd"}
 
 
