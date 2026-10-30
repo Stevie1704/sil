@@ -54,7 +54,7 @@ from sil.visualization.interchange import ChannelCodec
 from sil.visualization.navigation import MIB
 from sil.visualization.playback import (Backfill, Commit, InvalidCommand,
                                         Message, Playback, PlaybackState,
-                                        Refused, Reset, StateChanged)
+                                        Refused, Reset, StateChanged, Status)
 
 try:
     import foxglove
@@ -74,9 +74,12 @@ _RETRY_S = 0.5  # re-send an unacknowledged barrier or seek state
 _POLL_S = 0.05
 # Foxglove has no failed or closed status. Both stop playback, so they show
 # as Paused; a failure also sends an error status with its diagnostic.
-_STATUS = {"playing": FoxgloveStatus.Playing, "paused": FoxgloveStatus.Paused,
-           "buffering": FoxgloveStatus.Buffering, "ended": FoxgloveStatus.Ended,
-           "failed": FoxgloveStatus.Paused, "closed": FoxgloveStatus.Paused}
+_STATUS = {Status.PLAYING: FoxgloveStatus.Playing,
+           Status.PAUSED: FoxgloveStatus.Paused,
+           Status.BUFFERING: FoxgloveStatus.Buffering,
+           Status.ENDED: FoxgloveStatus.Ended,
+           Status.FAILED: FoxgloveStatus.Paused,
+           Status.CLOSED: FoxgloveStatus.Paused}
 
 
 class UnsupportedSource(ValueError):
@@ -261,7 +264,7 @@ class Bridge:
         elif isinstance(notification, StateChanged):
             self._settle()  # "ended" follows the final Messages
             state = notification.state
-            if state.status == "failed":
+            if state.status == Status.FAILED:
                 self._server.publish_status(
                     f"SiL playback failed: {state.diagnostic}", StatusLevel.Error)
             self._broadcast(state, request_id=None)

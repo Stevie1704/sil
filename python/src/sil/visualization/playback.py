@@ -42,6 +42,7 @@ import uuid
 from collections import OrderedDict, deque
 from collections.abc import Callable, Collection
 from dataclasses import dataclass
+from enum import StrEnum
 from fractions import Fraction
 from pathlib import Path
 
@@ -51,17 +52,23 @@ from sil.visualization.navigation import (Description, Limits,
                                          prepare_navigation, require_positive)
 from sil.visualization.source import SourceError, SourceMessage
 
-PAUSED = "paused"
-PLAYING = "playing"
-BUFFERING = "buffering"
-ENDED = "ended"
-FAILED = "failed"
-CLOSED = "closed"
 REQUEST_CACHE = 256
 MIN_RATE = 0.1
 MAX_RATE = 10.0
 _AFTER_INSTANT = 2**63 - 1  # record_index after every Message of an instant
 _MAX_PAGE_ROWS = 1000
+
+
+class Status(StrEnum):
+    """`PlaybackState.status`. A member equals its string, such as
+    "paused"."""
+
+    PAUSED = "paused"
+    PLAYING = "playing"
+    BUFFERING = "buffering"
+    ENDED = "ended"
+    FAILED = "failed"
+    CLOSED = "closed"
 
 
 @dataclass(frozen=True)
@@ -92,7 +99,7 @@ class PlaybackState:
     session_id: str
     source_sha256: str
     generation: int
-    status: str
+    status: Status
     playing: bool
     pending: bool
     cursor_ns: int | None
@@ -619,17 +626,17 @@ class Playback:
 
     def _state(self) -> PlaybackState:
         if self._closed:
-            status = CLOSED
+            status = Status.CLOSED
         elif self._fault is not None:
-            status = FAILED
+            status = Status.FAILED
         elif self._pending():
-            status = BUFFERING
+            status = Status.BUFFERING
         elif self._ended:
-            status = ENDED
+            status = Status.ENDED
         elif self._playing:
-            status = BUFFERING if self._stalled else PLAYING
+            status = Status.BUFFERING if self._stalled else Status.PLAYING
         else:
-            status = PAUSED
+            status = Status.PAUSED
         return PlaybackState(
             self._session, self._sha256, self._generation, status,
             self._playing, self._pending(), self._cursor, self._seek,
