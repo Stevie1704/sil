@@ -157,7 +157,7 @@ with prepare_navigation("run.mcap", cache_dir="nav-cache") as nav:
   Channel name is refused with `SelectionError`.
 - Times are integers in `0..2**64-1`; `end_ns` can be `2**64` to include the
   last possible time.
-- Each Message is a `SourceRecord(record_index, channel,
+- Each Message is a `SourceMessage(record_index, channel,
   publication_time_ns, data)` with the original `sil_pod` payload bytes.
   `record_index` is the whole-source locator, also after Channel selection.
 - Equal times are ordered by `record_index`. A snapshot takes the highest
@@ -243,8 +243,8 @@ with open_playback("run.mcap") as playback:
         playback.pump()
     for notification in playback.drain():
         if isinstance(notification, (Backfill, Message)):
-            record = notification.record
-            print(record.channel, record.publication_time_ns)
+            message = notification.message
+            print(message.channel, message.publication_time_ns)
         elif isinstance(notification, Commit):
             print("cursor", notification.state.cursor_ns)
 ```
@@ -308,8 +308,8 @@ change that it still needs.
 | Notification | Meaning |
 | --- | --- |
 | `Reset(generation, position_ns)` | Discard all delivered history. A seek follows. |
-| `Backfill(generation, record)` | The latest Message of a Channel at or before the cursor, with its original time and `record_index`. It is not a new publication. |
-| `Message(generation, record)` | A Message that continuous playback crossed. |
+| `Backfill(generation, message)` | The latest Message of a Channel at or before the cursor, with its original time and `record_index`. It is not a new publication. |
+| `Message(generation, message)` | A Message that continuous playback crossed. |
 | `Refused(...)` | A Message that a limit refused, in its place. `backfill` tells if it stands for a latest value. |
 | `Commit(state)` | A reconstruction is complete; `state.cursor_ns` is the new cursor. |
 | `StateChanged(state)` | The status changed without a command: buffering, ended, failed or closed. |

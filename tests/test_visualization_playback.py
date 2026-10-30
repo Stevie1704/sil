@@ -42,7 +42,7 @@ class FakeClock:
 
 
 def reference_records(path):
-    return list(open_source(path).records())
+    return list(open_source(path).messages())
 
 
 def ordered(records, channels, after, until):
@@ -80,7 +80,7 @@ def kinds(notifications):
 
 
 def records_of(notifications, kind):
-    return [n.record for n in notifications if isinstance(n, kind)]
+    return [n.message for n in notifications if isinstance(n, kind)]
 
 
 @pytest.fixture
@@ -518,8 +518,8 @@ def test_a_subscription_added_inside_a_burst_backfills_only_what_precedes(
     clock.advance(30 * MS)
     playback.pump()  # three of the a-Messages at 1.000 s and 1.005 s
     queued = playback.drain()
-    position = (queued[-1].record.publication_time_ns,
-                queued[-1].record.record_index)
+    position = (queued[-1].message.publication_time_ns,
+                queued[-1].message.record_index)
 
     playback.set_subscription(["a", "b"])
     playback.pump()
@@ -611,8 +611,8 @@ def test_an_oversize_message_is_refused_in_its_place_and_playback_continues(
     assert (refused.channel, refused.record_index, refused.size_bytes,
             refused.backfill) == ("blob", 1, 64, True)
     assert kinds(played) == ["Message", "Refused", "Message"]
-    assert (played[0].record.record_index, played[1].record_index,
-            played[2].record.record_index) == (2, 3, 4)
+    assert (played[0].message.record_index, played[1].record_index,
+            played[2].message.record_index) == (2, 3, 4)
     assert state.status == "ended"
 
 

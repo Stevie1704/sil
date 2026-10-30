@@ -49,7 +49,7 @@ from sil.visualization.navigation import (Description, Limits,
                                          LimitExceeded, Navigator,
                                          PageLimits, Progress,
                                          prepare_navigation)
-from sil.visualization.source import SourceError, SourceRecord
+from sil.visualization.source import SourceError, SourceMessage
 
 PAUSED = "paused"
 PLAYING = "playing"
@@ -123,7 +123,7 @@ class Backfill:
     with its original time and locator. Not a new publication."""
 
     generation: int
-    record: SourceRecord
+    message: SourceMessage
 
 
 @dataclass(frozen=True)
@@ -131,7 +131,7 @@ class Message:
     """A Message crossed by continuous playback."""
 
     generation: int
-    record: SourceRecord
+    message: SourceMessage
 
 
 @dataclass(frozen=True)
@@ -560,8 +560,8 @@ class Playback:
                 return
             self._enqueue(_refused(items[0], read.generation, False))
         else:
-            for record in items:
-                self._enqueue(Message(read.generation, record))
+            for message in items:
+                self._enqueue(Message(read.generation, message))
         if items:
             self._after = _key(items[-1])
             self._cursor = self._after[0]
@@ -689,13 +689,13 @@ class Playback:
     def _account(self, notification: Notification, sign: int) -> None:
         if isinstance(notification, (Message, Backfill)):
             self._queued_messages += sign
-            self._queued_bytes += sign * len(notification.record.data)
+            self._queued_bytes += sign * len(notification.message.data)
         elif isinstance(notification, Refused):
             self._queued_messages += sign
 
 
 def _key(item) -> tuple[int, int]:
-    """The (publication_time_ns, record_index) position of a record or of a
+    """The (publication_time_ns, record_index) position of a Message or of a
     LimitExceeded that names one."""
     return item.publication_time_ns, item.record_index
 
@@ -707,7 +707,7 @@ def _refused(error: LimitExceeded, generation: int, backfill: bool) -> Refused:
 
 def _channel(notification: Notification) -> str | None:
     if isinstance(notification, (Message, Backfill)):
-        return notification.record.channel
+        return notification.message.channel
     if isinstance(notification, Refused):
         return notification.channel
     return None

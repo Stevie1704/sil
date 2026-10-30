@@ -247,11 +247,11 @@ class Bridge:
         if isinstance(notification, Reset):
             self._reset(notification)
         elif isinstance(notification, (Backfill, Message)):
-            self._log(notification.record)
+            self._log(notification.message)
         elif isinstance(notification, Refused):
             kind = "latest value" if notification.backfill else "Message"
             self._warn(f"SiL refused the {kind} of {notification.channel!r} at "
-                       f"{notification.publication_time_ns} ns (record "
+                       f"{notification.publication_time_ns} ns (record_index "
                        f"{notification.record_index}, {notification.size_bytes} "
                        f"bytes): {notification.reason}")
         elif isinstance(notification, Commit):
@@ -267,20 +267,20 @@ class Bridge:
             self._broadcast(state, request_id=None)
             self._advance_time(state.cursor_ns)
 
-    def _log(self, record) -> None:
-        payload = self._codecs[record.channel].payload(
-            record.data, record.publication_time_ns, record.record_index)
+    def _log(self, message) -> None:
+        payload = self._codecs[message.channel].payload(
+            message.data, message.publication_time_ns, message.record_index)
         if len(payload) > self._max_message_bytes:
-            self._warn(f"SiL refused the Message of {record.channel!r} at "
-                       f"{record.publication_time_ns} ns (record "
-                       f"{record.record_index}): its JSON payload has "
+            self._warn(f"SiL refused the Message of {message.channel!r} at "
+                       f"{message.publication_time_ns} ns (record_index "
+                       f"{message.record_index}): its JSON payload has "
                        f"{len(payload)} bytes, above {self._max_message_bytes}")
             return
-        self._channels[record.channel].log(payload,
-                                           log_time=record.publication_time_ns)
+        self._channels[message.channel].log(payload,
+                                           log_time=message.publication_time_ns)
         with self._changed:
             self._logged += 1
-        self._latest_logged = record.publication_time_ns
+        self._latest_logged = message.publication_time_ns
 
     def _reset(self, reset: Reset) -> None:
         """Clear the client's history after everything logged before."""

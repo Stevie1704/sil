@@ -41,7 +41,7 @@ class SourceChannel:
     schema_sha256: str
 
 
-class SourceRecord(NamedTuple):
+class SourceMessage(NamedTuple):
     record_index: int
     channel: str
     publication_time_ns: int
@@ -57,11 +57,11 @@ class Source:
     channels: tuple[SourceChannel, ...]  # in declaration order
     _identity: tuple
 
-    def records(self) -> Iterator[SourceRecord]:
+    def messages(self) -> Iterator[SourceMessage]:
         """Every Message in stored order, with its whole-source ordinal."""
         try:
             for index, (topic, time_ns, data) in enumerate(read_records(self.path)):
-                yield SourceRecord(index, topic, time_ns, data)
+                yield SourceMessage(index, topic, time_ns, data)
         except (McapError, ValueError, KeyError, EOFError) as e:
             raise SourceError(f"source {str(self.path)!r} has an unreadable "
                               f"Message: {e}") from e

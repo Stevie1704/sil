@@ -36,7 +36,7 @@ MAX_TIME = 2**64 - 1
 def reference_records(path):
     """Every Message in stored order, from a sequential scan of the source
     with the existing stored-order reader."""
-    return list(open_source(path).records())
+    return list(open_source(path).messages())
 
 
 def reference_range(records, channels, start_ns, end_ns):

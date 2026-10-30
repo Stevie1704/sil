@@ -114,16 +114,16 @@ def _write(recording: Source, selected, codecs: dict[str, ChannelCodec],
         writer.start(profile="", library=f"{CONVERTER}/{build_info.__version__}")
         writer.add_metadata("sil_visualization", _metadata(recording, selected))
         ids = _register(writer, recording, selected, codecs)
-        for record in recording.records():
-            channel_id = ids.get(record.channel)
+        for message in recording.messages():
+            channel_id = ids.get(message.channel)
             if channel_id is None:
                 continue
-            payload = codecs[record.channel].payload(
-                record.data, record.publication_time_ns, record.record_index)
-            writer.add_message(channel_id, log_time=record.publication_time_ns,
-                               publish_time=record.publication_time_ns,
+            payload = codecs[message.channel].payload(
+                message.data, message.publication_time_ns, message.record_index)
+            writer.add_message(channel_id, log_time=message.publication_time_ns,
+                               publish_time=message.publication_time_ns,
                                data=payload)
-            _count(counts[record.channel], record.publication_time_ns)
+            _count(counts[message.channel], message.publication_time_ns)
         writer.finish()
     return counts
 
