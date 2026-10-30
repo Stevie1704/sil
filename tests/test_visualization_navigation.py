@@ -351,6 +351,24 @@ def test_preparation_reports_progress_and_a_second_preparation_reuses_the_index(
     assert first.index.path.name.startswith(first.source.sha256)
 
 
+def test_a_chunk_of_many_messages_is_indexed_in_bounded_batches(tmp_path):
+    # 70,000 one-byte Messages in one chunk: more than one 65,536-row batch.
+    source = write_source(tmp_path / "run.mcap",
+                          {"b.Byte": {"fields": [{"name": "v", "type": "u8"}]}},
+                          {"b": "b.Byte"},
+                          (("b", t, {"v": t % 256}) for t in range(70_000)),
+                          chunk_size=64 * 2**20)
+    seen = []
+
+    with prepare_navigation(source, cache_dir=tmp_path / "c",
+                            progress=seen.append) as nav:
+        assert nav.describe().message_count == 70_000
+        last = nav.snapshot(None, 2**64 - 1)["b"]
+
+    assert [p.messages for p in seen] == [65_536, 70_000]
+    assert (last.record_index, last.data) == (69_999, bytes([69_999 % 256]))
+
+
 @pytest.mark.parametrize("cancel_after", [1, "last"])
 def test_cancelled_preparation_publishes_no_index(tmp_path, cancel_after):
     source = many_chunks(tmp_path / "run.mcap")

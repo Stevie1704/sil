@@ -25,8 +25,11 @@ is not detected.
 Memory is bounded by `Limits`: at most one decoded chunk of
 `max_decoded_bytes` is read at a time, decoded chunks are cached up to
 `chunk_cache_bytes`, and no Message payload above `max_message_bytes` is
-read. Sizes are checked before allocation or decompression. SQLite page
-caches and decoder metadata come in addition, so memory use is not constant.
+read. Sizes are checked before allocation or decompression. The index build
+inserts the Message locations of a chunk in batches of at most
+`recording.LOCATION_BATCH` rows, so its memory does not grow with the
+Message count of a chunk. SQLite page caches and decoder metadata come in
+addition, so memory use is not constant.
 
 A Navigator is not safe for concurrent use; use it from one thread at a time.
 """
@@ -203,7 +206,7 @@ def prepare_navigation(source: str | Path, *, cache_dir: str | Path,
     """Validate and hash `source`, then reuse or build its index in
     `cache_dir`.
 
-    `progress` is called after each scanned chunk. Setting `cancel` stops a
+    `progress` is called after each indexed batch of Message locations. Setting `cancel` stops a
     build with PreparationCancelled. Raises SourceError for a source that is
     not a finalized supported Recording or that changes, LimitExceeded for
     an oversize chunk and IndexStorageError when the index cannot be

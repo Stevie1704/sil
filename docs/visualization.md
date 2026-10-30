@@ -195,7 +195,9 @@ index is deleted and built again. The index is disposable: delete it at any
 time.
 
 - `progress` receives `Progress(scanned_bytes, total_bytes, messages)` after
-  each chunk. Setting the `cancel` event stops preparation with
+  each indexed batch of at most 65,536 Message locations. A batch never spans
+  two chunks, so the build memory does not grow with the Message count of a
+  chunk. Setting the `cancel` event stops preparation with
   `PreparationCancelled`.
 - The source file identity (device, inode, size, modification time) is
   checked before and after preparation and around every read. A change is
