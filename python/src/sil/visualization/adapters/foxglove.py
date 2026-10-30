@@ -29,6 +29,8 @@ Mapping:
   is broadcast as server time.
 - `Refused` and payloads above `max_message_bytes` are sent as warning
   statuses, never as data.
+- A drained notification that a later seek, disconnect or unsubscribe
+  superseded (`Playback.superseded`) is dropped, not sent.
 - A disconnect pauses the controller, and a new session ID makes the next
   client start fresh.
 
@@ -252,6 +254,8 @@ class Bridge:
         self._server.broadcast_time(time_ns)
 
     def _handle(self, notification) -> None:
+        if self._playback.superseded(notification):
+            return  # a later seek, disconnect or unsubscribe flushed it
         if isinstance(notification, Reset):
             self._reset(notification)
         elif isinstance(notification, (Backfill, Message)):

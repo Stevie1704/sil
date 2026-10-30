@@ -516,6 +516,25 @@ def test_unsubscribing_drops_queued_messages_of_that_channel(tmp_path, clock):
         records, "a", BEFORE_START, S + 500 * MS)
 
 
+def test_drained_notifications_are_superseded_by_a_seek_or_an_unsubscribe(
+        tmp_path, clock):
+    playback, _ = make_playback(tmp_path, signal(), clock)
+    play_all(playback)
+    clock.advance(500 * MS)
+    settle(playback)
+    held = [n for n in playback.drain() if isinstance(n, Message)]
+    a = [n for n in held if n.message.channel == "a"]
+    b = [n for n in held if n.message.channel == "b"]
+
+    playback.set_subscription(["a"])  # a new generation, but no flush of a
+    after_unsubscribe = ([playback.superseded(n) for n in a],
+                         [playback.superseded(n) for n in b])
+    playback.configure("seek", position_ns=2 * S)
+
+    assert after_unsubscribe == ([False] * len(a), [True] * len(b))
+    assert all(playback.superseded(n) for n in held)
+
+
 def test_time_spent_buffering_is_not_played_after_a_subscription_change(
         tmp_path, clock):
     playback, _ = make_playback(tmp_path, signal(), clock,

@@ -267,6 +267,7 @@ disposable; delete it at any time.
 | `set_subscription(channels)` | Deliver only these Channels. New Channels are reconstructed at the cursor. |
 | `status()` | The current `PlaybackState`. |
 | `disconnect()` | The client went away: pause, drop the subscription, the queue and the request IDs. |
+| `superseded(notification)` | True for a drained notification that a later seek, disconnect or unsubscribe would have removed from the queue. An adapter drops it instead of sending it. |
 | `close()` | End the session and close the index. |
 
 Playback starts paused at the first Message time, with no subscription. It

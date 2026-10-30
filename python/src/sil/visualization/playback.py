@@ -256,6 +256,7 @@ class Playback:
         self._channels = tuple(c.name for c in described.channels)
         self._start, self._end = described.start_ns, described.end_ns
         self._generation = 0
+        self._flushed = 0  # generation of the last seek or disconnect
         self._playing = False
         self._rate = 1.0
         self._cursor = self._start
@@ -382,6 +383,7 @@ class Playback:
             self._staged = None
             self._requests.clear()
             self._generation += 1
+            self._flushed = self._generation
             self._drop(lambda n: True)
             self._fresh = True
             self._lock.notify_all()
@@ -423,6 +425,20 @@ class Playback:
             if taken:
                 self._lock.notify_all()
             return taken
+
+    def superseded(self, notification: Notification) -> bool:
+        """True for a drained notification that a later command would have
+        removed from the queue: a seek or disconnect followed its
+        generation, or its Channel is no longer subscribed. An adapter that
+        still holds it drops it instead of sending it."""
+        generation = getattr(notification, "generation", None)
+        if generation is None:
+            return False  # Commit and StateChanged carry a current state
+        with self._lock:
+            if generation < self._flushed:
+                return True
+            channel = _channel(notification)
+            return channel is not None and channel not in self._subscription
 
     # --- work ---------------------------------------------------------------
 
@@ -658,6 +674,7 @@ class Playback:
         it; None for a source without Messages."""
         self._staged = None
         self._generation += 1
+        self._flushed = self._generation
         self._reset_pending = True
         self._seek_after = after
         self._seek = None if after is None else after[0]

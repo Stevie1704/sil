@@ -523,6 +523,48 @@ def test_unacknowledged_bytes_stay_within_the_window(serve, big_blobs):
         serve(big_blobs, window_bytes=0)
 
 
+def seek_after_first_messages_drained(playback, monkeypatch, position_ns):
+    """Seek as soon as the adapter has drained its first batch of played
+    Messages: the batch is then in its hands, from an old generation."""
+    from sil.visualization.playback import Message
+    drain, stale = playback.drain, []
+
+    def draining(*args, **kwargs):
+        batch = drain(*args, **kwargs)
+        if not stale and any(isinstance(n, Message) for n in batch):
+            stale.extend(n.message.record_index for n in batch
+                         if isinstance(n, Message))
+            playback.configure("seek-while-held", position_ns=position_ns,
+                               playing=False)
+        return batch
+
+    monkeypatch.setattr(playback, "drain", draining)
+    return stale
+
+
+def test_drained_notifications_of_an_old_generation_are_not_sent(
+        serve, qualification, tmp_path, monkeypatch):
+    stale = []
+    bridge = serve(qualification, adjust=lambda p: stale.append(
+        seek_after_first_messages_drained(p, monkeypatch, 5 * S)) or p)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=0.1)
+    client.wait_for(lambda f: f["op"] == "playbackState" and f["did_seek"]
+                    and f["time"] == 5 * S)
+    client.wait_for(lambda f: f["op"] == "playbackState" and not f["did_seek"]
+                    and f["time"] == 5 * S and f["status"] == PAUSED)
+    time.sleep(0.2)
+
+    (held,) = stale
+    assert held  # the seek came while that batch was held
+    sent = {int(p["sil"]["record_index"]) for _, _, p in received(client)}
+    assert not sent & set(held)
+    messages = exported_messages(qualification, tmp_path)
+    assert received(client) == latest_at(messages, set(client.channels), 5 * S)
+    client.close()
+
+
 def test_queued_values_from_before_a_seek_never_follow_its_reset(
         serve, big_blobs):
     bridge = serve(big_blobs, backlog=32)
