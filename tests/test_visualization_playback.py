@@ -143,6 +143,7 @@ def test_playback_starts_paused_at_the_first_instant(tmp_path, clock):
     assert state.source_sha256 == open_source(source).sha256
     assert state.session_id
     assert state.subscription == ()
+    assert [c.name for c in playback.description.channels] == ["a", "b"]
     clock.advance(5 * S)
     assert settle(playback).cursor_ns == S
     assert playback.drain() == []

@@ -267,6 +267,9 @@ rate is a finite number from 0.1 to 10. A seek accepts any time from the
 first to the last Message time, inclusive. A source without Messages has no
 playback range: a seek is refused, and play ends at once.
 
+`playback.description` is the `describe()` result of the source: identity,
+Channels with their Schemas, bounds and completeness.
+
 An invalid command raises `InvalidCommand`. Its `state` is the actual
 state, which the command did not change.
 

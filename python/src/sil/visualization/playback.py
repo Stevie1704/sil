@@ -45,7 +45,8 @@ from dataclasses import dataclass
 from fractions import Fraction
 from pathlib import Path
 
-from sil.visualization.navigation import (Limits, LimitExceeded, Navigator,
+from sil.visualization.navigation import (Description, Limits,
+                                         LimitExceeded, Navigator,
                                          PageLimits, Progress,
                                          prepare_navigation)
 from sil.visualization.source import SourceError, SourceRecord
@@ -218,12 +219,17 @@ def open_playback(source: str | Path, *, cache_dir: str | Path | None = None,
 
 class Playback:
     """The playback controller over one Navigator, which it owns and
-    closes. It starts paused at the first instant of the source."""
+    closes. It starts paused at the first instant of the source.
+    `description` is the Navigator's `describe()` result: an adapter takes
+    the Channel schemas for its payload conversion from it."""
+
+    description: Description
 
     def __init__(self, navigator: Navigator, *,
                  clock: Callable[[], int] = time.monotonic_ns,
                  queue_limits: QueueLimits | None = None):
         described = navigator.describe()
+        self.description = described  # source identity and Channel catalog
         self._nav = navigator
         self._clock = clock
         self._limits = queue_limits or QueueLimits()
