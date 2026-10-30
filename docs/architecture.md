@@ -15,6 +15,7 @@ behavior, and CAN semantics live at the edge.
 | `include/sil/` | C ABI for Native participants and binary layouts shared with Process participants and the Clock shim. |
 | `shim/` | Preloaded Clock shim that reads the kernel-provided Virtual time. Its test probe lives in `tests/fixtures/`. |
 | `python/src/sil/` | Manifest authoring and validation, Participant templates, schema codecs, Process participant support, test helpers, recording conversion, comparison, regression tooling, diagnostics orchestration with its summaries and offline HTML reports (inline page assets in `report_assets/`), and CPU and heap profiling around perf and Heaptrack with its offline summary and HTML report (`profile_*.py`, [contract](profile-report.md)). |
+| `python/src/sil/visualization/` | Tool-independent interfaces to external visualization tools ([spec #345](https://github.com/Stevie1704/sil/issues/345)): the `sil_visualization_json` interchange profile (`interchange.py`), the finalized-source reader with whole-source `record_index` (`source.py`), and the [visualization export](visualization.md) (`export.py`). No kernel or SDK dependency. |
 | `python/src/sil/fmi/` | Importer: archive inspection, variable binding, FMI lifecycle, and coordination of FMU groups within one Process participant. |
 | `models/` | Maintained model products. `models/can/` owns CAN behavior, its FMI adapter, supported profile, tests, qualification, and release policy. |
 
