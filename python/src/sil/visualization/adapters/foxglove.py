@@ -242,9 +242,11 @@ class Bridge:
                        f"{notification.record_index}, {notification.size_bytes} "
                        f"bytes): {notification.reason}")
         elif isinstance(notification, Commit):
+            self._settle()  # the state follows the data it reports
             self._broadcast(notification.state, request_id=notification.state.request_id)
             self._advance_time(notification.state.cursor_ns)
         elif isinstance(notification, StateChanged):
+            self._settle()  # "ended" follows the final Messages
             state = notification.state
             if state.status == "failed":
                 self._server.publish_status(

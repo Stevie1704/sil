@@ -21,10 +21,10 @@ import time
 import pytest
 from conftest import ROOT
 from mcap.reader import make_reader
-from visualization_fixture import write_qualification_source
+from visualization_fixture import write_qualification_source, write_source
 
 from sil.visualization import export_recording
-from sil.visualization.playback import open_playback
+from sil.visualization.playback import QueueLimits, open_playback
 
 PYTHON_SRC = ROOT / "python" / "src"
 MS = 1_000_000
@@ -191,8 +191,9 @@ def serve(adapter, tmp_path):
     """Serve a source on an ephemeral loopback port; close it afterwards."""
     bridges = []
 
-    def start(source, **options):
-        playback = open_playback(source, cache_dir=tmp_path / "cache")
+    def start(source, queue_limits=None, **options):
+        playback = open_playback(source, cache_dir=tmp_path / "cache",
+                                 queue_limits=queue_limits)
         bridge = adapter.serve(playback, "127.0.0.1", 0, **options)
         bridges.append(bridge)
         return bridge
@@ -312,4 +313,140 @@ def test_play_delivers_every_message_in_order_with_its_time_then_ends(
     assert received(client) == latest_at(messages, set(client.channels), 0) + after_start
     times = [f["time"] for f in client.frames if f["op"] == "time"]
     assert times == sorted(times) and times[-1] == 9_990 * MS
+    client.close()
+
+
+def after_last_seek(client, position_ns):
+    """Messages after the last did_seek state at `position_ns`."""
+    seeks = [i for i, f in enumerate(client.frames) if f["op"] == "playbackState"
+             and f["did_seek"] and f["time"] == position_ns]
+    assert seeks, "no did_seek state"
+    return received(client, seeks[-1] + 1)
+
+
+def test_seek_backward_while_playing_clears_then_backfills_without_stale_values(
+        serve, qualification, tmp_path):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=10.0)
+    client.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 6 * S)
+    client.request("seek", PLAY, speed=10.0, seek=2 * S)
+    _, answer = client.wait_for(lambda f: f.get("request_id") == "seek"
+                                and not f["did_seek"])
+    assert answer["status"] == BUFFERING and answer["time"] == 2 * S
+    client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
+    messages = exported_messages(qualification, tmp_path)
+    expected = latest_at(messages, set(client.channels), 2 * S) + sorted(
+        (m for m in messages if m[1] > 2 * S), key=key)
+    assert after_last_seek(client, 2 * S) == expected
+    backfill = latest_at(messages, set(client.channels), 2 * S)
+    assert "sparse" not in {topic for topic, _, _ in backfill}
+    client.close()
+
+
+def test_repeated_seeks_leave_only_the_last_generation(
+        serve, qualification, tmp_path):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=10.0)
+    client.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 1 * S)
+    for number, position in enumerate((8 * S, 1 * S, 6 * S, 3 * S)):
+        client.request(f"seek-{number}", PLAY, speed=10.0, seek=position)
+    client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
+    messages = exported_messages(qualification, tmp_path)
+    expected = latest_at(messages, set(client.channels), 3 * S) + sorted(
+        (m for m in messages if m[1] > 3 * S), key=key)
+    assert after_last_seek(client, 3 * S) == expected
+    client.close()
+
+
+def test_pause_rate_and_invalid_requests_answer_the_actual_state(
+        serve, qualification):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=1.0)
+    client.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 200 * MS)
+    client.request("pause", PAUSE, speed=1.0)
+    _, paused = client.wait_for(lambda f: f.get("request_id") == "pause")
+    assert paused["status"] == PAUSED
+    time.sleep(0.3)
+    count = len(received(client))
+    time.sleep(0.5)
+    assert len(received(client)) == count  # nothing arrives while paused
+    client.request("faster", PAUSE, speed=2.0)
+    _, faster = client.wait_for(lambda f: f.get("request_id") == "faster")
+    assert (faster["status"], faster["speed"], faster["time"]) == (
+        PAUSED, 2.0, paused["time"])
+    client.request("too-fast", PLAY, speed=50.0)
+    _, refused = client.wait_for(lambda f: f.get("request_id") == "too-fast")
+    assert (refused["status"], refused["speed"], refused["time"]) == (
+        PAUSED, 2.0, paused["time"])
+    _, warning = client.wait_for(lambda f: f["op"] == "status"
+                                 and "refused" in f["message"])
+    assert warning["level"] == 1 and "rate" in warning["message"]
+    client.close()
+
+
+def write_blobs(path, size, count, period_ns):
+    """`count` Messages of `size` bytes (4/3 of that as JSON) every
+    `period_ns` on Channel `blobs`; field `n` numbers them."""
+    schema = {"b.Blob": {"fields": [{"name": "n", "type": "u32"},
+                                    {"name": "blob", "type": "u8", "count": size}]}}
+    return write_source(path, schema, {"blobs": "b.Blob"},
+                        (("blobs", step * period_ns,
+                          {"n": step, "blob": bytes([step % 256]) * size})
+                         for step in range(count)))
+
+
+@pytest.fixture
+def blobs(tmp_path):
+    """2 s of 80 KB JSON Messages every 10 ms: a client that stops
+    reading fills the socket buffers within a second."""
+    return write_blobs(tmp_path / "blobs.mcap", 60_000, 200, 10 * MS)
+
+
+@pytest.fixture
+def big_blobs(tmp_path):
+    """2 s of 1.3 MB JSON Messages every 50 ms: a few of them exceed the
+    socket buffers, so a stalled client leaves Messages in the SDK queue."""
+    return write_blobs(tmp_path / "big.mcap", 1_000_000, 40, 50 * MS)
+
+
+def numbers(entries):
+    return [payload["fields"]["n"] for _, _, payload in entries]
+
+
+def test_a_stalled_client_buffers_and_then_receives_every_message(
+        serve, blobs):
+    bridge = serve(blobs, backlog=16, queue_limits=QueueLimits(max_messages=32))
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=1.0)
+    client.wait_for(lambda f: f["op"] == "message")
+    client.reading.clear()
+    time.sleep(1.5)  # the source plays on; the client accepts nothing
+    client.reading.set()
+    client.wait_for(lambda f: f.get("status") == ENDED, timeout=30)
+    assert numbers(received(client)) == list(range(200))
+    assert any(f.get("status") == BUFFERING for f in client.frames)
+    client.close()
+
+
+def test_queued_values_from_before_a_seek_never_follow_its_reset(
+        serve, big_blobs):
+    bridge = serve(big_blobs, backlog=32)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=1.0)
+    client.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 200 * MS)
+    client.reading.clear()
+    time.sleep(1.0)  # data piles up in the SDK queue and the sockets
+    client.request("seek", PLAY, speed=1.0, seek=100 * MS)
+    time.sleep(0.3)
+    client.reading.set()
+    client.wait_for(lambda f: f.get("status") == ENDED, timeout=60)
+    assert numbers(after_last_seek(client, 100 * MS)) == list(range(2, 40))
     client.close()
