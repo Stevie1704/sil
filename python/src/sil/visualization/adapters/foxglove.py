@@ -351,10 +351,7 @@ class Bridge:
         with self._changed:
             connection = self._relay.connection
         self._barrier()
-        self._wait(lambda: self._room_locked() > 0, connection, timeout=_RETRY_S)
-
-    def _room_locked(self) -> int:
-        return self._window - (self._logged - self._acked_floor())
+        self._wait(lambda: self._room() > 0, connection, timeout=_RETRY_S)
 
     def _settle(self) -> bool:
         """Wait until every entry logged so far left the SDK queue. False
