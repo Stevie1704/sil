@@ -47,6 +47,7 @@ without the `sil[foxglove]` extra.
 from __future__ import annotations
 
 import itertools
+import math
 import threading
 import time
 
@@ -56,9 +57,10 @@ from sil.visualization.adapters.foxglove_relay import (BARRIER_ID, Relay,
                                                        Subscription)
 from sil.visualization.interchange import ChannelCodec
 from sil.visualization.navigation import MIB
-from sil.visualization.playback import (Backfill, Commit, InvalidCommand,
-                                        Message, Playback, PlaybackState,
-                                        Refused, Reset, StateChanged, Status)
+from sil.visualization.playback import (MAX_RATE, MIN_RATE, Backfill, Commit,
+                                        InvalidCommand, Message, Playback,
+                                        PlaybackState, Refused, Reset,
+                                        StateChanged, Status)
 
 try:
     import foxglove
@@ -192,7 +194,7 @@ class Bridge:
                 claimed.request_id or f"{_ANONYMOUS}{next(self._anonymous)}",
                 position_ns=request.seek_time,
                 playing=request.playback_command == PlaybackCommand.Play,
-                rate=float(f"{request.playback_speed:.6g}"))
+                rate=_rate(request.playback_speed))
         except InvalidCommand as e:
             self._server.publish_status(f"SiL refused the playback request: {e}",
                                         StatusLevel.Warning)
@@ -467,6 +469,16 @@ def _foxglove_state(state: PlaybackState, *, did_seek: bool,
                          current_time=now if now is not None else 0,
                          playback_speed=state.rate, did_seek=did_seek,
                          request_id=request_id)
+
+
+def _rate(speed: float) -> float:
+    """The rate of a request. The wire carries a 32-bit float, so an
+    accepted speed is shown with 6 significant digits (0.1, not
+    0.100000001). The range check uses the raw value: an out-of-range speed
+    goes to the controller unrounded, which refuses it."""
+    if math.isfinite(speed) and MIN_RATE <= speed <= MAX_RATE:
+        return float(f"{speed:.6g}")
+    return speed
 
 
 def _url_host(host: str) -> str:

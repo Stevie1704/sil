@@ -446,6 +446,24 @@ def test_requests_without_an_id_are_applied_and_never_conflict(
     client.close()
 
 
+def test_a_speed_just_outside_the_range_is_refused_before_rounding(
+        serve, qualification):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+
+    above = struct.unpack("<f", struct.pack("<f", 10.000001))[0]
+    assert above > 10.0  # what the wire carries
+    client.request("too-fast", PLAY, speed=above)
+    _, refused = client.wait_for(lambda f: f.get("request_id") == "too-fast")
+    _, warning = client.wait_for(lambda f: f["op"] == "status"
+                                 and "refused" in f["message"])
+
+    assert (refused["status"], refused["speed"]) == (PAUSED, 1.0)
+    assert "rate" in warning["message"]
+    client.close()
+
+
 def write_blobs(path, size, count, period_ns):
     """`count` Messages of `size` bytes (4/3 of that as JSON) every
     `period_ns` on Channel `blobs`; field `n` numbers them."""
