@@ -8,11 +8,13 @@ of the source (`reference_records`), never from the index under test.
 
 from __future__ import annotations
 
+import threading
+
 import pytest
 from visualization_fixture import write_source
 
 from sil.visualization.navigation import Limits, prepare_navigation
-from sil.visualization.playback import (Backfill, InvalidCommand,
+from sil.visualization.playback import (Backfill, Commit, InvalidCommand,
                                         Message, Playback, QueueLimits,
                                         RequestConflict,
                                         StateChanged)
@@ -665,3 +667,85 @@ def test_refused_requests_are_not_cached(tmp_path, clock):
         playback.configure(7, rate=2.0)
 
     assert playback.configure("r", rate=2.0).rate == 2.0
+
+
+# --- disconnect, failure and the worker loop --------------------------------------
+
+
+def test_disconnect_pauses_and_a_reconnect_gets_a_fresh_reconstruction(
+        tmp_path, clock):
+    playback, source = open_playback(tmp_path, signal(), clock)
+    records = reference_records(source)
+    play_all(playback)
+    playback.configure("r1", rate=2.0)
+    clock.advance(400 * MS)
+    settle(playback)  # Messages queued for the client that goes away
+
+    gone = playback.disconnect()
+    clock.advance(S)
+    idle = settle(playback)
+    playback.set_subscription(["b"])
+    playback.pump()
+    fresh = playback.drain()
+    reused = playback.configure("r1", rate=3.0)  # the cache is cleared
+
+    assert (gone.status, gone.playing, gone.subscription) == ("paused", False, ())
+    assert idle.cursor_ns == S + 800 * MS
+    assert kinds(fresh) == ["Reset", "Backfill", "Commit"]
+    assert fresh[0].position_ns == S + 800 * MS
+    assert records_of(fresh, Backfill) == latest(records, "b", S + 800 * MS)
+    assert fresh[-1].state.status == "paused"
+    assert reused.rate == 3.0
+
+
+def test_a_seek_pending_at_disconnect_is_where_the_reconnect_starts(
+        tmp_path, clock):
+    playback, _ = open_playback(tmp_path, signal(), clock)
+    playback.set_subscription(["a"])
+    playback.configure("seek", position_ns=2 * S)
+
+    playback.disconnect()
+    playback.set_subscription(["a"])
+    settle(playback)
+    fresh = playback.drain()
+
+    assert kinds(fresh) == ["Reset", "Backfill", "Commit"]
+    assert fresh[-1].state.cursor_ns == 2 * S
+
+
+def test_a_source_that_changes_during_playback_fails_the_session(tmp_path, clock):
+    playback, source = open_playback(tmp_path, signal(), clock)
+    play_all(playback)
+    with open(source, "ab") as stream:
+        stream.write(b"x")
+    clock.advance(S)
+
+    playback.pump()
+    failed = playback.status()
+
+    assert (failed.status, failed.playing) == ("failed", False)
+    assert "changed" in failed.diagnostic
+    notifications = playback.drain()
+    assert isinstance(notifications[-1], StateChanged)
+    assert notifications[-1].state.status == "failed"
+    with pytest.raises(InvalidCommand, match="failed"):
+        playback.configure("play", playing=True)
+    playback.close()
+    assert playback.status().status == "closed"
+
+
+def test_run_works_until_close_on_its_own_thread(tmp_path, clock):
+    playback, source = open_playback(tmp_path, signal(), clock)
+    records = reference_records(source)
+    worker = threading.Thread(target=playback.run, daemon=True)
+    worker.start()
+
+    playback.set_subscription(["a", "b"])
+    received = []
+    while not any(isinstance(n, Commit) for n in received):
+        received += playback.drain(timeout=10)
+    playback.close()
+    worker.join(timeout=10)
+
+    assert not worker.is_alive()
+    assert records_of(received, Backfill) == latest(records, "ab", S)

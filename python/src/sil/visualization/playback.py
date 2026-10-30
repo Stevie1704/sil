@@ -43,12 +43,13 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 from sil.visualization.navigation import LimitExceeded, Navigator, PageLimits
-from sil.visualization.source import SourceRecord
+from sil.visualization.source import SourceError, SourceRecord
 
 PAUSED = "paused"
 PLAYING = "playing"
 BUFFERING = "buffering"
 ENDED = "ended"
+FAILED = "failed"
 CLOSED = "closed"
 REQUEST_CACHE = 256
 MIN_RATE = 0.1
@@ -215,6 +216,9 @@ class Playback:
         self._ended = False
         self._closed = False
         self._busy = False
+        self._more = False  # the last page read stopped before its target
+        self._fault: str | None = None
+        self._fresh = False  # after a disconnect: the next client needs a Reset
         self._subscription: tuple[str, ...] = ()
         self._unreconstructed: set[str] = set()
         self._reset_pending = False
@@ -299,6 +303,28 @@ class Playback:
             self._subscription = wanted
             self._stalled, self._target = False, None
             self._drop(lambda n: _channel(n) in removed)
+            if self._fresh and wanted:
+                self._fresh = False
+                self._start_seek(self._seek if self._reset_pending
+                                 else self._cursor)
+            self._lock.notify_all()
+            return self._state()
+
+    def disconnect(self) -> PlaybackState:
+        """The client went away: pause, drop its subscription, queued
+        notifications and request IDs. The next subscription starts with a
+        Reset and a fresh reconstruction at the cursor."""
+        with self._lock:
+            if self._closed:
+                raise InvalidCommand("playback is closed", self._state())
+            self._playing = False
+            self._stalled, self._target = False, None
+            self._subscription = ()
+            self._unreconstructed = set()
+            self._requests.clear()
+            self._generation += 1
+            self._drop(lambda n: True)
+            self._fresh = True
             self._lock.notify_all()
             return self._state()
 
@@ -345,30 +371,44 @@ class Playback:
         """Do the next unit of work: one reconstruction or one page of
         playback. Call it from one thread only."""
         with self._lock:
-            if self._closed or self._busy:
+            if self._closed or self._busy or self._fault is not None:
                 return
             work = self._take_job() or self._take_read()
             if work is None:
                 return
             self._busy = True
+        error = None
         try:
             if isinstance(work, _Job):
                 result = self._reconstruct(work)
             else:
                 result = self._read(work)
-        finally:
-            with self._lock:
-                self._busy = False
-                if self._closed:
-                    self._nav.close()
+        except (SourceError, OSError) as e:  # source changed, index unusable
+            error = e
         with self._lock:
+            self._busy = False
             if self._closed:
-                return
-            if isinstance(work, _Job):
+                self._nav.close()
+            elif error is not None:
+                self._fail(error)
+            elif isinstance(work, _Job):
                 self._commit(work, result)
             else:
                 self._advance(work, *result)
             self._lock.notify_all()
+
+    def run(self, tick_ns: int = 10 * 1_000_000) -> None:
+        """Pump until `close`, on the calling thread. While playing it
+        pumps at least every `tick_ns` of wall time; otherwise it waits
+        for a command or a drain."""
+        while True:
+            self.pump()
+            with self._lock:
+                if self._closed:
+                    return
+                if self._fault is None and (self._pending() or self._more):
+                    continue
+                self._lock.wait(tick_ns / 1e9 if self._playing else None)
 
     def _take_job(self) -> _Job | None:
         if not self._pending():
@@ -382,6 +422,7 @@ class Playback:
         return _Job(self._generation, self._reset_pending, after, channels)
 
     def _take_read(self) -> _Read | None:
+        self._more = False
         if not self._playing or self._pending() or self._ended:
             return None
         target = self._target if self._stalled else self._playhead(self._clock())
@@ -490,6 +531,7 @@ class Playback:
             self._after = _key(items[-1])
             self._cursor = self._after[0]
         if not complete:
+            self._more = True
             return
         self._after = (read.target, _AFTER_INSTANT)
         self._cursor = read.target
@@ -542,6 +584,8 @@ class Playback:
     def _state(self) -> PlaybackState:
         if self._closed:
             status = CLOSED
+        elif self._fault is not None:
+            status = FAILED
         elif self._pending():
             status = BUFFERING
         elif self._ended:
@@ -554,11 +598,19 @@ class Playback:
             self._session, self._sha256, self._generation, status,
             self._playing, self._pending(), self._cursor, self._seek,
             self._start, self._end, self._rate, self._request_id,
-            self._subscription, None)
+            self._subscription, self._fault)
 
     def _check_open(self) -> None:
         if self._closed:
             raise InvalidCommand("playback is closed", self._state())
+        if self._fault is not None:
+            raise InvalidCommand(f"playback failed: {self._fault}", self._state())
+
+    def _fail(self, error: Exception) -> None:
+        self._fault = str(error)
+        self._playing = False
+        self._stalled, self._target = False, None
+        self._enqueue(StateChanged(self._state()))
 
     def _check_configure(self, position_ns, playing, rate) -> None:
         if position_ns is not None:
