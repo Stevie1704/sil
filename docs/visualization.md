@@ -420,7 +420,7 @@ client of the printed address controls playback.
 
 | Foxglove | SiL |
 | --- | --- |
-| Play, Pause, speed | One `configure`: the desired playing state and the rate (0.1 to 10). A request that only changes the speed keeps the playing state. |
+| Play, Pause, speed | One `configure`: the desired playing state and the rate (0.1 to 10). The SDK request has no "no change" command, only Play and Pause, so every request sets the playing state. A speed change keeps the playing state only because the client sends its current command with it, as the Foxglove playback bar does. |
 | Seek | `configure` with a position in the source's inclusive range. The answer reports `Buffering` until the reconstruction committed. |
 | Subscribe, unsubscribe a topic | The subscription is the set of the client's topics. A new topic gets the latest value at the cursor. |
 | Disconnect | Playback pauses. The next client gets a new session ID, a reset and the latest values at the cursor. |
