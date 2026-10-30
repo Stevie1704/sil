@@ -87,6 +87,11 @@ class ChannelCodec:
         self._fields = _checked_fields(schema_name, declaration)
         self._type = MessageType(schema_name, {"fields": self._fields})
 
+    @property
+    def payload_size(self) -> int:
+        """The fixed byte size of every `sil_pod` payload of the Schema."""
+        return self._type.size
+
     def json_schema(self) -> bytes:
         """The generated JSON Schema, with original types and array lengths
         in its descriptions."""
@@ -111,7 +116,7 @@ class ChannelCodec:
     def payload(self, data: bytes, publication_time_ns: int,
                 record_index: int) -> bytes:
         """The JSON payload of one source Message."""
-        if len(data) != self._type.size:
+        if len(data) != self.payload_size:
             raise MalformedPayload(
                 f"a {self.schema_name} payload has {self._type.size} bytes, "
                 f"got {len(data)}")

@@ -199,6 +199,9 @@ time.
   two chunks, so the build memory does not grow with the Message count of a
   chunk. Setting the `cancel` event stops preparation with
   `PreparationCancelled`.
+- The build checks that each payload has the fixed size of its Channel's
+  Schema, without decoding it. A malformed payload, a Message on an
+  undeclared Channel or an unsupported Schema is refused with `SourceError`.
 - The source file identity (device, inode, size, modification time) is
   checked before and after preparation and around every read. A change is
   refused with `SourceError`.

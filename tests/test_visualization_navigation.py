@@ -10,6 +10,7 @@ from the index under test.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import random
 import sqlite3
@@ -18,7 +19,7 @@ import threading
 
 import pytest
 from mcap.reader import make_reader
-from mcap.writer import CompressionType
+from mcap.writer import CompressionType, Writer
 from visualization_fixture import write_source
 
 from sil.visualization.navigation import (ContinuationError, IndexCorrupt,
@@ -509,6 +510,25 @@ def test_a_message_above_the_message_limit_is_refused_on_read(tmp_path):
             nav.snapshot(["a"], 1)
         with pytest.raises(LimitExceeded, match="record_index 0"):
             nav.messages(None, 0, 2)
+
+
+def test_a_payload_that_does_not_fit_its_schema_is_refused(tmp_path):
+    source = tmp_path / "run.mcap"
+    with open(source, "wb") as stream:
+        writer = Writer(stream)
+        writer.start()
+        schema = writer.register_schema("e.Event", "sil_pod",
+                                        json.dumps(EVENT["e.Event"]).encode())
+        channel = writer.register_channel("a", "sil_pod", schema)
+        writer.add_message(channel, log_time=0, publish_time=0,
+                           data=struct.pack("<Q", 1))
+        writer.add_message(channel, log_time=1, publish_time=1, data=b"\x01")
+        writer.finish()
+
+    with pytest.raises(SourceError, match="record_index 1 .* 1 bytes; its "
+                                          "Schema 'e.Event' has 8"):
+        prepare_navigation(source, cache_dir=tmp_path / "c")
+    assert_nothing_published(tmp_path / "c")
 
 
 def test_a_truncated_source_is_refused(tmp_path):

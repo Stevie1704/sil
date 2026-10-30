@@ -54,6 +54,7 @@ from mcap.reader import make_reader
 
 from sil import recording
 from sil.recording import OversizeMessage
+from sil.visualization.interchange import ChannelCodec, UnsupportedSchema
 from sil.visualization.source import (Source, SourceChannel, SourceError,
                                       SourceMessage, completeness, open_source,
                                       select_channels)
@@ -557,15 +558,13 @@ def _insert_locations(connection: sqlite3.Connection, source: Source,
                       ids: dict[str, int], limits: Limits,
                       progress: Callable[[Progress], None] | None,
                       cancel: threading.Event | None) -> int:
-    known = set(ids.values())
+    sizes = _payload_sizes(source, ids)
     count = 0
     for scanned, located in recording.locate_messages(
             source.path, max_chunk_bytes=limits.max_decoded_bytes):
         _check_cancel(cancel)
-        unknown = {location.channel_id for location in located} - known
-        if unknown:
-            raise SourceError(f"source {str(source.path)!r} has a Message on "
-                              f"undeclared channel id {min(unknown)}")
+        for location in located:
+            _check_payload_size(source, location, sizes)
         connection.executemany(
             "INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?)",
             [(m.record_index, m.channel_id, m.log_time - _TIME_SHIFT,
@@ -574,6 +573,32 @@ def _insert_locations(connection: sqlite3.Connection, source: Source,
         if progress is not None:
             progress(Progress(scanned, source.size_bytes, count))
     return count
+
+
+def _payload_sizes(source: Source, ids: dict[str, int]
+                   ) -> dict[int, tuple[str, int]]:
+    """(Schema name, fixed payload size) by channel id."""
+    try:
+        return {ids[c.name]: (c.schema_name,
+                              ChannelCodec(c.schema_name, c.schema).payload_size)
+                for c in source.channels}
+    except UnsupportedSchema as e:
+        raise SourceError(str(e)) from e
+
+
+def _check_payload_size(source: Source, location: recording.MessageLocation,
+                        sizes: dict[int, tuple[str, int]]) -> None:
+    """Refuse a Message on an undeclared Channel or with a payload that does
+    not have its Schema's fixed size. Nothing is decoded."""
+    if location.channel_id not in sizes:
+        raise SourceError(f"source {str(source.path)!r} has a Message on "
+                          f"undeclared channel id {location.channel_id}")
+    schema_name, size = sizes[location.channel_id]
+    if location.size != size:
+        raise SourceError(
+            f"source {str(source.path)!r} has a malformed payload: "
+            f"record_index {location.record_index} has {location.size} bytes; "
+            f"its Schema {schema_name!r} has {size}")
 
 
 def _check_cancel(cancel: threading.Event | None) -> None:
