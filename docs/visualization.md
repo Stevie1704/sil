@@ -5,7 +5,8 @@
 `sil recording export` converts a finalized Recording into an indexed MCAP
 file that an external file player, such as Foxglove, opens directly. The
 player supplies play, pause, seek, speed, loops and plots. SiL supplies no
-viewer, extension or server on this path.
+viewer, extension or server on this path. To play a Recording to Foxglove
+without an export, see [Serve a Recording to Foxglove](#serve-a-recording-to-foxglove).
 
 The output is a **visualization derivative**. It is not a Replay input: the
 kernel replays `sil_pod` Recordings only. The source Recording stays
@@ -357,6 +358,130 @@ One thread does the work: it calls `pump()`, or `run()`, which calls
 `pump()` until `close()`. Only that thread reads the index. All other calls
 can come from any thread. The controller does not hold its lock while it
 reads, so a new command can replace a reconstruction that is in progress.
+
+## Serve a Recording to Foxglove
+
+`sil playback serve` plays a Recording to Foxglove without an export. The
+Foxglove playback bar (play, pause, seek, speed) controls SiL's headless
+playback. SiL supplies no panel and no viewer.
+
+The command needs the `foxglove` extra. Export and the other commands do not:
+
+```sh
+pip install 'sil[foxglove]'
+sil playback serve run.mcap --adapter foxglove --listen 127.0.0.1:8765
+```
+
+The command validates and indexes the source (see [The index](#the-index)),
+starts paused at the first instant, prints the address and serves until
+Ctrl-C or SIGTERM. Exit codes: 0 stopped by a signal, 2 rejected input or
+configuration (also a missing extra, a source without Messages, or a source
+that ends after 2^32 s), 1 an I/O failure such as a port in use.
+
+To connect:
+
+1. Start the command. It prints `serving run.mcap to foxglove at
+   ws://127.0.0.1:8765`.
+2. In Foxglove, select **Open connection**, then **Foxglove WebSocket**, and
+   enter the printed address.
+3. Add panels on the topics. A topic is a Channel name; Messages are the
+   same `sil_visualization_json` payloads as in the export.
+
+The bridge serves one client at a time. A second client gets HTTP 409.
+Independent users or independent cursors need separate `sil playback serve`
+processes. The default address is loopback. Another `--listen` host makes
+the stream reachable from the network without authentication.
+
+### What the playback bar does
+
+| Foxglove | SiL |
+| --- | --- |
+| Play, Pause, speed | One `configure`: the desired playing state and the rate (0.1 to 10). A request that only changes the speed keeps the playing state. |
+| Seek | `configure` with a position in the source's inclusive range. The answer reports `Buffering` until the reconstruction committed. |
+| Subscribe, unsubscribe a topic | The subscription is the set of the client's topics. A new topic gets the latest value at the cursor. |
+| Disconnect | Playback pauses. The next client gets a new session ID, a reset and the latest values at the cursor. |
+
+Each answer is the actual state. A refused request (for example a speed of
+50) answers the unchanged state, with the request ID, and the Problems panel
+shows a warning with the reason. The server time and every Message log time
+are Virtual time in integer nanoseconds; time zero shows as the epoch.
+
+A seek sends, in this order: all data sent before it, a playback state with
+`did_seek` (Foxglove clears its panels), the latest Message per subscribed
+topic at or before the seek time with its original time and locator, then
+the committed state. A topic without a Message before the seek time stays
+empty; SiL sends no zero in its place. Play continues strictly after the
+seek time. `Ended` follows the final Message.
+
+A Message that a limit refuses is not sent: the Problems panel names its
+topic, time and `record_index`. The limits are the navigation limits, the
+controller queue and an encoded-payload limit of 8 MiB.
+
+### No silent loss
+
+foxglove-sdk 0.30.3 keeps a bounded queue per client and drops the oldest
+Message when it is full, without notice to the program. It also sends that
+queue and its control queue (playback states, time) in no fixed order. The
+adapter therefore puts a relay in front of the SDK server
+(`adapters/foxglove_relay.py`). The relay reports which barrier statuses and
+seek states the SDK actually wrote. The adapter keeps at most half the SDK
+queue unacknowledged, so the SDK never drops a Message. A slow client slows
+the relay, the adapter stops taking Messages, and the controller reports
+`Buffering`. A client that accepts no data for 30 s is disconnected; its
+next connection starts with a reset and a fresh reconstruction.
+
+### Limits of streaming
+
+- History: Foxglove keeps only what the stream delivered since the last
+  reset. A plot does not show the full range ahead of the playhead. For
+  full-range plots, loops and offline use, open the
+  [export](#export) as a file instead.
+- Latest-value reconstruction suits field inspection. It does not rebuild
+  state that accumulates over events, such as a 3D scene.
+- Wide integers are decimal strings, for exact inspection, not plot series.
+
+### Compatibility matrix
+
+| Component | Version | Verified here | How |
+| --- | --- | --- | --- |
+| foxglove-sdk (Python) | 0.30.3, pinned in the `foxglove` extra | Yes | `tests/test_visualization_foxglove.py` against the SDK server |
+| WebSocket subprotocol | `foxglove.sdk.v1` | Yes | Scripted client in the tests |
+| WebSocket subprotocol | `foxglove.websocket.v1` | Refused by the SDK (HTTP 400) | Test `test_the_sdk_refuses_the_legacy_subprotocol` |
+| WebSocket subprotocol | `foxglove.sdk.v1.1` | No | The relay reads no schema table; not exercised |
+| Foxglove desktop or web application | none | No | Manual procedure below |
+
+Verified with the scripted client against SDK 0.30.3: capabilities `time`
+and `playbackControl`, the data range, the export's schemas, exact 64-bit
+values as strings, log times equal to publication times, equal-time order
+by `record_index`, the latest-value backfill (also before a sparse topic's
+first Message), `did_seek` before the backfill, no value from before a seek
+after its reset (also with data queued in the SDK), repeated seeks, pause,
+speed, refused requests, subscription changes, a stalled client without
+loss, a stall timeout, reconnect with a new session, a refused second
+client, oversize payloads and an unchanged source.
+
+Not verified, because no Foxglove application is installed here:
+
+- that the application offers `foxglove.sdk.v1` or `foxglove.sdk.v1.1`
+  and connects;
+- that its playback bar sends the requests above and shows the range, the
+  time and the states;
+- that `did_seek` clears its panels, also a Raw Messages panel on a topic
+  without a value before the seek time;
+- how it shows times near 2^32 s, equal-time Messages and `null` floats.
+
+Procedure for these items:
+
+1. `python tests/visualization_fixture.py qualification.mcap`
+2. `sil playback serve qualification.mcap --adapter foxglove`
+3. Connect as above. Add a Plot of `fields.speed_mps` on `vehicle/speed`
+   and Raw Messages panels on `counter`, `sparse` and `burst`.
+4. Play at 1x and 2x; pause; seek to 6 s, then to 2 s. Make sure that
+   `sparse` is empty after the seek to 2 s (its only Message is at 5 s), and
+   that `counter` shows `fields.count` `"9007199254741192"` at 2 s.
+5. Close the application, connect again and make sure that the panels start
+   empty and paused at the old cursor.
+6. Record the application version and the results in this matrix.
 
 ## Open the output in Foxglove
 
