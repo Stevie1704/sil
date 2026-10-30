@@ -409,6 +409,11 @@ client of the printed address controls playback.
 | Subscribe, unsubscribe a topic | The subscription is the set of the client's topics. A new topic gets the latest value at the cursor. |
 | Disconnect | Playback pauses. The next client gets a new session ID, a reset and the latest values at the cursor. |
 
+Foxglove has no status for a failed session. When playback fails (the
+source changed or the index became unusable), the playback bar shows
+`Paused`, and the Problems panel shows an error with the diagnostic. SiL
+then refuses all requests; restart the command to continue.
+
 Each answer is the actual state. A refused request (for example a speed of
 50) answers the unchanged state, with the request ID, and the Problems panel
 shows a warning with the reason. The server time and every Message log time

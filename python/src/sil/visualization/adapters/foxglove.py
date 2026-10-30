@@ -72,6 +72,8 @@ MAX_TIME_NS = (2**32 - 1) * S + S - 1
 MIB = 1 << 20
 _RETRY_S = 0.5  # re-send an unacknowledged barrier or seek state
 _POLL_S = 0.05
+# Foxglove has no failed or closed status. Both stop playback, so they show
+# as Paused; a failure also sends an error status with its diagnostic.
 _STATUS = {"playing": FoxgloveStatus.Playing, "paused": FoxgloveStatus.Paused,
            "buffering": FoxgloveStatus.Buffering, "ended": FoxgloveStatus.Ended,
            "failed": FoxgloveStatus.Paused, "closed": FoxgloveStatus.Paused}
