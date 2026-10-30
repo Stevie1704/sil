@@ -112,7 +112,7 @@ map creation returned `Function not implemented`, with an additional memlock
 diagnostic. Thus this setup could not collect the fixture. The error alone
 does not identify whether kernel exposure, seccomp, capabilities or another
 constraint caused it. No host policy was changed. Native CI and its separate
-default-capability container reports are the retained, reviewable evidence;
+default-capability container reports are archived at the links below;
 this local smoke check is not substituted for them.
 
 ## Candidate disposition
@@ -139,8 +139,8 @@ shimmed-Process rejection retained.
 ## Native and container observations
 
 The [extended x86-64 workflow](https://github.com/Stevie1704/sil/actions/runs/40291189216)
-retains [native results](evidence-review/heaptrack-shim-bpf-native/availability.json)
-and [default-container results](evidence-review/heaptrack-shim-bpf-container/availability.json).
+retains [native results](https://github.com/Stevie1704/sil/blob/d34226cb347d6568c8b7dde33ccb23227e960231/proofs/heaptrack-shim/evidence-review/heaptrack-shim-bpf-native/availability.json)
+and [default-container results](https://github.com/Stevie1704/sil/blob/d34226cb347d6568c8b7dde33ccb23227e960231/proofs/heaptrack-shim/evidence-review/heaptrack-shim-bpf-container/availability.json).
 The ordinary UID 1001 invocation was rejected by this bpftrace version's root
 requirement. With existing sudo-root access it counted all 50,000 fixture calls
 and recorded monotonic values, but user-stack output contained raw addresses

@@ -89,7 +89,7 @@ with Heaptrack 1.5 and the recorded libstdc++ build established the same backend
 and a host-domain origin in both processes. The shimmed process emitted 33,087
 raw timestamp records, the unshimmed process ten. Its audit bytes, maps,
 selected symbol ranges, timestamp-value projection and complete analysis are
-retained under [evidence-review](evidence-review/heaptrack-shim-clock/).
+retained under [Git archive](https://github.com/Stevie1704/sil/tree/d34226cb347d6568c8b7dde33ccb23227e960231/proofs/heaptrack-shim/evidence-review/heaptrack-shim-clock/).
 The clock API, returned-value domains and origin model are measured in this
 calibration; the private cached origin is inferred by the stated arithmetic,
 and no continuous host mapping for arbitrary Run captures is claimed.
