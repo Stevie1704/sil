@@ -26,13 +26,16 @@ from sil.schema import MessageType  # noqa: E402
 
 
 def write_source(path, schemas: dict, channels: dict[str, str],
-                 messages, *, metadata: dict | None = None):
+                 messages, *, metadata: dict | None = None,
+                 chunk_size: int = 1024 * 1024,
+                 compression: CompressionType = CompressionType.NONE):
     """A `sil_pod` Recording: `channels` maps Channel name to Schema name,
     `messages` is (channel, publication time, field values) in Publish
     order."""
     types = {name: MessageType(name, spec) for name, spec in schemas.items()}
     with open(path, "wb") as stream:
-        writer = Writer(stream, compression=CompressionType.NONE)
+        writer = Writer(stream, chunk_size=chunk_size,
+                        compression=compression)
         writer.start(profile="sil", library="sil-test")
         if metadata is not None:
             writer.add_metadata("sil", metadata)
