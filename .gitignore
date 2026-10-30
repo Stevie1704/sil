@@ -7,3 +7,6 @@ __pycache__/
 .serena/
 .factory-proof.*
 .sil-run-*/
+/proofs/heaptrack-shim/evidence/
+/proofs/heaptrack-shim/evidence-failure/
+/proofs/heaptrack-shim/evidence-review/
