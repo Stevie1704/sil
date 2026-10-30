@@ -195,7 +195,7 @@ def serve(adapter, tmp_path):
               **options):
         playback = adjust(open_playback(source, cache_dir=tmp_path / "cache",
                                         queue_limits=queue_limits))
-        bridge = adapter.serve(playback, "127.0.0.1", 0, **options)
+        bridge = adapter.Bridge(playback, "127.0.0.1", 0, **options)
         bridges.append(bridge)
         return bridge
 

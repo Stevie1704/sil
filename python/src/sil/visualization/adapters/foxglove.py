@@ -1,7 +1,7 @@
 """Foxglove adapter: the Foxglove playback bar drives the headless
 playback controller (spec #345 s3, issue #349).
 
-`serve(playback, host, port)` starts a Foxglove SDK WebSocket server with
+`Bridge(playback, host, port)` starts a Foxglove SDK WebSocket server with
 the `Time` and `PlaybackControl` capabilities and the source's inclusive
 time range, and a relay (`foxglove_relay`) in front of it on `host:port`.
 Clients connect to the relay. Each source Channel is a topic with the
@@ -86,22 +86,16 @@ class UnsupportedSource(ValueError):
     """The source cannot be served: no Messages, or times out of range."""
 
 
-def serve(playback: Playback, host: str, port: int, *, backlog: int = 1024,
-          max_message_bytes: int = 8 * MIB,
-          stall_timeout: float = 30.0) -> Bridge:
-    """Serve `playback` to one Foxglove client at a time on `host:port`
-    (0 picks a free port). The bridge owns `playback` and closes it."""
-    return Bridge(playback, host, port, backlog=backlog,
-                  max_message_bytes=max_message_bytes,
-                  stall_timeout=stall_timeout)
-
-
 class Bridge:
-    """One served playback: the SDK server, its relay and two threads, one
-    pumping the controller and one delivering its notifications."""
+    """Serve `playback` to one Foxglove client at a time on `host:port`
+    (0 picks a free port). The bridge owns `playback` and closes it.
+
+    It holds the SDK server, its relay and two threads, one pumping the
+    controller and one delivering its notifications."""
 
     def __init__(self, playback: Playback, host: str, port: int, *,
-                 backlog: int, max_message_bytes: int, stall_timeout: float):
+                 backlog: int = 1024, max_message_bytes: int = 8 * MIB,
+                 stall_timeout: float = 30.0):
         described = playback.description
         if described.start_ns is None:
             raise UnsupportedSource("the source has no Messages, so it has no "

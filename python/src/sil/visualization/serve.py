@@ -74,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     except OSError as e:
         return _error(e, EXIT_IO)
     try:
-        bridge = adapter.serve(playback, host, port)
+        bridge = adapter.Bridge(playback, host, port)
     except adapter.UnsupportedSource as e:
         playback.close()
         return _error(e, EXIT_INPUT)
