@@ -183,6 +183,9 @@ ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
                              "convert CSV signals into a Recording"),
         "window": ModuleCommand("sil.replay_window",
                                 "select and rebase a window of a Recording"),
+        "export": ModuleCommand("sil.visualization.export",
+                                "export a Recording as an indexed MCAP for "
+                                "external viewers such as Foxglove"),
     }),
     "skill": Group("give a coding agent the skill of this version", {
         "install": ModuleCommand("sil.skill",

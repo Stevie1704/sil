@@ -122,6 +122,9 @@ PACKAGED_DOCS = {
                    "compare outputs against a reference trajectory"),
     "recording-queries": ("docs/recording-queries.md",
                           "bounded fields, summaries and event search in Recordings"),
+    "visualization": ("docs/visualization.md",
+                      "export a Recording as an indexed MCAP for viewers such "
+                      "as Foxglove"),
     "regression-bundles": ("docs/regression-bundles.md",
                            "seal and run regression cases and matrices"),
     "container": ("docs/container.md", "run one Manifest in a Linux container"),
