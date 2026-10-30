@@ -76,6 +76,8 @@ def export_recording(source: str | Path, output: str | Path, *,
         codecs = _codecs(selected)
     except (SourceError, interchange.UnsupportedSchema) as e:
         raise ExportInputError(str(e)) from e
+    except OSError as e:
+        raise ExportOutputError(f"cannot read source {str(source)!r}: {e}") from e
     with _TemporaryFiles(output, receipt_file) as temporary:
         try:
             counts = _write(recording, selected, codecs, temporary.output)

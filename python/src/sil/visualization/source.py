@@ -74,7 +74,10 @@ class Source:
 
 
 def open_source(path: str | Path) -> Source:
-    """The identity and Channel catalog of a finalized `sil_pod` Recording."""
+    """The identity and Channel catalog of a finalized `sil_pod` Recording.
+
+    A missing source is a SourceError (rejected input). Any other OSError
+    while reading it is an I/O failure and propagates unchanged."""
     path = Path(path)
     if path.suffix != ".mcap":
         raise SourceError(f"source {str(path)!r} must be an .mcap Recording")
@@ -84,7 +87,7 @@ def open_source(path: str | Path) -> Source:
         _check_finalized(path, size)
         channels = _channels(path)
         manifest_hash = read_manifest_hash(path)
-    except OSError as e:
+    except FileNotFoundError as e:
         raise SourceError(f"cannot read source {str(path)!r}: {e}") from e
     except (McapError, ValueError, KeyError, EOFError) as e:
         if isinstance(e, SourceError):

@@ -29,8 +29,9 @@ receipt = export_recording("run.mcap", "run.visualization.mcap",
   Without it, every Channel is exported, also Channels without Messages.
 - The command writes two files: the output MCAP and
   `<output>.receipt.json`. It refuses to overwrite either file.
-- Exit codes: `0` success, `2` rejected input or configuration, `1` output or
-  I/O failure. After a failure, neither file exists and no temporary file
+- Exit codes: `0` success, `2` rejected input or configuration (also a
+  source that does not exist), `1` output or I/O failure (also a source that
+  exists but cannot be read). After a failure, neither file exists and no temporary file
   stays.
 
 The source must be a finalized MCAP Recording with `sil_pod` Channels and

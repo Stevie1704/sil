@@ -445,6 +445,22 @@ def test_the_command_exits_0_2_or_1(tmp_path, capsys):
     assert cli.main([*command, "--channel", "nope"]) == 2
 
 
+def test_a_missing_source_is_rejected_but_an_unreadable_one_is_an_io_failure(
+        tmp_path, capsys):
+    source = write_source(tmp_path / "run.mcap", TWO, {"a": "s.A"}, STORED[:1])
+    command = ["recording", "export", "--profile", "visualization-json", "-o",
+               str(tmp_path / "out.mcap")]
+
+    assert cli.main([*command, str(tmp_path / "missing.mcap")]) == 2
+    source.chmod(0o000)
+    try:
+        assert cli.main([*command, str(source)]) == 1
+    finally:
+        source.chmod(0o600)
+    assert "cannot read source" in capsys.readouterr().err
+    assert not (tmp_path / "out.mcap").exists()
+
+
 # A failed Run --------------------------------------------------------------------
 
 
