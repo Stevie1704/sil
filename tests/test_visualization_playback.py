@@ -304,6 +304,7 @@ def test_an_explicit_seek_to_the_first_instant_backfills_then_plays_after_it(
 
     assert records_of(delivered, Backfill) == [records[1]]
     assert records_of(delivered, Message) == [records[2]]
+    assert (delivered[0].position_ns, delivered[0].request_id) == (S, "seek")
 
 
 def test_an_empty_source_has_no_range_and_play_ends_at_once(tmp_path, clock):

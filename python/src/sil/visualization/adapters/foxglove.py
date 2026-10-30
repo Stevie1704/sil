@@ -311,7 +311,9 @@ class Bridge:
             seen = self._relay.seek_states_seen
             connection = self._relay.connection
         while True:
-            self._broadcast(state, request_id=state.request_id, did_seek=True,
+            # The request ID and position of the seek this Reset belongs
+            # to, not of a newer request.
+            self._broadcast(state, request_id=reset.request_id, did_seek=True,
                             position_ns=reset.position_ns)
             if self._wait(lambda: self._relay.seek_states_seen > seen,
                           connection):

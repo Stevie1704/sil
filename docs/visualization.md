@@ -319,7 +319,7 @@ change that it still needs.
 
 | Notification | Meaning |
 | --- | --- |
-| `Reset(generation, position_ns)` | Discard all delivered history. A seek follows. |
+| `Reset(generation, position_ns, request_id)` | Discard all delivered history. A seek follows. `request_id` names the request that caused the seek, or is `None` (a new client after a disconnect). |
 | `Backfill(generation, message)` | The latest Message of a Channel at or before the cursor, with its original time and `record_index`. It is not a new publication. |
 | `Message(generation, message)` | A Message that continuous playback crossed. |
 | `Refused(...)` | A Message that a limit refused, in its place. `backfill` tells if it stands for a latest value. |

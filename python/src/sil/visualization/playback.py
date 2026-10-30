@@ -119,10 +119,13 @@ class PlaybackState:
 
 @dataclass(frozen=True)
 class Reset:
-    """Discard all delivered history: a seek to `position_ns` follows."""
+    """Discard all delivered history: a seek to `position_ns` follows.
+    `request_id` names the request that caused the seek, or is None for a
+    seek that no request caused (a new client after a disconnect)."""
 
     generation: int
     position_ns: int | None
+    request_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -279,6 +282,7 @@ class Playback:
         self._reset_pending = False
         self._seek: int | None = None
         self._seek_after: tuple[int, int] | None = None  # position after it
+        self._seek_request: str | None = None  # the request of the seek
         self._request_id: str | None = None
         self._requests: OrderedDict[str, tuple] = OrderedDict()
         self._queue: deque = deque()
@@ -323,10 +327,10 @@ class Playback:
                     self._anchor = (now, self._playhead(now))
                 self._rate = float(rate)
             if position_ns is not None:
-                self._start_seek((position_ns, _AFTER_INSTANT))
+                self._start_seek((position_ns, _AFTER_INSTANT), request_id)
             elif playing and self._ended and self._start is not None:
                 # Play after the end restarts before the first instant.
-                self._start_seek((self._start, _BEFORE_INSTANT))
+                self._start_seek((self._start, _BEFORE_INSTANT), request_id)
             if playing is not None:
                 self._set_playing(playing, now)
             self._request_id = request_id
@@ -364,8 +368,10 @@ class Playback:
             self._drop(lambda n: _channel(n) in removed)
             if self._fresh and wanted:
                 self._fresh = False
-                self._start_seek(self._seek_after if self._reset_pending
-                                 else self._after)
+                if self._reset_pending:
+                    self._start_seek(self._seek_after, None)
+                else:
+                    self._start_seek(self._after, None)
             self._lock.notify_all()
             return self._state()
 
@@ -580,7 +586,7 @@ class Playback:
         if job.generation != self._generation:
             return  # superseded while it was read
         if job.reset:
-            self._enqueue(Reset(job.generation, self._seek))
+            self._enqueue(Reset(job.generation, self._seek, self._seek_request))
         self._staged = _Staged(job, deque(items), set())
         self._fill_staged()
 
@@ -669,9 +675,12 @@ class Playback:
             self._stall_target = target
             self._enqueue(StateChanged(self._state()))
 
-    def _start_seek(self, after: tuple[int, int] | None) -> None:
+    def _start_seek(self, after: tuple[int, int] | None,
+                    request_id: str | None) -> None:
         """Reconstruct at `after` = (time, record_index), then play after
-        it; None for a source without Messages."""
+        it; None for a source without Messages. `request_id` is the request
+        that caused the seek, which its Reset names."""
+        self._seek_request = request_id
         self._staged = None
         self._generation += 1
         self._flushed = self._generation

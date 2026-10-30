@@ -583,6 +583,37 @@ def test_drained_notifications_of_an_old_generation_are_not_sent(
     client.close()
 
 
+def request_after_reset_drained(playback, monkeypatch):
+    """Send a newer request (a rate change) as soon as the adapter has
+    drained a Reset, before it sends the Reset's did_seek state."""
+    from sil.visualization.playback import Reset
+    drain = playback.drain
+
+    def draining(*args, **kwargs):
+        batch = drain(*args, **kwargs)
+        if any(isinstance(n, Reset) for n in batch):
+            playback.configure(f"later-{time.monotonic_ns()}", rate=2.0)
+        return batch
+
+    monkeypatch.setattr(playback, "drain", draining)
+    return playback
+
+
+def test_did_seek_carries_the_request_id_and_position_of_its_seek(
+        serve, qualification, monkeypatch):
+    bridge = serve(qualification,
+                   adjust=lambda p: request_after_reset_drained(p, monkeypatch))
+    client = connect_subscribed(bridge)
+    initial_state(client)
+
+    client.request("seek-a", PAUSE, speed=1.0, seek=2 * S)
+    _, did_seek = client.wait_for(lambda f: f["op"] == "playbackState"
+                                  and f["did_seek"])
+
+    assert (did_seek["request_id"], did_seek["time"]) == ("seek-a", 2 * S)
+    client.close()
+
+
 def test_queued_values_from_before_a_seek_never_follow_its_reset(
         serve, big_blobs):
     bridge = serve(big_blobs, backlog=32)
