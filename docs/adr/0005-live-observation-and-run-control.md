@@ -26,14 +26,16 @@ The qualification found:
 - The longest retained closed loop, `proofs/adas-closed-loop`
   `approach.native`, takes about 4.5 s of wall time per Run (measured,
   retained evidence). The esmini consumer Run takes 0.663 s. The ADAS
-  reference Manifest takes 15 ms on the qualification machine.
+  reference Manifest takes a median of 14.7 ms on the qualification machine
+  (measured, retained with the script that measured it).
 - Runs are deterministic. The finalized Recording, played through #346–#349,
   shows the same data that a live view would show, about 5 s later.
+  #346–#349 are implemented on the branch of PR #353 and are not yet merged.
 - `Engine::run` has a safe seam between the "no next Slot" check and the
   dispatch of due work. No Step exchange is outstanding there, and a wait
   there does not consume a Response deadline.
-- The estimated observer cost is below 0.5 % of wall time per Slot on the
-  retained workloads.
+- The estimated observer cost is at most 0.7 % of wall time per Slot on the
+  measured workloads.
 
 ## Decision
 

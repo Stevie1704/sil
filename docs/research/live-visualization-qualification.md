@@ -23,10 +23,10 @@ Every figure has one of two labels:
 
 | Question | Result |
 | --- | --- |
-| Is there a named workload that needs live visualization? | **No.** The proposed candidate (section 2) finishes in seconds, and its finalized Recording plays back through #346–#349 with the same data. |
+| Is there a named workload that needs live visualization? | **No.** The proposed candidate (section 2) finishes in seconds, and its finalized Recording can play back through #346–#349 with the same data. #346–#349 are implemented on this branch (PR #353) and are not yet merged. |
 | Does the kernel have a safe seam for control between complete Slots? | **Yes.** `Engine::run` in `kernel/src/engine.cpp`, between the check for "no next Slot" and the dispatch of the Slot's due work (section 4). No Step exchange is outstanding there. |
 | Can an observation feed be bounded and nonblocking without a change to Recording bytes? | **Yes, by design** (sections 5 and 7). It is not prototyped. |
-| What is the estimated observer cost? | Below 0.5 % of measured wall time per Slot on the retained workloads (section 3.3). |
+| What is the estimated observer cost? | At most 0.7 % of measured wall time per Slot on the measured workloads (section 3.3). |
 | Recommendation | **Defer** #351 and #352. Record the contract now. Keep completed-Recording delivery (#346–#349) independent. |
 
 ## 2. Proposed workload and external client
@@ -58,7 +58,7 @@ advance one Slot at a time".
 | Role | Proposed client | Identity status |
 | --- | --- | --- |
 | Live viewer | Foxglove app, connected to the #349 adapter in live mode (`Time` capability, no `PlaybackControl`) | SDK pinned: `foxglove-sdk==0.30.3`. App version **not pinned**: no app is available on the qualification machine. |
-| Run control | Python `RunControl` client and a `sil run control` CLI (section 6) | Proposed only |
+| Run control | Python `RunControl` client and a `sil run control` CLI (section 5.7) | Proposed only |
 | Run control from the viewer | Foxglove services `sil/run/*` through an existing service-capable client | SDK primitive verified by source reading in #349; app behavior not verified |
 
 ### 2.3 Why finalized playback is sufficient for this workload
@@ -68,12 +68,13 @@ advance one Slot at a time".
 | Wall time of one `approach.native` Run | 4.464 s, 4.436 s | measured (retained `evidence/runs.json`, Linux x86-64) |
 | Wall time of one `approach.fmu` Run | 5.490 s, 5.488 s | measured (retained) |
 | Wall time of the esmini consumer Run (8 s Virtual) | 0.663 s | measured (retained, [#118 decision](../decisions/118-consumer-capability-gate.md)) |
-| Wall time of the ADAS reference Manifest, 20 Slots | median 15.1 ms over 7 Runs (14.8–19.1 ms), all byte-identical | measured, macOS arm64, see section 3.1 |
+| Wall time of the ADAS reference Manifest, 20 Slots | median 14.7 ms over 7 Runs (14.5–19.1 ms), all byte-identical | measured, macOS arm64, retained (section 3.1) |
 
 Runs are deterministic. A second Run with the same Manifest gives the same
 Recording bytes. A user who wants the state at the mode change can open the
 finalized Recording in served playback (#349), seek to 2.31 s and step
-Message by Message. The user gets the result in about 5 s. Live control adds
+Message by Message. Served playback is implemented on this branch (PR #353)
+and is not yet merged. The user gets the result in about 5 s. Live control adds
 no information that the Recording does not hold, and it saves less than
 5 s of wall time on this workload.
 
@@ -106,18 +107,23 @@ that the user saves compared with post-run playback.
 
 ### 3.1 Method
 
-- Script: a 50-line Python script that reads each Recording with
+- Script: [`tools/live_visualization_measure.py`](../../tools/live_visualization_measure.py).
+  Its `recordings` command reads each Recording with
   `sil.recording.read_records` and counts Messages, payload bytes, distinct
   publication times, Messages per Channel per time (Burst depth) and
-  descending timestamps. It is not part of the repository.
+  descending timestamps. Its `time` command times Runs of a Manifest.
+- Retained output:
+  [`live-visualization-measurements.json`](live-visualization-measurements.json),
+  with the machine, the date and the commands.
 - ADAS reference Recording: `examples/adas-reference/run.sh` with the
   `sil-run` that `cmake --install` staged from the local build (macOS arm64,
   SDK 26.5). The script stopped at the later `sil compare` step because
   `sil` was not on `PATH`. The two reference Runs completed and were
-  byte-identical before that step.
-- Timing: 7 Runs of `reference.json` with `sil-run`, `time.perf_counter`
-  around each subprocess. Each output was compared byte for byte with
-  `reference-1.mcap`.
+  byte-identical before that step. The generated Recording is not retained;
+  its statistics and SHA-256 are.
+- Timing: the `time` command, 7 Runs of `reference.json` with `sil-run` and
+  `time.perf_counter` around each subprocess. Every output had the same
+  bytes.
 
 "Publication instants" are distinct publication times. A Slot that publishes
 nothing is not visible in a Recording, so this count is a lower bound of the
@@ -136,32 +142,36 @@ Slot count.
 | ADAS reference `reference-1.mcap` (10 maneuvers in one Run) | 40 | 735 | 17, 56, 185 | 20 | 0.19 | 3,868.4 | 407,447 | 4,413 | 3,870.8 | 39 | 1 | 0 |
 
 ADAS reference `reference-1.mcap`: 119,817 bytes, SHA-256
-`c6105936915646dd482f68821a94aaf7f255ad5b5abf2867cace13c267919ddd`,
-Manifest hash
-`79bcc556a9c10d90900f27684d37e15cc0e1e55fab9e5eb30bd71e929c5bc9a6`.
-The esmini Recording hash agrees with the #118 decision.
+`19579addd97385152aeba8e783a5a623c82b86c0a33f44f32858f83ee53b5510` (retained
+measurement). The generated Manifest names absolute paths in the work
+directory, so the Recording SHA-256 and the Manifest hash change with that
+directory; the statistics in the table do not. The esmini Recording hash
+agrees with the #118 decision.
 
 The largest measured Slot is 20,580 payload bytes (FMI-LS-BUS, 10 Messages).
 No retained Recording has descending timestamps, but the Replay participant
-can produce them (section 5.5).
+can produce them (section 5.9).
 
 ### 3.3 Observer cost (estimated)
 
 Assumptions: the kernel copies each published Message once more into a
-shared-memory ring (section 5.2), with a 32-byte record header; a copy
+shared-memory ring (section 5.2), with a 24-byte record header per Message
+(Channel index, Channel sequence, publication time, byte length) and a
+40-byte batch header per Slot; a copy
 runs at 5 GB/s or faster; the fixed cost per Message is 50 ns or less; the
 control check costs one `poll` system call with zero timeout per Slot,
 2 µs or less.
 
 | Workload | Bytes copied per Slot (payload + headers) | Estimated cost per Slot | Measured wall time per Slot | Estimated overhead |
 | --- | ---: | ---: | ---: | ---: |
-| esmini | 144 + 64 = 208 B | ≤ 2.2 µs | 829 µs (0.663 s / 800, retained) | ≤ 0.3 % |
-| ADAS reference, 10 maneuvers | 4,413 + 1,248 = 5,661 B | ≤ 5.1 µs | 755 µs (15.1 ms / 20, includes process start) | ≤ 0.7 % |
+| esmini | 144 + 2 × 24 + 40 = 232 B | ≤ 2.2 µs | 829 µs (0.663 s / 800, retained) | ≤ 0.3 % |
+| ADAS reference, 10 maneuvers | 4,413 + 39 × 24 + 40 = 5,389 B | ≤ 5.1 µs | 736 µs (14.7 ms / 20, includes process start, retained) | ≤ 0.7 % |
 | ADAS closed loop | not measured (no retained Recording) | ≤ 5 µs if similar to the reference | ≈ 12,700 µs (4.46 s / 352, retained) | ≤ 0.05 % |
 
 The ADAS reference row is pessimistic: process start dominates its 15 ms, so
 the true time per Slot is smaller and the overhead percentage is larger
-than the time of execution suggests. A prototype must measure this cost
+than the time of execution suggests. The wall times in this table are
+measured (section 3.1); the costs and percentages are estimates. A prototype must measure this cost
 with `sil-run-diagnostics` before #351 starts. These numbers do not
 support a claim of zero cost.
 
@@ -170,9 +180,10 @@ support a claim of zero cost.
 - Freshness: a human viewer does not need more than about 30 updates per
   wall second. The supervisor (section 5.3) forwards the latest complete
   batch; it does not need every batch for a live view.
-- Ring capacity: 4 MiB holds 740 Slots of the largest per-Slot size of the
-  ADAS reference (5,661 B), or 7.4 s of Virtual time at a 10 ms Period. It
-  holds 203 Slots of the largest FMI-LS-BUS Slot (20,580 B + 320 B).
+- Ring capacity: 4 MiB holds 778 Slots of the largest per-Slot size of the
+  ADAS reference (5,389 B), or 7.7 s of Virtual time at a 10 ms Period. It
+  holds 201 Slots of the largest FMI-LS-BUS Slot (20,580 B + 10 × 24 B +
+  40 B = 20,860 B).
 - Spool: not proposed. Latest-only mode (`seek=false`) needs no history
   spool. Complete history comes from the finalized Recording.
 
@@ -221,11 +232,21 @@ stays fixed while the Run is paused.
 participant background threads and child processes continue to run in wall
 time. This is a documented limit, not a defect to repair in the kernel.
 
+**Not a checkpoint.** A pause holds a live Run; it does not save or restore
+state. This draft does not infer checkpoint or resume support from
+[#196](https://github.com/Stevie1704/sil/issues/196).
+
 **Hung Activation.** A pause is accepted at once, but it completes only when
 the current Slot returns to the seam. A Process participant with a Response
 deadline fails the Run at the deadline; the failure is the terminal outcome.
 Without a deadline, the pause stays pending. Cancellation reaches a waiting
-Process exchange, because `send_line` and `read_line` check `run_interrupted()` (lines 820, 960 and 972).
+Process exchange only through a signal. `run_interrupted()`
+(`kernel/src/run_signal.cpp`) reads a flag that only the SIGINT, SIGHUP and
+SIGTERM handler sets, and `send_line` and `read_line` check it only after a
+system call returns `EINTR` (lines 820, 960 and 972). A wait without a
+deadline is `poll(-1)` (line 958), so a cancel request must make the
+supervisor deliver a signal, for example SIGTERM, to `sil-run`. A flag that
+the control descriptor sets would not interrupt that wait.
 A Native Task that does not return cannot be interrupted; this limit stays.
 
 **Wait at the seam.** While paused, the kernel waits in `poll` on the control
@@ -293,6 +314,10 @@ the client socket and the Foxglove adapter. One supervisor serves one Run.
   reaches the kernel.
 - Viewer pause in Foxglove pauses only the view. The live server does not
   advertise `PlaybackControl`.
+- SDK or client buffering is not execution control: a slow or stalled viewer
+  only loses or delays what it shows (a viewer-side gap), and the Run never
+  waits for it. Only the `sil.run_control` operations at the seam change
+  execution.
 - `Time` broadcasts follow acknowledged data (the #349 barrier rule).
 
 ### 5.4 Local IPC framing
@@ -393,7 +418,7 @@ response. A different request with a known ID returns `request_conflict`.
 | `pausing` | seam reached | `paused` | `operation_completed` |
 | `stepping` | seam after one Slot | `paused` | `operation_completed` |
 | `running`, `pausing`, `stepping` | no next Slot | terminal `completed` | Completion wins |
-| any non-terminal | `cancel` | `cancelling` | Interruption flag set |
+| any non-terminal | `cancel` | `cancelling` | The supervisor sends SIGTERM to `sil-run`; the handler sets the interruption flag and interrupts a blocking wait |
 | `cancelling` | cleanup done | terminal `cancelled` | Exit 1, as interruption |
 | any non-terminal | Run failure | terminal `failed` | Actual exit code and message |
 | any non-terminal | signal | terminal `interrupted` | Existing behavior |
@@ -465,6 +490,24 @@ back. Ordinary Runs do not change.
 No path in the kernel waits for an observer. The only wait is the paused wait
 that a controller requested.
 
+### 5.11 Supervisor shutdown sequence
+
+When the Run reaches a terminal state (completion, failure, cancellation or
+a signal):
+
+1. The kernel commits the last whole batch, then finalizes the Recording as
+   today. It does not write to the ring after that.
+2. The kernel exits. Its end of the control socketpair and its mapping of
+   the ring close with the process.
+3. The supervisor reaps `sil-run` (`waitpid`), so it knows the exit code.
+4. The supervisor reads the committed batches that remain in the ring and
+   forwards them to the viewer. Then it unmaps and removes the ring.
+5. The supervisor sets the terminal `outcome`, increments `revision` and
+   sends the `terminal` event to every connected client.
+6. Only then does it close the client connections, stop the viewer adapter
+   and remove the control socket file. Thus a client never sees the socket
+   close before the terminal state.
+
 ## 6. Verification plan
 
 ### 6.1 Byte equivalence
@@ -491,7 +534,7 @@ measured response times. The diagnostics report keeps pause time separate.
 | --- | --- |
 | Initialization fails before the first Slot | Terminal `failed`, exit 2 or 1 as today; no `paused` |
 | Pause while a Process Step hangs, deadline set | Pause stays pending; Run fails at the deadline; outcome `failed` |
-| Pause while a Process Step hangs, no deadline | Pause stays pending; `cancel` interrupts the exchange; outcome `cancelled` |
+| Pause while a Process Step hangs, no deadline | Pause stays pending; `cancel` delivers SIGTERM, which interrupts the `poll(-1)` wait of the exchange; outcome `cancelled` |
 | Pause while a Native Task hangs | Pause stays pending; status never reports `paused`; limit documented |
 | `advance_slot` on the last Slot | Normal shutdown; outcome `completed` |
 | `pause` and completion in the same Slot | `completed` |
@@ -522,8 +565,8 @@ not change them.
 5. **Resynchronization in the kernel.** Keep the latest Message of each
    Channel in the kernel (proposed, bounded by Σ Schema sizes), or accept
    that stale Channels stay stale until they publish again?
-6. **Descending timestamps.** Reset the viewer session (proposed), or refuse
-   live mode for Manifests whose Replay input has descending timestamps?
+6. **Descending timestamps.** Do you confirm the policy of section 5.9:
+   reset the viewer session at a batch with `time_regressed`?
 7. **Cancellation exit code.** Report `cancelled` with exit 1 and a new
    message, as interruption does today (proposed)?
 8. **Runner.** Support controlled Runs in `sil-run` only, or also in
