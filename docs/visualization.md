@@ -215,7 +215,7 @@ decompression; oversize data is refused with `LimitExceeded`.
 | `max_index_bytes` | none | The index file |
 
 SQLite caches and decoder metadata come in addition, so memory use is
-bounded but not constant. `tools/navigation_bench.py` measures preparation
+bounded but not constant. `tools/bench_navigation.py` measures preparation
 time, index size, peak RSS and seek latency on the spec fixture: 10 million
 64-byte Messages on 16 Channels in 1 MiB chunks.
 [navigation-results.md](bench/navigation-results.md) holds one measurement
