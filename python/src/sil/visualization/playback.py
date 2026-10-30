@@ -240,8 +240,9 @@ class Playback:
         self._cursor = self._start
         self._after = None if self._start is None else (self._start, _AFTER_INSTANT)
         self._anchor = (0, self._cursor)
-        self._stalled = False
-        self._target = None
+        # While buffering: the playhead that playback holds until the queue
+        # drained. None while not buffering.
+        self._stall_target: int | None = None
         self._ended = False
         self._closed = False
         self._busy = False
@@ -331,7 +332,7 @@ class Playback:
             self._unreconstructed = (self._unreconstructed & set(wanted)) | added
             self._subscription = wanted
             if self._stalled:  # time spent buffering is not played
-                self._stalled, self._target = False, None
+                self._stall_target = None
                 self._anchor = (self._clock(), self._cursor)
             self._drop(lambda n: _channel(n) in removed)
             if self._fresh and wanted:
@@ -349,7 +350,7 @@ class Playback:
             if self._closed:
                 raise InvalidCommand("playback is closed", self._state())
             self._playing = False
-            self._stalled, self._target = False, None
+            self._stall_target = None
             self._subscription = ()
             self._unreconstructed = set()
             self._requests.clear()
@@ -456,7 +457,7 @@ class Playback:
         self._more = False
         if not self._playing or self._pending() or self._ended:
             return None
-        target = self._target if self._stalled else self._playhead(self._clock())
+        target = self._stall_target if self._stalled else self._playhead(self._clock())
         free_messages = self._limits.max_messages - self._queued_messages
         free_bytes = self._limits.max_bytes - self._queued_bytes
         if free_messages <= 0 or free_bytes <= 0:
@@ -569,16 +570,16 @@ class Playback:
         if read.target == self._end:
             self._ended = True
             self._playing = False
-            self._stalled = False
+            self._stall_target = None
             self._enqueue(StateChanged(self._state()))
         elif self._stalled:
-            self._stalled, self._target = False, None
+            self._stall_target = None
             self._anchor = (self._clock(), self._cursor)
             self._enqueue(StateChanged(self._state()))
 
     def _stall(self, target: int) -> None:
         if not self._stalled:
-            self._stalled, self._target = True, target
+            self._stall_target = target
             self._enqueue(StateChanged(self._state()))
 
     def _start_seek(self, position_ns: int) -> None:
@@ -587,18 +588,22 @@ class Playback:
         self._seek = position_ns
         self._unreconstructed = set(self._subscription)
         self._ended = False
-        self._stalled, self._target = False, None
+        self._stall_target = None
         self._drop(lambda n: True)
 
     def _set_playing(self, playing: bool, now: int) -> None:
         if not playing:
             self._playing = False
-            self._stalled, self._target = False, None
+            self._stall_target = None
         elif self._start is None:
             self._ended = True  # no playback range: nothing to play
         elif not self._playing:
             self._playing = True
             self._anchor = (now, self._cursor)
+
+    @property
+    def _stalled(self) -> bool:
+        return self._stall_target is not None
 
     def _running(self) -> bool:
         return (self._playing and not self._pending() and not self._stalled
@@ -640,7 +645,7 @@ class Playback:
     def _fail(self, error: Exception) -> None:
         self._fault = str(error)
         self._playing = False
-        self._stalled, self._target = False, None
+        self._stall_target = None
         self._enqueue(StateChanged(self._state()))
 
     def _check_configure(self, position_ns, playing, rate) -> None:
