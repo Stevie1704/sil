@@ -162,7 +162,7 @@ def _indexed_records(stream: BinaryIO, summary: Summary, selected: _RecordFilter
                     yield channel.topic, record.log_time, record.data
 
 
-class OversizeRecord(ValueError):
+class OversizeMessage(ValueError):
     """A chunk or Message is larger than the caller's limit. It is refused
     before its bytes are read or decompressed."""
 
@@ -202,7 +202,7 @@ def locate_messages(path: str | Path, *, max_chunk_bytes: int
     outside a chunk. It reads the data section in physical order, the same
     stored order as `read_records`, and holds one chunk at a time. A chunk
     whose compressed or decompressed size exceeds `max_chunk_bytes` raises
-    OversizeRecord before it is read."""
+    OversizeMessage before it is read."""
     record_index = 0
     with open(path, "rb") as stream:
         if stream.read(len(_MCAP_MAGIC)) != _MCAP_MAGIC:
@@ -230,7 +230,7 @@ def read_chunk(stream: BinaryIO, chunk_offset: int, *, max_chunk_bytes: int
                ) -> bytes:
     """The decompressed records of the Chunk record at `chunk_offset`.
 
-    Refuses with OversizeRecord a chunk larger than `max_chunk_bytes`,
+    Refuses with OversizeMessage a chunk larger than `max_chunk_bytes`,
     compressed or decompressed, before it is read."""
     stream.seek(chunk_offset)
     opcode, length = _read_head(stream)
@@ -263,8 +263,8 @@ def read_message(stream: BinaryIO, offset: int, *, max_message_bytes: int
         raise ValueError(f"no Message record at file offset {offset}")
     size = length - _MESSAGE_HEAD.size
     if size > max_message_bytes:
-        raise OversizeRecord(f"Message at file offset {offset} has {size} "
-                             f"bytes; the limit is {max_message_bytes}")
+        raise OversizeMessage(f"Message at file offset {offset} has {size} "
+                              f"bytes; the limit is {max_message_bytes}")
     channel_id, _, log_time, _ = _MESSAGE_HEAD.unpack(
         _read_exact(stream, _MESSAGE_HEAD.size))
     return channel_id, log_time, _read_exact(stream, size)
@@ -287,18 +287,18 @@ def _read_chunk_records(stream: BinaryIO, chunk_offset: int, length: int,
     _, _, size, _, name_length = _CHUNK_HEAD.unpack(
         _read_exact(stream, _CHUNK_HEAD.size))
     if size > max_chunk_bytes:
-        raise OversizeRecord(f"chunk at file offset {chunk_offset} "
-                             f"decompresses to {size} bytes; the limit is "
-                             f"{max_chunk_bytes}")
+        raise OversizeMessage(f"chunk at file offset {chunk_offset} "
+                              f"decompresses to {size} bytes; the limit is "
+                              f"{max_chunk_bytes}")
     if name_length > _MAX_COMPRESSION_NAME:
         raise ValueError(f"chunk at file offset {chunk_offset} has a "
                          f"{name_length}-byte compression name")
     compression = _read_exact(stream, name_length).decode()
     (stored,) = struct.unpack("<Q", _read_exact(stream, 8))
     if stored > max_chunk_bytes:
-        raise OversizeRecord(f"chunk at file offset {chunk_offset} has "
-                             f"{stored} compressed bytes; the limit is "
-                             f"{max_chunk_bytes}")
+        raise OversizeMessage(f"chunk at file offset {chunk_offset} has "
+                              f"{stored} compressed bytes; the limit is "
+                              f"{max_chunk_bytes}")
     records = _decompress(_read_exact(stream, stored), compression, size)
     if len(records) != size:
         raise ValueError(f"chunk at file offset {chunk_offset} decompresses "

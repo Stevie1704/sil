@@ -191,10 +191,11 @@ def serve(adapter, tmp_path):
     """Serve a source on an ephemeral loopback port; close it afterwards."""
     bridges = []
 
-    def start(source, queue_limits=None, **options):
-        playback = open_playback(source, cache_dir=tmp_path / "cache",
-                                 queue_limits=queue_limits)
-        bridge = adapter.serve(playback, "127.0.0.1", 0, **options)
+    def start(source, queue_limits=None, adjust=lambda playback: playback,
+              **options):
+        playback = adjust(open_playback(source, cache_dir=tmp_path / "cache",
+                                        queue_limits=queue_limits))
+        bridge = adapter.Bridge(playback, "127.0.0.1", 0, **options)
         bridges.append(bridge)
         return bridge
 
@@ -252,6 +253,44 @@ def connect_subscribed(bridge, *topics):
     client.wait_for(lambda f: f["op"] == "advertise")
     client.subscribe(*(topics or tuple(client.channels)))
     return client
+
+
+def connect_when_free(bridge, *topics, timeout=5.0):
+    """Connect and subscribe as soon as the bridge has let the previous
+    client go; until then it answers HTTP 409."""
+    from websockets.exceptions import InvalidStatus
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            return connect_subscribed(bridge, *topics)
+        except InvalidStatus:
+            assert time.monotonic() < deadline, "the bridge stayed busy"
+            time.sleep(0.05)
+
+
+def test_a_direct_connection_to_the_sdk_port_cannot_affect_playback(
+        serve, qualification, tmp_path):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    # Any local process can find the SDK server's loopback port; the test
+    # reads it from the bridge instead of scanning for it.
+    direct = FoxgloveClient(f"ws://127.0.0.1:{bridge._server.port}")
+    direct.wait_for(lambda f: f["op"] == "advertise")
+    direct.subscribe("counter")
+    direct.request("intruder-play", PLAY, speed=10.0, seek=5 * S)
+    time.sleep(0.5)
+    messages = exported_messages(qualification, tmp_path)
+    assert all(f.get("status") != PLAYING for f in client.frames)
+    assert received(client) == latest_at(messages, set(client.channels), 0)
+    # The SDK tells the direct client that its request got no answer.
+    direct.wait_for(lambda f: f["op"] == "status" and f["level"] == 2)
+    direct.close()
+    client.request("play", PLAY, speed=10.0)
+    client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
+    after_start = sorted((m for m in messages if m[1] > 0), key=key)
+    assert received(client) == latest_at(messages, set(client.channels), 0) + after_start
+    client.close()
 
 
 def test_the_sdk_refuses_the_legacy_subprotocol(serve, qualification):
@@ -452,16 +491,29 @@ def test_queued_values_from_before_a_seek_never_follow_its_reset(
     client.close()
 
 
+def slow_disconnect(playback, monkeypatch, seconds=0.5):
+    """Make the controller's disconnect handling take `seconds`, so that a
+    next client can try to connect while it runs."""
+    disconnect = playback.disconnect
+
+    def slow():
+        time.sleep(seconds)
+        return disconnect()
+
+    monkeypatch.setattr(playback, "disconnect", slow)
+    return playback
+
+
 def test_reconnect_starts_a_new_session_paused_with_fresh_backfill(
-        serve, qualification, tmp_path):
-    bridge = serve(qualification)
+        serve, qualification, tmp_path, monkeypatch):
+    bridge = serve(qualification, adjust=lambda p: slow_disconnect(p, monkeypatch))
     first = connect_subscribed(bridge)
     _, info = first.wait_for(lambda f: f["op"] == "serverInfo")
     initial_state(first)
     first.request("play", PLAY, speed=1.0)
     first.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 300 * MS)
     first.close()
-    second = connect_subscribed(bridge)
+    second = connect_when_free(bridge)
     _, again = second.wait_for(lambda f: f["op"] == "serverInfo")
     assert again["sessionId"] != info["sessionId"]
     reset, state = second.wait_for(lambda f: f["op"] == "playbackState")

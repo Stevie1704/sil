@@ -58,6 +58,19 @@ NUMERIC_POLICY = {
 }
 
 
+def channel_metadata(source_sha256: str, schema_name: str,
+                     schema_sha256: str) -> dict[str, str]:
+    """The metadata of one Channel in this profile: the profile, the
+    source Recording and the Channel's source schema."""
+    return {
+        "sil_profile": PROFILE,
+        "sil_profile_version": str(PROFILE_VERSION),
+        "sil_source_sha256": source_sha256,
+        "sil_source_schema": schema_name,
+        "sil_source_schema_sha256": schema_sha256,
+    }
+
+
 class UnsupportedSchema(ValueError):
     """The source Schema is not a supported SiL schema declaration."""
 

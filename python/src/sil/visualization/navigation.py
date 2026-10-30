@@ -50,9 +50,9 @@ from pathlib import Path
 from mcap.reader import make_reader
 
 from sil import recording
-from sil.recording import OversizeRecord
+from sil.recording import OversizeMessage
 from sil.visualization.source import (Source, SourceChannel, SourceError,
-                                      SourceRecord, completeness, open_source,
+                                      SourceMessage, completeness, open_source,
                                       select_channels)
 
 INDEX_VERSION = 1
@@ -122,9 +122,9 @@ class Limits:
     def __post_init__(self):
         for name in ("max_decoded_bytes", "chunk_cache_bytes",
                      "max_message_bytes"):
-            _require_positive(name, getattr(self, name))
+            require_positive(name, getattr(self, name))
         if self.max_index_bytes is not None:
-            _require_positive("max_index_bytes", self.max_index_bytes)
+            require_positive("max_index_bytes", self.max_index_bytes)
         if self.chunk_cache_bytes < self.max_decoded_bytes:
             raise InvalidRequest("chunk_cache_bytes must hold one decoded "
                                  "chunk of max_decoded_bytes")
@@ -138,8 +138,8 @@ class PageLimits:
     max_bytes: int = 8 * MIB
 
     def __post_init__(self):
-        _require_positive("max_rows", self.max_rows)
-        _require_positive("max_bytes", self.max_bytes)
+        require_positive("max_rows", self.max_rows)
+        require_positive("max_bytes", self.max_bytes)
 
 
 @dataclass(frozen=True)
@@ -191,7 +191,7 @@ class Page:
     True when no Message of the request follows; otherwise `continuation`
     resumes after the last Message."""
 
-    messages: tuple[SourceRecord, ...]
+    messages: tuple[SourceMessage, ...]
     continuation: str | None
     complete: bool
 
@@ -299,12 +299,12 @@ class Navigator:
                 break
             taken.append(row)
             used += size
-        records = tuple(self._record(row) for row in taken)
+        messages = tuple(self._message(row) for row in taken)
         self._source.check_unchanged()
         if len(taken) == len(rows):
-            return Page(records, None, True)
-        return Page(records, _continuation(pin, records[-1].publication_time_ns,
-                                           records[-1].record_index), False)
+            return Page(messages, None, True)
+        return Page(messages, _continuation(pin, messages[-1].publication_time_ns,
+                                           messages[-1].record_index), False)
 
     def continuation_after(self, channels: Collection[str] | None,
                            start_ns: int, end_ns: int, time_ns: int,
@@ -325,7 +325,7 @@ class Navigator:
                              time_ns, record_index)
 
     def snapshot(self, channels: Collection[str] | None, time_ns: int
-                 ) -> dict[str, SourceRecord | None]:
+                 ) -> dict[str, SourceMessage | None]:
         """The latest Message of each selected Channel published at or
         before `time_ns`; equal times resolve to the highest record_index.
         A Channel without such a Message maps to None, never to a value."""
@@ -337,7 +337,7 @@ class Navigator:
             "ORDER BY time DESC, record_index DESC LIMIT 1",
             (self._ids[channel.name], time_ns - _TIME_SHIFT)).fetchone()
             for channel in selected}
-        result = {name: None if row is None else self._record(row)
+        result = {name: None if row is None else self._message(row)
                   for name, row in rows.items()}
         self._source.check_unchanged()
         return result
@@ -381,7 +381,7 @@ class Navigator:
         return list(itertools.islice(
             heapq.merge(*ranges, key=lambda row: (row[2], row[0])), count))
 
-    def _record(self, row) -> SourceRecord:
+    def _message(self, row) -> SourceMessage:
         record_index, channel_id, time, chunk, offset, size = row
         if size > self._limits.max_message_bytes:
             raise self._refusal(
@@ -393,7 +393,7 @@ class Navigator:
                     max_message_bytes=self._limits.max_message_bytes)
             else:
                 found = recording.message_in_chunk(self._chunk(chunk), offset)
-        except OversizeRecord as e:
+        except OversizeMessage as e:
             raise LimitExceeded(str(e)) from e
         except (ValueError, EOFError) as e:
             raise IndexCorrupt(f"index location of record_index "
@@ -401,8 +401,8 @@ class Navigator:
         if found[:2] != (channel_id, time + _TIME_SHIFT) or len(found[2]) != size:
             raise IndexCorrupt(f"index location of record_index {record_index} "
                                "names another Message")
-        return SourceRecord(record_index, self._names[channel_id],
-                            time + _TIME_SHIFT, found[2])
+        return SourceMessage(record_index, self._names[channel_id],
+                             time + _TIME_SHIFT, found[2])
 
     def _refusal(self, row, limit: str) -> LimitExceeded:
         record_index, channel_id, time, _, _, size = row
@@ -517,7 +517,7 @@ def _build(source: Source, ids: dict[str, int], index_path: Path,
         os.replace(temporary, index_path)
     except SourceError:
         raise
-    except OversizeRecord as e:
+    except OversizeMessage as e:
         raise LimitExceeded(str(e)) from e
     except sqlite3.Error as e:
         if cancel is not None and cancel.is_set():
@@ -642,6 +642,6 @@ def _require_time(name: str, value, maximum: int) -> None:
         raise InvalidRequest(f"{name} {value} is outside 0..{maximum}")
 
 
-def _require_positive(name: str, value) -> None:
+def require_positive(name: str, value) -> None:
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise InvalidRequest(f"{name} must be a positive integer, not {value!r}")

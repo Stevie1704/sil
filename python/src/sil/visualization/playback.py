@@ -42,27 +42,33 @@ import uuid
 from collections import OrderedDict, deque
 from collections.abc import Callable, Collection
 from dataclasses import dataclass
+from enum import StrEnum
 from fractions import Fraction
 from pathlib import Path
 
 from sil.visualization.navigation import (Description, Limits,
-                                         LimitExceeded, Navigator,
+                                         MIB, LimitExceeded, Navigator,
                                          PageLimits, Progress,
-                                         prepare_navigation)
-from sil.visualization.source import SourceError, SourceRecord
+                                         prepare_navigation, require_positive)
+from sil.visualization.source import SourceError, SourceMessage
 
-PAUSED = "paused"
-PLAYING = "playing"
-BUFFERING = "buffering"
-ENDED = "ended"
-FAILED = "failed"
-CLOSED = "closed"
 REQUEST_CACHE = 256
 MIN_RATE = 0.1
 MAX_RATE = 10.0
-MIB = 1 << 20
 _AFTER_INSTANT = 2**63 - 1  # record_index after every Message of an instant
 _MAX_PAGE_ROWS = 1000
+
+
+class Status(StrEnum):
+    """`PlaybackState.status`. A member equals its string, such as
+    "paused"."""
+
+    PAUSED = "paused"
+    PLAYING = "playing"
+    BUFFERING = "buffering"
+    ENDED = "ended"
+    FAILED = "failed"
+    CLOSED = "closed"
 
 
 @dataclass(frozen=True)
@@ -76,10 +82,7 @@ class QueueLimits:
 
     def __post_init__(self):
         for name in ("max_messages", "max_bytes"):
-            value = getattr(self, name)
-            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-                raise ValueError(f"{name} must be a positive integer, "
-                                 f"not {value!r}")
+            require_positive(name, getattr(self, name))
 
 
 @dataclass(frozen=True)
@@ -96,7 +99,7 @@ class PlaybackState:
     session_id: str
     source_sha256: str
     generation: int
-    status: str
+    status: Status
     playing: bool
     pending: bool
     cursor_ns: int | None
@@ -123,7 +126,7 @@ class Backfill:
     with its original time and locator. Not a new publication."""
 
     generation: int
-    record: SourceRecord
+    message: SourceMessage
 
 
 @dataclass(frozen=True)
@@ -131,7 +134,7 @@ class Message:
     """A Message crossed by continuous playback."""
 
     generation: int
-    record: SourceRecord
+    message: SourceMessage
 
 
 @dataclass(frozen=True)
@@ -244,8 +247,9 @@ class Playback:
         self._cursor = self._start
         self._after = None if self._start is None else (self._start, _AFTER_INSTANT)
         self._anchor = (0, self._cursor)
-        self._stalled = False
-        self._target = None
+        # While buffering: the playhead that playback holds until the queue
+        # drained. None while not buffering.
+        self._stall_target: int | None = None
         self._ended = False
         self._closed = False
         self._busy = False
@@ -335,7 +339,7 @@ class Playback:
             self._unreconstructed = (self._unreconstructed & set(wanted)) | added
             self._subscription = wanted
             if self._stalled:  # time spent buffering is not played
-                self._stalled, self._target = False, None
+                self._stall_target = None
                 self._anchor = (self._clock(), self._cursor)
             self._drop(lambda n: _channel(n) in removed)
             if self._fresh and wanted:
@@ -353,7 +357,7 @@ class Playback:
             if self._closed:
                 raise InvalidCommand("playback is closed", self._state())
             self._playing = False
-            self._stalled, self._target = False, None
+            self._stall_target = None
             self._subscription = ()
             self._unreconstructed = set()
             self._requests.clear()
@@ -460,7 +464,7 @@ class Playback:
         self._more = False
         if not self._playing or self._pending() or self._ended:
             return None
-        target = self._target if self._stalled else self._playhead(self._clock())
+        target = self._stall_target if self._stalled else self._playhead(self._clock())
         free_messages = self._limits.max_messages - self._queued_messages
         free_bytes = self._limits.max_bytes - self._queued_bytes
         if free_messages <= 0 or free_bytes <= 0:
@@ -560,8 +564,8 @@ class Playback:
                 return
             self._enqueue(_refused(items[0], read.generation, False))
         else:
-            for record in items:
-                self._enqueue(Message(read.generation, record))
+            for message in items:
+                self._enqueue(Message(read.generation, message))
         if items:
             self._after = _key(items[-1])
             self._cursor = self._after[0]
@@ -573,16 +577,16 @@ class Playback:
         if read.target == self._end:
             self._ended = True
             self._playing = False
-            self._stalled = False
+            self._stall_target = None
             self._enqueue(StateChanged(self._state()))
         elif self._stalled:
-            self._stalled, self._target = False, None
+            self._stall_target = None
             self._anchor = (self._clock(), self._cursor)
             self._enqueue(StateChanged(self._state()))
 
     def _stall(self, target: int) -> None:
         if not self._stalled:
-            self._stalled, self._target = True, target
+            self._stall_target = target
             self._enqueue(StateChanged(self._state()))
 
     def _start_seek(self, position_ns: int) -> None:
@@ -591,18 +595,22 @@ class Playback:
         self._seek = position_ns
         self._unreconstructed = set(self._subscription)
         self._ended = False
-        self._stalled, self._target = False, None
+        self._stall_target = None
         self._drop(lambda n: True)
 
     def _set_playing(self, playing: bool, now: int) -> None:
         if not playing:
             self._playing = False
-            self._stalled, self._target = False, None
+            self._stall_target = None
         elif self._start is None:
             self._ended = True  # no playback range: nothing to play
         elif not self._playing:
             self._playing = True
             self._anchor = (now, self._cursor)
+
+    @property
+    def _stalled(self) -> bool:
+        return self._stall_target is not None
 
     def _running(self) -> bool:
         return (self._playing and not self._pending() and not self._stalled
@@ -618,17 +626,17 @@ class Playback:
 
     def _state(self) -> PlaybackState:
         if self._closed:
-            status = CLOSED
+            status = Status.CLOSED
         elif self._fault is not None:
-            status = FAILED
+            status = Status.FAILED
         elif self._pending():
-            status = BUFFERING
+            status = Status.BUFFERING
         elif self._ended:
-            status = ENDED
+            status = Status.ENDED
         elif self._playing:
-            status = BUFFERING if self._stalled else PLAYING
+            status = Status.BUFFERING if self._stalled else Status.PLAYING
         else:
-            status = PAUSED
+            status = Status.PAUSED
         return PlaybackState(
             self._session, self._sha256, self._generation, status,
             self._playing, self._pending(), self._cursor, self._seek,
@@ -644,7 +652,7 @@ class Playback:
     def _fail(self, error: Exception) -> None:
         self._fault = str(error)
         self._playing = False
-        self._stalled, self._target = False, None
+        self._stall_target = None
         self._enqueue(StateChanged(self._state()))
 
     def _check_configure(self, position_ns, playing, rate) -> None:
@@ -689,13 +697,13 @@ class Playback:
     def _account(self, notification: Notification, sign: int) -> None:
         if isinstance(notification, (Message, Backfill)):
             self._queued_messages += sign
-            self._queued_bytes += sign * len(notification.record.data)
+            self._queued_bytes += sign * len(notification.message.data)
         elif isinstance(notification, Refused):
             self._queued_messages += sign
 
 
 def _key(item) -> tuple[int, int]:
-    """The (publication_time_ns, record_index) position of a record or of a
+    """The (publication_time_ns, record_index) position of a Message or of a
     LimitExceeded that names one."""
     return item.publication_time_ns, item.record_index
 
@@ -707,7 +715,7 @@ def _refused(error: LimitExceeded, generation: int, backfill: bool) -> Refused:
 
 def _channel(notification: Notification) -> str | None:
     if isinstance(notification, (Message, Backfill)):
-        return notification.record.channel
+        return notification.message.channel
     if isinstance(notification, Refused):
         return notification.channel
     return None

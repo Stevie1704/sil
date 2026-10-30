@@ -1,7 +1,7 @@
 """Foxglove adapter: the Foxglove playback bar drives the headless
 playback controller (spec #345 s3, issue #349).
 
-`serve(playback, host, port)` starts a Foxglove SDK WebSocket server with
+`Bridge(playback, host, port)` starts a Foxglove SDK WebSocket server with
 the `Time` and `PlaybackControl` capabilities and the source's inclusive
 time range, and a relay (`foxglove_relay`) in front of it on `host:port`.
 Clients connect to the relay. Each source Channel is a topic with the
@@ -16,6 +16,11 @@ Mapping:
   state and sends a warning status with the diagnostic.
 - Subscribe/unsubscribe set the controller's subscription to the union of
   the client's topics.
+- Only the relay's client controls playback. The SDK server listens on a
+  loopback port that other local processes can reach; the relay marks its
+  client's requests with one-time tokens (see `foxglove_relay`), and the
+  bridge ignores every other request. Such a client gets an error status
+  for its request, and copies of the data, but no control.
 - `Reset` (a seek, or a new client): first all Messages logged before it
   leave the SDK queue, then a playback state with `did_seek` reaches the
   client, then the Backfill follows. So no value from before the seek
@@ -43,11 +48,13 @@ import time
 
 from sil.visualization import interchange
 from sil.visualization.adapters import AdapterUnavailable
-from sil.visualization.adapters.foxglove_relay import BARRIER_ID, Relay
+from sil.visualization.adapters.foxglove_relay import (BARRIER_ID, Relay,
+                                                       Subscription)
 from sil.visualization.interchange import ChannelCodec
+from sil.visualization.navigation import MIB
 from sil.visualization.playback import (Backfill, Commit, InvalidCommand,
                                         Message, Playback, PlaybackState,
-                                        Refused, Reset, StateChanged)
+                                        Refused, Reset, StateChanged, Status)
 
 try:
     import foxglove
@@ -60,37 +67,35 @@ except ImportError as e:
     raise AdapterUnavailable("the Foxglove adapter needs the foxglove-sdk "
                              "package") from e
 
-S = 1_000_000_000
+NS_PER_S = 1_000_000_000
 # serverInfo carries the range as {sec: u32, nsec}: later times cannot be shown.
-MAX_TIME_NS = (2**32 - 1) * S + S - 1
-MIB = 1 << 20
+MAX_TIME_NS = (2**32 - 1) * NS_PER_S + NS_PER_S - 1
 _RETRY_S = 0.5  # re-send an unacknowledged barrier or seek state
 _POLL_S = 0.05
-_STATUS = {"playing": FoxgloveStatus.Playing, "paused": FoxgloveStatus.Paused,
-           "buffering": FoxgloveStatus.Buffering, "ended": FoxgloveStatus.Ended,
-           "failed": FoxgloveStatus.Paused, "closed": FoxgloveStatus.Paused}
+# Foxglove has no failed or closed status. Both stop playback, so they show
+# as Paused; a failure also sends an error status with its diagnostic.
+_STATUS = {Status.PLAYING: FoxgloveStatus.Playing,
+           Status.PAUSED: FoxgloveStatus.Paused,
+           Status.BUFFERING: FoxgloveStatus.Buffering,
+           Status.ENDED: FoxgloveStatus.Ended,
+           Status.FAILED: FoxgloveStatus.Paused,
+           Status.CLOSED: FoxgloveStatus.Paused}
 
 
 class UnsupportedSource(ValueError):
     """The source cannot be served: no Messages, or times out of range."""
 
 
-def serve(playback: Playback, host: str, port: int, *, backlog: int = 1024,
-          max_message_bytes: int = 8 * MIB,
-          stall_timeout: float = 30.0) -> Bridge:
-    """Serve `playback` to one Foxglove client at a time on `host:port`
-    (0 picks a free port). The bridge owns `playback` and closes it."""
-    return Bridge(playback, host, port, backlog=backlog,
-                  max_message_bytes=max_message_bytes,
-                  stall_timeout=stall_timeout)
-
-
 class Bridge:
-    """One served playback: the SDK server, its relay and two threads, one
-    pumping the controller and one delivering its notifications."""
+    """Serve `playback` to one Foxglove client at a time on `host:port`
+    (0 picks a free port). The bridge owns `playback` and closes it.
+
+    It holds the SDK server, its relay and two threads, one pumping the
+    controller and one delivering its notifications."""
 
     def __init__(self, playback: Playback, host: str, port: int, *,
-                 backlog: int, max_message_bytes: int, stall_timeout: float):
+                 backlog: int = 1024, max_message_bytes: int = 8 * MIB,
+                 stall_timeout: float = 30.0):
         described = playback.description
         if described.start_ns is None:
             raise UnsupportedSource("the source has no Messages, so it has no "
@@ -105,8 +110,6 @@ class Bridge:
         self._window = backlog // 2  # unacknowledged data-queue entries
         self._max_message_bytes = max_message_bytes
         self._closed = False
-        self._subscribed: set[str] = set()
-        self._client_id = -1
         self._sessions = 0
         self._changed = threading.Condition()
         self._next_barrier = 0
@@ -117,6 +120,9 @@ class Bridge:
         self._context = foxglove.Context()
         self._channels = {c.name: self._channel(c, described.source.sha256)
                           for c in described.channels}
+        self._topics = {channel.id(): name
+                        for name, channel in self._channels.items()}
+        self._relay: Relay | None = None
         self._server = foxglove.start_server(
             name="sil playback", host="127.0.0.1", port=0,
             capabilities=[Capability.Time, Capability.PlaybackControl],
@@ -156,10 +162,21 @@ class Bridge:
 
     # --- SDK callbacks (SDK threads) -----------------------------------------
 
-    def control(self, request: PlaybackControlRequest) -> FoxgloveState:
+    def control(self, request: PlaybackControlRequest) -> FoxgloveState | None:
+        """Act on a request of the relay's client. None for a request of
+        any other client: the SDK answers that client with an error."""
+        relay = self._relay  # None while the bridge starts
+        claimed = relay.claim(request.request_id) if relay else None
+        if isinstance(claimed, Subscription):
+            self._subscribe(claimed.channel_ids)
+            # The relay drops this answer to its fence.
+            return _foxglove_state(self._playback.status(), did_seek=False,
+                                   request_id=request.request_id)
+        if claimed is None:
+            return None
         try:
             state = self._playback.configure(
-                request.request_id or None,
+                claimed.request_id or None,
                 position_ns=request.seek_time,
                 playing=request.playback_command == PlaybackCommand.Play,
                 rate=float(f"{request.playback_speed:.6g}"))
@@ -169,16 +186,10 @@ class Bridge:
             state = e.state
         # did_seek is sent by the delivery thread, ordered with the data.
         return _foxglove_state(state, did_seek=False,
-                               request_id=request.request_id)
+                               request_id=claimed.request_id)
 
-    def subscription(self, client_id: int, topic: str, subscribed: bool) -> None:
-        with self._changed:
-            if client_id < self._client_id or self._closed:
-                return  # a callback of a client that already left
-            if client_id > self._client_id:
-                self._client_id, self._subscribed = client_id, set()
-            (self._subscribed.add if subscribed else self._subscribed.discard)(topic)
-            topics = sorted(self._subscribed)
+    def _subscribe(self, channel_ids: frozenset[int]) -> None:
+        topics = sorted(self._topics[c] for c in channel_ids if c in self._topics)
         try:
             self._playback.set_subscription(topics)
         except InvalidCommand:
@@ -191,7 +202,6 @@ class Bridge:
 
     def _disconnected(self) -> None:
         with self._changed:
-            self._subscribed = set()
             if self._closed:
                 return
         try:
@@ -234,11 +244,11 @@ class Bridge:
         if isinstance(notification, Reset):
             self._reset(notification)
         elif isinstance(notification, (Backfill, Message)):
-            self._log(notification.record)
+            self._log(notification.message)
         elif isinstance(notification, Refused):
             kind = "latest value" if notification.backfill else "Message"
             self._warn(f"SiL refused the {kind} of {notification.channel!r} at "
-                       f"{notification.publication_time_ns} ns (record "
+                       f"{notification.publication_time_ns} ns (record_index "
                        f"{notification.record_index}, {notification.size_bytes} "
                        f"bytes): {notification.reason}")
         elif isinstance(notification, Commit):
@@ -248,26 +258,26 @@ class Bridge:
         elif isinstance(notification, StateChanged):
             self._settle()  # "ended" follows the final Messages
             state = notification.state
-            if state.status == "failed":
+            if state.status == Status.FAILED:
                 self._server.publish_status(
                     f"SiL playback failed: {state.diagnostic}", StatusLevel.Error)
             self._broadcast(state, request_id=None)
             self._advance_time(state.cursor_ns)
 
-    def _log(self, record) -> None:
-        payload = self._codecs[record.channel].payload(
-            record.data, record.publication_time_ns, record.record_index)
+    def _log(self, message) -> None:
+        payload = self._codecs[message.channel].payload(
+            message.data, message.publication_time_ns, message.record_index)
         if len(payload) > self._max_message_bytes:
-            self._warn(f"SiL refused the Message of {record.channel!r} at "
-                       f"{record.publication_time_ns} ns (record "
-                       f"{record.record_index}): its JSON payload has "
+            self._warn(f"SiL refused the Message of {message.channel!r} at "
+                       f"{message.publication_time_ns} ns (record_index "
+                       f"{message.record_index}): its JSON payload has "
                        f"{len(payload)} bytes, above {self._max_message_bytes}")
             return
-        self._channels[record.channel].log(payload,
-                                           log_time=record.publication_time_ns)
+        self._channels[message.channel].log(payload,
+                                           log_time=message.publication_time_ns)
         with self._changed:
             self._logged += 1
-        self._latest_logged = record.publication_time_ns
+        self._latest_logged = message.publication_time_ns
 
     def _reset(self, reset: Reset) -> None:
         """Clear the client's history after everything logged before."""
@@ -335,10 +345,7 @@ class Bridge:
         with self._changed:
             connection = self._relay.connection
         self._barrier()
-        self._wait(lambda: self._room_locked() > 0, connection, timeout=_RETRY_S)
-
-    def _room_locked(self) -> int:
-        return self._window - (self._logged - self._acked_floor())
+        self._wait(lambda: self._room() > 0, connection, timeout=_RETRY_S)
 
     def _settle(self) -> bool:
         """Wait until every entry logged so far left the SDK queue. False
@@ -387,13 +394,8 @@ class Bridge:
             schema=foxglove.Schema(name=summary.schema_name,
                                    encoding=interchange.SCHEMA_ENCODING,
                                    data=codec.json_schema()),
-            context=self._context, metadata={
-                "sil_profile": interchange.PROFILE,
-                "sil_profile_version": str(interchange.PROFILE_VERSION),
-                "sil_source_sha256": source_sha256,
-                "sil_source_schema": summary.schema_name,
-                "sil_source_schema_sha256": summary.schema_sha256,
-            })
+            context=self._context, metadata=interchange.channel_metadata(
+                source_sha256, summary.schema_name, summary.schema_sha256))
 
     def _session_id(self) -> str:
         self._sessions += 1
@@ -401,14 +403,12 @@ class Bridge:
 
 
 class _Listener(ServerListener):
+    """Only playback control requests: the relay's fences carry the
+    subscriptions, because the SDK's subscribe callbacks also come from
+    clients that bypass the relay."""
+
     def __init__(self, bridge: Bridge):
         self._bridge = bridge
-
-    def on_subscribe(self, client, channel) -> None:
-        self._bridge.subscription(client.id, channel.topic, True)
-
-    def on_unsubscribe(self, client, channel) -> None:
-        self._bridge.subscription(client.id, channel.topic, False)
 
     def on_playback_control_request(self, request):
         return self._bridge.control(request)

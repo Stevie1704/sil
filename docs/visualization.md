@@ -157,7 +157,7 @@ with prepare_navigation("run.mcap", cache_dir="nav-cache") as nav:
   Channel name is refused with `SelectionError`.
 - Times are integers in `0..2**64-1`; `end_ns` can be `2**64` to include the
   last possible time.
-- Each Message is a `SourceRecord(record_index, channel,
+- Each Message is a `SourceMessage(record_index, channel,
   publication_time_ns, data)` with the original `sil_pod` payload bytes.
   `record_index` is the whole-source locator, also after Channel selection.
 - Equal times are ordered by `record_index`. A snapshot takes the highest
@@ -215,7 +215,7 @@ decompression; oversize data is refused with `LimitExceeded`.
 | `max_index_bytes` | none | The index file |
 
 SQLite caches and decoder metadata come in addition, so memory use is
-bounded but not constant. `tools/navigation_bench.py` measures preparation
+bounded but not constant. `tools/bench_navigation.py` measures preparation
 time, index size, peak RSS and seek latency on the spec fixture: 10 million
 64-byte Messages on 16 Channels in 1 MiB chunks.
 [navigation-results.md](bench/navigation-results.md) holds one measurement
@@ -243,8 +243,8 @@ with open_playback("run.mcap") as playback:
         playback.pump()
     for notification in playback.drain():
         if isinstance(notification, (Backfill, Message)):
-            record = notification.record
-            print(record.channel, record.publication_time_ns)
+            message = notification.message
+            print(message.channel, message.publication_time_ns)
         elif isinstance(notification, Commit):
             print("cursor", notification.state.cursor_ns)
 ```
@@ -308,8 +308,8 @@ change that it still needs.
 | Notification | Meaning |
 | --- | --- |
 | `Reset(generation, position_ns)` | Discard all delivered history. A seek follows. |
-| `Backfill(generation, record)` | The latest Message of a Channel at or before the cursor, with its original time and `record_index`. It is not a new publication. |
-| `Message(generation, record)` | A Message that continuous playback crossed. |
+| `Backfill(generation, message)` | The latest Message of a Channel at or before the cursor, with its original time and `record_index`. It is not a new publication. |
+| `Message(generation, message)` | A Message that continuous playback crossed. |
 | `Refused(...)` | A Message that a limit refused, in its place. `backfill` tells if it stands for a latest value. |
 | `Commit(state)` | A reconstruction is complete; `state.cursor_ns` is the new cursor. |
 | `StateChanged(state)` | The status changed without a command: buffering, ended, failed or closed. |
@@ -387,10 +387,18 @@ To connect:
 3. Add panels on the topics. A topic is a Channel name; Messages are the
    same `sil_visualization_json` payloads as in the export.
 
-The bridge serves one client at a time. A second client gets HTTP 409.
-Independent users or independent cursors need separate `sil playback serve`
-processes. The default address is loopback. Another `--listen` host makes
-the stream reachable from the network without authentication.
+The bridge serves one client at a time on the printed address. A second
+client gets HTTP 409. Independent users or independent cursors need
+separate `sil playback serve` processes. The default address is loopback.
+Another `--listen` host makes the stream reachable from the network without
+authentication.
+
+The Foxglove SDK server behind the bridge also listens on a loopback port
+of its own. A local process that connects to that port directly gets
+copies of the data, without the no-loss guarantee, but no control: the
+bridge ignores its playback requests and its subscriptions, and the SDK
+answers each of its playback requests with an error status. Only the
+client of the printed address controls playback.
 
 ### What the playback bar does
 
@@ -400,6 +408,11 @@ the stream reachable from the network without authentication.
 | Seek | `configure` with a position in the source's inclusive range. The answer reports `Buffering` until the reconstruction committed. |
 | Subscribe, unsubscribe a topic | The subscription is the set of the client's topics. A new topic gets the latest value at the cursor. |
 | Disconnect | Playback pauses. The next client gets a new session ID, a reset and the latest values at the cursor. |
+
+Foxglove has no status for a failed session. When playback fails (the
+source changed or the index became unusable), the playback bar shows
+`Paused`, and the Problems panel shows an error with the diagnostic. SiL
+then refuses all requests; restart the command to continue.
 
 Each answer is the actual state. A refused request (for example a speed of
 50) answers the unchanged state, with the request ID, and the Problems panel
@@ -425,7 +438,10 @@ queue and its control queue (playback states, time) in no fixed order. The
 adapter therefore puts a relay in front of the SDK server
 (`adapters/foxglove_relay.py`). The relay reports which barrier statuses and
 seek states the SDK actually wrote. The adapter keeps at most half the SDK
-queue unacknowledged, so the SDK never drops a Message. A slow client slows
+queue unacknowledged, so the SDK never drops a Message for the relay's
+client. The relay also marks its client's playback requests and
+subscriptions with one-time tokens, so a direct connection to the SDK port
+cannot bypass this flow control. A slow client slows
 the relay, the adapter stops taking Messages, and the controller reports
 `Buffering`. A client that accepts no data for 30 s is disconnected; its
 next connection starts with a reset and a fresh reconstruction.
@@ -458,7 +474,8 @@ first Message), `did_seek` before the backfill, no value from before a seek
 after its reset (also with data queued in the SDK), repeated seeks, pause,
 speed, refused requests, subscription changes, a stalled client without
 loss, a stall timeout, reconnect with a new session, a refused second
-client, oversize payloads and an unchanged source.
+client, a direct connection to the SDK port without control, oversize
+payloads and an unchanged source.
 
 Not verified, because no Foxglove application is installed here:
 

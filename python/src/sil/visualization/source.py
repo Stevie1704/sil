@@ -41,7 +41,7 @@ class SourceChannel:
     schema_sha256: str
 
 
-class SourceRecord(NamedTuple):
+class SourceMessage(NamedTuple):
     record_index: int
     channel: str
     publication_time_ns: int
@@ -57,11 +57,11 @@ class Source:
     channels: tuple[SourceChannel, ...]  # in declaration order
     _identity: tuple
 
-    def records(self) -> Iterator[SourceRecord]:
+    def messages(self) -> Iterator[SourceMessage]:
         """Every Message in stored order, with its whole-source ordinal."""
         try:
             for index, (topic, time_ns, data) in enumerate(read_records(self.path)):
-                yield SourceRecord(index, topic, time_ns, data)
+                yield SourceMessage(index, topic, time_ns, data)
         except (McapError, ValueError, KeyError, EOFError) as e:
             raise SourceError(f"source {str(self.path)!r} has an unreadable "
                               f"Message: {e}") from e
@@ -80,7 +80,7 @@ def open_source(path: str | Path) -> Source:
         raise SourceError(f"source {str(path)!r} must be an .mcap Recording")
     try:
         identity = _identity(path)
-        digest, size = _sha256(path)
+        digest, size = sha256_and_size(path)
         _check_finalized(path, size)
         channels = _channels(path)
         manifest_hash = read_manifest_hash(path)
@@ -99,7 +99,8 @@ def _identity(path: Path) -> tuple:
     return (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns)
 
 
-def _sha256(path: Path) -> tuple[str, int]:
+def sha256_and_size(path: Path) -> tuple[str, int]:
+    """The SHA-256 hex digest and the byte size of a file, from one read."""
     digest, size = hashlib.sha256(), 0
     with open(path, "rb") as stream:
         while block := stream.read(1 << 20):

@@ -17,7 +17,6 @@ success, 2 rejected input or configuration, 1 output or I/O failure.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import sys
@@ -31,7 +30,8 @@ from sil import build_info
 from sil.visualization import interchange
 from sil.visualization.interchange import ChannelCodec
 from sil.visualization.source import (Source, SourceError, completeness,
-                                      open_source, select_channels)
+                                      open_source, select_channels,
+                                      sha256_and_size)
 
 PROG = "sil recording export"
 CLI_PROFILE = "visualization-json"
@@ -114,16 +114,16 @@ def _write(recording: Source, selected, codecs: dict[str, ChannelCodec],
         writer.start(profile="", library=f"{CONVERTER}/{build_info.__version__}")
         writer.add_metadata("sil_visualization", _metadata(recording, selected))
         ids = _register(writer, recording, selected, codecs)
-        for record in recording.records():
-            channel_id = ids.get(record.channel)
+        for message in recording.messages():
+            channel_id = ids.get(message.channel)
             if channel_id is None:
                 continue
-            payload = codecs[record.channel].payload(
-                record.data, record.publication_time_ns, record.record_index)
-            writer.add_message(channel_id, log_time=record.publication_time_ns,
-                               publish_time=record.publication_time_ns,
+            payload = codecs[message.channel].payload(
+                message.data, message.publication_time_ns, message.record_index)
+            writer.add_message(channel_id, log_time=message.publication_time_ns,
+                               publish_time=message.publication_time_ns,
                                data=payload)
-            _count(counts[record.channel], record.publication_time_ns)
+            _count(counts[message.channel], message.publication_time_ns)
         writer.finish()
     return counts
 
@@ -153,13 +153,9 @@ def _register(writer: Writer, recording: Source, selected,
                 codec.json_schema())
         ids[channel.name] = writer.register_channel(
             channel.name, interchange.MESSAGE_ENCODING,
-            schema_ids[channel.schema_sha256], metadata={
-                "sil_profile": interchange.PROFILE,
-                "sil_profile_version": str(interchange.PROFILE_VERSION),
-                "sil_source_sha256": recording.sha256,
-                "sil_source_schema": channel.schema_name,
-                "sil_source_schema_sha256": channel.schema_sha256,
-            })
+            schema_ids[channel.schema_sha256],
+            metadata=interchange.channel_metadata(
+                recording.sha256, channel.schema_name, channel.schema_sha256))
     return ids
 
 
@@ -239,7 +235,7 @@ class _TemporaryFiles:
         output, receipt_file = self._final
         try:
             receipt["output"]["sha256"], receipt["output"]["size_bytes"] = (
-                _file_sha256(self.output))
+                sha256_and_size(self.output))
             self.receipt = self._new(receipt_file)
             self.receipt.write_text(json.dumps(receipt, indent=2) + "\n")
         except OSError as e:
@@ -272,15 +268,6 @@ class _TemporaryFiles:
 
     def __exit__(self, *exc) -> None:
         self._cleanup()
-
-
-def _file_sha256(path: Path) -> tuple[str, int]:
-    digest, size = hashlib.sha256(), 0
-    with open(path, "rb") as stream:
-        while block := stream.read(1 << 20):
-            digest.update(block)
-            size += len(block)
-    return digest.hexdigest(), size
 
 
 def main(argv: list[str] | None = None) -> int:

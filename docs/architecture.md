@@ -42,9 +42,9 @@ support and determinism scope lives in [SUPPORT.md](../SUPPORT.md).
 - `proofs/` holds acceptance experiments against pinned external artifacts,
   with independent references and retained evidence. These are distinct from
   maintained model products under `models/`.
-- `tools/bench_*.py` drives the routing experiments; their procedures and
-  results live in `docs/bench/`. Native benchmark Participants and schemas are
-  shared test fixtures under `tests/fixtures/`.
+- `tools/bench_*.py` drives the routing and navigation benchmarks; their
+  procedures and results live in `docs/bench/`. Native benchmark Participants
+  and schemas are shared test fixtures under `tests/fixtures/`.
 
 Keep acceptance evidence with the experiment or model it qualifies. A new
 model's domain semantics belong with the model; an example's adapter belongs
