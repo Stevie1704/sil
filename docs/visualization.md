@@ -128,6 +128,92 @@ provenance side-car `<source>.provenance.json` is next to the source and
 names the source's SHA-256. Then `run_exit_code` is the Run's exit code.
 Otherwise the outcome is `unknown`.
 
+## Navigate a Recording from Python
+
+Playback controllers and tool adapters read a finalized Recording through
+`prepare_navigation`. It reads the `sil_pod` source directly; no export is
+needed.
+
+```python
+from sil.visualization import prepare_navigation
+
+with prepare_navigation("run.mcap", cache_dir="nav-cache") as nav:
+    described = nav.describe()
+    page = nav.messages(["vehicle/speed"], 0, 5_000_000_000)
+    while not page.complete:
+        page = nav.messages(["vehicle/speed"], 0, 5_000_000_000,
+                            page.continuation)
+    values = nav.snapshot(None, 2_000_000_000)
+```
+
+| Call | Result |
+| --- | --- |
+| `describe()` | Source identity (SHA-256, size, Manifest hash), Channel catalog with Message counts and bounds, overall bounds (`None` for an empty source), completeness and index path, version and size |
+| `messages(channels, start_ns, end_ns, continuation=None, limits=None)` | One page of the Messages in `[start_ns, end_ns)`, ordered by publication time, then `record_index` |
+| `snapshot(channels, time_ns)` | Per Channel, the latest Message at or before `time_ns`, or `None` when the Channel has no Message up to then |
+
+- `channels=None` selects every Channel. An empty, unknown or repeated
+  Channel name is refused with `SelectionError`.
+- Times are integers in `0..2**64-1`; `end_ns` can be `2**64` to include the
+  last possible time.
+- Each Message is a `SourceRecord(record_index, channel,
+  publication_time_ns, data)` with the original `sil_pod` payload bytes.
+  `record_index` is the whole-source locator, also after Channel selection.
+- Equal times are ordered by `record_index`. A snapshot takes the highest
+  `record_index` among equal times. It never interpolates, never uses a
+  later Message and never makes a missing value zero.
+
+### Pages and continuations
+
+A page holds at most `PageLimits.max_rows` Messages (default 1000) and
+`PageLimits.max_bytes` payload bytes (default 8 MiB). `page.complete` is
+true when no Message of the request follows. Otherwise
+`page.continuation` resumes after the last Message. A continuation is valid
+only for the same source, index version, Channel selection, interval and
+order; any other use, or a malformed continuation, is refused with
+`ContinuationError`. A Message larger than the page byte limit is refused
+with `LimitExceeded`, never skipped.
+
+### The index
+
+`prepare_navigation` hashes the source and builds a SQLite index of Message
+locations in `cache_dir`, named by source SHA-256 and index version. The
+payloads stay in the MCAP. The index is built in a temporary file and
+published by rename when it is complete. A later preparation of the same
+source hashes it again and reuses the index; an unreadable or mismatched
+index is deleted and built again. The index is disposable: delete it at any
+time.
+
+- `progress` receives `Progress(scanned_bytes, total_bytes, messages)` after
+  each chunk. Setting the `cancel` event stops preparation with
+  `PreparationCancelled`.
+- The source file identity (device, inode, size, modification time) is
+  checked before and after preparation and around every read. A change is
+  refused with `SourceError`.
+- The index grows with the Message count, about 75 bytes per Message.
+  `describe().index.size_bytes` reports it. A full disk, or a full
+  `Limits.max_index_bytes` budget, raises `IndexStorageError`.
+- After cancellation or any failure, no index and no temporary file stays.
+
+`Limits` bounds the source reads. Sizes are checked before allocation or
+decompression; oversize data is refused with `LimitExceeded`.
+
+| Limit | Default | Applies to |
+| --- | --- | --- |
+| `max_decoded_bytes` | 64 MiB | One chunk, compressed and decompressed |
+| `chunk_cache_bytes` | 128 MiB | Decoded chunks kept for later reads |
+| `max_message_bytes` | 8 MiB | One Message payload |
+| `max_index_bytes` | none | The index file |
+
+SQLite caches and decoder metadata come in addition, so memory use is
+bounded but not constant. `tools/navigation_bench.py` measures preparation
+time, index size, peak RSS and seek latency on the spec fixture: 10 million
+64-byte Messages on 16 Channels in 1 MiB chunks.
+[navigation-results.md](bench/navigation-results.md) holds one measurement
+(raw values in [navigation.json](bench/navigation.json)). It describes one
+machine with a warm operating-system file cache; it is not a promise for
+other machines or a cold disk.
+
 ## Open the output in Foxglove
 
 The following procedure opens an export in the Foxglove desktop application
