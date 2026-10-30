@@ -17,7 +17,6 @@ success, 2 rejected input or configuration, 1 output or I/O failure.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import sys
@@ -31,7 +30,8 @@ from sil import build_info
 from sil.visualization import interchange
 from sil.visualization.interchange import ChannelCodec
 from sil.visualization.source import (Source, SourceError, completeness,
-                                      open_source, select_channels)
+                                      open_source, select_channels,
+                                      sha256_and_size)
 
 PROG = "sil recording export"
 CLI_PROFILE = "visualization-json"
@@ -239,7 +239,7 @@ class _TemporaryFiles:
         output, receipt_file = self._final
         try:
             receipt["output"]["sha256"], receipt["output"]["size_bytes"] = (
-                _file_sha256(self.output))
+                sha256_and_size(self.output))
             self.receipt = self._new(receipt_file)
             self.receipt.write_text(json.dumps(receipt, indent=2) + "\n")
         except OSError as e:
@@ -272,15 +272,6 @@ class _TemporaryFiles:
 
     def __exit__(self, *exc) -> None:
         self._cleanup()
-
-
-def _file_sha256(path: Path) -> tuple[str, int]:
-    digest, size = hashlib.sha256(), 0
-    with open(path, "rb") as stream:
-        while block := stream.read(1 << 20):
-            digest.update(block)
-            size += len(block)
-    return digest.hexdigest(), size
 
 
 def main(argv: list[str] | None = None) -> int:
