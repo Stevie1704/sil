@@ -146,16 +146,18 @@ class Relay:
         accepted = False
         try:
             client.settimeout(10)  # a handshake must not hold the bridge
-            request, rest = _read_head(client)
+            # Frames can arrive in the same read as a handshake head: the
+            # readers start with them, so no frame goes unobserved.
+            request, client_frames = _read_head(client)
             upstream = socket.create_connection(self._upstream, timeout=10)
             upstream.settimeout(None)
             with self.changed:
                 if self._closed:
                     raise Closed
                 self._sockets.append(upstream)
-            upstream.sendall(_without_extensions(request) + rest)
-            response, rest = _read_head(upstream)
-            client.sendall(response + rest)
+            upstream.sendall(_without_extensions(request))
+            response, server_frames = _read_head(upstream)
+            client.sendall(response)
             if not response.startswith(b"HTTP/1.1 101"):
                 return
             client.settimeout(self._stall_timeout)  # bounds a stalled send
@@ -168,11 +170,12 @@ class Relay:
                 self._forget_tokens()
                 self.changed.notify_all()
             self._on_connect()
-            upward = threading.Thread(target=self._client_to_server,
-                                      args=(client, upstream), daemon=True,
-                                      name="sil-relay-upward")
+            upward = threading.Thread(
+                target=self._client_to_server,
+                args=(_Reader(client, client_frames), client, upstream),
+                daemon=True, name="sil-relay-upward")
             upward.start()
-            self._server_to_client(upstream, client)
+            self._server_to_client(_Reader(upstream, server_frames), client)
         except (Closed, OSError, ValueError):
             pass
         finally:
@@ -196,9 +199,8 @@ class Relay:
         self._tokens.clear()
         self._answers.clear()
 
-    def _client_to_server(self, client: socket.socket,
+    def _client_to_server(self, reader: _Reader, client: socket.socket,
                           upstream: socket.socket) -> None:
-        reader = _Reader(client)
         subscriptions: dict[int, int] = {}  # subscription ID -> channel ID
         fragments: list[bytes] = []
         message_opcode = _BINARY
@@ -252,9 +254,7 @@ class Relay:
             self._answers[token] = answer_id
         return token
 
-    def _server_to_client(self, upstream: socket.socket,
-                          client: socket.socket) -> None:
-        reader = _Reader(upstream)
+    def _server_to_client(self, reader: _Reader, client: socket.socket) -> None:
         while True:
             head, payload = reader.frame()
             forwarded = self._observe(head, payload)
@@ -293,14 +293,17 @@ class Relay:
 
 class _Reader:
     """WebSocket frames from a socket: masked from a client, unmasked from
-    a server. A read timeout is no error: an idle client is not a stalled
-    one."""
+    a server. `pending` holds bytes already read from the socket. A read
+    timeout is no error: an idle client is not a stalled one."""
 
-    def __init__(self, sock: socket.socket):
+    def __init__(self, sock: socket.socket, pending: bytes = b""):
         self._sock = sock
+        self._pending = pending
 
     def exact(self, count: int) -> bytes:
-        chunks, missing = [], count
+        chunks = [self._pending[:count]]
+        self._pending = self._pending[count:]
+        missing = count - len(chunks[0])
         while missing:
             try:
                 data = self._sock.recv(min(missing, 1 << 20))
