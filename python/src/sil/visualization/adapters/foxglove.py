@@ -51,6 +51,7 @@ from sil.visualization.adapters import AdapterUnavailable
 from sil.visualization.adapters.foxglove_relay import (BARRIER_ID, Relay,
                                                        Subscription)
 from sil.visualization.interchange import ChannelCodec
+from sil.visualization.navigation import MIB
 from sil.visualization.playback import (Backfill, Commit, InvalidCommand,
                                         Message, Playback, PlaybackState,
                                         Refused, Reset, StateChanged)
@@ -69,7 +70,6 @@ except ImportError as e:
 S = 1_000_000_000
 # serverInfo carries the range as {sec: u32, nsec}: later times cannot be shown.
 MAX_TIME_NS = (2**32 - 1) * S + S - 1
-MIB = 1 << 20
 _RETRY_S = 0.5  # re-send an unacknowledged barrier or seek state
 _POLL_S = 0.05
 # Foxglove has no failed or closed status. Both stop playback, so they show

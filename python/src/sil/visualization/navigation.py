@@ -122,9 +122,9 @@ class Limits:
     def __post_init__(self):
         for name in ("max_decoded_bytes", "chunk_cache_bytes",
                      "max_message_bytes"):
-            _require_positive(name, getattr(self, name))
+            require_positive(name, getattr(self, name))
         if self.max_index_bytes is not None:
-            _require_positive("max_index_bytes", self.max_index_bytes)
+            require_positive("max_index_bytes", self.max_index_bytes)
         if self.chunk_cache_bytes < self.max_decoded_bytes:
             raise InvalidRequest("chunk_cache_bytes must hold one decoded "
                                  "chunk of max_decoded_bytes")
@@ -138,8 +138,8 @@ class PageLimits:
     max_bytes: int = 8 * MIB
 
     def __post_init__(self):
-        _require_positive("max_rows", self.max_rows)
-        _require_positive("max_bytes", self.max_bytes)
+        require_positive("max_rows", self.max_rows)
+        require_positive("max_bytes", self.max_bytes)
 
 
 @dataclass(frozen=True)
@@ -642,6 +642,6 @@ def _require_time(name: str, value, maximum: int) -> None:
         raise InvalidRequest(f"{name} {value} is outside 0..{maximum}")
 
 
-def _require_positive(name: str, value) -> None:
+def require_positive(name: str, value) -> None:
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise InvalidRequest(f"{name} must be a positive integer, not {value!r}")

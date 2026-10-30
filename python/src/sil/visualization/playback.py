@@ -46,9 +46,9 @@ from fractions import Fraction
 from pathlib import Path
 
 from sil.visualization.navigation import (Description, Limits,
-                                         LimitExceeded, Navigator,
+                                         MIB, LimitExceeded, Navigator,
                                          PageLimits, Progress,
-                                         prepare_navigation)
+                                         prepare_navigation, require_positive)
 from sil.visualization.source import SourceError, SourceMessage
 
 PAUSED = "paused"
@@ -60,7 +60,6 @@ CLOSED = "closed"
 REQUEST_CACHE = 256
 MIN_RATE = 0.1
 MAX_RATE = 10.0
-MIB = 1 << 20
 _AFTER_INSTANT = 2**63 - 1  # record_index after every Message of an instant
 _MAX_PAGE_ROWS = 1000
 
@@ -76,10 +75,7 @@ class QueueLimits:
 
     def __post_init__(self):
         for name in ("max_messages", "max_bytes"):
-            value = getattr(self, name)
-            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-                raise ValueError(f"{name} must be a positive integer, "
-                                 f"not {value!r}")
+            require_positive(name, getattr(self, name))
 
 
 @dataclass(frozen=True)
