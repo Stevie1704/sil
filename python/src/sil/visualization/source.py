@@ -19,10 +19,11 @@ from typing import Iterator, NamedTuple
 from mcap.exceptions import McapError
 from mcap.reader import make_reader
 
-from sil.recording import read_manifest_hash, read_records
+from sil.recording import read_manifest_hash, stored_messages
 from sil.visualization.interchange import SOURCE_ENCODING
 
 _MAGIC = b"\x89MCAP0\r\n"
+_UNBOUNDED = 1 << 64  # export reads chunks of any declared size
 
 
 class SourceError(ValueError):
@@ -58,10 +59,19 @@ class Source:
     _identity: tuple
 
     def messages(self) -> Iterator[SourceMessage]:
-        """Every Message in stored order, with its whole-source ordinal."""
+        """Every Message in stored order, with its whole-source ordinal.
+
+        It scans the data section as navigation does, so a top-level Message
+        beside chunks keeps the same `record_index` in both."""
         try:
-            for index, (topic, time_ns, data) in enumerate(read_records(self.path)):
-                yield SourceMessage(index, topic, time_ns, data)
+            with open(self.path, "rb") as stream:
+                topics = {id_: channel.topic for id_, channel
+                          in make_reader(stream).get_summary().channels.items()}
+            for location, data in stored_messages(
+                    self.path, max_chunk_bytes=_UNBOUNDED):
+                yield SourceMessage(location.record_index,
+                                    topics[location.channel_id],
+                                    location.log_time, data)
         except (McapError, ValueError, KeyError, EOFError) as e:
             raise SourceError(f"source {str(self.path)!r} has an unreadable "
                               f"Message: {e}") from e

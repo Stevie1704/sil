@@ -22,6 +22,7 @@ from sil import cli
 from sil.visualization import (ExportInputError, ExportOutputError,
                                export_recording)
 from sil.visualization.export import receipt_path
+from sil.visualization.navigation import prepare_navigation
 
 
 def exported(path) -> list[tuple[str, int, dict]]:
@@ -252,6 +253,51 @@ def test_a_channel_subset_keeps_the_whole_source_record_index(tmp_path):
     assert [c.topic for c in summary.channels.values()] == ["b"]
     assert receipt["selection"] == {"channels": ["b"]}
     assert receipt["messages"] == 1
+
+
+def write_mixed_source(path):
+    """A chunk-indexed source with a top-level Message between two chunks,
+    which the mcap Writer cannot write by itself: a (10), top-level b (5),
+    a (20)."""
+    with open(path, "wb") as stream:
+        writer = Writer(stream)
+        writer.start(profile="sil", library="sil-test")
+        schemas = {name: writer.register_schema(
+            name, "sil_pod", json.dumps(spec).encode())
+            for name, spec in TWO.items()}
+        a = writer.register_channel("a", "sil_pod", schemas["s.A"])
+        b = writer.register_channel("b", "sil_pod", schemas["s.B"])
+        writer.add_message(a, log_time=10, publish_time=10,
+                           data=struct.pack("<i", 1))
+        writer._Writer__finalize_chunk()
+        chunks, writer._Writer__chunk_builder = (
+            writer._Writer__chunk_builder, None)
+        writer.add_message(b, log_time=5, publish_time=5,
+                           data=struct.pack("<Q", 7))
+        writer._Writer__chunk_builder = chunks
+        writer.add_message(a, log_time=20, publish_time=20,
+                           data=struct.pack("<i", 2))
+        writer.finish()
+    with open(path, "rb") as stream:
+        summary = make_reader(stream).get_summary()
+    assert len(summary.chunk_indexes) == 2
+    return path
+
+
+def test_export_and_navigation_agree_on_top_level_messages_beside_chunks(
+        tmp_path):
+    source = write_mixed_source(tmp_path / "run.mcap")
+    out = tmp_path / "out.mcap"
+
+    receipt = export_recording(source, out)
+
+    assert locators(out) == [("a", 10, "0", "10"), ("b", 5, "1", "5"),
+                             ("a", 20, "2", "20")]
+    assert receipt["messages"] == 3
+    with prepare_navigation(source, cache_dir=tmp_path / "cache") as nav:
+        page = nav.messages(None, 0, 2**64)
+    assert [(m.channel, m.publication_time_ns, m.record_index)
+            for m in page.messages] == [("b", 5, 1), ("a", 10, 0), ("a", 20, 2)]
 
 
 def sha256(path) -> str:
