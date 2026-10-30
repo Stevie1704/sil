@@ -254,6 +254,44 @@ def connect_subscribed(bridge, *topics):
     return client
 
 
+def connect_when_free(bridge, *topics, timeout=5.0):
+    """Connect and subscribe as soon as the bridge has let the previous
+    client go; until then it answers HTTP 409."""
+    from websockets.exceptions import InvalidStatus
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            return connect_subscribed(bridge, *topics)
+        except InvalidStatus:
+            assert time.monotonic() < deadline, "the bridge stayed busy"
+            time.sleep(0.05)
+
+
+def test_a_direct_connection_to_the_sdk_port_cannot_affect_playback(
+        serve, qualification, tmp_path):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    # Any local process can find the SDK server's loopback port; the test
+    # reads it from the bridge instead of scanning for it.
+    direct = FoxgloveClient(f"ws://127.0.0.1:{bridge._server.port}")
+    direct.wait_for(lambda f: f["op"] == "advertise")
+    direct.subscribe("counter")
+    direct.request("intruder-play", PLAY, speed=10.0, seek=5 * S)
+    time.sleep(0.5)
+    messages = exported_messages(qualification, tmp_path)
+    assert all(f.get("status") != PLAYING for f in client.frames)
+    assert received(client) == latest_at(messages, set(client.channels), 0)
+    # The SDK tells the direct client that its request got no answer.
+    direct.wait_for(lambda f: f["op"] == "status" and f["level"] == 2)
+    direct.close()
+    client.request("play", PLAY, speed=10.0)
+    client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
+    after_start = sorted((m for m in messages if m[1] > 0), key=key)
+    assert received(client) == latest_at(messages, set(client.channels), 0) + after_start
+    client.close()
+
+
 def test_the_sdk_refuses_the_legacy_subprotocol(serve, qualification):
     from websockets.exceptions import InvalidStatus
     bridge = serve(qualification)

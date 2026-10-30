@@ -387,10 +387,18 @@ To connect:
 3. Add panels on the topics. A topic is a Channel name; Messages are the
    same `sil_visualization_json` payloads as in the export.
 
-The bridge serves one client at a time. A second client gets HTTP 409.
-Independent users or independent cursors need separate `sil playback serve`
-processes. The default address is loopback. Another `--listen` host makes
-the stream reachable from the network without authentication.
+The bridge serves one client at a time on the printed address. A second
+client gets HTTP 409. Independent users or independent cursors need
+separate `sil playback serve` processes. The default address is loopback.
+Another `--listen` host makes the stream reachable from the network without
+authentication.
+
+The Foxglove SDK server behind the bridge also listens on a loopback port
+of its own. A local process that connects to that port directly gets
+copies of the data, without the no-loss guarantee, but no control: the
+bridge ignores its playback requests and its subscriptions, and the SDK
+answers each of its playback requests with an error status. Only the
+client of the printed address controls playback.
 
 ### What the playback bar does
 
@@ -425,7 +433,10 @@ queue and its control queue (playback states, time) in no fixed order. The
 adapter therefore puts a relay in front of the SDK server
 (`adapters/foxglove_relay.py`). The relay reports which barrier statuses and
 seek states the SDK actually wrote. The adapter keeps at most half the SDK
-queue unacknowledged, so the SDK never drops a Message. A slow client slows
+queue unacknowledged, so the SDK never drops a Message for the relay's
+client. The relay also marks its client's playback requests and
+subscriptions with one-time tokens, so a direct connection to the SDK port
+cannot bypass this flow control. A slow client slows
 the relay, the adapter stops taking Messages, and the controller reports
 `Buffering`. A client that accepts no data for 30 s is disconnected; its
 next connection starts with a reset and a fresh reconstruction.
@@ -458,7 +469,8 @@ first Message), `did_seek` before the backfill, no value from before a seek
 after its reset (also with data queued in the SDK), repeated seeks, pause,
 speed, refused requests, subscription changes, a stalled client without
 loss, a stall timeout, reconnect with a new session, a refused second
-client, oversize payloads and an unchanged source.
+client, a direct connection to the SDK port without control, oversize
+payloads and an unchanged source.
 
 Not verified, because no Foxglove application is installed here:
 

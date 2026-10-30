@@ -16,6 +16,11 @@ Mapping:
   state and sends a warning status with the diagnostic.
 - Subscribe/unsubscribe set the controller's subscription to the union of
   the client's topics.
+- Only the relay's client controls playback. The SDK server listens on a
+  loopback port that other local processes can reach; the relay marks its
+  client's requests with one-time tokens (see `foxglove_relay`), and the
+  bridge ignores every other request. Such a client gets an error status
+  for its request, and copies of the data, but no control.
 - `Reset` (a seek, or a new client): first all Messages logged before it
   leave the SDK queue, then a playback state with `did_seek` reaches the
   client, then the Backfill follows. So no value from before the seek
@@ -43,7 +48,8 @@ import time
 
 from sil.visualization import interchange
 from sil.visualization.adapters import AdapterUnavailable
-from sil.visualization.adapters.foxglove_relay import BARRIER_ID, Relay
+from sil.visualization.adapters.foxglove_relay import (BARRIER_ID, Relay,
+                                                       Subscription)
 from sil.visualization.interchange import ChannelCodec
 from sil.visualization.playback import (Backfill, Commit, InvalidCommand,
                                         Message, Playback, PlaybackState,
@@ -105,8 +111,6 @@ class Bridge:
         self._window = backlog // 2  # unacknowledged data-queue entries
         self._max_message_bytes = max_message_bytes
         self._closed = False
-        self._subscribed: set[str] = set()
-        self._client_id = -1
         self._sessions = 0
         self._changed = threading.Condition()
         self._next_barrier = 0
@@ -117,6 +121,9 @@ class Bridge:
         self._context = foxglove.Context()
         self._channels = {c.name: self._channel(c, described.source.sha256)
                           for c in described.channels}
+        self._topics = {channel.id(): name
+                        for name, channel in self._channels.items()}
+        self._relay: Relay | None = None
         self._server = foxglove.start_server(
             name="sil playback", host="127.0.0.1", port=0,
             capabilities=[Capability.Time, Capability.PlaybackControl],
@@ -156,10 +163,21 @@ class Bridge:
 
     # --- SDK callbacks (SDK threads) -----------------------------------------
 
-    def control(self, request: PlaybackControlRequest) -> FoxgloveState:
+    def control(self, request: PlaybackControlRequest) -> FoxgloveState | None:
+        """Act on a request of the relay's client. None for a request of
+        any other client: the SDK answers that client with an error."""
+        relay = self._relay  # None while the bridge starts
+        claimed = relay.claim(request.request_id) if relay else None
+        if isinstance(claimed, Subscription):
+            self._subscribe(claimed.channel_ids)
+            # The relay drops this answer to its fence.
+            return _foxglove_state(self._playback.status(), did_seek=False,
+                                   request_id=request.request_id)
+        if claimed is None:
+            return None
         try:
             state = self._playback.configure(
-                request.request_id or None,
+                claimed.request_id or None,
                 position_ns=request.seek_time,
                 playing=request.playback_command == PlaybackCommand.Play,
                 rate=float(f"{request.playback_speed:.6g}"))
@@ -169,16 +187,10 @@ class Bridge:
             state = e.state
         # did_seek is sent by the delivery thread, ordered with the data.
         return _foxglove_state(state, did_seek=False,
-                               request_id=request.request_id)
+                               request_id=claimed.request_id)
 
-    def subscription(self, client_id: int, topic: str, subscribed: bool) -> None:
-        with self._changed:
-            if client_id < self._client_id or self._closed:
-                return  # a callback of a client that already left
-            if client_id > self._client_id:
-                self._client_id, self._subscribed = client_id, set()
-            (self._subscribed.add if subscribed else self._subscribed.discard)(topic)
-            topics = sorted(self._subscribed)
+    def _subscribe(self, channel_ids: frozenset[int]) -> None:
+        topics = sorted(self._topics[c] for c in channel_ids if c in self._topics)
         try:
             self._playback.set_subscription(topics)
         except InvalidCommand:
@@ -191,7 +203,6 @@ class Bridge:
 
     def _disconnected(self) -> None:
         with self._changed:
-            self._subscribed = set()
             if self._closed:
                 return
         try:
@@ -401,14 +412,12 @@ class Bridge:
 
 
 class _Listener(ServerListener):
+    """Only playback control requests: the relay's fences carry the
+    subscriptions, because the SDK's subscribe callbacks also come from
+    clients that bypass the relay."""
+
     def __init__(self, bridge: Bridge):
         self._bridge = bridge
-
-    def on_subscribe(self, client, channel) -> None:
-        self._bridge.subscription(client.id, channel.topic, True)
-
-    def on_unsubscribe(self, client, channel) -> None:
-        self._bridge.subscription(client.id, channel.topic, False)
 
     def on_playback_control_request(self, request):
         return self._bridge.control(request)
