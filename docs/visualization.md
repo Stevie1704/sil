@@ -29,8 +29,9 @@ receipt = export_recording("run.mcap", "run.visualization.mcap",
   Without it, every Channel is exported, also Channels without Messages.
 - The command writes two files: the output MCAP and
   `<output>.receipt.json`. It refuses to overwrite either file.
-- Exit codes: `0` success, `2` rejected input or configuration, `1` output or
-  I/O failure. After a failure, neither file exists and no temporary file
+- Exit codes: `0` success, `2` rejected input or configuration (also a
+  source that does not exist), `1` output or I/O failure (also a source that
+  exists but cannot be read). After a failure, neither file exists and no temporary file
   stays.
 
 The source must be a finalized MCAP Recording with `sil_pod` Channels and
@@ -194,8 +195,13 @@ index is deleted and built again. The index is disposable: delete it at any
 time.
 
 - `progress` receives `Progress(scanned_bytes, total_bytes, messages)` after
-  each chunk. Setting the `cancel` event stops preparation with
+  each indexed batch of at most 65,536 Message locations. A batch never spans
+  two chunks, so the build memory does not grow with the Message count of a
+  chunk. Setting the `cancel` event stops preparation with
   `PreparationCancelled`.
+- The build checks that each payload has the fixed size of its Channel's
+  Schema, without decoding it. A malformed payload, a Message on an
+  undeclared Channel or an unsupported Schema is refused with `SourceError`.
 - The source file identity (device, inode, size, modification time) is
   checked before and after preparation and around every read. A change is
   refused with `SourceError`.
@@ -257,13 +263,17 @@ disposable; delete it at any time.
 
 | Call | Effect |
 | --- | --- |
-| `configure(request_id, position_ns=None, playing=None, rate=None)` | Seek, play or pause, and set the rate in one atomic operation. `None` keeps the current value. |
+| `configure(request_id, position_ns=None, playing=None, rate=None)` | Seek, play or pause, and set the rate in one atomic operation. `request_id` is a required non-empty string. `None` keeps the current value. |
 | `set_subscription(channels)` | Deliver only these Channels. New Channels are reconstructed at the cursor. |
 | `status()` | The current `PlaybackState`. |
 | `disconnect()` | The client went away: pause, drop the subscription, the queue and the request IDs. |
+| `superseded(notification)` | True for a drained notification that a later seek, disconnect or unsubscribe would have removed from the queue. An adapter drops it instead of sending it. |
 | `close()` | End the session and close the index. |
 
-Playback starts paused at the first Message time, with no subscription. The
+Playback starts paused at the first Message time, with no subscription. It
+starts before the first instant: nothing precedes it, so a new subscription
+gets no `Backfill`, and play delivers every Message at the first time as a
+`Message`, also each Message of an equal-time Burst. The
 rate is a finite number from 0.1 to 10. A seek accepts any time from the
 first to the last Message time, inclusive. A source without Messages has no
 playback range: a seek is refused, and play ends at once.
@@ -285,7 +295,7 @@ state, which the command did not change.
 | `paused` | Playback does not advance. |
 | `playing` | Playback advances by elapsed time times the rate. |
 | `buffering` | A reconstruction is pending, or the adapter drains slower than the rate. |
-| `ended` | All Messages up to the last time are delivered. Play without a seek restarts at the first time. |
+| `ended` | All Messages up to the last time are delivered. Play without a seek restarts before the first instant: `Reset` and `Commit` without `Backfill`, then every Message again. |
 | `failed` | The source changed or the index is unusable. `diagnostic` tells why. Only `disconnect` and `close` are accepted. |
 | `closed` | The session ended. |
 
@@ -294,7 +304,9 @@ state, which the command did not change.
 The controller keeps the last 256 accepted request IDs. A repeated request
 ID with the same content returns its first result and does nothing again.
 The same ID with other content raises `RequestConflict`. A refused request
-is not kept. `request_id=None` is never kept.
+is not kept. A missing or empty `request_id` is refused with
+`InvalidCommand`. The Foxglove adapter gives a client request without an ID
+a local ID, which it does not echo.
 
 After 256 newer requests, or after `disconnect`, an ID is new again. A
 client that is not sure whether its request was applied, for example after
@@ -307,7 +319,7 @@ change that it still needs.
 
 | Notification | Meaning |
 | --- | --- |
-| `Reset(generation, position_ns)` | Discard all delivered history. A seek follows. |
+| `Reset(generation, position_ns, request_id)` | Discard all delivered history. A seek follows. `request_id` names the request that caused the seek, or is `None` (a new client after a disconnect). |
 | `Backfill(generation, message)` | The latest Message of a Channel at or before the cursor, with its original time and `record_index`. It is not a new publication. |
 | `Message(generation, message)` | A Message that continuous playback crossed. |
 | `Refused(...)` | A Message that a limit refused, in its place. `backfill` tells if it stands for a latest value. |
@@ -318,6 +330,8 @@ A seek to `t` gives `Reset`, the latest Message of each subscribed Channel
 at or before `t`, then `Commit`. A Channel without a Message up to `t` gets
 no `Backfill`: missing data is never a zero. Equal times resolve to the
 highest `record_index`. After the commit, play starts strictly after `t`.
+This rule also holds for an explicit seek to the first time; only a fresh
+session and the restart after `ended` start before the first instant.
 
 During play, each subscribed Message is delivered once, in
 (publication time, `record_index`) order, also for equal times and for
@@ -337,8 +351,10 @@ latest command is the one pending replacement.
 Messages and their payload bytes. When the queue is full, playback stops
 advancing and reports `buffering`. It continues when the adapter has
 drained the queue, from the position where it stopped, so no Message is
-skipped. A reconstruction is added as one unit, so the queue can hold one
-more Message per subscribed Channel.
+skipped. A reconstruction respects the same bounds: its `Backfill` is
+queued as room allows, the status stays `buffering` (and `pending`) while
+the rest waits, and the cursor commits only after all of it is queued. A
+newer seek, subscription change or disconnect discards the waiting rest.
 
 A Message larger than `Limits.max_message_bytes` or
 `QueueLimits.max_bytes` is not delivered. A `Refused` notification takes
@@ -373,7 +389,7 @@ sil playback serve run.mcap --adapter foxglove --listen 127.0.0.1:8765
 ```
 
 The command validates and indexes the source (see [The index](#the-index)),
-starts paused at the first instant, prints the address and serves until
+starts paused before the first instant, prints the address and serves until
 Ctrl-C or SIGTERM. Exit codes: 0 stopped by a signal, 2 rejected input or
 configuration (also a missing extra, a source without Messages, or a source
 that ends after 2^32 s), 1 an I/O failure such as a port in use.
@@ -404,7 +420,7 @@ client of the printed address controls playback.
 
 | Foxglove | SiL |
 | --- | --- |
-| Play, Pause, speed | One `configure`: the desired playing state and the rate (0.1 to 10). A request that only changes the speed keeps the playing state. |
+| Play, Pause, speed | One `configure`: the desired playing state and the rate (0.1 to 10). The SDK request has no "no change" command, only Play and Pause, so every request sets the playing state. A speed change keeps the playing state only because the client sends its current command with it, as the Foxglove playback bar does. |
 | Seek | `configure` with a position in the source's inclusive range. The answer reports `Buffering` until the reconstruction committed. |
 | Subscribe, unsubscribe a topic | The subscription is the set of the client's topics. A new topic gets the latest value at the cursor. |
 | Disconnect | Playback pauses. The next client gets a new session ID, a reset and the latest values at the cursor. |
@@ -439,7 +455,8 @@ adapter therefore puts a relay in front of the SDK server
 (`adapters/foxglove_relay.py`). The relay reports which barrier statuses and
 seek states the SDK actually wrote. The adapter keeps at most half the SDK
 queue unacknowledged, so the SDK never drops a Message for the relay's
-client. The relay also marks its client's playback requests and
+client. It also keeps at most `Bridge(window_bytes=32 MiB)` of encoded
+payloads unacknowledged; a single larger Message goes alone. The relay also marks its client's playback requests and
 subscriptions with one-time tokens, so a direct connection to the SDK port
 cannot bypass this flow control. A slow client slows
 the relay, the adapter stops taking Messages, and the controller reports

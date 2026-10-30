@@ -25,10 +25,14 @@ Delivery: `drain` returns notifications in order. Continuous playback
 enqueues every subscribed Message crossed, in (publication_time_ns,
 record_index) order, as `Message`. A seek enqueues `Reset`, then the latest
 Message per subscribed Channel at or before the seek time as `Backfill`,
-then `Commit`. A Message the Navigator refuses as oversize is reported in
+then `Commit`, and playback continues strictly after the seek time. A fresh
+session and Play after `ended` start before the first instant instead, so
+every Message at the first time is delivered as `Message`. A Message the
+Navigator refuses as oversize is reported in
 its place as `Refused`; nothing is skipped silently. The queue is bounded by
 `QueueLimits`: when it is full, playback stops advancing and reports
-`buffering` until the adapter drains it. A source that changes, or an index
+`buffering` until the adapter drains it. Backfill also waits for room; the
+seek commits only after all of it is queued. A source that changes, or an index
 that becomes unusable, ends the session with status `failed`.
 """
 
@@ -56,6 +60,7 @@ REQUEST_CACHE = 256
 MIN_RATE = 0.1
 MAX_RATE = 10.0
 _AFTER_INSTANT = 2**63 - 1  # record_index after every Message of an instant
+_BEFORE_INSTANT = -1  # record_index before every Message of an instant
 _MAX_PAGE_ROWS = 1000
 
 
@@ -114,10 +119,13 @@ class PlaybackState:
 
 @dataclass(frozen=True)
 class Reset:
-    """Discard all delivered history: a seek to `position_ns` follows."""
+    """Discard all delivered history: a seek to `position_ns` follows.
+    `request_id` names the request that caused the seek, or is None for a
+    seek that no request caused (a new client after a disconnect)."""
 
     generation: int
     position_ns: int | None
+    request_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -188,6 +196,15 @@ class _Job:
     channels: tuple[str, ...]
 
 
+@dataclass
+class _Staged:
+    """A completed reconstruction whose Backfill waits for queue room."""
+
+    job: _Job
+    items: deque
+    queued: set[str]  # Channels whose Backfill or Refused is queued
+
+
 @dataclass(frozen=True)
 class _Read:
     generation: int
@@ -222,7 +239,7 @@ def open_playback(source: str | Path, *, cache_dir: str | Path | None = None,
 
 class Playback:
     """The playback controller over one Navigator, which it owns and
-    closes. It starts paused at the first instant of the source.
+    closes. It starts paused before the first instant of the source.
     `description` is the Navigator's `describe()` result: an adapter takes
     the Channel schemas for its payload conversion from it."""
 
@@ -242,10 +259,13 @@ class Playback:
         self._channels = tuple(c.name for c in described.channels)
         self._start, self._end = described.start_ns, described.end_ns
         self._generation = 0
+        self._flushed = 0  # generation of the last seek or disconnect
         self._playing = False
         self._rate = 1.0
         self._cursor = self._start
-        self._after = None if self._start is None else (self._start, _AFTER_INSTANT)
+        # A fresh session plays every Message of the first instant.
+        self._after = (None if self._start is None
+                       else (self._start, _BEFORE_INSTANT))
         self._anchor = (0, self._cursor)
         # While buffering: the playhead that playback holds until the queue
         # drained. None while not buffering.
@@ -258,8 +278,11 @@ class Playback:
         self._fresh = False  # after a disconnect: the next client needs a Reset
         self._subscription: tuple[str, ...] = ()
         self._unreconstructed: set[str] = set()
+        self._staged: _Staged | None = None
         self._reset_pending = False
         self._seek: int | None = None
+        self._seek_after: tuple[int, int] | None = None  # position after it
+        self._seek_request: str | None = None  # the request of the seek
         self._request_id: str | None = None
         self._requests: OrderedDict[str, tuple] = OrderedDict()
         self._queue: deque = deque()
@@ -272,7 +295,7 @@ class Playback:
         with self._lock:
             return self._state()
 
-    def configure(self, request_id: str | None = None, *,
+    def configure(self, request_id: str, *,
                   position_ns: int | None = None, playing: bool | None = None,
                   rate: float | None = None) -> PlaybackState:
         """Seek, set the desired playing state and the rate in one atomic
@@ -280,23 +303,23 @@ class Playback:
         `Commit` follows when the reconstruction completes. Raises
         InvalidCommand with the unchanged state.
 
-        The last REQUEST_CACHE accepted request IDs are remembered: the same
-        ID with the same content returns its first result without acting
-        again; with other content it raises RequestConflict. An expired ID
-        is a new request. `request_id=None` is never cached."""
+        `request_id` is a non-empty string. The last REQUEST_CACHE accepted
+        request IDs are remembered: the same ID with the same content
+        returns its first result without acting again; with other content
+        it raises RequestConflict. An expired ID is a new request."""
         with self._lock:
             self._check_open()
             content = (position_ns, playing, rate)
-            if request_id is not None and not isinstance(request_id, str):
-                self._refuse(f"request_id must be a string, not {request_id!r}")
-            if request_id is not None:
-                cached = self._requests.get(request_id)
-                if cached is not None:
-                    if cached[0] != content:
-                        raise RequestConflict(
-                            f"request {request_id!r} was already used with "
-                            "other content", self._state())
-                    return cached[1]
+            if not isinstance(request_id, str) or not request_id:
+                self._refuse(f"request_id must be a non-empty string, not "
+                             f"{request_id!r}")
+            cached = self._requests.get(request_id)
+            if cached is not None:
+                if cached[0] != content:
+                    raise RequestConflict(
+                        f"request {request_id!r} was already used with "
+                        "other content", self._state())
+                return cached[1]
             self._check_configure(position_ns, playing, rate)
             now = self._clock()
             if rate is not None and rate != self._rate:
@@ -304,17 +327,17 @@ class Playback:
                     self._anchor = (now, self._playhead(now))
                 self._rate = float(rate)
             if position_ns is not None:
-                self._start_seek(position_ns)
+                self._start_seek((position_ns, _AFTER_INSTANT), request_id)
             elif playing and self._ended and self._start is not None:
-                self._start_seek(self._start)  # Play after the end restarts
+                # Play after the end restarts before the first instant.
+                self._start_seek((self._start, _BEFORE_INSTANT), request_id)
             if playing is not None:
                 self._set_playing(playing, now)
             self._request_id = request_id
             state = self._state()
-            if request_id is not None:
-                self._requests[request_id] = (content, state)
-                if len(self._requests) > REQUEST_CACHE:
-                    self._requests.popitem(last=False)
+            self._requests[request_id] = (content, state)
+            if len(self._requests) > REQUEST_CACHE:
+                self._requests.popitem(last=False)
             self._lock.notify_all()
             return state
 
@@ -335,6 +358,7 @@ class Playback:
                 return self._state()
             removed = set(self._subscription) - set(wanted)
             added = set(wanted) - set(self._subscription)
+            self._discard_staged()
             self._generation += 1
             self._unreconstructed = (self._unreconstructed & set(wanted)) | added
             self._subscription = wanted
@@ -344,8 +368,10 @@ class Playback:
             self._drop(lambda n: _channel(n) in removed)
             if self._fresh and wanted:
                 self._fresh = False
-                self._start_seek(self._seek if self._reset_pending
-                                 else self._cursor)
+                if self._reset_pending:
+                    self._start_seek(self._seek_after, None)
+                else:
+                    self._start_seek(self._after, None)
             self._lock.notify_all()
             return self._state()
 
@@ -360,8 +386,10 @@ class Playback:
             self._stall_target = None
             self._subscription = ()
             self._unreconstructed = set()
+            self._staged = None
             self._requests.clear()
             self._generation += 1
+            self._flushed = self._generation
             self._drop(lambda n: True)
             self._fresh = True
             self._lock.notify_all()
@@ -404,6 +432,20 @@ class Playback:
                 self._lock.notify_all()
             return taken
 
+    def superseded(self, notification: Notification) -> bool:
+        """True for a drained notification that a later command would have
+        removed from the queue: a seek or disconnect followed its
+        generation, or its Channel is no longer subscribed. An adapter that
+        still holds it drops it instead of sending it."""
+        generation = getattr(notification, "generation", None)
+        if generation is None:
+            return False  # Commit and StateChanged carry a current state
+        with self._lock:
+            if generation < self._flushed:
+                return True
+            channel = _channel(notification)
+            return channel is not None and channel not in self._subscription
+
     # --- work ---------------------------------------------------------------
 
     def pump(self) -> None:
@@ -411,6 +453,10 @@ class Playback:
         playback. Call it from one thread only."""
         with self._lock:
             if self._closed or self._busy or self._fault is not None:
+                return
+            if self._staged is not None:
+                self._fill_staged()
+                self._lock.notify_all()
                 return
             work = self._take_job() or self._take_read()
             if work is None:
@@ -445,17 +491,16 @@ class Playback:
             with self._lock:
                 if self._closed:
                     return
-                if self._fault is None and (self._pending() or self._more):
+                waiting = self._staged is not None  # until a drain makes room
+                if self._fault is None and (
+                        (self._pending() and not waiting) or self._more):
                     continue
                 self._lock.wait(tick_ns / 1e9 if self._playing else None)
 
     def _take_job(self) -> _Job | None:
         if not self._pending():
             return None
-        if self._reset_pending:
-            after = None if self._seek is None else (self._seek, _AFTER_INSTANT)
-        else:
-            after = self._after
+        after = self._seek_after if self._reset_pending else self._after
         channels = tuple(c for c in self._subscription
                          if c in self._unreconstructed)
         return _Job(self._generation, self._reset_pending, after, channels)
@@ -518,7 +563,8 @@ class Playback:
         if not read.channels or time_ns > read.target or (
                 time_ns == read.target and record_index == _AFTER_INSTANT):
             return [], True
-        return self._page(read.channels, time_ns, read.target + 1, read.after,
+        return self._page(read.channels, time_ns, read.target + 1,
+                          None if record_index == _BEFORE_INSTANT else read.after,
                           read.limits)
 
     def _page(self, channels, start_ns, end_ns, after, limits) -> tuple[list, bool]:
@@ -540,19 +586,59 @@ class Playback:
         if job.generation != self._generation:
             return  # superseded while it was read
         if job.reset:
-            self._enqueue(Reset(job.generation, self._seek))
+            self._enqueue(Reset(job.generation, self._seek, self._seek_request))
+        self._staged = _Staged(job, deque(items), set())
+        self._fill_staged()
+
+    def _fill_staged(self) -> None:
+        """Queue the staged Backfill as room allows; commit once all of it
+        is queued. Until then the state stays pending (`buffering`)."""
+        staged = self._staged
+        while staged.items:
+            notification = self._backfill(staged.items[0], staged.job.generation)
+            if notification is None:
+                return  # no room: a drain makes some
+            staged.items.popleft()
+            self._enqueue(notification)
+            staged.queued.add(_channel(notification))
+        self._staged = None
+        job = staged.job
+        if job.reset:
             self._cursor = self._seek
             self._after = job.after
-            self._seek = None
+            self._seek = self._seek_after = None
             self._reset_pending = False
-        for item in items:
-            self._enqueue(_refused(item, job.generation, True)
-                          if isinstance(item, LimitExceeded)
-                          else Backfill(job.generation, item))
         self._unreconstructed.clear()
         if self._playing:
             self._anchor = (self._clock(), self._cursor)
         self._enqueue(Commit(self._state()))
+
+    def _backfill(self, item, generation: int) -> Backfill | Refused | None:
+        """The notification for one reconstructed item, or None while the
+        queue has no room for it. A Message larger than the queue byte limit
+        is refused in its place."""
+        if self._queued_messages >= self._limits.max_messages:
+            return None
+        if isinstance(item, LimitExceeded):
+            return _refused(item, generation, True)
+        size = len(item.data)
+        if size > self._limits.max_bytes:
+            return Refused(generation, item.channel, item.publication_time_ns,
+                           item.record_index, size, True,
+                           f"Message record_index {item.record_index} has "
+                           f"{size} bytes; the queue limit is "
+                           f"{self._limits.max_bytes}")
+        if self._queued_bytes + size > self._limits.max_bytes:
+            return None
+        return Backfill(generation, item)
+
+    def _discard_staged(self) -> None:
+        """Drop staged Backfill that a new generation supersedes. Channels
+        whose Backfill is already queued are not reconstructed again, unless
+        a Reset is still pending."""
+        if self._staged is not None and not self._staged.job.reset:
+            self._unreconstructed -= self._staged.queued
+        self._staged = None
 
     def _advance(self, read: _Read, items: list, complete: bool) -> None:
         if (read.generation != self._generation or not self._playing
@@ -589,10 +675,18 @@ class Playback:
             self._stall_target = target
             self._enqueue(StateChanged(self._state()))
 
-    def _start_seek(self, position_ns: int) -> None:
+    def _start_seek(self, after: tuple[int, int] | None,
+                    request_id: str | None) -> None:
+        """Reconstruct at `after` = (time, record_index), then play after
+        it; None for a source without Messages. `request_id` is the request
+        that caused the seek, which its Reset names."""
+        self._seek_request = request_id
+        self._staged = None
         self._generation += 1
+        self._flushed = self._generation
         self._reset_pending = True
-        self._seek = position_ns
+        self._seek_after = after
+        self._seek = None if after is None else after[0]
         self._unreconstructed = set(self._subscription)
         self._ended = False
         self._stall_target = None

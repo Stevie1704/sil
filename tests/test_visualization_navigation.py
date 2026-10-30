@@ -10,6 +10,7 @@ from the index under test.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import random
 import sqlite3
@@ -18,7 +19,7 @@ import threading
 
 import pytest
 from mcap.reader import make_reader
-from mcap.writer import CompressionType
+from mcap.writer import CompressionType, Writer
 from visualization_fixture import write_source
 
 from sil.visualization.navigation import (ContinuationError, IndexCorrupt,
@@ -351,6 +352,24 @@ def test_preparation_reports_progress_and_a_second_preparation_reuses_the_index(
     assert first.index.path.name.startswith(first.source.sha256)
 
 
+def test_a_chunk_of_many_messages_is_indexed_in_bounded_batches(tmp_path):
+    # 70,000 one-byte Messages in one chunk: more than one 65,536-row batch.
+    source = write_source(tmp_path / "run.mcap",
+                          {"b.Byte": {"fields": [{"name": "v", "type": "u8"}]}},
+                          {"b": "b.Byte"},
+                          (("b", t, {"v": t % 256}) for t in range(70_000)),
+                          chunk_size=64 * 2**20)
+    seen = []
+
+    with prepare_navigation(source, cache_dir=tmp_path / "c",
+                            progress=seen.append) as nav:
+        assert nav.describe().message_count == 70_000
+        last = nav.snapshot(None, 2**64 - 1)["b"]
+
+    assert [p.messages for p in seen] == [65_536, 70_000]
+    assert (last.record_index, last.data) == (69_999, bytes([69_999 % 256]))
+
+
 @pytest.mark.parametrize("cancel_after", [1, "last"])
 def test_cancelled_preparation_publishes_no_index(tmp_path, cancel_after):
     source = many_chunks(tmp_path / "run.mcap")
@@ -491,6 +510,25 @@ def test_a_message_above_the_message_limit_is_refused_on_read(tmp_path):
             nav.snapshot(["a"], 1)
         with pytest.raises(LimitExceeded, match="record_index 0"):
             nav.messages(None, 0, 2)
+
+
+def test_a_payload_that_does_not_fit_its_schema_is_refused(tmp_path):
+    source = tmp_path / "run.mcap"
+    with open(source, "wb") as stream:
+        writer = Writer(stream)
+        writer.start()
+        schema = writer.register_schema("e.Event", "sil_pod",
+                                        json.dumps(EVENT["e.Event"]).encode())
+        channel = writer.register_channel("a", "sil_pod", schema)
+        writer.add_message(channel, log_time=0, publish_time=0,
+                           data=struct.pack("<Q", 1))
+        writer.add_message(channel, log_time=1, publish_time=1, data=b"\x01")
+        writer.finish()
+
+    with pytest.raises(SourceError, match="record_index 1 .* 1 bytes; its "
+                                          "Schema 'e.Event' has 8"):
+        prepare_navigation(source, cache_dir=tmp_path / "c")
+    assert_nothing_published(tmp_path / "c")
 
 
 def test_a_truncated_source_is_refused(tmp_path):

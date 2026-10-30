@@ -29,13 +29,16 @@ Mapping:
   is broadcast as server time.
 - `Refused` and payloads above `max_message_bytes` are sent as warning
   statuses, never as data.
+- A drained notification that a later seek, disconnect or unsubscribe
+  superseded (`Playback.superseded`) is dropped, not sent.
 - A disconnect pauses the controller, and a new session ID makes the next
   client start fresh.
 
 Flow control: fewer Messages than the SDK's per-client backlog are ever
-unacknowledged by the relay, so the SDK's lossy queue never drops one. A
-slow client stops acknowledgements; the adapter then stops draining the
-controller, which reports buffering.
+unacknowledged by the relay, so the SDK's lossy queue never drops one, and
+their encoded payloads hold at most `window_bytes` (one larger Message goes
+alone). A slow client stops acknowledgements; the adapter then stops
+draining the controller, which reports buffering.
 
 The import of `foxglove` is here only: export and the other commands work
 without the `sil[foxglove]` extra.
@@ -43,6 +46,8 @@ without the `sil[foxglove]` extra.
 
 from __future__ import annotations
 
+import itertools
+import math
 import threading
 import time
 
@@ -52,9 +57,10 @@ from sil.visualization.adapters.foxglove_relay import (BARRIER_ID, Relay,
                                                        Subscription)
 from sil.visualization.interchange import ChannelCodec
 from sil.visualization.navigation import MIB
-from sil.visualization.playback import (Backfill, Commit, InvalidCommand,
-                                        Message, Playback, PlaybackState,
-                                        Refused, Reset, StateChanged, Status)
+from sil.visualization.playback import (MAX_RATE, MIN_RATE, Backfill, Commit,
+                                        InvalidCommand, Message, Playback,
+                                        PlaybackState, Refused, Reset,
+                                        StateChanged, Status)
 
 try:
     import foxglove
@@ -72,6 +78,9 @@ NS_PER_S = 1_000_000_000
 MAX_TIME_NS = (2**32 - 1) * NS_PER_S + NS_PER_S - 1
 _RETRY_S = 0.5  # re-send an unacknowledged barrier or seek state
 _POLL_S = 0.05
+# The controller needs a request ID; a client request without one gets a
+# local ID, which is never echoed to the client.
+_ANONYMOUS = "sil-anonymous-"
 # Foxglove has no failed or closed status. Both stop playback, so they show
 # as Paused; a failure also sends an error status with its diagnostic.
 _STATUS = {Status.PLAYING: FoxgloveStatus.Playing,
@@ -95,7 +104,7 @@ class Bridge:
 
     def __init__(self, playback: Playback, host: str, port: int, *,
                  backlog: int = 1024, max_message_bytes: int = 8 * MIB,
-                 stall_timeout: float = 30.0):
+                 window_bytes: int = 32 * MIB, stall_timeout: float = 30.0):
         described = playback.description
         if described.start_ns is None:
             raise UnsupportedSource("the source has no Messages, so it has no "
@@ -106,11 +115,17 @@ class Bridge:
                 f"ranges end at {MAX_TIME_NS} ns (2^32 s)")
         if backlog < 4:
             raise ValueError("backlog must be at least 4")
+        if isinstance(window_bytes, bool) or not isinstance(window_bytes, int) \
+                or window_bytes <= 0:
+            raise ValueError(f"window_bytes must be a positive integer, not "
+                             f"{window_bytes!r}")
         self._playback = playback
         self._window = backlog // 2  # unacknowledged data-queue entries
+        self._window_bytes = window_bytes  # and their payload bytes
         self._max_message_bytes = max_message_bytes
         self._closed = False
         self._sessions = 0
+        self._anonymous = itertools.count()
         self._changed = threading.Condition()
         self._next_barrier = 0
         self._latest_logged: int | None = None
@@ -176,10 +191,10 @@ class Bridge:
             return None
         try:
             state = self._playback.configure(
-                claimed.request_id or None,
+                claimed.request_id or f"{_ANONYMOUS}{next(self._anonymous)}",
                 position_ns=request.seek_time,
                 playing=request.playback_command == PlaybackCommand.Play,
-                rate=float(f"{request.playback_speed:.6g}"))
+                rate=_rate(request.playback_speed))
         except InvalidCommand as e:
             self._server.publish_status(f"SiL refused the playback request: {e}",
                                         StatusLevel.Warning)
@@ -241,6 +256,8 @@ class Bridge:
         self._server.broadcast_time(time_ns)
 
     def _handle(self, notification) -> None:
+        if self._playback.superseded(notification):
+            return  # a later seek, disconnect or unsubscribe flushed it
         if isinstance(notification, Reset):
             self._reset(notification)
         elif isinstance(notification, (Backfill, Message)):
@@ -273,10 +290,16 @@ class Bridge:
                        f"{message.record_index}): its JSON payload has "
                        f"{len(payload)} bytes, above {self._max_message_bytes}")
             return
+        size = len(payload)
+        while (not self._closed and self._unacknowledged_bytes()
+               and self._unacknowledged_bytes() + size > self._window_bytes):
+            self._await_acknowledgement(
+                lambda: self._unacknowledged_bytes() + size <= self._window_bytes)
         self._channels[message.channel].log(payload,
                                            log_time=message.publication_time_ns)
         with self._changed:
             self._logged += 1
+            self._logged_bytes += size
         self._latest_logged = message.publication_time_ns
 
     def _reset(self, reset: Reset) -> None:
@@ -288,7 +311,9 @@ class Bridge:
             seen = self._relay.seek_states_seen
             connection = self._relay.connection
         while True:
-            self._broadcast(state, request_id=state.request_id, did_seek=True,
+            # The request ID and position of the seek this Reset belongs
+            # to, not of a newer request.
+            self._broadcast(state, request_id=reset.request_id, did_seek=True,
                             position_ns=reset.position_ns)
             if self._wait(lambda: self._relay.seek_states_seen > seen,
                           connection):
@@ -303,9 +328,10 @@ class Bridge:
         """Forget the entries of a previous client. Barrier numbers keep
         counting, so a late barrier of that client acknowledges nothing."""
         with self._changed:
-            self._logged = 0
-            self._acked = 0
-            self._barriers = {}  # barrier number -> entries logged up to it
+            self._logged = self._logged_bytes = 0
+            self._acked = self._acked_bytes = 0
+            # barrier number -> (entries, payload bytes) logged up to it
+            self._barriers = {}
             self._barrier_sent_at = 0.0
             self._time = None
 
@@ -313,7 +339,9 @@ class Bridge:
         """Entries known to have left the SDK queue (lock held)."""
         seen = self._relay.barrier_seen
         for barrier in [b for b in self._barriers if b <= seen]:
-            self._acked = max(self._acked, self._barriers.pop(barrier))
+            entries, size = self._barriers.pop(barrier)
+            self._acked = max(self._acked, entries)
+            self._acked_bytes = max(self._acked_bytes, size)
         return self._acked
 
     def _unacknowledged(self) -> int:
@@ -322,7 +350,18 @@ class Bridge:
                 return 0
             return self._logged - self._acked_floor()
 
+    def _unacknowledged_bytes(self) -> int:
+        with self._changed:
+            if not self._relay.connected:
+                return 0
+            self._acked_floor()
+            return self._logged_bytes - self._acked_bytes
+
     def _room(self) -> int:
+        """Entries the delivery thread may drain now: none while the byte
+        window is full."""
+        if self._unacknowledged_bytes() >= self._window_bytes:
+            return 0
         return self._window - self._unacknowledged()
 
     def _barrier(self) -> None:
@@ -336,16 +375,19 @@ class Bridge:
             number = self._next_barrier
             self._next_barrier += 1
             self._logged += 1  # the barrier takes a slot of the same queue
-            self._barriers[number] = self._logged
+            self._barriers[number] = (self._logged, self._logged_bytes)
             self._barrier_sent_at = time.monotonic()
         self._server.publish_status("SiL delivery barrier", StatusLevel.Info,
                                     id=f"{BARRIER_ID}{number}")
 
-    def _await_acknowledgement(self) -> None:
+    def _await_acknowledgement(self, condition=None) -> None:
+        """Send a barrier and wait a while for `condition` (default: room
+        in the window)."""
         with self._changed:
             connection = self._relay.connection
         self._barrier()
-        self._wait(lambda: self._room() > 0, connection, timeout=_RETRY_S)
+        self._wait(condition or (lambda: self._room() > 0), connection,
+                   timeout=_RETRY_S)
 
     def _settle(self) -> bool:
         """Wait until every entry logged so far left the SDK queue. False
@@ -380,6 +422,8 @@ class Bridge:
 
     def _broadcast(self, state: PlaybackState, *, request_id: str | None,
                    did_seek: bool = False, position_ns: int | None = None) -> None:
+        if request_id is not None and request_id.startswith(_ANONYMOUS):
+            request_id = None
         self._server.broadcast_playback_state(_foxglove_state(
             state, did_seek=did_seek, request_id=request_id,
             position_ns=position_ns))
@@ -427,6 +471,16 @@ def _foxglove_state(state: PlaybackState, *, did_seek: bool,
                          current_time=now if now is not None else 0,
                          playback_speed=state.rate, did_seek=did_seek,
                          request_id=request_id)
+
+
+def _rate(speed: float) -> float:
+    """The rate of a request. The wire carries a 32-bit float, so an
+    accepted speed is shown with 6 significant digits (0.1, not
+    0.100000001). The range check uses the raw value: an out-of-range speed
+    goes to the controller unrounded, which refuses it."""
+    if math.isfinite(speed) and MIN_RATE <= speed <= MAX_RATE:
+        return float(f"{speed:.6g}")
+    return speed
 
 
 def _url_host(host: str) -> str:

@@ -282,14 +282,13 @@ def test_a_direct_connection_to_the_sdk_port_cannot_affect_playback(
     time.sleep(0.5)
     messages = exported_messages(qualification, tmp_path)
     assert all(f.get("status") != PLAYING for f in client.frames)
-    assert received(client) == latest_at(messages, set(client.channels), 0)
+    assert received(client) == []  # nothing precedes the first instant
     # The SDK tells the direct client that its request got no answer.
     direct.wait_for(lambda f: f["op"] == "status" and f["level"] == 2)
     direct.close()
     client.request("play", PLAY, speed=10.0)
     client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
-    after_start = sorted((m for m in messages if m[1] > 0), key=key)
-    assert received(client) == latest_at(messages, set(client.channels), 0) + after_start
+    assert received(client) == sorted(messages, key=key)
     client.close()
 
 
@@ -315,20 +314,22 @@ def test_server_advertises_range_time_control_and_the_export_schemas(
     client.close()
 
 
-def test_a_new_client_gets_the_latest_values_at_the_start(
+def test_a_new_client_at_the_start_gets_the_whole_first_instant_on_play(
         serve, qualification, tmp_path):
     bridge = serve(qualification)
     client = connect_subscribed(bridge)
     _, state = client.wait_for(lambda f: f["op"] == "playbackState")
     assert (state["status"], state["time"], state["did_seek"]) == (PAUSED, 0, False)
-    client.wait_for(lambda f: len(received(client)) >= 5)
-    time.sleep(0.2)  # nothing else may follow while paused
+    time.sleep(0.2)
+    assert received(client) == []  # nothing precedes the first instant
+    client.request("play", PLAY, speed=0.1)
     messages = exported_messages(qualification, tmp_path)
-    assert received(client) == latest_at(messages, set(client.channels), 0)
-    assert "sparse" not in {topic for topic, _, _ in received(client)}
-    burst = [p for topic, _, p in received(client) if topic == "burst"]
-    assert burst[0]["fields"]["id"] == 2  # the last of the equal-time Burst
-    counter = [p for topic, _, p in received(client) if topic == "counter"]
+    first_instant = sorted((m for m in messages if m[1] == 0), key=key)
+    client.wait_for(lambda f: len(received(client)) >= len(first_instant))
+    assert received(client)[:len(first_instant)] == first_instant
+    burst = [p["fields"]["id"] for topic, _, p in first_instant if topic == "burst"]
+    assert burst == [0, 1, 2]  # the whole equal-time Burst, as Messages
+    counter = [p for topic, _, p in first_instant if topic == "counter"]
     assert counter[0]["fields"]["count"] == "9007199254740992"
     client.close()
 
@@ -348,8 +349,7 @@ def test_play_delivers_every_message_in_order_with_its_time_then_ends(
     _, ended = client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
     assert ended["time"] == 9_990 * MS
     messages = exported_messages(qualification, tmp_path)
-    after_start = sorted((m for m in messages if m[1] > 0), key=key)
-    assert received(client) == latest_at(messages, set(client.channels), 0) + after_start
+    assert received(client) == sorted(messages, key=key)
     times = [f["time"] for f in client.frames if f["op"] == "time"]
     assert times == sorted(times) and times[-1] == 9_990 * MS
     client.close()
@@ -429,6 +429,41 @@ def test_pause_rate_and_invalid_requests_answer_the_actual_state(
     client.close()
 
 
+def test_requests_without_an_id_are_applied_and_never_conflict(
+        serve, qualification):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+
+    client.request("", PAUSE, speed=2.0)
+    client.wait_for(lambda f: f.get("speed") == 2.0)
+    client.request("", PAUSE, speed=3.0)  # other content, also without an ID
+    _, answer = client.wait_for(lambda f: f.get("speed") == 3.0)
+
+    assert (answer["status"], answer["request_id"]) == (PAUSED, None)
+    assert not any(f["op"] == "status" and "refused" in f["message"]
+                   for f in client.frames)
+    client.close()
+
+
+def test_a_speed_just_outside_the_range_is_refused_before_rounding(
+        serve, qualification):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+
+    above = struct.unpack("<f", struct.pack("<f", 10.000001))[0]
+    assert above > 10.0  # what the wire carries
+    client.request("too-fast", PLAY, speed=above)
+    _, refused = client.wait_for(lambda f: f.get("request_id") == "too-fast")
+    _, warning = client.wait_for(lambda f: f["op"] == "status"
+                                 and "refused" in f["message"])
+
+    assert (refused["status"], refused["speed"]) == (PAUSED, 1.0)
+    assert "rate" in warning["message"]
+    client.close()
+
+
 def write_blobs(path, size, count, period_ns):
     """`count` Messages of `size` bytes (4/3 of that as JSON) every
     `period_ns` on Channel `blobs`; field `n` numbers them."""
@@ -471,6 +506,111 @@ def test_a_stalled_client_buffers_and_then_receives_every_message(
     client.wait_for(lambda f: f.get("status") == ENDED, timeout=30)
     assert numbers(received(client)) == list(range(200))
     assert any(f.get("status") == BUFFERING for f in client.frames)
+    client.close()
+
+
+class LoggedBytes:
+    """Wraps a bridge's SDK channel: records the bridge's unacknowledged
+    bytes, including the payload, each time it logs a Message."""
+
+    def __init__(self, bridge, topic):
+        self._bridge, self._channel = bridge, bridge._channels[topic]
+        self.in_flight = []
+        bridge._channels[topic] = self
+
+    def log(self, payload, *, log_time):
+        self.in_flight.append(self._bridge._unacknowledged_bytes() + len(payload))
+        self._channel.log(payload, log_time=log_time)
+
+
+def test_unacknowledged_bytes_stay_within_the_window(serve, big_blobs):
+    bridge = serve(big_blobs, backlog=1024, window_bytes=3 * 2**20)
+    logged = LoggedBytes(bridge, "blobs")
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=10.0)
+    client.wait_for(lambda f: f["op"] == "message")
+    client.reading.clear()
+    time.sleep(0.5)  # a stalled client: acknowledgements stop
+    client.reading.set()
+    client.wait_for(lambda f: f.get("status") == ENDED, timeout=60)
+
+    assert numbers(received(client)) == list(range(40))
+    assert max(logged.in_flight) <= 3 * 2**20
+    with pytest.raises(ValueError, match="window_bytes"):
+        serve(big_blobs, window_bytes=0)
+
+
+def seek_after_first_messages_drained(playback, monkeypatch, position_ns):
+    """Seek as soon as the adapter has drained its first batch of played
+    Messages: the batch is then in its hands, from an old generation."""
+    from sil.visualization.playback import Message
+    drain, stale = playback.drain, []
+
+    def draining(*args, **kwargs):
+        batch = drain(*args, **kwargs)
+        if not stale and any(isinstance(n, Message) for n in batch):
+            stale.extend(n.message.record_index for n in batch
+                         if isinstance(n, Message))
+            playback.configure("seek-while-held", position_ns=position_ns,
+                               playing=False)
+        return batch
+
+    monkeypatch.setattr(playback, "drain", draining)
+    return stale
+
+
+def test_drained_notifications_of_an_old_generation_are_not_sent(
+        serve, qualification, tmp_path, monkeypatch):
+    stale = []
+    bridge = serve(qualification, adjust=lambda p: stale.append(
+        seek_after_first_messages_drained(p, monkeypatch, 5 * S)) or p)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=0.1)
+    client.wait_for(lambda f: f["op"] == "playbackState" and f["did_seek"]
+                    and f["time"] == 5 * S)
+    client.wait_for(lambda f: f["op"] == "playbackState" and not f["did_seek"]
+                    and f["time"] == 5 * S and f["status"] == PAUSED)
+    time.sleep(0.2)
+
+    (held,) = stale
+    assert held  # the seek came while that batch was held
+    sent = {int(p["sil"]["record_index"]) for _, _, p in received(client)}
+    assert not sent & set(held)
+    messages = exported_messages(qualification, tmp_path)
+    assert received(client) == latest_at(messages, set(client.channels), 5 * S)
+    client.close()
+
+
+def request_after_reset_drained(playback, monkeypatch):
+    """Send a newer request (a rate change) as soon as the adapter has
+    drained a Reset, before it sends the Reset's did_seek state."""
+    from sil.visualization.playback import Reset
+    drain = playback.drain
+
+    def draining(*args, **kwargs):
+        batch = drain(*args, **kwargs)
+        if any(isinstance(n, Reset) for n in batch):
+            playback.configure(f"later-{time.monotonic_ns()}", rate=2.0)
+        return batch
+
+    monkeypatch.setattr(playback, "drain", draining)
+    return playback
+
+
+def test_did_seek_carries_the_request_id_and_position_of_its_seek(
+        serve, qualification, monkeypatch):
+    bridge = serve(qualification,
+                   adjust=lambda p: request_after_reset_drained(p, monkeypatch))
+    client = connect_subscribed(bridge)
+    initial_state(client)
+
+    client.request("seek-a", PAUSE, speed=1.0, seek=2 * S)
+    _, did_seek = client.wait_for(lambda f: f["op"] == "playbackState"
+                                  and f["did_seek"])
+
+    assert (did_seek["request_id"], did_seek["time"]) == ("seek-a", 2 * S)
     client.close()
 
 

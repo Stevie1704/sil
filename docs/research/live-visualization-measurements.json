@@ -1,0 +1,167 @@
+{
+  "description": "Retained output of tools/live_visualization_measure.py for docs/research/live-visualization-qualification.md",
+  "machine": "macOS arm64 (Apple silicon), SDK 26.5, sil-run installed from the local build with cmake --install",
+  "date": "2026-10-30",
+  "commands": [
+    "PYTHONPATH=python/src python tools/live_visualization_measure.py recordings <the Recordings below>",
+    "PYTHONPATH=python/src python tools/live_visualization_measure.py time WORKDIR/reference.json --sil-run PREFIX/bin/sil-run --runs 7"
+  ],
+  "recordings": [
+    {
+      "file": "proofs/esmini/evidence/run-1.mcap",
+      "sha256": "4ff77017a1ff66bc9374229e803843eb6c7ed724047d697c8f83bc59236116c4",
+      "size_bytes": 191911,
+      "channels": 2,
+      "messages": 1600,
+      "payload_sizes": [
+        72
+      ],
+      "publication_instants": 800,
+      "virtual_span_s": 7.99,
+      "messages_per_virtual_s": 200.25031289111388,
+      "payload_bytes_per_virtual_s": 14418.0225281602,
+      "max_payload_bytes_per_instant": 144,
+      "mean_payload_bytes_per_instant": 144.0,
+      "max_messages_per_instant": 2,
+      "max_burst_depth": 1,
+      "descending_timestamps": 0
+    },
+    {
+      "file": "proofs/acc-fmi/evidence/controller-1.mcap",
+      "sha256": "63a99c188da7ac71900479186e8c83af347251739d3d99cd33e47cd5394eb08e",
+      "size_bytes": 3133,
+      "channels": 4,
+      "messages": 28,
+      "payload_sizes": [
+        8,
+        24
+      ],
+      "publication_instants": 10,
+      "virtual_span_s": 0.9,
+      "messages_per_virtual_s": 31.11111111111111,
+      "payload_bytes_per_virtual_s": 391.1111111111111,
+      "max_payload_bytes_per_instant": 64,
+      "mean_payload_bytes_per_instant": 35.2,
+      "max_messages_per_instant": 4,
+      "max_burst_depth": 1,
+      "descending_timestamps": 0
+    },
+    {
+      "file": "proofs/acc-fmi/evidence/plant-accelerate-1.mcap",
+      "sha256": "dfa2316d318e6671a0ef119e71689e8f3145d2f11f07fa53dea920f169edb9df",
+      "size_bytes": 3711,
+      "channels": 4,
+      "messages": 22,
+      "payload_sizes": [
+        8,
+        48
+      ],
+      "publication_instants": 10,
+      "virtual_span_s": 0.9,
+      "messages_per_virtual_s": 24.444444444444443,
+      "payload_bytes_per_virtual_s": 1084.4444444444443,
+      "max_payload_bytes_per_instant": 112,
+      "mean_payload_bytes_per_instant": 97.6,
+      "max_messages_per_instant": 4,
+      "max_burst_depth": 1,
+      "descending_timestamps": 0
+    },
+    {
+      "file": "proofs/fmi-ls-bus/evidence/live-coarse.mcap",
+      "sha256": "aae1009550560d956f782fb121bb7a5f9f4c0f4626f4479eb65bdb28f1ccfb0e",
+      "size_bytes": 43475,
+      "channels": 4,
+      "messages": 20,
+      "payload_sizes": [
+        2058
+      ],
+      "publication_instants": 3,
+      "virtual_span_s": 1.0,
+      "messages_per_virtual_s": 20.0,
+      "payload_bytes_per_virtual_s": 41160.0,
+      "max_payload_bytes_per_instant": 20580,
+      "mean_payload_bytes_per_instant": 13720.0,
+      "max_messages_per_instant": 10,
+      "max_burst_depth": 4,
+      "descending_timestamps": 0
+    },
+    {
+      "file": "proofs/fmi-ls-bus/evidence/replay-aligned.mcap",
+      "sha256": "52f0a3507c643bfa3365516598b3829a1acde67bf432e2611b582f63d0c41879",
+      "size_bytes": 43475,
+      "channels": 4,
+      "messages": 20,
+      "payload_sizes": [
+        2058
+      ],
+      "publication_instants": 7,
+      "virtual_span_s": 0.9,
+      "messages_per_virtual_s": 22.22222222222222,
+      "payload_bytes_per_virtual_s": 45733.333333333336,
+      "max_payload_bytes_per_instant": 8232,
+      "mean_payload_bytes_per_instant": 5880.0,
+      "max_messages_per_instant": 4,
+      "max_burst_depth": 2,
+      "descending_timestamps": 0
+    },
+    {
+      "file": "proofs/agent-investigation/evidence/trial-1/ci/cases/nominal-control/runs/nominal-control/run-1.mcap",
+      "sha256": "ada509b39bfbb433985da12edc36ce30e18a9702f8a702bd0e4ff1333252bab9",
+      "size_bytes": 10079,
+      "channels": 4,
+      "messages": 55,
+      "payload_sizes": [
+        17,
+        56,
+        185
+      ],
+      "publication_instants": 20,
+      "virtual_span_s": 0.19,
+      "messages_per_virtual_s": 289.4736842105263,
+      "payload_bytes_per_virtual_s": 22289.473684210527,
+      "max_payload_bytes_per_instant": 443,
+      "mean_payload_bytes_per_instant": 211.75,
+      "max_messages_per_instant": 4,
+      "max_burst_depth": 1,
+      "descending_timestamps": 0
+    },
+    {
+      "file": "reference-1.mcap from examples/adas-reference/run.sh (generated, not retained)",
+      "sha256": "19579addd97385152aeba8e783a5a623c82b86c0a33f44f32858f83ee53b5510",
+      "size_bytes": 119817,
+      "channels": 40,
+      "messages": 735,
+      "payload_sizes": [
+        17,
+        56,
+        185
+      ],
+      "publication_instants": 20,
+      "virtual_span_s": 0.19,
+      "messages_per_virtual_s": 3868.4210526315787,
+      "payload_bytes_per_virtual_s": 407447.36842105264,
+      "max_payload_bytes_per_instant": 4413,
+      "mean_payload_bytes_per_instant": 3870.75,
+      "max_messages_per_instant": 39,
+      "max_burst_depth": 1,
+      "descending_timestamps": 0
+    }
+  ],
+  "adas_reference_timing": {
+    "manifest": "reference.json from examples/adas-reference/run.sh (generated, not retained)",
+    "runs": 7,
+    "wall_s": [
+      0.019136,
+      0.014791,
+      0.014629,
+      0.014767,
+      0.014724,
+      0.014671,
+      0.014495
+    ],
+    "median_s": 0.014723667001817375,
+    "min_s": 0.014495291979983449,
+    "max_s": 0.01913579204119742,
+    "recording_sha256": "19579addd97385152aeba8e783a5a623c82b86c0a33f44f32858f83ee53b5510"
+  }
+}

@@ -26,6 +26,7 @@ from sil.visualization.source import open_source
 EVENT = {"e.Event": {"fields": [{"name": "value", "type": "u64"}]}}
 MS = 1_000_000
 S = 1_000_000_000
+BEFORE_START = (S, -1)  # before every Message of the first instant, S
 
 
 class FakeClock:
@@ -173,7 +174,7 @@ def test_play_advances_by_elapsed_clock_time_times_the_rate(tmp_path, clock):
 
     assert (state.status, state.cursor_ns) == ("playing", S + 250 * MS)
     assert records_of(first, Message) == ordered(
-        records, "ab", (S, 2**63), S + 250 * MS)
+        records, "ab", BEFORE_START, S + 250 * MS)
     assert second.cursor_ns == S + 650 * MS
     assert records_of(playback.drain(), Message) == ordered(
         records, "ab", (S + 250 * MS, 2**63), S + 650 * MS)
@@ -209,7 +210,7 @@ def test_pause_keeps_the_cursor_and_play_resumes_from_it(tmp_path, clock):
     assert held.cursor_ns == S + 300 * MS
     assert resumed.cursor_ns == S + 400 * MS
     assert records_of(playback.drain(), Message) == ordered(
-        records, "ab", (S, 2**63), S + 400 * MS)
+        records, "ab", BEFORE_START, S + 400 * MS)
 
 
 def test_rates_outside_the_range_and_bad_values_leave_state_unchanged(
@@ -247,13 +248,63 @@ def test_the_end_emits_the_final_messages_then_ended_and_play_restarts(
     replay = playback.drain()
 
     assert (ended.status, ended.playing, ended.cursor_ns) == ("ended", False, 3 * S)
-    assert records_of(tail, Message) == ordered(records, "ab", (S, 2**63), 3 * S)
+    assert records_of(tail, Message) == ordered(records, "ab", BEFORE_START, 3 * S)
     assert isinstance(tail[-1], StateChanged)
     assert tail[-1].state.status == "ended"
     assert restarted.playing and restarted.seek_ns == S
-    assert kinds(replay) == ["Reset", "Backfill", "Backfill", "Commit"]
+    # The restart begins before the first instant: no Backfill, and every
+    # Message at S plays again.
+    assert kinds(replay) == ["Reset", "Commit", "Message", "Message"]
     assert replay[0].position_ns == S
-    assert replay[-1].state.cursor_ns == S
+    assert replay[1].state.cursor_ns == S
+    assert records_of(replay, Message) == ordered(records, "ab", BEFORE_START, S)
+
+
+def test_every_message_of_the_first_instant_is_played_also_after_a_restart(
+        tmp_path, clock):
+    first_instant = [("a", S, {"value": 1}), ("b", S, {"value": 2}),
+                     ("a", S, {"value": 3}), ("a", S + MS, {"value": 4})]
+    playback, source = make_playback(tmp_path, first_instant, clock)
+    records = reference_records(source)
+    playback.set_subscription(["a", "b"])
+    settle(playback)
+    reconstructed = playback.drain()
+    playback.configure("play", playing=True)
+    clock.advance(S)
+    settle(playback)
+    first = playback.drain()
+    playback.configure("again", playing=True)  # after the end: restart
+    settle(playback)
+    clock.advance(S)
+    settle(playback)
+    second = playback.drain()
+
+    assert kinds(reconstructed) == ["Commit"]
+    assert records_of(first, Message) == records
+    assert kinds(second)[:2] == ["Reset", "Commit"]
+    assert records_of(second, Message) == records
+    assert records_of(second, Backfill) == []
+
+
+def test_an_explicit_seek_to_the_first_instant_backfills_then_plays_after_it(
+        tmp_path, clock):
+    first_instant = [("a", S, {"value": 1}), ("a", S, {"value": 3}),
+                     ("a", S + MS, {"value": 4})]
+    playback, source = make_playback(tmp_path, first_instant, clock)
+    records = reference_records(source)
+    playback.set_subscription(["a"])
+    settle(playback)
+    playback.drain()
+
+    playback.configure("seek", position_ns=S, playing=True)
+    settle(playback)
+    clock.advance(S)
+    settle(playback)
+    delivered = playback.drain()
+
+    assert records_of(delivered, Backfill) == [records[1]]
+    assert records_of(delivered, Message) == [records[2]]
+    assert (delivered[0].position_ns, delivered[0].request_id) == (S, "seek")
 
 
 def test_an_empty_source_has_no_range_and_play_ends_at_once(tmp_path, clock):
@@ -272,7 +323,7 @@ def test_an_empty_source_has_no_range_and_play_ends_at_once(tmp_path, clock):
     assert records_of(playback.drain(), Backfill) == []
 
 
-def test_a_single_instant_source_is_backfilled_and_ends_on_play(tmp_path, clock):
+def test_a_single_instant_source_plays_every_message_and_ends(tmp_path, clock):
     playback, source = make_playback(tmp_path, [
         ("a", 5 * S, {"value": 1}), ("a", 5 * S, {"value": 2}),
         ("b", 5 * S, {"value": 3})], clock)
@@ -284,9 +335,9 @@ def test_a_single_instant_source_is_backfilled_and_ends_on_play(tmp_path, clock)
     playback.configure("play", playing=True)
     ended = settle(playback)
 
-    assert records_of(backfill, Backfill) == latest(records, "ab", 5 * S)
+    assert kinds(backfill) == ["Commit"]  # nothing precedes the first instant
     assert (ended.status, ended.cursor_ns) == ("ended", 5 * S)
-    assert records_of(playback.drain(), Message) == []
+    assert records_of(playback.drain(), Message) == records
 
 
 # --- seek -------------------------------------------------------------------
@@ -441,7 +492,7 @@ def test_a_new_subscription_is_reconstructed_at_the_cursor_without_future_data(
     resumed = settle(playback)
 
     assert records_of(queued_a, Message) == ordered(
-        records, "a", (S, 2**63), S + 250 * MS)
+        records, "a", BEFORE_START, S + 250 * MS)
     assert (changed.status, changed.pending, changed.playing) == (
         "buffering", True, True)
     assert kinds(extended) == ["Backfill", "Commit"]  # no Reset: history stays
@@ -463,7 +514,26 @@ def test_unsubscribing_drops_queued_messages_of_that_channel(tmp_path, clock):
 
     assert not state.pending
     assert records_of(playback.drain(), Message) == ordered(
-        records, "a", (S, 2**63), S + 500 * MS)
+        records, "a", BEFORE_START, S + 500 * MS)
+
+
+def test_drained_notifications_are_superseded_by_a_seek_or_an_unsubscribe(
+        tmp_path, clock):
+    playback, _ = make_playback(tmp_path, signal(), clock)
+    play_all(playback)
+    clock.advance(500 * MS)
+    settle(playback)
+    held = [n for n in playback.drain() if isinstance(n, Message)]
+    a = [n for n in held if n.message.channel == "a"]
+    b = [n for n in held if n.message.channel == "b"]
+
+    playback.set_subscription(["a"])  # a new generation, but no flush of a
+    after_unsubscribe = ([playback.superseded(n) for n in a],
+                         [playback.superseded(n) for n in b])
+    playback.configure("seek", position_ns=2 * S)
+
+    assert after_unsubscribe == ([False] * len(a), [True] * len(b))
+    assert all(playback.superseded(n) for n in held)
 
 
 def test_time_spent_buffering_is_not_played_after_a_subscription_change(
@@ -563,7 +633,7 @@ def test_continuous_playback_delivers_every_message_in_order_through_a_small_que
     delivered += playback.drain()
 
     messages = records_of(delivered, Message)
-    assert messages == ordered(records, "ab", (S, 2**63), 2 * S)
+    assert messages == ordered(records, "ab", BEFORE_START, 2 * S)
     assert "buffering" in statuses
     assert playback.status().status == "ended"
 
@@ -583,6 +653,115 @@ def test_the_queue_never_holds_more_than_its_bounds(tmp_path, clock):
     assert playback.status().status == "buffering"
 
 
+def stalled(tmp_path, clock):
+    """Playing and buffering: a full queue holds playback back."""
+    playback, source = make_playback(
+        tmp_path, burst_messages(), clock,
+        queue_limits=QueueLimits(max_messages=3))
+    play_all(playback)
+    clock.advance(10 * S)
+    for _ in range(5):
+        playback.pump()
+    assert playback.status().status == "buffering"
+    return playback, source
+
+
+def test_pause_while_buffering_holds_and_resume_loses_nothing(tmp_path, clock):
+    playback, source = stalled(tmp_path, clock)
+    records = reference_records(source)
+
+    paused = playback.configure("pause", playing=False)
+    delivered = playback.drain()
+    clock.advance(10 * S)
+    for _ in range(5):
+        playback.pump()
+    held = playback.status()
+    playback.configure("resume", playing=True)
+    for _ in range(100):
+        clock.advance(10 * S)
+        playback.pump()
+        delivered += playback.drain()
+
+    assert (paused.status, paused.playing) == ("paused", False)
+    assert (held.status, held.cursor_ns) == ("paused", paused.cursor_ns)
+    assert records_of(delivered, Message) == ordered(
+        records, "ab", BEFORE_START, 2 * S)
+    assert playback.status().status == "ended"
+
+
+def test_close_while_buffering_drops_the_queue_and_stops(tmp_path, clock):
+    playback, _ = stalled(tmp_path, clock)
+
+    playback.close()
+    playback.pump()
+    left = playback.drain()
+
+    assert kinds(left) == ["StateChanged"]
+    assert left[0].state.status == "closed"
+    assert playback.status().status == "closed"
+    with pytest.raises(InvalidCommand, match="closed"):
+        playback.configure("play", playing=True)
+
+
+FOUR = {name: "e.Event" for name in "abcd"}
+
+
+@pytest.mark.parametrize("queue_limits", [QueueLimits(max_messages=2),
+                                          QueueLimits(max_bytes=16)])
+def test_backfill_waits_for_room_in_the_queue_and_commits_when_all_is_queued(
+        tmp_path, clock, queue_limits):
+    playback, source = make_playback(
+        tmp_path, [(name, S + i * MS, {"value": i})
+                   for i, name in enumerate("abcd")] + [("a", 2 * S, {"value": 9})],
+        clock, channels=FOUR, queue_limits=queue_limits)
+    records = reference_records(source)
+    playback.set_subscription(list("abcd"))
+    settle(playback)
+    playback.drain()
+
+    playback.configure("seek", position_ns=S + 3 * MS)
+    delivered, states = [], []
+    for _ in range(10):
+        playback.pump()
+        states.append(playback.status())
+        batch = playback.drain(max_items=2)
+        assert len(records_of(batch, Backfill)) <= 2
+        delivered += batch
+
+    assert states[0].status == "buffering" and states[0].pending
+    assert states[0].cursor_ns == S  # not committed while backfill waits
+    assert kinds(delivered) == ["Reset", "Backfill", "Backfill", "Backfill",
+                                "Backfill", "Commit"]
+    assert records_of(delivered, Backfill) == latest(records, "abcd", S + 3 * MS)
+    assert delivered[-1].state.cursor_ns == S + 3 * MS
+    assert playback.status().status == "paused"
+
+
+def test_a_seek_while_backfill_waits_discards_the_old_generation(
+        tmp_path, clock):
+    playback, source = make_playback(
+        tmp_path, [(name, S + i * MS, {"value": i}) for i, name in enumerate("abcd")]
+        + [(name, 2 * S, {"value": 10 + i}) for i, name in enumerate("abcd")],
+        clock, channels=FOUR, queue_limits=QueueLimits(max_messages=2))
+    records = reference_records(source)
+    playback.set_subscription(list("abcd"))
+    settle(playback)
+    playback.drain()
+    playback.configure("seek-1", position_ns=S + 3 * MS)
+    playback.pump()  # two Backfill queued; two wait
+
+    playback.configure("seek-2", position_ns=2 * S)
+    delivered = []
+    for _ in range(10):
+        playback.pump()
+        delivered += playback.drain()
+
+    assert kinds(delivered) == ["Reset", "Backfill", "Backfill", "Backfill",
+                                "Backfill", "Commit"]
+    assert delivered[0].position_ns == 2 * S
+    assert records_of(delivered, Backfill) == latest(records, "abcd", 2 * S)
+
+
 BLOB = {"e.Event": EVENT["e.Event"],
         "b.Blob": {"fields": [{"name": "raw", "type": "u8", "count": 64}]}}
 
@@ -597,6 +776,9 @@ def test_an_oversize_message_is_refused_in_its_place_and_playback_continues(
         limits=Limits(max_message_bytes=32))
     playback.set_subscription(["a", "blob"])
     settle(playback)
+    playback.drain()
+    playback.configure("seek", position_ns=S)  # backfills the first instant
+    settle(playback)
     backfill = playback.drain()
     playback.configure("play", playing=True)
     clock.advance(S)
@@ -606,8 +788,8 @@ def test_an_oversize_message_is_refused_in_its_place_and_playback_continues(
         played += [n for n in playback.drain() if not isinstance(n, StateChanged)]
     state = playback.status()
 
-    assert kinds(backfill) == ["Backfill", "Refused", "Commit"]
-    refused = backfill[1]
+    assert kinds(backfill) == ["Reset", "Backfill", "Refused", "Commit"]
+    refused = backfill[2]
     assert (refused.channel, refused.record_index, refused.size_bytes,
             refused.backfill) == ("blob", 1, 64, True)
     assert kinds(played) == ["Message", "Refused", "Message"]
@@ -628,12 +810,35 @@ def test_a_message_larger_than_the_queue_is_refused_not_skipped(tmp_path, clock)
     playback.drain()
     playback.configure("play", playing=True)
     clock.advance(S)
+    played = []
+    for _ in range(10):  # the Refused waits until the queue drained
+        playback.pump()
+        played += [n for n in playback.drain() if not isinstance(n, StateChanged)]
+
+    assert kinds(played) == ["Message", "Refused", "Message"]
+    assert played[1].record_index == 1 and not played[1].backfill
+    assert playback.status().status == "ended"
+
+
+def test_a_backfill_larger_than_the_queue_is_refused_in_its_place(
+        tmp_path, clock):
+    playback, _ = make_playback(tmp_path, [
+        ("a", S, {"value": 1}), ("blob", S + MS, {"raw": bytes(64)}),
+        ("a", 2 * S, {"value": 2})], clock,
+        channels={"a": "e.Event", "blob": "b.Blob"}, schemas=BLOB,
+        queue_limits=QueueLimits(max_bytes=32))
+    playback.set_subscription(["a", "blob"])
     settle(playback)
+    playback.drain()
 
-    played = playback.drain()
+    playback.configure("seek", position_ns=S + MS)
+    settle(playback)
+    delivered = playback.drain()
 
-    assert kinds(played) == ["Refused", "Message", "StateChanged"]
-    assert played[0].record_index == 1 and not played[0].backfill
+    assert kinds(delivered) == ["Reset", "Backfill", "Refused", "Commit"]
+    refused = delivered[2]
+    assert (refused.channel, refused.record_index, refused.size_bytes,
+            refused.backfill) == ("blob", 1, 64, True)
 
 
 # --- request IDs --------------------------------------------------------------
@@ -690,6 +895,19 @@ def test_refused_requests_are_not_cached(tmp_path, clock):
         playback.configure(7, rate=2.0)
 
     assert playback.configure("r", rate=2.0).rate == 2.0
+
+
+def test_a_request_id_is_required(tmp_path, clock):
+    playback, _ = make_playback(tmp_path, signal(), clock)
+    before = playback.status()
+
+    with pytest.raises(TypeError):
+        playback.configure(rate=2.0)
+    for missing in (None, ""):
+        with pytest.raises(InvalidCommand, match="request_id"):
+            playback.configure(missing, rate=2.0)
+
+    assert playback.status() == before
 
 
 # --- disconnect, failure and the worker loop --------------------------------------
@@ -771,7 +989,8 @@ def test_run_works_until_close_on_its_own_thread(tmp_path, clock):
     worker.join(timeout=10)
 
     assert not worker.is_alive()
-    assert records_of(received, Backfill) == latest(records, "ab", S)
+    assert records_of(received, Backfill) == []  # nothing precedes the start
+    assert received[-1].state.cursor_ns == records[0].publication_time_ns
 
 
 # --- random seeks against the sequential reference --------------------------------
@@ -785,13 +1004,15 @@ def test_random_seeks_and_plays_match_the_sequential_reference(tmp_path, clock):
     settle(playback)
     playback.drain()
 
-    for _ in range(60):
+    for step_number in range(60):
         position = rng.randrange(S, 2 * S + 1)
-        playback.configure(None, position_ns=position, playing=False)
+        playback.configure(f"seek-{step_number}", position_ns=position,
+                           playing=False)
         settle(playback)
         committed = playback.drain()
         assert records_of(committed, Backfill) == latest(records, "ab", position)
-        playback.configure(None, playing=True, rate=rng.choice([0.5, 1.0, 7.0]))
+        playback.configure(f"play-{step_number}", playing=True,
+                           rate=rng.choice([0.5, 1.0, 7.0]))
         step = rng.randrange(0, 50 * MS)
         clock.advance(step)
         cursor = settle(playback).cursor_ns

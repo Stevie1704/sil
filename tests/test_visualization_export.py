@@ -22,6 +22,7 @@ from sil import cli
 from sil.visualization import (ExportInputError, ExportOutputError,
                                export_recording)
 from sil.visualization.export import receipt_path
+from sil.visualization.navigation import prepare_navigation
 
 
 def exported(path) -> list[tuple[str, int, dict]]:
@@ -64,6 +65,10 @@ ALL_TYPES = {"t.All": {"fields": [
     {"name": "f32", "type": "f32"}, {"name": "f64", "type": "f64"},
     {"name": "blob", "type": "u8", "count": 3},
     {"name": "u16s", "type": "u16", "count": 2},
+    {"name": "u32s", "type": "u32", "count": 2},
+    {"name": "i8s", "type": "i8", "count": 2},
+    {"name": "i16s", "type": "i16", "count": 2},
+    {"name": "i32s", "type": "i32", "count": 2},
     {"name": "i64s", "type": "i64", "count": 2},
     {"name": "u64s", "type": "u64", "count": 1},
     {"name": "f32s", "type": "f32", "count": 3},
@@ -75,13 +80,16 @@ MAXIMA = {"u8": 255, "u16": 65535, "u32": 4294967295,
           "i32": 2147483647, "i64": 9223372036854775807,
           "f32": 0.1, "f64": 1.7976931348623157e308,
           "blob": b"\x00\xff\x10", "u16s": [0, 65535],
+          "u32s": [0, 4294967295], "i8s": [-128, 127],
+          "i16s": [-32768, 32767], "i32s": [-2147483648, 2147483647],
           "i64s": [9007199254740993, -9223372036854775808],
           "u64s": [9007199254740993], "f32s": [1.5, -0.0, 3.0],
           "f64s": [2.0, -2.5]}
 MINIMA = {"u8": 0, "u16": 0, "u32": 0, "u64": 0, "i8": -128, "i16": -32768,
           "i32": -2147483648, "i64": -9223372036854775808,
           "f32": float("nan"), "f64": float("-inf"), "blob": b"abc",
-          "u16s": [1, 2], "i64s": [0, -1], "u64s": [0],
+          "u16s": [1, 2], "u32s": [1, 2], "i8s": [0, -1], "i16s": [0, -1],
+          "i32s": [0, -1], "i64s": [0, -1], "u64s": [0],
           "f32s": [float("inf"), 0.25, float("nan")],
           "f64s": [float("-inf"), 1e-300]}
 
@@ -101,6 +109,8 @@ def test_every_type_has_its_profile_representation(tmp_path):
         "i32": 2147483647, "i64": "9223372036854775807",
         "f32": 0.10000000149011612, "f64": 1.7976931348623157e308,
         "blob": "AP8Q", "u16s": [0, 65535],
+        "u32s": [0, 4294967295], "i8s": [-128, 127],
+        "i16s": [-32768, 32767], "i32s": [-2147483648, 2147483647],
         "i64s": ["9007199254740993", "-9223372036854775808"],
         "u64s": ["9007199254740993"], "f32s": [1.5, -0.0, 3.0],
         "f64s": [2.0, -2.5]}}
@@ -113,6 +123,7 @@ def test_every_type_has_its_profile_representation(tmp_path):
         "u8": 0, "u16": 0, "u32": 0, "u64": "0", "i8": -128, "i16": -32768,
         "i32": -2147483648, "i64": "-9223372036854775808",
         "f32": None, "f64": None, "blob": "YWJj", "u16s": [1, 2],
+        "u32s": [1, 2], "i8s": [0, -1], "i16s": [0, -1], "i32s": [0, -1],
         "i64s": ["0", "-1"], "u64s": ["0"], "f32s": [None, 0.25, None],
         "f64s": [None, 1e-300]}}
 
@@ -157,6 +168,20 @@ def test_the_generated_schema_names_original_types_and_array_lengths(tmp_path):
         "SiL f32[3] (null when non-finite, see /sil/nonfinite)")
     assert fields["i64s"]["items"]["type"] == "string"
     assert fields["i64s"]["description"] == "SiL i64[2] (decimal string)"
+
+
+def test_equal_declarations_under_different_names_keep_their_own_titles(
+        tmp_path):
+    declaration = {"fields": [{"name": "v", "type": "u8"}]}
+    source = write_source(tmp_path / "run.mcap",
+                          {"a.Left": declaration, "b.Right": declaration},
+                          {"left": "a.Left", "right": "b.Right"}, [])
+    out = tmp_path / "out.mcap"
+
+    export_recording(source, out)
+
+    assert output_schema(out, "left")["title"] == "a.Left"
+    assert output_schema(out, "right")["title"] == "b.Right"
 
 
 def test_source_fields_named_like_the_envelope_do_not_collide(tmp_path):
@@ -228,6 +253,51 @@ def test_a_channel_subset_keeps_the_whole_source_record_index(tmp_path):
     assert [c.topic for c in summary.channels.values()] == ["b"]
     assert receipt["selection"] == {"channels": ["b"]}
     assert receipt["messages"] == 1
+
+
+def write_mixed_source(path):
+    """A chunk-indexed source with a top-level Message between two chunks,
+    which the mcap Writer cannot write by itself: a (10), top-level b (5),
+    a (20)."""
+    with open(path, "wb") as stream:
+        writer = Writer(stream)
+        writer.start(profile="sil", library="sil-test")
+        schemas = {name: writer.register_schema(
+            name, "sil_pod", json.dumps(spec).encode())
+            for name, spec in TWO.items()}
+        a = writer.register_channel("a", "sil_pod", schemas["s.A"])
+        b = writer.register_channel("b", "sil_pod", schemas["s.B"])
+        writer.add_message(a, log_time=10, publish_time=10,
+                           data=struct.pack("<i", 1))
+        writer._Writer__finalize_chunk()
+        chunks, writer._Writer__chunk_builder = (
+            writer._Writer__chunk_builder, None)
+        writer.add_message(b, log_time=5, publish_time=5,
+                           data=struct.pack("<Q", 7))
+        writer._Writer__chunk_builder = chunks
+        writer.add_message(a, log_time=20, publish_time=20,
+                           data=struct.pack("<i", 2))
+        writer.finish()
+    with open(path, "rb") as stream:
+        summary = make_reader(stream).get_summary()
+    assert len(summary.chunk_indexes) == 2
+    return path
+
+
+def test_export_and_navigation_agree_on_top_level_messages_beside_chunks(
+        tmp_path):
+    source = write_mixed_source(tmp_path / "run.mcap")
+    out = tmp_path / "out.mcap"
+
+    receipt = export_recording(source, out)
+
+    assert locators(out) == [("a", 10, "0", "10"), ("b", 5, "1", "5"),
+                             ("a", 20, "2", "20")]
+    assert receipt["messages"] == 3
+    with prepare_navigation(source, cache_dir=tmp_path / "cache") as nav:
+        page = nav.messages(None, 0, 2**64)
+    assert [(m.channel, m.publication_time_ns, m.record_index)
+            for m in page.messages] == [("b", 5, 1), ("a", 10, 0), ("a", 20, 2)]
 
 
 def sha256(path) -> str:
@@ -429,6 +499,22 @@ def test_the_command_exits_0_2_or_1(tmp_path, capsys):
     missing_dir = tmp_path / "missing" / "out.mcap"
     assert cli.main([*command[:-1], str(missing_dir)]) == 1
     assert cli.main([*command, "--channel", "nope"]) == 2
+
+
+def test_a_missing_source_is_rejected_but_an_unreadable_one_is_an_io_failure(
+        tmp_path, capsys):
+    source = write_source(tmp_path / "run.mcap", TWO, {"a": "s.A"}, STORED[:1])
+    command = ["recording", "export", "--profile", "visualization-json", "-o",
+               str(tmp_path / "out.mcap")]
+
+    assert cli.main([*command, str(tmp_path / "missing.mcap")]) == 2
+    source.chmod(0o000)
+    try:
+        assert cli.main([*command, str(source)]) == 1
+    finally:
+        source.chmod(0o600)
+    assert "cannot read source" in capsys.readouterr().err
+    assert not (tmp_path / "out.mcap").exists()
 
 
 # A failed Run --------------------------------------------------------------------
