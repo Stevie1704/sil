@@ -67,9 +67,9 @@ except ImportError as e:
     raise AdapterUnavailable("the Foxglove adapter needs the foxglove-sdk "
                              "package") from e
 
-S = 1_000_000_000
+NS_PER_S = 1_000_000_000
 # serverInfo carries the range as {sec: u32, nsec}: later times cannot be shown.
-MAX_TIME_NS = (2**32 - 1) * S + S - 1
+MAX_TIME_NS = (2**32 - 1) * NS_PER_S + NS_PER_S - 1
 _RETRY_S = 0.5  # re-send an unacknowledged barrier or seek state
 _POLL_S = 0.05
 # Foxglove has no failed or closed status. Both stop playback, so they show
