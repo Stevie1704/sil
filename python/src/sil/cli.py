@@ -187,6 +187,12 @@ ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
                                 "export a Recording as an indexed MCAP for "
                                 "external viewers such as Foxglove"),
     }),
+    "playback": Group("play Recordings to external visualization tools", {
+        "serve": ModuleCommand("sil.visualization.serve",
+                               "serve a Recording to the playback controls of "
+                               "an external tool such as Foxglove "
+                               "(needs sil[foxglove])"),
+    }),
     "skill": Group("give a coding agent the skill of this version", {
         "install": ModuleCommand("sil.skill",
                                  "copy the SiL agent skill into a project or "
