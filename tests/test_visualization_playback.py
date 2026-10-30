@@ -14,6 +14,7 @@ from visualization_fixture import write_source
 from sil.visualization.navigation import Limits, prepare_navigation
 from sil.visualization.playback import (Backfill, InvalidCommand,
                                         Message, Playback, QueueLimits,
+                                        RequestConflict,
                                         StateChanged)
 from sil.visualization.source import open_source
 
@@ -608,3 +609,59 @@ def test_a_message_larger_than_the_queue_is_refused_not_skipped(tmp_path, clock)
 
     assert kinds(played) == ["Refused", "Message", "StateChanged"]
     assert played[0].record_index == 1 and not played[0].backfill
+
+
+# --- request IDs --------------------------------------------------------------
+
+
+def test_a_repeated_request_returns_its_cached_result_without_acting_again(
+        tmp_path, clock):
+    playback, _ = open_playback(tmp_path, signal(), clock)
+    playback.set_subscription(["a"])
+    settle(playback)
+    playback.drain()
+
+    first = playback.configure("seek-1", position_ns=2 * S)
+    settle(playback)
+    playback.drain()
+    repeated = playback.configure("seek-1", position_ns=2 * S)
+
+    assert repeated == first
+    assert playback.status().generation == first.generation
+    assert playback.drain() == []  # no second reconstruction
+
+
+def test_changed_content_under_a_cached_request_id_is_refused(tmp_path, clock):
+    playback, _ = open_playback(tmp_path, signal(), clock)
+    playback.configure("r", rate=2.0)
+    before = playback.status()
+
+    with pytest.raises(RequestConflict) as refused:
+        playback.configure("r", rate=3.0)
+
+    assert refused.value.state == before
+    assert playback.status().rate == 2.0
+
+
+def test_request_ids_expire_after_256_newer_ones(tmp_path, clock):
+    playback, _ = open_playback(tmp_path, signal(), clock)
+    playback.configure("old", rate=2.0)
+    for i in range(255):
+        playback.configure(f"r{i}")
+    with pytest.raises(RequestConflict):
+        playback.configure("old", rate=3.0)  # still cached
+
+    playback.configure("r255")
+    reused = playback.configure("old", rate=3.0)  # expired: a new request
+
+    assert reused.rate == 3.0
+
+
+def test_refused_requests_are_not_cached(tmp_path, clock):
+    playback, _ = open_playback(tmp_path, signal(), clock)
+    with pytest.raises(InvalidCommand):
+        playback.configure("r", rate=20.0)
+    with pytest.raises(InvalidCommand, match="request_id"):
+        playback.configure(7, rate=2.0)
+
+    assert playback.configure("r", rate=2.0).rate == 2.0

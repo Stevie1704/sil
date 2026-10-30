@@ -37,7 +37,7 @@ import math
 import threading
 import time
 import uuid
-from collections import deque
+from collections import OrderedDict, deque
 from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from fractions import Fraction
@@ -50,6 +50,7 @@ PLAYING = "playing"
 BUFFERING = "buffering"
 ENDED = "ended"
 CLOSED = "closed"
+REQUEST_CACHE = 256
 MIN_RATE = 0.1
 MAX_RATE = 10.0
 MIB = 1 << 20
@@ -165,6 +166,10 @@ class InvalidCommand(ValueError):
         self.state = state
 
 
+class RequestConflict(InvalidCommand):
+    """A cached request ID came with other content."""
+
+
 @dataclass(frozen=True)
 class _Job:
     generation: int
@@ -215,6 +220,7 @@ class Playback:
         self._reset_pending = False
         self._seek: int | None = None
         self._request_id: str | None = None
+        self._requests: OrderedDict[str, tuple] = OrderedDict()
         self._queue: deque = deque()
         self._queued_messages = 0
         self._queued_bytes = 0
@@ -231,9 +237,25 @@ class Playback:
         """Seek, set the desired playing state and the rate in one atomic
         operation; None keeps a value. A seek returns a pending state; its
         `Commit` follows when the reconstruction completes. Raises
-        InvalidCommand with the unchanged state."""
+        InvalidCommand with the unchanged state.
+
+        The last REQUEST_CACHE accepted request IDs are remembered: the same
+        ID with the same content returns its first result without acting
+        again; with other content it raises RequestConflict. An expired ID
+        is a new request. `request_id=None` is never cached."""
         with self._lock:
             self._check_open()
+            content = (position_ns, playing, rate)
+            if request_id is not None and not isinstance(request_id, str):
+                self._refuse(f"request_id must be a string, not {request_id!r}")
+            if request_id is not None:
+                cached = self._requests.get(request_id)
+                if cached is not None:
+                    if cached[0] != content:
+                        raise RequestConflict(
+                            f"request {request_id!r} was already used with "
+                            "other content", self._state())
+                    return cached[1]
             self._check_configure(position_ns, playing, rate)
             now = self._clock()
             if rate is not None and rate != self._rate:
@@ -247,8 +269,13 @@ class Playback:
             if playing is not None:
                 self._set_playing(playing, now)
             self._request_id = request_id
+            state = self._state()
+            if request_id is not None:
+                self._requests[request_id] = (content, state)
+                if len(self._requests) > REQUEST_CACHE:
+                    self._requests.popitem(last=False)
             self._lock.notify_all()
-            return self._state()
+            return state
 
     def set_subscription(self, channels: Collection[str]) -> PlaybackState:
         """Deliver only `channels`. Newly subscribed Channels are
