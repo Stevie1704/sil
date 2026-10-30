@@ -34,6 +34,7 @@ its place as `Refused`; nothing is skipped silently. The queue is bounded by
 from __future__ import annotations
 
 import math
+import os
 import threading
 import time
 import uuid
@@ -41,8 +42,11 @@ from collections import OrderedDict, deque
 from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from fractions import Fraction
+from pathlib import Path
 
-from sil.visualization.navigation import LimitExceeded, Navigator, PageLimits
+from sil.visualization.navigation import (Limits, LimitExceeded, Navigator,
+                                         PageLimits, Progress,
+                                         prepare_navigation)
 from sil.visualization.source import SourceError, SourceRecord
 
 PAUSED = "paused"
@@ -187,6 +191,28 @@ class _Read:
     target: int
     limits: PageLimits
     queue_empty: bool
+
+
+def default_cache_dir() -> Path:
+    """Where `open_playback` keeps navigation indexes without a
+    `cache_dir`: `$XDG_CACHE_HOME/sil/navigation`, else
+    `~/.cache/sil/navigation`. The indexes are disposable."""
+    base = os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache"
+    return Path(base) / "sil" / "navigation"
+
+
+def open_playback(source: str | Path, *, cache_dir: str | Path | None = None,
+                  limits: Limits | None = None,
+                  progress: Callable[[Progress], None] | None = None,
+                  cancel: threading.Event | None = None,
+                  clock: Callable[[], int] = time.monotonic_ns,
+                  queue_limits: QueueLimits | None = None) -> Playback:
+    """Prepare navigation of `source` (see `prepare_navigation`) and
+    return a paused controller over it."""
+    navigator = prepare_navigation(
+        source, cache_dir=default_cache_dir() if cache_dir is None else cache_dir,
+        limits=limits, progress=progress, cancel=cancel)
+    return Playback(navigator, clock=clock, queue_limits=queue_limits)
 
 
 class Playback:

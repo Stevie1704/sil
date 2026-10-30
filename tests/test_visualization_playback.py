@@ -8,6 +8,7 @@ of the source (`reference_records`), never from the index under test.
 
 from __future__ import annotations
 
+import random
 import threading
 
 import pytest
@@ -17,7 +18,8 @@ from sil.visualization.navigation import Limits, prepare_navigation
 from sil.visualization.playback import (Backfill, Commit, InvalidCommand,
                                         Message, Playback, QueueLimits,
                                         RequestConflict,
-                                        StateChanged)
+                                        StateChanged, default_cache_dir,
+                                        open_playback)
 from sil.visualization.source import open_source
 
 EVENT = {"e.Event": {"fields": [{"name": "value", "type": "u64"}]}}
@@ -103,7 +105,7 @@ class Interposed:
         return self._nav.snapshot(channels, time_ns)
 
 
-def open_playback(tmp_path, messages, clock, *, channels=None, limits=None,
+def make_playback(tmp_path, messages, clock, *, channels=None, limits=None,
                   queue_limits=None, schemas=EVENT, interpose=False):
     channels = channels or {"a": "e.Event", "b": "e.Event"}
     source = write_source(tmp_path / "run.mcap", schemas, channels, messages)
@@ -129,7 +131,7 @@ def signal(count=21, step=100 * MS):
 
 
 def test_playback_starts_paused_at_the_first_instant(tmp_path, clock):
-    playback, source = open_playback(tmp_path, signal(), clock)
+    playback, source = make_playback(tmp_path, signal(), clock)
 
     state = playback.status()
 
@@ -156,7 +158,7 @@ def play_all(playback):
 
 
 def test_play_advances_by_elapsed_clock_time_times_the_rate(tmp_path, clock):
-    playback, source = open_playback(tmp_path, signal(), clock)
+    playback, source = make_playback(tmp_path, signal(), clock)
     records = reference_records(source)
     play_all(playback)
 
@@ -177,7 +179,7 @@ def test_play_advances_by_elapsed_clock_time_times_the_rate(tmp_path, clock):
 
 def test_a_rate_change_between_pumps_keeps_the_elapsed_time_at_the_old_rate(
         tmp_path, clock):
-    playback, _ = open_playback(tmp_path, signal(), clock)
+    playback, _ = make_playback(tmp_path, signal(), clock)
     play_all(playback)
 
     clock.advance(200 * MS)
@@ -188,7 +190,7 @@ def test_a_rate_change_between_pumps_keeps_the_elapsed_time_at_the_old_rate(
 
 
 def test_pause_keeps_the_cursor_and_play_resumes_from_it(tmp_path, clock):
-    playback, source = open_playback(tmp_path, signal(), clock)
+    playback, source = make_playback(tmp_path, signal(), clock)
     records = reference_records(source)
     play_all(playback)
     clock.advance(300 * MS)
@@ -210,7 +212,7 @@ def test_pause_keeps_the_cursor_and_play_resumes_from_it(tmp_path, clock):
 
 def test_rates_outside_the_range_and_bad_values_leave_state_unchanged(
         tmp_path, clock):
-    playback, _ = open_playback(tmp_path, signal(), clock)
+    playback, _ = make_playback(tmp_path, signal(), clock)
     before = playback.status()
 
     for bad in ({"rate": 0.09}, {"rate": 10.5}, {"rate": float("nan")},
@@ -231,7 +233,7 @@ def test_rates_outside_the_range_and_bad_values_leave_state_unchanged(
 
 def test_the_end_emits_the_final_messages_then_ended_and_play_restarts(
         tmp_path, clock):
-    playback, source = open_playback(tmp_path, signal(), clock)
+    playback, source = make_playback(tmp_path, signal(), clock)
     records = reference_records(source)
     play_all(playback)
 
@@ -253,7 +255,7 @@ def test_the_end_emits_the_final_messages_then_ended_and_play_restarts(
 
 
 def test_an_empty_source_has_no_range_and_play_ends_at_once(tmp_path, clock):
-    playback, _ = open_playback(tmp_path, [], clock)
+    playback, _ = make_playback(tmp_path, [], clock)
 
     state = playback.status()
     with pytest.raises(InvalidCommand, match="no Messages"):
@@ -269,7 +271,7 @@ def test_an_empty_source_has_no_range_and_play_ends_at_once(tmp_path, clock):
 
 
 def test_a_single_instant_source_is_backfilled_and_ends_on_play(tmp_path, clock):
-    playback, source = open_playback(tmp_path, [
+    playback, source = make_playback(tmp_path, [
         ("a", 5 * S, {"value": 1}), ("a", 5 * S, {"value": 2}),
         ("b", 5 * S, {"value": 3})], clock)
     records = reference_records(source)
@@ -290,7 +292,7 @@ def test_a_single_instant_source_is_backfilled_and_ends_on_play(tmp_path, clock)
 
 def test_a_combined_seek_and_play_commits_backfill_then_plays_after_it(
         tmp_path, clock):
-    playback, source = open_playback(tmp_path, signal(), clock)
+    playback, source = make_playback(tmp_path, signal(), clock)
     records = reference_records(source)
     play_all(playback)
     playback.configure("pause", playing=False)
@@ -321,7 +323,7 @@ def test_a_combined_seek_and_play_commits_backfill_then_plays_after_it(
 
 def test_a_backward_seek_flushes_queued_data_and_backfills_no_future_value(
         tmp_path, clock):
-    playback, source = open_playback(tmp_path, signal(), clock)
+    playback, source = make_playback(tmp_path, signal(), clock)
     records = reference_records(source)
     play_all(playback)
     clock.advance(1500 * MS)
@@ -339,7 +341,7 @@ def test_a_backward_seek_flushes_queued_data_and_backfills_no_future_value(
 
 def test_a_seek_before_a_sparse_channels_first_message_leaves_it_absent(
         tmp_path, clock):
-    playback, source = open_playback(tmp_path, [
+    playback, source = make_playback(tmp_path, [
         ("a", S, {"value": 1}), ("b", 2 * S, {"value": 2}),
         ("a", 3 * S, {"value": 3})], clock)
     playback.set_subscription(["a", "b"])
@@ -356,7 +358,7 @@ def test_a_seek_before_a_sparse_channels_first_message_leaves_it_absent(
 
 def test_rapid_seeks_replace_the_pending_one_and_stale_reads_are_dropped(
         tmp_path, clock):
-    playback, source, nav = open_playback(tmp_path, signal(), clock,
+    playback, source, nav = make_playback(tmp_path, signal(), clock,
                                           interpose=True)
     records = reference_records(source)
     playback.set_subscription(["a", "b"])
@@ -385,7 +387,7 @@ def test_rapid_seeks_replace_the_pending_one_and_stale_reads_are_dropped(
 
 def test_pause_while_a_seek_is_pending_cancels_the_automatic_resume(
         tmp_path, clock):
-    playback, _ = open_playback(tmp_path, signal(), clock)
+    playback, _ = make_playback(tmp_path, signal(), clock)
     playback.set_subscription(["a"])
 
     playback.configure("seek", position_ns=2 * S, playing=True)
@@ -398,7 +400,7 @@ def test_pause_while_a_seek_is_pending_cancels_the_automatic_resume(
 
 
 def test_close_while_a_seek_is_pending_ends_the_session(tmp_path, clock):
-    playback, _, nav = open_playback(tmp_path, signal(), clock,
+    playback, _, nav = make_playback(tmp_path, signal(), clock,
                                      interpose=True)
     playback.set_subscription(["a"])
     playback.configure("seek", position_ns=2 * S, playing=True)
@@ -420,7 +422,7 @@ def test_close_while_a_seek_is_pending_ends_the_session(tmp_path, clock):
 
 def test_a_new_subscription_is_reconstructed_at_the_cursor_without_future_data(
         tmp_path, clock):
-    playback, source = open_playback(tmp_path, signal(), clock)
+    playback, source = make_playback(tmp_path, signal(), clock)
     records = reference_records(source)
     playback.set_subscription(["a"])
     settle(playback)
@@ -449,7 +451,7 @@ def test_a_new_subscription_is_reconstructed_at_the_cursor_without_future_data(
 
 
 def test_unsubscribing_drops_queued_messages_of_that_channel(tmp_path, clock):
-    playback, source = open_playback(tmp_path, signal(), clock)
+    playback, source = make_playback(tmp_path, signal(), clock)
     records = reference_records(source)
     play_all(playback)
     clock.advance(500 * MS)
@@ -463,7 +465,7 @@ def test_unsubscribing_drops_queued_messages_of_that_channel(tmp_path, clock):
 
 
 def test_unknown_or_repeated_channels_are_refused(tmp_path, clock):
-    playback, _ = open_playback(tmp_path, signal(), clock)
+    playback, _ = make_playback(tmp_path, signal(), clock)
     before = playback.status()
     for bad in (["c"], ["a", "a"]):
         with pytest.raises(InvalidCommand) as refused:
@@ -485,7 +487,7 @@ def burst_messages():
 
 def test_a_subscription_added_inside_a_burst_backfills_only_what_precedes(
         tmp_path, clock):
-    playback, source = open_playback(
+    playback, source = make_playback(
         tmp_path, burst_messages(), clock,
         queue_limits=QueueLimits(max_messages=3))
     records = reference_records(source)
@@ -519,7 +521,7 @@ def test_a_subscription_added_inside_a_burst_backfills_only_what_precedes(
 
 def test_continuous_playback_delivers_every_message_in_order_through_a_small_queue(
         tmp_path, clock):
-    playback, source = open_playback(
+    playback, source = make_playback(
         tmp_path, burst_messages(), clock,
         queue_limits=QueueLimits(max_messages=4, max_bytes=24))
     records = reference_records(source)
@@ -546,7 +548,7 @@ def test_continuous_playback_delivers_every_message_in_order_through_a_small_que
 
 
 def test_the_queue_never_holds_more_than_its_bounds(tmp_path, clock):
-    playback, _ = open_playback(
+    playback, _ = make_playback(
         tmp_path, burst_messages(), clock,
         queue_limits=QueueLimits(max_messages=5, max_bytes=24))
     play_all(playback)
@@ -566,7 +568,7 @@ BLOB = {"e.Event": EVENT["e.Event"],
 
 def test_an_oversize_message_is_refused_in_its_place_and_playback_continues(
         tmp_path, clock):
-    playback, source = open_playback(tmp_path, [
+    playback, source = make_playback(tmp_path, [
         ("a", S, {"value": 1}), ("blob", S, {"raw": bytes(64)}),
         ("a", S + MS, {"value": 2}), ("blob", S + 2 * MS, {"raw": bytes(64)}),
         ("a", S + 3 * MS, {"value": 3})], clock,
@@ -594,7 +596,7 @@ def test_an_oversize_message_is_refused_in_its_place_and_playback_continues(
 
 
 def test_a_message_larger_than_the_queue_is_refused_not_skipped(tmp_path, clock):
-    playback, _ = open_playback(tmp_path, [
+    playback, _ = make_playback(tmp_path, [
         ("a", S, {"value": 1}), ("blob", S + MS, {"raw": bytes(64)}),
         ("a", S + 2 * MS, {"value": 2})], clock,
         channels={"a": "e.Event", "blob": "b.Blob"}, schemas=BLOB,
@@ -618,7 +620,7 @@ def test_a_message_larger_than_the_queue_is_refused_not_skipped(tmp_path, clock)
 
 def test_a_repeated_request_returns_its_cached_result_without_acting_again(
         tmp_path, clock):
-    playback, _ = open_playback(tmp_path, signal(), clock)
+    playback, _ = make_playback(tmp_path, signal(), clock)
     playback.set_subscription(["a"])
     settle(playback)
     playback.drain()
@@ -634,7 +636,7 @@ def test_a_repeated_request_returns_its_cached_result_without_acting_again(
 
 
 def test_changed_content_under_a_cached_request_id_is_refused(tmp_path, clock):
-    playback, _ = open_playback(tmp_path, signal(), clock)
+    playback, _ = make_playback(tmp_path, signal(), clock)
     playback.configure("r", rate=2.0)
     before = playback.status()
 
@@ -646,7 +648,7 @@ def test_changed_content_under_a_cached_request_id_is_refused(tmp_path, clock):
 
 
 def test_request_ids_expire_after_256_newer_ones(tmp_path, clock):
-    playback, _ = open_playback(tmp_path, signal(), clock)
+    playback, _ = make_playback(tmp_path, signal(), clock)
     playback.configure("old", rate=2.0)
     for i in range(255):
         playback.configure(f"r{i}")
@@ -660,7 +662,7 @@ def test_request_ids_expire_after_256_newer_ones(tmp_path, clock):
 
 
 def test_refused_requests_are_not_cached(tmp_path, clock):
-    playback, _ = open_playback(tmp_path, signal(), clock)
+    playback, _ = make_playback(tmp_path, signal(), clock)
     with pytest.raises(InvalidCommand):
         playback.configure("r", rate=20.0)
     with pytest.raises(InvalidCommand, match="request_id"):
@@ -674,7 +676,7 @@ def test_refused_requests_are_not_cached(tmp_path, clock):
 
 def test_disconnect_pauses_and_a_reconnect_gets_a_fresh_reconstruction(
         tmp_path, clock):
-    playback, source = open_playback(tmp_path, signal(), clock)
+    playback, source = make_playback(tmp_path, signal(), clock)
     records = reference_records(source)
     play_all(playback)
     playback.configure("r1", rate=2.0)
@@ -700,7 +702,7 @@ def test_disconnect_pauses_and_a_reconnect_gets_a_fresh_reconstruction(
 
 def test_a_seek_pending_at_disconnect_is_where_the_reconnect_starts(
         tmp_path, clock):
-    playback, _ = open_playback(tmp_path, signal(), clock)
+    playback, _ = make_playback(tmp_path, signal(), clock)
     playback.set_subscription(["a"])
     playback.configure("seek", position_ns=2 * S)
 
@@ -714,7 +716,7 @@ def test_a_seek_pending_at_disconnect_is_where_the_reconnect_starts(
 
 
 def test_a_source_that_changes_during_playback_fails_the_session(tmp_path, clock):
-    playback, source = open_playback(tmp_path, signal(), clock)
+    playback, source = make_playback(tmp_path, signal(), clock)
     play_all(playback)
     with open(source, "ab") as stream:
         stream.write(b"x")
@@ -735,7 +737,7 @@ def test_a_source_that_changes_during_playback_fails_the_session(tmp_path, clock
 
 
 def test_run_works_until_close_on_its_own_thread(tmp_path, clock):
-    playback, source = open_playback(tmp_path, signal(), clock)
+    playback, source = make_playback(tmp_path, signal(), clock)
     records = reference_records(source)
     worker = threading.Thread(target=playback.run, daemon=True)
     worker.start()
@@ -749,3 +751,52 @@ def test_run_works_until_close_on_its_own_thread(tmp_path, clock):
 
     assert not worker.is_alive()
     assert records_of(received, Backfill) == latest(records, "ab", S)
+
+
+# --- random seeks against the sequential reference --------------------------------
+
+
+def test_random_seeks_and_plays_match_the_sequential_reference(tmp_path, clock):
+    rng = random.Random(348)
+    playback, source = make_playback(tmp_path, burst_messages(), clock)
+    records = reference_records(source)
+    playback.set_subscription(["a", "b"])
+    settle(playback)
+    playback.drain()
+
+    for _ in range(60):
+        position = rng.randrange(S, 2 * S + 1)
+        playback.configure(None, position_ns=position, playing=False)
+        settle(playback)
+        committed = playback.drain()
+        assert records_of(committed, Backfill) == latest(records, "ab", position)
+        playback.configure(None, playing=True, rate=rng.choice([0.5, 1.0, 7.0]))
+        step = rng.randrange(0, 50 * MS)
+        clock.advance(step)
+        cursor = settle(playback).cursor_ns
+        assert records_of(playback.drain(), Message) == ordered(
+            records, "ab", (position, 2**63), cursor)
+
+
+# --- opening a Recording ----------------------------------------------------
+
+
+def test_open_playback_keeps_its_index_in_the_user_cache_by_default(
+        tmp_path, clock, monkeypatch):
+    source = write_source(tmp_path / "run.mcap", EVENT, {"a": "e.Event"},
+                          [("a", S, {"value": 1})])
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg"))
+
+    with open_playback(source, clock=clock) as playback:
+        state = playback.status()
+
+    assert default_cache_dir() == tmp_path / "xdg" / "sil" / "navigation"
+    assert list(default_cache_dir().glob(f"{state.source_sha256}.*.sqlite"))
+
+
+def test_without_xdg_cache_home_the_cache_is_under_the_home_directory(
+        tmp_path, monkeypatch):
+    monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    assert default_cache_dir() == tmp_path / ".cache" / "sil" / "navigation"
