@@ -508,3 +508,38 @@ def test_a_truncated_source_is_refused(tmp_path):
 def test_invalid_limits_are_refused(options):
     with pytest.raises(InvalidRequest):
         Limits(**options)
+
+
+def test_a_refused_row_names_its_locator_and_size(tmp_path):
+    source = write_source(tmp_path / "run.mcap", EVENT, TWO, [
+        ("b", 4, {"value": 0}), ("a", 5, {"value": 1})])
+    with prepare_navigation(source, cache_dir=tmp_path / "c",
+                            limits=Limits(max_message_bytes=7)) as nav:
+        with pytest.raises(LimitExceeded) as on_page:
+            nav.messages(["a"], 0, 10)
+        with pytest.raises(LimitExceeded) as on_snapshot:
+            nav.snapshot(["b"], 9)
+
+    assert (on_page.value.record_index, on_page.value.channel,
+            on_page.value.publication_time_ns, on_page.value.size_bytes) == (
+        1, "a", 5, 8)
+    assert (on_snapshot.value.record_index, on_snapshot.value.channel,
+            on_snapshot.value.publication_time_ns) == (0, "b", 4)
+
+
+def test_a_continuation_after_a_position_resumes_strictly_after_it(tmp_path):
+    source = write_source(tmp_path / "run.mcap", EVENT, TWO, [
+        ("a", 5, {"value": 0}), ("b", 5, {"value": 1}), ("a", 5, {"value": 2}),
+        ("a", 6, {"value": 3}), ("b", 9, {"value": 4})])
+    with prepare_navigation(source, cache_dir=tmp_path / "c") as nav:
+        mid_burst = nav.continuation_after(None, 5, 10, 5, 1)
+        after_instant = nav.continuation_after(["a"], 5, 7, 5, 2**63 - 1)
+        resumed = nav.messages(None, 5, 10, mid_burst).messages
+        later = nav.messages(["a"], 5, 7, after_instant).messages
+        with pytest.raises(ContinuationError, match="outside"):
+            nav.continuation_after(None, 5, 10, 10, 0)
+        with pytest.raises(InvalidRequest):
+            nav.continuation_after(None, 5, 10, 5, -1)
+
+    assert [m.record_index for m in resumed] == [2, 3, 4]
+    assert [m.record_index for m in later] == [3]

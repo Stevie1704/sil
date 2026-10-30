@@ -79,7 +79,21 @@ class ContinuationError(InvalidRequest):
 
 class LimitExceeded(NavigationError):
     """A chunk, Message or page row exceeds a configured limit. It is
-    refused, never silently skipped."""
+    refused, never silently skipped.
+
+    For a refused Message, `record_index`, `channel`, `publication_time_ns`
+    and `size_bytes` name it, so a reader can report it and resume after it
+    with `Navigator.continuation_after`. They are None otherwise."""
+
+    def __init__(self, message: str, *, record_index: int | None = None,
+                 channel: str | None = None,
+                 publication_time_ns: int | None = None,
+                 size_bytes: int | None = None):
+        super().__init__(message)
+        self.record_index = record_index
+        self.channel = channel
+        self.publication_time_ns = publication_time_ns
+        self.size_bytes = size_bytes
 
 
 class PreparationCancelled(NavigationError):
@@ -277,10 +291,9 @@ class Navigator:
             size = row[5]
             if size > min(page.max_bytes, self._limits.max_message_bytes):
                 if not taken:
-                    raise LimitExceeded(
-                        f"Message record_index {row[0]} has {size} bytes; the "
-                        f"page limit is {page.max_bytes} and the Message limit "
-                        f"{self._limits.max_message_bytes}")
+                    raise self._refusal(
+                        row, f"the page limit is {page.max_bytes} and the "
+                        f"Message limit {self._limits.max_message_bytes}")
                 break
             if used + size > page.max_bytes:
                 break
@@ -290,7 +303,26 @@ class Navigator:
         self._source.check_unchanged()
         if len(taken) == len(rows):
             return Page(records, None, True)
-        return Page(records, _continuation(pin, records[-1]), False)
+        return Page(records, _continuation(pin, records[-1].publication_time_ns,
+                                           records[-1].record_index), False)
+
+    def continuation_after(self, channels: Collection[str] | None,
+                           start_ns: int, end_ns: int, time_ns: int,
+                           record_index: int) -> str:
+        """A continuation of `messages(channels, start_ns, end_ns)` that
+        resumes strictly after (time_ns, record_index). With record_index
+        `2**63 - 1` it resumes after every Message at `time_ns`. A reader
+        uses it to continue from its own position, for example after a
+        Message refused with LimitExceeded."""
+        selected = select_channels(self._source, channels)
+        _require_time("start_ns", start_ns, _TIME_LIMIT)
+        _require_time("end_ns", end_ns, _TIME_LIMIT)
+        _require_time("time_ns", time_ns, _TIME_LIMIT - 1)
+        _require_time("record_index", record_index, _TIME_SHIFT - 1)
+        if not start_ns <= time_ns < end_ns:
+            raise ContinuationError("the continuation is outside the interval")
+        return _continuation(self._pin(selected, start_ns, end_ns),
+                             time_ns, record_index)
 
     def snapshot(self, channels: Collection[str] | None, time_ns: int
                  ) -> dict[str, SourceRecord | None]:
@@ -352,9 +384,8 @@ class Navigator:
     def _record(self, row) -> SourceRecord:
         record_index, channel_id, time, chunk, offset, size = row
         if size > self._limits.max_message_bytes:
-            raise LimitExceeded(f"Message record_index {record_index} has "
-                                f"{size} bytes; the limit is "
-                                f"{self._limits.max_message_bytes}")
+            raise self._refusal(
+                row, f"the limit is {self._limits.max_message_bytes}")
         try:
             if chunk < 0:
                 found = recording.read_message(
@@ -372,6 +403,13 @@ class Navigator:
                                "names another Message")
         return SourceRecord(record_index, self._names[channel_id],
                             time + _TIME_SHIFT, found[2])
+
+    def _refusal(self, row, limit: str) -> LimitExceeded:
+        record_index, channel_id, time, _, _, size = row
+        return LimitExceeded(
+            f"Message record_index {record_index} has {size} bytes; {limit}",
+            record_index=record_index, channel=self._names[channel_id],
+            publication_time_ns=time + _TIME_SHIFT, size_bytes=size)
 
     def _chunk(self, offset: int) -> bytes:
         records = self._chunks.pop(offset, None)
@@ -581,9 +619,8 @@ def _resume(token: str, pin: dict, start_ns: int, end_ns: int
     return time_ns, record_index
 
 
-def _continuation(pin: dict, last: SourceRecord) -> str:
-    body = {**pin, "after": [str(last.publication_time_ns),
-                             str(last.record_index)]}
+def _continuation(pin: dict, time_ns: int, record_index: int) -> str:
+    body = {**pin, "after": [str(time_ns), str(record_index)]}
     return base64.urlsafe_b64encode(
         json.dumps(body, sort_keys=True, separators=(",", ":")).encode()
     ).decode("ascii")
