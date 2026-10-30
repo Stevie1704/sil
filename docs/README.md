@@ -51,7 +51,9 @@ agent.
   [profile report contract](profile-report.md) is the versioned evidence of
   `sil profile` (#313; Linux x86-64 with perf).
   Record new architectural decisions here; consult the applicable ADR and its
-  status when an older design statement differs.
+  status when an older design statement differs. The
+  [live observation and Run control](adr/0005-live-observation-and-run-control.md)
+  ADR is proposed, not accepted.
 - [docs/decisions/](decisions/) retains the historical
   [consumer capability gate](decisions/118-consumer-capability-gate.md) and
   the scoped [Native ADAS reference decision](decisions/222-native-adas-reference.md),
@@ -61,6 +63,8 @@ agent.
   location for new ADRs.
 - [Proposals](proposals/) and [research](research/) describe prospective work
   and investigation; they do not establish implemented or supported behavior.
+  The [live visualization qualification](research/live-visualization-qualification.md)
+  is the draft evidence for the proposed ADR 0005.
 
 ## Contributing and releasing
 
