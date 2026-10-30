@@ -450,3 +450,175 @@ def test_queued_values_from_before_a_seek_never_follow_its_reset(
     client.wait_for(lambda f: f.get("status") == ENDED, timeout=60)
     assert numbers(after_last_seek(client, 100 * MS)) == list(range(2, 40))
     client.close()
+
+
+def test_reconnect_starts_a_new_session_paused_with_fresh_backfill(
+        serve, qualification, tmp_path):
+    bridge = serve(qualification)
+    first = connect_subscribed(bridge)
+    _, info = first.wait_for(lambda f: f["op"] == "serverInfo")
+    initial_state(first)
+    first.request("play", PLAY, speed=1.0)
+    first.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 300 * MS)
+    first.close()
+    second = connect_subscribed(bridge)
+    _, again = second.wait_for(lambda f: f["op"] == "serverInfo")
+    assert again["sessionId"] != info["sessionId"]
+    reset, state = second.wait_for(lambda f: f["op"] == "playbackState")
+    assert state["did_seek"]
+    _, committed = second.wait_for(lambda f: f["op"] == "playbackState"
+                                   and f["status"] == PAUSED and not f["did_seek"])
+    cursor = committed["time"]
+    assert cursor > 300 * MS
+    time.sleep(0.5)  # paused: nothing beyond the backfill arrives
+    messages = exported_messages(qualification, tmp_path)
+    assert received(second, reset + 1) == latest_at(messages, set(second.channels),
+                                                    cursor)
+    second.close()
+
+
+def test_a_second_client_is_refused_while_one_is_connected(serve, qualification):
+    from websockets.exceptions import InvalidStatus
+    bridge = serve(qualification)
+    first = FoxgloveClient(bridge.url)
+    first.wait_for(lambda f: f["op"] == "serverInfo")
+    with pytest.raises(InvalidStatus) as refused:
+        FoxgloveClient(bridge.url)
+    assert refused.value.response.status_code == 409
+    first.close()
+    deadline = time.monotonic() + 5
+    while True:  # the bridge frees itself when the first connection ends
+        try:
+            second = FoxgloveClient(bridge.url)
+            break
+        except InvalidStatus:
+            assert time.monotonic() < deadline
+            time.sleep(0.05)
+    second.wait_for(lambda f: f["op"] == "serverInfo")
+    second.close()
+
+
+def test_subscription_changes_backfill_added_and_stop_removed_topics(
+        serve, qualification, tmp_path):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge, "counter")
+    initial_state(client)
+    client.request("seek", PAUSE, speed=1.0, seek=4 * S)
+    client.wait_for(lambda f: f.get("request_id") == "seek" and f["status"] == PAUSED
+                    and not f["did_seek"] and f["time"] == 4 * S)
+    start = len(client.frames)
+    client.subscribe("sparse", "vehicle/speed")
+    client.unsubscribe("counter")
+    client.wait_for(lambda f: f["op"] == "message" and f["topic"] == "vehicle/speed")
+    client.request("play", PLAY, speed=10.0)
+    client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
+    messages = exported_messages(qualification, tmp_path)
+    topics = {"sparse", "vehicle/speed"}
+    expected = latest_at(messages, topics, 4 * S) + sorted(
+        (m for m in messages if m[0] in topics and m[1] > 4 * S), key=key)
+    assert [m for m in received(client, start) if m[0] != "counter"] == expected
+    assert [m for m in received(client, start) if m[0] == "counter"] == []
+    client.close()
+
+
+def test_oversize_payloads_are_reported_and_never_sent(
+        serve, qualification, tmp_path):
+    messages = exported_messages(qualification, tmp_path)
+    size = {topic: max(len(json.dumps(p, separators=(",", ":")))
+                       for t, _, p in messages if t == topic)
+            for topic in {t for t, _, _ in messages}}
+    limit = max(s for topic, s in size.items() if topic != "arrays")
+    assert min(len(json.dumps(p, separators=(",", ":")))
+               for t, _, p in messages if t == "arrays") > limit
+    bridge = serve(qualification, max_message_bytes=limit)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=10.0)
+    client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
+    assert "arrays" not in {topic for topic, _, _ in received(client)}
+    warnings = [f for f in client.frames if f["op"] == "status"
+                and "'arrays'" in f["message"]]
+    arrays = [m for m in messages if m[0] == "arrays"]
+    assert len(warnings) == len(arrays)  # the backfill at 0 and each later one
+    assert all(f["level"] == 1 for f in warnings)
+    client.close()
+
+
+def file_sha256(path):
+    import hashlib
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def test_serving_and_seeking_leave_the_source_unchanged(serve, qualification):
+    beside = lambda: sorted(qualification.parent.glob("run*"))  # noqa: E731
+    before = (file_sha256(qualification), beside())
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=10.0)
+    client.request("seek", PLAY, speed=10.0, seek=7 * S)
+    client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
+    client.close()
+    bridge.close()
+    assert (file_sha256(qualification), beside()) == before
+
+
+def test_sources_without_a_foxglove_playback_range_are_refused(
+        adapter, tmp_path):
+    event = {"e.Event": {"fields": [{"name": "value", "type": "u64"}]}}
+    empty = write_source(tmp_path / "empty.mcap", event, {"e": "e.Event"}, [])
+    late = write_source(tmp_path / "late.mcap", event, {"e": "e.Event"},
+                        [("e", 0, {"value": 1}), ("e", 2**32 * S, {"value": 2})])
+    for source, reason in ((empty, "no Messages"), (late, "2^32 s")):
+        proc = sil(["playback", "serve", str(source), "--listen", "127.0.0.1:0",
+                    "--cache-dir", str(tmp_path / "cache")],
+                   dict(os.environ, PYTHONPATH=str(PYTHON_SRC)))
+        assert proc.returncode == 2, proc.stderr
+        assert reason in proc.stderr
+
+
+def test_the_serve_command_prints_its_address_and_stops_on_sigterm(
+        adapter, qualification, tmp_path):
+    import signal
+    process = subprocess.Popen(
+        [sys.executable, "-m", "sil.cli", "playback", "serve", str(qualification),
+         "--adapter", "foxglove", "--listen", "127.0.0.1:0",
+         "--cache-dir", str(tmp_path / "cache")],
+        env=dict(os.environ, PYTHONPATH=str(PYTHON_SRC)),
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        line = process.stdout.readline()
+        assert " at ws://127.0.0.1:" in line, process.stderr.read()
+        client = FoxgloveClient(line.rsplit(" at ", 1)[1].strip())
+        _, info = client.wait_for(lambda f: f["op"] == "serverInfo")
+        assert "playbackControl" in info["capabilities"]
+        client.close()
+        process.send_signal(signal.SIGTERM)
+        assert process.wait(timeout=20) == 0
+    finally:
+        process.kill()
+        process.wait()
+
+
+def test_a_client_stalled_past_the_timeout_is_disconnected_and_playback_pauses(
+        serve, big_blobs):
+    bridge = serve(big_blobs, backlog=32, stall_timeout=1.0)
+    stalled = connect_subscribed(bridge)
+    initial_state(stalled)
+    stalled.request("play", PLAY, speed=1.0)
+    stalled.wait_for(lambda f: f["op"] == "message")
+    stalled.reading.clear()
+    deadline = time.monotonic() + 15
+    while True:  # the relay gives up on the client
+        try:
+            fresh = connect_subscribed(bridge)
+            break
+        except Exception:
+            assert time.monotonic() < deadline
+            time.sleep(0.2)
+    _, state = fresh.wait_for(lambda f: f["op"] == "playbackState")
+    assert state["did_seek"]
+    _, committed = fresh.wait_for(lambda f: f["op"] == "playbackState"
+                                  and not f["did_seek"])
+    assert committed["status"] == PAUSED
+    fresh.close()
