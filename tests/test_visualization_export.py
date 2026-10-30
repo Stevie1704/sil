@@ -159,6 +159,20 @@ def test_the_generated_schema_names_original_types_and_array_lengths(tmp_path):
     assert fields["i64s"]["description"] == "SiL i64[2] (decimal string)"
 
 
+def test_equal_declarations_under_different_names_keep_their_own_titles(
+        tmp_path):
+    declaration = {"fields": [{"name": "v", "type": "u8"}]}
+    source = write_source(tmp_path / "run.mcap",
+                          {"a.Left": declaration, "b.Right": declaration},
+                          {"left": "a.Left", "right": "b.Right"}, [])
+    out = tmp_path / "out.mcap"
+
+    export_recording(source, out)
+
+    assert output_schema(out, "left")["title"] == "a.Left"
+    assert output_schema(out, "right")["title"] == "b.Right"
+
+
 def test_source_fields_named_like_the_envelope_do_not_collide(tmp_path):
     schemas = {"c.Clash": {"fields": [{"name": "sil", "type": "u8"},
                                       {"name": "fields", "type": "u8"},

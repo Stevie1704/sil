@@ -143,17 +143,18 @@ def _metadata(recording: Source, selected) -> dict[str, str]:
 
 def _register(writer: Writer, recording: Source, selected,
               codecs: dict[str, ChannelCodec]) -> dict[str, int]:
-    schema_ids: dict[str, int] = {}
+    # Keyed by name and declaration: the output schema title is the name.
+    schema_ids: dict[tuple[str, str], int] = {}
     ids = {}
     for channel in selected:
         codec = codecs[channel.name]
-        if channel.schema_sha256 not in schema_ids:
-            schema_ids[channel.schema_sha256] = writer.register_schema(
+        key = (channel.schema_name, channel.schema_sha256)
+        if key not in schema_ids:
+            schema_ids[key] = writer.register_schema(
                 channel.schema_name, interchange.SCHEMA_ENCODING,
                 codec.json_schema())
         ids[channel.name] = writer.register_channel(
-            channel.name, interchange.MESSAGE_ENCODING,
-            schema_ids[channel.schema_sha256],
+            channel.name, interchange.MESSAGE_ENCODING, schema_ids[key],
             metadata=interchange.channel_metadata(
                 recording.sha256, channel.schema_name, channel.schema_sha256))
     return ids
