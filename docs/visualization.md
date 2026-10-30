@@ -263,7 +263,7 @@ disposable; delete it at any time.
 
 | Call | Effect |
 | --- | --- |
-| `configure(request_id, position_ns=None, playing=None, rate=None)` | Seek, play or pause, and set the rate in one atomic operation. `None` keeps the current value. |
+| `configure(request_id, position_ns=None, playing=None, rate=None)` | Seek, play or pause, and set the rate in one atomic operation. `request_id` is a required non-empty string. `None` keeps the current value. |
 | `set_subscription(channels)` | Deliver only these Channels. New Channels are reconstructed at the cursor. |
 | `status()` | The current `PlaybackState`. |
 | `disconnect()` | The client went away: pause, drop the subscription, the queue and the request IDs. |
@@ -303,7 +303,9 @@ state, which the command did not change.
 The controller keeps the last 256 accepted request IDs. A repeated request
 ID with the same content returns its first result and does nothing again.
 The same ID with other content raises `RequestConflict`. A refused request
-is not kept. `request_id=None` is never kept.
+is not kept. A missing or empty `request_id` is refused with
+`InvalidCommand`. The Foxglove adapter gives a client request without an ID
+a local ID, which it does not echo.
 
 After 256 newer requests, or after `disconnect`, an ID is new again. A
 client that is not sure whether its request was applied, for example after

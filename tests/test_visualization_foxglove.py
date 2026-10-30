@@ -429,6 +429,23 @@ def test_pause_rate_and_invalid_requests_answer_the_actual_state(
     client.close()
 
 
+def test_requests_without_an_id_are_applied_and_never_conflict(
+        serve, qualification):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+
+    client.request("", PAUSE, speed=2.0)
+    client.wait_for(lambda f: f.get("speed") == 2.0)
+    client.request("", PAUSE, speed=3.0)  # other content, also without an ID
+    _, answer = client.wait_for(lambda f: f.get("speed") == 3.0)
+
+    assert (answer["status"], answer["request_id"]) == (PAUSED, None)
+    assert not any(f["op"] == "status" and "refused" in f["message"]
+                   for f in client.frames)
+    client.close()
+
+
 def write_blobs(path, size, count, period_ns):
     """`count` Messages of `size` bytes (4/3 of that as JSON) every
     `period_ns` on Channel `blobs`; field `n` numbers them."""

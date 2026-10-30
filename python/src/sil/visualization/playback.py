@@ -290,7 +290,7 @@ class Playback:
         with self._lock:
             return self._state()
 
-    def configure(self, request_id: str | None = None, *,
+    def configure(self, request_id: str, *,
                   position_ns: int | None = None, playing: bool | None = None,
                   rate: float | None = None) -> PlaybackState:
         """Seek, set the desired playing state and the rate in one atomic
@@ -298,23 +298,23 @@ class Playback:
         `Commit` follows when the reconstruction completes. Raises
         InvalidCommand with the unchanged state.
 
-        The last REQUEST_CACHE accepted request IDs are remembered: the same
-        ID with the same content returns its first result without acting
-        again; with other content it raises RequestConflict. An expired ID
-        is a new request. `request_id=None` is never cached."""
+        `request_id` is a non-empty string. The last REQUEST_CACHE accepted
+        request IDs are remembered: the same ID with the same content
+        returns its first result without acting again; with other content
+        it raises RequestConflict. An expired ID is a new request."""
         with self._lock:
             self._check_open()
             content = (position_ns, playing, rate)
-            if request_id is not None and not isinstance(request_id, str):
-                self._refuse(f"request_id must be a string, not {request_id!r}")
-            if request_id is not None:
-                cached = self._requests.get(request_id)
-                if cached is not None:
-                    if cached[0] != content:
-                        raise RequestConflict(
-                            f"request {request_id!r} was already used with "
-                            "other content", self._state())
-                    return cached[1]
+            if not isinstance(request_id, str) or not request_id:
+                self._refuse(f"request_id must be a non-empty string, not "
+                             f"{request_id!r}")
+            cached = self._requests.get(request_id)
+            if cached is not None:
+                if cached[0] != content:
+                    raise RequestConflict(
+                        f"request {request_id!r} was already used with "
+                        "other content", self._state())
+                return cached[1]
             self._check_configure(position_ns, playing, rate)
             now = self._clock()
             if rate is not None and rate != self._rate:
@@ -330,10 +330,9 @@ class Playback:
                 self._set_playing(playing, now)
             self._request_id = request_id
             state = self._state()
-            if request_id is not None:
-                self._requests[request_id] = (content, state)
-                if len(self._requests) > REQUEST_CACHE:
-                    self._requests.popitem(last=False)
+            self._requests[request_id] = (content, state)
+            if len(self._requests) > REQUEST_CACHE:
+                self._requests.popitem(last=False)
             self._lock.notify_all()
             return state
 

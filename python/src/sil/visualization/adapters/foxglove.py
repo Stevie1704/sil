@@ -43,6 +43,7 @@ without the `sil[foxglove]` extra.
 
 from __future__ import annotations
 
+import itertools
 import threading
 import time
 
@@ -72,6 +73,9 @@ NS_PER_S = 1_000_000_000
 MAX_TIME_NS = (2**32 - 1) * NS_PER_S + NS_PER_S - 1
 _RETRY_S = 0.5  # re-send an unacknowledged barrier or seek state
 _POLL_S = 0.05
+# The controller needs a request ID; a client request without one gets a
+# local ID, which is never echoed to the client.
+_ANONYMOUS = "sil-anonymous-"
 # Foxglove has no failed or closed status. Both stop playback, so they show
 # as Paused; a failure also sends an error status with its diagnostic.
 _STATUS = {Status.PLAYING: FoxgloveStatus.Playing,
@@ -111,6 +115,7 @@ class Bridge:
         self._max_message_bytes = max_message_bytes
         self._closed = False
         self._sessions = 0
+        self._anonymous = itertools.count()
         self._changed = threading.Condition()
         self._next_barrier = 0
         self._latest_logged: int | None = None
@@ -176,7 +181,7 @@ class Bridge:
             return None
         try:
             state = self._playback.configure(
-                claimed.request_id or None,
+                claimed.request_id or f"{_ANONYMOUS}{next(self._anonymous)}",
                 position_ns=request.seek_time,
                 playing=request.playback_command == PlaybackCommand.Play,
                 rate=float(f"{request.playback_speed:.6g}"))
@@ -380,6 +385,8 @@ class Bridge:
 
     def _broadcast(self, state: PlaybackState, *, request_id: str | None,
                    did_seek: bool = False, position_ns: int | None = None) -> None:
+        if request_id is not None and request_id.startswith(_ANONYMOUS):
+            request_id = None
         self._server.broadcast_playback_state(_foxglove_state(
             state, did_seek=did_seek, request_id=request_id,
             position_ns=position_ns))

@@ -827,6 +827,19 @@ def test_refused_requests_are_not_cached(tmp_path, clock):
     assert playback.configure("r", rate=2.0).rate == 2.0
 
 
+def test_a_request_id_is_required(tmp_path, clock):
+    playback, _ = make_playback(tmp_path, signal(), clock)
+    before = playback.status()
+
+    with pytest.raises(TypeError):
+        playback.configure(rate=2.0)
+    for missing in (None, ""):
+        with pytest.raises(InvalidCommand, match="request_id"):
+            playback.configure(missing, rate=2.0)
+
+    assert playback.status() == before
+
+
 # --- disconnect, failure and the worker loop --------------------------------------
 
 
@@ -921,13 +934,15 @@ def test_random_seeks_and_plays_match_the_sequential_reference(tmp_path, clock):
     settle(playback)
     playback.drain()
 
-    for _ in range(60):
+    for step_number in range(60):
         position = rng.randrange(S, 2 * S + 1)
-        playback.configure(None, position_ns=position, playing=False)
+        playback.configure(f"seek-{step_number}", position_ns=position,
+                           playing=False)
         settle(playback)
         committed = playback.drain()
         assert records_of(committed, Backfill) == latest(records, "ab", position)
-        playback.configure(None, playing=True, rate=rng.choice([0.5, 1.0, 7.0]))
+        playback.configure(f"play-{step_number}", playing=True,
+                           rate=rng.choice([0.5, 1.0, 7.0]))
         step = rng.randrange(0, 50 * MS)
         clock.advance(step)
         cursor = settle(playback).cursor_ns
