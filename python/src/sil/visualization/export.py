@@ -30,7 +30,8 @@ from mcap.writer import LIBRARY_IDENTIFIER, CompressionType, Writer
 from sil import build_info
 from sil.visualization import interchange
 from sil.visualization.interchange import ChannelCodec
-from sil.visualization.source import Source, SourceError, open_source
+from sil.visualization.source import (Source, SourceError, completeness,
+                                      open_source, select_channels)
 
 PROG = "sil recording export"
 CLI_PROFILE = "visualization-json"
@@ -71,7 +72,7 @@ def export_recording(source: str | Path, output: str | Path, *,
     try:
         recording = open_source(source)
         _refuse_collisions(recording, output, receipt_file)
-        selected = _selected(recording, channels)
+        selected = select_channels(recording, channels)
         codecs = _codecs(selected)
     except (SourceError, interchange.UnsupportedSchema) as e:
         raise ExportInputError(str(e)) from e
@@ -96,23 +97,6 @@ def _refuse_collisions(recording: Source, output: Path, receipt: Path) -> None:
         if os.path.lexists(path):
             raise ExportInputError(f"output {str(path)!r} already exists; it "
                                    "is not overwritten")
-
-
-def _selected(recording: Source, channels: Collection[str] | None):
-    if channels is None:
-        return recording.channels
-    names = list(channels)
-    if not names:
-        raise ExportInputError("the Channel selection is empty")
-    duplicates = sorted({name for name in names if names.count(name) > 1})
-    if duplicates:
-        raise ExportInputError(f"channel {duplicates[0]!r} is selected twice")
-    known = {channel.name for channel in recording.channels}
-    unknown = [name for name in names if name not in known]
-    if unknown:
-        raise ExportInputError(f"channel {unknown[0]!r} is not in the source "
-                               f"{str(recording.path)!r}")
-    return tuple(c for c in recording.channels if c.name in set(names))
 
 
 def _codecs(selected) -> dict[str, ChannelCodec]:
@@ -224,27 +208,8 @@ def _receipt(recording: Source, selected, counts: dict[str, dict],
         "messages": sum(c["messages"] for c in counts.values()),
         "bounds": _bounds(min(firsts, default=None), max(lasts, default=None)),
         "numeric_policy": interchange.NUMERIC_POLICY,
-        "completeness": _completeness(recording),
+        "completeness": completeness(recording),
     }
-
-
-def _completeness(recording: Source) -> dict:
-    """What is known about the Run that wrote the source. Message coverage
-    alone does not prove that the Run completed."""
-    known = {"source_finalized": True, "run_outcome": "unknown",
-             "run_exit_code": None, "evidence": None,
-             "note": "Message coverage does not prove Run completion"}
-    sidecar = recording.path.with_name(recording.path.name + ".provenance.json")
-    try:
-        document = json.loads(sidecar.read_text())
-        bound = document["recording"]["sha256"] == recording.sha256
-        exit_code = document["run_exit_code"]
-    except (OSError, ValueError, KeyError, TypeError):
-        return known
-    if not bound or isinstance(exit_code, bool) or not isinstance(exit_code, int):
-        return known
-    return {**known, "run_outcome": "completed" if exit_code == 0 else "failed",
-            "run_exit_code": exit_code, "evidence": sidecar.name}
 
 
 class _TemporaryFiles:

@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from collections.abc import Collection
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator, NamedTuple
@@ -26,6 +27,10 @@ _MAGIC = b"\x89MCAP0\r\n"
 
 class SourceError(ValueError):
     """The source is not a finalized Recording with supported encodings."""
+
+
+class SelectionError(SourceError):
+    """A Channel selection names no, an unknown or a repeated Channel."""
 
 
 @dataclass(frozen=True)
@@ -142,3 +147,41 @@ def _channels(path: Path) -> tuple[SourceChannel, ...]:
         channels.append(SourceChannel(channel.topic, schema.name, declaration,
                                       hashlib.sha256(schema.data).hexdigest()))
     return tuple(channels)
+
+
+def select_channels(recording: Source, channels: Collection[str] | None
+                    ) -> tuple[SourceChannel, ...]:
+    """The named source Channels in declaration order; None selects all."""
+    if channels is None:
+        return recording.channels
+    names = list(channels)
+    if not names:
+        raise SelectionError("the Channel selection is empty")
+    duplicates = sorted({name for name in names if names.count(name) > 1})
+    if duplicates:
+        raise SelectionError(f"channel {duplicates[0]!r} is selected twice")
+    known = {channel.name for channel in recording.channels}
+    unknown = [name for name in names if name not in known]
+    if unknown:
+        raise SelectionError(f"channel {unknown[0]!r} is not in the source "
+                             f"{str(recording.path)!r}")
+    return tuple(c for c in recording.channels if c.name in set(names))
+
+
+def completeness(recording: Source) -> dict:
+    """What is known about the Run that wrote the source. Message coverage
+    alone does not prove that the Run completed."""
+    known = {"source_finalized": True, "run_outcome": "unknown",
+             "run_exit_code": None, "evidence": None,
+             "note": "Message coverage does not prove Run completion"}
+    sidecar = recording.path.with_name(recording.path.name + ".provenance.json")
+    try:
+        document = json.loads(sidecar.read_text())
+        bound = document["recording"]["sha256"] == recording.sha256
+        exit_code = document["run_exit_code"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return known
+    if not bound or isinstance(exit_code, bool) or not isinstance(exit_code, int):
+        return known
+    return {**known, "run_outcome": "completed" if exit_code == 0 else "failed",
+            "run_exit_code": exit_code, "evidence": sidecar.name}
