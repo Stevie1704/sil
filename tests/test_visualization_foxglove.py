@@ -10,14 +10,25 @@ scan of the source, never from the index or the controller under test.
 
 from __future__ import annotations
 
+import json
 import os
+import struct
 import subprocess
 import sys
+import threading
+import time
 
+import pytest
 from conftest import ROOT
+from mcap.reader import make_reader
 from visualization_fixture import write_qualification_source
 
+from sil.visualization import export_recording
+from sil.visualization.playback import open_playback
+
 PYTHON_SRC = ROOT / "python" / "src"
+MS = 1_000_000
+S = 1_000_000_000
 
 
 def without_foxglove_sdk(tmp_path) -> dict:
@@ -57,3 +68,248 @@ def test_export_and_other_commands_work_without_the_foxglove_extra(tmp_path):
     help_text = sil(["playback", "serve", "--help"], env)
     assert help_text.returncode == 0, help_text.stderr
     assert "--listen" in help_text.stdout
+
+
+# --- the wire seam ---------------------------------------------------------
+
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:connect\\(\\) must be used:DeprecationWarning")
+
+
+@pytest.fixture(scope="module")
+def adapter():
+    pytest.importorskip("foxglove", reason="needs the sil[foxglove] extra")
+    pytest.importorskip("websockets", reason="needs the websockets client")
+    from sil.visualization.adapters import foxglove
+    return foxglove
+
+
+PLAYING, PAUSED, BUFFERING, ENDED = 0, 1, 2, 3
+PLAY, PAUSE = 0, 1
+
+
+class FoxgloveClient:
+    """A scripted client of the Foxglove WebSocket protocol, subprotocol
+    `foxglove.sdk.v1`: it decodes what the server sends, in arrival order,
+    and sends subscriptions and playback control requests."""
+
+    def __init__(self, url, subprotocol="foxglove.sdk.v1"):
+        from websockets.sync.client import connect
+        self.ws = connect(url, subprotocols=[subprotocol], max_size=None,
+                          open_timeout=5)
+        self.frames = []  # every decoded frame, in arrival order
+        self._new = threading.Condition()
+        self.channels = {}  # topic -> advertised channel
+        self._subscriptions = {}  # subscription id -> topic
+        self._next_id = 1
+        self.reading = threading.Event()
+        self.reading.set()
+        self.closed = False
+        self._reader = threading.Thread(target=self._read, daemon=True)
+        self._reader.start()
+
+    def _read(self):
+        from websockets.exceptions import ConnectionClosed
+        try:
+            while True:
+                self.reading.wait()
+                frame = self._decode(self.ws.recv())
+                with self._new:
+                    self.frames.append(frame)
+                    self._new.notify_all()
+        except ConnectionClosed:
+            with self._new:
+                self.closed = True
+                self._new.notify_all()
+
+    def _decode(self, data):
+        if isinstance(data, str):
+            message = json.loads(data)
+            if message["op"] == "advertise":
+                for channel in message["channels"]:
+                    self.channels[channel["topic"]] = channel
+            return message
+        opcode = data[0]
+        if opcode == 1:
+            sub, log_time = struct.unpack_from("<IQ", data, 1)
+            return {"op": "message", "topic": self._subscriptions.get(sub),
+                    "log_time": log_time, "payload": json.loads(data[13:])}
+        if opcode == 2:
+            return {"op": "time", "time": struct.unpack_from("<Q", data, 1)[0]}
+        if opcode == 5:
+            status, now, speed, did_seek, length = struct.unpack_from(
+                "<BQfBI", data, 1)
+            return {"op": "playbackState", "status": status, "time": now,
+                    "speed": speed, "did_seek": bool(did_seek),
+                    "request_id": data[19:19 + length].decode() or None}
+        return {"op": f"binary-{opcode}"}
+
+    def wait_for(self, predicate, timeout=10.0):
+        """The first frame from now on (or already received, at or after
+        index `start`) that matches; fails after `timeout` seconds."""
+        deadline = time.monotonic() + timeout
+        with self._new:
+            index = 0
+            while True:
+                while index < len(self.frames):
+                    if predicate(self.frames[index]):
+                        return index, self.frames[index]
+                    index += 1
+                remaining = deadline - time.monotonic()
+                assert remaining > 0, f"no matching frame; got {self.frames[-5:]}"
+                self._new.wait(remaining)
+
+    def subscribe(self, *topics):
+        subscriptions = []
+        for topic in topics:
+            sub = self._next_id
+            self._next_id += 1
+            self._subscriptions[sub] = topic
+            subscriptions.append({"id": sub, "channelId": self.channels[topic]["id"]})
+        self.ws.send(json.dumps({"op": "subscribe", "subscriptions": subscriptions}))
+
+    def unsubscribe(self, *topics):
+        ids = [sub for sub, topic in self._subscriptions.items() if topic in topics]
+        self.ws.send(json.dumps({"op": "unsubscribe", "subscriptionIds": ids}))
+
+    def request(self, request_id, command=PAUSE, speed=1.0, seek=None):
+        self.ws.send(b"\x03" + struct.pack(
+            "<BfBQI", command, speed, seek is not None, seek or 0,
+            len(request_id)) + request_id.encode())
+
+    def close(self):
+        self.ws.close()
+
+
+@pytest.fixture
+def qualification(tmp_path):
+    return write_qualification_source(tmp_path / "run.mcap")
+
+
+@pytest.fixture
+def serve(adapter, tmp_path):
+    """Serve a source on an ephemeral loopback port; close it afterwards."""
+    bridges = []
+
+    def start(source, **options):
+        playback = open_playback(source, cache_dir=tmp_path / "cache")
+        bridge = adapter.serve(playback, "127.0.0.1", 0, **options)
+        bridges.append(bridge)
+        return bridge
+
+    yield start
+    for bridge in bridges:
+        bridge.close()
+
+
+def exported_schemas(source, tmp_path):
+    """Topic -> (encoding, schema name, schema encoding, schema text) as the
+    export writes them."""
+    output = tmp_path / "export.mcap"
+    export_recording(source, output, profile="visualization-json")
+    with open(output, "rb") as stream:
+        summary = make_reader(stream).get_summary()
+    return {channel.topic: (channel.message_encoding,
+                            summary.schemas[channel.schema_id].name,
+                            summary.schemas[channel.schema_id].encoding,
+                            summary.schemas[channel.schema_id].data.decode())
+            for channel in summary.channels.values()}
+
+
+def exported_messages(source, tmp_path):
+    """Every exported Message as (topic, log time, payload), in stored
+    order, read back from the export with the mcap reader."""
+    output = tmp_path / "messages.mcap"
+    export_recording(source, output, profile="visualization-json")
+    with open(output, "rb") as stream:
+        return [(channel.topic, message.log_time, json.loads(message.data))
+                for _, channel, message in make_reader(stream).iter_messages(
+                    log_time_order=False)]
+
+
+def key(entry):
+    """(time, record_index) of a received or exported Message."""
+    return (entry[1], int(entry[2]["sil"]["record_index"]))
+
+
+def received(client, start=0):
+    return [(f["topic"], f["log_time"], f["payload"])
+            for f in client.frames[start:] if f["op"] == "message"]
+
+
+def latest_at(messages, topics, time_ns):
+    found = {}
+    for message in messages:
+        if message[0] in topics and message[1] <= time_ns:
+            if message[0] not in found or key(message) > key(found[message[0]]):
+                found[message[0]] = message
+    return sorted(found.values(), key=key)
+
+
+def connect_subscribed(bridge, *topics):
+    client = FoxgloveClient(bridge.url)
+    client.wait_for(lambda f: f["op"] == "advertise")
+    client.subscribe(*(topics or tuple(client.channels)))
+    return client
+
+
+def test_the_sdk_refuses_the_legacy_subprotocol(serve, qualification):
+    from websockets.exceptions import InvalidStatus
+    bridge = serve(qualification)
+    with pytest.raises(InvalidStatus):
+        FoxgloveClient(bridge.url, subprotocol="foxglove.websocket.v1")
+
+
+def test_server_advertises_range_time_control_and_the_export_schemas(
+        serve, qualification, tmp_path):
+    bridge = serve(qualification)
+    client = FoxgloveClient(bridge.url)
+    _, info = client.wait_for(lambda f: f["op"] == "serverInfo")
+    assert {"time", "playbackControl"} <= set(info["capabilities"])
+    assert info["dataStartTime"] == {"sec": 0, "nsec": 0}
+    assert info["dataEndTime"] == {"sec": 9, "nsec": 990_000_000}
+    client.wait_for(lambda f: f["op"] == "advertise")
+    advertised = {topic: (c["encoding"], c["schemaName"], c["schemaEncoding"],
+                          c["schema"]) for topic, c in client.channels.items()}
+    assert advertised == exported_schemas(qualification, tmp_path)
+    client.close()
+
+
+def test_a_new_client_gets_the_latest_values_at_the_start(
+        serve, qualification, tmp_path):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    _, state = client.wait_for(lambda f: f["op"] == "playbackState")
+    assert (state["status"], state["time"], state["did_seek"]) == (PAUSED, 0, False)
+    client.wait_for(lambda f: len(received(client)) >= 5)
+    time.sleep(0.2)  # nothing else may follow while paused
+    messages = exported_messages(qualification, tmp_path)
+    assert received(client) == latest_at(messages, set(client.channels), 0)
+    assert "sparse" not in {topic for topic, _, _ in received(client)}
+    burst = [p for topic, _, p in received(client) if topic == "burst"]
+    assert burst[0]["fields"]["id"] == 2  # the last of the equal-time Burst
+    counter = [p for topic, _, p in received(client) if topic == "counter"]
+    assert counter[0]["fields"]["count"] == "9007199254740992"
+    client.close()
+
+
+def initial_state(client):
+    return client.wait_for(lambda f: f["op"] == "playbackState")[1]
+
+
+def test_play_delivers_every_message_in_order_with_its_time_then_ends(
+        serve, qualification, tmp_path):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play-1", PLAY, speed=10.0)
+    _, answer = client.wait_for(lambda f: f.get("request_id") == "play-1")
+    assert (answer["status"], answer["speed"]) == (PLAYING, 10.0)
+    _, ended = client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
+    assert ended["time"] == 9_990 * MS
+    messages = exported_messages(qualification, tmp_path)
+    after_start = sorted((m for m in messages if m[1] > 0), key=key)
+    assert received(client) == latest_at(messages, set(client.channels), 0) + after_start
+    times = [f["time"] for f in client.frames if f["op"] == "time"]
+    assert times == sorted(times) and times[-1] == 9_990 * MS
+    client.close()
