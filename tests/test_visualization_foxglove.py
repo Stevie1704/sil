@@ -191,9 +191,10 @@ def serve(adapter, tmp_path):
     """Serve a source on an ephemeral loopback port; close it afterwards."""
     bridges = []
 
-    def start(source, queue_limits=None, **options):
-        playback = open_playback(source, cache_dir=tmp_path / "cache",
-                                 queue_limits=queue_limits)
+    def start(source, queue_limits=None, adjust=lambda playback: playback,
+              **options):
+        playback = adjust(open_playback(source, cache_dir=tmp_path / "cache",
+                                        queue_limits=queue_limits))
         bridge = adapter.serve(playback, "127.0.0.1", 0, **options)
         bridges.append(bridge)
         return bridge
@@ -490,16 +491,29 @@ def test_queued_values_from_before_a_seek_never_follow_its_reset(
     client.close()
 
 
+def slow_disconnect(playback, monkeypatch, seconds=0.5):
+    """Make the controller's disconnect handling take `seconds`, so that a
+    next client can try to connect while it runs."""
+    disconnect = playback.disconnect
+
+    def slow():
+        time.sleep(seconds)
+        return disconnect()
+
+    monkeypatch.setattr(playback, "disconnect", slow)
+    return playback
+
+
 def test_reconnect_starts_a_new_session_paused_with_fresh_backfill(
-        serve, qualification, tmp_path):
-    bridge = serve(qualification)
+        serve, qualification, tmp_path, monkeypatch):
+    bridge = serve(qualification, adjust=lambda p: slow_disconnect(p, monkeypatch))
     first = connect_subscribed(bridge)
     _, info = first.wait_for(lambda f: f["op"] == "serverInfo")
     initial_state(first)
     first.request("play", PLAY, speed=1.0)
     first.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 300 * MS)
     first.close()
-    second = connect_subscribed(bridge)
+    second = connect_when_free(bridge)
     _, again = second.wait_for(lambda f: f["op"] == "serverInfo")
     assert again["sessionId"] != info["sessionId"]
     reset, state = second.wait_for(lambda f: f["op"] == "playbackState")

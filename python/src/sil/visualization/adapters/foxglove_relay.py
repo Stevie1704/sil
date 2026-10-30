@@ -31,8 +31,8 @@ the messages of one client in order, so when the fence arrives, the SDK
 has registered the subscription. The relay does not forward the answer to
 a fence to the client.
 
-The relay admits one client at a time and answers a second one with HTTP
-409. It removes
+The relay admits one client at a time. It answers a second one with HTTP
+409 until it has handled the disconnect of the first one. It removes
 `Sec-WebSocket-Extensions` from the client's handshake, so no compression
 hides the frames that it reads. It uses only the standard library.
 """
@@ -81,8 +81,9 @@ class Subscription(NamedTuple):
 class Relay:
     """Listen on `host:port`; relay one client at a time to the SDK server
     on loopback `upstream_port`. `on_connect` runs when the SDK accepted
-    the client's handshake, `on_disconnect` when that connection ended.
-    `changed` is notified whenever a counter or `connected` changes."""
+    the client's handshake, `on_disconnect` when that connection ended; the
+    next client is admitted after `on_disconnect` returned. `changed` is
+    notified whenever a counter or `connected` changes."""
 
     def __init__(self, host: str, port: int, upstream_port: int, *,
                  on_connect: Callable[[], None],
@@ -180,12 +181,15 @@ class Relay:
                 _close(upstream)
             with self.changed:
                 self.connected = False
-                self._busy = False
-                self._sockets = []
                 self._forget_tokens()
                 self.changed.notify_all()
-            if accepted:
-                self._on_disconnect()
+            try:
+                if accepted:  # before a next client can subscribe
+                    self._on_disconnect()
+            finally:
+                with self.changed:
+                    self._busy = False
+                    self._sockets = []
 
     def _forget_tokens(self) -> None:
         """Requests of an earlier connection claim nothing (lock held)."""
