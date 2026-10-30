@@ -269,7 +269,10 @@ disposable; delete it at any time.
 | `disconnect()` | The client went away: pause, drop the subscription, the queue and the request IDs. |
 | `close()` | End the session and close the index. |
 
-Playback starts paused at the first Message time, with no subscription. The
+Playback starts paused at the first Message time, with no subscription. It
+starts before the first instant: nothing precedes it, so a new subscription
+gets no `Backfill`, and play delivers every Message at the first time as a
+`Message`, also each Message of an equal-time Burst. The
 rate is a finite number from 0.1 to 10. A seek accepts any time from the
 first to the last Message time, inclusive. A source without Messages has no
 playback range: a seek is refused, and play ends at once.
@@ -291,7 +294,7 @@ state, which the command did not change.
 | `paused` | Playback does not advance. |
 | `playing` | Playback advances by elapsed time times the rate. |
 | `buffering` | A reconstruction is pending, or the adapter drains slower than the rate. |
-| `ended` | All Messages up to the last time are delivered. Play without a seek restarts at the first time. |
+| `ended` | All Messages up to the last time are delivered. Play without a seek restarts before the first instant: `Reset` and `Commit` without `Backfill`, then every Message again. |
 | `failed` | The source changed or the index is unusable. `diagnostic` tells why. Only `disconnect` and `close` are accepted. |
 | `closed` | The session ended. |
 
@@ -324,6 +327,8 @@ A seek to `t` gives `Reset`, the latest Message of each subscribed Channel
 at or before `t`, then `Commit`. A Channel without a Message up to `t` gets
 no `Backfill`: missing data is never a zero. Equal times resolve to the
 highest `record_index`. After the commit, play starts strictly after `t`.
+This rule also holds for an explicit seek to the first time; only a fresh
+session and the restart after `ended` start before the first instant.
 
 During play, each subscribed Message is delivered once, in
 (publication time, `record_index`) order, also for equal times and for
@@ -379,7 +384,7 @@ sil playback serve run.mcap --adapter foxglove --listen 127.0.0.1:8765
 ```
 
 The command validates and indexes the source (see [The index](#the-index)),
-starts paused at the first instant, prints the address and serves until
+starts paused before the first instant, prints the address and serves until
 Ctrl-C or SIGTERM. Exit codes: 0 stopped by a signal, 2 rejected input or
 configuration (also a missing extra, a source without Messages, or a source
 that ends after 2^32 s), 1 an I/O failure such as a port in use.

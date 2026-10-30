@@ -25,7 +25,10 @@ Delivery: `drain` returns notifications in order. Continuous playback
 enqueues every subscribed Message crossed, in (publication_time_ns,
 record_index) order, as `Message`. A seek enqueues `Reset`, then the latest
 Message per subscribed Channel at or before the seek time as `Backfill`,
-then `Commit`. A Message the Navigator refuses as oversize is reported in
+then `Commit`, and playback continues strictly after the seek time. A fresh
+session and Play after `ended` start before the first instant instead, so
+every Message at the first time is delivered as `Message`. A Message the
+Navigator refuses as oversize is reported in
 its place as `Refused`; nothing is skipped silently. The queue is bounded by
 `QueueLimits`: when it is full, playback stops advancing and reports
 `buffering` until the adapter drains it. A source that changes, or an index
@@ -56,6 +59,7 @@ REQUEST_CACHE = 256
 MIN_RATE = 0.1
 MAX_RATE = 10.0
 _AFTER_INSTANT = 2**63 - 1  # record_index after every Message of an instant
+_BEFORE_INSTANT = -1  # record_index before every Message of an instant
 _MAX_PAGE_ROWS = 1000
 
 
@@ -222,7 +226,7 @@ def open_playback(source: str | Path, *, cache_dir: str | Path | None = None,
 
 class Playback:
     """The playback controller over one Navigator, which it owns and
-    closes. It starts paused at the first instant of the source.
+    closes. It starts paused before the first instant of the source.
     `description` is the Navigator's `describe()` result: an adapter takes
     the Channel schemas for its payload conversion from it."""
 
@@ -245,7 +249,9 @@ class Playback:
         self._playing = False
         self._rate = 1.0
         self._cursor = self._start
-        self._after = None if self._start is None else (self._start, _AFTER_INSTANT)
+        # A fresh session plays every Message of the first instant.
+        self._after = (None if self._start is None
+                       else (self._start, _BEFORE_INSTANT))
         self._anchor = (0, self._cursor)
         # While buffering: the playhead that playback holds until the queue
         # drained. None while not buffering.
@@ -260,6 +266,7 @@ class Playback:
         self._unreconstructed: set[str] = set()
         self._reset_pending = False
         self._seek: int | None = None
+        self._seek_after: tuple[int, int] | None = None  # position after it
         self._request_id: str | None = None
         self._requests: OrderedDict[str, tuple] = OrderedDict()
         self._queue: deque = deque()
@@ -304,9 +311,10 @@ class Playback:
                     self._anchor = (now, self._playhead(now))
                 self._rate = float(rate)
             if position_ns is not None:
-                self._start_seek(position_ns)
+                self._start_seek((position_ns, _AFTER_INSTANT))
             elif playing and self._ended and self._start is not None:
-                self._start_seek(self._start)  # Play after the end restarts
+                # Play after the end restarts before the first instant.
+                self._start_seek((self._start, _BEFORE_INSTANT))
             if playing is not None:
                 self._set_playing(playing, now)
             self._request_id = request_id
@@ -344,8 +352,8 @@ class Playback:
             self._drop(lambda n: _channel(n) in removed)
             if self._fresh and wanted:
                 self._fresh = False
-                self._start_seek(self._seek if self._reset_pending
-                                 else self._cursor)
+                self._start_seek(self._seek_after if self._reset_pending
+                                 else self._after)
             self._lock.notify_all()
             return self._state()
 
@@ -452,10 +460,7 @@ class Playback:
     def _take_job(self) -> _Job | None:
         if not self._pending():
             return None
-        if self._reset_pending:
-            after = None if self._seek is None else (self._seek, _AFTER_INSTANT)
-        else:
-            after = self._after
+        after = self._seek_after if self._reset_pending else self._after
         channels = tuple(c for c in self._subscription
                          if c in self._unreconstructed)
         return _Job(self._generation, self._reset_pending, after, channels)
@@ -518,7 +523,8 @@ class Playback:
         if not read.channels or time_ns > read.target or (
                 time_ns == read.target and record_index == _AFTER_INSTANT):
             return [], True
-        return self._page(read.channels, time_ns, read.target + 1, read.after,
+        return self._page(read.channels, time_ns, read.target + 1,
+                          None if record_index == _BEFORE_INSTANT else read.after,
                           read.limits)
 
     def _page(self, channels, start_ns, end_ns, after, limits) -> tuple[list, bool]:
@@ -543,7 +549,7 @@ class Playback:
             self._enqueue(Reset(job.generation, self._seek))
             self._cursor = self._seek
             self._after = job.after
-            self._seek = None
+            self._seek = self._seek_after = None
             self._reset_pending = False
         for item in items:
             self._enqueue(_refused(item, job.generation, True)
@@ -589,10 +595,13 @@ class Playback:
             self._stall_target = target
             self._enqueue(StateChanged(self._state()))
 
-    def _start_seek(self, position_ns: int) -> None:
+    def _start_seek(self, after: tuple[int, int] | None) -> None:
+        """Reconstruct at `after` = (time, record_index), then play after
+        it; None for a source without Messages."""
         self._generation += 1
         self._reset_pending = True
-        self._seek = position_ns
+        self._seek_after = after
+        self._seek = None if after is None else after[0]
         self._unreconstructed = set(self._subscription)
         self._ended = False
         self._stall_target = None

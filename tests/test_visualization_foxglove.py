@@ -282,14 +282,13 @@ def test_a_direct_connection_to_the_sdk_port_cannot_affect_playback(
     time.sleep(0.5)
     messages = exported_messages(qualification, tmp_path)
     assert all(f.get("status") != PLAYING for f in client.frames)
-    assert received(client) == latest_at(messages, set(client.channels), 0)
+    assert received(client) == []  # nothing precedes the first instant
     # The SDK tells the direct client that its request got no answer.
     direct.wait_for(lambda f: f["op"] == "status" and f["level"] == 2)
     direct.close()
     client.request("play", PLAY, speed=10.0)
     client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
-    after_start = sorted((m for m in messages if m[1] > 0), key=key)
-    assert received(client) == latest_at(messages, set(client.channels), 0) + after_start
+    assert received(client) == sorted(messages, key=key)
     client.close()
 
 
@@ -315,20 +314,22 @@ def test_server_advertises_range_time_control_and_the_export_schemas(
     client.close()
 
 
-def test_a_new_client_gets_the_latest_values_at_the_start(
+def test_a_new_client_at_the_start_gets_the_whole_first_instant_on_play(
         serve, qualification, tmp_path):
     bridge = serve(qualification)
     client = connect_subscribed(bridge)
     _, state = client.wait_for(lambda f: f["op"] == "playbackState")
     assert (state["status"], state["time"], state["did_seek"]) == (PAUSED, 0, False)
-    client.wait_for(lambda f: len(received(client)) >= 5)
-    time.sleep(0.2)  # nothing else may follow while paused
+    time.sleep(0.2)
+    assert received(client) == []  # nothing precedes the first instant
+    client.request("play", PLAY, speed=0.1)
     messages = exported_messages(qualification, tmp_path)
-    assert received(client) == latest_at(messages, set(client.channels), 0)
-    assert "sparse" not in {topic for topic, _, _ in received(client)}
-    burst = [p for topic, _, p in received(client) if topic == "burst"]
-    assert burst[0]["fields"]["id"] == 2  # the last of the equal-time Burst
-    counter = [p for topic, _, p in received(client) if topic == "counter"]
+    first_instant = sorted((m for m in messages if m[1] == 0), key=key)
+    client.wait_for(lambda f: len(received(client)) >= len(first_instant))
+    assert received(client)[:len(first_instant)] == first_instant
+    burst = [p["fields"]["id"] for topic, _, p in first_instant if topic == "burst"]
+    assert burst == [0, 1, 2]  # the whole equal-time Burst, as Messages
+    counter = [p for topic, _, p in first_instant if topic == "counter"]
     assert counter[0]["fields"]["count"] == "9007199254740992"
     client.close()
 
@@ -348,8 +349,7 @@ def test_play_delivers_every_message_in_order_with_its_time_then_ends(
     _, ended = client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
     assert ended["time"] == 9_990 * MS
     messages = exported_messages(qualification, tmp_path)
-    after_start = sorted((m for m in messages if m[1] > 0), key=key)
-    assert received(client) == latest_at(messages, set(client.channels), 0) + after_start
+    assert received(client) == sorted(messages, key=key)
     times = [f["time"] for f in client.frames if f["op"] == "time"]
     assert times == sorted(times) and times[-1] == 9_990 * MS
     client.close()
