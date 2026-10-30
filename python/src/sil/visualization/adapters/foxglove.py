@@ -403,13 +403,8 @@ class Bridge:
             schema=foxglove.Schema(name=summary.schema_name,
                                    encoding=interchange.SCHEMA_ENCODING,
                                    data=codec.json_schema()),
-            context=self._context, metadata={
-                "sil_profile": interchange.PROFILE,
-                "sil_profile_version": str(interchange.PROFILE_VERSION),
-                "sil_source_sha256": source_sha256,
-                "sil_source_schema": summary.schema_name,
-                "sil_source_schema_sha256": summary.schema_sha256,
-            })
+            context=self._context, metadata=interchange.channel_metadata(
+                source_sha256, summary.schema_name, summary.schema_sha256))
 
     def _session_id(self) -> str:
         self._sessions += 1

@@ -153,13 +153,9 @@ def _register(writer: Writer, recording: Source, selected,
                 codec.json_schema())
         ids[channel.name] = writer.register_channel(
             channel.name, interchange.MESSAGE_ENCODING,
-            schema_ids[channel.schema_sha256], metadata={
-                "sil_profile": interchange.PROFILE,
-                "sil_profile_version": str(interchange.PROFILE_VERSION),
-                "sil_source_sha256": recording.sha256,
-                "sil_source_schema": channel.schema_name,
-                "sil_source_schema_sha256": channel.schema_sha256,
-            })
+            schema_ids[channel.schema_sha256],
+            metadata=interchange.channel_metadata(
+                recording.sha256, channel.schema_name, channel.schema_sha256))
     return ids
 
 
