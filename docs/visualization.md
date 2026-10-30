@@ -454,7 +454,8 @@ adapter therefore puts a relay in front of the SDK server
 (`adapters/foxglove_relay.py`). The relay reports which barrier statuses and
 seek states the SDK actually wrote. The adapter keeps at most half the SDK
 queue unacknowledged, so the SDK never drops a Message for the relay's
-client. The relay also marks its client's playback requests and
+client. It also keeps at most `Bridge(window_bytes=32 MiB)` of encoded
+payloads unacknowledged; a single larger Message goes alone. The relay also marks its client's playback requests and
 subscriptions with one-time tokens, so a direct connection to the SDK port
 cannot bypass this flow control. A slow client slows
 the relay, the adapter stops taking Messages, and the controller reports

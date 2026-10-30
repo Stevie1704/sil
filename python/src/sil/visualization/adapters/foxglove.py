@@ -33,9 +33,10 @@ Mapping:
   client start fresh.
 
 Flow control: fewer Messages than the SDK's per-client backlog are ever
-unacknowledged by the relay, so the SDK's lossy queue never drops one. A
-slow client stops acknowledgements; the adapter then stops draining the
-controller, which reports buffering.
+unacknowledged by the relay, so the SDK's lossy queue never drops one, and
+their encoded payloads hold at most `window_bytes` (one larger Message goes
+alone). A slow client stops acknowledgements; the adapter then stops
+draining the controller, which reports buffering.
 
 The import of `foxglove` is here only: export and the other commands work
 without the `sil[foxglove]` extra.
@@ -99,7 +100,7 @@ class Bridge:
 
     def __init__(self, playback: Playback, host: str, port: int, *,
                  backlog: int = 1024, max_message_bytes: int = 8 * MIB,
-                 stall_timeout: float = 30.0):
+                 window_bytes: int = 32 * MIB, stall_timeout: float = 30.0):
         described = playback.description
         if described.start_ns is None:
             raise UnsupportedSource("the source has no Messages, so it has no "
@@ -110,8 +111,13 @@ class Bridge:
                 f"ranges end at {MAX_TIME_NS} ns (2^32 s)")
         if backlog < 4:
             raise ValueError("backlog must be at least 4")
+        if isinstance(window_bytes, bool) or not isinstance(window_bytes, int) \
+                or window_bytes <= 0:
+            raise ValueError(f"window_bytes must be a positive integer, not "
+                             f"{window_bytes!r}")
         self._playback = playback
         self._window = backlog // 2  # unacknowledged data-queue entries
+        self._window_bytes = window_bytes  # and their payload bytes
         self._max_message_bytes = max_message_bytes
         self._closed = False
         self._sessions = 0
@@ -278,10 +284,16 @@ class Bridge:
                        f"{message.record_index}): its JSON payload has "
                        f"{len(payload)} bytes, above {self._max_message_bytes}")
             return
+        size = len(payload)
+        while (not self._closed and self._unacknowledged_bytes()
+               and self._unacknowledged_bytes() + size > self._window_bytes):
+            self._await_acknowledgement(
+                lambda: self._unacknowledged_bytes() + size <= self._window_bytes)
         self._channels[message.channel].log(payload,
                                            log_time=message.publication_time_ns)
         with self._changed:
             self._logged += 1
+            self._logged_bytes += size
         self._latest_logged = message.publication_time_ns
 
     def _reset(self, reset: Reset) -> None:
@@ -308,9 +320,10 @@ class Bridge:
         """Forget the entries of a previous client. Barrier numbers keep
         counting, so a late barrier of that client acknowledges nothing."""
         with self._changed:
-            self._logged = 0
-            self._acked = 0
-            self._barriers = {}  # barrier number -> entries logged up to it
+            self._logged = self._logged_bytes = 0
+            self._acked = self._acked_bytes = 0
+            # barrier number -> (entries, payload bytes) logged up to it
+            self._barriers = {}
             self._barrier_sent_at = 0.0
             self._time = None
 
@@ -318,7 +331,9 @@ class Bridge:
         """Entries known to have left the SDK queue (lock held)."""
         seen = self._relay.barrier_seen
         for barrier in [b for b in self._barriers if b <= seen]:
-            self._acked = max(self._acked, self._barriers.pop(barrier))
+            entries, size = self._barriers.pop(barrier)
+            self._acked = max(self._acked, entries)
+            self._acked_bytes = max(self._acked_bytes, size)
         return self._acked
 
     def _unacknowledged(self) -> int:
@@ -327,7 +342,18 @@ class Bridge:
                 return 0
             return self._logged - self._acked_floor()
 
+    def _unacknowledged_bytes(self) -> int:
+        with self._changed:
+            if not self._relay.connected:
+                return 0
+            self._acked_floor()
+            return self._logged_bytes - self._acked_bytes
+
     def _room(self) -> int:
+        """Entries the delivery thread may drain now: none while the byte
+        window is full."""
+        if self._unacknowledged_bytes() >= self._window_bytes:
+            return 0
         return self._window - self._unacknowledged()
 
     def _barrier(self) -> None:
@@ -341,16 +367,19 @@ class Bridge:
             number = self._next_barrier
             self._next_barrier += 1
             self._logged += 1  # the barrier takes a slot of the same queue
-            self._barriers[number] = self._logged
+            self._barriers[number] = (self._logged, self._logged_bytes)
             self._barrier_sent_at = time.monotonic()
         self._server.publish_status("SiL delivery barrier", StatusLevel.Info,
                                     id=f"{BARRIER_ID}{number}")
 
-    def _await_acknowledgement(self) -> None:
+    def _await_acknowledgement(self, condition=None) -> None:
+        """Send a barrier and wait a while for `condition` (default: room
+        in the window)."""
         with self._changed:
             connection = self._relay.connection
         self._barrier()
-        self._wait(lambda: self._room() > 0, connection, timeout=_RETRY_S)
+        self._wait(condition or (lambda: self._room() > 0), connection,
+                   timeout=_RETRY_S)
 
     def _settle(self) -> bool:
         """Wait until every entry logged so far left the SDK queue. False

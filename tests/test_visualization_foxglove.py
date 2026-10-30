@@ -491,6 +491,38 @@ def test_a_stalled_client_buffers_and_then_receives_every_message(
     client.close()
 
 
+class LoggedBytes:
+    """Wraps a bridge's SDK channel: records the bridge's unacknowledged
+    bytes, including the payload, each time it logs a Message."""
+
+    def __init__(self, bridge, topic):
+        self._bridge, self._channel = bridge, bridge._channels[topic]
+        self.in_flight = []
+        bridge._channels[topic] = self
+
+    def log(self, payload, *, log_time):
+        self.in_flight.append(self._bridge._unacknowledged_bytes() + len(payload))
+        self._channel.log(payload, log_time=log_time)
+
+
+def test_unacknowledged_bytes_stay_within_the_window(serve, big_blobs):
+    bridge = serve(big_blobs, backlog=1024, window_bytes=3 * 2**20)
+    logged = LoggedBytes(bridge, "blobs")
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=10.0)
+    client.wait_for(lambda f: f["op"] == "message")
+    client.reading.clear()
+    time.sleep(0.5)  # a stalled client: acknowledgements stop
+    client.reading.set()
+    client.wait_for(lambda f: f.get("status") == ENDED, timeout=60)
+
+    assert numbers(received(client)) == list(range(40))
+    assert max(logged.in_flight) <= 3 * 2**20
+    with pytest.raises(ValueError, match="window_bytes"):
+        serve(big_blobs, window_bytes=0)
+
+
 def test_queued_values_from_before_a_seek_never_follow_its_reset(
         serve, big_blobs):
     bridge = serve(big_blobs, backlog=32)
