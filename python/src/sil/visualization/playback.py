@@ -31,7 +31,8 @@ every Message at the first time is delivered as `Message`. A Message the
 Navigator refuses as oversize is reported in
 its place as `Refused`; nothing is skipped silently. The queue is bounded by
 `QueueLimits`: when it is full, playback stops advancing and reports
-`buffering` until the adapter drains it. A source that changes, or an index
+`buffering` until the adapter drains it. Backfill also waits for room; the
+seek commits only after all of it is queued. A source that changes, or an index
 that becomes unusable, ends the session with status `failed`.
 """
 
@@ -192,6 +193,15 @@ class _Job:
     channels: tuple[str, ...]
 
 
+@dataclass
+class _Staged:
+    """A completed reconstruction whose Backfill waits for queue room."""
+
+    job: _Job
+    items: deque
+    queued: set[str]  # Channels whose Backfill or Refused is queued
+
+
 @dataclass(frozen=True)
 class _Read:
     generation: int
@@ -264,6 +274,7 @@ class Playback:
         self._fresh = False  # after a disconnect: the next client needs a Reset
         self._subscription: tuple[str, ...] = ()
         self._unreconstructed: set[str] = set()
+        self._staged: _Staged | None = None
         self._reset_pending = False
         self._seek: int | None = None
         self._seek_after: tuple[int, int] | None = None  # position after it
@@ -343,6 +354,7 @@ class Playback:
                 return self._state()
             removed = set(self._subscription) - set(wanted)
             added = set(wanted) - set(self._subscription)
+            self._discard_staged()
             self._generation += 1
             self._unreconstructed = (self._unreconstructed & set(wanted)) | added
             self._subscription = wanted
@@ -368,6 +380,7 @@ class Playback:
             self._stall_target = None
             self._subscription = ()
             self._unreconstructed = set()
+            self._staged = None
             self._requests.clear()
             self._generation += 1
             self._drop(lambda n: True)
@@ -420,6 +433,10 @@ class Playback:
         with self._lock:
             if self._closed or self._busy or self._fault is not None:
                 return
+            if self._staged is not None:
+                self._fill_staged()
+                self._lock.notify_all()
+                return
             work = self._take_job() or self._take_read()
             if work is None:
                 return
@@ -453,7 +470,9 @@ class Playback:
             with self._lock:
                 if self._closed:
                     return
-                if self._fault is None and (self._pending() or self._more):
+                waiting = self._staged is not None  # until a drain makes room
+                if self._fault is None and (
+                        (self._pending() and not waiting) or self._more):
                     continue
                 self._lock.wait(tick_ns / 1e9 if self._playing else None)
 
@@ -547,18 +566,58 @@ class Playback:
             return  # superseded while it was read
         if job.reset:
             self._enqueue(Reset(job.generation, self._seek))
+        self._staged = _Staged(job, deque(items), set())
+        self._fill_staged()
+
+    def _fill_staged(self) -> None:
+        """Queue the staged Backfill as room allows; commit once all of it
+        is queued. Until then the state stays pending (`buffering`)."""
+        staged = self._staged
+        while staged.items:
+            notification = self._backfill(staged.items[0], staged.job.generation)
+            if notification is None:
+                return  # no room: a drain makes some
+            staged.items.popleft()
+            self._enqueue(notification)
+            staged.queued.add(_channel(notification))
+        self._staged = None
+        job = staged.job
+        if job.reset:
             self._cursor = self._seek
             self._after = job.after
             self._seek = self._seek_after = None
             self._reset_pending = False
-        for item in items:
-            self._enqueue(_refused(item, job.generation, True)
-                          if isinstance(item, LimitExceeded)
-                          else Backfill(job.generation, item))
         self._unreconstructed.clear()
         if self._playing:
             self._anchor = (self._clock(), self._cursor)
         self._enqueue(Commit(self._state()))
+
+    def _backfill(self, item, generation: int) -> Backfill | Refused | None:
+        """The notification for one reconstructed item, or None while the
+        queue has no room for it. A Message larger than the queue byte limit
+        is refused in its place."""
+        if self._queued_messages >= self._limits.max_messages:
+            return None
+        if isinstance(item, LimitExceeded):
+            return _refused(item, generation, True)
+        size = len(item.data)
+        if size > self._limits.max_bytes:
+            return Refused(generation, item.channel, item.publication_time_ns,
+                           item.record_index, size, True,
+                           f"Message record_index {item.record_index} has "
+                           f"{size} bytes; the queue limit is "
+                           f"{self._limits.max_bytes}")
+        if self._queued_bytes + size > self._limits.max_bytes:
+            return None
+        return Backfill(generation, item)
+
+    def _discard_staged(self) -> None:
+        """Drop staged Backfill that a new generation supersedes. Channels
+        whose Backfill is already queued are not reconstructed again, unless
+        a Reset is still pending."""
+        if self._staged is not None and not self._staged.job.reset:
+            self._unreconstructed -= self._staged.queued
+        self._staged = None
 
     def _advance(self, read: _Read, items: list, complete: bool) -> None:
         if (read.generation != self._generation or not self._playing
@@ -598,6 +657,7 @@ class Playback:
     def _start_seek(self, after: tuple[int, int] | None) -> None:
         """Reconstruct at `after` = (time, record_index), then play after
         it; None for a source without Messages."""
+        self._staged = None
         self._generation += 1
         self._reset_pending = True
         self._seek_after = after

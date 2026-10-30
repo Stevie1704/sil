@@ -633,6 +633,65 @@ def test_the_queue_never_holds_more_than_its_bounds(tmp_path, clock):
     assert playback.status().status == "buffering"
 
 
+FOUR = {name: "e.Event" for name in "abcd"}
+
+
+@pytest.mark.parametrize("queue_limits", [QueueLimits(max_messages=2),
+                                          QueueLimits(max_bytes=16)])
+def test_backfill_waits_for_room_in_the_queue_and_commits_when_all_is_queued(
+        tmp_path, clock, queue_limits):
+    playback, source = make_playback(
+        tmp_path, [(name, S + i * MS, {"value": i})
+                   for i, name in enumerate("abcd")] + [("a", 2 * S, {"value": 9})],
+        clock, channels=FOUR, queue_limits=queue_limits)
+    records = reference_records(source)
+    playback.set_subscription(list("abcd"))
+    settle(playback)
+    playback.drain()
+
+    playback.configure("seek", position_ns=S + 3 * MS)
+    delivered, states = [], []
+    for _ in range(10):
+        playback.pump()
+        states.append(playback.status())
+        batch = playback.drain(max_items=2)
+        assert len(records_of(batch, Backfill)) <= 2
+        delivered += batch
+
+    assert states[0].status == "buffering" and states[0].pending
+    assert states[0].cursor_ns == S  # not committed while backfill waits
+    assert kinds(delivered) == ["Reset", "Backfill", "Backfill", "Backfill",
+                                "Backfill", "Commit"]
+    assert records_of(delivered, Backfill) == latest(records, "abcd", S + 3 * MS)
+    assert delivered[-1].state.cursor_ns == S + 3 * MS
+    assert playback.status().status == "paused"
+
+
+def test_a_seek_while_backfill_waits_discards_the_old_generation(
+        tmp_path, clock):
+    playback, source = make_playback(
+        tmp_path, [(name, S + i * MS, {"value": i}) for i, name in enumerate("abcd")]
+        + [(name, 2 * S, {"value": 10 + i}) for i, name in enumerate("abcd")],
+        clock, channels=FOUR, queue_limits=QueueLimits(max_messages=2))
+    records = reference_records(source)
+    playback.set_subscription(list("abcd"))
+    settle(playback)
+    playback.drain()
+    playback.configure("seek-1", position_ns=S + 3 * MS)
+    playback.pump()  # two Backfill queued; two wait
+
+    playback.configure("seek-2", position_ns=2 * S)
+    delivered = []
+    for _ in range(10):
+        playback.pump()
+        delivered += playback.drain()
+
+    assert kinds(delivered) == ["Reset", "Backfill", "Backfill", "Backfill",
+                                "Backfill", "Commit"]
+    assert delivered[0].position_ns == 2 * S
+    assert records_of(delivered, Backfill) == latest(records, "abcd", 2 * S)
+
+
 BLOB = {"e.Event": EVENT["e.Event"],
         "b.Blob": {"fields": [{"name": "raw", "type": "u8", "count": 64}]}}
 
@@ -689,6 +748,27 @@ def test_a_message_larger_than_the_queue_is_refused_not_skipped(tmp_path, clock)
     assert kinds(played) == ["Message", "Refused", "Message"]
     assert played[1].record_index == 1 and not played[1].backfill
     assert playback.status().status == "ended"
+
+
+def test_a_backfill_larger_than_the_queue_is_refused_in_its_place(
+        tmp_path, clock):
+    playback, _ = make_playback(tmp_path, [
+        ("a", S, {"value": 1}), ("blob", S + MS, {"raw": bytes(64)}),
+        ("a", 2 * S, {"value": 2})], clock,
+        channels={"a": "e.Event", "blob": "b.Blob"}, schemas=BLOB,
+        queue_limits=QueueLimits(max_bytes=32))
+    playback.set_subscription(["a", "blob"])
+    settle(playback)
+    playback.drain()
+
+    playback.configure("seek", position_ns=S + MS)
+    settle(playback)
+    delivered = playback.drain()
+
+    assert kinds(delivered) == ["Reset", "Backfill", "Refused", "Commit"]
+    refused = delivered[2]
+    assert (refused.channel, refused.record_index, refused.size_bytes,
+            refused.backfill) == ("blob", 1, 64, True)
 
 
 # --- request IDs --------------------------------------------------------------

@@ -348,8 +348,10 @@ latest command is the one pending replacement.
 Messages and their payload bytes. When the queue is full, playback stops
 advancing and reports `buffering`. It continues when the adapter has
 drained the queue, from the position where it stopped, so no Message is
-skipped. A reconstruction is added as one unit, so the queue can hold one
-more Message per subscribed Channel.
+skipped. A reconstruction respects the same bounds: its `Backfill` is
+queued as room allows, the status stays `buffering` (and `pending`) while
+the rest waits, and the cursor commits only after all of it is queued. A
+newer seek, subscription change or disconnect discards the waiting rest.
 
 A Message larger than `Limits.max_message_bytes` or
 `QueueLimits.max_bytes` is not delivered. A `Refused` notification takes
