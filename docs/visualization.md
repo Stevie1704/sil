@@ -172,7 +172,15 @@ true when no Message of the request follows. Otherwise
 only for the same source, index version, Channel selection, interval and
 order; any other use, or a malformed continuation, is refused with
 `ContinuationError`. A Message larger than the page byte limit is refused
-with `LimitExceeded`, never skipped.
+with `LimitExceeded`, never skipped. For a refused Message, the exception
+names it in `record_index`, `channel`, `publication_time_ns` and
+`size_bytes`.
+
+`continuation_after(channels, start_ns, end_ns, time_ns, record_index)`
+makes a continuation that resumes strictly after that position. A reader
+uses it to continue from its own position, for example after a refused
+Message. With `record_index` `2**63 - 1` it resumes after all Messages at
+`time_ns`.
 
 ### The index
 
@@ -213,6 +221,139 @@ time, index size, peak RSS and seek latency on the spec fixture: 10 million
 (raw values in [navigation.json](bench/navigation.json)). It describes one
 machine with a warm operating-system file cache; it is not a promise for
 other machines or a cold disk.
+
+## Play a Recording from Python
+
+`open_playback` prepares navigation of a finalized Recording and returns a
+`Playback` controller. The controller is headless and tool-independent: it
+keeps the playback state and gives an ordered stream of notifications. A
+tool adapter forwards the notifications to its viewer. No viewer, browser or
+Foxglove SDK is necessary.
+
+```python
+from sil.visualization import open_playback
+from sil.visualization.playback import Backfill, Commit, Message
+
+with open_playback("run.mcap") as playback:
+    playback.set_subscription(["vehicle/speed", "sparse"])
+    state = playback.configure("seek-7", position_ns=2_000_000_000,
+                               playing=False, rate=1.0)
+    while playback.status().pending:
+        playback.pump()
+    for notification in playback.drain():
+        if isinstance(notification, (Backfill, Message)):
+            record = notification.record
+            print(record.channel, record.publication_time_ns)
+        elif isinstance(notification, Commit):
+            print("cursor", notification.state.cursor_ns)
+```
+
+Without `cache_dir`, the index goes to `$XDG_CACHE_HOME/sil/navigation`, or
+to `~/.cache/sil/navigation` when `XDG_CACHE_HOME` is not set. The index is
+disposable; delete it at any time.
+
+### Commands
+
+| Call | Effect |
+| --- | --- |
+| `configure(request_id, position_ns=None, playing=None, rate=None)` | Seek, play or pause, and set the rate in one atomic operation. `None` keeps the current value. |
+| `set_subscription(channels)` | Deliver only these Channels. New Channels are reconstructed at the cursor. |
+| `status()` | The current `PlaybackState`. |
+| `disconnect()` | The client went away: pause, drop the subscription, the queue and the request IDs. |
+| `close()` | End the session and close the index. |
+
+Playback starts paused at the first Message time, with no subscription. The
+rate is a finite number from 0.1 to 10. A seek accepts any time from the
+first to the last Message time, inclusive. A source without Messages has no
+playback range: a seek is refused, and play ends at once.
+
+An invalid command raises `InvalidCommand`. Its `state` is the actual
+state, which the command did not change.
+
+`PlaybackState` holds the session and source identity (`session_id`,
+`source_sha256`), the `generation`, `status`, the desired `playing` state,
+`pending`, the committed `cursor_ns`, the pending `seek_ns`, the bounds
+`start_ns` and `end_ns`, the `rate`, the last `request_id`, the
+`subscription` and a `diagnostic`.
+
+| `status` | Meaning |
+| --- | --- |
+| `paused` | Playback does not advance. |
+| `playing` | Playback advances by elapsed time times the rate. |
+| `buffering` | A reconstruction is pending, or the adapter drains slower than the rate. |
+| `ended` | All Messages up to the last time are delivered. Play without a seek restarts at the first time. |
+| `failed` | The source changed or the index is unusable. `diagnostic` tells why. Only `disconnect` and `close` are accepted. |
+| `closed` | The session ended. |
+
+### Request IDs
+
+The controller keeps the last 256 accepted request IDs. A repeated request
+ID with the same content returns its first result and does nothing again.
+The same ID with other content raises `RequestConflict`. A refused request
+is not kept. `request_id=None` is never kept.
+
+After 256 newer requests, or after `disconnect`, an ID is new again. A
+client that is not sure whether its request was applied, for example after
+a reconnect, reads `status()` first. Then it sends a new request ID for the
+change that it still needs.
+
+### Notifications
+
+`drain()` returns the notifications in order. One type per event:
+
+| Notification | Meaning |
+| --- | --- |
+| `Reset(generation, position_ns)` | Discard all delivered history. A seek follows. |
+| `Backfill(generation, record)` | The latest Message of a Channel at or before the cursor, with its original time and `record_index`. It is not a new publication. |
+| `Message(generation, record)` | A Message that continuous playback crossed. |
+| `Refused(...)` | A Message that a limit refused, in its place. `backfill` tells if it stands for a latest value. |
+| `Commit(state)` | A reconstruction is complete; `state.cursor_ns` is the new cursor. |
+| `StateChanged(state)` | The status changed without a command: buffering, ended, failed or closed. |
+
+A seek to `t` gives `Reset`, the latest Message of each subscribed Channel
+at or before `t`, then `Commit`. A Channel without a Message up to `t` gets
+no `Backfill`: missing data is never a zero. Equal times resolve to the
+highest `record_index`. After the commit, play starts strictly after `t`.
+
+During play, each subscribed Message is delivered once, in
+(publication time, `record_index`) order, also for equal times and for
+stored times that decrease. A new subscription gets `Backfill` and `Commit`
+for the new Channels only, without `Reset`.
+
+A new seek, subscription change or disconnect starts a new generation. A
+seek or disconnect also removes all queued notifications, and a
+subscription change removes those of the removed Channels. A reconstruction that a
+newer command replaced is discarded when it completes, so a late result
+never overrides the newer command. At most one reconstruction runs, and the
+latest command is the one pending replacement.
+
+### Bounds and oversize Messages
+
+`QueueLimits(max_messages=1024, max_bytes=16 MiB)` bounds the queued
+Messages and their payload bytes. When the queue is full, playback stops
+advancing and reports `buffering`. It continues when the adapter has
+drained the queue, from the position where it stopped, so no Message is
+skipped. A reconstruction is added as one unit, so the queue can hold one
+more Message per subscribed Channel.
+
+A Message larger than `Limits.max_message_bytes` or
+`QueueLimits.max_bytes` is not delivered. A `Refused` notification takes
+its place, with its Channel, time, `record_index`, size and the reason.
+Playback then continues after it. To deliver such a Message, increase the
+limits.
+
+### Time and threads
+
+The controller reads time from a monotonic clock in integer nanoseconds.
+`open_playback(clock=...)` and `Playback(navigator, clock=...)` accept a
+different clock, for example a test clock. A rate change continues from the
+current playhead, so the cursor does not jump. Time spent pending or
+buffering does not advance the playhead.
+
+One thread does the work: it calls `pump()`, or `run()`, which calls
+`pump()` until `close()`. Only that thread reads the index. All other calls
+can come from any thread. The controller does not hold its lock while it
+reads, so a new command can replace a reconstruction that is in progress.
 
 ## Open the output in Foxglove
 

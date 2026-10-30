@@ -28,7 +28,8 @@ Message per subscribed Channel at or before the seek time as `Backfill`,
 then `Commit`. A Message the Navigator refuses as oversize is reported in
 its place as `Refused`; nothing is skipped silently. The queue is bounded by
 `QueueLimits`: when it is full, playback stops advancing and reports
-`buffering` until the adapter drains it.
+`buffering` until the adapter drains it. A source that changes, or an index
+that becomes unusable, ends the session with status `failed`.
 """
 
 from __future__ import annotations
@@ -327,7 +328,9 @@ class Playback:
             self._generation += 1
             self._unreconstructed = (self._unreconstructed & set(wanted)) | added
             self._subscription = wanted
-            self._stalled, self._target = False, None
+            if self._stalled:  # time spent buffering is not played
+                self._stalled, self._target = False, None
+                self._anchor = (self._clock(), self._cursor)
             self._drop(lambda n: _channel(n) in removed)
             if self._fresh and wanted:
                 self._fresh = False

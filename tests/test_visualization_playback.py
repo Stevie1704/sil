@@ -12,7 +12,8 @@ import random
 import threading
 
 import pytest
-from visualization_fixture import write_source
+from conftest import ROOT
+from visualization_fixture import write_qualification_source, write_source
 
 from sil.visualization.navigation import Limits, prepare_navigation
 from sil.visualization.playback import (Backfill, Commit, InvalidCommand,
@@ -464,6 +465,25 @@ def test_unsubscribing_drops_queued_messages_of_that_channel(tmp_path, clock):
         records, "a", (S, 2**63), S + 500 * MS)
 
 
+def test_time_spent_buffering_is_not_played_after_a_subscription_change(
+        tmp_path, clock):
+    playback, _ = make_playback(tmp_path, signal(), clock,
+                                queue_limits=QueueLimits(max_messages=2))
+    play_all(playback)
+    clock.advance(400 * MS)
+    playback.pump()
+    playback.pump()
+    stalled = playback.status()
+    clock.advance(10 * S)
+    playback.drain()
+
+    playback.set_subscription(["a"])
+    resumed = settle(playback)
+
+    assert stalled.status == "buffering"
+    assert resumed.cursor_ns == stalled.cursor_ns
+
+
 def test_unknown_or_repeated_channels_are_refused(tmp_path, clock):
     playback, _ = make_playback(tmp_path, signal(), clock)
     before = playback.status()
@@ -800,3 +820,20 @@ def test_without_xdg_cache_home_the_cache_is_under_the_home_directory(
     monkeypatch.setenv("HOME", str(tmp_path))
 
     assert default_cache_dir() == tmp_path / ".cache" / "sil" / "navigation"
+
+
+def test_the_documented_example_runs_without_a_viewer(
+        tmp_path, monkeypatch, capsys):
+    section = (ROOT / "docs" / "visualization.md").read_text().partition(
+        "## Play a Recording from Python")[2]
+    example = section.partition("```python\n")[2].partition("```")[0]
+    write_qualification_source(tmp_path / "run.mcap")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+
+    exec(compile(example, "visualization.md", "exec"), {})
+
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[-1] == "cursor 2000000000"
+    assert "sparse 5000000000" not in lines  # no future value
+    assert "vehicle/speed 2000000000" in lines
