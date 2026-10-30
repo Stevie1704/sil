@@ -43,7 +43,7 @@ def test_help_names_where_the_run_measurement_options_are(capsys):
     ("fmi", ("inspect", "couple", "replay", "substitute")),
     ("manifest", ("validate",)),
     ("new", ("participant",)),
-    ("recording", ("channels", "show", "csv", "window")),
+    ("recording", ("channels", "show", "csv", "window", "export")),
     ("schema", ("import",)),
 ])
 def test_group_help_lists_its_subcommands(group, commands, capsys):
