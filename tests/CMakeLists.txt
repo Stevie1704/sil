@@ -4,9 +4,18 @@ add_executable(sil_interceptor_test
   ${PROJECT_SOURCE_DIR}/kernel/src/interceptor.cpp
   ${PROJECT_SOURCE_DIR}/kernel/src/manifest.cpp)
 target_include_directories(sil_interceptor_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src)
-target_link_libraries(sil_interceptor_test PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(sil_interceptor_test PRIVATE nlohmann_json::nlohmann_json sil_sha256)
 add_test(NAME sil_interceptor_plan COMMAND sil_interceptor_test
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+# The hashing interface (#325): published vectors in C++, and a small tool that
+# tests/test_sha256.py and tools/sha256_backend_measure.py drive.
+add_executable(sil_sha256_test sha256_test.cpp)
+target_link_libraries(sil_sha256_test PRIVATE sil_sha256)
+add_test(NAME sil_sha256 COMMAND sil_sha256_test
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+add_executable(sil_sha256_digest sha256_digest_tool.cpp)
+target_link_libraries(sil_sha256_digest PRIVATE sil_sha256)
 
 # Unsigned virtual-time addition is the one arithmetic boundary every
 # scheduling and delivery decision rests on, so its table of edge cases is a

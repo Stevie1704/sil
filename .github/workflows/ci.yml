@@ -22,6 +22,11 @@ jobs:
           uv venv .venv
           uv pip install -p .venv/bin/python -e "python/[dev]"
 
+      - name: Install the kernel build dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libssl-dev
+
       - name: Build kernel
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release

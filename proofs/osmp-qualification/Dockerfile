@@ -14,7 +14,7 @@ ARG DEBIAN_SNAPSHOT
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && echo "deb [check-valid-until=no] ${DEBIAN_SNAPSHOT} bookworm main" > /etc/apt/sources.list \
     && apt-get -o Acquire::Check-Valid-Until=false update \
-    && apt-get install -y --no-install-recommends build-essential cmake ca-certificates git \
+    && apt-get install -y --no-install-recommends build-essential cmake libssl-dev ca-certificates git \
         libprotobuf-dev protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 # The OSMP build tools and Python Protobuf, pinned by hash, and the SiL
