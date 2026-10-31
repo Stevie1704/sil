@@ -64,3 +64,16 @@ for repeated timings. It also proves that the instrumented Runs write the
 same Recording bytes. Its retained results are a reference baseline for
 [#125](https://github.com/Stevie1704/sil/issues/125).
 
+## Hashing cost baseline
+
+[docs/bench/hash-baseline.md](bench/hash-baseline.md) measures what file hashing
+costs in a Release build, for any revision. It separates preparation, execution
+and Recording, finalization and the end-to-end time, and it counts hash
+operations and bytes per role.
+
+```sh
+make bench-hash ARGS='--revision <commit> --machine "<name>" --load-condition "<what else runs>"'
+```
+
+The values are evidence for one machine and one build. No test or gate reads
+them.
