@@ -148,8 +148,8 @@ has `path`.
   entry, always hold an artifact object. `artifacts.clock_shim` is null only
   when no Participant asks for the Clock shim.
 - `recording` is a digest object without `path`: `calculated`, `omitted`,
-  `failed` or `not_requested`. `omitted` does not say that a Recording file
-  exists. See `run_exit_code` for the outcome.
+  `failed` or `not_requested`. `omitted` says that the Run opened the Recording.
+  It does not say that the file is complete. See `run_exit_code` for the outcome.
 - An empty or zero digest never means omission. A null `sha256` never means
   that a check passed.
 - `errors` still lists every `unresolved` or `failed` artifact and a failed
@@ -174,8 +174,10 @@ the runner does no output digest work.
 | The Run opened no Recording, for example after a Manifest error | Exit `2` | `failed`, with an entry in `errors`. An older file at that path is not the output of this Run, so SiL does not digest it. |
 
 After the first failed write, the runner writes no more bytes to the file, and
-the Run stops with exit `1`. In `external` mode the outcome is the same and
-`recording` is `omitted`.
+the Run stops with exit `1`. In `external` mode the outcome is the same, and
+`recording` is `omitted` for each Recording that the Run opened. A Run that
+opened no Recording gives `failed` in both modes, with an entry in `errors`, and
+SiL hashes nothing.
 
 A `calculated` digest identifies the bytes when the runner closed the file. It
 does not show that the file is unchanged after that time.

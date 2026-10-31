@@ -140,16 +140,15 @@ struct SizeLimitOption {
 };
 
 // Completes the provenance record once the Run's outcome is known and writes
-// the JSON side-car. The Recording digest comes from the closed sink, so a
-// normal Run does not read the file again. A Run that opened no sink has no
-// output of its own to digest: a file at that path is not from this Run.
+// the JSON side-car. The Recording digest comes from the closed sink, which
+// reports `omitted` in external mode, so a normal Run does not read the file
+// again. A Run that opened no sink has no output of its own to digest in either
+// mode: a file at that path is not from this Run.
 void write_side_car(sil::Provenance &provenance, int exit_code,
                     const sil::RecordingSink *recorder, bool recording,
                     const char *out_path, const char *requested_path) {
   provenance.run_exit_code = exit_code;
-  if (recording && provenance.mode == sil::ProvenanceMode::External) {
-    provenance.recording = sil::ProvenanceDigest::omitted();
-  } else if (recording) {
+  if (recording) {
     provenance.recording =
         recorder ? recorder->digest()
                  : sil::ProvenanceDigest::failed(

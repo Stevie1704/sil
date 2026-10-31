@@ -301,20 +301,23 @@ def test_an_unreadable_artifact_fails_preparation_in_both_modes(
     assert record["reason"]
 
 
-def test_a_failed_recording_digest_is_not_an_omitted_one(sil_run, tmp_path):
-    """A Manifest error leaves no Recording file to digest in full mode."""
+@pytest.mark.parametrize("mode", ["full", "external"])
+def test_a_failed_recording_digest_is_not_an_omitted_one(sil_run, tmp_path,
+                                                         mode):
+    """After a Manifest error the Run opened no Recording, so no mode has a
+    digest to omit."""
     ref = missing_executable_manifest(tmp_path)
-    full, external = tmp_path / "full.mcap", tmp_path / "external.mcap"
+    out = tmp_path / "out.mcap"
 
-    run(sil_run, ref.path, full)
-    run(sil_run, ref.path, external, "--provenance-mode", "external")
+    run(sil_run, ref.path, out, "--provenance-mode", mode)
 
-    recording = sidecar(full)["recording"]
+    document = sidecar(out)
+    recording = document["recording"]
     assert recording["digest_state"] == "failed"
     assert recording["sha256"] is None
     assert recording["reason"]
-    assert sidecar(external)["recording"] == {"digest_state": "omitted",
-                                              "sha256": None}
+    assert any(error["artifact"] == "Recording"
+               for error in document["errors"])
 
 
 @pytest.mark.parametrize("options", [
