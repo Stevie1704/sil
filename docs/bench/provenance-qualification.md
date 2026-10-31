@@ -214,7 +214,7 @@ Linux-only tests, in a Debian arm64 container ([limitations](#limitations)).
 
 | Check | Run | Result |
 | --- | --- | --- |
-| `ci`: C++ tests, pytest, determinism gate, staged install, runtime and acceptance images, `test_container.py` | [41187537139](https://github.com/Stevie1704/sil/actions/runs/41187537139) | Pass. pytest: 3552 passed, 48 skipped. Container: 10 passed. The first run of `test_a_heap_capture_hashes_each_artifact_once` and of the heap policy tests passed here. |
+| `ci`: C++ tests, pytest, determinism gate, staged install, runtime and acceptance images, `test_container.py` | [41187537139](https://github.com/Stevie1704/sil/actions/runs/41187537139) | Pass. pytest: 3552 passed, 48 skipped. Container: 10 passed. `test_a_heap_capture_hashes_each_artifact_once` and the heap policy tests of #327 executed and passed here. |
 | `profile-cpu-integration`, real perf | [41187537099](https://github.com/Stevie1704/sil/actions/runs/41187537099) | Pass |
 | `profile-heap-integration`, real Heaptrack | [41187537050](https://github.com/Stevie1704/sil/actions/runs/41187537050) | Pass |
 | `release`, release shapes | [41187537248](https://github.com/Stevie1704/sil/actions/runs/41187537248) | Pass |
@@ -260,7 +260,7 @@ P = passing evidence. L = passing evidence with the named limitation. N = not me
 | Activations cause no second hash; handoff or fallback and external digests match independent results, with failure cases | L: L5 | `test_activations_hash_each_finalized_artifact_once`, `test_full_mode_hashes_the_recording_apart_from_the_runner`, `test_external_mode_keeps_the_profile_digest_of_the_recording`, `test_a_failed_run_keeps_the_digest_of_its_partial_recording`. The handoff is not built: the fallback path applies. |
 | Profile qualification keeps runner and profile hashing apart, with before and after end-to-end values; no zero-total claim | L: L3 | [Attribution of the profile command](#attribution-of-the-profile-command) |
 | Docs: CLI, Manifest bytes, platform duties, Replay exception, migration, profile separation, backend dependencies | P | `docs/running.md`, `SUPPORT.md`, `docs/profile-report.md`, `docs/releases/unreleased.md`, `docs/adr/0006-sha256-backend-static-openssl.md` |
-| `make build`, `make test`, determinism gate, installed and container checks | P for this branch on macOS; L2 for CI on this branch | The final branch results are in the handback. CI at `67fee44`: [ci](https://github.com/Stevie1704/sil/actions/runs/41187537139). |
+| `make build`, `make test`, determinism gate, installed and container checks | P for this branch on macOS; L2 for CI on this branch | This branch on macOS: 3602 passed, 115 skipped, and the determinism gate passed. CI at `67fee44`: [ci](https://github.com/Stevie1704/sil/actions/runs/41187537139). |
 
 ### Ticket #329
 
@@ -271,7 +271,7 @@ P = passing evidence. L = passing evidence with the named limitation. N = not me
 | Work counts: input reuse, no post-close scan, no provenance-only hash in external | P | As mapped above |
 | Retained results with limitations and no flaky timing gates | L: L1, L3, L4 | This file. The tool tests read no duration. |
 | v1 reader, full-hash consumers, failure reporting, mode-specific v2 states | P | [Consumer audit](#consumer-audit), `test_a_failed_recording_digest_is_not_an_omitted_one` |
-| Build, test, gate, and installed and container checks | L: L2, L8 | CI table, final results in the handback |
+| Build, test, gate, and installed and container checks | L: L2, L8 | CI table, and the macOS result above |
 | CPU and heap workflow evidence for both policies and scopes; malformed Replay rejected | P on arm64, L2 for x86-64 | `tests/test_provenance_qualification.py`, Heaptrack table |
 | Render and diff; tampering in both modes; no duplicate finalization hash; handoff or fallback digests | L: L5 | As mapped above |
 | Profile before and after results | L: L1, L3 | Profile tables |
