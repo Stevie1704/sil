@@ -1,0 +1,141 @@
+{
+  "machine": "MacBookPro18,1, Apple M1 Pro, 10 logical CPUs",
+  "conditions": "NOT QUIET: other agents built and tested on this machine during the measurement, and one Docker image build ran; files hashed from memory, so storage and page cache do not affect the file table; Run Recordings written to the system temporary directory on local SSD with a warm page cache",
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "architecture": "arm64",
+  "repeats": 15,
+  "pairs": 5,
+  "files": {
+    "runner-sized, 1 MiB": {
+      "bytes": 1048576,
+      "sha256": "cbce4e316b41e9c61c0a9119db8b06e8ba6f5fdfe8b4b901e47496b7beaf4c3f",
+      "minimal": {
+        "cpu_ns": {
+          "median": 5287000.0,
+          "min": 4969000.0,
+          "max": 5361000.0
+        },
+        "wall_ns": {
+          "median": 5284625.0,
+          "min": 4971834.0,
+          "max": 5379375.0
+        }
+      },
+      "kernel": {
+        "cpu_ns": {
+          "median": 1102000.0,
+          "min": 1006000.0,
+          "max": 1282000.0
+        },
+        "wall_ns": {
+          "median": 1096459.0,
+          "min": 1003792.0,
+          "max": 1910542.0
+        }
+      }
+    },
+    "library-sized, 16 MiB": {
+      "bytes": 16777216,
+      "sha256": "2e667a8f4cd74254dffee8973f74fc1be59e03d28d25543c5e42c02d19162502",
+      "minimal": {
+        "cpu_ns": {
+          "median": 84007000.0,
+          "min": 80126000.0,
+          "max": 86129000.0
+        },
+        "wall_ns": {
+          "median": 84160958.0,
+          "min": 80182459.0,
+          "max": 86727125.0
+        }
+      },
+      "kernel": {
+        "cpu_ns": {
+          "median": 8334000.0,
+          "min": 7620000.0,
+          "max": 9490000.0
+        },
+        "wall_ns": {
+          "median": 8339708.0,
+          "min": 7629666.0,
+          "max": 9531416.0
+        }
+      }
+    },
+    "Recording-sized, 256 MiB": {
+      "bytes": 268435456,
+      "sha256": "82d3efbb843d583211d9be02747ccf00f5fbea5fd13813db3e984928fe5502ec",
+      "minimal": {
+        "cpu_ns": {
+          "median": 1385150000.0,
+          "min": 1342090000.0,
+          "max": 1434900000.0
+        },
+        "wall_ns": {
+          "median": 1393870834.0,
+          "min": 1343461958.0,
+          "max": 1568591208.0
+        }
+      },
+      "kernel": {
+        "cpu_ns": {
+          "median": 136902000.0,
+          "min": 127132000.0,
+          "max": 163641000.0
+        },
+        "wall_ns": {
+          "median": 138906875.0,
+          "min": 127523541.0,
+          "max": 170544417.0
+        }
+      }
+    }
+  },
+  "runs": {
+    "native-multitask-100s": {
+      "description": "Native participant, 2 Tasks (1 ms, 5 ms), 100 s Duration: 120,000 activations",
+      "recording_bytes": 7561895,
+      "recording_sha256": "5d42a27af4e1760974f39b379f5f47698e6ea843397f3a3a15a59ec134e3e676",
+      "old_wall_ns": {
+        "median": 84000875,
+        "min": 83645042,
+        "max": 298981334
+      },
+      "new_wall_ns": {
+        "median": 49683458,
+        "min": 47436250,
+        "max": 56660959
+      }
+    },
+    "native-multitask-1000s": {
+      "description": "the same Participant, 1,000 s Duration: 1,200,000 activations, far past the 8,192-sample reservoir",
+      "recording_bytes": 75611303,
+      "recording_sha256": "9c469e59dc8f116acb971847b5dc0d236985a7df614a8aa3b6379d2e4f1e96ba",
+      "old_wall_ns": {
+        "median": 801814500,
+        "min": 695425792,
+        "max": 896176083
+      },
+      "new_wall_ns": {
+        "median": 414812709,
+        "min": 359897208,
+        "max": 1087140292
+      }
+    },
+    "native-and-process-60s": {
+      "description": "2 Native Tasks (10 ms, 20 ms) and a Python Process participant (10 ms Step), 60 s Duration: 6,000 Process Steps",
+      "recording_bytes": 946235,
+      "recording_sha256": "62f18517945a012c1045d8885d55ea68680b2a77d2504b657801e68cd9236fa7",
+      "old_wall_ns": {
+        "median": 837073125,
+        "min": 662520375,
+        "max": 11661588125
+      },
+      "new_wall_ns": {
+        "median": 824809458,
+        "min": 538806750,
+        "max": 3955267291
+      }
+    }
+  }
+}

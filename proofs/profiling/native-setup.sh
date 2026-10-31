@@ -21,7 +21,7 @@ sudo apt-get update
 heaptrack_package=heaptrack${heaptrack_version:+=$heaptrack_version}
 sudo apt-get install -y --no-install-recommends \
     "linux-tools-$(uname -r)" linux-tools-common "$heaptrack_package" \
-    binutils build-essential cmake
+    binutils build-essential cmake libssl-dev
 cmake -S "$root" -B "$prefix/build" -DCMAKE_BUILD_TYPE=Release
 cmake --build "$prefix/build" --target sil-run sil-run-diagnostics \
     sil-diagnostics-launcher sil_clock_shim -j "$(nproc)"

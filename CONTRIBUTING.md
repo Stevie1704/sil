@@ -53,7 +53,9 @@ change to one of them belongs in the pull request description.
 
 ## Before you open a pull request
 
-Build and run the full suite:
+Build and run the full suite. The kernel build needs OpenSSL 3.0 or newer with
+its static library (`libssl-dev` on Debian and Ubuntu, `openssl@3` from Homebrew
+on a macOS development host):
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j

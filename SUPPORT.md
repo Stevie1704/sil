@@ -79,6 +79,7 @@ none.
 | libc | glibc, Debian bookworm level or newer |
 | Python | 3.11 or newer, as the distribution metadata declares; the image pins 3.13 |
 | Reference environment | the pinned `runtime` container image in [Dockerfile](Dockerfile) |
+| Build from source | OpenSSL 3.0 or newer with its static library. A built runner has no OpenSSL runtime dependency ([decision](docs/adr/0006-sha256-backend-static-openssl.md)) |
 
 Continuous integration runs on x86-64 Linux with one interpreter, and that is
 the only machine class this project verifies. An older supported Python is
