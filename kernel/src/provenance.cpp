@@ -80,10 +80,13 @@ fs::path canonical_file(const fs::path &input, const fs::path &base) {
   return resolved;
 }
 
-ResolvedFile resolve_and_digest(const fs::path &input, const fs::path &base) {
+// Resolution happens before lookup, so a symlink alias and its target share one
+// digest. The cache is the preparation's own, so the work count is per Run.
+ResolvedFile resolve_and_digest(const fs::path &input, const fs::path &base,
+                                ProvenanceDigests &digests) {
   ResolvedFile file;
   file.path = canonical_file(input, base);
-  file.sha256 = sha256_file(file.path);
+  file.sha256 = digests.digest(file.path);
   return file;
 }
 
@@ -271,7 +274,8 @@ Provenance initialize_provenance(const Manifest &manifest,
   return provenance;
 }
 
-PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
+PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance,
+                        ProvenanceDigests &digests) {
   // The loader compiles these plans, and preparation is the only path to an
   // Engine. Keep the check here as well so a hand-built Manifest cannot forge
   // a ready Run by omitting a plan.
@@ -293,8 +297,8 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
   prepared_participants.reserve(manifest.participants.size());
 
   if (const auto file = collect_file(
-          provenance, "runner", "/proc/self/exe", [] {
-            return resolve_and_digest(running_executable(), {});
+          provenance, "runner", "/proc/self/exe", [&digests] {
+            return resolve_and_digest(running_executable(), {}, digests);
           }))
     provenance.runner = artifact(*file);
 
@@ -306,8 +310,8 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
   if (shim_requested) {
     const fs::path shim = clock_shim_library_path();
     if (const auto file = collect_file(
-            provenance, "Clock shim", shim.string(), [&shim] {
-              return resolve_and_digest(shim, {});
+            provenance, "Clock shim", shim.string(), [&shim, &digests] {
+              return resolve_and_digest(shim, {}, digests);
             }))
       provenance.clock_shim = artifact(*file);
   }
@@ -324,8 +328,8 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
       if (const auto file = collect_file(
               provenance, "Native participant '" + participant.name +
                               "' library",
-              requested.string(), [&requested, &manifest] {
-                return resolve_and_digest(requested, manifest.base_dir);
+              requested.string(), [&requested, &manifest, &digests] {
+                return resolve_and_digest(requested, manifest.base_dir, digests);
               })) {
         resolved_library = launch_path;
         record.library = artifact(*file);
@@ -367,8 +371,8 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
                 provenance,
                 "Process participant '" + participant.name +
                     "' executable",
-                executable->target_path.string(), [&executable] {
-                  return resolve_and_digest(executable->target_path, {});
+                executable->target_path.string(), [&executable, &digests] {
+                  return resolve_and_digest(executable->target_path, {}, digests);
                 }))
           record.executable = artifact(*file);
       }
@@ -381,8 +385,8 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
         if (const auto file = collect_file(
                 provenance,
                 "File named by participant '" + participant.name + "' command",
-                requested.string(), [&requested, &base] {
-                  return resolve_and_digest(requested, base);
+                requested.string(), [&requested, &base, &digests] {
+                  return resolve_and_digest(requested, base, digests);
                 }))
           named.file = artifact(*file);
         provenance.command_files.push_back(std::move(named));
@@ -400,6 +404,16 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
 
   if (!provenance.errors.empty()) throw ManifestError(preflight_error(provenance));
   return PreparedRun(manifest, std::move(prepared_participants));
+}
+
+const std::string &ProvenanceDigests::digest(const fs::path &canonical_path) {
+  const std::string key = canonical_path.string();
+  const auto cached = digests_.find(key);
+  if (cached != digests_.end()) return cached->second;
+
+  std::string sha256 = sha256_file(canonical_path);
+  ++hash_operations_;
+  return digests_.emplace(key, std::move(sha256)).first->second;
 }
 
 std::string sha256_file(const fs::path &path) {

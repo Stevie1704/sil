@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstddef>
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -74,12 +76,32 @@ Provenance initialize_provenance(const Manifest &manifest,
                                  const std::string &source_repository,
                                  const std::string &source_revision);
 
+// Digests of the canonical input paths that one preparation has already hashed.
+// Each preparation owns one instance, so a digest never outlives the Run it
+// described: a later preparation hashes the bytes that are on disk then.
+class ProvenanceDigests {
+ public:
+  // Returns the SHA-256 of the regular file at a canonical path, hashing it on
+  // first use and reusing that digest for every later request.
+  const std::string &digest(const std::filesystem::path &canonical_path);
+
+  // The number of content hashes performed. Tests use it as the work count.
+  std::size_t hash_operations() const { return hash_operations_; }
+
+ private:
+  std::map<std::string, std::string> digests_;
+  std::size_t hash_operations_ = 0;
+};
+
 // Preparation resolves and hashes every artifact the Manifest names before a
 // Participant is loaded or spawned. It returns the only value Engine accepts;
 // the authored Manifest is not modified. Records every artifact error it finds,
 // then throws ManifestError once the whole preflight has run, so one diagnostic
-// names every unreadable artifact rather than only the first.
-PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance);
+// names every unreadable artifact rather than only the first. Every digest comes
+// from `digests`, so a canonical input shared by several Participants is hashed
+// once.
+PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance,
+                        ProvenanceDigests &digests);
 
 // Computes the SHA-256 of an already-resolved file. Used for the Recording
 // after its sink has closed.

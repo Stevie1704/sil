@@ -15,6 +15,7 @@ namespace sil {
 
 class InterceptorPlan;
 struct Provenance;
+class ProvenanceDigests;
 
 // A manifest that can never be a valid kernel input. Runner exits 2.
 struct ManifestError : std::runtime_error {
@@ -176,7 +177,8 @@ class PreparedRun {
   }
 
  private:
-  friend PreparedRun prepare_run(const Manifest &, Provenance &);
+  friend PreparedRun prepare_run(const Manifest &, Provenance &,
+                                 ProvenanceDigests &);
 
   PreparedRun(Manifest manifest,
               std::vector<PreparedParticipantSpec> participants)
