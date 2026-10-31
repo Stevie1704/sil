@@ -139,29 +139,34 @@ struct SizeLimitOption {
   bool given;
 };
 
+// Where the outputs of this Run go. `recording_path` also names the side-cars
+// when `recording` is false, so that their paths stay predictable.
+struct RunOutputs {
+  bool recording;
+  const char *recording_path;
+  std::filesystem::path provenance_path;
+};
+
 // Completes the provenance record once the Run's outcome is known and writes
 // the JSON side-car. The Recording digest comes from the closed sink, which
 // reports `omitted` in external mode, so a normal Run does not read the file
 // again. A Run that opened no sink has no output of its own to digest in either
 // mode: a file at that path is not from this Run.
 void write_side_car(sil::Provenance &provenance, int exit_code,
-                    const sil::RecordingSink *recorder, bool recording,
-                    const char *out_path, const char *requested_path) {
+                    const sil::RecordingSink *recorder,
+                    const RunOutputs &outputs) {
   provenance.run_exit_code = exit_code;
-  if (recording) {
+  if (outputs.recording) {
     provenance.recording =
         recorder ? recorder->digest()
                  : sil::ProvenanceDigest::failed(
                        "the Run did not open this Recording");
     if (provenance.recording.state == sil::DigestState::Failed)
       provenance.errors.push_back(
-          {"Recording", out_path, provenance.recording.reason});
+          {"Recording", outputs.recording_path, provenance.recording.reason});
   }
-  const std::filesystem::path path =
-      requested_path ? std::filesystem::path(requested_path)
-                     : sil::default_provenance_path(out_path);
   try {
-    sil::write_provenance(path, provenance);
+    sil::write_provenance(outputs.provenance_path, provenance);
   } catch (const std::exception &e) {
     // The Run's exit code and its first diagnostic remain authoritative. A
     // side-car write problem is reported without rewriting either.
@@ -231,16 +236,16 @@ bool same_path(const std::filesystem::path &a,
 // lands on a path the Run writes for something else. Checked before the
 // Manifest is loaded, so a rejected path starts no Participant.
 bool diagnostics_path_is_new(const std::filesystem::path &path,
-                             const char *recording_path, bool recording,
-                             const std::filesystem::path &provenance_path) {
+                             const RunOutputs &outputs) {
   std::error_code error;
   const auto status = std::filesystem::symlink_status(path, error);
   const char *problem = nullptr;
   if (std::filesystem::exists(status))
     problem = "already exists";
-  else if ((recording && same_path(path, recording_path)) ||
-           same_path(path, provenance_path) ||
-           same_path(path, sil::default_failure_report_path(recording_path)))
+  else if ((outputs.recording && same_path(path, outputs.recording_path)) ||
+           same_path(path, outputs.provenance_path) ||
+           same_path(path,
+                     sil::default_failure_report_path(outputs.recording_path)))
     problem = "is also another artifact of this Run";
   if (!problem) return true;
   std::cerr << "sil-run-diagnostics: diagnostics report '" << path.string()
@@ -250,9 +255,8 @@ bool diagnostics_path_is_new(const std::filesystem::path &path,
 
 sil::diagnostics::RunFacts run_facts(
     const char *manifest_path, const std::optional<sil::Manifest> &manifest,
-    int exit_code, const std::optional<FirstFailure> &failure, bool recording,
-    const char *out_path, const std::filesystem::path &provenance_path,
-    sil::ProvenanceMode provenance_mode,
+    int exit_code, const std::optional<FirstFailure> &failure,
+    const RunOutputs &outputs, sil::ProvenanceMode provenance_mode,
     const std::optional<std::chrono::milliseconds> &participant_timeout,
     const sil::RunBoundaryLimits &limits) {
   sil::diagnostics::RunFacts facts;
@@ -267,7 +271,7 @@ sil::diagnostics::RunFacts run_facts(
   facts.exit_code = exit_code;
   if (exit_code != kExitOk) {
     facts.failure_report_path =
-        sil::default_failure_report_path(out_path).string();
+        sil::default_failure_report_path(outputs.recording_path).string();
     if (failure) {
       facts.failure_message = failure->message;
       facts.failure_category =
@@ -277,9 +281,9 @@ sil::diagnostics::RunFacts run_facts(
       facts.failure_virtual_time_ns = failure->facts.virtual_time_ns;
     }
   }
-  facts.recording = recording;
-  facts.recording_path = out_path;
-  facts.provenance_path = provenance_path.string();
+  facts.recording = outputs.recording;
+  facts.recording_path = outputs.recording_path;
+  facts.provenance_path = outputs.provenance_path.string();
   facts.provenance_mode = sil::provenance_mode_name(provenance_mode);
   if (participant_timeout)
     facts.participant_timeout_ms = uint64_t(participant_timeout->count());
@@ -471,16 +475,16 @@ int run(int argc, char **argv) {
     usage();
     return kExitConfigError;
   }
+  const RunOutputs outputs{recording, out_path,
+                           provenance_path_arg
+                               ? std::filesystem::path(provenance_path_arg)
+                               : sil::default_provenance_path(out_path)};
 
 #ifdef SIL_RUN_DIAGNOSTICS
   const std::filesystem::path diagnostics_path =
       diagnostics_path_arg ? std::filesystem::path(diagnostics_path_arg)
                            : default_diagnostics_path(out_path);
-  const std::filesystem::path provenance_path =
-      provenance_path_arg ? std::filesystem::path(provenance_path_arg)
-                          : sil::default_provenance_path(out_path);
-  if (!diagnostics_path_is_new(diagnostics_path, out_path, recording,
-                               provenance_path))
+  if (!diagnostics_path_is_new(diagnostics_path, outputs))
     return kExitConfigError;
   if (retention_path_arg) {
     // A profiler captures the modules a Run loads from its Run working
@@ -611,15 +615,14 @@ int run(int argc, char **argv) {
   sil::diagnostics::end_run();
 
   if (provenance)
-    write_side_car(*provenance, exit_code, recorder.get(), recording, out_path,
-                   provenance_path_arg);
+    write_side_car(*provenance, exit_code, recorder.get(), outputs);
   write_failure_side_car(failure, exit_code, out_path);
 
 #ifdef SIL_RUN_DIAGNOSTICS
   write_diagnostics(diagnostics_path,
                     run_facts(manifest_path, manifest, exit_code, failure,
-                              recording, out_path, provenance_path,
-                              provenance_mode, participant_timeout, limits));
+                              outputs, provenance_mode, participant_timeout,
+                              limits));
 #endif
 
   if (exit_code == kExitOk && manifest)
