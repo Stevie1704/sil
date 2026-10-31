@@ -149,9 +149,9 @@ def test_shared_inputs_count_real_hashes_only_and_none_when_external(
     external = hash_work(sil_run_instrumented, ref, external_out,
                          "--provenance-mode", "external")
 
-    # Runner, executable, command file and the Recording: a reused digest does
-    # not count.
-    assert full["count"] == 4
+    # Runner, executable and command file: a reused digest does not count, and
+    # the Recording digest is not a pass over a file.
+    assert full["count"] == 3
     assert external == {"count": 0, "bytes": 0}
 
     # Every Participant keeps its own entries in both modes.
