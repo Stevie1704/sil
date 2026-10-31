@@ -157,6 +157,29 @@ has `path`.
 - Two equivalent Runs in one mode give the same record bytes. A record of
   `full` and a record of `external` differ.
 
+### Recording digest
+
+In `full` mode, the runner calculates the digest while it writes the Recording.
+The digest includes each byte in file order: the header, Messages, chunks,
+indexes, metadata, footer and final magic. Memory use does not grow with the
+file. A normal Run does not read the file again after close. In `external` mode,
+the runner does no output digest work.
+
+| Case | Run outcome | `recording` in `full` mode |
+| --- | --- | --- |
+| The Recording closes correctly | Exit `0` | `calculated`, from the bytes written |
+| A Participant fails, and the partial Recording closes correctly | Exit `1` | `calculated`, from the bytes written |
+| A write or the close fails, for example on a full disk | Exit `1` | `calculated`, from one read of the file after close, so the digest is of the bytes on disk. `run_exit_code` and the failure report show that this file is not complete. |
+| A write or the close fails, and the file cannot be read | Exit `1` | `failed`, with an entry in `errors` |
+| The Run opened no Recording, for example after a Manifest error | Exit `2` | `failed`, with an entry in `errors`. An older file at that path is not the output of this Run, so SiL does not digest it. |
+
+After the first failed write, the runner writes no more bytes to the file, and
+the Run stops with exit `1`. In `external` mode the outcome is the same and
+`recording` is `omitted`.
+
+A `calculated` digest identifies the bytes when the runner closed the file. It
+does not show that the file is unchanged after that time.
+
 A record with `path` values only is not evidence of file contents. Do not read
 an `omitted` digest as a verification, or as a statement that a file did not
 change.

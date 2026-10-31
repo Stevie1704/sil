@@ -334,9 +334,11 @@ class Measurement:
                 continue
             on = by_key[(*_key(r)[:3], True)]
             off_counters = dict(r["deterministic"]["counters"],
-                                recorded=None, provenance_hash=None)
+                                recorded=None, provenance_hash=None,
+                                recording_digest=None)
             on_counters = dict(on["deterministic"]["counters"],
-                               recorded=None, provenance_hash=None)
+                               recorded=None, provenance_hash=None,
+                                recording_digest=None)
             if off_counters != on_counters:
                 changed.append(r["name"])
         self.check("recording_changes_only_recorded", not changed, changed)

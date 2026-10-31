@@ -98,7 +98,7 @@ and a reader shows this as `full (report predates the option)`.
 | Member | Content |
 | --- | --- |
 | `run_wall_time` | `wall_ns` and `boundary`: from the runner's measurement start, before the Manifest is loaded, through Participant cleanup and Recording close. Python startup and report writing are outside it. |
-| `phases` | `preflight_ns`, `setup_ns`, `scheduled_execution_ns`, `shutdown_ns`, `recording_finalization_ns` and `unattributed_ns`. The intervals do not overlap; with `unattributed_ns` they add up to `wall_ns`. |
+| `phases` | `preflight_ns`, `setup_ns`, `scheduled_execution_ns`, `shutdown_ns`, `recording_finalization_ns` and `unattributed_ns`. The intervals do not overlap; with `unattributed_ns` they add up to `wall_ns`. In `full` provenance mode, the Recording digest is calculated while the Run writes, so its time is in the phase of each write. `recording_finalization_ns` holds only the digest of the final records. |
 | `tasks` | One row per Task: `participant`, `task`, `kind`, `timing`, and `failed_activation` (`activation_index`, `wall_ns`) or null |
 | `replay` | One row per Replay participant: `participant`, `timing`, `failed_activation` |
 | `throughput` | `completed_native_activations`, `completed_process_steps`, `native_activations_per_s`, `process_steps_per_s`, and their `denominator`, `scheduled_execution_ns` |

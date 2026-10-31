@@ -118,7 +118,7 @@ bytes, never from timing.
 | `only_the_controller_differs` | the three forms measure the same declared experiment |
 | `counters_repeat` | the two instrumented Runs of a row report the same counters |
 | `recording_equals_instrumented` | every timed production Recording equals the instrumented Recording byte for byte: the instrumentation does not change the observed behavior |
-| `recording_changes_only_recorded` | with Recording off, every counter but `recorded` equals the Recording-on row |
+| `recording_changes_only_recorded` | with Recording off, every counter but `recorded` and the hash counters equals the Recording-on row |
 | `forms_publish_identical_commands` | the process and FMU forms publish the native form's Commands byte for byte, and each Run publishes one Command per activation and instance |
 | `application_computes_the_published_commands` | the in-process timing harness computes exactly the Commands the Runs published |
 

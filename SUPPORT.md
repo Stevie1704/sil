@@ -65,7 +65,9 @@ has the state `not_requested`.
 
 The side-car has schema version 2. Each digest has an explicit state:
 `calculated`, `omitted`, `unresolved`, `failed` or, for the Recording,
-`not_requested`. `--provenance-mode external` lets a platform own artifact
+`not_requested`. The runner calculates a `calculated` Recording digest while it
+writes. A failed Recording write or close is a Run failure (exit `1`).
+`--provenance-mode external` lets a platform own artifact
 identity: the runner omits its input and Recording digests, and keeps the
 Manifest hash, path and file checks, and Replay verification. SiL does not
 verify the identities of the platform. Schema version 1 records keep their

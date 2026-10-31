@@ -601,8 +601,10 @@ def markdown(document: dict) -> str:
         f"scale {conditions['scale']:g}; runner arguments: "
         f"{' '.join(conditions['runner_args']) or 'none'}",
         f"- Cache: {conditions['warm_cache']} {conditions['cold_cache']}",
-        "- Timing boundary: the reported Run wall time excludes the hash of "
-        "the Recording after its close. The end-to-end time includes it.",
+        "- Timing boundary: for a build before #328, the reported Run wall "
+        "time excludes the hash of the Recording after its close. For a later "
+        "build, it includes the hash, which occurs while the Run writes. The "
+        "end-to-end time includes the hash in both.",
         "",
         "| Workload | Inputs (MiB) | Recording (MiB) | Ordinary end to end | "
         "Attributed end to end | Preparation | Execution and Recording | "

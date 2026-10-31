@@ -140,7 +140,8 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance,
                         ProvenanceDigests &digests);
 
 // Computes the SHA-256 of an already-resolved file for provenance. Used for the
-// Recording after its sink has closed. External mode never calls it.
+// inputs, and for a Recording only if its write path has no digest to give.
+// External mode never calls it.
 std::string sha256_file(const std::filesystem::path &path);
 
 const char *provenance_mode_name(ProvenanceMode mode);

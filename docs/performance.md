@@ -77,3 +77,6 @@ make bench-hash ARGS='--revision <commit> --machine "<name>" --load-condition "<
 
 The values are evidence for one machine and one build. No test or gate reads
 them.
+
+[docs/bench/recording-digest.md](bench/recording-digest.md) shows where the
+Recording digest cost goes since it is calculated while the Run writes.
