@@ -13,9 +13,16 @@ reads a duration from it.
 | #328 | See [recording-digest.md](recording-digest.md) | Not quiet | Linked there | Linked there |
 | #326 before | `55c4d3990f6e42339c6a2f1195a73a3d9f657fa7` (feat/323 tip, no provenance cache) | Not quiet. 1-minute load average 6.9 at 09:33. Three repetitions. | [results](hash-baseline-dedup-before-55c4d3990f6e-results.md) | [JSON](hash-baseline-dedup-before-55c4d3990f6e.json) |
 | #326 after | `fdece5b17cf54178160f937872bba9b0339c8577` (per-preparation provenance cache) | Not quiet. 1-minute load average 6.9 at 09:33. Three repetitions. | [results](hash-baseline-dedup-after-fdece5b-results.md) | [JSON](hash-baseline-dedup-after-fdece5b.json) |
+| #329 base | `600fa429` | One agent, 1-minute load average 2.8 to 7.0. Nine repetitions. | [results](hash-baseline-329-1-base-results.md) | [JSON](hash-baseline-329-1-base.json) |
+| #329 backend | `558f993` | One agent, 1-minute load average 2.8 to 7.0. Nine repetitions. | [results](hash-baseline-329-2-backend-results.md) | [JSON](hash-baseline-329-2-backend.json) |
+| #329 policy | `16c2683` | One agent, 1-minute load average 2.8 to 7.0. Nine repetitions. | [results](hash-baseline-329-3-policy-full-results.md) | [JSON](hash-baseline-329-3-policy-full.json) |
+| #329 dedup | `693594b` | One agent, 1-minute load average 2.8 to 7.0. Nine repetitions. | [results](hash-baseline-329-4-dedup-results.md) | [JSON](hash-baseline-329-4-dedup.json) |
+| #329 streaming | `67fee44` | One agent, 1-minute load average 2.8 to 7.0. Nine repetitions. | [results](hash-baseline-329-5-streaming-results.md) | [JSON](hash-baseline-329-5-streaming.json) |
+| #329 external | `67fee44` | One agent, 1-minute load average 2.8 to 7.0. Nine repetitions. | [results](hash-baseline-329-6-external-results.md) | [JSON](hash-baseline-329-6-external.json) |
 
 The initial capture shows the method and the order of magnitude. Do not use it
-to compare small differences. #329 repeats the capture on a quiet machine.
+to compare small differences. [The qualification](provenance-qualification.md) repeats the capture
+under less load and attributes each change.
 
 The #326 pair uses one backend, so it isolates repeated-input reuse from the
 backend change. The provenance-input hash operations of

@@ -7,7 +7,9 @@ from it.
 
 **The machine was not quiet.** Other coding agents built and tested on it (the
 1-minute load average went from about 3 to about 18). Do not use these values to
-compare small differences. #329 repeats the capture on a quiet machine.
+compare small differences. [The qualification](provenance-qualification.md) repeats the capture under
+less load, with the same result: the hash work moved, with no resolved end-to-end
+gain in `full` mode.
 
 The machine is an Apple M1 Pro with macOS on arm64, with a warm page cache. This
 is not the supported Linux x86-64 machine class. The capture has no cold-cache

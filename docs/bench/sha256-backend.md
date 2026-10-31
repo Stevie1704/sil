@@ -7,7 +7,8 @@ are in [sha256-backend.json](sha256-backend.json).
 
 **This machine was not quiet.** Other agents built and tested on it during the
 measurement, and a Docker image build ran. The maximum values show this load.
-#329 repeats the measurement on a quiet machine.
+[The qualification](provenance-qualification.md) repeats the measurement under less load
+([raw](sha256-backend-329.json)).
 
 **This machine is not the supported machine class.** SUPPORT.md names Linux
 x86-64. There is no x86-64 result here, and an arm64 ratio does not predict an

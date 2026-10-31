@@ -16,6 +16,27 @@ The platform that uses `external` must bind the actual runner and inputs to its
 execution record and hash the finalized Recording. The Manifest hash does not
 identify the contents of the files that a Manifest names.
 
+The Manifest hash is the SHA-256 of the exact file bytes. Replay verification
+stays on in both modes. `sil check`, `sil bundle`, comparisons and the artifact
+digests of a profile directory keep their hashes. `sil profile` in `external`
+mode still hashes a Recording in its directory, as profile evidence.
+[`examples/managed-platform/`](../running.md#managed-platform-example) shows the
+duties of the platform.
+
+## Less hash work in `full` mode
+
+| Change | Effect | Dependency or limit |
+| --- | --- | --- |
+| SHA-256 uses OpenSSL EVP | Digests stay the same. Hardware acceleration is used where the CPU has it. | A build from source needs OpenSSL 3.0 or newer with its static library. A built runner has no OpenSSL runtime dependency ([decision](../adr/0006-sha256-backend-static-openssl.md)). |
+| One digest for each canonical input path in one preparation | Participants that share an input cause one hash. | The reuse is for one preparation only. A later Run sees replaced bytes. |
+| The Recording digest is calculated while the Run writes | A normal Run does not read the Recording again. | The same CPU work occurs during the Run, so the reported Run wall time now includes it. `full` mode has no measured end-to-end gain from this change. A failed write can cause one read of the file. |
+| A profile command builds its artifact list once | Each finalized artifact has one hash. | The profile tool does not reuse the digest of the runner ([why](../profile-report.md#no-recording-digest-handoff)). |
+
+[The qualification](../bench/provenance-qualification.md) gives the measured
+results and limitations. The retained results are for one arm64 macOS machine
+unless the report states otherwise. They are not results for the supported
+machine class, and they do not promise a speedup on your workload.
+
 ## Compatibility
 
 | Surface | Status |

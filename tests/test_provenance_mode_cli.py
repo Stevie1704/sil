@@ -227,11 +227,12 @@ def test_external_cpu_capture_still_hashes_every_profile_artifact(
         "digest_state": "omitted", "sha256": None}
 
 
-def test_external_profile_rejects_tampered_normalized_evidence(
-        tools, exports, tmp_path):
+@pytest.mark.parametrize("mode", ["full", "external"])
+def test_a_profile_rejects_tampered_normalized_evidence_in_each_mode(
+        tools, exports, tmp_path, mode):
     manifest = mixed_period_manifest(tmp_path)
     proc = profile_sil([str(manifest), "--out", "prof", "--collector", "cpu",
-                        "--provenance-mode", "external"], tools, tmp_path,
+                        "--provenance-mode", mode], tools, tmp_path,
                        exports)
     assert proc.returncode == 0, proc.stderr
     samples = tmp_path / "prof" / "cpu" / "samples.json"
@@ -337,6 +338,92 @@ def test_heap_capture_forwards_and_records_the_policy(
     assert report["configuration"]["provenance_mode"] == mode
     assert side_car(out / "run.mcap.provenance.json")[
         "provenance_mode"] == mode
+
+
+@needs_linux
+@pytest.mark.parametrize("mode", ["full", "external"])
+@pytest.mark.parametrize("scoped", [False, True], ids=["runner", "process"])
+def test_heap_capture_keeps_no_recording_and_custom_paths(
+        tools, heaptrack, tmp_path, mode, scoped):
+    manifest, _markers = marker_manifest(tmp_path)
+    scope = ["--participant", "scoped"] if scoped else ["--runner"]
+
+    proc = heap_sil([*heap(manifest, *scope), "--no-recording",
+                     "--provenance", "custom.json",
+                     "--provenance-mode", mode], tools, tmp_path, heaptrack)
+
+    assert proc.returncode == 0, proc.stderr
+    report = heap_profile(tmp_path / "prof")
+    assert report["configuration"]["provenance_mode"] == mode
+    assert report["configuration"]["recording"] is None
+    assert side_car(tmp_path / "custom.json")["recording"] == {
+        "digest_state": "not_requested", "sha256": None}
+    assert "recording" not in {row["role"] for row in report["artifacts"]}
+
+
+@needs_linux
+@pytest.mark.parametrize("mode", ["full", "external"])
+def test_heap_capture_keeps_a_custom_recording_and_side_car_path(
+        tools, heaptrack, tmp_path, mode):
+    manifest, _markers = marker_manifest(tmp_path)
+
+    proc = heap_sil([*heap(manifest, "--runner"), "-o", "elsewhere.mcap",
+                     "--provenance", "custom.json",
+                     "--provenance-mode", mode], tools, tmp_path, heaptrack)
+
+    assert proc.returncode == 0, proc.stderr
+    state = side_car(tmp_path / "custom.json")["recording"]["digest_state"]
+    assert state == {"full": "calculated", "external": "omitted"}[mode]
+    assert (tmp_path / "elsewhere.mcap").is_file()
+
+
+@needs_linux
+@pytest.mark.parametrize("mode", ["full", "external"])
+def test_a_failed_heap_capture_run_keeps_its_exit_code(
+        tools, heaptrack, tmp_path, mode):
+    manifest = failing_step_manifest(tmp_path)
+
+    proc = heap_sil([*heap(manifest, "--runner"), "--provenance-mode", mode],
+                    tools, tmp_path, heaptrack)
+
+    assert proc.returncode == 1, proc.stderr
+    report = heap_profile(tmp_path / "prof")
+    assert report["run"]["status"] == "run_failure"
+    assert report["configuration"]["provenance_mode"] == mode
+
+
+@needs_linux
+@pytest.mark.parametrize("mode", ["full", "external"])
+def test_heap_capture_of_a_replay_mismatch_is_a_configuration_error(
+        tools, heaptrack, tmp_path, run_sil, mode):
+    ref, source = replay_run(tmp_path, run_sil)
+    source.write_bytes(source.read_bytes() + b"\0")
+
+    proc = heap_sil([*heap(ref.path, "--runner"), "--provenance-mode", mode],
+                    tools, tmp_path, heaptrack)
+
+    assert proc.returncode == 2, proc.stderr
+    report = heap_profile(tmp_path / "prof")
+    assert report["run"]["status"] == "configuration_error"
+    assert report["configuration"]["provenance_mode"] == mode
+
+
+@needs_linux
+@pytest.mark.parametrize("mode", ["full", "external"])
+def test_heap_profile_rejects_tampered_normalized_evidence(
+        tools, heaptrack, tmp_path, mode):
+    manifest, _markers = marker_manifest(tmp_path)
+    proc = heap_sil([*heap(manifest, "--runner"), "--provenance-mode", mode],
+                    tools, tmp_path, heaptrack)
+    assert proc.returncode == 0, proc.stderr
+    allocations = tmp_path / "prof" / "heap" / "allocations.json"
+    allocations.write_text(allocations.read_text() + " ")
+
+    proc = heap_sil(["render", "prof/profile.json"], tools, tmp_path,
+                    heaptrack)
+
+    assert proc.returncode == 2
+    assert "SHA-256" in proc.stderr
 
 
 # --- offline presentation ---------------------------------------------------
