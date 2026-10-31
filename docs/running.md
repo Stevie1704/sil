@@ -248,6 +248,11 @@ interpreter. The runner does not search `PATH` for the other arguments. If a
 relative argument names a file in the Manifest directory, the runner and the
 side-car use the absolute path of that file.
 
+`sil-run` digests each distinct input file once for each Run. Participants that
+name the same file, directly or through a symbolic link, share one digest. Each
+Run starts a new digest pass, so a file that changed between Runs gets a new
+digest.
+
 Because of this, the environment of `sil-run` decides which file a bare name
 starts. The ACC example uses `python3 -m sil.participant ...`. If the
 environment that has `sil` installed is not active, a different `python3`
