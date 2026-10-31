@@ -11,9 +11,20 @@ reads a duration from it.
 | --- | --- | --- | --- | --- |
 | Initial | `600fa429dfcca50b11eb5db9b6735d6d52bcea89` | Not quiet. Other coding agents built and tested on this machine (1-minute load average 8 to 13). | [results](hash-baseline-600fa429dfcc-results.md) | [JSON](hash-baseline-600fa429dfcc.json) |
 | #328 | See [recording-digest.md](recording-digest.md) | Not quiet | Linked there | Linked there |
+| #326 before | `55c4d3990f6e42339c6a2f1195a73a3d9f657fa7` (feat/323 tip, no provenance cache) | Not quiet. 1-minute load average 6.9 at 09:33. Three repetitions. | [results](hash-baseline-dedup-before-55c4d3990f6e-results.md) | [JSON](hash-baseline-dedup-before-55c4d3990f6e.json) |
+| #326 after | `fdece5b17cf54178160f937872bba9b0339c8577` (per-preparation provenance cache) | Not quiet. 1-minute load average 6.9 at 09:33. Three repetitions. | [results](hash-baseline-dedup-after-fdece5b-results.md) | [JSON](hash-baseline-dedup-after-fdece5b.json) |
 
 The initial capture shows the method and the order of magnitude. Do not use it
 to compare small differences. #329 repeats the capture on a quiet machine.
+
+The #326 pair uses one backend, so it isolates repeated-input reuse from the
+backend change. The provenance-input hash operations of
+`native-shared-library` fall from 33 to 2, for the same 8 MiB library. Those of
+`process-shared-inputs` fall from 25 to 4. The median preparation time falls
+from 177.9 ms to 10.8 ms, and from 184.3 ms to 28.0 ms. Both captures ran on a
+loaded machine. The end-to-end medians are lower after the change, but three
+repetitions on a loaded machine do not establish a speedup. The operation
+counts are the deterministic evidence.
 
 The machine is an Apple M1 Pro with macOS on arm64. SUPPORT.md names Linux
 x86-64 as the supported machine class, so this capture does not describe that

@@ -88,6 +88,20 @@ target_include_directories(sil_mapped_region_test PRIVATE ${PROJECT_SOURCE_DIR}/
 add_test(NAME sil_mapped_region COMMAND sil_mapped_region_test
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+# Provenance digests are reused within one preparation (#326). The test counts
+# digest operations per canonical input and checks digests against references
+# computed outside the kernel, so it links only the preparation sources.
+add_executable(sil_provenance_digest_test
+  provenance_digest_test.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/provenance.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/manifest.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/interceptor.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/clock_shim.cpp)
+target_include_directories(sil_provenance_digest_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(sil_provenance_digest_test PRIVATE nlohmann_json::nlohmann_json sil_sha256)
+add_test(NAME sil_provenance_digest COMMAND sil_provenance_digest_test
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
 # --- generated message headers (single typed contract per DESIGN #9) ---
 set(SIL_GEN_DIR ${CMAKE_BINARY_DIR}/generated)
 add_custom_command(
