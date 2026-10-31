@@ -45,5 +45,6 @@ machine class, and they do not promise a speedup on your workload.
 | `sil_run_diagnostics` | Version 1, with the new `configuration.provenance_mode`. A report without it stays valid and reads as `full`. |
 | `sil_benchmark_report` | Version 1, with the new `policy.provenance_mode`. A report without it stays valid and reads as `full`. |
 | `sil_profile_report` | Version 1, with the new `configuration.provenance_mode`. A set without it stays valid and reads as `full`; null reads as `unknown`. `sil profile diff` warns when the modes differ. |
-| Runner command line and exit codes | One new option. Existing use is unchanged. |
+| Runner command line | One new option. Existing use of the command line is unchanged. |
+| Runner exit codes | **Changed.** The codes keep their meanings, but a failed Recording write or close now gives exit `1`, and the Run stops after the first failed write. A caller that saw exit `0` for such a Run now sees a Run failure ([SUPPORT.md](../../SUPPORT.md), [details](../running.md#recording-digest)). |
 | Manifest document, Manifest hash, Recording contract | Unchanged |
