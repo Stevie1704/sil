@@ -228,6 +228,31 @@ decrease. Other operations keep their own hashing and their defaults:
 `sil check`, `sil bundle seal`, `sil bundle verify`, comparisons and the
 integrity checks of a profile directory.
 
+### Managed-platform example
+
+`examples/managed-platform/platform_run.py` is a runnable example of these
+duties. It needs no platform connector and no trace transport.
+
+```sh
+sil examples --dir examples
+python examples/managed-platform/platform_run.py \
+  --execution-id exec-0001 --workdir run-0001
+```
+
+| Duty | Where in the example | Where in `execution-record.json` |
+| --- | --- | --- |
+| Immutable inputs | `stage_inputs` makes a read-only Run directory. | `inputs[].path` |
+| Input identities | `take_identities` gives a digest for the runner, the interpreter and the participant script. A real platform takes them from its artifact store. | `inputs[].platform_sha256` |
+| Exact Manifest digest | The platform hashes the file bytes and compares them with `manifest_hash` in the side-car. | `manifest.sha256` |
+| Resolved input paths | Each artifact path in the side-car must have an identity. If not, the example stops with exit `3`. | `inputs[].role` |
+| Final output hash | The platform hashes the Recording after the Run. | `output.platform_sha256` |
+| External execution record | `--execution-id` names the record of the platform. | `execution_id` |
+
+SiL does not read this record and does not verify its digests. The side-car of
+the Run still shows `omitted`. To keep the example self-contained, it hashes its
+inputs for each execution. That work does not decrease the total. A platform
+gains only if it already has these identities.
+
 ## Failure report
 
 When `sil-run` has accepted its command line, a Run that ends with exit `1` or

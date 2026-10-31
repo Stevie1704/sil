@@ -138,15 +138,16 @@ def test_a_failed_run_keeps_the_digest_of_its_partial_recording(
 
 @pytest.mark.skipif(platform.system() != "Linux",
                     reason="Heaptrack is Linux only")
+@pytest.mark.parametrize("mode", ["full", "external"])
 def test_a_heap_capture_hashes_each_artifact_once(
-        tools, heaptrack, tmp_path, monkeypatch, capture):  # noqa: F811
+        tools, heaptrack, tmp_path, monkeypatch, capture, mode):  # noqa: F811
     _, hashed = capture
     manifest, _ = marker_manifest(tmp_path)
     for name, value in heaptrack.items():
         monkeypatch.setenv(name, value)
 
     profile_run.main([str(manifest), "--out", "prof", "--collector", "heap",
-                      "--runner"])
+                      "--runner", "--provenance-mode", mode])
 
     out = tmp_path / "prof"
     report = json.loads((out / "profile.json").read_text())
