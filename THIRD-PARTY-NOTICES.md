@@ -16,6 +16,19 @@ the container image and in the native-development archive.
 | [nlohmann/json](https://github.com/nlohmann/json) | 3.12.0 | MIT | `/usr/share/licenses/sil/nlohmann-json/LICENSE.MIT` (image), `share/licenses/sil/nlohmann-json/LICENSE.MIT` (staged prefix) |
 | [MCAP C++](https://github.com/foxglove/mcap) | 2.1.3 | MIT | `/usr/share/licenses/sil/mcap/LICENSE` (image), `share/licenses/sil/mcap/LICENSE` (staged prefix) |
 
+## Linked into the native binaries
+
+`libcrypto` is linked statically into `sil-run` and `sil-run-diagnostics`. It
+gives the SHA-256 backend. It is present in the container image and in the
+native-development archive, and no shared OpenSSL library is necessary at run
+time.
+
+| Component | Version | License | Text in a published artifact |
+| --- | --- | --- | --- |
+| [OpenSSL](https://www.openssl.org/) `libcrypto` | 3.x from the Debian bookworm snapshot of the build image | Apache-2.0, Copyright The OpenSSL Project Authors | The same text as SiL's own: `/usr/share/licenses/sil/LICENSE` (image), `share/licenses/sil/LICENSE` (staged prefix) |
+
+## MCAP compression
+
 The kernel builds MCAP with `MCAP_COMPRESSION_NO_LZ4` and
 `MCAP_COMPRESSION_NO_ZSTD`, so no compression library is linked into the
 native binaries.
