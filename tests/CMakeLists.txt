@@ -81,7 +81,7 @@ add_executable(sil_provenance_digest_test
   ${PROJECT_SOURCE_DIR}/kernel/src/interceptor.cpp
   ${PROJECT_SOURCE_DIR}/kernel/src/clock_shim.cpp)
 target_include_directories(sil_provenance_digest_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(sil_provenance_digest_test PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(sil_provenance_digest_test PRIVATE nlohmann_json::nlohmann_json sil_sha256)
 add_test(NAME sil_provenance_digest COMMAND sil_provenance_digest_test
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
