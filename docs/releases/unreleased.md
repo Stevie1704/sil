@@ -33,9 +33,9 @@ duties of the platform.
 | A profile command builds its artifact list once | Each finalized artifact has one hash. | The profile tool does not reuse the digest of the runner ([why](../profile-report.md#no-recording-digest-handoff)). |
 
 [The qualification](../bench/provenance-qualification.md) gives the measured
-results and limitations. The retained results are for one arm64 macOS machine
-unless the report states otherwise. They are not results for the supported
-machine class, and they do not promise a speedup on your workload.
+results and limitations. The attribution for each change is from one arm64 macOS
+machine. The x86-64 results are from one shared CI runner. The results do not
+promise a speedup on your workload.
 
 ## Compatibility
 
