@@ -140,22 +140,23 @@ struct SizeLimitOption {
 };
 
 // Completes the provenance record once the Run's outcome is known and writes
-// it beside the Recording. The Recording is digested here rather than during
-// the preflight because its bytes do not exist until the sink has closed. In
-// external mode the caller owns the digest, so the file is not read at all.
-void write_side_car(sil::Provenance &provenance, int exit_code, bool recording,
+// the JSON side-car. The Recording digest comes from the closed sink, so a
+// normal Run does not read the file again. A Run that opened no sink has no
+// output of its own to digest: a file at that path is not from this Run.
+void write_side_car(sil::Provenance &provenance, int exit_code,
+                    const sil::RecordingSink *recorder, bool recording,
                     const char *out_path, const char *requested_path) {
   provenance.run_exit_code = exit_code;
   if (recording && provenance.mode == sil::ProvenanceMode::External) {
     provenance.recording = sil::ProvenanceDigest::omitted();
   } else if (recording) {
-    try {
-      provenance.recording =
-          sil::ProvenanceDigest::calculated(sil::sha256_file(out_path));
-    } catch (const std::exception &e) {
-      provenance.recording = sil::ProvenanceDigest::failed(e.what());
-      provenance.errors.push_back({"Recording", out_path, e.what()});
-    }
+    provenance.recording =
+        recorder ? recorder->digest()
+                 : sil::ProvenanceDigest::failed(
+                       "the Run did not open this Recording");
+    if (provenance.recording.state == sil::DigestState::Failed)
+      provenance.errors.push_back(
+          {"Recording", out_path, provenance.recording.reason});
   }
   const std::filesystem::path path =
       requested_path ? std::filesystem::path(requested_path)
@@ -562,7 +563,8 @@ int run(int argc, char **argv) {
     // unrecognized output extension is a Manifest error (exit 2) and must reject
     // before any participant is created.
     if (recording)
-      recorder = sil::make_recording_sink(out_path, prepared->manifest());
+      recorder = sil::make_recording_sink(out_path, prepared->manifest(),
+                                          provenance_mode);
     try {
       sil::diagnostics::enter_phase(sil::diagnostics::Phase::Setup);
       if (sil::run_interrupted())
@@ -594,8 +596,9 @@ int run(int argc, char **argv) {
     exit_code = kExitRunFailure;
   }
 
-  // Close before hashing so a failed Run's partial Recording is still an
-  // auditable artifact. McapRecorder's destructor is a second safety net.
+  // Close first so a failed Run's partial Recording is still an auditable
+  // artifact with a final digest. McapRecorder's destructor is a second safety
+  // net.
   if (recorder) {
     sil::diagnostics::enter_phase(
         sil::diagnostics::Phase::RecordingFinalization);
@@ -609,7 +612,7 @@ int run(int argc, char **argv) {
   sil::diagnostics::end_run();
 
   if (provenance)
-    write_side_car(*provenance, exit_code, recording, out_path,
+    write_side_car(*provenance, exit_code, recorder.get(), recording, out_path,
                    provenance_path_arg);
   write_failure_side_car(failure, exit_code, out_path);
 

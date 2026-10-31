@@ -32,6 +32,23 @@ target_include_directories(sil_engine_interface_test PRIVATE ${PROJECT_SOURCE_DI
 add_test(NAME sil_engine_interface COMMAND sil_engine_interface_test
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+# The close contract of a Recording sink (#328). A failed close cannot be made
+# from outside a Run on every host, so this test drives the sink directly.
+add_executable(sil_recording_sink_test
+  recording_sink_test.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/mcap_recording.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/recording_file.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/provenance.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/manifest.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/interceptor.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/clock_shim.cpp)
+target_include_directories(sil_recording_sink_test PRIVATE
+  ${PROJECT_SOURCE_DIR}/kernel/src ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(sil_recording_sink_test PRIVATE
+  nlohmann_json::nlohmann_json mcap_headers sil_sha256)
+add_test(NAME sil_recording_sink COMMAND sil_recording_sink_test
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
 # The diagnostics collector's statistics (#300) are pure arithmetic over
 # synthetic durations, so they get a focused C++ test rather than a timed Run.
 add_executable(sil_diagnostics_stats_test

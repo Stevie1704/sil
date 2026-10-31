@@ -119,8 +119,9 @@ def test_external_mode_performs_no_provenance_hashing(
     external = hash_work(sil_run_instrumented, ref, tmp_path / "ext.mcap",
                          "--provenance-mode", "external")
 
-    # Runner, shim, library, executable, command file and the Recording.
-    assert full["count"] == 6
+    # Runner, shim, library, executable and command file. The Recording digest
+    # comes from the write path, so it is not a pass over a file.
+    assert full["count"] == 5
     assert external == {"count": 0, "bytes": 0}
 
 
