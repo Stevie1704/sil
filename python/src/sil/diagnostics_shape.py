@@ -41,7 +41,7 @@ FLAG = _leaf(lambda v: type(v) is bool, "a boolean")
 
 def one_of(values: set[str]) -> Shape:
     def check(value: Any, where: str, errors: list) -> None:
-        if value not in values:
+        if type(value) is not str or value not in values:
             errors.append(f"{where}: unknown value {value!r}")
     return check
 
