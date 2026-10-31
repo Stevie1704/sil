@@ -65,7 +65,8 @@ void usage() {
                "[--max-step-output-messages <N>] "
                "[--max-step-inline-payload-bytes <N>] "
                "[-o <out.mcap> | --no-recording] "
-               "[--provenance <out.provenance.json>]" SIL_DIAGNOSTICS_USAGE
+               "[--provenance <out.provenance.json>] "
+               "[--provenance-mode full|external]" SIL_DIAGNOSTICS_USAGE
                "\n"
                "       " SIL_RUNNER_NAME " --version\n"
                "       " SIL_RUNNER_NAME " --build-info\n";
@@ -117,6 +118,18 @@ bool parse_positive_size(std::string_view text, size_t &value) {
   return true;
 }
 
+bool parse_provenance_mode(std::string_view text, sil::ProvenanceMode &mode) {
+  if (text == "full") {
+    mode = sil::ProvenanceMode::Full;
+    return true;
+  }
+  if (text == "external") {
+    mode = sil::ProvenanceMode::External;
+    return true;
+  }
+  return false;
+}
+
 // The three Step-protocol size guards differ only in the flag that names them
 // and the field they land in, so the loop below matches them through here
 // rather than repeating the same parse-and-reject block once per guard.
@@ -128,14 +141,19 @@ struct SizeLimitOption {
 
 // Completes the provenance record once the Run's outcome is known and writes
 // it beside the Recording. The Recording is digested here rather than during
-// the preflight because its bytes do not exist until the sink has closed.
+// the preflight because its bytes do not exist until the sink has closed. In
+// external mode the caller owns the digest, so the file is not read at all.
 void write_side_car(sil::Provenance &provenance, int exit_code, bool recording,
                     const char *out_path, const char *requested_path) {
   provenance.run_exit_code = exit_code;
-  if (recording) {
+  if (recording && provenance.mode == sil::ProvenanceMode::External) {
+    provenance.recording = sil::ProvenanceDigest::omitted();
+  } else if (recording) {
     try {
-      provenance.recording_sha256 = sil::sha256_file(out_path);
+      provenance.recording =
+          sil::ProvenanceDigest::calculated(sil::sha256_file(out_path));
     } catch (const std::exception &e) {
+      provenance.recording = sil::ProvenanceDigest::failed(e.what());
       provenance.errors.push_back({"Recording", out_path, e.what()});
     }
   }
@@ -234,6 +252,7 @@ sil::diagnostics::RunFacts run_facts(
     const char *manifest_path, const std::optional<sil::Manifest> &manifest,
     int exit_code, const std::optional<FirstFailure> &failure, bool recording,
     const char *out_path, const std::filesystem::path &provenance_path,
+    sil::ProvenanceMode provenance_mode,
     const std::optional<std::chrono::milliseconds> &participant_timeout,
     const sil::RunBoundaryLimits &limits) {
   sil::diagnostics::RunFacts facts;
@@ -261,6 +280,7 @@ sil::diagnostics::RunFacts run_facts(
   facts.recording = recording;
   facts.recording_path = out_path;
   facts.provenance_path = provenance_path.string();
+  facts.provenance_mode = sil::provenance_mode_name(provenance_mode);
   if (participant_timeout)
     facts.participant_timeout_ms = uint64_t(participant_timeout->count());
   facts.max_protocol_line_bytes = limits.max_protocol_line_bytes;
@@ -309,6 +329,8 @@ int run(int argc, char **argv) {
   const char *manifest_path = nullptr;
   const char *out_path = "out.mcap";
   const char *provenance_path_arg = nullptr;
+  sil::ProvenanceMode provenance_mode = sil::ProvenanceMode::Full;
+  bool provenance_mode_given = false;
 #ifdef SIL_RUN_DIAGNOSTICS
   const char *diagnostics_path_arg = nullptr;
   const char *retention_path_arg = nullptr;
@@ -347,6 +369,17 @@ int run(int argc, char **argv) {
         return kExitConfigError;
       }
       provenance_path_arg = argv[++i];
+    } else if (std::strcmp(argv[i], "--provenance-mode") == 0) {
+      if (provenance_mode_given || i + 1 >= argc) {
+        usage();
+        return kExitConfigError;
+      }
+      if (!parse_provenance_mode(argv[++i], provenance_mode)) {
+        std::cerr << SIL_RUNNER_NAME
+            ": --provenance-mode must be full or external\n";
+        return kExitConfigError;
+      }
+      provenance_mode_given = true;
     } else if (std::strcmp(argv[i], "--participant-timeout-ms") == 0) {
       if (participant_timeout || i + 1 >= argc) {
         usage();
@@ -513,7 +546,8 @@ int run(int argc, char **argv) {
     manifest.emplace(sil::load_manifest(manifest_path));
     provenance.emplace(
         sil::initialize_provenance(manifest.value(), SIL_VERSION,
-                                   SIL_SOURCE_REPOSITORY, SIL_SOURCE_REVISION));
+                                   SIL_SOURCE_REPOSITORY, SIL_SOURCE_REVISION,
+                                   provenance_mode));
 
     // Validate and resolve the Run before Engine can load a Native library or
     // spawn a Process participant. Preparation keeps the resolved execution
@@ -583,7 +617,7 @@ int run(int argc, char **argv) {
   write_diagnostics(diagnostics_path,
                     run_facts(manifest_path, manifest, exit_code, failure,
                               recording, out_path, provenance_path,
-                              participant_timeout, limits));
+                              provenance_mode, participant_timeout, limits));
 #endif
 
   if (exit_code == kExitOk && manifest)
