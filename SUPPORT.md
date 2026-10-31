@@ -61,7 +61,16 @@ among them), their SHA-256 digests, the Manifest hash, the SiL version, and the
 machine class. Every Manifest-named path, Process commands included, resolves
 against the Manifest's directory. With `--no-recording`, the side-car is
 still emitted next to the default `out.mcap` location and its `recording` value
-is `null`.
+has the state `not_requested`.
+
+The side-car has schema version 2. Each digest has an explicit state:
+`calculated`, `omitted`, `unresolved`, `failed` or, for the Recording,
+`not_requested`. `--provenance-mode external` lets a platform own artifact
+identity: the runner omits its input and Recording digests, and keeps the
+Manifest hash, path and file checks, and Replay verification. SiL does not
+verify the identities of the platform. Schema version 1 records keep their
+meaning. The [schema and the migration](docs/running.md#provenance-side-car)
+are in the Run documentation.
 
 A failed Run (exit `1` or `2`) also writes a failure report next to its
 Recording: `<recording>.failure.json`. It names the failure category, the

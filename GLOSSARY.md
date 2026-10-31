@@ -275,6 +275,13 @@ The digest of a manifest's exact bytes, archived with every run so results can
 be attributed to a manifest and deduplicated.
 _Avoid_: config id, fingerprint, version
 
+**Provenance mode**:
+The invocation policy that says who owns artifact identity for a run: `full`,
+where the runner hashes its inputs and the recording, or `external`, where the
+caller does and the runner omits those digests. It is never part of the
+manifest or the manifest hash, and it does not disable replay verification.
+_Avoid_: hash switch, integrity mode
+
 **Manifest error**:
 A run rejected before any participant is stepped, because its manifest — or
 the environment that manifest names — cannot be honoured. Exit code 2. Nothing

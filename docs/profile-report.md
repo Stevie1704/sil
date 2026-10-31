@@ -29,6 +29,7 @@ unknown version.
 ```sh
 sil profile MANIFEST --out DIR --collector cpu
     [-o RECORDING | --no-recording] [--provenance PATH]
+    [--provenance-mode full|external]
     [--participant-timeout-ms N] [--max-protocol-line-bytes N]
     [--max-step-output-messages N] [--max-step-inline-payload-bytes N]
     [--frequency-hz N] [--stack-bytes N] [--max-capture-bytes N]
@@ -37,6 +38,7 @@ sil profile MANIFEST --out DIR --collector cpu
 
 sil profile MANIFEST --out DIR --collector heap (--runner | --participant NAME)
     [-o RECORDING | --no-recording] [--provenance PATH]
+    [--provenance-mode full|external]
     [--participant-timeout-ms N] [--max-protocol-line-bytes N]
     [--max-step-output-messages N] [--max-step-inline-payload-bytes N]
     [--max-capture-bytes N] [--symbolization-timeout-s N]
@@ -47,6 +49,7 @@ sil profile MANIFEST --out DIR --collector heap (--runner | --participant NAME)
 | `--out DIR` | required | The profile directory. It must not exist; its parent must exist. |
 | `--collector` | required | `cpu` or `heap`. |
 | `-o`, `--no-recording`, `--provenance` | `DIR/run.mcap` | As `sil run`. A relative path resolves against the current directory. With `--no-recording` the provenance record is `DIR/run.provenance.json`; a failure report is `out.mcap.failure.json` in the current directory, as with `sil run`. |
+| `--provenance-mode` | `full` | As `sil run` ([provenance mode](running.md#provenance-mode)). It controls the runner only. See [Provenance mode and profile integrity](#provenance-mode-and-profile-integrity). |
 | the four guards | as `sil run` | Passed to the runner unchanged and recorded. |
 | `--frequency-hz` | 999 | perf sampling frequency (`-F`). |
 | `--stack-bytes` | 8192 | User stack bytes that perf copies per sample for DWARF unwinding. |
@@ -277,12 +280,36 @@ Reasons of `activation_correlation` (#316):
 | `producer` | `name` (`sil profile`), `sil_version` |
 | `identity` | `manifest_path` as given, `manifest_hash`, `sil_version`, `source_repository`, `source_revision` (from the diagnostics report; null with `no_diagnostics_report`) |
 | `host` | `os`, `kernel_release`, `architecture`, `perf_event_paranoid` (null when not readable) |
-| `configuration` | `collector`, `recording` (null for `--no-recording`), `participant_timeout_ms` and the three guards (null when not given), `cwd` |
+| `configuration` | `collector`, `recording` (null for `--no-recording`), `provenance_mode`, `participant_timeout_ms` and the three guards (null when not given), `cwd` |
 | `run` | The Run outcome, below |
 | `capture` | The collector variant: `kind` `cpu` or `heap` |
 | `activation_correlation` | `kind` `not_requested` or `activation` |
 | `artifacts` | List of `{role, path, bytes, sha256}`: every file the directory holds that `profile.json` relies on; `path` relative to `DIR` |
 | `limitations` | Fixed statements that apply to every value, below |
+
+### Provenance mode and profile integrity
+
+Provenance hashing is part of the measured runner work, so a capture records
+its effective mode in `configuration.provenance_mode`. `sil profile render`
+shows it, and `sil profile diff` warns when two sets differ.
+
+| `provenance_mode` | Meaning | Shown as |
+| --- | --- | --- |
+| `full`, `external` | The effective mode of this capture | The value |
+| Not present | A set from before the option. Those Runs used `full`. | `full (report predates the option)`; the diff compares it as `full` |
+| null | The mode cannot be established | `unknown` |
+
+Report version 1 stays valid, because the member is optional. A reader never
+infers `external` from a missing digest.
+
+`external` omits runner provenance hashing only. The profile tool still
+calculates and verifies each digest in `artifacts`, and `sil profile render`
+still rejects changed normalized evidence. A Recording in the profile directory
+is an artifact, so the profile tool hashes it after the Run, also in `external`
+mode. A `sha256` in `artifacts` is a digest of the profile tool. It is not a
+digest of the runner, and the side-car still shows `omitted`. So `external` does
+not make a profile command free of hash work. A Recording outside the profile
+directory is not an artifact, as before.
 
 ### `run`
 
@@ -1015,7 +1042,7 @@ HTML report, including usable tables without JavaScript, keyboard sorting,
 and the same dark/light theme controls as the profile report.
 
 Both sets' Manifest hash, SiL version, source revision, host, tool version,
-sampling settings, call graph and scope are shown. Differences produce a
+sampling settings, call graph, scope and provenance mode are shown. Differences produce a
 prominent warning; unknown identity values stay unknown. Run and capture
 statuses and reasons remain visible even when a partial set is compared.
 

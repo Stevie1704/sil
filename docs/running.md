@@ -93,6 +93,118 @@ participant, `manifest.py` first compiles the library with `$CC` (default
 `cc`) against the headers installed beside `sil-run`. To give a different
 include directory, set `CFLAGS=-I<dir>`.
 
+## Provenance side-car
+
+Each Run that has loaded its Manifest writes a deterministic JSON record next
+to its Recording: `<recording>.provenance.json`. `--provenance PATH` selects
+another path. With `--no-recording`, the record goes next to the default
+`out.mcap` location.
+
+### Provenance mode
+
+`--provenance-mode full|external` selects who owns artifact identity. The
+default is `full`. `sil-run`, `sil run` with or without diagnostics,
+`sil benchmark` and `sil profile` accept the option. An unknown or a repeated
+value is a usage error (exit `2`), and no Run starts. The option is an
+invocation policy. It is not a Manifest field, so it does not change the
+Manifest hash.
+
+| Operation | `full` | `external` |
+| --- | --- | --- |
+| Hash the exact Manifest bytes | Yes | Yes |
+| Resolve paths, check that files can be opened, check topology | Yes | Yes |
+| Hash the runner, Clock shim, Native libraries, Process executables and files that commands name | Yes | No |
+| Hash the output Recording | Yes | No |
+| Verify a Replay input against its expected hash | Yes | Yes |
+| Write the side-car | Yes | Yes |
+
+The mode does not change Recording bytes, virtual scheduling, Message order,
+Participant behavior or exit codes. An artifact that `full` rejects because it
+cannot be resolved or opened, `external` also rejects. A Replay hash mismatch
+is a configuration error in both modes.
+
+### Schema version 2
+
+The record has `schema_version` 2 and a top-level `provenance_mode`. All other
+top-level members keep their names: `manifest_hash`, `sil`, `machine_class`,
+`run_exit_code`, `artifacts` and `errors`.
+
+Each digest is an object with a `digest_state` member. An artifact object also
+has `path`.
+
+| `digest_state` | Meaning | `path` | `sha256` | `reason` |
+| --- | --- | --- | --- | --- |
+| `calculated` | SiL calculated the digest of this Run. | Canonical | 64 hex digits | Not present |
+| `omitted` | External ownership: SiL did not calculate a digest. It makes no statement about the file contents. | Canonical | null | Not present |
+| `unresolved` | The path does not resolve to a regular file. | As requested | null | Text |
+| `failed` | SiL could not read or hash the file. | Canonical | null | Text |
+| `not_requested` | `recording` only: the Run was asked to write no Recording. | Not present | null | Not present |
+
+```json
+{"path": "/opt/sil/libcontroller.silp", "digest_state": "omitted", "sha256": null}
+```
+
+- `artifacts.runner`, and the `library`, `executable` and `file` member of each
+  entry, always hold an artifact object. `artifacts.clock_shim` is null only
+  when no Participant asks for the Clock shim.
+- `recording` is a digest object without `path`: `calculated`, `omitted`,
+  `failed` or `not_requested`. `omitted` does not say that a Recording file
+  exists. See `run_exit_code` for the outcome.
+- An empty or zero digest never means omission. A null `sha256` never means
+  that a check passed.
+- `errors` still lists every `unresolved` or `failed` artifact and a failed
+  Recording digest.
+- Two equivalent Runs in one mode give the same record bytes. A record of
+  `full` and a record of `external` differ.
+
+A record with `path` values only is not evidence of file contents. Do not read
+an `omitted` digest as a verification, or as a statement that a file did not
+change.
+
+### Migrate from schema version 1
+
+| Member | Version 1 | Version 2 |
+| --- | --- | --- |
+| `schema_version` | `1` | `2` |
+| `provenance_mode` | Not present | `full` or `external` |
+| Artifact object | `path`, `sha256` | `path`, `digest_state`, `sha256`, and `reason` on failure |
+| Artifact that failed | null, and an `errors` entry | An object with `unresolved` or `failed`, and an `errors` entry |
+| `recording` with a digest | `{"sha256": ...}` | `{"digest_state": "calculated", "sha256": ...}` |
+| `recording` without a Recording | null | `{"digest_state": "not_requested", "sha256": null}` |
+| `recording` with a failed digest | null | `{"digest_state": "failed", "sha256": null, "reason": ...}` |
+
+A version 1 record keeps its meaning. A reader that needs a digest must check
+`digest_state` in version 2, and must reject a record without a calculated
+digest. In this repository, `sil recording export` reads both versions. It
+binds a Run outcome to the source only through a digest that SiL calculated
+([completeness](visualization.md#completeness)).
+
+### Platform responsibility in external mode
+
+Use `external` when a platform can bind its recorded identities to the actual
+runner and inputs that SiL uses, for example with immutable artifacts or an
+isolated immutable Run directory. `external` means that the caller owns
+artifact identity. It does not mean that SiL verified a digest of the caller,
+and SiL accepts no such digest.
+
+The platform must:
+
+- bind the identity of the actual runner and of every input to its execution
+  record;
+- hash the finalized Recording after the Run;
+- associate the Manifest hash with these identities.
+
+The Manifest hash is configuration identity. It is the SHA-256 of the exact
+bytes of the Manifest file. It does not identify the contents of files that the
+Manifest names: if you replace a library at the same path, the Manifest hash
+does not change. If you parse and write the JSON again, the bytes and so the
+hash can change.
+
+If a wrapper does the same hashing synchronously, the total work does not
+decrease. Other operations keep their own hashing and their defaults:
+`sil check`, `sil bundle seal`, `sil bundle verify`, comparisons and the
+integrity checks of a profile directory.
+
 ## Failure report
 
 When `sil-run` has accepted its command line, a Run that ends with exit `1` or
@@ -332,8 +444,9 @@ sil run manifest.json --no-recording --diagnostics  # out.mcap.diagnostics.json
 - The report is `<recording>.diagnostics.json`, also under `--no-recording`
   (`out.mcap.diagnostics.json`). `--diagnostics-out PATH` gives another path
   and implies `--diagnostics`.
-- `-o`, `--no-recording`, `--provenance`, `--participant-timeout-ms` and the
-  three Step-protocol size guards have the same meaning as for `sil-run`. The
+- `-o`, `--no-recording`, `--provenance`, `--provenance-mode`,
+  `--participant-timeout-ms` and the three Step-protocol size guards have the
+  same meaning as for `sil-run`. The
   Manifest is not moved or changed, so its relative paths resolve as in an
   ordinary Run.
 - The report must be a new file in an existing directory. A path that exists,
@@ -378,6 +491,9 @@ sil benchmark manifest.json --repeats 10 --warmup 0 --out results \
   --participant-timeout-ms 5000 --no-recording
 ```
 
+- `--provenance-mode` is forwarded to every Run
+  ([provenance mode](#provenance-mode)). The summary records it in
+  `policy.provenance_mode`, because the hashing is part of the measured work.
 - `--repeats N` (an integer, at least 1, default 5) measured Runs follow
   `--warmup N` (an integer, at least 0, default 1) warm-up Runs. Each Run has
   fresh processes and a fresh working directory, and the Runs are one after
