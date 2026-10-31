@@ -16,6 +16,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <fstream>
+#include <map>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -215,6 +216,22 @@ void add_error(Provenance &provenance, const std::string &name,
   provenance.errors.push_back({name, path, reason});
 }
 
+// Digests of the canonical input paths that one preparation has already hashed.
+// Each preparation owns one instance, so a digest never outlives the Run it
+// described. Only a real hash reaches the provenance_hash counter.
+class ProvenanceDigests {
+ public:
+  const std::string &digest(const fs::path &canonical_path) {
+    const std::string key = canonical_path.string();
+    const auto cached = digests_.find(key);
+    if (cached != digests_.end()) return cached->second;
+    return digests_.emplace(key, sha256_file(canonical_path)).first->second;
+  }
+
+ private:
+  std::map<std::string, std::string> digests_;
+};
+
 // External mode returns before it reaches the cache, so it can never hash.
 ProvenanceDigest digest_of(const Provenance &provenance,
                            ProvenanceDigests &digests, const fs::path &path) {
@@ -321,8 +338,9 @@ Provenance initialize_provenance(const Manifest &manifest,
   return provenance;
 }
 
-PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance,
-                        ProvenanceDigests &digests) {
+PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
+  ProvenanceDigests digests;
+
   // The loader compiles these plans, and preparation is the only path to an
   // Engine. Keep the check here as well so a hand-built Manifest cannot forge
   // a ready Run by omitting a plan.
@@ -438,16 +456,6 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance,
 
   if (!provenance.errors.empty()) throw ManifestError(preflight_error(provenance));
   return PreparedRun(manifest, std::move(prepared_participants));
-}
-
-const std::string &ProvenanceDigests::digest(const fs::path &canonical_path) {
-  const std::string key = canonical_path.string();
-  const auto cached = digests_.find(key);
-  if (cached != digests_.end()) return cached->second;
-
-  std::string sha256 = sha256_file(canonical_path);
-  ++hash_operations_;
-  return digests_.emplace(key, std::move(sha256)).first->second;
 }
 
 std::string sha256_file(const fs::path &path) {

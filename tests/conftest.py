@@ -1,3 +1,4 @@
+import hashlib
 import importlib.util
 import os
 import subprocess
@@ -22,6 +23,11 @@ _SRC = ROOT / "python" / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 os.environ["PYTHONPATH"] = str(_SRC) + os.pathsep + os.environ.get("PYTHONPATH", "")
+
+
+def file_sha256(path) -> str:
+    """The independent digest of a file, for an expected value in a test."""
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def load_module(name: str, path: Path):

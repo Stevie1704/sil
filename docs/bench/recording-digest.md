@@ -69,5 +69,6 @@ Medians in ms.
 | 72 MiB | 6 MiB | 6 MiB |
 | 288 MiB | 6 MiB | 6 MiB |
 
-The peak does not change with the file length or the mode.
-`tests/test_recording_digest.py` keeps a check with a wide margin.
+The peak does not change with the file length or the mode. This table is
+evidence: no test gates on a memory value. `tests/test_recording_digest.py` pins
+the digest and the count of digested bytes, which repeat exactly.

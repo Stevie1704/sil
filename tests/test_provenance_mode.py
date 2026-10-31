@@ -6,7 +6,6 @@ the side-car holds, and no other result of the Run.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import shutil
@@ -15,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import BUILD_DIR
+from conftest import BUILD_DIR, file_sha256
 from test_provenance import STEP_LOOP, native_manifest, sidecar
 from test_replayer import record_producer_run, replay_manifest
 from toys import toy_manifest
@@ -76,11 +75,10 @@ def test_full_mode_digests_every_artifact_and_the_recording(
     assert len(artifacts) == 5
     for artifact in artifacts:
         assert artifact["digest_state"] == "calculated"
-        assert artifact["sha256"] == hashlib.sha256(
-            Path(artifact["path"]).read_bytes()).hexdigest()
+        assert artifact["sha256"] == file_sha256(artifact["path"])
     assert document["recording"] == {
         "digest_state": "calculated",
-        "sha256": hashlib.sha256(out.read_bytes()).hexdigest()}
+        "sha256": file_sha256(out)}
 
 
 def test_external_mode_keeps_paths_and_marks_every_digest_omitted(
@@ -156,7 +154,7 @@ def test_shared_inputs_count_real_hashes_only_and_none_when_external(
 
     # Every Participant keeps its own entries in both modes.
     payload = str((tmp_path / "scenario.xosc").resolve())
-    reference = hashlib.sha256(Path(payload).read_bytes()).hexdigest()
+    reference = file_sha256(payload)
     for out, state, sha256 in ((full_out, "calculated", reference),
                                (external_out, "omitted", None)):
         artifacts = sidecar(out)["artifacts"]
@@ -165,6 +163,39 @@ def test_shared_inputs_count_real_hashes_only_and_none_when_external(
                 for entry in artifacts["command_files"]] == [
             (name, {"path": payload, "digest_state": state, "sha256": sha256})
             for name in ("first", "second")]
+
+
+def native_and_process_shared_inputs_manifest(directory: Path):
+    """Three Native participants share one library, one through a symbolic link.
+    Two Process participants share one executable, and the first names a file."""
+    library = directory / "producer.silp"
+    shutil.copy2(BUILD_DIR / "toy_producer.silp", library)
+    alias = directory / "alias.silp"
+    alias.symlink_to(library.name)
+    script = executable_script(directory)
+    payload = directory / "scenario.xosc"
+    payload.write_text("<OpenSCENARIO/>\n")
+    manifest = toy_manifest(duration_ns=10_000_000)
+    for name, path in (("a", library), ("b", alias), ("c", library)):
+        manifest.add_channel(name, schema="toy.Counter")
+        manifest.add_native(name, library=str(path),
+                            config={"channel": name, "period_ns": 10_000_000},
+                            publishes=[name])
+    manifest.add_process("p", command=[str(script), str(payload)],
+                         step_period_ns=10_000_000)
+    manifest.add_process("q", command=[str(script)], step_period_ns=10_000_000)
+    return manifest.write(directory / "shared.json")
+
+
+def test_each_canonical_input_is_hashed_once_in_one_preparation(
+        sil_run_instrumented, tmp_path):
+    ref = native_and_process_shared_inputs_manifest(tmp_path)
+
+    work = hash_work(sil_run_instrumented, ref, tmp_path / "out.mcap")
+
+    # Runner, library, executable and command file. Without reuse it is seven:
+    # the runner, three libraries, two executables and the command file.
+    assert work["count"] == 4
 
 
 def replay_run(directory: Path, run_sil):
@@ -301,20 +332,23 @@ def test_an_unreadable_artifact_fails_preparation_in_both_modes(
     assert record["reason"]
 
 
-def test_a_failed_recording_digest_is_not_an_omitted_one(sil_run, tmp_path):
-    """A Manifest error leaves no Recording file to digest in full mode."""
+@pytest.mark.parametrize("mode", ["full", "external"])
+def test_a_failed_recording_digest_is_not_an_omitted_one(sil_run, tmp_path,
+                                                         mode):
+    """After a Manifest error the Run opened no Recording, so no mode has a
+    digest to omit."""
     ref = missing_executable_manifest(tmp_path)
-    full, external = tmp_path / "full.mcap", tmp_path / "external.mcap"
+    out = tmp_path / "out.mcap"
 
-    run(sil_run, ref.path, full)
-    run(sil_run, ref.path, external, "--provenance-mode", "external")
+    run(sil_run, ref.path, out, "--provenance-mode", mode)
 
-    recording = sidecar(full)["recording"]
+    document = sidecar(out)
+    recording = document["recording"]
     assert recording["digest_state"] == "failed"
     assert recording["sha256"] is None
     assert recording["reason"]
-    assert sidecar(external)["recording"] == {"digest_state": "omitted",
-                                              "sha256": None}
+    assert any(error["artifact"] == "Recording"
+               for error in document["errors"])
 
 
 @pytest.mark.parametrize("options", [

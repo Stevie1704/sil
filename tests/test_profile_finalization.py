@@ -8,7 +8,6 @@ expected digests come from `hashlib` over the files on disk.
 from __future__ import annotations
 
 import dataclasses
-import hashlib
 import json
 import platform
 from collections import Counter
@@ -16,6 +15,7 @@ from pathlib import Path
 
 import pytest
 
+from conftest import file_sha256
 from sil import profile_common, profile_run
 from sil.profile_activation import Correlation
 from test_profile_heap_run import heaptrack, marker_manifest  # noqa: F401
@@ -53,7 +53,7 @@ def assert_inventory_hashed_once(report: dict, out: Path, hashed: Counter):
     assert hashed == Counter(dict.fromkeys(rows, 1))
     for path, row in rows.items():
         assert row["bytes"] == path.stat().st_size
-        assert row["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
+        assert row["sha256"] == file_sha256(path)
 
 
 def correlation_document(monkeypatch) -> None:

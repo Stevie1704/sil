@@ -7,6 +7,10 @@ value reads the same everywhere.
 
 from __future__ import annotations
 
+# The policy of every Run before the option existed. It is a fact about old
+# reports, so it does not change if the default of a new Run changes.
+LEGACY_PROVENANCE_MODE = "full"
+
 
 def format_duration_ns(value: float) -> str:
     """Nanoseconds in the largest unit below the value, three decimals."""
@@ -47,7 +51,7 @@ def provenance_mode(values: dict) -> str:
     without the member predates the option, when every Run was full (docs/
     running.md, "Provenance side-car"). Null means that it cannot be known."""
     if "provenance_mode" not in values:
-        return "full"
+        return LEGACY_PROVENANCE_MODE
     return values["provenance_mode"] or "unknown"
 
 

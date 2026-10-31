@@ -16,8 +16,9 @@ gate reads a duration from it.
   Replay verification stay.
 - A profile command gains from the faster runner. Its own artifact hash stays,
   also in `external` mode. With Activations, the hash work falls by half.
-- **All timings are from arm64.** No x86-64 timing exists yet
-  ([limitations](#limitations)).
+- The detailed attribution is from arm64.
+  [x86-64 timing](#x86-64-timing) on the supported machine class shows the same
+  direction, from a shared runner and without a column for each change.
 
 ## Conditions
 
@@ -142,8 +143,9 @@ Full tables: [base](profile-cost-329-base-results.md),
   prove a join, so this host writes no correlation file. Thus the Activations
   row has 5 files. `test_activations_hash_each_finalized_artifact_once` proves
   the count with the correlation file. The real join ran on CI
-  ([profile-cpu-integration](https://github.com/Stevie1704/sil/actions/runs/41187537099)),
-  but CI did not measure it.
+  ([profile-cpu-integration](https://github.com/Stevie1704/sil/actions/runs/41187537099)).
+  The [real collector series](#sil-profile-with-real-perf-and-heaptrack) measures
+  the command with real perf.
 
 ### Real Heaptrack
 
@@ -161,6 +163,68 @@ supported machine class, and it ran in the Colima VM.
 
 There is no before series for heap: the build in that container has no history.
 A heap capture before these changes also built its inventory once.
+
+## x86-64 timing
+
+[provenance-qualification run 41190752656](https://github.com/Stevie1704/sil/actions/runs/41190752656)
+measured `8e45473`, merged with `main` as `687f5a3`, against the base `600fa429`.
+The machine is a GitHub Actions `ubuntu-24.04` runner: AMD EPYC 7763, 4 logical
+CPUs, x86-64 glibc, with SHA-NI. The runner is shared, and this job does not
+control its load, so do not read small differences. This file keeps a summary
+only. The raw files are in the artifact of the run, and GitHub removes them after
+its retention period.
+
+### `sil-run`, end to end
+
+Median, with min to max, in ms. There are 9 repetitions, and the page cache is
+warm.
+
+| Workload | Base | `full` | `external` |
+| --- | --- | --- | --- |
+| `native-shared-library` | 1084.2 (1081.6-1098.5) | 14.9 (14.7-15.2) | 3.7 (3.6-4.1) |
+| `native-distinct-artifacts` | 2157.2 (2153.4-2159.5) | 385.4 (384.6-386.1) | 3.2 (3.1-3.3) |
+| `native-recording-heavy` | 666.6 (661.7-674.3) | 403.4 (398.1-408.7) | 329.8 (325.4-337.6) |
+| `process-shared-inputs` | 1899.3 (1890.4-1953.2) | 585.0 (560.2-602.8) | 552.0 (549.1-556.1) |
+| `replay-verification` | 126.2 (125.4-130.0) | 77.0 (76.8-78.3) | 65.9 (65.6-66.8) |
+
+Hash operations for the inputs agree with arm64: 33 to 2 and 25 to 4 with
+repeated inputs, 5 with distinct inputs, and 0 in `external`. The output pass
+goes from 1 to 0. Replay verification stays at 1 operation of 7.21 MiB in both
+modes.
+
+The backend alone, on a 256 MiB file in memory: 997.7 to 169.8 ms CPU, median of
+15 repetitions.
+
+In `native-recording-heavy`, finalization goes from 285.2 to 1.5 ms, and execution
+goes from 423.0 to 491.1 ms. The `external` execution is 422.4 ms. This run has no
+series between the base and the tip, so it does not separate the effect of the
+backend from the effect of the digest while writing.
+
+### `sil profile`, with real perf and Heaptrack
+
+Median in ms, 5 repetitions. Hash work gives operations, then MiB.
+
+| Case | Revision, mode | End to end | Capture and Run | Post-Run | Profile hash | Hash work | Runner Recording |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| CPU | Base, default | 1188.3 | 818.2 | 372.2 | 58.6 | 4, 78.0 | `calculated` |
+| CPU | Tip, `full` | 1028.5 | 598.8 | 430.8 | 57.2 | 4, 76.3 | `calculated` |
+| CPU | Tip, `external` | 941.3 | 525.0 | 407.3 | 56.8 | 4, 75.7 | `omitted` |
+| CPU, Activations | Base, default | 10637.5 | 5141.3 | 5466.6 | 307.9 | **11, 412.7** | `calculated` |
+| CPU, Activations | Tip, `full` | 10114.3 | 4873.4 | 5264.0 | 174.3 | **6, 234.1** | `calculated` |
+| CPU, Activations | Tip, `external` | 10106.4 | 4804.1 | 5302.4 | 174.4 | **6, 234.1** | `omitted` |
+| Heap, runner | Base, default | 10023.2 | 1692.1 | 8272.0 | 87.1 | 5, 113.8 | `calculated` |
+| Heap, runner | Tip, `full` | 9980.3 | 1588.6 | 8402.1 | 86.7 | 5, 114.0 | `calculated` |
+| Heap, runner | Tip, `external` | 9893.1 | 1495.9 | 8441.3 | 86.1 | 5, 114.0 | `omitted` |
+| Heap, Process | Base, default | 6069.8 | 4406.9 | 1613.6 | 8.0 | 5, 9.8 | `calculated` |
+| Heap, Process | Tip, `full` | 5966.8 | 4359.8 | 1625.2 | 8.0 | 5, 9.8 | `calculated` |
+| Heap, Process | Tip, `external` | 5899.8 | 4241.1 | 1627.5 | 7.9 | 5, 9.8 | `omitted` |
+
+- In the Activation and heap runner cases, post-Run processing is more than half
+  of the command. The end-to-end spreads of the Activation and heap cases overlap between `full`
+  and `external`, so these results show no resolved gain from `external`.
+- The profile hash work stays in `external` mode. This is not a zero-hash mode.
+- With Activations, the operations fall from 11 to 6, because the inventory is
+  built once. Real perf has one more operation than the fake perf series above.
 
 ## Consumer audit
 
@@ -208,13 +272,15 @@ In the kernel, Replay verification is on in both modes
 
 ## CI
 
-The evidence is draft PR #363 at `67fee44`, on x86-64 Linux. New tests of this
-ticket are **not** in this run. They passed on arm64 macOS and, for the
-Linux-only tests, in a Debian arm64 container ([limitations](#limitations)).
+The evidence is draft PR #363 on x86-64 Linux. The `ci` row is from `8e45473`,
+which includes the tests of this ticket. The other rows are from `67fee44`.
+At `8e45473` these checks passed again, and the same three proofs in the last row
+failed with the same errors.
 
 | Check | Run | Result |
 | --- | --- | --- |
-| `ci`: C++ tests, pytest, determinism gate, staged install, runtime and acceptance images, `test_container.py` | [41187537139](https://github.com/Stevie1704/sil/actions/runs/41187537139) | Pass. pytest: 3552 passed, 48 skipped. Container: 10 passed. `test_a_heap_capture_hashes_each_artifact_once` and the heap policy tests of #327 executed and passed here. |
+| `ci` at `8e45473`: C++ tests, pytest, determinism gate, staged install, runtime and acceptance images, `test_container.py` | [41190752668](https://github.com/Stevie1704/sil/actions/runs/41190752668) | Pass. pytest: 3669 passed, 48 skipped. Container: 10 passed. All 95 tests of `test_provenance_qualification.py` and `test_managed_platform_example.py` executed and passed, with none skipped. |
+| `ci` at `67fee44`, the same steps | [41187537139](https://github.com/Stevie1704/sil/actions/runs/41187537139) | Pass. pytest: 3552 passed, 48 skipped. Container: 10 passed. `test_a_heap_capture_hashes_each_artifact_once` and the heap policy tests of #327 executed and passed here. |
 | `profile-cpu-integration`, real perf | [41187537099](https://github.com/Stevie1704/sil/actions/runs/41187537099) | Pass |
 | `profile-heap-integration`, real Heaptrack | [41187537050](https://github.com/Stevie1704/sil/actions/runs/41187537050) | Pass |
 | `release`, release shapes | [41187537248](https://github.com/Stevie1704/sil/actions/runs/41187537248) | Pass |
@@ -227,16 +293,16 @@ All other checks on this PR passed.
 
 | # | Limitation | Consequence | What resolves it |
 | --- | --- | --- | --- |
-| L1 | **No x86-64 timing.** All timings are from arm64 (macOS, and one Linux container). #325 has this gap too. | The backend ratio and the absolute values do not describe the supported machine class. Correctness on x86-64 is proven by CI, not cost. | `.github/workflows/provenance-qualification.yml` is new. It runs after the next push, and it keeps the same captures with the real collectors as an artifact. A shared runner is not a quiet machine, and it does not gate anything. |
-| L2 | **The tests that this ticket adds have not run on x86-64.** | They ran on arm64 only until the next push. | The `ci` job runs them on the next push. |
-| L3 | **Profile timings use a fake perf.** | They show the runner and the finalization, not perf overhead or a real export. | The new workflow, `--real-tools`. |
+| L1 | **Resolved.** [x86-64 timing](#x86-64-timing) is from the workflow at `8e45473`. | A shared runner is not a quiet machine, and the run has no column for each change. The attribution for each change stays on arm64. | Nothing is needed. |
+| L2 | **Resolved at `8e45473`.** The tests of this ticket passed on x86-64 ([CI](#ci)). | Tests that the code review changes run on x86-64 after the next push. | The `ci` job on the next push |
+| L3 | **Resolved on x86-64.** The [real collector series](#sil-profile-with-real-perf-and-heaptrack) is from real perf and Heaptrack. | The arm64 CPU tables still use a fake perf. Read them only as a comparison of revisions. | Nothing is needed. |
 | L4 | **No cold-cache series.** | A gain from no reread where a read is slow is not measured or claimed. | Needs administrator rights. Not planned. |
 | L5 | **No Recording digest handoff.** The spec allows this fallback ([why](../profile-report.md#no-recording-digest-handoff)). | One bounded-memory hash remains in each capture with a Recording in the directory. | Nothing is needed. Tests compare the result with independent hashes. |
 | L6 | **Load was not zero.** | The 1-minute load average was 2.8 to 7.0. The spreads are narrow except in `process-shared-inputs`. | Do not read small differences. |
 | L7 | **Heap tests use a fake Heaptrack for policy variants.** | The real tool runs in `profile-heap-integration` and in the arm64 series. It does not run each option combination. | Nothing is needed for this contract. |
 | L8 | **Local image builds did not run.** The Colima Docker disk is 100% full, and this work deleted nothing there. | Image checks come from CI. An existing image ran the Linux-only tests, with all files on a bound host directory. | CI |
 | L9 | **Three proofs are red on this PR and on `main`.** | They do not qualify this work, and this work does not fix them. | Separate work |
-| L10 | `test_the_digest_keeps_memory_bounded_as_the_file_grows` asserts on an observational RSS value. This work does not touch it. | Against the repository rule. | The code-review phase |
+| L10 | **No test gates on the peak memory of the Recording digest.** The repository rule forbids a memory threshold, so the code review removed the RSS assertion. `test_a_large_recording_has_each_written_byte_in_its_digest` pins the digested bytes and the digest. | Only a new capture can show a memory regression. The [RSS comparison](recording-digest.md#peak-memory) is the evidence. | Nothing is needed. |
 
 ## Acceptance map
 
@@ -254,13 +320,13 @@ P = passing evidence. L = passing evidence with the named limitation. N = not me
 | Output digest matches the finalized file: empty, large, failed partial | P | `test_the_digest_is_the_digest_of_the_finalized_file`, `test_a_failed_run_has_the_digest_of_its_partial_recording`, `test_a_failed_write_fails_the_run_without_a_false_digest` |
 | No post-close scan in success; no output digest work in external | P | `test_a_successful_run_does_not_read_the_recording_again`, `test_external_mode_accumulates_no_output_digest`, Output pass row above |
 | `--no-recording`, custom paths, diagnostics, benchmark, invalid options, schema states, v1 consumers | P | `tests/test_provenance_mode.py`, `tests/test_provenance_mode_cli.py`, [consumer audit](#consumer-audit) |
-| Retained before/after benchmarks for the three workloads, with phases, bytes, cache, machine and distributions | L: L1, L4, L6 | [Attribution](#attribution-of-the-run). Cold cache is stated as not measured. |
-| CPU with and without Activations and heap for runner and Process forward each policy and record it; Recording and outcome equal; invalid and repeated options, no Recording, custom paths, failed Runs and Replay mismatches | P on arm64 Linux and macOS, L2 for x86-64 | `tests/test_provenance_mode_cli.py`, `tests/test_provenance_qualification.py`. The heap tests for no Recording, custom paths, failed Run and Replay mismatch are new, as #327 did not have them. |
+| Retained before/after benchmarks for the three workloads, with phases, bytes, cache, machine and distributions | L: L4, L6 | [Attribution](#attribution-of-the-run), [x86-64 timing](#x86-64-timing). Cold cache is stated as not measured. |
+| CPU with and without Activations and heap for runner and Process forward each policy and record it; Recording and outcome equal; invalid and repeated options, no Recording, custom paths, failed Runs and Replay mismatches | P | `tests/test_provenance_mode_cli.py`, `tests/test_provenance_qualification.py`. The heap tests for no Recording, custom paths, failed Run and Replay mismatch are new, as #327 did not have them. |
 | Render and diff show policy and unknown; v1 sets readable; tampered evidence rejected in both modes | P | `test_render_shows_the_policy`, `test_diff_flags_differing_policies`, `test_a_profile_rejects_tampered_normalized_evidence_in_each_mode`, `test_heap_profile_rejects_tampered_normalized_evidence` |
 | Activations cause no second hash; handoff or fallback and external digests match independent results, with failure cases | L: L5 | `test_activations_hash_each_finalized_artifact_once`, `test_full_mode_hashes_the_recording_apart_from_the_runner`, `test_external_mode_keeps_the_profile_digest_of_the_recording`, `test_a_failed_run_keeps_the_digest_of_its_partial_recording`. The handoff is not built: the fallback path applies. |
-| Profile qualification keeps runner and profile hashing apart, with before and after end-to-end values; no zero-total claim | L: L3 | [Attribution of the profile command](#attribution-of-the-profile-command) |
+| Profile qualification keeps runner and profile hashing apart, with before and after end-to-end values; no zero-total claim | P | [Attribution of the profile command](#attribution-of-the-profile-command), [real collectors](#sil-profile-with-real-perf-and-heaptrack) |
 | Docs: CLI, Manifest bytes, platform duties, Replay exception, migration, profile separation, backend dependencies | P | `docs/running.md`, `SUPPORT.md`, `docs/profile-report.md`, `docs/releases/unreleased.md`, `docs/adr/0006-sha256-backend-static-openssl.md` |
-| `make build`, `make test`, determinism gate, installed and container checks | P for this branch on macOS; L2 for CI on this branch | This branch on macOS: 3602 passed, 115 skipped, and the determinism gate passed. CI at `67fee44`: [ci](https://github.com/Stevie1704/sil/actions/runs/41187537139). |
+| `make build`, `make test`, determinism gate, installed and container checks | P | CI at `8e45473`: [ci](https://github.com/Stevie1704/sil/actions/runs/41190752668). |
 
 ### Ticket #329
 
@@ -269,11 +335,11 @@ P = passing evidence. L = passing evidence with the named limitation. N = not me
 | All items of the parent are mapped | P | The table above |
 | Across policies, equal bytes; invalid Replay digests fail | P | `tests/test_provenance_qualification.py` |
 | Work counts: input reuse, no post-close scan, no provenance-only hash in external | P | As mapped above |
-| Retained results with limitations and no flaky timing gates | L: L1, L3, L4 | This file. The tool tests read no duration. |
+| Retained results with limitations and no flaky timing gates | L: L4 | This file. The tool tests read no duration. |
 | v1 reader, full-hash consumers, failure reporting, mode-specific v2 states | P | [Consumer audit](#consumer-audit), `test_a_failed_recording_digest_is_not_an_omitted_one` |
-| Build, test, gate, and installed and container checks | L: L2, L8 | CI table, and the macOS result above |
-| CPU and heap workflow evidence for both policies and scopes; malformed Replay rejected | P on arm64, L2 for x86-64 | `tests/test_provenance_qualification.py`, Heaptrack table |
+| Build, test, gate, and installed and container checks | L: L8 | CI table |
+| CPU and heap workflow evidence for both policies and scopes; malformed Replay rejected | P | `tests/test_provenance_qualification.py`, Heaptrack table, [real collectors](#sil-profile-with-real-perf-and-heaptrack) |
 | Render and diff; tampering in both modes; no duplicate finalization hash; handoff or fallback digests | L: L5 | As mapped above |
-| Profile before and after results | L: L1, L3 | Profile tables |
+| Profile before and after results | P | Profile tables |
 | Parent tracker updated with evidence links | **N** | By instruction, this work does not edit issues. The owner links this report. |
 | Managed-platform example (scope) | P | `examples/managed-platform/`, `tests/test_managed_platform_example.py`, [docs](../running.md#managed-platform-example) |

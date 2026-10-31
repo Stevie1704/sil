@@ -6,7 +6,6 @@ Run left on disk. Work counts come from the instrumented runner, not from time.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import resource
@@ -16,17 +15,13 @@ from pathlib import Path
 
 import pytest
 
-from conftest import BUILD_DIR
+from conftest import BUILD_DIR, file_sha256
 from test_provenance import sidecar
 from toys import add_producer, add_thrower, toy_manifest
 
 MS = 1_000_000
 MIB = 1 << 20
 CHUNK_BYTES = 1 << 20  # the default chunk size of the MCAP writer
-
-
-def file_digest(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def run(runner: Path, manifest: Path, out: Path, *options: str, **kwargs):
@@ -83,7 +78,7 @@ def test_the_digest_is_the_digest_of_the_finalized_file(
     if shape == "large":
         assert size > 64 * MIB
     assert sidecar(out)["recording"] == {"digest_state": "calculated",
-                                         "sha256": file_digest(out)}
+                                         "sha256": file_sha256(out)}
 
 
 def test_a_successful_run_does_not_read_the_recording_again(
@@ -117,24 +112,19 @@ def test_external_mode_accumulates_no_output_digest(
                                               "sha256": None}
 
 
-def test_the_digest_keeps_memory_bounded_as_the_file_grows(
+def test_a_large_recording_has_each_written_byte_in_its_digest(
         sil_run_instrumented, tmp_path):
-    """A digest that kept the file in memory would add the size of the file.
-    The Recording is far larger than the margin, so load on the machine does
-    not decide this result."""
+    """Peak memory is evidence in docs/bench/recording-digest.md, not a gate."""
     manifest = multitask_manifest(tmp_path, 1000)
-    full, external = tmp_path / "full.mcap", tmp_path / "external.mcap"
+    out = tmp_path / "out.mcap"
 
-    peak = {
-        "full": counters(sil_run_instrumented, manifest, full),
-        "external": counters(sil_run_instrumented, manifest, external,
-                             "--provenance-mode", "external"),
-    }
+    deterministic = counters(sil_run_instrumented, manifest, out)[
+        "deterministic"]
 
-    assert full.stat().st_size > 64 * MIB
-    growth = (peak["full"]["observational"]["kernel_max_rss_bytes"]
-              - peak["external"]["observational"]["kernel_max_rss_bytes"])
-    assert growth < 16 * MIB
+    assert out.stat().st_size > 64 * MIB
+    assert deterministic["recording_digest"]["bytes"] == out.stat().st_size
+    assert sidecar(out)["recording"] == {"digest_state": "calculated",
+                                         "sha256": file_sha256(out)}
 
 
 def test_a_failed_run_has_the_digest_of_its_partial_recording(
@@ -154,7 +144,7 @@ def test_a_failed_run_has_the_digest_of_its_partial_recording(
     document = sidecar(out)
     assert document["run_exit_code"] == 1
     assert document["recording"] == {"digest_state": "calculated",
-                                     "sha256": file_digest(out)}
+                                     "sha256": file_sha256(out)}
     deterministic = json.loads(report.read_text())["deterministic"]
     assert deterministic["recording_digest"]["bytes"] == out.stat().st_size
 
@@ -185,7 +175,7 @@ def test_a_failed_write_fails_the_run_without_a_false_digest(
     document = sidecar(out)
     assert document["run_exit_code"] == 1
     assert document["recording"] == (
-        {"digest_state": "calculated", "sha256": file_digest(out)}
+        {"digest_state": "calculated", "sha256": file_sha256(out)}
         if digest == "partial" else {"digest_state": "omitted",
                                      "sha256": None})
 

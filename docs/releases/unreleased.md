@@ -33,9 +33,9 @@ duties of the platform.
 | A profile command builds its artifact list once | Each finalized artifact has one hash. | The profile tool does not reuse the digest of the runner ([why](../profile-report.md#no-recording-digest-handoff)). |
 
 [The qualification](../bench/provenance-qualification.md) gives the measured
-results and limitations. The retained results are for one arm64 macOS machine
-unless the report states otherwise. They are not results for the supported
-machine class, and they do not promise a speedup on your workload.
+results and limitations. The attribution for each change is from one arm64 macOS
+machine. The x86-64 results are from one shared CI runner. The results do not
+promise a speedup on your workload.
 
 ## Compatibility
 
@@ -45,5 +45,6 @@ machine class, and they do not promise a speedup on your workload.
 | `sil_run_diagnostics` | Version 1, with the new `configuration.provenance_mode`. A report without it stays valid and reads as `full`. |
 | `sil_benchmark_report` | Version 1, with the new `policy.provenance_mode`. A report without it stays valid and reads as `full`. |
 | `sil_profile_report` | Version 1, with the new `configuration.provenance_mode`. A set without it stays valid and reads as `full`; null reads as `unknown`. `sil profile diff` warns when the modes differ. |
-| Runner command line and exit codes | One new option. Existing use is unchanged. |
+| Runner command line | One new option. Existing use of the command line is unchanged. |
+| Runner exit codes | **Changed.** The codes keep their meanings, but a failed Recording write or close now gives exit `1`, and the Run stops after the first failed write. A caller that saw exit `0` for such a Run now sees a Run failure ([SUPPORT.md](../../SUPPORT.md), [details](../running.md#recording-digest)). |
 | Manifest document, Manifest hash, Recording contract | Unchanged |
