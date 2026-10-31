@@ -19,6 +19,7 @@ namespace {
 const char *const kSiteNames[] = {
     "caller_to_kernel", "subscriber_copy", "recorded", "arena_write",
     "arena_read",       "inline_encode",   "inline_decode",
+    "provenance_hash",  "recording_digest",
 };
 static_assert(sizeof kSiteNames / sizeof *kSiteNames ==
               size_t(Site::kSiteCount));

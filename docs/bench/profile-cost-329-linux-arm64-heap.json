@@ -1,0 +1,1273 @@
+{
+  "sil_profile_cost": 1,
+  "label": "329-linux-arm64-heap",
+  "host": {
+    "machine": "Debian arm64 container on Apple M1 Pro (Colima), not the supported machine class",
+    "os": "Linux-6.8.0-117-generic-aarch64-with-glibc2.36",
+    "architecture": "aarch64",
+    "cpu": null,
+    "logical_cpus": 4
+  },
+  "build": {
+    "source_revision": "8d9981678a318a4fa7915ad40070d56aafec064e",
+    "worktree_clean": true,
+    "cmake_build_type": "Release",
+    "cxx_compiler": "/usr/bin/c++",
+    "sil_version": "0.2.1"
+  },
+  "conditions": {
+    "load": "One coding agent. Linux VM with the Docker disk 100% full; workspace on a bound host directory.",
+    "repetitions": 5,
+    "scale": 0.1,
+    "runner_end": "Modification time of the side-car, the last file of the runner. It is on the same clock as the start of the command, with file-system resolution. The end of perf or Heaptrack is in post-Run time.",
+    "tools": "real collector",
+    "tools_statement": "The real collector on PATH, as the capture records.",
+    "cache": "Warm: one discarded command precedes each series."
+  },
+  "cases": {
+    "heap-runner": {
+      "full": {
+        "summary": {
+          "end_to_end_ns": {
+            "min": 1715337366,
+            "median": 1846373942,
+            "max": 1861245157
+          },
+          "capture_and_run_ns": {
+            "min": 757866404,
+            "median": 903360228,
+            "max": 911835344
+          },
+          "post_run_ns": {
+            "min": 943013714,
+            "median": 949409813,
+            "max": 957470962
+          },
+          "profile_hash_ns": {
+            "min": 11553049,
+            "median": 12587633,
+            "max": 13456761
+          },
+          "post_run_without_hash_ns": {
+            "min": 930426081,
+            "median": 937856764,
+            "max": 944916185
+          },
+          "profile_hash_operations": 5,
+          "profile_hash_bytes": 12613904,
+          "runner_input_digests": {
+            "entries": 2,
+            "distinct_paths": 2,
+            "distinct_bytes": 5448944
+          },
+          "runner_recording_state": "calculated",
+          "recording_bytes": 7561895
+        },
+        "runs": [
+          {
+            "exit_code": 0,
+            "command_process_ns": 1930004407,
+            "phases": {
+              "end_to_end_ns": 1857807110,
+              "capture_and_run_ns": 911206074,
+              "post_run_ns": 946601036,
+              "profile_hash_ns": 13110730,
+              "post_run_without_hash_ns": 933490306
+            },
+            "run_wall_ns": 824062179,
+            "runner": {
+              "recording_state": "calculated",
+              "input_digests": {
+                "entries": 2,
+                "distinct_paths": 2,
+                "distinct_bytes": 5448944
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 290774,
+                "sha256": "d5b1a9765c7626bea6f4af3964a5b7f9906bd65af51606e46636bca3724b6948",
+                "ns": 605230
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 7561895,
+                "sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56",
+                "ns": 7053473
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 320740
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 4540837,
+                "sha256": "383fc909e65bd1b95a186eb49a235e289b6eb34fc7d66395ca88bb06ef8cd7a9",
+                "ns": 4599638
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 219989,
+                "sha256": "f5ab77db624668a5d9726e0d4c63e250442546c9085ded626a716119a966f508",
+                "ns": 531649
+              }
+            ],
+            "recording_bytes": 7561895,
+            "recording_sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1919723134,
+            "phases": {
+              "end_to_end_ns": 1846373942,
+              "capture_and_run_ns": 903360228,
+              "post_run_ns": 943013714,
+              "profile_hash_ns": 12587633,
+              "post_run_without_hash_ns": 930426081
+            },
+            "run_wall_ns": 812283783,
+            "runner": {
+              "recording_state": "calculated",
+              "input_digests": {
+                "entries": 2,
+                "distinct_paths": 2,
+                "distinct_bytes": 5448944
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 290750,
+                "sha256": "a47d5a2ac02fc567ab9d0586b2e011c2fc47dd692fb6e635c13121f20beb2a89",
+                "ns": 521483
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 7561895,
+                "sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56",
+                "ns": 7141601
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 235868
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 4540437,
+                "sha256": "e1b59b958b25a7b5fb4d9fcb2cb7a7cfe35f487d6c9e1622dd97b617ddfc3d17",
+                "ns": 4122532
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 219985,
+                "sha256": "266859e035137f9f7d15dc61f075584c8c6e1d5b4cdc49111bdad8511c372beb",
+                "ns": 566149
+              }
+            ],
+            "recording_bytes": 7561895,
+            "recording_sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1937321025,
+            "phases": {
+              "end_to_end_ns": 1861245157,
+              "capture_and_run_ns": 911835344,
+              "post_run_ns": 949409813,
+              "profile_hash_ns": 11553049,
+              "post_run_without_hash_ns": 937856764
+            },
+            "run_wall_ns": 831456317,
+            "runner": {
+              "recording_state": "calculated",
+              "input_digests": {
+                "entries": 2,
+                "distinct_paths": 2,
+                "distinct_bytes": 5448944
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 290774,
+                "sha256": "f8034f8727c67e962ba148d6df55f7936bdfaf513c9ffbc8aad87a10304c8744",
+                "ns": 664396
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 7561895,
+                "sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56",
+                "ns": 6089931
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 288574
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 4540903,
+                "sha256": "f83452166e1c7542b388cad237885957ab5d270f7aab78f349a8e879f5ff9b46",
+                "ns": 3930333
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 220060,
+                "sha256": "e3d55c43fec56dda4a5403ba41616489ece932b87db8f1bc29c431e2beb7a0e5",
+                "ns": 579815
+              }
+            ],
+            "recording_bytes": 7561895,
+            "recording_sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1785948591,
+            "phases": {
+              "end_to_end_ns": 1715337366,
+              "capture_and_run_ns": 757866404,
+              "post_run_ns": 957470962,
+              "profile_hash_ns": 12554777,
+              "post_run_without_hash_ns": 944916185
+            },
+            "run_wall_ns": 678879180,
+            "runner": {
+              "recording_state": "calculated",
+              "input_digests": {
+                "entries": 2,
+                "distinct_paths": 2,
+                "distinct_bytes": 5448944
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 290735,
+                "sha256": "777666cc9710e40accf61f08fcbc2f9093cfb9149b1e6b5bba4ba17ead4f88a3",
+                "ns": 620522
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 7561895,
+                "sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56",
+                "ns": 6578796
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 332615
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 4540704,
+                "sha256": "df04761e5f06ee747cd87e6f648f6390abe6823fa400dc0fe4a6afe6d0d165b6",
+                "ns": 4449529
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 219989,
+                "sha256": "bf9d9ca63b42c930c8dd51d3fdd5c649f18057d81d6a4ad30e479fe1147af9b3",
+                "ns": 573315
+              }
+            ],
+            "recording_bytes": 7561895,
+            "recording_sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1911117036,
+            "phases": {
+              "end_to_end_ns": 1840879786,
+              "capture_and_run_ns": 887349196,
+              "post_run_ns": 953530590,
+              "profile_hash_ns": 13456761,
+              "post_run_without_hash_ns": 940073829
+            },
+            "run_wall_ns": 805099022,
+            "runner": {
+              "recording_state": "calculated",
+              "input_digests": {
+                "entries": 2,
+                "distinct_paths": 2,
+                "distinct_bytes": 5448944
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 290746,
+                "sha256": "8be830d17b2a41d57098501a525d9f9ec4933a40caae62190d07eccd9621a45e",
+                "ns": 600648
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 7561895,
+                "sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56",
+                "ns": 7354278
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 326241
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 4540835,
+                "sha256": "2ec9d1e92056a3bb4f8445ffc4196abea7d9933d173537f152b08b0845bbfa8e",
+                "ns": 4603236
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 219989,
+                "sha256": "a0f2c3c232a506f68135cc97102286211c01a39022cc289f6e8ab066ac740c3c",
+                "ns": 572358
+              }
+            ],
+            "recording_bytes": 7561895,
+            "recording_sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56"
+          }
+        ]
+      },
+      "external": {
+        "summary": {
+          "end_to_end_ns": {
+            "min": 1698406755,
+            "median": 1795059972,
+            "max": 1838042556
+          },
+          "capture_and_run_ns": {
+            "min": 728831263,
+            "median": 827660779,
+            "max": 858584360
+          },
+          "post_run_ns": {
+            "min": 963989943,
+            "median": 969575492,
+            "max": 979458196
+          },
+          "profile_hash_ns": {
+            "min": 11216925,
+            "median": 12856802,
+            "max": 13102189
+          },
+          "post_run_without_hash_ns": {
+            "min": 951455688,
+            "median": 956473303,
+            "max": 968241271
+          },
+          "profile_hash_operations": 5,
+          "profile_hash_bytes": 12606807,
+          "runner_input_digests": {
+            "entries": 0,
+            "distinct_paths": 0,
+            "distinct_bytes": 0
+          },
+          "runner_recording_state": "omitted",
+          "recording_bytes": 7561895
+        },
+        "runs": [
+          {
+            "exit_code": 0,
+            "command_process_ns": 1912567048,
+            "phases": {
+              "end_to_end_ns": 1838042556,
+              "capture_and_run_ns": 858584360,
+              "post_run_ns": 979458196,
+              "profile_hash_ns": 11216925,
+              "post_run_without_hash_ns": 968241271
+            },
+            "run_wall_ns": 766955337,
+            "runner": {
+              "recording_state": "omitted",
+              "input_digests": {
+                "entries": 0,
+                "distinct_paths": 0,
+                "distinct_bytes": 0
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 290725,
+                "sha256": "8c6cb713d7938f3a872f7f3db93a1003f1891ec1a932757ca507391c7cce1850",
+                "ns": 674731
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 7561895,
+                "sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56",
+                "ns": 6088032
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 267409
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 4537160,
+                "sha256": "f3c7e78e87f9394189367cfd997b827469683d28722dd53b98cda1b8b66f2b46",
+                "ns": 3662102
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 217194,
+                "sha256": "1b377ccc0f765e28f3022e5a27efac1da1df59f5db48bbadc28bff6f560b2c5d",
+                "ns": 524651
+              }
+            ],
+            "recording_bytes": 7561895,
+            "recording_sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1864296467,
+            "phases": {
+              "end_to_end_ns": 1795059972,
+              "capture_and_run_ns": 827660779,
+              "post_run_ns": 967399193,
+              "profile_hash_ns": 12856802,
+              "post_run_without_hash_ns": 954542391
+            },
+            "run_wall_ns": 746980711,
+            "runner": {
+              "recording_state": "omitted",
+              "input_digests": {
+                "entries": 0,
+                "distinct_paths": 0,
+                "distinct_bytes": 0
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 290774,
+                "sha256": "0418efc08d4e75e25718897c3e7968c126ac7ab7a455a38548759cbe0362741e",
+                "ns": 580233
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 7561895,
+                "sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56",
+                "ns": 7327376
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 334866
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 4537077,
+                "sha256": "adfacf656f5609e35149552575056cff073ee45567dfa863aeb3e48955f98a00",
+                "ns": 4057635
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 217194,
+                "sha256": "93f871c29e201d70745fba17b809a3880c612e86a2972dc6505fb298d51bba78",
+                "ns": 556692
+              }
+            ],
+            "recording_bytes": 7561895,
+            "recording_sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1846372347,
+            "phases": {
+              "end_to_end_ns": 1777328045,
+              "capture_and_run_ns": 805468626,
+              "post_run_ns": 971859419,
+              "profile_hash_ns": 12923935,
+              "post_run_without_hash_ns": 958935484
+            },
+            "run_wall_ns": 721413107,
+            "runner": {
+              "recording_state": "omitted",
+              "input_digests": {
+                "entries": 0,
+                "distinct_paths": 0,
+                "distinct_bytes": 0
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 290846,
+                "sha256": "9c1236c0fb2181b235a135190533474b3fad1592d4aafd285bce11c414c4746c",
+                "ns": 713730
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 7561895,
+                "sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56",
+                "ns": 7107304
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 346198
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 4536609,
+                "sha256": "9162ddf5868a0399545ece5e6906a7a656933f95537f0aea8b24fe92f4df7fa9",
+                "ns": 4222384
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 217119,
+                "sha256": "aa106490b88e1730b545199b76614b5df4d390068b83bd9fa8a95708b96ea9f8",
+                "ns": 534319
+              }
+            ],
+            "recording_bytes": 7561895,
+            "recording_sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1768790612,
+            "phases": {
+              "end_to_end_ns": 1698406755,
+              "capture_and_run_ns": 728831263,
+              "post_run_ns": 969575492,
+              "profile_hash_ns": 13102189,
+              "post_run_without_hash_ns": 956473303
+            },
+            "run_wall_ns": 653922926,
+            "runner": {
+              "recording_state": "omitted",
+              "input_digests": {
+                "entries": 0,
+                "distinct_paths": 0,
+                "distinct_bytes": 0
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 290854,
+                "sha256": "196b543df5e5286c0ea066055e83d8d92067a99118c674158a56f96e9aa9b5a8",
+                "ns": 603067
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 7561895,
+                "sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56",
+                "ns": 7233431
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 322408
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 4536478,
+                "sha256": "168c5a7d2ee281f12c22817bdf5b63191105ed95abaaaf3939f9e9f0c3f3f220",
+                "ns": 4362591
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 217119,
+                "sha256": "32002efe1cc86b80477e9e84b218b8321c6f07feb67d93b8a5758fb7bbece34f",
+                "ns": 580692
+              }
+            ],
+            "recording_bytes": 7561895,
+            "recording_sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1881054450,
+            "phases": {
+              "end_to_end_ns": 1813877413,
+              "capture_and_run_ns": 849887470,
+              "post_run_ns": 963989943,
+              "profile_hash_ns": 12534255,
+              "post_run_without_hash_ns": 951455688
+            },
+            "run_wall_ns": 765647292,
+            "runner": {
+              "recording_state": "omitted",
+              "input_digests": {
+                "entries": 0,
+                "distinct_paths": 0,
+                "distinct_bytes": 0
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 290731,
+                "sha256": "a67c6a190531e854da6791157e6527d6ea1a4992e80d374c07ced8f9588470ca",
+                "ns": 592859
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 7561895,
+                "sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56",
+                "ns": 6862196
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 322116
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 4536623,
+                "sha256": "129cfd3aa464648db6cd44175e5711e7d991a21297b80b89071a6e76ab9ad2a1",
+                "ns": 4213848
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 217119,
+                "sha256": "db440aaaa956c3052899a2c003e838ec6b7d62752d87d09c652ef404278bed16",
+                "ns": 543236
+              }
+            ],
+            "recording_bytes": 7561895,
+            "recording_sha256": "ae2db6a0d9aebc161f1490fd358c4a5441a996e55ce8068302124d7a55ed1d56"
+          }
+        ]
+      }
+    },
+    "heap-process": {
+      "full": {
+        "summary": {
+          "end_to_end_ns": {
+            "min": 1158870086,
+            "median": 1163336602,
+            "max": 1173650690
+          },
+          "capture_and_run_ns": {
+            "min": 728059798,
+            "median": 731012106,
+            "max": 747932965
+          },
+          "post_run_ns": {
+            "min": 425717725,
+            "median": 429992957,
+            "max": 434013928
+          },
+          "profile_hash_ns": {
+            "min": 4312856,
+            "median": 5181207,
+            "max": 5244458
+          },
+          "post_run_without_hash_ns": {
+            "min": 421404869,
+            "median": 424779583,
+            "max": 428832721
+          },
+          "profile_hash_operations": 5,
+          "profile_hash_bytes": 3888073,
+          "runner_input_digests": {
+            "entries": 3,
+            "distinct_paths": 3,
+            "distinct_bytes": 5364295
+          },
+          "runner_recording_state": "calculated",
+          "recording_bytes": 335
+        },
+        "runs": [
+          {
+            "exit_code": 0,
+            "command_process_ns": 1232014560,
+            "phases": {
+              "end_to_end_ns": 1159326970,
+              "capture_and_run_ns": 731012106,
+              "post_run_ns": 428314864,
+              "profile_hash_ns": 5164660,
+              "post_run_without_hash_ns": 423150204
+            },
+            "run_wall_ns": 748606735,
+            "runner": {
+              "recording_state": "calculated",
+              "input_digests": {
+                "entries": 3,
+                "distinct_paths": 3,
+                "distinct_bytes": 5364295
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 163858,
+                "sha256": "d8251511eb56f185f3740d09ed4d604971e5e9072c1f780298ea9fba446a6941",
+                "ns": 517820
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 335,
+                "sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be",
+                "ns": 299201
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 321658
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 1488351,
+                "sha256": "ee4df7a835631e463f12d7e47a7d3c0b255a615f93901788e20bedaf70011809",
+                "ns": 1733081
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 2235107,
+                "sha256": "695ca93206649a72e8653cb016630a0e3fc3ccd3788d9b770bf1cdb6f24a04e4",
+                "ns": 2292900
+              }
+            ],
+            "recording_bytes": 335,
+            "recording_sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1237340254,
+            "phases": {
+              "end_to_end_ns": 1163846988,
+              "capture_and_run_ns": 729833060,
+              "post_run_ns": 434013928,
+              "profile_hash_ns": 5181207,
+              "post_run_without_hash_ns": 428832721
+            },
+            "run_wall_ns": 749677605,
+            "runner": {
+              "recording_state": "calculated",
+              "input_digests": {
+                "entries": 3,
+                "distinct_paths": 3,
+                "distinct_bytes": 5364295
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 163857,
+                "sha256": "1751bbe24b2ee2b0e689a4407639c8979c41ab991ce26746da07d3734f2a5a8a",
+                "ns": 516029
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 335,
+                "sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be",
+                "ns": 283660
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 281785
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 1488352,
+                "sha256": "f123e61ac02cd4156ddce3f5d2244057b18f4ab5297cb744fa22a8c255afd276",
+                "ns": 1595586
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 2235107,
+                "sha256": "c6da7bfe58837663364095337e5e8791ae97b24e8c178a1d0e5d82a9404fc500",
+                "ns": 2504147
+              }
+            ],
+            "recording_bytes": 335,
+            "recording_sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1233944406,
+            "phases": {
+              "end_to_end_ns": 1163336602,
+              "capture_and_run_ns": 733343645,
+              "post_run_ns": 429992957,
+              "profile_hash_ns": 5213374,
+              "post_run_without_hash_ns": 424779583
+            },
+            "run_wall_ns": 755826899,
+            "runner": {
+              "recording_state": "calculated",
+              "input_digests": {
+                "entries": 3,
+                "distinct_paths": 3,
+                "distinct_bytes": 5364295
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 163853,
+                "sha256": "abb923459254a334700fbdfd30b0c0e8aa13d65f763a73c1cf7b456f2dea336e",
+                "ns": 530487
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 335,
+                "sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be",
+                "ns": 304785
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 278160
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 1488352,
+                "sha256": "2b47c0c0f82eab4d8cd0daebf2e15332757932910425eea0497cbc7d1644b402",
+                "ns": 1690251
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 2235107,
+                "sha256": "a2bfb5aa36efc98c8b62c4230c3946c9d2009b954bc677a43667912b4ef933ec",
+                "ns": 2409691
+              }
+            ],
+            "recording_bytes": 335,
+            "recording_sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1243381872,
+            "phases": {
+              "end_to_end_ns": 1173650690,
+              "capture_and_run_ns": 747932965,
+              "post_run_ns": 425717725,
+              "profile_hash_ns": 4312856,
+              "post_run_without_hash_ns": 421404869
+            },
+            "run_wall_ns": 769134593,
+            "runner": {
+              "recording_state": "calculated",
+              "input_digests": {
+                "entries": 3,
+                "distinct_paths": 3,
+                "distinct_bytes": 5364295
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 163867,
+                "sha256": "c79465d4711ee99fc578b22c454ff2e80c6f8579db239f4f46b33130c4b2e9d8",
+                "ns": 455989
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 335,
+                "sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be",
+                "ns": 262203
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 243536
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 1488364,
+                "sha256": "d19f9866172a33805e2853cd759b297eeea88ff026b4f7c6c0a5e5bd2e89d31a",
+                "ns": 1434466
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 2235107,
+                "sha256": "7f0a92d22cd2060ebb3a1993dda3b817030d77e3ebfae136e2184ce993adba25",
+                "ns": 1916662
+              }
+            ],
+            "recording_bytes": 335,
+            "recording_sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1229763100,
+            "phases": {
+              "end_to_end_ns": 1158870086,
+              "capture_and_run_ns": 728059798,
+              "post_run_ns": 430810288,
+              "profile_hash_ns": 5244458,
+              "post_run_without_hash_ns": 425565830
+            },
+            "run_wall_ns": 748401154,
+            "runner": {
+              "recording_state": "calculated",
+              "input_digests": {
+                "entries": 3,
+                "distinct_paths": 3,
+                "distinct_bytes": 5364295
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 163841,
+                "sha256": "e1ceeeb2354b157edb903fdced1239d5b7c035ea8662ae32eac0dea7845515f3",
+                "ns": 496404
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 335,
+                "sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be",
+                "ns": 287202
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 278660
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 1488351,
+                "sha256": "6efa808811ff762ce85ce615af5fcb293a2847339a71bfa892ae4401bc09ab3e",
+                "ns": 1649211
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 2235107,
+                "sha256": "9bc5624572370f4acf36722695d2d0604e37350ed42d7ecb8e348abc585dc8d5",
+                "ns": 2532981
+              }
+            ],
+            "recording_bytes": 335,
+            "recording_sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be"
+          }
+        ]
+      },
+      "external": {
+        "summary": {
+          "end_to_end_ns": {
+            "min": 1148252247,
+            "median": 1154562498,
+            "max": 1168917087
+          },
+          "capture_and_run_ns": {
+            "min": 711827064,
+            "median": 721969624,
+            "max": 725672430
+          },
+          "post_run_ns": {
+            "min": 426530513,
+            "median": 431634813,
+            "max": 457090023
+          },
+          "profile_hash_ns": {
+            "min": 4440360,
+            "median": 4947306,
+            "max": 5086638
+          },
+          "post_run_without_hash_ns": {
+            "min": 421443875,
+            "median": 427194453,
+            "max": 452498454
+          },
+          "profile_hash_operations": 5,
+          "profile_hash_bytes": 3888071,
+          "runner_input_digests": {
+            "entries": 0,
+            "distinct_paths": 0,
+            "distinct_bytes": 0
+          },
+          "runner_recording_state": "omitted",
+          "recording_bytes": 335
+        },
+        "runs": [
+          {
+            "exit_code": 0,
+            "command_process_ns": 1232566859,
+            "phases": {
+              "end_to_end_ns": 1162576792,
+              "capture_and_run_ns": 722582301,
+              "post_run_ns": 439994491,
+              "profile_hash_ns": 4947306,
+              "post_run_without_hash_ns": 435047185
+            },
+            "run_wall_ns": 745102940,
+            "runner": {
+              "recording_state": "omitted",
+              "input_digests": {
+                "entries": 0,
+                "distinct_paths": 0,
+                "distinct_bytes": 0
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 163856,
+                "sha256": "0ac04264ffe8b29dce9eb5ef0a9a0cde24a19b64f3fec6eacac0ab7da47cb84c",
+                "ns": 537363
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 335,
+                "sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be",
+                "ns": 259120
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 249786
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 1488339,
+                "sha256": "83784942b98c94633c464be5be9c9e4f6bff77faf5feb34442cd9f5bc4dcd8bb",
+                "ns": 1662088
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 2235107,
+                "sha256": "376c618c1f016b14d49493e88e399f7e3d7ad9b6053e0fce46a5295260adc38f",
+                "ns": 2238949
+              }
+            ],
+            "recording_bytes": 335,
+            "recording_sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1219145214,
+            "phases": {
+              "end_to_end_ns": 1148500137,
+              "capture_and_run_ns": 721969624,
+              "post_run_ns": 426530513,
+              "profile_hash_ns": 5086638,
+              "post_run_without_hash_ns": 421443875
+            },
+            "run_wall_ns": 744101869,
+            "runner": {
+              "recording_state": "omitted",
+              "input_digests": {
+                "entries": 0,
+                "distinct_paths": 0,
+                "distinct_bytes": 0
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 163879,
+                "sha256": "d34c17b24f7dc7b1e1b4030d1f312b314de804bb60fae19610241c1da2d7f385",
+                "ns": 533488
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 335,
+                "sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be",
+                "ns": 286535
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 276036
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 1488326,
+                "sha256": "53e6e5ed3dfe1946aa570e3ddffb0b0c9d3ff98be7de01dc2de6fc4855400652",
+                "ns": 1665422
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 2235107,
+                "sha256": "1de85ec460c16d5d1df6cd85005d1a1eadd519a9efa708da993df6ef6c3ba478",
+                "ns": 2325157
+              }
+            ],
+            "recording_bytes": 335,
+            "recording_sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1220963677,
+            "phases": {
+              "end_to_end_ns": 1148252247,
+              "capture_and_run_ns": 716617434,
+              "post_run_ns": 431634813,
+              "profile_hash_ns": 4440360,
+              "post_run_without_hash_ns": 427194453
+            },
+            "run_wall_ns": 737556934,
+            "runner": {
+              "recording_state": "omitted",
+              "input_digests": {
+                "entries": 0,
+                "distinct_paths": 0,
+                "distinct_bytes": 0
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 163876,
+                "sha256": "517c4545646d181c27e892e5aeaa37f4ee7d8b7eeca46a62f8e9862a2f8412fe",
+                "ns": 458073
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 335,
+                "sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be",
+                "ns": 183871
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 216828
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 1488352,
+                "sha256": "8834ce1bd15c26d49f9e94a2d3c177bb372a163508f04e6111dd04591a13c51a",
+                "ns": 1476801
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 2235107,
+                "sha256": "6828e7b8660bb947f0fa07cb09b14d15c262e540491c09bfd968842fc2b8cee5",
+                "ns": 2104787
+              }
+            ],
+            "recording_bytes": 335,
+            "recording_sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1238858023,
+            "phases": {
+              "end_to_end_ns": 1168917087,
+              "capture_and_run_ns": 711827064,
+              "post_run_ns": 457090023,
+              "profile_hash_ns": 4591569,
+              "post_run_without_hash_ns": 452498454
+            },
+            "run_wall_ns": 733957887,
+            "runner": {
+              "recording_state": "omitted",
+              "input_digests": {
+                "entries": 0,
+                "distinct_paths": 0,
+                "distinct_bytes": 0
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 163866,
+                "sha256": "855ab059262e759f7fa688311d9ad8a1e8406673e3342acbb679669b5f862658",
+                "ns": 594029
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 335,
+                "sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be",
+                "ns": 289494
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 261828
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 1488339,
+                "sha256": "32a1c34555b246a2586a5aa972c4cbbb12cfa001714a142c254d9e84b4cfa8f1",
+                "ns": 1465635
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 2235107,
+                "sha256": "fad9701276a39f9160d8dc3a30a94f4aa4f19e696c8569a93c63bf4e26d865c8",
+                "ns": 1980583
+              }
+            ],
+            "recording_bytes": 335,
+            "recording_sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be"
+          },
+          {
+            "exit_code": 0,
+            "command_process_ns": 1224337816,
+            "phases": {
+              "end_to_end_ns": 1154562498,
+              "capture_and_run_ns": 725672430,
+              "post_run_ns": 428890068,
+              "profile_hash_ns": 5035020,
+              "post_run_without_hash_ns": 423855048
+            },
+            "run_wall_ns": 740490038,
+            "runner": {
+              "recording_state": "omitted",
+              "input_digests": {
+                "entries": 0,
+                "distinct_paths": 0,
+                "distinct_bytes": 0
+              }
+            },
+            "profile_hashes": [
+              {
+                "path": "run.diagnostics.json",
+                "bytes": 163839,
+                "sha256": "cd7f423b57924ba1b997d9f5c4ce69c282ba3b4b0a1ee7f61a4285f129e4c9d4",
+                "ns": 466449
+              },
+              {
+                "path": "run.mcap",
+                "bytes": 335,
+                "sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be",
+                "ns": 231245
+              },
+              {
+                "path": "heap/launch-adapter.sh",
+                "bytes": 439,
+                "sha256": "525b692a5895297e4644f5127b40c799bbd1e4474c4ccb35b5e0e24090f758c0",
+                "ns": 236954
+              },
+              {
+                "path": "heap/heaptrack.data",
+                "bytes": 1488351,
+                "sha256": "c857e302afe4b44df4b5470fa1adb74196cb15b66988c94f1c93dba79ed3fcf3",
+                "ns": 1439303
+              },
+              {
+                "path": "heap/allocations.json",
+                "bytes": 2235107,
+                "sha256": "91e3a1542d0853fc0ce5f5b5d0187cf63b52725afbb80c7fb59986e24f104367",
+                "ns": 2661069
+              }
+            ],
+            "recording_bytes": 335,
+            "recording_sha256": "a973c3b1416cc938aaeba3f896469a2d205d418aa9b44ed54131919b407418be"
+          }
+        ]
+      }
+    }
+  }
+}

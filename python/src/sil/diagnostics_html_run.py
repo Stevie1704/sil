@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sil.diagnostics_format import format_duration_ns
+from sil.diagnostics_format import format_duration_ns, provenance_mode_text
 from sil.diagnostics_html_charts import histogram, phase_chart
 from sil.diagnostics_html_markup import (
     PHASE_LABELS, REASONS, Html, banner, card, code, definition_list,
@@ -109,6 +109,7 @@ def _identity_section(report: dict) -> Html:
             tag("div", tag("h3", "Measurement"), definition_list([
                 ("Measurement mode", configuration["measurement_mode"]),
                 ("Recording", plain(configuration["recording"])),
+                ("Provenance mode", provenance_mode_text(configuration)),
                 *guard_items(configuration),
                 ("Collector", f"{collector['name']} version "
                               f"{collector['collector_version']}"),

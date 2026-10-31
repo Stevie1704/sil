@@ -37,8 +37,9 @@ from sil.diagnostics_report import ReportError, load_report, write_new_file
 from sil.diagnostics_run import (
     EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_USAGE, FORWARDED_SIGNALS,
     STDERR_DRAIN_S, GivenOnce, ToolMissing,
-    _read_status, _StderrCopy, add_guard_arguments, command_error,
-    find_native_tools, guards_from,
+    _read_status, _StderrCopy, add_guard_arguments,
+    add_provenance_mode_argument, command_error,
+    find_native_tools, guards_from, provenance_mode_from,
 )
 from sil.profile_activation import correlate
 from sil.profile_common import (
@@ -189,6 +190,10 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-recording", action="store_true")
     parser.add_argument("--provenance", type=Path, action=GivenOnce,
                         metavar="PATH")
+    add_provenance_mode_argument(
+        parser, " This covers the runner only: the profile tool still hashes "
+                "the files of the profile directory, the Recording among "
+                "them.")
     add_guard_arguments(parser)
     parser.add_argument("--frequency-hz", type=_positive, action=GivenOnce,
                         metavar="N", help=f"default {FREQUENCY_HZ}")
@@ -250,7 +255,7 @@ def request_from_arguments(argv: list[str]) -> CpuRequest | HeapRequest:
 def _target(args, recording: Path | None,
             provenance: Path | None) -> RunTarget:
     return RunTarget(args.manifest, args.out, recording, provenance,
-                     guards_from(args))
+                     guards_from(args), provenance_mode_from(args))
 
 
 def _outputs(args) -> tuple[Path | None, Path | None]:
@@ -798,6 +803,7 @@ def build_report(request: CpuRequest, layout: Layout, cwd: Path,
             "collector": "cpu",
             "recording": None if request.target.recording is None
             else str(request.target.recording),
+            "provenance_mode": request.target.provenance_mode,
             "participant_timeout_ms": guards.participant_timeout_ms,
             "max_protocol_line_bytes": guards.max_protocol_line_bytes,
             "max_step_output_messages": guards.max_step_output_messages,
@@ -829,7 +835,6 @@ def build_report(request: CpuRequest, layout: Layout, cwd: Path,
             **members,
         },
         "activation_correlation": {"kind": "not_requested"},
-        "artifacts": _artifacts(layout, request, cwd),
         "limitations": list(LIMITATIONS),
     }
 
@@ -943,7 +948,9 @@ def _finish(perf: Path, request: CpuRequest, layout: Layout, cwd: Path,
             sys.stderr.write(f"{PROG}: cannot write '{layout.correlation}': "
                              f"{error}\n")
             return None
-        report["artifacts"] = _artifacts(layout, request, cwd)
+    # After correlation, which adds a file: each artifact is final and hashed
+    # once.
+    report["artifacts"] = _artifacts(layout, request, cwd)
     errors = validate_profile_report(report)
     if errors:
         sys.stderr.write(f"{PROG}: the profile report is not valid, so it "

@@ -26,6 +26,7 @@
 #include <nlohmann/json.hpp>
 
 #include "clock_shim.hpp"
+#include "copy_counters.hpp"
 #include "sha256.hpp"
 
 namespace sil {
@@ -40,11 +41,6 @@ struct MachineClass {
   std::string os;
   std::string architecture;
   std::string libc;
-};
-
-struct ResolvedFile {
-  fs::path path;
-  std::string sha256;
 };
 
 struct ResolvedExecutable {
@@ -80,11 +76,13 @@ fs::path canonical_file(const fs::path &input, const fs::path &base) {
   return resolved;
 }
 
-ResolvedFile resolve_and_digest(const fs::path &input, const fs::path &base) {
-  ResolvedFile file;
-  file.path = canonical_file(input, base);
-  file.sha256 = sha256_file(file.path);
-  return file;
+// Opens the file and reads nothing: external ownership skips the digest, but a
+// file that this Run cannot read still fails preparation as it does in full mode.
+void require_readable(const fs::path &path) {
+  std::ifstream input(path, std::ios::binary);
+  if (!input)
+    throw std::runtime_error("cannot open '" + path.string() + "': " +
+                             std::strerror(errno));
 }
 
 std::string normalize_architecture(std::string architecture) {
@@ -212,25 +210,42 @@ std::vector<std::string> command_file_arguments(
   return result;
 }
 
-ProvenanceArtifact artifact(const ResolvedFile &file) {
-  return {file.path.string(), file.sha256};
-}
-
 void add_error(Provenance &provenance, const std::string &name,
                const std::string &path, const std::string &reason) {
   provenance.errors.push_back({name, path, reason});
 }
 
-template <typename Body>
-std::optional<ResolvedFile> collect_file(Provenance &provenance,
-                                         const std::string &name,
-                                         const std::string &display_path,
-                                         Body body) {
+// External mode returns before it reaches the cache, so it can never hash.
+ProvenanceDigest digest_of(const Provenance &provenance,
+                           ProvenanceDigests &digests, const fs::path &path) {
+  if (provenance.mode == ProvenanceMode::External) {
+    require_readable(path);
+    return ProvenanceDigest::omitted();
+  }
+  return ProvenanceDigest::calculated(digests.digest(path));
+}
+
+// `resolve` gives the canonical path, so a symlink alias and its target share one
+// digest. Every failure stays in the record, as the artifact's own state and as
+// a preflight error.
+template <typename Resolve>
+ProvenanceArtifact collect_file(Provenance &provenance,
+                                ProvenanceDigests &digests,
+                                const std::string &name,
+                                const std::string &display_path,
+                                Resolve resolve) {
+  fs::path path;
   try {
-    return body();
+    path = resolve();
   } catch (const std::exception &error) {
     add_error(provenance, name, display_path, error.what());
-    return std::nullopt;
+    return {display_path, ProvenanceDigest::unresolved(error.what())};
+  }
+  try {
+    return {path.string(), digest_of(provenance, digests, path)};
+  } catch (const std::exception &error) {
+    add_error(provenance, name, display_path, error.what());
+    return {path.string(), ProvenanceDigest::failed(error.what())};
   }
 }
 
@@ -243,22 +258,57 @@ std::string preflight_error(const Provenance &provenance) {
   return message.str();
 }
 
-json artifact_json(const std::optional<ProvenanceArtifact> &value) {
-  if (!value) return nullptr;
-  return { {"path", value->path}, {"sha256", value->sha256} };
+const char *digest_state_name(DigestState state) {
+  switch (state) {
+    case DigestState::Calculated: return "calculated";
+    case DigestState::Omitted: return "omitted";
+    case DigestState::Unresolved: return "unresolved";
+    case DigestState::Failed: return "failed";
+    case DigestState::NotRequested: return "not_requested";
+  }
+  return "unknown";
 }
 
-json artifact_json(const ProvenanceArtifact &value) {
-  return { {"path", value.path}, {"sha256", value.sha256} };
+json digest_json(const ProvenanceDigest &digest) {
+  json document = {{"digest_state", digest_state_name(digest.state)},
+                   {"sha256", nullptr}};
+  if (digest.state == DigestState::Calculated) document["sha256"] = digest.sha256;
+  if (!digest.reason.empty()) document["reason"] = digest.reason;
+  return document;
+}
+
+json artifact_json(const std::optional<ProvenanceArtifact> &value) {
+  if (!value) return nullptr;
+  json document = digest_json(value->digest);
+  document["path"] = value->path;
+  return document;
 }
 
 }  // namespace
 
+ProvenanceDigest ProvenanceDigest::calculated(std::string sha256) {
+  return {DigestState::Calculated, std::move(sha256), {}};
+}
+ProvenanceDigest ProvenanceDigest::omitted() {
+  return {DigestState::Omitted, {}, {}};
+}
+ProvenanceDigest ProvenanceDigest::unresolved(std::string reason) {
+  return {DigestState::Unresolved, {}, std::move(reason)};
+}
+ProvenanceDigest ProvenanceDigest::failed(std::string reason) {
+  return {DigestState::Failed, {}, std::move(reason)};
+}
+ProvenanceDigest ProvenanceDigest::not_requested() {
+  return {DigestState::NotRequested, {}, {}};
+}
+
 Provenance initialize_provenance(const Manifest &manifest,
                                  const std::string &sil_version,
                                  const std::string &source_repository,
-                                 const std::string &source_revision) {
+                                 const std::string &source_revision,
+                                 ProvenanceMode mode) {
   Provenance provenance;
+  provenance.mode = mode;
   provenance.manifest_hash = manifest.hash_hex;
   provenance.sil_version = sil_version;
   provenance.source_repository = source_repository;
@@ -271,7 +321,8 @@ Provenance initialize_provenance(const Manifest &manifest,
   return provenance;
 }
 
-PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
+PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance,
+                        ProvenanceDigests &digests) {
   // The loader compiles these plans, and preparation is the only path to an
   // Engine. Keep the check here as well so a hand-built Manifest cannot forge
   // a ready Run by omitting a plan.
@@ -292,11 +343,8 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
   std::vector<PreparedParticipantSpec> prepared_participants;
   prepared_participants.reserve(manifest.participants.size());
 
-  if (const auto file = collect_file(
-          provenance, "runner", "/proc/self/exe", [] {
-            return resolve_and_digest(running_executable(), {});
-          }))
-    provenance.runner = artifact(*file);
+  provenance.runner = collect_file(provenance, digests, "runner", "/proc/self/exe",
+                                   [] { return running_executable(); });
 
   bool shim_requested = false;
   for (const ParticipantSpec &participant : manifest.participants) {
@@ -305,11 +353,9 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
   }
   if (shim_requested) {
     const fs::path shim = clock_shim_library_path();
-    if (const auto file = collect_file(
-            provenance, "Clock shim", shim.string(), [&shim] {
-              return resolve_and_digest(shim, {});
-            }))
-      provenance.clock_shim = artifact(*file);
+    provenance.clock_shim =
+        collect_file(provenance, digests, "Clock shim", shim.string(),
+                     [&shim] { return canonical_file(shim, {}); });
   }
 
   for (const ParticipantSpec &participant : manifest.participants) {
@@ -320,21 +366,15 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
           requested.is_absolute()
               ? requested
               : (manifest.base_dir / requested).lexically_normal();
-      std::optional<fs::path> resolved_library;
-      if (const auto file = collect_file(
-              provenance, "Native participant '" + participant.name +
-                              "' library",
-              requested.string(), [&requested, &manifest] {
-                return resolve_and_digest(requested, manifest.base_dir);
-              })) {
-        resolved_library = launch_path;
-        record.library = artifact(*file);
-      }
+      record.library = collect_file(
+          provenance, digests, "Native participant '" + participant.name + "' library",
+          requested.string(), [&requested, &manifest] {
+            return canonical_file(requested, manifest.base_dir);
+          });
       provenance.native_participants.push_back(std::move(record));
-      if (resolved_library)
-        prepared_participants.push_back(
-            {participant.name,
-             PreparedNativeSpec{*native, std::move(*resolved_library)}});
+      // A failed artifact is in provenance.errors, so this value is never used.
+      prepared_participants.push_back(
+          {participant.name, PreparedNativeSpec{*native, launch_path}});
       continue;
     }
 
@@ -346,11 +386,13 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
       try {
         executable = resolve_executable(process->command.at(0), base);
       } catch (const std::exception &error) {
+        const std::string requested =
+            process->command.empty() ? "" : process->command.front();
         add_error(provenance,
-                  "Process participant '" + participant.name +
-                      "' executable",
-                  process->command.empty() ? "" : process->command.front(),
-                  error.what());
+                  "Process participant '" + participant.name + "' executable",
+                  requested, error.what());
+        record.executable = ProvenanceArtifact{
+            requested, ProvenanceDigest::unresolved(error.what())};
       }
       if (executable) {
         try {
@@ -363,14 +405,12 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
                     process->command.empty() ? "" : process->command.front(),
                     error.what());
         }
-        if (const auto file = collect_file(
-                provenance,
-                "Process participant '" + participant.name +
-                    "' executable",
-                executable->target_path.string(), [&executable] {
-                  return resolve_and_digest(executable->target_path, {});
-                }))
-          record.executable = artifact(*file);
+        record.executable = collect_file(
+            provenance, digests,
+            "Process participant '" + participant.name + "' executable",
+            executable->target_path.string(), [&executable] {
+              return canonical_file(executable->target_path, {});
+            });
       }
       provenance.process_participants.push_back(std::move(record));
 
@@ -378,13 +418,11 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
            command_file_arguments(process->command, base)) {
         ProvenanceCommandFile named{participant.name, std::nullopt};
         const fs::path requested = argument;
-        if (const auto file = collect_file(
-                provenance,
-                "File named by participant '" + participant.name + "' command",
-                requested.string(), [&requested, &base] {
-                  return resolve_and_digest(requested, base);
-                }))
-          named.file = artifact(*file);
+        named.file = collect_file(
+            provenance, digests,
+            "File named by participant '" + participant.name + "' command",
+            requested.string(),
+            [&requested, &base] { return canonical_file(requested, base); });
         provenance.command_files.push_back(std::move(named));
       }
       if (resolved_command)
@@ -402,6 +440,16 @@ PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance) {
   return PreparedRun(manifest, std::move(prepared_participants));
 }
 
+const std::string &ProvenanceDigests::digest(const fs::path &canonical_path) {
+  const std::string key = canonical_path.string();
+  const auto cached = digests_.find(key);
+  if (cached != digests_.end()) return cached->second;
+
+  std::string sha256 = sha256_file(canonical_path);
+  ++hash_operations_;
+  return digests_.emplace(key, std::move(sha256)).first->second;
+}
+
 std::string sha256_file(const fs::path &path) {
   std::ifstream input(path, std::ios::binary);
   if (!input)
@@ -410,11 +458,19 @@ std::string sha256_file(const fs::path &path) {
 
   Sha256 digest;
   char buffer[64 * 1024];
-  while (input.read(buffer, sizeof buffer) || input.gcount() != 0)
+  size_t bytes = 0;
+  while (input.read(buffer, sizeof buffer) || input.gcount() != 0) {
     digest.update(buffer, static_cast<size_t>(input.gcount()));
+    bytes += static_cast<size_t>(input.gcount());
+  }
   if (!input.eof())
     throw std::runtime_error("cannot read '" + path.string() + "'");
+  counters::count(counters::Site::kProvenanceHash, bytes);
   return digest.hex_digest();
+}
+
+const char *provenance_mode_name(ProvenanceMode mode) {
+  return mode == ProvenanceMode::External ? "external" : "full";
 }
 
 fs::path default_provenance_path(const fs::path &recording_path) {
@@ -489,10 +545,8 @@ void write_provenance(const fs::path &path, const Provenance &provenance) {
         {"libc", provenance.machine_libc},
         {"os", provenance.machine_os}}},
       {"manifest_hash", provenance.manifest_hash},
-      {"recording",
-       provenance.recording_sha256
-           ? json{{"sha256", *provenance.recording_sha256}}
-           : json(nullptr)},
+      {"provenance_mode", provenance_mode_name(provenance.mode)},
+      {"recording", digest_json(provenance.recording)},
       {"run_exit_code", provenance.run_exit_code},
       {"schema_version", Provenance::kSchemaVersion},
       {"sil",

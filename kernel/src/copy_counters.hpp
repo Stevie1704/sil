@@ -35,6 +35,8 @@ enum class Site {
   kArenaRead,       // Arena -> kernel, shared-memory Transport
   kInlineEncode,    // payload -> base64 on the step line
   kInlineDecode,    // base64 -> payload off the step line
+  kProvenanceHash,  // a file hashed for provenance; one count per file
+  kRecordingDigest,  // Recording bytes digested while they are written
   kSiteCount,
 };
 

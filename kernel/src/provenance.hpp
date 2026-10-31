@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstddef>
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -10,9 +12,39 @@
 
 namespace sil {
 
-struct ProvenanceArtifact {
-  std::string path;
+// Who owns artifact identity for this Run. It is an invocation policy and never
+// a Manifest field. Under External the caller owns the identity of the inputs
+// and of the Recording; the Manifest hash and Replay verification stay on.
+enum class ProvenanceMode { Full, External };
+
+// What a side-car says about one digest (docs/running.md, "Provenance
+// side-car"). This is the only representation of a digest outcome, so a
+// Recording digest calculated while writing fits it as well.
+enum class DigestState {
+  Calculated,    // SiL calculated `sha256`.
+  Omitted,       // External ownership: SiL did not calculate a digest.
+  Unresolved,    // The path did not resolve to a regular file.
+  Failed,        // The path resolved, but SiL could not read or hash the file.
+  NotRequested,  // Recording only: the Run was asked to write none.
+};
+
+// `sha256` is empty unless the state is Calculated, and `reason` is empty unless
+// the state is Unresolved or Failed. Use the factories to keep this true.
+struct ProvenanceDigest {
+  DigestState state = DigestState::Omitted;
   std::string sha256;
+  std::string reason;
+
+  static ProvenanceDigest calculated(std::string sha256);
+  static ProvenanceDigest omitted();
+  static ProvenanceDigest unresolved(std::string reason);
+  static ProvenanceDigest failed(std::string reason);
+  static ProvenanceDigest not_requested();
+};
+
+struct ProvenanceArtifact {
+  std::string path;  // Canonical, or as requested when the state is Unresolved.
+  ProvenanceDigest digest;
 };
 
 struct ProvenanceError {
@@ -44,8 +76,9 @@ struct ProvenanceCommandFile {
 // structure intentionally contains no wall-clock, pid, hostname, Run working
 // directory, or elapsed-time fields.
 struct Provenance {
-  static constexpr int kSchemaVersion = 1;
+  static constexpr int kSchemaVersion = 2;
 
+  ProvenanceMode mode = ProvenanceMode::Full;
   std::string manifest_hash;
   std::string sil_version;
   std::string source_repository;
@@ -55,6 +88,8 @@ struct Provenance {
   std::string machine_architecture;
   std::string machine_libc;
 
+  // Null only for a Clock shim that no Participant requested, and for an
+  // artifact entry of a record that preparation did not reach.
   std::optional<ProvenanceArtifact> runner;
   std::optional<ProvenanceArtifact> clock_shim;
   std::vector<ProvenanceNativeParticipant> native_participants;
@@ -63,7 +98,7 @@ struct Provenance {
   std::vector<ProvenanceError> errors;
 
   int run_exit_code = kExitConfigError;
-  std::optional<std::string> recording_sha256;
+  ProvenanceDigest recording = ProvenanceDigest::not_requested();
 };
 
 // Builds the fixed metadata portion of a Run provenance record. Artifact
@@ -72,18 +107,44 @@ struct Provenance {
 Provenance initialize_provenance(const Manifest &manifest,
                                  const std::string &sil_version,
                                  const std::string &source_repository,
-                                 const std::string &source_revision);
+                                 const std::string &source_revision,
+                                 ProvenanceMode mode);
 
-// Preparation resolves and hashes every artifact the Manifest names before a
-// Participant is loaded or spawned. It returns the only value Engine accepts;
+// Digests of the canonical input paths that one preparation has already hashed.
+// Each preparation owns one instance, so a digest never outlives the Run it
+// described: a later preparation hashes the bytes that are on disk then.
+class ProvenanceDigests {
+ public:
+  // Returns the SHA-256 of the regular file at a canonical path, hashing it on
+  // first use and reusing that digest for every later request.
+  const std::string &digest(const std::filesystem::path &canonical_path);
+
+  // The number of content hashes performed. Tests use it as the work count. A
+  // reused digest counts neither here nor in the provenance_hash counter.
+  std::size_t hash_operations() const { return hash_operations_; }
+
+ private:
+  std::map<std::string, std::string> digests_;
+  std::size_t hash_operations_ = 0;
+};
+
+// Preparation resolves and checks every artifact the Manifest names before a
+// Participant is loaded or spawned, and hashes each one unless
+// `provenance.mode` is External. It returns the only value Engine accepts;
 // the authored Manifest is not modified. Records every artifact error it finds,
 // then throws ManifestError once the whole preflight has run, so one diagnostic
-// names every unreadable artifact rather than only the first.
-PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance);
+// names every unreadable artifact rather than only the first. Every digest comes
+// from `digests`, so a canonical input shared by several Participants is hashed
+// once. External mode does not use `digests`.
+PreparedRun prepare_run(const Manifest &manifest, Provenance &provenance,
+                        ProvenanceDigests &digests);
 
-// Computes the SHA-256 of an already-resolved file. Used for the Recording
-// after its sink has closed.
+// Computes the SHA-256 of an already-resolved file for provenance. Used for the
+// inputs, and for a Recording only if its write path has no digest to give.
+// External mode never calls it.
 std::string sha256_file(const std::filesystem::path &path);
+
+const char *provenance_mode_name(ProvenanceMode mode);
 
 // The default side-car is adjacent to the selected Recording path. With
 // --no-recording, the runner still uses its default conceptual out.mcap path,

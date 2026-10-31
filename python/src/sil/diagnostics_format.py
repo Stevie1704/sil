@@ -40,3 +40,18 @@ def format_value(unit: str, value) -> str:
     if unit == "factor":
         return format_factor(value)
     return format_rate(value)
+
+
+def provenance_mode(values: dict) -> str:
+    """The policy of a report's `configuration` or `policy` member. A report
+    without the member predates the option, when every Run was full (docs/
+    running.md, "Provenance side-car"). Null means that it cannot be known."""
+    if "provenance_mode" not in values:
+        return "full"
+    return values["provenance_mode"] or "unknown"
+
+
+def provenance_mode_text(values: dict) -> str:
+    """`provenance_mode`, and the reason when it comes from the legacy rule."""
+    note = "" if "provenance_mode" in values else " (report predates the option)"
+    return provenance_mode(values) + note

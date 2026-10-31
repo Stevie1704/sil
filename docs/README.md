@@ -28,7 +28,7 @@ agent.
 | Seal and run regression cases and matrices | [Regression bundles](regression-bundles.md) |
 | Run one Manifest in a Linux container | [Container deployment](container.md) |
 | Find acceptance evidence and maintained models | [Acceptance proofs](acceptance.md) |
-| Understand routing measurements and memory costs | [Performance](performance.md), [routing baseline](bench/routing-baseline.md), [large-message baseline](bench/large-message-routing-baseline.md), [diagnostics overhead](bench/diagnostics-overhead.md), [ADAS execution cost](../proofs/adas-cost/README.md) |
+| Understand routing measurements and memory costs | [Performance](performance.md), [routing baseline](bench/routing-baseline.md), [large-message baseline](bench/large-message-routing-baseline.md), [diagnostics overhead](bench/diagnostics-overhead.md), [provenance qualification](bench/provenance-qualification.md), [ADAS execution cost](../proofs/adas-cost/README.md) |
 
 ## Architecture and contracts
 

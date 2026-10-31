@@ -10,7 +10,7 @@ FROM ${PYTHON_IMAGE}
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && echo 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260901T000000Z bookworm main' > /etc/apt/sources.list \
     && apt-get -o Acquire::Check-Valid-Until=false update \
-    && apt-get install -y --no-install-recommends build-essential cmake \
+    && apt-get install -y --no-install-recommends build-essential cmake libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 # Installed SiL, as a consumer installs it: the native prefix (sil-run,
