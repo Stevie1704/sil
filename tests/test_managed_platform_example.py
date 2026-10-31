@@ -6,7 +6,6 @@ state of each digest comes from the table in docs/running.md.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import subprocess
@@ -15,13 +14,9 @@ from pathlib import Path
 
 import pytest
 
-from conftest import ROOT
+from conftest import ROOT, file_sha256
 
 EXAMPLE = ROOT / "examples" / "managed-platform" / "platform_run.py"
-
-
-def digest(path) -> str:
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def run_example(build_dir: Path, workdir: Path, execution_id: str = "exec-0001"):
@@ -52,7 +47,7 @@ def test_the_record_is_associated_with_the_external_execution(executed):
 
 def test_the_manifest_digest_is_of_the_exact_bytes_that_sil_read(executed):
     workdir, record, side_car = executed
-    expected = digest(workdir / "inputs" / "manifest.json")
+    expected = file_sha256(workdir / "inputs" / "manifest.json")
     assert record["manifest"]["sha256"] == expected
     assert side_car["manifest_hash"] == expected
 
@@ -65,7 +60,7 @@ def test_each_resolved_input_has_the_identity_of_the_platform(executed):
         workdir / "inputs" / "participant.py")
     assert by_role["executable"]["path"] == os.path.realpath(sys.executable)
     for row in record["inputs"]:
-        assert row["platform_sha256"] == digest(row["path"])
+        assert row["platform_sha256"] == file_sha256(row["path"])
     # The side-car states the path and no digest of its own.
     assert side_car["artifacts"]["runner"]["digest_state"] == "omitted"
     assert side_car["artifacts"]["runner"]["sha256"] is None
@@ -75,7 +70,7 @@ def test_each_resolved_input_has_the_identity_of_the_platform(executed):
 def test_the_output_digest_is_of_the_finalized_recording(executed):
     workdir, record, _ = executed
     recording = workdir / "outputs" / "out.mcap"
-    assert record["output"]["platform_sha256"] == digest(recording)
+    assert record["output"]["platform_sha256"] == file_sha256(recording)
     assert record["output"]["bytes"] == recording.stat().st_size
 
 

@@ -6,7 +6,6 @@ Run left on disk. Work counts come from the instrumented runner, not from time.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import resource
@@ -16,17 +15,13 @@ from pathlib import Path
 
 import pytest
 
-from conftest import BUILD_DIR
+from conftest import BUILD_DIR, file_sha256
 from test_provenance import sidecar
 from toys import add_producer, add_thrower, toy_manifest
 
 MS = 1_000_000
 MIB = 1 << 20
 CHUNK_BYTES = 1 << 20  # the default chunk size of the MCAP writer
-
-
-def file_digest(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def run(runner: Path, manifest: Path, out: Path, *options: str, **kwargs):
@@ -83,7 +78,7 @@ def test_the_digest_is_the_digest_of_the_finalized_file(
     if shape == "large":
         assert size > 64 * MIB
     assert sidecar(out)["recording"] == {"digest_state": "calculated",
-                                         "sha256": file_digest(out)}
+                                         "sha256": file_sha256(out)}
 
 
 def test_a_successful_run_does_not_read_the_recording_again(
@@ -129,7 +124,7 @@ def test_a_large_recording_has_each_written_byte_in_its_digest(
     assert out.stat().st_size > 64 * MIB
     assert deterministic["recording_digest"]["bytes"] == out.stat().st_size
     assert sidecar(out)["recording"] == {"digest_state": "calculated",
-                                         "sha256": file_digest(out)}
+                                         "sha256": file_sha256(out)}
 
 
 def test_a_failed_run_has_the_digest_of_its_partial_recording(
@@ -149,7 +144,7 @@ def test_a_failed_run_has_the_digest_of_its_partial_recording(
     document = sidecar(out)
     assert document["run_exit_code"] == 1
     assert document["recording"] == {"digest_state": "calculated",
-                                     "sha256": file_digest(out)}
+                                     "sha256": file_sha256(out)}
     deterministic = json.loads(report.read_text())["deterministic"]
     assert deterministic["recording_digest"]["bytes"] == out.stat().st_size
 
@@ -180,7 +175,7 @@ def test_a_failed_write_fails_the_run_without_a_false_digest(
     document = sidecar(out)
     assert document["run_exit_code"] == 1
     assert document["recording"] == (
-        {"digest_state": "calculated", "sha256": file_digest(out)}
+        {"digest_state": "calculated", "sha256": file_sha256(out)}
         if digest == "partial" else {"digest_state": "omitted",
                                      "sha256": None})
 

@@ -6,7 +6,6 @@ the side-car holds, and no other result of the Run.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import shutil
@@ -15,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import BUILD_DIR
+from conftest import BUILD_DIR, file_sha256
 from test_provenance import STEP_LOOP, native_manifest, sidecar
 from test_replayer import record_producer_run, replay_manifest
 from toys import toy_manifest
@@ -76,11 +75,10 @@ def test_full_mode_digests_every_artifact_and_the_recording(
     assert len(artifacts) == 5
     for artifact in artifacts:
         assert artifact["digest_state"] == "calculated"
-        assert artifact["sha256"] == hashlib.sha256(
-            Path(artifact["path"]).read_bytes()).hexdigest()
+        assert artifact["sha256"] == file_sha256(artifact["path"])
     assert document["recording"] == {
         "digest_state": "calculated",
-        "sha256": hashlib.sha256(out.read_bytes()).hexdigest()}
+        "sha256": file_sha256(out)}
 
 
 def test_external_mode_keeps_paths_and_marks_every_digest_omitted(
@@ -156,7 +154,7 @@ def test_shared_inputs_count_real_hashes_only_and_none_when_external(
 
     # Every Participant keeps its own entries in both modes.
     payload = str((tmp_path / "scenario.xosc").resolve())
-    reference = hashlib.sha256(Path(payload).read_bytes()).hexdigest()
+    reference = file_sha256(payload)
     for out, state, sha256 in ((full_out, "calculated", reference),
                                (external_out, "omitted", None)):
         artifacts = sidecar(out)["artifacts"]

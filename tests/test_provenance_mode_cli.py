@@ -7,12 +7,12 @@ the runner, and each report says which policy its measurement had.
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
 from pathlib import Path
 
 import pytest
 
+from conftest import file_sha256
 from profile_sets import artifact_set, fixture
 from sil.diagnostics_format import provenance_mode_text
 from sil.diagnostics_report import validate_benchmark_report, validate_run_report
@@ -220,8 +220,7 @@ def test_external_cpu_capture_still_hashes_every_profile_artifact(
     roles = {artifact["role"]: artifact for artifact in report["artifacts"]}
     assert "recording" in roles
     for artifact in report["artifacts"]:
-        assert artifact["sha256"] == hashlib.sha256(
-            (out / artifact["path"]).read_bytes()).hexdigest()
+        assert artifact["sha256"] == file_sha256(out / artifact["path"])
     # The profile tool's digest does not become a runner digest.
     assert side_car(out / "run.mcap.provenance.json")["recording"] == {
         "digest_state": "omitted", "sha256": None}

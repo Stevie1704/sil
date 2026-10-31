@@ -7,13 +7,13 @@ ordinary `sil-run` in `full` mode, and digests come from `hashlib`.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import shutil
 from pathlib import Path
 
 import pytest
 
+from conftest import file_sha256
 from test_profile_heap_run import heap, heaptrack, needs_linux  # noqa: F401
 from test_profile_heap_run import sil as heap_sil
 from test_profile_run import exports, sil as profile_sil, tools  # noqa: F401
@@ -47,8 +47,7 @@ def assert_policy_of_side_car(side_car: Path, recording: Path, mode: str):
         assert digest == {"digest_state": "omitted", "sha256": None}
     else:
         assert digest["digest_state"] == "calculated"
-        assert digest["sha256"] == hashlib.sha256(
-            recording.read_bytes()).hexdigest()
+        assert digest["sha256"] == file_sha256(recording)
 
 
 @pytest.fixture(params=FIXTURES)
@@ -284,7 +283,7 @@ def test_replacing_a_library_changes_only_the_full_mode_digest(
 
     assert before["manifest_hash"] == after["manifest_hash"] \
         == external["manifest_hash"]
-    expected = hashlib.sha256(library.read_bytes()).hexdigest()
+    expected = file_sha256(library)
     native = [entry["library"]["sha256"] for entry
               in after["artifacts"]["native_participants"]]
     assert native == [expected]
@@ -305,5 +304,4 @@ def test_the_manifest_hash_is_of_the_exact_bytes(sil_run, tmp_path):
                                "external") == 0
         document = json.loads(
             (tmp_path / f"{name}.provenance.json").read_text())
-        assert document["manifest_hash"] == hashlib.sha256(
-            manifest.read_bytes()).hexdigest()
+        assert document["manifest_hash"] == file_sha256(manifest)
