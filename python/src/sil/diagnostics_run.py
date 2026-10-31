@@ -34,6 +34,7 @@ from typing import BinaryIO, Iterable, Sequence
 
 from sil.diagnostics_format import (
     format_bytes, format_duration_ns, format_factor, format_rate,
+    provenance_mode_text,
 )
 from sil.diagnostics_html import write_html
 from sil.diagnostics_report import (
@@ -44,6 +45,7 @@ PROG = "sil run"
 RUNNER = "sil-run-diagnostics"
 LAUNCHER = "sil-diagnostics-launcher"
 DEFAULT_RECORDING = "out.mcap"
+DEFAULT_PROVENANCE_MODE = "full"
 
 EXIT_OK = 0
 EXIT_FAILURE = 1
@@ -89,6 +91,7 @@ class RunRequest:
     recording: Path | None = Path(DEFAULT_RECORDING)  # None: --no-recording
     provenance: Path | None = None  # None: beside the Recording path
     guards: Guards = field(default_factory=Guards)
+    provenance_mode: str = DEFAULT_PROVENANCE_MODE
 
     @property
     def recording_path(self) -> Path:
@@ -101,6 +104,7 @@ class RunRequest:
                    else ["-o", str(self.recording)])
         if self.provenance is not None:
             result += ["--provenance", str(self.provenance)]
+        result += ["--provenance-mode", self.provenance_mode]
         result += self.guards.arguments()
         return result + ["--diagnostics-out", str(self.report)]
 
@@ -467,7 +471,9 @@ def _run_lines(report: dict) -> list[str]:
     completeness = report["completeness"]
     state = ("complete" if completeness["run_complete"] else
              "partial (" + ", ".join(completeness["reasons"]) + ")")
-    lines = [f"run: {run['status']}, exit code {run['exit_code']}, {state}"]
+    lines = [f"run: {run['status']}, exit code {run['exit_code']}, {state}",
+             "provenance mode: "
+             + provenance_mode_text(report["configuration"])]
     failure = run["failure"]
     if failure is not None:
         context = [failure["category"]]
@@ -614,6 +620,20 @@ def add_guard_arguments(parser: argparse.ArgumentParser) -> None:
                             type=_positive(MAX_SIZE), metavar="N")
 
 
+def add_provenance_mode_argument(parser: argparse.ArgumentParser,
+                                 note: str = "") -> None:
+    parser.add_argument(
+        "--provenance-mode", choices=("full", "external"), action=GivenOnce,
+        help="who owns artifact identity. full (default): the runner hashes "
+             "its inputs and the Recording. external: the caller does, and "
+             "the runner omits those digests. The Manifest hash and Replay "
+             "verification stay on in both modes." + note)
+
+
+def provenance_mode_from(args: argparse.Namespace) -> str:
+    return args.provenance_mode or DEFAULT_PROVENANCE_MODE
+
+
 def guards_from(args: argparse.Namespace) -> Guards:
     return Guards(args.participant_timeout_ms, args.max_protocol_line_bytes,
                   args.max_step_output_messages,
@@ -637,6 +657,7 @@ def _parser() -> argparse.ArgumentParser:
                         help="execute without writing a Recording")
     parser.add_argument("--provenance", type=Path, action=GivenOnce,
                         metavar="PATH", help="the provenance record")
+    add_provenance_mode_argument(parser)
     add_guard_arguments(parser)
     parser.add_argument("--diagnostics", action="store_true",
                         help="write <recording>.diagnostics.json (also "
@@ -662,7 +683,7 @@ def request_from_arguments(argv: list[str]) -> tuple[RunRequest, Path | None]:
         args.recording or Path(DEFAULT_RECORDING))
     report = args.diagnostics_out or default_report_path(recording)
     return RunRequest(args.manifest, report, recording, args.provenance,
-                      guards_from(args)), args.html
+                      guards_from(args), provenance_mode_from(args)), args.html
 
 
 def write_html_report(outcome: RunOutcome, path: Path,

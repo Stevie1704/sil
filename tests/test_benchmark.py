@@ -299,6 +299,7 @@ class TestAggregation:
 
         assert summary["policy"] == {
             "repeats": 1, "warmup": 0, "recording": True,
+            "provenance_mode": "full",
             "execution": "serial_fresh_processes",
             "participant_timeout_ms": None,
             "max_protocol_line_bytes": 16777216,
@@ -420,6 +421,7 @@ class TestCommand:
             assert [Path(argv[0]).resolve(), *argv[1:]] == [
                 (tmp_path / "project" / "m.json").resolve(),
                 "-o", str(out / label / "run.mcap"),
+                "--provenance-mode", "full",
                 "--participant-timeout-ms", "5000",
                 "--max-step-output-messages", "7",
                 "--diagnostics-out",

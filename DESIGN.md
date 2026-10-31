@@ -27,7 +27,10 @@ Recording (or beside the default output location when recording is disabled).
 It binds the Manifest hash to the SHA-256 of the production runner, the Clock
 shim when used, every resolved Native participant library, every resolved
 Process participant executable and argument vector, and every other file a
-Participant's command names — an imported FMU archive among them.
+Participant's command names — an imported FMU archive among them. With
+`--provenance-mode external` the side-car keeps these paths and marks each
+digest as omitted, because the caller owns artifact identity
+([docs/running.md](docs/running.md#provenance-side-car)).
 It carries the SiL version, source revision, and the machine-class identifier
 (OS, CPU architecture, and libc), plus the Recording digest when a Recording
 exists. The side-car deliberately does not claim to capture kernel build

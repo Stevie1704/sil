@@ -72,7 +72,7 @@ def test_successful_record_binds_runner_process_and_machine(
     assert proc.returncode == 0, proc.stderr
 
     document = sidecar(out)
-    assert document["schema_version"] == 1
+    assert document["schema_version"] == 2
     assert document["manifest_hash"] == ref.hash
     assert document["run_exit_code"] == 0
     assert document["recording"]["sha256"] == hashlib.sha256(
@@ -246,7 +246,7 @@ def test_no_recording_still_emits_a_sidecar(run_sil, sil_run, tmp_path):
     document = json.loads(
         (tmp_path / "out.mcap.provenance.json").read_text()
     )
-    assert document["recording"] is None
+    assert document["recording"]["digest_state"] == "not_requested"
     assert document["run_exit_code"] == 0
 
 

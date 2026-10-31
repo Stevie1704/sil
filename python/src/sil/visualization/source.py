@@ -191,9 +191,14 @@ def completeness(recording: Source) -> dict:
     sidecar = recording.path.with_name(recording.path.name + ".provenance.json")
     try:
         document = json.loads(sidecar.read_text())
-        bound = document["recording"]["sha256"] == recording.sha256
+        # Schema 1 has only a digest or null. Under schema 2 only a calculated
+        # digest binds: an omitted one does not say which file this Run wrote.
+        digest = document["recording"]
+        bound = (document["schema_version"] in (1, 2)
+                 and digest.get("digest_state", "calculated") == "calculated"
+                 and digest["sha256"] == recording.sha256)
         exit_code = document["run_exit_code"]
-    except (OSError, ValueError, KeyError, TypeError):
+    except (AttributeError, OSError, ValueError, KeyError, TypeError):
         return known
     if not bound or isinstance(exit_code, bool) or not isinstance(exit_code, int):
         return known
