@@ -593,6 +593,7 @@ def build_report(request: HeapRequest, layout: HeapLayout, cwd: Path,
             "collector": "heap",
             "recording": None if request.target.recording is None
             else str(request.target.recording),
+            "provenance_mode": request.target.provenance_mode,
             "participant_timeout_ms": guards.participant_timeout_ms,
             "max_protocol_line_bytes": guards.max_protocol_line_bytes,
             "max_step_output_messages": guards.max_step_output_messages,

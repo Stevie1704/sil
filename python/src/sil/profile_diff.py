@@ -8,6 +8,7 @@ import sys
 import unicodedata
 from pathlib import Path
 
+from sil.diagnostics_format import provenance_mode
 from sil.diagnostics_html import page
 from sil.diagnostics_html_markup import code, join, section, table, tag
 from sil.diagnostics_report import new_path_problem, write_new_file
@@ -33,7 +34,8 @@ def identities(profile: ProfileSet) -> dict:
             "Tool version": capture["backend"]["version"],
             "Sampling settings": capture.get("sampling"),
             "Call graph": capture.get("call_graph"),
-            "Scope": capture["scope"]}
+            "Scope": capture["scope"],
+            "Provenance mode": provenance_mode(report["configuration"])}
 
 
 def _name(function: tuple) -> str:

@@ -39,6 +39,13 @@ TEXT = _leaf(lambda v: type(v) is str, "a string")
 FLAG = _leaf(lambda v: type(v) is bool, "a boolean")
 
 
+def one_of(values: set[str]) -> Shape:
+    def check(value: Any, where: str, errors: list) -> None:
+        if value not in values:
+            errors.append(f"{where}: unknown value {value!r}")
+    return check
+
+
 def maybe(shape: Shape) -> Shape:
     """`shape`, or null."""
     def check(value: Any, where: str, errors: list) -> None:
@@ -158,6 +165,7 @@ OBSERVATIONAL = members({
     "resources": RESOURCES,
 })
 
+PROVENANCE_MODES = {"full", "external"}
 SIZE_GUARDS = ("max_protocol_line_bytes", "max_step_output_messages",
                "max_step_inline_payload_bytes")
 RUN_REPORT = members({
@@ -173,7 +181,8 @@ RUN_REPORT = members({
                           "cpu_description": TEXT}),
     "configuration": members({"measurement_mode": TEXT, "recording": FLAG,
                               "participant_timeout_ms": maybe(COUNT),
-                              **{guard: COUNT for guard in SIZE_GUARDS}}),
+                              **{guard: COUNT for guard in SIZE_GUARDS}},
+                             {"provenance_mode": one_of(PROVENANCE_MODES)}),
     "run": members({"exit_code": INTEGER, "status": TEXT,
                     "failure": maybe(members({
                         "message": TEXT, "category": TEXT,
@@ -203,7 +212,8 @@ BENCHMARK_REPORT = members({
     "policy": members({"repeats": COUNT, "warmup": COUNT, "recording": FLAG,
                        "execution": TEXT,
                        "participant_timeout_ms": maybe(COUNT),
-                       **{guard: maybe(COUNT) for guard in SIZE_GUARDS}}),
+                       **{guard: maybe(COUNT) for guard in SIZE_GUARDS}},
+                      {"provenance_mode": one_of(PROVENANCE_MODES)}),
     "status": members({"complete": FLAG, "exit_code": INTEGER,
                        "stopped_reason": maybe(TEXT)}),
     "counts": members({prefix + key: COUNT for prefix in ("", "warmups_")

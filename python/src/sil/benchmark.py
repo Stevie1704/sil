@@ -34,7 +34,9 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from sil import build_info
-from sil.diagnostics_format import format_duration_ns, format_value
+from sil.diagnostics_format import (
+    format_duration_ns, format_value, provenance_mode_text,
+)
 from sil.diagnostics_html import write_html
 from sil.diagnostics_report import (
     BENCHMARK_REPORT_KEY, SUPPORTED_VERSION, new_path_problem,
@@ -44,8 +46,10 @@ from sil.diagnostics_report import (
 from sil.diagnostics_run import (
     EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE,
     FORWARDED_SIGNALS, GivenOnce, Guards, NativeTools, RunOutcome, RunRequest,
-    ToolMissing, add_guard_arguments, command_error, default_report_path,
-    describe_problems, execute, find_native_tools, guards_from, resolve_exit,
+    ToolMissing, add_guard_arguments, add_provenance_mode_argument,
+    command_error, default_report_path,
+    describe_problems, execute, find_native_tools, guards_from,
+    provenance_mode_from, resolve_exit,
 )
 
 PROG = "sil benchmark"
@@ -100,6 +104,7 @@ class Policy:
     warmup: int
     recording: bool
     guards: Guards
+    provenance_mode: str = "full"
 
 
 @dataclass(frozen=True)
@@ -171,10 +176,12 @@ def _host(report: dict | None) -> dict:
 def _policy(policy: Policy, report: dict | None) -> dict:
     """The guards in effect: the runner's values, else the requested ones."""
     guards = vars(policy.guards)
+    mode = policy.provenance_mode
     if report is not None:
         guards = {key: report["configuration"][key] for key in guards}
+        mode = report["configuration"].get("provenance_mode", mode)
     return {"repeats": policy.repeats, "warmup": policy.warmup,
-            "recording": policy.recording,
+            "recording": policy.recording, "provenance_mode": mode,
             "execution": "serial_fresh_processes", **guards}
 
 
@@ -353,7 +360,8 @@ def _run_one(policy: Policy, manifest: Path, out: Path, tools: NativeTools,
     recording = directory / RECORDING if policy.recording else None
     report = directory / default_report_path(
         Path(RECORDING) if policy.recording else None)
-    request = RunRequest(manifest, report, recording, guards=policy.guards)
+    request = RunRequest(manifest, report, recording, guards=policy.guards,
+                         provenance_mode=policy.provenance_mode)
     with open(directory / "stdout.log", "wb") as stdout, \
             open(directory / "stderr.log", "wb") as stderr:
         outcome = execute(request, tools, cwd=directory, stdout=stdout,
@@ -391,6 +399,7 @@ def format_summary(summary: dict, summary_path: Path) -> str:
         f"benchmark summary: {summary_path}",
         f"benchmark: {state}, exit code {status['exit_code']}; measurement "
         "mode diagnostics (instrumented Runs, not uninstrumented timings)",
+        f"provenance mode: {provenance_mode_text(summary['policy'])}",
         f"{counts['completed']} of {counts['requested']} measured Runs "
         f"succeeded ({counts['attempted']} attempted); "
         f"{counts['warmups_completed']} of {counts['warmups_requested']} "
@@ -464,6 +473,7 @@ def _parser() -> argparse.ArgumentParser:
                         help="the new directory for every Run and the summary")
     parser.add_argument("--no-recording", action="store_true",
                         help="execute every Run without a Recording")
+    add_provenance_mode_argument(parser)
     add_guard_arguments(parser)
     parser.add_argument("--html", type=Path, action=GivenOnce,
                         metavar="PATH",
@@ -478,7 +488,8 @@ def main(argv: list[str] | None = None) -> int:
     policy = Policy(
         repeats=DEFAULT_REPEATS if args.repeats is None else args.repeats,
         warmup=DEFAULT_WARMUP if args.warmup is None else args.warmup,
-        recording=not args.no_recording, guards=guards_from(args))
+        recording=not args.no_recording, guards=guards_from(args),
+        provenance_mode=provenance_mode_from(args))
     # Every Run has its own cwd, so the Manifest path the user gave is made
     # absolute here; the Manifest itself is never copied or rewritten.
     manifest = Path.cwd() / args.manifest

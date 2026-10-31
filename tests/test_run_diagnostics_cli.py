@@ -81,6 +81,7 @@ def test_summary_names_units_scopes_and_attribution():
     assert text == """\
 diagnostics report: run.json
 run: succeeded, exit code 0, complete
+provenance mode: full
 run wall time: 67.235 ms (native runner start before Manifest load through \
 Participant cleanup and Recording close)
 phases: preflight 8.079 ms, setup 38.608 ms, scheduled execution 202.083 us, \

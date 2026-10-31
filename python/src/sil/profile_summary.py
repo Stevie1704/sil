@@ -9,7 +9,9 @@ from __future__ import annotations
 import unicodedata
 from pathlib import Path
 
-from sil.diagnostics_format import format_bytes, format_duration_ns
+from sil.diagnostics_format import (
+    format_bytes, format_duration_ns, provenance_mode_text,
+)
 
 
 def format_summary(report: dict, path: Path) -> str:
@@ -35,7 +37,9 @@ def _identity_lines(report: dict) -> list[str]:
 
     return [f"manifest: {_clean(identity['manifest_path'])} "
             f"({known('manifest_hash')})",
-            f"sil: {known('sil_version')}, {known('source_revision')}"]
+            f"sil: {known('sil_version')}, {known('source_revision')}",
+            "provenance mode: "
+            + provenance_mode_text(report["configuration"])]
 
 
 def _limitations_line(report: dict) -> str:
