@@ -835,7 +835,6 @@ def build_report(request: CpuRequest, layout: Layout, cwd: Path,
             **members,
         },
         "activation_correlation": {"kind": "not_requested"},
-        "artifacts": _artifacts(layout, request, cwd),
         "limitations": list(LIMITATIONS),
     }
 
@@ -949,7 +948,9 @@ def _finish(perf: Path, request: CpuRequest, layout: Layout, cwd: Path,
             sys.stderr.write(f"{PROG}: cannot write '{layout.correlation}': "
                              f"{error}\n")
             return None
-        report["artifacts"] = _artifacts(layout, request, cwd)
+    # After correlation, which adds a file: each artifact is final and hashed
+    # once.
+    report["artifacts"] = _artifacts(layout, request, cwd)
     errors = validate_profile_report(report)
     if errors:
         sys.stderr.write(f"{PROG}: the profile report is not valid, so it "
