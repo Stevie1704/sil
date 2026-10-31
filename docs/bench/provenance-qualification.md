@@ -236,7 +236,7 @@ All other checks on this PR passed.
 | L7 | **Heap tests use a fake Heaptrack for policy variants.** | The real tool runs in `profile-heap-integration` and in the arm64 series. It does not run each option combination. | Nothing is needed for this contract. |
 | L8 | **Local image builds did not run.** The Colima Docker disk is 100% full, and this work deleted nothing there. | Image checks come from CI. An existing image ran the Linux-only tests, with all files on a bound host directory. | CI |
 | L9 | **Three proofs are red on this PR and on `main`.** | They do not qualify this work, and this work does not fix them. | Separate work |
-| L10 | `test_the_digest_keeps_memory_bounded_as_the_file_grows` asserts on an observational RSS value. This work does not touch it. | Against the repository rule. | The code-review phase |
+| L10 | **No test gates on the peak memory of the Recording digest.** The repository rule forbids a memory threshold, so the code review removed the RSS assertion. `test_a_large_recording_has_each_written_byte_in_its_digest` pins the digested bytes and the digest. | Only a new capture can show a memory regression. The [RSS comparison](recording-digest.md#peak-memory) is the evidence. | Nothing is needed. |
 
 ## Acceptance map
 

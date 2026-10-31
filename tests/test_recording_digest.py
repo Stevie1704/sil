@@ -117,24 +117,19 @@ def test_external_mode_accumulates_no_output_digest(
                                               "sha256": None}
 
 
-def test_the_digest_keeps_memory_bounded_as_the_file_grows(
+def test_a_large_recording_has_each_written_byte_in_its_digest(
         sil_run_instrumented, tmp_path):
-    """A digest that kept the file in memory would add the size of the file.
-    The Recording is far larger than the margin, so load on the machine does
-    not decide this result."""
+    """Peak memory is evidence in docs/bench/recording-digest.md, not a gate."""
     manifest = multitask_manifest(tmp_path, 1000)
-    full, external = tmp_path / "full.mcap", tmp_path / "external.mcap"
+    out = tmp_path / "out.mcap"
 
-    peak = {
-        "full": counters(sil_run_instrumented, manifest, full),
-        "external": counters(sil_run_instrumented, manifest, external,
-                             "--provenance-mode", "external"),
-    }
+    deterministic = counters(sil_run_instrumented, manifest, out)[
+        "deterministic"]
 
-    assert full.stat().st_size > 64 * MIB
-    growth = (peak["full"]["observational"]["kernel_max_rss_bytes"]
-              - peak["external"]["observational"]["kernel_max_rss_bytes"])
-    assert growth < 16 * MIB
+    assert out.stat().st_size > 64 * MIB
+    assert deterministic["recording_digest"]["bytes"] == out.stat().st_size
+    assert sidecar(out)["recording"] == {"digest_state": "calculated",
+                                         "sha256": file_digest(out)}
 
 
 def test_a_failed_run_has_the_digest_of_its_partial_recording(
