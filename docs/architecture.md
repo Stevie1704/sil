@@ -46,6 +46,10 @@ support and determinism scope lives in [SUPPORT.md](../SUPPORT.md).
   procedures and results live in `docs/bench/`. Native benchmark Participants
   and schemas are shared test fixtures under `tests/fixtures/`.
 
+All kernel hashing goes through `kernel/src/sha256.hpp`. Its backend is OpenSSL
+EVP, linked statically; see the
+[backend decision](adr/0006-sha256-backend-static-openssl.md).
+
 Keep acceptance evidence with the experiment or model it qualifies. A new
 model's domain semantics belong with the model; an example's adapter belongs
 with that example.
