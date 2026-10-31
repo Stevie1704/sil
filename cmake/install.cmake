@@ -19,6 +19,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/release.json
 # The staged prefix is what the release archives, so the grant travels with the
 # binaries rather than staying behind in the checkout. The two header-only
 # dependencies are compiled into sil-run, so their MIT notices ship with it.
+# The statically linked libcrypto is Apache-2.0, the text of LICENSE.
 set(SIL_LICENSE_DIR ${CMAKE_INSTALL_DATAROOTDIR}/licenses/sil)
 install(FILES LICENSE NOTICE THIRD-PARTY-NOTICES.md
   DESTINATION ${SIL_LICENSE_DIR})
