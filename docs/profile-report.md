@@ -311,6 +311,40 @@ digest of the runner, and the side-car still shows `omitted`. So `external` does
 not make a profile command free of hash work. A Recording outside the profile
 directory is not an artifact, as before.
 
+#### The artifact inventory
+
+The profile tool builds `artifacts` once, after normalization and after the
+optional Activation correlation. Thus it reads and hashes each file once per
+capture. It keeps no digest between commands.
+
+#### No Recording digest handoff
+
+The profile tool does not reuse the digest of the runner (#323, section 6). It
+hashes the Recording itself, with one read in bounded memory, in all modes. The
+ticket allows this result if a trustworthy handoff cannot be established.
+
+A handoff must show four facts. The profile tool can show three of them:
+
+| Fact | Available | Why |
+| --- | --- | --- |
+| This invocation | Yes | The profile tool starts the runner and selects the side-car path. |
+| The exact output | Yes | The profile tool selects the Recording path. |
+| Successful finalization | Yes | The side-car and the exit code give it. |
+| The file is unchanged until profile finalization | **No** | A Recording stays writable after the Run while `perf` and the analysis run. Only path, size and modification time could be compared, and these do not prove content identity. |
+
+An entry in `artifacts` is the integrity claim of the profile set. If the profile
+tool copied a digest, a change between the runner close and profile finalization
+would give a claim about bytes that are not in the file. The cost is small
+compared to the work that it protects: one read of the Recording, in a command
+that also exports and normalizes a capture.
+
+| Case | `recording` in the side-car | `sha256` of the `recording` artifact |
+| --- | --- | --- |
+| `full`, file unchanged | `calculated` | Calculated apart, and equal |
+| `external` | `omitted` | Calculated by the profile tool |
+| Failed Run with a partial Recording | The digest of the partial file | Calculated by the profile tool, of the same partial file |
+| `--no-recording`, or a Recording outside the directory | Not related | No artifact |
+
 ### `run`
 
 | Member | Content |
