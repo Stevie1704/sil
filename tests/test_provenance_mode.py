@@ -124,6 +124,48 @@ def test_external_mode_performs_no_provenance_hashing(
     assert external == {"count": 0, "bytes": 0}
 
 
+def shared_inputs_manifest(directory: Path):
+    """Two Process participants that share one executable and one command file,
+    the second through a symbolic link."""
+    script = executable_script(directory)
+    payload = directory / "scenario.xosc"
+    payload.write_text("<OpenSCENARIO/>\n")
+    alias = directory / "alias.xosc"
+    alias.symlink_to(payload.name)
+    manifest = toy_manifest(duration_ns=10_000_000)
+    for name, argument in (("first", payload), ("second", alias)):
+        manifest.add_process(name, command=[str(script), str(argument)],
+                             step_period_ns=10_000_000)
+    return manifest.write(directory / "shared.json")
+
+
+def test_shared_inputs_count_real_hashes_only_and_none_when_external(
+        sil_run_instrumented, tmp_path):
+    ref = shared_inputs_manifest(tmp_path)
+    full_out, external_out = tmp_path / "full.mcap", tmp_path / "ext.mcap"
+
+    full = hash_work(sil_run_instrumented, ref, full_out)
+    external = hash_work(sil_run_instrumented, ref, external_out,
+                         "--provenance-mode", "external")
+
+    # Runner, executable, command file and the Recording: a reused digest does
+    # not count.
+    assert full["count"] == 4
+    assert external == {"count": 0, "bytes": 0}
+
+    # Every Participant keeps its own entries in both modes.
+    payload = str((tmp_path / "scenario.xosc").resolve())
+    reference = hashlib.sha256(Path(payload).read_bytes()).hexdigest()
+    for out, state, sha256 in ((full_out, "calculated", reference),
+                               (external_out, "omitted", None)):
+        artifacts = sidecar(out)["artifacts"]
+        assert len(artifacts["process_participants"]) == 2
+        assert [(entry["participant"], entry["file"])
+                for entry in artifacts["command_files"]] == [
+            (name, {"path": payload, "digest_state": state, "sha256": sha256})
+            for name in ("first", "second")]
+
+
 def replay_run(directory: Path, run_sil):
     source, _ = record_producer_run(run_sil, directory)
     return replay_manifest(source).write(directory / "replay.json"), source
