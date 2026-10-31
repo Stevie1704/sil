@@ -12,9 +12,14 @@ Repository = "https://github.com/Stevie1704/sil"
 Source = "https://github.com/Stevie1704/sil"
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pyelftools>=0.31"]
+# The Foxglove qualification tests (tests/test_visualization_foxglove.py) need
+# the pinned SDK and a WebSocket client.
+dev = ["pytest>=8", "pyelftools>=0.31", "foxglove-sdk==0.30.3", "websockets>=13"]
 # sil schema import reads DWARF with pyelftools (public domain / Unlicense).
 dwarf = ["pyelftools>=0.31"]
+# sil playback serve --adapter foxglove (MIT). The adapter is qualified against
+# this exact version (docs/visualization.md "Compatibility matrix").
+foxglove = ["foxglove-sdk==0.30.3"]
 
 [project.scripts]
 sil = "sil.cli:main"

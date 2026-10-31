@@ -8,7 +8,9 @@ file to an MCAP decoder. MCAP is the only format in v1.
 
 from __future__ import annotations
 
+import itertools
 import json
+import struct
 from collections.abc import Collection
 from dataclasses import dataclass
 from pathlib import Path
@@ -159,6 +161,238 @@ def _indexed_records(stream: BinaryIO, summary: Summary, selected: _RecordFilter
                 channel = summary.channels[record.channel_id]
                 if selected.matches_message(channel, record):
                     yield channel.topic, record.log_time, record.data
+
+
+class OversizeMessage(ValueError):
+    """A chunk or Message is larger than the caller's limit. It is refused
+    before its bytes are read or decompressed."""
+
+
+class MessageLocation(NamedTuple):
+    """Where one Message is stored in an MCAP file.
+
+    `record_index` is the Message's ordinal in the whole file's stored order.
+    `chunk_offset` is the file offset of the Chunk record that holds it, or
+    -1 for a Message outside any chunk. `offset` is the offset of the Message
+    record in the decompressed chunk records, or in the file for a Message
+    outside any chunk. `size` is the length of its payload."""
+
+    record_index: int
+    channel_id: int
+    log_time: int
+    chunk_offset: int
+    offset: int
+    size: int
+
+
+_MCAP_MAGIC = b"\x89MCAP0\r\n"
+_OP_MESSAGE = 0x05
+_OP_CHUNK = 0x06
+_OP_DATA_END = 0x0F
+_RECORD_HEAD = struct.Struct("<BQ")
+_MESSAGE_HEAD = struct.Struct("<HIQQ")  # channel, sequence, log, publish time
+_CHUNK_HEAD = struct.Struct("<QQQII")  # start, end, size, crc, compression len
+_MAX_COMPRESSION_NAME = 64
+
+
+LOCATION_BATCH = 1 << 16
+
+
+def locate_messages(path: str | Path, *, max_chunk_bytes: int,
+                    batch_size: int = LOCATION_BATCH
+                    ) -> Iterator[tuple[int, list[MessageLocation]]]:
+    """Every Message of an MCAP file in stored order, with its location.
+
+    Yields (bytes scanned so far, locations) in batches of at most
+    `batch_size` locations; a batch never spans two chunks. It reads the
+    data section in physical order, as `stored_messages` does, and holds one
+    chunk at a time. A chunk whose compressed or decompressed size exceeds
+    `max_chunk_bytes` raises OversizeMessage before it is read."""
+    scan = _scan(path, max_chunk_bytes, payloads=False)
+    for scanned, group in itertools.groupby(scan, key=lambda found: found[0]):
+        locations = (location for _, location, _ in group)
+        while batch := list(itertools.islice(locations, batch_size)):
+            yield scanned, batch
+
+
+def stored_messages(path: str | Path, *, max_chunk_bytes: int
+                    ) -> Iterator[tuple[MessageLocation, bytes]]:
+    """Every Message of an MCAP file with its payload, in stored order.
+
+    Chunked and top-level Messages are both visited, in physical order, so
+    `record_index` is the same whole-file ordinal as in `locate_messages`.
+    Chunks are bounded by `max_chunk_bytes` as there."""
+    for _, location, payload in _scan(path, max_chunk_bytes, payloads=True):
+        yield location, payload
+
+
+def _scan(path: str | Path, max_chunk_bytes: int, payloads: bool
+          ) -> Iterator[tuple[int, MessageLocation, bytes | None]]:
+    """(end offset of the record that holds it, location, payload or None)
+    of every Message, in physical order."""
+    record_index = 0
+    with open(path, "rb") as stream:
+        if stream.read(len(_MCAP_MAGIC)) != _MCAP_MAGIC:
+            raise ValueError(f"{str(path)!r} is not an MCAP file")
+        while True:
+            start = stream.tell()
+            opcode, length = _read_head(stream)
+            end = start + _RECORD_HEAD.size + length
+            if opcode == _OP_DATA_END:
+                return
+            if opcode == _OP_CHUNK:
+                records = _read_chunk_records(stream, start, length,
+                                              max_chunk_bytes)
+                found = _messages_in_chunk(records, start, record_index,
+                                           payloads)
+            elif opcode == _OP_MESSAGE:
+                found = [_top_level_message(stream, start, length,
+                                            record_index, payloads)]
+            else:
+                stream.seek(length, 1)
+                continue
+            for location, payload in found:
+                record_index += 1
+                yield end, location, payload
+            stream.seek(end)
+
+
+def read_chunk(stream: BinaryIO, chunk_offset: int, *, max_chunk_bytes: int
+               ) -> bytes:
+    """The decompressed records of the Chunk record at `chunk_offset`.
+
+    Refuses with OversizeMessage a chunk larger than `max_chunk_bytes`,
+    compressed or decompressed, before it is read."""
+    stream.seek(chunk_offset)
+    opcode, length = _read_head(stream)
+    if opcode != _OP_CHUNK:
+        raise ValueError(f"no Chunk record at file offset {chunk_offset}")
+    return _read_chunk_records(stream, chunk_offset, length, max_chunk_bytes)
+
+
+def message_in_chunk(records: bytes, offset: int) -> tuple[int, int, bytes]:
+    """(channel id, log time, payload) of the Message record at `offset` in
+    decompressed chunk records."""
+    if offset < 0 or offset + _RECORD_HEAD.size > len(records):
+        raise ValueError(f"no Message record at chunk offset {offset}")
+    opcode, length = _RECORD_HEAD.unpack_from(records, offset)
+    end = offset + _RECORD_HEAD.size + length
+    if opcode != _OP_MESSAGE or length < _MESSAGE_HEAD.size or end > len(records):
+        raise ValueError(f"no Message record at chunk offset {offset}")
+    channel_id, _, log_time, _ = _MESSAGE_HEAD.unpack_from(
+        records, offset + _RECORD_HEAD.size)
+    return channel_id, log_time, records[end - length + _MESSAGE_HEAD.size:end]
+
+
+def read_message(stream: BinaryIO, offset: int, *, max_message_bytes: int
+                 ) -> tuple[int, int, bytes]:
+    """(channel id, log time, payload) of the Message record at file offset
+    `offset`, outside any chunk."""
+    stream.seek(offset)
+    opcode, length = _read_head(stream)
+    if opcode != _OP_MESSAGE or length < _MESSAGE_HEAD.size:
+        raise ValueError(f"no Message record at file offset {offset}")
+    size = length - _MESSAGE_HEAD.size
+    if size > max_message_bytes:
+        raise OversizeMessage(f"Message at file offset {offset} has {size} "
+                              f"bytes; the limit is {max_message_bytes}")
+    channel_id, _, log_time, _ = _MESSAGE_HEAD.unpack(
+        _read_exact(stream, _MESSAGE_HEAD.size))
+    return channel_id, log_time, _read_exact(stream, size)
+
+
+def _read_exact(stream: BinaryIO, size: int) -> bytes:
+    data = stream.read(size)
+    if len(data) != size:
+        raise EOFError("the MCAP file ends inside a record")
+    return data
+
+
+def _read_head(stream: BinaryIO) -> tuple[int, int]:
+    return _RECORD_HEAD.unpack(_read_exact(stream, _RECORD_HEAD.size))
+
+
+def _read_chunk_records(stream: BinaryIO, chunk_offset: int, length: int,
+                        max_chunk_bytes: int) -> bytes:
+    """Decompress the Chunk record whose head was just read."""
+    _, _, size, _, name_length = _CHUNK_HEAD.unpack(
+        _read_exact(stream, _CHUNK_HEAD.size))
+    if size > max_chunk_bytes:
+        raise OversizeMessage(f"chunk at file offset {chunk_offset} "
+                              f"decompresses to {size} bytes; the limit is "
+                              f"{max_chunk_bytes}")
+    if name_length > _MAX_COMPRESSION_NAME:
+        raise ValueError(f"chunk at file offset {chunk_offset} has a "
+                         f"{name_length}-byte compression name")
+    compression = _read_exact(stream, name_length).decode()
+    (stored,) = struct.unpack("<Q", _read_exact(stream, 8))
+    if stored > max_chunk_bytes:
+        raise OversizeMessage(f"chunk at file offset {chunk_offset} has "
+                              f"{stored} compressed bytes; the limit is "
+                              f"{max_chunk_bytes}")
+    records = _decompress(_read_exact(stream, stored), compression, size)
+    if len(records) != size:
+        raise ValueError(f"chunk at file offset {chunk_offset} decompresses "
+                         f"to {len(records)} bytes, not the declared {size}")
+    return records
+
+
+def _decompress(data: bytes, compression: str, size: int) -> bytes:
+    """At most size + 1 bytes, so a frame that lies about its size cannot
+    allocate more than the declared, already checked size."""
+    if compression == "":
+        return data
+    if compression == "zstd":
+        import io
+
+        import zstandard
+
+        with zstandard.ZstdDecompressor().stream_reader(io.BytesIO(data)) as r:
+            return r.read(size + 1)
+    if compression == "lz4":
+        import lz4.frame
+
+        return lz4.frame.LZ4FrameDecompressor().decompress(data, max_length=size + 1)
+    raise ValueError(f"unsupported chunk compression {compression!r}")
+
+
+def _messages_in_chunk(records: bytes, chunk_offset: int, record_index: int,
+                       payloads: bool
+                       ) -> Iterator[tuple[MessageLocation, bytes | None]]:
+    position, end = 0, len(records)
+    while position < end:
+        if position + _RECORD_HEAD.size > end:
+            raise ValueError(f"chunk at file offset {chunk_offset} ends "
+                             "inside a record")
+        opcode, length = _RECORD_HEAD.unpack_from(records, position)
+        following = position + _RECORD_HEAD.size + length
+        if opcode == _OP_MESSAGE:
+            if length < _MESSAGE_HEAD.size or following > end:
+                raise ValueError(f"short Message in chunk at {chunk_offset}")
+            channel_id, _, log_time, _ = _MESSAGE_HEAD.unpack_from(
+                records, position + _RECORD_HEAD.size)
+            yield (MessageLocation(record_index, channel_id, log_time,
+                                   chunk_offset, position,
+                                   length - _MESSAGE_HEAD.size),
+                   records[following - length + _MESSAGE_HEAD.size:following]
+                   if payloads else None)
+            record_index += 1
+        position = following
+    if position != end:
+        raise ValueError(f"chunk at file offset {chunk_offset} ends inside "
+                         "a record")
+
+
+def _top_level_message(stream: BinaryIO, start: int, length: int,
+                       record_index: int, payloads: bool
+                       ) -> tuple[MessageLocation, bytes | None]:
+    if length < _MESSAGE_HEAD.size:
+        raise ValueError(f"short Message at file offset {start}")
+    channel_id, _, log_time, _ = _MESSAGE_HEAD.unpack(
+        _read_exact(stream, _MESSAGE_HEAD.size))
+    size = length - _MESSAGE_HEAD.size
+    return (MessageLocation(record_index, channel_id, log_time, -1, start, size),
+            _read_exact(stream, size) if payloads else None)
 
 
 def _read_mcap(path: Path, channels: Collection[str] | None,
