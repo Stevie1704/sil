@@ -11,7 +11,7 @@ each such null names its reason). Members not stated here are allowed.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any, Callable, Collection
 
 # A shape appends the violations of `value` at `where` to `errors`.
 Shape = Callable[[Any, str, list], None]
@@ -39,7 +39,7 @@ TEXT = _leaf(lambda v: type(v) is str, "a string")
 FLAG = _leaf(lambda v: type(v) is bool, "a boolean")
 
 
-def one_of(values: set[str]) -> Shape:
+def one_of(values: Collection[str]) -> Shape:
     def check(value: Any, where: str, errors: list) -> None:
         if type(value) is not str or value not in values:
             errors.append(f"{where}: unknown value {value!r}")
@@ -165,7 +165,7 @@ OBSERVATIONAL = members({
     "resources": RESOURCES,
 })
 
-PROVENANCE_MODES = {"full", "external"}
+PROVENANCE_MODES = ("full", "external")
 SIZE_GUARDS = ("max_protocol_line_bytes", "max_step_output_messages",
                "max_step_inline_payload_bytes")
 RUN_REPORT = members({

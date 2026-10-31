@@ -44,7 +44,7 @@ from sil.diagnostics_report import (
     write_new_file,
 )
 from sil.diagnostics_run import (
-    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE,
+    DEFAULT_PROVENANCE_MODE, EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE,
     FORWARDED_SIGNALS, GivenOnce, Guards, NativeTools, RunOutcome, RunRequest,
     ToolMissing, add_guard_arguments, add_provenance_mode_argument,
     command_error, default_report_path,
@@ -104,7 +104,7 @@ class Policy:
     warmup: int
     recording: bool
     guards: Guards
-    provenance_mode: str = "full"
+    provenance_mode: str = DEFAULT_PROVENANCE_MODE
 
 
 @dataclass(frozen=True)

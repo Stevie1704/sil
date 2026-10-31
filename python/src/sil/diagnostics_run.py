@@ -40,6 +40,7 @@ from sil.diagnostics_html import write_html
 from sil.diagnostics_report import (
     PHASES, ReportError, load_report, new_path_problem,
 )
+from sil.diagnostics_shape import PROVENANCE_MODES
 
 PROG = "sil run"
 RUNNER = "sil-run-diagnostics"
@@ -623,7 +624,7 @@ def add_guard_arguments(parser: argparse.ArgumentParser) -> None:
 def add_provenance_mode_argument(parser: argparse.ArgumentParser,
                                  note: str = "") -> None:
     parser.add_argument(
-        "--provenance-mode", choices=("full", "external"), action=GivenOnce,
+        "--provenance-mode", choices=PROVENANCE_MODES, action=GivenOnce,
         help="who owns artifact identity. full (default): the runner hashes "
              "its inputs and the Recording. external: the caller does, and "
              "the runner omits those digests. The Manifest hash and Replay "

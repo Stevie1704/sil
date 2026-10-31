@@ -16,7 +16,8 @@ from pathlib import Path
 
 from sil.bundle import file_sha256
 from sil.diagnostics_run import (
-    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, Guards, RunRequest, alias_problems,
+    DEFAULT_PROVENANCE_MODE, EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_OK, Guards,
+    RunRequest, alias_problems,
 )
 
 PROG = "sil profile"
@@ -36,7 +37,7 @@ class RunTarget:
     recording: Path | None  # None: --no-recording
     provenance: Path | None
     guards: Guards
-    provenance_mode: str = "full"
+    provenance_mode: str = DEFAULT_PROVENANCE_MODE
 
     def run_request(self, diagnostics: Path) -> RunRequest:
         """The diagnostics Run of this target."""
