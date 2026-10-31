@@ -80,3 +80,8 @@ them.
 
 [docs/bench/recording-digest.md](bench/recording-digest.md) shows where the
 Recording digest cost goes since it is calculated while the Run writes.
+
+[docs/bench/provenance-qualification.md](bench/provenance-qualification.md)
+attributes the backend, the input reuse, the Recording digest and the provenance
+mode, for Runs and for `sil profile`, with its limitations.
+`tools/profile_cost_measure.py` separates runner work from profile finalization.
