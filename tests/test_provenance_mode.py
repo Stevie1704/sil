@@ -165,6 +165,39 @@ def test_shared_inputs_count_real_hashes_only_and_none_when_external(
             for name in ("first", "second")]
 
 
+def native_and_process_shared_inputs_manifest(directory: Path):
+    """Three Native participants share one library, one through a symbolic link.
+    Two Process participants share one executable, and the first names a file."""
+    library = directory / "producer.silp"
+    shutil.copy2(BUILD_DIR / "toy_producer.silp", library)
+    alias = directory / "alias.silp"
+    alias.symlink_to(library.name)
+    script = executable_script(directory)
+    payload = directory / "scenario.xosc"
+    payload.write_text("<OpenSCENARIO/>\n")
+    manifest = toy_manifest(duration_ns=10_000_000)
+    for name, path in (("a", library), ("b", alias), ("c", library)):
+        manifest.add_channel(name, schema="toy.Counter")
+        manifest.add_native(name, library=str(path),
+                            config={"channel": name, "period_ns": 10_000_000},
+                            publishes=[name])
+    manifest.add_process("p", command=[str(script), str(payload)],
+                         step_period_ns=10_000_000)
+    manifest.add_process("q", command=[str(script)], step_period_ns=10_000_000)
+    return manifest.write(directory / "shared.json")
+
+
+def test_each_canonical_input_is_hashed_once_in_one_preparation(
+        sil_run_instrumented, tmp_path):
+    ref = native_and_process_shared_inputs_manifest(tmp_path)
+
+    work = hash_work(sil_run_instrumented, ref, tmp_path / "out.mcap")
+
+    # Runner, library, executable and command file. Without reuse it is seven:
+    # the runner, three libraries, two executables and the command file.
+    assert work["count"] == 4
+
+
 def replay_run(directory: Path, run_sil):
     source, _ = record_producer_run(run_sil, directory)
     return replay_manifest(source).write(directory / "replay.json"), source

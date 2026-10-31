@@ -1,6 +1,7 @@
-// Preparation-local digest reuse (#326). Each canonical input path is hashed
-// once per prepare_run, every Participant keeps its own attribution entry, and
-// a later preparation hashes the bytes that are on disk then.
+// Preparation-local digest reuse (#326). Every Participant keeps its own
+// attribution entry, and a later preparation hashes the bytes that are on disk
+// then. The work count of one preparation comes from the provenance_hash counter
+// of the instrumented runner: see tests/test_provenance_mode.py.
 
 #include <unistd.h>
 
@@ -23,7 +24,6 @@ using sil::ManifestError;
 using sil::NativeSpec;
 using sil::ParticipantSpec;
 using sil::Provenance;
-using sil::ProvenanceDigests;
 using sil::ProcessSpec;
 
 // SHA-256 references computed outside the kernel with `shasum -a 256`.
@@ -81,8 +81,7 @@ const sil::ProvenanceProcessParticipant &process_record(const Provenance &p,
   throw std::runtime_error("no process record for " + name);
 }
 
-// The runner digest is one operation of its own, so every expectation counts it.
-void shared_inputs_are_hashed_once(const fs::path &directory) {
+void shared_inputs_keep_their_attribution(const fs::path &directory) {
   const fs::path library = directory / "lib" / "libshared.so";
   write_file(library, "abc");
   fs::create_directory_symlink(library.filename(), directory / "lib" / "alias.so");
@@ -100,14 +99,8 @@ void shared_inputs_are_hashed_once(const fs::path &directory) {
 
   Provenance provenance = sil::initialize_provenance(manifest, "test", "", "",
                                                    sil::ProvenanceMode::Full);
-  ProvenanceDigests digests;
-  const auto prepared = sil::prepare_run(manifest, provenance, digests);
+  const auto prepared = sil::prepare_run(manifest, provenance);
   (void)prepared;
-
-  // Runner, shared library, shared executable, and the command file.
-  check(digests.hash_operations() == 4,
-        "expected 4 digest operations, got " +
-            std::to_string(digests.hash_operations()));
 
   const fs::path canonical_library = fs::canonical(library);
   for (const std::string name : {"a", "b", "c"}) {
@@ -144,8 +137,7 @@ void later_preparation_observes_replaced_bytes(const fs::path &directory) {
 
   Provenance first = sil::initialize_provenance(manifest, "test", "", "",
                                                    sil::ProvenanceMode::Full);
-  ProvenanceDigests first_digests;
-  (void)sil::prepare_run(manifest, first, first_digests);
+  (void)sil::prepare_run(manifest, first);
   check(native_record(first, "only").library->digest.sha256 == kSha256Abc,
         "first preparation digest mismatch");
 
@@ -153,12 +145,9 @@ void later_preparation_observes_replaced_bytes(const fs::path &directory) {
 
   Provenance second = sil::initialize_provenance(manifest, "test", "", "",
                                                    sil::ProvenanceMode::Full);
-  ProvenanceDigests second_digests;
-  (void)sil::prepare_run(manifest, second, second_digests);
+  (void)sil::prepare_run(manifest, second);
   check(native_record(second, "only").library->digest.sha256 == kSha256Changed,
         "later preparation reused a stale digest");
-  check(second_digests.hash_operations() == 2,
-        "later preparation should hash the runner and the library once each");
 }
 
 void unreadable_shared_input_is_reported_per_participant(const fs::path &directory) {
@@ -167,10 +156,9 @@ void unreadable_shared_input_is_reported_per_participant(const fs::path &directo
 
   Provenance provenance = sil::initialize_provenance(manifest, "test", "", "",
                                                    sil::ProvenanceMode::Full);
-  ProvenanceDigests digests;
   bool rejected = false;
   try {
-    (void)sil::prepare_run(manifest, provenance, digests);
+    (void)sil::prepare_run(manifest, provenance);
   } catch (const ManifestError &) {
     rejected = true;
   }
@@ -202,8 +190,8 @@ int main() {
     }
   };
 
-  run("shared inputs are hashed once", [&] {
-    shared_inputs_are_hashed_once(root / "shared");
+  run("shared inputs keep their attribution", [&] {
+    shared_inputs_keep_their_attribution(root / "shared");
   });
   run("later preparation observes replaced bytes", [&] {
     later_preparation_observes_replaced_bytes(root / "replaced");

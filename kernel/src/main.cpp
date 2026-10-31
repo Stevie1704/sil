@@ -552,8 +552,7 @@ int run(int argc, char **argv) {
     // Validate and resolve the Run before Engine can load a Native library or
     // spawn a Process participant. Preparation keeps the resolved execution
     // data separate from the authored Manifest.
-    sil::ProvenanceDigests digests;
-    prepared.emplace(sil::prepare_run(manifest.value(), *provenance, digests));
+    prepared.emplace(sil::prepare_run(manifest.value(), *provenance));
 #ifdef SIL_RUN_DIAGNOSTICS
     if (wrapped_participant_arg)
       require_process(*manifest, wrapped_participant_arg);
