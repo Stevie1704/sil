@@ -1,0 +1,709 @@
+{
+  "spec": 354,
+  "ticket": 359,
+  "host": {
+    "system": "Linux",
+    "node": "runnervm48cm3",
+    "release": "7.0.0-1017-azure",
+    "version": "#17~24.04.1-Ubuntu SMP PREEMPT Thu Sep 24 18:46:57 UTC 2026",
+    "machine": "x86_64",
+    "processor": "x86_64"
+  },
+  "libc": [
+    "glibc",
+    "2.39"
+  ],
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "source_revision": "600cdddeec825266a1f05bf8665540740cc499a8",
+  "expected": {
+    "tasks": 52,
+    "activations_per_task": 620,
+    "selected_task": "task51",
+    "selected_index": 610,
+    "virtual_time_ns": 610000000,
+    "publications_in_query": 104,
+    "site_allocations": 8,
+    "site_allocated_bytes": 8192
+  },
+  "selected": [
+    {
+      "variant": "base",
+      "activation": {
+        "participant": "late",
+        "task": "task51",
+        "kind": "native_task",
+        "index": 610,
+        "virtual_time_ns": 610000000,
+        "begin_ns": "237399014222",
+        "end_ns": "237438552318",
+        "outcome": "completed",
+        "samples": 39,
+        "weight_ns": 39039039
+      },
+      "execution_context_samples": 39,
+      "sampled_source_locations": [
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 25
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 25
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        }
+      ],
+      "profile_identity": {
+        "manifest_hash": "eb693940d5dcad342cccb25de4a3a726f5ddac4ea21cbb22bf92986ab534f7ac",
+        "manifest_path": "/home/runner/work/sil/sil/build/actionable-evidence/base.json",
+        "sil_version": "0.2.1",
+        "source_repository": "https://github.com/Stevie1704/sil",
+        "source_revision": "600cdddeec825266a1f05bf8665540740cc499a8",
+        "unavailable": {}
+      },
+      "rendered_summaries": {
+        "caller-summary": "Selected function: late_spin. 39 samples / 39039039 ns. 100.0% of the enclosing selection (39039039 ns).",
+        "source-summary": "39 samples / 39039039 ns attributed; 0 samples / 0 ns unknown. 100.0% of selected weight has a retained leaf source line. Denominator: 39 samples / 39039039 ns."
+      },
+      "independent_source_partition": {
+        "attributed_samples": 39,
+        "attributed_weight_ns": 39039039,
+        "unknown_samples": 0,
+        "unknown_weight_ns": 0
+      }
+    },
+    {
+      "variant": "new",
+      "activation": {
+        "participant": "late",
+        "task": "task51",
+        "kind": "native_task",
+        "index": 610,
+        "virtual_time_ns": 610000000,
+        "begin_ns": "241450880103",
+        "end_ns": "241474223160",
+        "outcome": "completed",
+        "samples": 23,
+        "weight_ns": 23023023
+      },
+      "execution_context_samples": 23,
+      "sampled_source_locations": [
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        }
+      ],
+      "profile_identity": {
+        "manifest_hash": "df4edf44e752f9026f9bdd6eb44f1fc3ab264e125870d098acfc1bf2d53a184f",
+        "manifest_path": "/home/runner/work/sil/sil/build/actionable-evidence/new.json",
+        "sil_version": "0.2.1",
+        "source_repository": "https://github.com/Stevie1704/sil",
+        "source_revision": "600cdddeec825266a1f05bf8665540740cc499a8",
+        "unavailable": {}
+      },
+      "rendered_summaries": {
+        "caller-summary": "Selected function: late_spin. 23 samples / 23023023 ns. 100.0% of the enclosing selection (23023023 ns).",
+        "source-summary": "23 samples / 23023023 ns attributed; 0 samples / 0 ns unknown. 100.0% of selected weight has a retained leaf source line. Denominator: 23 samples / 23023023 ns."
+      },
+      "independent_source_partition": {
+        "attributed_samples": 23,
+        "attributed_weight_ns": 23023023,
+        "unknown_samples": 0,
+        "unknown_weight_ns": 0
+      }
+    }
+  ],
+  "observations": [
+    {
+      "label": "build-base",
+      "argv": [
+        "cc",
+        "-O2",
+        "-g",
+        "-fPIC",
+        "-shared",
+        "-fno-omit-frame-pointer",
+        "-DWORK=40000000",
+        "-I",
+        "/home/runner/work/_temp/sil-native/include",
+        "/home/runner/work/sil/sil/proofs/actionable-profiling/late_outlier.c",
+        "-o",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base.so"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 71538634,
+      "peak_rss_kib": 27160
+    },
+    {
+      "label": "build-new",
+      "argv": [
+        "cc",
+        "-O2",
+        "-g",
+        "-fPIC",
+        "-shared",
+        "-fno-omit-frame-pointer",
+        "-DWORK=20000000",
+        "-I",
+        "/home/runner/work/_temp/sil-native/include",
+        "/home/runner/work/sil/sil/proofs/actionable-profiling/late_outlier.c",
+        "-o",
+        "/home/runner/work/sil/sil/build/actionable-evidence/new.so"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 63883301,
+      "peak_rss_kib": 27148
+    },
+    {
+      "label": "ordinary-base",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "run",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/actionable-evidence/ordinary-base.mcap"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 113943387,
+      "peak_rss_kib": 19552
+    },
+    {
+      "label": "ordinary-new",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "run",
+        "/home/runner/work/sil/sil/build/actionable-evidence/new.json",
+        "-o",
+        "/home/runner/work/sil/sil/build/actionable-evidence/ordinary-new.mcap"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 114079617,
+      "peak_rss_kib": 19052
+    },
+    {
+      "label": "capture-base",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "profile",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base.json",
+        "--out",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base",
+        "--collector",
+        "cpu",
+        "--activations",
+        "--max-activation-bytes",
+        "33554432",
+        "--provenance-mode",
+        "full"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 6177589139,
+      "peak_rss_kib": 105860
+    },
+    {
+      "label": "render-base",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "profile",
+        "render",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base/profile.json",
+        "--participant",
+        "late",
+        "--task",
+        "task51",
+        "--activation-index",
+        "610",
+        "--diagnostics",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base/run.diagnostics.json",
+        "--html",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base-selected.html"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 765392484,
+      "peak_rss_kib": 92812
+    },
+    {
+      "label": "minimal-base",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "profile",
+        "render",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base-minimal/profile.json",
+        "--html",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base-minimal.html"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 815872450,
+      "peak_rss_kib": 138004
+    },
+    {
+      "label": "benchmark-base",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "benchmark",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base.json",
+        "--out",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base-benchmark",
+        "--warmup",
+        "1",
+        "--repeats",
+        "3",
+        "--provenance-mode",
+        "full"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 615050301,
+      "peak_rss_kib": 43464
+    },
+    {
+      "label": "query-base",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "recording",
+        "query",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base/run.mcap",
+        "--channel",
+        "events",
+        "--field",
+        "task",
+        "--field",
+        "index",
+        "--field",
+        "publication",
+        "--from",
+        "610000000",
+        "--to",
+        "611000000",
+        "--max-results",
+        "104",
+        "--max-messages",
+        "104",
+        "--max-bytes",
+        "65536"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 114128092,
+      "peak_rss_kib": 24824
+    },
+    {
+      "label": "capture-new",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "profile",
+        "/home/runner/work/sil/sil/build/actionable-evidence/new.json",
+        "--out",
+        "/home/runner/work/sil/sil/build/actionable-evidence/new",
+        "--collector",
+        "cpu",
+        "--activations",
+        "--max-activation-bytes",
+        "33554432",
+        "--provenance-mode",
+        "external"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 815730442,
+      "peak_rss_kib": 103696
+    },
+    {
+      "label": "render-new",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "profile",
+        "render",
+        "/home/runner/work/sil/sil/build/actionable-evidence/new/profile.json",
+        "--participant",
+        "late",
+        "--task",
+        "task51",
+        "--activation-index",
+        "610",
+        "--diagnostics",
+        "/home/runner/work/sil/sil/build/actionable-evidence/new/run.diagnostics.json",
+        "--html",
+        "/home/runner/work/sil/sil/build/actionable-evidence/new-selected.html"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 815767334,
+      "peak_rss_kib": 92176
+    },
+    {
+      "label": "minimal-new",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "profile",
+        "render",
+        "/home/runner/work/sil/sil/build/actionable-evidence/new-minimal/profile.json",
+        "--html",
+        "/home/runner/work/sil/sil/build/actionable-evidence/new-minimal.html"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 916222414,
+      "peak_rss_kib": 134600
+    },
+    {
+      "label": "benchmark-new",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "benchmark",
+        "/home/runner/work/sil/sil/build/actionable-evidence/new.json",
+        "--out",
+        "/home/runner/work/sil/sil/build/actionable-evidence/new-benchmark",
+        "--warmup",
+        "1",
+        "--repeats",
+        "3",
+        "--provenance-mode",
+        "external"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 565224969,
+      "peak_rss_kib": 47124
+    },
+    {
+      "label": "query-new",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "recording",
+        "query",
+        "/home/runner/work/sil/sil/build/actionable-evidence/new/run.mcap",
+        "--channel",
+        "events",
+        "--field",
+        "task",
+        "--field",
+        "index",
+        "--field",
+        "publication",
+        "--from",
+        "610000000",
+        "--to",
+        "611000000",
+        "--max-results",
+        "104",
+        "--max-messages",
+        "104",
+        "--max-bytes",
+        "65536"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 114080370,
+      "peak_rss_kib": 23908
+    },
+    {
+      "label": "diff",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "profile",
+        "diff",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base/profile.json",
+        "/home/runner/work/sil/sil/build/actionable-evidence/new/profile.json",
+        "--base-benchmark",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base-benchmark/summary.json",
+        "--new-benchmark",
+        "/home/runner/work/sil/sil/build/actionable-evidence/new-benchmark/summary.json",
+        "--html",
+        "/home/runner/work/sil/sil/build/actionable-evidence/diff.html"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 1316681626,
+      "peak_rss_kib": 125388
+    },
+    {
+      "label": "heap",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "profile",
+        "/home/runner/work/sil/sil/build/actionable-evidence/base.json",
+        "--out",
+        "/home/runner/work/sil/sil/build/actionable-evidence/heap",
+        "--collector",
+        "heap",
+        "--runner"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 565336978,
+      "peak_rss_kib": 66264
+    },
+    {
+      "label": "heap-render",
+      "argv": [
+        "/home/runner/work/sil/sil/.venv/bin/python",
+        "-m",
+        "sil.cli",
+        "profile",
+        "render",
+        "/home/runner/work/sil/sil/build/actionable-evidence/heap-minimal/profile.json",
+        "--html",
+        "/home/runner/work/sil/sil/build/actionable-evidence/heap.html"
+      ],
+      "exit_code": 0,
+      "elapsed_ns": 113995359,
+      "peak_rss_kib": 26104
+    }
+  ],
+  "rss_scope": "GNU time per-command maximum resident set size in KiB, including child execution",
+  "limits": "Timings and sampled weights are observations, not significance or correctness thresholds."
+}

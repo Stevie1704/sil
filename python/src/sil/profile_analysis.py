@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Iterable, Iterator
 
 from sil.profile_set import ProfileSet
 
@@ -64,8 +64,22 @@ def cpu_ranking(paths: list[list[int]], rows: Iterable[list]) -> CpuRanking:
                       {k: (v[0], v[1]) for k, v in inclusive.items()})
 
 
-def cpu_rows(profile: ProfileSet) -> list[list]:
+def iter_cpu_rows(profile: ProfileSet) -> Iterator[list]:
+    """Selected samples as path/thread/class/reference/count/weight rows.
+
+    Static analyses and bounded interactive aggregation share this predicate;
+    iteration does not allocate another full-size sample table.
+    """
     assert profile.samples is not None, "normalized samples are required"
     classes = profile.correlation["samples"] if profile.correlation else None
-    return [[s[4], s[2], *(classes[i] if classes else ["", ""]), 1, s[3]]
-            for i, s in enumerate(profile.samples["samples"])]
+    selected = set(profile.selection) if profile.selection is not None else None
+    for index, sample in enumerate(profile.samples["samples"]):
+        cls, ref = classes[index] if classes else ("", "")
+        if selected is not None and (cls not in ("execution_context", "window_associated")
+                                     or ref not in selected):
+            continue
+        yield [sample[4], sample[2], cls, ref, 1, sample[3]]
+
+
+def cpu_rows(profile: ProfileSet) -> list[list]:
+    return list(iter_cpu_rows(profile))

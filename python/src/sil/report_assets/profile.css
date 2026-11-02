@@ -67,3 +67,12 @@ tr.no-samples td { color: var(--muted); }
   .tree-wrap { max-height: none; overflow: visible; border: none; }
   #explorer, #selection-tables { display: none !important; }
 }
+#activation-navigation label { display: inline-flex; flex-direction: column;
+  gap: 4px; width: min(100%, 220px); margin: 0 12px 10px 0;
+  color: var(--muted); font-size: 13px; }
+#activation-navigation input, #activation-navigation select { width: 100%;
+  min-width: 0; box-sizing: border-box; font: inherit; }
+#activation-outliers textarea { display: block; width: 100%; max-width: 100%;
+  box-sizing: border-box; margin: 10px 0; padding: 8px; min-height: 8rem;
+  font-family: var(--mono); color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 6px; }

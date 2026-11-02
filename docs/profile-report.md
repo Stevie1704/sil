@@ -1065,7 +1065,8 @@ value becomes a URL. "Download JSON" saves `profile.json` byte for byte.
 ## Profile diff
 
 ```sh
-sil profile diff BASE/profile.json NEW/profile.json [--html OUTPUT.html]
+sil profile diff BASE/profile.json NEW/profile.json [--html OUTPUT.html] \
+  [--base-benchmark BASE/summary.json --new-benchmark NEW/summary.json]
 ```
 
 Compare two portable artifact sets of the same collector, offline, using the
@@ -1082,7 +1083,11 @@ statuses and reasons remain visible even when a partial set is compared.
 
 CPU: compare self and inclusive sampled-weight shares per function, with
 both sample-count and weight denominators and changes in percentage points.
-Doubling every sample leaves the shares unchanged. A zero-weight denominator
+Each scope also shows BASE and NEW estimated sampled weight in ns and the
+signed absolute weight change, computed from every normalized sample, including
+functions outside the saved summary top list. Doubling every sample leaves
+the shares unchanged and doubles the displayed weights. An absolute change
+is available even when a zero denominator makes a share unavailable. A zero-weight denominator
 has an unavailable share and change, never an invented zero percentage.
 Functions that appear or disappear have zero weight on the absent side of a
 nonzero denominator. Function identity is the exact module path and symbol,
@@ -1100,17 +1105,60 @@ allocations at capture end are not a leak verdict.
 
 Rankings show at most 100 functions/sites; the self remainder gives omitted
 weight on both sides (heap: every metric), and inclusive rows are explicitly
-non-additive. At most 50 Tasks are expanded. Global rankings include all
+non-additive. The CPU rows are the 50 largest share changes and the 50 largest
+absolute estimated weight changes, so uniform growth with unchanged shares
+still lists the functions that grew most. At most 50 Tasks are expanded. Global rankings include all
 samples, also the Tasks that are not expanded. The diff compares one Run
 per set: it supplies no significance verdict, and small CPU share changes
 may be sampling noise. Weights remain estimates, never function durations
 or call counts.
 
+Optional repeated experiments: pass `--base-benchmark` and `--new-benchmark`
+together to load two saved `sil_benchmark_report` v1 files. They are separate
+experiments, never the same executions as the profiles. The report records
+each side's input path, byte count, SHA-256, schema, identity, host, measurement
+mode, policy (including the existing provenance-mode legacy rule), status,
+warm-up and measured-Run counts. It warns about differences between experiments,
+between profile and benchmark metadata, and within a campaign. Unknown binary
+identities remain unavailable: a matching Manifest or artifact path does not
+establish identical binaries. No sibling file or provenance sidecar is opened.
+
+The repeated Run/phase distributions are the saved min/median/max/mean/stddev
+aggregates of successful measured Runs; warm-ups remain excluded. Each measured
+Run's Task row retains its own completed-Activation count, timing scope,
+reservoir metadata, p50/p95/p99, unavailable reasons and failed-Activation
+observation. Partial and failed Runs remain visible with their outcomes and
+configuration. Percentiles are never pooled or averaged across Runs. Nothing
+subtracts assumed collector overhead or establishes a significance verdict or
+performance pass/fail threshold.
+
+Explicit benchmark input is checked before any output: supported schema,
+finite values, embedded Run reports, campaign counts/status, per-Run aggregate
+values and saved distribution consistency must agree. Missing, malformed,
+unsupported, oversized or inconsistent input fails with exit `2`; it is never
+silently ignored. A missing benchmark option pair also fails. These checks do
+not require a benchmark identity to match the profile, because those experiments
+are distinct.
+
+Benchmark presentation adds at most 100 aggregate rows, 100 Run metadata rows
+(including warm-ups), and 500 measured-Run Task rows per side. Omitted row counts
+are explicit. Each displayed cell is limited to 4096 characters with an explicit
+truncation notice. The JSON download retains both complete benchmark reports,
+including omitted rows and full strings. These are static tables, available
+without JavaScript and with the existing keyboard and theme controls. Each
+optional file has the same 256 MiB input cap as a portable artifact. A maximal
+CPU comparison with both correlations and both benchmarks reads up to eight
+capped files (2 GiB total); JSON parsing, validation and the complete downloadable
+JSON scale with that input and may require substantially more memory. The
+base64 download adds roughly one third to the serialized JSON size. Display
+bounds limit visible DOM rows, not the size of the retained downloadable input.
+
 Exit codes: `0` means the summary and requested HTML were produced; `1`
 means an output write failed; `2` means invalid usage, missing/invalid or
 unsupported evidence, different collectors, an output collision, or a
 missing output directory. Output paths are checked first and existing files
-are never replaced. The HTML's JSON download holds both input summaries.
+are never replaced. The HTML's JSON download holds both input summaries and,
+when explicitly supplied, both benchmark reports with their digests.
 
 ## Normalized samples: `cpu/samples.json`
 
@@ -1126,3 +1174,114 @@ are never replaced. The HTML's JSON download holds both input summaries.
 Rows refer to the identities of `profile.json`. The file is the offline
 input for reports and for the Activation join; it does not reconstruct
 chronology from sorted values.
+
+### Bottom-up callers from retained stacks
+
+CPU and heap reports include a bounded **Bottom-up callers** view. Search
+captured symbol/module names and page the matching function choices (50 per
+page). Choose an inclusive function or leaf site. Inclusive selection counts
+each contributing sample/allocation row once, using the function's leafmost
+occurrence as the anchor; callers run outward from there. Recursive ancestors
+remain explicit and their ambiguous recursive relationship is labeled.
+Repeated inline frames follow the same rule. The root denominator matches the
+selected function's inclusive ranking (or self ranking in leaf-site mode), and
+also states its share of the enclosing selection. These relationships are not
+exact function-call counts. Stack endings remain explicitly unavailable or
+possibly truncated; they do not establish a complete path.
+
+CPU uses estimated sampled weight and follows the explorer's process, thread,
+Task, Virtual-time, interval and correlation-class selections. Keep
+`execution_context` and `window_associated` interpretations separate. Heap
+selects allocations, allocated bytes, temporary allocations, outstanding
+allocations or outstanding bytes independently from retained allocation rows;
+it has no Activation, thread or time attribution. Outstanding metrics remain
+capture-end snapshots, not leak verdicts.
+
+The static page includes the largest inclusive contributor, with leaf weight
+breaking ties, without JavaScript. Interactive callers use at most 200,000
+normalized rows/functions, 1,000,000 stack-path keys and 8 Mi characters of
+function/module labels. Over-budget tables are not embedded; the bounded
+static summary remains. Each tree uses the existing 1,500-node, 20-sibling,
+64-level and 0.5%-weight budgets, with explicit disjoint remainders. Each
+selected row contributes once to every node on its caller path; recursive
+nodes at different depths must not be added together. The normalized inputs
+are still subject to the 256 MiB per-file limit. Analysis retains the parsed
+inputs plus function/path indexes and the selected tree; interactive data can
+include another bounded copy of indexes and CPU rows in the inert JSON block.
+No source file, binary, raw capture or additional profiler is opened.
+
+### CPU source-line hotspots
+
+The CPU report partitions the current explorer selection by each sample's
+retained **leaf** module ID/build ID, captured file path and positive line
+number. Identical file paths in different modules remain separate. The
+optional checkbox restricts this partition to the caller view's selected
+function **as a leaf**, independently of inclusive caller selection. A caller
+or inline ancestor never receives a copy of its leaf's source location.
+
+The table shows the top 50 known locations, omitted known locations, one
+unknown/missing/untrusted bucket and the exact selected sample/weight totals.
+Covered and uncovered weights reconcile with the denominator. Missing source,
+line zero, empty paths, unknown modules, unavailable source symbolization and
+modules without embedded or matching separate debug evidence enter the
+unknown bucket. A malformed nonnumeric/null `source.line` remains invalid v1
+input and fails validation before output; absent source is encoded as
+`source: null`. Static tables work without JavaScript, and the interactive
+table follows the same CPU filters and caller-view data budgets. Leaf source
+locations are interned before embedding, avoiding repeated long paths per
+stack. Paths are displayed using the existing escaped text/file-link policy;
+no source files, executable material, raw captures or tools are read. These
+are sampled self-attribution hotspots, never code coverage, execution counts
+or exact function durations.
+
+### Activation outliers and offline selection
+
+`sil profile render` accepts optional `--participant NAME`, `--task NAME`,
+`--activation-index N`, `--from T`, `--to T`, and `--diagnostics PATH`.
+These select saved evidence. Task requires Participant; an exact index
+requires both, is nonnegative, and cannot be combined with a time range.
+Virtual time bounds are exact nonnegative integer nanoseconds in `[from,to)`;
+equal Virtual times on different Tasks remain distinct Activations.
+Selections require validated CPU correlation. An absent interval is stated as
+missing; no nearby interval is substituted. The original capture summaries
+remain visible alongside class-separated selected rankings and stacks.
+
+The outlier table ranks only retained **completed** intervals by inclusive
+host elapsed time. Failed/interrupted intervals remain selectable but do not
+enter that ranking; every Activation table shows each interval's outcome. No full-Run percentile is inferred from correlation.
+The paged navigator searches Participant/Task names, exact Activation indices
+and Virtual-time ranges, or orders completed intervals by duration. It shows
+100 rows per page, independent of the first 500 intervals and first 50 Task
+details. Exact offline selection remains available beyond the interactive
+budget: 200,000 Activation metadata rows, aggregated sample rows and used
+stack-path keys. Over-budget interactive data is omitted. Static interval
+lists remain capped at 500, the slowest list at 20, and explicit selection
+includes up to 20 editable query handoffs; narrower offline selection reaches
+other retained evidence. Paging does not change sample denominators.
+
+Explicit diagnostics must have the size and SHA-256 of the profile's named
+diagnostics artifact, a supported Run schema, matching common build/Manifest
+identity, host, explicit guard settings, provenance policy when present,
+Recording configuration and Run outcome. Retained Tasks and outlier intervals
+must agree. A null profile guard means the runner default was requested;
+diagnostics records effective defaults. Diagnostics is never discovered or
+read implicitly. Its table keeps the full measurement scope, completed count,
+reservoir method/capacity/approximation, individual p50/p95/p99 null reasons
+and slowest 20. A diagnostics outlier missing from correlation stays missing.
+
+Each selected interval distinguishes exact Virtual time, inclusive elapsed
+host nanoseconds, sample count and estimated sampled weight. The editable
+`sil recording query` recipe requires the user to choose Recording, Channel,
+fields and `[from,to)` publication-time bounds. It includes result, byte and
+scan budgets. Compare `source.sha256` in the query report with the displayed
+expected Recording digest. A missing digest makes the link unavailable or
+unverified; a moved/missing Recording must first be located and verified.
+Nothing executes in the report. Equal Virtual time establishes no Message
+identity or cause, and publication time differs from payload Sample time.
+
+The 256 MiB per-file input cap remains: CPU render reads at most profile,
+samples and correlation, plus diagnostics only when explicitly requested
+(up to 1 GiB of file bytes in aggregate before decoded/index/tree overhead).
+HTML embeds bounded metadata and indexes, never Recording payloads. The
+portable legacy minimum remains sufficient; sources, binaries, Recording,
+diagnostics and profiler tools are optional or absent.

@@ -26,8 +26,13 @@ from sil.profile_html_parts import (
     identity_section, limitations_section, reason_text, reasons_list,
     render_tree, share, source_cell, unlisted_note,
 )
+from sil.profile_source_lines import source_lines_section
 from sil.profile_set import ProfileSet
-from sil.profile_analysis import profile_tasks
+from sil.profile_navigation import (
+    navigation_section, navigation_data, query_recipe, NAVIGATION_LIMIT,
+)
+from sil.profile_focus import callers_section, interactive_focus_data
+from sil.profile_analysis import profile_tasks, cpu_rows, iter_cpu_rows
 from sil.profile_html_views import TASK_LIMIT, flame_section, task_drilldowns, timeline
 
 HOTSPOT_ROWS = 50
@@ -65,7 +70,10 @@ def cpu_body(profile: ProfileSet) -> Html:
         limitations_section(report),
         _hotspots(capture, profile.samples),
         _tree_section(profile),
+        callers_section(profile),
+        source_lines_section(profile),
         _activations(profile),
+        navigation_section(profile),
         timeline(profile),
         task_drilldowns(profile),
         _processes(capture),
@@ -266,17 +274,23 @@ def _tree_section(profile: ProfileSet) -> Html:
             class_="note"))
     frame_keys, functions = _function_keys(profile)
     paths = _paths(profile, frame_keys)
-    tree = build_tree((paths[row[4]], 1, row[3])
-                      for row in profile.samples["samples"])
+    selected_rows = cpu_rows(profile)
+    tree = build_tree((paths[row[0]], row[4], row[5]) for row in selected_rows)
     modules = _modules_by_id(capture)
     return section(
         "tree", "Caller tree",
         _explorer_form(profile),
+        tag("p", "Selected classes: " + "; ".join(
+            f"{cls}: {sum(r[4] for r in selected_rows if r[2] == cls)} samples / "
+            f"{sum(r[5] for r in selected_rows if r[2] == cls)} ns sampled weight"
+            for cls in ("execution_context", "window_associated")))
+        if profile.selection is not None else None,
         tag("div", render_tree(tree, _label(functions, modules), weight,
                                "samples", TreeLimits()),
             id="cpu-tree", class_="tree-wrap", tabindex="0", role="region",
             aria_label="Caller tree"),
-        tag("div", id="selection-tables"),
+        tag("div", *(_static_selection_tables(profile, selected_rows)
+                       if profile.selection is not None else []), id="selection-tables"),
         flame_section(tree, lambda key: f"{functions[key][1] or '[unknown function]'} "
                       f"({modules.get(functions[key][0], '[unknown module]')})"),
         note="Top-down: each node is a function in its callers' context, "
@@ -287,10 +301,29 @@ def _tree_section(profile: ProfileSet) -> Html:
              "twice in one node.")
 
 
+def _static_selection_tables(profile, rows):
+    from sil.profile_analysis import cpu_ranking, function_paths
+    from sil.profile_html_views import _rank_table
+    functions, paths = function_paths(profile)
+    blocks = []
+    for cls in ("execution_context", "window_associated"):
+        selected = [r for r in rows if r[2] == cls]
+        ranked = cpu_ranking(paths, selected)
+        blocks.extend([tag("h3", cls),
+            _rank_table("selected-" + cls + "-self", "Selected self hotspots", ranked.self,
+                        functions, ranked.samples, ranked.weight, True),
+            _rank_table("selected-" + cls + "-inclusive", "Selected inclusive hotspots", ranked.inclusive,
+                        functions, ranked.samples, ranked.weight, False)])
+    return blocks
+
+
 def _explorer_form(profile: ProfileSet) -> Html:
     assert profile.samples is not None
     capture = profile.report["capture"]
     correlation = profile.report["activation_correlation"]
+    if not _interactive_available(profile):
+        return tag("p", "Interactive data exceeds its bounded budget. Use offline "
+                   "--participant/--task/--activation-index or --from/--to to select retained evidence.", class_="note")
     sampled = [p for p in capture["processes"] if p["samples"]]
     threads = [t for t in capture["threads"] if t["samples"]]
     fields = [
@@ -302,11 +335,15 @@ def _explorer_form(profile: ProfileSet) -> Html:
             for t in threads]),
     ]
     if profile.correlation is not None:
+        selected_tasks = ({(profile.correlation["activations"][i]["participant"],
+                            profile.correlation["activations"][i]["task"])
+                           for i in profile.selection} if profile.selection is not None else set())
         fields = [
             _select("f-class", "Class", [(c, c) for c in CLASSES]),
             _select("f-task", "Participant / Task", [
                 (str(index), f"{p} / {t}")
-                for index, (p, t) in enumerate(profile_tasks(profile))]),
+                for index, (p, t) in enumerate(profile_tasks(profile))
+                if index < ACTIVATION_ROWS or (p, t) in selected_tasks]),
             tag("label", "Virtual time from (ns, inclusive)",
                 void("input", id="f-vt-from", type="text",
                      inputmode="numeric", pattern="[0-9]*",
@@ -347,19 +384,30 @@ def _select(id_: str, label: str, options: list[tuple[str, str]]) -> Html:
 
 def _explorer_rows(profile: ProfileSet) -> list | None:
     """Samples with equal stack, thread and class in one row, or None."""
-    assert profile.samples is not None
-    classes = (profile.correlation["samples"] if profile.correlation
-               else None)
     rows: Counter = Counter()
     weights: Counter = Counter()
-    for index, sample in enumerate(profile.samples["samples"]):
-        cls, ref = classes[index] if classes else ("", "")
-        key = (sample[4], sample[2], cls, ref)
-        rows[key] += 1
-        weights[key] += sample[3]
+    for row in iter_cpu_rows(profile):
+        key = tuple(row[:4])
+        rows[key] += row[4]
+        weights[key] += row[5]
         if len(rows) > MAX_EXPLORER_ROWS:
             return None
     return [[*key, rows[key], weights[key]] for key in rows]
+
+
+def _interactive_available(profile: ProfileSet) -> bool:
+    if profile.selection is not None and len(profile.selection) > NAVIGATION_LIMIT:
+        return False
+    rows = _explorer_rows(profile)
+    if rows is None:
+        return False
+    if profile.correlation is not None and profile.selection is None and len(profile.correlation["activations"]) > NAVIGATION_LIMIT:
+        return False
+    if profile.selection is None and (len(profile.samples["frames"]) > MAX_EXPLORER_ROWS or
+            len(profile.samples["stacks"]) > MAX_EXPLORER_ROWS):
+        return False
+    needed = {r[0] for r in rows}
+    return sum(len(profile.samples["stacks"][i]) or 1 for i in needed) <= MAX_EXPLORER_ROWS
 
 
 def explorer_data(profile: ProfileSet) -> dict | None:
@@ -367,7 +415,7 @@ def explorer_data(profile: ProfileSet) -> dict | None:
     if profile.samples is None:
         return None
     rows = _explorer_rows(profile)
-    if rows is None:
+    if rows is None or not _interactive_available(profile):
         return None
     capture = profile.report["capture"]
     frame_keys, functions = _function_keys(profile)
@@ -377,16 +425,33 @@ def explorer_data(profile: ProfileSet) -> dict | None:
     if profile.correlation is not None:
         # Virtual times as decimal strings: the script compares BigInts.
         tasks = {task: index for index, task in enumerate(profile_tasks(profile))}
-        activations = [[tasks[a["participant"], a["task"]],
-                        str(a["virtual_time_ns"])]
-                       for a in profile.correlation["activations"]]
+        selected = set(profile.selection) if profile.selection is not None else None
+        activations = {str(i): [tasks[a["participant"], a["task"]],
+                                  str(a["virtual_time_ns"])]
+                       for i, a in enumerate(profile.correlation["activations"])
+                       if selected is None or i in selected}
+        if selected is None:
+            activations = list(activations.values())
+    paths = _paths(profile, frame_keys)
+    if profile.selection is not None:
+        # Sparse maps keep original references for timeline/focus interoperability.
+        paths = {str(i): paths[i] for i in {row[0] for row in rows}}
+        used = {key for path in paths.values() for key in path}
+        function_data = {str(i): [functions[i][1], modules.get(functions[i][0])] for i in used}
+    else:
+        function_data = [[symbol, modules.get(module)] for module, symbol in functions]
     return {
-        "functions": [[symbol, modules.get(module)]
-                      for module, symbol in functions],
-        "paths": _paths(profile, frame_keys),
+        "navigation": navigation_data(profile),
+        "query_recipe": query_recipe(profile),
+        "offline_selection": list(profile.selection) if profile.selection is not None else None,
+        "functions": function_data,
+        "paths": paths,
+        "focus": interactive_focus_data(profile),
+
         "rows": rows,
         "threads": {t["id"]: t["process"] for t in capture["threads"]},
-        "tasks": [list(task) for task in profile_tasks(profile)]
+        "tasks": ([list(task) for task in profile_tasks(profile)]
+                  if profile.selection is None else None)
         if profile.correlation is not None else None,
         "activations": activations,
         "total": [capture["totals"]["samples"], capture["totals"]["weight_ns"]],

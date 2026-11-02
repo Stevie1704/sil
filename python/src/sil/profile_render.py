@@ -25,6 +25,7 @@ from sil.diagnostics_run import (
 from sil.profile_html import render_profile
 from sil.profile_set import ProfileSetError, load_profile_set
 from sil.profile_summary import format_summary
+from sil.profile_navigation import select_activations, with_diagnostics
 
 PROG = "sil profile render"
 
@@ -41,6 +42,13 @@ def _parser() -> argparse.ArgumentParser:
                         metavar="OUTPUT.html",
                         help="the new HTML file; an existing file is never "
                              "replaced")
+    for flag in ("participant", "task"):
+        parser.add_argument("--" + flag, action=GivenOnce)
+    parser.add_argument("--activation-index", type=int, action=GivenOnce)
+    parser.add_argument("--from", dest="start", type=int, action=GivenOnce)
+    parser.add_argument("--to", dest="end", type=int, action=GivenOnce)
+    parser.add_argument("--diagnostics", type=Path, action=GivenOnce,
+                        help="explicit same-Run diagnostics artifact (digest verified)")
     return parser
 
 
@@ -56,6 +64,12 @@ def main(argv: list[str] | None = None) -> int:
         return command_error(
             PROG, f"'{args.profile}' is not a profile this version can "
             f"present: {error}", EXIT_USAGE)
+    try:
+        profile = with_diagnostics(profile, args.diagnostics)
+        profile = select_activations(profile, participant=args.participant, task=args.task,
+                                     index=args.activation_index, start=args.start, end=args.end)
+    except ProfileSetError as error:
+        return command_error(PROG, str(error), EXIT_USAGE)
     page = None
     if args.html is not None:
         # The download is the validated bytes, not a second read.
