@@ -92,9 +92,11 @@ def qualify(out: Path, include: Path) -> dict:
         manifest.write(path)
         manifests[variant] = path
 
-    ordinary = out / "ordinary.mcap"
-    run(out, "ordinary", [*cli, "run", str(manifests["base"]), "-o",
-                           str(ordinary)], observations)
+    ordinary = {}
+    for variant, manifest in manifests.items():
+        ordinary[variant] = out / f"ordinary-{variant}.mcap"
+        run(out, f"ordinary-{variant}", [*cli, "run", str(manifest), "-o",
+            str(ordinary[variant])], observations)
     selections = []
     for variant, policy in (("base", "full"), ("new", "external")):
         manifest = manifests[variant]
@@ -127,7 +129,7 @@ def qualify(out: Path, include: Path) -> dict:
                                samples["frames"][samples["stacks"][row[4]][0]].get("source")
                                for row in matching if samples["stacks"][row[4]]],
                            "profile_identity": profile["identity"]})
-        assert digest(directory / "run.mcap") == digest(ordinary)
+        assert digest(directory / "run.mcap") == digest(ordinary[variant])
         run(out, f"render-{variant}", [*cli, "profile", "render",
             str(directory / "profile.json"), "--participant", "late",
             "--task", "task51", "--activation-index", "610", "--diagnostics",
@@ -166,7 +168,7 @@ def qualify(out: Path, include: Path) -> dict:
     copied = minimal(out / "heap", out / "heap-minimal")
     run(out, "heap-render", [*cli, "profile", "render", str(copied), "--html",
         str(out / "heap.html")], observations)
-    assert digest(out / "heap/run.mcap") == digest(ordinary)
+    assert digest(out / "heap/run.mcap") == digest(ordinary["base"])
     return {"spec": 354, "ticket": 359, "host": platform.uname()._asdict(),
             "libc": platform.libc_ver(), "python": sys.version,
             "source_revision": os.environ.get("SIL_SOURCE_REVISION"),
