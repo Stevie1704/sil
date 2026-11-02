@@ -737,7 +737,12 @@ sil profile render prof/profile.json --html prof.html
   NEW/profile.json --html diff.html` compares the same collector: CPU self
   and inclusive shares with both denominators (per Task only with complete
   correlations on both sides), or heap site allocation metrics. It shows
-  both identities and warns about differences. One Run each gives no
+  both identities and warns about differences. CPU tables include BASE/NEW
+  estimated sampled weights and signed changes, so uniform growth remains
+  visible with unchanged shares. Optionally pass paired `--base-benchmark`
+  and `--new-benchmark` summary paths for separate repeated Run/phase
+  distributions and per-Run Task percentiles; these experiments are not joined
+  to the profiled Runs and percentiles are never pooled. One Run each gives no
   significance verdict; small changes may be sampling noise. It uses the
   same portable files as `render`. Exit `0`: rendered; `1`: output write
   failed; `2`: invalid/missing evidence, mismatched collectors or output
