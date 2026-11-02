@@ -9,10 +9,7 @@ reads a duration from it.
 
 | Capture | Revision | Load | Tables | Raw |
 | --- | --- | --- | --- | --- |
-| Initial | `600fa429dfcca50b11eb5db9b6735d6d52bcea89` | Not quiet. Other coding agents built and tested on this machine (1-minute load average 8 to 13). | [results](hash-baseline-600fa429dfcc-results.md) | [JSON](hash-baseline-600fa429dfcc.json) |
 | #328 | See [recording-digest.md](recording-digest.md) | Not quiet | Linked there | Linked there |
-| #326 before | `55c4d3990f6e42339c6a2f1195a73a3d9f657fa7` (feat/323 tip, no provenance cache) | Not quiet. 1-minute load average 6.9 at 09:33. Three repetitions. | [results](hash-baseline-dedup-before-55c4d3990f6e-results.md) | [JSON](hash-baseline-dedup-before-55c4d3990f6e.json) |
-| #326 after | `fdece5b17cf54178160f937872bba9b0339c8577` (per-preparation provenance cache) | Not quiet. 1-minute load average 6.9 at 09:33. Three repetitions. | [results](hash-baseline-dedup-after-fdece5b-results.md) | [JSON](hash-baseline-dedup-after-fdece5b.json) |
 | #329 base | `600fa429` | One agent, 1-minute load average 2.8 to 7.0. Nine repetitions. | [results](hash-baseline-329-1-base-results.md) | [JSON](hash-baseline-329-1-base.json) |
 | #329 backend | `558f993` | One agent, 1-minute load average 2.8 to 7.0. Nine repetitions. | [results](hash-baseline-329-2-backend-results.md) | [JSON](hash-baseline-329-2-backend.json) |
 | #329 policy | `16c2683` | One agent, 1-minute load average 2.8 to 7.0. Nine repetitions. | [results](hash-baseline-329-3-policy-full-results.md) | [JSON](hash-baseline-329-3-policy-full.json) |
@@ -20,7 +17,10 @@ reads a duration from it.
 | #329 streaming | `67fee44` | One agent, 1-minute load average 2.8 to 7.0. Nine repetitions. | [results](hash-baseline-329-5-streaming-results.md) | [JSON](hash-baseline-329-5-streaming.json) |
 | #329 external | `67fee44` | One agent, 1-minute load average 2.8 to 7.0. Nine repetitions. | [results](hash-baseline-329-6-external-results.md) | [JSON](hash-baseline-329-6-external.json) |
 
-The initial capture shows the method and the order of magnitude. Do not use it
+The initial capture at `600fa429` ran on a loaded machine (1-minute load
+average 8 to 13, five repetitions). Its raw files are removed, because the
+#329 base capture repeats it at the same revision under less load. It showed the
+method and the order of magnitude. Do not use it
 to compare small differences. [The qualification](provenance-qualification.md) repeats the capture
 under less load and attributes each change.
 
@@ -146,9 +146,10 @@ there is no cold-cache series, and each capture states this.
 
 ## Initial results
 
-The [tables](hash-baseline-600fa429dfcc-results.md) have the minimum, the median
-and the maximum of each value. These medians come from five repetitions on a
-loaded machine:
+These medians come from the initial capture: five repetitions on a loaded
+machine. Its raw files are removed; the [#329 base
+tables](hash-baseline-329-1-base-results.md) have the same revision under less
+load:
 
 - `native-shared-library`: 33 hash operations and 257 MiB, for 8 MiB of distinct
   library bytes. The hash passes are 1,524 ms of 1,554 ms end to end.

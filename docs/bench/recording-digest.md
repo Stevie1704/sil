@@ -21,14 +21,17 @@ series, so it does not show the cost of the read from a slow disk.
 Messages, a 72 MiB Recording), 9 repetitions, OpenSSL backend.
 [hash-baseline.md](hash-baseline.md) gives the timing boundaries.
 
-| Series | Build | Mode | Tables | Raw |
-| --- | --- | --- | --- | --- |
-| Before | `16c2683`, which reads the file again | `full` | [results](hash-baseline-328-before-results.md) | [JSON](hash-baseline-328-before.json) |
-| After, full | `809b4b1` | `full` | [results](hash-baseline-328-after-full-results.md) | [JSON](hash-baseline-328-after-full.json) |
-| After, external | `809b4b1` | `external` | [results](hash-baseline-328-after-external-results.md) | [JSON](hash-baseline-328-after-external.json) |
+| Series | Build | Mode |
+| --- | --- | --- |
+| Before | `16c2683`, which reads the file again | `full` |
+| After, full | `809b4b1` | `full` |
+| After, external | `809b4b1` | `external` |
 
-The after series state "uncommitted changes". The only such changes were the
-evidence files of the earlier series.
+This file keeps only the medians below. The raw files of these series are
+removed, because the #329 [dedup](hash-baseline-329-4-dedup-results.md),
+[streaming](hash-baseline-329-5-streaming-results.md) and
+[external](hash-baseline-329-6-external-results.md) captures repeat them under
+less load.
 
 ## Results
 

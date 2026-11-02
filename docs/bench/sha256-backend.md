@@ -2,8 +2,9 @@
 
 One observational comparison for #325 of the minimal software SHA-256 with the
 OpenSSL EVP backend ([decision](../adr/0006-sha256-backend-static-openssl.md)).
-It is evidence, not a threshold: no test asserts a duration from it. Raw results
-are in [sha256-backend.json](sha256-backend.json).
+It is evidence, not a threshold: no test asserts a duration from it. The tables
+below keep the results. The raw file of this loaded-machine measurement is
+removed, because the qualification repeats it.
 
 **This machine was not quiet.** Other agents built and tested on it during the
 measurement, and a Docker image build ran. The maximum values show this load.
@@ -26,7 +27,7 @@ x86-64 ratio, because the acceleration of each CPU is different.
 
 ## Machine and conditions
 
-The JSON file has the machine fields. Build: CMake `Release`, OpenSSL 3.6.2 from
+Machine: Apple M1 Pro, macOS, arm64. Build: CMake `Release`, OpenSSL 3.6.2 from
 Homebrew, macOS, arm64.
 
 | Part | Storage and cache conditions |
