@@ -35,7 +35,8 @@ def select_activations(profile: ProfileSet, *, participant=None, task=None,
                   and (task is None or a['task'] == task)]
     known = {(t['participant'], t['task']) for t in
              (profile.diagnostics or {}).get('observational', {}).get('tasks', [])}
-    if not candidates and not any(p == participant and (task is None or t == task) for p, t in known):
+    if (participant is not None and not candidates
+            and not any(p == participant and (task is None or t == task) for p, t in known)):
         raise ProfileSetError('Participant / Task is not present in the retained evidence')
     refs = tuple(i for i, a in candidates
                  if (index is None or a['index'] == index)
@@ -62,7 +63,7 @@ def with_diagnostics(profile: ProfileSet, path: Path | None) -> ProfileSet:
         if artifact['bytes'] != len(data) or artifact['sha256'] != hashlib.sha256(data).hexdigest():
             raise ProfileSetError('diagnostics size/SHA-256 does not match this profile Run')
         diagnostics = parse_report(data.decode('utf-8'), source=str(path))
-    except (OSError, UnicodeDecodeError, ReportError) as error:
+    except (OSError, UnicodeDecodeError, ReportError, RecursionError) as error:
         raise ProfileSetError(f'invalid diagnostics: {error}') from error
     if 'sil_run_diagnostics' not in diagnostics:
         raise ProfileSetError('diagnostics input must be one Run report')
@@ -161,12 +162,13 @@ def navigation_section(profile: ProfileSet) -> Html:
     slowest = sorted(completed, key=lambda r: -(int(r[1]['end_ns']) - int(r[1]['begin_ns'])))[:20]
     headers = [('Participant / Task', False), ('Activation index', True),
                ('Virtual time (ns)', True), ('Elapsed wall time (ns)', True),
-               ('Samples', True), ('Sampled weight (ns)', True)]
+               ('Outcome', False), ('Samples', True), ('Sampled weight (ns)', True)]
     def cells(i, a):
-        return [tag('button', f"{a['participant']} / {a['task']}", type='button',
+        # Disabled until the script runs: without it the button has no action.
+        return [tag('button', f"{a['participant']} / {a['task']}", type='button', disabled=True,
                     data_interval_kind='activation', data_interval_ref=str(i)),
                 str(a['index']), code(str(a['virtual_time_ns'])),
-                code(str(int(a['end_ns']) - int(a['begin_ns']))),
+                code(str(int(a['end_ns']) - int(a['begin_ns']))), a['outcome'],
                 str(a['samples']), str(a['weight_ns'])]
     body = [tag('p', 'Completed retained intervals only; inclusive host elapsed time is distinct from sampled weight. '
                     'Failed/unclosed work is excluded from duration ranking. No full-Run percentiles are inferred. '

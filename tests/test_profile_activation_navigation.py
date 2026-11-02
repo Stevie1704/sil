@@ -128,3 +128,74 @@ def test_exact_activation_selection_rejects_duplicate_retained_identities(tmp_pa
     assert result.returncode == 2
     assert 'duplicate Activation identity' in result.stderr
     assert not (tmp_path / 'ambiguous.html').exists()
+
+
+def selected_text(html):
+    return Page(html.split('id="activation-selection"', 1)[1].split('</section>', 1)[0]).text
+
+
+def test_selected_failed_activation_shows_its_outcome(tmp_path):
+    profile = artifact_set(tmp_path / 'set', 'activation-complete.json')
+    result = render([str(profile), '--participant', 'plant', '--task', 'step',
+                     '--html', 'failed.html'], tmp_path)
+    assert result.returncode == 0, result.stderr
+    html = (tmp_path / 'failed.html').read_text()
+    page = Page(html.split('id="selected-activations"', 1)[1].split('</table>', 1)[0])
+    assert 'Outcome' in page.text
+    assert 'failed' in page.text and 'completed' in page.text
+    # Without the script the interval buttons have no action.
+    buttons = [a for t, a in page.elements if t == 'button' and 'data-interval-kind' in a]
+    assert buttons and all('disabled' in a for a in buttons)
+
+
+def test_time_only_selection_without_activations_selects_nothing(tmp_path):
+    from dataclasses import replace
+    from sil.profile_navigation import select_activations
+    from sil.profile_set import load_profile_set
+    profile = load_profile_set(artifact_set(tmp_path / 'set', 'activation-complete.json'))
+    empty = replace(profile, correlation={**profile.correlation, 'activations': []})
+    assert select_activations(empty, start=0).selection == ()
+
+
+def test_selection_errors_name_the_selection_not_the_profile(tmp_path):
+    profile = artifact_set(tmp_path / 'set', 'activation-complete.json')
+    result = render([str(profile), '--task', 'tick', '--html', 'bad.html'], tmp_path)
+    assert result.returncode == 2
+    assert '--task requires --participant' in result.stderr
+    assert 'is not a profile' not in result.stderr
+
+
+@pytest.mark.parametrize('content', [None, '{"other": 1}', '[' * 1_000_000 + ']' * 1_000_000],
+                         ids=['missing', 'mismatched', 'nested'])
+def test_missing_mismatched_or_nested_diagnostics_fail_before_output(tmp_path, content):
+    from profile_sets import seal
+    profile = artifact_set(tmp_path / 'set', 'activation-complete.json')
+    path = profile.parent / 'run.diagnostics.json'
+    if content is not None:
+        path.write_text('{}')
+        seal(profile.parent)  # the profile binds the '{}' bytes
+        if content.startswith('['):
+            path.write_text(content)
+            seal(profile.parent)
+        else:
+            path.write_text(content)
+    result = render([str(profile), '--diagnostics', str(path), '--html', 'bad.html'], tmp_path)
+    assert result.returncode == 2, result.stderr
+    assert 'diagnostics' in result.stderr
+    assert 'Traceback' not in result.stderr
+    assert not (tmp_path / 'bad.html').exists()
+
+
+def test_recipe_without_a_retained_recording_digest_is_unverified(tmp_path):
+    from profile_sets import seal
+    profile = artifact_set(tmp_path / 'set', 'activation-complete.json')
+    report = json.loads(profile.read_text())
+    report['artifacts'] = [a for a in report['artifacts'] if a['role'] != 'recording']
+    profile.write_text(json.dumps(report))
+    seal(profile.parent)
+    result = render([str(profile), '--participant', 'controller', '--task', 'tick',
+                     '--activation-index', '0', '--html', 'moved.html'], tmp_path)
+    assert result.returncode == 0, result.stderr
+    text = selected_text((tmp_path / 'moved.html').read_text())
+    assert 'Recording link unavailable/unverified' in text
+    assert 'A missing/moved Recording must be located and verified first' in text

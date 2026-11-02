@@ -442,3 +442,15 @@ def test_offline_exact_selection_initializes_the_recording_recipe_with_exact_tim
     assert 'controller / tick, Activation index 600' in chrome.evaluate(
         "document.getElementById('nav-detail').textContent")
     assert chrome.console_errors == [] and chrome.blocked_requests == []
+
+
+def test_static_activation_buttons_work_only_with_the_script(chrome, pages):
+    opened(chrome, pages["activations"], javascript=False)
+    assert chrome.evaluate(
+        "Array.from(document.querySelectorAll('#slowest-retained button[data-interval-kind]')).every(b => b.disabled)")
+    opened(chrome, pages["activations"])
+    assert chrome.evaluate(
+        "Array.from(document.querySelectorAll('#slowest-retained button[data-interval-kind]')).every(b => !b.disabled)")
+    chrome.evaluate("document.querySelector('#slowest-retained button[data-interval-kind]').click()")
+    assert "interval activation" in chrome.evaluate("document.getElementById('selection').textContent")
+

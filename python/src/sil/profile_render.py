@@ -59,13 +59,17 @@ def main(argv: list[str] | None = None) -> int:
         if problem is not None:
             return command_error(PROG, problem, EXIT_USAGE)
     try:
-        profile = with_diagnostics(load_profile_set(args.profile), args.diagnostics)
-        profile = select_activations(profile, participant=args.participant, task=args.task,
-                                     index=args.activation_index, start=args.start, end=args.end)
+        profile = load_profile_set(args.profile)
     except ProfileSetError as error:
         return command_error(
             PROG, f"'{args.profile}' is not a profile this version can "
             f"present: {error}", EXIT_USAGE)
+    try:
+        profile = with_diagnostics(profile, args.diagnostics)
+        profile = select_activations(profile, participant=args.participant, task=args.task,
+                                     index=args.activation_index, start=args.start, end=args.end)
+    except ProfileSetError as error:
+        return command_error(PROG, str(error), EXIT_USAGE)
     page = None
     if args.html is not None:
         # The download is the validated bytes, not a second read.

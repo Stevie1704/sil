@@ -380,6 +380,9 @@
     }
   }
   document.addEventListener("click", activateGraphic);
+  document.querySelectorAll("button[data-interval-kind][disabled]").forEach(function (button) {
+    button.disabled = false;
+  });
   document.addEventListener("keydown", activateGraphic);
   document.addEventListener("focus", function(event) {
     var frame = event.target.closest(".flame-frame");

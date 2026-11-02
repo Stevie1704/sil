@@ -1248,7 +1248,7 @@ remain visible alongside class-separated selected rankings and stacks.
 
 The outlier table ranks only retained **completed** intervals by inclusive
 host elapsed time. Failed/interrupted intervals remain selectable but do not
-enter that ranking. No full-Run percentile is inferred from correlation.
+enter that ranking; every Activation table shows each interval's outcome. No full-Run percentile is inferred from correlation.
 The paged navigator searches Participant/Task names, exact Activation indices
 and Virtual-time ranges, or orders completed intervals by duration. It shows
 100 rows per page, independent of the first 500 intervals and first 50 Task
