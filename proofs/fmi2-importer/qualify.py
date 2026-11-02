@@ -181,7 +181,8 @@ def run_sil(m: Manifest, directory: Path) -> SilRun:
     leftovers = sorted(
         str(path.relative_to(directory)) for path in directory.iterdir()
         if path.name not in ("manifest.json", "out.mcap",
-                             "out.mcap.provenance.json")
+                             "out.mcap.provenance.json",
+                             "out.mcap.failure.json")
     )
     result = None
     if process.returncode == 0:

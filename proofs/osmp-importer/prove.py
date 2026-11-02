@@ -167,8 +167,8 @@ class SilRun:
 def run_sil(m: Manifest, directory: Path) -> SilRun:
     """One Run at the run boundary, from a directory of its own.
 
-    Whatever is left in that directory afterwards, beside the manifest and
-    the Recording, is what the Run failed to remove.
+    Whatever is left in that directory afterwards, beside the manifest, the
+    Recording and its side-cars, is what the Run failed to remove.
     """
     directory.mkdir(parents=True)
     reference = m.write(directory / "manifest.json")
@@ -180,7 +180,8 @@ def run_sil(m: Manifest, directory: Path) -> SilRun:
     leftovers = sorted(
         str(path.relative_to(directory)) for path in directory.iterdir()
         if path.name not in ("manifest.json", "out.mcap",
-                             "out.mcap.provenance.json")
+                             "out.mcap.provenance.json",
+                             "out.mcap.failure.json")
     )
     result = None
     if process.returncode == 0:

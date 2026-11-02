@@ -15,7 +15,9 @@ from scenario_participant import violations
 
 def records(path):
     result = {name: [] for name in FIELDS}
-    for channel, t, raw in read_records(path):
+    # read_records yields stored order; a stable sort gives log-time order
+    # with ties in publication order.
+    for channel, t, raw in sorted(read_records(path), key=lambda record: record[1]):
         require(channel in FIELDS, f"unknown Channel {channel}")
         values = list(struct.unpack("<" + "d" * len(FIELDS[channel]), raw))
         result[channel].append((t, values))
@@ -37,7 +39,7 @@ def compare(actual, reference, config, failed=False):
             end = actual["truth"][-1][0] - (config["step_ns"] if channel == "freshness" else 0)
         expected = [(row["sensing_publication_ns"] if channel == "sensing" else row["slot_ns"], row[channel])
                     for row in reference["intervals"] if row[channel] is not None and row["slot_ns"] <= end]
-        # MCAP iteration sorts by timestamp; ties retain publication order.
+        # records() sorts by timestamp; ties retain publication order.
         expected.sort(key=lambda item: item[0])
         require(len(actual[channel]) == len(expected), f"{channel}: count {len(actual[channel])} expected {len(expected)}")
         for (t, values), (et, wanted) in zip(actual[channel], expected):
