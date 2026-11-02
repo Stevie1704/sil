@@ -344,3 +344,23 @@ def test_diff_opens_offline_with_safe_fallback_tables(chrome, tmp_path, javascri
     assert chrome.evaluate("document.querySelector('#diff-functions').offsetParent !== null")
     assert "sampling noise" in chrome.evaluate("document.body.innerText")
     assert chrome.blocked_requests == [] and chrome.console_errors == []
+
+
+def test_navigation_reaches_a_late_zero_sample_activation_with_keyboard(chrome, tmp_path):
+    from test_profile_activation_navigation import late_set
+    profile = late_set(tmp_path / 'late')
+    html = tmp_path / 'late.html'
+    html.write_text(render_profile(load_profile_set(profile), profile.read_text()))
+    opened(chrome, html)
+    assert chrome.evaluate("document.querySelectorAll('#nav-page tbody tr').length") == 100
+    chrome.evaluate("document.getElementById('nav-index').value='600';"
+                    "document.getElementById('nav-index').dispatchEvent(new Event('input'))")
+    assert chrome.evaluate("document.querySelectorAll('#nav-page tbody tr').length") == 1
+    chrome.evaluate("document.querySelector('#nav-page button').focus()")
+    chrome.press('Enter', key_code=13, text='\r')
+    assert '9007199254740993' in chrome.evaluate("document.getElementById('nav-detail').textContent")
+    assert '987654321' in chrome.evaluate("document.getElementById('nav-detail').textContent")
+    assert '0 of 10 samples' in chrome.evaluate("document.getElementById('selection').textContent")
+    assert '--max-messages 10000' in chrome.evaluate("document.getElementById('nav-recipe').value")
+    assert chrome.console_errors == []
+    assert chrome.blocked_requests == []
