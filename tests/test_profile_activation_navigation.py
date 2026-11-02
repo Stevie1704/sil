@@ -112,3 +112,19 @@ def test_offline_selection_reaches_task_after_first_fifty(tmp_path):
     text = Page((tmp_path / 'task.html').read_text()).text
     assert 'Participant late-59, Task work, Activation index 0' in text
     assert '0 samples / 0 ns sampled weight' in text
+
+
+def test_exact_activation_selection_rejects_duplicate_retained_identities(tmp_path):
+    report = fixture('activation-complete.json')
+    samples = samples_document(report)
+    correlation = correlation_document(report, samples)
+    correlation['activations'][1]['index'] = 0
+    profile = artifact_set(tmp_path / 'set', 'activation-complete.json', report=report,
+                           samples=samples, correlation=correlation)
+
+    result = render([str(profile), '--participant', 'controller', '--task', 'tick',
+                     '--activation-index', '0', '--html', 'ambiguous.html'], tmp_path)
+
+    assert result.returncode == 2
+    assert 'duplicate Activation identity' in result.stderr
+    assert not (tmp_path / 'ambiguous.html').exists()

@@ -313,3 +313,56 @@ def test_cpu_absolute_weight_rankings_bound_functions_and_preserve_remainders(tm
     html = (tmp_path / "diff.html").read_text()
     functions = html.split('id="diff-functions"', 1)[1].split('</table>', 1)[0]
     assert functions.count('<tr>') == 101  # 100 function rows plus the header
+
+
+def test_matching_benchmark_metadata_uses_common_host_and_requested_guard_semantics(tmp_path):
+    benchmark = json.loads((DIAGNOSTICS / "benchmark-complete.json").read_text())
+    report = fixture("cpu-complete.json")
+    for key in ("manifest_hash", "sil_version", "source_revision"):
+        report["identity"][key] = benchmark["identity"][key]
+    report["host"].update(os=benchmark["host"]["os"],
+                          architecture=benchmark["host"]["architecture"],
+                          kernel_release=benchmark["host"]["os_release"])
+    report["configuration"]["participant_timeout_ms"] = None
+    profile = artifact_set(tmp_path / "profile", "cpu-complete.json", report=report)
+    evidence = tmp_path / "benchmark.json"
+    evidence.write_text(json.dumps(benchmark))
+
+    proc = diff(tmp_path, profile, profile, "--base-benchmark", str(evidence),
+                "--new-benchmark", str(evidence), "--html", "diff.html")
+
+    assert proc.returncode == 0, proc.stderr
+    assert "Host: profile/benchmark mismatch" not in proc.stdout
+    assert "recording: profile/benchmark configuration mismatch" not in proc.stdout
+    assert "max_protocol_line_bytes: profile/benchmark configuration mismatch" not in proc.stdout
+    assert "max_step_output_messages: profile/benchmark configuration mismatch" not in proc.stdout
+    assert "max_step_inline_payload_bytes: profile/benchmark configuration mismatch" not in proc.stdout
+    assert "Common metadata matches; binary identity is unavailable." in proc.stdout
+
+
+@pytest.mark.parametrize("scope,key,value,warning", [
+    ("host", "kernel_release", "another-kernel", "Host: profile/benchmark mismatch"),
+    ("configuration", "recording", None, "recording: profile/benchmark configuration mismatch"),
+    ("configuration", "max_step_output_messages", 17,
+     "max_step_output_messages: profile/benchmark configuration mismatch"),
+])
+def test_benchmark_context_preserves_real_common_metadata_mismatches(
+        tmp_path, scope, key, value, warning):
+    benchmark = json.loads((DIAGNOSTICS / "benchmark-complete.json").read_text())
+    report = fixture("cpu-complete.json")
+    for member in ("manifest_hash", "sil_version", "source_revision"):
+        report["identity"][member] = benchmark["identity"][member]
+    report["host"].update(os=benchmark["host"]["os"],
+                          architecture=benchmark["host"]["architecture"],
+                          kernel_release=benchmark["host"]["os_release"])
+    report["configuration"]["participant_timeout_ms"] = None
+    report[scope][key] = value
+    profile = artifact_set(tmp_path / "profile", "cpu-complete.json", report=report)
+    evidence = tmp_path / "benchmark.json"
+    evidence.write_text(json.dumps(benchmark))
+
+    proc = diff(tmp_path, profile, profile, "--base-benchmark", str(evidence),
+                "--new-benchmark", str(evidence))
+
+    assert proc.returncode == 0, proc.stderr
+    assert warning in proc.stdout
