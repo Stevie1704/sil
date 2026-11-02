@@ -84,3 +84,9 @@ missing-source and zero-sample fixture checks complement this successful
 capture. Collector/environment support still refers to the prior
 [native/container qualification](../../profiling-qualification/README.md).
 This new evidence does not widen collector or machine-class support.
+
+The screenshot below re-renders the retained BASE evidence after review fixes
+in `c319684c`. The recipe starts at the selected Activation's exact Virtual
+time. Chrome reported no script errors or network requests.
+
+![Late Activation selection with separate elapsed time, sample count and estimated weight](activation.png)
