@@ -206,12 +206,13 @@ for explicit probes. Exact package versions and binary/source digests are
 retained with the experiment. These are development/qualification tools,
 not new dependencies of the installed SiL runtime.
 
-## Heap profiling proof tools (#314, #319, #330)
+## Heap profiling proof tools (#314, #319, #330, #359)
 
 [Heaptrack](https://invent.kde.org/sdk/heaptrack) is installed from distribution
 packages by [proofs/profiling/](proofs/profiling/),
 [proofs/profiling-qualification/](proofs/profiling-qualification/) and
-[proofs/heaptrack-shim/](proofs/heaptrack-shim/). It is a proof tool, not a
+[proofs/heaptrack-shim/](proofs/heaptrack-shim/), and
+[proofs/actionable-profiling/](proofs/actionable-profiling/). It is a proof tool, not a
 component of any published SiL artifact. Its preload library is loaded only
 into disposable proof processes; no Heaptrack code is vendored or compiled into
 SiL binaries.
@@ -230,6 +231,15 @@ files with the package inventory. Exact source-package links and checksums
 are in [the package evidence](proofs/heaptrack-shim/availability-notes.md#license-evidence).
 The GUI is not used by these proofs; this table is not an assertion that all
 Heaptrack files share one license.
+
+## Offline workflow resource measurements (#359)
+
+[proofs/actionable-profiling/](proofs/actionable-profiling/) invokes
+[GNU time](https://www.gnu.org/software/time/) (GPL-3.0-or-later) from the
+Ubuntu package as an external qualification tool. Its per-command resource
+records are retained with the experiment. No GNU time source or binary is
+vendored, linked into SiL, or included in a published runtime. Exact package
+versions are recorded in the workflow's host inventory.
 
 ## eBPF availability proof tool (#330)
 
