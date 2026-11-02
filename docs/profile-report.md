@@ -1065,7 +1065,8 @@ value becomes a URL. "Download JSON" saves `profile.json` byte for byte.
 ## Profile diff
 
 ```sh
-sil profile diff BASE/profile.json NEW/profile.json [--html OUTPUT.html]
+sil profile diff BASE/profile.json NEW/profile.json [--html OUTPUT.html] \
+  [--base-benchmark BASE/summary.json --new-benchmark NEW/summary.json]
 ```
 
 Compare two portable artifact sets of the same collector, offline, using the
@@ -1082,7 +1083,11 @@ statuses and reasons remain visible even when a partial set is compared.
 
 CPU: compare self and inclusive sampled-weight shares per function, with
 both sample-count and weight denominators and changes in percentage points.
-Doubling every sample leaves the shares unchanged. A zero-weight denominator
+Each scope also shows BASE and NEW estimated sampled weight in ns and the
+signed absolute weight change, computed from every normalized sample, including
+functions outside the saved summary top list. Doubling every sample leaves
+the shares unchanged and doubles the displayed weights. An absolute change
+is available even when a zero denominator makes a share unavailable. A zero-weight denominator
 has an unavailable share and change, never an invented zero percentage.
 Functions that appear or disappear have zero weight on the absent side of a
 nonzero denominator. Function identity is the exact module path and symbol,
@@ -1106,11 +1111,52 @@ per set: it supplies no significance verdict, and small CPU share changes
 may be sampling noise. Weights remain estimates, never function durations
 or call counts.
 
+Optional repeated experiments: pass `--base-benchmark` and `--new-benchmark`
+together to load two saved `sil_benchmark_report` v1 files. They are separate
+experiments, never the same executions as the profiles. The report records
+each side's input path, byte count, SHA-256, schema, identity, host, measurement
+mode, policy (including the existing provenance-mode legacy rule), status,
+warm-up and measured-Run counts. It warns about differences between experiments,
+between profile and benchmark metadata, and within a campaign. Unknown binary
+identities remain unavailable: a matching Manifest or artifact path does not
+establish identical binaries. No sibling file or provenance sidecar is opened.
+
+The repeated Run/phase distributions are the saved min/median/max/mean/stddev
+aggregates of successful measured Runs; warm-ups remain excluded. Each measured
+Run's Task row retains its own completed-Activation count, timing scope,
+reservoir metadata, p50/p95/p99, unavailable reasons and failed-Activation
+observation. Partial and failed Runs remain visible with their outcomes and
+configuration. Percentiles are never pooled or averaged across Runs. Nothing
+subtracts assumed collector overhead or establishes a significance verdict or
+performance pass/fail threshold.
+
+Explicit benchmark input is checked before any output: supported schema,
+finite values, embedded Run reports, campaign counts/status, per-Run aggregate
+values and saved distribution consistency must agree. Missing, malformed,
+unsupported, oversized or inconsistent input fails with exit `2`; it is never
+silently ignored. A missing benchmark option pair also fails. These checks do
+not require a benchmark identity to match the profile, because those experiments
+are distinct.
+
+Benchmark presentation adds at most 100 aggregate rows, 100 Run metadata rows
+(including warm-ups), and 500 measured-Run Task rows per side. Omitted row counts
+are explicit. Each displayed cell is limited to 4096 characters with an explicit
+truncation notice. The JSON download retains both complete benchmark reports,
+including omitted rows and full strings. These are static tables, available
+without JavaScript and with the existing keyboard and theme controls. Each
+optional file has the same 256 MiB input cap as a portable artifact. A maximal
+CPU comparison with both correlations and both benchmarks reads up to eight
+capped files (2 GiB total); JSON parsing, validation and the complete downloadable
+JSON scale with that input and may require substantially more memory. The
+base64 download adds roughly one third to the serialized JSON size. Display
+bounds limit visible DOM rows, not the size of the retained downloadable input.
+
 Exit codes: `0` means the summary and requested HTML were produced; `1`
 means an output write failed; `2` means invalid usage, missing/invalid or
 unsupported evidence, different collectors, an output collision, or a
 missing output directory. Output paths are checked first and existing files
-are never replaced. The HTML's JSON download holds both input summaries.
+are never replaced. The HTML's JSON download holds both input summaries and,
+when explicitly supplied, both benchmark reports with their digests.
 
 ## Normalized samples: `cpu/samples.json`
 
