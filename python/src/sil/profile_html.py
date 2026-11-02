@@ -27,6 +27,7 @@ from sil.diagnostics_html_markup import Html
 from sil.profile_html_cpu import cpu_body, explorer_data
 from sil.profile_html_heap import heap_body
 from sil.profile_set import ProfileSet
+from sil.profile_focus import interactive_focus_data
 
 DATA_ID = "profile-data"
 
@@ -45,10 +46,11 @@ def render_profile(profile: ProfileSet, source: str) -> str:
     if profile.report["capture"]["kind"] == "heap":
         return page("SiL heap profile", heap_body(profile), source,
                     styles=("report.css", "profile.css"),
-                    scripts=("report.js",), download_name="profile.json")
+                    scripts=("report.js", "profile_focus.js"), download_name="profile.json",
+                    data=json_block({"focus": interactive_focus_data(profile)}))
     data = explorer_data(profile)
     return page("SiL CPU profile", cpu_body(profile), source,
                 styles=("report.css", "profile.css"),
-                scripts=("report.js", "profile.js"),
+                scripts=("report.js", "profile.js", "profile_focus.js"),
                 download_name="profile.json",
                 data=json_block(data) if data is not None else None)

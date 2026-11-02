@@ -513,6 +513,7 @@
     treeBox.appendChild(renderTree(currentTree));
     renderFlame();
     renderTables(rows, count, weight);
+    document.dispatchEvent(new CustomEvent("sil-profile-selection", {detail: {rows: rows}}));
     var table = byId("activation-table");
     if (table) {
       Array.prototype.forEach.call(table.tBodies[0].rows, function (row) {

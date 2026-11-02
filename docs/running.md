@@ -737,7 +737,12 @@ sil profile render prof/profile.json --html prof.html
   NEW/profile.json --html diff.html` compares the same collector: CPU self
   and inclusive shares with both denominators (per Task only with complete
   correlations on both sides), or heap site allocation metrics. It shows
-  both identities and warns about differences. One Run each gives no
+  both identities and warns about differences. CPU tables include BASE/NEW
+  estimated sampled weights and signed changes, so uniform growth remains
+  visible with unchanged shares. Optionally pass paired `--base-benchmark`
+  and `--new-benchmark` summary paths for separate repeated Run/phase
+  distributions and per-Run Task percentiles; these experiments are not joined
+  to the profiled Runs and percentiles are never pooled. One Run each gives no
   significance verdict; small changes may be sampling noise. It uses the
   same portable files as `render`. Exit `0`: rendered; `1`: output write
   failed; `2`: invalid/missing evidence, mismatched collectors or output
@@ -1018,3 +1023,22 @@ absent is unbounded: the loader accepts either a pre-#75 string entry such as
 `capacity` and `overflow` is invalid. This preserves existing behavior and
 byte-identical hashes. Blocking overflow is invalid because the sequential
 scheduler cannot activate a consumer while stopped inside its publisher's call.
+
+For a retained Activation outlier, render an exact offline selection:
+
+```sh
+sil profile render prof/profile.json --participant controller --task tick \
+  --activation-index 610 --diagnostics prof/run.diagnostics.json --html selected.html
+```
+
+Task requires Participant; an exact nonnegative index requires both. Instead
+of an index, use exact Virtual-time nanoseconds `--from T --to T` for a
+half-open interval. The paged Activation navigator reaches later intervals
+and Tasks; use offline selection when interactive data exceeds its cap.
+Diagnostics is optional and must match this profile's artifact digest and Run
+identity. Retained completed-interval durations and full diagnostics
+percentiles have different measurement scopes. The editable bounded
+Recording-query recipe requires explicit Channel, fields and publication-time
+bounds, plus verification of the expected Recording digest against the query
+report. It does not identify a causal Message from equal Virtual time. See
+[Activation outliers](profile-report.md#activation-outliers-and-offline-selection).

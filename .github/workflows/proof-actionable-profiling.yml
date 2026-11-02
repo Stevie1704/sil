@@ -1,0 +1,55 @@
+name: proof-actionable-profiling
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/actionable-profiling/**'
+      - 'python/src/sil/profile_*.py'
+      - 'python/src/sil/report_assets/profile.*'
+      - '.github/workflows/proof-actionable-profiling.yml'
+  workflow_dispatch:
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SIL_SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install real collectors and build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libssl-dev \
+            "linux-tools-$(uname -r)" linux-tools-common \
+            heaptrack=1.5.0+dfsg1-2ubuntu3 build-essential binutils time
+      - name: Install wheel and native runners
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j
+          cmake --install build --prefix "$RUNNER_TEMP/sil-native"
+          uv build --wheel --out-dir build/wheels python
+          uv venv .venv
+          uv pip install -p .venv/bin/python build/wheels/sil-*.whl
+      - name: Disclosed native perf setup, paranoid 2
+        run: |
+          mkdir -p build/actionable-host
+          uname -a > build/actionable-host/uname.txt
+          cat /proc/sys/kernel/perf_event_paranoid > build/actionable-host/paranoid-before.txt
+          dpkg-query -W > build/actionable-host/packages.txt
+          sudo sysctl -w kernel.perf_event_paranoid=2
+      - name: Late outlier, query handoff, caller and line views, separate benchmarks
+        run: |
+          export PATH="$RUNNER_TEMP/sil-native/bin:$PATH"
+          .venv/bin/python proofs/actionable-profiling/qualify.py \
+            "$PWD/build/actionable-evidence" --include "$RUNNER_TEMP/sil-native/include"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: actionable-profiling-evidence
+          retention-days: 30
+          path: |
+            build/actionable-evidence/
+            build/actionable-host/
+            !build/actionable-evidence/**/perf.data

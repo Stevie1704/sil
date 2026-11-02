@@ -26,8 +26,12 @@ from sil.profile_html_parts import (
     identity_section, limitations_section, reason_text, reasons_list,
     render_tree, share, source_cell, unlisted_note,
 )
+from sil.profile_source_lines import source_lines_section
 from sil.profile_set import ProfileSet
-from sil.profile_navigation import navigation_section, navigation_data, query_recipe, NAVIGATION_LIMIT
+from sil.profile_navigation import (
+    navigation_section, navigation_data, query_recipe, NAVIGATION_LIMIT,
+)
+from sil.profile_focus import callers_section, interactive_focus_data
 from sil.profile_analysis import profile_tasks, cpu_rows
 from sil.profile_html_views import TASK_LIMIT, flame_section, task_drilldowns, timeline
 
@@ -66,6 +70,8 @@ def cpu_body(profile: ProfileSet) -> Html:
         limitations_section(report),
         _hotspots(capture, profile.samples),
         _tree_section(profile),
+        callers_section(profile),
+        source_lines_section(profile),
         _activations(profile),
         navigation_section(profile),
         timeline(profile),
@@ -447,6 +453,8 @@ def explorer_data(profile: ProfileSet) -> dict | None:
         "offline_selection": list(profile.selection) if profile.selection is not None else None,
         "functions": function_data,
         "paths": paths,
+        "focus": interactive_focus_data(profile),
+
         "rows": rows,
         "threads": {t["id"]: t["process"] for t in capture["threads"]},
         "tasks": ([list(task) for task in profile_tasks(profile)]
