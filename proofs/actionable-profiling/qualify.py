@@ -12,7 +12,8 @@ import hashlib
 import json
 import os
 import platform
-import resource
+import re
+import signal
 import shutil
 import subprocess
 import sys
@@ -32,16 +33,28 @@ def digest(path: Path) -> str:
 
 def run(out: Path, label: str, argv: list[str], observations: list) -> None:
     begin = time.monotonic_ns()
+    resources = out / f"{label}.resources"
     with (out / f"{label}.stdout").open("wb") as stdout, \
             (out / f"{label}.stderr").open("wb") as stderr:
-        result = subprocess.run(argv, stdout=stdout, stderr=stderr, timeout=240)
+        process = subprocess.Popen(
+            ["/usr/bin/time", "-v", "-o", str(resources), *argv],
+            stdout=stdout, stderr=stderr, start_new_session=True)
+        try:
+            code = process.wait(timeout=240)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait()
+            raise
+    peak = re.search(r"Maximum resident set size \(kbytes\): (\d+)",
+                     resources.read_text())
+    if peak is None:
+        raise RuntimeError("GNU time did not retain a per-command peak RSS")
     observations.append({"label": label, "argv": argv,
-                         "exit_code": result.returncode,
+                         "exit_code": code,
                          "elapsed_ns": time.monotonic_ns() - begin,
-                         "children_peak_rss_kib": resource.getrusage(
-                             resource.RUSAGE_CHILDREN).ru_maxrss})
-    if result.returncode:
-        raise RuntimeError(f"{label}: exit {result.returncode}; see {out}")
+                         "peak_rss_kib": int(peak.group(1))})
+    if code:
+        raise RuntimeError(f"{label}: exit {code}; see {out}")
 
 
 def minimal(source: Path, target: Path) -> Path:
@@ -163,7 +176,7 @@ def qualify(out: Path, include: Path) -> dict:
                          "publications_in_query": 104,
                          "site_allocations": 8, "site_allocated_bytes": 8192},
             "selected": selections, "observations": observations,
-            "rss_scope": "cumulative child-process high-water mark in KiB; not per command",
+            "rss_scope": "GNU time per-command maximum resident set size in KiB, including child execution",
             "limits": "Timings and sampled weights are observations, not significance or correctness thresholds."}
 
 

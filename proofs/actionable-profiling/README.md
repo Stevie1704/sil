@@ -61,8 +61,9 @@ suite; they complement real sampling, whose addresses and weights vary.
 `results.json` retains the source revision, host/libc/Python identity, worked
 expectations, selected intervals and per-command elapsed observations.
 `digests.json` records input/output sizes and SHA-256 values, including HTML.
-The observed child RSS is explicitly a cumulative high-water mark, not
-per-command incremental memory. No time, RSS, sample share or overhead ratio
+GNU time records each command's peak RSS independently, including the offline
+analysis/render commands. Its complete resource record is retained beside
+each command's stdout/stderr. No time, RSS, sample share or overhead ratio
 is a correctness gate. The loop edit supplies no significance verdict.
 
 The existing [installed/container collector qualification](../profiling-qualification/README.md)
