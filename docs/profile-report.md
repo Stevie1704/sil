@@ -1105,7 +1105,9 @@ allocations at capture end are not a leak verdict.
 
 Rankings show at most 100 functions/sites; the self remainder gives omitted
 weight on both sides (heap: every metric), and inclusive rows are explicitly
-non-additive. At most 50 Tasks are expanded. Global rankings include all
+non-additive. The CPU rows are the 50 largest share changes and the 50 largest
+absolute estimated weight changes, so uniform growth with unchanged shares
+still lists the functions that grew most. At most 50 Tasks are expanded. Global rankings include all
 samples, also the Tasks that are not expanded. The diff compares one Run
 per set: it supplies no significance verdict, and small CPU share changes
 may be sampling noise. Weights remain estimates, never function durations

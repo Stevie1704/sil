@@ -17,12 +17,10 @@ def diff(tmp_path, base, new, *args):
          str(new), *args], cwd=tmp_path, capture_output=True, text=True)
 
 
-def test_cpu_diff_compares_shares_with_both_denominators(tmp_path):
-    report = fixture("cpu-complete.json")
-    samples = samples_document(report)
-    base = artifact_set(tmp_path / "base", "cpu-complete.json")
-    # Duplicate all samples: twice the weight, exactly the same shares.
-    samples["samples"] *= 2
+def doubled(report, samples):
+    """Duplicate all samples: twice the weight, exactly the same shares."""
+    samples = {**samples, "samples": samples["samples"] * 2}
+    report = json.loads(json.dumps(report))
     def scale(value):
         if isinstance(value, dict):
             for key, item in value.items():
@@ -34,6 +32,13 @@ def test_cpu_diff_compares_shares_with_both_denominators(tmp_path):
             for item in value:
                 scale(item)
     scale(report["capture"])
+    return report, samples
+
+
+def test_cpu_diff_compares_shares_with_both_denominators(tmp_path):
+    base = artifact_set(tmp_path / "base", "cpu-complete.json")
+    report, samples = doubled(fixture("cpu-complete.json"),
+                              samples_document(fixture("cpu-complete.json")))
     new = artifact_set(tmp_path / "new", "cpu-complete.json", report=report,
                        samples=samples)
 
@@ -313,6 +318,29 @@ def test_cpu_absolute_weight_rankings_bound_functions_and_preserve_remainders(tm
     html = (tmp_path / "diff.html").read_text()
     functions = html.split('id="diff-functions"', 1)[1].split('</table>', 1)[0]
     assert functions.count('<tr>') == 101  # 100 function rows plus the header
+
+
+def test_uniform_growth_lists_largest_weight_changes_beyond_the_row_limit(tmp_path):
+    report = fixture("cpu-complete.json")
+    samples = samples_document(report)
+    # 110 callers on one stack sort before "main" and have smaller weight changes.
+    for index in range(110):
+        samples["frames"].append({"module": None, "symbol": f"aaa-caller-{index:03}",
+                                  "source": None, "address": "0x1", "module_offset": None})
+        samples["stacks"][0].insert(1, len(samples["frames"]) - 1)
+    base = artifact_set(tmp_path / "base", "cpu-complete.json", report=report,
+                        samples=samples)
+    report, samples = doubled(report, samples)
+    new = artifact_set(tmp_path / "new", "cpu-complete.json", report=report,
+                       samples=samples)
+
+    proc = diff(tmp_path, base, new)
+
+    assert proc.returncode == 0, proc.stderr
+    main = next(line for line in proc.stdout.splitlines()
+                if line.startswith("main "))
+    assert "10010000 | 20020000 | +10010000" in main
+    assert "17 other functions not listed" in proc.stdout
 
 
 def test_matching_benchmark_metadata_uses_common_host_and_requested_guard_semantics(tmp_path):

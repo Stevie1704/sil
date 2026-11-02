@@ -61,10 +61,25 @@ def _cpu_comparison(base: ProfileSet, new: ProfileSet, base_rows: list,
     def change(key, before, after):
         return 100 * (after.get(key, 0) / new_rank.weight -
                       before.get(key, 0) / base_rank.weight) if base_rank.weight and new_rank.weight else 0
-    keys = sorted(keys, key=lambda k: (-max(abs(change(k, base_self, new_self)),
-                                           abs(change(k, base_inclusive, new_inclusive))), _name(k)))
+    def share_change(k):
+        return max(abs(change(k, base_self, new_self)),
+                   abs(change(k, base_inclusive, new_inclusive)))
+    def weight_change(k):
+        return max(abs(new_self.get(k, 0) - base_self.get(k, 0)),
+                   abs(new_inclusive.get(k, 0) - base_inclusive.get(k, 0)))
+    # Unchanged shares can hide large absolute growth, so both rankings
+    # contribute rows.
+    by_share = sorted(keys, key=lambda k: (-share_change(k), _name(k)))
+    by_weight = sorted(keys, key=lambda k: (-weight_change(k), _name(k)))
+    listed = dict.fromkeys(by_share[:ROW_LIMIT // 2] + by_weight[:ROW_LIMIT // 2])
+    for key in by_share:
+        if len(listed) >= ROW_LIMIT:
+            break
+        listed.setdefault(key)
+    shown = sorted(listed, key=lambda k: (-share_change(k), -weight_change(k), _name(k)))
+    hidden = [k for k in by_share if k not in listed]
     rows = []
-    for key in keys[:ROW_LIMIT]:
+    for key in shown:
         values = [_name(key)]
         for before, after in ((base_self, new_self), (base_inclusive, new_inclusive)):
             values += [_share(before.get(key, 0), base_rank.weight),
@@ -74,9 +89,9 @@ def _cpu_comparison(base: ProfileSet, new: ProfileSet, base_rows: list,
             values += [str(before.get(key, 0)), str(after.get(key, 0)),
                        f"{after.get(key, 0) - before.get(key, 0):+d}"]
         rows.append(values)
-    hidden = keys[ROW_LIMIT:]
     note = (f"Denominators: BASE {base_rank.samples} samples / {base_rank.weight} ns; "
             f"NEW {new_rank.samples} samples / {new_rank.weight} ns. "
+            f"Listed: the largest share changes and the largest absolute estimated weight changes. "
             f"{len(hidden)} other functions not listed; self remainder: "
             f"BASE {sum(base_self.get(k, 0) for k in hidden)} ns, "
             f"NEW {sum(new_self.get(k, 0) for k in hidden)} ns. "
