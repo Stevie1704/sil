@@ -444,6 +444,32 @@ def test_offline_exact_selection_initializes_the_recording_recipe_with_exact_tim
     assert chrome.console_errors == [] and chrome.blocked_requests == []
 
 
+def test_interactive_source_lines_keep_the_static_link_policy(chrome, tmp_path):
+    from test_profile_focus import source_cpu_set
+    profile = source_cpu_set(tmp_path / "set")
+    html = tmp_path / "lines.html"
+    html.write_text(render_profile(load_profile_set(profile), profile.read_text()))
+    opened(chrome, html, javascript=False)
+    static = chrome.evaluate(
+        "Array.from(document.querySelectorAll('#source-lines a.source')).map(a => a.href).join(' ')")
+    opened(chrome, html)
+    scripted = chrome.evaluate(
+        "Array.from(document.querySelectorAll('#source-line-table a.source')).map(a => a.href).join(' ')")
+    assert scripted == static
+    assert "file:///captured/shared.c" in scripted
+    assert chrome.console_errors == []
+
+
+def test_paging_function_options_keeps_the_selected_function(chrome, pages):
+    opened(chrome, pages["deep"])
+    before = chrome.evaluate("document.getElementById('caller-summary').textContent")
+    chrome.evaluate("document.getElementById('caller-next').click()")
+    assert "51–" in chrome.evaluate("document.getElementById('caller-page').textContent")
+    assert chrome.evaluate("document.getElementById('caller-summary').textContent") == before
+    assert chrome.evaluate("document.getElementById('caller-function').selectedIndex") == -1
+    assert chrome.console_errors == []
+
+
 def test_static_activation_buttons_work_only_with_the_script(chrome, pages):
     opened(chrome, pages["activations"], javascript=False)
     assert chrome.evaluate(
@@ -454,3 +480,16 @@ def test_static_activation_buttons_work_only_with_the_script(chrome, pages):
     chrome.evaluate("document.querySelector('#slowest-retained button[data-interval-kind]').click()")
     assert "interval activation" in chrome.evaluate("document.getElementById('selection').textContent")
 
+
+def test_tied_source_lines_keep_the_static_order(chrome, tmp_path):
+    from test_profile_focus import tied_lines_set
+    profile = tied_lines_set(tmp_path / "set")
+    html = tmp_path / "tied.html"
+    html.write_text(render_profile(load_profile_set(profile), profile.read_text()))
+    rows = ("Array.from(document.querySelectorAll('{} tbody tr'))"
+            ".map(r => r.cells[3].querySelector('a, code').textContent).join(' ')")
+    opened(chrome, html, javascript=False)
+    static = chrome.evaluate(rows.format("#source-lines table"))
+    opened(chrome, html)
+    assert chrome.evaluate(rows.format("#source-line-table")) == static
+    assert static.startswith("/captured/many.c:1 /captured/many.c:2")

@@ -75,15 +75,14 @@ def _metric_value(data: dict, row: list, metric: str) -> int:
     return row[(4, 5, 6, 7, 8)[METRICS.index(metric)]]
 
 
-def caller_tree(data: dict, selected: int, metric: str,
-                leaf_only: bool = False):
+def caller_tree(data: dict, selected: int, metric: str):
     """Each row contributes once; reverse callers from its leafmost anchor."""
     end, deep = len(data["functions"]), len(data["functions"]) + 1
     limit = TreeLimits().max_depth
     paths = []
     for row in data["rows"]:
         path = data["paths"][row[0]]
-        if selected not in path or (leaf_only and path[-1] != selected):
+        if selected not in path:
             continue
         anchor = len(path) - 1 - path[::-1].index(selected)
         callers = list(reversed(path[:anchor]))

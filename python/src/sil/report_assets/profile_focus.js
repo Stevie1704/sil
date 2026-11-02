@@ -43,13 +43,26 @@
       var option = node("option", name(key)); option.value = key;
       option.selected = key === selected; functions.appendChild(option);
     });
-    if (selected === null || !matches.slice(offset,offset + limits.options).includes(selected)) {
+    // Paging keeps the selection; only a search that excludes it changes it.
+    if (selected === null || !matches.includes(selected)) {
       selected = functions.value === "" ? null : +functions.value;
+    } else if (!matches.slice(offset, offset + limits.options).includes(selected)) {
+      functions.selectedIndex = -1;
     }
     byId("caller-page").textContent = (matches.length ? offset + 1 : 0) + "–" +
       Math.min(offset + limits.options, matches.length) + " of " + matches.length + " matching functions";
     byId("caller-prev").disabled = offset === 0;
     byId("caller-next").disabled = offset + limits.options >= matches.length;
+  }
+  // Same link policy as the static source cell: only an absolute path links,
+  // and the href is built from the path as a file: URL.
+  function sourceCell(file, line) {
+    var label = file + ":" + line;
+    if (file.charAt(0) !== "/") return node("code", label);
+    var link = node("a", label);
+    link.className = "source";
+    link.href = "file://" + file.split("/").map(encodeURIComponent).join("/");
+    return link;
   }
   function renderLines() {
     if (!data.source) return;
@@ -69,7 +82,15 @@
       unknown[0]+" samples / "+unknown[1]+" ns unknown. "+share(attributed[1],total[1])+
       " of selected weight has a retained leaf source line. Denominator: "+total[0]+" samples / "+total[1]+" ns."+
       (chosen ? " Selected function leaf samples only." : " All selected leaf functions.");
-    var ranked = Array.from(groups.entries()).sort(function(a,b) { return b[1][1]-a[1][1] || a[0]-b[0]; });
+    // Same order as the static table: weight, then module, file and line.
+    function compareLocation(a, b) {
+      var x = data.source.locations[a], y = data.source.locations[b];
+      for (var i = 0; i < 2; i++) if (x[i] !== y[i]) return x[i] < y[i] ? -1 : 1;
+      return x[2] - y[2];
+    }
+    var ranked = Array.from(groups.entries()).sort(function(a,b) {
+      return b[1][1]-a[1][1] || compareLocation(a[0], b[0]);
+    });
     var table = node("table"), head = node("tr"), body = node("tbody"), foot = node("tfoot"), other = [0,0];
     table.id = "source-line-table";
     ["Module ID","Captured module path","Build ID","Captured file and line","Samples","Estimated weight","Share of selection"].forEach(function(text) {
@@ -80,8 +101,8 @@
       var leaf=data.source.locations[entry[0]], bucket=entry[1], module=data.source.modules[leaf[0]];
       if(index >= data.source.limit) { other[0]+=bucket[0]; other[1]+=bucket[1]; return; }
       var row=node("tr");
-      [leaf[0],module[0],module[1] || "[unknown build ID]",leaf[1]+":"+leaf[2],String(bucket[0]),bucket[1]+" ns",share(bucket[1],total[1])].forEach(function(text) {
-        row.appendChild(node("td",text));
+      [leaf[0],module[0],module[1] || "[unknown build ID]",sourceCell(leaf[1],leaf[2]),String(bucket[0]),bucket[1]+" ns",share(bucket[1],total[1])].forEach(function(cell) {
+        row.appendChild(typeof cell === "string" ? node("td",cell) : add(node("td"),cell));
       }); body.appendChild(row);
     });
     [["Other known lines ("+Math.max(0,ranked.length-data.source.limit)+" omitted)",other],
