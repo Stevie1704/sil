@@ -87,5 +87,6 @@ implementation. This proof adds no collector, counter, runtime hook or
 permanent processing-time field. Delivery B dispositions and reopening
 criteria live in [the decision record](../../docs/profiling-investigation-decisions.md).
 
-Retained real-Linux results are added here after the workflow succeeds;
-macOS development checks cannot substitute for them.
+The [retained real-Linux results](evidence/README.md) include a compact,
+digest-indexed portable evidence archive and offline replay commands.
+macOS development checks cannot substitute for that collector qualification.
