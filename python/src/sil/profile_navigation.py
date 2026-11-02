@@ -103,8 +103,6 @@ def _check_diagnostics_intervals(profile: ProfileSet, diagnostics: dict) -> None
         if task is None or task['kind'] != a['kind']:
             raise ProfileSetError('retained Activation has no matching diagnostics Task')
         identity = (*key, a['index'])
-        if identity in retained:
-            raise ProfileSetError('duplicate retained Activation identity is ambiguous')
         retained[identity] = a
         if a['outcome'] == 'completed':
             completed[key] = completed.get(key, 0) + 1
@@ -129,11 +127,13 @@ def activation_rows(profile: ProfileSet) -> list[tuple[int, dict]]:
             else [(i, activations[i]) for i in refs])
 
 
-def query_recipe(profile: ProfileSet, virtual: int) -> str:
+def query_recipe(profile: ProfileSet, virtual: int | None = None) -> str:
     artifact = next((a for a in profile.report['artifacts'] if a['role'] == 'recording'), None)
     digest = ('Expected Recording SHA-256: ' + artifact['sha256'] if artifact
               else 'Recording link unavailable/unverified: no retained digest.')
-    return (f'Activation Virtual time: {virtual} ns. {digest}\n'
+    time = (f'Activation Virtual time: {virtual} ns.' if virtual is not None
+            else 'Activation Virtual time: unavailable (no interval selected).')
+    return (f'{time} {digest}\n'
             'Choose the Recording path, Channel, fields and publication-time interval explicitly.\n'
             'sil recording query RECORDING.mcap --channel CHANNEL --field FIELD '
             '--from FROM_NS --to TO_NS --max-results 100 --max-bytes 65536 --max-messages 10000\n'

@@ -158,13 +158,28 @@ def benchmark_context(base: Benchmark, new: Benchmark,
                 notices.append(f"{key}: unknown profile/benchmark identity")
             elif value != profile.report["identity"][key]:
                 notices.append(f"{key}: profile/benchmark mismatch")
-        if r["host"] != profile.report["host"]:
+        # The profile and diagnostics contracts name the kernel differently
+        # and retain different host details. Compare only shared evidence.
+        host_pairs = [(profile.report["host"].get(profile_key), r["host"].get(benchmark_key))
+                      for profile_key, benchmark_key in
+                      (("os", "os"), ("architecture", "architecture"),
+                       ("kernel_release", "os_release"))]
+        if any(before is not None and after is not None and before != after
+               for before, after in host_pairs):
             notices.append("Host: profile/benchmark mismatch")
+        if any(before is None or after is None for before, after in host_pairs):
+            notices.append("Host: unknown common profile/benchmark identity")
         if provenance_mode(r["policy"]) != provenance_mode(profile.report["configuration"]):
             notices.append("Provenance mode: profile/benchmark mismatch")
         for key, value in r["policy"].items():
-            if key != "provenance_mode" and key in profile.report["configuration"] and \
-                    value != profile.report["configuration"][key]:
+            configuration = profile.report["configuration"]
+            if key == "provenance_mode" or key not in configuration:
+                continue
+            # A profile keeps the Recording path and requested guard values;
+            # diagnostics keeps Recording presence and effective defaults.
+            requested = (configuration[key] is not None if key == "recording"
+                         else configuration[key])
+            if requested is not None and requested != value:
                 notices.append(f"{key}: profile/benchmark configuration mismatch")
         if r["measurement_mode"] != "diagnostics":
             notices.append("Measurement mode differs from the diagnostics profile Run")

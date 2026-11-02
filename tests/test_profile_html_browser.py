@@ -424,3 +424,21 @@ def test_each_heap_caller_metric_reconciles_with_known_leaf_site(chrome, pages, 
     summary = chrome.evaluate("document.getElementById('caller-summary').textContent")
     assert "3 allocations / " + expected in summary
     assert chrome.console_errors == []
+
+
+def test_offline_exact_selection_initializes_the_recording_recipe_with_exact_time(chrome, tmp_path):
+    from test_profile_activation_navigation import late_set
+    from test_profile_render import render
+    profile = late_set(tmp_path / 'set')
+    result = render([str(profile), '--participant', 'controller', '--task', 'tick',
+                     '--activation-index', '600', '--html', 'selected.html'], tmp_path)
+    assert result.returncode == 0, result.stderr
+
+    opened(chrome, tmp_path / 'selected.html')
+
+    recipe = chrome.evaluate("document.getElementById('nav-recipe').value")
+    assert 'Activation Virtual time: 9007199254740993 ns.' in recipe
+    assert 'Activation Virtual time: 0 ns.' not in recipe
+    assert 'controller / tick, Activation index 600' in chrome.evaluate(
+        "document.getElementById('nav-detail').textContent")
+    assert chrome.console_errors == [] and chrome.blocked_requests == []

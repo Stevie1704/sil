@@ -32,7 +32,7 @@ from sil.profile_navigation import (
     navigation_section, navigation_data, query_recipe, NAVIGATION_LIMIT,
 )
 from sil.profile_focus import callers_section, interactive_focus_data
-from sil.profile_analysis import profile_tasks, cpu_rows
+from sil.profile_analysis import profile_tasks, cpu_rows, iter_cpu_rows
 from sil.profile_html_views import TASK_LIMIT, flame_section, task_drilldowns, timeline
 
 HOTSPOT_ROWS = 50
@@ -384,19 +384,12 @@ def _select(id_: str, label: str, options: list[tuple[str, str]]) -> Html:
 
 def _explorer_rows(profile: ProfileSet) -> list | None:
     """Samples with equal stack, thread and class in one row, or None."""
-    assert profile.samples is not None
-    classes = (profile.correlation["samples"] if profile.correlation
-               else None)
     rows: Counter = Counter()
     weights: Counter = Counter()
-    selected = set(profile.selection) if profile.selection is not None else None
-    for index, sample in enumerate(profile.samples["samples"]):
-        cls, ref = classes[index] if classes else ("", "")
-        if selected is not None and (cls not in ("execution_context", "window_associated") or ref not in selected):
-            continue
-        key = (sample[4], sample[2], cls, ref)
-        rows[key] += 1
-        weights[key] += sample[3]
+    for row in iter_cpu_rows(profile):
+        key = tuple(row[:4])
+        rows[key] += row[4]
+        weights[key] += row[5]
         if len(rows) > MAX_EXPLORER_ROWS:
             return None
     return [[*key, rows[key], weights[key]] for key in rows]
@@ -449,7 +442,7 @@ def explorer_data(profile: ProfileSet) -> dict | None:
         function_data = [[symbol, modules.get(module)] for module, symbol in functions]
     return {
         "navigation": navigation_data(profile),
-        "query_recipe": query_recipe(profile, 0),
+        "query_recipe": query_recipe(profile),
         "offline_selection": list(profile.selection) if profile.selection is not None else None,
         "functions": function_data,
         "paths": paths,

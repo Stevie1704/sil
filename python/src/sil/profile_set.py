@@ -265,6 +265,10 @@ def _check_correlation(correlation: dict, samples: dict, summary: dict,
     phases = {p["phase"] for p in correlation["phases"]}
     if len(phases) != len(correlation["phases"]):
         _fail(name, "duplicate lifecycle phase names make sample references ambiguous")
+    identities = [(a["participant"], a["task"], a["index"])
+                  for a in correlation["activations"]]
+    if len(set(identities)) != len(identities):
+        _fail(name, "duplicate Activation identity makes exact selection ambiguous")
     tasks = {(t["participant"], t["task"]) for t in summary["tasks"]}
     if {(a["participant"], a["task"]) for a in correlation["activations"]} != tasks:
         _fail(name, "Activation Tasks do not match the summary")

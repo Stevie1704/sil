@@ -453,7 +453,7 @@
       "; Virtual time "+a[4]+" ns; inclusive elapsed wall time "+a[5]+" ns; "+
       a[7]+" samples / "+a[8]+" ns estimated sampled weight; outcome "+a[6]+
       ". Zero samples do not mean zero CPU work.";
-    byId("nav-recipe").value = data.query_recipe.replace("Activation Virtual time: 0 ns.",
+    byId("nav-recipe").value = data.query_recipe.replace("Activation Virtual time: unavailable (no interval selected).",
       "Activation Virtual time: "+a[4]+" ns.");
   }
   if (navigation && data.navigation) {
@@ -464,6 +464,9 @@
     byId("nav-next").addEventListener("click", function() { navPage++; renderNavigation(); });
     byId("nav-recipe").value = data.query_recipe;
     renderNavigation();
+    if (data.offline_selection && data.offline_selection.length === 1) {
+      intervalDetail(data.offline_selection[0]);
+    }
   }
 
   // --- update ----------------------------------------------------------------
