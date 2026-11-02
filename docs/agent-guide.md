@@ -230,6 +230,40 @@ Read `sil docs running`, section "Profile a Run", and the contract in
    the HTML of `sil profile render`. Share `cpu/perf.data` only as a core
    dump: it holds copies of stacks.
 
+To follow a retained outlier, use `sil profile render DIR/profile.json
+--participant NAME --task NAME --activation-index N --html selected.html`.
+These are offline selections: they never change what was collected. Task
+requires Participant; an exact nonnegative index requires both and excludes
+`--from`/`--to`. Time bounds are integer Virtual-time nanoseconds in
+`[from,to)`. Paged navigation reaches retained Activations beyond the initial
+display; captures above interactive budgets require a narrower offline
+selection. An absent correlation interval stays missing.
+
+Explicitly add `--diagnostics DIR/run.diagnostics.json` to inspect its
+digest-matched full measurement scope and reservoir-qualified quantiles.
+Without it, duration rankings describe retained completed intervals only.
+Use the selected Activation's editable `sil recording query` recipe to
+choose Channel, fields and publication-time bounds. Compare the expected
+Recording SHA-256 with the query report's `source.sha256` and check scan and
+output completeness. A missing/moved Recording or absent digest leaves the
+handoff unavailable/unverified. Equal Virtual time identifies no Message or
+cause; payload Sample time remains separate.
+
+The offline caller view follows retained stacks toward callers of a selected
+function/site. Recursive occurrences contribute once per sample/allocation
+row; sampled relationships are not call counts. CPU source-line hotspots
+partition captured leaf samples by module/file/line plus an unknown bucket;
+they neither read source files nor establish code coverage. Keep elapsed host
+duration, estimated sampled weight and sample count distinct.
+
+For repeated measurement context, supply both `--base-benchmark PATH` and
+`--new-benchmark PATH` to `sil profile diff`. They are separate experiments
+from the profiles. Read their digests, hosts, policies, identities, warm-ups,
+measured-run counts and mismatches. Absolute estimated sampled weights can
+change while shares stay equal. Never pool per-Run percentiles or infer
+significance from one pair of profiles. New collector investigations remain
+[explicitly deferred](profiling-investigation-decisions.md).
+
 ## Machine-readable output
 
 Use exit codes, not message text. Message text can change in any release.
