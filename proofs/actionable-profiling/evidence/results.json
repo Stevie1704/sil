@@ -14,7 +14,7 @@
     "2.39"
   ],
   "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
-  "source_revision": "60bae49dd9899e8f1481ac835c391a0ae8a59495",
+  "source_revision": "600cdddeec825266a1f05bf8665540740cc499a8",
   "expected": {
     "tasks": 52,
     "activations_per_task": 620,
@@ -34,13 +34,13 @@
         "kind": "native_task",
         "index": 610,
         "virtual_time_ns": 610000000,
-        "begin_ns": "241338996865",
-        "end_ns": "241394312541",
+        "begin_ns": "237399014222",
+        "end_ns": "237438552318",
         "outcome": "completed",
-        "samples": 55,
-        "weight_ns": 55055055
+        "samples": 39,
+        "weight_ns": 39039039
       },
-      "execution_context_samples": 55,
+      "execution_context_samples": 39,
       "sampled_source_locations": [
         {
           "file": "late_outlier.c",
@@ -48,15 +48,19 @@
         },
         {
           "file": "late_outlier.c",
-          "line": 25
+          "line": 26
         },
         {
           "file": "late_outlier.c",
-          "line": 25
+          "line": 26
         },
         {
           "file": "late_outlier.c",
-          "line": 25
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
         },
         {
           "file": "late_outlier.c",
@@ -76,34 +80,6 @@
         },
         {
           "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
           "line": 26
         },
         {
@@ -116,7 +92,7 @@
         },
         {
           "file": "late_outlier.c",
-          "line": 25
+          "line": 26
         },
         {
           "file": "late_outlier.c",
@@ -136,71 +112,7 @@
         },
         {
           "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
           "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
         },
         {
           "file": "late_outlier.c",
@@ -232,6 +144,50 @@
         },
         {
           "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
           "line": 25
         },
         {
@@ -241,26 +197,6 @@
         {
           "file": "late_outlier.c",
           "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
         }
       ],
       "profile_identity": {
@@ -268,16 +204,16 @@
         "manifest_path": "/home/runner/work/sil/sil/build/actionable-evidence/base.json",
         "sil_version": "0.2.1",
         "source_repository": "https://github.com/Stevie1704/sil",
-        "source_revision": "60bae49dd9899e8f1481ac835c391a0ae8a59495",
+        "source_revision": "600cdddeec825266a1f05bf8665540740cc499a8",
         "unavailable": {}
       },
       "rendered_summaries": {
-        "caller-summary": "Selected function: late_spin. 55 samples / 55055055 ns. 100.0% of the enclosing selection (55055055 ns).",
-        "source-summary": "55 samples / 55055055 ns attributed; 0 samples / 0 ns unknown. 100.0% of selected weight has a retained leaf source line. Denominator: 55 samples / 55055055 ns."
+        "caller-summary": "Selected function: late_spin. 39 samples / 39039039 ns. 100.0% of the enclosing selection (39039039 ns).",
+        "source-summary": "39 samples / 39039039 ns attributed; 0 samples / 0 ns unknown. 100.0% of selected weight has a retained leaf source line. Denominator: 39 samples / 39039039 ns."
       },
       "independent_source_partition": {
-        "attributed_samples": 55,
-        "attributed_weight_ns": 55055055,
+        "attributed_samples": 39,
+        "attributed_weight_ns": 39039039,
         "unknown_samples": 0,
         "unknown_weight_ns": 0
       }
@@ -290,13 +226,13 @@
         "kind": "native_task",
         "index": 610,
         "virtual_time_ns": 610000000,
-        "begin_ns": "246578279254",
-        "end_ns": "246606026774",
+        "begin_ns": "241450880103",
+        "end_ns": "241474223160",
         "outcome": "completed",
-        "samples": 28,
-        "weight_ns": 28028028
+        "samples": 23,
+        "weight_ns": 23023023
       },
-      "execution_context_samples": 28,
+      "execution_context_samples": 23,
       "sampled_source_locations": [
         {
           "file": "late_outlier.c",
@@ -304,15 +240,7 @@
         },
         {
           "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
           "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
         },
         {
           "file": "late_outlier.c",
@@ -332,7 +260,15 @@
         },
         {
           "file": "late_outlier.c",
-          "line": 25
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
+        },
+        {
+          "file": "late_outlier.c",
+          "line": 26
         },
         {
           "file": "late_outlier.c",
@@ -348,11 +284,7 @@
         },
         {
           "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
+          "line": 26
         },
         {
           "file": "late_outlier.c",
@@ -360,11 +292,7 @@
         },
         {
           "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
+          "line": 26
         },
         {
           "file": "late_outlier.c",
@@ -380,19 +308,7 @@
         },
         {
           "file": "late_outlier.c",
-          "line": 25
-        },
-        {
-          "file": "late_outlier.c",
           "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 26
-        },
-        {
-          "file": "late_outlier.c",
-          "line": 25
         },
         {
           "file": "late_outlier.c",
@@ -408,7 +324,7 @@
         },
         {
           "file": "late_outlier.c",
-          "line": 25
+          "line": 26
         }
       ],
       "profile_identity": {
@@ -416,16 +332,16 @@
         "manifest_path": "/home/runner/work/sil/sil/build/actionable-evidence/new.json",
         "sil_version": "0.2.1",
         "source_repository": "https://github.com/Stevie1704/sil",
-        "source_revision": "60bae49dd9899e8f1481ac835c391a0ae8a59495",
+        "source_revision": "600cdddeec825266a1f05bf8665540740cc499a8",
         "unavailable": {}
       },
       "rendered_summaries": {
-        "caller-summary": "Selected function: late_spin. 28 samples / 28028028 ns. 100.0% of the enclosing selection (28028028 ns).",
-        "source-summary": "28 samples / 28028028 ns attributed; 0 samples / 0 ns unknown. 100.0% of selected weight has a retained leaf source line. Denominator: 28 samples / 28028028 ns."
+        "caller-summary": "Selected function: late_spin. 23 samples / 23023023 ns. 100.0% of the enclosing selection (23023023 ns).",
+        "source-summary": "23 samples / 23023023 ns attributed; 0 samples / 0 ns unknown. 100.0% of selected weight has a retained leaf source line. Denominator: 23 samples / 23023023 ns."
       },
       "independent_source_partition": {
-        "attributed_samples": 28,
-        "attributed_weight_ns": 28028028,
+        "attributed_samples": 23,
+        "attributed_weight_ns": 23023023,
         "unknown_samples": 0,
         "unknown_weight_ns": 0
       }
@@ -449,8 +365,8 @@
         "/home/runner/work/sil/sil/build/actionable-evidence/base.so"
       ],
       "exit_code": 0,
-      "elapsed_ns": 121008082,
-      "peak_rss_kib": 27008
+      "elapsed_ns": 71538634,
+      "peak_rss_kib": 27160
     },
     {
       "label": "build-new",
@@ -469,8 +385,8 @@
         "/home/runner/work/sil/sil/build/actionable-evidence/new.so"
       ],
       "exit_code": 0,
-      "elapsed_ns": 114249170,
-      "peak_rss_kib": 27028
+      "elapsed_ns": 63883301,
+      "peak_rss_kib": 27148
     },
     {
       "label": "ordinary-base",
@@ -484,8 +400,8 @@
         "/home/runner/work/sil/sil/build/actionable-evidence/ordinary-base.mcap"
       ],
       "exit_code": 0,
-      "elapsed_ns": 164285203,
-      "peak_rss_kib": 19560
+      "elapsed_ns": 113943387,
+      "peak_rss_kib": 19552
     },
     {
       "label": "ordinary-new",
@@ -499,8 +415,8 @@
         "/home/runner/work/sil/sil/build/actionable-evidence/ordinary-new.mcap"
       ],
       "exit_code": 0,
-      "elapsed_ns": 114335912,
-      "peak_rss_kib": 19084
+      "elapsed_ns": 114079617,
+      "peak_rss_kib": 19052
     },
     {
       "label": "capture-base",
@@ -521,8 +437,8 @@
         "full"
       ],
       "exit_code": 0,
-      "elapsed_ns": 4975426735,
-      "peak_rss_kib": 105968
+      "elapsed_ns": 6177589139,
+      "peak_rss_kib": 105860
     },
     {
       "label": "render-base",
@@ -545,8 +461,8 @@
         "/home/runner/work/sil/sil/build/actionable-evidence/base-selected.html"
       ],
       "exit_code": 0,
-      "elapsed_ns": 966301758,
-      "peak_rss_kib": 92912
+      "elapsed_ns": 765392484,
+      "peak_rss_kib": 92812
     },
     {
       "label": "minimal-base",
@@ -561,8 +477,8 @@
         "/home/runner/work/sil/sil/build/actionable-evidence/base-minimal.html"
       ],
       "exit_code": 0,
-      "elapsed_ns": 1116466565,
-      "peak_rss_kib": 134776
+      "elapsed_ns": 815872450,
+      "peak_rss_kib": 138004
     },
     {
       "label": "benchmark-base",
@@ -582,8 +498,8 @@
         "full"
       ],
       "exit_code": 0,
-      "elapsed_ns": 815793080,
-      "peak_rss_kib": 47036
+      "elapsed_ns": 615050301,
+      "peak_rss_kib": 43464
     },
     {
       "label": "query-base",
@@ -614,8 +530,8 @@
         "65536"
       ],
       "exit_code": 0,
-      "elapsed_ns": 164423894,
-      "peak_rss_kib": 24700
+      "elapsed_ns": 114128092,
+      "peak_rss_kib": 24824
     },
     {
       "label": "capture-new",
@@ -636,8 +552,8 @@
         "external"
       ],
       "exit_code": 0,
-      "elapsed_ns": 1016447684,
-      "peak_rss_kib": 104932
+      "elapsed_ns": 815730442,
+      "peak_rss_kib": 103696
     },
     {
       "label": "render-new",
@@ -660,8 +576,8 @@
         "/home/runner/work/sil/sil/build/actionable-evidence/new-selected.html"
       ],
       "exit_code": 0,
-      "elapsed_ns": 966377290,
-      "peak_rss_kib": 90812
+      "elapsed_ns": 815767334,
+      "peak_rss_kib": 92176
     },
     {
       "label": "minimal-new",
@@ -676,8 +592,8 @@
         "/home/runner/work/sil/sil/build/actionable-evidence/new-minimal.html"
       ],
       "exit_code": 0,
-      "elapsed_ns": 1167174362,
-      "peak_rss_kib": 133576
+      "elapsed_ns": 916222414,
+      "peak_rss_kib": 134600
     },
     {
       "label": "benchmark-new",
@@ -697,8 +613,8 @@
         "external"
       ],
       "exit_code": 0,
-      "elapsed_ns": 665331591,
-      "peak_rss_kib": 47008
+      "elapsed_ns": 565224969,
+      "peak_rss_kib": 47124
     },
     {
       "label": "query-new",
@@ -729,8 +645,8 @@
         "65536"
       ],
       "exit_code": 0,
-      "elapsed_ns": 114409189,
-      "peak_rss_kib": 23816
+      "elapsed_ns": 114080370,
+      "peak_rss_kib": 23908
     },
     {
       "label": "diff",
@@ -750,8 +666,8 @@
         "/home/runner/work/sil/sil/build/actionable-evidence/diff.html"
       ],
       "exit_code": 0,
-      "elapsed_ns": 1718285122,
-      "peak_rss_kib": 127132
+      "elapsed_ns": 1316681626,
+      "peak_rss_kib": 125388
     },
     {
       "label": "heap",
@@ -768,8 +684,8 @@
         "--runner"
       ],
       "exit_code": 0,
-      "elapsed_ns": 715512626,
-      "peak_rss_kib": 66348
+      "elapsed_ns": 565336978,
+      "peak_rss_kib": 66264
     },
     {
       "label": "heap-render",
@@ -784,8 +700,8 @@
         "/home/runner/work/sil/sil/build/actionable-evidence/heap.html"
       ],
       "exit_code": 0,
-      "elapsed_ns": 164410468,
-      "peak_rss_kib": 26096
+      "elapsed_ns": 113995359,
+      "peak_rss_kib": 26104
     }
   ],
   "rss_scope": "GNU time per-command maximum resident set size in KiB, including child execution",

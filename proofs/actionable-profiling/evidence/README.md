@@ -1,14 +1,14 @@
 # Retained integrated workflow
 
-[Linux workflow run 41457648886](https://github.com/Stevie1704/sil/actions/runs/41457648886)
-passed for source revision `60bae49dd9899e8f1481ac835c391a0ae8a59495`.
+[Linux workflow run 41472449683](https://github.com/Stevie1704/sil/actions/runs/41472449683)
+passed for source revision `600cdddeec825266a1f05bf8665540740cc499a8`.
 The installed wheel and native runners report that revision. The host was
 Ubuntu 24.04 x86-64/glibc, kernel `7.0.0-1017-azure`; exact collector/tool
 versions and build identities are in the archived profiles. This is a real
 perf/Heaptrack capture, not the test fake backends.
 
-`portable-evidence.tar.gz` retains 39 files (36,839,207 uncompressed bytes,
-2,425,295 compressed bytes). `archive.sha256` binds the archive;
+`portable-evidence.tar.gz` retains 39 files (36,767,488 uncompressed bytes,
+2,406,415 compressed bytes). `archive.sha256` binds the archive;
 `contents.json` gives the size and SHA-256 of each member. The archive holds
 the CPU/heap portable inputs, explicitly matched diagnostics, Recordings,
 query receipts, benchmark summaries, Manifests and GNU time records.
@@ -53,10 +53,10 @@ Manifests and binaries differ and are never claimed byte-identical.
 
 | Selected interval | BASE / full provenance | NEW / external provenance |
 | --- | ---: | ---: |
-| Inclusive elapsed host ns | 55,315,676 | 27,747,520 |
-| Samples | 55 | 28 |
-| Estimated sampled weight ns | 55,055,055 | 28,028,028 |
-| Leaf source-attributed samples / unknown | 55 / 0 | 28 / 0 |
+| Inclusive elapsed host ns | 39,538,096 | 23,343,057 |
+| Samples | 39 | 23 |
+| Estimated sampled weight ns | 39,039,039 | 23,023,023 |
+| Leaf source-attributed samples / unknown | 39 / 0 | 23 / 0 |
 
 The independent normalized-stack oracle and static caller/source summaries
 agree on these counts/weights. The selected function is `late_spin`. The
@@ -68,10 +68,10 @@ Each side's separate benchmark retains one warm-up and three measured Runs.
 The full/external policy difference remains visible in the diff; required
 profile artifact hashes remain present under both policies.
 
-GNU time observed selected-render peaks of 92,912/90,812 KiB and elapsed
-command times of about 0.97/0.97 seconds. Minimal unselected renders peaked
-at 134,776/133,576 KiB and about 1.12/1.17 seconds. The heap render peaked
-at 26,096 KiB and about 0.16 seconds. These include a fresh Python process,
+GNU time observed selected-render peaks of 92,812/92,176 KiB and elapsed
+command times of about 0.77/0.82 seconds. Minimal unselected renders peaked
+at 138,004/134,600 KiB and about 0.82/0.92 seconds. The heap render peaked
+at 26,104 KiB and about 0.11 seconds. These include a fresh Python process,
 input validation and HTML generation. `contents.json` and the resource
 records provide exact input sizes and resource observations;
 `rendered-outputs.json` records HTML sizes (about 3.7 MiB selected CPU, 6.6 MiB
@@ -85,8 +85,8 @@ capture. Collector/environment support still refers to the prior
 [native/container qualification](../../profiling-qualification/README.md).
 This new evidence does not widen collector or machine-class support.
 
-The screenshot below re-renders the retained BASE evidence after review fixes
-in `c319684c`. The recipe starts at the selected Activation's exact Virtual
-time. Chrome reported no script errors or network requests.
+The screenshot below renders the retained BASE evidence at the same source
+revision. The recipe starts at the selected Activation's exact Virtual time.
+Chrome reported no script errors or network requests.
 
 ![Late Activation selection with separate elapsed time, sample count and estimated weight](activation.png)
