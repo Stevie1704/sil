@@ -344,3 +344,26 @@ def test_diff_opens_offline_with_safe_fallback_tables(chrome, tmp_path, javascri
     assert chrome.evaluate("document.querySelector('#diff-functions').offsetParent !== null")
     assert "sampling noise" in chrome.evaluate("document.body.innerText")
     assert chrome.blocked_requests == [] and chrome.console_errors == []
+
+
+def test_bottom_up_function_selection_is_keyboard_accessible_and_filters_cpu(chrome, pages):
+    opened(chrome, pages["activations"])
+    assert chrome.evaluate("!document.getElementById('caller-controls').hidden")
+    chrome.evaluate("document.getElementById('caller-function').focus()")
+    assert chrome.evaluate("document.activeElement.id") == "caller-function"
+    chrome.evaluate("document.getElementById('f-class').value='execution_context';"
+                    "document.getElementById('f-class').dispatchEvent(new Event('change',{bubbles:true}))")
+    summary = chrome.evaluate("document.getElementById('caller-summary').textContent")
+    assert "enclosing selection (5005000 ns)" in summary
+    assert "execution_context" in chrome.evaluate("document.getElementById('selection').textContent")
+    assert chrome.blocked_requests == []
+    assert chrome.console_errors == []
+
+
+def test_heap_caller_metric_selection_uses_retained_allocation_rows(chrome, pages):
+    opened(chrome, pages["heap"])
+    assert chrome.evaluate("!document.getElementById('caller-controls').hidden")
+    chrome.evaluate("document.getElementById('caller-metric').value='temporary_allocations';"
+                    "document.getElementById('caller-metric').dispatchEvent(new Event('change',{bubbles:true}))")
+    assert "temporary_allocations" in chrome.evaluate("document.getElementById('caller-summary').textContent")
+    assert chrome.console_errors == []

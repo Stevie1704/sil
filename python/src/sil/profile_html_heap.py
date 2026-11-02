@@ -22,6 +22,7 @@ from sil.profile_html_parts import (
 )
 from sil.profile_report import HEAP_METRICS
 from sil.profile_set import ProfileSet
+from sil.profile_focus import callers_section
 
 RANKING_ROWS = 25
 RANKINGS = (
@@ -52,6 +53,7 @@ def heap_body(profile: ProfileSet) -> Html:
             *(_ranking(analysis, *ranking) for ranking in RANKINGS),
             _inclusive(analysis, profile.allocations),
             _tree(profile),
+            callers_section(profile),
             _modules(analysis),
         ]),
     ])
