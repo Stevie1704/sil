@@ -127,8 +127,9 @@ python -c "import json; r = json.load(open('run.visualization.mcap.receipt.json'
 
 `completeness.run_outcome` is `completed` or `failed` only when the Run's
 provenance side-car `<source>.provenance.json` is next to the source and
-names the source's SHA-256. Then `run_exit_code` is the Run's exit code.
-Otherwise the outcome is `unknown`.
+names the source's SHA-256 as a digest that SiL calculated. Then
+`run_exit_code` is the Run's exit code. Otherwise the outcome is `unknown`, also
+for a side-car of `--provenance-mode external`, which holds no Recording digest.
 
 ## Navigate a Recording from Python
 

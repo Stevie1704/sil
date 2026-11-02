@@ -61,7 +61,26 @@ among them), their SHA-256 digests, the Manifest hash, the SiL version, and the
 machine class. Every Manifest-named path, Process commands included, resolves
 against the Manifest's directory. With `--no-recording`, the side-car is
 still emitted next to the default `out.mcap` location and its `recording` value
-is `null`.
+has the state `not_requested`.
+
+The side-car has schema version 2. Each digest has an explicit state:
+`calculated`, `omitted`, `unresolved`, `failed` or, for the Recording,
+`not_requested`. The runner calculates a `calculated` Recording digest while it
+writes. A failed Recording write or close is a Run failure (exit `1`).
+`--provenance-mode external` lets a platform own artifact
+identity: the runner omits its input and Recording digests, and keeps the
+Manifest hash, path and file checks, and Replay verification. SiL does not
+verify the identities of the platform. Schema version 1 records keep their
+meaning. The [schema and the migration](docs/running.md#provenance-side-car)
+are in the Run documentation, with a
+[runnable platform example](docs/running.md#managed-platform-example).
+
+The Manifest hash is the SHA-256 of the exact Manifest file bytes. It identifies
+the configuration, not the files that the Manifest names. Replay verification is
+on in both modes: it enforces the committed stimulus and is not provenance-only
+work. `sil check`, `sil bundle` and comparisons keep their own hashes. The
+[qualification](docs/bench/provenance-qualification.md) gives the measured cost
+and its limitations.
 
 A failed Run (exit `1` or `2`) also writes a failure report next to its
 Recording: `<recording>.failure.json`. It names the failure category, the
@@ -79,6 +98,7 @@ none.
 | libc | glibc, Debian bookworm level or newer |
 | Python | 3.11 or newer, as the distribution metadata declares; the image pins 3.13 |
 | Reference environment | the pinned `runtime` container image in [Dockerfile](Dockerfile) |
+| Build from source | OpenSSL 3.0 or newer with its static library. A built runner has no OpenSSL runtime dependency ([decision](docs/adr/0006-sha256-backend-static-openssl.md)) |
 
 Continuous integration runs on x86-64 Linux with one interpreter, and that is
 the only machine class this project verifies. An older supported Python is

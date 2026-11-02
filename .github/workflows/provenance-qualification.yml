@@ -1,0 +1,97 @@
+name: provenance-qualification
+
+# The measurements of docs/bench/provenance-qualification.md on the supported
+# machine class, Linux x86-64/glibc, with the real perf and Heaptrack. This is
+# evidence, not a gate: no step reads a duration, and a shared runner is not a
+# quiet machine. It runs when the measurement tools change and on demand.
+
+on:
+  pull_request:
+    paths:
+      - 'tools/hash_baseline.py'
+      - 'tools/hash_trace.c'
+      - 'tools/profile_cost_measure.py'
+      - 'tools/sha256_backend_measure.py'
+      - '.github/workflows/provenance-qualification.yml'
+  workflow_dispatch:
+
+env:
+  BASE: 600fa429dfcca50b11eb5db9b6735d6d52bcea89
+  MACHINE: GitHub Actions ubuntu-24.04, x86-64
+  LOAD: Shared hosted runner; the load is not under the control of this job.
+  EVIDENCE: build/qualification
+
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install the collectors and the build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            "linux-tools-$(uname -r)" linux-tools-common heaptrack binutils \
+            build-essential cmake libssl-dev
+          sudo sysctl -w kernel.perf_event_paranoid=2
+          mkdir -p "$EVIDENCE"
+          { uname -a; lscpu; perf --version; heaptrack --version;
+            cc --version | head -1; openssl version; } | tee "$EVIDENCE/host.txt"
+
+      - name: Set up Python environment
+        run: |
+          uv venv .venv
+          uv pip install -p .venv/bin/python -e "python/[dev]"
+
+      - name: Build kernel
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j
+
+      - name: Hash work, before the changes
+        run: |
+          .venv/bin/python tools/hash_baseline.py --revision "$BASE" \
+            --machine "$MACHINE" --load-condition "$LOAD" \
+            --backend "minimal software SHA-256" --repetitions 9 \
+            --label x86-base --out-dir "$EVIDENCE"
+
+      - name: Hash work, after the changes, in each mode
+        run: |
+          for mode in full external; do
+            .venv/bin/python tools/hash_baseline.py --build-dir build \
+              --machine "$MACHINE" --load-condition "$LOAD" \
+              --backend "OpenSSL EVP, static" --repetitions 9 \
+              --runner-arg=--provenance-mode "--runner-arg=$mode" \
+              --label "x86-$mode" --out-dir "$EVIDENCE"
+          done
+
+      - name: SHA-256 backend
+        run: |
+          .venv/bin/python tools/sha256_backend_measure.py --build-dir build \
+            --old-runner "${TMPDIR:-/tmp}/sil-hash-builds/$BASE/build/sil-run" \
+            --machine "$MACHINE" --conditions "$LOAD" \
+            --json "$EVIDENCE/sha256-backend-x86.json"
+
+      - name: Profile command, with the real collectors
+        run: |
+          .venv/bin/python tools/profile_cost_measure.py --revision "$BASE" \
+            --real-tools --mode default --case cpu --case cpu-activations \
+            --case heap-runner --case heap-process \
+            --machine "$MACHINE" --load-condition "$LOAD" --repetitions 5 \
+            --label x86-base --out-dir "$EVIDENCE"
+          .venv/bin/python tools/profile_cost_measure.py --build-dir build \
+            --real-tools --mode full --mode external --case cpu \
+            --case cpu-activations --case heap-runner --case heap-process \
+            --machine "$MACHINE" --load-condition "$LOAD" --repetitions 5 \
+            --label x86-after --out-dir "$EVIDENCE"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: provenance-qualification-evidence
+          path: build/qualification/

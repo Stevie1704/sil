@@ -4,9 +4,18 @@ add_executable(sil_interceptor_test
   ${PROJECT_SOURCE_DIR}/kernel/src/interceptor.cpp
   ${PROJECT_SOURCE_DIR}/kernel/src/manifest.cpp)
 target_include_directories(sil_interceptor_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src)
-target_link_libraries(sil_interceptor_test PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(sil_interceptor_test PRIVATE nlohmann_json::nlohmann_json sil_sha256)
 add_test(NAME sil_interceptor_plan COMMAND sil_interceptor_test
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+# The hashing interface (#325): published vectors in C++, and a small tool that
+# tests/test_sha256.py and tools/sha256_backend_measure.py drive.
+add_executable(sil_sha256_test sha256_test.cpp)
+target_link_libraries(sil_sha256_test PRIVATE sil_sha256)
+add_test(NAME sil_sha256 COMMAND sil_sha256_test
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+add_executable(sil_sha256_digest sha256_digest_tool.cpp)
+target_link_libraries(sil_sha256_digest PRIVATE sil_sha256)
 
 # Unsigned virtual-time addition is the one arithmetic boundary every
 # scheduling and delivery decision rests on, so its table of edge cases is a
@@ -21,6 +30,23 @@ add_test(NAME sil_virtual_time COMMAND sil_virtual_time_test
 add_executable(sil_engine_interface_test engine_interface_test.cpp)
 target_include_directories(sil_engine_interface_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src)
 add_test(NAME sil_engine_interface COMMAND sil_engine_interface_test
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+# The close contract of a Recording sink (#328). A failed close cannot be made
+# from outside a Run on every host, so this test drives the sink directly.
+add_executable(sil_recording_sink_test
+  recording_sink_test.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/mcap_recording.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/recording_file.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/provenance.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/manifest.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/interceptor.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/clock_shim.cpp)
+target_include_directories(sil_recording_sink_test PRIVATE
+  ${PROJECT_SOURCE_DIR}/kernel/src ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(sil_recording_sink_test PRIVATE
+  nlohmann_json::nlohmann_json mcap_headers sil_sha256)
+add_test(NAME sil_recording_sink COMMAND sil_recording_sink_test
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # The diagnostics collector's statistics (#300) are pure arithmetic over
@@ -60,6 +86,20 @@ add_executable(sil_mapped_region_test
   ${PROJECT_SOURCE_DIR}/kernel/src/mapped_region.cpp)
 target_include_directories(sil_mapped_region_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src)
 add_test(NAME sil_mapped_region COMMAND sil_mapped_region_test
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+# Provenance digests are reused within one preparation (#326). The test counts
+# digest operations per canonical input and checks digests against references
+# computed outside the kernel, so it links only the preparation sources.
+add_executable(sil_provenance_digest_test
+  provenance_digest_test.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/provenance.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/manifest.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/interceptor.cpp
+  ${PROJECT_SOURCE_DIR}/kernel/src/clock_shim.cpp)
+target_include_directories(sil_provenance_digest_test PRIVATE ${PROJECT_SOURCE_DIR}/kernel/src ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(sil_provenance_digest_test PRIVATE nlohmann_json::nlohmann_json sil_sha256)
+add_test(NAME sil_provenance_digest COMMAND sil_provenance_digest_test
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # --- generated message headers (single typed contract per DESIGN #9) ---

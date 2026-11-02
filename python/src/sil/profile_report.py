@@ -19,8 +19,8 @@ from sil.profile_activation import (
     CLASSES, CORRELATION_REASONS, PHASES, UNATTRIBUTED_REASONS,
 )
 from sil.diagnostics_shape import (
-    COUNT, FLAG, INTEGER, TEXT, Shape, items, maybe, members, reasoned,
-    shape_errors,
+    COUNT, FLAG, INTEGER, PROVENANCE_MODES, TEXT, Shape, items, maybe, members,
+    one_of, reasoned, shape_errors,
 )
 
 REPORT_KEY = "sil_profile_report"
@@ -65,13 +65,6 @@ def _leaf(test: Callable[[Any], bool], name: str) -> Shape:
     def check(value: Any, where: str, errors: list) -> None:
         if not test(value):
             errors.append(f"{where} is not {name}")
-    return check
-
-
-def one_of(values: set[str]) -> Shape:
-    def check(value: Any, where: str, errors: list) -> None:
-        if value not in values:
-            errors.append(f"{where}: unknown value {value!r}")
     return check
 
 
@@ -252,7 +245,8 @@ REPORT = members({
         "participant_timeout_ms": maybe(COUNT),
         "max_protocol_line_bytes": maybe(COUNT),
         "max_step_output_messages": maybe(COUNT),
-        "max_step_inline_payload_bytes": maybe(COUNT), "cwd": TEXT}),
+        "max_step_inline_payload_bytes": maybe(COUNT), "cwd": TEXT},
+        {"provenance_mode": maybe(one_of(PROVENANCE_MODES))}),
     "run": members({
         "status": one_of(RUN_STATUSES), "exit_code": maybe(INTEGER),
         "signal": maybe(COUNT),

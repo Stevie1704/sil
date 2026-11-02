@@ -341,6 +341,7 @@
     "max_step_inline_payload_bytes": 67108864,
     "max_step_output_messages": 1024,
     "participant_timeout_ms": null,
+    "provenance_mode": "full",
     "recording": true,
     "repeats": 5,
     "warmup": 1

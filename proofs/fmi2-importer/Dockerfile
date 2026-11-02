@@ -10,7 +10,7 @@ FROM ${PYTHON_IMAGE}
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && echo 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260901T000000Z bookworm main' > /etc/apt/sources.list \
     && apt-get -o Acquire::Check-Valid-Until=false update \
-    && apt-get install -y --no-install-recommends build-essential cmake ca-certificates git \
+    && apt-get install -y --no-install-recommends build-essential cmake libssl-dev ca-certificates git \
         libprotobuf-dev protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 # FMPy 0.3.26 and the OSMP build tools, pinned by hash, and the SiL runtime

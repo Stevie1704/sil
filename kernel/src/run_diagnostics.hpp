@@ -58,6 +58,7 @@ struct RunFacts {
   bool recording = true;
   std::string recording_path;
   std::string provenance_path;
+  std::string provenance_mode;
   std::optional<std::string> failure_report_path;
   std::optional<uint64_t> participant_timeout_ms;
   uint64_t max_protocol_line_bytes = 0;

@@ -144,6 +144,7 @@ PACKAGED_EXAMPLES = {
     "fmu-array": "fixed-size array replay and coupling documents",
     "compare": "comparison contract and reference trajectory",
     "adas-reference": "Native and Process adapters, maneuvers and FMU sources",
+    "managed-platform": "one Run with external provenance and an execution record",
 }
 # Include source inputs only; local builds and Python caches are not examples.
 EXAMPLE_SUFFIXES = {".py", ".c", ".h", ".csv", ".json", ".xml", ".sh", ".txt"}

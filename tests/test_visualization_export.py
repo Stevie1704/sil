@@ -336,6 +336,32 @@ def test_the_receipt_binds_source_and_output_and_reports_counts(tmp_path):
     assert "visualization" in receipt["derivative"]
 
 
+@pytest.mark.parametrize("schema, recording, outcome", [
+    (1, lambda digest: {"sha256": digest}, "completed"),
+    (2, lambda digest: {"digest_state": "calculated", "sha256": digest},
+     "completed"),
+    (2, lambda _: {"digest_state": "omitted", "sha256": None}, "unknown"),
+    (2, lambda _: {"digest_state": "not_requested", "sha256": None}, "unknown"),
+    (2, lambda _: {"digest_state": "failed", "sha256": None, "reason": "x"},
+     "unknown"),
+    (2, lambda digest: {"digest_state": "omitted", "sha256": digest}, "unknown"),
+    (1, lambda _: None, "unknown"),
+    (3, lambda digest: {"digest_state": "calculated", "sha256": digest},
+     "unknown"),
+], ids=["v1", "v2", "omitted", "not-requested", "failed", "omitted-with-digest",
+        "v1-no-recording", "unknown-schema"])
+def test_only_a_calculated_digest_binds_a_side_car(tmp_path, schema, recording,
+                                                   outcome):
+    source = write_source(tmp_path / "run.mcap", TWO, {"a": "s.A"}, [])
+    sidecar = source.with_name(source.name + ".provenance.json")
+    sidecar.write_text(json.dumps({"schema_version": schema, "run_exit_code": 0,
+                                   "recording": recording(sha256(source))}))
+
+    receipt = export_recording(source, tmp_path / "out.mcap")
+
+    assert receipt["completeness"]["run_outcome"] == outcome
+
+
 def test_output_metadata_binds_the_source_digest_and_profile(tmp_path):
     source = write_source(tmp_path / "run.mcap", TWO, {"a": "s.A"}, [])
     out = tmp_path / "out.mcap"

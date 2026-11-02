@@ -66,13 +66,17 @@ it is.
 | `collector` | `name`, `collector_version` (2), `clock` (`host_monotonic`), `slowest_retained` (20), `p95_minimum_samples` (20), `p99_minimum_samples` (100) |
 | `identity` | `manifest_path` as given, `manifest_hash`, `sil_version`, `source_repository`, `source_revision` |
 | `host` | `os`, `os_release`, `architecture`, `logical_cpu_count`, `cpu_description` |
-| `configuration` | `measurement_mode` (`diagnostics`), `recording`, `participant_timeout_ms` (null when not given), the three Step-protocol size guards |
+| `configuration` | `measurement_mode` (`diagnostics`), `recording`, `provenance_mode` (`full` or `external`), `participant_timeout_ms` (null when not given), the three Step-protocol size guards |
 | `run` | `exit_code`, `status` (`succeeded`, `run_failure`, `configuration_error`, `interrupted`), `failure` (null on success; else `message`, `category` as in the failure report, `participant`, `virtual_time_ns`) |
 | `completeness` | `run_complete` (exit code 0) and `reasons` (the status of a failed Run) |
 | `collection_errors` | List of `{scope, message}` for measurements the collector lost |
 | `execution` | `duration_ns`, `last_virtual_time_ns` (the last Slot opened) and `participants` |
 | `observational` | Times, statistics and resource records, below |
 | `artifacts` | `recording` (null without a Recording), `provenance`, `failure_report` (null on success) |
+
+Provenance hashing is runner work, so the mode changes what the times mean. A
+report without `provenance_mode` predates the option. Those Runs used `full`,
+and a reader shows this as `full (report predates the option)`.
 
 `execution.participants` lists every Participant in Manifest (name) order:
 `participant`, `kind` (`native`, `process`, `replay`), `tasks` and `replay`.
@@ -94,7 +98,7 @@ it is.
 | Member | Content |
 | --- | --- |
 | `run_wall_time` | `wall_ns` and `boundary`: from the runner's measurement start, before the Manifest is loaded, through Participant cleanup and Recording close. Python startup and report writing are outside it. |
-| `phases` | `preflight_ns`, `setup_ns`, `scheduled_execution_ns`, `shutdown_ns`, `recording_finalization_ns` and `unattributed_ns`. The intervals do not overlap; with `unattributed_ns` they add up to `wall_ns`. |
+| `phases` | `preflight_ns`, `setup_ns`, `scheduled_execution_ns`, `shutdown_ns`, `recording_finalization_ns` and `unattributed_ns`. The intervals do not overlap; with `unattributed_ns` they add up to `wall_ns`. In `full` provenance mode, the Recording digest is calculated while the Run writes, so its time is in the phase of each write. `recording_finalization_ns` holds only the digest of the final records. |
 | `tasks` | One row per Task: `participant`, `task`, `kind`, `timing`, and `failed_activation` (`activation_index`, `wall_ns`) or null |
 | `replay` | One row per Replay participant: `participant`, `timing`, `failed_activation` |
 | `throughput` | `completed_native_activations`, `completed_process_steps`, `native_activations_per_s`, `process_steps_per_s`, and their `denominator`, `scheduled_execution_ns` |

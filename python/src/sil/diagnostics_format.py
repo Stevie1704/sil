@@ -7,6 +7,10 @@ value reads the same everywhere.
 
 from __future__ import annotations
 
+# The policy of every Run before the option existed. It is a fact about old
+# reports, so it does not change if the default of a new Run changes.
+LEGACY_PROVENANCE_MODE = "full"
+
 
 def format_duration_ns(value: float) -> str:
     """Nanoseconds in the largest unit below the value, three decimals."""
@@ -40,3 +44,18 @@ def format_value(unit: str, value) -> str:
     if unit == "factor":
         return format_factor(value)
     return format_rate(value)
+
+
+def provenance_mode(values: dict) -> str:
+    """The policy of a report's `configuration` or `policy` member. A report
+    without the member predates the option, when every Run was full (docs/
+    running.md, "Provenance side-car"). Null means that it cannot be known."""
+    if "provenance_mode" not in values:
+        return LEGACY_PROVENANCE_MODE
+    return values["provenance_mode"] or "unknown"
+
+
+def provenance_mode_text(values: dict) -> str:
+    """`provenance_mode`, and the reason when it comes from the legacy rule."""
+    note = "" if "provenance_mode" in values else " (report predates the option)"
+    return provenance_mode(values) + note

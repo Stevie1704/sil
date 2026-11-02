@@ -65,7 +65,8 @@ void usage() {
                "[--max-step-output-messages <N>] "
                "[--max-step-inline-payload-bytes <N>] "
                "[-o <out.mcap> | --no-recording] "
-               "[--provenance <out.provenance.json>]" SIL_DIAGNOSTICS_USAGE
+               "[--provenance <out.provenance.json>] "
+               "[--provenance-mode full|external]" SIL_DIAGNOSTICS_USAGE
                "\n"
                "       " SIL_RUNNER_NAME " --version\n"
                "       " SIL_RUNNER_NAME " --build-info\n";
@@ -117,6 +118,18 @@ bool parse_positive_size(std::string_view text, size_t &value) {
   return true;
 }
 
+bool parse_provenance_mode(std::string_view text, sil::ProvenanceMode &mode) {
+  if (text == "full") {
+    mode = sil::ProvenanceMode::Full;
+    return true;
+  }
+  if (text == "external") {
+    mode = sil::ProvenanceMode::External;
+    return true;
+  }
+  return false;
+}
+
 // The three Step-protocol size guards differ only in the flag that names them
 // and the field they land in, so the loop below matches them through here
 // rather than repeating the same parse-and-reject block once per guard.
@@ -126,24 +139,34 @@ struct SizeLimitOption {
   bool given;
 };
 
+// Where the outputs of this Run go. `recording_path` also names the side-cars
+// when `recording` is false, so that their paths stay predictable.
+struct RunOutputs {
+  bool recording;
+  const char *recording_path;
+  std::filesystem::path provenance_path;
+};
+
 // Completes the provenance record once the Run's outcome is known and writes
-// it beside the Recording. The Recording is digested here rather than during
-// the preflight because its bytes do not exist until the sink has closed.
-void write_side_car(sil::Provenance &provenance, int exit_code, bool recording,
-                    const char *out_path, const char *requested_path) {
+// the JSON side-car. The Recording digest comes from the closed sink, which
+// reports `omitted` in external mode, so a normal Run does not read the file
+// again. A Run that opened no sink has no output of its own to digest in either
+// mode: a file at that path is not from this Run.
+void write_side_car(sil::Provenance &provenance, int exit_code,
+                    const sil::RecordingSink *recorder,
+                    const RunOutputs &outputs) {
   provenance.run_exit_code = exit_code;
-  if (recording) {
-    try {
-      provenance.recording_sha256 = sil::sha256_file(out_path);
-    } catch (const std::exception &e) {
-      provenance.errors.push_back({"Recording", out_path, e.what()});
-    }
+  if (outputs.recording) {
+    provenance.recording =
+        recorder ? recorder->digest()
+                 : sil::ProvenanceDigest::failed(
+                       "the Run did not open this Recording");
+    if (provenance.recording.state == sil::DigestState::Failed)
+      provenance.errors.push_back(
+          {"Recording", outputs.recording_path, provenance.recording.reason});
   }
-  const std::filesystem::path path =
-      requested_path ? std::filesystem::path(requested_path)
-                     : sil::default_provenance_path(out_path);
   try {
-    sil::write_provenance(path, provenance);
+    sil::write_provenance(outputs.provenance_path, provenance);
   } catch (const std::exception &e) {
     // The Run's exit code and its first diagnostic remain authoritative. A
     // side-car write problem is reported without rewriting either.
@@ -213,16 +236,16 @@ bool same_path(const std::filesystem::path &a,
 // lands on a path the Run writes for something else. Checked before the
 // Manifest is loaded, so a rejected path starts no Participant.
 bool diagnostics_path_is_new(const std::filesystem::path &path,
-                             const char *recording_path, bool recording,
-                             const std::filesystem::path &provenance_path) {
+                             const RunOutputs &outputs) {
   std::error_code error;
   const auto status = std::filesystem::symlink_status(path, error);
   const char *problem = nullptr;
   if (std::filesystem::exists(status))
     problem = "already exists";
-  else if ((recording && same_path(path, recording_path)) ||
-           same_path(path, provenance_path) ||
-           same_path(path, sil::default_failure_report_path(recording_path)))
+  else if ((outputs.recording && same_path(path, outputs.recording_path)) ||
+           same_path(path, outputs.provenance_path) ||
+           same_path(path,
+                     sil::default_failure_report_path(outputs.recording_path)))
     problem = "is also another artifact of this Run";
   if (!problem) return true;
   std::cerr << "sil-run-diagnostics: diagnostics report '" << path.string()
@@ -232,8 +255,8 @@ bool diagnostics_path_is_new(const std::filesystem::path &path,
 
 sil::diagnostics::RunFacts run_facts(
     const char *manifest_path, const std::optional<sil::Manifest> &manifest,
-    int exit_code, const std::optional<FirstFailure> &failure, bool recording,
-    const char *out_path, const std::filesystem::path &provenance_path,
+    int exit_code, const std::optional<FirstFailure> &failure,
+    const RunOutputs &outputs, sil::ProvenanceMode provenance_mode,
     const std::optional<std::chrono::milliseconds> &participant_timeout,
     const sil::RunBoundaryLimits &limits) {
   sil::diagnostics::RunFacts facts;
@@ -248,7 +271,7 @@ sil::diagnostics::RunFacts run_facts(
   facts.exit_code = exit_code;
   if (exit_code != kExitOk) {
     facts.failure_report_path =
-        sil::default_failure_report_path(out_path).string();
+        sil::default_failure_report_path(outputs.recording_path).string();
     if (failure) {
       facts.failure_message = failure->message;
       facts.failure_category =
@@ -258,9 +281,10 @@ sil::diagnostics::RunFacts run_facts(
       facts.failure_virtual_time_ns = failure->facts.virtual_time_ns;
     }
   }
-  facts.recording = recording;
-  facts.recording_path = out_path;
-  facts.provenance_path = provenance_path.string();
+  facts.recording = outputs.recording;
+  facts.recording_path = outputs.recording_path;
+  facts.provenance_path = outputs.provenance_path.string();
+  facts.provenance_mode = sil::provenance_mode_name(provenance_mode);
   if (participant_timeout)
     facts.participant_timeout_ms = uint64_t(participant_timeout->count());
   facts.max_protocol_line_bytes = limits.max_protocol_line_bytes;
@@ -309,6 +333,8 @@ int run(int argc, char **argv) {
   const char *manifest_path = nullptr;
   const char *out_path = "out.mcap";
   const char *provenance_path_arg = nullptr;
+  sil::ProvenanceMode provenance_mode = sil::ProvenanceMode::Full;
+  bool provenance_mode_given = false;
 #ifdef SIL_RUN_DIAGNOSTICS
   const char *diagnostics_path_arg = nullptr;
   const char *retention_path_arg = nullptr;
@@ -347,6 +373,17 @@ int run(int argc, char **argv) {
         return kExitConfigError;
       }
       provenance_path_arg = argv[++i];
+    } else if (std::strcmp(argv[i], "--provenance-mode") == 0) {
+      if (provenance_mode_given || i + 1 >= argc) {
+        usage();
+        return kExitConfigError;
+      }
+      if (!parse_provenance_mode(argv[++i], provenance_mode)) {
+        std::cerr << SIL_RUNNER_NAME
+            ": --provenance-mode must be full or external\n";
+        return kExitConfigError;
+      }
+      provenance_mode_given = true;
     } else if (std::strcmp(argv[i], "--participant-timeout-ms") == 0) {
       if (participant_timeout || i + 1 >= argc) {
         usage();
@@ -438,16 +475,16 @@ int run(int argc, char **argv) {
     usage();
     return kExitConfigError;
   }
+  const RunOutputs outputs{recording, out_path,
+                           provenance_path_arg
+                               ? std::filesystem::path(provenance_path_arg)
+                               : sil::default_provenance_path(out_path)};
 
 #ifdef SIL_RUN_DIAGNOSTICS
   const std::filesystem::path diagnostics_path =
       diagnostics_path_arg ? std::filesystem::path(diagnostics_path_arg)
                            : default_diagnostics_path(out_path);
-  const std::filesystem::path provenance_path =
-      provenance_path_arg ? std::filesystem::path(provenance_path_arg)
-                          : sil::default_provenance_path(out_path);
-  if (!diagnostics_path_is_new(diagnostics_path, out_path, recording,
-                               provenance_path))
+  if (!diagnostics_path_is_new(diagnostics_path, outputs))
     return kExitConfigError;
   if (retention_path_arg) {
     // A profiler captures the modules a Run loads from its Run working
@@ -513,7 +550,8 @@ int run(int argc, char **argv) {
     manifest.emplace(sil::load_manifest(manifest_path));
     provenance.emplace(
         sil::initialize_provenance(manifest.value(), SIL_VERSION,
-                                   SIL_SOURCE_REPOSITORY, SIL_SOURCE_REVISION));
+                                   SIL_SOURCE_REPOSITORY, SIL_SOURCE_REVISION,
+                                   provenance_mode));
 
     // Validate and resolve the Run before Engine can load a Native library or
     // spawn a Process participant. Preparation keeps the resolved execution
@@ -528,7 +566,8 @@ int run(int argc, char **argv) {
     // unrecognized output extension is a Manifest error (exit 2) and must reject
     // before any participant is created.
     if (recording)
-      recorder = sil::make_recording_sink(out_path, prepared->manifest());
+      recorder = sil::make_recording_sink(out_path, prepared->manifest(),
+                                          provenance_mode);
     try {
       sil::diagnostics::enter_phase(sil::diagnostics::Phase::Setup);
       if (sil::run_interrupted())
@@ -560,8 +599,9 @@ int run(int argc, char **argv) {
     exit_code = kExitRunFailure;
   }
 
-  // Close before hashing so a failed Run's partial Recording is still an
-  // auditable artifact. McapRecorder's destructor is a second safety net.
+  // Close first so a failed Run's partial Recording is still an auditable
+  // artifact with a final digest. McapRecorder's destructor is a second safety
+  // net.
   if (recorder) {
     sil::diagnostics::enter_phase(
         sil::diagnostics::Phase::RecordingFinalization);
@@ -575,15 +615,14 @@ int run(int argc, char **argv) {
   sil::diagnostics::end_run();
 
   if (provenance)
-    write_side_car(*provenance, exit_code, recording, out_path,
-                   provenance_path_arg);
+    write_side_car(*provenance, exit_code, recorder.get(), outputs);
   write_failure_side_car(failure, exit_code, out_path);
 
 #ifdef SIL_RUN_DIAGNOSTICS
   write_diagnostics(diagnostics_path,
                     run_facts(manifest_path, manifest, exit_code, failure,
-                              recording, out_path, provenance_path,
-                              participant_timeout, limits));
+                              outputs, provenance_mode, participant_timeout,
+                              limits));
 #endif
 
   if (exit_code == kExitOk && manifest)

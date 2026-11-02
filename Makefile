@@ -223,6 +223,10 @@ example-adas-reference: venv build ## Build the C ADAS reference against the sta
 bench: venv build ## Regenerate the routing baseline: make bench ARGS="--repeats 3"
 	$(PYTHON) tools/bench_routing.py --build-dir $(BUILD_DIR) $(ARGS)
 
+.PHONY: bench-hash
+bench-hash: venv ## Hashing cost baseline: make bench-hash ARGS="--revision <commit> --machine <name> --load-condition <text>"
+	$(PYTHON) tools/hash_baseline.py $(ARGS)
+
 # Housekeeping -----------------------------------------------------------------
 .PHONY: clean
 clean: ## Remove the build directory and caches

@@ -26,7 +26,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             'gdb=15.0.50.20240403-0ubuntu1' \
             'gcc-12=12.4.0-2ubuntu1~24.04.1' 'g++-12=12.4.0-2ubuntu1~24.04.1' \
-            cmake binutils
+            cmake binutils libssl-dev
           mkdir -p build/source-debugging-host
           dpkg-query -W > build/source-debugging-host/packages.txt
           uv venv .venv

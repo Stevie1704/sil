@@ -16,9 +16,23 @@ set(SIL_KERNEL_SOURCES
   src/recording_file.cpp
   src/replayer.cpp)
 
+# The one SHA-256 backend (#325). libcrypto is linked statically: a shared copy
+# would enter the process of each Native Participant and could take the place
+# of the OpenSSL that a Participant expects. See docs/architecture.md.
+set(OPENSSL_USE_STATIC_LIBS TRUE)
+# Homebrew keeps OpenSSL out of the default search path. macOS is a development
+# host only (SUPPORT.md).
+if(APPLE AND NOT OPENSSL_ROOT_DIR AND EXISTS /opt/homebrew/opt/openssl@3)
+  set(OPENSSL_ROOT_DIR /opt/homebrew/opt/openssl@3)
+endif()
+find_package(OpenSSL 3.0 REQUIRED COMPONENTS Crypto)
+add_library(sil_sha256 STATIC src/sha256.cpp)
+target_include_directories(sil_sha256 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(sil_sha256 PRIVATE OpenSSL::Crypto)
+
 add_executable(sil-run ${SIL_KERNEL_SOURCES})
 target_include_directories(sil-run PRIVATE ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(sil-run PRIVATE nlohmann_json::nlohmann_json mcap_headers)
+target_link_libraries(sil-run PRIVATE nlohmann_json::nlohmann_json mcap_headers sil_sha256)
 
 # The same kernel with routing test instrumentation compiled in (issues #61,
 # #75): payload-copy counts plus subscriber-route queue counters.
@@ -36,7 +50,7 @@ add_executable(sil-run-instrumented
 target_include_directories(sil-run-instrumented PRIVATE ${PROJECT_SOURCE_DIR}/include)
 target_compile_definitions(sil-run-instrumented PRIVATE SIL_COPY_COUNTERS)
 target_link_libraries(sil-run-instrumented
-  PRIVATE nlohmann_json::nlohmann_json mcap_headers)
+  PRIVATE nlohmann_json::nlohmann_json mcap_headers sil_sha256)
 
 # The same kernel with the opt-in Run diagnostics collector compiled in
 # (#299, #300). It is the supported, installed measurement runner; #63's
@@ -50,7 +64,7 @@ add_executable(sil-run-diagnostics
 target_include_directories(sil-run-diagnostics PRIVATE ${PROJECT_SOURCE_DIR}/include)
 target_compile_definitions(sil-run-diagnostics PRIVATE SIL_RUN_DIAGNOSTICS)
 target_link_libraries(sil-run-diagnostics
-  PRIVATE nlohmann_json::nlohmann_json mcap_headers)
+  PRIVATE nlohmann_json::nlohmann_json mcap_headers sil_sha256)
 
 # The process a supervisor starts sil-run-diagnostics through (#301). It is
 # plain C with no allocation, so it is small when it forks the runner: on

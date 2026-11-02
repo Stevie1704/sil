@@ -27,6 +27,7 @@ RUN rm -f /etc/apt/sources.list.d/*.sources \
       build-essential \
       ca-certificates \
       cmake \
+      libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src

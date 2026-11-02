@@ -172,6 +172,7 @@ wheel=$(find dist -maxdepth 1 -name 'sil-*.whl' -print -quit)
 uv venv .venv-staged
 uv pip install -p .venv-staged/bin/python "$wheel"
 
+# The kernel build needs libssl-dev (OpenSSL 3.0 or newer, static library).
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 prefix=$(mktemp -d)

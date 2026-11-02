@@ -14,21 +14,33 @@ class McapWriter;
 
 namespace sil {
 
+class RecordingFileOutput;
+
 // MCAP implementation of the recording seam: self-describing, schema-embedded,
 // indexed container (DESIGN #13). Written uncompressed and in publish order, so
 // FileOrder reads reproduce the original global publish order.
 class McapRecorder : public RecordingSink {
  public:
-  McapRecorder(const std::filesystem::path &out, const Manifest &manifest);
+  McapRecorder(const std::filesystem::path &out, const Manifest &manifest,
+               ProvenanceMode mode);
   ~McapRecorder() override;
 
   void record(uint32_t channel_index, uint64_t publish_ns, uint32_t seq,
               const void *data, size_t len) override;
   void close() override;
+  const ProvenanceDigest &digest() const override { return digest_; }
 
  private:
+  ProvenanceDigest finalized_digest() const;
+
+  std::filesystem::path path_;
+  ProvenanceMode mode_;
+  // Declared before the writer, which still holds a reference when destroyed.
+  std::unique_ptr<RecordingFileOutput> output_;
   std::unique_ptr<mcap::McapWriter> writer_;
   std::vector<uint16_t> channel_ids_;  // manifest channel index -> mcap id
+  ProvenanceDigest digest_ =
+      ProvenanceDigest::failed("the Recording is not finalized");
   bool closed_ = false;
 };
 

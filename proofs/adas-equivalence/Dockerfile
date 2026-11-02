@@ -11,7 +11,7 @@ FROM ${PYTHON_IMAGE}
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && echo 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260901T000000Z bookworm main' > /etc/apt/sources.list \
     && apt-get -o Acquire::Check-Valid-Until=false update \
-    && apt-get install -y --no-install-recommends build-essential cmake procps \
+    && apt-get install -y --no-install-recommends build-essential cmake libssl-dev procps \
     && rm -rf /var/lib/apt/lists/*
 # FMPy 0.3.26 by hash, in the base interpreter only. The SiL environment
 # below has no FMPy, and independent.py imports no SiL.

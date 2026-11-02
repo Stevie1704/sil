@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 from typing import Any, Callable, Iterable, Sequence
 
+from sil.diagnostics_format import provenance_mode_text
 from sil.diagnostics_html_markup import (
     ICONS, Html, code, definition_list, identity_value, join, plain, section,
     tag,
@@ -223,6 +224,7 @@ def identity_section(report: dict, method: Sequence[tuple[str, Any]]) -> Html:
                  identity_value(identity, "source_repository")),
                 ("Recording", plain(configuration["recording"],
                                     "none (--no-recording)")),
+                ("Provenance mode", provenance_mode_text(configuration)),
                 ("Working directory", code(configuration["cwd"])),
                 *((name, plain(value, "not set")) for name, value in guards),
                 ("Producer", f"{report['producer']['name']} "

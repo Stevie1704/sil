@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from sil.diagnostics_format import provenance_mode_text
 from sil.diagnostics_html_charts import bar_chart
 from sil.diagnostics_html_markup import (
     ICONS, REASONS, Html, banner, card, code, definition_list,
@@ -169,6 +170,7 @@ def _benchmark_identity(summary: dict) -> Html:
                 ("Measured Runs requested", str(policy["repeats"])),
                 ("Warm-up Runs requested", str(policy["warmup"])),
                 ("Recording", plain(policy["recording"])),
+                ("Provenance mode", provenance_mode_text(policy)),
                 ("Execution", policy["execution"]),
                 *guard_items(policy),
             ])),

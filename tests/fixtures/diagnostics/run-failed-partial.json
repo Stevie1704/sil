@@ -25,6 +25,7 @@
     "max_step_output_messages": 1024,
     "measurement_mode": "diagnostics",
     "participant_timeout_ms": null,
+    "provenance_mode": "full",
     "recording": true
   },
   "execution": {

@@ -368,6 +368,7 @@
     "max_step_inline_payload_bytes": 67108864,
     "max_step_output_messages": 1024,
     "participant_timeout_ms": null,
+    "provenance_mode": "full",
     "recording": true,
     "repeats": 5,
     "warmup": 1
@@ -406,6 +407,7 @@
           "max_step_output_messages": 1024,
           "measurement_mode": "diagnostics",
           "participant_timeout_ms": null,
+          "provenance_mode": "full",
           "recording": true
         },
         "execution": {
@@ -869,6 +871,7 @@
           "max_step_output_messages": 1024,
           "measurement_mode": "diagnostics",
           "participant_timeout_ms": null,
+          "provenance_mode": "full",
           "recording": true
         },
         "execution": {
@@ -1334,6 +1337,7 @@
           "max_step_output_messages": 1024,
           "measurement_mode": "diagnostics",
           "participant_timeout_ms": null,
+          "provenance_mode": "full",
           "recording": true
         },
         "execution": {

@@ -669,6 +669,7 @@ json report_json(const Collector &c, const RunFacts &facts) {
   json configuration = {
       {"measurement_mode", "diagnostics"},
       {"recording", facts.recording},
+      {"provenance_mode", facts.provenance_mode},
       {"participant_timeout_ms", nullptr},
       {"max_protocol_line_bytes", facts.max_protocol_line_bytes},
       {"max_step_output_messages", facts.max_step_output_messages},

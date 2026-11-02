@@ -1,5 +1,5 @@
 FROM python@sha256:781449467ffb6f04218f09b1ecdcdc7d22b289ee5da9ec498b024e24ad7a6db7
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential cmake git patch ca-certificates \
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential cmake libssl-dev git patch ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir fmpy==0.3.32 pytest==8.4.2
 COPY models/can/profile.json models/can/fetch_upstream.py /opt/can-build/

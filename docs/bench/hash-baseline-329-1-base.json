@@ -1,0 +1,3368 @@
+{
+  "sil_hash_baseline": 1,
+  "host": {
+    "machine": "Apple M1 Pro, macOS, arm64",
+    "os": "macOS-27.0.1-arm64-arm-64bit",
+    "architecture": "arm64",
+    "cpu": "Apple M1 Pro",
+    "logical_cpus": 10
+  },
+  "build": {
+    "source_revision": "600fa429dfcca50b11eb5db9b6735d6d52bcea89",
+    "worktree_clean": true,
+    "cmake_build_type": "Release",
+    "cxx_compiler": "/usr/bin/c++",
+    "sil_version": "0.2.1"
+  },
+  "conditions": {
+    "load": "One coding agent, no other build or test. Desktop session open. Load averages at start: { 3,51 9,28 12,45 }",
+    "repetitions": 9,
+    "scale": 1.0,
+    "backend": "minimal software SHA-256",
+    "runner_args": [],
+    "warm_cache": "Warm: one discarded Run precedes the series of each workload.",
+    "cold_cache": "Cold: the tool cannot control this. Dropping the page cache needs administrator rights, so this capture has no cold-cache series."
+  },
+  "workloads": {
+    "native-shared-library": {
+      "description": "32 Native Participants share one library, 100 ms Duration, 10 ms Period",
+      "participants": 32,
+      "artifacts": [
+        {
+          "kind": "library",
+          "bytes": 8388608
+        }
+      ],
+      "manifest_bytes": 8573,
+      "recording_bytes": 24277,
+      "load_average_1m": {
+        "before": 3.39111328125,
+        "after": 3.49560546875
+      },
+      "summary": {
+        "recordings_identical": true,
+        "end_to_end_ns": {
+          "ordinary": {
+            "min": 1351741584,
+            "median": 1356432333,
+            "max": 1369397667,
+            "count": 9
+          },
+          "attributed": {
+            "min": 1361642166,
+            "median": 1375706166,
+            "max": 1529902709,
+            "count": 9
+          }
+        },
+        "phases": {
+          "preparation_ns": {
+            "min": 1352438166,
+            "median": 1365129583,
+            "max": 1380944083,
+            "count": 9
+          },
+          "execution_recording_ns": {
+            "min": 1364250,
+            "median": 1390959,
+            "max": 1443667,
+            "count": 9
+          },
+          "recording_close_ns": {
+            "min": 149750,
+            "median": 182000,
+            "max": 203334,
+            "count": 9
+          },
+          "output_hash_ns": {
+            "min": 36625,
+            "median": 355250,
+            "max": 431042,
+            "count": 9
+          },
+          "finalization_ns": {
+            "min": 197333,
+            "median": 537959,
+            "max": 634376,
+            "count": 9
+          },
+          "reported_run_wall_ns": {
+            "min": 1354057625,
+            "median": 1366723000,
+            "max": 1382498292,
+            "count": 9
+          },
+          "outside_reported_run_wall_ns": {
+            "min": 6980625,
+            "median": 7203209,
+            "max": 163179709,
+            "count": 9
+          }
+        },
+        "hash_work": {
+          "manifest": {
+            "operations": {
+              "min": 1,
+              "median": 1,
+              "max": 1,
+              "count": 9
+            },
+            "bytes": {
+              "min": 8573,
+              "median": 8573,
+              "max": 8573,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 36500,
+              "median": 39333,
+              "max": 88583,
+              "count": 9
+            }
+          },
+          "provenance_inputs": {
+            "operations": {
+              "min": 33,
+              "median": 33,
+              "max": 33,
+              "count": 9
+            },
+            "bytes": {
+              "min": 269529936,
+              "median": 269529936,
+              "max": 269529936,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 1348440124,
+              "median": 1360627834,
+              "max": 1376583376,
+              "count": 9
+            }
+          },
+          "replay_verification": {
+            "operations": {
+              "min": 0,
+              "median": 0,
+              "max": 0,
+              "count": 9
+            },
+            "bytes": {
+              "min": 0,
+              "median": 0,
+              "max": 0,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 0,
+              "median": 0,
+              "max": 0,
+              "count": 9
+            }
+          },
+          "output": {
+            "operations": {
+              "min": 1,
+              "median": 1,
+              "max": 1,
+              "count": 9
+            },
+            "bytes": {
+              "min": 24277,
+              "median": 24277,
+              "max": 24277,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 36625,
+              "median": 355250,
+              "max": 431042,
+              "count": 9
+            }
+          }
+        },
+        "other_read_bytes": {
+          "min": 0,
+          "median": 0,
+          "max": 0,
+          "count": 9
+        },
+        "output_digest_without_reread": false,
+        "inputs_without_observed_hash": []
+      },
+      "runs": [
+        {
+          "repetition": 1,
+          "series": "ordinary",
+          "end_to_end_ns": 1355348334,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35"
+        },
+        {
+          "repetition": 1,
+          "series": "attributed",
+          "end_to_end_ns": 1529902709,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35",
+          "recording_bytes": 24277,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1365129583,
+            "execution_recording_ns": 1443667,
+            "recording_close_ns": 149750,
+            "output_hash_ns": 47583,
+            "finalization_ns": 197333,
+            "reported_run_wall_ns": 1366723000,
+            "outside_reported_run_wall_ns": 163179709
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 8573,
+              "time_ns": 54583
+            },
+            "provenance_inputs": {
+              "operations": 33,
+              "bytes": 269529936,
+              "time_ns": 1360627834
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 24277,
+              "time_ns": 47583
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 33,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 65944
+        },
+        {
+          "repetition": 2,
+          "series": "ordinary",
+          "end_to_end_ns": 1355890334,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35"
+        },
+        {
+          "repetition": 2,
+          "series": "attributed",
+          "end_to_end_ns": 1368209667,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35",
+          "recording_bytes": 24277,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1359414500,
+            "execution_recording_ns": 1409958,
+            "recording_close_ns": 182000,
+            "output_hash_ns": 355250,
+            "finalization_ns": 537250,
+            "reported_run_wall_ns": 1361006458,
+            "outside_reported_run_wall_ns": 7203209
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 8573,
+              "time_ns": 88583
+            },
+            "provenance_inputs": {
+              "operations": 33,
+              "bytes": 269529936,
+              "time_ns": 1355277169
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 24277,
+              "time_ns": 355250
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 33,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 65944
+        },
+        {
+          "repetition": 3,
+          "series": "ordinary",
+          "end_to_end_ns": 1362903375,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35"
+        },
+        {
+          "repetition": 3,
+          "series": "attributed",
+          "end_to_end_ns": 1361642166,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35",
+          "recording_bytes": 24277,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1352438166,
+            "execution_recording_ns": 1433792,
+            "recording_close_ns": 185667,
+            "output_hash_ns": 352292,
+            "finalization_ns": 537959,
+            "reported_run_wall_ns": 1354057625,
+            "outside_reported_run_wall_ns": 7584541
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 8573,
+              "time_ns": 39292
+            },
+            "provenance_inputs": {
+              "operations": 33,
+              "bytes": 269529936,
+              "time_ns": 1348440124
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 24277,
+              "time_ns": 352292
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 33,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 65944
+        },
+        {
+          "repetition": 4,
+          "series": "ordinary",
+          "end_to_end_ns": 1351741584,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35"
+        },
+        {
+          "repetition": 4,
+          "series": "attributed",
+          "end_to_end_ns": 1382812000,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35",
+          "recording_bytes": 24277,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1373891083,
+            "execution_recording_ns": 1416375,
+            "recording_close_ns": 173083,
+            "output_hash_ns": 387000,
+            "finalization_ns": 560083,
+            "reported_run_wall_ns": 1375480541,
+            "outside_reported_run_wall_ns": 7331459
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 8573,
+              "time_ns": 39375
+            },
+            "provenance_inputs": {
+              "operations": 33,
+              "bytes": 269529936,
+              "time_ns": 1369640578
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 24277,
+              "time_ns": 387000
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 33,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 65944
+        },
+        {
+          "repetition": 5,
+          "series": "ordinary",
+          "end_to_end_ns": 1353205125,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35"
+        },
+        {
+          "repetition": 5,
+          "series": "attributed",
+          "end_to_end_ns": 1375706166,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35",
+          "recording_bytes": 24277,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1367043083,
+            "execution_recording_ns": 1390959,
+            "recording_close_ns": 190500,
+            "output_hash_ns": 398666,
+            "finalization_ns": 589166,
+            "reported_run_wall_ns": 1368624542,
+            "outside_reported_run_wall_ns": 7081624
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 8573,
+              "time_ns": 36500
+            },
+            "provenance_inputs": {
+              "operations": 33,
+              "bytes": 269529936,
+              "time_ns": 1362756003
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 24277,
+              "time_ns": 398666
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 33,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 65944
+        },
+        {
+          "repetition": 6,
+          "series": "ordinary",
+          "end_to_end_ns": 1369397667,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35"
+        },
+        {
+          "repetition": 6,
+          "series": "attributed",
+          "end_to_end_ns": 1365519209,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35",
+          "recording_bytes": 24277,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1356457417,
+            "execution_recording_ns": 1382208,
+            "recording_close_ns": 201292,
+            "output_hash_ns": 376375,
+            "finalization_ns": 577667,
+            "reported_run_wall_ns": 1358040917,
+            "outside_reported_run_wall_ns": 7478292
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 8573,
+              "time_ns": 39250
+            },
+            "provenance_inputs": {
+              "operations": 33,
+              "bytes": 269529936,
+              "time_ns": 1352259296
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 24277,
+              "time_ns": 376375
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 33,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 65944
+        },
+        {
+          "repetition": 7,
+          "series": "ordinary",
+          "end_to_end_ns": 1365896292,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35"
+        },
+        {
+          "repetition": 7,
+          "series": "attributed",
+          "end_to_end_ns": 1378574166,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35",
+          "recording_bytes": 24277,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1369841000,
+            "execution_recording_ns": 1367375,
+            "recording_close_ns": 177750,
+            "output_hash_ns": 300500,
+            "finalization_ns": 478250,
+            "reported_run_wall_ns": 1371386125,
+            "outside_reported_run_wall_ns": 7188041
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 8573,
+              "time_ns": 39542
+            },
+            "provenance_inputs": {
+              "operations": 33,
+              "bytes": 269529936,
+              "time_ns": 1365826708
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 24277,
+              "time_ns": 300500
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 33,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 65944
+        },
+        {
+          "repetition": 8,
+          "series": "ordinary",
+          "end_to_end_ns": 1356432333,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35"
+        },
+        {
+          "repetition": 8,
+          "series": "attributed",
+          "end_to_end_ns": 1362289875,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35",
+          "recording_bytes": 24277,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1353572500,
+            "execution_recording_ns": 1364250,
+            "recording_close_ns": 203334,
+            "output_hash_ns": 431042,
+            "finalization_ns": 634376,
+            "reported_run_wall_ns": 1355140084,
+            "outside_reported_run_wall_ns": 7149791
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 8573,
+              "time_ns": 39333
+            },
+            "provenance_inputs": {
+              "operations": 33,
+              "bytes": 269529936,
+              "time_ns": 1349286915
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 24277,
+              "time_ns": 431042
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 33,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 65944
+        },
+        {
+          "repetition": 9,
+          "series": "ordinary",
+          "end_to_end_ns": 1366576041,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35"
+        },
+        {
+          "repetition": 9,
+          "series": "attributed",
+          "end_to_end_ns": 1389478917,
+          "recording_sha256": "d5697a25f305e9d74dd79d751fffa3ee42530b3c4692e6c84c62268033e72d35",
+          "recording_bytes": 24277,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1380944083,
+            "execution_recording_ns": 1388709,
+            "recording_close_ns": 165500,
+            "output_hash_ns": 36625,
+            "finalization_ns": 202125,
+            "reported_run_wall_ns": 1382498292,
+            "outside_reported_run_wall_ns": 6980625
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 8573,
+              "time_ns": 37250
+            },
+            "provenance_inputs": {
+              "operations": 33,
+              "bytes": 269529936,
+              "time_ns": 1376583376
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 24277,
+              "time_ns": 36625
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 33,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 65944
+        }
+      ]
+    },
+    "native-distinct-artifacts": {
+      "description": "4 Native Participants, each with its own large library, 100 ms Duration",
+      "participants": 4,
+      "artifacts": [
+        {
+          "kind": "library",
+          "bytes": 134217728
+        },
+        {
+          "kind": "library",
+          "bytes": 134217728
+        },
+        {
+          "kind": "library",
+          "bytes": 134217728
+        },
+        {
+          "kind": "library",
+          "bytes": 134217728
+        }
+      ],
+      "manifest_bytes": 1277,
+      "recording_bytes": 3689,
+      "load_average_1m": {
+        "before": 3.37548828125,
+        "after": 3.1923828125
+      },
+      "summary": {
+        "recordings_identical": true,
+        "end_to_end_ns": {
+          "ordinary": {
+            "min": 2693569333,
+            "median": 2714741292,
+            "max": 2774911792,
+            "count": 9
+          },
+          "attributed": {
+            "min": 2710921417,
+            "median": 2722896458,
+            "max": 2765312625,
+            "count": 9
+          }
+        },
+        "phases": {
+          "preparation_ns": {
+            "min": 2698214625,
+            "median": 2710085375,
+            "max": 2751931542,
+            "count": 9
+          },
+          "execution_recording_ns": {
+            "min": 5468541,
+            "median": 5890875,
+            "max": 6129000,
+            "count": 9
+          },
+          "recording_close_ns": {
+            "min": 101709,
+            "median": 150250,
+            "max": 316042,
+            "count": 9
+          },
+          "output_hash_ns": {
+            "min": 3709,
+            "median": 384333,
+            "max": 432917,
+            "count": 9
+          },
+          "finalization_ns": {
+            "min": 105418,
+            "median": 525458,
+            "max": 604875,
+            "count": 9
+          },
+          "reported_run_wall_ns": {
+            "min": 2704506584,
+            "median": 2715775917,
+            "max": 2758319375,
+            "count": 9
+          },
+          "outside_reported_run_wall_ns": {
+            "min": 5827041,
+            "median": 6532500,
+            "max": 7120541,
+            "count": 9
+          }
+        },
+        "hash_work": {
+          "manifest": {
+            "operations": {
+              "min": 1,
+              "median": 1,
+              "max": 1,
+              "count": 9
+            },
+            "bytes": {
+              "min": 1277,
+              "median": 1277,
+              "max": 1277,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 10250,
+              "median": 10417,
+              "max": 11041,
+              "count": 9
+            }
+          },
+          "provenance_inputs": {
+            "operations": {
+              "min": 5,
+              "median": 5,
+              "max": 5,
+              "count": 9
+            },
+            "bytes": {
+              "min": 537965392,
+              "median": 537965392,
+              "max": 537965392,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 2696987791,
+              "median": 2708814374,
+              "max": 2750882415,
+              "count": 9
+            }
+          },
+          "replay_verification": {
+            "operations": {
+              "min": 0,
+              "median": 0,
+              "max": 0,
+              "count": 9
+            },
+            "bytes": {
+              "min": 0,
+              "median": 0,
+              "max": 0,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 0,
+              "median": 0,
+              "max": 0,
+              "count": 9
+            }
+          },
+          "output": {
+            "operations": {
+              "min": 1,
+              "median": 1,
+              "max": 1,
+              "count": 9
+            },
+            "bytes": {
+              "min": 3689,
+              "median": 3689,
+              "max": 3689,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 3709,
+              "median": 384333,
+              "max": 432917,
+              "count": 9
+            }
+          }
+        },
+        "other_read_bytes": {
+          "min": 0,
+          "median": 0,
+          "max": 0,
+          "count": 9
+        },
+        "output_digest_without_reread": false,
+        "inputs_without_observed_hash": []
+      },
+      "runs": [
+        {
+          "repetition": 1,
+          "series": "ordinary",
+          "end_to_end_ns": 2730149250,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5"
+        },
+        {
+          "repetition": 1,
+          "series": "attributed",
+          "end_to_end_ns": 2765312625,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5",
+          "recording_bytes": 3689,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 2751931542,
+            "execution_recording_ns": 6071791,
+            "recording_close_ns": 316042,
+            "output_hash_ns": 4375,
+            "finalization_ns": 320417,
+            "reported_run_wall_ns": 2758319375,
+            "outside_reported_run_wall_ns": 6993250
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 1277,
+              "time_ns": 10250
+            },
+            "provenance_inputs": {
+              "operations": 5,
+              "bytes": 537965392,
+              "time_ns": 2750882415
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 3689,
+              "time_ns": 4375
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 5,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 131481
+        },
+        {
+          "repetition": 2,
+          "series": "ordinary",
+          "end_to_end_ns": 2710749167,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5"
+        },
+        {
+          "repetition": 2,
+          "series": "attributed",
+          "end_to_end_ns": 2717005458,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5",
+          "recording_bytes": 3689,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 2704477666,
+            "execution_recording_ns": 5884792,
+            "recording_close_ns": 171958,
+            "output_hash_ns": 432917,
+            "finalization_ns": 604875,
+            "reported_run_wall_ns": 2710534416,
+            "outside_reported_run_wall_ns": 6471042
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 1277,
+              "time_ns": 10458
+            },
+            "provenance_inputs": {
+              "operations": 5,
+              "bytes": 537965392,
+              "time_ns": 2703324541
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 3689,
+              "time_ns": 432917
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 5,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 131481
+        },
+        {
+          "repetition": 3,
+          "series": "ordinary",
+          "end_to_end_ns": 2727417875,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5"
+        },
+        {
+          "repetition": 3,
+          "series": "attributed",
+          "end_to_end_ns": 2727656792,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5",
+          "recording_bytes": 3689,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 2714711292,
+            "execution_recording_ns": 5890875,
+            "recording_close_ns": 151166,
+            "output_hash_ns": 409209,
+            "finalization_ns": 560375,
+            "reported_run_wall_ns": 2720753333,
+            "outside_reported_run_wall_ns": 6903459
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 1277,
+              "time_ns": 10417
+            },
+            "provenance_inputs": {
+              "operations": 5,
+              "bytes": 537965392,
+              "time_ns": 2713503084
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 3689,
+              "time_ns": 409209
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 5,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 131481
+        },
+        {
+          "repetition": 4,
+          "series": "ordinary",
+          "end_to_end_ns": 2714741292,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5"
+        },
+        {
+          "repetition": 4,
+          "series": "attributed",
+          "end_to_end_ns": 2727507083,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5",
+          "recording_bytes": 3689,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 2716109792,
+            "execution_recording_ns": 5468541,
+            "recording_close_ns": 101709,
+            "output_hash_ns": 3709,
+            "finalization_ns": 105418,
+            "reported_run_wall_ns": 2721680042,
+            "outside_reported_run_wall_ns": 5827041
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 1277,
+              "time_ns": 10291
+            },
+            "provenance_inputs": {
+              "operations": 5,
+              "bytes": 537965392,
+              "time_ns": 2714941668
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 3689,
+              "time_ns": 3709
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 5,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 131481
+        },
+        {
+          "repetition": 5,
+          "series": "ordinary",
+          "end_to_end_ns": 2774911792,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5"
+        },
+        {
+          "repetition": 5,
+          "series": "attributed",
+          "end_to_end_ns": 2722896458,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5",
+          "recording_bytes": 3689,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 2710085375,
+            "execution_recording_ns": 5549417,
+            "recording_close_ns": 141125,
+            "output_hash_ns": 384333,
+            "finalization_ns": 525458,
+            "reported_run_wall_ns": 2715775917,
+            "outside_reported_run_wall_ns": 7120541
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 1277,
+              "time_ns": 10333
+            },
+            "provenance_inputs": {
+              "operations": 5,
+              "bytes": 537965392,
+              "time_ns": 2708814374
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 3689,
+              "time_ns": 384333
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 5,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 131481
+        },
+        {
+          "repetition": 6,
+          "series": "ordinary",
+          "end_to_end_ns": 2696393333,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5"
+        },
+        {
+          "repetition": 6,
+          "series": "attributed",
+          "end_to_end_ns": 2710921417,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5",
+          "recording_bytes": 3689,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 2698214625,
+            "execution_recording_ns": 6129000,
+            "recording_close_ns": 162959,
+            "output_hash_ns": 405583,
+            "finalization_ns": 568542,
+            "reported_run_wall_ns": 2704506584,
+            "outside_reported_run_wall_ns": 6414833
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 1277,
+              "time_ns": 10375
+            },
+            "provenance_inputs": {
+              "operations": 5,
+              "bytes": 537965392,
+              "time_ns": 2696987791
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 3689,
+              "time_ns": 405583
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 5,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 131481
+        },
+        {
+          "repetition": 7,
+          "series": "ordinary",
+          "end_to_end_ns": 2693569333,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5"
+        },
+        {
+          "repetition": 7,
+          "series": "attributed",
+          "end_to_end_ns": 2724362667,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5",
+          "recording_bytes": 3689,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 2711935875,
+            "execution_recording_ns": 5874083,
+            "recording_close_ns": 150250,
+            "output_hash_ns": 412959,
+            "finalization_ns": 563209,
+            "reported_run_wall_ns": 2717960208,
+            "outside_reported_run_wall_ns": 6402459
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 1277,
+              "time_ns": 10750
+            },
+            "provenance_inputs": {
+              "operations": 5,
+              "bytes": 537965392,
+              "time_ns": 2710768292
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 3689,
+              "time_ns": 412959
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 5,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 131481
+        },
+        {
+          "repetition": 8,
+          "series": "ordinary",
+          "end_to_end_ns": 2710083959,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5"
+        },
+        {
+          "repetition": 8,
+          "series": "attributed",
+          "end_to_end_ns": 2714061083,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5",
+          "recording_bytes": 3689,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 2700859875,
+            "execution_recording_ns": 5994791,
+            "recording_close_ns": 121084,
+            "output_hash_ns": 7667,
+            "finalization_ns": 128751,
+            "reported_run_wall_ns": 2706975750,
+            "outside_reported_run_wall_ns": 7085333
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 1277,
+              "time_ns": 10709
+            },
+            "provenance_inputs": {
+              "operations": 5,
+              "bytes": 537965392,
+              "time_ns": 2699631374
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 3689,
+              "time_ns": 7667
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 5,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 131481
+        },
+        {
+          "repetition": 9,
+          "series": "ordinary",
+          "end_to_end_ns": 2720231500,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5"
+        },
+        {
+          "repetition": 9,
+          "series": "attributed",
+          "end_to_end_ns": 2712335709,
+          "recording_sha256": "d258653131246eeee6ff46811d6615527f40c900d9f9eb2fe45e89f53f9c2bc5",
+          "recording_bytes": 3689,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 2699560292,
+            "execution_recording_ns": 6096250,
+            "recording_close_ns": 146667,
+            "output_hash_ns": 373167,
+            "finalization_ns": 519834,
+            "reported_run_wall_ns": 2705803209,
+            "outside_reported_run_wall_ns": 6532500
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 1277,
+              "time_ns": 11041
+            },
+            "provenance_inputs": {
+              "operations": 5,
+              "bytes": 537965392,
+              "time_ns": 2698271832
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 3689,
+              "time_ns": 373167
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 5,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 131481
+        }
+      ]
+    },
+    "native-recording-heavy": {
+      "description": "1 Native Participant, 2 Tasks (1 ms, 5 ms), 1000 s Duration: 1200000 Messages",
+      "participants": 1,
+      "artifacts": [
+        {
+          "kind": "library",
+          "bytes": 141168
+        }
+      ],
+      "manifest_bytes": 593,
+      "recording_bytes": 75611303,
+      "load_average_1m": {
+        "before": 3.1923828125,
+        "after": 3.21728515625
+      },
+      "summary": {
+        "recordings_identical": true,
+        "end_to_end_ns": {
+          "ordinary": {
+            "min": 640466333,
+            "median": 642988708,
+            "max": 663427792,
+            "count": 9
+          },
+          "attributed": {
+            "min": 681638250,
+            "median": 683326417,
+            "max": 695474917,
+            "count": 9
+          }
+        },
+        "phases": {
+          "preparation_ns": {
+            "min": 6491625,
+            "median": 6553583,
+            "max": 7432291,
+            "count": 9
+          },
+          "execution_recording_ns": {
+            "min": 288491625,
+            "median": 289499583,
+            "max": 298429458,
+            "count": 9
+          },
+          "recording_close_ns": {
+            "min": 1155167,
+            "median": 1217292,
+            "max": 1422541,
+            "count": 9
+          },
+          "output_hash_ns": {
+            "min": 376703541,
+            "median": 378667583,
+            "max": 381219125,
+            "count": 9
+          },
+          "finalization_ns": {
+            "min": 377886833,
+            "median": 379822750,
+            "max": 382640832,
+            "count": 9
+          },
+          "reported_run_wall_ns": {
+            "min": 296435583,
+            "median": 297322084,
+            "max": 306182250,
+            "count": 9
+          },
+          "outside_reported_run_wall_ns": {
+            "min": 384531042,
+            "median": 385856500,
+            "max": 389292667,
+            "count": 9
+          }
+        },
+        "hash_work": {
+          "manifest": {
+            "operations": {
+              "min": 1,
+              "median": 1,
+              "max": 1,
+              "count": 9
+            },
+            "bytes": {
+              "min": 593,
+              "median": 593,
+              "max": 593,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 7667,
+              "median": 8250,
+              "max": 12333,
+              "count": 9
+            }
+          },
+          "provenance_inputs": {
+            "operations": {
+              "min": 2,
+              "median": 2,
+              "max": 2,
+              "count": 9
+            },
+            "bytes": {
+              "min": 1235648,
+              "median": 1235648,
+              "max": 1235648,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 5888333,
+              "median": 5926541,
+              "max": 6621041,
+              "count": 9
+            }
+          },
+          "replay_verification": {
+            "operations": {
+              "min": 0,
+              "median": 0,
+              "max": 0,
+              "count": 9
+            },
+            "bytes": {
+              "min": 0,
+              "median": 0,
+              "max": 0,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 0,
+              "median": 0,
+              "max": 0,
+              "count": 9
+            }
+          },
+          "output": {
+            "operations": {
+              "min": 1,
+              "median": 1,
+              "max": 1,
+              "count": 9
+            },
+            "bytes": {
+              "min": 75611303,
+              "median": 75611303,
+              "max": 75611303,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 376703541,
+              "median": 378667583,
+              "max": 381219125,
+              "count": 9
+            }
+          }
+        },
+        "other_read_bytes": {
+          "min": 0,
+          "median": 0,
+          "max": 0,
+          "count": 9
+        },
+        "output_digest_without_reread": false,
+        "inputs_without_observed_hash": []
+      },
+      "runs": [
+        {
+          "repetition": 1,
+          "series": "ordinary",
+          "end_to_end_ns": 643060125,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e"
+        },
+        {
+          "repetition": 1,
+          "series": "attributed",
+          "end_to_end_ns": 695474917,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e",
+          "recording_bytes": 75611303,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 6566000,
+            "execution_recording_ns": 298429458,
+            "recording_close_ns": 1186792,
+            "output_hash_ns": 381219125,
+            "finalization_ns": 382405917,
+            "reported_run_wall_ns": 306182250,
+            "outside_reported_run_wall_ns": 389292667
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 593,
+              "time_ns": 8333
+            },
+            "provenance_inputs": {
+              "operations": 2,
+              "bytes": 1235648,
+              "time_ns": 5955167
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 75611303,
+              "time_ns": 381219125
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 2,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 18786
+        },
+        {
+          "repetition": 2,
+          "series": "ordinary",
+          "end_to_end_ns": 641926792,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e"
+        },
+        {
+          "repetition": 2,
+          "series": "attributed",
+          "end_to_end_ns": 681638250,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e",
+          "recording_bytes": 75611303,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 7432291,
+            "execution_recording_ns": 288491625,
+            "recording_close_ns": 1183292,
+            "output_hash_ns": 376703541,
+            "finalization_ns": 377886833,
+            "reported_run_wall_ns": 297107208,
+            "outside_reported_run_wall_ns": 384531042
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 593,
+              "time_ns": 12333
+            },
+            "provenance_inputs": {
+              "operations": 2,
+              "bytes": 1235648,
+              "time_ns": 6621041
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 75611303,
+              "time_ns": 376703541
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 2,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 18786
+        },
+        {
+          "repetition": 3,
+          "series": "ordinary",
+          "end_to_end_ns": 640466333,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e"
+        },
+        {
+          "repetition": 3,
+          "series": "attributed",
+          "end_to_end_ns": 685429125,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e",
+          "recording_bytes": 75611303,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 6491625,
+            "execution_recording_ns": 288913000,
+            "recording_close_ns": 1422541,
+            "output_hash_ns": 381218291,
+            "finalization_ns": 382640832,
+            "reported_run_wall_ns": 296827166,
+            "outside_reported_run_wall_ns": 388601959
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 593,
+              "time_ns": 7667
+            },
+            "provenance_inputs": {
+              "operations": 2,
+              "bytes": 1235648,
+              "time_ns": 5888333
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 75611303,
+              "time_ns": 381218291
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 2,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 18786
+        },
+        {
+          "repetition": 4,
+          "series": "ordinary",
+          "end_to_end_ns": 642988708,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e"
+        },
+        {
+          "repetition": 4,
+          "series": "attributed",
+          "end_to_end_ns": 683032541,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e",
+          "recording_bytes": 75611303,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 6543667,
+            "execution_recording_ns": 289499583,
+            "recording_close_ns": 1278834,
+            "output_hash_ns": 378359500,
+            "finalization_ns": 379638334,
+            "reported_run_wall_ns": 297322084,
+            "outside_reported_run_wall_ns": 385710457
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 593,
+              "time_ns": 7875
+            },
+            "provenance_inputs": {
+              "operations": 2,
+              "bytes": 1235648,
+              "time_ns": 5926541
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 75611303,
+              "time_ns": 378359500
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 2,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 18786
+        },
+        {
+          "repetition": 5,
+          "series": "ordinary",
+          "end_to_end_ns": 663427792,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e"
+        },
+        {
+          "repetition": 5,
+          "series": "attributed",
+          "end_to_end_ns": 685540334,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e",
+          "recording_bytes": 75611303,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 6516291,
+            "execution_recording_ns": 290955875,
+            "recording_close_ns": 1204125,
+            "output_hash_ns": 378537583,
+            "finalization_ns": 379741708,
+            "reported_run_wall_ns": 298676291,
+            "outside_reported_run_wall_ns": 386864043
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 593,
+              "time_ns": 10708
+            },
+            "provenance_inputs": {
+              "operations": 2,
+              "bytes": 1235648,
+              "time_ns": 5903792
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 75611303,
+              "time_ns": 378537583
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 2,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 18786
+        },
+        {
+          "repetition": 6,
+          "series": "ordinary",
+          "end_to_end_ns": 640864917,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e"
+        },
+        {
+          "repetition": 6,
+          "series": "attributed",
+          "end_to_end_ns": 683326417,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e",
+          "recording_bytes": 75611303,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 6512709,
+            "execution_recording_ns": 290401958,
+            "recording_close_ns": 1250125,
+            "output_hash_ns": 378168542,
+            "finalization_ns": 379418667,
+            "reported_run_wall_ns": 298164792,
+            "outside_reported_run_wall_ns": 385161625
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 593,
+              "time_ns": 8083
+            },
+            "provenance_inputs": {
+              "operations": 2,
+              "bytes": 1235648,
+              "time_ns": 5915249
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 75611303,
+              "time_ns": 378168542
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 2,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 18786
+        },
+        {
+          "repetition": 7,
+          "series": "ordinary",
+          "end_to_end_ns": 640970167,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e"
+        },
+        {
+          "repetition": 7,
+          "series": "attributed",
+          "end_to_end_ns": 682305000,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e",
+          "recording_bytes": 75611303,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 6635875,
+            "execution_recording_ns": 288658833,
+            "recording_close_ns": 1217292,
+            "output_hash_ns": 378740125,
+            "finalization_ns": 379957417,
+            "reported_run_wall_ns": 296512000,
+            "outside_reported_run_wall_ns": 385793000
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 593,
+              "time_ns": 8500
+            },
+            "provenance_inputs": {
+              "operations": 2,
+              "bytes": 1235648,
+              "time_ns": 5981375
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 75611303,
+              "time_ns": 378740125
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 2,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 18786
+        },
+        {
+          "repetition": 8,
+          "series": "ordinary",
+          "end_to_end_ns": 645295417,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e"
+        },
+        {
+          "repetition": 8,
+          "series": "attributed",
+          "end_to_end_ns": 685900875,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e",
+          "recording_bytes": 75611303,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 6556500,
+            "execution_recording_ns": 292184167,
+            "recording_close_ns": 1303708,
+            "output_hash_ns": 378776834,
+            "finalization_ns": 380080542,
+            "reported_run_wall_ns": 300044375,
+            "outside_reported_run_wall_ns": 385856500
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 593,
+              "time_ns": 8250
+            },
+            "provenance_inputs": {
+              "operations": 2,
+              "bytes": 1235648,
+              "time_ns": 5940708
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 75611303,
+              "time_ns": 378776834
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 2,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 18786
+        },
+        {
+          "repetition": 9,
+          "series": "ordinary",
+          "end_to_end_ns": 649118959,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e"
+        },
+        {
+          "repetition": 9,
+          "series": "attributed",
+          "end_to_end_ns": 682444125,
+          "recording_sha256": "f78b8cbe4525f53f829efdcd6dcec5bc474cdd1bd5374bd27d87062b22cde54e",
+          "recording_bytes": 75611303,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 6553583,
+            "execution_recording_ns": 288726833,
+            "recording_close_ns": 1155167,
+            "output_hash_ns": 378667583,
+            "finalization_ns": 379822750,
+            "reported_run_wall_ns": 296435583,
+            "outside_reported_run_wall_ns": 386008542
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 593,
+              "time_ns": 8167
+            },
+            "provenance_inputs": {
+              "operations": 2,
+              "bytes": 1235648,
+              "time_ns": 5888499
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 75611303,
+              "time_ns": 378667583
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 2,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 18786
+        }
+      ]
+    },
+    "process-shared-inputs": {
+      "description": "8 Python Process participants share an interpreter, a script and one file argument, 100 ms Duration, 10 ms Step",
+      "participants": 8,
+      "artifacts": [
+        {
+          "kind": "file_argument",
+          "bytes": 33554432
+        },
+        {
+          "kind": "script",
+          "bytes": 375
+        },
+        {
+          "kind": "interpreter",
+          "bytes": 49968
+        }
+      ],
+      "manifest_bytes": 4333,
+      "recording_bytes": 802,
+      "load_average_1m": {
+        "before": 3.21728515625,
+        "after": 3.19091796875
+      },
+      "summary": {
+        "recordings_identical": true,
+        "end_to_end_ns": {
+          "ordinary": {
+            "min": 1727826667,
+            "median": 1775519375,
+            "max": 1782886333,
+            "count": 9
+          },
+          "attributed": {
+            "min": 1751336166,
+            "median": 1799263583,
+            "max": 1814462583,
+            "count": 9
+          }
+        },
+        "phases": {
+          "preparation_ns": {
+            "min": 1356137334,
+            "median": 1357305625,
+            "max": 1368304792,
+            "count": 9
+          },
+          "execution_recording_ns": {
+            "min": 386693250,
+            "median": 435050667,
+            "max": 438984500,
+            "count": 9
+          },
+          "recording_close_ns": {
+            "min": 121833,
+            "median": 138500,
+            "max": 164583,
+            "count": 9
+          },
+          "output_hash_ns": {
+            "min": 5333,
+            "median": 315666,
+            "max": 346500,
+            "count": 9
+          },
+          "finalization_ns": {
+            "min": 127874,
+            "median": 459333,
+            "max": 480249,
+            "count": 9
+          },
+          "reported_run_wall_ns": {
+            "min": 1744137375,
+            "median": 1792141667,
+            "max": 1807449750,
+            "count": 9
+          },
+          "outside_reported_run_wall_ns": {
+            "min": 6701125,
+            "median": 7012833,
+            "max": 7325000,
+            "count": 9
+          }
+        },
+        "hash_work": {
+          "manifest": {
+            "operations": {
+              "min": 1,
+              "median": 1,
+              "max": 1,
+              "count": 9
+            },
+            "bytes": {
+              "min": 4333,
+              "median": 4333,
+              "max": 4333,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 21875,
+              "median": 23416,
+              "max": 27208,
+              "count": 9
+            }
+          },
+          "provenance_inputs": {
+            "operations": {
+              "min": 25,
+              "median": 25,
+              "max": 25,
+              "count": 9
+            },
+            "bytes": {
+              "min": 269932680,
+              "median": 269932680,
+              "max": 269932680,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 1350923500,
+              "median": 1352081417,
+              "max": 1362798832,
+              "count": 9
+            }
+          },
+          "replay_verification": {
+            "operations": {
+              "min": 0,
+              "median": 0,
+              "max": 0,
+              "count": 9
+            },
+            "bytes": {
+              "min": 0,
+              "median": 0,
+              "max": 0,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 0,
+              "median": 0,
+              "max": 0,
+              "count": 9
+            }
+          },
+          "output": {
+            "operations": {
+              "min": 1,
+              "median": 1,
+              "max": 1,
+              "count": 9
+            },
+            "bytes": {
+              "min": 802,
+              "median": 802,
+              "max": 802,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 5333,
+              "median": 315666,
+              "max": 346500,
+              "count": 9
+            }
+          }
+        },
+        "other_read_bytes": {
+          "min": 0,
+          "median": 0,
+          "max": 0,
+          "count": 9
+        },
+        "output_digest_without_reread": false,
+        "inputs_without_observed_hash": []
+      },
+      "runs": [
+        {
+          "repetition": 1,
+          "series": "ordinary",
+          "end_to_end_ns": 1777383125,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31"
+        },
+        {
+          "repetition": 1,
+          "series": "attributed",
+          "end_to_end_ns": 1802206542,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31",
+          "recording_bytes": 802,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1356137334,
+            "execution_recording_ns": 438579625,
+            "recording_close_ns": 164583,
+            "output_hash_ns": 315666,
+            "finalization_ns": 480249,
+            "reported_run_wall_ns": 1794881542,
+            "outside_reported_run_wall_ns": 7325000
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 4333,
+              "time_ns": 23875
+            },
+            "provenance_inputs": {
+              "operations": 25,
+              "bytes": 269932680,
+              "time_ns": 1350923500
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 802,
+              "time_ns": 315666
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 25,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 66018
+        },
+        {
+          "repetition": 2,
+          "series": "ordinary",
+          "end_to_end_ns": 1775306959,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31"
+        },
+        {
+          "repetition": 2,
+          "series": "attributed",
+          "end_to_end_ns": 1814462583,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31",
+          "recording_bytes": 802,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1368304792,
+            "execution_recording_ns": 438984500,
+            "recording_close_ns": 160458,
+            "output_hash_ns": 304375,
+            "finalization_ns": 464833,
+            "reported_run_wall_ns": 1807449750,
+            "outside_reported_run_wall_ns": 7012833
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 4333,
+              "time_ns": 21875
+            },
+            "provenance_inputs": {
+              "operations": 25,
+              "bytes": 269932680,
+              "time_ns": 1362798832
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 802,
+              "time_ns": 304375
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 25,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 66018
+        },
+        {
+          "repetition": 3,
+          "series": "ordinary",
+          "end_to_end_ns": 1775519375,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31"
+        },
+        {
+          "repetition": 3,
+          "series": "attributed",
+          "end_to_end_ns": 1751336166,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31",
+          "recording_bytes": 802,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1357305625,
+            "execution_recording_ns": 386693250,
+            "recording_close_ns": 138500,
+            "output_hash_ns": 319458,
+            "finalization_ns": 457958,
+            "reported_run_wall_ns": 1744137375,
+            "outside_reported_run_wall_ns": 7198791
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 4333,
+              "time_ns": 23375
+            },
+            "provenance_inputs": {
+              "operations": 25,
+              "bytes": 269932680,
+              "time_ns": 1352081417
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 802,
+              "time_ns": 319458
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 25,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 66018
+        },
+        {
+          "repetition": 4,
+          "series": "ordinary",
+          "end_to_end_ns": 1768123416,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31"
+        },
+        {
+          "repetition": 4,
+          "series": "attributed",
+          "end_to_end_ns": 1799263583,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31",
+          "recording_bytes": 802,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1358596000,
+            "execution_recording_ns": 433406834,
+            "recording_close_ns": 138833,
+            "output_hash_ns": 281791,
+            "finalization_ns": 420624,
+            "reported_run_wall_ns": 1792141667,
+            "outside_reported_run_wall_ns": 7121916
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 4333,
+              "time_ns": 27208
+            },
+            "provenance_inputs": {
+              "operations": 25,
+              "bytes": 269932680,
+              "time_ns": 1353192626
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 802,
+              "time_ns": 281791
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 25,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 66018
+        },
+        {
+          "repetition": 5,
+          "series": "ordinary",
+          "end_to_end_ns": 1782886333,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31"
+        },
+        {
+          "repetition": 5,
+          "series": "attributed",
+          "end_to_end_ns": 1795580542,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31",
+          "recording_bytes": 802,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1356421708,
+            "execution_recording_ns": 432291000,
+            "recording_close_ns": 125292,
+            "output_hash_ns": 346500,
+            "finalization_ns": 471792,
+            "reported_run_wall_ns": 1788838000,
+            "outside_reported_run_wall_ns": 6742542
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 4333,
+              "time_ns": 22209
+            },
+            "provenance_inputs": {
+              "operations": 25,
+              "bytes": 269932680,
+              "time_ns": 1351082291
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 802,
+              "time_ns": 346500
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 25,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 66018
+        },
+        {
+          "repetition": 6,
+          "series": "ordinary",
+          "end_to_end_ns": 1727826667,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31"
+        },
+        {
+          "repetition": 6,
+          "series": "attributed",
+          "end_to_end_ns": 1799968208,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31",
+          "recording_bytes": 802,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1356612834,
+            "execution_recording_ns": 435887375,
+            "recording_close_ns": 148666,
+            "output_hash_ns": 316917,
+            "finalization_ns": 465583,
+            "reported_run_wall_ns": 1792648875,
+            "outside_reported_run_wall_ns": 7319333
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 4333,
+              "time_ns": 23416
+            },
+            "provenance_inputs": {
+              "operations": 25,
+              "bytes": 269932680,
+              "time_ns": 1351216334
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 802,
+              "time_ns": 316917
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 25,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 66018
+        },
+        {
+          "repetition": 7,
+          "series": "ordinary",
+          "end_to_end_ns": 1744708625,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31"
+        },
+        {
+          "repetition": 7,
+          "series": "attributed",
+          "end_to_end_ns": 1798826291,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31",
+          "recording_bytes": 802,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1356430709,
+            "execution_recording_ns": 435386875,
+            "recording_close_ns": 121833,
+            "output_hash_ns": 6041,
+            "finalization_ns": 127874,
+            "reported_run_wall_ns": 1791939417,
+            "outside_reported_run_wall_ns": 6886874
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 4333,
+              "time_ns": 23125
+            },
+            "provenance_inputs": {
+              "operations": 25,
+              "bytes": 269932680,
+              "time_ns": 1350976293
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 802,
+              "time_ns": 6041
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 25,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 66018
+        },
+        {
+          "repetition": 8,
+          "series": "ordinary",
+          "end_to_end_ns": 1776247041,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31"
+        },
+        {
+          "repetition": 8,
+          "series": "attributed",
+          "end_to_end_ns": 1789146125,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31",
+          "recording_bytes": 802,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1359134333,
+            "execution_recording_ns": 423037125,
+            "recording_close_ns": 131792,
+            "output_hash_ns": 327541,
+            "finalization_ns": 459333,
+            "reported_run_wall_ns": 1782303250,
+            "outside_reported_run_wall_ns": 6842875
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 4333,
+              "time_ns": 23458
+            },
+            "provenance_inputs": {
+              "operations": 25,
+              "bytes": 269932680,
+              "time_ns": 1353802500
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 802,
+              "time_ns": 327541
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 25,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 66018
+        },
+        {
+          "repetition": 9,
+          "series": "ordinary",
+          "end_to_end_ns": 1777064625,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31"
+        },
+        {
+          "repetition": 9,
+          "series": "attributed",
+          "end_to_end_ns": 1799538250,
+          "recording_sha256": "1119d04176d88710334f055c52b39b89fc49c8ccf28ad32c865fc478f8439a31",
+          "recording_bytes": 802,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 1357661625,
+            "execution_recording_ns": 435050667,
+            "recording_close_ns": 124833,
+            "output_hash_ns": 5333,
+            "finalization_ns": 130166,
+            "reported_run_wall_ns": 1792837125,
+            "outside_reported_run_wall_ns": 6701125
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 4333,
+              "time_ns": 23708
+            },
+            "provenance_inputs": {
+              "operations": 25,
+              "bytes": 269932680,
+              "time_ns": 1352250833
+            },
+            "replay_verification": {
+              "operations": 0,
+              "bytes": 0,
+              "time_ns": 0
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 802,
+              "time_ns": 5333
+            },
+            "other_reads": {
+              "bytes": 0
+            }
+          },
+          "references": {
+            "inputs": 25,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 66018
+        }
+      ]
+    },
+    "replay-verification": {
+      "description": "Replay of a 100 s Recording of the multi-Task Participant, with its digest committed in the Manifest",
+      "participants": 1,
+      "artifacts": [
+        {
+          "kind": "replay_recording",
+          "bytes": 7561895
+        }
+      ],
+      "manifest_bytes": 544,
+      "recording_bytes": 7561895,
+      "load_average_1m": {
+        "before": 3.19091796875,
+        "after": 3.19091796875
+      },
+      "summary": {
+        "recordings_identical": true,
+        "end_to_end_ns": {
+          "ordinary": {
+            "min": 117311125,
+            "median": 118531666,
+            "max": 120054917,
+            "count": 9
+          },
+          "attributed": {
+            "min": 123832542,
+            "median": 125077250,
+            "max": 127307625,
+            "count": 9
+          }
+        },
+        "phases": {
+          "preparation_ns": {
+            "min": 5745834,
+            "median": 5817625,
+            "max": 5873000,
+            "count": 9
+          },
+          "execution_recording_ns": {
+            "min": 72918792,
+            "median": 73060333,
+            "max": 73153500,
+            "count": 9
+          },
+          "recording_close_ns": {
+            "min": 500500,
+            "median": 1524959,
+            "max": 1717208,
+            "count": 9
+          },
+          "output_hash_ns": {
+            "min": 37580083,
+            "median": 37663000,
+            "max": 38220167,
+            "count": 9
+          },
+          "finalization_ns": {
+            "min": 38624167,
+            "median": 39279416,
+            "max": 39477501,
+            "count": 9
+          },
+          "reported_run_wall_ns": {
+            "min": 79402583,
+            "median": 80410792,
+            "max": 80722875,
+            "count": 9
+          },
+          "outside_reported_run_wall_ns": {
+            "min": 44049584,
+            "median": 44800582,
+            "max": 46739792,
+            "count": 9
+          }
+        },
+        "hash_work": {
+          "manifest": {
+            "operations": {
+              "min": 1,
+              "median": 1,
+              "max": 1,
+              "count": 9
+            },
+            "bytes": {
+              "min": 544,
+              "median": 544,
+              "max": 544,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 7334,
+              "median": 7834,
+              "max": 19584,
+              "count": 9
+            }
+          },
+          "provenance_inputs": {
+            "operations": {
+              "min": 1,
+              "median": 1,
+              "max": 1,
+              "count": 9
+            },
+            "bytes": {
+              "min": 1094480,
+              "median": 1094480,
+              "max": 1094480,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 5231458,
+              "median": 5306958,
+              "max": 5335584,
+              "count": 9
+            }
+          },
+          "replay_verification": {
+            "operations": {
+              "min": 1,
+              "median": 1,
+              "max": 1,
+              "count": 9
+            },
+            "bytes": {
+              "min": 7561895,
+              "median": 7561895,
+              "max": 7561895,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 36494750,
+              "median": 36652917,
+              "max": 36757375,
+              "count": 9
+            }
+          },
+          "output": {
+            "operations": {
+              "min": 1,
+              "median": 1,
+              "max": 1,
+              "count": 9
+            },
+            "bytes": {
+              "min": 7561895,
+              "median": 7561895,
+              "max": 7561895,
+              "count": 9
+            },
+            "time_ns": {
+              "min": 37580083,
+              "median": 37663000,
+              "max": 38220167,
+              "count": 9
+            }
+          }
+        },
+        "other_read_bytes": {
+          "min": 15031236,
+          "median": 15031236,
+          "max": 15031236,
+          "count": 9
+        },
+        "output_digest_without_reread": false,
+        "inputs_without_observed_hash": []
+      },
+      "runs": [
+        {
+          "repetition": 1,
+          "series": "ordinary",
+          "end_to_end_ns": 118531666,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a"
+        },
+        {
+          "repetition": 1,
+          "series": "attributed",
+          "end_to_end_ns": 125077250,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a",
+          "recording_bytes": 7561895,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 5824000,
+            "execution_recording_ns": 73148792,
+            "recording_close_ns": 1699333,
+            "output_hash_ns": 37580083,
+            "finalization_ns": 39279416,
+            "reported_run_wall_ns": 80672125,
+            "outside_reported_run_wall_ns": 44405125
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 544,
+              "time_ns": 7334
+            },
+            "provenance_inputs": {
+              "operations": 1,
+              "bytes": 1094480,
+              "time_ns": 5297250
+            },
+            "replay_verification": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 36705125
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 37580083
+            },
+            "other_reads": {
+              "bytes": 15031236
+            }
+          },
+          "references": {
+            "inputs": 1,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 2355
+        },
+        {
+          "repetition": 2,
+          "series": "ordinary",
+          "end_to_end_ns": 119378042,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a"
+        },
+        {
+          "repetition": 2,
+          "series": "attributed",
+          "end_to_end_ns": 125248250,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a",
+          "recording_bytes": 7561895,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 5825500,
+            "execution_recording_ns": 73060333,
+            "recording_close_ns": 1524959,
+            "output_hash_ns": 37773625,
+            "finalization_ns": 39298584,
+            "reported_run_wall_ns": 80410792,
+            "outside_reported_run_wall_ns": 44837458
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 544,
+              "time_ns": 8125
+            },
+            "provenance_inputs": {
+              "operations": 1,
+              "bytes": 1094480,
+              "time_ns": 5289458
+            },
+            "replay_verification": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 36646916
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 37773625
+            },
+            "other_reads": {
+              "bytes": 15031236
+            }
+          },
+          "references": {
+            "inputs": 1,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 2355
+        },
+        {
+          "repetition": 3,
+          "series": "ordinary",
+          "end_to_end_ns": 118704875,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a"
+        },
+        {
+          "repetition": 3,
+          "series": "attributed",
+          "end_to_end_ns": 123832542,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a",
+          "recording_bytes": 7561895,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 5817625,
+            "execution_recording_ns": 73084458,
+            "recording_close_ns": 500500,
+            "output_hash_ns": 38123667,
+            "finalization_ns": 38624167,
+            "reported_run_wall_ns": 79402583,
+            "outside_reported_run_wall_ns": 44429959
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 544,
+              "time_ns": 7792
+            },
+            "provenance_inputs": {
+              "operations": 1,
+              "bytes": 1094480,
+              "time_ns": 5318750
+            },
+            "replay_verification": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 36652917
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 38123667
+            },
+            "other_reads": {
+              "bytes": 15031236
+            }
+          },
+          "references": {
+            "inputs": 1,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 2355
+        },
+        {
+          "repetition": 4,
+          "series": "ordinary",
+          "end_to_end_ns": 118068834,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a"
+        },
+        {
+          "repetition": 4,
+          "series": "attributed",
+          "end_to_end_ns": 124814791,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a",
+          "recording_bytes": 7561895,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 5745834,
+            "execution_recording_ns": 73011041,
+            "recording_close_ns": 1257334,
+            "output_hash_ns": 38220167,
+            "finalization_ns": 39477501,
+            "reported_run_wall_ns": 80014209,
+            "outside_reported_run_wall_ns": 44800582
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 544,
+              "time_ns": 7834
+            },
+            "provenance_inputs": {
+              "operations": 1,
+              "bytes": 1094480,
+              "time_ns": 5231458
+            },
+            "replay_verification": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 36590166
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 38220167
+            },
+            "other_reads": {
+              "bytes": 15031236
+            }
+          },
+          "references": {
+            "inputs": 1,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 2355
+        },
+        {
+          "repetition": 5,
+          "series": "ordinary",
+          "end_to_end_ns": 117311125,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a"
+        },
+        {
+          "repetition": 5,
+          "series": "attributed",
+          "end_to_end_ns": 124951292,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a",
+          "recording_bytes": 7561895,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 5765209,
+            "execution_recording_ns": 73043958,
+            "recording_close_ns": 1614875,
+            "output_hash_ns": 37652292,
+            "finalization_ns": 39267167,
+            "reported_run_wall_ns": 80424042,
+            "outside_reported_run_wall_ns": 44527250
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 544,
+              "time_ns": 10375
+            },
+            "provenance_inputs": {
+              "operations": 1,
+              "bytes": 1094480,
+              "time_ns": 5250958
+            },
+            "replay_verification": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 36593709
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 37652292
+            },
+            "other_reads": {
+              "bytes": 15031236
+            }
+          },
+          "references": {
+            "inputs": 1,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 2355
+        },
+        {
+          "repetition": 6,
+          "series": "ordinary",
+          "end_to_end_ns": 118195416,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a"
+        },
+        {
+          "repetition": 6,
+          "series": "attributed",
+          "end_to_end_ns": 124772459,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a",
+          "recording_bytes": 7561895,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 5873000,
+            "execution_recording_ns": 73153500,
+            "recording_close_ns": 1696375,
+            "output_hash_ns": 37725667,
+            "finalization_ns": 39422042,
+            "reported_run_wall_ns": 80722875,
+            "outside_reported_run_wall_ns": 44049584
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 544,
+              "time_ns": 19584
+            },
+            "provenance_inputs": {
+              "operations": 1,
+              "bytes": 1094480,
+              "time_ns": 5335584
+            },
+            "replay_verification": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 36688166
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 37725667
+            },
+            "other_reads": {
+              "bytes": 15031236
+            }
+          },
+          "references": {
+            "inputs": 1,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 2355
+        },
+        {
+          "repetition": 7,
+          "series": "ordinary",
+          "end_to_end_ns": 120054917,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a"
+        },
+        {
+          "repetition": 7,
+          "series": "attributed",
+          "end_to_end_ns": 125300709,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a",
+          "recording_bytes": 7561895,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 5792083,
+            "execution_recording_ns": 73120458,
+            "recording_close_ns": 1492667,
+            "output_hash_ns": 37598417,
+            "finalization_ns": 39091084,
+            "reported_run_wall_ns": 80405208,
+            "outside_reported_run_wall_ns": 44895501
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 544,
+              "time_ns": 7667
+            },
+            "provenance_inputs": {
+              "operations": 1,
+              "bytes": 1094480,
+              "time_ns": 5306958
+            },
+            "replay_verification": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 36708792
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 37598417
+            },
+            "other_reads": {
+              "bytes": 15031236
+            }
+          },
+          "references": {
+            "inputs": 1,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 2355
+        },
+        {
+          "repetition": 8,
+          "series": "ordinary",
+          "end_to_end_ns": 119261042,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a"
+        },
+        {
+          "repetition": 8,
+          "series": "attributed",
+          "end_to_end_ns": 125692291,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a",
+          "recording_bytes": 7561895,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 5821375,
+            "execution_recording_ns": 72918792,
+            "recording_close_ns": 1312125,
+            "output_hash_ns": 37607791,
+            "finalization_ns": 38919916,
+            "reported_run_wall_ns": 80052292,
+            "outside_reported_run_wall_ns": 45639999
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 544,
+              "time_ns": 7667
+            },
+            "provenance_inputs": {
+              "operations": 1,
+              "bytes": 1094480,
+              "time_ns": 5314125
+            },
+            "replay_verification": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 36494750
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 37607791
+            },
+            "other_reads": {
+              "bytes": 15031236
+            }
+          },
+          "references": {
+            "inputs": 1,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 2355
+        },
+        {
+          "repetition": 9,
+          "series": "ordinary",
+          "end_to_end_ns": 117801000,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a"
+        },
+        {
+          "repetition": 9,
+          "series": "attributed",
+          "end_to_end_ns": 127307625,
+          "recording_sha256": "2fb28fa6b9e9b9b85370a785fcec442b5c0cf377e24b3dba96608c57a7204c2a",
+          "recording_bytes": 7561895,
+          "runner_bytes": 1094480,
+          "phases": {
+            "preparation_ns": 5817417,
+            "execution_recording_ns": 73033208,
+            "recording_close_ns": 1717208,
+            "output_hash_ns": 37663000,
+            "finalization_ns": 39380208,
+            "reported_run_wall_ns": 80567833,
+            "outside_reported_run_wall_ns": 46739792
+          },
+          "hash_work": {
+            "manifest": {
+              "operations": 1,
+              "bytes": 544,
+              "time_ns": 7916
+            },
+            "provenance_inputs": {
+              "operations": 1,
+              "bytes": 1094480,
+              "time_ns": 5315250
+            },
+            "replay_verification": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 36757375
+            },
+            "output": {
+              "operations": 1,
+              "bytes": 7561895,
+              "time_ns": 37663000
+            },
+            "other_reads": {
+              "bytes": 15031236
+            }
+          },
+          "references": {
+            "inputs": 1,
+            "recording_digest_present": true
+          },
+          "output_digest_without_reread": false,
+          "inputs_without_observed_hash": [],
+          "trace_read_calls": 2355
+        }
+      ]
+    }
+  }
+}

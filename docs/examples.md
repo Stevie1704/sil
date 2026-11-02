@@ -26,6 +26,7 @@ is refused before copying; choose a new directory to retain your edits.
 | `fmu-coupling/` | Coupling and substitution documents: `sil docs fmu-coupling` |
 | `fmu-numeric/`, `fmu-array/` | Numeric and array authoring documents, input signals and references: `sil docs fmi` |
 | `compare/` | Comparison contract and reference signals: `sil docs comparison` |
+| `managed-platform/` | One Run in external provenance mode, with immutable inputs and an execution record: [running.md](running.md#managed-platform-example) |
 | `adas-reference/` | Native and Process adapters, C application, maneuvers, expected outputs and FMU sources: `sil docs adas-reference` |
 
 The packaged ACC example also runs directly with
