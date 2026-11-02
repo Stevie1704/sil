@@ -367,3 +367,40 @@ def test_heap_caller_metric_selection_uses_retained_allocation_rows(chrome, page
                     "document.getElementById('caller-metric').dispatchEvent(new Event('change',{bubbles:true}))")
     assert "temporary_allocations" in chrome.evaluate("document.getElementById('caller-summary').textContent")
     assert chrome.console_errors == []
+
+
+def test_source_line_function_filter_uses_leafs_and_current_cpu_selection(chrome, tmp_path):
+    from test_profile_focus import source_cpu_set
+    profile = source_cpu_set(tmp_path / "set")
+    html = tmp_path / "lines.html"
+    html.write_text(render_profile(load_profile_set(profile), profile.read_text()))
+    opened(chrome, html)
+    assert chrome.evaluate("!document.getElementById('source-controls').hidden")
+    assert "7 samples / 7007000 ns attributed" in chrome.evaluate("document.getElementById('source-summary').textContent")
+    chrome.evaluate("document.getElementById('caller-search').value='inline_leaf';"
+                    "document.getElementById('caller-search').dispatchEvent(new Event('input',{bubbles:true}));"
+                    "document.getElementById('source-selected').checked=true;"
+                    "document.getElementById('source-selected').dispatchEvent(new Event('change',{bubbles:true}))")
+    summary = chrome.evaluate("document.getElementById('source-summary').textContent")
+    assert "4 samples / 4004000 ns attributed" in summary
+    assert "Denominator: 4 samples / 4004000 ns" in summary
+    assert chrome.console_errors == []
+
+
+@pytest.mark.parametrize("metric, expected", [
+    ("allocations", "3 allocations"),
+    ("allocated_bytes", "3072 allocated_bytes"),
+    ("temporary_allocations", "2 temporary_allocations"),
+    ("outstanding_allocations", "0 outstanding_allocations"),
+    ("outstanding_bytes", "0 outstanding_bytes"),
+])
+def test_each_heap_caller_metric_reconciles_with_known_leaf_site(chrome, pages, metric, expected):
+    opened(chrome, pages["heap"])
+    chrome.evaluate("document.getElementById('caller-search').value='alloc_site';"
+                    "document.getElementById('caller-search').dispatchEvent(new Event('input',{bubbles:true}));"
+                    "document.getElementById('caller-mode').value='leaf';"
+                    f"document.getElementById('caller-metric').value='{metric}';"
+                    "document.getElementById('caller-metric').dispatchEvent(new Event('change',{bubbles:true}))")
+    summary = chrome.evaluate("document.getElementById('caller-summary').textContent")
+    assert "3 allocations / " + expected in summary
+    assert chrome.console_errors == []

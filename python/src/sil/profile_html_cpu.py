@@ -26,6 +26,7 @@ from sil.profile_html_parts import (
     identity_section, limitations_section, reason_text, reasons_list,
     render_tree, share, source_cell, unlisted_note,
 )
+from sil.profile_source_lines import source_lines_section
 from sil.profile_set import ProfileSet
 from sil.profile_focus import callers_section, interactive_focus_data
 from sil.profile_analysis import profile_tasks
@@ -67,6 +68,7 @@ def cpu_body(profile: ProfileSet) -> Html:
         _hotspots(capture, profile.samples),
         _tree_section(profile),
         callers_section(profile),
+        source_lines_section(profile),
         _activations(profile),
         timeline(profile),
         task_drilldowns(profile),

@@ -1161,3 +1161,27 @@ are still subject to the 256 MiB per-file limit. Analysis retains the parsed
 inputs plus function/path indexes and the selected tree; interactive data can
 include another bounded copy of indexes and CPU rows in the inert JSON block.
 No source file, binary, raw capture or additional profiler is opened.
+
+### CPU source-line hotspots
+
+The CPU report partitions the current explorer selection by each sample's
+retained **leaf** module ID/build ID, captured file path and positive line
+number. Identical file paths in different modules remain separate. The
+optional checkbox restricts this partition to the caller view's selected
+function **as a leaf**, independently of inclusive caller selection. A caller
+or inline ancestor never receives a copy of its leaf's source location.
+
+The table shows the top 50 known locations, omitted known locations, one
+unknown/missing/untrusted bucket and the exact selected sample/weight totals.
+Covered and uncovered weights reconcile with the denominator. Missing source,
+line zero, empty paths, unknown modules, unavailable source symbolization and
+modules without embedded or matching separate debug evidence enter the
+unknown bucket. A malformed nonnumeric/null `source.line` remains invalid v1
+input and fails validation before output; absent source is encoded as
+`source: null`. Static tables work without JavaScript, and the interactive
+table follows the same CPU filters and caller-view data budgets. Leaf source
+locations are interned before embedding, avoiding repeated long paths per
+stack. Paths are displayed using the existing escaped text/file-link policy;
+no source files, executable material, raw captures or tools are read. These
+are sampled self-attribution hotspots, never code coverage, execution counts
+or exact function durations.

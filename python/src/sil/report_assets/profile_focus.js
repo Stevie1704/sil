@@ -51,7 +51,50 @@
     byId("caller-prev").disabled = offset === 0;
     byId("caller-next").disabled = offset + limits.options >= matches.length;
   }
+  function renderLines() {
+    if (!data.source) return;
+    var chosen = byId("source-selected").checked, groups = new Map(), unknown = [0,0], total = [0,0];
+    rows.forEach(function(row) {
+      var path = data.paths[row[0]];
+      if (chosen && path[path.length-1] !== selected) return;
+      total[0] += row[4]; total[1] += row[5];
+      var location = data.source.leaves[row[0]], leaf = data.source.locations[location];
+      var bucket;
+      if (leaf[1] === null) bucket = unknown;
+      else { bucket = groups.get(location) || [0,0]; groups.set(location,bucket); }
+      bucket[0] += row[4]; bucket[1] += row[5];
+    });
+    var attributed = [total[0]-unknown[0],total[1]-unknown[1]];
+    byId("source-summary").textContent = attributed[0]+" samples / "+attributed[1]+" ns attributed; "+
+      unknown[0]+" samples / "+unknown[1]+" ns unknown. "+share(attributed[1],total[1])+
+      " of selected weight has a retained leaf source line. Denominator: "+total[0]+" samples / "+total[1]+" ns."+
+      (chosen ? " Selected function leaf samples only." : " All selected leaf functions.");
+    var ranked = Array.from(groups.entries()).sort(function(a,b) { return b[1][1]-a[1][1] || a[0]-b[0]; });
+    var table = node("table"), head = node("tr"), body = node("tbody"), foot = node("tfoot"), other = [0,0];
+    table.id = "source-line-table";
+    ["Module ID","Captured module path","Build ID","Captured file and line","Samples","Estimated weight","Share of selection"].forEach(function(text) {
+      var th=node("th",text); th.scope="col"; head.appendChild(th);
+    });
+    add(table,node("caption","Retained leaf source locations, top "+data.source.limit+" by sampled weight"),add(node("thead"),head),body,foot);
+    ranked.forEach(function(entry,index) {
+      var leaf=data.source.locations[entry[0]], bucket=entry[1], module=data.source.modules[leaf[0]];
+      if(index >= data.source.limit) { other[0]+=bucket[0]; other[1]+=bucket[1]; return; }
+      var row=node("tr");
+      [leaf[0],module[0],module[1] || "[unknown build ID]",leaf[1]+":"+leaf[2],String(bucket[0]),bucket[1]+" ns",share(bucket[1],total[1])].forEach(function(text) {
+        row.appendChild(node("td",text));
+      }); body.appendChild(row);
+    });
+    [["Other known lines ("+Math.max(0,ranked.length-data.source.limit)+" omitted)",other],
+     ["Unknown/missing/untrusted leaf source",unknown],["All selected samples",total]].forEach(function(entry) {
+      var row=node("tr"); [entry[0],"","","",String(entry[1][0]),entry[1][1]+" ns",share(entry[1][1],total[1])].forEach(function(text) { row.appendChild(node("td",text)); });
+      foot.appendChild(row);
+    });
+    var wrap=node("div"); wrap.className="table-wrap"; wrap.tabIndex=0; wrap.setAttribute("role","region");
+    wrap.setAttribute("aria-label","Retained CPU source-line hotspots"); wrap.appendChild(table);
+    byId("source-table-wrap").replaceChildren(wrap);
+  }
   function render() {
+    renderLines();
     var root = newNode(), enclosing = 0, end = data.functions.length, deep = end + 1;
     rows.forEach(function (row) {
       enclosing += value(row);
@@ -111,6 +154,10 @@
     }
   }
   controls.hidden = false;
+  if (data.source) {
+    byId("source-controls").hidden = false;
+    byId("source-selected").addEventListener("change",renderLines);
+  }
   // Prefer the largest inclusive contributor, using leaf weight to break ties.
   var totals = new Map(), own = new Map();
   rows.forEach(function(row) {

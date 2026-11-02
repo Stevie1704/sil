@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from sil.diagnostics_html_markup import Html, code, join, section, tag, void
+from sil.diagnostics_html_markup import Html, join, section, tag, void
 from sil.profile_analysis import cpu_rows
 from sil.profile_html_parts import (TreeLimits, build_tree, function_cell,
                                     render_tree, share)
 from sil.profile_set import ProfileSet
+from sil.profile_source_lines import source_data
 
 METRICS = ("allocations", "allocated_bytes", "temporary_allocations",
            "outstanding_allocations", "outstanding_bytes")
@@ -42,12 +43,16 @@ def focus_data(profile: ProfileSet) -> dict | None:
          size * outstanding]
         for stack, size, count, temporary, outstanding in document["allocations"]]
     names = [[symbol, module_paths.get(module)] for module, symbol in keys]
+    source = source_data(profile) if cpu else None
+    source_chars = (sum(len(loc[1] or "") for loc in source["locations"])
+                    if source else 0)
     interactive = (len(rows) <= INTERACTIVE_ROWS
                    and sum(map(len, paths)) <= INTERACTIVE_PATH_KEYS
                    and len(names) <= INTERACTIVE_ROWS
                    and sum(len(part or "") for fn in names for part in fn)
-                   <= INTERACTIVE_NAME_CHARS)
-    return {"kind": "cpu" if cpu else "heap", "paths": paths,
+                   + source_chars <= INTERACTIVE_NAME_CHARS)
+    return {"source": source,
+            "kind": "cpu" if cpu else "heap", "paths": paths,
             "functions": names,
             "rows": rows, "interactive": interactive,
             "metrics": ["sampled_weight_ns"] if cpu else list(METRICS),
@@ -56,7 +61,6 @@ def focus_data(profile: ProfileSet) -> dict | None:
                        "max_children": TreeLimits().max_children,
                        "min_share": TreeLimits().min_share,
                        "options": FUNCTION_OPTIONS}}
-
 
 
 def interactive_focus_data(profile: ProfileSet) -> dict | None:
