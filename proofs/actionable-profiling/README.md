@@ -31,13 +31,22 @@ contains 104 Messages. Its last two Messages are `(51,610,0)` and
 `(51,610,1)`. These expectations come from the workload, not the renderer.
 The loop result is deliberately absent from the Recording. The two builds
 use 40/20 million loop iterations, preserving published bytes while changing
-host work. Their binary/Manifest differences must remain visible.
+host work. Their binary/Manifest differences must remain visible. Each build
+has its own ordinary reference Recording: byte equality is checked only
+within that Manifest, since the Recording retains its Manifest hash.
 
 The proof captures BASE with full provenance and NEW with external
 provenance, retaining each policy and all profile-integrity hashes. It checks
 Recording equivalence to an ordinary Run, exactly selects the late interval,
 reconciles its execution-context sample count/weight with the normalized rows,
 retains sampled leaf locations, and renders with digest-matched diagnostics.
+An independent full-stack oracle compares the static caller summary with
+the maximum inclusive contributor (one contribution per sample despite
+recursive occurrences), and partitions retained leaf locations into trusted
+and unknown samples/weights. Both partitions are checked against the actual
+rendered source-line summary and selected denominator. The heap allocation
+expectation is checked against all normalized allocation rows, never a
+summary top-N list.
 No sample-presence or timing threshold is required: a missing sample remains
 missing evidence. The heap site's independent expectation is eight
 allocations/8,192 requested bytes; other runner allocation sites are not
@@ -55,6 +64,11 @@ different directories and renders those without optional diagnostics or
 Recordings. Existing legacy/unknown policy and adversarial, recursive,
 partial, zero-sample and browser fixtures remain in the repository test
 suite; they complement real sampling, whose addresses and weights vary.
+`tests/test_profile_workflow.py` combines Activation selection, recursive
+callers, unknown stacks and leaf-source partition checks at the public render
+boundary. It also deletes original sets before rendering copied minimal
+partial sets with full/external/legacy/unknown policy presentation. These
+checks use independent literal counts and do not require optional evidence.
 
 ## Evidence and limits
 

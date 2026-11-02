@@ -26,10 +26,15 @@ jobs:
             heaptrack=1.5.0+dfsg1-2ubuntu3 build-essential binutils time
       - name: Install wheel and native runners
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DSIL_SOURCE_REVISION="$SIL_SOURCE_REVISION"
           cmake --build build -j
           cmake --install build --prefix "$RUNNER_TEMP/sil-native"
-          uv build --wheel --out-dir build/wheels python
+          version="$(python3 tools/release.py project-version)"
+          python3 tools/release.py stamp-python --root "$PWD" \
+            --output-dir build/python-release --version "$version" \
+            --source-revision "$SIL_SOURCE_REVISION"
+          uv build --wheel --out-dir build/wheels build/python-release
           uv venv .venv
           uv pip install -p .venv/bin/python build/wheels/sil-*.whl
       - name: Disclosed native perf setup, paranoid 2

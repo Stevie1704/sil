@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+from html.parser import HTMLParser
 import json
 import os
 import platform
@@ -24,6 +25,30 @@ from sil.manifest import Manifest
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
+
+
+class SummaryText(HTMLParser):
+    """Read the public static summaries, as a non-JavaScript reader does."""
+
+    def __init__(self, text: str):
+        super().__init__()
+        self.selected = None
+        self.values: dict[str, str] = {}
+        self.feed(text)
+
+    def handle_starttag(self, tag, attrs):
+        identity = dict(attrs).get("id")
+        if tag == "p" and identity in ("caller-summary", "source-summary"):
+            self.selected = identity
+            self.values[identity] = ""
+
+    def handle_data(self, text):
+        if self.selected is not None:
+            self.values[self.selected] += text
+
+    def handle_endtag(self, tag):
+        if tag == "p":
+            self.selected = None
 
 
 def digest(path: Path) -> str:
@@ -135,6 +160,39 @@ def qualify(out: Path, include: Path) -> dict:
             "--task", "task51", "--activation-index", "610", "--diagnostics",
             str(directory / "run.diagnostics.json"), "--html",
             str(out / f"{variant}-selected.html")], observations)
+        summaries = SummaryText((out / f"{variant}-selected.html").read_text()).values
+        # Independent oracle over captured leaf-first stacks. No renderer
+        # analysis helper or summary top-N list supplies expected totals.
+        inclusive: dict[tuple, list[int]] = {}
+        attributed = [0, 0]
+        modules = {m["id"]: m for m in profile["capture"]["modules"]}
+        for row in matching:
+            frames = [samples["frames"][f] for f in samples["stacks"][row[4]]]
+            for key in {(f["module"], f["symbol"]) for f in frames} or {(None, None)}:
+                bucket = inclusive.setdefault(key, [0, 0])
+                bucket[0] += 1
+                bucket[1] += row[3]
+            leaf = frames[0] if frames else None
+            source = leaf.get("source") if leaf else None
+            module = modules.get(leaf["module"]) if leaf else None
+            if (source and source["file"] and source["line"] > 0 and module
+                    and module["debug"]["status"] in ("embedded", "separate_matching")
+                    and profile["capture"]["symbolization"]["source_lines"]["status"] != "unavailable"):
+                attributed[0] += 1
+                attributed[1] += row[3]
+        max_weight = max((v[1] for v in inclusive.values()), default=0)
+        valid_counts = {v[0] for v in inclusive.values() if v[1] == max_weight} or {0}
+        assert any(f"{count} samples / {max_weight} ns" in summaries["caller-summary"]
+                   for count in valid_counts)
+        unknown_count = len(matching) - attributed[0]
+        unknown_weight = selected["weight_ns"] - attributed[1]
+        assert (f"{attributed[0]} samples / {attributed[1]} ns attributed; "
+                f"{unknown_count} samples / {unknown_weight} ns unknown.") in summaries["source-summary"]
+        assert f"Denominator: {len(matching)} samples / {selected['weight_ns']} ns." in summaries["source-summary"]
+        selections[-1]["rendered_summaries"] = summaries
+        selections[-1]["independent_source_partition"] = {
+            "attributed_samples": attributed[0], "attributed_weight_ns": attributed[1],
+            "unknown_samples": unknown_count, "unknown_weight_ns": unknown_weight}
         copied = minimal(directory, out / f"{variant}-minimal")
         run(out, f"minimal-{variant}", [*cli, "profile", "render", str(copied),
             "--html", str(out / f"{variant}-minimal.html")], observations)
@@ -160,11 +218,11 @@ def qualify(out: Path, include: Path) -> dict:
         observations)
     run(out, "heap", [*cli, "profile", str(manifests["base"]), "--out",
         str(out / "heap"), "--collector", "heap", "--runner"], observations)
-    heap = json.loads((out / "heap/profile.json").read_text())
-    site = [row for row in heap["capture"]["analysis"]["hotspots"]["self"]
-            if row["symbol"] and "late_allocations" in row["symbol"]]
-    assert len(site) == 1 and site[0]["allocations"] == 8
-    assert site[0]["allocated_bytes"] == 8192
+    heap = json.loads((out / "heap/heap/allocations.json").read_text())
+    site = [row for row in heap["allocations"] if heap["stacks"][row[0]]
+            and "late_allocations" in (heap["frames"][heap["stacks"][row[0]][0]]["symbol"] or "")]
+    assert sum(row[2] for row in site) == 8
+    assert sum(row[1] * row[2] for row in site) == 8192
     copied = minimal(out / "heap", out / "heap-minimal")
     run(out, "heap-render", [*cli, "profile", "render", str(copied), "--html",
         str(out / "heap.html")], observations)
