@@ -1231,3 +1231,55 @@ stack. Paths are displayed using the existing escaped text/file-link policy;
 no source files, executable material, raw captures or tools are read. These
 are sampled self-attribution hotspots, never code coverage, execution counts
 or exact function durations.
+
+### Activation outliers and offline selection
+
+`sil profile render` accepts optional `--participant NAME`, `--task NAME`,
+`--activation-index N`, `--from T`, `--to T`, and `--diagnostics PATH`.
+These select saved evidence. Task requires Participant; an exact index
+requires both, is nonnegative, and cannot be combined with a time range.
+Virtual time bounds are exact nonnegative integer nanoseconds in `[from,to)`;
+equal Virtual times on different Tasks remain distinct Activations.
+Selections require validated CPU correlation. An absent interval is stated as
+missing; no nearby interval is substituted. The original capture summaries
+remain visible alongside class-separated selected rankings and stacks.
+
+The outlier table ranks only retained **completed** intervals by inclusive
+host elapsed time. Failed/interrupted intervals remain selectable but do not
+enter that ranking. No full-Run percentile is inferred from correlation.
+The paged navigator searches Participant/Task names, exact Activation indices
+and Virtual-time ranges, or orders completed intervals by duration. It shows
+100 rows per page, independent of the first 500 intervals and first 50 Task
+details. Exact offline selection remains available beyond the interactive
+budget: 200,000 Activation metadata rows, aggregated sample rows and used
+stack-path keys. Over-budget interactive data is omitted. Static interval
+lists remain capped at 500, the slowest list at 20, and explicit selection
+includes up to 20 editable query handoffs; narrower offline selection reaches
+other retained evidence. Paging does not change sample denominators.
+
+Explicit diagnostics must have the size and SHA-256 of the profile's named
+diagnostics artifact, a supported Run schema, matching common build/Manifest
+identity, host, explicit guard settings, provenance policy when present,
+Recording configuration and Run outcome. Retained Tasks and outlier intervals
+must agree. A null profile guard means the runner default was requested;
+diagnostics records effective defaults. Diagnostics is never discovered or
+read implicitly. Its table keeps the full measurement scope, completed count,
+reservoir method/capacity/approximation, individual p50/p95/p99 null reasons
+and slowest 20. A diagnostics outlier missing from correlation stays missing.
+
+Each selected interval distinguishes exact Virtual time, inclusive elapsed
+host nanoseconds, sample count and estimated sampled weight. The editable
+`sil recording query` recipe requires the user to choose Recording, Channel,
+fields and `[from,to)` publication-time bounds. It includes result, byte and
+scan budgets. Compare `source.sha256` in the query report with the displayed
+expected Recording digest. A missing digest makes the link unavailable or
+unverified; a moved/missing Recording must first be located and verified.
+Nothing executes in the report. Equal Virtual time establishes no Message
+identity or cause, and publication time differs from payload Sample time.
+
+The 256 MiB per-file input cap remains: CPU render reads at most profile,
+samples and correlation, plus diagnostics only when explicitly requested
+(up to 1 GiB of file bytes in aggregate before decoded/index/tree overhead).
+HTML embeds bounded metadata and indexes, never Recording payloads. The
+portable legacy minimum remains sufficient; sources, binaries, Recording,
+diagnostics and profiler tools are optional or absent.

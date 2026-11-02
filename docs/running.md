@@ -1023,3 +1023,22 @@ absent is unbounded: the loader accepts either a pre-#75 string entry such as
 `capacity` and `overflow` is invalid. This preserves existing behavior and
 byte-identical hashes. Blocking overflow is invalid because the sequential
 scheduler cannot activate a consumer while stopped inside its publisher's call.
+
+For a retained Activation outlier, render an exact offline selection:
+
+```sh
+sil profile render prof/profile.json --participant controller --task tick \
+  --activation-index 610 --diagnostics prof/run.diagnostics.json --html selected.html
+```
+
+Task requires Participant; an exact nonnegative index requires both. Instead
+of an index, use exact Virtual-time nanoseconds `--from T --to T` for a
+half-open interval. The paged Activation navigator reaches later intervals
+and Tasks; use offline selection when interactive data exceeds its cap.
+Diagnostics is optional and must match this profile's artifact digest and Run
+identity. Retained completed-interval durations and full diagnostics
+percentiles have different measurement scopes. The editable bounded
+Recording-query recipe requires explicit Channel, fields and publication-time
+bounds, plus verification of the expected Recording digest against the query
+report. It does not identify a causal Message from equal Virtual time. See
+[Activation outliers](profile-report.md#activation-outliers-and-offline-selection).

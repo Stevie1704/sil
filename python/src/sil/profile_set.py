@@ -53,6 +53,9 @@ class ProfileSet:
     samples: dict | None = None
     correlation: dict | None = None
     allocations: dict | None = None
+    selection: tuple[int, ...] | None = None
+    selection_label: str | None = None
+    diagnostics: dict | None = None
 
 
 def _decimal(value: Any, where: str, errors: list) -> None:

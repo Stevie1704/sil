@@ -375,6 +375,7 @@
       var kind = interval.dataset.intervalKind;
       selectedInterval = {kind: kind, ref: kind === "lifecycle" ?
         interval.dataset.intervalPhase : +interval.dataset.intervalRef};
+      if (kind === "activation") intervalDetail(selectedInterval.ref);
       flameZoom = []; update();
     }
   }
@@ -397,6 +398,73 @@
       update();
     });
   });
+
+  // --- bounded Activation navigation -----------------------------------------
+  var navigation = byId("activation-navigation"), navPage = 0;
+  function renderNavigation() {
+    if (!navigation || !data.navigation) return;
+    navigation.hidden = false;
+    var search = byId("nav-search").value.trim().toLowerCase();
+    var index = exactValue(byId("nav-index"));
+    var from = exactValue(byId("nav-from")), to = exactValue(byId("nav-to"));
+    if (index === undefined || from === undefined || to === undefined ||
+        (from !== null && to !== null && from >= to)) {
+      byId("nav-status").textContent = "Use exact nonnegative integers and a nonempty [from,to) range.";
+      return;
+    }
+    var rows = data.navigation.filter(function(a) {
+      return (!search || (a[1] + " / " + a[2]).toLowerCase().includes(search)) &&
+        (index === null || BigInt(a[3]) === index) &&
+        (from === null || BigInt(a[4]) >= from) && (to === null || BigInt(a[4]) < to);
+    });
+    if (byId("nav-order").value === "duration") {
+      rows = rows.filter(function(a) { return a[6] === "completed"; });
+      rows.sort(function(a,b) {
+        var x = BigInt(a[5]), y = BigInt(b[5]); return x === y ? a[0]-b[0] : x > y ? -1 : 1;
+      });
+    }
+    navPage = Math.max(0, Math.min(navPage, Math.ceil(rows.length / 100)-1));
+    var shown = rows.slice(navPage*100, navPage*100+100);
+    byId("nav-status").textContent = rows.length + " matching retained Activations; page " +
+      (navPage+1) + " of " + Math.max(1, Math.ceil(rows.length/100)) +
+      ". At most 100 visible rows; no totals change when paging.";
+    byId("nav-prev").disabled = navPage === 0;
+    byId("nav-next").disabled = (navPage+1)*100 >= rows.length;
+    var table = node("table"), head = node("tr"), body = node("tbody");
+    ["Participant / Task", "Index", "Virtual time (ns)", "Elapsed wall time (ns)",
+      "Outcome", "Samples", "Sampled weight (ns)"].forEach(function(text) {
+        var th = node("th", null, text); th.scope = "col"; head.appendChild(th);
+      });
+    add(table, add(node("thead"), head), body);
+    shown.forEach(function(a) {
+      var button = node("button", null, a[1]+" / "+a[2]); button.type = "button";
+      button.dataset.intervalKind = "activation"; button.dataset.intervalRef = a[0];
+      add(body, add(node("tr"), add(node("td"), button), node("td", null, a[3]),
+        node("td", null, a[4]), node("td", null, a[5]), node("td", null, a[6]),
+        node("td", null, String(a[7])), node("td", null, String(a[8]))));
+    });
+    byId("nav-page").replaceChildren(table);
+  }
+  function intervalDetail(ref) {
+    if (!data.navigation) return;
+    var a = data.navigation.find(function(a) { return a[0] === ref; });
+    if (!a) return;
+    byId("nav-detail").textContent = a[1]+" / "+a[2]+", Activation index "+a[3]+
+      "; Virtual time "+a[4]+" ns; inclusive elapsed wall time "+a[5]+" ns; "+
+      a[7]+" samples / "+a[8]+" ns estimated sampled weight; outcome "+a[6]+
+      ". Zero samples do not mean zero CPU work.";
+    byId("nav-recipe").value = data.query_recipe.replace("Activation Virtual time: 0 ns.",
+      "Activation Virtual time: "+a[4]+" ns.");
+  }
+  if (navigation && data.navigation) {
+    ["nav-search", "nav-index", "nav-from", "nav-to", "nav-order"].forEach(function(id) {
+      byId(id).addEventListener("input", function() { navPage = 0; renderNavigation(); });
+    });
+    byId("nav-prev").addEventListener("click", function() { navPage--; renderNavigation(); });
+    byId("nav-next").addEventListener("click", function() { navPage++; renderNavigation(); });
+    byId("nav-recipe").value = data.query_recipe;
+    renderNavigation();
+  }
 
   // --- update ----------------------------------------------------------------
   function update() {

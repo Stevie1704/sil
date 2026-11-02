@@ -67,5 +67,9 @@ def cpu_ranking(paths: list[list[int]], rows: Iterable[list]) -> CpuRanking:
 def cpu_rows(profile: ProfileSet) -> list[list]:
     assert profile.samples is not None, "normalized samples are required"
     classes = profile.correlation["samples"] if profile.correlation else None
+    selected = set(profile.selection) if profile.selection is not None else None
     return [[s[4], s[2], *(classes[i] if classes else ["", ""]), 1, s[3]]
-            for i, s in enumerate(profile.samples["samples"])]
+            for i, s in enumerate(profile.samples["samples"])
+            if selected is None or (classes is not None and
+                classes[i][0] in ("execution_context", "window_associated") and
+                classes[i][1] in selected)]
