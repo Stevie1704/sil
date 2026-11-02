@@ -12,7 +12,8 @@ perf/Heaptrack capture, not the test fake backends.
 `contents.json` gives the size and SHA-256 of each member. The archive holds
 the CPU/heap portable inputs, explicitly matched diagnostics, Recordings,
 query receipts, benchmark summaries, Manifests and GNU time records.
-`results.json` is also available without extraction. Raw process stacks,
+`results.json` is also available without extraction. `rendered-outputs.json`
+retains each original HTML output's exact size and digest. Raw process stacks,
 binary copies and generated HTML are excluded; regenerate HTML offline.
 
 ```sh
@@ -72,8 +73,8 @@ command times of about 0.97/0.97 seconds. Minimal unselected renders peaked
 at 134,776/133,576 KiB and about 1.12/1.17 seconds. The heap render peaked
 at 26,096 KiB and about 0.16 seconds. These include a fresh Python process,
 input validation and HTML generation. `contents.json` and the resource
-records provide exact input sizes and resource observations; the original
-workflow artifact records HTML sizes (about 3.7 MiB selected CPU, 6.6 MiB
+records provide exact input sizes and resource observations;
+`rendered-outputs.json` records HTML sizes (about 3.7 MiB selected CPU, 6.6 MiB
 unselected CPU). None is a threshold, performance prediction, significance
 verdict or estimate of target-ECU timing. Nested/inclusive values overlap;
 elapsed time and sampled weight are distinct measurements.

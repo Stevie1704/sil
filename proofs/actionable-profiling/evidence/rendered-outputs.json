@@ -1,0 +1,32 @@
+[
+  {
+    "path": "base-minimal.html",
+    "bytes": 7029930,
+    "sha256": "d52bff3181ebfc3d9e859c2f1a52e7238f8efb47e14e54c5c018fa084f4c1fe0"
+  },
+  {
+    "path": "base-selected.html",
+    "bytes": 3918845,
+    "sha256": "78866aad8c3697c62c5edb6645778dc821a774c97eae5d5cc421bfa234acb311"
+  },
+  {
+    "path": "diff.html",
+    "bytes": 3913391,
+    "sha256": "d6c47093362abcb4545734e13f0ff92dcb63b0a0fd9d4e44e17375947532444f"
+  },
+  {
+    "path": "heap.html",
+    "bytes": 232131,
+    "sha256": "9eaac7156a11fdf4900751715f80a80fb965a5120c0ea1254a3093ce3094fbbf"
+  },
+  {
+    "path": "new-minimal.html",
+    "bytes": 6978159,
+    "sha256": "147d6337c6cfe741ac4d90ee36acfa5a5bfaf1aab3e0f9411f4fbd16f94848e8"
+  },
+  {
+    "path": "new-selected.html",
+    "bytes": 3898626,
+    "sha256": "ec479042156d707352d0159e75d408f960cc588da86a0e2541d6d3bbc8407ccc"
+  }
+]
