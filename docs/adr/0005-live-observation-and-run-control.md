@@ -2,7 +2,7 @@
 
 Date: 2026-10-30
 
-Status: proposed
+Status: accepted (2026-11-03)
 
 Relates to [issue #350](https://github.com/Stevie1704/sil/issues/350) and
 section 4 of the specification
@@ -30,7 +30,7 @@ The qualification found:
   (measured, retained with the script that measured it).
 - Runs are deterministic. The finalized Recording, played through #346–#349,
   shows the same data that a live view would show, about 5 s later.
-  #346–#349 are implemented on the branch of PR #353 and are not yet merged.
+  #346–#349 are merged (PR #353).
 - `Engine::run` has a safe seam between the "no next Slot" check and the
   dispatch of due work. No Step exchange is outstanding there, and a wait
   there does not consume a Response deadline.
@@ -69,9 +69,16 @@ A named adopter workload with a measured completion cost, and one of:
 - a Run wall time much longer than the acceptable feedback time (proposed:
   60 s or more) with an early action that the user takes;
 - an interactive action at a Slot that is not known before the Run and that a
-  finalized Recording cannot replace;
+  finalized Recording cannot replace. Example: a debugger session that changes
+  Participant state at a stop (`set var`, a patched function). After that
+  stop, the Run is different from the Recording;
 - a Participant whose behavior a second Run cannot reproduce, with the reason
   why the Run is still valid evidence.
+
+Stepping through code at a debugger stop without a change of state does not
+by itself reopen this decision. The finalized Recording at the Virtual time of
+the stop shows the same data as a live view. #366 makes served playback follow
+the debugger stops. #367 handles debugger hold time and Response deadlines.
 
 The evidence must state the expected wall time saved compared with post-run
 playback. A fixture made only to justify the capability does not count.

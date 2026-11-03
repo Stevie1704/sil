@@ -3,8 +3,8 @@
 Status: **draft**. Date: 2026-10-30. Scope: issue
 [#350](https://github.com/Stevie1704/sil/issues/350), section 4 of the
 specification [#345](https://github.com/Stevie1704/sil/issues/345).
-Proposed decision: [ADR 0005](../adr/0005-live-observation-and-run-control.md)
-(status **proposed**, not accepted).
+Decision: [ADR 0005](../adr/0005-live-observation-and-run-control.md)
+(status **accepted** on 2026-11-03: defer).
 
 This document does not establish implemented or supported behavior. No
 kernel code changes with it. It applies the
@@ -554,7 +554,8 @@ not change them.
 ## 8. Open questions for the user
 
 1. **Build or defer.** This draft recommends defer (section 2.3). Do you
-   accept the defer decision and ADR 0005?
+   accept the defer decision and ADR 0005? **Answered 2026-11-03:** yes,
+   ADR 0005 is accepted. Questions 2 and later stay open until the gate opens.
 2. **Reopen threshold.** Is "at least 60 s of wall time per Run, with an
    early action" the right reopen criterion?
 3. **Process structure.** A Python supervisor with an inherited control
