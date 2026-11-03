@@ -64,7 +64,7 @@ agent.
 - [Proposals](proposals/) and [research](research/) describe prospective work
   and investigation; they do not establish implemented or supported behavior.
   The [live visualization qualification](research/live-visualization-qualification.md)
-  is the draft evidence for the proposed ADR 0005.
+  is the evidence for the accepted ADR 0005 (live mode deferred).
 
 ## Contributing and releasing
 
