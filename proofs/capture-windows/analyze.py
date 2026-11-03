@@ -36,13 +36,14 @@ def per_run(directory, row):
                                   "begin_ns": opened.pop(key), "end_ns": host})
     else:
         reasons.append("workload_markers_missing")
-    selected = [i for i in intervals if requested is not None
-                and requested["from_ns"] <= i["index"]*1_000_000 < requested["to_ns"]
-                and (requested["task"] is None or i["task"] == requested["task"])]
+    comparison = requested or {"from_ns": 610_000_000, "to_ns": 611_000_000, "task": None}
+    selected = [i for i in intervals
+                if comparison["from_ns"] <= i["index"]*1_000_000 < comparison["to_ns"]
+                and (comparison["task"] is None or i["task"] == comparison["task"])]
     observer = row.get("observer")
     if observer and (observer["dropped"] or observer["sent"] != observer["received"]):
         reasons.append("notification_loss")
-    if not observer and row["mode"] not in ("ordinary", "ordinary-failure", "diagnostics", "unclosed"):
+    if not observer and row["mode"] not in ("ordinary", "ordinary-failure", "diagnostics", "whole-baseline", "unclosed"):
         reasons.append("observer_footer_missing")
     if row["mode"] == "unclosed": reasons.append("observer_footer_missing_after_sigkill")
     if row["stop_reason"]: reasons.append(row["stop_reason"])
@@ -80,6 +81,15 @@ def per_run(directory, row):
     begin = min((i["begin_ns"] for i in selected), default=None)
     end = max((i["end_ns"] for i in selected), default=None)
     inside = sum(any(i["begin_ns"] <= ns < i["end_ns"] for i in selected) for ns in times)
+    hot_samples = 0
+    symbols_path = directory / "symbols.txt"
+    if symbols_path.exists():
+        if symbols_path.stat().st_size > MAX_INPUT: raise ValueError("symbols too large")
+        for line in symbols_path.read_text(errors="replace").splitlines():
+            match = re.match(r"^\s*(\d+)\.(\d{9}):?\s", line)
+            if match and "late_hot_function" in line:
+                ns = int(match[1])*1_000_000_000 + int(match[2])
+                hot_samples += any(i["begin_ns"] <= ns < i["end_ns"] for i in selected)
     commands = []
     for c in row["controls"]:
         prior = [n for n in notices if n[4] <= c["write_ns"]]
@@ -111,11 +121,12 @@ def per_run(directory, row):
             "effective_transition_times": "not_observed",
             "sample_times_are_not_continuous_coverage": True,
             "known_selected_work": selected, "unclosed_workload_entries": len(opened),
+            "comparison_selection": comparison, "selected_hot_function_leaf_samples": hot_samples,
             "failed_activations": len(failed), "completed_activations": sum(r["outcome"] == "completed" for r in work_rows),
             "first_sample_minus_known_work_begin_ns": times[0]-begin if times and begin is not None else None,
             "last_sample_minus_known_work_end_ns": times[-1]-end if times and end is not None else None,
             "samples_inside_known_selected_work": inside,
-            "samples_outside_known_selected_work": len(times)-inside if requested else None,
+            "samples_outside_known_selected_work": len(times)-inside,
             "control_observations": commands, "setup_metadata": setup}
 
 
@@ -125,14 +136,12 @@ def summarize(root):
         return {"availability": "unavailable", "comparisons": [], "runs": []}
     rows = []
     for row in results["runs"]:
-        candidates = list(root.glob(f"{row['variant']}-{row['mode']}-*"))
+        candidates = list(root.glob(f"{row['variant']}-{row['mode']}*"))
         # Match by raw result identity; timing makes repetitions distinct.
         directory = next((p for p in candidates if (p / "result.json").exists()
                           and read(p / "result.json")["elapsed_ns"] == row["elapsed_ns"]), None)
         if directory is None:
-            # reserve directory is named separately from its window mode.
-            directory = root / f"{row['variant']}-reserve"
-            if not directory.exists(): raise ValueError("run artifact missing")
+            raise ValueError("run artifact missing")
         rows.append({"directory": directory.name, **row, "analysis": per_run(directory, row)})
     comparisons = []
     for variant in ("native", "process"):
@@ -140,13 +149,13 @@ def summarize(root):
         def median(mode, key):
             values = [r[key] for r in group if r["mode"] == mode and r["stop_reason"] is None]
             return statistics.median(values) if values else None
-        whole, window = median("whole", "perf_bytes"), median("window", "perf_bytes")
+        whole, window = median("whole-baseline", "perf_bytes"), median("window", "perf_bytes")
         ordinary = median("ordinary", "elapsed_ns")
         comparisons.append({"variant": variant, "whole_median_bytes": whole,
                             "window_median_bytes": window,
                             "window_to_whole_bytes": window/whole if whole else None,
                             "elapsed_median_ns": {mode: median(mode, "elapsed_ns") for mode in
-                                ("ordinary", "diagnostics", "observer", "whole", "window")},
+                                ("ordinary", "diagnostics", "observer", "whole-baseline", "whole", "window")},
                             "ordinary_elapsed_median_ns": ordinary})
     return {"availability": "available", "comparisons": comparisons, "runs": rows}
 

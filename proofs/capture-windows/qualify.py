@@ -57,6 +57,8 @@ def command(argv, out, *, timeout=180):
                 process.wait()
                 raise RuntimeError(f"tool exceeded time/output budget: {argv}")
             time.sleep(.02)
+        if output.tell() > EXPORT_BYTES:
+            raise RuntimeError(f"tool exceeded output budget: {argv}")
     return process.returncode
 
 
@@ -82,6 +84,13 @@ def build(work):
     source = work / "run_diagnostics.cpp"
     source.write_text(patched)
     commands = [
+        ["cmake", "-S", ROOT, "-B", work / "build", "-DCMAKE_BUILD_TYPE=Release",
+         ],
+        ["cmake", "--build", work / "build", "--target", "sil-run",
+         "sil-run-diagnostics", "-j2"],
+        # Keep a genuinely unmodified diagnostics baseline, including its
+        # exact binary identity. Reconfigure reuses every other object file.
+        ["cp", work / "build/sil-run-diagnostics", work / "diagnostics-baseline"],
         ["cmake", "-S", ROOT, "-B", work / "build", "-DCMAKE_BUILD_TYPE=Release",
          f"-DCMAKE_PROJECT_INCLUDE={HERE / 'overlay.cmake'}",
          f"-DWINDOW_PROOF_SOURCE={source}"],
@@ -130,7 +139,7 @@ def capture(out, work, variant, mode, *, small=None):
     source = manifest(work, variant, failing)
     ordinary = mode in ("ordinary", "ordinary-failure")
     measured = mode not in ("ordinary", "ordinary-failure", "diagnostics", "observer")
-    window = measured and mode not in ("whole", "limit")
+    window = measured and mode not in ("whole", "whole-baseline", "limit", "reserve", "exhaustion")
     data = (small / (out.name + ".data")) if small else out / "perf.data"
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT / "python/src")
@@ -144,6 +153,8 @@ def capture(out, work, variant, mode, *, small=None):
     if mode in ("failure", "unclosed"): requested["to_ns"] = 615_000_000
     if mode == "loss": requested.update(from_ns=0, to_ns=620_000_000)
     runner = work / "build" / ("sil-run" if ordinary else "sil-run-diagnostics")
+    if mode in ("diagnostics", "whole-baseline"):
+        runner = work / "diagnostics-baseline"
     argv = [str(runner), str(source), "-o", str(out / "run.mcap"),
             "--participant-timeout-ms", "10000"]
     if not ordinary:
@@ -157,7 +168,7 @@ def capture(out, work, variant, mode, *, small=None):
         receiver.bind(temporary + "/notice")
         receiver.setblocking(False)
         selector.register(receiver, selectors.EVENT_READ, "notice")
-        if mode not in ("ordinary", "diagnostics"):
+        if mode not in ("ordinary", "ordinary-failure", "diagnostics", "whole-baseline"):
             env.update(SIL_WINDOW_SOCKET=temporary + "/notice",
                        SIL_WINDOW_OBSERVER=str(out / "observer.json"))
         control_fd = ack_fd = None
@@ -174,6 +185,7 @@ def capture(out, work, variant, mode, *, small=None):
         write(out / "command.json", argv)
         pending, desired, active, stopped = None, not window, not window, None
         enable_due = disable_due = kill_due = None
+        exhausted = False
         ack_buffer = b""
         last_poll = 0
         with (out / "stdout.txt").open("wb") as stdout, \
@@ -210,6 +222,20 @@ def capture(out, work, variant, mode, *, small=None):
                                 notices.append([host, vt, task, edge, time.monotonic_ns()])
                                 if len(notices) > 10000:
                                     raise RuntimeError("notice budget exceeded")
+                                if mode == "exhaustion" and not exhausted and vt >= 100_000_000:
+                                    # Disclosed storage fault between normal guard
+                                    # polls: another writer consumes the reserve.
+                                    filler = small / "filler"
+                                    descriptor = os.open(filler, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                                    try:
+                                        for _ in range(512):
+                                            try: os.write(descriptor, b"x"*65536)
+                                            except OSError as error:
+                                                if error.errno != 28: raise
+                                                break
+                                    finally:
+                                        os.close(descriptor)
+                                    exhausted = True
                                 selected = (requested["from_ns"] <= vt < requested["to_ns"]
                                             and (requested["task"] is None or task == requested["task"]))
                                 if window and not stopped:
@@ -264,8 +290,11 @@ def capture(out, work, variant, mode, *, small=None):
     result = {"variant": variant, "mode": mode, "requested": requested if window else None,
               "exit_code": process.returncode, "elapsed_ns": time.monotonic_ns()-started,
               "controls": controls, "stop_reason": stopped,
+              "storage_fault_injected": exhausted,
               "growth": growth, "perf_bytes": data.stat().st_size if data.exists() else 0,
               "recording_sha256": digest(out / "run.mcap") if (out / "run.mcap").exists() else None}
+    diagnostics_path = out / "diagnostics.json"
+    result["run_exit_code"] = json.loads(diagnostics_path.read_text())["run"]["exit_code"] if diagnostics_path.exists() else (process.returncode if ordinary else None)
     write(out / "notices.json", notices)
     if (out / "observer.json").exists():
         result["observer"] = json.loads((out / "observer.json").read_text())
@@ -273,6 +302,7 @@ def capture(out, work, variant, mode, *, small=None):
     if measured and data.exists():
         passes = {
             "samples.txt": ["script", "--ns", "-F", "time", "--no-call-graph"],
+            "symbols.txt": ["script", "--ns", "-F", "time,sym,dso", "--no-call-graph"],
             "metadata.txt": ["script", "--ns", "--show-mmap-events", "--show-task-events",
                              "--show-lost-events", "--no-call-graph"],
             "stats.txt": ["report", "--stdio", "--stats"],
@@ -301,6 +331,7 @@ def capture(out, work, variant, mode, *, small=None):
         if small:
             shutil.copy2(data, out / "perf.data")
             data.unlink()
+            (small / "filler").unlink(missing_ok=True)
     write(out / "result.json", result)
     return result
 
@@ -314,7 +345,8 @@ def qualify(out, work, environment, small):
                         "packages": ["dpkg-query", "-W"], "buildids": ["readelf", "-n", work / "workload.so"]}.items():
         command(args, out / f"{label}.txt")
     identities["binaries"] = {str(p): digest(p) for p in
-        (work / "workload.so", work / "build/sil-run", work / "build/sil-run-diagnostics")}
+        (work / "workload.so", work / "build/sil-run", work / "build/sil-run-diagnostics",
+         work / "diagnostics-baseline")}
     identities["sources"] = {str(p.relative_to(ROOT)): digest(p) for p in
         (HERE / "workload.c", HERE / "notify.hpp", HERE / "qualify.py",
          ROOT / "kernel/src/run_diagnostics.cpp")}
@@ -330,11 +362,11 @@ def qualify(out, work, environment, small):
     results = []
     for variant in ("native", "process"):
         baseline = failure_baseline = None
-        modes = ("ordinary", "diagnostics", "observer", "whole", "window", "exact-peer",
+        modes = ("ordinary", "diagnostics", "observer", "whole-baseline", "whole", "window", "exact-peer",
                  "empty", "unreached", "during", "end-during", "ordinary-failure", "failure", "unclosed",
                  "loss", "limit")
         for mode in modes:
-            repeats = 3 if mode in ("ordinary", "diagnostics", "observer", "whole", "window") else 1
+            repeats = 3 if mode in ("ordinary", "diagnostics", "observer", "whole-baseline", "whole", "window") else 1
             for repeat in range(repeats):
                 row = capture(out / f"{variant}-{mode}-{repeat}", work, variant, mode)
                 if mode == "ordinary": baseline = row["recording_sha256"]
@@ -352,10 +384,13 @@ def qualify(out, work, environment, small):
                 results.append(row)
                 write(out / "results.json", {"decision": "pending_analysis", "runs": results})
         if small:
-            row = capture(out / f"{variant}-reserve", work, variant, "window", small=small)
-            row["recording_equal"] = row["recording_sha256"] == baseline
-            results.append(row)
-            write(out / "results.json", {"decision": "pending_analysis", "runs": results})
+            for storage_mode in ("reserve", "exhaustion"):
+                row = capture(out / f"{variant}-{storage_mode}", work, variant, storage_mode, small=small)
+                row["recording_equal"] = row["recording_sha256"] == baseline
+                if storage_mode == "reserve" and (row["exit_code"] or not row["recording_equal"] or row["stop_reason"] != "storage_reserve"):
+                    raise RuntimeError("reserve did not preserve Run outcome/Recording")
+                results.append(row)
+                write(out / "results.json", {"decision": "pending_analysis", "runs": results})
     write(out / "digests.json", {str(p.relative_to(out)): digest(p)
                                 for p in out.rglob("*") if p.is_file()})
 

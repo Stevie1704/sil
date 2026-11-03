@@ -62,7 +62,7 @@ jobs:
       - name: Container CAP_PERFMON experiment without changing host policy
         run: |
           docker run --rm --user "$(id -u):$(id -g)" --cap-add PERFMON \
-            --security-opt seccomp=unconfined --tmpfs /small:rw,size=7m,mode=1777 \
+            --security-opt seccomp=unconfined --tmpfs /small:rw,size=16m,mode=1777 \
             -e SIL_SOURCE_REVISION -v "$PWD:$PWD" -w "$PWD" sil-window-proof \
             .venv/bin/python proofs/capture-windows/qualify.py run "$PWD/build/window-work" \
             --out "$PWD/build/window-evidence/container-perfmon" \
@@ -71,7 +71,7 @@ jobs:
         run: |
           sudo sysctl -w kernel.perf_event_paranoid=2
           sudo mkdir -p /mnt/sil-window-small
-          sudo mount -t tmpfs -o size=7m,mode=1777 tmpfs /mnt/sil-window-small
+          sudo mount -t tmpfs -o size=16m,mode=1777 tmpfs /mnt/sil-window-small
       - name: Native bounded capture experiment
         run: |
           .venv/bin/python proofs/capture-windows/qualify.py run "$PWD/build/window-work" \
