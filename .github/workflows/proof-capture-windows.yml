@@ -1,0 +1,85 @@
+name: proof-capture-windows
+
+on:
+  pull_request:
+    paths:
+      - 'proofs/capture-windows/**'
+      - 'tests/test_capture_windows_proof.py'
+      - '.github/workflows/proof-capture-windows.yml'
+  workflow_dispatch:
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SIL_SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install collector and compiler; retain host policy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libssl-dev \
+            "linux-tools-$(uname -r)" linux-tools-common build-essential \
+            cmake binutils python3-venv
+          uv venv --python /usr/bin/python3 .venv
+          uv pip install -p .venv/bin/python -e python/
+          mkdir -p build/window-evidence
+          uname -a > build/window-evidence/host.txt
+          cat /proc/sys/kernel/perf_event_paranoid > build/window-evidence/paranoid-before.txt
+          dpkg-query -W > build/window-evidence/packages.txt
+      - name: Build proof-only diagnostics overlay and optimized workload
+        run: |
+          .venv/bin/python proofs/capture-windows/qualify.py build "$PWD/build/window-work"
+      - name: Native availability under original host policy
+        run: |
+          .venv/bin/python proofs/capture-windows/qualify.py run "$PWD/build/window-work" \
+            --out "$PWD/build/window-evidence/native-default" --environment native-default
+      - name: Build container with the same perf package
+        run: |
+          cat > build/window-container.Dockerfile <<'EOF'
+          FROM ubuntu:24.04
+          ARG PERF_PACKAGE
+          RUN apt-get update && apt-get install -y --no-install-recommends \
+              "$PERF_PACKAGE" linux-tools-common python3 python3-venv binutils \
+              gcc libc6-dev libssl3t64 && rm -rf /var/lib/apt/lists/*
+          EOF
+          docker build --build-arg "PERF_PACKAGE=linux-tools-$(uname -r)" \
+            -f build/window-container.Dockerfile -t sil-window-proof .
+          docker image inspect sil-window-proof > build/window-evidence/container-image.json
+      - name: Container default-capability availability
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:$PWD" -w "$PWD" \
+            sil-window-proof .venv/bin/python proofs/capture-windows/qualify.py run \
+            "$PWD/build/window-work" --out "$PWD/build/window-evidence/container-default" \
+            --environment container-default
+      - name: Container CAP_PERFMON experiment without changing host policy
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" --cap-add PERFMON \
+            --security-opt seccomp=unconfined --tmpfs /small:rw,size=7m,mode=1777 \
+            -e SIL_SOURCE_REVISION -v "$PWD:$PWD" -w "$PWD" sil-window-proof \
+            .venv/bin/python proofs/capture-windows/qualify.py run "$PWD/build/window-work" \
+            --out "$PWD/build/window-evidence/container-perfmon" \
+            --environment container-perfmon-seccomp-unconfined --small-dir /small
+      - name: Disclosed native policy change and reserve filesystem
+        run: |
+          sudo sysctl -w kernel.perf_event_paranoid=2
+          sudo mkdir -p /mnt/sil-window-small
+          sudo mount -t tmpfs -o size=7m,mode=1777 tmpfs /mnt/sil-window-small
+      - name: Native bounded capture experiment
+        run: |
+          .venv/bin/python proofs/capture-windows/qualify.py run "$PWD/build/window-work" \
+            --out "$PWD/build/window-evidence/native-paranoid-2" \
+            --environment native-paranoid-2 --small-dir /mnt/sil-window-small
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capture-window-evidence
+          retention-days: 30
+          path: |
+            build/window-evidence/
+            build/window-work/commands.json
+            build/window-work/build-*.txt
+            build/window-work/run_diagnostics.cpp
+            build/window-work/workload.so
