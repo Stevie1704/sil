@@ -144,6 +144,7 @@ def capture(out, work, variant, mode, *, small=None):
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT / "python/src")
     env["SIL_WINDOW_MARKERS"] = str(out / "markers.json")
+    if mode == "loss": env["SIL_WINDOW_SMALL_BUFFER"] = "1"
     notices, controls, growth = [], [], []
     started = time.monotonic_ns()
     requested = {"from_ns": 610_000_000, "to_ns": 611_000_000, "task": None}
@@ -307,7 +308,7 @@ def capture(out, work, variant, mode, *, small=None):
     if measured and data.exists():
         passes = {
             "samples.txt": ["script", "--ns", "-F", "time", "--hide-call-graph"],
-            "symbols.txt": ["script", "--ns", "-F", "time,sym,dso", "--hide-call-graph"],
+            "symbols.txt": ["script", "--ns", "-F", "time,ip,sym,dso", "--hide-call-graph"],
             "metadata.txt": ["script", "--ns", "--show-mmap-events", "--show-task-events",
                              "--show-lost-events", "--hide-call-graph"],
             "stats.txt": ["report", "--stdio", "--stats"],

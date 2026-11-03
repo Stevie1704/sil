@@ -24,6 +24,12 @@ struct Observer {
     if (std::strlen(path) >= sizeof(address.sun_path)) return;
     std::strcpy(address.sun_path, path);
     fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+    if (fd >= 0 && std::getenv("SIL_WINDOW_SMALL_BUFFER")) {
+      int bytes = 2048;
+      if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &bytes, sizeof bytes) != 0) {
+        close(fd); fd = -1;
+      }
+    }
     if (fd >= 0 && connect(fd, reinterpret_cast<sockaddr *>(&address),
                            sizeof address) != 0) { close(fd); fd = -1; }
   }

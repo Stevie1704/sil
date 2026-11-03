@@ -67,7 +67,11 @@ def per_run(directory, row):
     # A workload marker exit proves only that window_work returned, not that
     # its encompassing Activation completed (e.g. deliberate api->fail).
     if failed: reasons.append("failed_or_interrupted_activation")
-    if row["exit_code"] and not failed: reasons.append("unclosed_run_work")
+    if row["run_exit_code"] is None and row["exit_code"] and not failed:
+        reasons.append("unclosed_run_work")
+    if row["exit_code"] and row["run_exit_code"] == 0:
+        reasons.append("collector_failed")
+    if row["run_exit_code"] not in (None, 0): reasons.append("run_failed")
     if requested is None:
         selection_state = "whole_run_or_unprofiled"
     elif requested["from_ns"] == requested["to_ns"]:
@@ -92,6 +96,8 @@ def per_run(directory, row):
                 hot_samples += any(i["begin_ns"] <= ns < i["end_ns"] for i in selected)
     commands = []
     for c in row["controls"]:
+        if c["ack_ns"] is not None and c["ack_ns"] < c["write_ns"]:
+            raise ValueError("acknowledgment precedes command")
         prior = [n for n in notices if n[4] <= c["write_ns"]]
         notice = prior[-1] if prior else None
         commands.append({**c, "ack_latency_ns": c["ack_ns"]-c["write_ns"] if c["ack_ns"] else None,
@@ -121,6 +127,10 @@ def per_run(directory, row):
             "effective_transition_times": "not_observed",
             "sample_times_are_not_continuous_coverage": True,
             "known_selected_work": selected, "unclosed_workload_entries": len(opened),
+            "known_interval_sample_counts": [
+                {"task": i["task"], "index": i["index"],
+                 "samples": sum(i["begin_ns"] <= ns < i["end_ns"] for ns in times)}
+                for i in selected],
             "comparison_selection": comparison, "selected_hot_function_leaf_samples": hot_samples,
             "failed_activations": len(failed), "completed_activations": sum(r["outcome"] == "completed" for r in work_rows),
             "first_sample_minus_known_work_begin_ns": times[0]-begin if times and begin is not None else None,
