@@ -180,12 +180,14 @@ def capture(out, work, variant, mode, *, small=None):
             ack_fd = os.open(ack, os.O_RDWR | os.O_NONBLOCK)
             selector.register(ack_fd, selectors.EVENT_READ, "ack")
             argv = ["perf", "record", *SAMPLE_OPTIONS,
+                    *(["-m", "1"] if mode == "perf-loss" else []),
                     "--control", f"fifo:{ctl},{ack}", "-o", str(data),
                     *(["--delay=-1"] if window else []), "--", *argv]
         write(out / "command.json", argv)
         pending, desired, active, stopped = None, not window, not window, None
         enable_due = disable_due = kill_due = None
         exhausted = False
+        loss_pause_done = False
         ack_buffer = b""
         last_poll = 0
         with (out / "stdout.txt").open("wb") as stdout, \
@@ -193,8 +195,6 @@ def capture(out, work, variant, mode, *, small=None):
             process = subprocess.Popen(argv, env=env, stdout=stdout, stderr=stderr,
                                        start_new_session=True)
             try:
-                # Deliberately force kernel socket backpressure in the loss case.
-                if mode == "loss": time.sleep(.1)
                 while True:
                     now = time.monotonic_ns()
                     if now - started > 60_000_000_000:
@@ -220,6 +220,11 @@ def capture(out, work, variant, mode, *, small=None):
                                     raise RuntimeError("bad proof notice")
                                 host, vt, task, edge = NOTICE.unpack(raw)
                                 notices.append([host, vt, task, edge, time.monotonic_ns()])
+                                if mode == "loss" and not loss_pause_done:
+                                    # Pause after the first real Activation notice,
+                                    # not during perf's variable setup latency.
+                                    time.sleep(.1)
+                                    loss_pause_done = True
                                 if len(notices) > 10000:
                                     raise RuntimeError("notice budget exceeded")
                                 if mode == "exhaustion" and not exhausted and vt >= 100_000_000:
@@ -367,7 +372,7 @@ def qualify(out, work, environment, small):
         baseline = failure_baseline = None
         modes = ("ordinary", "diagnostics", "observer", "whole-baseline", "whole", "window", "exact-peer",
                  "empty", "unreached", "during", "end-during", "ordinary-failure", "failure", "unclosed",
-                 "loss", "limit")
+                 "loss", "perf-loss", "limit")
         for mode in modes:
             repeats = 3 if mode in ("ordinary", "diagnostics", "observer", "whole-baseline", "whole", "window") else 1
             for repeat in range(repeats):

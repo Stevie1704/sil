@@ -80,7 +80,7 @@ jobs:
       - name: Analyze retained boundaries and volumes
         run: |
           for environment in build/window-evidence/*/; do
-            .venv/bin/python proofs/capture-windows/analyze.py "$environment"
+            .venv/bin/python proofs/capture-windows/validate.py "$environment"
           done
       - uses: actions/upload-artifact@v4
         if: always()
