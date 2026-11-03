@@ -41,8 +41,11 @@ reserve remain explicit; a stop preserves Run execution. Export has a separate
 The workflow records native/container availability before changing host
 policy. The capability experiment explicitly uses CAP_PERFMON and an
 unconfined seccomp profile. Native sampling explicitly sets paranoid 2.
-A separate 7 MiB tmpfs starts below the existing 8 MiB reserve; this tests
-reserve disable without filling the filesystem used by Run outputs.
+A separate 16 MiB tmpfs tests active collection crossing the existing 8 MiB
+reserve. A second case deliberately consumes the remaining space between
+guard polls to expose actual collector ENOSPC behavior. Run outputs live on
+the main filesystem. This injected competing writer can defeat a reserve;
+its measured Run/collector outcomes remain separate.
 
 Cases include equal-time Tasks, range and exact-Task edges, empty/unreached
 selection, delayed enable and a host stop during ongoing work, failed and

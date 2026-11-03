@@ -301,10 +301,10 @@ def capture(out, work, variant, mode, *, small=None):
         result["observer"]["received"] = len(notices)
     if measured and data.exists():
         passes = {
-            "samples.txt": ["script", "--ns", "-F", "time", "--no-call-graph"],
-            "symbols.txt": ["script", "--ns", "-F", "time,sym,dso", "--no-call-graph"],
+            "samples.txt": ["script", "--ns", "-F", "time", "--hide-call-graph"],
+            "symbols.txt": ["script", "--ns", "-F", "time,sym,dso", "--hide-call-graph"],
             "metadata.txt": ["script", "--ns", "--show-mmap-events", "--show-task-events",
-                             "--show-lost-events", "--no-call-graph"],
+                             "--show-lost-events", "--hide-call-graph"],
             "stats.txt": ["report", "--stdio", "--stats"],
             "events.txt": ["evlist", "-v"],
             "buildids.txt": ["buildid-list", "--with-hits"],
@@ -312,6 +312,9 @@ def capture(out, work, variant, mode, *, small=None):
         result["exports"] = {}
         for name, args in passes.items():
             result["exports"][name] = command(["perf", *args, "-i", data], out / name)
+        if mode != "exhaustion" and any(result["exports"].values()):
+            write(out / "result.json", result)
+            raise RuntimeError(f"incomplete perf export: {out}")
         times = sample_times(out / "samples.txt")
         write(out / "sample-times.json", times)
         result["samples"] = {"count": len(times), "first_ns": min(times) if times else None,
@@ -382,6 +385,7 @@ def qualify(out, work, environment, small):
                     if row["exit_code"] or not row["recording_equal"]:
                         raise RuntimeError(f"outcome/Recording changed: {variant} {mode}")
                 results.append(row)
+                print(f"{variant} {mode} {repeat}: exit={row['exit_code']} bytes={row['perf_bytes']}", flush=True)
                 write(out / "results.json", {"decision": "pending_analysis", "runs": results})
         if small:
             for storage_mode in ("reserve", "exhaustion"):
