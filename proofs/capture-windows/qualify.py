@@ -14,7 +14,6 @@ from pathlib import Path
 import platform
 import re
 import selectors
-import shutil
 import signal
 import socket
 import struct
@@ -107,7 +106,7 @@ def manifest(work, variant, fail=False):
     else:
         m.add_process("work", command=[sys.executable, str(HERE / "process.py"),
                       str(work / "workload.so"), "fail" if fail else "pass"],
-                      period_ns=1_000_000, publishes=["events"])
+                      step_period_ns=1_000_000, publishes=["events"])
     path = work / f"{variant}-{'fail' if fail else 'pass'}.json"
     if not path.exists():
         m.write(path)

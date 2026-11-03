@@ -1,5 +1,8 @@
 # Replace only the diagnostics translation unit in a proof build. No edit to
 # kernel sources, installation rules or the ordinary runner's target.
+if(NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+  return()
+endif()
 function(window_proof_overlay)
   get_target_property(sources sil-run-diagnostics SOURCES)
   list(REMOVE_ITEM sources src/run_diagnostics.cpp)
