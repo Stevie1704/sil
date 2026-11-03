@@ -2,9 +2,10 @@
 
 Delivery A uses retained evidence. Its delivery does not qualify another
 collector. The decisions below explicitly defer the Delivery B work tracked
-by [#354](https://github.com/Stevie1704/sil/issues/354); they are not failed
-experiments or evidence that a candidate cannot work. No new Linux collector
-experiment was performed for these decisions.
+by [#354](https://github.com/Stevie1704/sil/issues/354); the original deferrals
+were not failed experiments or evidence that a candidate cannot work. The #361 entry below
+was subsequently revisited with a Linux capture-window experiment; the other
+entries retain their original evidence and scope.
 
 The existing [#321](https://github.com/Stevie1704/sil/issues/321) and
 [#340](https://github.com/Stevie1704/sil/issues/340) retain their ownership,
@@ -100,28 +101,57 @@ deadline Recording equivalence. Only then create separate API/lifecycle,
 decoder and presentation tickets. Process/FMU/prebuilt-library/XRay coverage
 and CPU-duration/target/WCET claims remain excluded.
 
-## Late capture windows — #361: defer
+## Late capture windows — #361: defer production after qualification
 
-Offline selection reaches retained late Activations but cannot reduce capture
-volume. The existing collector's storage-reserve disable path establishes
-neither exact per-Activation control nor preserved setup metadata for a new
-windowed collector. No new enable/disable experiment is claimed here.
+The [capture-window proof](../proofs/capture-windows/README.md) now performs
+this investigation. Its [retained evidence and decision](../proofs/capture-windows/evidence/README.md)
+supersede the earlier evidence-free deferral. It uses an optimized Native
+late-spike workload at Activation 610, a Process variant, equal-time Native
+Tasks, independently retained workload markers and actual perf control.
 
-Defer because the offline workflow can inspect already captured outliers;
-there is no retained named workload demonstrating that current capture volume
-prevents that investigation. Reopen with a reproducible optimized Native
-late-spike case after Activation 500, a Process variant and equal-time Tasks,
-when whole-Run collection exceeds a declared storage/processing budget.
-Compare whole-Run/post-filtering with perf control enable/disable on a pinned
-Linux native/container setup. Retain requested Virtual-time bounds separately
-from actual host sample/control/acknowledgment boundaries, setup module/exec
-metadata, latency, overshoot, file growth and observer cost. Cover empty and
-unreached windows, interval edges, failure/unclosed work, loss and reserve
-exhaustion. Preserve ordinary/observed Recordings with explicit generous
-deadlines. Deliberately uncaptured regions need their own coverage state;
-asynchronous commands cannot promise isolation of one short Activation.
-A positive result still requires a separate coverage/schema contract. No
-trigger language, ring buffer or heap windowing is authorized.
+**Long-window feasibility is positive; production adoption remains deferred.**
+On the named workload, bounded files are approximately 94% smaller for Native
+work and 88–89% smaller for Process work than whole-Run capture. Setup exec/DSO
+metadata and post-disable lifetime records survive named CPU controls. The
+proof retains requested Virtual time separately from notification, command,
+acknowledgment, workload and sample times. An acknowledgment identifies no
+exact effective collection edge. The short equal-time peer selection retains
+only one or two samples, including a sample outside the requested Task on
+the native host. This is no exact per-Activation isolation guarantee.
+
+The active storage-reserve case preserves the Run and its Recording. A
+competing writer that consumes the reserve between guard polls can instead
+cause perf to exit 255, send SIGTERM to the Run, and leave truncated capture
+data; the measured Run reports exit 1. This negative result is distinct from
+intentional disable, empty/unreached selection, observer backpressure,
+PERF_RECORD_LOST and an unclosed hard-killed Activation. Generous-deadline
+ordinary/observed successful fixtures and deliberate Participant failures
+retain equal outcomes and Recordings. Storage fault injection does not.
+
+Defer a production windowed collector until a source owner accepts its
+asynchronous boundaries and a reviewed contract resolves both of these:
+
+- A separate versioned coverage envelope: exact requested `[from,to)` and
+  optional Participant/Task/index identity; host clock/process lifetime;
+  notification/control/ack observations; first/last samples; deliberate
+  disabled regions; empty, unreached, failed/unclosed and unknown transitions;
+  independent observation/perf loss, capture-limit, reserve, truncation and
+  finalization states. Unknown effective boundaries stay unknown. Never
+  reinterpret an existing v1 coverage field or infer continuous coverage,
+  exclusive Process CPU, exact Activation isolation or idle time from samples.
+- Collector lifetime ownership that preserves the Run's functional outcome
+  when capture storage fails. Requalify actual ENOSPC with independently
+  surviving Run supervision, existing guards/reserve, bounded shutdown and
+  explicit partial output. A reserve is not a guarantee against other writers.
+  The proof's perf-owned workload launch does not satisfy this requirement.
+
+Reopen with a named adopter storage/processing budget, an allocated Linux
+native/container qualification environment, and those coverage/lifetime
+contracts. Then create separate production specification and implementation
+tickets, retain repeated perturbation measurements, and qualify permission,
+loss, failure and metadata behavior again. No production CLI, ordinary-run
+hook, scheduler wait, deadline relaxation, trigger language, ring buffer or
+heap windowing is authorized by this experiment.
 
 ## Scheduler/blocking evidence — #362: defer
 

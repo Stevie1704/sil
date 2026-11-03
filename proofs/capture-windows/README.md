@@ -55,6 +55,24 @@ perf loss/truncation must remain distinct. Acknowledgment is neither the
 first/last sample nor a drain guarantee; zero samples do not prove complete
 coverage. See [source findings](../../docs/research/perf-capture-window-control.md).
 
-Results and the build/defer/no-change decision are recorded after Linux
-qualification. A positive feasibility result alone cannot ship a collector:
-it needs separate coverage/schema and implementation tickets.
+The [retained evidence and decision](evidence/README.md) record Linux native
+and container measurements. Long-window volume reduction is positive;
+production adoption is **deferred** because asynchronous boundaries need a
+reviewed coverage contract and actual ENOSPC can terminate the perf-owned Run.
+A positive feasibility result alone cannot ship a collector.
+
+`analyze.py EVIDENCE` replays the retained files into `analysis.json` without
+perf or the workload binaries. `validate.py EVIDENCE` also checks the named
+experiment's counts, identity/outcome equality, setup metadata and explicit
+loss/guard cases. A permission-denied environment remains unavailable.
+The analysis aggregates counts by independently marked host intervals; these
+are time-window associations across sampled processes, not exclusive Task or
+Process CPU accounts. A workload helper return does not imply a completed
+Activation. First/last samples do not establish continuously observed work.
+
+Four independent report-boundary tests cover collector/Run outcome separation,
+invalid acknowledgment order and equal-Virtual-time half-open interval edges:
+
+```sh
+SIL_SKIP_BUILD=1 .venv/bin/python -m pytest tests/test_capture_windows_proof.py
+```
