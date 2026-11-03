@@ -43,9 +43,14 @@ jobs:
           ARG PERF_PACKAGE
           RUN apt-get update && apt-get install -y --no-install-recommends \
               "$PERF_PACKAGE" linux-tools-common python3 python3-venv binutils \
-              gcc libc6-dev libssl3t64 && rm -rf /var/lib/apt/lists/*
+              gcc libc6-dev libssl3t64 libcap2-bin && \
+              for tool in /usr/lib/linux-tools/*/perf /usr/lib/linux-tools-*/perf; do \
+                if [ -f "$tool" ]; then setcap cap_perfmon+ep "$(readlink -f "$tool")"; fi; \
+              done && rm -rf /var/lib/apt/lists/*
           EOF
-          docker build --build-arg "PERF_PACKAGE=linux-tools-$(uname -r)" \
+          perf_package="linux-tools-$(uname -r)"
+          perf_version=$(dpkg-query -W -f='${Version}' "$perf_package")
+          docker build --build-arg "PERF_PACKAGE=$perf_package=$perf_version" \
             -f build/window-container.Dockerfile -t sil-window-proof .
           docker image inspect sil-window-proof > build/window-evidence/container-image.json
       - name: Container default-capability availability
@@ -72,6 +77,11 @@ jobs:
           .venv/bin/python proofs/capture-windows/qualify.py run "$PWD/build/window-work" \
             --out "$PWD/build/window-evidence/native-paranoid-2" \
             --environment native-paranoid-2 --small-dir /mnt/sil-window-small
+      - name: Analyze retained boundaries and volumes
+        run: |
+          for environment in build/window-evidence/*/; do
+            .venv/bin/python proofs/capture-windows/analyze.py "$environment"
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -14,6 +14,7 @@ from pathlib import Path
 import platform
 import re
 import selectors
+import shutil
 import signal
 import socket
 import struct
@@ -297,6 +298,9 @@ def capture(out, work, variant, mode, *, small=None):
             "lost_records": metadata.count("PERF_RECORD_LOST"),
             "throttle_records": metadata.count("PERF_RECORD_THROTTLE"),
         }
+        if small:
+            shutil.copy2(data, out / "perf.data")
+            data.unlink()
     write(out / "result.json", result)
     return result
 
@@ -311,6 +315,10 @@ def qualify(out, work, environment, small):
         command(args, out / f"{label}.txt")
     identities["binaries"] = {str(p): digest(p) for p in
         (work / "workload.so", work / "build/sil-run", work / "build/sil-run-diagnostics")}
+    identities["sources"] = {str(p.relative_to(ROOT)): digest(p) for p in
+        (HERE / "workload.c", HERE / "notify.hpp", HERE / "qualify.py",
+         ROOT / "kernel/src/run_diagnostics.cpp")}
+    identities["overlay_sha256"] = digest(work / "run_diagnostics.cpp")
     write(out / "identities.json", identities)
     # Retain permission/feature availability before the experiment. No sysctl here.
     probe = command(["perf", "record", *SAMPLE_OPTIONS, "--delay=-1", "-o",
