@@ -121,10 +121,11 @@ No production CLI, ABI, Manifest, Recording format or supported schema changes.
 
 ## Retention and offline replay
 
-`results.json` is the compact permanent summary. `contents.json` binds every
-archived file by size/SHA-256; `archive.sha256` binds `portable-evidence.tar.gz`.
-The archive contains exact proof sources, all raw control/notification/workload
-events, Activation logs, sample timestamps/leaf symbols, metadata, statistics,
+`archive.sha256` binds the complete `portable-evidence.tar.gz` bundle.
+Per-environment `results.json` and `analysis.json` reports are retained inside
+the archive; the tables above summarize their findings. The archive contains
+exact proof sources, all raw control/notification/workload events, Activation
+logs, sample timestamps/leaf symbols, metadata, statistics,
 identities, diagnostics, Recordings and reports. Original `digests.json` also
 names raw perf files omitted from this portable archive. Raw perf data remains
 in the linked Actions artifact for its 30-day retention; offline replay needs
