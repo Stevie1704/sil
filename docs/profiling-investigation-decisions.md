@@ -62,15 +62,13 @@ and [ADR 0007](adr/0007-source-owned-native-scope-observer.md) replace the
 earlier deferral. They freeze the source API, the opt-in `sil profile
 --collector scopes` lifecycle, separately versioned raw/normalized files with
 [worked fixtures](../tests/fixtures/source_scopes/), the join, the
-Run/capture outcomes and the resource budgets. The named benefit is exact
-per-Activation call counts and order, which sampled stacks cannot give, first
-for the ADAS reference's object search. The constraints stay: one
-source-owned Native C library, synchronous runner-thread calls, ordinary C
-returns, Linux x86-64/glibc, GCC 12 and durations of the instrumented build
-only.
+Run/capture outcomes and the resource budgets. The contract records the
+named benefit and the constraints of this decision.
 
-No supported interface ships with this decision. Separate API/lifecycle,
-decoding and presentation tickets implement the contract; each ships only
+No supported interface ships with this decision. Separate tickets implement
+the contract: decoding [#371](https://github.com/Stevie1704/sil/issues/371),
+API/lifecycle [#372](https://github.com/Stevie1704/sil/issues/372) and
+presentation [#373](https://github.com/Stevie1704/sil/issues/373); each ships only
 after its rows of the contract's qualification matrix pass. Process/FMU/
 prebuilt-library/XRay coverage and CPU-duration/target/WCET claims remain
 excluded.

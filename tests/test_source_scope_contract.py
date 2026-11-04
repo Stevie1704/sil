@@ -64,6 +64,7 @@ def test_raw_file_matches_its_metadata(case):
     assert len(data["bytes"]) == raw["bytes_written"] == \
         HEADER.size + RECORD.size * raw["records"]
     assert raw["records"] <= capacity
+    assert raw["dropped_full"] == 0 or raw["records"] == capacity
 
 
 @pytest.mark.parametrize("case", CASES)
@@ -78,7 +79,7 @@ def test_records_name_mapped_scopes_in_per_thread_time_order(case):
 
 
 @pytest.mark.parametrize("case", CASES)
-def test_identity_mismatch_fails_before_any_call_is_decoded(case):
+def test_build_id_mismatch_has_an_error_example(case):
     data = load(case)
     matches = data["raw"]["library"]["build_id"] == data["map"]["library"]["build_id"]
     assert matches == ("error" not in data["expected"])
@@ -114,6 +115,22 @@ def test_calls_reconcile_with_raw_edges(case):
         totals["entries"] - totals["paired_calls"]
     assert sum(row["entry_ns"] is None for row in rows) == \
         totals["returns"] - totals["paired_calls"]
+
+
+@pytest.mark.parametrize("case", decoded_cases())
+def test_every_listed_edge_is_a_distinct_raw_record(case):
+    data = load(case)
+    unused = Counter((tid, scope, edge, ns) for ns, tid, scope, edge, _ in records(data))
+    runner = data["observations"][0]["runner_tid"]
+    listed = [(runner, call) for activation in data["expected"]["activations"]
+              for call in activation["calls"]]
+    listed += [(row["tid"], row) for row in data["expected"]["unattributed"]["rows"]]
+    for tid, call in listed:
+        for edge, key in ((ENTRY, "entry_ns"), (RETURN, "return_ns")):
+            if call[key] is not None:
+                record = (tid, call["scope"], edge, int(call[key]))
+                assert unused[record] > 0, record
+                unused[record] -= 1
 
 
 @pytest.mark.parametrize("case", decoded_cases())
@@ -156,4 +173,13 @@ def test_exact_activations_hold_contained_nested_calls(case):
                 assert ret <= int(calls[parent]["return_ns"])
         assert activation["counts"] == {
             str(scope): count for scope, count in
-            sorted(Counter(call["scope"] for call in calls).items())}
+            Counter(call["scope"] for call in calls).items()}
+
+
+def test_ordinary_runner_sources_have_no_scope_observer():
+    kernel = FIXTURES.parents[2] / "kernel"
+    sources = [path for path in kernel.rglob("*") if path.suffix in
+               (".c", ".cpp", ".h", ".hpp", ".txt", ".cmake")]
+    assert sources
+    assert not [path for path in sources
+                if "sil_source_scope" in path.read_text(errors="replace")]

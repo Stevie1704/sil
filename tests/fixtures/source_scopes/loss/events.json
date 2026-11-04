@@ -23,8 +23,8 @@
   },
   "capacity_records": 65536,
   "records": 2,
-  "dropped_full": 3,
-  "dropped_contended": 0,
+  "dropped_full": 0,
+  "dropped_contended": 3,
   "bytes_written": 96,
   "write_status": "complete"
 }

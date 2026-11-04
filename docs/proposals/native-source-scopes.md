@@ -24,9 +24,9 @@ the same Run. For each Activation the user can see:
 
 Sampled stacks cannot give these values. A sample weight is an estimate,
 and a sampled caller is not a call count. The named first user is the ADAS
-reference: the number of `confirms` calls grows with the number of objects
-((2, 1, 1, 1) and (16, 8, 36, 1) calls of `check_object`, `confirmed`,
-`confirms` and `select_lead` for one and eight objects). #320 counted these
+reference. Its number of `confirms` calls grows with the number of objects.
+For one and eight objects, `check_object`, `confirmed`, `confirms` and
+`select_lead` have (2, 1, 1, 1) and (16, 8, 36, 1) calls. #320 counted these
 calls exactly, also when the compiler inlined the four functions.
 
 ## Scope of the contract
@@ -64,8 +64,10 @@ static int confirms(const object *radar, const object *camera) {
   chooses the IDs and keeps them stable across the builds that they compare.
 - `name` is a string literal of at most 63 bytes. `__FILE__` must be at
   most 183 bytes. A longer value is a compile error.
-- Two sites with the same `id` must have the same name. The same site in
-  more than one translation unit (a header) is one scope.
+- One scope ID can have more than one site, for example in two blocks or
+  in a header that more than one translation unit includes. All sites of an
+  ID must have the same name. Sites with the same ID and different names
+  are a conflicting duplicate.
 - Without the macro `SIL_SOURCE_SCOPES` defined to 1, the macro expands to
   nothing: no code, no data and no link dependency. This is the **opt-out**
   and the default.
@@ -141,20 +143,26 @@ sil profile MANIFEST --out DIR --collector scopes --participant NAME
 
 ### Lifecycle
 
-1. **Preflight.** The platform must be Linux x86-64/glibc. The output
-   paths are checked as for the other collectors. `NAME` must be a Native
-   participant. Its library must be a readable ELF file with a GNU build ID,
-   a valid `sil_source_scopes` section and `libsil_source_scope.so.1` in
-   `DT_NEEDED`. The command extracts the scope map, then writes
-   `DIR/scopes/map.json` with the library's path, build ID and SHA-256.
-   Any failure exits 2 before `DIR` is made.
+1. **Preflight.** The output paths are checked as for the other
+   collectors. `NAME` must be a Native participant. Its library must be a
+   readable ELF file with a GNU build ID, a valid `sil_source_scopes`
+   section and `libsil_source_scope.so.1` in `DT_NEEDED`. The command
+   extracts the scope map in memory and records the library's path, build
+   ID and SHA-256. A failure of these checks exits 2. The host must be
+   Linux x86-64/glibc; on another host the command exits 1, as a host
+   preflight failure of the other collectors. No preflight failure makes
+   `DIR`. After preflight, the command makes `DIR` and writes
+   `DIR/scopes/map.json` first. A failure to write it exits 1 and leaves
+   `DIR` as found, without a `scopes.json`.
 2. **Session.** The command makes a fresh capture ID (UUID version 4). It
    sets `SIL_SOURCE_SCOPE_SESSION` with the capture ID, the capacity and the
    two output paths. The launcher adds `pid`.
 3. **Run.** It starts the launcher and `sil-run-diagnostics` with
    `--activation-observations`, as the CPU collector does with
    `--activations`. The Manifest bytes, Participant commands and working
-   directory do not change.
+   directory do not change. The environment of the runner, and of each
+   process it starts, gets one more variable: `SIL_SOURCE_SCOPE_SESSION`.
+   Only the runner's PID matches it.
 4. **Finalization.** The observer writes when the instrumented library is
    unloaded, or at process exit if that is first. It writes
    `scopes/events.bin` first and `scopes/events.json` last. Each is a fresh
@@ -230,7 +238,8 @@ in order per thread, not across threads.
 
 `library` (`path`, `build_id`, `sha256`), `original` (`path`, `build_id`,
 `sha256` of `--original-library`, or null) and `scopes`: one `{id, name,
-file, line}` per distinct scope, sorted by `id`.
+sites}` per scope ID, sorted by `id`. `sites` lists each distinct `{file,
+line}` of that ID, sorted by file, then line.
 
 ### `scopes/calls.json`: `sil_source_scope_calls` v1
 
@@ -239,7 +248,7 @@ file, line}` per distinct scope, sorted by `id`.
 | `sil_source_scope_calls`, `capture_id`, `participant` | Version 1, the session, the selected participant |
 | `status`, `problems` | `complete` with `[]`, or `partial` with the capture problems below |
 | `totals` | `entries`, `returns`, `paired_calls`, `attributed_calls`, `withheld_calls`, `unattributed` |
-| `activations` | Every kept Native Task activation record of the participant, in stream order (below) |
+| `activations` | The record of every kept Native Task Activation of the participant, in stream order (below) |
 | `unattributed` | `reasons` (count per reason), `rows` (at most 1,000, in entry order), `rows_remainder` |
 
 An activation has the observation members (`participant`, `task`, `index`,
@@ -273,7 +282,7 @@ return and `returns - paired_calls` rows have no entry.
 | `capture` | `status` (`complete`, `partial`, `failed`, `interrupted`), `reasons`, `capture_id`, loss counters, `records` |
 | `identities` | `instrumented` and `original` library identities, observer version, compiler identity from the library's `.comment` section |
 | `artifacts` | Path, size and SHA-256 of every file in the table above |
-| `summary` | Per Task: activations, exact, unavailable by reason; per scope: total attributed calls, and min/median/max calls per exact Activation |
+| `summary` | Per Task: Activations, exact, unavailable by reason; per scope: total attributed calls, and min/median/max calls per exact Activation |
 | `limitations` | The fixed list in [Presentation](#presentation) |
 
 ## Join and pairing
@@ -286,10 +295,12 @@ left at the end are `missing_return`. Recursion is nesting of the same ID.
 No return is made up for a missing one, and a missing return has no
 duration.
 
-A paired call belongs to Activation A when its thread is the runner thread
-(`runner_tid` and A's `tid`), A is of the selected participant and of kind
-`native_task`, and both `begin_ns <= entry_ns < end_ns` and
-`begin_ns <= return_ns < end_ns`. Intervals are half open: an event at the
+A paired call belongs to Activation A when all of these are true:
+
+- Its thread is the runner thread: `runner_tid`, and A's `tid`.
+- A is an Activation of the selected participant, of kind `native_task`.
+- `begin_ns <= entry_ns < end_ns` and `begin_ns <= return_ns < end_ns`.
+ Intervals are half open: an event at the
 next Activation's `begin_ns` belongs to that Activation.
 
 | Call | Result |
@@ -329,6 +340,8 @@ These checks fail the decode before any file is written. The capture is
   non-decreasing order and `clock_errors` is known (`clock_unverified`).
 - The scope map has no conflicting duplicates and at most 4,096 sites
   (`map_invalid`; normally a preflight error).
+- In `sil profile render`: each file in `artifacts` has its recorded size
+  and SHA-256, and a known contract version, before any output (exit 2).
 
 ## Run and capture outcomes
 
@@ -337,7 +350,8 @@ replaces a Run failure.
 
 | Situation | Exit code | `scopes.json` |
 | --- | --- | --- |
-| Invalid option, unsupported platform, output path exists or is an alias, participant not Native, library not instrumented | 2 | not written, `DIR` not made |
+| Invalid option, output path exists or is an alias, participant not Native, library not instrumented | 2 | not written, `DIR` not made |
+| Not Linux x86-64/glibc (host preflight) | 1 | not written, `DIR` not made |
 | `sil-run-diagnostics` or the launcher is not on `PATH` | 127 | not written |
 | The Run failed (exit code N) | N | written, capture status as found |
 | The runner ended by signal N | 128+N | written, capture `failed` (`raw_incomplete`) |
@@ -370,7 +384,8 @@ dormant process.
 | Finalization | Two regular-file writes after the observation `end` line; 30 s, then SIGTERM, 5 s, SIGKILL | `finalization_timeout` |
 | Offline inputs | 16 MiB per file, as all `sil profile` offline commands | exit 2 |
 
-Disk growth of `DIR` excluding the Recording is at most 4 MiB raw +
+Disk growth of `DIR` excluding the Recording and `run.diagnostics.json`
+is at most 4 MiB raw +
 the observation limit + 16 MiB normalized + 3 MiB maps and summaries.
 Regular-file I/O can wait on the file system. The observer makes no hard
 real-time or uninterruptible-I/O promise. No reader or pipe can apply
@@ -385,7 +400,8 @@ sil profile render DIR/scopes.json [--html OUTPUT.html]
 ```
 
 `sil profile render` selects the contract by the document's top-level
-version member. The selection options have the same rules as for
+version member. It reads `scopes.json` and the files that its `artifacts`
+list names, and verifies them first ([Identity checks](#identity-checks)). The selection options have the same rules as for
 `profile.json` ([Activation outliers](../profile-report.md#activation-outliers-and-offline-selection)).
 `sil profile diff` rejects `scopes.json` with exit 2.
 
@@ -401,7 +417,7 @@ Every view states these limitations:
 
 - Durations are inclusive elapsed host time of the **instrumented** build.
   They include observer cost, waiting and preemption. Nested durations
-  overlap and must not be added. No probe overhead is subtracted.
+  overlap and must not be added. No observer cost is subtracted.
 - The instrumented build can inline and optimize differently from the
   original build. Both identities are shown; durations do not transfer to
   the original build.
@@ -452,10 +468,10 @@ the implementation: worked examples or a counted fixture.
 | Q15 | Finalization blocked beyond 30 s | `finalization_timeout`; Run outcome from the diagnostics report | API/lifecycle |
 | Q16 | Free-space reserve reached | `storage_reserve_reached`; Run continues | API/lifecycle |
 | Q17 | Instrumented library under `sil run`, `sil-run`, a CPU profile and as a Process participant | Dormant: no file; equal Recordings and exit codes | API/lifecycle |
-| Q18 | `sil-run` binary and kernel sources | No `sil_source_scope` symbol or include | API/lifecycle |
+| Q18 | `sil-run` binary and kernel sources | No `sil_source_scope` symbol or include. The source check already runs offline in `tests/test_source_scope_contract.py`; the binary check is pending | API/lifecycle |
 | Q19 | Build without `SIL_SOURCE_SCOPES` | Same bytes as without the header calls; no `DT_NEEDED` | API/lifecycle |
 | Q20 | Original and instrumented builds | Both identities retained; inline decisions of both builds retained | API/lifecycle |
-| Q21 | Ordinary versus capture Runs, generous deadlines, 3 repeats | Byte-identical Recordings and equal outcomes; elapsed and storage retained without a threshold | API/lifecycle |
+| Q21 | Ordinary versus capture Runs, generous Response deadlines, 3 repeats | Byte-identical Recordings and equal outcomes; elapsed and storage retained without a threshold | API/lifecycle |
 | Q22 | Fixtures in `tests/fixtures/source_scopes/` (offline) | The decoder output equals each `expected.json` | decoding |
 | Q23 | Malicious names, large integers, 1,000+ unattributed rows, maximum `calls.json` (offline) | Escaped, bounded, remainder shown | decoding, presentation |
 | Q24 | Render and HTML of all fixture cases (offline) | Exact and unavailable Activations, limitations shown | presentation |
@@ -463,8 +479,9 @@ the implementation: worked examples or a counted fixture.
 The fixtures in [`tests/fixtures/source_scopes/`](../../tests/fixtures/source_scopes/)
 are worked examples of the decoder's input and output. They cover nesting,
 an early return, the half-open boundary, recursion, every unattributed
-reason except `missing_entry` and `observations_incomplete`, an
-unbalanced Activation, loss and an identity mismatch.
+reason except `missing_entry` and `observations_incomplete`, the
+`not_completed`, `unbalanced_scopes`, `crossing_call` and `events_lost`
+Activations, and an identity mismatch.
 `tests/test_source_scope_contract.py` keeps them consistent with this
 contract.
 
@@ -478,11 +495,11 @@ durations only.
 
 The work is split into three tickets against this contract:
 
-- API and capture lifecycle: header, observer, launcher session,
+- [#372](https://github.com/Stevie1704/sil/issues/372) API and capture lifecycle: header, observer, launcher session,
   `--collector scopes`, raw files, supervision and Q1–Q10, Q13–Q21.
-- Decoding: map extraction, identity checks, pairing, join,
+- [#371](https://github.com/Stevie1704/sil/issues/371) Decoding: map extraction, identity checks, pairing, join,
   `calls.json`, `scopes.json` and Q2, Q11, Q12, Q22, Q23.
-- Presentation: `sil profile render` for `scopes.json` and Q23, Q24.
+- [#373](https://github.com/Stevie1704/sil/issues/373) Presentation: `sil profile render` for `scopes.json` and Q23, Q24.
 
 Decoding has no dependency. API/lifecycle uses the decoder's map
 extraction. Presentation needs decoding. Nothing ships until its ticket's

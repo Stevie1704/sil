@@ -48,7 +48,7 @@ _Avoid_: trace, benchmark
 A logical C call region that a source owner marks with `SIL_SOURCE_SCOPE` in
 an instrumented Native library. Its entry and return events give exact call
 counts, order and inclusive elapsed host time per Activation for that build
-only (contract accepted in #360, not yet implemented).
+only.
 _Avoid_: function trace, instruction trace, probe
 
 **CPU capture window**:

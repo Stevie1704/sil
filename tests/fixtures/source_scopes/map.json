@@ -7,10 +7,55 @@
   },
   "original": null,
   "scopes": [
-    {"id": 1, "name": "check_object", "file": "adas_reference.c", "line": 120},
-    {"id": 2, "name": "confirmed", "file": "adas_reference.c", "line": 151},
-    {"id": 3, "name": "confirms", "file": "adas_reference.c", "line": 140},
-    {"id": 4, "name": "select_lead", "file": "adas_reference.c", "line": 170},
-    {"id": 5, "name": "walk", "file": "adas_reference.c", "line": 200}
+    {
+      "id": 1,
+      "name": "check_object",
+      "sites": [
+        {
+          "file": "adas_reference.c",
+          "line": 120
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "confirmed",
+      "sites": [
+        {
+          "file": "adas_reference.c",
+          "line": 151
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "confirms",
+      "sites": [
+        {
+          "file": "adas_reference.c",
+          "line": 140
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "select_lead",
+      "sites": [
+        {
+          "file": "adas_reference.c",
+          "line": 170
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "walk",
+      "sites": [
+        {
+          "file": "adas_reference.c",
+          "line": 200
+        }
+      ]
+    }
   ]
 }

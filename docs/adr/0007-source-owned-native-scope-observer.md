@@ -68,10 +68,10 @@ Compatibility:
   A source owner who uses them builds and keeps an instrumented variant.
 - Durations describe the instrumented build. Its inlining and timing can
   differ from the original build, and observer cost is substantial in short
-  Activations (#320: 7,160.5 → 50,795.5 ns median for eight objects). No
-  overhead is subtracted; both build identities are kept.
+  Activations (see the contract's #320 evidence). No overhead is
+  subtracted; both build identities are kept.
 - Instrumentation can move a Run that sits on a response-deadline edge.
-  Recording equality is qualified with generous deadlines only.
+  Recording equality is qualified with generous Response deadlines only.
 - Process participants, FMUs, prebuilt libraries, worker threads,
   nonlocal exits and compilers other than GCC 12 stay outside the contract
   until separately qualified.
