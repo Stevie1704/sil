@@ -1,12 +1,6 @@
 name: proof-host-scheduling
 
 on:
-  push:
-    branches: ['proof/362-host-scheduling']
-    paths:
-      - 'proofs/host-scheduling/**'
-      - 'tests/test_host_scheduling_proof.py'
-      - '.github/workflows/proof-host-scheduling.yml'
   pull_request:
     paths:
       - 'proofs/host-scheduling/**'
