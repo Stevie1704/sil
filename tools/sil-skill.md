@@ -1,6 +1,6 @@
 ---
 name: sil
-description: Test a system under test (SUT) deterministically with SiL, the `sil` command. Use it to bring a SUT (an FMU, a C library or an executable) into a Run as a Participant. Use it to inspect or couple FMUs, or to write and validate a Manifest. Use it to execute a Run into a Recording, or to read and compare Recordings. Use it for a determinism check, or to find why a Run failed. Use it to measure wall time, Task and Step times, CPU time or peak memory, benchmark repeated Runs, capture or explore CPU/heap profiles, or compare saved profiles. Use it when the user names SiL, a vECU, an FMU, a Manifest, a Recording, a determinism check, a Run failure, or a slow Run.
+description: Test a system under test (SUT) deterministically with SiL, the `sil` command. Use it to bring a SUT (an FMU, a C library or an executable) into a Run as a Participant. Use it to inspect or couple FMUs, or to write and validate a Manifest. Use it to execute a Run into a Recording, or to read and compare Recordings. Use it for a determinism check, or to find why a Run failed. Use it to measure wall time, Task and Step times, CPU time or peak memory, benchmark repeated Runs, capture or explore CPU/heap profiles, or compare saved profiles. Use it to interpret saved diagnostics reports, benchmark results or profiles and explain performance findings. Use it when the user names SiL, a vECU, an FMU, a Manifest, a Recording, a determinism check, a Run failure, or a slow Run.
 metadata:
   sil-version: "$version"
 ---
@@ -13,7 +13,10 @@ This skill is for SiL $version. When you change the installed SiL version, run
 ## Steps
 
 Each step names the docs to read. All docs are offline and match the
-installed version.
+installed version. For an existing diagnostics report, benchmark result or
+profile, start with `sil docs agent-guide`, section "Interpret saved
+measurements". This workflow starts from the supplied evidence and identifies
+which further measurement, if any, would answer the user's question.
 
 1. **Inspect** the SUT: `sil docs fmi` (an FMU), `sil docs library` (a C
    library), `sil docs step-protocol` (an executable). When a guide uses
