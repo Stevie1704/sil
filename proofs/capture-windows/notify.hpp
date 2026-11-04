@@ -13,10 +13,11 @@
 namespace window_proof {
 struct Notice { uint64_t host_ns, virtual_ns, task, edge; };
 static_assert(sizeof(Notice) == 32);
-struct Observer {
+struct Notifier {
   int fd = -1;
   uint64_t sent = 0, dropped = 0;
-  Observer() {
+  uint64_t last_virtual_ns = 0;
+  Notifier() {
     const char *path = std::getenv("SIL_WINDOW_SOCKET");
     if (!path) return;
     sockaddr_un address{};
@@ -33,7 +34,10 @@ struct Observer {
     if (fd >= 0 && connect(fd, reinterpret_cast<sockaddr *>(&address),
                            sizeof address) != 0) { close(fd); fd = -1; }
   }
-  ~Observer() {
+  ~Notifier() {
+    // Shutdown is not a new Slot. It requests CPU disable when no later
+    // Activation starts (including failure); SIGKILL cannot emit it.
+    emit(UINT64_MAX, last_virtual_ns, 2);
     if (fd >= 0) close(fd);
     const char *path = std::getenv("SIL_WINDOW_OBSERVER");
     if (!path) return;
@@ -45,6 +49,7 @@ struct Observer {
     }
   }
   void emit(uint64_t task, uint64_t vt, uint64_t edge) {
+    last_virtual_ns = vt;
     timespec time{};
     if (clock_gettime(CLOCK_MONOTONIC, &time) != 0) { ++dropped; return; }
     Notice notice{uint64_t(time.tv_sec)*1000000000 + uint64_t(time.tv_nsec),
@@ -55,7 +60,7 @@ struct Observer {
   }
 };
 inline void notify(uint64_t task, uint64_t vt, uint64_t edge) {
-  static Observer observer;
-  observer.emit(task, vt, edge);
+  static Notifier notifier;
+  notifier.emit(task, vt, edge);
 }
 }

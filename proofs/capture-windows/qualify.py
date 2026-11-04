@@ -12,27 +12,21 @@ import json
 import os
 from pathlib import Path
 import platform
-import re
-import selectors
 import shutil
 import signal
-import socket
-import struct
 import subprocess
 import sys
-import tempfile
 import time
 
 from sil.manifest import Manifest
-from sil.profile_storage import reserve_reached
+from sil.profile_storage import RESERVE_BYTES
+from model import CASES, EVENT, MAX_CAPTURE_BYTES, PERIOD_NS, RUN_DURATION_NS, perf_sample_host_ns
+from session import CaptureSession, GUARD_POLL_NS, SUPERVISOR_TIMEOUT_NS
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-NOTICE = struct.Struct("<QQQQ")
-EVENT = "cpu-clock:u"
 SAMPLE_OPTIONS = ["-e", EVENT, "-F", "997", "-k", "monotonic",
                   "--call-graph", "dwarf,8192", "--buildid-mmap", "-N", "-q"]
-MAX_BYTES = 128 << 20
 EXPORT_BYTES = 256 << 20
 
 
@@ -106,7 +100,7 @@ def build(work):
 
 
 def manifest(work, variant, fail=False):
-    m = Manifest(duration_ns=620_000_000)
+    m = Manifest(duration_ns=RUN_DURATION_NS)
     m.add_schemas({"Event": {"fields": [{"name": "task", "type": "u64"},
                                            {"name": "index", "type": "u64"}]}})
     m.add_channel("events", schema="Event")
@@ -116,237 +110,109 @@ def manifest(work, variant, fail=False):
     else:
         m.add_process("work", command=[sys.executable, str(HERE / "process.py"),
                       str(work / "workload.so"), "fail" if fail else "pass"],
-                      step_period_ns=1_000_000, publishes=["events"])
+                      step_period_ns=PERIOD_NS, publishes=["events"])
     path = work / f"{variant}-{'fail' if fail else 'pass'}.json"
     if not path.exists():
         m.write(path)
     return path
 
 
-def sample_times(path):
-    """perf's --ns time-only sample pass, independent of Activation decoder."""
-    result = []
-    for line in path.read_text().splitlines():
-        match = re.match(r"^\s*(\d+)\.(\d{9}):?\s*$", line)
-        if match:
-            result.append(int(match[1])*1_000_000_000 + int(match[2]))
-    return result
+def perf_sample_host_times(path):
+    """Integer host timestamps from perf's --ns sample pass."""
+    return [host_ns for line in path.read_text().splitlines()
+            if (host_ns := perf_sample_host_ns(line)) is not None]
 
 
-def capture(out, work, variant, mode, *, small=None):
-    out.mkdir()
-    failing = mode in ("failure", "ordinary-failure")
-    source = manifest(work, variant, failing)
-    ordinary = mode in ("ordinary", "ordinary-failure")
-    measured = mode not in ("ordinary", "ordinary-failure", "diagnostics", "observer")
-    window = measured and mode not in ("whole", "whole-baseline", "limit", "reserve", "exhaustion")
-    data = (small / (out.name + ".data")) if small else out / "perf.data"
-    env = os.environ.copy()
-    env["PYTHONPATH"] = str(ROOT / "python/src")
-    env["SIL_WINDOW_MARKERS"] = str(out / "markers.json")
-    if mode == "loss": env["SIL_WINDOW_SMALL_BUFFER"] = "1"
-    notices, controls, growth = [], [], []
-    started = time.monotonic_ns()
-    requested = {"from_ns": 610_000_000, "to_ns": 611_000_000, "task": None}
-    if mode == "empty": requested["to_ns"] = requested["from_ns"]
-    if mode == "unreached": requested.update(from_ns=900_000_000, to_ns=901_000_000)
-    if mode == "exact-peer": requested["task"] = 1 if variant == "native" else 0
-    if mode in ("failure", "unclosed"): requested["to_ns"] = 615_000_000
-    if mode == "loss": requested.update(from_ns=0, to_ns=620_000_000)
-    runner = work / "build" / ("sil-run" if ordinary else "sil-run-diagnostics")
-    if mode in ("diagnostics", "whole-baseline"):
-        runner = work / "diagnostics-baseline"
-    argv = [str(runner), str(source), "-o", str(out / "run.mcap"),
+def runner_command(out, work, variant, case):
+    source = manifest(work, variant, case.failing_workload)
+    runners = {"ordinary": work / "build/sil-run", "baseline": work / "diagnostics-baseline",
+               "observed": work / "build/sil-run-diagnostics"}
+    argv = [str(runners[case.runner]), str(source), "-o", str(out / "run.mcap"),
             "--participant-timeout-ms", "10000"]
-    if not ordinary:
+    if case.runner != "ordinary":
         argv += ["--diagnostics-out", str(out / "diagnostics.json"),
                  "--activation-observations", str(out / "activations.jsonl"),
                  "--activation-observations-limit-bytes", str(8 << 20)]
-    # Short Unix socket path, regardless of evidence path length.
-    with tempfile.TemporaryDirectory(prefix="sil-window-") as temporary, \
-            selectors.DefaultSelector() as selector:
-        receiver = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-        receiver.bind(temporary + "/notice")
-        receiver.setblocking(False)
-        selector.register(receiver, selectors.EVENT_READ, "notice")
-        if mode not in ("ordinary", "ordinary-failure", "diagnostics", "whole-baseline"):
-            env.update(SIL_WINDOW_SOCKET=temporary + "/notice",
-                       SIL_WINDOW_OBSERVER=str(out / "observer.json"))
-        control_fd = ack_fd = None
-        if measured:
-            ctl, ack = out / "control.fifo", out / "ack.fifo"
-            os.mkfifo(ctl, 0o600)
-            os.mkfifo(ack, 0o600)
-            control_fd = os.open(ctl, os.O_RDWR | os.O_NONBLOCK)
-            ack_fd = os.open(ack, os.O_RDWR | os.O_NONBLOCK)
-            selector.register(ack_fd, selectors.EVENT_READ, "ack")
-            argv = ["perf", "record", *SAMPLE_OPTIONS,
-                    *(["-m", "1"] if mode == "perf-loss" else []),
-                    "--control", f"fifo:{ctl},{ack}", "-o", str(data),
-                    *(["--delay=-1"] if window else []), "--", *argv]
-        write(out / "command.json", argv)
-        pending, desired, active, stopped = None, not window, not window, None
-        enable_due = disable_due = kill_due = None
-        exhausted = False
-        loss_pause_done = False
-        ack_buffer = b""
-        last_poll = 0
-        with (out / "stdout.txt").open("wb") as stdout, \
-                (out / "stderr.txt").open("wb") as stderr:
-            process = subprocess.Popen(argv, env=env, stdout=stdout, stderr=stderr,
-                                       start_new_session=True)
-            try:
-                while True:
-                    now = time.monotonic_ns()
-                    if now - started > 60_000_000_000:
-                        raise RuntimeError("capture exceeded 60 s guard")
-                    for key, _ in selector.select(.001):
-                        if key.data == "ack":
-                            ack_buffer += os.read(ack_fd, 4096)
-                            ack_buffer = ack_buffer.lstrip(b"\0")
-                            while b"\n" in ack_buffer:
-                                line, ack_buffer = ack_buffer.split(b"\n", 1)
-                                ack_buffer = ack_buffer.lstrip(b"\0")
-                                if line != b"ack" or pending is None:
-                                    raise RuntimeError("unexpected perf acknowledgment")
-                                pending["ack_ns"] = time.monotonic_ns()
-                                active = pending["command"] == "enable"
-                                pending = None
-                        else:
-                            # Drain only a bounded batch so guards/acks get service.
-                            for _ in range(256):
-                                try: raw = receiver.recv(128)
-                                except BlockingIOError: break
-                                if len(raw) != NOTICE.size:
-                                    raise RuntimeError("bad proof notice")
-                                host, vt, task, edge = NOTICE.unpack(raw)
-                                notices.append([host, vt, task, edge, time.monotonic_ns()])
-                                if mode == "loss" and not loss_pause_done:
-                                    # Pause after the first real Activation notice,
-                                    # not during perf's variable setup latency.
-                                    time.sleep(.1)
-                                    loss_pause_done = True
-                                if len(notices) > 10000:
-                                    raise RuntimeError("notice budget exceeded")
-                                if mode == "exhaustion" and not exhausted and vt >= 100_000_000:
-                                    # Disclosed storage fault between normal guard
-                                    # polls: another writer consumes the reserve.
-                                    filler = small / "filler"
-                                    descriptor = os.open(filler, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-                                    try:
-                                        for _ in range(512):
-                                            try: os.write(descriptor, b"x"*65536)
-                                            except OSError as error:
-                                                if error.errno != 28: raise
-                                                break
-                                    finally:
-                                        os.close(descriptor)
-                                    exhausted = True
-                                selected = (requested["from_ns"] <= vt < requested["to_ns"]
-                                            and (requested["task"] is None or task == requested["task"]))
-                                if window and not stopped:
-                                    if requested["task"] is not None:
-                                        if selected: desired = edge == 0
-                                    elif edge == 0:
-                                        desired = selected
-                                    if mode == "during" and desired and enable_due is None and not active:
-                                        enable_due = time.monotonic_ns() + 20_000_000
-                                        desired = False
-                                    if mode == "end-during" and desired and disable_due is None:
-                                        disable_due = time.monotonic_ns() + 30_000_000
-                                    if mode == "unclosed" and desired and kill_due is None:
-                                        kill_due = time.monotonic_ns() + 30_000_000
-                    now = time.monotonic_ns()
-                    if enable_due and now >= enable_due:
-                        desired, enable_due = True, None
-                    if disable_due and now >= disable_due:
-                        desired, disable_due, stopped = False, None, "explicit_host_stop"
-                    if kill_due and now >= kill_due:
-                        # perf's launched child is the runner. Kill just it;
-                        # perf must remain alive to finalize its own capture.
-                        children = Path(f"/proc/{process.pid}/task/{process.pid}/children")
-                        for pid in children.read_text().split(): os.kill(int(pid), signal.SIGKILL)
-                        kill_due = None
-                    if measured and now - last_poll >= 100_000_000:
-                        last_poll = now
-                        size = data.stat().st_size if data.exists() else 0
-                        growth.append([now, size])
-                        limit = (64 << 10) if mode == "limit" else MAX_BYTES
-                        if not stopped and (size > limit or reserve_reached(data.parent)):
-                            stopped = "capture_limit" if size > limit else "storage_reserve"
-                            desired = False
-                    if measured and pending is None and desired != active:
-                        # Event-specific control leaves the dummy tracking event on.
-                        verb = "enable" if desired else "disable"
-                        sent = time.monotonic_ns()
-                        os.write(control_fd, f"{verb} {EVENT}\n".encode())
-                        pending = {"command": verb, "write_ns": sent, "ack_ns": None}
-                        controls.append(pending)
-                    if process.poll() is not None:
-                        break
-            finally:
-                if process.poll() is None:
-                    os.killpg(process.pid, signal.SIGKILL)
-                    process.wait()
-                receiver.close()
-                if control_fd is not None: os.close(control_fd)
-                if ack_fd is not None: os.close(ack_fd)
-                for name in ("control.fifo", "ack.fifo"):
-                    (out / name).unlink(missing_ok=True)
-    result = {"variant": variant, "mode": mode, "requested": requested if window else None,
-              "exit_code": process.returncode, "elapsed_ns": time.monotonic_ns()-started,
-              "controls": controls, "stop_reason": stopped,
-              "storage_fault_injected": exhausted,
-              "growth": growth, "perf_bytes": data.stat().st_size if data.exists() else 0,
-              "recording_sha256": digest(out / "run.mcap") if (out / "run.mcap").exists() else None}
-    diagnostics_path = out / "diagnostics.json"
-    result["run_exit_code"] = json.loads(diagnostics_path.read_text())["run"]["exit_code"] if diagnostics_path.exists() else (process.returncode if ordinary else None)
-    write(out / "notices.json", notices)
-    if (out / "observer.json").exists():
-        result["observer"] = json.loads((out / "observer.json").read_text())
-        result["observer"]["received"] = len(notices)
-    if measured and data.exists():
-        passes = {
-            "samples.txt": ["script", "--ns", "-F", "time", "--hide-call-graph"],
-            "symbols.txt": ["script", "--ns", "-F", "time,ip,sym,dso", "--hide-call-graph"],
-            "metadata.txt": ["script", "--ns", "--show-mmap-events", "--show-task-events",
-                             "--show-lost-events", "--hide-call-graph"],
-            "stats.txt": ["report", "--stdio", "--stats"],
-            "events.txt": ["evlist", "-v"],
-            "buildids.txt": ["buildid-list", "--with-hits"],
-        }
-        result["exports"] = {}
-        for name, args in passes.items():
-            result["exports"][name] = command(["perf", *args, "-i", data], out / name)
-        if mode != "exhaustion" and any(result["exports"].values()):
-            write(out / "result.json", result)
-            raise RuntimeError(f"incomplete perf export: {out}")
-        times = sample_times(out / "samples.txt")
-        write(out / "sample-times.json", times)
-        result["samples"] = {"count": len(times), "first_ns": min(times) if times else None,
-                             "last_ns": max(times) if times else None}
-        # Retain raw observations; no inference that ack equals a sample edge.
-        metadata = (out / "metadata.txt").read_text(errors="replace")
-        first_enable = next((c["write_ns"] for c in controls if c["command"] == "enable"), None)
-        result["metadata"] = {
-            "exec_records": metadata.count("PERF_RECORD_COMM exec"),
+    return argv
+
+
+def metadata_counts(path, controls):
+    metadata = path.read_text(errors="replace")
+    return {"exec_records": metadata.count("PERF_RECORD_COMM exec"),
             "fork_records": metadata.count("PERF_RECORD_FORK"),
             "exit_records": metadata.count("PERF_RECORD_EXIT"),
             "workload_mapping": "workload.so" in metadata,
-            "first_enable_write_ns": first_enable,
+            "first_enable_write_ns": next((c["write_ns"] for c in controls if c["command"] == "enable"), None),
             "lost_records": metadata.count("PERF_RECORD_LOST"),
-            "throttle_records": metadata.count("PERF_RECORD_THROTTLE"),
-        }
-        if small:
+            "throttle_records": metadata.count("PERF_RECORD_THROTTLE")}
+
+
+def export_perf(out, data, result, case):
+    passes = {
+        "samples.txt": ["script", "--ns", "-F", "time", "--hide-call-graph"],
+        "symbols.txt": ["script", "--ns", "-F", "time,ip,sym,dso", "--hide-call-graph"],
+        "metadata.txt": ["script", "--ns", "--show-mmap-events", "--show-task-events",
+                         "--show-lost-events", "--hide-call-graph"],
+        "stats.txt": ["report", "--stdio", "--stats"],
+        "events.txt": ["evlist", "-v"], "buildids.txt": ["buildid-list", "--with-hits"]}
+    result["exports"] = {name: command(["perf", *args, "-i", data], out / name)
+                         for name, args in passes.items()}
+    if case.outcome != "storage_fault" and any(result["exports"].values()):
+        write(out / "result.json", result)
+        raise RuntimeError(f"incomplete perf export: {out}")
+    host_times = perf_sample_host_times(out / "samples.txt")
+    write(out / "perf-sample-host-times.json", host_times)
+    result["samples"] = {"count": len(host_times),
+                         "first_host_ns": min(host_times) if host_times else None,
+                         "last_host_ns": max(host_times) if host_times else None}
+    result["metadata"] = metadata_counts(out / "metadata.txt", result["controls"])
+
+
+def capture_result(out, case, variant, mode, data, session, code, elapsed_ns):
+    diagnostics = out / "diagnostics.json"
+    run_code = json.loads(diagnostics.read_text())["run"]["exit_code"] if diagnostics.exists() else None
+    if case.runner == "ordinary":
+        run_code = code
+    result = {"variant": variant, "mode": mode, "requested": case.selection(variant).json() if case.gated else None,
+              "exit_code": code, "run_exit_code": run_code, "elapsed_ns": elapsed_ns,
+              "perf_bytes": data.stat().st_size if data.exists() else 0,
+              "recording_sha256": digest(out / "run.mcap") if (out / "run.mcap").exists() else None,
+              "policy": {"max_capture_bytes": (64 << 10) if case.fault == "capture_limit" else MAX_CAPTURE_BYTES,
+                         "guard_poll_ns": GUARD_POLL_NS, "storage_reserve_bytes": RESERVE_BYTES,
+                         "proof_supervisor_timeout_ns": SUPERVISOR_TIMEOUT_NS,
+                         "participant_response_deadline_ms": 10000, "frequency_hz": 997,
+                         "cpu_control": "named_event_preserves_tracking"},
+              **session.observations()}
+    write(out / "notices.json", session.notices)
+    if (out / "observer.json").exists():
+        result["observer"] = json.loads((out / "observer.json").read_text())
+        result["observer"]["received"] = len(session.notices)
+    return result
+
+
+def capture(out, work, variant, mode, *, reserve_directory=None):
+    out.mkdir()
+    case = CASES[mode]
+    data = reserve_directory / (out.name + ".data") if reserve_directory else out / "perf.data"
+    environment = {**os.environ, "PYTHONPATH": str(ROOT / "python/src"),
+                   "SIL_WINDOW_MARKERS": str(out / "markers.json")}
+    started = time.monotonic_ns()
+    with CaptureSession(out, case, case.selection(variant), data, reserve_directory) as session:
+        argv = session.collector_command(runner_command(out, work, variant, case), SAMPLE_OPTIONS)
+        write(out / "command.json", argv)
+        code = session.run(argv, environment)
+        result = capture_result(out, case, variant, mode, data, session, code, time.monotonic_ns()-started)
+    if case.collector and data.exists():
+        export_perf(out, data, result, case)
+        if reserve_directory:
             shutil.copy2(data, out / "perf.data")
             data.unlink()
-            (small / "filler").unlink(missing_ok=True)
+            (reserve_directory / "filler").unlink(missing_ok=True)
     write(out / "result.json", result)
     return result
 
 
-def qualify(out, work, environment, small):
-    out.mkdir(parents=True, exist_ok=False)
+def write_identities(out, work, environment):
     identities = {"environment": environment, "uname": platform.uname()._asdict(),
                   "libc": platform.libc_ver(), "revision": os.environ.get("SIL_SOURCE_REVISION"),
                   "perf_event_paranoid": Path("/proc/sys/kernel/perf_event_paranoid").read_text().strip()}
@@ -358,9 +224,44 @@ def qualify(out, work, environment, small):
          work / "diagnostics-baseline")}
     identities["sources"] = {str(p.relative_to(ROOT)): digest(p) for p in
         (HERE / "workload.c", HERE / "notify.hpp", HERE / "qualify.py",
+         HERE / "model.py", HERE / "session.py", HERE / "analyze.py", HERE / "validate.py",
          ROOT / "kernel/src/run_diagnostics.cpp")}
     identities["overlay_sha256"] = digest(work / "run_diagnostics.cpp")
     write(out / "identities.json", identities)
+
+
+def check_functional_outcome(row, case, baselines):
+    if case.runner == "ordinary":
+        baselines[case.outcome] = row["recording_sha256"]
+    if case.outcome in ("complete", "failed"):
+        expected_code = 0 if case.outcome == "complete" else 1
+        row["recording_equal"] = row["recording_sha256"] == baselines[case.outcome]
+        if row["exit_code"] != expected_code or not row["recording_equal"]:
+            raise RuntimeError(f"outcome/Recording changed: {row['variant']} {row['mode']}")
+    else:
+        row["recording_equal"] = row["recording_sha256"] == baselines["complete"]
+    if case.required_reason == "storage_reserve" and row["stop_reason"] != "storage_reserve":
+        raise RuntimeError("storage reserve not exercised")
+
+
+def run_variant(out, work, variant, reserve_directory, results):
+    baselines = {}
+    for mode, case in CASES.items():
+        if case.storage and reserve_directory is None:
+            continue
+        for repeat in range(case.repeats):
+            destination = out / f"{variant}-{mode}-{repeat}"
+            row = capture(destination, work, variant, mode,
+                          reserve_directory=reserve_directory if case.storage else None)
+            check_functional_outcome(row, case, baselines)
+            results.append(row)
+            print(f"{variant} {mode} {repeat}: exit={row['exit_code']} bytes={row['perf_bytes']}", flush=True)
+            write(out / "results.json", {"decision": "pending_analysis", "runs": results})
+
+
+def qualify(out, work, environment, reserve_directory):
+    out.mkdir(parents=True, exist_ok=False)
+    write_identities(out, work, environment)
     # Retain permission/feature availability before the experiment. No sysctl here.
     probe = command(["perf", "record", *SAMPLE_OPTIONS, "--delay=-1", "-o",
                      out / "probe.data", "--", "/bin/true"], out / "availability.txt")
@@ -370,37 +271,7 @@ def qualify(out, work, environment, small):
         return
     results = []
     for variant in ("native", "process"):
-        baseline = failure_baseline = None
-        modes = ("ordinary", "diagnostics", "observer", "whole-baseline", "whole", "window", "exact-peer",
-                 "empty", "unreached", "during", "end-during", "ordinary-failure", "failure", "unclosed",
-                 "loss", "perf-loss", "limit")
-        for mode in modes:
-            repeats = 3 if mode in ("ordinary", "diagnostics", "observer", "whole-baseline", "whole", "window") else 1
-            for repeat in range(repeats):
-                row = capture(out / f"{variant}-{mode}-{repeat}", work, variant, mode)
-                if mode == "ordinary": baseline = row["recording_sha256"]
-                if mode == "ordinary-failure":
-                    failure_baseline = row["recording_sha256"]
-                    if row["exit_code"] != 1: raise RuntimeError("ordinary failure did not fail")
-                if mode == "failure":
-                    row["recording_equal"] = row["recording_sha256"] == failure_baseline
-                    if row["exit_code"] != 1 or not row["recording_equal"]:
-                        raise RuntimeError("observed failure changed outcome/Recording")
-                if mode not in ("ordinary-failure", "failure", "unclosed"):
-                    row["recording_equal"] = row["recording_sha256"] == baseline
-                    if row["exit_code"] or not row["recording_equal"]:
-                        raise RuntimeError(f"outcome/Recording changed: {variant} {mode}")
-                results.append(row)
-                print(f"{variant} {mode} {repeat}: exit={row['exit_code']} bytes={row['perf_bytes']}", flush=True)
-                write(out / "results.json", {"decision": "pending_analysis", "runs": results})
-        if small:
-            for storage_mode in ("reserve", "exhaustion"):
-                row = capture(out / f"{variant}-{storage_mode}", work, variant, storage_mode, small=small)
-                row["recording_equal"] = row["recording_sha256"] == baseline
-                if storage_mode == "reserve" and (row["exit_code"] or not row["recording_equal"] or row["stop_reason"] != "storage_reserve"):
-                    raise RuntimeError("reserve did not preserve Run outcome/Recording")
-                results.append(row)
-                write(out / "results.json", {"decision": "pending_analysis", "runs": results})
+        run_variant(out, work, variant, reserve_directory, results)
     write(out / "digests.json", {str(p.relative_to(out)): digest(p)
                                 for p in out.rglob("*") if p.is_file()})
 

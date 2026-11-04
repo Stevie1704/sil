@@ -114,10 +114,16 @@ On the named workload, bounded files are approximately 94% smaller for Native
 work and 88–89% smaller for Process work than whole-Run capture. Setup exec/DSO
 metadata and post-disable lifetime records survive named CPU controls. The
 proof retains requested Virtual time separately from notification, command,
-acknowledgment, workload and sample times. An acknowledgment identifies no
+acknowledgment, workload and CPU-sample host timestamps. An acknowledgment identifies no
 exact effective collection edge. The short equal-time peer selection retains
 only one or two samples, including a sample outside the requested Task on
 the native host. This is no exact per-Activation isolation guarantee.
+
+Failure can terminate a Run before its requested Virtual-time end. That end
+is reported as unreached; shutdown requests disable separately, with any
+missing acknowledgment or effective end left unknown. Disabled request regions
+and samples observed during their uncertain transitions are retained separately
+from loss/truncation. No Virtual-time range is treated as a host deadline.
 
 The active storage-reserve case preserves the Run and its Recording. A
 competing writer that consumes the reserve between guard polls can instead

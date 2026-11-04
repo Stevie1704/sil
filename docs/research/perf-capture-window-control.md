@@ -71,14 +71,14 @@ enabled during a windowed experiment, including after its CPU sampling window.
 ## Truthful experimental interpretation
 
 Record requested Virtual-time/Task/index selection independently from host
-observation, command-write, acknowledgment and first/last sample times. The
+observation, command-write, acknowledgment and first/last perf-sample host timestamps. The
 controller can observe only its own timestamps around a command and ack;
 effective collection transitions remain bounded observations rather than exact
 Activation edges. The scheduler must not wait for acknowledgments. This is an
 inference from the asynchronous control path above, not a measured latency
 bound. A short selected Activation can finish before enable is processed.
 
-`PERF_SAMPLE_TIME` records sample timestamps. Lost and throttle records are
+`PERF_SAMPLE_TIME` records host timestamps of CPU samples. Lost and throttle records are
 separate event types; deliberately disabled sampling must therefore be a
 distinct coverage state. Neither a zero-sample window nor an ack proves absence
 of loss. Pausing output instead discards generated samples and can create lost

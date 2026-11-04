@@ -8,7 +8,7 @@
 #include <string.h>
 #include <time.h>
 
-typedef struct { uint64_t ns, task, index, edge; } Marker;
+typedef struct { uint64_t ns, task, index, virtual_ns, edge; } Marker;
 static Marker markers[4096];
 static size_t used, lost;
 static volatile uint64_t sink;
@@ -17,8 +17,8 @@ static uint64_t host_ns(void) {
   if (clock_gettime(CLOCK_MONOTONIC, &t)) abort();
   return (uint64_t)t.tv_sec*1000000000 + t.tv_nsec;
 }
-static void mark(uint64_t task, uint64_t index, uint64_t edge) {
-  if (used < 4096) markers[used++] = (Marker){host_ns(), task, index, edge};
+static void mark(uint64_t task, uint64_t index, uint64_t virtual_ns, uint64_t edge) {
+  if (used < 4096) markers[used++] = (Marker){host_ns(), task, index, virtual_ns, edge};
   else ++lost;
 }
 __attribute__((noinline)) static void ordinary_spin(void) {
@@ -33,23 +33,24 @@ __attribute__((noinline)) static void late_hot_function(void) {
     value = (value ^ i)*UINT64_C(6364136223846793005) + 1;
   sink = value;
 }
-void window_work(uint64_t task, uint64_t index) {
-  mark(task, index, 0);
+void window_work(uint64_t task, uint64_t index, uint64_t virtual_ns) {
+  mark(task, index, virtual_ns, 0);
   if (task == 0 && index == 610) late_hot_function();
   else ordinary_spin();
-  mark(task, index, 1);
+  mark(task, index, virtual_ns, 1);
 }
 __attribute__((destructor)) static void finish(void) {
   const char *path = getenv("SIL_WINDOW_MARKERS");
   if (!path) return;
   FILE *out = fopen(path, "wx");
   if (!out) return;
-  fprintf(out, "{\"lost\":%zu,\"events\":[", lost);
+  fprintf(out, "{\"sil_capture_workload_markers\":2,\"lost\":%zu,\"events\":[", lost);
   for (size_t i = 0; i < used; ++i) {
     Marker *m = &markers[i];
-    fprintf(out, "%s[%llu,%llu,%llu,%llu]", i ? "," : "",
+    fprintf(out, "%s[%llu,%llu,%llu,%llu,%llu]", i ? "," : "",
             (unsigned long long)m->ns, (unsigned long long)m->task,
-            (unsigned long long)m->index, (unsigned long long)m->edge);
+            (unsigned long long)m->index, (unsigned long long)m->virtual_ns,
+            (unsigned long long)m->edge);
   }
   fprintf(out, "]}\n");
   fclose(out);
@@ -57,10 +58,9 @@ __attribute__((destructor)) static void finish(void) {
 typedef struct { const sil_api_v1 *api; uint64_t task, index; int fail; } State;
 static State states[2];
 static void step(void *user, uint64_t now) {
-  (void)now;
   State *s = user;
   uint64_t index = s->index++;
-  window_work(s->task, index);
+  window_work(s->task, index, now);
   if (s->fail && s->task == 0 && index == 610) {
     s->api->fail(s->api->ctx, "named late failure"); return;
   }

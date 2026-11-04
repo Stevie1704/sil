@@ -20,6 +20,15 @@ budget. The ordinary target continues to compile the repository's untouched
 sources. A supervisor serializes named perf commands and records its receipt,
 write and acknowledgment times. No Activation waits for a collector.
 
+The existing Activation writer (`record_activation`) emits its record only
+after completion, through a buffered regular file. It cannot start collection
+for that same Activation. Tailing or polling it would add an uncontrolled
+completion/buffering delay; using a requested Virtual-time value as a host timer
+would conflate clocks. The proof therefore adds just nonblocking begin/return
+notifications to the diagnostics build. Its notifier also sends one shutdown
+notice during normal unwinding, before writing its loss footer; SIGKILL cannot
+send it. No per-Task string lookup or collector acknowledgment enters scheduling.
+
 On Linux x86-64/glibc with perf, a compiler, CMake and the Python package:
 
 ```sh
@@ -32,14 +41,20 @@ Both directories must be fresh. Commands, package versions, host policy,
 binary hashes/build IDs, raw perf data, metadata, samples, controls, file
 growth, workload markers, diagnostics and Recordings are retained. Three
 fresh repetitions compare ordinary, diagnostics, observer, whole and bounded
-modes. Per-Run/Step guards stay 60 seconds/10 seconds. Times and file sizes are
+modes. The proof adds a 60-second supervisor guard and explicitly selects a
+10-second Process response deadline; these are experiment policies, not
+production defaults. Times and file sizes are
 observations, never timing correctness thresholds or an overhead correction.
-The 128 MiB capture limit, 100 ms guard polling and existing 8 MiB storage
-reserve remain explicit; a stop preserves Run execution. Export has a separate
+The production-default 1 GiB capture limit, 100 ms guard polling and 8 MiB storage
+reserve remain explicit; reserve/size stops preserve Run execution. The size
+case explicitly lowers the limit to 64 KiB. Named CPU disable intentionally
+differs from production's all-event disable to retain the dummy tracking event.
+Sampling is 997 Hz here, versus production's 999 Hz. Every result records these
+policies; this proof does not claim identical collector behavior or overhead. Export has a separate
 256 MiB/180-second budget. There is no automatic permission change.
 
-The workflow records native/container availability before changing host
-policy. The capability experiment explicitly uses CAP_PERFMON and an
+The manually dispatched workflow records native/container availability before changing host
+policy. It is not a PR gate. The capability experiment explicitly uses CAP_PERFMON and an
 unconfined seccomp profile. Native sampling explicitly sets paranoid 2.
 A separate 16 MiB tmpfs tests active collection crossing the existing 8 MiB
 reserve. A second case deliberately consumes the remaining space between
@@ -61,18 +76,37 @@ production adoption is **deferred** because asynchronous boundaries need a
 reviewed coverage contract and actual ENOSPC can terminate the perf-owned Run.
 A positive feasibility result alone cannot ship a collector.
 
-`analyze.py EVIDENCE` replays the retained files into `analysis.json` without
-perf or the workload binaries. `validate.py EVIDENCE` also checks the named
+`validate.py EVIDENCE` replays retained inputs and writes `analysis.json`
+without perf or workload binaries. It checks the named
 experiment's counts, identity/outcome equality, setup metadata and explicit
-loss/guard cases. A permission-denied environment remains unavailable.
+loss/guard cases, including SIGKILL and ENOSPC outcomes. `--report-only`
+reports partial fixtures without asserting that the whole experiment ran.
+A permission-denied environment remains unavailable.
 The analysis aggregates counts by independently marked host intervals; these
 are time-window associations across sampled processes, not exclusive Task or
 Process CPU accounts. A workload helper return does not imply a completed
 Activation. First/last samples do not establish continuously observed work.
 
-Four independent report-boundary tests cover collector/Run outcome separation,
-invalid acknowledgment order and equal-Virtual-time half-open interval edges:
+Independent report-boundary tests cover collector/Run outcome separation,
+invalid acknowledgment order, actual Virtual time, disabled request regions,
+early termination and rejection of false SIGKILL/ENOSPC results:
 
 ```sh
 SIL_SKIP_BUILD=1 .venv/bin/python -m pytest tests/test_capture_windows_proof.py
 ```
+
+For a task-less window, the first begin notice at or beyond `to_ns` requests
+disable. A failed Run may never reach that Virtual time. Shutdown then requests
+disable separately; it does not pretend that the requested end occurred. The
+report records `not_reached_run_failed`/`not_reached_run_killed`, the terminal
+notice (if any), control writes/acks and observed collector exit. A late or
+missing shutdown acknowledgment remains unknown. CPU may be collected through
+failure/unwinding until control or collector exit; no host deadline is inferred
+from the requested Virtual-time range.
+
+`disabled_regions` records deliberate disable request intervals with their
+command/ack/collector-exit observations and counts any samples in those
+transition intervals. Effective boundaries remain unknown; loss/truncation
+are separate reasons. Workload markers carry actual Virtual time, and the
+real-run validator checks that index 611 is retained outside the selected
+region and that its begin notice triggers the normal window end.

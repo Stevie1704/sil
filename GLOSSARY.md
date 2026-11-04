@@ -44,6 +44,12 @@ The evidence of one `sil profile` capture of one fresh Run: CPU samples
 `sil_profile_report`. It describes the host build that ran, not a target ECU.
 _Avoid_: trace, benchmark
 
+**CPU capture window**:
+A requested region of a Run, identified by Virtual time and optionally a Task
+or Activation, in which CPU sampling is requested. Its observed host collection
+boundaries can differ from the requested region or remain unknown.
+_Avoid_: Replay window, Sample time when naming CPU collection bounds
+
 **Duration**:
 The length of virtual time a run covers, after which the kernel stops.
 _Avoid_: runtime, horizon, end time

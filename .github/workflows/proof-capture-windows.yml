@@ -1,11 +1,6 @@
 name: proof-capture-windows
 
 on:
-  pull_request:
-    paths:
-      - 'proofs/capture-windows/**'
-      - 'tests/test_capture_windows_proof.py'
-      - '.github/workflows/proof-capture-windows.yml'
   workflow_dispatch:
 
 jobs:

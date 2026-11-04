@@ -1,143 +1,237 @@
-#!/usr/bin/env python3
-"""Interpret proof artifacts without treating perf acks as collection edges."""
-from __future__ import annotations
-
-import argparse
+"""File-input/report-output analysis; validate.py is the single CLI entry point."""
+from dataclasses import dataclass
 import json
-from pathlib import Path
-import re
 import statistics
 
-MAX_INPUT = 256 << 20
+from model import CASES, MAX_INPUT_BYTES, CaptureWindow, Notice, WorkInterval, perf_sample_host_ns
 
 
 def read(path):
-    if path.stat().st_size > MAX_INPUT:
+    if path.stat().st_size > MAX_INPUT_BYTES:
         raise ValueError(f"input exceeds proof budget: {path}")
     return json.loads(path.read_text())
 
 
-def per_run(directory, row):
-    notices = read(directory / "notices.json")
-    marker_path = directory / "markers.json"
-    markers = read(marker_path) if marker_path.exists() else None
-    sample_path = directory / "sample-times.json"
-    times = read(sample_path) if sample_path.exists() else []
-    requested = row["requested"]
-    reasons = []
-    intervals, opened = [], {}
-    if markers is not None:
-        if markers["lost"]: reasons.append("workload_marker_loss")
-        for host, task, index, edge in markers["events"]:
-            key = task, index
-            if edge == 0: opened[key] = host
-            elif key in opened:
-                intervals.append({"task": task, "index": index,
-                                  "begin_ns": opened.pop(key), "end_ns": host})
-    else:
-        reasons.append("workload_markers_missing")
-    comparison = requested or {"from_ns": 610_000_000, "to_ns": 611_000_000, "task": None}
-    selected = [i for i in intervals
-                if comparison["from_ns"] <= i["index"]*1_000_000 < comparison["to_ns"]
-                and (comparison["task"] is None or i["task"] == comparison["task"])]
-    observer = row.get("observer")
-    if observer and (observer["dropped"] or observer["sent"] != observer["received"]):
-        reasons.append("notification_loss")
-    if not observer and row["mode"] not in ("ordinary", "ordinary-failure", "diagnostics", "whole-baseline", "unclosed"):
-        reasons.append("observer_footer_missing")
-    if row["mode"] == "unclosed": reasons.append("observer_footer_missing_after_sigkill")
-    if row["stop_reason"]: reasons.append(row["stop_reason"])
-    if any(code for code in row.get("exports", {}).values()): reasons.append("export_incomplete")
-    metadata = row.get("metadata", {})
-    if metadata.get("lost_records"): reasons.append("perf_lost_records")
-    if metadata.get("throttle_records"): reasons.append("perf_throttle_records")
-    if any(c["ack_ns"] is None for c in row["controls"]): reasons.append("control_unacknowledged")
+def lines(path):
+    if path.stat().st_size > MAX_INPUT_BYTES:
+        raise ValueError(f"input exceeds proof budget: {path}")
+    return path.read_text(errors="replace").splitlines()
 
-    observations = directory / "activations.jsonl"
-    work_rows, footer = [], None
-    if observations.exists():
-        if observations.stat().st_size > MAX_INPUT: raise ValueError("observations too large")
-        for line in observations.read_text().splitlines():
-            record = json.loads(line)
-            if record.get("kind") == "activation": work_rows.append(record)
-            if record.get("kind") == "end": footer = record
-        if footer is None or footer.get("dropped") or footer.get("truncated") or footer.get("write_failed"):
-            reasons.append("activation_observations_incomplete")
-    failed = [r for r in work_rows if r["outcome"] != "completed"]
-    # A workload marker exit proves only that window_work returned, not that
-    # its encompassing Activation completed (e.g. deliberate api->fail).
-    if failed: reasons.append("failed_or_interrupted_activation")
+
+@dataclass
+class WorkEvidence:
+    intervals: list
+    unclosed_entries: int
+    reasons: list
+
+
+def workload_intervals(directory):
+    path = directory / "markers.json"
+    if not path.exists():
+        return WorkEvidence([], 0, ["workload_markers_missing"])
+    markers = read(path)
+    if markers.get("sil_capture_workload_markers") != 2:
+        raise ValueError("unsupported workload marker version")
+    intervals, opened = [], {}
+    for host, task, index, virtual_ns, edge in markers["events"]:
+        key = task, index
+        if edge == 0:
+            opened[key] = (host, virtual_ns)
+        elif key in opened:
+            begin, begin_virtual_ns = opened.pop(key)
+            if virtual_ns != begin_virtual_ns or host < begin:
+                raise ValueError("inconsistent workload interval")
+            intervals.append(WorkInterval(task, index, virtual_ns, begin, host))
+    return WorkEvidence(intervals, len(opened), ["workload_marker_loss"] if markers["lost"] else [])
+
+
+def activation_evidence(directory, case):
+    path = directory / "activations.jsonl"
+    if not path.exists():
+        return [], [] if case.runner == "ordinary" else ["activation_observations_incomplete"]
+    rows = [json.loads(line) for line in lines(path)]
+    work = [row for row in rows if row.get("kind") == "activation"]
+    footer = next((row for row in reversed(rows) if row.get("kind") == "end"), None)
+    incomplete = footer is None or any(footer.get(key) for key in ("dropped", "truncated", "write_failed"))
+    return work, ["activation_observations_incomplete"] if incomplete else []
+
+
+def capture_reasons(row, case, work, observation_reasons):
+    reasons = list(observation_reasons)
+    notifier = row.get("observer")
+    if notifier and (notifier["dropped"] or notifier["sent"] != notifier["received"]):
+        reasons.append("notification_loss")
+    if case.notifications and not notifier:
+        reasons.append("observer_footer_missing_after_sigkill" if case.outcome == "killed" else "observer_footer_missing")
+    if row["stop_reason"]:
+        reasons.append(row["stop_reason"])
+    if any(row.get("exports", {}).values()):
+        reasons.append("export_incomplete")
+    metadata = row.get("metadata", {})
+    for field, reason in (("lost_records", "perf_lost_records"), ("throttle_records", "perf_throttle_records")):
+        if metadata.get(field):
+            reasons.append(reason)
+    if any(c["ack_ns"] is None for c in row["controls"]):
+        reasons.append("control_unacknowledged")
+    failed = any(r["outcome"] != "completed" for r in work)
+    if failed:
+        reasons.append("failed_or_interrupted_activation")
     if row["run_exit_code"] is None and row["exit_code"] and not failed:
         reasons.append("unclosed_run_work")
     if row["exit_code"] and row["run_exit_code"] == 0:
         reasons.append("collector_failed")
-    if row["run_exit_code"] not in (None, 0): reasons.append("run_failed")
-    if requested is None:
-        selection_state = "whole_run_or_unprofiled"
-    elif requested["from_ns"] == requested["to_ns"]:
-        selection_state = "empty"
-    elif selected:
-        selection_state = "reached"
-    elif any(requested["from_ns"] <= n[1] < requested["to_ns"] for n in notices):
-        selection_state = "reached_but_no_closed_workload_interval"
-    else:
-        selection_state = "unreached"
-    begin = min((i["begin_ns"] for i in selected), default=None)
-    end = max((i["end_ns"] for i in selected), default=None)
-    inside = sum(any(i["begin_ns"] <= ns < i["end_ns"] for i in selected) for ns in times)
-    hot_samples = 0
-    symbols_path = directory / "symbols.txt"
-    if symbols_path.exists():
-        if symbols_path.stat().st_size > MAX_INPUT: raise ValueError("symbols too large")
-        for line in symbols_path.read_text(errors="replace").splitlines():
-            match = re.match(r"^\s*(\d+)\.(\d{9}):?\s", line)
-            if match and "late_hot_function" in line:
-                ns = int(match[1])*1_000_000_000 + int(match[2])
-                hot_samples += any(i["begin_ns"] <= ns < i["end_ns"] for i in selected)
-    commands = []
-    for c in row["controls"]:
-        if c["ack_ns"] is not None and c["ack_ns"] < c["write_ns"]:
+    if row["run_exit_code"] not in (None, 0):
+        reasons.append("run_failed")
+    return reasons
+
+
+def requested_end(row, notices):
+    if row["requested"] is None:
+        return "not_applicable", None
+    selection = CaptureWindow(**row["requested"])
+    if selection.from_ns == selection.to_ns:
+        return "empty", None
+    boundary = next((n for n in notices if n.edge == 0 and n.virtual_ns >= selection.to_ns), None)
+    if boundary is not None:
+        return "observed", boundary._asdict()
+    if row["run_exit_code"] not in (None, 0):
+        return "not_reached_run_failed", None
+    if row["run_exit_code"] is None and row["exit_code"]:
+        return "not_reached_run_killed", None
+    return "run_completed_without_end_notice", None
+
+
+def selection_state(row, selection, notices, selected, end_state):
+    if row["requested"] is None:
+        return "whole_run_or_unprofiled"
+    if selection.from_ns == selection.to_ns:
+        return "empty"
+    entered = selected or any(n.edge == 0 and selection.contains(n.virtual_ns, n.task) for n in notices)
+    if entered and end_state in ("not_reached_run_failed", "not_reached_run_killed"):
+        return "terminated_before_requested_end"
+    if selected:
+        return "reached"
+    return "reached_but_no_closed_workload_interval" if entered else "unreached"
+
+
+def disabled_regions(row, host_times):
+    current, regions = None, []
+    if row["requested"] is not None:
+        current = {"intent": "initially_disabled", "begin_request_host_ns": row.get("collector_start_host_ns"),
+                   "disable_ack_host_ns": None}
+    for control in row["controls"]:
+        if control["command"] == "disable":
+            current = {"intent": row["stop_reason"] or "outside_selection",
+                       "begin_request_host_ns": control["write_ns"], "disable_ack_host_ns": control["ack_ns"]}
+        elif current is not None:
+            current["end_request_host_ns"] = control["write_ns"]
+            regions.append(current)
+            current = None
+    if current is not None:
+        current["end_request_host_ns"] = row.get("collector_exit_observed_host_ns")
+        regions.append(current)
+    for region in regions:
+        begin, end = region["begin_request_host_ns"], region["end_request_host_ns"]
+        region["effective_boundaries"] = "unknown"
+        region["observed_samples_in_request_interval"] = (
+            sum(begin <= ns < end for ns in host_times) if begin is not None and end is not None else None)
+    return regions
+
+
+def control_observations(controls, notices):
+    result = []
+    for control in controls:
+        if control["ack_ns"] is not None and control["ack_ns"] < control["write_ns"]:
             raise ValueError("acknowledgment precedes command")
-        prior = [n for n in notices if n[4] <= c["write_ns"]]
+        prior = [notice for notice in notices if notice.received_host_ns <= control["write_ns"]]
         notice = prior[-1] if prior else None
-        commands.append({**c, "ack_latency_ns": c["ack_ns"]-c["write_ns"] if c["ack_ns"] else None,
-                         "preceding_notice": notice,
-                         "notice_to_write_ns": c["write_ns"]-notice[0] if notice else None})
-    # Check setup metadata by its own host timestamp, before the first enable
-    # request. Export text is retained so these counts are independently replayable.
-    first_enable = next((c["write_ns"] for c in row["controls"] if c["command"] == "enable"), None)
-    setup = {"exec_before_enable": 0, "workload_mmap_before_enable": 0,
-             "exit_after_disable": 0}
-    last_disable = next((c["ack_ns"] for c in reversed(row["controls"])
-                         if c["command"] == "disable" and c["ack_ns"]), None)
-    metadata_path = directory / "metadata.txt"
-    if metadata_path.exists():
-        if metadata_path.stat().st_size > MAX_INPUT: raise ValueError("metadata too large")
-        for line in metadata_path.read_text(errors="replace").splitlines():
-            match = re.search(r"\s(\d+)\.(\d{9}):", line)
-            if not match: continue
-            ns = int(match[1])*1_000_000_000 + int(match[2])
-            if first_enable is not None and ns < first_enable:
-                setup["exec_before_enable"] += "PERF_RECORD_COMM exec" in line
-                setup["workload_mmap_before_enable"] += "PERF_RECORD_MMAP" in line and "workload.so" in line
-            if last_disable is not None and ns >= last_disable:
-                setup["exit_after_disable"] += "PERF_RECORD_EXIT" in line
-    return {"selection_state": selection_state, "reasons": reasons,
-            "intentional_disabled_regions": requested is not None,
-            "effective_transition_times": "not_observed",
-            "sample_times_are_not_continuous_coverage": True,
-            "known_selected_work": selected, "unclosed_workload_entries": len(opened),
-            "known_interval_sample_counts": [
-                {"task": i["task"], "index": i["index"],
-                 "samples": sum(i["begin_ns"] <= ns < i["end_ns"] for ns in times)}
-                for i in selected],
-            "comparison_selection": comparison, "selected_hot_function_leaf_samples": hot_samples,
-            "failed_activations": len(failed), "completed_activations": sum(r["outcome"] == "completed" for r in work_rows),
-            "first_sample_minus_known_work_begin_ns": times[0]-begin if times and begin is not None else None,
-            "last_sample_minus_known_work_end_ns": times[-1]-end if times and end is not None else None,
+        result.append({**control,
+            "ack_latency_ns": control["ack_ns"]-control["write_ns"] if control["ack_ns"] is not None else None,
+            "preceding_notice": notice._asdict() if notice else None,
+            "notice_to_write_ns": control["write_ns"]-notice.host_ns if notice else None})
+    return result
+
+
+def setup_metadata(directory, controls):
+    result = {"exec_before_enable": 0, "workload_mmap_before_enable": 0, "exit_after_disable": 0}
+    first_enable = next((c["write_ns"] for c in controls if c["command"] == "enable"), None)
+    last_disable = next((c["ack_ns"] for c in reversed(controls) if c["command"] == "disable" and c["ack_ns"]), None)
+    path = directory / "metadata.txt"
+    if not path.exists():
+        return result
+    for line in lines(path):
+        host_ns = perf_sample_host_ns(line)
+        if host_ns is None:
+            continue
+        if first_enable is not None and host_ns < first_enable:
+            result["exec_before_enable"] += "PERF_RECORD_COMM exec" in line
+            result["workload_mmap_before_enable"] += "PERF_RECORD_MMAP" in line and "workload.so" in line
+        if last_disable is not None and host_ns >= last_disable:
+            result["exit_after_disable"] += "PERF_RECORD_EXIT" in line
+    return result
+
+
+def selected_work_summary(directory, selected, host_times):
+    contains = lambda ns: any(interval.contains(ns) for interval in selected)
+    inside = sum(contains(ns) for ns in host_times)
+    hot_samples = 0
+    path = directory / "symbols.txt"
+    if path.exists():
+        for line in lines(path):
+            if "late_hot_function" in line and (host_ns := perf_sample_host_ns(line)) is not None:
+                hot_samples += contains(host_ns)
+    begin = min((i.begin_ns for i in selected), default=None)
+    end = max((i.end_ns for i in selected), default=None)
+    return {"known_selected_work": [i.json() for i in selected],
+            "known_interval_sample_counts": [{"task": i.task, "index": i.index,
+                "samples": sum(i.contains(ns) for ns in host_times)} for i in selected],
+            "selected_hot_function_leaf_samples": hot_samples,
             "samples_inside_known_selected_work": inside,
-            "samples_outside_known_selected_work": len(times)-inside,
-            "control_observations": commands, "setup_metadata": setup}
+            "samples_outside_known_selected_work": len(host_times)-inside,
+            "first_perf_sample_host_ns_minus_work_begin_ns": min(host_times)-begin if host_times and begin is not None else None,
+            "last_perf_sample_host_ns_minus_work_end_ns": max(host_times)-end if host_times and end is not None else None}
+
+
+def per_run(directory, row):
+    case = CASES[row["mode"]]
+    notices = [Notice(*raw) for raw in read(directory / "notices.json")]
+    path = directory / "perf-sample-host-times.json"
+    host_times = read(path) if path.exists() else []
+    work = workload_intervals(directory)
+    selection = CaptureWindow(**row["requested"]) if row["requested"] else CaptureWindow()
+    selected = [i for i in work.intervals if selection.contains(i.virtual_ns, i.task)]
+    excluded = next((i for i in work.intervals if i.virtual_ns >= selection.to_ns), None)
+    activations, observation_reasons = activation_evidence(directory, case)
+    reasons = capture_reasons(row, case, activations, [*work.reasons, *observation_reasons])
+    end_state, end_notice = requested_end(row, notices)
+    return {"selection_state": selection_state(row, selection, notices, selected, end_state),
+            "requested_end_state": end_state, "requested_end_notice": end_notice,
+            "disabled_regions": disabled_regions(row, host_times), "reasons": reasons,
+            "first_excluded_work": excluded.json() if excluded else None,
+            "effective_transition_times": "not_observed",
+            "perf_sample_host_times_do_not_establish_continuous_coverage": True,
+            "unclosed_workload_entries": work.unclosed_entries,
+            "comparison_selection": selection.json(),
+            "failed_activations": sum(r["outcome"] != "completed" for r in activations),
+            "completed_activations": sum(r["outcome"] == "completed" for r in activations),
+            "control_observations": control_observations(row["controls"], notices),
+            "setup_metadata": setup_metadata(directory, row["controls"]),
+            **selected_work_summary(directory, selected, host_times)}
+
+
+def comparisons(rows):
+    result = []
+    for variant in ("native", "process"):
+        group = [row for row in rows if row["variant"] == variant]
+        def median(mode, key):
+            values = [row[key] for row in group if row["mode"] == mode and row["stop_reason"] is None]
+            return statistics.median(values) if values else None
+        whole, bounded = median("whole-baseline", "perf_bytes"), median("window", "perf_bytes")
+        result.append({"variant": variant, "whole_median_bytes": whole, "window_median_bytes": bounded,
+                       "window_to_whole_bytes": bounded/whole if whole else None,
+                       "elapsed_median_ns": {name: median(name, "elapsed_ns")
+                           for name, case in CASES.items() if case.repeats > 1}})
+    return result
 
 
 def summarize(root):
@@ -146,33 +240,10 @@ def summarize(root):
         return {"availability": "unavailable", "comparisons": [], "runs": []}
     rows = []
     for row in results["runs"]:
-        candidates = list(root.glob(f"{row['variant']}-{row['mode']}*"))
-        # Match by raw result identity; timing makes repetitions distinct.
+        candidates = root.glob(f"{row['variant']}-{row['mode']}*")
         directory = next((p for p in candidates if (p / "result.json").exists()
                           and read(p / "result.json")["elapsed_ns"] == row["elapsed_ns"]), None)
         if directory is None:
             raise ValueError("run artifact missing")
         rows.append({"directory": directory.name, **row, "analysis": per_run(directory, row)})
-    comparisons = []
-    for variant in ("native", "process"):
-        group = [r for r in rows if r["variant"] == variant]
-        def median(mode, key):
-            values = [r[key] for r in group if r["mode"] == mode and r["stop_reason"] is None]
-            return statistics.median(values) if values else None
-        whole, window = median("whole-baseline", "perf_bytes"), median("window", "perf_bytes")
-        ordinary = median("ordinary", "elapsed_ns")
-        comparisons.append({"variant": variant, "whole_median_bytes": whole,
-                            "window_median_bytes": window,
-                            "window_to_whole_bytes": window/whole if whole else None,
-                            "elapsed_median_ns": {mode: median(mode, "elapsed_ns") for mode in
-                                ("ordinary", "diagnostics", "observer", "whole-baseline", "whole", "window")},
-                            "ordinary_elapsed_median_ns": ordinary})
-    return {"availability": "available", "comparisons": comparisons, "runs": rows}
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("evidence", type=Path)
-    args = parser.parse_args()
-    report = summarize(args.evidence)
-    (args.evidence / "analysis.json").write_text(json.dumps(report, indent=2) + "\n")
+    return {"availability": "available", "comparisons": comparisons(rows), "runs": rows}
