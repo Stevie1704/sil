@@ -323,28 +323,33 @@ def _missing(request: ScopesRequest, layout: ScopesLayout,
             relative = Path(os.path.realpath(path)).relative_to(layout.out)
         except ValueError:
             continue  # outside the directory: not one of its files
-        if not path.is_file() or (role == "recording"
-                                  and not _is_recording(path)):
+        if not path.is_file() or not _readable(role, path):
             rows.append({"role": role, "path": relative.as_posix(),
                          "reason": "not_written"})
     return rows
 
 
-def _is_recording(path: Path) -> bool:
-    """A runner that was killed can leave a Recording file without even
-    the MCAP magic: it is not a Recording, so it is `not_written`."""
+def _readable(role: str, path: Path) -> bool:
+    """False for a file that a killed runner left without even the start
+    of its contract: a Recording without the MCAP magic, an observation
+    stream without its header line. It is `not_written`, not an artifact."""
     try:
         with path.open("rb") as stream:
-            return stream.read(len(MCAP_MAGIC)) == MCAP_MAGIC
-    except OSError:
+            if role == "recording":
+                return stream.read(len(MCAP_MAGIC)) == MCAP_MAGIC
+            if role == "activation_observations":
+                first = json.loads(stream.readline(1 << 16))
+                return isinstance(first, dict) and \
+                    first.get("sil_activation_observations") == 1
+    except (OSError, ValueError):
         return False
+    return True
 
 
 def _artifacts(request: ScopesRequest, layout: ScopesLayout,
                cwd: Path) -> list[dict]:
     return [row for row in artifact_rows(request.target, cwd, _files(layout))
-            if row["role"] != "recording"
-            or _is_recording(layout.out / row["path"])]
+            if _readable(row["role"], layout.out / row["path"])]
 
 
 def build_report(request: ScopesRequest, layout: ScopesLayout, cwd: Path,
